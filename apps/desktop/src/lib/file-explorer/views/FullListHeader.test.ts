@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from 'svelte'
 import FullListHeader from './FullListHeader.svelte'
 import type { SortColumn } from '../types'
+import type { DateColumn } from '../displayed-date'
 
 function mountHeader(props: Partial<Parameters<typeof mountHeaderRaw>[0]> = {}) {
   return mountHeaderRaw({
@@ -19,6 +20,8 @@ function mountHeader(props: Partial<Parameters<typeof mountHeaderRaw>[0]> = {}) 
     isFocused: true,
     sortBy: 'name',
     sortOrder: 'ascending' as const,
+    dateColumn: 'modified' as const,
+    dateFallbackNote: undefined,
     showExtensionInName: false,
     gitColumnVisible: false,
     skipTransition: false,
@@ -32,6 +35,8 @@ function mountHeaderRaw(props: {
   isFocused: boolean
   sortBy: SortColumn | null
   sortOrder: 'ascending' | 'descending'
+  dateColumn: DateColumn
+  dateFallbackNote: string | undefined
   showExtensionInName: boolean
   gitColumnVisible: boolean
   skipTransition: boolean

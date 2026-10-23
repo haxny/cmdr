@@ -1,5 +1,5 @@
 /**
- * Shrink-wraps the Ext / Size / Modified columns in FullList to the narrowest width
+ * Shrink-wraps the Ext / Size / date columns in FullList to the narrowest width
  * that fits the currently loaded entries plus the header label. Uses `@chenglou/pretext`
  * for pixel-accurate text measurement without DOM reflow.
  *
@@ -26,6 +26,7 @@ import {
   wordGitMeta,
 } from './full-list-utils'
 import { tString } from '#lib/intl/messages.svelte.js'
+import { dateHeaderSortColumn, dateOf, headerLabelKey, type DateColumn } from '../displayed-date'
 
 export interface ColumnWidths {
   ext: number
@@ -65,6 +66,13 @@ const HEADER_CHROME_ACTIVE = 12
 const HEADER_CHROME_INACTIVE = 0
 
 /**
+ * The fallback glyph `SortableHeader` draws beside the date label while a requested date sort
+ * falls back to Modified: the button's 4px flex gap, `StatusGlyph`'s 2px left margin, and its
+ * 12px icon. Mirrors `SortableHeader.svelte` and `StatusGlyph.svelte`; change them together.
+ */
+const HEADER_FALLBACK_GLYPH = 18
+
+/**
  * Per-cell measurement safety pad in CSS pixels.
  *
  * Pretext measures via canvas, the file list renders via DOM. On macOS
@@ -74,7 +82,7 @@ const HEADER_CHROME_INACTIVE = 0
  * out with end-side antialiasing bleed and inline-block subpixel rounding.
  * The gap is invisible on most strings but accumulates on certain digit
  * combinations (a `00:NN` time renders ~1 px wider than pretext measures),
- * causing the Modified column to ellipsize for one or two rows while every
+ * causing the date column to ellipsize for one or two rows while every
  * other entry in the same listing fits perfectly. 2 px covers the worst case
  * we've seen with the iso `YYYY-MM-DD HH:mm` format and is small enough
  * to be invisible in the overall layout.
@@ -105,7 +113,7 @@ let measureUnavailable = false
 let cachedScale = 0
 
 /**
- * The font's widest decimal digit at the current scale. The Size and Modified
+ * The font's widest decimal digit at the current scale. The Size and date
  * columns render with `font-variant-numeric: tabular-nums`, so every digit
  * takes the same advance, but canvas/pretext can't measure that feature (the
  * canvas `font` shorthand has no tabular-nums slot). We model it by measuring
@@ -260,7 +268,7 @@ function sizeIconSuffixForEntry(entry: FileEntry, showSizeMismatchWarning: boole
 }
 
 /**
- * Compute the shrink-wrapped Ext / Size / Modified column widths for the FullList.
+ * Compute the shrink-wrapped Ext / Size / date column widths for the FullList.
  * Measures only `entries` plus the optional `parentDirStats` (shown on the ".." row).
  * Fully client-side, no disk/IPC calls.
  */
@@ -275,8 +283,12 @@ export function computeFullListColumnWidths(args: {
    *  width and the drawn glyph disagree row by row. */
   isSizeUpdating: (entry: FileEntry) => boolean
   showSizeMismatchWarning: boolean
-  /** The column the rows are in, or `null` when they are in no column's order. */
+  /** The REQUESTED sort column (it decides which header draws a caret), or `null` when the rows are in no column's order. */
   sortBy: SortColumn | null
+  /** The date the date column shows (`displayedDateColumn`): its header label and its cells. */
+  dateColumn: DateColumn
+  /** Whether the date header carries the fallback glyph (`SortableHeader`'s `fallbackNote`). */
+  dateFallbackGlyph?: boolean
   sizeFormatOpts: SizeFormatOpts
   /** Returns `true` for paths in the TCC-restricted set so the size cell
    * widths account for the `<no perms>` override. Defaults to never-restricted. */
@@ -297,6 +309,8 @@ export function computeFullListColumnWidths(args: {
     isSizeUpdating,
     showSizeMismatchWarning,
     sortBy,
+    dateColumn,
+    dateFallbackGlyph = false,
     sizeFormatOpts,
     isRestricted,
     showExtensionInName = false,
@@ -321,7 +335,12 @@ export function computeFullListColumnWidths(args: {
   // Start with header widths (the column must fit its header regardless of data).
   let extMax = measure(tString('fileExplorer.columns.ext')) + chromeFor('extension')
   let sizeMax = measure(tString('fileExplorer.columns.size')) + chromeFor('size')
-  let dateMax = measure(tString('fileExplorer.columns.modified')) + chromeFor('modified')
+  // The date header sorts by the requested date (`dateHeaderSortColumn`), so it's active for any
+  // date sort while its label names the date it shows.
+  let dateMax =
+    measure(tString(headerLabelKey(dateColumn))) +
+    chromeFor(dateHeaderSortColumn(sortBy)) +
+    (dateFallbackGlyph ? HEADER_FALLBACK_GLYPH : 0)
 
   // Cap on per-row Ext text width so a single pathological extension can't
   // push the rest of the row off-screen. Compared against the row's text-only
@@ -347,6 +366,7 @@ export function computeFullListColumnWidths(args: {
     sizeFormatOpts,
     isRestricted,
     formattedDate,
+    dateColumn,
   })
   extMax = rowResult.extMax
   sizeMax = rowResult.sizeMax
@@ -392,6 +412,7 @@ interface FoldEntriesContext {
   sizeFormatOpts: SizeFormatOpts
   isRestricted?: (path: string) => boolean
   formattedDate: (timestamp: number) => FormattedDate
+  dateColumn: DateColumn
 }
 
 function foldEntries(
@@ -422,12 +443,11 @@ function foldEntries(
     if (rowSize > sizeMax) sizeMax = rowSize
     if (iconSuffix > sizeIconSuffixMax) sizeIconSuffixMax = iconSuffix
 
-    // `!= null` (not `!== undefined`): IPC payloads serialize `Option::None` as
-    // explicit `null`, and `formattedDate(null)` returns an empty record but the
-    // upstream call sites used to throw on this case; keep the guard to match
-    // the historical safety net (this was the F8-after-volume-switch killer).
-    if (entry.modifiedAt != null) {
-      const w = ctx.measureNum(joinSegments(ctx.formattedDate(entry.modifiedAt).segments))
+    // `dateOf` reads IPC's `null` as no date: `formattedDate(null)` used to throw upstream
+    // (the F8-after-volume-switch killer).
+    const date = dateOf(entry, ctx.dateColumn)
+    if (date !== undefined) {
+      const w = ctx.measureNum(joinSegments(ctx.formattedDate(date).segments))
       if (w > dateMax) dateMax = w
     }
   }
@@ -442,7 +462,7 @@ function foldEntries(
  * row, which on a pane sitting on `~` under ordinary background writes meant a transition every few
  * seconds for a change nobody asked for. So while the rows are the same ones (`sameRows`), Size grows at
  * once but never shrinks; any change to which rows are on screen, or to how they're measured, lets it
- * shrink-wrap again. Ext and Modified don't move on index updates, so they always follow `next`.
+ * shrink-wrap again. Ext and the date don't move on index updates, so they always follow `next`.
  *
  * Returns `previous` itself when nothing moved, so the caller can skip the write.
  */

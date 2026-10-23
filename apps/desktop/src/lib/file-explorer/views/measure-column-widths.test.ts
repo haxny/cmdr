@@ -10,6 +10,7 @@ import { _setMeasureForTests, computeFullListColumnWidths, holdSizeColumnWidth }
 import { isDirSizeUpdating } from './full-list-utils'
 import { NO_WALKED_GROUND, isPathAffectedByWalk, type WalkedGround } from '#lib/indexing/walked-ground.js'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import { formatSizeForDisplay } from '../selection/selection-info-utils'
 
 const fakeMeasure = (text: string): number => text.length * 7
@@ -61,6 +62,7 @@ const baseArgs = {
   isSizeUpdating: nothingUpdating,
   showSizeMismatchWarning: false,
   sortBy: 'name' as const,
+  dateColumn: 'modified' as const,
   sizeFormatOpts: { unit: 'bytes' as const, format: 'binary' as const },
 }
 
@@ -202,6 +204,48 @@ describe('computeFullListColumnWidths', () => {
     })
     // "2026-12-31 23:59" = 16 chars × 7 = 112 + 2 px pad = 114. Beats MIN_DATE_WIDTH (70).
     expect(w.date).toBe(16 * 7 + 2)
+  })
+
+  // The date column shows `displayedDateColumn`'s date, so it measures that date's cells,
+  // never Modified's by habit (renderer and measurer are one contract).
+  it('measures the cells of the date the column shows', () => {
+    _setMeasureForTests(fakeMeasure)
+    const formattedDate = (t: number) => stubDate(t === 2 ? '2026-12-31 23:59:59 long' : 'short')
+    const rows = [entry({ name: 'a', modifiedAt: 1, addedAt: 2 })]
+    const modified = computeFullListColumnWidths({ ...baseArgs, formattedDate, entries: rows })
+    const added = computeFullListColumnWidths({ ...baseArgs, formattedDate, entries: rows, dateColumn: 'added' })
+    expect(modified.date).toBe(70)
+    expect(added.date).toBe('2026-12-31 23:59:59 long'.length * 7 + 2)
+  })
+
+  describe('date header', () => {
+    afterEach(() => {
+      _setCatalogForTests('xx', null)
+      _setLocaleForTests(null)
+    })
+
+    /** A language whose Added label outgrows the column's floor, so header widths show. */
+    function useLongAddedLabel(label: string): void {
+      _setCatalogForTests('xx', { 'fileExplorer.columns.added': label })
+      _setLocaleForTests('xx')
+    }
+
+    it('fits the label of the date it shows, with the caret while a date sort is requested', () => {
+      _setMeasureForTests(fakeMeasure)
+      useLongAddedLabel('Added to this folder')
+      const shown = { ...baseArgs, entries: [], dateColumn: 'added' as const }
+      // 20 chars × 7 = 140 + 2 px pad; the caret's 12 only while the header is active.
+      expect(computeFullListColumnWidths(shown).date).toBe(142)
+      expect(computeFullListColumnWidths({ ...shown, sortBy: 'added' }).date).toBe(154)
+    })
+
+    it('makes room for the fallback glyph beside the label', () => {
+      _setMeasureForTests(fakeMeasure)
+      // Requested Added, rows in Modified: "Modified" 56 + caret 12 + glyph 18 + pad 2.
+      const fallback = { ...baseArgs, entries: [], sortBy: 'added' as const, dateColumn: 'modified' as const }
+      expect(computeFullListColumnWidths(fallback).date).toBe(70)
+      expect(computeFullListColumnWidths({ ...fallback, dateFallbackGlyph: true }).date).toBe(88)
+    })
   })
 
   it('uses the widest date across all rows', () => {

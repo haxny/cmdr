@@ -59,6 +59,9 @@
         isHiddenRowDimmed,
     } from './full-list-utils'
     import { computeFullListColumnWidths, holdSizeColumnWidth } from './measure-column-widths'
+    import { dateOf, displayedDateColumn } from '../displayed-date'
+    import { buildDateTooltip } from '../selection/selection-info-utils'
+    import { sortFallbackMessage } from '../pane/sort-fallback'
     import { untrack } from 'svelte'
     import {
         getRowHeight,
@@ -123,6 +126,12 @@
          */
         sortBy: SortColumn | null
         sortOrder: SortOrder
+        /**
+         * The column the backend ordered the rows by (`FilePaneAPI.getEffectiveSortBy`, paired
+         * with `listingId`): `sortBy`, or Modified for a date the location doesn't record.
+         * It picks the date the date column shows (`displayed-date.ts`).
+         */
+        effectiveSortBy: SortColumn | null
         /**
          * Repo root for the optional Git status column. `null` when the path
          * isn't inside a worktree; `undefined` when the column is disabled.
@@ -204,6 +213,7 @@
         currentPath,
         sortBy,
         sortOrder,
+        effectiveSortBy,
         gitRepoRoot = null,
         showGitColumn = false,
         renameState = null,
@@ -257,9 +267,22 @@
         cacheGeneration: () => cacheGeneration,
         softRefreshTick: () => softRefreshTick,
         staticEntries: () => staticEntries,
+        sortBy: () => sortBy,
+        effectiveSortBy: () => effectiveSortBy,
         onSyncStatusRequest: () => onSyncStatusRequest,
         onIndexStatusRequest: () => onIndexStatusRequest,
         onFolderCoverageRequest: () => onFolderCoverageRequest,
+    })
+
+    /**
+     * The date column follows the sort its ROWS were fetched under (`cache.rowsSort`), so
+     * retained rows keep their own date until the new ones land. Cells, header label, glyph,
+     * width, tooltip, and row names all read these two.
+     */
+    const dateColumn = $derived(displayedDateColumn(cache.rowsSort.effectiveSortBy))
+    const dateFallbackNote = $derived.by(() => {
+        const { sortBy: requested, effectiveSortBy: effective } = cache.rowsSort
+        return requested === null || effective === null ? undefined : (sortFallbackMessage(requested, effective) ?? undefined)
     })
 
     // ==== Virtual scrolling constants ====
@@ -474,6 +497,8 @@
             isSizeUpdating,
             showSizeMismatchWarning,
             sortBy,
+            dateColumn,
+            dateFallbackGlyph: dateFallbackNote !== undefined,
             sizeFormatOpts,
             isRestricted,
             showExtensionInName,
@@ -493,6 +518,8 @@
             sizeFormatOpts.unit,
             sizeFormatOpts.format,
             sortBy,
+            dateColumn,
+            dateFallbackNote,
             showSizeMismatchWarning,
             showExtensionInName,
             scale,
@@ -750,6 +777,8 @@
         {isFocused}
         {sortBy}
         {sortOrder}
+        {dateColumn}
+        {dateFallbackNote}
         {showExtensionInName}
         {gitColumnVisible}
         {skipTransition}
@@ -810,7 +839,7 @@
                         isSelected: selectedIndices.has(globalIndex),
                         isUnderCursor: globalIndex === cursorIndex,
                     })}
-                    {@const date = formattedDate(file.modifiedAt)}
+                    {@const date = formattedDate(dateOf(file, dateColumn))}
                     {@const dirUpdating = file.isDirectory && isSizeUpdating(file)}
                     {@const dirSizeState = file.isDirectory
                         ? getDirSizeDisplayState(
@@ -842,7 +871,7 @@
                                         triads: sizeTriads,
                                         dirState: dirSizeState,
                                     }),
-                                    modified: date.text,
+                                    date: { column: dateColumn, text: date.text },
                                     gitStatus: gitStatus ? labelFor(gitStatus) : undefined,
                                 },
                             }),
@@ -1012,7 +1041,8 @@
                                 >
                             {/if}
                         </span>
-                        <span class="col-date">
+                        <!-- Every date the entry carries, built on hover only: a row renders far more often than anyone hovers it. -->
+                        <span class="col-date" use:tooltip={{ html: () => buildDateTooltip(file, formattedDate, dateColumn).html }}>
                             {#each date.segments as seg, i (i)}{#if seg.ageClass}<span class={seg.ageClass}
                                         >{seg.text}</span
                                     >{:else}{seg.text}{/if}{/each}

@@ -1511,9 +1511,13 @@
   },
   "fileExplorer.columns.created": "Created",
   "@fileExplorer.columns.created": {
-    "description": "File-list column header for the creation date (Brief view). Keep it short.",
+    "description": "File-list column header for the creation date. Brief view shows it as its own sort button; Full view shows it on the date column while the list is sorted by date created. Its rendered text is also measured to size the column. Keep it short.",
     "screenshot": "main-window.png",
     "screenshotNote": "The main window, pictured here. Your string is the header of the creation date column in the file list, which this screenshot doesn’t show."
+  },
+  "fileExplorer.columns.added": "Added",
+  "@fileExplorer.columns.added": {
+    "description": "File-list column header for the date each item was added to its folder (moved, copied, or downloaded into it), Finder's \"Date Added\". Full view shows it on the date column while the list is sorted by date added. Its rendered text is also measured to size the column. Keep it short, parallel with fileExplorer.columns.created and fileExplorer.columns.modified."
   },
   "fileExplorer.columns.sortByRelevance": "Sort by relevance",
   "@fileExplorer.columns.sortByRelevance": {
@@ -1588,6 +1592,20 @@
       "date": "the file’s last-modified date and time, already formatted the way the Modified column shows it"
     },
     "screenshot": "main-window.png"
+  },
+  "fileExplorer.list.rowCreated": "created {date}",
+  "@fileExplorer.list.rowCreated": {
+    "description": "Spoken near the end of a row in the file list’s Full view when a screen reader reads it while the list is sorted by date created, as in “a.txt, 1 KB, created 2026-10-14 10:30”. Never shown on screen. Lowercase where your language allows, because it follows other details after a comma. Keep it parallel with fileExplorer.list.rowModified.",
+    "placeholders": {
+      "date": "the file’s creation date and time, already formatted the way the date column shows it"
+    }
+  },
+  "fileExplorer.list.rowAdded": "added {date}",
+  "@fileExplorer.list.rowAdded": {
+    "description": "Spoken near the end of a row in the file list’s Full view when a screen reader reads it while the list is sorted by date added (when the item was put in its folder, Finder's \"Date Added\"), as in “a.txt, 1 KB, added 2026-10-14 10:30”. Never shown on screen. Lowercase where your language allows, because it follows other details after a comma. Keep it parallel with fileExplorer.list.rowModified.",
+    "placeholders": {
+      "date": "the date and time the item was added to its folder, already formatted the way the date column shows it"
+    }
   },
   "fileExplorer.list.rowGitStatus": "{status} in git",
   "@fileExplorer.list.rowGitStatus": {
@@ -1926,9 +1944,16 @@
   "@fileExplorer.dateTooltip.created": {
     "description": "Label in a file’s date tooltip for its creation time."
   },
-  "fileExplorer.dateTooltip.lastMoved": "Last moved (“added”)",
-  "@fileExplorer.dateTooltip.lastMoved": {
-    "description": "Label in a file’s date tooltip for when it was last moved into its folder. The parenthetical “added” is the macOS Finder term for the same timestamp; keep both."
+  "fileExplorer.dateTooltip.dateAdded": "Date added",
+  "@fileExplorer.dateTooltip.dateAdded": {
+    "description": "Label in a file’s date tooltip for when it was put in its folder (moved, copied, or downloaded into it). Use the word macOS Finder uses for its \"Date Added\" column in your language, in sentence case."
+  },
+  "fileExplorer.dateTooltip.displayedLabel": "{label} (displayed)",
+  "@fileExplorer.dateTooltip.displayedLabel": {
+    "description": "Wraps the one label in a file’s date tooltip whose date the file list’s date column is showing right now, as in “Last modified (displayed): 2026-10-14 10:30”. The tooltip lists every date a file has, one per line, so this marks which of them the column shows. Put the marker word wherever your language reads naturally.",
+    "placeholders": {
+      "label": "one of the tooltip’s date labels, already translated: “Created”, “Date added”, or “Last modified”"
+    }
   },
   "fileExplorer.dateTooltip.lastModified": "Last modified",
   "@fileExplorer.dateTooltip.lastModified": {

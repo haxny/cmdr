@@ -168,9 +168,10 @@ Full history-stack contract and the volume-breadcrumb detail live in `navigation
     describes: `listing-loader.ts::handleListingComplete` (beside `setTotalCount`, before its first `await`),
     `applyRowResult` (re-sort and the hidden-files toggle), a `directory-diff` batch whose `effectiveSortBy` is set (a
     re-read into a volume recording other dates), and a pane swap (`SwapState` carries it). Navigation start leaves it
-    alone. ❗ The list caches still paint the old folder's retained rows for one fetch AFTER `listing-complete`, so a
-    view that renders a date from it must capture it with its fetched rows, the way they capture the `..` row
-    (`views/DETAILS.md`), or those rows flash the new folder's date.
+    alone. The pane hands it to the list paired with the listing it renders (`listing-presentation.svelte.ts`), and the
+    Full cache captures it with each fetch's rows (`rowsSort`), since the old folder's retained rows stay painted for
+    one fetch AFTER `listing-complete` (`views/DETAILS.md`). The date the rows show is `displayed-date.ts`'s
+    `displayedDateColumn`, the one derivation every date surface reads.
   - A snapshot pane's lives on its `AppliedSnapshotSort` (`search/DETAILS.md` § "The snapshot pane's row order").
   - A user-picked sort COLUMN that lands in a fallback raises an info toast (`pane/sort-fallback.ts`, from
     `sort-operations.ts`); an order flip of the column already requested, a re-sort the user didn't start, and a

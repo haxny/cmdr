@@ -68,7 +68,11 @@ describe('fileRowName', () => {
   })
 
   it('adds the Full view’s size, modified date, and git status in that order', () => {
-    const details = { size: '1 KB', modified: '2026-10-14 10:30', gitStatus: 'Modified' }
+    const details = {
+      size: '1 KB',
+      date: { column: 'modified', text: '2026-10-14 10:30' },
+      gitStatus: 'Modified',
+    } as const
     expect(fileRowName({ entry: entry({ name: 'a.txt' }), details })).toBe(
       'a.txt, 1 KB, (modified) 2026-10-14 10:30, Modified in git',
     )
@@ -77,11 +81,21 @@ describe('fileRowName', () => {
     )
   })
 
+  // The date cell shows the date the rows are sorted by (`displayedDateColumn`), so the name
+  // says which one it is.
+  it.each([
+    ['created', 'a.txt, (created) 2026-10-14 10:30'],
+    ['added', 'a.txt, (added) 2026-10-14 10:30'],
+    ['modified', 'a.txt, (modified) 2026-10-14 10:30'],
+  ] as const)('names the %s date the date cell shows', (column, expected) => {
+    const details = { date: { column, text: '2026-10-14 10:30' } }
+    expect(fileRowName({ entry: entry({ name: 'a.txt' }), details })).toBe(expected)
+  })
+
   it('leaves out a size, date, or git status it doesn’t have', () => {
-    expect(fileRowName({ entry: entry({ name: 'a.txt' }), details: { modified: '2026-10-14 10:30' } })).toBe(
-      'a.txt, (modified) 2026-10-14 10:30',
-    )
-    expect(fileRowName({ entry: entry({ name: 'a.txt' }), details: { size: '', modified: '' } })).toBe('a.txt')
+    expect(fileRowName({ entry: entry({ name: 'a.txt' }), details: { size: '1 KB' } })).toBe('a.txt, 1 KB')
+    const noDate = { size: '', date: { column: 'modified', text: '' } } as const
+    expect(fileRowName({ entry: entry({ name: 'a.txt' }), details: noDate })).toBe('a.txt')
   })
 
   it('joins with no "and", in a language whose lists end in one', () => {
@@ -89,7 +103,7 @@ describe('fileRowName', () => {
     try {
       const name = fileRowName({
         entry: entry({ name: 'sub', isDirectory: true }),
-        details: { size: '1 KB', modified: '2026-10-14 10:30' },
+        details: { size: '1 KB', date: { column: 'modified', text: '2026-10-14 10:30' } },
       })
       expect(name).toMatch(/^sub \(.+\), 1 KB, \(.+\) 2026-10-14 10:30$/)
       expect(name).not.toMatch(/\bund\b/)

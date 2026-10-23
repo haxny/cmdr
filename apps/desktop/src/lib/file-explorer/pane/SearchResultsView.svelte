@@ -241,6 +241,7 @@
         currentPath={path}
         sortBy={snapshotSort?.column ?? null}
         sortOrder={snapshotSort?.order ?? 'ascending'}
+        effectiveSortBy={snapshotSort?.effectiveSortBy ?? null}
         {clearsSortLabel}
         onSortChange={(column: SortColumn) => {
             if (snapshotId) void sortSnapshot(snapshotId, nextSnapshotSort(snapshotSort, column))

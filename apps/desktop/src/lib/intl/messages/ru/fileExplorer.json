@@ -1294,10 +1294,6 @@
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
   },
-  "fileExplorer.dateTooltip.lastMoved": "Последнее перемещение («добавление»)",
-  "@fileExplorer.dateTooltip.lastMoved": {
-    "sourceHash": "1366405"
-  },
   "fileExplorer.dateTooltip.lastModified": "Последнее изменение",
   "@fileExplorer.dateTooltip.lastModified": {
     "sourceHash": "0fe1058"

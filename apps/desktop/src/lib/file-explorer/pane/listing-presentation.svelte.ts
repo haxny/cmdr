@@ -4,6 +4,8 @@
  * a load that lasts 100 ms earns the normal loading screen.
  */
 
+import type { SortColumn } from '../types'
+
 export const LISTING_LOADING_DELAY_MS = 100
 
 export interface ListingPresentationDeps {
@@ -12,6 +14,8 @@ export interface ListingPresentationDeps {
   getLoading: () => boolean
   /** The `..` row the CURRENT path asks for, which moves before its listing lands. */
   getParentRow: () => ParentRow
+  /** The column the CURRENT listing is ordered by, set at `listing-complete` while loading still runs. */
+  getEffectiveSortBy: () => SortColumn | null
 }
 
 /** Whether a list starts with the synthetic `..` row, and where that row points. */
@@ -31,6 +35,12 @@ export interface ListingPresentation {
    * it `/a/b`), a duplicate key in the list's keyed `#each`.
    */
   readonly parentRow: ParentRow
+  /**
+   * The column the rows of `listingId` are ordered by, which decides the date they show
+   * (`displayed-date.ts`). The pane takes the next listing's at `listing-complete`, before
+   * its loading ends, so the settled rows keep theirs until then.
+   */
+  readonly effectiveSortBy: SortColumn | null
   /** Whether the loading screen has outlasted the grace period. */
   readonly showLoading: boolean
 }
@@ -39,6 +49,7 @@ export function createListingPresentation(deps: ListingPresentationDeps): Listin
   let settledListingId = $state('')
   let settledTotalCount = $state(0)
   let settledParentRow = $state<ParentRow>({ hasParent: false, parentPath: '' })
+  let settledEffectiveSortBy = $state<SortColumn | null>(null)
   let showLoading = $state(deps.getLoading())
 
   $effect(() => {
@@ -51,6 +62,7 @@ export function createListingPresentation(deps: ListingPresentationDeps): Listin
         settledListingId = listingId
         settledTotalCount = deps.getTotalCount()
         settledParentRow = deps.getParentRow()
+        settledEffectiveSortBy = deps.getEffectiveSortBy()
       }
       showLoading = false
     } else if (!settledListingId) {
@@ -77,6 +89,9 @@ export function createListingPresentation(deps: ListingPresentationDeps): Listin
     },
     get parentRow() {
       return deps.getLoading() ? settledParentRow : deps.getParentRow()
+    },
+    get effectiveSortBy() {
+      return deps.getLoading() ? settledEffectiveSortBy : deps.getEffectiveSortBy()
     },
     get showLoading() {
       return showLoading

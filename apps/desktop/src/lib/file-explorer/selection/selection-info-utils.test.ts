@@ -191,22 +191,45 @@ describe('buildDateTooltip', () => {
   const NOW_MS = Date.parse('2026-05-11T12:00:00Z')
   const fmt = (ts: number | null | undefined) => formatDateForDisplay(ts, 'iso', 'YYYY-MM-DD | HH:mm', NOW_MS)
 
+  /** Each line's label, in order, with the tags and the date stripped. */
+  function labels(html: string): string[] {
+    return html.split('<br>').map((line) => line.slice(0, line.indexOf(':')))
+  }
+
+  const allDates = { createdAt: 1705322445, addedAt: 1705322446, modifiedAt: 1705322447 }
+
   it('returns empty html when no dates are set', () => {
     const entry = createFileEntry()
-    expect(buildDateTooltip(entry, fmt).html).toBe('')
+    expect(buildDateTooltip(entry, fmt, 'modified').html).toBe('')
   })
 
-  it('includes labeled lines for each known date', () => {
-    const entry = createFileEntry({
-      createdAt: 1705322445,
-      addedAt: 1705322445,
-      modifiedAt: 1705322445,
-    })
-    const html = buildDateTooltip(entry, fmt).html
-    expect(html).toContain('Created:')
-    expect(html).toContain('Last moved (“added”):')
-    expect(html).toContain('Last modified:')
-    expect(html).toContain('<br>')
+  it('lists every date the entry carries as Created, Date added, Last modified', () => {
+    const html = buildDateTooltip(createFileEntry(allDates), fmt, 'created').html
+    expect(labels(html)).toEqual(['Created (displayed)', 'Date added', 'Last modified'])
+  })
+
+  it.each([
+    ['modified', ['Created', 'Date added', 'Last modified (displayed)']],
+    ['added', ['Created', 'Date added (displayed)', 'Last modified']],
+  ] as const)('marks the %s date as the one the column shows', (displayed, expected) => {
+    expect(labels(buildDateTooltip(createFileEntry(allDates), fmt, displayed).html)).toEqual(expected)
+  })
+
+  // A location that doesn't record a date leaves it unset (the backends' conformance
+  // rule), so the tooltip never shows a line it can't fill.
+  it('leaves out a date the entry lacks, null from IPC included', () => {
+    const entry = createFileEntry({ modifiedAt: 1705322447, addedAt: null as unknown as undefined })
+    expect(labels(buildDateTooltip(entry, fmt, 'modified').html)).toEqual(['Last modified (displayed)'])
+  })
+
+  it('escapes a translated label, since the tooltip renders html', () => {
+    _setCatalogForTests('en', { 'fileExplorer.dateTooltip.created': 'Made & born' })
+    try {
+      const html = buildDateTooltip(createFileEntry({ createdAt: 1705322445 }), fmt, 'modified').html
+      expect(html).toContain('Made &amp; born:')
+    } finally {
+      _setCatalogForTests('en', null)
+    }
   })
 
   it('wraps colored segments in their age-tier spans', () => {
@@ -215,7 +238,7 @@ describe('buildDateTooltip', () => {
     // Five years ago: year tier is age-old, no month/day/time coloring.
     const old = Date.parse('2021-05-11T08:00:00Z') / 1000
     const entry = createFileEntry({ createdAt: old, modifiedAt: sameDay })
-    const html = buildDateTooltip(entry, fmt).html
+    const html = buildDateTooltip(entry, fmt, 'modified').html
     expect(html).toContain('class="age-old"')
     expect(html).toContain('class="age-fresh"')
   })

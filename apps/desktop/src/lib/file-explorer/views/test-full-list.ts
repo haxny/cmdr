@@ -5,7 +5,7 @@
  * scroll surface's `clientHeight` straight to the virtual-window math — so
  * without a viewport it renders ZERO rows, silently, and a spec goes green while
  * asserting on an empty DOM. `mountFullList` supplies that viewport, a
- * `getFileRange` that serves the range it's asked for, and the twelve required
+ * `getFileRange` that serves the range it's asked for, and the thirteen required
  * props, so a spec says what it's actually about.
  *
  * A spec pairs this with the module stand-ins from `test-file-list-mocks.ts`
@@ -173,6 +173,7 @@ export async function mountFullList(options: MountFullListOptions = {}): Promise
     currentPath: '/root',
     sortBy: 'name',
     sortOrder: 'ascending',
+    effectiveSortBy: 'name',
     onSelect: () => {},
     onNavigate: () => {},
     ...options.props,

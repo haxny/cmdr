@@ -22,7 +22,8 @@
  * `directory-diff` tick, and the static-entries mirror would rewrite on any prop at all.
  */
 
-import type { FileEntry } from '../types'
+import { untrack } from 'svelte'
+import type { FileEntry, SortColumn } from '../types'
 import { getDirStatsBatch } from '#lib/tauri-commands/index.js'
 import { noteRenderedFolderSizes } from '#lib/indexing/first-size-timing.js'
 import {
@@ -57,6 +58,10 @@ export interface FullListCacheDeps {
    * (search-results pane). `undefined` on a normal pane.
    */
   staticEntries: () => FileEntry[] | undefined
+  /** The REQUESTED sort column, or `null` for a pane in no column's order. */
+  sortBy: () => SortColumn | null
+  /** The column the backend ordered the listing by (`FilePaneAPI.getEffectiveSortBy`). */
+  effectiveSortBy: () => SortColumn | null
   onSyncStatusRequest: () => ((paths: string[]) => void) | undefined
   onIndexStatusRequest: () => ((paths: string[]) => void) | undefined
   onFolderCoverageRequest: () => ((folderPaths: string[]) => void) | undefined
@@ -66,6 +71,15 @@ export interface FullListCacheDeps {
 interface ParentRow {
   hasParent: boolean
   parentPath: string
+}
+
+/**
+ * The sort a window's rows were fetched under: what the view derives their shown date
+ * (`displayedDateColumn`) and the date header's fallback glyph from.
+ */
+export interface RowsSort {
+  sortBy: SortColumn | null
+  effectiveSortBy: SortColumn | null
 }
 
 /** A row ready to render: the entry plus its UI index (`..` included when `hasParent`). */
@@ -93,6 +107,12 @@ export interface FullListCache {
   readonly range: { start: number; end: number }
   /** Recursive stats for the CURRENT directory, shown on the `..` row. Reactive. */
   readonly parentDirStats: DirStats | null
+  /**
+   * The sort the cached rows were fetched under, or the live props while no rows are held.
+   * Reactive. Retained rows keep theirs until the forced fetch replaces them: the pane takes
+   * a new folder's effective column at `listing-complete`, one fetch before its rows land here.
+   */
+  readonly rowsSort: RowsSort
   /** The entry at a UI index, or `undefined` when it isn't in the window. */
   getEntryAt: (globalIndex: number) => FileEntry | undefined
   /** The UI index of a loaded row, or `undefined` when it isn't in the window. */
@@ -137,11 +157,18 @@ export function createFullListCache(deps: FullListCacheDeps): FullListCache {
   // old rows (`/a` → `/a/b/c` makes it `/a/b`), a duplicate key in the keyed `#each`.
   let entriesListingId = ''
   let entriesParentRow: ParentRow = { hasParent: false, parentPath: '' }
+  // The sort `entries` were fetched under, captured with them like the `..` row above.
+  let entriesSort = $state<RowsSort>({ sortBy: null, effectiveSortBy: null })
   let queuedFetch: (VisibleWindowRange & { force?: boolean }) | null = null
 
   /** The cached rows that are safe to act on: none while retained rows await replacement. */
   function actionableEntries(): FileEntry[] {
     return entriesEpoch === fetchEpoch ? entries : []
+  }
+
+  /** The live sort props, read untracked: a caller's effect shouldn't re-run on a sort change for this. */
+  function liveSort(): RowsSort {
+    return untrack(() => ({ sortBy: deps.sortBy(), effectiveSortBy: deps.effectiveSortBy() }))
   }
 
   function queueFetchIfBusy(args: VisibleWindowRange & { force?: boolean }): boolean {
@@ -171,6 +198,7 @@ export function createFullListCache(deps: FullListCacheDeps): FullListCache {
     const hasParent = deps.hasParent()
     const parentPath = deps.parentPath()
     const totalCount = deps.totalCount()
+    const sort = liveSort()
 
     // Check if range is already cached BEFORE setting isFetching
     // This prevents blocking subsequent fetches when data is already available
@@ -205,6 +233,7 @@ export function createFullListCache(deps: FullListCacheDeps): FullListCache {
         entriesEpoch = capturedEpoch
         entriesListingId = listingId
         entriesParentRow = { hasParent, parentPath }
+        entriesSort = sort
         noteRenderedFolderSizes(entries, deps.volumeId())
       }
     } catch {
@@ -241,6 +270,9 @@ export function createFullListCache(deps: FullListCacheDeps): FullListCache {
     },
     get parentDirStats() {
       return parentDirStats
+    },
+    get rowsSort() {
+      return entries.length > 0 ? entriesSort : { sortBy: deps.sortBy(), effectiveSortBy: deps.effectiveSortBy() }
     },
 
     getEntryAt: (globalIndex: number) =>
@@ -323,6 +355,8 @@ export function createFullListCache(deps: FullListCacheDeps): FullListCache {
       range = { start: 0, end: src.length }
       entriesEpoch = fetchEpoch
       entriesListingId = deps.listingId()
+      // Tracked: a snapshot's sort and its rows change together, so this mirror re-runs with them.
+      entriesSort = { sortBy: deps.sortBy(), effectiveSortBy: deps.effectiveSortBy() }
     },
 
     refreshIndexSizes: refreshIndexSizesNow,

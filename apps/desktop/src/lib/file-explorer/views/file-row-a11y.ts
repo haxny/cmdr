@@ -18,6 +18,7 @@ import { formatUnitList } from '#lib/intl/list-format.js'
 import { getSyncStatusLabelKey } from './file-list-utils'
 import { LOWER_BOUND_GLYPH, type DirSizeDisplayState } from './full-list-utils'
 import type { CursorRowRef } from './list-focus.svelte'
+import { rowDatePhraseKey, type DateColumn } from '../displayed-date'
 
 /**
  * A file row's DOM id. `listId` is the list instance's `$props.id()`, so the two panes (and a
@@ -67,12 +68,13 @@ export interface FileRowNameInput {
    * The Full view's cells, as the row already formatted them. An empty or missing value is
    * left out (a folder whose size isn't known yet says no size).
    */
-  details?: { host?: string; size?: string; modified?: string; gitStatus?: string }
+  details?: { host?: string; size?: string; date?: { column: DateColumn; text: string }; gitStatus?: string }
 }
 
 /**
- * The row's accessible name: "{name} ({kind}, {badges})", then (Full view) size,
- * "(modified) {date}", and "{status} in git": "src (folder), 4,096, (modified) 2026-10-14 10:30,
+ * The row's accessible name: "{name} ({kind}, {badges})", then (Full view) size, the date cell
+ * as "(modified) {date}" (or "(created)", "(added)": whichever date `displayedDateColumn` put in
+ * the cell), and "{status} in git": "src (folder), 4,096, (modified) 2026-10-14 10:30,
  * Modified in git". The git phrase needs no parentheses: the Git cell draws its glyph from CSS,
  * so none of it is visible text, and "in git" keeps it from echoing the date's "modified".
  * `..` says "Parent folder" in place of its name, then its cells like any row, its size as
@@ -99,7 +101,7 @@ export function fileRowName({ entry, syncStatus, isRestricted = false, details }
       : withAside(entry.name, rowAsides(entry, syncStatus, isRestricted)),
     details?.host ? asideAround('fileExplorer.restic.snapshot.host', details.host) : '',
     parent && size !== '' ? asideAround('fileExplorer.list.parentRowSize', size) : size,
-    details?.modified ? asideAround('fileExplorer.list.rowModified', details.modified) : '',
+    details?.date?.text ? asideAround(rowDatePhraseKey(details.date.column), details.date.text) : '',
     details?.gitStatus ? tString('fileExplorer.list.rowGitStatus', { status: details.gitStatus }) : '',
   ]
   return formatUnitList(parts.filter((part) => part !== ''))
@@ -127,6 +129,8 @@ const VALUE_SLOT = '\u0000'
 /** Each phrase {@link asideAround} splits, and the param its visible value fills. */
 const ASIDE_SLOTS = {
   'fileExplorer.list.rowModified': 'date',
+  'fileExplorer.list.rowCreated': 'date',
+  'fileExplorer.list.rowAdded': 'date',
   'fileExplorer.list.parentRowSize': 'size',
   'fileExplorer.restic.snapshot.host': 'host',
 } as const satisfies Partial<Record<MessageKey, string>>

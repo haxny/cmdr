@@ -1,6 +1,7 @@
 <script lang="ts">
     import SortableHeader from '../selection/SortableHeader.svelte'
     import type { SortColumn, SortOrder } from '../types'
+    import { dateHeaderSortColumn, headerLabelKey, type DateColumn } from '../displayed-date'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
 
@@ -11,6 +12,10 @@
         /** The column the rows are in, or `null` for a pane in no column's order. */
         sortBy: SortColumn | null
         sortOrder: SortOrder
+        /** The date the date column shows (`displayedDateColumn` of its rows' sort), which names its header. */
+        dateColumn: DateColumn
+        /** Why the rows follow Modified though a date sort was requested, or `undefined` when they don't. */
+        dateFallbackNote: string | undefined
         /**
          * When on, the Name column carries the full filename and there's no Ext
          * column: the two sort triggers share the Name track instead.
@@ -36,6 +41,8 @@
         isFocused,
         sortBy,
         sortOrder,
+        dateColumn,
+        dateFallbackNote,
         showExtensionInName,
         gitColumnVisible,
         skipTransition,
@@ -123,11 +130,14 @@
         currentSortOrder={sortOrder}
         onClick={sort}
     />
+    <!-- One date column: it sorts by (and lights up for) the requested date, and its label
+         names the date its cells show, which is Modified in a fallback. -->
     <SortableHeader
-        column="modified"
+        column={dateHeaderSortColumn(sortBy)}
         {isFocused}
         {clearsSortLabel}
-        label={tString('fileExplorer.columns.modified')}
+        label={tString(headerLabelKey(dateColumn))}
+        fallbackNote={dateFallbackNote}
         align="right"
         currentSortColumn={sortBy}
         currentSortOrder={sortOrder}

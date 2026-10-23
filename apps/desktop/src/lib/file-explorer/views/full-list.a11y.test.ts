@@ -21,6 +21,7 @@ import { dirEntry, fileEntry, mountFullList } from './test-full-list'
 import { installLayoutMock } from '#lib/test-layout.js'
 import { listFocusCases } from './test-list-focus.svelte'
 import type { SortColumn, SortOrder } from '../types'
+import type { DateColumn } from '../displayed-date'
 
 vi.mock('#lib/tauri-commands/index.js', async () =>
   (await import('./test-file-list-mocks')).tauriCommandsMock({
@@ -74,6 +75,7 @@ describe('FullList a11y', () => {
         currentPath: '/root',
         sortBy: 'name',
         sortOrder: 'ascending',
+        effectiveSortBy: 'name',
         onSelect: () => {},
         onNavigate: () => {},
         ...props,
@@ -209,6 +211,8 @@ describe('FullListHeader a11y', () => {
     isFocused: boolean
     sortBy: SortColumn
     sortOrder: SortOrder
+    dateColumn: DateColumn
+    dateFallbackNote: string | undefined
     showExtensionInName: boolean
     gitColumnVisible: boolean
     skipTransition: boolean
@@ -226,6 +230,8 @@ describe('FullListHeader a11y', () => {
         isFocused: true,
         sortBy: 'name',
         sortOrder: 'ascending',
+        dateColumn: 'modified',
+        dateFallbackNote: undefined,
         showExtensionInName: false,
         gitColumnVisible: false,
         skipTransition: false,
@@ -255,6 +261,17 @@ describe('FullListHeader a11y', () => {
 
   it('an unfocused pane has no a11y violations', async () => {
     await expectNoA11yViolations(await mountHeader({ isFocused: false, sortBy: 'modified', sortOrder: 'descending' }))
+  })
+
+  it('a date sort showing its own date has no a11y violations', async () => {
+    await expectNoA11yViolations(await mountHeader({ sortBy: 'added', dateColumn: 'added' }))
+  })
+
+  it('the fallback glyph inside the date header has no a11y violations', async () => {
+    const note = 'This location doesn’t record when items were added, so Cmdr sorts by date modified here.'
+    await expectNoA11yViolations(
+      await mountHeader({ sortBy: 'added', sortOrder: 'descending', dateColumn: 'modified', dateFallbackNote: note }),
+    )
   })
 
   it('every branch at once has no a11y violations', async () => {

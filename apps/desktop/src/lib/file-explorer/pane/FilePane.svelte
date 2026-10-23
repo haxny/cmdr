@@ -451,6 +451,7 @@
         getTotalCount: () => effectiveTotalCount,
         getLoading: () => loading,
         getParentRow: () => ({ hasParent, parentPath: hasParent && canonicalPath ? parentOf(canonicalPath) : '' }),
+        getEffectiveSortBy: () => effectiveSortBy,
     })
     /** A load past the grace period: the list's rows give way to `LoadingIcon`, its header stays. */
     const showLoadingView = $derived(loading && listingPresentation.showLoading)
@@ -2294,6 +2295,7 @@
                 hasParent={listingPresentation.parentRow.hasParent}
                 {sortBy}
                 {sortOrder}
+                effectiveSortBy={listingPresentation.effectiveSortBy}
                 gitRepoRoot={gitBrowser.gitRepoInfo?.repoRoot ?? null}
                 showGitColumn={gitBrowser.showGitStatusColumn}
                 renameState={rename.active ? rename : null}

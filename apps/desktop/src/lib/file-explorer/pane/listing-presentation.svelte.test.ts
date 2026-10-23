@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync } from 'svelte'
 
 import { createListingPresentation, LISTING_LOADING_DELAY_MS } from './listing-presentation.svelte'
+import type { SortColumn } from '../types'
 
 describe('createListingPresentation', () => {
   let dispose: (() => void) | undefined
@@ -16,6 +17,7 @@ describe('createListingPresentation', () => {
     totalCount: number
     loading: boolean
     parentRow?: { hasParent: boolean; parentPath: string }
+    effectiveSortBy?: SortColumn | null
   }
 
   function create(initial: State) {
@@ -23,6 +25,7 @@ describe('createListingPresentation', () => {
     let totalCount = $state(initial.totalCount)
     let loading = $state(initial.loading)
     let parentRow = $state(initial.parentRow ?? { hasParent: false, parentPath: '' })
+    let effectiveSortBy = $state(initial.effectiveSortBy ?? null)
     let presentation!: ReturnType<typeof createListingPresentation>
 
     dispose = $effect.root(() => {
@@ -31,6 +34,7 @@ describe('createListingPresentation', () => {
         getTotalCount: () => totalCount,
         getLoading: () => loading,
         getParentRow: () => parentRow,
+        getEffectiveSortBy: () => effectiveSortBy,
       })
     })
     flushSync()
@@ -39,6 +43,7 @@ describe('createListingPresentation', () => {
       presentation,
       set: (next: Partial<State>) => {
         if (next.parentRow !== undefined) parentRow = next.parentRow
+        if (next.effectiveSortBy !== undefined) effectiveSortBy = next.effectiveSortBy
         if (next.listingId !== undefined) listingId = next.listingId
         if (next.totalCount !== undefined) totalCount = next.totalCount
         if (next.loading !== undefined) loading = next.loading
@@ -91,6 +96,36 @@ describe('createListingPresentation', () => {
 
     set({ totalCount: 4, loading: false })
     expect(presentation.parentRow).toEqual(next)
+  })
+
+  // `listing-complete` sets the new folder's effective column before its cursor lookup
+  // awaits, while the settled rows are still the ones on screen: those rows keep theirs.
+  it('keeps the settled listing’s effective sort until the next listing lands', () => {
+    const { presentation, set } = create({
+      listingId: 'old',
+      totalCount: 2,
+      loading: false,
+      effectiveSortBy: 'modified',
+    })
+
+    set({ listingId: 'new', loading: true })
+    set({ totalCount: 4, effectiveSortBy: 'added' })
+    expect(presentation.effectiveSortBy).toBe('modified')
+
+    set({ loading: false })
+    expect(presentation.effectiveSortBy).toBe('added')
+  })
+
+  it('follows a re-sort while nothing is loading', () => {
+    const { presentation, set } = create({
+      listingId: 'old',
+      totalCount: 2,
+      loading: false,
+      effectiveSortBy: 'modified',
+    })
+
+    set({ effectiveSortBy: 'added' })
+    expect(presentation.effectiveSortBy).toBe('added')
   })
 
   it('reveals loading after 100 ms and cancels the timer when the load settles', () => {

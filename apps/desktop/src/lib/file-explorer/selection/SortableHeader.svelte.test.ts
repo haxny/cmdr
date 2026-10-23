@@ -37,6 +37,7 @@ interface HeaderProps {
   currentSortOrder: 'ascending' | 'descending'
   onClick: (column: SortColumn) => void
   isFocused: boolean
+  fallbackNote?: string
 }
 
 function setup(overrides: Partial<HeaderProps> = {}) {
@@ -141,6 +142,52 @@ describe('SortableHeader sort-shortcut tooltip', () => {
 
     expect(tooltipEl()?.textContent).toContain('Sort by date created')
     expect(tooltipKbd()).toBeNull()
+  })
+})
+
+// A requested date sort the location can't honor falls back to Modified; the header says so
+// with a glyph, and the button's tooltip carries the sentence above its command name.
+describe('SortableHeader fallback note', () => {
+  const NOTE = 'This location doesn’t record when items were added.'
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('draws the info glyph inside the button, hidden from the a11y tree, with no tooltip of its own', () => {
+    const header = setup({ column: 'added', label: 'Modified', fallbackNote: NOTE })
+    const glyph = header.button.querySelector('.status-glyph')
+    expect(glyph).not.toBeNull()
+    expect(glyph?.closest('[aria-hidden="true"]')).not.toBeNull()
+
+    glyph?.dispatchEvent(new MouseEvent('mouseenter'))
+    vi.advanceTimersByTime(TOOLTIP_SHOW_DELAY_MS + 10)
+    expect(document.querySelector('.cmdr-tooltip.visible')).toBeNull()
+
+    void unmount(header.component)
+    header.target.remove()
+  })
+
+  it('puts the note above the command name in the button tooltip', () => {
+    const header = setup({ column: 'added', label: 'Modified', fallbackNote: NOTE })
+    hover(header.button)
+
+    expect(tooltipEl()?.querySelector('.cmdr-tooltip-text')?.textContent).toBe(`${NOTE}\n\nSort by date added`)
+
+    header.button.dispatchEvent(new MouseEvent('mouseleave'))
+    void unmount(header.component)
+    header.target.remove()
+  })
+
+  it('draws no glyph without a note', () => {
+    const header = setup({ column: 'added', label: 'Added' })
+    expect(header.button.querySelector('.status-glyph')).toBeNull()
+    void unmount(header.component)
+    header.target.remove()
   })
 })
 

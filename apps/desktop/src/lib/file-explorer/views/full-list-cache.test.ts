@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FileEntry } from '../types'
+import type { FileEntry, SortColumn } from '../types'
 
 const utils = vi.hoisted(() => ({
   fetchVisibleRange: vi.fn(),
@@ -55,6 +55,8 @@ interface Props {
   cacheGeneration: number
   softRefreshTick: number
   staticEntries: FileEntry[] | undefined
+  sortBy: SortColumn | null
+  effectiveSortBy: SortColumn | null
 }
 
 let props: Props
@@ -71,6 +73,8 @@ function makeCache() {
     cacheGeneration: () => props.cacheGeneration,
     softRefreshTick: () => props.softRefreshTick,
     staticEntries: () => props.staticEntries,
+    sortBy: () => props.sortBy,
+    effectiveSortBy: () => props.effectiveSortBy,
     onSyncStatusRequest: () => undefined,
     onIndexStatusRequest: () => undefined,
     onFolderCoverageRequest: () => undefined,
@@ -90,6 +94,8 @@ beforeEach(() => {
     cacheGeneration: 0,
     softRefreshTick: 0,
     staticEntries: undefined,
+    sortBy: 'added',
+    effectiveSortBy: 'modified',
   }
   utils.fetchVisibleRange.mockResolvedValue({ entries: [entry('a.txt'), entry('b.txt')], range: { start: 0, end: 2 } })
   utils.updateIndexSizesInPlace.mockResolvedValue(null)
@@ -367,6 +373,37 @@ describe('windowRows', () => {
       [0, '/bucket/test'],
       [1, '/bucket/test/sub/a.txt'],
     ])
+  })
+
+  // The pane takes the new folder's effective column at `listing-complete`, one fetch BEFORE
+  // its rows replace the old folder's here. Rows painted with the new folder's column would
+  // show the wrong date (an Added sort on APFS over a zip's Modified-ordered rows).
+  it('keeps the sort its retained rows were fetched under until the replacement lands', async () => {
+    const cache = makeCache()
+    cache.syncToProps(true)
+    await cache.fetch({ startIndex: 0, endIndex: 10 })
+    expect(cache.rowsSort).toEqual({ sortBy: 'added', effectiveSortBy: 'modified' })
+
+    props.listingId = 'listing-2'
+    props.effectiveSortBy = 'added'
+    cache.syncToProps(true)
+    expect(cache.rowsSort).toEqual({ sortBy: 'added', effectiveSortBy: 'modified' })
+
+    await cache.fetch({ startIndex: 0, endIndex: 10, force: true })
+    expect(cache.rowsSort).toEqual({ sortBy: 'added', effectiveSortBy: 'added' })
+  })
+
+  it('reads the live sort while it holds no rows', () => {
+    props.effectiveSortBy = 'added'
+    expect(makeCache().rowsSort).toEqual({ sortBy: 'added', effectiveSortBy: 'added' })
+  })
+
+  it('captures the static entries’ sort with them', () => {
+    props.staticEntries = [entry('a.txt')]
+    const cache = makeCache()
+    cache.syncStaticEntries()
+    props.effectiveSortBy = 'added'
+    expect(cache.rowsSort).toEqual({ sortBy: 'added', effectiveSortBy: 'modified' })
   })
 
   it('skips rows outside the fetched range rather than rendering blanks', async () => {

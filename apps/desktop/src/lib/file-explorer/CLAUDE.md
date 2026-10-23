@@ -10,6 +10,8 @@ Dual-pane file explorer with keyboard-driven navigation, file selection, sorting
   `navigate()` transaction, volume capabilities, and the error-display pipeline (see `pane/CLAUDE.md`).
 - Sorting, the command palette, and the "Open with" copy toasts (`open-with-copy-bridge.ts`) have no own directory;
   their detail is in `DETAILS.md`.
+- `displayed-date.ts`: `displayedDateColumn(effectiveSortBy)`, the ONE rule for which date a list shows (Created or
+  Added when the rows follow it, else Modified), plus each date's labels. ❌ No second derivation in a view.
 
 ## Must-knows
 

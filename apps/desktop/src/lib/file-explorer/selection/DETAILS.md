@@ -17,10 +17,13 @@ Depth for the status-bar / header components. `CLAUDE.md` holds the must-knows.
   for HTML strings (tooltips, error copy). The tier comes with the size, never from its unit word, which is translated
   copy (`common.sizeUnit.*`).
 - `formatDate(timestamp)`: Unix seconds → `"YYYY-MM-DD HH:MM:SS"` local time.
-- `buildDateTooltip(entry, formatter)`: returns `{ html }`. Each timestamp is rendered via the `formatter` callback (the
-  caller passes `formattedDate` from `reactive-settings.svelte.ts`), then the year portion of each line is wrapped in an
-  age-tier `<span>` so the tooltip picks up the active date palette. The callback keeps the util pure (no reactive
-  imports); the `tooltip` action accepts `{ html }` directly.
+- `buildDateTooltip(entry, formatter, displayed)`: returns `{ html }`, one line per date the entry carries (Created,
+  Date added, Last modified; a missing date has no line), the `displayed` one (`displayedDateColumn`, in
+  `../displayed-date.ts`) labeled through `fileExplorer.dateTooltip.displayedLabel`. Labels are HTML-escaped. Each
+  timestamp is rendered via the `formatter` callback (the caller passes `formattedDate` from
+  `reactive-settings.svelte.ts`), its segments wrapped in age-tier `<span>`s so the tooltip picks up the active date
+  palette. The callback keeps the util pure (no reactive imports); the `tooltip` action accepts `{ html }` directly. The
+  Full date cell passes it as a lazy `html` function, built only on hover.
 - `getSizeDisplay(entry, isBrokenSymlink, displaySize?, formatOpts?)`: returns triads array, `'DIR'`, or `null`. A
   broken symlink is the ONLY entry state that suppresses the size; nothing infers "no access" from metadata. ❌ Don't
   reintroduce a permission-denied guess from `permissions === 0 && size == null`: `FileEntry::new` defaults
@@ -197,7 +200,7 @@ folder's baked-in tint is discarded first, so a folder macOS rendered in any sys
 ## `SortableHeader.svelte`
 
 Props: `column`, `label`, `currentSortColumn`, `currentSortOrder`, `onClick`, `align?` (`'left'` default, `'right'` for
-numeric columns), `isFocused?` (`true` default; pass the pane's focus state).
+numeric columns), `isFocused?` (`true` default; pass the pane's focus state), `clearsSortLabel?`, `fallbackNote?`.
 
 Renders a `<button>` with a sort-direction triangle (▲/▼). The triangle is `display: none` on inactive columns so it
 doesn't reserve width (`FullList` shrink-wraps column widths; `opacity: 0` would bake ~12px of dead space into every
@@ -216,6 +219,11 @@ does more than push the button's content right: it flips the row to `flex-direct
 the label's LEFT and never sits between the label and the column's right edge, where the digits below line up. Under
 `row-reverse` the packing keyword inverts too, hence `justify-content: flex-start`. Width is unaffected — same flex gap,
 same caret — so `measure-column-widths.ts`'s `HEADER_CHROME_*` constants still hold.
+
+`fallbackNote` (a date sort the location can't honor, so the rows follow Modified) draws an `info` `StatusGlyph` after
+the label, inside the button, wrapped `aria-hidden` and with `tooltip={null}`: the button's `aria-label` replaces its
+content's name anyway, and a second tooltip would stack on the button's. The note leads the button's tooltip instead,
+above the command name. The measurer mirrors the glyph's width as `HEADER_FALLBACK_GLYPH`.
 
 ## Decisions
 

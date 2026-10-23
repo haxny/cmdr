@@ -471,8 +471,8 @@ PageUp/PageDown step distance is content-dependent, derived from `prefixSums` di
 so a "page" of skinny columns moves more files than a page of wide ones. Intentional UX: the step matches what's
 visible.
 
-**Decision**: Shrink-wrap Ext / Size / Modified columns from the rows **currently on screen**, not the prefetch buffer
-or the full directory **Why**: The name column should keep every spare pixel, so columns track live content. Pretext's
+**Decision**: Shrink-wrap Ext / Size / date columns from the rows **currently on screen**, not the prefetch buffer or
+the full directory **Why**: The name column should keep every spare pixel, so columns track live content. Pretext's
 canvas measurement is fast enough to recompute on every scroll row-crossing and window resize. The 300ms
 `grid-template-columns ease` transition (on both `.header-row` and `.file-entry`) smooths the resulting width changes.
 Dir switches snap instead of animating (see Gotcha below). The `..` row's (often huge) recursive size only contributes
@@ -606,7 +606,15 @@ breathing room, but an equal negative margin (`margin: 0 calc(-1 * var(--spacing
 still lines up with the data cells below. Only gap+caret count toward the track width. **Why**: If you change those CSS
 values or the caret size/markup, update the two constants or column widths drift. The values aren't derived from the
 live DOM because pretext measurement runs without a reference element. Everything is computed from the pre-known chrome
-formula.
+formula. `HEADER_FALLBACK_GLYPH` (18px: 4px gap, `StatusGlyph`'s 2px margin, 12px icon) mirrors the date header's
+fallback glyph the same way.
+
+**Decision**: The Full date column shows ONE date, `displayedDateColumn` (`../displayed-date.ts`) of the sort its rows
+were fetched under (`full-list-cache.svelte.ts`'s `rowsSort`, captured with the rows like their `..` row). Cells, the
+header label and fallback glyph, the measured width, the row's accessible name, and the cell's lazy date tooltip all
+read it. **Why**: the pane takes a new folder's effective column at `listing-complete`, one fetch before the new rows
+replace the retained ones; read live, those old rows would show the new folder's date. The header still sorts by (and
+lights up for) the REQUESTED date (`dateHeaderSortColumn`). Pinned in `FullList.displayed-date.svelte.test.ts`.
 
 **Gotcha**: Width transitions would "slide" on dir switches, because the header (FullList) and columns (BriefList)
 persist across navs **Why**: When `shouldResetCache` fires, both lists set a `skipTransition` flag and clear it after

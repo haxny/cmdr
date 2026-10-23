@@ -243,10 +243,6 @@
   "@fileExplorer.rename.chainKeptOriginalNameAndOthers": {
     "sourceHash": "0953523"
   },
-  "fileExplorer.dateTooltip.lastMoved": "Último movimiento (“agregado”)",
-  "@fileExplorer.dateTooltip.lastMoved": {
-    "sourceHash": "f1b3bdb"
-  },
   "fileExplorer.imageIndex.file.failed": "No se pudo indexar",
   "@fileExplorer.imageIndex.file.failed": {
     "sourceHash": "db8c074"

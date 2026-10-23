@@ -205,7 +205,8 @@
         return null
     })
     const dateTimestamp = $derived(entry?.name === '..' ? currentDirModifiedAt : entry?.modifiedAt)
-    const dateTooltip = $derived(entry && !isBrokenSymlink ? buildDateTooltip(entry, formattedDate) : undefined)
+    // The line shows `modifiedAt` (`dateTimestamp`), so the tooltip marks Modified as displayed.
+    const dateTooltip = $derived(entry && !isBrokenSymlink ? buildDateTooltip(entry, formattedDate, 'modified') : undefined)
     // Show an info hint next to a directory's size when its subtree contains
     // symlinks: their content is intentionally excluded from the recursive
     // size (matching `du`/Finder), but that can be surprising for folders that

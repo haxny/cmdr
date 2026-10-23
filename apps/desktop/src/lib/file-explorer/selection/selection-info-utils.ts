@@ -9,6 +9,7 @@ import { formatTieredSize, fixedUnitFor, type TieredSize } from '#lib/units/byte
 import type { DateSegment, FormattedDate } from '#lib/settings/format-utils.js'
 import { formatInteger, getGroupSeparator } from '#lib/intl/number-format.js'
 import { tString } from '#lib/intl/messages.svelte.js'
+import { dateOf, TOOLTIP_DATE_ORDER, tooltipLabelKey, type DateColumn } from '../displayed-date'
 
 // Size tier colors for digit triads (indexed: 0=bytes, 1=kB, 2=MB, 3=GB, 4=TB+)
 export const sizeTierClasses = ['size-bytes', 'size-kb', 'size-mb', 'size-gb', 'size-tb']
@@ -141,22 +142,27 @@ function renderSegments(segments: DateSegment[]): string {
  * `reactive-settings.svelte.ts` to inherit the user's date format setting, or
  * a stub from tests.
  *
+ * Lists every date the entry carries, in `TOOLTIP_DATE_ORDER`, and marks the
+ * `displayed` one (`displayedDateColumn`) with the `displayedLabel` wrapper. A
+ * date the entry lacks gets no line; a location that doesn't record a date
+ * never fills it, so no capability lookup is needed here.
+ *
  * Returns `{ html }` for the `tooltip` action. An empty `html` means no
  * timestamps were available on the entry.
  */
 export function buildDateTooltip(
   e: FileEntry,
   formatter: (ts: number | null | undefined) => FormattedDate,
+  displayed: DateColumn,
 ): { html: string } {
   const lines: string[] = []
-  const line = (label: string, ts: number) => {
-    const d = formatter(ts)
-    lines.push(`${label}: ${renderSegments(d.segments)}`)
+  for (const column of TOOLTIP_DATE_ORDER) {
+    const ts = dateOf(e, column)
+    if (ts === undefined) continue
+    const label = tString(tooltipLabelKey(column))
+    const shownLabel = column === displayed ? tString('fileExplorer.dateTooltip.displayedLabel', { label }) : label
+    lines.push(`${escapeHtml(shownLabel)}: ${renderSegments(formatter(ts).segments)}`)
   }
-  // `!= null` because IPC payloads serialize `Option::None` as JSON `null`.
-  if (e.createdAt != null) line(tString('fileExplorer.dateTooltip.created'), e.createdAt)
-  if (e.addedAt != null) line(tString('fileExplorer.dateTooltip.lastMoved'), e.addedAt)
-  if (e.modifiedAt != null) line(tString('fileExplorer.dateTooltip.lastModified'), e.modifiedAt)
   return { html: lines.join('<br>') }
 }
 
