@@ -244,6 +244,20 @@ describe('createSelectionInfoFeed', () => {
       expect(onCursorRow).not.toHaveBeenCalled()
     })
 
+    // The footer shows this entry's date in the CURRENT listing's date kind, so an entry
+    // from the folder the pane left must never land over the new one.
+    it('drops a row read from a listing the pane has since left', async () => {
+      let resolveRead!: (entry: unknown) => void
+      ipc.getFileAt.mockReturnValue(new Promise((resolve) => (resolveRead = resolve)))
+      const { feed, setListingId } = create({ cursorIndex: 3 })
+      const read = feed.fetchEntry()
+      setListingId('listing-2')
+      resolveRead(fileEntry('d.txt'))
+      await read
+      expect(feed.entry).toBeNull()
+      expect(listUtils.updateIndexSizesInPlace).not.toHaveBeenCalled()
+    })
+
     it('reports no row for `..`, whose path is the parent folder', async () => {
       const { feed, onCursorRow } = create({ hasParent: true, cursorIndex: 0, canonicalPath: canonical('/dir/sub') })
       await feed.fetchEntry()

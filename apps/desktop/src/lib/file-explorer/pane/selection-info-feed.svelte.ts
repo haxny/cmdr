@@ -149,12 +149,17 @@ export function createSelectionInfoFeed(deps: SelectionInfoFeedDeps): SelectionI
     // Adjust index for ".." entry
     const backendIndex = hasParent ? cursorIndex - 1 : cursorIndex
 
+    let read: FileEntry | null
     try {
-      entry = await getFileAt(listingId, backendIndex, deps.getIncludeHidden())
+      read = await getFileAt(listingId, backendIndex, deps.getIncludeHidden())
     } catch {
-      entry = null
+      read = null
     }
-    if (entry && deps.getListingId() === listingId && deps.getCursorIndex() === cursorIndex) {
+    // A read from a listing the pane has left belongs to the old folder: dropping it keeps
+    // the footer from showing that file's date in the new folder's date kind.
+    if (deps.getListingId() !== listingId) return
+    entry = read
+    if (entry && deps.getCursorIndex() === cursorIndex) {
       deps.onCursorRow?.(cursorIndex, entry.path)
     }
 
