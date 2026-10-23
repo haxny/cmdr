@@ -395,6 +395,37 @@ describe('createSortOperations', () => {
     expect(addToastForPaneSpy).not.toHaveBeenCalled()
   })
 
+  // Flipping the order of a date sort the location can't honor would otherwise
+  // repeat the same sentence on every flip: the header's glyph already says it.
+  it('stays quiet on an order toggle of a date sort that already fell back', async () => {
+    landsInModified()
+    const { deps, setPaneSort } = makeDeps(makePaneRef(), { sortBy: 'added', sortOrder: 'descending' })
+    const ops = createSortOperations(deps)
+
+    await ops.handleSortChange('left', 'added')
+    ops.setSortOrder('toggle')
+    await vi.waitFor(() => {
+      expect(setPaneSort).toHaveBeenCalledTimes(2)
+    })
+    await ops.setSort('added', 'asc', 'left')
+
+    expect(resortListingSpy).toHaveBeenCalledTimes(3)
+    expect(addToastForPaneSpy).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet when a snapshot pane flips the order of a date sort that already fell back', async () => {
+    getSnapshotSpy.mockReturnValue({ sort: { column: 'added', order: 'ascending' } })
+    sortSnapshotSpy.mockResolvedValue({ column: 'added', order: 'descending', effectiveSortBy: 'modified' })
+    const { deps } = makeDeps(makeSnapshotPaneRef(), { sortBy: 'name', sortOrder: 'ascending' })
+    const ops = createSortOperations(deps)
+
+    await ops.handleSortChange('left', 'added')
+    await ops.setSort('added', 'asc', 'left')
+
+    expect(sortSnapshotSpy).toHaveBeenCalledTimes(2)
+    expect(addToastForPaneSpy).not.toHaveBeenCalled()
+  })
+
   it('says why when a snapshot pane’s sort lands in a fallback', async () => {
     getSnapshotSpy.mockReturnValue({ sort: null })
     sortSnapshotSpy.mockResolvedValue({ column: 'added', order: 'descending', effectiveSortBy: 'modified' })

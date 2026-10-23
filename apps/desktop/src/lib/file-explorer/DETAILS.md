@@ -172,9 +172,10 @@ Full history-stack contract and the volume-breadcrumb detail live in `navigation
     view that renders a date from it must capture it with its fetched rows, the way they capture the `..` row
     (`views/DETAILS.md`), or those rows flash the new folder's date.
   - A snapshot pane's lives on its `AppliedSnapshotSort` (`search/DETAILS.md` § "The snapshot pane's row order").
-  - A user-started sort that lands in a fallback raises an info toast (`pane/sort-fallback.ts`, from
-    `sort-operations.ts`); a re-sort the user didn't start and a navigation stay quiet. The toast stack's live region
-    speaks it, so no `announce` beside it.
+  - A user-picked sort COLUMN that lands in a fallback raises an info toast (`pane/sort-fallback.ts`, from
+    `sort-operations.ts`); an order flip of the column already requested, a re-sort the user didn't start, and a
+    navigation stay quiet (the header glyph says it). The toast stack's live region speaks it, so no `announce` beside
+    it.
 
 ### Implementation
 

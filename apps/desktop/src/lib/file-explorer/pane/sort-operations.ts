@@ -54,20 +54,36 @@ export interface SortOperations {
 
 export function createSortOperations(deps: SortOperationsDeps): SortOperations {
   /**
-   * Says why the rows follow Modified when a sort the user started lands in a
-   * fallback. Only then: a re-sort they didn't start (a settings flip) or landing
-   * in a folder already sorted that way stays quiet, the column header's glyph
-   * telling the rest. The toast stack's own live region speaks it, so ❌ no
-   * `announce` beside it (it would read twice).
+   * Says why the rows follow Modified when the user picks a sort COLUMN that lands
+   * in a fallback. Only then: an order flip of the column already shown, a re-sort
+   * they didn't start (a settings flip), or landing in a folder already sorted that
+   * way stays quiet, the column header's glyph telling the rest. The toast stack's
+   * own live region speaks it, so ❌ no `announce` beside it (it would read twice).
    */
-  function sayWhyFallback(pane: 'left' | 'right', requested: SortColumn, effective: SortColumn): void {
-    const message = sortFallbackMessage(requested, effective)
+  function sayWhyFallback(
+    pane: 'left' | 'right',
+    sort: { previous: SortColumn | null; requested: SortColumn; effective: SortColumn },
+  ): void {
+    if (sort.requested === sort.previous) return
+    const message = sortFallbackMessage(sort.requested, sort.effective)
     if (message !== null) addToastForPane(pane, message, { level: 'info' })
+  }
+
+  /** Sorts a snapshot pane, saying why when a newly picked column falls back. */
+  async function sortSnapshotPane(
+    pane: 'left' | 'right',
+    snapshotId: string,
+    sort: { column: SortColumn; order: SortOrder } | null,
+  ): Promise<void> {
+    const previous = getSnapshot(snapshotId)?.sort?.column ?? null
+    const applied = await sortSnapshot(snapshotId, sort)
+    if (applied) sayWhyFallback(pane, { previous, requested: applied.column, effective: applied.effectiveSortBy })
   }
 
   async function sortPane(pane: 'left' | 'right', column: SortColumn, order: SortOrder, persist: boolean) {
     const ref = deps.getPaneRef(pane)
     if (!ref?.getListingId()) return
+    const previous = deps.getPaneSort(pane).sortBy
     await ref.getRowState().changeView({
       isCurrent: () => deps.getPaneRef(pane) === ref,
       request: (token) => {
@@ -88,7 +104,7 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
         // The REQUESTED column persists; the result's effective one only orders the rows.
         if (persist) deps.setPaneSort(pane, column, order)
         const effects = ref.applyRowResult(result)
-        if (persist) sayWhyFallback(pane, column, result.effectiveSortBy)
+        if (persist) sayWhyFallback(pane, { previous, requested: column, effective: result.effectiveSortBy })
         return effects
       },
     })
@@ -134,8 +150,7 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
     if (snapshotId !== null) {
       // The same tri-state a header click runs, so the keyboard and the mouse
       // can't disagree about where the third press lands.
-      const applied = await sortSnapshot(snapshotId, nextSnapshotSort(getSnapshot(snapshotId)?.sort ?? null, newColumn))
-      if (applied) sayWhyFallback(pane, applied.column, applied.effectiveSortBy)
+      await sortSnapshotPane(pane, snapshotId, nextSnapshotSort(getSnapshot(snapshotId)?.sort ?? null, newColumn))
       return
     }
 
@@ -176,8 +191,7 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
       // The atomic set names both halves, so there is no cycle to run and no way
       // to ask for the ranked order through it. An agent restores that by opening
       // the snapshot again.
-      const applied = await sortSnapshot(snapshotId, { column, order: newOrderAsked })
-      if (applied) sayWhyFallback(pane, applied.column, applied.effectiveSortBy)
+      await sortSnapshotPane(pane, snapshotId, { column, order: newOrderAsked })
       return
     }
 
