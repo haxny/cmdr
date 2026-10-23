@@ -203,7 +203,8 @@ async fn test_volume_manager_with_inmemory() {
 
 #[test]
 fn test_streaming_entries_are_sorted() {
-    use cmdr_listing::{DirectorySortMode, sort_entries};
+    use cmdr_fs::volume::SupportedDates;
+    use cmdr_listing::{DirectorySortMode, EffectiveSort, sort_entries};
     use cmdr_listing::{SortColumn, SortOrder};
 
     // Create unsorted entries
@@ -218,9 +219,12 @@ fn test_streaming_entries_are_sorted() {
     sort_entries(
         &crate::listing_host::listings().collator(),
         &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        EffectiveSort::resolve(
+            SortColumn::Name,
+            SortOrder::Ascending,
+            DirectorySortMode::LikeFiles,
+            SupportedDates::ALL,
+        ),
     );
 
     // Directories should come first, sorted alphabetically

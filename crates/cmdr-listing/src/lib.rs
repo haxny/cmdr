@@ -80,7 +80,9 @@ pub use listing_id::ListingId;
 pub use operations::{ListingLookupError, PaneMarks, ResortResult, RowBeside, RowSpan, SelectionSnapshot};
 pub use quick_filter::{NameFilterResult, OnNoMatch};
 pub use reread::{ReadTicket, RefreshOutcome};
-pub use sorting::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator, sort_entries};
+pub use sorting::{
+    DirectorySortMode, EffectiveSort, SortColumn, SortOrder, SortableEntry, entry_comparator, sort_entries,
+};
 pub use stalled_on::StalledOn;
 pub use stats::ListingStats;
 pub use streaming::ListingRequest;
@@ -266,6 +268,8 @@ mod caching_reaper_test;
 mod caching_replacement_test;
 #[cfg(test)]
 mod caching_test;
+#[cfg(test)]
+mod caching_update_test;
 // Name order itself, split from `sorting_test` because it reads each test's
 // own fixed language.
 #[cfg(test)]
@@ -276,6 +280,8 @@ mod compare_test;
 mod diff_emitter_test;
 #[cfg(test)]
 mod diff_test;
+#[cfg(test)]
+mod effective_sort_test;
 #[cfg(test)]
 mod engine_test;
 #[cfg(test)]
@@ -308,6 +314,8 @@ mod row_beside_test;
 mod selection_test;
 #[cfg(test)]
 mod sorting_dir_mode_test;
+#[cfg(test)]
+mod sorting_effective_test;
 #[cfg(test)]
 mod sorting_test;
 #[cfg(test)]

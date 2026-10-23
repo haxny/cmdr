@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::DirectoryDiffBatch;
 use crate::listing_id::ListingId;
+use crate::sorting::SortColumn;
 
 /// How one streaming listing ended. Exactly one per listing the engine starts.
 #[derive(Debug)]
@@ -35,6 +36,9 @@ pub enum ListingEnd {
         /// The listing came back empty AT its volume's root, which on some volumes
         /// means the OS hid the contents (iCloud Drive without Full Disk Access).
         empty_at_volume_root: bool,
+        /// The column the rows are ordered by: the requested one, or Modified when
+        /// it's a date this volume doesn't record (`EffectiveSort`).
+        effective_sort_by: SortColumn,
     },
     /// The pane moved on before the listing landed. Nothing was cached.
     Cancelled {

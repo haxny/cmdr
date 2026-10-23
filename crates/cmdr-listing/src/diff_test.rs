@@ -51,6 +51,22 @@ fn test_compute_diff_modification() {
     assert_eq!(diff[0].index, 0); // index in new listing
 }
 
+/// Every date counts as a modification whatever the sort, since the row's
+/// tooltip shows them all: a changed creation or added time alone is a Modify.
+#[test]
+fn test_compute_diff_reports_a_changed_creation_or_added_time() {
+    let dated = |created: u64, added: u64| FileEntry {
+        created_at: Some(created),
+        added_at: Some(added),
+        ..make_entry("a.txt", Some(100))
+    };
+    for (new, what) in [(dated(2, 10), "created"), (dated(1, 20), "added")] {
+        let diff = compute_diff(&[dated(1, 10)], &[new], true, None, ScratchVisibility::default());
+        assert_eq!(diff.len(), 1, "{what}");
+        assert_eq!(diff[0].change_type, DiffChangeType::Modify, "{what}");
+    }
+}
+
 #[test]
 fn test_compute_diff_no_change() {
     let old = vec![make_entry("a.txt", Some(100))];

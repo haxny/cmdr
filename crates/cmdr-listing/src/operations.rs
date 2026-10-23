@@ -18,7 +18,7 @@ use crate::Inner;
 use crate::cached_listing::CachedListing;
 #[cfg(test)]
 use crate::pipeline::ReadBy;
-use crate::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::visible_rows::VisibleRows;
 #[cfg(test)]
 use cmdr_fs::benchmark;
@@ -85,18 +85,17 @@ impl Inner {
             volume: &volume,
             routed: is_routed,
         };
-        let mut all_entries = self.prepare(read_by, volume_id, path, all_entries).await;
+        let all_entries = self.prepare(read_by, volume_id, path, all_entries).await;
         if !is_routed {
             self.index.verify_directory(volume_id, path);
         }
 
-        // Sort the entries
-        all_entries.sort(&self.collator(), sort_by, sort_order, dir_sort_mode);
-
-        // Cache the entries FIRST (watcher will read from here), then read the row
-        // count back off the listing's own map so the number the frontend sizes its
-        // scroller with comes from the same filter every later fetch goes through.
-        let listing = CachedListing::new(
+        // Sort through the listing, which resolves the requested column against the
+        // volume's dates, and cache it FIRST (watcher will read from here), then
+        // read the row count back off the listing's own map so the number the
+        // frontend sizes its scroller with comes from the same filter every later
+        // fetch goes through.
+        let mut listing = CachedListing::new(
             self,
             volume_id.to_string(),
             path.to_path_buf(),
@@ -106,6 +105,7 @@ impl Inner {
             sort_order,
             dir_sort_mode,
         );
+        listing.sort_rows(&self.collator());
         let total_count = listing.rows(include_hidden).len();
         let cached_path = listing.path.as_path().to_path_buf();
         self.cache.write_ignore_poison().insert(listing_id.clone(), listing);
@@ -184,6 +184,7 @@ impl Inner {
         Ok(ResortResult {
             sequence: listing.sequence.load(Ordering::Acquire),
             total_count: rows.len(),
+            effective_sort_by: listing.effective().column(),
             new_cursor_index: cursor_path.and_then(|path| rows.iter().position(|e| e.path == path)),
             new_selected_indices: selected_paths.map(|paths| {
                 let paths: std::collections::HashSet<_> = paths.into_iter().collect();
@@ -459,6 +460,10 @@ pub struct ResortResult {
     /// New indices of previously selected files after re-sorting.
     /// None if no selected_indices were provided.
     pub new_selected_indices: Option<Vec<usize>>,
+    /// The column the rows are ordered by: the requested one, or Modified when
+    /// it's a date the listing's volume doesn't record. The requested column is
+    /// the caller's own; this never replaces it.
+    pub effective_sort_by: SortColumn,
 }
 
 impl Inner {
@@ -520,11 +525,10 @@ impl Inner {
             })
         };
 
-        // Re-sort the entries
-        sort_entries(&collator, listing.entries_mut(), sort_by, sort_order, dir_sort_mode);
-        listing.sort_by = sort_by;
-        listing.directory_sort_mode = dir_sort_mode;
-        listing.sort_order = sort_order;
+        // Record the REQUESTED sort, then re-sort by what it resolves to on this
+        // listing's volume.
+        listing.set_sort(sort_by, sort_order, dir_sort_mode);
+        listing.sort_rows(&collator);
         listing.advance_sequence();
         publish.drop_pending(listing_id);
 
@@ -553,6 +557,7 @@ impl Inner {
         Ok(ResortResult {
             sequence: listing.sequence.load(Ordering::Acquire),
             total_count: rows.len(),
+            effective_sort_by: listing.effective().column(),
             new_cursor_index,
             new_selected_indices,
         })

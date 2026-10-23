@@ -179,22 +179,12 @@ pub fn publish_replacement(
 }
 
 /// One `FullRefresh` of `path` on `volume_id`, as a watcher event drives it,
-/// landing on `listing_id` (sorted Name / Ascending / LikeFiles), awaited to
-/// its end: what a refresh does to a listing, without waiting on a spawn.
+/// landing on `listing_id` (sorted the listing's own way), awaited to its end:
+/// what a refresh does to a listing, without waiting on a spawn.
 pub async fn full_refresh(engine: &Listings, volume_id: &str, path: &Path, listing_id: &str) {
-    use crate::{DirectorySortMode, SortColumn, SortOrder};
     engine
         .inner
-        .notify_full_refresh(
-            volume_id.to_string(),
-            path.to_path_buf(),
-            vec![(
-                listing_id.to_string(),
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )],
-        )
+        .notify_full_refresh(volume_id.to_string(), path.to_path_buf(), vec![listing_id.to_string()])
         .await;
 }
 

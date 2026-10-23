@@ -31,7 +31,7 @@ fn cached_tags(listing: &TestListingGuard, path: &str) -> Vec<TagRef> {
 }
 
 /// Creates a minimal test entry.
-fn make_entry(name: &str, is_dir: bool, size: Option<u64>) -> FileEntry {
+pub(super) fn make_entry(name: &str, is_dir: bool, size: Option<u64>) -> FileEntry {
     FileEntry {
         size,
         permissions: if is_dir { 0o755 } else { 0o644 },
@@ -41,14 +41,14 @@ fn make_entry(name: &str, is_dir: bool, size: Option<u64>) -> FileEntry {
     }
 }
 
-fn make_dir_entry(name: &str, recursive_size: Option<u64>) -> FileEntry {
+pub(super) fn make_dir_entry(name: &str, recursive_size: Option<u64>) -> FileEntry {
     let mut e = make_entry(name, true, None);
     e.recursive_size = recursive_size;
     e
 }
 
 /// Caches a listing in `engine` under a unique id derived from `tag`.
-fn insert_test_listing(
+pub(super) fn insert_test_listing(
     engine: &Listings,
     tag: &str,
     path: &str,
@@ -113,10 +113,7 @@ fn test_find_listings_for_path_one_match() {
         .inner
         .find_listings_for_path_on_volume(None, &PathBuf::from(&path));
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].0, listing.id());
-    assert_eq!(results[0].1, SortColumn::Name);
-    assert_eq!(results[0].2, SortOrder::Ascending);
-    assert_eq!(results[0].3, DirectorySortMode::LikeFiles);
+    assert_eq!(results, [listing.id()]);
 }
 
 #[test]
@@ -149,7 +146,7 @@ fn test_find_listings_for_path_two_matches() {
     assert_eq!(results.len(), 2);
 
     // Both IDs should be present (order unspecified since HashMap is unordered)
-    let ids: Vec<&str> = results.iter().map(|(id, _, _, _)| id.as_str()).collect();
+    let ids: Vec<&str> = results.iter().map(String::as_str).collect();
     assert!(ids.contains(&listing1.id()));
     assert!(ids.contains(&listing2.id()));
 }
@@ -543,194 +540,6 @@ fn test_has_entry_false_for_missing_listing() {
 }
 
 // ============================================================================
-// update_entry_sorted tests
-// ============================================================================
-
-#[test]
-fn test_update_entry_sorted_in_place_for_non_sort_change() {
-    let engine = TestEngine::new();
-    let listing = insert_test_listing(
-        &engine,
-        "update_inplace",
-        "/test",
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-        vec![
-            make_entry("alpha.txt", false, Some(100)),
-            make_entry("beta.txt", false, Some(200)),
-        ],
-    );
-
-    // Change permissions only (not sort-relevant for Name sort)
-    let mut updated = make_entry("beta.txt", false, Some(200));
-    updated.permissions = 0o755;
-
-    let result = listing.engine().inner.update_entry_sorted(listing.id(), updated);
-    assert_eq!(
-        result,
-        Some(PaneRows {
-            before: Some(1),
-            after: Some(1)
-        })
-    );
-
-    assert_eq!(listing.entries()[1].permissions, 0o755);
-}
-
-#[test]
-fn test_update_entry_sorted_moved_for_size_change() {
-    let engine = TestEngine::new();
-    let listing = insert_test_listing(
-        &engine,
-        "update_moved",
-        "/test",
-        SortColumn::Size,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-        vec![
-            make_entry("small.txt", false, Some(10)),
-            make_entry("medium.txt", false, Some(100)),
-            make_entry("large.txt", false, Some(1000)),
-        ],
-    );
-
-    // Change small.txt size to be the largest
-    let updated = make_entry("small.txt", false, Some(5000));
-    let result = listing.engine().inner.update_entry_sorted(listing.id(), updated);
-    assert_eq!(
-        result,
-        Some(PaneRows {
-            before: Some(0),
-            after: Some(2)
-        })
-    );
-
-    assert_eq!(listing.entry_names(), ["medium.txt", "large.txt", "small.txt"]);
-}
-
-#[test]
-fn test_update_entry_sorted_moved_for_modified_at_change() {
-    let engine = TestEngine::new();
-    let listing = insert_test_listing(
-        &engine,
-        "update_mtime",
-        "/test",
-        SortColumn::Modified,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-        vec![
-            {
-                let mut e = make_entry("old.txt", false, Some(100));
-                e.modified_at = Some(1000);
-                e
-            },
-            {
-                let mut e = make_entry("new.txt", false, Some(100));
-                e.modified_at = Some(2000);
-                e
-            },
-        ],
-    );
-
-    // Make old.txt newer than new.txt
-    let mut updated = make_entry("old.txt", false, Some(100));
-    updated.modified_at = Some(3000);
-
-    let result = listing.engine().inner.update_entry_sorted(listing.id(), updated);
-    assert_eq!(
-        result,
-        Some(PaneRows {
-            before: Some(0),
-            after: Some(1)
-        })
-    );
-}
-
-/// Regression anchor: a re-stat re-places a row only when its size, mtime, or
-/// kind changed. Under a Created sort, a new creation time alone patches the row
-/// IN PLACE, leaving it out of order; a kind change moves it. When the date
-/// columns join change detection, the created half of this flips to a move.
-#[test]
-fn test_update_entry_sorted_replaces_only_on_size_mtime_or_kind() {
-    let entry = |name: &str, created: u64| {
-        let mut e = make_entry(name, false, Some(100));
-        e.modified_at = Some(1000);
-        e.created_at = Some(created);
-        e
-    };
-    let engine = TestEngine::new();
-    let listing = insert_test_listing(
-        &engine,
-        "update_created",
-        "/test",
-        SortColumn::Created,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-        vec![entry("first.txt", 1000), entry("second.txt", 2000)],
-    );
-
-    // first.txt is now the newest, but only its creation time moved.
-    let result = listing
-        .engine()
-        .inner
-        .update_entry_sorted(listing.id(), entry("first.txt", 3000));
-    assert_eq!(
-        result,
-        Some(PaneRows {
-            before: Some(0),
-            after: Some(0)
-        }),
-        "a creation-time change alone patches in place"
-    );
-    assert_eq!(listing.entry_names(), ["first.txt", "second.txt"]);
-    assert_eq!(listing.entries()[0].created_at, Some(3000), "the patch landed");
-
-    // A kind change re-places it: folders sort first.
-    let mut as_folder = entry("second.txt", 2000);
-    as_folder.is_directory = true;
-    as_folder.size = None;
-    let result = listing.engine().inner.update_entry_sorted(listing.id(), as_folder);
-    assert_eq!(
-        result,
-        Some(PaneRows {
-            before: Some(1),
-            after: Some(0)
-        }),
-        "a kind change moves the row"
-    );
-}
-
-#[test]
-fn test_update_entry_sorted_returns_none_for_missing_entry() {
-    let engine = TestEngine::new();
-    let listing = insert_test_listing(
-        &engine,
-        "update_miss",
-        "/test",
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-        vec![make_entry("alpha.txt", false, Some(100))],
-    );
-
-    let result = listing
-        .engine()
-        .inner
-        .update_entry_sorted(listing.id(), make_entry("nonexistent.txt", false, Some(100)));
-    assert!(result.is_none());
-}
-
-#[test]
-fn test_update_entry_sorted_returns_none_for_missing_listing() {
-    let engine = TestEngine::new();
-    let result = engine
-        .inner
-        .update_entry_sorted("nonexistent_listing", make_entry("test.txt", false, Some(100)));
-    assert!(result.is_none());
-}
-
-// ============================================================================
 // find_listings_for_path_on_volume tests
 // ============================================================================
 
@@ -765,14 +574,14 @@ fn test_find_listings_for_path_on_volume_filters_by_volume() {
         .inner
         .find_listings_for_path_on_volume(Some("root"), &PathBuf::from(&path));
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].0, listing1.id());
+    assert_eq!(results, [listing1.id()]);
 
     // Filter by the SMB volume: only the SMB listing.
     let results = engine
         .inner
         .find_listings_for_path_on_volume(Some(&smb), &PathBuf::from(&path));
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].0, listing2.id());
+    assert_eq!(results, [listing2.id()]);
 
     // No filter: both.
     let results = engine
@@ -857,16 +666,12 @@ fn test_find_listings_on_volume_returns_all_volume_listings() {
     assert!(ids.contains(&listing1.id()));
     assert!(ids.contains(&listing2.id()));
 
-    // Verify paths and sort params are returned correctly
+    // Verify the paths are returned correctly
     let listing1 = results.iter().find(|(id, ..)| id == listing1.id()).unwrap();
     assert_eq!(listing1.1, PathBuf::from("/mnt/share/docs"));
-    assert_eq!(listing1.2, SortColumn::Name);
 
     let listing2 = results.iter().find(|(id, ..)| id == listing2.id()).unwrap();
     assert_eq!(listing2.1, PathBuf::from("/mnt/share/photos"));
-    assert_eq!(listing2.2, SortColumn::Size);
-    assert_eq!(listing2.3, SortOrder::Descending);
-    assert_eq!(listing2.4, DirectorySortMode::AlwaysByName);
 }
 
 #[test]
@@ -1022,12 +827,7 @@ fn spawn_full_refresh_survives_a_thread_with_no_tokio_runtime() {
         inner.spawn_full_refresh(
             "no-such-volume".to_string(),
             PathBuf::from("/test/spawn_full_refresh"),
-            vec![(
-                "sfr_listing".to_string(),
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )],
+            vec!["sfr_listing".to_string()],
         );
     });
 
@@ -1086,12 +886,7 @@ async fn a_slow_refresh_cannot_overwrite_the_listing_a_newer_one_already_wrote()
         .entries(mid_write.clone())
         .insert(&engine, "refresh-order");
 
-    let listings = vec![(
-        listing.id().to_string(),
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )];
+    let listings = vec![listing.id().to_string()];
 
     // A starts first and reads the mid-write folder slowly; B starts second and reads
     // the finished folder immediately. Both are in flight at once, exactly as two
@@ -1158,12 +953,7 @@ async fn a_storm_of_refreshes_costs_two_reads_of_the_directory_not_one_per_event
         .path(dir.clone())
         .entries(Vec::new())
         .insert(&engine, "refresh-storm");
-    let listings = vec![(
-        listing.id().to_string(),
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )];
+    let listings = vec![listing.id().to_string()];
 
     let first = engine
         .inner

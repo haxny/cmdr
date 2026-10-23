@@ -18,6 +18,7 @@ use std::collections::{HashMap, HashSet};
 use super::name_filter::NameFilter;
 #[cfg(test)]
 use super::visible_rows::shows;
+use crate::sorting::SortColumn;
 use cmdr_fs::entry::FileEntry;
 
 /// What happened to one row of a listing.
@@ -132,6 +133,11 @@ pub struct DirectoryDiffBatch {
     pub total_count: usize,
     /// The row changes, in the order they apply.
     pub changes: Vec<DiffChange>,
+    /// The column the rows are now ordered by, when this batch moved it: a
+    /// re-read whose volume records different dates (an smbfs mount upgraded to
+    /// direct SMB) re-sorts into a new effective column. `None` when it didn't
+    /// move. Batches aren't merged, so the last `Some` a pane applies wins.
+    pub effective_sort_by: Option<SortColumn>,
 }
 
 /// Computes the diff a pane with this `include_hidden`, quick filter, and
@@ -244,10 +250,13 @@ fn longest_increasing_subsequence(values: &[usize]) -> Vec<usize> {
 }
 
 /// Check if a file entry has been modified. `is_hidden` counts: a pane showing
-/// hidden files dims the row, and one hiding them loses it.
+/// hidden files dims the row, and one hiding them loses it. Every date counts,
+/// whatever the sort: the row's tooltip shows them all.
 fn is_entry_modified(old: &FileEntry, new: &FileEntry) -> bool {
     old.size != new.size
         || old.modified_at != new.modified_at
+        || old.created_at != new.created_at
+        || old.added_at != new.added_at
         || old.permissions != new.permissions
         || old.is_directory != new.is_directory
         || old.is_symlink != new.is_symlink

@@ -14,7 +14,7 @@ use super::sorting::DirectorySortMode;
 use std::sync::Arc;
 
 use super::sorting::{entry_comparator, sort_entries};
-use super::sorting_test_support::make_entry;
+use super::sorting_test_support::{every_date, make_entry};
 use super::testing::collator_for;
 use super::{SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
@@ -42,9 +42,7 @@ fn mixed_unicode_normalization_orders_by_the_visible_name() {
     sort_entries(
         &collator,
         &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     );
 
     // "Dávi*a*d" precedes "Dávi*d*": the `a`/`d` at the fifth character decides,
@@ -70,9 +68,7 @@ fn the_two_spellings_of_one_name_are_ordered_deterministically() {
         sort_entries(
             &collator,
             &mut entries,
-            SortColumn::Name,
-            SortOrder::Ascending,
-            DirectorySortMode::LikeFiles,
+            every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
         );
         entries.iter().map(|e| e.name.clone()).collect::<Vec<_>>()
     };
@@ -99,9 +95,7 @@ fn underscore_sorts_before_digits() {
     sort_entries(
         &collator,
         &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     );
 
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
@@ -126,9 +120,7 @@ fn accented_letters_sort_beside_their_base_letter() {
     sort_entries(
         &collator,
         &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     );
 
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
@@ -168,17 +160,13 @@ fn the_bulk_sort_and_the_live_comparator_agree_on_unicode_names() {
     sort_entries(
         &collator,
         &mut via_sort,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     );
 
     let mut via_cmp = entries.clone();
     via_cmp.sort_by(entry_comparator(
         Arc::clone(&collator),
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     ));
 
     let sorted: Vec<&str> = via_sort.iter().map(|e| e.name.as_str()).collect();
@@ -201,9 +189,7 @@ fn test_case_insensitive_sort() {
     sort_entries(
         &collator,
         &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     );
 
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
@@ -249,9 +235,7 @@ fn golden_order(locale: &str) -> Vec<String> {
     sort_entries(
         &collator,
         &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+        every_date(SortColumn::Name, SortOrder::Ascending, DirectorySortMode::LikeFiles),
     );
     entries.into_iter().map(|e| e.name).collect()
 }

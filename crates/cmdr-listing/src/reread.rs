@@ -153,6 +153,10 @@ impl Inner {
     /// the listing's way, and publishes what changed: THE step every full
     /// re-read lands through. Drops the re-read when the listing already
     /// published one that started later than `generation`.
+    ///
+    /// A volume re-read also refreshes the dates the listing's volume records,
+    /// BEFORE the sort, so a backend swap that gains or loses a date re-sorts
+    /// into the new effective column here, and the batch says so.
     pub(crate) fn update_listing_entries(
         &self,
         listing_id: &str,
@@ -160,7 +164,7 @@ impl Inner {
         generation: ReadGeneration,
     ) -> RefreshOutcome {
         let indexed = prepared.indexed();
-        let (entries, overlay_rows) = prepared.into_parts();
+        let (entries, overlay_rows, dates) = prepared.into_parts();
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
         let collator = self.collator();
@@ -178,19 +182,14 @@ impl Inner {
         listing.published_generation = generation;
         listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
+        let effective_moved = listing.set_listed_dates(dates);
         let mut entries = entries;
-        sort_entries(
-            &collator,
-            &mut entries,
-            listing.sort_by,
-            listing.sort_order,
-            listing.directory_sort_mode,
-        );
+        sort_entries(&collator, &mut entries, listing.effective());
         let changes = listing.replace_entries(entries, visibility);
         if let OverlayRows::Recounted(count) = overlay_rows {
             listing.set_overlay_rows(count);
         }
-        listing.publish_changes(&publish, listing_id, changes);
+        listing.publish_changes_and_sort(&publish, listing_id, changes, effective_moved);
         drop(cache);
 
         // The pipeline enriched these rows before the read landed; an index event

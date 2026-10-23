@@ -190,6 +190,7 @@ fn test_sort_tool_schema() {
     assert!(by_enum.contains(&json!("size")));
     assert!(by_enum.contains(&json!("modified")));
     assert!(by_enum.contains(&json!("created")));
+    assert!(by_enum.contains(&json!("added")));
 
     let order_enum = props.get("order").unwrap().get("enum").unwrap().as_array().unwrap();
     assert!(order_enum.contains(&json!("asc")));

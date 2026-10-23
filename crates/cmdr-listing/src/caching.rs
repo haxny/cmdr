@@ -9,7 +9,6 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 use crate::Inner;
 use crate::listing_id::ListingId;
-use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
 pub(crate) use cmdr_fs::volume::DirectoryChange;
 
@@ -58,13 +57,10 @@ impl Inner {
     /// remote pane showing the same path string matches too. Only a local caller
     /// that doesn't know its own volume id may rely on that.
     ///
-    /// Returns `(listing_id, sort_by, sort_order, directory_sort_mode)` for each match.
-    /// Typically 0 (no pane showing that dir), 1, or 2 (both panes showing the same dir).
-    pub(crate) fn find_listings_for_path_on_volume(
-        &self,
-        volume_id: Option<&str>,
-        parent_path: &Path,
-    ) -> Vec<(String, SortColumn, SortOrder, DirectorySortMode)> {
+    /// Returns each match's listing id: typically none (no pane showing that
+    /// dir), one, or two (both panes showing the same dir). Ids only, since the
+    /// listing is the one holder of its sort.
+    pub(crate) fn find_listings_for_path_on_volume(&self, volume_id: Option<&str>, parent_path: &Path) -> Vec<String> {
         let key = volume_id.map(|vid| (vid, self.listing_path(vid, parent_path)));
         let cache = self.cache.read_ignore_poison();
 
@@ -74,14 +70,7 @@ impl Inner {
                 Some((vid, key)) => listing.volume_id == *vid && listing.path == *key,
                 None => listing.path.as_path() == parent_path,
             })
-            .map(|(id, listing)| {
-                (
-                    id.clone(),
-                    listing.sort_by,
-                    listing.sort_order,
-                    listing.directory_sort_mode,
-                )
-            })
+            .map(|(id, _)| id.clone())
             .collect()
     }
 
@@ -105,24 +94,13 @@ impl Inner {
     /// Used by `FullRefresh` when the SMB watcher emits `STATUS_NOTIFY_ENUM_DIR` for
     /// the share root but no listing matches that exact path (the user may be browsing
     /// a subdirectory).
-    pub(crate) fn find_listings_on_volume(
-        &self,
-        volume_id: &str,
-    ) -> Vec<(String, PathBuf, SortColumn, SortOrder, DirectorySortMode)> {
+    pub(crate) fn find_listings_on_volume(&self, volume_id: &str) -> Vec<(String, PathBuf)> {
         let cache = self.cache.read_ignore_poison();
 
         cache
             .iter()
             .filter(|(_, listing)| listing.volume_id == volume_id)
-            .map(|(id, listing)| {
-                (
-                    id.clone(),
-                    listing.path.as_path().to_path_buf(),
-                    listing.sort_by,
-                    listing.sort_order,
-                    listing.directory_sort_mode,
-                )
-            })
+            .map(|(id, listing)| (id.clone(), listing.path.as_path().to_path_buf()))
             .collect()
     }
 
@@ -168,20 +146,20 @@ impl Inner {
             DirectoryChange::Added(entry) => {
                 let mut entry = entry;
                 self.index.enrich(volume_id, std::slice::from_mut(&mut entry));
-                for (listing_id, ..) in &listings {
+                for listing_id in &listings {
                     self.notify_added(listing_id, entry.clone());
                 }
             }
             DirectoryChange::Removed(name) => {
                 let full_path = parent_path.join(&name);
-                for (listing_id, ..) in &listings {
+                for listing_id in &listings {
                     self.notify_removed(listing_id, &full_path);
                 }
             }
             DirectoryChange::Modified(entry) => {
                 let mut entry = entry;
                 self.index.enrich(volume_id, std::slice::from_mut(&mut entry));
-                for (listing_id, ..) in &listings {
+                for listing_id in &listings {
                     self.notify_modified(listing_id, entry.clone());
                 }
             }
@@ -189,7 +167,7 @@ impl Inner {
                 let mut new_entry = new_entry;
                 self.index.enrich(volume_id, std::slice::from_mut(&mut new_entry));
                 let old_path = parent_path.join(&old_name);
-                for (listing_id, ..) in &listings {
+                for listing_id in &listings {
                     self.notify_removed(listing_id, &old_path);
                     self.notify_added(listing_id, new_entry.clone());
                 }
@@ -202,7 +180,7 @@ impl Inner {
                 let generation = self.next_read_generation();
                 match self.prepare_handed_over(volume_id, parent_path, entries) {
                     Some(prepared) => {
-                        for (listing_id, ..) in &listings {
+                        for listing_id in &listings {
                             self.publish_replacement(listing_id, prepared.clone(), generation);
                         }
                     }
@@ -217,12 +195,8 @@ impl Inner {
                     // path is the share root, but the user may be browsing a subdirectory.
                     // Refresh all listings on this volume instead.
                     let volume_listings = self.find_listings_on_volume(volume_id);
-                    for (lid, path, sort_by, sort_order, dir_sort_mode) in volume_listings {
-                        self.spawn_full_refresh(
-                            volume_id.to_string(),
-                            path,
-                            vec![(lid, sort_by, sort_order, dir_sort_mode)],
-                        );
+                    for (lid, path) in volume_listings {
+                        self.spawn_full_refresh(volume_id.to_string(), path, vec![lid]);
                     }
                 } else {
                     self.spawn_full_refresh(volume_id.to_string(), parent_path.to_path_buf(), listings);

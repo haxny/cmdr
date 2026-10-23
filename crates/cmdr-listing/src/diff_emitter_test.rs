@@ -24,6 +24,7 @@ fn enqueue_diff(listing: &TestListingGuard, changes: Vec<DiffChange>) {
             sequence: 1,
             total_count: 0,
             changes,
+            effective_sort_by: None,
         },
     );
 }

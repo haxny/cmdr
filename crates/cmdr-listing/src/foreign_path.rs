@@ -136,7 +136,7 @@ impl Inner {
     /// Fire-and-forget, one task per listing, each holding its directory's refresh
     /// turn so it can't interleave with a watcher's re-read of the same directory.
     pub(crate) fn respell_listings_on_volume(self: &std::sync::Arc<Self>, volume_id: &str) {
-        for (listing_id, path, ..) in self.find_listings_on_volume(volume_id) {
+        for (listing_id, path) in self.find_listings_on_volume(volume_id) {
             // A strong handle: the respell ends.
             let engine = std::sync::Arc::clone(self);
             let volume_id = volume_id.to_string();

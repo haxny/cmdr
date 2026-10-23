@@ -13,7 +13,6 @@ use cmdr_fs::log_private::LogPrivate;
 use crate::Inner;
 use crate::pipeline::{Prepared, ReadBy};
 use crate::reread::ReadGeneration;
-use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
 
 /// One directory's refresh turnstile: an async lock plus a flag saying whether a
 /// refresh is already queued behind the running one.
@@ -31,12 +30,7 @@ impl Inner {
     /// running" and takes the app down. The engine's own runtime handle works from
     /// any thread instead of inheriting a thread-local one.
     /// Same rule as `file_system::watcher` and `cmdr_archive::watch`.
-    pub(crate) fn spawn_full_refresh(
-        self: &Arc<Self>,
-        volume_id: String,
-        parent_path: PathBuf,
-        listings: Vec<(String, SortColumn, SortOrder, DirectorySortMode)>,
-    ) {
+    pub(crate) fn spawn_full_refresh(self: &Arc<Self>, volume_id: String, parent_path: PathBuf, listings: Vec<String>) {
         // A strong handle: the refresh ends.
         let engine = Arc::clone(self);
         self.runtime
@@ -96,12 +90,7 @@ impl Inner {
     /// replaces, not just safer.
     ///
     /// `pub(super)` so a test can await one directly rather than through the spawn.
-    pub(crate) async fn notify_full_refresh(
-        &self,
-        volume_id: String,
-        parent_path: PathBuf,
-        listings: Vec<(String, SortColumn, SortOrder, DirectorySortMode)>,
-    ) {
+    pub(crate) async fn notify_full_refresh(&self, volume_id: String, parent_path: PathBuf, listings: Vec<String>) {
         let slot = self.refresh_slot(&volume_id, &parent_path);
         // Claim the single waiting berth. Losing the race means somebody is already queued
         // to read AFTER the current refresh, which covers this request too.
@@ -136,12 +125,7 @@ impl Inner {
     }
 
     /// The body of one refresh, with the directory's turn already held.
-    async fn notify_full_refresh_locked(
-        &self,
-        volume_id: String,
-        parent_path: PathBuf,
-        listings: Vec<(String, SortColumn, SortOrder, DirectorySortMode)>,
-    ) {
+    async fn notify_full_refresh_locked(&self, volume_id: String, parent_path: PathBuf, listings: Vec<String>) {
         // Re-resolve from `(volume_id, parent_path)` so a `.zip`-crossing listing hits
         // the same `ArchiveVolume` the read used (the cache keys on the parent drive
         // id, and a re-resolve re-registers a lazily-evicted archive).
@@ -175,7 +159,7 @@ impl Inner {
         };
         let prepared = self.prepare(read_by, &volume_id, &parent_path, new_entries).await;
 
-        for (listing_id, ..) in &listings {
+        for listing_id in &listings {
             self.publish_replacement(listing_id, prepared.clone(), generation);
         }
     }
@@ -185,25 +169,13 @@ impl Inner {
     /// `Path::starts_with` is component-wise, so `/a/foo.zip` matches the archive
     /// root listing (`/a/foo.zip`) and any inner listing (`/a/foo.zip/sub`) but never
     /// a prefix-similar sibling (`/a/foo.zipper`) or the containing directory (`/a`).
-    fn find_listings_under_path_on_volume(
-        &self,
-        volume_id: &str,
-        root: &Path,
-    ) -> Vec<(String, PathBuf, SortColumn, SortOrder, DirectorySortMode)> {
+    fn find_listings_under_path_on_volume(&self, volume_id: &str, root: &Path) -> Vec<(String, PathBuf)> {
         let root = self.listing_path(volume_id, root);
         let cache = self.cache.read_ignore_poison();
         cache
             .iter()
             .filter(|(_, listing)| listing.volume_id == volume_id && listing.path.as_path().starts_with(root.as_path()))
-            .map(|(id, listing)| {
-                (
-                    id.clone(),
-                    listing.path.as_path().to_path_buf(),
-                    listing.sort_by,
-                    listing.sort_order,
-                    listing.directory_sort_mode,
-                )
-            })
+            .map(|(id, listing)| (id.clone(), listing.path.as_path().to_path_buf()))
             .collect()
     }
 
@@ -228,15 +200,11 @@ impl Inner {
     /// refresh path.
     pub(crate) async fn refresh_archive_listings(&self, volume_id: &str, archive_path: &Path) {
         let listings = self.find_listings_under_path_on_volume(volume_id, archive_path);
-        for (listing_id, path, sort_by, sort_order, dir_sort_mode) in listings {
+        for (listing_id, path) in listings {
             // Each inner listing lives at its own path, so refresh per listing path
             // (two panes on the same inner dir share a path and coalesce naturally).
-            self.notify_full_refresh(
-                volume_id.to_string(),
-                path,
-                vec![(listing_id, sort_by, sort_order, dir_sort_mode)],
-            )
-            .await;
+            self.notify_full_refresh(volume_id.to_string(), path, vec![listing_id])
+                .await;
         }
     }
 }

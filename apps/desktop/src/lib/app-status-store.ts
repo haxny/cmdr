@@ -138,7 +138,7 @@ function parseViewMode(raw: unknown): ViewMode {
 }
 
 function parseSortColumn(raw: unknown): SortColumn {
-  const validColumns: SortColumn[] = ['name', 'extension', 'size', 'modified', 'created']
+  const validColumns: SortColumn[] = ['name', 'extension', 'size', 'modified', 'created', 'added']
   if (typeof raw === 'string' && validColumns.includes(raw as SortColumn)) {
     return raw as SortColumn
   }

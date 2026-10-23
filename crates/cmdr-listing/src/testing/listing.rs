@@ -11,8 +11,9 @@ use cmdr_fs::testing::unique_test_id;
 use crate::Listings;
 use crate::cached_listing::CachedListing;
 use crate::listing_id::ListingId;
-use crate::pipeline::{OverlayRows, Prepared};
+use crate::pipeline::{ListedDates, OverlayRows, Prepared};
 use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use cmdr_fs::volume::SupportedDates;
 
 /// A listing a test put into `engine`, ended on drop.
 ///
@@ -93,7 +94,7 @@ impl Drop for TestListingGuard {
 
 /// Builder for a listing a test puts into an engine's cache. Defaults to an
 /// empty listing on `root` at `/test`, sorted Name / Ascending / LikeFiles,
-/// hidden files shown.
+/// hidden files shown, read from a volume that records every date.
 ///
 /// `last_accessed_ms` defaults to the engine's NOW, matching a listing a live
 /// pane just touched, so an orphan sweep doesn't take it; the reaper's own
@@ -104,6 +105,7 @@ pub struct TestListing {
     sort_by: SortColumn,
     sort_order: SortOrder,
     directory_sort_mode: DirectorySortMode,
+    supported_dates: SupportedDates,
     entries: Vec<FileEntry>,
     include_hidden: bool,
     sequence: u64,
@@ -127,6 +129,7 @@ impl TestListing {
             sort_by: SortColumn::Name,
             sort_order: SortOrder::Ascending,
             directory_sort_mode: DirectorySortMode::LikeFiles,
+            supported_dates: SupportedDates::ALL,
             entries: Vec::new(),
             include_hidden: true,
             sequence: 0,
@@ -155,7 +158,14 @@ impl TestListing {
         self
     }
 
-    /// The entries the listing holds, already in its sort order.
+    /// The dates the volume that read the listing records, which decide the
+    /// column its rows are in (`EffectiveSort`).
+    pub fn supported_dates(mut self, dates: SupportedDates) -> Self {
+        self.supported_dates = dates;
+        self
+    }
+
+    /// The entries the listing holds, already in its EFFECTIVE sort order.
     pub fn entries(mut self, entries: Vec<FileEntry>) -> Self {
         self.entries = entries;
         self
@@ -199,7 +209,8 @@ impl TestListing {
             inner,
             self.volume_id,
             self.path,
-            Prepared::for_test(self.entries, OverlayRows::Recounted(self.overlay_rows)),
+            Prepared::for_test(self.entries, OverlayRows::Recounted(self.overlay_rows))
+                .claiming(ListedDates::Claimed(self.supported_dates)),
             self.include_hidden,
             self.sort_by,
             self.sort_order,

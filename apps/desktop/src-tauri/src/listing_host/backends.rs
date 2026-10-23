@@ -20,8 +20,9 @@ use std::pin::Pin;
 use cmdr_fs::volume::host::listings::ListingHost;
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::SupportedDates;
 use cmdr_fs::volume::{DirectoryChange, WatchCoverage};
-use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_listing::{DirectorySortMode, EffectiveSort, SortColumn, SortOrder, sort_entries};
 
 /// Answers a backend's listing questions from the app's real listing cache.
 pub struct AppListings;
@@ -80,9 +81,13 @@ impl ListingHost for AppListings {
         sort_entries(
             &super::listings().collator(),
             entries,
-            SortColumn::Name,
-            SortOrder::Ascending,
-            DirectorySortMode::LikeFiles,
+            // A name sort reads no date, so no volume's dates change it.
+            EffectiveSort::resolve(
+                SortColumn::Name,
+                SortOrder::Ascending,
+                DirectorySortMode::LikeFiles,
+                SupportedDates::NONE,
+            ),
         );
     }
 }

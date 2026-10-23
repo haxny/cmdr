@@ -8,8 +8,8 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::RwLockReadGuard;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, RwLockReadGuard};
 use std::time::Instant;
 
 use crate::Inner;
@@ -18,12 +18,14 @@ use crate::host::{ListingVolumes, ScratchVisibility};
 use crate::name_filter::NameFilter;
 use crate::path_index::PathIndexCache;
 pub(crate) use crate::pipeline::OverlayRows;
-use crate::pipeline::Prepared;
+use crate::pipeline::{ListedDates, Prepared};
 use crate::reread::ReadGeneration;
-use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use crate::sorting::{DirectorySortMode, EffectiveSort, SortColumn, SortOrder, sort_entries};
 use crate::visible_rows::{ScratchProjection, VisibleRows, VisibleRowsCache};
+use cmdr_collation::NameCollator;
 use cmdr_fs::entry::{FileEntry, TagRef};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::volume::SupportedDates;
 
 impl Inner {
     /// The cache under its read lock, with every listing in `ids` reconciled to
@@ -121,12 +123,19 @@ pub(crate) struct CachedListing {
     /// Where each entry sits, by path, for the callers that know a path and need
     /// an index. Rebuilt lazily after any mutation; see `path_index.rs`.
     path_index: PathIndexCache,
-    /// Current sort column
-    pub(crate) sort_by: SortColumn,
-    /// Current sort order
-    pub(crate) sort_order: SortOrder,
-    /// How directories are sorted relative to the current sort column
-    pub(crate) directory_sort_mode: DirectorySortMode,
+    /// The column the pane ASKED to sort by, kept as asked: a fallback never
+    /// writes it. The rows are in [`Self::effective`]'s order, which is the
+    /// only thing a comparator may read.
+    sort_by: SortColumn,
+    /// The pane's sort order.
+    sort_order: SortOrder,
+    /// How directories are sorted relative to the sort column.
+    directory_sort_mode: DirectorySortMode,
+    /// Which dates the volume that last read this listing records, from the
+    /// RESOLVED volume (an archive answers for itself). With the requested
+    /// column it derives [`Self::effective`]; ❌ no stored effective column to
+    /// drift from it.
+    supported_dates: SupportedDates,
     /// Committed visible revision. Allocated under the cache write lock for a
     /// visible patch, sort, or visibility change, never by the transport emitter.
     /// Lives on the listing so it works for all volume types, including SMB/MTP
@@ -190,12 +199,16 @@ impl CachedListing {
         sort_order: SortOrder,
         directory_sort_mode: DirectorySortMode,
     ) -> Self {
-        let (entries, overlay_rows) = prepared.into_parts();
-        // A new listing has no earlier count for `Unchanged` to keep, so it
-        // carries none.
+        let (entries, overlay_rows, dates) = prepared.into_parts();
+        // A new listing has no earlier count or dates for `Unchanged` to keep,
+        // so it carries none: Modified is the date every volume records.
         let overlay_rows = match overlay_rows {
             OverlayRows::Recounted(count) => count,
             OverlayRows::Unchanged => 0,
+        };
+        let supported_dates = match dates {
+            ListedDates::Claimed(dates) => dates,
+            ListedDates::Unchanged => SupportedDates::NONE,
         };
         let scratch_projection =
             ScratchProjection::for_entries(&entries, &ScratchProjection::default(), engine.scratch_visibility());
@@ -211,6 +224,7 @@ impl CachedListing {
             sort_by,
             sort_order,
             directory_sort_mode,
+            supported_dates,
             sequence: AtomicU64::new(0),
             created_at: Instant::now(),
             last_accessed_ms: AtomicU64::new(engine.epoch_millis_now()),
@@ -234,6 +248,56 @@ impl CachedListing {
     /// Whether a listing overlay contributed any of these rows.
     pub(crate) fn has_overlay_rows(&self) -> bool {
         self.overlay_rows > 0
+    }
+
+    /// The sort the rows are in: the requested column, resolved against the
+    /// dates this listing's volume records. THE input to every comparator that
+    /// orders this listing.
+    pub(crate) fn effective(&self) -> EffectiveSort {
+        EffectiveSort::resolve(
+            self.sort_by,
+            self.sort_order,
+            self.directory_sort_mode,
+            self.supported_dates,
+        )
+    }
+
+    /// The column the pane asked for, which a fallback never changes.
+    #[cfg(test)]
+    pub(crate) fn requested_column(&self) -> SortColumn {
+        self.sort_by
+    }
+
+    /// Records the pane's requested sort. The caller re-sorts with
+    /// [`Self::sort_rows`].
+    pub(crate) fn set_sort(
+        &mut self,
+        sort_by: SortColumn,
+        sort_order: SortOrder,
+        directory_sort_mode: DirectorySortMode,
+    ) {
+        self.sort_by = sort_by;
+        self.sort_order = sort_order;
+        self.directory_sort_mode = directory_sort_mode;
+    }
+
+    /// Records the dates a re-read's volume records, unless nothing read through
+    /// a volume (`ListedDates::Unchanged`). Answers the effective column when
+    /// that moved, so the re-read can tell the pane its displayed date changed.
+    pub(crate) fn set_listed_dates(&mut self, dates: ListedDates) -> Option<SortColumn> {
+        let ListedDates::Claimed(dates) = dates else {
+            return None;
+        };
+        let before = self.effective().column();
+        self.supported_dates = dates;
+        let after = self.effective().column();
+        (before != after).then_some(after)
+    }
+
+    /// Puts the entries in [`Self::effective`]'s order.
+    pub(crate) fn sort_rows(&mut self, collator: &Arc<NameCollator>) {
+        let sort = self.effective();
+        sort_entries(collator, self.entries_mut(), sort);
     }
 
     /// Refreshes `last_accessed_ms` to now. Cheap, lock-free; safe to call under a shared
@@ -423,7 +487,7 @@ impl CachedListing {
             super::diff::diff_rows(&old, &new)
         };
         self.scratch_projection = next;
-        self.publish_transition(publish, listing_id, changes);
+        self.publish_transition(publish, listing_id, changes, None);
     }
 
     /// Replacement diffs compare projected rows, including newly admitted paths.
@@ -463,13 +527,33 @@ impl CachedListing {
         listing_id: &str,
         changes: Vec<super::diff::DiffChange>,
     ) {
-        if changes.is_empty() {
-            return;
-        }
-        self.publish_transition(publish, listing_id, changes);
+        self.publish_changes_and_sort(publish, listing_id, changes, None);
     }
 
-    fn publish_transition(&mut self, publish: &Publish<'_>, listing_id: &str, changes: Vec<super::diff::DiffChange>) {
+    /// [`Self::publish_changes`] for a re-read, which may also have moved the
+    /// effective column (`effective_sort_by`). A moved column publishes even
+    /// with no row changed: a one-row folder still has to hear that its
+    /// displayed date changed.
+    pub(crate) fn publish_changes_and_sort(
+        &mut self,
+        publish: &Publish<'_>,
+        listing_id: &str,
+        changes: Vec<super::diff::DiffChange>,
+        effective_sort_by: Option<SortColumn>,
+    ) {
+        if changes.is_empty() && effective_sort_by.is_none() {
+            return;
+        }
+        self.publish_transition(publish, listing_id, changes, effective_sort_by);
+    }
+
+    fn publish_transition(
+        &mut self,
+        publish: &Publish<'_>,
+        listing_id: &str,
+        changes: Vec<super::diff::DiffChange>,
+        effective_sort_by: Option<SortColumn>,
+    ) {
         let from_sequence = self.sequence.load(Ordering::Relaxed);
         let sequence = self.advance_sequence();
         publish.enqueue(
@@ -479,6 +563,7 @@ impl CachedListing {
                 sequence,
                 total_count: self.pane_rows().len(),
                 changes,
+                effective_sort_by,
             },
         );
     }

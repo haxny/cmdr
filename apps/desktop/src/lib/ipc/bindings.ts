@@ -3294,13 +3294,17 @@ export const commands = {
    *  shipping them back would double the round trip for no new information. The sort
    *  is STABLE, so rows equal under the chosen column keep the engine's ranked order
    *  between them, which makes a re-sort reproducible instead of shuffling ties.
+   *
+   *  The rows come from the drive index, which stores no creation or added time,
+   *  so they resolve as a volume recording Modified only: a date sort falls back
+   *  exactly as it does on such a volume, and the answer says so.
    */
   sortSearchResults: (
     rows: SearchSortRow[],
     sortBy: SortColumn,
     sortOrder: SortOrder,
     dirSortMode: DirectorySortMode,
-  ) => __TAURI_INVOKE<number[]>('sort_search_results', { rows, sortBy, sortOrder, dirSortMode }),
+  ) => __TAURI_INVOKE<SearchSortAnswer>('sort_search_results', { rows, sortBy, sortOrder, dirSortMode }),
   /**
    *  Search the scope's volume, walking whatever its index can't answer for yet.
    *
@@ -7847,6 +7851,13 @@ export type DirectoryDiffBatch = {
   totalCount: number
   // The row changes, in the order they apply.
   changes: DiffChange[]
+  /**
+   *  The column the rows are now ordered by, when this batch moved it: a
+   *  re-read whose volume records different dates (an smbfs mount upgraded to
+   *  direct SMB) re-sorts into a new effective column. `None` when it didn't
+   *  move. Batches aren't merged, so the last `Some` a pane applies wins.
+   */
+  effectiveSortBy: SortColumn | null
 }
 
 // How to sort directories relative to the current sort column.
@@ -10509,6 +10520,12 @@ export type ListingCompleteEvent = {
    *  given, which is nearly every listing.
    */
   storedPath: string | null
+  /**
+   *  The column the rows are ordered by: the requested one, or Modified when
+   *  it's a date this volume doesn't record. The pane keeps its requested
+   *  column; this only says which date its rows follow.
+   */
+  effectiveSortBy: SortColumn
 }
 
 /**
@@ -14529,6 +14546,12 @@ export type ResortResult = {
    *  None if no selected_indices were provided.
    */
   newSelectedIndices: number[] | null
+  /**
+   *  The column the rows are ordered by: the requested one, or Modified when
+   *  it's a date the listing's volume doesn't record. The requested column is
+   *  the caller's own; this never replaces it.
+   */
+  effectiveSortBy: SortColumn
 }
 
 /**
@@ -15953,6 +15976,20 @@ export type SearchRunError =
 export type SearchSort = 'relevance' | 'size' | 'modified'
 
 /**
+ *  How a search-results pane's rows should render: `rows`' own indices in order,
+ *  and the column that order follows.
+ */
+export type SearchSortAnswer = {
+  // `rows`' indices, in the order they should render.
+  order: number[]
+  /**
+   *  The column the order follows: the requested one, or Modified for a date
+   *  the index doesn't store (every date but Modified).
+   */
+  effectiveSortBy: SortColumn
+}
+
+/**
  *  One search-results row, carrying only what ordering it needs.
  *
  *  A deliberate subset of `SearchResultEntry`: the path, parent path, and icon id
@@ -17084,6 +17121,8 @@ export type SortColumn =
   | 'modified'
   // By creation time.
   | 'created'
+  // By when the item was added to its folder (macOS APFS and HFS+ only).
+  | 'added'
 
 // Sort order (ascending or descending).
 export type SortOrder =

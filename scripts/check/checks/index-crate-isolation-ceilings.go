@@ -346,10 +346,14 @@ var surfaceGuardedCrates = []struct {
 		// 47th method, 2026-10-22: `open_listing_paths`, for the NFS poller (one
 		// GETATTR per shown directory). A typed question, ❌ not a fold into
 		// `summaries`, whose triage snapshot isn't a contract to poll against.
+		//
+		// 36th root promise, 2026-10-23: `EffectiveSort`, the only thing
+		// `entry_comparator` and `sort_entries` take, built only by `resolve`, so a
+		// sort outside a listing (search results) can't skip the date fallback.
 		Name:       "cmdr-listing",
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
-			RootPromises:   35,
+			RootPromises:   36,
 			HandleMethods:  47,
 			PublicModules:  1,
 			SubsystemItems: 20,

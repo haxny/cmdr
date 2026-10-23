@@ -32,7 +32,7 @@ pub fn sort_schema() -> Value {
             },
             "by": {
                 "type": "string",
-                "enum": ["name", "ext", "size", "modified", "created"],
+                "enum": ["name", "ext", "size", "modified", "created", "added"],
                 "description": "Field to sort by"
             },
             "order": {

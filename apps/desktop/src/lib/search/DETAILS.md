@@ -852,9 +852,10 @@ implements the shared `SortableEntry` trait. Natural number ordering, case foldi
 `directorySortMode` choices all come along, and there is no second implementation to drift. A frontend comparator would
 have had to reproduce `alphanumeric_sort`'s leading-zero and non-ASCII rules by hand.
 
-Two consequences of that trait's `None` answers, both deliberate. A search result carries no CREATION time, so
-`sort.byCreated` lands on the comparator's both-unknown arm and orders by name (the header has no Created column to
-claim either way). And it carries no RECURSIVE size, so under Size the directories are all "unknown" and sort by name
+Two consequences of what a search row lacks, both deliberate. The index stores no creation or added time, so the command
+resolves as a volume recording Modified only (`EffectiveSort::resolve` with `SupportedDates::NONE`): a Created or Added
+sort orders by Modified, and the answer's `effectiveSortBy` says so (`crates/cmdr-listing/DETAILS.md` § "Requested and
+effective sort"). And it carries no RECURSIVE size, so under Size the directories are all "unknown" and sort by name
 among themselves, matching the `<dir>` their Size cell renders.
 
 **Ties keep the ranked order.** Both `Vec::sort_by` and the frontend's array are stable, and the input is the ranked

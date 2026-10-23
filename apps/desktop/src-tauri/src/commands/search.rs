@@ -10,7 +10,8 @@ use genai::chat::ChatOptions;
 
 use crate::ai::AiTranslateError;
 use crate::search::{self, ParsedScope, SearchQuery, SearchResult, VolumeLoad};
-use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator};
+use cmdr_fs::volume::SupportedDates;
+use cmdr_listing::{DirectorySortMode, EffectiveSort, SortColumn, SortOrder, SortableEntry, entry_comparator};
 
 use crate::search::ai::{self, query_builder as ai_query_builder};
 use crate::search::history::{DEFAULT_MAX_COUNT, HistoryEntry, RECENT_SEARCHES};
@@ -390,9 +391,13 @@ impl SortableEntry for SearchSortRow {
     fn modified_at(&self) -> Option<u64> {
         self.modified_at
     }
-    /// A search result carries no creation time, so ordering by Created lands on
-    /// the comparator's both-unknown arm and falls back to the name.
+    /// The index stores no creation time. Never read for ordering: search
+    /// results claim Modified only, so a Created sort resolves to Modified.
     fn created_at(&self) -> Option<u64> {
+        None
+    }
+    /// Nor an added time, for the same reason.
+    fn added_at(&self) -> Option<u64> {
         None
     }
     /// Nor a recursive size: the search never walked into the directories it
@@ -404,6 +409,18 @@ impl SortableEntry for SearchSortRow {
     fn recursive_size_complete(&self) -> Option<bool> {
         None
     }
+}
+
+/// How a search-results pane's rows should render: `rows`' own indices in order,
+/// and the column that order follows.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchSortAnswer {
+    /// `rows`' indices, in the order they should render.
+    pub order: Vec<u32>,
+    /// The column the order follows: the requested one, or Modified for a date
+    /// the index doesn't store (every date but Modified).
+    pub effective_sort_by: SortColumn,
 }
 
 /// Orders a search-results pane's rows, answering with `rows`' own indices in the
@@ -419,6 +436,10 @@ impl SortableEntry for SearchSortRow {
 /// shipping them back would double the round trip for no new information. The sort
 /// is STABLE, so rows equal under the chosen column keep the engine's ranked order
 /// between them, which makes a re-sort reproducible instead of shuffling ties.
+///
+/// The rows come from the drive index, which stores no creation or added time,
+/// so they resolve as a volume recording Modified only: a date sort falls back
+/// exactly as it does on such a volume, and the answer says so.
 #[tauri::command]
 #[specta::specta]
 pub fn sort_search_results(
@@ -426,12 +447,16 @@ pub fn sort_search_results(
     sort_by: SortColumn,
     sort_order: SortOrder,
     dir_sort_mode: DirectorySortMode,
-) -> Vec<u32> {
+) -> SearchSortAnswer {
     let collator = crate::listing_host::listings().collator();
-    let comparator = entry_comparator::<SearchSortRow>(collator, sort_by, sort_order, dir_sort_mode);
+    let sort = EffectiveSort::resolve(sort_by, sort_order, dir_sort_mode, SupportedDates::NONE);
+    let comparator = entry_comparator::<SearchSortRow>(collator, sort);
     let mut order: Vec<u32> = (0..rows.len() as u32).collect();
     order.sort_by(|a, b| comparator(&rows[*a as usize], &rows[*b as usize]));
-    order
+    SearchSortAnswer {
+        order,
+        effective_sort_by: sort.column(),
+    }
 }
 
 #[cfg(test)]
@@ -513,7 +538,8 @@ mod tests {
             SortColumn::Name,
             SortOrder::Ascending,
             DirectorySortMode::LikeFiles,
-        );
+        )
+        .order;
         assert_eq!(
             names_in_order(&rows, &order),
             // Case-folded, so `img_…` sorts before `readme`, and `img_2` before
@@ -530,7 +556,8 @@ mod tests {
             SortColumn::Size,
             SortOrder::Descending,
             DirectorySortMode::LikeFiles,
-        );
+        )
+        .order;
         // Directories lead whatever the column; a snapshot row carries no
         // recursive size, so the two dirs are both unknown and fall back to name.
         assert_eq!(
@@ -554,18 +581,38 @@ mod tests {
             SortColumn::Size,
             SortOrder::Ascending,
             DirectorySortMode::LikeFiles,
-        );
+        )
+        .order;
         assert_eq!(order, vec![0, 1, 2]);
     }
 
     #[test]
     fn sorting_an_empty_search_result_set_answers_an_empty_order() {
-        let order = sort_search_results(
+        let answer = sort_search_results(
             vec![],
             SortColumn::Modified,
             SortOrder::Descending,
             DirectorySortMode::LikeFiles,
         );
-        assert!(order.is_empty());
+        assert!(answer.order.is_empty());
+    }
+
+    /// The index stores neither a creation nor an added time, so a date sort
+    /// orders like Modified, and the answer names Modified as the column.
+    #[test]
+    fn sorting_search_results_by_an_unstored_date_orders_by_modified_and_says_so() {
+        let rows = ranked_rows();
+        let modified = sort_search_results(
+            rows.clone(),
+            SortColumn::Modified,
+            SortOrder::Descending,
+            DirectorySortMode::LikeFiles,
+        );
+        for date in [SortColumn::Added, SortColumn::Created] {
+            let answer = sort_search_results(rows.clone(), date, SortOrder::Descending, DirectorySortMode::LikeFiles);
+            assert_eq!(answer.order, modified.order, "{date:?}");
+            assert_eq!(answer.effective_sort_by, SortColumn::Modified, "{date:?}");
+        }
+        assert_eq!(modified.effective_sort_by, SortColumn::Modified);
     }
 }

@@ -222,8 +222,8 @@ fn safety_stale_sort_hidden_and_consumption_refuse_without_mutating() {
     left.with_listing(|l| {
         assert_eq!(l.sequence.load(std::sync::atomic::Ordering::Acquire), 1);
         assert!(!l.include_hidden());
-        assert_eq!(l.sort_by, SortColumn::Name);
-        assert_eq!(l.sort_order, SortOrder::Descending);
+        assert_eq!(l.requested_column(), SortColumn::Name);
+        assert_eq!(l.effective().order(), SortOrder::Descending);
     });
     let consumed = left
         .engine()

@@ -45,7 +45,8 @@
         clearsSortLabel,
     }: Props = $props()
 
-    const columnToCommandIdMap: Record<SortColumn, CommandId> = {
+    // Partial: Added has no sort command yet, so its header names no command.
+    const columnToCommandIdMap: Partial<Record<SortColumn, CommandId>> = {
         name: 'sort.byName',
         extension: 'sort.byExtension',
         size: 'sort.bySize',
@@ -57,7 +58,7 @@
     const commandName = $derived(commands.find((c) => c.id === commandId)?.name ?? '')
     // Reactive: re-reads when the user rebinds the shortcut. The tooltip action
     // live-updates its content, so a focus flip or rebind mid-hover shows too.
-    const shortcut = $derived(isFocused ? getFirstShortcutReactive(commandId) : undefined)
+    const shortcut = $derived(isFocused && commandId ? getFirstShortcutReactive(commandId) : undefined)
 
     const isActive = $derived(column === currentSortColumn)
     /**

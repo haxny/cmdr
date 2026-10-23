@@ -24,7 +24,6 @@ use cmdr_fs::volume::{
 use tokio::sync::Notify;
 
 use super::Listings;
-use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use super::testing::{TestEngine, TestListing};
 use cmdr_fs::testing::wait_until_async;
 
@@ -173,13 +172,8 @@ fn names(entries: Vec<FileEntry>) -> Vec<String> {
     entries.into_iter().map(|e| e.name).collect()
 }
 
-fn sort_of(id: &str) -> Vec<(String, SortColumn, SortOrder, DirectorySortMode)> {
-    vec![(
-        id.to_string(),
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )]
+fn sort_of(id: &str) -> Vec<String> {
+    vec![id.to_string()]
 }
 
 /// Whether a `FullRefresh` of `dir` is queued behind the running one.

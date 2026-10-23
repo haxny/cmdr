@@ -29,6 +29,9 @@ Tauri-free; Cmdr hosts it from `apps/desktop/src-tauri/src/listing_host/`.
 - ❌ **Never abort a read**: cancel detaches (an abort wedges an MTP phone), and a stall reports and keeps waiting.
 - **ONE comparator**, `entry_comparator`; a sort change bumps the frontend's `cacheGeneration`. Names collate through
   `cmdr-collation`, whose must-knows apply here (`crates/cmdr-collation/CLAUDE.md`).
+- **A listing stores the REQUESTED column; only `CachedListing::effective()` feeds a comparator.** A date the volume
+  doesn't record sorts by Modified (`EffectiveSort::resolve`), ❌ never written back as the request. `DETAILS.md` §
+  "Requested and effective sort".
 - **A listing's path is a `ListingPath`** from `ListingPath::on_volume`; ❌ never compare a raw path to it (MTP).
 - **Only a pane open or a Finder drop/paste resolves a foreign spelling**, ❌ never a walker, scan, or refresh.
 - **The orphan reaper keys on `last_accessed_ms`**, which index-size writes never bump.

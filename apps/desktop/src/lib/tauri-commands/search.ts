@@ -54,7 +54,10 @@ export async function sortSearchResults(
   sortOrder: SortOrder,
   dirSortMode: DirectorySortMode,
 ): Promise<number[]> {
-  return commands.sortSearchResults(rows, sortBy, sortOrder, dirSortMode)
+  // The answer also names the column the order follows (a date the index doesn't
+  // store sorts by Modified); no caller reads it yet.
+  const answer = await commands.sortSearchResults(rows, sortBy, sortOrder, dirSortMode)
+  return answer.order
 }
 
 /**

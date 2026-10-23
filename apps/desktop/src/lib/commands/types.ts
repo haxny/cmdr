@@ -42,7 +42,7 @@ export type NoCommandArgs = undefined
 export type PaneId = 'left' | 'right'
 
 /** Sortable column (mirrors `ExplorerAPI.setSort`). */
-export type SortColumn = 'name' | 'extension' | 'size' | 'modified' | 'created'
+export type SortColumn = 'name' | 'extension' | 'size' | 'modified' | 'created' | 'added'
 
 /** Selection mode for the MCP `select` tool. */
 export type McpSelectMode = 'replace' | 'add' | 'subtract'

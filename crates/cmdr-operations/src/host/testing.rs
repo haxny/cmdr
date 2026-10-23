@@ -23,11 +23,12 @@ use std::time::Duration;
 use cmdr_collation::NameCollator;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::SupportedDates;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{DirectoryChange, ResolvedVolume, RoutedKind, Volume};
 use cmdr_listing::testing::TestEngine;
-use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_listing::{DirectorySortMode, EffectiveSort, SortColumn, SortOrder, sort_entries};
 use cmdr_operation_log::rollback::VolumeLookup;
 
 use super::super::types::{LeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
@@ -311,9 +312,13 @@ impl ListingHost for PaneOrderListings {
         sort_entries(
             collator,
             entries,
-            SortColumn::Name,
-            SortOrder::Ascending,
-            DirectorySortMode::LikeFiles,
+            // A name sort reads no date, so no volume's dates change it.
+            EffectiveSort::resolve(
+                SortColumn::Name,
+                SortOrder::Ascending,
+                DirectorySortMode::LikeFiles,
+                SupportedDates::NONE,
+            ),
         );
     }
 }
@@ -385,9 +390,13 @@ impl ListingHost for PaneListings {
         sort_entries(
             &self.panes.collator(),
             entries,
-            SortColumn::Name,
-            SortOrder::Ascending,
-            DirectorySortMode::LikeFiles,
+            // A name sort reads no date, so no volume's dates change it.
+            EffectiveSort::resolve(
+                SortColumn::Name,
+                SortOrder::Ascending,
+                DirectorySortMode::LikeFiles,
+                SupportedDates::NONE,
+            ),
         );
     }
 }

@@ -409,7 +409,7 @@ export function describeUsbSpeed(speed: UsbSpeed): UsbSpeedDisplay {
 // ============================================================================
 
 /** Column to sort files by. Must match Rust enum. */
-export type SortColumn = 'name' | 'extension' | 'size' | 'modified' | 'created'
+export type SortColumn = 'name' | 'extension' | 'size' | 'modified' | 'created' | 'added'
 
 /** Sort order. Must match Rust enum. */
 export type SortOrder = 'ascending' | 'descending'
@@ -421,6 +421,7 @@ export const defaultSortOrders: Record<SortColumn, SortOrder> = {
   size: 'descending',
   modified: 'descending',
   created: 'descending',
+  added: 'descending',
 }
 
 /** Default sort column when opening a new directory. */

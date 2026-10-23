@@ -13,13 +13,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::{SupportedDates, Volume};
 use tokio::runtime::Handle;
 
 use crate::Inner;
 use crate::host::ListingOverlay;
-use crate::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
-use cmdr_collation::NameCollator;
 
 /// What a cache update knows about the [`ListingOverlay`] rows inside the
 /// entries it is about to write.
@@ -37,11 +35,25 @@ pub(crate) enum OverlayRows {
     Unchanged,
 }
 
+/// Which dates the volume that read a [`Prepared`] records, so the listing that
+/// stores it sorts the way that volume can (`sorting::EffectiveSort`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ListedDates {
+    /// The volume answered `Volume::supported_dates` for this read's directory.
+    /// Asked on every volume read, so a re-read after a backend swap (an smbfs
+    /// mount handing over to direct SMB) refreshes them.
+    Claimed(SupportedDates),
+    /// No volume read these (`std::fs`, or a backend's handed-over entries), so
+    /// the listing keeps the dates it had.
+    Unchanged,
+}
+
 /// A read's entries, enriched and decorated: the only form a listing stores.
 #[derive(Clone)]
 pub(crate) struct Prepared {
     entries: Vec<FileEntry>,
     overlay_rows: OverlayRows,
+    dates: ListedDates,
     /// Whether the drive index holds these rows, so the enrich ran. A routed
     /// volume's (an archive's, a git snapshot's) paths aren't on disk.
     indexed: bool,
@@ -53,37 +65,33 @@ impl Prepared {
         self.entries.len()
     }
 
-    /// Sorts the entries. The overlays ran before this, so contributed rows
-    /// land where the pane's sort puts them.
-    pub(crate) fn sort(
-        &mut self,
-        collator: &Arc<NameCollator>,
-        sort_by: SortColumn,
-        sort_order: SortOrder,
-        dir_sort_mode: DirectorySortMode,
-    ) {
-        sort_entries(collator, &mut self.entries, sort_by, sort_order, dir_sort_mode);
-    }
-
     /// Whether the drive index holds these rows (`false` for a routed volume).
     pub(crate) fn indexed(&self) -> bool {
         self.indexed
     }
 
-    /// The entries and what the overlays contributed to them, for the cache
-    /// write that stores them.
-    pub(crate) fn into_parts(self) -> (Vec<FileEntry>, OverlayRows) {
-        (self.entries, self.overlay_rows)
+    /// The entries, what the overlays contributed to them, and the dates the
+    /// reading volume records, for the cache write that stores them.
+    pub(crate) fn into_parts(self) -> (Vec<FileEntry>, OverlayRows, ListedDates) {
+        (self.entries, self.overlay_rows, self.dates)
     }
 
-    /// Entries a test hands the cache as if a read prepared them.
+    /// Entries a test hands the cache as if a read prepared them, from a volume
+    /// that records every date. [`Self::claiming`] plays one that doesn't.
     #[cfg(any(test, feature = "testing"))]
     pub(crate) fn for_test(entries: Vec<FileEntry>, overlay_rows: OverlayRows) -> Self {
         Self {
             entries,
             overlay_rows,
+            dates: ListedDates::Claimed(SupportedDates::ALL),
             indexed: true,
         }
+    }
+
+    /// The same entries, read by a volume that records `dates`.
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) fn claiming(self, dates: ListedDates) -> Self {
+        Self { dates, ..self }
     }
 }
 
@@ -102,6 +110,8 @@ impl Inner {
     /// Enriches `entries` with what the drive index knows (skipped for a routed
     /// volume), then folds in every applicable overlay's rows: AFTER the enrich,
     /// since a contributed row has no index entry, and before the caller sorts.
+    /// A volume read also asks the volume which dates it records there: the
+    /// RESOLVED volume, so a routed archive answers for itself.
     pub(crate) async fn prepare(
         &self,
         read_by: ReadBy<'_>,
@@ -115,9 +125,11 @@ impl Inner {
                     self.index.enrich(volume_id, &mut entries);
                 }
                 let overlay_rows = OverlayRows::Recounted(self.decorate(volume_id, volume, path, &mut entries).await);
+                let dates = ListedDates::Claimed(volume.supported_dates(path).await);
                 Prepared {
                     entries,
                     overlay_rows,
+                    dates,
                     indexed: !routed,
                 }
             }
@@ -126,6 +138,7 @@ impl Inner {
                 Prepared {
                     entries,
                     overlay_rows: OverlayRows::Unchanged,
+                    dates: ListedDates::Unchanged,
                     indexed: true,
                 }
             }
@@ -158,6 +171,7 @@ impl Inner {
         Some(Prepared {
             entries,
             overlay_rows: OverlayRows::Recounted(0),
+            dates: ListedDates::Unchanged,
             indexed: true,
         })
     }

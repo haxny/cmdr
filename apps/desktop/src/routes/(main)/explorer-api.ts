@@ -170,10 +170,13 @@ export interface ExplorerAPI {
    * shares a code path with.
    */
   openContextMenuAtCursor: () => Promise<void>
-  setSortColumn: (column: 'name' | 'extension' | 'size' | 'modified' | 'created', pane?: 'left' | 'right') => void
+  setSortColumn: (
+    column: 'name' | 'extension' | 'size' | 'modified' | 'created' | 'added',
+    pane?: 'left' | 'right',
+  ) => void
   setSortOrder: (order: 'asc' | 'desc' | 'toggle', pane?: 'left' | 'right') => void
   setSort: (
-    column: 'name' | 'extension' | 'size' | 'modified' | 'created',
+    column: 'name' | 'extension' | 'size' | 'modified' | 'created' | 'added',
     order: 'asc' | 'desc',
     pane: 'left' | 'right',
   ) => Promise<void>

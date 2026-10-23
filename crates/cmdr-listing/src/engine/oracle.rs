@@ -86,7 +86,7 @@ impl Listings {
     }
 }
 
-/// The ids of a lookup's matches; their sort settings stay inside.
-fn ids<A, B, C>(found: Vec<(String, A, B, C)>) -> Vec<ListingId> {
-    found.into_iter().map(|(id, ..)| ListingId::new(id)).collect()
+/// A lookup's matches as typed ids.
+fn ids(found: Vec<String>) -> Vec<ListingId> {
+    found.into_iter().map(ListingId::new).collect()
 }

@@ -23,10 +23,10 @@ use cmdr_fs::volume::friendly_error::{
     listing_error_for_restricted_empty_root, listing_error_from_volume_error,
 };
 use cmdr_fs::volume::{ListingPhase, ListingProgress, VolumeError};
-use cmdr_listing::DirectoryDiffBatch;
 use cmdr_listing::ListingId;
 use cmdr_listing::StalledOn;
 use cmdr_listing::host::{ListingEnd, ListingEvents};
+use cmdr_listing::{DirectoryDiffBatch, SortColumn};
 
 // ============================================================================
 // Wire payloads
@@ -61,6 +61,10 @@ pub struct ListingCompleteEvent {
     /// every child path carry the stored bytes. `None` for a path that listed as
     /// given, which is nearly every listing.
     pub stored_path: Option<String>,
+    /// The column the rows are ordered by: the requested one, or Modified when
+    /// it's a date this volume doesn't record. The pane keeps its requested
+    /// column; this only says which date its rows follow.
+    pub effective_sort_by: SortColumn,
 }
 
 /// Error event payload
@@ -148,7 +152,7 @@ pub(crate) trait ListingWire: Send + Sync {
     fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn);
     fn emit_progress(&self, listing_id: &str, loaded_count: usize, phase: Option<ListingPhase>);
     fn emit_read_complete(&self, listing_id: &str, total_count: usize);
-    fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>);
+    fn emit_complete(&self, event: ListingCompleteEvent);
     fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>);
     fn emit_cancelled(&self, listing_id: &str);
     fn emit_diff(&self, listing_id: &str, batches: Vec<DirectoryDiffBatch>);
@@ -188,14 +192,8 @@ impl ListingWire for tauri::AppHandle {
         .emit(self);
     }
 
-    fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>) {
-        let _ = ListingCompleteEvent {
-            listing_id: listing_id.to_string(),
-            total_count,
-            volume_root,
-            stored_path,
-        }
-        .emit(self);
+    fn emit_complete(&self, event: ListingCompleteEvent) {
+        let _ = event.emit(self);
     }
 
     fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {
@@ -329,12 +327,13 @@ impl<W: ListingWire, E: ListingEndEffects> TauriListingEvents<W, E> {
             self.wire.emit_error(listing_id, message, Some(listing_error));
             return;
         }
-        self.wire.emit_complete(
-            listing_id,
-            end.total_count,
-            end.volume_root.to_string_lossy().to_string(),
-            end.stored_path.map(|path| path.to_string_lossy().into_owned()),
-        );
+        self.wire.emit_complete(ListingCompleteEvent {
+            listing_id: listing_id.to_string(),
+            total_count: end.total_count,
+            volume_root: end.volume_root.to_string_lossy().to_string(),
+            stored_path: end.stored_path.map(|path| path.to_string_lossy().into_owned()),
+            effective_sort_by: end.effective_sort_by,
+        });
     }
 
     /// A failed read: classified into a `listing-error`, with the app bookkeeping
@@ -395,6 +394,7 @@ struct Completed<'a> {
     volume_root: &'a Path,
     stored_path: Option<PathBuf>,
     empty_at_volume_root: bool,
+    effective_sort_by: SortColumn,
 }
 
 impl<W: ListingWire, E: ListingEndEffects> ListingEvents for TauriListingEvents<W, E> {
@@ -424,6 +424,7 @@ impl<W: ListingWire, E: ListingEndEffects> ListingEvents for TauriListingEvents<
                 volume_root,
                 stored_path,
                 empty_at_volume_root,
+                effective_sort_by,
             } => {
                 let listed_path = stored_path.as_deref().unwrap_or(&path).to_path_buf();
                 self.complete(
@@ -435,6 +436,7 @@ impl<W: ListingWire, E: ListingEndEffects> ListingEvents for TauriListingEvents<
                         volume_root: &volume_root,
                         stored_path,
                         empty_at_volume_root,
+                        effective_sort_by,
                     },
                 );
                 // Success: if this path was previously recorded as TCC-restricted,
@@ -506,13 +508,7 @@ impl ListingWire for std::sync::Arc<WireCollector> {
     fn emit_read_complete(&self, _listing_id: &str, _total_count: usize) {
         self.note("read_complete");
     }
-    fn emit_complete(
-        &self,
-        _listing_id: &str,
-        _total_count: usize,
-        _volume_root: String,
-        _stored_path: Option<String>,
-    ) {
+    fn emit_complete(&self, _event: ListingCompleteEvent) {
         self.note("complete");
     }
     fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {

@@ -73,9 +73,9 @@ pub async fn execute_sort<R: Runtime>(app: &AppHandle<R>, params: &Value) -> Too
     if !["left", "right"].contains(&pane) {
         return Err(ToolError::invalid_params("pane must be 'left' or 'right'"));
     }
-    if !["name", "ext", "size", "modified", "created"].contains(&by) {
+    if !["name", "ext", "size", "modified", "created", "added"].contains(&by) {
         return Err(ToolError::invalid_params(
-            "by must be 'name', 'ext', 'size', 'modified', or 'created'",
+            "by must be 'name', 'ext', 'size', 'modified', 'created', or 'added'",
         ));
     }
     if !["asc", "desc"].contains(&order) {

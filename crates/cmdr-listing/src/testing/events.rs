@@ -10,6 +10,7 @@ use crate::DirectoryDiffBatch;
 use crate::host::events::StalledOn;
 use crate::host::{ListingEnd, ListingEvents};
 use crate::listing_id::ListingId;
+use crate::sorting::SortColumn;
 
 /// Records every report, per kind and in one combined order.
 // DEFAULT-OK: a recorder that has heard nothing yet holds empty lists.
@@ -31,6 +32,8 @@ pub struct RecordingEvents {
     pub stored_paths: Mutex<Vec<(String, Option<PathBuf>)>>,
     /// Per completed listing, whether it came back empty at its volume's root.
     pub empty_at_volume_root: Mutex<Vec<(String, bool)>>,
+    /// Per completed listing, the column its rows are ordered by.
+    pub effective_sorts: Mutex<Vec<(String, SortColumn)>>,
     /// Every listing that ended cancelled.
     pub cancelled: Mutex<Vec<String>>,
     /// Per failed listing, the error's message.
@@ -92,10 +95,14 @@ impl ListingEvents for RecordingEvents {
                 total_count,
                 stored_path,
                 empty_at_volume_root,
+                effective_sort_by,
                 ..
             } => {
                 self.note("complete");
                 self.complete.lock_ignore_poison().push((id.clone(), total_count));
+                self.effective_sorts
+                    .lock_ignore_poison()
+                    .push((id.clone(), effective_sort_by));
                 self.stored_paths.lock_ignore_poison().push((id.clone(), stored_path));
                 self.empty_at_volume_root
                     .lock_ignore_poison()

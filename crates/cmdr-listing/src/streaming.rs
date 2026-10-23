@@ -328,28 +328,18 @@ impl Inner {
             volume: &volume,
             routed: is_routed,
         };
-        let mut entries = self.prepare(read_by, volume_id, path, entries).await;
+        let entries = self.prepare(read_by, volume_id, path, entries).await;
         if !is_routed {
             self.index.verify_directory(volume_id, path);
         }
         let enrich_ms = enrich_start.elapsed().as_millis();
 
-        // Sort entries
-        benchmark::log_event("sort START");
-        let sort_start = std::time::Instant::now();
-        entries.sort(&self.collator(), sort_by, sort_order, dir_sort_mode);
-        let sort_ms = sort_start.elapsed().as_millis();
-        benchmark::log_event("sort END");
-
-        // Calculate counts based on include_hidden setting
-        // Cache the completed listing, with atomic cancellation check.
-        // We check cancellation WHILE holding the cache lock to avoid a race condition:
-        // without this, a cancel arriving between a check and insert would leave a stale
-        // entry (listDirectoryEnd would try to remove before the entry exists, then this
-        // insert would add it permanently).
-        let cache_write_start = std::time::Instant::now();
+        // Build the listing (it asks the volume seam for its spelling, so before
+        // the cache lock), then sort it: the listing resolves the requested column
+        // against the dates its volume records, so a date this volume doesn't
+        // record sorts by Modified.
         let entries_count_for_log = entries.len();
-        let listing = CachedListing::new(
+        let mut listing = CachedListing::new(
             self,
             volume_id.to_string(),
             path.to_path_buf(),
@@ -359,6 +349,19 @@ impl Inner {
             sort_order,
             dir_sort_mode,
         );
+        benchmark::log_event("sort START");
+        let sort_start = std::time::Instant::now();
+        listing.sort_rows(&self.collator());
+        let sort_ms = sort_start.elapsed().as_millis();
+        benchmark::log_event("sort END");
+        let effective_sort_by = listing.effective().column();
+
+        // Cache the completed listing, with atomic cancellation check.
+        // We check cancellation WHILE holding the cache lock to avoid a race condition:
+        // without this, a cancel arriving between a check and insert would leave a stale
+        // entry (listDirectoryEnd would try to remove before the entry exists, then this
+        // insert would add it permanently).
+        let cache_write_start = std::time::Instant::now();
         let cached_path = listing.path.as_path().to_path_buf();
         // The row count comes off the listing's own map, so the number the frontend
         // sizes its scroller with is produced by the same filter every later fetch
@@ -416,6 +419,7 @@ impl Inner {
                 volume_root,
                 stored_path,
                 empty_at_volume_root,
+                effective_sort_by,
             },
         );
         let to_complete_emit_ms = emit_t.elapsed().as_millis();

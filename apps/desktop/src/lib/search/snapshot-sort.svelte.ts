@@ -41,6 +41,7 @@ const DEFAULT_ORDERS: Record<SortColumn, SnapshotSort['order']> = {
   size: 'descending',
   modified: 'descending',
   created: 'descending',
+  added: 'descending',
 }
 
 /**

@@ -584,7 +584,8 @@
               "ext",
               "size",
               "modified",
-              "created"
+              "created",
+              "added"
             ],
             "type": "string"
           },

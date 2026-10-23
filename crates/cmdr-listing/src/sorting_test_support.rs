@@ -8,7 +8,9 @@
 
 use cmdr_fs::entry::FileEntry;
 
-use super::sorting::{DirectorySortMode, SortColumn, SortOrder, SortableEntry};
+use cmdr_fs::volume::SupportedDates;
+
+use super::sorting::{DirectorySortMode, EffectiveSort, SortColumn, SortOrder, SortableEntry};
 use super::testing::collator_for;
 
 /// Creates a test entry with the given name and properties.
@@ -39,7 +41,8 @@ pub(super) fn make_dir_with_recursive_size(
     entry
 }
 
-/// `sorting::sort_entries` the way an engine reading English sorts. Column and
+/// `sorting::sort_entries` the way an engine reading English sorts, on a volume
+/// that records every date (so the column is the one asked for). Column and
 /// directory order don't depend on the language; `collation_test` pins the
 /// ones that do.
 pub(super) fn sort_entries(
@@ -48,14 +51,28 @@ pub(super) fn sort_entries(
     sort_order: SortOrder,
     dir_sort_mode: DirectorySortMode,
 ) {
-    super::sorting::sort_entries(&collator_for("en"), entries, sort_by, sort_order, dir_sort_mode);
+    super::sorting::sort_entries(
+        &collator_for("en"),
+        entries,
+        every_date(sort_by, sort_order, dir_sort_mode),
+    );
 }
 
-/// `sorting::entry_comparator` the way an engine reading English compares.
+/// `sorting::entry_comparator` the way an engine reading English compares, on a
+/// volume that records every date.
 pub(super) fn entry_comparator<E: SortableEntry + ?Sized>(
     sort_by: SortColumn,
     sort_order: SortOrder,
     dir_sort_mode: DirectorySortMode,
 ) -> impl Fn(&E, &E) -> std::cmp::Ordering {
-    super::sorting::entry_comparator(collator_for("en"), sort_by, sort_order, dir_sort_mode)
+    super::sorting::entry_comparator(collator_for("en"), every_date(sort_by, sort_order, dir_sort_mode))
+}
+
+/// The sort as asked, on a volume that records every date.
+pub(super) fn every_date(
+    sort_by: SortColumn,
+    sort_order: SortOrder,
+    dir_sort_mode: DirectorySortMode,
+) -> EffectiveSort {
+    EffectiveSort::resolve(sort_by, sort_order, dir_sort_mode, SupportedDates::ALL)
 }

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_collation::{NameCollator, NameKey};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::SupportedDates;
 
 // ============================================================================
 // Sorting configuration
@@ -27,6 +28,8 @@ pub enum SortColumn {
     Modified,
     /// By creation time.
     Created,
+    /// By when the item was added to its folder (macOS APFS and HFS+ only).
+    Added,
 }
 
 /// Sort order (ascending or descending).
@@ -55,6 +58,59 @@ pub enum DirectorySortMode {
     /// Directories don't lead: they sort among the files by the same column ("Show
     /// folders first" off). Size ranks a directory by its `recursive_size`.
     MixedWithFiles,
+}
+
+/// The sort a listing's rows are actually in: the pane's requested column, or
+/// Modified when the requested date is one the listed volume doesn't record.
+///
+/// ❗ [`EffectiveSort::resolve`] is the ONLY constructor, and [`entry_comparator`]
+/// and [`sort_entries`] take nothing else, so a sort site that forgets the
+/// fallback doesn't compile. The requested column is what the pane, the
+/// persisted setting, and every echo keep; this one only orders rows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EffectiveSort {
+    column: SortColumn,
+    order: SortOrder,
+    dir_mode: DirectorySortMode,
+}
+
+impl EffectiveSort {
+    /// The sort a pane that asked for `requested` gets on a volume listing
+    /// `supported`: Created or Added falls back to Modified where the volume
+    /// doesn't record it, and every other column sorts as asked. The order and
+    /// directory mode always stay the pane's.
+    pub fn resolve(
+        requested: SortColumn,
+        order: SortOrder,
+        dir_mode: DirectorySortMode,
+        supported: SupportedDates,
+    ) -> Self {
+        let column = match requested {
+            SortColumn::Created if !supported.created => SortColumn::Modified,
+            SortColumn::Added if !supported.added => SortColumn::Modified,
+            column => column,
+        };
+        Self {
+            column,
+            order,
+            dir_mode,
+        }
+    }
+
+    /// The column the rows are ordered by.
+    pub fn column(&self) -> SortColumn {
+        self.column
+    }
+
+    /// The direction.
+    pub fn order(&self) -> SortOrder {
+        self.order
+    }
+
+    /// Where directories sort.
+    pub fn dir_mode(&self) -> DirectorySortMode {
+        self.dir_mode
+    }
 }
 
 // ============================================================================
@@ -92,6 +148,8 @@ pub trait SortableEntry {
     fn modified_at(&self) -> Option<u64>;
     /// Creation time in Unix seconds, `None` when unknown.
     fn created_at(&self) -> Option<u64>;
+    /// When the row was added to its folder, in Unix seconds, `None` when unknown.
+    fn added_at(&self) -> Option<u64>;
     /// A directory's recursive size, `None` when it isn't known. See [`known_dir_size`].
     fn recursive_size(&self) -> Option<u64>;
     /// Whether [`SortableEntry::recursive_size`] is exact. See [`known_dir_size`].
@@ -113,6 +171,9 @@ impl SortableEntry for FileEntry {
     }
     fn created_at(&self) -> Option<u64> {
         self.created_at
+    }
+    fn added_at(&self) -> Option<u64> {
+        self.added_at
     }
     fn recursive_size(&self) -> Option<u64> {
         self.recursive_size
@@ -178,6 +239,9 @@ impl<E: SortableEntry + ?Sized> SortableEntry for Keyed<'_, E> {
     fn created_at(&self) -> Option<u64> {
         self.row.created_at()
     }
+    fn added_at(&self) -> Option<u64> {
+        self.row.added_at()
+    }
     fn recursive_size(&self) -> Option<u64> {
         self.row.recursive_size()
     }
@@ -202,11 +266,11 @@ fn known_dir_size<E: SortableEntry + ?Sized>(e: &E) -> Option<u64> {
     }
 }
 
-/// Returns a comparator that orders `FileEntry` values according to the given sort params.
+/// Returns a comparator that orders `FileEntry` values according to `sort`.
 ///
-/// Directories come first, then files, unless `dir_sort_mode` is
+/// Directories come first, then files, unless the directory mode is
 /// [`DirectorySortMode::MixedWithFiles`] ([`compare_mixed`]). Within each group the comparator
-/// applies the requested column, order, and directory sort mode (including the
+/// applies the effective column, order, and directory sort mode (including the
 /// `recursive_size: None` sorts-last rule for Size).
 ///
 /// Names rank by Unicode collation, resolved through [`SortableEntry::compare_name`]
@@ -219,10 +283,13 @@ fn known_dir_size<E: SortableEntry + ?Sized>(e: &E) -> Option<u64> {
 /// against each other and break the strict-weak-ordering `sort_by` needs.
 pub fn entry_comparator<E: SortableEntry + ?Sized>(
     collator: Arc<NameCollator>,
-    sort_by: SortColumn,
-    sort_order: SortOrder,
-    dir_sort_mode: DirectorySortMode,
+    sort: EffectiveSort,
 ) -> impl Fn(&E, &E) -> std::cmp::Ordering {
+    let EffectiveSort {
+        column: sort_by,
+        order: sort_order,
+        dir_mode: dir_sort_mode,
+    } = sort;
     move |a, b| {
         if dir_sort_mode == DirectorySortMode::MixedWithFiles {
             return compare_mixed(a, b, sort_by, sort_order, &collator);
@@ -236,7 +303,7 @@ pub fn entry_comparator<E: SortableEntry + ?Sized>(
         }
 
         // AlwaysByName keeps directories A→Z under every other column, whatever
-        // the arrow says: Size, Modified, and Created default to descending, so
+        // the arrow says: Size and the three dates default to descending, so
         // following it showed Z→A folders, which reads as random (ERR-MJFJG). On
         // the Name column the arrow IS the name order, so they follow it there.
         if a.is_directory()
@@ -383,14 +450,47 @@ fn compare_by_column<E: SortableEntry + ?Sized>(
             (Some(_), None) => std::cmp::Ordering::Greater,
             (Some(a_time), Some(b_time)) => a_time.cmp(&b_time),
         },
+        SortColumn::Added => match (a.added_at(), b.added_at()) {
+            (None, None) => a.compare_name(b, collator),
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (Some(a_time), Some(b_time)) => a_time.cmp(&b_time),
+        },
     }
 }
 
-/// Sorts file entries by the specified column and order.
+/// Whether replacing `old` with `new` can move the row under `sort`: a change to
+/// any field the comparator reads for that column, or to the row's kind.
+///
+/// Reads the same [`SortableEntry`] accessors [`compare_by_column`] and the
+/// directory size arms read, so the two can't disagree about what a sort key is.
+/// A false positive costs a harmless re-place; a false negative leaves the row
+/// out of order, so anything the comparator might read counts.
+pub(crate) fn sort_key_changed<E: SortableEntry + ?Sized>(old: &E, new: &E, sort: &EffectiveSort) -> bool {
+    if old.is_directory() != new.is_directory() || old.name() != new.name() {
+        return true;
+    }
+    match sort.column {
+        // The name already compared above, and an extension is part of it.
+        SortColumn::Name | SortColumn::Extension => false,
+        // A directory ranks by its `known_dir_size` under every Size sort but
+        // AlwaysByName's, a file by its `size`; both, so no mode is missed.
+        SortColumn::Size => {
+            old.size() != new.size()
+                || old.recursive_size() != new.recursive_size()
+                || old.recursive_size_complete() != new.recursive_size_complete()
+        }
+        SortColumn::Modified => old.modified_at() != new.modified_at(),
+        SortColumn::Created => old.created_at() != new.created_at(),
+        SortColumn::Added => old.added_at() != new.added_at(),
+    }
+}
+
+/// Sorts file entries by `sort`'s column and order.
 /// Names order by Unicode collation, so digit runs compare numerically ("img_2"
 /// before "img_10") and an accent's spelling doesn't decide anything.
 ///
-/// `dir_sort_mode` controls where directories go:
+/// The directory mode controls where directories go:
 /// - `LikeFiles`: first, sorted by the same column as files (using `recursive_size` for Size)
 /// - `AlwaysByName`: first, A→Z by name, regardless of the active sort column (the
 ///   Name column's arrow still reverses them)
@@ -399,13 +499,7 @@ fn compare_by_column<E: SortableEntry + ?Sized>(
 /// Collates each name ONCE into a [`NameKey`] and sorts on those, rather than
 /// collating a pair per comparison: a 100k listing does 100k collations instead
 /// of ~1.7M. `DETAILS.md` § "Collating names" carries the measurement.
-pub fn sort_entries(
-    collator: &Arc<NameCollator>,
-    entries: &mut [FileEntry],
-    sort_by: SortColumn,
-    sort_order: SortOrder,
-    dir_sort_mode: DirectorySortMode,
-) {
+pub fn sort_entries(collator: &Arc<NameCollator>, entries: &mut [FileEntry], sort: EffectiveSort) {
     let mut order: Vec<u32> = (0..entries.len() as u32).collect();
 
     // Scoped so the keys (and the comparator holding their lifetime) release
@@ -419,8 +513,7 @@ pub fn sort_entries(
             })
             .collect();
 
-        let comparator =
-            entry_comparator::<Keyed<'_, FileEntry>>(Arc::clone(collator), sort_by, sort_order, dir_sort_mode);
+        let comparator = entry_comparator::<Keyed<'_, FileEntry>>(Arc::clone(collator), sort);
         order.sort_by(|a, b| comparator(&keyed[*a as usize], &keyed[*b as usize]));
     }
 

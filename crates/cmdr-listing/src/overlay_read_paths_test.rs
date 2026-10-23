@@ -111,16 +111,7 @@ async fn a_full_refresh_folds_in_overlay_rows() {
     volume
         .engine
         .inner
-        .notify_full_refresh(
-            volume.id.clone(),
-            "/".into(),
-            vec![(
-                listing.id().to_string(),
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )],
-        )
+        .notify_full_refresh(volume.id.clone(), "/".into(), vec![listing.id().to_string()])
         .await;
 
     assert_decorated(&listing);

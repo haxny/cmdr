@@ -8,7 +8,7 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 use crate::Inner;
 use crate::diff::{DiffChange, PaneRows};
-use crate::sorting::entry_comparator;
+use crate::sorting::{entry_comparator, sort_key_changed};
 use cmdr_fs::entry::{FileEntry, TagRef};
 
 impl Inner {
@@ -38,12 +38,7 @@ impl Inner {
         }
 
         listing.admit_entry(&entry, visibility);
-        let cmp = entry_comparator(
-            Arc::clone(&collator),
-            listing.sort_by,
-            listing.sort_order,
-            listing.directory_sort_mode,
-        );
+        let cmp = entry_comparator(Arc::clone(&collator), listing.effective());
         let pos = listing
             .entries()
             .partition_point(|existing| cmp(existing, &entry).is_lt());
@@ -170,8 +165,9 @@ impl Inner {
 
     /// Updates an existing entry in the cached listing.
     ///
-    /// If sort-relevant fields changed (size, modified_at, is_directory), removes the old entry
-    /// and re-inserts at the correct sorted position. Otherwise updates in place.
+    /// If the entry's key under the listing's effective sort changed
+    /// (`sort_key_changed`), removes the old entry and re-inserts at the correct
+    /// sorted position. Otherwise updates in place.
     /// Returns the rows the pane showed it on before and shows it on after, or `None` if
     /// the listing or entry wasn't found.
     pub(crate) fn update_entry_sorted(&self, listing_id: &str, new_entry: FileEntry) -> Option<PaneRows> {
@@ -183,21 +179,15 @@ impl Inner {
         listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
 
-        let cmp = entry_comparator(
-            Arc::clone(&collator),
-            listing.sort_by,
-            listing.sort_order,
-            listing.directory_sort_mode,
-        );
+        let sort = listing.effective();
+        let cmp = entry_comparator(Arc::clone(&collator), sort);
         // ❗ Before `entries_mut`, which drops the path map: after it, this could only
         // walk. Still true when the mutation lands, because the cache write
         // lock is held across both, and a modify that finds nothing now leaves both
         // maps standing rather than dropping them for a listing it never touched.
         let idx = listing.index_of_path(&new_entry.path)?;
         let old = &listing.entries()[idx];
-        let sort_relevant_changed = old.size != new_entry.size
-            || old.modified_at != new_entry.modified_at
-            || old.is_directory != new_entry.is_directory;
+        let sort_relevant_changed = sort_key_changed(old, &new_entry, &sort);
 
         // Where the entry goes, and the pane's rows around it, both read off the
         // listing as it stands. Everything the old entry sorted below (itself too,

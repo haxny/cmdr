@@ -129,10 +129,11 @@ reclaims a leaked listing `orphan_reaper.rs`.
   epoch).
 - **The cache** (`Inner::cache`): `RwLock<HashMap<String, CachedListing>>`, keyed by `listing_id` (UUID per navigation).
 - **`CachedListing`**:
-  `{ volume_id, path, entries, visible_rows, path_index, sort_by, sort_order, directory_sort_mode, sequence, created_at, last_accessed_ms, overlay_rows }`.
-  `entries` is private: `entries()` reads, `entries_mut()` / `set_entries()` change it and drop BOTH maps on the way,
-  `rows(include_hidden)` is what every read accessor asks, and `index_of_path` / `indices_of_paths` are what every
-  by-path caller asks. See § "Row numbers" and § "Entries by path".
+  `{ volume_id, path, entries, visible_rows, path_index, sort_by, sort_order, directory_sort_mode, supported_dates, sequence, created_at, last_accessed_ms, overlay_rows }`.
+  The four sort fields are private: `sort_by` is the REQUESTED column and `effective()` derives the order the rows are
+  in (§ "Requested and effective sort"). `entries` is private: `entries()` reads, `entries_mut()` / `set_entries()`
+  change it and drop BOTH maps on the way, `rows(include_hidden)` is what every read accessor asks, and `index_of_path`
+  / `indices_of_paths` are what every by-path caller asks. See § "Row numbers" and § "Entries by path".
 - **Focused-pane reads**: `Listings::cached_entries(volume_id, path)` clones the newest matching cached listing without
   requiring watcher coverage. Agent reads use it for the already-open pane, including SMB and MTP, and never start a new
   filesystem listing.
@@ -456,15 +457,43 @@ which is what the threshold deliberately buys.
 
 ## Sorting
 
-`sorting.rs` holds the comparator every list in the app is ordered by.
-`entry_comparator(sort_by, sort_order, dir_sort_mode)` is generic over the `SortableEntry` trait, which names the seven
-fields ordering reads: name, is_directory, size, modified_at, created_at, and the two recursive-size fields the Size
-column's directory rule needs.
+`sorting.rs` holds the comparator every list in the app is ordered by. `entry_comparator(collator, EffectiveSort)` is
+generic over the `SortableEntry` trait, which names the eight fields ordering reads: name, is_directory, size,
+modified_at, created_at, added_at, and the two recursive-size fields the Size column's directory rule needs.
 
 Two implementors. `FileEntry` answers from its own fields. `commands::search::SearchSortRow` is a search-results pane's
-row, and it answers `None` for the creation time and recursive size a search result doesn't carry, which lands it on the
-comparator's existing unknown-value arms rather than on a second set of rules: ordering such rows by Created falls back
-to the name, and under Size the directories are all unknown and sort by name among themselves.
+row, and it answers `None` for the dates and recursive size a search result doesn't carry. Its dates are never read for
+ordering (search resolves as a Modified-only volume, below); under Size its directories are all unknown and sort by name
+among themselves.
+
+### Requested and effective sort
+
+A pane REQUESTS a column; the rows are in the EFFECTIVE one. They differ only for a date the listed volume doesn't
+record (`Volume::supported_dates`, the matrix in `crates/cmdr-fs/DETAILS.md` § "Which dates each volume lists"): a pane
+asking for Added on an smbfs mount gets Modified order.
+
+- **Decision: `EffectiveSort` is a type whose only constructor is
+  `EffectiveSort::resolve(requested, order, dir_mode, supported)`, and `entry_comparator` and `sort_entries` take
+  nothing else.** Why: the fallback rule lives in ONE function, and a sort site that forgets it doesn't compile. Rule:
+  Created or Added that `supported` lacks becomes Modified; every other column, the order, and the directory mode stay
+  as asked.
+- **Decision: `CachedListing` stores the requested column plus the reading volume's `SupportedDates`, and `effective()`
+  derives the column.** Why: no stored effective column can drift from its inputs, and nothing holding a resolved column
+  can hand it back as the next request or persist it. Only `CachedListing` holds sort state (the cache lookups return
+  ids, never a sort).
+- **The dates travel on `Prepared`** (`pipeline::ListedDates`). `prepare(ReadBy::Volume { .. })` asks the RESOLVED
+  volume (a routed archive answers for itself), so the first read and every re-read refresh them, including the respell
+  after a backend swap. `ReadBy::StdFs` and a backend's handed-over entries carry `Unchanged` and keep the listing's.
+  `update_listing_entries` writes them BEFORE it sorts; when that moves the effective column, its `DirectoryDiffBatch`
+  carries `effective_sort_by: Some(column)` and publishes even with no row changed, or a one-row folder never hears that
+  its displayed date moved. Batches aren't merged, so the last `Some` a pane applies wins.
+- **Every answer names the effective column**: `ListingEnd::Complete` (`listing-complete`), `ResortResult` (resort AND
+  the hidden-files toggle), the diff batch above, and `sort_search_results`, which resolves with `SupportedDates::NONE`
+  since the drive index stores neither date. The frontend never computes it.
+- **What re-places a row**: `sort_key_changed(old, new, &EffectiveSort)`, beside `compare_by_column`, reads the same
+  accessors the comparator reads for the effective column, plus kind and name (Size includes a directory's recursive
+  size and its completeness). A false positive costs a harmless re-place; a false negative is a misplaced row.
+  Separately, `diff::is_entry_modified` counts every date whatever the sort, since the row's tooltip shows them all.
 
 **Why a trait and not a conversion.** Building a fabricated `FileEntry` per search row would be a second place where the
 mapping from "a row" to "what orders it" is decided, and that mapping is the thing that must not drift. The trait makes
@@ -479,10 +508,10 @@ directory's last) would cycle once mixed. The mode arrives per listing from the 
 into it (`apps/desktop/src/lib/file-explorer/DETAILS.md` § Sorting), and every sort path reads it off the
 `CachedListing`, so the watcher's re-sorts, archive panes, and every volume follow it.
 
-`sort_search_results` (`commands/search.rs`) is the frontend's way in: it answers with the input indices in sorted
-order, and the caller re-orders the rows it already holds. The frontend deliberately has NO comparator of its own; the
-snapshot store's sort round-trips through this command. `apps/desktop/src/lib/search/DETAILS.md` § "The snapshot pane's
-row order".
+`sort_search_results` (`commands/search.rs`) is the frontend's way in: it answers with the input indices in sorted order
+(plus the effective column), and the caller re-orders the rows it already holds. The frontend deliberately has NO
+comparator of its own; the snapshot store's sort round-trips through this command.
+`apps/desktop/src/lib/search/DETAILS.md` § "The snapshot pane's row order".
 
 ### Collating names
 
@@ -505,11 +534,12 @@ by Name, release build, M-series laptop, 2026-09-08: **105 ms, against 228 ms** 
 index sort, and the permutation). `collation_test::the_bulk_sort_and_the_live_comparator_agree_on_unicode_names` and
 `cmdr-collation`'s `tests::a_key_ranks_names_the_way_compare_does` pin that they never diverge.
 
-Sorting is covered by three suites, split along the questions they answer rather than by size: `sorting_test` (which
+Sorting is covered by four suites, split along the questions they answer rather than by size: `sorting_test` (which
 column, which direction, and the edge cases), `sorting_dir_mode_test` (`DirectorySortMode`, so how a directory ranks
-against the files beside it, including the honest-size coverage flags), and `collation_test` (the order names themselves
-come out in). `sorting_test_support` holds the two builders more than one of them needs; a builder used by one suite
-stays in that suite.
+against the files beside it, including the honest-size coverage flags), `sorting_effective_test` (the fallback rule, the
+Added column, and `sort_key_changed`), and `collation_test` (the order names themselves come out in). A whole listing in
+a fallback is `effective_sort_test`; `update_entry_sorted` is `caching_update_test`. `sorting_test_support` holds the
+two builders more than one of them needs; a builder used by one suite stays in that suite.
 
 The fixture each suite needs is what marks the seam. `collation_test` fixes the reading language per engine
 (`testing::FixedLocale`), which is why case-insensitive ordering is tested THERE and not beside the other column tests:
@@ -533,7 +563,7 @@ at `i` GOES. Applying the un-inverted permutation scrambles the whole listing wi
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 35 root promises, 47 `Listings` methods, one public module (`host`), and 20
+`index-crate-isolation` holds this crate to 36 root promises, 47 `Listings` methods, one public module (`host`), and 20
 public items inside it. The numbers are exactly what the crate exposes, with no headroom, so an addition has to be
 argued for. Everything counted exists for a named caller:
 
@@ -558,7 +588,9 @@ argued for. Everything counted exists for a named caller:
   `open_listing_paths` is the NFS poller's: the directories one volume's panes show, a typed question rather than a read
   of the `summaries` triage snapshot.
 - **Sorting outside a listing** (search results, the local reader): `SortColumn`, `SortOrder`, `DirectorySortMode`,
-  `SortableEntry`, `entry_comparator`, `sort_entries`, `NameCollator`, and `Listings::collator`.
+  `EffectiveSort`, `SortableEntry`, `entry_comparator`, `sort_entries`, `NameCollator`, and `Listings::collator`.
+  `EffectiveSort` is the one input both sort functions take, and `resolve` its only constructor, so a caller outside a
+  listing can't sort by a date without stating which dates its rows carry.
 - **Housekeeping**: `start_orphan_reaper`, `flush_pending_diffs` (the `playwright-e2e` feature only), and
   `stored_spellings` (a Finder drop's foreign spelling, resolved once).
 - **The seams** (`host`, the 20 items): the eight traits, the six `No*` defaults (the two list seams need none), and the
@@ -795,13 +827,13 @@ in its protocol's order (MTP by object handle), so a diff computed against that 
 wrong rows in a pane sorted any other way.
 
 All variants enrich entries with index data and queue `directory-diff` events through `diff_emitter::Publish`. A re-stat
-whose sort-relevant fields changed re-inserts the entry at its new sorted position and reports one
-`DiffChangeType::Move` (`apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Reordered rows"), which is what lets the
-pane cursor follow the row. Natural deduplication: `insert_entry_sorted` returns `None` for duplicates,
-`remove_entry_by_name` returns `None` if already removed. Callers: `Volume::notify_mutation()` (after each successful
-create/delete/rename on all volume types) and the `rename_file` command (local FS renames), both through the app's
-composer. A create on a volume where `supports_local_fs_access()` is `true` goes through the same local mutation patch
-(§ "Decisions", the instant row).
+whose sort key changed (`sort_key_changed`, § "Requested and effective sort") re-inserts the entry at its new sorted
+position and reports one `DiffChangeType::Move` (`apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Reordered
+rows"), which is what lets the pane cursor follow the row. Natural deduplication: `insert_entry_sorted` returns `None`
+for duplicates, `remove_entry_by_name` returns `None` if already removed. Callers: `Volume::notify_mutation()` (after
+each successful create/delete/rename on all volume types) and the `rename_file` command (local FS renames), both through
+the app's composer. A create on a volume where `supports_local_fs_access()` is `true` goes through the same local
+mutation patch (§ "Decisions", the instant row).
 
 `Listings::refresh_archive_listings(volume_id, archive_path)` is a sibling entry point for the archive content watch: it
 `FullRefresh`es every open listing at or inside a changed `.zip` (parent drive id + full path) WITHOUT the drive-index
@@ -851,11 +883,12 @@ count for that transition. A 50 ms window coalesces transport without flattening
 out of order; clients chain batches by revision rather than treating an event's changes as one transition.
 
 `resort_listing` accepts a final `expected_sequence: Option<u64>` and returns `ResortResult` with `sequence`,
-`totalCount`, `newCursorIndex`, and `newSelectedIndices`. It refuses stale revisions before interpreting selected rows,
-commits a revision even for identical ordering, and discards queued old-space batches under the cache write lock.
-Already drained batches retain their older stamps, so the client can discard them. `set_listing_include_hidden` takes
-the expected revision plus optional cursor and selection, remaps exact surviving identities from the OLD visibility to
-the NEW visibility, and returns the same result. An unchanged setting does not allocate a revision.
+`totalCount`, `effectiveSortBy`, `newCursorIndex`, and `newSelectedIndices`. It refuses stale revisions before
+interpreting selected rows, commits a revision even for identical ordering, and discards queued old-space batches under
+the cache write lock. Already drained batches retain their older stamps, so the client can discard them.
+`set_listing_include_hidden` takes the expected revision plus optional cursor and selection, remaps exact surviving
+identities from the OLD visibility to the NEW visibility, and returns the same result. An unchanged setting does not
+allocate a revision.
 
 `get_selection_snapshot(listing_id, include_hidden, selected_indices, expected_sequence)` consumes backend-space rows
 under one reconciled read lock, returning `{ paths, fileCount, folderCount }`. Revision or visibility mismatch and
