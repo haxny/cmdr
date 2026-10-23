@@ -341,9 +341,12 @@ fn install_canned_leaves(coverage: SearchCoverage, reason: Option<SearchCoverage
     });
 }
 
+/// Trashes `sources` as a journaled op. Hold the returned guard to the test's end:
+/// it takes the trashed items back out of the user's real Trash.
 #[cfg(target_os = "macos")]
-fn trash(engine: &TestOperations, op_id: &str, sources: &[std::path::PathBuf]) {
+fn trash(engine: &TestOperations, op_id: &str, sources: &[std::path::PathBuf]) -> crate::testing::TrashCleanup {
     use super::delete::trash::trash_files_with_progress;
+    let cleanup = crate::testing::TrashCleanup::of(sources);
     let st = state(engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Trash, Initiator::User, 0, None);
     let events = CollectorEventSink::new();
@@ -351,6 +354,7 @@ fn trash(engine: &TestOperations, op_id: &str, sources: &[std::path::PathBuf]) {
     let _ = trash_files_with_progress(&events, op_id, &st, sources, None);
     journal::finalize_op(st.scope(), OpKind::Trash, ExecutionStatus::Done);
     super::journal_search::test_hook::clear();
+    cleanup
 }
 
 /// A trashed folder records the top-level `rollback_unit` row AND the subtree's
@@ -368,7 +372,7 @@ fn trashed_dir_records_search_leaves_and_stays_full() {
     std::fs::write(dir.join("sub").join("b.jpg"), b"b").expect("b");
 
     install_canned_leaves(SearchCoverage::Full, None, &["a.jpg", "sub/b.jpg"]);
-    trash(&engine, "op-trash-leaves", std::slice::from_ref(&dir));
+    let _trash = trash(&engine, "op-trash-leaves", std::slice::from_ref(&dir));
 
     let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, "op-trash-leaves").expect("read").expect("row");
@@ -403,7 +407,7 @@ fn trashed_item_records_the_node_it_landed_as_in_the_trash() {
     let before = NodeIdentity::of(&std::fs::symlink_metadata(&dir).expect("stat")).expect("APFS keeps a birth time");
 
     install_canned_leaves(SearchCoverage::Full, None, &[]);
-    trash(&engine, "op-trash-identity", std::slice::from_ref(&dir));
+    let _trash = trash(&engine, "op-trash-identity", std::slice::from_ref(&dir));
 
     let conn = open_read_connection(log.db()).expect("read conn");
     let units = read_rollback_units_page(&conn, "op-trash-identity", i64::MAX, 10).expect("units");
@@ -412,7 +416,6 @@ fn trashed_item_records_the_node_it_landed_as_in_the_trash() {
     let landed = NodeIdentity::of(&std::fs::symlink_metadata(&in_trash).expect("in the Trash")).expect("identity");
     assert_eq!(units[0].dest_identity, Some(landed), "the node at the in-Trash path");
     assert_eq!(landed, before, "a trip into the Trash keeps the node");
-    std::fs::remove_dir(&in_trash).expect("clean up the one item this test trashed");
 }
 
 /// A trash op whose one top-level item FAILS records no `search_only` rows for
@@ -431,7 +434,7 @@ fn failed_trash_item_records_no_search_leaves_but_a_sibling_keeps_its_own() {
     let missing = work.path().join("gone");
 
     install_canned_leaves(SearchCoverage::Full, None, &["keep.jpg"]);
-    trash(&engine, "op-trash-partial", &[good.clone(), missing.clone()]);
+    let _trash = trash(&engine, "op-trash-partial", &[good.clone(), missing.clone()]);
 
     let conn = open_read_connection(jdb).expect("read conn");
     let items = read_operation_items(&conn, "op-trash-partial", 1000).expect("items");
@@ -778,7 +781,7 @@ fn over_cap_trash_is_top_level_only_capped_but_still_rollbackable() {
     std::fs::write(dir.join("x.bin"), b"x").expect("x");
 
     install_canned_leaves(SearchCoverage::TopLevelOnly, Some(SearchCoverageReason::Capped), &[]);
-    trash(&engine, "op-trash-capped", std::slice::from_ref(&dir));
+    let _trash = trash(&engine, "op-trash-capped", std::slice::from_ref(&dir));
 
     let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, "op-trash-capped").expect("read").expect("row");

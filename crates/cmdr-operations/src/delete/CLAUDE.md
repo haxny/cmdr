@@ -16,9 +16,8 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume walker (every backen
   DETAILS § "Waiting out a dropped share".
 - **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
   `trash_single_journaled`), `trash_files_with_progress()` (batch, per-item progress, cancel), and
-  `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`,
-  ❌ never a sentence; every item it can't take emits its own `Failed` source-item event. Existence checks use
-  `symlink_metadata()`.
+  `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Every item it can't take emits its own
+  `Failed` source-item event. Existence checks use `symlink_metadata()`.
 - **`cloud_trash.rs`**: `routing_for_selection()` behind the `trash_routing_for_paths` command, plus `is_online_only`
   (the one `SF_DATALESS` read). DETAILS § "A trash of online-only cloud content becomes a delete".
 - **`volume_start.rs`**: a volume delete's managed lifecycle (here, not `../local_start.rs`, because its body is
@@ -50,6 +49,7 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume walker (every backen
 - **A refusal carries a typed `TrashRefusalKind`, read from the `NSError` DOMAIN + CODE**, ❌ never its localized words
   (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (one
   flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
+- **A test that really trashes holds `testing::TrashCleanup`** (`docs/testing.md`).
 - **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`** (it stalled every other app; `clippy.toml`
   disallows `libc::sync`).
 - **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**

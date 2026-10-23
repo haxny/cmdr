@@ -314,6 +314,7 @@ async fn a_delete_announces_each_file_then_its_folder_while_they_still_exist() {
 fn a_trash_announces_each_item_while_it_still_exists() {
     let rig = Rig::new("announce_trash");
     fs::write(rig.join("src/a.txt"), b"a").expect("file");
+    let _trash = crate::testing::TrashCleanup::of(&[rig.join("src/a.txt")]);
 
     let events = CollectorEventSink::new();
     super::delete::trash::trash_files_with_progress(

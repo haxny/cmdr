@@ -19,6 +19,7 @@
 
 import { waitBudget } from './wait-budget.js'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { test, expect } from './fixtures.js'
 import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
@@ -32,6 +33,29 @@ import { ensureMcpClient, mcpCall, mcpReadResource, mcpNavToPath, mcpAwaitItem }
 test.afterEach(() => {
   restoreFixtureTree(getFixtureRoot())
 })
+
+/**
+ * Removes what a trashed fixture became in the developer's real Trash, which
+ * the delete above lands in. A trash keeps the node while macOS may rename it
+ * (a timestamp when the name is taken), so the match is the inode under the
+ * fixture's name. Linux runs in a throwaway container, so only `~/.Trash`.
+ */
+function takeBackFromTrash(name: string, ino: number): void {
+  const trashDir = path.join(os.homedir(), '.Trash')
+  let entries: string[]
+  try {
+    entries = fs.readdirSync(trashDir)
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    const inTrash = path.join(trashDir, entry)
+    if (entry.startsWith(name) && fs.lstatSync(inTrash, { throwIfNoEntry: false })?.ino === ino) {
+      fs.rmSync(inTrash, { recursive: true, force: true })
+      return
+    }
+  }
+}
 
 test.describe('MCP agent tools', () => {
   test.beforeEach(() => {
@@ -68,17 +92,22 @@ test.describe('MCP agent tools', () => {
 
     // Delete one of the copies and wait for ABSENCE — the await condition that
     // makes "did my delete finish?" a one-call check.
-    await mcpCall('select', { pane: 'right', names: ['file-a.txt'] })
-    const deleteResult = await mcpCall('delete', { autoConfirm: true })
-    expect(deleteResult).toContain('OK')
-    const gone = await mcpCall('await', {
-      pane: 'right',
-      condition: 'not_has_item',
-      value: 'file-a.txt',
-      timeoutSeconds: 15,
-    })
-    expect(gone).toContain('OK')
-    await expectAndDismissToast(tauriPage, 'to trash')
+    const trashedIno = fs.statSync(path.join(fixtureRoot, 'right', 'file-a.txt')).ino
+    try {
+      await mcpCall('select', { pane: 'right', names: ['file-a.txt'] })
+      const deleteResult = await mcpCall('delete', { autoConfirm: true })
+      expect(deleteResult).toContain('OK')
+      const gone = await mcpCall('await', {
+        pane: 'right',
+        condition: 'not_has_item',
+        value: 'file-a.txt',
+        timeoutSeconds: 15,
+      })
+      expect(gone).toContain('OK')
+      await expectAndDismissToast(tauriPage, 'to trash')
+    } finally {
+      takeBackFromTrash('file-a.txt', trashedIno)
+    }
   })
 
   test('honest errors: missing names, bad cursor targets, empty operations', async ({ tauriPage }) => {

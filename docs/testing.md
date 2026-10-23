@@ -735,6 +735,12 @@ processes, 2026-09-10). The shipped app never pays it. Keep the test off the hos
 `'system'` language is English without asking (`apps/desktop/src-tauri/src/intl/DETAILS.md` § "Which locale, and who
 decides"), and a test whose subject isn't the Trash trashes a path that doesn't exist.
 
+**The Trash variant: a real trash lands in the developer's own `~/.Trash`.** `trashItemAtURL` can't be pointed
+elsewhere, so every test that needs a real success held its fixtures there for good: 393 of them in three days of runs
+(2026-10-23). A Rust test that really trashes holds `cmdr_operations::testing::TrashCleanup::of(&sources)`, taken before
+the trash; on drop, a panic included, it removes each item by the node it was. The one E2E spec that trashes
+(`mcp-agent-tools.spec.ts`) does the same by inode in a `finally`.
+
 ### ❌ Remove-then-recreate to get "a different file"
 
 **The rule:** when a test needs a path to become a DIFFERENT file (a new inode), write the replacement beside it and

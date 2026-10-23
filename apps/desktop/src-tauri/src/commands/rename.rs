@@ -607,6 +607,7 @@ mod tests {
         let tmp = create_test_dir("trash_ok");
         let file = tmp.join("trash_me.txt");
         fs::write(&file, "goodbye").unwrap();
+        let _trash = cmdr_operations::testing::TrashCleanup::of(&[&file]);
         let result = move_to_trash(file.to_string_lossy().to_string()).await;
         assert!(result.is_ok());
         assert!(!file.exists());

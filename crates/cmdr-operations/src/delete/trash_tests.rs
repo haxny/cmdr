@@ -5,6 +5,8 @@
 
 use super::*;
 use crate::testing::TestOperations;
+#[cfg(target_os = "macos")]
+use crate::testing::TrashCleanup;
 use crate::types::CancelRollbackOutcome;
 #[cfg(target_os = "macos")]
 use crate::types::TrashRefusedItems;
@@ -30,6 +32,7 @@ fn test_move_to_trash_sync_file() {
     let file = tmp.join("test.txt");
     fs::write(&file, "content").unwrap();
     assert!(fs::symlink_metadata(&file).is_ok());
+    let _trash = TrashCleanup::of(&[&file]);
 
     let result = move_to_trash_sync(&file);
     assert!(result.is_ok());
@@ -44,7 +47,6 @@ fn test_move_to_trash_sync_file() {
         in_trash.display()
     );
     assert!(fs::symlink_metadata(&in_trash).is_ok(), "the item exists in Trash");
-    let _ = fs::remove_file(&in_trash);
 }
 
 // ========================================================================
@@ -61,6 +63,7 @@ fn trash_dir_for_path_matches_where_the_item_actually_landed() {
     let tmp = create_test_dir("trash_dir_resolve");
     let file = tmp.join("test.txt");
     fs::write(&file, "content").unwrap();
+    let _trash = TrashCleanup::of(&[&file]);
 
     let resolved = trash_dir_for_path(&file).expect("the boot volume has a trash");
     let in_trash = move_to_trash_sync(&file)
@@ -74,7 +77,6 @@ fn trash_dir_for_path_matches_where_the_item_actually_landed() {
         resolved.display(),
         in_trash.display()
     );
-    let _ = fs::remove_file(&in_trash);
 }
 
 /// The case the feature exists for: by the time anyone asks where a trashed item
@@ -115,6 +117,7 @@ fn test_move_to_trash_sync_directory() {
     let dir = tmp.join("subdir");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("inner.txt"), "data").unwrap();
+    let _trash = TrashCleanup::of(&[&dir]);
 
     let result = move_to_trash_sync(&dir);
     assert!(result.is_ok());
@@ -143,6 +146,7 @@ fn test_move_to_trash_sync_dangling_symlink() {
     assert!(fs::symlink_metadata(&link).is_ok());
     // But path.exists() would return false (follows symlink)
     assert!(!link.exists());
+    let _trash = TrashCleanup::of(&[&link]);
 
     // move_to_trash_sync should handle this correctly
     let result = move_to_trash_sync(&link);
@@ -281,6 +285,7 @@ fn a_partly_refused_batch_reports_what_it_left_behind() {
     let taken = tmp.join("taken.txt");
     fs::write(&taken, "content").unwrap();
     let refused = tmp.join("no-such-file.txt");
+    let _trash = TrashCleanup::of(&[&taken]);
 
     let sources = [taken.clone(), refused.clone()];
     let result = trash_files_with_progress(&*events, "op-trash-partial", &state, &sources, None);
@@ -323,6 +328,7 @@ fn a_batch_the_os_took_in_full_reports_nothing_left_behind() {
     let second = tmp.join("second.txt");
     fs::write(&first, "content").unwrap();
     fs::write(&second, "content").unwrap();
+    let _trash = TrashCleanup::of(&[&first, &second]);
 
     let sources = [first, second];
     let result = trash_files_with_progress(&*events, "op-trash-all-taken", &state, &sources, None);
