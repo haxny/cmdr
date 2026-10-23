@@ -666,4 +666,40 @@ describe('tooltip', () => {
       expect(onOpenChange).toHaveBeenCalledWith(true)
     })
   })
+  // A virtual list builds a row tooltip per rendered row per render; a lazy `html` costs
+  // nothing until a hover actually shows it.
+  describe('lazy html', () => {
+    it('builds the html only when the tooltip shows', () => {
+      const el = makeTrigger()
+      const build = vi.fn(() => '<b>Created</b>')
+      tooltip(el, { html: build })
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      expect(build).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(400)
+
+      expect(build).toHaveBeenCalledTimes(1)
+      expect(document.querySelector('.cmdr-tooltip.visible')?.innerHTML).toBe('<b>Created</b>')
+    })
+
+    it('shows nothing when the lazy html comes out empty', () => {
+      const el = makeTrigger()
+      tooltip(el, { html: () => '' })
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(400)
+
+      expect(document.querySelector('.cmdr-tooltip.visible')).toBeNull()
+    })
+
+    it('rebuilds a shown tooltip when its param changes', () => {
+      const el = makeTrigger()
+      const action = tooltip(el, { html: () => 'old' })
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(400)
+
+      action.update?.({ html: () => 'new' })
+
+      expect(document.querySelector('.cmdr-tooltip.visible')?.innerHTML).toBe('new')
+    })
+  })
 })

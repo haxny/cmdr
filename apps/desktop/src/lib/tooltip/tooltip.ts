@@ -4,7 +4,12 @@ export type TooltipParam =
   | string
   | {
       text?: string
-      html?: string
+      /**
+       * Rendered as markup. A function builds it only when the tooltip shows (and again on a live
+       * update while shown), for a trigger that renders far more often than anyone hovers it, like a
+       * file row. An empty result shows nothing.
+       */
+      html?: string | (() => string)
       shortcut?: string
       overflowOnly?: boolean
       contentEl?: HTMLElement
@@ -170,7 +175,18 @@ function returnAdoptedContentEl(): void {
   adoptedContentHost = null
 }
 
-function setTooltipContent(el: HTMLDivElement, param: TooltipParam): void {
+/** Builds a lazy `html`, so everything past here sees a plain string. */
+function resolveLazyHtml(param: TooltipParam): ShownTooltipParam {
+  if (typeof param !== 'object' || param === null || typeof param.html !== 'function') return param as ShownTooltipParam
+  return { ...param, html: param.html() }
+}
+
+/** A param as shown: any lazy `html` already built. */
+type ShownTooltipParam =
+  | Exclude<TooltipParam, object>
+  | (Exclude<TooltipParam, string | null | undefined> & { html?: string })
+
+function setTooltipContent(el: HTMLDivElement, param: ShownTooltipParam): void {
   const nextContentEl = typeof param === 'object' && param !== null ? param.contentEl : undefined
 
   // Runs on every content write (show, the live `update()` path, and any future call site). If the
@@ -290,7 +306,7 @@ function hasOpenPopup(triggerEl: HTMLElement): boolean {
   return triggerEl.getAttribute('aria-expanded') === 'true'
 }
 
-function showTooltip(triggerEl: HTMLElement, param: TooltipParam): void {
+function showTooltip(triggerEl: HTMLElement, lazyParam: TooltipParam): void {
   // The trigger may have been removed from the DOM during the show delay (e.g. a virtual-scroll row
   // recycled while hovered). Never show against a detached element: its rect is all-zero, which would
   // place the tooltip in the top-left corner.
@@ -299,7 +315,9 @@ function showTooltip(triggerEl: HTMLElement, param: TooltipParam): void {
     if (openListener?.node === triggerEl) notifyClosed()
     return
   }
-  // An `onOpenChange` caller that mounted nothing in time has nothing to show; an empty box is worse.
+  const param = resolveLazyHtml(lazyParam)
+  // An `onOpenChange` caller that mounted nothing in time, or a lazy `html` that came out empty,
+  // has nothing to show; an empty box is worse.
   if (hasNoContent(param)) {
     if (openListener?.node === triggerEl) notifyClosed()
     return
@@ -548,10 +566,11 @@ export function tooltip(node: HTMLElement, param: TooltipParam): ActionReturn<To
 
       // If tooltip is currently visible for this element, update content live
       if (activeElement === node && tooltipEl) {
-        if (hasNoContent(currentParam)) {
+        const shown = resolveLazyHtml(currentParam)
+        if (hasNoContent(shown)) {
           hideTooltip()
         } else {
-          setTooltipContent(tooltipEl, currentParam)
+          setTooltipContent(tooltipEl, shown)
           positionTooltip(node)
         }
       }
