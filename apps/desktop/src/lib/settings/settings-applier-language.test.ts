@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { _setSystemLocalesForTests } from '#lib/intl/os-locales.js'
 
-const setLocale = vi.fn()
+const setLocale = vi.fn<(locale: string | null) => Promise<void>>(() => Promise.resolve())
 
 // The change listener the applier registers, captured so the test can fire it.
 let changeListener: ((change: { id: string; value: unknown }) => void) | undefined
@@ -25,11 +25,8 @@ vi.mock('#lib/intl/messages.svelte.js', async (importOriginal) => {
   return {
     ...actual,
     // Spy on the locale-switch seam; keep `availableLocales` (the registry needs
-    // it to build the language options) and everything else real. Braces keep the
-    // arrow void (the spy's signature is `(tag) => void`, so don't return the call).
-    setLocale: (locale: string | null) => {
-      setLocale(locale)
-    },
+    // it to build the language options) and everything else real.
+    setLocale: (locale: string | null) => setLocale(locale),
   }
 })
 
@@ -75,7 +72,8 @@ vi.mock('#lib/settings/index.js', async (importOriginal) => {
 import { initSettingsApplier, cleanupSettingsApplier } from './settings-applier'
 
 beforeEach(() => {
-  setLocale.mockClear()
+  setLocale.mockReset()
+  setLocale.mockImplementation(() => Promise.resolve())
   changeListener = undefined
   osLocalesChanged = undefined
   startupLanguage = 'system'
@@ -91,6 +89,31 @@ describe('settings-applier: appearance.language', () => {
     startupLanguage = 'en-XA'
     await initSettingsApplier()
     expect(setLocale).toHaveBeenCalledWith('en-XA')
+  })
+
+  it('finishes starting up only once the language has switched, so the panes mount in it', async () => {
+    // The main window mounts its panes when `initSettingsApplier()` resolves. A switch waits
+    // for its catalog chunk, so resolving earlier would mount them in the old language.
+    startupLanguage = 'de'
+    let landCatalog = (): void => {}
+    setLocale.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          landCatalog = resolve
+        }),
+    )
+    let started = false
+    const starting = initSettingsApplier().then(() => {
+      started = true
+    })
+    await vi.waitFor(() => {
+      expect(setLocale).toHaveBeenCalledWith('de')
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(started).toBe(false)
+    landCatalog()
+    await starting
+    expect(started).toBe(true)
   })
 
   it('applies the OS-resolved locale at startup for System default', async () => {

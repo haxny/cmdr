@@ -114,12 +114,19 @@ function applyDensity(density: UiDensity): void {
  * RAW setting (`'system'` included) rather than the resolved tag, because
  * `'system'` has to keep meaning "follow the OS" on the Rust side as well; it
  * rebuilds the menu bar only when its answer actually moves.
+ *
+ * The webview switch lands once the language's catalog chunk has loaded (a few
+ * ms; the window keeps its current language until then). `languageApplied`
+ * holds that switch, so startup can wait for it before mounting the panes.
  */
 function applyLanguage(value: string): void {
-  setLocale(pickUiLocale(value))
+  languageApplied = setLocale(pickUiLocale(value))
   void setUiLanguage(value)
   log.debug('Applied language: {value}', { value })
 }
+
+/** The latest language switch, settled once its catalog is loaded and it's on screen. */
+let languageApplied: Promise<void> = Promise.resolve()
 
 /**
  * Applies Rust backend settings that need to be synced on startup.
@@ -391,6 +398,9 @@ export async function initSettingsApplier(): Promise<void> {
 
     // Apply current settings
     applyAllSettings()
+    // The panes mount when this resolves (`settingsReady`), so wait for the language
+    // switch to land: a few ms, and only when its catalog isn't loaded yet.
+    await languageApplied
 
     // Report the language this launch came up in, once. After the apply, so it
     // describes what the user is actually looking at rather than what the webview

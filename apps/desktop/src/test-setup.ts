@@ -5,6 +5,13 @@
 
 import { afterEach, vi } from 'vitest'
 import { TestResizeObserver } from '#lib/test-layout.js'
+import { _loadAllCatalogsForTests } from '#lib/intl/messages.svelte.js'
+
+// The app loads a window's catalogs on demand, which makes `setLocale()` async. Every
+// catalog here, kept for the whole file, keeps it synchronous in tests, so a test can
+// `setLocale('de')` and assert on `t()` on the next line. `lazy-catalogs.svelte.test.ts`
+// covers the on-demand behavior itself.
+await _loadAllCatalogsForTests()
 
 // Every component a test mounts is unmounted once that test ends, whether or not the
 // test does it. A component left mounted keeps its timers, effects, and frame loops

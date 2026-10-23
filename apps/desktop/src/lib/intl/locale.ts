@@ -63,6 +63,15 @@ export function getUiLocale(): string {
 }
 
 /**
+ * What {@link getUiLocale} answers with no override: the webview's own tag. For the
+ * message runtime, which loads a catalog BEFORE it switches to it, so it has to know what a
+ * `null` override will resolve to ahead of writing it.
+ */
+export function defaultUiLocale(): string {
+  return runtimeLocale()
+}
+
+/**
  * The locale whose CONVENTIONS the user formats in, as a BCP 47 tag. Numbers,
  * file sizes, dates, and calendar facts (which day the week starts on) read
  * this. It follows the OS and ❌ never the `appearance.language` setting.

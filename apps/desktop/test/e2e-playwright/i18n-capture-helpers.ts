@@ -53,7 +53,7 @@ interface CaptureApi {
   dump: () => Record<string, string[]>
   reset: () => void
   rerender: () => void
-  setLocale: (tag: string | null) => void
+  setLocale: (tag: string | null) => Promise<void>
   setTextSize: (percent: number) => Promise<void>
 }
 

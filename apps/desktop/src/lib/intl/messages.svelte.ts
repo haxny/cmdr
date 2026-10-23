@@ -28,7 +28,7 @@
  */
 
 import { IntlMessageFormat, type PrimitiveType, type FormatXMLElementFn } from 'intl-messageformat'
-import { getUiLocale, setUiLocaleOverride } from './locale'
+import { defaultUiLocale, getUiLocale, setUiLocaleOverride } from './locale'
 import { inheritableAncestors } from './locale-inheritance'
 import { setDocumentLanguage } from './document-language'
 import type { MessageKey } from './keys.gen'
@@ -37,6 +37,17 @@ import enCatalog from 'virtual:cmdr-catalog/en'
 import { loaders, manifestMessages, shippedLocales } from 'virtual:cmdr-locale-manifest'
 
 const BASE_LOCALE = 'en'
+
+/**
+ * Logs a catalog that didn't load. The logger is imported lazily, on this rare path only: it
+ * pulls in IPC and the settings store, which the always-loaded i18n runtime (and every test
+ * file, through `test-setup.ts`) must not.
+ */
+function warnCatalogLoad(message: string, properties: Record<string, unknown>): void {
+  void import('#lib/logging/logger.js').then(({ getAppLogger }) => {
+    getAppLogger('i18n').warn(message, properties)
+  })
+}
 
 /**
  * A catalog: key → ICU message string. `@key` metadata never reaches the runtime:
@@ -60,11 +71,17 @@ const catalogs: Record<string, Catalog | undefined> = { [BASE_LOCALE]: enCatalog
 // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state; a load-dedup map.
 const inFlight = new Map<string, Promise<void>>()
 
+type CatalogLoader = () => Promise<{ default: Catalog }>
+
+/** Test-only stand-ins for the manifest's loaders, so a test controls WHEN a catalog lands. */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state; a test seam.
+const loaderOverrides = new Map<string, CatalogLoader>()
+
 /** Loads one shipped catalog's chunk; a tag with no loader (`en`, or one that doesn't ship) is a no-op. */
 function loadCatalog(tag: string): Promise<void> {
   const existing = inFlight.get(tag)
   if (existing !== undefined) return existing
-  const loader = Object.hasOwn(loaders, tag) ? loaders[tag] : undefined
+  const loader = loaderOverrides.get(tag) ?? (Object.hasOwn(loaders, tag) ? loaders[tag] : undefined)
   if (loader === undefined) return Promise.resolve()
   const pending = loader()
     .then((mod) => {
@@ -257,11 +274,12 @@ interface I18nCaptureApi {
    * Switches the app's active locale to `tag` (e.g. `en-XA`, the pseudolocale)
    * for the overflow-capture pass, so every surface renders in the expanded,
    * accented strings. `null` reverts to the OS default. The driver calls this
-   * once after the app is ready, before capturing surfaces. Relies on the
-   * `tag`'s catalog being loaded (the glob includes it only if the dir existed
-   * at build time, so `en-XA` has to be on disk when the E2E binary is built).
+   * once after the app is ready, before capturing surfaces, and awaits the
+   * returned promise: the switch lands once `tag`'s catalog chunk has loaded.
+   * The chunk exists only if the dir was on disk at build time, so `en-XA` has
+   * to be there when the E2E binary is built.
    */
-  setLocale: (tag: string | null) => void
+  setLocale: (tag: string | null) => Promise<void>
   /**
    * Sets the UI zoom (the `appearance.textSize` percentage, 75/100/125/150) for
    * the WORST-CASE overflow pass, so every surface renders at the largest
@@ -297,10 +315,12 @@ if (__CMDR_E2E_BUILD__ && typeof window !== 'undefined') {
       captureSink.clear()
     },
     rerender() {
-      setLocale(getUiLocale())
+      // The current language's catalogs are loaded, so this re-render is synchronous.
+      void setLocale(getUiLocale())
     },
     setLocale(tag: string | null) {
-      setLocale(tag)
+      // Returned so the driver's `captureCall` (a `page.evaluate`) waits for the catalog.
+      return setLocale(tag)
     },
     async setTextSize(percent: number | string) {
       // Lazy import: keeps the always-loaded intl runtime free of a settings
@@ -428,15 +448,74 @@ export function tStringIn(locale: string, key: MessageKey, params?: TranslationP
  * Also announces the language to the DOM (`document-language.ts`). This is the
  * seam every window and every live change funnels through, which is what makes
  * one write here cover all of them.
+ *
+ * Loads first, switches second. A window holds only English and the catalogs
+ * its language reads, so a switch first loads the new language's chain (an
+ * overlay brings its base), and only then flips the locale, bumps the rune, and
+ * writes `<html lang>`, in one synchronous step. Until then the window shows
+ * the OLD language in full: never a frame of English, never half-switched.
+ * When the chain is already loaded the switch is synchronous and the returned
+ * promise is already settled. The latest call wins: a load that lands after a
+ * newer `setLocale()` started applies nothing. A chunk that fails to load
+ * leaves the old language on screen (and the promise resolves: there's nothing
+ * a caller could do about it).
  */
-export function setLocale(locale: string | null): void {
+export function setLocale(locale: string | null): Promise<void> {
+  const call = ++latestSwitch
+  const load = ensureCatalogs(locale ?? defaultUiLocale())
+  if (load === null) {
+    applyLocale(locale)
+    return Promise.resolve()
+  }
+  return load.then(
+    () => {
+      if (call === latestSwitch) applyLocale(locale)
+    },
+    (error: unknown) => {
+      warnCatalogLoad('Kept the current language: a catalog for {locale} did not load: {error}', { locale, error })
+    },
+  )
+}
+
+/** Numbers every `setLocale()` call; a load applies only if no newer call started since. */
+let latestSwitch = 0
+
+/** The synchronous half of a switch: everything a reader of the UI language sees moves at once. */
+function applyLocale(locale: string | null): void {
   setUiLocaleOverride(locale)
   compiledCache.clear()
+  evictUnreadCatalogs()
   localeVersion += 1
   // Read back through `getUiLocale()` rather than using `locale`: a `null` here
   // means "no override", and the effective tag is then the webview's own.
   setDocumentLanguage(resolvedCatalogLocale(getUiLocale()))
 }
+
+/**
+ * Loads every shipped catalog `locale`'s chain reads that isn't here yet. `null`
+ * when the whole chain is already loaded, so a caller can stay synchronous.
+ */
+function ensureCatalogs(locale: string): Promise<void> | null {
+  const missing = fallbackChain(locale).filter((tag) => shippedLocales.includes(tag) && catalogs[tag] === undefined)
+  if (missing.length === 0) return null
+  return Promise.all(missing.map(loadCatalog)).then(() => undefined)
+}
+
+/**
+ * Drops every shipped catalog the current language doesn't read, English aside,
+ * so arrowing through the picker doesn't end with every catalog in memory. A
+ * test's synthetic catalog (`_setCatalogForTests`) is never dropped.
+ */
+function evictUnreadCatalogs(): void {
+  if (keepAllCatalogs) return
+  const read = new Set([BASE_LOCALE, ...fallbackChain(getUiLocale())])
+  for (const tag of Object.keys(catalogs)) {
+    if (shippedLocales.includes(tag) && !read.has(tag)) Reflect.deleteProperty(catalogs, tag)
+  }
+}
+
+/** Set by `_loadAllCatalogsForTests`: nothing is evicted, so every later switch stays synchronous. */
+let keepAllCatalogs = false
 
 /** Test seam: drop the compiled-message cache so a memoization assertion starts clean. */
 export function _clearCompiledCacheForTests(): void {
@@ -484,7 +563,41 @@ export function _setCatalogForTests(locale: string, catalog: Catalog | null): vo
   chainCache.clear()
 }
 
-// Every catalog, before anything renders (top-level await; Safari 15+). The loaders
-// make each locale its own chunk; loading them all here keeps today's synchronous
-// language switch while the runtime moves onto the manifest.
-await Promise.all(shippedLocales.map(loadCatalog))
+/** Test seam: the tags whose catalog this window holds right now, sorted. */
+export function _loadedCatalogsForTests(): string[] {
+  return Object.keys(catalogs).sort()
+}
+
+/**
+ * Test seam: load `tag`'s catalog through `loader` instead of its chunk (`null` restores the
+ * chunk), so a test decides when, and in what order, catalogs land.
+ */
+export function _setCatalogLoaderForTests(tag: string, loader: CatalogLoader | null): void {
+  if (loader === null) loaderOverrides.delete(tag)
+  else loaderOverrides.set(tag, loader)
+}
+
+/** Test seam: back to a window's startup shape, English only. Undo with `_loadAllCatalogsForTests`. */
+export function _unloadCatalogsForTests(): void {
+  keepAllCatalogs = false
+  for (const tag of Object.keys(catalogs))
+    if (shippedLocales.includes(tag) && tag !== BASE_LOCALE) Reflect.deleteProperty(catalogs, tag)
+  compiledCache.clear()
+}
+
+/** Test seam: load every shipped catalog. */
+export async function _loadAllCatalogsForTests(): Promise<void> {
+  keepAllCatalogs = true
+  await Promise.all(shippedLocales.map(loadCatalog))
+}
+
+// The first render must find its catalog already here, or every `t()` in it reads
+// English for a frame. So the module waits (top-level await; Safari 15+) for the
+// catalogs the window's starting language reads. A chunk that won't load leaves the
+// window in English rather than leaving it blank.
+await (ensureCatalogs(defaultUiLocale()) ?? Promise.resolve()).catch((error: unknown) => {
+  warnCatalogLoad('Starting in English: the catalog for {locale} did not load: {error}', {
+    locale: defaultUiLocale(),
+    error,
+  })
+})

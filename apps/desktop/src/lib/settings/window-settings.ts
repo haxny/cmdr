@@ -112,7 +112,9 @@ export async function initWindowSettings(pathname?: string): Promise<void> {
  */
 export function initWindowLanguageSync(options: { title?: () => string | null } = {}): () => void {
   const apply = (value: string): void => {
-    setLocale(pickUiLocale(value))
+    // Fire and forget: the switch lands in one step once its catalog is here, and the
+    // window keeps its current language until then.
+    void setLocale(pickUiLocale(value))
   }
   apply(getSetting('appearance.language'))
   void loadSystemLocales().then(() => {

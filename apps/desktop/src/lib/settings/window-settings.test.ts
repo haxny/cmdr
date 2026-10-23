@@ -250,7 +250,11 @@ describe('initWindowLanguageSync and the document language', () => {
 
     initWindowLanguageSync()
 
-    expect(document.documentElement.lang).toBe('zh-Hant')
+    // A fresh module graph holds only English, as a new window does, so the switch lands once
+    // the zh-Hant chunk has loaded.
+    await vi.waitFor(() => {
+      expect(document.documentElement.lang).toBe('zh-Hant')
+    })
   })
 
   it('announces the catalog the window reads, not a language we ship nothing for', async () => {
