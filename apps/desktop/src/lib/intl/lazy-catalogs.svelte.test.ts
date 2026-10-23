@@ -20,6 +20,7 @@ import {
   manifestMessage,
   setLocale,
   tString,
+  tStringIn,
 } from './messages.svelte'
 import { getUiLocale } from './locale'
 import { _forgetStartupCatalogForTests } from './startup-catalog'
@@ -74,6 +75,13 @@ describe('what a window holds', () => {
     expect(tString('settings.appearance.language.label')).toBe(
       manifestMessage('es', 'settings.appearance.language.label'),
     )
+  })
+
+  it('refuses text in a language the window doesn’t hold, which would silently read English', async () => {
+    expect(() => tStringIn('de', 'settings.appearance.language.label')).toThrow(/not loaded/)
+    expect(tStringIn('en', 'settings.appearance.language.label')).toBe('Language')
+    await setLocale('de')
+    expect(tStringIn('de', 'settings.appearance.language.label')).toBe('Sprache')
   })
 
   it('drops the catalogs the window no longer reads', async () => {

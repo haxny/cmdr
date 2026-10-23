@@ -422,12 +422,20 @@ export function tString(key: MessageKey, params?: TranslationParams): string {
 }
 
 /**
- * `tString` in a locale OTHER than the UI's, down that locale's own fallback chain. For the rare
- * reader that needs text the user isn't currently reading: Settings search indexes English as a
- * fallback, and the Language setting under every loaded catalog's label. A snapshot, never
- * reactive: markup always wants the UI locale, through `t()`.
+ * `tString` in a given locale rather than the UI's, down that locale's own fallback chain, as a
+ * snapshot (never reactive: markup always wants the UI locale, through `t()`). Settings search
+ * reads English as a fallback this way.
+ *
+ * Only for a language this window HOLDS: English, or the UI language's chain. Any other catalog
+ * isn't loaded, and resolving through it would quietly answer in English. So it throws outside
+ * production builds; a text needed from EVERY language goes in the manifest instead
+ * (`manifestMessage`).
  */
 export function tStringIn(locale: string, key: MessageKey, params?: TranslationParams): string {
+  const unloaded = fallbackChain(locale).find((tag) => shippedLocales.includes(tag) && catalogs[tag] === undefined)
+  if (unloaded !== undefined && !import.meta.env.PROD) {
+    throw new Error(`tStringIn("${locale}"): the "${unloaded}" catalog is not loaded in this window`)
+  }
   const result = asShown(getCompiled(locale, key).format(params))
   if (typeof result !== 'string') {
     throw new Error(`Message "${key}" produced rich-text output; use <Trans> or t() and read the array`)
