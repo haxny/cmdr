@@ -542,9 +542,3 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `multiRename.mediaButtonName` (aria of `mediaButton`) invites a compound (de `Medienfelder`) that contains the label
   only as a substring; say whether WCAG 2.5.3 containment needs a whole word. (de; sv wrote `Fält för media`, since
   `Mediefält` lacks `media`)
-- `fileExplorer.dateTooltip.displayedLabel`: "(displayed)" is a participle that agrees with `{label}`'s gender in es,
-  fr, pt, ru; say so in the description, or reword ("shown in the list"). Those locales wrote "in the column". (es, fr,
-  pt, ru)
-- `fileExplorer.columns.added` shares "Added" with `fileExplorer.git.status.added` (a state); date-label locales need an
-  allowlist entry. The description could say it's a date label like Finder's "Date Added", not a state. (nl, ru, zh,
-  zh-Hant)

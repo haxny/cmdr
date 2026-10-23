@@ -1517,7 +1517,7 @@
   },
   "fileExplorer.columns.added": "Added",
   "@fileExplorer.columns.added": {
-    "description": "File-list column header for the date each item was added to its folder (moved, copied, or downloaded into it), Finder's \"Date Added\". Brief view shows it as its own sort button, after Created; Full view shows it on the date column while the list is sorted by date added. Its rendered text is also measured to size the column. Keep it short, parallel with fileExplorer.columns.created and fileExplorer.columns.modified."
+    "description": "File-list column header for the date each item was added to its folder (moved, copied, or downloaded into it), Finder's \"Date Added\". It names a date, like the Created and Modified headers beside it, not a status: it is distinct from fileExplorer.git.status.added (a file newly added to a git repo), so the two may translate differently. Brief view shows it as its own sort button, after Created; Full view shows it on the date column while the list is sorted by date added. Its rendered text is also measured to size the column. Keep it short, parallel with fileExplorer.columns.created and fileExplorer.columns.modified."
   },
   "fileExplorer.columns.dateSortMenu": "Choose a date to sort by",
   "@fileExplorer.columns.dateSortMenu": {
@@ -1962,7 +1962,7 @@
   },
   "fileExplorer.dateTooltip.displayedLabel": "{label} (displayed)",
   "@fileExplorer.dateTooltip.displayedLabel": {
-    "description": "Wraps the one label in a file’s date tooltip whose date the file list’s date column is showing right now, as in “Last modified (displayed): 2026-10-14 10:30”. The tooltip lists every date a file has, one per line, so this marks which of them the column shows. Put the marker word wherever your language reads naturally.",
+    "description": "Wraps the one label in a file’s date tooltip whose date the file list’s date column is showing right now, as in “Last modified (displayed): 2026-10-14 10:30”. The tooltip lists every date a file has, one per line, so this marks which of them the column shows. Put the marker wherever your language reads naturally. Where “displayed” would be a participle agreeing with the label’s gender (the three labels can differ), rephrase freely so one wording fits all three, for example as “in the column”.",
     "placeholders": {
       "label": "one of the tooltip’s date labels, already translated: “Created”, “Date added”, or “Last modified”"
     }
