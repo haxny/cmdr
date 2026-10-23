@@ -62,7 +62,7 @@ window focus context.
   strings) and `update_menu_item_accelerator` (swapping one on a live item).
 - `view_mode_items.rs`: `rebuild_view_mode_items` (full remove/recreate/reinsert when the active pane
   or a shortcut moved) and `sync_view_mode_check_states` (the cheap check-state-only path).
-- `sort_checks.rs`: View > Sort by's checkmarks: `RequestedSort`, `SortCheck`, and `sync_sort_check_states`. See "View
+- `sort_checks.rs`: View > Sort by's checkmarks: `RequestedSort`, `SortCheck::is_on`, and `sync_sort_check_states` (the `SortCheck` enum itself is spec vocabulary, in `menu_spec.rs`). See "View
   > Sort by checkmarks".
 - `macos_appkit.rs`: the two passes that reach past Tauri into AppKit once the bar is built:
   `cleanup_macos_menus` (removes system-injected Edit items, registers the Help menu) and

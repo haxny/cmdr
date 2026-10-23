@@ -9,11 +9,11 @@ use std::collections::HashSet;
 use super::MENU_BAR;
 use crate::menu::ViewMode;
 use crate::menu::menu_items::APP_MENU_TITLE;
+use crate::menu::menu_spec::SortCheck;
 use crate::menu::menu_spec::{
     CheckRole, EntryKind, ItemSpec, Label, Pane, Platform, Predefined, SubmenuRole, SubmenuSpec, Tracking,
     display_accelerator_label,
 };
-use crate::menu::sort_checks::SortCheck;
 
 const PLATFORMS: [Platform; 2] = [Platform::MacOs, Platform::Linux];
 

@@ -11,7 +11,7 @@ use tauri::Runtime;
 use crate::ignore_poison::IgnorePoison as _;
 
 use super::menu_bar::MENU_BAR;
-use super::menu_spec::{CheckRole, EntryKind, SubmenuRole, SubmenuSpec};
+use super::menu_spec::{CheckRole, EntryKind, SortCheck, SubmenuRole, SubmenuSpec};
 use super::{MenuState, cloned_handle};
 
 /// The sort a pane asked for: what View > Sort by checks.
@@ -20,13 +20,6 @@ use super::{MenuState, cloned_handle};
 pub struct RequestedSort {
     pub column: SortColumn,
     pub order: SortOrder,
-}
-
-/// What one Sort by check item stands for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SortCheck {
-    Column(SortColumn),
-    Order(SortOrder),
 }
 
 impl SortCheck {

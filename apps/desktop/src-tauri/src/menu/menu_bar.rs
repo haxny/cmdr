@@ -30,12 +30,12 @@
 //! frontend keydown layer accepts `metaKey || ctrlKey`; it was the label (and the Super binding)
 //! that was wrong.
 
+use super::menu_spec::SortCheck::{self, Column, Order};
 use super::menu_spec::{
     Accelerator, BarMenu, CheckRole, Entry, EntryKind, Label, NONE, Pane, PerPlatform, Platform, Predefined, SEPARATOR,
     SubmenuRole, SubmenuSpec, both, check, cmd_or_ctrl, displayed_item, item, labeled_item, linux_only, macos,
     macos_menu, macos_only, menu, predefined, split, submenu,
 };
-use super::sort_checks::SortCheck::{self, Column, Order};
 use super::{
     ABOUT_ID, ACKNOWLEDGEMENTS_ID, APP_MENU_ID, ASK_CMDR_ID, CALCULATE_FOLDER_SIZES_ID, CHANGELOG_ID,
     CHECK_FOR_UPDATES_ID, CLI_INSTALL_ID, CLONE_PANE_ID, CLOSE_OTHER_TABS_ID, CLOSE_TAB_ID, COMMAND_PALETTE_ID,

@@ -4,7 +4,7 @@
 //! the Linux bar on a Mac too. `menu_bar_builder.rs` builds the one for [`Platform::current`].
 
 use super::ViewMode;
-use super::sort_checks::SortCheck;
+use cmdr_listing::{SortColumn, SortOrder};
 
 /// The two menu bars Cmdr builds. Every platform that isn't macOS gets the Linux one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -210,6 +210,14 @@ pub(crate) enum CheckRole {
     /// A View > Sort by column or order, checked while the focused pane asks for it. Kept in no
     /// field: `sort_checks::sync_sort_check_states` finds each one by id in `MenuState.sort_submenu`.
     Sort(SortCheck),
+}
+
+/// What one View > Sort by check item stands for. Its predicate, [`SortCheck::is_on`], lives with
+/// the state it reads, in `sort_checks.rs`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SortCheck {
+    Column(SortColumn),
+    Order(SortOrder),
 }
 
 /// Which `MenuState` field keeps a submenu, if any.
