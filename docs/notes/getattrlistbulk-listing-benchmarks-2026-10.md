@@ -71,6 +71,7 @@ $B gen /private/tmp/lb/f100000 100000
 $B parity /private/tmp/lb/f100000 / /Volumes /usr/bin /private/var/db
 $B bench /private/tmp/lb/f100000 7 current,bulk,readdir,bulk_xattr
 $B volcaps / /Volumes/<some mount>
+$B restat /private/tmp/lb/f10000 7
 ```
 
 Methods now: `current` is production (bulk on APFS and HFS+), `bulk` and `readdir` force a lister, and `readdir` on APFS
@@ -168,6 +169,27 @@ commit, run back to back on the same fixture.
   entry, the intended difference (bulk lists it as the folder it is, `read_dir` as a minimal row). `added_at` agreed
   with a per-path `getattrlist` on every entry except that one (whose `getattrlist` gets `EPERM` too). At `/` and
   `/System/Volumes/Data`, one entry has no added date on either lister.
+
+## What a re-stat costs
+
+`get_single_entry` (the watcher's re-stat, and every write path's preflight, cleanup, and conflict check) used to ask
+"is my folder bulk-eligible?" with a `statfs` of the parent on every call, then one `getattrlist` for the added date
+where it was. It now answers from a per-device cache keyed on its own `lstat`'s `st_dev` (`cmdr-local/DETAILS.md` § "A
+re-stat asks no `statfs`"). Measured with `listing_bench restat <dir> [runs]` (median of 5–7 warm passes over every
+entry, after one warm-up pass), release build, macOS 27.0, 2026-10-23, load average 3–5:
+
+- **APFS, 10,620 entries** (`gen … 10000`): 4.47–4.50 µs per call before (three runs), 3.30–3.36 µs after. The `statfs`
+  was ~1.2 µs of each call.
+- **smbfs, Docker Samba on localhost** (3 entries): 2.56 µs before, 1.47 µs after.
+- **smbfs, a NAS over Tailscale** (18 entries): 3.44 µs before, 1.62 µs after.
+
+On both smbfs mounts the warm `statfs` answered from the client's cache (no round trip per call in steady state), so the
+win there is the syscall, not the network. A cold `statfs` on a mount the client hasn't asked recently can still reach
+the server; now that happens once per device between filesystem events, not once per call.
+
+A first version drained the kqueue inline (`kevent` with a zero timeout) before each lookup: 15.9–16.9 µs wall per call
+against 4.8–5.7 µs CPU, because the call yields. It's a dedicated thread blocked on the kqueue instead, counting events
+into an atomic each lookup reads.
 
 ## Last opened is not one xattr
 

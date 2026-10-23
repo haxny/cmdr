@@ -10,7 +10,11 @@
 //! cargo run --release -p cmdr-local --example listing_bench -- parity <dir>...
 //! cargo run --release -p cmdr-local --example listing_bench -- volcaps <dir>...
 //! cargo run --release -p cmdr-local --example listing_bench -- vanish <dir>
+//! cargo run --release -p cmdr-local --example listing_bench -- restat <dir> [runs]
 //! ```
+//!
+//! `restat` times `reading::get_single_entry` over every entry of `<dir>` (what a
+//! preflight, a conflict check, or a watcher burst costs per call).
 //!
 //! Methods (`bench`'s third argument, comma-separated; default: all four):
 //! - `current`: `reading::list_directory_core`, what production runs (bulk on
@@ -64,7 +68,7 @@ mod macos {
     pub fn main() {
         let args: Vec<String> = std::env::args().skip(1).collect();
         let Some(cmd) = args.first() else {
-            eprintln!("usage: listing_bench gen|bench|parity|volcaps|vanish ...");
+            eprintln!("usage: listing_bench gen|bench|parity|volcaps|vanish|restat ...");
             std::process::exit(2);
         };
         match cmd.as_str() {
@@ -85,6 +89,7 @@ mod macos {
                 }
             }
             "vanish" => vanish(Path::new(&args[1])),
+            "restat" => restat(Path::new(&args[1]), args.get(2).map_or(7, |r| r.parse().expect("runs"))),
             other => panic!("unknown command {other}"),
         }
     }
@@ -121,6 +126,36 @@ mod macos {
     fn median(mut v: Vec<Duration>) -> Duration {
         v.sort();
         v[v.len() / 2]
+    }
+
+    /// Median wall and CPU per `get_single_entry` call over every entry of `dir`,
+    /// after one warm-up pass.
+    fn restat(dir: &Path, runs: usize) {
+        let paths: Vec<PathBuf> = fs::read_dir(dir)
+            .expect("read_dir")
+            .map(|entry| entry.expect("entry").path())
+            .collect();
+        let mut wall = Vec::new();
+        let mut cpu = Vec::new();
+        for round in 0..=runs {
+            let c0 = cpu_time();
+            let t0 = Instant::now();
+            for path in &paths {
+                std::hint::black_box(reading::get_single_entry(path).ok());
+            }
+            if round > 0 {
+                wall.push(t0.elapsed());
+                cpu.push(cpu_time() - c0);
+            }
+        }
+        let per_call = |d: Duration| d.as_secs_f64() * 1e6 / paths.len().max(1) as f64;
+        println!(
+            "dir={} entries={} runs={runs}: median wall {:.2} µs/call, cpu {:.2} µs/call",
+            dir.display(),
+            paths.len(),
+            per_call(median(wall)),
+            per_call(median(cpu)),
+        );
     }
 
     fn bench(dir: &Path, runs: usize, methods: &str) {

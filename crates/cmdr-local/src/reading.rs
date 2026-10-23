@@ -12,6 +12,9 @@
 #[cfg(target_os = "macos")]
 mod bulk;
 
+#[cfg(all(test, target_os = "macos"))]
+pub(crate) use bulk::filesystem_events;
+
 use std::collections::HashSet;
 use std::fs;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
@@ -384,7 +387,7 @@ pub fn get_single_entry(path: &Path) -> Result<FileEntry, std::io::Error> {
     let entry = entry_from_metadata(path, name, &metadata, &HashSet::new());
     #[cfg(target_os = "macos")]
     let entry = FileEntry {
-        added_at: bulk::parent_is_bulk_eligible(path)
+        added_at: bulk::holder_is_bulk_eligible(path, &metadata)
             .then(|| bulk::added_at_by_path(path))
             .flatten(),
         ..entry

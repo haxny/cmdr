@@ -172,8 +172,16 @@ this path.
 **The added date never depends on which lister ran.** On a bulk-eligible folder, the `read_dir` lister (forced, or the
 re-list after a doubtful stream) and a doubtful record fill `added_at` with one `getattrlist(ATTR_CMN_ADDEDTIME)` each
 (`bulk::added_at_by_path`, ~3.5 µs, paid only on those rare paths), and `get_single_entry` does the same when its PARENT
-is bulk-eligible (`statfs` of the path itself would follow a final symlink). Elsewhere, no `added_at`. HFS+ records none
-for a symlink (verified on macOS 27.0.1, `reading_parity_test` on a `testing::disk_images` HFS+ image, 2026-10-22).
+is bulk-eligible. Elsewhere, no `added_at`.
+
+**A re-stat asks no `statfs`** (`src/reading/bulk/device_cache.rs`). An entry lives on its folder's filesystem, so the
+device its `lstat` already names answers "is my folder bulk-eligible?", remembered per device. Two exceptions fall back
+to a `statfs` of the parent: a mount point (each device remembers its mount root's inode; a folder with it lists in
+another filesystem) and a device the probe couldn't read. A device number is reused after an unmount, so a thread
+blocked on a kqueue `EVFILT_FS` filter counts filesystem events, and any event forgets every device; a probe that
+straddled one isn't stored. ❌ Don't poll the kqueue inline: a zero-timeout `kevent` yields, costing ~12 µs of wall time
+per call. Numbers: `docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md` § "What a re-stat costs". HFS+ records
+none for a symlink (verified on macOS 27.0.1, `reading_parity_test` on a `testing::disk_images` HFS+ image, 2026-10-22).
 
 **Intended differences from a `read_dir` listing:**
 

@@ -9,7 +9,8 @@ rename, local volume space, and the mount probes. Tauri-free; the app builds eve
   **local_posix/scan.rs** (the copy-scan family) and **local_posix/streams.rs** (bytes in and out). A trait impl can't
   span files, so a moved method stays a one-line delegation to a `pub(super)` inherent body.
 - **reading.rs** (the local reader the watcher and `tags.rs` read through too; `read_dir` + `lstat`) with
-  **reading/bulk.rs** (macOS: the `getattrlistbulk` lister APFS and HFS+ take), **mutation.rs** (the listing patch a
+  **reading/bulk.rs** (macOS: the `getattrlistbulk` lister APFS and HFS+ take; `src/reading/bulk/device_cache.rs`
+  answers a re-stat's eligibility per device, forgotten on every mount event), **mutation.rs** (the listing patch a
   local mutation sends), **space.rs** + **live_space.rs**, and the OS probes: **filesystem_kind.rs**,
   **mount_table.rs**, **statfs.rs**, **nsurl.rs**, **linux_mounts.rs** (Linux).
 

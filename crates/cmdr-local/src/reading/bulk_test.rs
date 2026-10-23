@@ -13,7 +13,7 @@ use cmdr_fs::attr_buf::{Record, Timespec, VDIR, VLNK, VREG};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::TestDir;
 
-use super::{Restart, SF_FIRMLINK, bulk_eligible, entry_from_record, kernel_batch, read_entries_with};
+use super::{Restart, SF_FIRMLINK, STATFS_CALLS, bulk_eligible, entry_from_record, kernel_batch, read_entries_with};
 use crate::reading::{AddedAt, Lister, ListingTally, Pick, get_single_entry, minimal_row};
 
 // ============================================================================
@@ -472,6 +472,32 @@ fn another_errno_reaches_the_caller() {
         Err(io::Error::from_raw_os_error(libc::EIO))
     });
     assert_eq!(result.err().and_then(|e| e.raw_os_error()), Some(libc::EIO));
+}
+
+// ============================================================================
+// What a re-stat costs
+// ============================================================================
+
+/// A re-stat answers "does my folder list in bulk?" from the device its `lstat`
+/// already named, so a folder's worth of re-stats (a preflight, a conflict
+/// check, a watcher burst) costs at most one `statfs`, ❌ never one each: on an
+/// smbfs destination each one may be a network round trip.
+#[test]
+fn restats_in_one_folder_cost_at_most_one_statfs() {
+    let dir = TestDir::new("restat_statfs");
+    fs::create_dir(dir.join("sub")).expect("a folder");
+    for i in 0..20 {
+        fs::write(dir.join(format!("f{i}")), b"x").expect("a file");
+    }
+    symlink("f0", dir.join("link")).expect("a link");
+
+    let before = STATFS_CALLS.with(std::cell::Cell::get);
+    for name in (0..20).map(|i| format!("f{i}")).chain(["sub".into(), "link".into()]) {
+        let entry = get_single_entry(&dir.join(&name)).expect("re-stat");
+        assert!(entry.added_at.is_some(), "{name}: APFS carries the added date");
+    }
+    let statfs_calls = STATFS_CALLS.with(std::cell::Cell::get) - before;
+    assert!(statfs_calls <= 1, "statfs count over 22 re-stats: {statfs_calls}");
 }
 
 /// Production picks bulk on APFS (the scratch dir's filesystem) and lists the
