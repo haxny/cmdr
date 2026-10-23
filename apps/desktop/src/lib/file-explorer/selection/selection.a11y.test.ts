@@ -195,6 +195,7 @@ describe('SelectionInfo a11y', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 0,
+        effectiveSortBy: 'name',
       },
     })
     await tick()
@@ -221,6 +222,7 @@ describe('SelectionInfo a11y', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 0,
+        effectiveSortBy: 'name',
       },
     })
     await tick()
@@ -247,6 +249,7 @@ describe('SelectionInfo a11y', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 0,
+        effectiveSortBy: 'name',
       },
     })
     await tick()
@@ -273,6 +276,7 @@ describe('SelectionInfo a11y', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 3,
+        effectiveSortBy: 'name',
       },
     })
     await tick()

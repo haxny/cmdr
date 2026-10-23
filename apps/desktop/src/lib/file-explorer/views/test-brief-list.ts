@@ -117,6 +117,7 @@ export async function mountBriefList(options: MountBriefListOptions = {}): Promi
     currentPath: '/root',
     sortBy: 'name',
     sortOrder: 'ascending',
+    effectiveSortBy: 'name',
     onSelect: () => {},
     onNavigate: () => {},
     ...options.props,

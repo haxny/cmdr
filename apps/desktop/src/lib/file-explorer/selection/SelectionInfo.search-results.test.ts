@@ -54,6 +54,7 @@ function render(props: Record<string, unknown>): HTMLElement {
       entry: null,
       stats: stats(),
       selectedCount: 0,
+      effectiveSortBy: 'name',
       ...props,
     },
   })

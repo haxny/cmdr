@@ -92,6 +92,7 @@ describe('SelectionInfo symlink hint', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 0,
+        effectiveSortBy: 'name',
       },
     })
     await tick()
@@ -120,6 +121,7 @@ describe('SelectionInfo symlink hint', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 0,
+        effectiveSortBy: 'name',
       },
     })
     await tick()
@@ -147,6 +149,7 @@ describe('SelectionInfo symlink hint', () => {
           selectedPhysicalSize: null,
         },
         selectedCount: 0,
+        effectiveSortBy: 'name',
       },
     })
     await tick()

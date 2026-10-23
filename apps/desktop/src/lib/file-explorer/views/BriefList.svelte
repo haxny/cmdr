@@ -85,6 +85,7 @@
     import type { RenameStepDirection } from '../rename/rename-step'
     import { formatByteSizeTiered } from '#lib/units/index.js'
     import { isDoubleClick, type BriefListClick } from './brief-list-utils'
+    import { sortFallbackNote } from '../pane/sort-fallback'
 
     interface Props {
         listingId: string
@@ -122,6 +123,12 @@
         currentPath: string
         sortBy: SortColumn
         sortOrder: SortOrder
+        /**
+         * The column the backend ordered the rows by, paired with `listingId`: `sortBy`, or
+         * Modified for a date the location doesn't record. Brief rows show no date, so it only
+         * puts the fallback glyph on the requested date's header button.
+         */
+        effectiveSortBy: SortColumn | null
         /** Rename state for inline editing */
         renameState?: RenameState | null
         onSelect: (args: SelectPayload) => void
@@ -180,6 +187,7 @@
         currentPath,
         sortBy,
         sortOrder,
+        effectiveSortBy,
         renameState = null,
         onSelect,
         onNavigate,
@@ -205,6 +213,12 @@
 
     // Unique per mounted list, so the two panes never render the same row id.
     const listId = $props.id()
+
+    /** Why the rows follow Modified, on the requested date's header button only. */
+    const sortFallback = $derived(sortFallbackNote(sortBy, effectiveSortBy))
+    function fallbackNoteFor(column: SortColumn): string | undefined {
+        return column === sortBy ? sortFallback : undefined
+    }
 
     // ==== Cached entries (prefetch buffer) ====
     let cachedEntries = $state<FileEntry[]>([])
@@ -1008,6 +1022,16 @@
             label={tString('fileExplorer.columns.created')}
             currentSortColumn={sortBy}
             currentSortOrder={sortOrder}
+            fallbackNote={fallbackNoteFor('created')}
+            onClick={(col: SortColumn) => onSortChange?.(col)}
+        />
+        <SortableHeader
+            column="added"
+            {isFocused}
+            label={tString('fileExplorer.columns.added')}
+            currentSortColumn={sortBy}
+            currentSortOrder={sortOrder}
+            fallbackNote={fallbackNoteFor('added')}
             onClick={(col: SortColumn) => onSortChange?.(col)}
         />
     </div>

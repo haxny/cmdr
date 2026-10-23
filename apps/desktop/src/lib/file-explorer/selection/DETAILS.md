@@ -133,6 +133,13 @@ yet" hourglass on top — replacing the `≥` rather than joining it, since a mo
 `updateIndexSizesInPlace([entry])` (skipping `..`, whose entry path is the parent folder), and `applyFolderSizes` writes
 each pushed `listing-index-sizes-changed` reading onto it in place, so the hourglass tracks a storm live.
 
+The `file-info` date line and its tooltip show the date `displayedDateColumn(effectiveSortBy)` picks
+(`../displayed-date.ts`), the one Full's date column would show, ❌ never a derivation of their own. `FilePane` passes
+`listingPresentation.effectiveSortBy` (a search pane: its snapshot's), the column paired with the listing on screen, and
+the feed drops a cursor read that lands after the pane left its listing (`../pane/selection-info-feed.svelte.ts`), so
+the footer never shows the old folder's file in the new folder's date kind. `..` carries no dates, so it shows none.
+Pinned in `SelectionInfo.displayed-date.test.ts`.
+
 Other layout: filename truncation uses `useShortenMiddle` with `preferBreakAt: '.'`. Date column width is computed via
 `measureDateColumnWidth(formatDateTime)` to stay in sync with FullList; `formatDateTime` comes from
 `reactive-settings.svelte`.

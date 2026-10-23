@@ -1,7 +1,8 @@
 <script lang="ts">
     import Icon from '#lib/ui/Icon.svelte'
     import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
-    import type { FileEntry, ListingStats } from '../types'
+    import type { FileEntry, ListingStats, SortColumn } from '../types'
+    import { dateOf, displayedDateColumn } from '../displayed-date'
     import {
         buildDateTooltip,
         getSizeDisplay,
@@ -58,8 +59,12 @@
         volumeId: string
         /** Entry under cursor (for Brief mode without selection) */
         entry: FileEntry | null
-        /** Modified timestamp of the current directory (for ".." entry) */
-        currentDirModifiedAt?: number
+        /**
+         * The column the pane's rows are ordered by, paired with the listing `entry` came
+         * from (`null`: a ranked search pane). The date line shows the one
+         * `displayedDateColumn` picks from it, the same date Full's column would.
+         */
+        effectiveSortBy: SortColumn | null
         /** Listing statistics from backend */
         stats: ListingStats | null
         /** Number of selected items */
@@ -94,7 +99,7 @@
         viewMode,
         volumeId,
         entry,
-        currentDirModifiedAt,
+        effectiveSortBy,
         stats,
         selectedCount,
         volumeSpace,
@@ -196,17 +201,17 @@
     /**
      * `placeholder` is a string for a broken symlink (there's no honest
      * timestamp to show) and `null` when we should render the actual timestamp
-     * via `<DateLabel>`. `dateTimestamp` carries the value for that case (the
-     * parent dir's modifiedAt covers the `..` row).
+     * via `<DateLabel>`. `dateTimestamp` carries the value for that case (`..`
+     * carries no dates, so it shows none).
      */
     const datePlaceholder = $derived.by(() => {
         if (!entry) return ''
         if (isBrokenSymlink) return tString('fileExplorer.entry.brokenSymlink')
         return null
     })
-    const dateTimestamp = $derived(entry?.name === '..' ? currentDirModifiedAt : entry?.modifiedAt)
-    // The line shows `modifiedAt` (`dateTimestamp`), so the tooltip marks Modified as displayed.
-    const dateTooltip = $derived(entry && !isBrokenSymlink ? buildDateTooltip(entry, formattedDate, 'modified') : undefined)
+    const dateColumn = $derived(displayedDateColumn(effectiveSortBy))
+    const dateTimestamp = $derived(entry ? dateOf(entry, dateColumn) : undefined)
+    const dateTooltip = $derived(entry && !isBrokenSymlink ? buildDateTooltip(entry, formattedDate, dateColumn) : undefined)
     // Show an info hint next to a directory's size when its subtree contains
     // symlinks: their content is intentionally excluded from the recursive
     // size (matching `du`/Finder), but that can be surprising for folders that

@@ -2250,6 +2250,7 @@
                 hasParent={listingPresentation.parentRow.hasParent}
                 {sortBy}
                 {sortOrder}
+                effectiveSortBy={listingPresentation.effectiveSortBy}
                 renameState={rename.active ? rename : null}
                 parentPath={listingPresentation.parentRow.parentPath}
                 {currentPath}
@@ -2373,7 +2374,7 @@
             viewMode={isSearchResultsView ? 'full' : viewMode}
             volumeId={searchSnapshot?.volumeId ?? volumeId}
             entry={selectionInfo.entry}
-            currentDirModifiedAt={undefined}
+            effectiveSortBy={isSearchResultsView ? (searchSnapshot?.sort?.effectiveSortBy ?? null) : listingPresentation.effectiveSortBy}
             stats={selectionInfo.stats}
             selectedCount={selection.selectedIndices.size}
             volumeSpace={diskSpace.volumeSpace}

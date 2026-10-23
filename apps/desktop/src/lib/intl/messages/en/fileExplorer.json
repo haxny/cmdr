@@ -1517,7 +1517,7 @@
   },
   "fileExplorer.columns.added": "Added",
   "@fileExplorer.columns.added": {
-    "description": "File-list column header for the date each item was added to its folder (moved, copied, or downloaded into it), Finder's \"Date Added\". Full view shows it on the date column while the list is sorted by date added. Its rendered text is also measured to size the column. Keep it short, parallel with fileExplorer.columns.created and fileExplorer.columns.modified."
+    "description": "File-list column header for the date each item was added to its folder (moved, copied, or downloaded into it), Finder's \"Date Added\". Brief view shows it as its own sort button, after Created; Full view shows it on the date column while the list is sorted by date added. Its rendered text is also measured to size the column. Keep it short, parallel with fileExplorer.columns.created and fileExplorer.columns.modified."
   },
   "fileExplorer.columns.dateSortMenu": "Choose a date to sort by",
   "@fileExplorer.columns.dateSortMenu": {

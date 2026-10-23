@@ -66,7 +66,7 @@
     import { computeFullListColumnWidths, holdSizeColumnWidth } from './measure-column-widths'
     import { dateOf, displayedDateColumn } from '../displayed-date'
     import { buildDateTooltip } from '../selection/selection-info-utils'
-    import { sortFallbackMessage } from '../pane/sort-fallback'
+    import { sortFallbackNote } from '../pane/sort-fallback'
     import { untrack } from 'svelte'
     import {
         getRowHeight,
@@ -288,10 +288,7 @@
      * width, tooltip, and row names all read these two.
      */
     const dateColumn = $derived(displayedDateColumn(cache.rowsSort.effectiveSortBy))
-    const dateFallbackNote = $derived.by(() => {
-        const { sortBy: requested, effectiveSortBy: effective } = cache.rowsSort
-        return requested === null || effective === null ? undefined : (sortFallbackMessage(requested, effective) ?? undefined)
-    })
+    const dateFallbackNote = $derived(sortFallbackNote(cache.rowsSort.sortBy, cache.rowsSort.effectiveSortBy))
 
     // ==== Virtual scrolling constants ====
     // Row height is reactive based on UI density setting

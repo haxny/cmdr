@@ -63,7 +63,7 @@ function mountFileInfo(entry: ReturnType<typeof makeRemoteDir>): HTMLElement {
   document.body.appendChild(target)
   mount(SelectionInfo, {
     target,
-    props: { viewMode: 'brief', volumeId: 'smb-nas', entry, stats: STATS, selectedCount: 0 },
+    props: { viewMode: 'brief', volumeId: 'smb-nas', entry, stats: STATS, selectedCount: 0, effectiveSortBy: 'name' },
   })
   return target
 }

@@ -628,6 +628,13 @@ read it. **Why**: the pane takes a new folder's effective column at `listing-com
 replace the retained ones; read live, those old rows would show the new folder's date. The header still sorts by (and
 lights up for) the REQUESTED date (`dateHeaderSortColumn`). Pinned in `FullList.displayed-date.svelte.test.ts`.
 
+**Decision**: Brief's header has a button per sort column (Name, Ext, Size, Modified, Created, Added), and in a date
+fallback the REQUESTED date's button carries the `fallbackNote` glyph (`pane/sort-fallback.ts::sortFallbackNote`, the
+same sentence Full's date header uses). Brief rows show no date, and their accessible name stays the bare name: the date
+reaches sight and VoiceOver through `SelectionInfo`'s visible date line, which reads `displayedDateColumn` of the same
+`effectiveSortBy` the list gets (`listing-presentation.svelte.ts`). Six `flex: 1` buttons ellipsize their `.label` in a
+narrow pane; the glyph is `flex-shrink: 0` so it never does. Pinned in `BriefList.date-headers.test.ts`.
+
 **Gotcha**: Width transitions would "slide" on dir switches, because the header (FullList) and columns (BriefList)
 persist across navs **Why**: When `shouldResetCache` fires, both lists set a `skipTransition` flag and clear it after
 two `requestAnimationFrame` ticks (one to paint with `transition: none`, one more before re-enabling). FullList also
