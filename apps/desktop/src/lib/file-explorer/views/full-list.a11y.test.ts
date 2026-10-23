@@ -16,6 +16,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import FullList from './FullList.svelte'
 import FullListHeader from './FullListHeader.svelte'
+import DateSortChevron from './DateSortChevron.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { dirEntry, fileEntry, mountFullList } from './test-full-list'
 import { installLayoutMock } from '#lib/test-layout.js'
@@ -278,5 +279,25 @@ describe('FullListHeader a11y', () => {
     await expectNoA11yViolations(
       await mountHeader({ showExtensionInName: true, gitColumnVisible: true, skipTransition: true, sortBy: 'size' }),
     )
+  })
+})
+
+/**
+ * Tier 3 a11y tests for `DateSortChevron.svelte`, the date header's Sort by menu button
+ * (the header cases above mount it closed). Open, it says `aria-expanded="true"` while
+ * the native popup is up.
+ */
+describe('DateSortChevron a11y', () => {
+  it('closed and open have no a11y violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(DateSortChevron, { target, props: { onOpen: () => new Promise<void>(() => {}) } })
+    await tick()
+    await expectNoA11yViolations(target)
+
+    target.querySelector('button')?.click()
+    await tick()
+    expect(target.querySelector('button')?.getAttribute('aria-expanded')).toBe('true')
+    await expectNoA11yViolations(target)
   })
 })

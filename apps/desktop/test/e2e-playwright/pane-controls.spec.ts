@@ -92,6 +92,27 @@ test.describe('Pane controls from the keyboard', () => {
       .toBe(true)
   })
 
+  // The Full date header's Sort by chevron is a plain button in the sort toolbar, left of the
+  // date header, so the walk reaches it with no `tabindex`. (Its native menu can't be driven here.)
+  test('the arrows reach the date Sort by chevron in Full view', async ({ tauriPage }) => {
+    await executeViaCommandPalette(tauriPage, 'Full view')
+    await expect
+      .poll(async () => tauriPage.isVisible('.file-pane.is-focused .full-list-container .date-sort-chevron'), {
+        timeout: waitBudget(5000),
+      })
+      .toBeTruthy()
+
+    await enterControls(tauriPage)
+    await tauriPage.keyboard.press('ArrowDown')
+    await expect.poll(async () => focusIsIn(tauriPage, '.header-row'), { timeout: waitBudget(3000) }).toBe(true)
+    await tauriPage.keyboard.press('End')
+    await tauriPage.keyboard.press('ArrowLeft')
+    await expect
+      .poll(async () => focused(tauriPage), { timeout: waitBudget(3000) })
+      .toMatch(/^sort:button\.date-sort-chevron/)
+    expect(await tauriPage.evaluate<string | null>(`document.activeElement.getAttribute('aria-haspopup')`)).toBe('menu')
+  })
+
   test('a path segment navigates, and focus lands back in the list', async ({ tauriPage }) => {
     await enterControls(tauriPage)
     // The last segment button is the current folder's parent: the fixture root, holding `left/`.
