@@ -48,7 +48,6 @@ export function paneListingOf(pane: { hasError: boolean; loading: boolean; stall
 
 /** A listing's seconds-since-epoch date as the ISO string `cmdr://state` carries, or `null` when absent. */
 function isoDate(seconds: number | null | undefined): string | null {
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, just formatting a timestamp
   return seconds != null ? new Date(seconds * 1000).toISOString() : null
 }
 
@@ -205,7 +204,6 @@ export function createPaneMcpSync(deps: PaneMcpSyncDeps) {
       isDirectory: entry.isDirectory,
       size: entry.size ?? null,
       recursiveSize: entry.recursiveSize ?? null,
-      // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, just formatting a timestamp
       modified: isoDate(entry.modifiedAt),
       created: isoDate(entry.createdAt),
       added: isoDate(entry.addedAt),

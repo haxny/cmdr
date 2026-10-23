@@ -133,7 +133,7 @@ export function createQuickFilterController(deps: QuickFilterControllerDeps): Qu
             totalCount: result.totalCount,
             cursorIndex:
               result.newCursorIndex === null ? (result.totalCount > 0 ? offset : 0) : result.newCursorIndex + offset,
-            selectedIndices: (result.newSelectedIndices ?? []).map((i) => i + offset),
+            selectedIndices: result.newSelectedIndices.map((i) => i + offset),
             sequence: result.sequence,
           })
         },

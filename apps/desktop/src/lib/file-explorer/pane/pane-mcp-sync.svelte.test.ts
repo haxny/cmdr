@@ -477,9 +477,9 @@ describe('the dates a row carries', () => {
 
     const [dated, undated] = await sync.buildMcpFileList()
 
-    expect(dated?.created).toBe(new Date(1_600_000_000 * 1000).toISOString())
-    expect(dated?.added).toBe(new Date(1_750_000_000 * 1000).toISOString())
-    expect(undated?.created).toBeNull()
-    expect(undated?.added).toBeNull()
+    expect(dated.created).toBe(new Date(1_600_000_000 * 1000).toISOString())
+    expect(dated.added).toBe(new Date(1_750_000_000 * 1000).toISOString())
+    expect(undated.created).toBeNull()
+    expect(undated.added).toBeNull()
   })
 })
