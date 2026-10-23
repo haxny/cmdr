@@ -520,6 +520,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::usage::get_launch_day_count,
                     crate::space_poller::set_disk_space_size_format,
                     crate::main_window_visibility::set_main_window_visible,
+                    crate::commands::menu_state::update_sort_menu,
                 ]
                 dispatch_only: [
                     // Generic over `R: tauri::Runtime`, which `collect_functions!` can't take.

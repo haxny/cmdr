@@ -8,9 +8,9 @@
 
 use crate::ignore_poison::IgnorePoison;
 use crate::menu::{
-    MenuState, SELECT_SAME_KIND_ID, SameKindTarget, SettingsChanged, TrashUndoTarget, UNDO_TRASH_ID, ViewMode,
-    apply_menu_item_states, cloned_handle, rebuild_view_mode_items, same_kind_menu_label, set_menu_context,
-    sync_view_mode_check_states, undo_trash_menu_label,
+    MenuState, RequestedSort, SELECT_SAME_KIND_ID, SameKindTarget, SettingsChanged, TrashUndoTarget, UNDO_TRASH_ID,
+    ViewMode, apply_menu_item_states, cloned_handle, rebuild_view_mode_items, same_kind_menu_label, set_menu_context,
+    sync_sort_check_states, sync_view_mode_check_states, undo_trash_menu_label,
 };
 #[cfg(target_os = "macos")]
 use crate::menu::{swap_to_main_menu, swap_to_viewer_menu};
@@ -116,6 +116,18 @@ pub fn update_view_mode_menu<R: Runtime>(
     }
 
     Ok(())
+}
+
+/// Checks View > Sort by's column and order for the sort the focused pane ASKED for, or nothing for
+/// `None` (a search pane in its ranked order). ❗ The requested sort, never a fallback's effective
+/// column. The only writer is `pane/sort-menu-sync.svelte.ts`, which pushes on every change of
+/// focus, tab, or sort, deduped. Not generic over the runtime, so specta types it.
+#[tauri::command]
+#[specta::specta]
+pub fn update_sort_menu(app: AppHandle, sort: Option<RequestedSort>) {
+    let menu_state = app.state::<MenuState<tauri::Wry>>();
+    *menu_state.requested_sort.lock_ignore_poison() = sort;
+    sync_sort_check_states(&menu_state);
 }
 
 /// Updates the File menu "Pin tab" / "Unpin tab" label based on the active tab's pin state.

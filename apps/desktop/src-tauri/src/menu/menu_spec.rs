@@ -4,6 +4,7 @@
 //! the Linux bar on a Mac too. `menu_bar_builder.rs` builds the one for [`Platform::current`].
 
 use super::ViewMode;
+use super::sort_checks::SortCheck;
 
 /// The two menu bars Cmdr builds. Every platform that isn't macOS gets the Linux one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -206,6 +207,9 @@ pub(crate) enum CheckRole {
     /// One pane's Full or Brief item (`MenuState.view_mode_full_left` and its three siblings),
     /// checked while that pane is in that mode.
     ViewMode(Pane, ViewMode),
+    /// A View > Sort by column or order, checked while the focused pane asks for it. Kept in no
+    /// field: `sort_checks::sync_sort_check_states` finds each one by id in `MenuState.sort_submenu`.
+    Sort(SortCheck),
 }
 
 /// Which `MenuState` field keeps a submenu, if any.
@@ -244,6 +248,10 @@ pub(crate) struct CheckSpec {
     pub(crate) label: Label,
     pub(crate) accelerator: Accelerator,
     pub(crate) role: CheckRole,
+    /// Whether it's also in `MenuState.items`, like a [`Tracking::Tracked`] command item, so a
+    /// custom shortcut can be swapped onto it. `update_menu_item_accelerator` recreates a check
+    /// item as a check item, its checked state included.
+    pub(crate) tracked: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -366,6 +374,7 @@ pub(crate) const fn check(id: &'static str, key: &'static str, accelerator: Acce
         label: Label::Key(key),
         accelerator,
         role,
+        tracked: false,
     }))
 }
 
@@ -412,6 +421,20 @@ impl Entry {
     /// This item, [`Tracking::Untracked`].
     pub(crate) const fn untracked(self) -> Self {
         self.tracked_as(Tracking::Untracked)
+    }
+
+    /// This check item, also kept in `MenuState.items` ([`CheckSpec::tracked`]).
+    pub(crate) const fn tracked(self) -> Self {
+        match self.kind {
+            EntryKind::Check(mut check) => {
+                check.tracked = true;
+                Self {
+                    only: self.only,
+                    kind: EntryKind::Check(check),
+                }
+            }
+            _ => panic!("a command item is tracked already; only a check item opts in"),
+        }
     }
 
     /// This item, kept as [`Tracking::PinTab`].

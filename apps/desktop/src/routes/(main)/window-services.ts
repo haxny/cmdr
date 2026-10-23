@@ -59,6 +59,7 @@ import {
 } from '#lib/indexing/index.js'
 import { startLowDiskSpaceEventBridge } from '#lib/low-disk-space/event-bridge.svelte.js'
 import { startOpenTerminalMenuGate } from '#lib/open-terminal/menu-gate.svelte.js'
+import { startSortMenuSync } from '#lib/file-explorer/pane/sort-menu-sync.svelte.js'
 import { initSnapshotPurge, destroySnapshotPurge } from '#lib/search/snapshot-purge.js'
 import { getSetting } from '#lib/settings/index.js'
 import { drainPendingReveals } from '#lib/tauri-commands/index.js'
@@ -126,6 +127,9 @@ let stopVisibilityReport: (() => void) | null = null
 /** Tears down the "Open terminal here" menu-item sync (HMR safety). */
 let stopTerminalMenuGate: (() => void) | null = null
 
+/** Tears down View > Sort by's checkmark sync (HMR safety). */
+let stopSortMenuSync: (() => void) | null = null
+
 /** Tears down the sync of the menu items a dialog greys out (HMR safety). */
 let stopMenuDialogGate: (() => void) | null = null
 
@@ -143,6 +147,8 @@ export function startEarlyWindowServices(): void {
   // Grey out the File menu's "Open terminal here" while the focused pane sits on a
   // phone, the network browser, or a search snapshot. Chrome only, same as above.
   stopTerminalMenuGate = startOpenTerminalMenuGate()
+  // Check View > Sort by's column and order on what the focused pane asked for.
+  stopSortMenuSync = startSortMenuSync()
   // Seed and subscribe the suggestions badge. The seed is not redundant with the subscription:
   // suggestions never expire, so a group proposed in an earlier session is already waiting
   // before anything emits.
@@ -303,6 +309,8 @@ export function stopWindowServices(): void {
   stopMenuGate = null
   stopTerminalMenuGate?.()
   stopTerminalMenuGate = null
+  stopSortMenuSync?.()
+  stopSortMenuSync = null
   stopMenuDialogGate?.()
   stopMenuDialogGate = null
   // Clean up every menu / MCP / dialog / window-focus listener (prevents duplicate listeners

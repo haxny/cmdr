@@ -176,6 +176,9 @@ Full history-stack contract and the volume-breadcrumb detail live in `navigation
     `sort-operations.ts`); an order flip of the column already requested, a re-sort the user didn't start, and a
     navigation stay quiet (the header glyph says it). The toast stack's live region speaks it, so no `announce` beside
     it.
+  - View > Sort by checks the focused pane's REQUESTED column and order, pushed by the one `$effect` in
+    `pane/sort-menu-sync.svelte.ts` (the tab's sort, or the snapshot's for a search pane). The Rust side:
+    `src-tauri/src/menu/DETAILS.md` § "View > Sort by checkmarks".
 
 ### Implementation
 

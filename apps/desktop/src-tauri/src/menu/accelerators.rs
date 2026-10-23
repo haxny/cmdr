@@ -13,12 +13,15 @@
 //! [`frontend_shortcut_to_accelerator`] converts and then refuses anything the bar
 //! can't safely own.
 
-use tauri::{AppHandle, Runtime, menu::MenuItem};
+use tauri::{
+    AppHandle, Runtime,
+    menu::{CheckMenuItem, MenuItem},
+};
 
 use crate::ignore_poison::IgnorePoison;
 
 use super::menu_spec::{Platform, display_accelerator_label};
-use super::{MenuItemEntry, MenuState};
+use super::{MenuItemEntry, MenuState, TrackedItem};
 
 /// Convert frontend shortcut format (⌘2) to the text a menu item shows (Cmd+2, Ctrl+2 on Linux).
 /// Returns None if the shortcut is empty.
@@ -251,10 +254,27 @@ pub fn update_menu_item_accelerator<R: Runtime>(
     let submenu = entry.submenu.clone();
     let position = entry.position;
 
-    // Remove old item, create replacement with new accelerator, reinsert
-    submenu.remove(&entry.item)?;
-    let new_item = MenuItem::with_id(app, menu_item_id, &built_label, enabled, new_accelerator)?;
-    submenu.insert(&new_item, position)?;
+    // Remove old item, create a replacement of the SAME kind with the new accelerator, reinsert.
+    // A check item keeps its check: View > Sort by's bound columns are check items.
+    let new_item = match &entry.item {
+        TrackedItem::Plain(_) => TrackedItem::Plain(MenuItem::with_id(
+            app,
+            menu_item_id,
+            &built_label,
+            enabled,
+            new_accelerator,
+        )?),
+        TrackedItem::Check(old) => TrackedItem::Check(CheckMenuItem::with_id(
+            app,
+            menu_item_id,
+            &built_label,
+            enabled,
+            old.is_checked()?,
+            new_accelerator,
+        )?),
+    };
+    submenu.remove(entry.item.as_menu_item())?;
+    submenu.insert(new_item.as_menu_item(), position)?;
 
     // Update the HashMap entry
     items_guard.insert(

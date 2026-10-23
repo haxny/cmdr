@@ -35,6 +35,7 @@ use super::menu_spec::{
     SubmenuRole, SubmenuSpec, both, check, cmd_or_ctrl, displayed_item, item, labeled_item, linux_only, macos,
     macos_menu, macos_only, menu, predefined, split, submenu,
 };
+use super::sort_checks::SortCheck::{self, Column, Order};
 use super::{
     ABOUT_ID, ACKNOWLEDGEMENTS_ID, APP_MENU_ID, ASK_CMDR_ID, CALCULATE_FOLDER_SIZES_ID, CHANGELOG_ID,
     CHECK_FOR_UPDATES_ID, CLI_INSTALL_ID, CLONE_PANE_ID, CLOSE_OTHER_TABS_ID, CLOSE_TAB_ID, COMMAND_PALETTE_ID,
@@ -54,6 +55,12 @@ use super::{
     VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_ZOOM_75_ID, VIEW_ZOOM_100_ID, VIEW_ZOOM_125_ID,
     VIEW_ZOOM_150_ID, VIEW_ZOOM_IN_ID, VIEW_ZOOM_OUT_ID, ViewMode, WINDOW_MENU_ID,
 };
+use cmdr_listing::{SortColumn, SortOrder};
+
+/// A View > Sort by row: a check item showing whether the focused pane asked for `role`.
+const fn sort_check(id: &'static str, key: &'static str, accelerator: Accelerator, role: SortCheck) -> Entry {
+    check(id, key, accelerator, CheckRole::Sort(role))
+}
 
 /// "Copy path", matching Finder's "Copy as Pathname". Must stay in sync with the `file.copyPath`
 /// default in `src/lib/commands/sources/file-list.ts` (`⌘⌥C`), which is what the frontend
@@ -310,21 +317,61 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             ),
             // GTK intercepts F-row keys but lets Cmd+digit chords through, so both platforms
             // register these; the ⌘F3–⌘F6 alternates go through JS dispatch alone. Date created, Date
-            // added, and the two order items have no shortcut to sync, so nothing tracks them.
+            // added, and the two order items have no shortcut to sync, so nothing tracks them. Every
+            // row checks what the focused pane asked for (`sort_checks.rs`).
             submenu(
                 Some(SORT_BY_MENU_ID),
                 "menu.view.sortBy",
                 SubmenuRole::SortBy,
                 &[
-                    item(SORT_BY_NAME_ID, "menu.sort.name", cmd_or_ctrl!("3")),
-                    item(SORT_BY_EXTENSION_ID, "menu.sort.extension", cmd_or_ctrl!("4")),
-                    item(SORT_BY_MODIFIED_ID, "menu.sort.dateModified", cmd_or_ctrl!("5")),
-                    item(SORT_BY_SIZE_ID, "menu.sort.size", cmd_or_ctrl!("6")),
-                    item(SORT_BY_CREATED_ID, "menu.sort.dateCreated", NONE).untracked(),
-                    item(SORT_BY_ADDED_ID, "menu.sort.dateAdded", NONE).untracked(),
+                    sort_check(
+                        SORT_BY_NAME_ID,
+                        "menu.sort.name",
+                        cmd_or_ctrl!("3"),
+                        Column(SortColumn::Name),
+                    )
+                    .tracked(),
+                    sort_check(
+                        SORT_BY_EXTENSION_ID,
+                        "menu.sort.extension",
+                        cmd_or_ctrl!("4"),
+                        Column(SortColumn::Extension),
+                    )
+                    .tracked(),
+                    sort_check(
+                        SORT_BY_MODIFIED_ID,
+                        "menu.sort.dateModified",
+                        cmd_or_ctrl!("5"),
+                        Column(SortColumn::Modified),
+                    )
+                    .tracked(),
+                    sort_check(
+                        SORT_BY_SIZE_ID,
+                        "menu.sort.size",
+                        cmd_or_ctrl!("6"),
+                        Column(SortColumn::Size),
+                    )
+                    .tracked(),
+                    sort_check(
+                        SORT_BY_CREATED_ID,
+                        "menu.sort.dateCreated",
+                        NONE,
+                        Column(SortColumn::Created),
+                    ),
+                    sort_check(SORT_BY_ADDED_ID, "menu.sort.dateAdded", NONE, Column(SortColumn::Added)),
                     SEPARATOR,
-                    item(SORT_ASCENDING_ID, "menu.sort.ascending", NONE).untracked(),
-                    item(SORT_DESCENDING_ID, "menu.sort.descending", NONE).untracked(),
+                    sort_check(
+                        SORT_ASCENDING_ID,
+                        "menu.sort.ascending",
+                        NONE,
+                        Order(SortOrder::Ascending),
+                    ),
+                    sort_check(
+                        SORT_DESCENDING_ID,
+                        "menu.sort.descending",
+                        NONE,
+                        Order(SortOrder::Descending),
+                    ),
                 ],
             ),
             // Each preset writes `appearance.textSize` through the command-execute event, and Zoom

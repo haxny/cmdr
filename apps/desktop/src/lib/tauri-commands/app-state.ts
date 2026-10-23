@@ -6,6 +6,7 @@ import {
   type ChildWindowRect,
   type PaneFileEntry,
   type PaneState,
+  type RequestedSort,
   type SelectedRows,
   type ServicesSelection,
 } from '#lib/ipc/bindings.js'
@@ -15,7 +16,7 @@ import type { OperationGate, SoftDialogId } from '#lib/ui/dialog-registry.js'
 import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { throwIpcError } from './ipc-types'
 
-export type { PaneFileEntry, PaneState, SelectedRows, ServicesSelection }
+export type { PaneFileEntry, PaneState, RequestedSort, SelectedRows, ServicesSelection }
 
 // ============================================================================
 // MCP pane state
@@ -241,6 +242,14 @@ export async function updateViewModeMenu(
 ): Promise<void> {
   // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic <R: Runtime> command, excluded from specta bindings (see the `ipc.rs` manifest)
   await invoke('update_view_mode_menu', { activePane, leftMode, rightMode })
+}
+
+/**
+ * Checks View > Sort by's column and order for the sort the focused pane ASKED for, or nothing for
+ * `null` (a search pane in its ranked order). The only caller is `pane/sort-menu-sync.svelte.ts`.
+ */
+export async function updateSortMenu(sort: RequestedSort | null): Promise<void> {
+  await commands.updateSortMenu(sort)
 }
 
 // ============================================================================

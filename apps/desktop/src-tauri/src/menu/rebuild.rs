@@ -7,8 +7,8 @@
 //! language), so correctness beats cleverness here: nothing tries to work out
 //! which labels actually moved.
 //!
-//! What survives the rebuild is what Rust knows: the checked states, the
-//! per-pane view modes, and which of the two macOS bars is installed. What
+//! What survives the rebuild is what Rust knows: the checked states (Sort by's
+//! included), the per-pane view modes, and which of the two macOS bars is installed. What
 //! doesn't is what only the frontend knows (custom accelerators, the pin/unpin
 //! label, whether "Reopen closed tab" is live) — those come back through the
 //! [`MenuBarRebuilt`] event.
@@ -36,16 +36,18 @@ pub fn rebuild_menu_bar<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     // Carry the state the new bar has to come up in. The show-hidden tick is read
     // off the live item (the menu itself is the authority for it, see
     // `menu/CLAUDE.md`); the view modes and the licence label come from the
-    // cached copies `MenuState` already keeps for `rebuild_view_mode_items`.
+    // cached copies `MenuState` already keeps for `rebuild_view_mode_items`, and
+    // the Sort by checks from the focused pane's last pushed sort.
     let show_hidden = super::cloned_handle(&menu_state.show_hidden_files)
         .and_then(|item| item.is_checked().ok())
         .unwrap_or(false);
     let view_mode = *menu_state.view_mode_left.lock_ignore_poison();
+    let requested_sort = *menu_state.requested_sort.lock_ignore_poison();
     let has_existing_license = menu_state
         .has_existing_license
         .load(std::sync::atomic::Ordering::Relaxed);
 
-    let menu_items = super::build_menu(app, show_hidden, view_mode, has_existing_license)?;
+    let menu_items = super::build_menu(app, show_hidden, view_mode, requested_sort, has_existing_license)?;
     let new_menu = menu_state.store_item_refs(menu_items);
 
     #[cfg(target_os = "macos")]

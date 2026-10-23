@@ -3898,6 +3898,18 @@ export const commands = {
    */
   setMainWindowVisible: (visible: boolean) => __TAURI_INVOKE<void>('set_main_window_visible', { visible }),
   /**
+   *  Checks View > Sort by's column and order for the sort the focused pane ASKED for, or nothing for
+   *  `None` (a search pane in its ranked order). ❗ The requested sort, never a fallback's effective
+   *  column. The only writer is `pane/sort-menu-sync.svelte.ts`, which pushes on every change of
+   *  focus, tab, or sort, deduped. Not generic over the runtime, so specta types it.
+   */
+  updateSortMenu: (
+    sort: {
+      column: SortColumn
+      order: SortOrder
+    } | null,
+  ) => __TAURI_INVOKE<void>('update_sort_menu', { sort }),
+  /**
    *  Enables or disables MTP support at runtime.
    *
    *  When disabled: disconnects all devices, stops auto-connecting, and restores
@@ -14502,6 +14514,12 @@ export type RepoInfo = {
    *  in `is_dirty`).
    */
   isDirty: boolean
+}
+
+// The sort a pane asked for: what View > Sort by checks.
+export type RequestedSort = {
+  column: SortColumn
+  order: SortOrder
 }
 
 /**

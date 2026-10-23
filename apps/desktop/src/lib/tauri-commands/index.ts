@@ -199,6 +199,7 @@ export {
   activateWindowMenu,
   syncMenuShowHidden,
   updateViewModeMenu,
+  updateSortMenu,
   showMainWindow,
   setMainWindowVisible,
   orderWindowToBack,
@@ -213,7 +214,7 @@ export {
   updateMenuAccelerator,
   setUiLanguage,
 } from './app-state'
-export type { PaneFileEntry, PaneState, McpTabInfo, SelectedRows, ServicesSelection } from './app-state'
+export type { PaneFileEntry, PaneState, McpTabInfo, RequestedSort, SelectedRows, ServicesSelection } from './app-state'
 
 // Shared IPC types (timeout-aware wrappers)
 export type { TimedOut } from './ipc-types'

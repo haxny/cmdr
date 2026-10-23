@@ -30,7 +30,7 @@ Native menu bars for macOS and Linux, built from scratch in the user's language.
 - **Accelerator changes go remove/recreate/reinsert**, so `MenuState` tracks each item's submenu and index; a live
   label moves through `MenuState::set_item_label`, ❌ never a bare `set_text`.
 - **Four families skip `"execute-command"`**: CheckMenuItems auto-toggle (it would double-toggle) and send
-  `"settings-changed"` / `"view-mode-changed"`; sort sends `"menu-sort"`; Cut / Copy / Paste / Move here / Select all
+  `"settings-changed"` / `"view-mode-changed"`; sort resets its checks, then sends `"menu-sort"`; Cut / Copy / Paste / Move here / Select all
   are Custom (❌ not Predefined) items forwarding the native selector via `send_native_edit_action()` outside the main
   window, or ⌘A and the clipboard die there; all four of the VIEWER bar's are Custom too, on their own `VIEWER_*` ids —
   Copy / Select all emit `ViewerEditAction` to the viewer in front (a native selector would grab its status bar), while

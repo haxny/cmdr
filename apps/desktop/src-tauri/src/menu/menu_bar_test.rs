@@ -13,6 +13,7 @@ use crate::menu::menu_spec::{
     CheckRole, EntryKind, ItemSpec, Label, Pane, Platform, Predefined, SubmenuRole, SubmenuSpec, Tracking,
     display_accelerator_label,
 };
+use crate::menu::sort_checks::SortCheck;
 
 const PLATFORMS: [Platform; 2] = [Platform::MacOs, Platform::Linux];
 
@@ -95,15 +96,15 @@ menu menu.bar.view id=menu_view
   2 separator
   3 check show_hidden_files menu.view.showHiddenFiles [Cmd+Shift+.] show-hidden-files
   4 submenu menu.view.sortBy id=menu_sort_by sort-by
-      0 item sort_by_name menu.sort.name [Cmd+3] tracked
-      1 item sort_by_extension menu.sort.extension [Cmd+4] tracked
-      2 item sort_by_modified menu.sort.dateModified [Cmd+5] tracked
-      3 item sort_by_size menu.sort.size [Cmd+6] tracked
-      4 item sort_by_created menu.sort.dateCreated untracked
-      5 item sort_by_added menu.sort.dateAdded untracked
+      0 check sort_by_name menu.sort.name [Cmd+3] sort:name tracked
+      1 check sort_by_extension menu.sort.extension [Cmd+4] sort:extension tracked
+      2 check sort_by_modified menu.sort.dateModified [Cmd+5] sort:modified tracked
+      3 check sort_by_size menu.sort.size [Cmd+6] sort:size tracked
+      4 check sort_by_created menu.sort.dateCreated sort:created
+      5 check sort_by_added menu.sort.dateAdded sort:added
       6 separator
-      7 item sort_ascending menu.sort.ascending untracked
-      8 item sort_descending menu.sort.descending untracked
+      7 check sort_ascending menu.sort.ascending sort:ascending
+      8 check sort_descending menu.sort.descending sort:descending
   5 submenu menu.view.zoom nested
       0 item view_zoom_75 menu.zoom.percent75 untracked
       1 item view_zoom_100 menu.zoom.percent100 [Cmd+0] untracked
@@ -220,15 +221,15 @@ menu menu.bar.view
   2 separator
   3 check show_hidden_files menu.view.showHiddenFiles [Ctrl+Shift+.] show-hidden-files
   4 submenu menu.view.sortBy id=menu_sort_by sort-by
-      0 item sort_by_name menu.sort.name [Ctrl+3] tracked
-      1 item sort_by_extension menu.sort.extension [Ctrl+4] tracked
-      2 item sort_by_modified menu.sort.dateModified [Ctrl+5] tracked
-      3 item sort_by_size menu.sort.size [Ctrl+6] tracked
-      4 item sort_by_created menu.sort.dateCreated untracked
-      5 item sort_by_added menu.sort.dateAdded untracked
+      0 check sort_by_name menu.sort.name [Ctrl+3] sort:name tracked
+      1 check sort_by_extension menu.sort.extension [Ctrl+4] sort:extension tracked
+      2 check sort_by_modified menu.sort.dateModified [Ctrl+5] sort:modified tracked
+      3 check sort_by_size menu.sort.size [Ctrl+6] sort:size tracked
+      4 check sort_by_created menu.sort.dateCreated sort:created
+      5 check sort_by_added menu.sort.dateAdded sort:added
       6 separator
-      7 item sort_ascending menu.sort.ascending untracked
-      8 item sort_descending menu.sort.descending untracked
+      7 check sort_ascending menu.sort.ascending sort:ascending
+      8 check sort_descending menu.sort.descending sort:descending
   5 submenu menu.view.zoom nested
       0 item view_zoom_75 menu.zoom.percent75 untracked
       1 item view_zoom_100 menu.zoom.percent100 [Ctrl+0] untracked
@@ -305,7 +306,8 @@ fn every_handle_menu_state_keeps_is_built_exactly_once() {
             .into_iter()
             .filter_map(|entry| match entry {
                 EntryKind::Item(item) if item.tracking == Tracking::PinTab => Some("pin-tab".to_string()),
-                EntryKind::Check(check) => Some(check_role(check.role)),
+                // Sort by's checks are kept in no field: `sort_checks.rs` finds them by id.
+                EntryKind::Check(check) if !matches!(check.role, CheckRole::Sort(_)) => Some(check_role(check.role)),
                 EntryKind::Submenu(nested) if nested.role != SubmenuRole::Plain => Some(submenu_role(nested.role)),
                 _ => None,
             })
@@ -486,11 +488,12 @@ fn render_entries(spec: &SubmenuSpec, platform: Platform, indent: &str, out: &mu
                 )
             }
             EntryKind::Check(check) => format!(
-                "check {} {}{} {}",
+                "check {} {}{} {}{}",
                 check.id,
                 label(check.label, platform),
                 accelerator(check.accelerator.on(platform)),
                 check_role(check.role),
+                if check.tracked { " tracked" } else { "" },
             ),
             EntryKind::Separator => "separator".to_string(),
             EntryKind::Predefined(kind, text) => {
@@ -595,6 +598,8 @@ fn check_role(role: CheckRole) -> String {
             };
             format!("view-mode:{}:{mode}", pane_name(pane))
         }
+        CheckRole::Sort(SortCheck::Column(column)) => format!("sort:{column:?}").to_lowercase(),
+        CheckRole::Sort(SortCheck::Order(order)) => format!("sort:{order:?}").to_lowercase(),
     }
 }
 

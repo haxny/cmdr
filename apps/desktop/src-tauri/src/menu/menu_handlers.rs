@@ -461,6 +461,23 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
     }
 
     // === Sort items: emit menu-sort directly (frontend has a dedicated listener) ===
+    // They're check items, and muda has already toggled the clicked one by now. Put every check
+    // back on the stored request first: the check moves when the frontend's sort lands and it
+    // re-pushes (`update_sort_menu`), and a sort the frontend refuses (over a dialog) leaves it be.
+    let is_sort_item = [
+        SORT_BY_NAME_ID,
+        SORT_BY_EXTENSION_ID,
+        SORT_BY_SIZE_ID,
+        SORT_BY_MODIFIED_ID,
+        SORT_BY_CREATED_ID,
+        SORT_BY_ADDED_ID,
+        SORT_ASCENDING_ID,
+        SORT_DESCENDING_ID,
+    ]
+    .contains(&id);
+    if is_sort_item {
+        super::sync_sort_check_states(&app.state::<MenuState<tauri::Wry>>());
+    }
     if id == SORT_BY_NAME_ID
         || id == SORT_BY_EXTENSION_ID
         || id == SORT_BY_SIZE_ID

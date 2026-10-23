@@ -41,6 +41,8 @@ pub fn at_startup(app: &tauri::App, settings: &Settings) -> tauri::Result<()> {
         app.handle(),
         settings.show_hidden_files,
         ViewMode::Brief,
+        // No pane has said what it's sorted by yet; the frontend's first push checks the items.
+        None,
         has_existing_license,
     )?;
 

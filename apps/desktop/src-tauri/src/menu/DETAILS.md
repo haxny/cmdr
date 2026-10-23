@@ -60,6 +60,8 @@ window focus context.
   strings) and `update_menu_item_accelerator` (swapping one on a live item).
 - `view_mode_items.rs`: `rebuild_view_mode_items` (full remove/recreate/reinsert when the active pane
   or a shortcut moved) and `sync_view_mode_check_states` (the cheap check-state-only path).
+- `sort_checks.rs`: View > Sort by's checkmarks: `RequestedSort`, `SortCheck`, and `sync_sort_check_states`. See "View
+  > Sort by checkmarks".
 - `macos_appkit.rs`: the two passes that reach past Tauri into AppKit once the bar is built:
   `cleanup_macos_menus` (removes system-injected Edit items, registers the Help menu) and
   `set_macos_menu_icons` (SF Symbol icons via objc2 FFI) with its `MENU_BAR_ICONS` table.
@@ -145,7 +147,8 @@ command (the user picked a language in Settings) and `intl/live_locale.rs`'s emi
 setting). Both first ask `refresh_active_locale` whether the answer actually MOVED, because a rebuild is a visible
 flicker plus a round of frontend re-pushes.
 
-What survives is what Rust knows: the show-hidden tick (read off the live item), the per-pane view modes and their
+What survives is what Rust knows: the show-hidden tick (read off the live item), Sort by's checks (seeded from
+`requested_sort`), the per-pane view modes and their
 accelerator (`rebuild_view_mode_items` runs again afterwards), the licence wording (cached in
 `MenuState.has_existing_license`, since the licence lookup isn't generic over the runtime), and which of the two macOS
 bars is installed (`active_menu_kind`, so a focused viewer isn't yanked back to the main bar). Then `cleanup_macos_menus`
@@ -184,8 +187,9 @@ Exceptions that do NOT use `"execute-command"`:
   double-toggle, so these emit `"settings-changed"` / `"view-mode-changed"` directly
 - **Close tab** (⌘W): checks if a non-main window has focus and closes it instead of emitting
   `tab.close`
-- **Sort items**: emit `"menu-sort"` with field/direction payload, which the frontend maps to a `sort.*` command
-  (`routes/(main)/menu-sort-command.ts`). The four shortcut-bound columns
+- **Sort items**: check items that re-sync every check from the stored request (undoing muda's toggle), then emit
+  `"menu-sort"` with field/direction payload, which the frontend maps to a `sort.*` command
+  (`routes/(main)/menu-sort-command.ts`). See "View > Sort by checkmarks". The four shortcut-bound columns
   (`SORT_BY_{NAME,EXTENSION,MODIFIED,SIZE}_ID`) are *also* listed in `menu_id_to_command` and
   registered in the items HashMap, purely so user-customized accelerators flow through the
   generic update path. The on_menu_event special-case fires first, so the generic dispatch is
@@ -283,8 +287,10 @@ Shared state managed via `tauri::State<MenuState<Wry>>`. Holds:
   `view_mode_full_accel`, `view_mode_brief_accel`) used by `rebuild_view_mode_items` to
   attach the keyboard accelerator only to the currently-active pane's pair. The two accels start as the left pane's
   spec accelerators on this platform (`menu_bar::spec_accelerator`), so a rebuild can't put a macOS chord on Linux.
-- `items: HashMap<String, MenuItemEntry>` for every `Tracking::Tracked` row in `menu_bar.rs`, the items
-  that need accelerator updates and enable/disable
+- `items: HashMap<String, MenuItemEntry>` for every `Tracking::Tracked` row in `menu_bar.rs` (plus the tracked check
+  rows, Sort by's four bound columns), the items that need accelerator updates and enable/disable. `MenuItemEntry.item`
+  is a `TrackedItem`, plain or check, so a rebind recreates the same kind.
+- `requested_sort`: the focused pane's requested sort, which View > Sort by checks ("View > Sort by checkmarks").
 - `context: MenuContext` for right-click context menu: `path` (primary right-clicked file),
   `filename`, `paths` (full selection if the right-clicked file is part of it, else `[path]`),
   and (macOS) `open_with_apps` (`bundle_id → app_path` map populated when "Open with" submenu
@@ -502,6 +508,30 @@ Click-on-inactive-pane works without changing focus: opening `View > Right pane 
 while the left pane is active emits `view-mode-changed` with `pane: "right"`, and the frontend
 updates the right pane's mode without touching focus. The frontend then pushes
 `update_view_mode_menu` so the check states stay consistent.
+
+### View > Sort by checkmarks
+
+Every Sort by row is a check item (`CheckRole::Sort`), checking the column and the order the focused pane ASKED for. ❗
+Never a fallback's effective column: a date sort the location can't honor still checks that date, like the pane header
+and MCP's `sort`. `sort_checks.rs` holds all of it:
+
+- **One state**: `MenuState.requested_sort` (`Option<RequestedSort>`; `None` is a search pane in its ranked order, and
+  checks nothing). Its only writer is the typed `update_sort_menu` command, pushed by the frontend's ONE `$effect` in
+  `apps/desktop/src/lib/file-explorer/pane/sort-menu-sync.svelte.ts`, deduped, so focus, tab switch, pane swap, and every sort path
+  reach it through one derivation.
+- **One predicate**: `SortCheck::is_on`, which both the build (seeding the checks from `build_menu`'s `requested_sort`)
+  and `sort_check_states` use. The ids come off `MENU_BAR`'s Sort by rows, so a new row can't be missed.
+- **One writer of the checks**: `sync_sort_check_states`, which finds each item by id in `MenuState.sort_submenu`
+  (`Submenu::get`, a lookup in Tauri's own child list with no main-thread hop; verified in tauri 2.12.4's
+  `submenu.rs:341`, 2026-10-23). ❌ No second handle store: a rebind's replacement item is the one found.
+- **A click**: muda toggles a check item itself before `on_menu_event` hears of it (muda 0.20.0's macOS
+  `platform_impl/macos/mod.rs:832`; GTK's check items toggle natively). So the sort arm of `handle_menu_event` re-syncs every check
+  from the stored request FIRST, then emits `MenuSort`. The check moves only when the frontend's sort lands and the
+  effect re-pushes, and a sort the frontend refuses (over a dialog) leaves it where it was.
+- **Rebinding ⌘3–⌘6**: Name, Extension, Date modified, and Size are tracked check items (`CheckSpec::tracked`), so
+  `MenuState.items` holds them as `TrackedItem::Check`, and `update_menu_item_accelerator` recreates the same kind with
+  `is_checked()` copied. A plain `MenuItem` there would silently drop the checkmark on the first rebind.
+- **A language rebuild** seeds the new bar from `requested_sort`, so the frontend needn't re-push.
 
 ### Per-window menu activation (`activate_window_menu`)
 

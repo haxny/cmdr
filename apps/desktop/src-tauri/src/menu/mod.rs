@@ -28,6 +28,7 @@
 //!   register), and `update_menu_item_accelerator` (swapping one on a live item).
 //! - `view_mode_items.rs`: keeping the per-pane view-mode items in step, via a full
 //!   `rebuild_view_mode_items` or a cheap `sync_view_mode_check_states`.
+//! - `sort_checks.rs`: View > Sort by's checkmarks, following the focused pane's requested sort.
 //! - `macos_appkit.rs`: the objc2 passes that fix the built menu bar up (`cleanup_macos_menus`,
 //!   `set_macos_menu_icons`), plus the `MENU_BAR_ICONS` table.
 //! - `display_accelerators.rs` (macOS): the third such pass, drawing the shortcuts a menu item can
@@ -90,6 +91,7 @@ mod selection_submenu;
 mod services_context;
 #[cfg(target_os = "macos")]
 pub mod share_submenu;
+mod sort_checks;
 #[cfg(target_os = "macos")]
 mod tag_icons;
 mod tag_row;
@@ -148,6 +150,8 @@ pub use queue_row_menu::{QueueRowMenuEntry, build_queue_row_context_menu};
 pub use rebuild::rebuild_menu_bar;
 #[cfg(target_os = "macos")]
 pub use services_context::lend_services_menu;
+pub use sort_checks::RequestedSort;
+pub(crate) use sort_checks::sync_sort_check_states;
 #[cfg(target_os = "macos")]
 pub use tag_row::lend_tag_row;
 pub use view_mode_items::{rebuild_view_mode_items, sync_view_mode_check_states};
@@ -332,9 +336,60 @@ pub struct VolumeRowMenuContext {
     pub volume_name: String,
 }
 
+/// A tracked menu-bar item: a command item, or a check item that also takes a custom shortcut
+/// (View > Sort by's four bound columns).
+///
+/// Two kinds, so `update_menu_item_accelerator` can recreate the SAME kind: a check item swapped
+/// for a plain one would silently lose its checkmark on the first rebind.
+pub enum TrackedItem<R: Runtime> {
+    Plain(MenuItem<R>),
+    Check(CheckMenuItem<R>),
+}
+
+// By hand: a derive would ask `R: Clone`, which no runtime is. The handles are reference-counted.
+impl<R: Runtime> Clone for TrackedItem<R> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Plain(item) => Self::Plain(item.clone()),
+            Self::Check(item) => Self::Check(item.clone()),
+        }
+    }
+}
+
+impl<R: Runtime> TrackedItem<R> {
+    pub fn is_enabled(&self) -> tauri::Result<bool> {
+        match self {
+            Self::Plain(item) => item.is_enabled(),
+            Self::Check(item) => item.is_enabled(),
+        }
+    }
+
+    pub fn set_enabled(&self, enabled: bool) -> tauri::Result<()> {
+        match self {
+            Self::Plain(item) => item.set_enabled(enabled),
+            Self::Check(item) => item.set_enabled(enabled),
+        }
+    }
+
+    pub fn set_text(&self, text: impl AsRef<str>) -> tauri::Result<()> {
+        match self {
+            Self::Plain(item) => item.set_text(text),
+            Self::Check(item) => item.set_text(text),
+        }
+    }
+
+    /// The item as its submenu holds it, for `Submenu::remove` / `insert`.
+    pub fn as_menu_item(&self) -> &dyn tauri::menu::IsMenuItem<R> {
+        match self {
+            Self::Plain(item) => item,
+            Self::Check(item) => item,
+        }
+    }
+}
+
 /// A menu item tracked for accelerator updates, with its parent submenu and position.
 pub struct MenuItemEntry<R: Runtime> {
-    pub item: MenuItem<R>,
+    pub item: TrackedItem<R>,
     pub submenu: Submenu<R>,
     pub position: usize,
     /// The item's label WITHOUT any display-only accelerator spelled into it, mnemonic and
@@ -426,6 +481,10 @@ pub struct MenuState<R: Runtime> {
     pub display_accelerators: Mutex<HashMap<String, Option<String>>>,
     /// Sort by submenu (disabled when not in explorer context)
     pub sort_submenu: Mutex<Option<Submenu<R>>>,
+    /// The sort the focused pane ASKED for, which View > Sort by checks: never a fallback's
+    /// effective column. `None` is a search pane in its ranked order, and the state before the
+    /// frontend's first push. Its only writer is `update_sort_menu`; `sort_checks.rs` applies it.
+    pub requested_sort: Mutex<Option<RequestedSort>>,
     /// Context for the most recent network host context menu (host_id + host_name)
     pub network_host_context: Mutex<NetworkHostMenuContext>,
     /// Context for the most recent breadcrumb / volume / favorite row context menu.
@@ -516,6 +575,7 @@ impl<R: Runtime> Default for MenuState<R> {
             items: Mutex::new(HashMap::new()),
             display_accelerators: Mutex::new(HashMap::new()),
             sort_submenu: Mutex::new(None),
+            requested_sort: Mutex::new(None),
             network_host_context: Mutex::new(NetworkHostMenuContext::default()),
             volume_row_context: Mutex::new(VolumeRowMenuContext::default()),
             #[cfg(target_os = "macos")]

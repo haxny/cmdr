@@ -17,16 +17,18 @@ use super::menu_spec::{
     display_accelerator_label,
 };
 use super::mnemonics::Mnemonics;
-use super::{MenuItemEntry, MenuItems, ViewMode};
+use super::{MenuItemEntry, MenuItems, RequestedSort, TrackedItem, ViewMode};
 
 /// Builds the application menu bar for the current platform, in the active UI language.
 ///
 /// `view_mode` is the left pane's. The right pane's items start on Brief, and
 /// `rebuild_view_mode_items` sets both panes from the frontend's state afterwards.
+/// `requested_sort` is what View > Sort by starts checked on (`MenuState.requested_sort`).
 pub fn build_menu<R: Runtime>(
     app: &AppHandle<R>,
     show_hidden_files: bool,
     view_mode: ViewMode,
+    requested_sort: Option<RequestedSort>,
     has_existing_license: bool,
 ) -> tauri::Result<MenuItems<R>> {
     let platform = Platform::current();
@@ -35,6 +37,7 @@ pub fn build_menu<R: Runtime>(
         platform,
         show_hidden_files,
         view_mode,
+        requested_sort,
         has_existing_license,
         items: HashMap::new(),
         show_hidden: None,
@@ -60,6 +63,7 @@ struct Builder<'a, R: Runtime> {
     platform: Platform,
     show_hidden_files: bool,
     view_mode: ViewMode,
+    requested_sort: Option<RequestedSort>,
     has_existing_license: bool,
     items: HashMap<String, MenuItemEntry<R>>,
     show_hidden: Option<CheckMenuItem<R>>,
@@ -97,7 +101,7 @@ impl<R: Runtime> Builder<'_, R> {
         let mut mnemonics = Mnemonics::new();
         let mut children = Vec::new();
         // `(id, position, built item, the label WITHOUT a display accelerator on it)`.
-        let mut tracked: Vec<(&str, usize, MenuItem<R>, String)> = Vec::new();
+        let mut tracked: Vec<(&str, usize, TrackedItem<R>, String)> = Vec::new();
         for (position, entry) in spec.entries_on(platform).enumerate() {
             let child = match entry {
                 EntryKind::Item(item) => {
@@ -111,7 +115,9 @@ impl<R: Runtime> Builder<'_, R> {
                     let built =
                         MenuItem::with_id(app, item.id, built_label, item.enabled, item.accelerator.on(platform))?;
                     match item.tracking {
-                        Tracking::Tracked => tracked.push((item.id, position, built.clone(), label)),
+                        Tracking::Tracked => {
+                            tracked.push((item.id, position, TrackedItem::Plain(built.clone()), label));
+                        }
                         Tracking::Untracked => {}
                         Tracking::PinTab => self.pin_tab = Some(built.clone()),
                     }
@@ -122,13 +128,19 @@ impl<R: Runtime> Builder<'_, R> {
                     let checked = match check.role {
                         CheckRole::ShowHiddenFiles => self.show_hidden_files,
                         CheckRole::ViewMode(pane, mode) => self.initial_view_mode(pane) == mode,
+                        CheckRole::Sort(role) => role.is_on(self.requested_sort),
                     };
                     let accelerator = check.accelerator.on(platform);
-                    let built = CheckMenuItem::with_id(app, check.id, label, true, checked, accelerator)?;
+                    let built = CheckMenuItem::with_id(app, check.id, &label, true, checked, accelerator)?;
                     match check.role {
                         CheckRole::ShowHiddenFiles => self.show_hidden = Some(built.clone()),
                         CheckRole::ViewMode(pane, ViewMode::Full) => self.pane(pane).full = Some(built.clone()),
                         CheckRole::ViewMode(pane, ViewMode::Brief) => self.pane(pane).brief = Some(built.clone()),
+                        // Found by id in `sort_submenu` whenever it's set (`sort_checks.rs`).
+                        CheckRole::Sort(_) => {}
+                    }
+                    if check.tracked {
+                        tracked.push((check.id, position, TrackedItem::Check(built.clone()), label));
                     }
                     MenuItemKind::Check(built)
                 }
