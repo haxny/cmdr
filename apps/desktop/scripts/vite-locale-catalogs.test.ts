@@ -76,6 +76,32 @@ describe('a catalog module', () => {
   })
 })
 
+describe('generated code', () => {
+  // Catalog text lands in generated JS. `JSON.stringify` alone leaves `<`, `>`, `/`, U+2028, and
+  // U+2029 raw, which break out of an inline `<script>` or an older parser (CodeQL alert #40,
+  // `js/bad-code-sanitization`). They're escaped, and the values still round-trip exactly.
+  const hostile = 'a </script><!-- b   c   d > e'
+
+  it('escapes the characters that break out of generated code, in catalogs and the manifest', async () => {
+    write('nl', 'settings.json', { 'settings.appearance.language.label': hostile, 'x.other': hostile })
+    try {
+      for (const code of [catalogModuleCode(root, 'nl'), manifestModuleCode(root)]) {
+        expect(code).not.toMatch(/<\/|<!--|[\u2028\u2029]/)
+      }
+      expect((await evaluate(catalogModuleCode(root, 'nl'))).default).toEqual({
+        'settings.appearance.language.label': hostile,
+        'x.other': hostile,
+      })
+      const manifest = await evaluate(manifestModuleCode(root))
+      expect((manifest.manifestMessages as Record<string, Record<string, string>>).nl).toEqual({
+        'settings.appearance.language.label': hostile,
+      })
+    } finally {
+      rmSync(join(root, 'nl'), { recursive: true })
+    }
+  })
+})
+
 describe('the manifest module', () => {
   it('lists the shipped tags, the manifest keys from each catalog, and a loader per non-English tag', async () => {
     const code = manifestModuleCode(root)
@@ -88,7 +114,9 @@ describe('the manifest module', () => {
       'en-GB': {},
     })
     expect(Object.keys(mod.loaders as object)).toEqual(['de', 'en-GB'])
-    expect(code).toContain(`() => import("${CATALOG_MODULE_PREFIX}de")`)
+    // The specifier is escaped like every literal (`/` becomes `\\u002f`), and parses back to the virtual id.
+    const specifiers = [...code.matchAll(/\(\) => import\(("[^"]+")\)/g)].map((m) => JSON.parse(m[1]) as string)
+    expect(specifiers).toEqual([`${CATALOG_MODULE_PREFIX}de`, `${CATALOG_MODULE_PREFIX}en-GB`])
     expect(code).not.toContain('screenshots')
   })
 })

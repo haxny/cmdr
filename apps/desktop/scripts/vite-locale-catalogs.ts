@@ -68,9 +68,21 @@ export function mergedCatalog(messagesRoot: string, tag: string): Record<string,
   return out
 }
 
+/**
+ * `JSON.stringify` for text spliced into generated JS. JSON leaves `<`, `>`, `/`, U+2028, and U+2029
+ * raw, and those break out of an inline `<script>` or an older parser; each becomes its `\uXXXX`
+ * escape, which parses back to the same value (CodeQL `js/bad-code-sanitization`).
+ */
+function toCodeLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>/\u2028\u2029]/g,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  )
+}
+
 /** The source of `virtual:cmdr-catalog/<tag>`. */
 export function catalogModuleCode(messagesRoot: string, tag: string): string {
-  return `export default ${JSON.stringify(mergedCatalog(messagesRoot, tag))};\n`
+  return `export default ${toCodeLiteral(mergedCatalog(messagesRoot, tag))};\n`
 }
 
 /** The source of `virtual:cmdr-locale-manifest`. */
@@ -85,10 +97,10 @@ export function manifestModuleCode(messagesRoot: string): string {
   }
   const loaders = tags
     .filter((tag) => tag !== 'en')
-    .map((tag) => `  ${JSON.stringify(tag)}: () => import(${JSON.stringify(CATALOG_MODULE_PREFIX + tag)}),`)
+    .map((tag) => `  ${toCodeLiteral(tag)}: () => import(${toCodeLiteral(CATALOG_MODULE_PREFIX + tag)}),`)
   return [
-    `export const shippedLocales = ${JSON.stringify(tags)};`,
-    `export const manifestMessages = ${JSON.stringify(manifestMessages)};`,
+    `export const shippedLocales = ${toCodeLiteral(tags)};`,
+    `export const manifestMessages = ${toCodeLiteral(manifestMessages)};`,
     `export const loaders = {\n${loaders.join('\n')}\n};`,
     '',
   ].join('\n')
