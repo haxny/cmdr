@@ -495,6 +495,20 @@ describe('ops alerts', () => {
     expect(unnotified('ops_events')).toBe(0)
   })
 
+  it('folds rows with the same alert into one line, and stamps them all', async () => {
+    // Two CSP reports racing past the KV dedupe each record a row with the same message.
+    insertOpsEvent('csp-violation', 'CSP (frame-src) blocked https://div.show/.')
+    insertOpsEvent('csp-violation', 'CSP (frame-src) blocked https://div.show/.')
+
+    await handleReportDigest(testEnv())
+
+    const { subject, html } = lastEmail()
+    expect(subject).toBe('Cmdr digest: 1 ops alert in the past 3h')
+    expect(html.split('blocked https://div.show/.').length - 1).toBe(1)
+    expect(html).toContain('2 times')
+    expect(unnotified('ops_events')).toBe(0)
+  })
+
   it('escapes an alert message, which can quote a URL a stranger chose', async () => {
     insertOpsEvent('csp-violation', 'blocked https://x.test/<script>')
     await handleReportDigest(testEnv())

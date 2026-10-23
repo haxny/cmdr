@@ -188,6 +188,26 @@ function splitBelowThreshold(rows: OpsRow[]): { alerts: OpsRow[]; quiet: OpsRow[
   return { alerts, quiet }
 }
 
+/**
+ * Fold rows with the same kind and message into one, summing their occurrences and keeping the
+ * newest's time. Duplicates are real: two first occurrences racing in `countOpsEvent`, or two CSP
+ * reports both passing the KV dedupe (`csp-report.ts::claimAlert`, a read-then-write KV can't make
+ * atomic). Rendering only: the stamp still takes every row's id.
+ */
+function foldRepeats(rows: OpsRow[]): OpsRow[] {
+  const byKey = new Map<string, OpsRow>()
+  for (const row of rows) {
+    const key = `${row.kind}\u0000${row.message}`
+    const seen = byKey.get(key)
+    if (!seen) byKey.set(key, { ...row })
+    else {
+      seen.occurrences += row.occurrences
+      if (row.created_at > seen.created_at) seen.created_at = row.created_at
+    }
+  }
+  return [...byKey.values()]
+}
+
 /** The alert's text, with how often it happened when that's more than once. */
 function opsAlertMessage(row: OpsRow): string {
   return row.occurrences > 1 ? `${row.message} (${String(row.occurrences)} times)` : row.message
@@ -276,7 +296,11 @@ async function toContent(env: Bindings, rows: PendingRows): Promise<DigestConten
       card: cardFor(env, row.report_issue),
     })),
     feedback,
-    opsAlerts: rows.opsAlerts.map((row) => ({ when: row.created_at, kind: row.kind, message: opsAlertMessage(row) })),
+    opsAlerts: foldRepeats(rows.opsAlerts).map((row) => ({
+      when: row.created_at,
+      kind: row.kind,
+      message: opsAlertMessage(row),
+    })),
   }
 }
 
