@@ -26,12 +26,12 @@ const TEST_LANG = 'zz'
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
 
 beforeEach(() => {
-  setLocale('en')
+  void setLocale('en')
   _setCatalogForTests(TEST_LANG, { 'settings.window.title': 'Beállítások' })
 })
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   _setLocaleForTests(null)
   _setCatalogForTests(TEST_LANG, null)
   _clearCompiledCacheForTests()
@@ -54,7 +54,7 @@ describe('followWindowTitle', () => {
     await settle()
     flushSync()
 
-    setLocale(TEST_LANG)
+    void setLocale(TEST_LANG)
     flushSync()
 
     expect(write).toHaveBeenLastCalledWith('[Beállítások]')
@@ -69,7 +69,7 @@ describe('followWindowTitle', () => {
     await settle()
     flushSync()
 
-    setLocale('en')
+    void setLocale('en')
     flushSync()
 
     expect(write).toHaveBeenCalledTimes(1)
@@ -94,7 +94,7 @@ describe('followWindowTitle', () => {
     await settle()
     flushSync()
 
-    setLocale(TEST_LANG)
+    void setLocale(TEST_LANG)
     flushSync()
 
     expect(write).not.toHaveBeenCalled()

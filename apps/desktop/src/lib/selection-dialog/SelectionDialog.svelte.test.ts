@@ -203,11 +203,11 @@ describe('SelectionDialog', () => {
         'selection.runHint': 'RUN-HINT',
         'selection.notice.snapshotPane': 'SNAPSHOT-NOTICE',
       })
-      setLocale(TEST_LOCALE)
+      void setLocale(TEST_LOCALE)
     })
 
     afterEach(() => {
-      setLocale(null)
+      void setLocale(null)
       _setCatalogForTests(TEST_LOCALE, null)
     })
 

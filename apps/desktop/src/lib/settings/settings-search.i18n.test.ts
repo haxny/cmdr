@@ -23,11 +23,11 @@ function span(start: number, end: number): number[] {
 }
 
 beforeEach(() => {
-  setLocale('en')
+  void setLocale('en')
 })
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   _clearCompiledCacheForTests()
 })
 
@@ -36,16 +36,16 @@ describe('the index follows the UI language', () => {
     // Build the English index first, so a stale cache would answer the Hungarian queries.
     expect(ids('language')).toContain('appearance.language')
 
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('nyelv')).toContain('appearance.language')
     expect(getMatchIndicesForLabel('nyelv', 'appearance.language')).toEqual(span(0, 5))
 
-    setLocale('en')
+    void setLocale('en')
     expect(getMatchIndicesForLabel('language', 'appearance.language')).toEqual(span(0, 8))
   })
 
   it('puts the translated section titles in the index', () => {
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('megjelenés')).toContain('appearance.uiDensity')
     // The section path sits before the label, so the label highlight must not shift.
     expect(getMatchIndicesForLabel('sűrűsége', 'appearance.uiDensity')).toEqual(span(8, 16))
@@ -58,12 +58,12 @@ describe('other scripts', () => {
     ['zh', '语言'],
     ['zh-Hant', '語言'],
   ])('finds Language in %s by %s', (locale, query) => {
-    setLocale(locale)
+    void setLocale(locale)
     expect(ids(query)).toContain('appearance.language')
   })
 
   it('allows no typo in a CJK query', () => {
-    setLocale('zh')
+    void setLocale('zh')
     // The zh description says `选择 Cmdr 使用的语言`; one character off is a different phrase.
     expect(ids('使用的语言')).toContain('appearance.language')
     expect(ids('使用的语文')).toEqual([])
@@ -72,14 +72,14 @@ describe('other scripts', () => {
 
 describe('accents are optional', () => {
   it('finds a Hungarian label typed without accents, highlighting the accented letters', () => {
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('tema')).toContain('theme.mode') // "Témamód"
     expect(ids('felulet')).toContain('appearance.uiDensity') // "Felület sűrűsége"
     expect(getMatchIndicesForLabel('felulet', 'appearance.uiDensity')).toEqual(span(0, 7))
   })
 
   it('finds a Vietnamese label typed without diacritics', () => {
-    setLocale('vi')
+    void setLocale('vi')
     expect(ids('ngon ngu')).toContain('appearance.language') // "Ngôn ngữ"
     expect(getMatchIndicesForLabel('ngon ngu', 'appearance.language')).toEqual([...span(0, 4), ...span(5, 8)])
   })
@@ -87,19 +87,19 @@ describe('accents are optional', () => {
 
 describe('English as a fallback', () => {
   it('finds a row by its English label in another language, without a highlight', () => {
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('density')).toContain('appearance.uiDensity')
     expect(getMatchIndicesForLabel('density', 'appearance.uiDensity')).toEqual([])
   })
 
   it('finds a row by its English keyword in another language', () => {
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('locale')).toContain('appearance.language')
   })
 
   it('leaves the English description out, since long common-word sentences make short queries noisy', () => {
     expect(ids('compounds')).toContain('appearance.textSize')
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('compounds')).not.toContain('appearance.textSize')
   })
 })
@@ -131,7 +131,7 @@ describe('keywords from the catalog, terms from TS', () => {
 
   it('finds a row by a keyword the UI language wrote for it', () => {
     _setCatalogForTests('hu', { ...huThemeMode, 'settings.theme.mode.keywords': 'éjszakai mód , kontraszt,,' })
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('éjszakai')).toContain('theme.mode')
     expect(ids('kontraszt')).toContain('theme.mode')
     // Split on the commas, trimmed, and the empty ones dropped: no stray separators or gaps.
@@ -140,7 +140,7 @@ describe('keywords from the catalog, terms from TS', () => {
 
   it('keeps the English keywords as a fallback', () => {
     _setCatalogForTests('hu', { ...huThemeMode, 'settings.theme.mode.keywords': 'éjszakai mód' })
-    setLocale('hu')
+    void setLocale('hu')
     expect(ids('dark')).toContain('theme.mode')
   })
 
@@ -148,18 +148,18 @@ describe('keywords from the catalog, terms from TS', () => {
     // A key the language hasn't translated resolves to English; indexing that as the
     // language's own keywords too would put every English word in twice.
     _setCatalogForTests('hu', huThemeMode)
-    setLocale('hu')
+    void setLocale('hu')
     expect(textOf('theme.mode', 'témamód').match(/\bdark\b/g)).toHaveLength(1)
   })
 
   it.each(['en', 'hu', 'zh', 'ru'])('matches language-neutral terms in %s', (locale) => {
-    setLocale(locale)
+    void setLocale(locale)
     expect(ids('openai')).toContain('ai.cloudProvider')
     expect(ids('ssh')).toContain('row:network.trustedHostKeys')
   })
 
   it('indexes the terms once, outside English too', () => {
-    setLocale('hu')
+    void setLocale('hu')
     expect(textOf('ai.cloudProvider', 'openrouter').match(/\bopenrouter\b/g)).toHaveLength(1)
   })
 })
@@ -168,7 +168,7 @@ describe('the Language setting from any language', () => {
   it.each(['språk', 'sprak', 'magyar', 'Русский', 'deutsch', 'idioma'])(
     'finds Language by %s with French selected',
     (query) => {
-      setLocale('fr')
+      void setLocale('fr')
       expect(ids(query)).toContain('appearance.language')
     },
   )
@@ -177,7 +177,7 @@ describe('the Language setting from any language', () => {
   // its English name, or the setting's name in their language.
   describe.each(['en', 'fr', 'de', 'hu', 'ru', 'zh-Hant'])('with %s selected', (locale) => {
     it.each(['Deutsch', 'Magyar', 'Nyelv', 'German'])('finds Language by %s', (query) => {
-      setLocale(locale)
+      void setLocale(locale)
       expect(ids(query)).toContain('appearance.language')
     })
   })
@@ -201,7 +201,7 @@ describe('the Language setting from any language', () => {
   })
 
   it('stays the only setting searched across languages', () => {
-    setLocale('fr')
+    void setLocale('fr')
     // "Téma" is the Hungarian theme label; French search mustn't reach it.
     expect(ids('témamód')).not.toContain('theme.mode')
   })

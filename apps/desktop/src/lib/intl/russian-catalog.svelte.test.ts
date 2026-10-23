@@ -12,7 +12,7 @@ import { _setLocaleForTests } from './locale'
 
 /** Restore the shared locale, compiled messages, and document language after each test. */
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   _setLocaleForTests(null)
   _clearCompiledCacheForTests()
   document.documentElement.lang = 'en'
@@ -22,7 +22,7 @@ afterEach(() => {
 describe('the shipped Russian catalog', () => {
   /** A regional OS language must discover Russian and localize both HTML and native menus. */
   it('resolves ru-RU to Russian and exposes translated raw menu labels', () => {
-    setLocale('ru-RU')
+    void setLocale('ru-RU')
     expect(availableLocales()).toContain('ru')
     expect(resolvedCatalogLocale('ru-RU')).toBe('ru')
     expect(document.documentElement.lang).toBe('ru')
@@ -32,7 +32,7 @@ describe('the shipped Russian catalog', () => {
 
   /** Russian one includes 21 and 101; every branch must preserve the displayed count. */
   it('renders the real file counter across Russian plural boundaries', () => {
-    setLocale('ru')
+    void setLocale('ru')
     // Pin the visible result, including both the number and its grammatical ending.
     const cases: [number, string][] = [
       [1, 'файл'],
@@ -53,7 +53,7 @@ describe('the shipped Russian catalog', () => {
 
   /** Only exactly one operation may use the short singular wording. */
   it('distinguishes exactly one operation from 21 operations', () => {
-    setLocale('ru')
+    void setLocale('ru')
     expect(tString('main.quit.title', { count: 1, countText: '1' })).toBe(
       'Завершить работу, пока выполняется операция?',
     )
@@ -64,7 +64,7 @@ describe('the shipped Russian catalog', () => {
 
   /** Selection totals after “из” need genitive rather than a nominative count noun. */
   it('uses genitive in a selection total ending in 21', () => {
-    setLocale('ru')
+    void setLocale('ru')
     expect(
       tString('fileExplorer.selectionInfo.noSelectionOfMatches', { count: 21, shownText: '3', totalText: '21' }),
     ).toBe('Ничего не выделено, 3 из 21 совпадения.')

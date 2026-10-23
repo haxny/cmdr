@@ -66,11 +66,11 @@ describe('status-column', () => {
   // Git cell's tooltip said "Modified" in every language.
   describe('in another UI language', () => {
     afterEach(() => {
-      setLocale(null)
+      void setLocale(null)
     })
 
     it('says the status in that language', () => {
-      setLocale('de')
+      void setLocale('de')
       expect(labelFor('modified')).not.toBe('Modified')
       expect(labelFor('untracked')).not.toBe('Untracked')
     })

@@ -13,13 +13,13 @@ let dispose: (() => void) | undefined
 afterEach(() => {
   dispose?.()
   dispose = undefined
-  setLocale(null)
+  void setLocale(null)
   _clearCompiledCacheForTests()
 })
 
 describe('settings search follows a language switch', () => {
   it('re-derives the lit sections without a new query', () => {
-    setLocale('en')
+    void setLocale('en')
     // Warm the cache outside any reactive context, as the first keystroke would: the derived
     // below then hits cached results and must still learn that the language matters.
     getMatchingSections('témamód')
@@ -34,13 +34,13 @@ describe('settings search follows a language switch', () => {
     flushSync()
     expect(sections.has('Appearance')).toBe(false)
 
-    setLocale('hu')
+    void setLocale('hu')
     flushSync()
     expect(sections.has('Appearance')).toBe(true)
   })
 
   it('re-derives a section’s match set without a new query', () => {
-    setLocale('en')
+    void setLocale('en')
     getMatchingSettingIdsInSection('témamód', ['Appearance'])
     let size = -1
     dispose = $effect.root(() => {
@@ -52,7 +52,7 @@ describe('settings search follows a language switch', () => {
     flushSync()
     expect(size).toBe(0)
 
-    setLocale('hu')
+    void setLocale('hu')
     flushSync()
     expect(size).toBeGreaterThan(0)
   })

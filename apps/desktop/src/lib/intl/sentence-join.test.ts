@@ -5,7 +5,7 @@ import { _setLocaleForTests } from './locale'
 import { joinSentences } from './sentence-join'
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   _setLocaleForTests(null)
   _clearCompiledCacheForTests()
   document.documentElement.lang = 'en'
@@ -24,11 +24,11 @@ describe('joinSentences', () => {
   })
 
   it('runs Chinese sentences together after the full-width stop', () => {
-    setLocale('zh')
+    void setLocale('zh')
     expect(joinSentences(['位于分支“main”。', '工作树中有未提交的改动。'])).toBe(
       '位于分支“main”。工作树中有未提交的改动。',
     )
-    setLocale('zh-Hant')
+    void setLocale('zh-Hant')
     expect(joinSentences(['位於分支 main。', '有改動。'])).toBe('位於分支 main。有改動。')
   })
 })

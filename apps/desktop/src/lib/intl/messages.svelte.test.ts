@@ -41,7 +41,7 @@ const TEST_LOCALE = 'zz-ZZ'
 const TEST_LANG = 'zz'
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   document.documentElement.lang = 'en'
   _setLocaleForTests(null)
   _setCatalogForTests(TEST_LOCALE, null)
@@ -268,7 +268,7 @@ describe('reactivity in markup (read-rune-before-cache invariant)', () => {
     expect(span?.textContent).toBe('Moved 1 file to trash')
 
     // Drive via setLocale (bumps the rune): the reactive path.
-    setLocale(TEST_LANG)
+    void setLocale(TEST_LANG)
     flushSync()
     expect(span?.textContent).toBe('SWITCHED 1')
 
@@ -322,23 +322,23 @@ describe('the catalog actually supplying the text', () => {
 
 describe('the document language attribute', () => {
   it('follows a language switch', () => {
-    setLocale('zh-Hant')
+    void setLocale('zh-Hant')
     expect(document.documentElement.lang).toBe('zh-Hant')
 
-    setLocale('hu')
+    void setLocale('hu')
     expect(document.documentElement.lang).toBe('hu')
   })
 
   it('announces the catalog on screen, not the language that was asked for', () => {
     // A Japanese Mac with no Japanese catalog reads English text. Announcing
     // `ja-JP` would hand a screen reader a Japanese voice for English words.
-    setLocale('ja-JP')
+    void setLocale('ja-JP')
     expect(document.documentElement.lang).toBe('en')
   })
 
   it('re-resolves when the override is dropped rather than going stale', () => {
-    setLocale('hu')
-    setLocale(null)
+    void setLocale('hu')
+    void setLocale(null)
     expect(document.documentElement.lang).not.toBe('hu')
   })
 })

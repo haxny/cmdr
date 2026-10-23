@@ -92,7 +92,7 @@ describe('a US-English Mac with a Swedish region', () => {
   it('keeps formatting Swedish however the UI language is set', () => {
     // Decision 2, from the other direction: the OS owns the conventions, so an
     // explicit Hungarian UI must not drag the dates and numbers to `hu`.
-    setLocale('hu')
+    void setLocale('hu')
 
     expect(getUiLocale()).toBe('hu')
     expect(tString('fileExplorer.columns.size')).toBe('Méret')
@@ -112,7 +112,7 @@ describe('a US-English Mac with a Swedish region', () => {
 
 describe('the Language picker', () => {
   afterEach(() => {
-    setLocale(null)
+    void setLocale(null)
     _setFormatLocaleForTests(null)
   })
 
@@ -120,7 +120,7 @@ describe('the Language picker', () => {
     _setFormatLocaleForTests('sv-SE')
     const swedishCount = formatNumber(1234567)
 
-    setLocale('hu')
+    void setLocale('hu')
 
     expect(getUiLocale()).toBe('hu')
     expect(tString('fileExplorer.columns.size')).toBe('Méret')

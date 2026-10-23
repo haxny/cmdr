@@ -46,7 +46,7 @@ async function mountFollowing(language: string) {
   const applied = vi.fn()
   await watchSystemLocales(() => {
     applied()
-    setLocale(pickUiLocale(language))
+    void setLocale(pickUiLocale(language))
   })
 
   const text = (): string | null | undefined => target.querySelector('[data-test="trans-text"]')?.textContent
@@ -61,7 +61,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   _setLocaleForTests(null)
   _setSystemLocalesForTests({ ui: null, format: null })
   _setCatalogForTests(TEST_LANG, null)

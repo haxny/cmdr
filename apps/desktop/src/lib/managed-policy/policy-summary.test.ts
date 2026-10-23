@@ -7,7 +7,7 @@ import { managedPolicySummary } from './policy-summary'
 const TEST_LANG = 'zz'
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
   _setCatalogForTests(TEST_LANG, null)
 })
 
@@ -52,7 +52,7 @@ describe('managedPolicySummary', () => {
       'settings.managed.summary.updatesOff': 'updates-off',
       'settings.managed.summary.aiOff': 'ai-off',
     })
-    setLocale(TEST_LANG)
+    void setLocale(TEST_LANG)
     const values = managedPolicySummary(
       view({
         usageStatsDisabled: true,

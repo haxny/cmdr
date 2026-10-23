@@ -3,7 +3,7 @@ import { setLocale } from '#lib/intl/messages.svelte.js'
 import { searchResultsNotAFolderToast } from './capabilities'
 
 afterEach(() => {
-  setLocale(null)
+  void setLocale(null)
 })
 
 describe('search-results capability strings', () => {
@@ -12,7 +12,7 @@ describe('search-results capability strings', () => {
   })
 
   it('speaks the language picked after the module loaded', () => {
-    setLocale('hu')
+    void setLocale('hu')
     expect(searchResultsNotAFolderToast()).toBe('A találatok nem egy mappa. Illeszd be inkább egy valódi mappába.')
   })
 })
