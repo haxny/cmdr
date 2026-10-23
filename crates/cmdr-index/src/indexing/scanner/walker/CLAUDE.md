@@ -21,9 +21,9 @@ runs the walk (`walk`, the workers, the watchdog, `SubtreeBudget`, `WALK_THREADS
   the model to copy.
 - **Subtree give-up after `DEFAULT_GIVE_UP_AFTER` (32) consecutive failed reads**, sticky per dir and reset by a
   successful sibling. Throttle, not exclude: ❌ no path denylist.
-- **`bulk_read` degrades, it doesn't drop.** Every entry is validated against `ATTR_CMN_RETURNED_ATTRS`; a miss yields
-  `stat: None` and the caller falls back to `symlink_metadata`. ❌ Never report a size the parser didn't read, and ❌
-  never widen the parse without widening that validation.
+- **`bulk_read` degrades, it doesn't drop.** It decodes through `cmdr_fs::attr_buf` (❌ no offset table here); a missing
+  attribute yields `stat: None` and the caller falls back to `symlink_metadata`, and a record that can't become an entry
+  re-reads the directory with `read_dir`. ❌ Never report a value the decoder answered `None` for.
 - **Each batch publishes through `ReadProgress` as it arrives** — that IS how the watchdog knows this read is working.
   ❌ Don't buffer a whole directory before reporting.
 - **The park point (`park.rs`) is `#[cfg(test)]`, ❌ never `feature = "testing"`**: the app turns `testing` on for every

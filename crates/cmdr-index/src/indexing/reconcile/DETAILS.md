@@ -154,25 +154,27 @@ walk is serial, `GuardedReader` caps each read at `LOCAL_LIST_TIMEOUT`, and the 
 `is_canonicalization_alias`, in `child_is_indexable`) run per child, all exactly as the `read_dir` path does. Non-macOS
 targets use `read_fs_children_via_read_dir` (`read_dir` + per-entry `symlink_metadata`).
 
-**Decision/Why the fallbacks are preserved, at two levels.** A hand-parsed packed buffer can be wrong in ways an `lstat`
-can't, and this walk _writes what it reads_, so both failure modes are caught rather than trusted:
+**Decision/Why the fallbacks are preserved, at two levels.** A packed attribute buffer can be wrong in ways an `lstat`
+can't, and this walk _writes what it reads_, so both failure modes are caught rather than trusted (the reader's side:
+`../scanner/walker/DETAILS.md` § "The bulk reader"):
 
-- **A child with no inline attributes still gets stated.** `parse_entry` returns `stat: None` when an attribute wasn't
+- **A child with no inline attributes still gets stated.** The reader returns `stat: None` when an attribute wasn't
   returned for an entry, or when the type carries no inline sizes at all (fifo, socket, device node), and
-  `read_fs_children` pays one `symlink_metadata` for that child. Reporting the parser's zeros instead would write a
-  wrong size; taking the stat costs one syscall on an entry we've never actually seen in the field.
-- **A directory that lost a record is re-read whole.** A record with no recoverable name can't be stated (there's
-  nothing to name), so it's counted in `BulkDirRead::unusable` and the whole directory is re-read with `read_dir`. It
-  must not be diffed short: `diff_dir_against_db` DELETES every DB child the live listing lacks, so one unparsed record
-  would delete a real file (and its subtree) from the index. This is the same rule as the `EmptyRoot` guard and the
-  cost-budget skip — a listing we don't fully trust is never handed to the diff.
+  `read_fs_children` pays one `symlink_metadata` for that child. Reporting zeros instead would write a wrong size;
+  taking the stat costs one syscall on an entry we've never actually seen in the field.
+- **A directory that lost a record is re-read whole.** A record with no recoverable name or type, or one the decoder
+  can't trust at all (and every record after it in its batch), is counted in `BulkDirRead::unusable` and the whole
+  directory is re-read with `read_dir`. It must not be diffed short: `diff_dir_against_db` DELETES every DB child the
+  live listing lacks, so one undecoded record would delete a real file (and its subtree) from the index. This is the
+  same rule as the `EmptyRoot` guard and the cost-budget skip — a listing we don't fully trust is never handed to the
+  diff.
 
 Both branches are unreachable on the filesystems we've measured (`FSOPT_PACK_INVAL_ATTRS` makes every requested
 attribute present), which is exactly why they're pinned by tests rather than by field evidence: `bulk_read.rs`'s
-synthetic-record tests build packed records with attributes withheld, and `reconciler/tests/directory_read.rs`'s
-`the_reconcile_read_matches_a_per_entry_stat` asserts the batched read equals `read_dir` + `symlink_metadata`
-field-for-field over a tree of files with known sizes, an empty dir, a symlink, a broken symlink, a hardlink pair, a
-unicode name, a fifo, and an excluded basename.
+synthetic-record tests build packed records with attributes withheld or the record cut short, and
+`reconciler/tests/directory_read.rs`'s `the_reconcile_read_matches_a_per_entry_stat` asserts the batched read equals
+`read_dir` + `symlink_metadata` field-for-field over a tree of files with known sizes, an empty dir, a symlink, a broken
+symlink, a hardlink pair, a unicode name, a fifo, and an excluded basename.
 
 **The shared per-dir diff.** `reconciler::diff_dir_against_db(dir_id, live_children, db_children, missing, writer)` is
 the one place the add/remove/modify/type-change diff lives. `missing` is a `MissingRows`, and it governs ONLY the

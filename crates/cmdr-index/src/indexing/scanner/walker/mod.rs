@@ -317,15 +317,8 @@ pub struct WalkStats {
 /// following symlinks (the visitor stats each for sizes/mtime). Read errors on
 /// individual entries are skipped (the directory read as a whole still succeeds);
 /// a failure to open the directory propagates as the `Err`. On macOS
-/// [`default_reader`] uses the `getattrlistbulk` reader instead, so this is unused
-/// there.
-#[cfg_attr(
-    target_os = "macos",
-    allow(
-        dead_code,
-        reason = "macOS uses the getattrlistbulk reader; std_read_dir is the reader for other platforms"
-    )
-)]
+/// [`default_reader`] uses the `getattrlistbulk` reader instead, which falls back
+/// to this for a directory it couldn't decode whole.
 pub fn std_read_dir(path: &Path, progress: &ReadProgress) -> std::io::Result<Vec<RawDirEntry>> {
     let mut out = Vec::new();
     for entry in std::fs::read_dir(path)? {

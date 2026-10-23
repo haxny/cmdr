@@ -42,11 +42,9 @@ the shared `extract_metadata` primitive at `../metadata.rs` (documented in the [
   private to the scanner. It returns a `BulkDirRead` (entries + an `unusable` count) rather than a bare `Vec`, because
   the reconcile can't tolerate a silently-short listing: `diff_dir_against_db` deletes index rows the live listing
   lacks, so it re-reads a directory with `read_dir` when `unusable > 0`. See `../reconcile/DETAILS.md`.
-- **Degrade, never drop.** `parse_entry` returns an entry with `stat: None` (the caller pays one `symlink_metadata`)
-  when an attribute it needs wasn't returned, or when the type isn't file / dir / symlink and so carries no inline size
-  — a fifo, socket, or device node. It returns `None`, counted as `unusable`, only for a record with no recoverable name
-  or type. Both branches are unreachable on the filesystems we've measured; the synthetic-record tests in `bulk_read.rs`
-  are what keep them correct.
+- **Degrade, never drop.** The bulk reader decodes through `cmdr_fs::attr_buf`; a missing attribute costs an entry its
+  inline stat, never the entry, and a record that can't become one makes the directory re-read with `read_dir`.
+  `walker/DETAILS.md` § "The bulk reader".
 - **exclusions.rs** — the self-contained two-tier path-exclusion policy: `EXCLUDED_PREFIXES`, the
   `FIRMLINKED_SYSTEM_PREFIXES` allowlist, `JUNK_BASENAMES`, `PSEUDO_FS_BASENAMES`, the `ExclusionScope` /
   `ExclusionTier` types, `should_exclude`, `e2e_allowlist_path`, `is_canonicalization_alias`, and `default_exclusions`

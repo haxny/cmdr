@@ -137,3 +137,35 @@ contract (an abandoned dir is never marked listed, so it stays `listed_epoch = 0
 Tests (`tests.rs`, all millisecond-scale with a mock reader): `a_read_that_keeps_delivering_is_never_abandoned`,
 `a_read_that_stops_delivering_is_abandoned_promptly`, `a_reader_that_cannot_report_progress_is_still_bounded`,
 `a_trickling_read_is_abandoned_by_the_per_entry_allowance`.
+
+## The bulk reader
+
+`bulk_read.rs` is the macOS reader: one `getattrlistbulk` call per batch, its own loop (open, retry on `EINTR`, publish
+each batch through `ReadProgress` before decoding it). The record layout is NOT here: it asks for `REQUEST` (an
+`attr_buf::Request`) and decodes through `cmdr_fs::attr_buf::records`, the one decoder the local lister uses too
+(`crates/cmdr-fs/DETAILS.md` § "`attr_buf`: the packed attribute layout"). ❌ No offset table, `attrlist`, or `ATTR_*`
+constant in this crate: two hand-rolled tables of one packed ABI is how the returned-vs-requested offset bug shipped
+once. What the index does with a decoded record is its own policy, in `decode_batch` / `entry_from_record`:
+
+- **Degrade, don't drop.** A record with a name and a type is always an entry. Its `stat` is `None` (the caller pays one
+  `symlink_metadata`) when an attribute the stat needs wasn't returned (the inode, or for a file any of link count,
+  allocated size, logical size), or when the type isn't file / dir / symlink and carries no inline size (fifo, socket,
+  device node). ❌ Never report a value the decoder answered `None` for.
+- **Every record is accounted for.** A record with no name or no type, and a `BadRecord` (the record itself can't be
+  trusted, so nothing after it in the batch can be located) together with every record after it, count in
+  `BulkDirRead::unusable`. Entries plus unusable always equal the kernel's count.
+- **A short read is never used.** The walk's `bulk_read_dir` re-reads a directory with any unusable record through
+  `std_read_dir` (`complete_or_reread`), so a scan never stamps a directory listed while leaving a child out; the serial
+  reconcile does the same in `read_fs_children` (`../../reconcile/DETAILS.md`), since its diff DELETES rows a listing
+  lacks.
+- **Decision/Why a truncated file record now re-reads the directory.** A file or symlink record too short for its file
+  group (`BadRecord::Truncated`) is unusable, where the index's own parser once kept it with `stat: None` and walked on
+  by its length. The decoder can't locate anything past a record it doesn't believe, and a `read_dir` re-read is
+  complete and correct, so the conservative answer costs only speed on a record no measured filesystem writes.
+- **`EINTR` is retried in place**, resuming the same fd. Whether a resumed `getattrlistbulk` can skip a batch is open:
+  [#708](https://github.com/vdavid/cmdr/issues/708).
+
+Tests (`bulk_read.rs`): `bulk_matches_symlink_metadata` (decoded values equal `symlink_metadata` field for field over a
+rich real tree), the synthetic-record cells for each branch above (`build_record` packs a record in `REQUEST`'s layout
+with attributes withheld), `a_truncated_record_and_everything_after_it_are_unusable`, and
+`the_walk_rereads_a_directory_with_an_unusable_record`.
