@@ -2,7 +2,7 @@
 //! pane state used by ordinary MCP resources.
 
 use super::StateOptions;
-use crate::mcp::pane_state::{PaneFileEntry, PaneListing, PaneState, TabInfo};
+use crate::mcp::pane_state::{DisplayedDate, PaneFileEntry, PaneListing, PaneState, TabInfo};
 use crate::search::format_size;
 
 /// The `listing:` value for a pane whose listing isn't settled, or `None` for one that is.
@@ -15,37 +15,19 @@ pub(crate) fn listing_marker(listing: PaneListing) -> Option<&'static str> {
     }
 }
 
-/// Which date a detailed row line adds after Modified (which it always shows): the one
-/// its pane's rows are ordered by, so an agent can check the order it reads. Only that
-/// one, because a local folder records all three and `cmdr://state` stays lean.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RowDate {
-    ModifiedOnly,
-    Created,
-    Added,
-}
-
-impl RowDate {
-    /// From the column the pane's rows follow: the fallback when there is one, else the
-    /// requested column. Wire names are `pane-mcp-sync.svelte.ts`'s `sortFieldMap`.
-    pub(crate) fn for_pane(state: &PaneState) -> Self {
-        match state.sort_fallback.as_deref().unwrap_or(&state.sort_field) {
-            "created" => Self::Created,
-            "added" => Self::Added,
-            _ => Self::ModifiedOnly,
-        }
-    }
-}
-
 /// Format a file entry in compact format.
 /// Format: `i:INDEX TYPE NAME [SIZE] [DATES] [MARKERS]`
+///
+/// A detailed line always shows Modified, plus the pane's `displayed_date` when that's
+/// Created or Added, so an agent can check the order it reads. Only that one, because a
+/// local folder records all three and `cmdr://state` stays lean.
 pub(crate) fn format_file_compact(
     file: &PaneFileEntry,
     index: usize,
     is_cursor: bool,
     is_selected: bool,
     include_details: bool,
-    row_date: RowDate,
+    displayed_date: DisplayedDate,
 ) -> String {
     let file_type = if file.is_directory {
         "d"
@@ -69,12 +51,12 @@ pub(crate) fn format_file_compact(
         if let Some(ref modified) = file.modified {
             parts.push(modified.clone());
         }
-        let sorted_date = match row_date {
-            RowDate::ModifiedOnly => None,
-            RowDate::Created => file.created.as_ref().map(|date| format!("created:{date}")),
-            RowDate::Added => file.added.as_ref().map(|date| format!("added:{date}")),
+        let shown_date = match displayed_date {
+            DisplayedDate::Modified => None,
+            DisplayedDate::Created => file.created.as_ref().map(|date| format!("created:{date}")),
+            DisplayedDate::Added => file.added.as_ref().map(|date| format!("added:{date}")),
         };
-        parts.extend(sorted_date);
+        parts.extend(shown_date);
     }
 
     if is_cursor {
@@ -328,7 +310,6 @@ pub(crate) fn build_pane_yaml_with_options(state: &PaneState, indent: &str, opts
 
         let is_full_mode = state.view_mode == "full";
         let selected_set: std::collections::HashSet<usize> = state.selected_indices.iter().copied().collect();
-        let row_date = RowDate::for_pane(state);
 
         for (idx, file) in state.files.iter().enumerate() {
             // Convert local index to global index based on loaded_start
@@ -337,7 +318,14 @@ pub(crate) fn build_pane_yaml_with_options(state: &PaneState, indent: &str, opts
             let is_selected = selected_set.contains(&global_idx);
             // In full mode, include details for all files. In brief mode, only for cursor.
             let include_details = is_full_mode || is_cursor;
-            let formatted = format_file_compact(file, global_idx, is_cursor, is_selected, include_details, row_date);
+            let formatted = format_file_compact(
+                file,
+                global_idx,
+                is_cursor,
+                is_selected,
+                include_details,
+                state.displayed_date,
+            );
             lines.push(format!("{}  - \"{}\"", indent, formatted));
         }
     }

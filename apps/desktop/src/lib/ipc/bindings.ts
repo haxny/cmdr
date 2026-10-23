@@ -7981,6 +7981,9 @@ export type DisplayAccessibilityChanged = {
   options: DisplayAccessibility
 }
 
+// Which date a pane's file list shows (`displayed-date.ts`'s `DateColumn`).
+export type DisplayedDate = 'modified' | 'created' | 'added'
+
 // Why we won't offer, or why a pin can't go ahead.
 export type DockPinBlocker =
   /**
@@ -13542,6 +13545,11 @@ export type PaneState = {
    *  the column the user asked for.
    */
   sortFallback?: string | null
+  /**
+   *  The date the pane's file list shows: the frontend's `displayedDateColumn`
+   *  answer, pushed as is so the row lines never derive it a second way.
+   */
+  displayedDate?: DisplayedDate
   totalFiles?: number
   /**
    *  Whether the pane renders a `..` row, which `total_files` counts. Without

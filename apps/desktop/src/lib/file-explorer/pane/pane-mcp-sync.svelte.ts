@@ -12,6 +12,7 @@ import type { SnapshotSort } from '#lib/search/snapshot-store.svelte.js'
 import { getWalkedGround, isVolumeAggregating } from '#lib/indexing/index-state.svelte.js'
 import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
 import { isDirSizeUpdating } from '../views/full-list-utils'
+import { displayedDateColumn } from '../displayed-date'
 import { snapshotMcpRows } from './snapshot-mcp-rows'
 
 /** Whether one mirrored row's folder size can still move. */
@@ -346,6 +347,8 @@ export function createPaneMcpSync(deps: PaneMcpSyncDeps) {
         sortField: sort.field,
         sortOrder: sort.order,
         sortFallback: sort.fallback,
+        // The ONE derivation the file list uses, so MCP row lines show its date.
+        displayedDate: displayedDateColumn(deps.getEffectiveSortBy()),
         totalFiles: effectiveTotal,
         // Says whether `totalFiles` counts a `..` row. The backend's empty-pane
         // gate subtracts it before deciding there's nothing to act on, so a

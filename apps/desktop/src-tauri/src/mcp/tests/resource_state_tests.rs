@@ -3,9 +3,9 @@
 //! `resource_tests.rs`.
 
 use crate::mcp::listing_errors::RecentListingError;
-use crate::mcp::pane_state::{MountErrorInfo, PaneFileEntry, PaneListing, PaneState, TabInfo};
+use crate::mcp::pane_state::{DisplayedDate, MountErrorInfo, PaneFileEntry, PaneListing, PaneState, TabInfo};
 use crate::mcp::resources::panes::{
-    RowDate, build_pane_yaml_with_options, format_file_compact, format_tab_compact, tags_marker,
+    build_pane_yaml_with_options, format_file_compact, format_tab_compact, tags_marker,
 };
 use crate::mcp::resources::{StateOptions, build_recent_errors_yaml, parse_state_options, split_uri};
 use crate::search::format_size;
@@ -117,19 +117,19 @@ fn test_format_file_compact() {
     };
 
     // Without details
-    let formatted = format_file_compact(&file, 0, false, false, false, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&file, 0, false, false, false, DisplayedDate::Modified);
     assert_eq!(formatted, "i:0 f test.txt");
 
     // With cursor marker
-    let formatted = format_file_compact(&file, 0, true, false, false, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&file, 0, true, false, false, DisplayedDate::Modified);
     assert_eq!(formatted, "i:0 f test.txt [cur]");
 
     // With selected marker
-    let formatted = format_file_compact(&file, 0, false, true, false, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&file, 0, false, true, false, DisplayedDate::Modified);
     assert_eq!(formatted, "i:0 f test.txt [sel]");
 
     // With details
-    let formatted = format_file_compact(&file, 0, true, true, true, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&file, 0, true, true, true, DisplayedDate::Modified);
     assert_eq!(formatted, "i:0 f test.txt 1 KiB 2024-01-15 [cur] [sel]");
 
     // Directory
@@ -144,7 +144,7 @@ fn test_format_file_compact() {
         tags: vec![],
         ..Default::default()
     };
-    let formatted = format_file_compact(&dir, 1, false, false, false, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&dir, 1, false, false, false, DisplayedDate::Modified);
     assert_eq!(formatted, "i:1 d docs");
 
     // Directory with recursive size
@@ -159,7 +159,7 @@ fn test_format_file_compact() {
         tags: vec![],
         ..Default::default()
     };
-    let formatted = format_file_compact(&dir_with_size, 5, false, false, true, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&dir_with_size, 5, false, false, true, DisplayedDate::Modified);
     assert_eq!(formatted, "i:5 d src 169 B 2026-03-19T17:33:53.000Z");
 
     // Directory whose recursive size is still moving gets a [size-unsettled]
@@ -176,10 +176,10 @@ fn test_format_file_compact() {
         tags: vec![],
         ..Default::default()
     };
-    let formatted = format_file_compact(&moving_dir, 2, false, false, true, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&moving_dir, 2, false, false, true, DisplayedDate::Modified);
     assert_eq!(formatted, "i:2 d target ~4 KiB [size-unsettled]");
     // The marker shows even without details (it's a status, not a detail).
-    let formatted = format_file_compact(&moving_dir, 2, false, false, false, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&moving_dir, 2, false, false, false, DisplayedDate::Modified);
     assert_eq!(formatted, "i:2 d target [size-unsettled]");
 }
 
@@ -228,7 +228,7 @@ fn test_format_file_compact_appends_tags_marker() {
         ..Default::default()
     };
     // The tags marker trails the cursor/selected markers.
-    let formatted = format_file_compact(&file, 3, true, false, false, RowDate::ModifiedOnly);
+    let formatted = format_file_compact(&file, 3, true, false, false, DisplayedDate::Modified);
     assert_eq!(formatted, "i:3 f photo.jpg [cur] [tags:green]");
 }
 
@@ -268,6 +268,7 @@ fn test_build_pane_yaml() {
         sort_field: "name".to_string(),
         sort_order: "asc".to_string(),
         sort_fallback: None,
+        displayed_date: Default::default(),
         total_files: 2,
         has_parent_row: true,
         loaded_start: 0,
@@ -349,6 +350,7 @@ fn test_brief_cursor_detail_respects_loaded_window() {
         sort_field: "name".to_string(),
         sort_order: "asc".to_string(),
         sort_fallback: None,
+        displayed_date: Default::default(),
         total_files: 50_000,
         has_parent_row: true,
         loaded_start: 100,
@@ -473,7 +475,7 @@ fn incomplete_recursive_size_renders_as_a_lower_bound() {
         ..Default::default()
     };
     assert_eq!(
-        format_file_compact(&partial, 2, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&partial, 2, false, false, true, DisplayedDate::Modified),
         "i:2 d deps ≥4 KiB"
     );
 
@@ -483,7 +485,7 @@ fn incomplete_recursive_size_renders_as_a_lower_bound() {
         ..partial.clone()
     };
     assert_eq!(
-        format_file_compact(&complete, 2, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&complete, 2, false, false, true, DisplayedDate::Modified),
         "i:2 d deps 4 KiB"
     );
 
@@ -493,7 +495,7 @@ fn incomplete_recursive_size_renders_as_a_lower_bound() {
         ..partial.clone()
     };
     assert_eq!(
-        format_file_compact(&unknown, 2, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&unknown, 2, false, false, true, DisplayedDate::Modified),
         "i:2 d deps 4 KiB"
     );
 }
@@ -517,7 +519,7 @@ fn a_moving_total_reads_approximate_rather_than_claiming_a_floor() {
         ..Default::default()
     };
     assert_eq!(
-        format_file_compact(&moving, 2, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&moving, 2, false, false, true, DisplayedDate::Modified),
         "i:2 d deps ~4 KiB [size-unsettled]"
     );
 
@@ -527,7 +529,7 @@ fn a_moving_total_reads_approximate_rather_than_claiming_a_floor() {
         ..moving.clone()
     };
     assert_eq!(
-        format_file_compact(&moving_exact, 2, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&moving_exact, 2, false, false, true, DisplayedDate::Modified),
         "i:2 d deps ~4 KiB [size-unsettled]"
     );
 
@@ -537,7 +539,7 @@ fn a_moving_total_reads_approximate_rather_than_claiming_a_floor() {
         ..moving.clone()
     };
     assert_eq!(
-        format_file_compact(&settled, 2, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&settled, 2, false, false, true, DisplayedDate::Modified),
         "i:2 d deps ≥4 KiB"
     );
 }
@@ -555,7 +557,7 @@ fn an_incomplete_dir_with_nothing_known_yet_shows_no_size() {
         ..Default::default()
     };
     assert_eq!(
-        format_file_compact(&nothing_yet, 3, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&nothing_yet, 3, false, false, true, DisplayedDate::Modified),
         "i:3 d scanning"
     );
 }
@@ -574,11 +576,11 @@ fn a_stale_recursive_size_is_marked() {
         ..Default::default()
     };
     assert_eq!(
-        format_file_compact(&stale, 4, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&stale, 4, false, false, true, DisplayedDate::Modified),
         "i:4 d old 2 KiB [size-stale]"
     );
     assert_eq!(
-        format_file_compact(&stale, 4, false, false, false, RowDate::ModifiedOnly),
+        format_file_compact(&stale, 4, false, false, false, DisplayedDate::Modified),
         "i:4 d old [size-stale]"
     );
 }
@@ -599,7 +601,7 @@ fn on_disk_size_shows_only_when_it_diverges_enough_to_matter() {
         ..Default::default()
     };
     assert_eq!(
-        format_file_compact(&sparse, 5, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&sparse, 5, false, false, true, DisplayedDate::Modified),
         "i:5 d sparse 4 GiB (1 GiB on disk)"
     );
 
@@ -610,7 +612,7 @@ fn on_disk_size_shows_only_when_it_diverges_enough_to_matter() {
         ..sparse.clone()
     };
     assert_eq!(
-        format_file_compact(&tiny_gap, 5, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&tiny_gap, 5, false, false, true, DisplayedDate::Modified),
         "i:5 d sparse 1000 B"
     );
 
@@ -621,7 +623,7 @@ fn on_disk_size_shows_only_when_it_diverges_enough_to_matter() {
         ..sparse.clone()
     };
     assert_eq!(
-        format_file_compact(&small_relative_gap, 5, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&small_relative_gap, 5, false, false, true, DisplayedDate::Modified),
         "i:5 d sparse 10 GiB"
     );
 
@@ -631,13 +633,13 @@ fn on_disk_size_shows_only_when_it_diverges_enough_to_matter() {
         ..sparse.clone()
     };
     assert_eq!(
-        format_file_compact(&partial_sparse, 5, false, false, true, RowDate::ModifiedOnly),
+        format_file_compact(&partial_sparse, 5, false, false, true, DisplayedDate::Modified),
         "i:5 d sparse ≥4 GiB (1 GiB on disk)"
     );
 
     // Details off ⇒ no sizes at all, on-disk included.
     assert_eq!(
-        format_file_compact(&sparse, 5, false, false, false, RowDate::ModifiedOnly),
+        format_file_compact(&sparse, 5, false, false, false, DisplayedDate::Modified),
         "i:5 d sparse"
     );
 }
@@ -793,7 +795,7 @@ fn dated_row() -> PaneFileEntry {
     }
 }
 
-fn full_pane_sorted(field: &str, fallback: Option<&str>) -> PaneState {
+fn full_pane_sorted(field: &str, fallback: Option<&str>, displayed_date: DisplayedDate) -> PaneState {
     PaneState {
         path: "/Users/test/Downloads".to_string(),
         view_mode: "full".to_string(),
@@ -803,42 +805,58 @@ fn full_pane_sorted(field: &str, fallback: Option<&str>) -> PaneState {
         sort_field: field.to_string(),
         sort_order: "desc".to_string(),
         sort_fallback: fallback.map(str::to_string),
+        displayed_date,
         ..Default::default()
     }
 }
 
-/// A row carries the date its pane is ordered by, so an agent can check the order
-/// it sees; the other dates stay off the line to keep `cmdr://state` lean.
+/// A row carries the date its pane shows, so an agent can check the order it
+/// sees; the other dates stay off the line to keep `cmdr://state` lean.
 #[test]
-fn a_row_shows_the_date_its_pane_is_ordered_by() {
+fn a_row_shows_the_date_its_pane_shows() {
     let opts = StateOptions::default();
 
-    let by_added = build_pane_yaml_with_options(&full_pane_sorted("added", None), "  ", &opts);
+    let by_added = full_pane_sorted("added", None, DisplayedDate::Added);
+    let by_added = build_pane_yaml_with_options(&by_added, "  ", &opts);
     assert!(by_added.contains("added:2026-10-23T08:00:00.000Z"), "{by_added}");
     assert!(!by_added.contains("created:"), "{by_added}");
 
-    let by_created = build_pane_yaml_with_options(&full_pane_sorted("created", None), "  ", &opts);
+    let by_created = full_pane_sorted("created", None, DisplayedDate::Created);
+    let by_created = build_pane_yaml_with_options(&by_created, "  ", &opts);
     assert!(by_created.contains("created:2019-06-01T00:00:00.000Z"), "{by_created}");
     assert!(!by_created.contains("added:"), "{by_created}");
 
-    let by_name = build_pane_yaml_with_options(&full_pane_sorted("name", None), "  ", &opts);
+    let by_name = full_pane_sorted("name", None, DisplayedDate::Modified);
+    let by_name = build_pane_yaml_with_options(&by_name, "  ", &opts);
     assert!(
         !by_name.contains("added:") && !by_name.contains("created:"),
         "{by_name}"
     );
 }
 
-/// In a fallback the rows follow Modified, which every row line already shows, so
+/// In a fallback the list shows Modified, which every row line already shows, so
 /// the requested date stays off it.
 #[test]
 fn a_row_in_a_fallback_shows_no_extra_date() {
     let yaml = build_pane_yaml_with_options(
-        &full_pane_sorted("added", Some("modified")),
+        &full_pane_sorted("added", Some("modified"), DisplayedDate::Modified),
         "  ",
         &StateOptions::default(),
     );
     assert!(yaml.contains("2020-01-01T00:00:00.000Z"), "{yaml}");
     assert!(!yaml.contains("added:2026"), "{yaml}");
+}
+
+/// The row date is the pane's pushed `displayedDate` (the frontend's one rule),
+/// ❌ never re-derived from the sort strings beside it.
+#[test]
+fn a_row_date_follows_the_pushed_displayed_date_not_the_sort_strings() {
+    let yaml = build_pane_yaml_with_options(
+        &full_pane_sorted("name", None, DisplayedDate::Created),
+        "  ",
+        &StateOptions::default(),
+    );
+    assert!(yaml.contains("created:2019-06-01T00:00:00.000Z"), "{yaml}");
 }
 
 /// The empty-field fallbacks describe a `PaneState` no pane ever pushed, and

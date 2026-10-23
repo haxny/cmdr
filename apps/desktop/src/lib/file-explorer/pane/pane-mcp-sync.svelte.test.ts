@@ -465,6 +465,33 @@ describe('the sort fallback', () => {
   })
 })
 
+/**
+ * MCP row lines show the date the file list shows, so the pane sends
+ * `displayedDateColumn`'s answer and Rust never re-derives it.
+ */
+describe('the displayed date', () => {
+  beforeEach(() => {
+    getFileRange.mockResolvedValue([])
+    updateLeftPaneState.mockClear()
+  })
+
+  async function displayedDate(overrides: Partial<PaneMcpSyncDeps>) {
+    await createPaneMcpSync(deps(overrides)).syncPaneStateToMcp()
+    return (updateLeftPaneState.mock.lastCall?.[0] as { displayedDate: string }).displayedDate
+  }
+
+  it('is the date the rows follow when it’s Created or Added', async () => {
+    expect(await displayedDate({ getSortBy: () => 'created', getEffectiveSortBy: () => 'created' })).toBe('created')
+    expect(await displayedDate({ getSortBy: () => 'added', getEffectiveSortBy: () => 'added' })).toBe('added')
+  })
+
+  it('is Modified in a fallback, for a non-date sort, and before any listing lands', async () => {
+    expect(await displayedDate({ getSortBy: () => 'added', getEffectiveSortBy: () => 'modified' })).toBe('modified')
+    expect(await displayedDate({ getSortBy: () => 'name', getEffectiveSortBy: () => 'name' })).toBe('modified')
+    expect(await displayedDate({ getSortBy: () => 'created', getEffectiveSortBy: () => null })).toBe('modified')
+  })
+})
+
 describe('the dates a row carries', () => {
   it('mirrors created and added as ISO strings when the volume records them', async () => {
     getFileRange.mockResolvedValue([

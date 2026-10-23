@@ -4,7 +4,7 @@
  * ❗ `displayedDateColumn` is the ONE derivation of the shown date: every surface that
  * shows a date (Full cells, the Full date header's label and measured width, the date
  * tooltips' "(displayed)" marker, Full rows' accessible names, Brief's status-bar
- * date line) reads it, ❌ never a
+ * date line, and MCP's row lines via `pane-mcp-sync`'s `displayedDate`) reads it, ❌ never a
  * second rule of its own. It takes the EFFECTIVE column, the one the backend actually
  * ordered the rows by, so a Created or Added sort a location can't honor shows the
  * Modified date its rows follow (`crates/cmdr-listing/DETAILS.md` § "Requested and

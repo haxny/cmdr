@@ -101,9 +101,11 @@ by re-opening the snapshot, not by asking for `relevance`.
 
 **`sortFallback:`** follows `sort:` only when the rows follow another column than the one asked for: a date the
 location doesn't record (a USB stick, a share, a search pane) sorts by Modified, while `sort:` keeps the request
-(`crates/cmdr-listing/DETAILS.md` § "Requested and effective sort"). A detailed row line adds the date its pane is
-ordered by when that's Created or Added (`created:<iso>` / `added:<iso>`, `RowDate`), and only that one: a local folder
-records all three, and the Modified date is already on every line.
+(`crates/cmdr-listing/DETAILS.md` § "Requested and effective sort"). A detailed row line adds the date its pane's list
+shows when that's Created or Added (`created:<iso>` / `added:<iso>`), and only that one: a local folder records all
+three, and the Modified date is already on every line. That date is the pane's pushed `displayedDate`, the frontend's
+`displayedDateColumn` answer; ❌ don't re-derive it here from `sortField` / `sortFallback`, or MCP and the list can
+disagree.
 
 ### Pane state includes pagination
 

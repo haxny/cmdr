@@ -101,6 +101,10 @@ pub struct PaneState {
     /// the column the user asked for.
     #[serde(default)]
     pub sort_fallback: Option<String>,
+    /// The date the pane's file list shows: the frontend's `displayedDateColumn`
+    /// answer, pushed as is so the row lines never derive it a second way.
+    #[serde(default)]
+    pub displayed_date: DisplayedDate,
     #[serde(default)]
     pub total_files: usize,
     /// Whether the pane renders a `..` row, which `total_files` counts. Without
@@ -148,6 +152,18 @@ pub struct PaneState {
     /// as `totalFiles: 0` with no rows.
     #[serde(default)]
     pub listing: PaneListing,
+}
+
+/// Which date a pane's file list shows (`displayed-date.ts`'s `DateColumn`).
+// DEFAULT-OK: Modified is what every list shows unless its rows follow Created or Added,
+// so a pane that never pushed one shows it too.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum DisplayedDate {
+    #[default]
+    Modified,
+    Created,
+    Added,
 }
 
 /// Where a pane's listing stands, as the pane shows it.
@@ -401,6 +417,7 @@ mod tests {
             sort_field: "name".to_string(),
             sort_order: "asc".to_string(),
             sort_fallback: None,
+            displayed_date: Default::default(),
             total_files: 1,
             has_parent_row: false,
             loaded_start: 0,
