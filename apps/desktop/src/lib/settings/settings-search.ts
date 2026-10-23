@@ -5,7 +5,7 @@
 
 import { foldForSearch, fuzzySearch, type FoldedText } from '#lib/utils/unicode-fuzzy.js'
 import { availableLocales, tStringIn, uiCatalogLocale } from '#lib/intl/messages.svelte.js'
-import { localeDisplayName } from '#lib/intl/locale-display-names.js'
+import { localeDisplayName, localeEnglishName } from '#lib/intl/locale-display-names.js'
 import type { SearchableEntry, SettingSearchResult } from './types'
 import { settingsRegistry } from './settings-registry'
 import { searchableRowEntries } from './sections/searchable-rows'
@@ -105,7 +105,8 @@ function buildSearchIndex(): SearchIndex {
  *    a card title surfaces its rows.
  * 2. Outside English, the English fallback: label, keywords, card title, and section path. Not the
  *    description: long common-word sentences make short queries noisy.
- * 3. For a `searchAllLocales` entry, its label in every loaded catalog plus every locale's own name.
+ * 3. For a `searchAllLocales` entry, its label in every catalog plus every locale's own name and its
+ *    English name.
  *
  * The label's offsets are recorded here, from the same strings, so a highlight never measures a
  * live label against stale text. Anything matched past the label (English included) shows no
@@ -134,13 +135,17 @@ function indexEntry(entry: SearchableEntry, locale: string): SearchIndexEntry {
   }
 }
 
-/** The entry's label in every loaded catalog, plus each locale's name in its own language, deduplicated. */
+/**
+ * The entry's label in every catalog, plus each locale's name in its own language ("Deutsch") and
+ * in English ("German"), deduplicated.
+ */
 function everyLocaleTerms(entry: SearchableEntry): string[] {
   const locales = availableLocales()
   const terms = new Set<string>()
   for (const tag of locales) {
     terms.add(tStringIn(tag, entry.labelKey))
     terms.add(localeDisplayName(tag, locales))
+    terms.add(localeEnglishName(tag, locales))
   }
   return [...terms]
 }

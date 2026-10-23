@@ -4,7 +4,7 @@
  * is unambiguous, and that nothing carries a qualifier that distinguishes nothing.
  */
 import { describe, it, expect } from 'vitest'
-import { localeDisplayName } from './locale-display-names'
+import { localeDisplayName, localeEnglishName } from './locale-display-names'
 import { availableLocales } from './messages.svelte'
 
 const SHIPPED = ['de', 'en', 'en-AU', 'en-GB', 'es', 'es-419', 'fr', 'hu', 'nl', 'pt', 'sv', 'vi', 'zh', 'zh-Hant']
@@ -54,5 +54,19 @@ describe('localeDisplayName', () => {
     const shipped = availableLocales()
     const labels = shipped.map((tag) => localeDisplayName(tag, shipped))
     expect(new Set(labels).size).toBe(labels.length)
+  })
+})
+
+describe('localeEnglishName', () => {
+  it('names a language in English, whatever its own script', () => {
+    expect(localeEnglishName('de', SHIPPED)).toBe('German')
+    expect(localeEnglishName('hu', SHIPPED)).toBe('Hungarian')
+    expect(localeEnglishName('ru', [...SHIPPED, 'ru'])).toBe('Russian')
+  })
+
+  it('names the script only where a sibling needs it, like the own-language label', () => {
+    expect(localeEnglishName('zh', SHIPPED)).toBe('Simplified Chinese')
+    expect(localeEnglishName('zh-Hant', SHIPPED)).toBe('Traditional Chinese')
+    expect(localeEnglishName('zh', ['en', 'zh'])).toBe('Chinese')
   })
 })

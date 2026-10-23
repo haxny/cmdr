@@ -79,3 +79,21 @@ export function localeDisplayName(tag: string, shipped: readonly string[]): stri
   }
   return tag
 }
+
+/**
+ * `tag`'s name in ENGLISH ("German", "Hungarian", "Simplified Chinese"), for Settings search:
+ * someone who can't read the UI language, and doesn't know their language's own name in its
+ * script, can still type the name they know. CLDR data via `Intl`, so no catalog is involved.
+ * Takes the shipped list for the same reason {@link localeDisplayName} does: `zh` needs its
+ * script named only beside `zh-Hant`.
+ */
+export function localeEnglishName(tag: string, shipped: readonly string[]): string {
+  try {
+    const asked = labelTag(tag, shipped)
+    const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(asked)
+    if (name !== undefined && name !== asked) return name
+  } catch {
+    // fall through to the raw tag
+  }
+  return tag
+}

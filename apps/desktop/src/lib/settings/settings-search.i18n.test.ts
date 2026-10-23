@@ -173,6 +173,15 @@ describe('the Language setting from any language', () => {
     },
   )
 
+  // Someone who can't read the UI language types the name they know: the language's own name,
+  // its English name, or the setting's name in their language.
+  describe.each(['en', 'fr', 'de', 'hu', 'ru', 'zh-Hant'])('with %s selected', (locale) => {
+    it.each(['Deutsch', 'Magyar', 'Nyelv', 'German'])('finds Language by %s', (query) => {
+      setLocale(locale)
+      expect(ids(query)).toContain('appearance.language')
+    })
+  })
+
   it('finds Language by another language name in English too', () => {
     expect(ids('nyelv')).toContain('appearance.language')
   })

@@ -217,8 +217,8 @@ export interface SettingDefinition {
    */
   terms?: string[]
   /**
-   * Index this setting's label under EVERY loaded catalog, plus every locale's own name
-   * ("Svenska", "Magyar", "Русский"), so it's findable whatever the UI speaks. For the Language
+   * Index this setting's label under EVERY catalog, plus every locale's own name ("Svenska",
+   * "Magyar", "Русский") and English name ("Swedish"), so it's findable whatever the UI speaks. For the Language
    * setting alone: the way back for someone who can't read the current language. ❌ Not for
    * other settings: their foreign labels would be search noise.
    */
