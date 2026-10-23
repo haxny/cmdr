@@ -1027,6 +1027,14 @@
   "@fileExplorer.columns.created": {
     "sourceHash": "d70b9e2"
   },
+  "fileExplorer.columns.added": "添加日期",
+  "@fileExplorer.columns.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.columns.dateSortMenu": "选择按哪个日期排序",
+  "@fileExplorer.columns.dateSortMenu": {
+    "sourceHash": "bd7d8ef"
+  },
   "fileExplorer.columns.sortByRelevance": "按相关性排序",
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
@@ -1034,6 +1042,10 @@
   "fileExplorer.columns.sortState": "{column}，{order, select, ascending {升序排列} descending {降序排列} other {未排序}}",
   "@fileExplorer.columns.sortState": {
     "sourceHash": "b4787e7"
+  },
+  "fileExplorer.columns.sortStateFallback": "{state}（{fallback}）",
+  "@fileExplorer.columns.sortStateFallback": {
+    "sourceHash": "29aa530"
   },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
@@ -1083,6 +1095,14 @@
   "fileExplorer.list.rowModified": "修改于 {date}",
   "@fileExplorer.list.rowModified": {
     "sourceHash": "974427b"
+  },
+  "fileExplorer.list.rowCreated": "创建于 {date}",
+  "@fileExplorer.list.rowCreated": {
+    "sourceHash": "99d5771"
+  },
+  "fileExplorer.list.rowAdded": "添加于 {date}",
+  "@fileExplorer.list.rowAdded": {
+    "sourceHash": "5347d04"
   },
   "fileExplorer.list.rowGitStatus": "git 状态：{status}",
   "@fileExplorer.list.rowGitStatus": {
@@ -1205,6 +1225,14 @@
   "@fileExplorer.git.sizeSortTooManyCommits": {
     "sourceHash": "b3c0038"
   },
+  "fileExplorer.sortFallback.created": "这个位置不记录项目的创建时间，所以 Cmdr 在这里按修改日期排序。",
+  "@fileExplorer.sortFallback.created": {
+    "sourceHash": "fd60c89"
+  },
+  "fileExplorer.sortFallback.added": "这个位置不记录项目的添加时间，所以 Cmdr 在这里按修改日期排序。",
+  "@fileExplorer.sortFallback.added": {
+    "sourceHash": "977f69d"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "正在统计这次提交改动的文件…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"
@@ -1292,6 +1320,14 @@
   "fileExplorer.dateTooltip.created": "创建日期",
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
+  },
+  "fileExplorer.dateTooltip.dateAdded": "添加日期",
+  "@fileExplorer.dateTooltip.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
+  "fileExplorer.dateTooltip.displayedLabel": "{label}（当前显示）",
+  "@fileExplorer.dateTooltip.displayedLabel": {
+    "sourceHash": "975a232"
   },
   "fileExplorer.dateTooltip.lastModified": "上次修改",
   "@fileExplorer.dateTooltip.lastModified": {

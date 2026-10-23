@@ -1028,6 +1028,14 @@
   "@fileExplorer.columns.created": {
     "sourceHash": "d70b9e2"
   },
+  "fileExplorer.columns.added": "Hozzáadva",
+  "@fileExplorer.columns.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.columns.dateSortMenu": "Rendezési dátum kiválasztása",
+  "@fileExplorer.columns.dateSortMenu": {
+    "sourceHash": "bd7d8ef"
+  },
   "fileExplorer.columns.sortByRelevance": "Rendezés relevancia szerint",
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
@@ -1035,6 +1043,11 @@
   "fileExplorer.columns.sortState": "{column}, {order, select, ascending {növekvő sorrendben rendezve} descending {csökkenő sorrendben rendezve} other {nincs rendezve}}",
   "@fileExplorer.columns.sortState": {
     "sourceHash": "b4787e7"
+  },
+  "fileExplorer.columns.sortStateFallback": "{state} ({fallback})",
+  "@fileExplorer.columns.sortStateFallback": {
+    "sourceHash": "29aa530",
+    "sameAsSourceJustification": "Placeholders and punctuation only, no words: this language sets an explanatory aside in round parentheses after a space, exactly as English does, so the assembled screen-reader name is byte-identical. The key exists for languages that restructure it (Chinese uses full-width parentheses)."
   },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
@@ -1084,6 +1097,14 @@
   "fileExplorer.list.rowModified": "módosítva: {date}",
   "@fileExplorer.list.rowModified": {
     "sourceHash": "974427b"
+  },
+  "fileExplorer.list.rowCreated": "létrehozva: {date}",
+  "@fileExplorer.list.rowCreated": {
+    "sourceHash": "99d5771"
+  },
+  "fileExplorer.list.rowAdded": "hozzáadva: {date}",
+  "@fileExplorer.list.rowAdded": {
+    "sourceHash": "5347d04"
   },
   "fileExplorer.list.rowGitStatus": "{status} a gitben",
   "@fileExplorer.list.rowGitStatus": {
@@ -1207,6 +1228,14 @@
   "@fileExplorer.git.sizeSortTooManyCommits": {
     "sourceHash": "b3c0038"
   },
+  "fileExplorer.sortFallback.created": "Ez a hely nem tárolja az elemek létrehozásának dátumát, ezért a Cmdr itt módosítás dátuma szerint rendez.",
+  "@fileExplorer.sortFallback.created": {
+    "sourceHash": "fd60c89"
+  },
+  "fileExplorer.sortFallback.added": "Ez a hely nem tárolja az elemek hozzáadásának dátumát, ezért a Cmdr itt módosítás dátuma szerint rendez.",
+  "@fileExplorer.sortFallback.added": {
+    "sourceHash": "977f69d"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "A commitban változott fájlok számolása…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"
@@ -1294,6 +1323,14 @@
   "fileExplorer.dateTooltip.created": "Létrehozva",
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
+  },
+  "fileExplorer.dateTooltip.dateAdded": "Hozzáadás dátuma",
+  "@fileExplorer.dateTooltip.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
+  "fileExplorer.dateTooltip.displayedLabel": "{label} (megjelenítve)",
+  "@fileExplorer.dateTooltip.displayedLabel": {
+    "sourceHash": "975a232"
   },
   "fileExplorer.dateTooltip.lastModified": "Utoljára módosítva",
   "@fileExplorer.dateTooltip.lastModified": {

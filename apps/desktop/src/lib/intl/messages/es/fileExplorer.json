@@ -1030,6 +1030,14 @@
   "@fileExplorer.columns.created": {
     "sourceHash": "d70b9e2"
   },
+  "fileExplorer.columns.added": "Añadido",
+  "@fileExplorer.columns.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.columns.dateSortMenu": "Elegir la fecha por la que ordenar",
+  "@fileExplorer.columns.dateSortMenu": {
+    "sourceHash": "bd7d8ef"
+  },
   "fileExplorer.columns.sortByRelevance": "Ordenar por relevancia",
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
@@ -1037,6 +1045,11 @@
   "fileExplorer.columns.sortState": "{column}, {order, select, ascending {orden ascendente} descending {orden descendente} other {sin ordenar}}",
   "@fileExplorer.columns.sortState": {
     "sourceHash": "b4787e7"
+  },
+  "fileExplorer.columns.sortStateFallback": "{state} ({fallback})",
+  "@fileExplorer.columns.sortStateFallback": {
+    "sourceHash": "29aa530",
+    "sameAsSourceJustification": "Placeholders and punctuation only, no words: this language sets an explanatory aside in round parentheses after a space, exactly as English does, so the assembled screen-reader name is byte-identical. The key exists for languages that restructure it (Chinese uses full-width parentheses)."
   },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
@@ -1086,6 +1099,14 @@
   "fileExplorer.list.rowModified": "modificación: {date}",
   "@fileExplorer.list.rowModified": {
     "sourceHash": "974427b"
+  },
+  "fileExplorer.list.rowCreated": "creación: {date}",
+  "@fileExplorer.list.rowCreated": {
+    "sourceHash": "99d5771"
+  },
+  "fileExplorer.list.rowAdded": "inclusión: {date}",
+  "@fileExplorer.list.rowAdded": {
+    "sourceHash": "5347d04"
   },
   "fileExplorer.list.rowGitStatus": "{status} en git",
   "@fileExplorer.list.rowGitStatus": {
@@ -1209,6 +1230,14 @@
   "@fileExplorer.git.sizeSortTooManyCommits": {
     "sourceHash": "b3c0038"
   },
+  "fileExplorer.sortFallback.created": "Esta ubicación no registra cuándo se crearon los elementos, así que Cmdr ordena aquí por fecha de modificación.",
+  "@fileExplorer.sortFallback.created": {
+    "sourceHash": "fd60c89"
+  },
+  "fileExplorer.sortFallback.added": "Esta ubicación no registra cuándo se añadieron los elementos, así que Cmdr ordena aquí por fecha de modificación.",
+  "@fileExplorer.sortFallback.added": {
+    "sourceHash": "977f69d"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Contando los archivos que cambió este commit…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"
@@ -1296,6 +1325,14 @@
   "fileExplorer.dateTooltip.created": "Creado",
   "@fileExplorer.dateTooltip.created": {
     "sourceHash": "d70b9e2"
+  },
+  "fileExplorer.dateTooltip.dateAdded": "Fecha de inclusión",
+  "@fileExplorer.dateTooltip.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
+  "fileExplorer.dateTooltip.displayedLabel": "{label} (en la columna)",
+  "@fileExplorer.dateTooltip.displayedLabel": {
+    "sourceHash": "975a232"
   },
   "fileExplorer.dateTooltip.lastModified": "Última modificación",
   "@fileExplorer.dateTooltip.lastModified": {

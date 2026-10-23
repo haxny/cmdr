@@ -62,5 +62,9 @@
   "menu.mediaIndex.addFolderExcluded": "Agregar a las carpetas indexadas (excluida)",
   "@menu.mediaIndex.addFolderExcluded": {
     "sourceHash": "cfc08b1"
+  },
+  "menu.sort.dateAdded": "Fecha en que se agregó",
+  "@menu.sort.dateAdded": {
+    "sourceHash": "3709ae0"
   }
 }

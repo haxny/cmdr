@@ -340,6 +340,10 @@
   "@menu.sort.dateCreated": {
     "sourceHash": "fa91f76"
   },
+  "menu.sort.dateAdded": "添加日期",
+  "@menu.sort.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
   "menu.sort.ascending": "升序",
   "@menu.sort.ascending": {
     "sourceHash": "7718459"

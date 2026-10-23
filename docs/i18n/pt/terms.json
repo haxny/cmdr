@@ -42,10 +42,10 @@
   },
   "add": {
     "chosen": "Adicionar",
-    "accept": ["adiciona", "adicione", "adicioná", "adicionou"],
-    "forms": "button Adicionar; description Adiciona; imperative Adicione; ao relatório / aos favoritos / à fila",
+    "accept": ["adiciona", "adicione", "adicioná", "adicionou", "adição"],
+    "forms": "button Adicionar; description Adiciona; imperative Adicione; ao relatório / aos favoritos / à fila; the date label Data da adição (Finder's Data da Adição, sentence-cased)",
     "confidence": "high",
-    "sources": "KDE Dolphin, Total Commander, Double Commander pt-BR (Adicionar ao/à …)"
+    "sources": "KDE Dolphin, Total Commander, Double Commander pt-BR (Adicionar ao/à …); macOS Finder pt_BR LocalizableMerged N169.38 / N230 (Data da Adição)"
   },
   "advanced": {
     "chosen": "Avançado",

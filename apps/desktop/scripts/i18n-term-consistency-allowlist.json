@@ -188,6 +188,10 @@
     ],
     "nl": [
       {
+        "source": "Added",
+        "reason": "Two senses of one English word. `fileExplorer.columns.added` is a date column header, so it takes Finder's date label `Toevoegingsdatum` (LocalizableMerged N169.38), parallel with its siblings `Aanmaakdatum` and `Bewerkingsdatum`. `Toegevoegd` is a state: a file git added (`fileExplorer.git.status.added`) and a shortcut the user added (`shortcuts.list.addedTooltip`)."
+      },
+      {
         "source": "Back",
         "reason": "`Terug` is the standalone back button in a list you drill into (network browser, share list, mount sheet). `Vorige` is the paired previous/next of the Go menu and the onboarding wizard, where macOS Dutch pairs `Vorige` with `Volgende`. See `docs/i18n/nl/terms.json` `back`."
       },
@@ -364,6 +368,10 @@
     ],
     "zh": [
       {
+        "source": "Added",
+        "reason": "Two senses of one English word. `fileExplorer.columns.added` is a date column header, so it takes Finder's date label `添加日期` (LocalizableMerged N169.38), parallel with its siblings `创建日期` and `修改日期`. `已添加` is a state: a file git added (`fileExplorer.git.status.added`) and a shortcut the user added (`shortcuts.list.addedTooltip`)."
+      },
+      {
         "source": "App",
         "reason": "Two senses. Beside `macOS` as a colour SOURCE (the date and size colour options) the Latin `App` stays, as Apple zh-CN writes it; as a shortcut SCOPE (`shortcuts.scope.app`) it's the translated scope word `应用`, matching its all-Chinese sibling scopes. See `docs/i18n/zh/terms.json` `app`."
       },
@@ -421,6 +429,10 @@
       }
     ],
     "zh-Hant": [
+      {
+        "source": "Added",
+        "reason": "Two senses of one English word. `fileExplorer.columns.added` is a date column header, so it takes Finder's date label `加入日期` (LocalizableMerged N169.38, zh-TW and zh-HK alike), parallel with its siblings `製作日期` and `修改日期`. `已加入` is a state: a file git added (`fileExplorer.git.status.added`) and a shortcut the user added (`shortcuts.list.addedTooltip`)."
+      },
       {
         "source": "Starting",
         "reason": "Two different states. `正在啟動⋯` is a service booting up (`ai.local.statusStarting`, the local AI server); `即將開始⋯` is Multi-rename's Rename button while the rename waits for tags to be read and starts on its own (`multiRename.starting`). Nothing is launching there, so `啟動` would misdescribe a queued wait."
@@ -487,6 +499,10 @@
       }
     ],
     "ru": [
+      {
+        "source": "Added",
+        "reason": "Two senses of one English word. `fileExplorer.columns.added` is a date column header, so it takes Finder's date label `Дата добавления` (LocalizableMerged N169.38), parallel with its siblings `Дата создания` and `Дата изменения`. `Добавлено` is a state: a file git added (`fileExplorer.git.status.added`) and a shortcut the user added (`shortcuts.list.addedTooltip`)."
+      },
       {
         "source": "Archived",
         "reason": "Two senses of one English word. `askCmdr.sessions.archivedBadge` marks a chat the user put away (`В архиве`); `fileExplorer.archivedFile.label` marks a file in an S3 cold-storage class (`В архивном хранилище`). In a file list `В архиве` reads as inside a zip, which hides why the file won't open. See `docs/i18n/ru/terms.json` `cold-storage`."

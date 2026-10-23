@@ -214,5 +214,9 @@
   "commands.multiRenameInsertField.label": "Insertar un campo de foto, video o música",
   "@commands.multiRenameInsertField.label": {
     "sourceHash": "827d9b0"
+  },
+  "commands.sortByAdded.label": "Ordenar por fecha en que se agregó",
+  "@commands.sortByAdded.label": {
+    "sourceHash": "3849f74"
   }
 }

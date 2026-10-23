@@ -55,6 +55,12 @@
       }
     ],
     "confidence": "high",
+    "exceptions": {
+      "menu.sort.dateAdded": "Finder's own Date Added label is Fecha de inclusión (LocalizableMerged N169.38 / N230, es.lproj), and the @key asks for Finder's exact wording.",
+      "fileExplorer.dateTooltip.dateAdded": "Same English as menu.sort.dateAdded, so the same Finder label Fecha de inclusión.",
+      "commands.sortByAdded.label": "Names the Finder date label Fecha de inclusión, parallel with Ordenar por fecha de creación.",
+      "fileExplorer.list.rowAdded": "The spoken row date names the same Finder label, parallel with modificación: {date}."
+    },
     "sources": "macOS Finder (Añadir, Añadir a favoritos, Añadir al Dock, Añadir etiquetas…)",
     "decision": "Añadir a un informe ya enviado"
   },

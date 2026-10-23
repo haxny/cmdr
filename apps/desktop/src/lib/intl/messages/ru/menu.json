@@ -340,6 +340,10 @@
   "@menu.sort.dateCreated": {
     "sourceHash": "fa91f76"
   },
+  "menu.sort.dateAdded": "Дата добавления",
+  "@menu.sort.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
   "menu.sort.ascending": "По возрастанию",
   "@menu.sort.ascending": {
     "sourceHash": "7718459"

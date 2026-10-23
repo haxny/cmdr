@@ -244,6 +244,10 @@
   "@commands.sortByCreated.label": {
     "sourceHash": "9bdaf4e"
   },
+  "commands.sortByAdded.label": "Ordenar por data da adição",
+  "@commands.sortByAdded.label": {
+    "sourceHash": "d89aba6"
+  },
   "commands.sortAscending.label": "Ordenar em ordem crescente",
   "@commands.sortAscending.label": {
     "sourceHash": "ec3c9c7"

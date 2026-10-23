@@ -434,5 +434,21 @@
   "fileExplorer.tags.skipped": "{count, plural, one {Cmdr dejó las etiquetas de un elemento como estaban, porque no pudo leer las que ya tenía. Comprueba que puedes abrirlo o etiquétalo en el Finder.} many {Cmdr dejó las etiquetas de {countText} elementos como estaban, porque no pudo leer las que ya tenían. Comprueba que puedes abrirlos o etiquétalos en el Finder.} other {Cmdr dejó las etiquetas de {countText} elementos como estaban, porque no pudo leer las que ya tenían. Comprueba que puedes abrirlos o etiquétalos en el Finder.}}",
   "@fileExplorer.tags.skipped": {
     "sourceHash": "b006e02"
+  },
+  "fileExplorer.columns.added": "Agregado",
+  "@fileExplorer.columns.added": {
+    "sourceHash": "f52c88f"
+  },
+  "fileExplorer.list.rowAdded": "fecha en que se agregó: {date}",
+  "@fileExplorer.list.rowAdded": {
+    "sourceHash": "b16f147"
+  },
+  "fileExplorer.sortFallback.added": "Esta ubicación no registra cuándo se agregaron los elementos, así que Cmdr ordena aquí por fecha de modificación.",
+  "@fileExplorer.sortFallback.added": {
+    "sourceHash": "bb79eab"
+  },
+  "fileExplorer.dateTooltip.dateAdded": "Fecha en que se agregó",
+  "@fileExplorer.dateTooltip.dateAdded": {
+    "sourceHash": "3709ae0"
   }
 }

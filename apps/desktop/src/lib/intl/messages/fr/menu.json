@@ -343,6 +343,10 @@
   "@menu.sort.dateCreated": {
     "sourceHash": "fa91f76"
   },
+  "menu.sort.dateAdded": "Date de l’ajout",
+  "@menu.sort.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
   "menu.sort.ascending": "Croissant",
   "@menu.sort.ascending": {
     "sourceHash": "7718459"

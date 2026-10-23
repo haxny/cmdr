@@ -51,7 +51,17 @@
     "sources": "macOS (Aktivera), MS terminology"
   },
   "add": {
-    "accept": ["lägger till", "lägger du till", "lade till", "lagts till", "lägga till", "tillagd", "lagt till"],
+    "accept": [
+      "lägger till",
+      "lägger du till",
+      "lade till",
+      "lades till",
+      "lagts till",
+      "lägga till",
+      "tillagd",
+      "lagt till",
+      "tilläggsdatum"
+    ],
     "avoid": [
       {
         "form": "bifoga (for adding a note to a report)",
@@ -66,7 +76,7 @@
       "search.walkHandoff.superseded": "Stopped adding to the results is the idiom slutade fylla på resultaten; lägga till would read as adding a result by hand."
     },
     "forms": "button Lägg till i … (Lägg till i favoriter, Lägg till i rapporten); progress Lägger till…; past Lade till",
-    "sources": "macOS AppKit/Finder (Lägg till i Dock, Lägg till i sidofältet)"
+    "sources": "macOS AppKit/Finder (Lägg till i Dock, Lägg till i sidofältet); the date label Tilläggsdatum is Finder's Date Added (LocalizableMerged N169.38 / N230)"
   },
   "advanced": {
     "accept": ["avancerad"],

@@ -244,6 +244,10 @@
   "@commands.sortByCreated.label": {
     "sourceHash": "9bdaf4e"
   },
+  "commands.sortByAdded.label": "Sortera efter tilläggsdatum",
+  "@commands.sortByAdded.label": {
+    "sourceHash": "d89aba6"
+  },
   "commands.sortAscending.label": "Sortera stigande",
   "@commands.sortAscending.label": {
     "sourceHash": "ec3c9c7"

@@ -344,6 +344,10 @@
   "@menu.sort.dateCreated": {
     "sourceHash": "fa91f76"
   },
+  "menu.sort.dateAdded": "Toevoegingsdatum",
+  "@menu.sort.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
   "menu.sort.ascending": "Oplopend",
   "@menu.sort.ascending": {
     "sourceHash": "7718459"
