@@ -285,7 +285,8 @@ fn read_entries(
 }
 
 /// Every entry of `path`, unsorted. Linux has no `getattrlistbulk`, so always
-/// `read_dir`, and no added date.
+/// `read_dir`, and no added date. Each entry keeps only the dates `path`'s
+/// listing claims (`withhold_unclaimed_dates`): one more `stat`, of `path`.
 #[cfg(not(target_os = "macos"))]
 fn read_entries(
     path: &Path,
@@ -294,7 +295,12 @@ fn read_entries(
     pick: Pick,
 ) -> std::io::Result<Vec<FileEntry>> {
     let _ = pick;
-    read_dir_entries(path, dot_hidden, tally, AddedAt::Skip)
+    let entries = read_dir_entries(path, dot_hidden, tally, AddedAt::Skip)?;
+    let dates = supported_dates_of(path);
+    Ok(entries
+        .into_iter()
+        .map(|entry| withhold_unclaimed_dates(entry, dates))
+        .collect())
 }
 
 /// The `read_dir` lister: every name, then one `lstat` per entry. A name whose
@@ -383,7 +389,27 @@ pub fn get_single_entry(path: &Path) -> Result<FileEntry, std::io::Error> {
             .flatten(),
         ..entry
     };
+    // Linux: keep the birth time only where the parent's listing claims one, as
+    // `read_entries` does, so a re-stat equals its listing entry. The parent's
+    // `stat` runs only for an entry that has a birth time to lose.
+    #[cfg(not(target_os = "macos"))]
+    let entry = if entry.created_at.is_some() {
+        let parent = parent_dir(path);
+        withhold_unclaimed_dates(entry, supported_dates_of(parent))
+    } else {
+        entry
+    };
     Ok(entry)
+}
+
+/// The folder whose listing holds `path` (`path` itself at `/`).
+#[cfg(not(target_os = "macos"))]
+fn parent_dir(path: &Path) -> &Path {
+    match path.parent() {
+        Some(parent) if parent.as_os_str().is_empty() => Path::new("."),
+        Some(parent) => parent,
+        None => path,
+    }
 }
 
 /// Which dates a listing of the folder `dir` carries beyond the modification
@@ -403,6 +429,23 @@ pub(crate) fn supported_dates_of(dir: &Path) -> SupportedDates {
         added: bulk::dir_is_bulk_eligible(dir),
         #[cfg(not(target_os = "macos"))]
         added: false,
+    }
+}
+
+/// `entry` without the dates its folder's listing doesn't claim (`dates`, from
+/// `supported_dates_of`), so a listing never carries a date its claim denies.
+///
+/// Only Linux needs it: there an entry's birth time is its OWN filesystem's
+/// (`statx`), so an ext4 mount point inside an NFS folder carries one the NFS
+/// listing doesn't claim. On macOS every `stat` has `st_birthtime`, and the
+/// added date is fetched only where the folder is bulk-eligible, so both claims
+/// hold by construction there.
+#[cfg_attr(target_os = "macos", allow(dead_code, reason = "Linux-only; tested on every OS"))]
+pub(crate) fn withhold_unclaimed_dates(entry: FileEntry, dates: SupportedDates) -> FileEntry {
+    FileEntry {
+        created_at: entry.created_at.filter(|_| dates.created),
+        added_at: entry.added_at.filter(|_| dates.added),
+        ..entry
     }
 }
 

@@ -900,7 +900,13 @@ because the local answer is a `statfs` of the listed folder (the root volume lis
   listers fill. Added iff the folder is bulk-eligible (APFS, HFS+: `bulk_eligible`, whose `read_dir` fallback and
   `get_single_entry` fill it too); Created iff the folder's own `stat` carries a birth time (macOS always,
   `st_birthtime`; Linux when `statx` returns `STATX_BTIME`). So an APFS folder claims both, an smbfs mount or an exFAT
-  stick Created only. `FilesystemKind` is a test oracle here, ❌ not the decider.
+  stick Created only. `FilesystemKind` is a test oracle here, ❌ not the decider. An entry's own `stat` can carry a date
+  its folder doesn't claim (Linux: an ext4 mount point inside an NFS folder has a birth time), so the Linux listing
+  passes every entry through `withhold_unclaimed_dates` against the folder's claim. A lone `get_single_entry` on Linux
+  does the same against its PARENT's claim, so a re-stat still equals its listing entry; it stats the parent only when
+  the entry has a birth time to lose, which puts it on a local filesystem whose parent `stat` is a cache hit (a mount
+  point under a network folder is the one remote case). macOS needs neither: `st_birthtime` is always there, and the
+  added date is only fetched where the folder is bulk-eligible.
 - **SMB** (`cmdr-smb/src/volume/mapping.rs`): Created, from the server's `FILE_BASIC_INFORMATION` creation time on every
   row and `stat`.
 - **MTP** (`cmdr-mtp/src/connection/directory_ops.rs` `entry_for_object`): Created, `ObjectInfo`'s capture date when the

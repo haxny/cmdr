@@ -1,7 +1,9 @@
 //! Tests for the local reader: `std::fs` listing, single-entry stat, and `FileEntry` construction.
 
-use crate::reading::{AddedAt, entry_from_lstat, get_single_entry, list_directory_core};
+use crate::reading::{AddedAt, entry_from_lstat, get_single_entry, list_directory_core, withhold_unclaimed_dates};
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::TestDir;
+use cmdr_fs::volume::SupportedDates;
 use cmdr_fs::volume::host::VolumeHost;
 use std::fs;
 
@@ -91,7 +93,7 @@ fn test_get_single_entry_nonexistent() {
 // ============================================================================
 
 /// The entry at `dir/name` through `entry_from_lstat`, outside any volume root.
-fn entry_at(dir: &std::path::Path, name: &str) -> Option<cmdr_fs::entry::FileEntry> {
+fn entry_at(dir: &std::path::Path, name: &str) -> Option<FileEntry> {
     entry_from_lstat(
         &dir.join(name),
         name.to_string(),
@@ -178,4 +180,30 @@ fn test_entry_from_lstat_honors_uf_hidden_with_no_dot_in_the_name() {
         entry.is_hidden,
         "UF_HIDDEN must mark an entry hidden even though its name carries no dot"
     );
+}
+
+// ============================================================================
+// Tests for withhold_unclaimed_dates
+// ============================================================================
+
+/// A listing never carries a date its folder's claim denies: an ext4 mount
+/// point inside an NFS folder has a birth time of its own, but the NFS folder's
+/// listing claims no Created date.
+#[test]
+fn an_entry_loses_the_dates_its_folder_does_not_claim() {
+    let entry = FileEntry {
+        created_at: Some(1_600_000_000),
+        added_at: Some(1_700_000_000),
+        ..FileEntry::new("mnt".to_string(), "/nfs/mnt".to_string(), true, false)
+    };
+
+    let modified_only = withhold_unclaimed_dates(entry.clone(), SupportedDates::NONE);
+    assert_eq!((modified_only.created_at, modified_only.added_at), (None, None));
+
+    let created_only = SupportedDates {
+        created: true,
+        added: false,
+    };
+    let kept = withhold_unclaimed_dates(entry, created_only);
+    assert_eq!((kept.created_at, kept.added_at), (Some(1_600_000_000), None));
 }
