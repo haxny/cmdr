@@ -169,6 +169,25 @@ commit, run back to back on the same fixture.
   with a per-path `getattrlist` on every entry except that one (whose `getattrlist` gets `EPERM` too). At `/` and
   `/System/Volumes/Data`, one entry has no added date on either lister.
 
+## What a re-stat costs, and why it keeps its `statfs`
+
+`get_single_entry` (the watcher's re-stat, and every write path's preflight, cleanup, and conflict check) asks "is my
+folder bulk-eligible?" with a `statfs` of the parent on every call, then one `getattrlist` for the added date where it
+is. A per-device cache keyed on the call's own `lstat` `st_dev`, cleared by a thread blocked on a kqueue `EVFILT_FS`
+filter, was built and measured, then reverted. Median of 5–7 warm passes over every entry, release build, macOS 27.0,
+2026-10-23, load average 3–5:
+
+- **APFS, 10,620 entries**: 4.47–4.50 µs per call with the `statfs`, 3.30–3.36 µs with the cache. The `statfs` is ~1.2
+  µs of each call.
+- **smbfs, Docker Samba on localhost** (3 entries): 2.56 µs vs 1.47 µs.
+- **smbfs, a NAS over Tailscale** (18 entries): 3.44 µs vs 1.62 µs.
+
+On both smbfs mounts the warm `statfs` answered from the client's cache, so there's no network round trip per call in
+steady state: the cache saves one syscall, not a round trip. **Decision: keep the `statfs`.** ~1 µs per call doesn't pay
+for ~230 lines, a resident thread, and device-number-reuse and mid-read-mount races to reason about. Revisit only if a
+profile shows re-stats hot, or a cold `statfs` on a slow mount turns up in one. (An inline kqueue drain before each
+lookup was worse than the `statfs`: 15.9–16.9 µs wall per call, because the call yields.)
+
 ## Last opened is not one xattr
 
 Finder's "Date Last Opened" is Spotlight's `kMDItemLastUsedDate`. The `com.apple.lastuseddate#PS` xattr is one of its
