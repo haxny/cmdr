@@ -58,9 +58,6 @@
     "file-explorer/rename/rename-activation.ts": {
       "reason": "Depends on document event listeners and timers"
     },
-    "file-explorer/selection/FileIcon.svelte": {
-      "reason": "Simple UI component, display only"
-    },
     "file-explorer/views/BriefList.svelte": {
       "reason": "Logic tested in brief-list-utils.ts, component mounting heavy"
     },
