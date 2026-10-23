@@ -107,12 +107,17 @@ less WebContent footprint once settled, against loading all 15; one more catalog
   row the one that sticks, however the loads land. A chunk that fails to load keeps the old language (logged).
 - **Eviction.** After a switch, shipped catalogs the window no longer reads (English aside) are dropped, so browsing the
   picker doesn't end with every catalog in memory. Switching back costs one more load.
-- **Startup.** The module waits (top-level await; the build targets Safari 15, which has it) for the catalog the window
-  will most likely speak: the one the last switch in ANY window landed on (`startup-catalog.ts`, in localStorage; every
-  window shares the `tauri://localhost` origin), else the webview's own. The remembered tag also becomes the language
-  (and `<html lang>`) until `appearance.language` applies, so a language picked against the macOS one shows from the
-  first frame. A stale hint (the macOS language changed while Cmdr was closed) costs one more load when the setting
-  applies, and the window shows the hinted language meanwhile, never English unless that's the hint.
+- **Startup.** At module load the runtime starts loading the catalog the window will most likely speak, as
+  `startupCatalogsReady`, and the root `routes/+layout.ts` `load` awaits it, which gates every window's first render. ❌
+  Not a top-level await: one here made WebKitGTK 2.52 resolve a secondary window's route-node `import()` before that
+  module had finished evaluating, so the page component ran with its own module-level templates still `undefined`, and
+  every Settings, viewer, and queue window crashed while the main window worked (CI run 39989092928, reproduced in the
+  Linux E2E container). `no-restricted-syntax` in `eslint.config.js` bans top-level await in app code. The catalog it
+  loads: the one the last switch in ANY window landed on (`startup-catalog.ts`, in localStorage; every window shares the
+  `tauri://localhost` origin), else the webview's own. The remembered tag also becomes the language (and `<html lang>`)
+  until `appearance.language` applies, so a language picked against the macOS one shows from the first frame. A stale
+  hint (the macOS language changed while Cmdr was closed) costs one more load when the setting applies, and the window
+  shows the hinted language meanwhile, never English unless that's the hint.
 - **Callers.** The main window's `initSettingsApplier()` awaits the startup switch before `settingsReady`, so the panes
   mount in the right language. Secondary windows' `initWindowLanguageSync()` and every live change fire and forget. The
   native menu bar (`setUiLanguage`, Rust) moves a few ms before the webview on a switch to an unloaded language.

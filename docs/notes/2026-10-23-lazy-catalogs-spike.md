@@ -101,9 +101,11 @@ prod app exposes no JS entry point, and a dev build in the spike worktree would 
 
 ## Risks that remain
 
-- **Top-level await in the i18n runtime**: every module importing it waits for one catalog fetch at window start (~8 ms,
-  against ~70 ms of evaluation saved). A chunk that fails to load is caught and logged: the window starts in its webview
-  language, and a switch keeps the old one.
+- **The startup gate**: every window's first render waits for one catalog fetch (~8 ms, against ~70 ms of evaluation
+  saved), through the root `+layout.ts` `load`. A chunk that fails to load is caught and logged: the window starts in
+  its webview language, and a switch keeps the old one. The first version used a top-level await instead, and WebKitGTK
+  ran secondary windows' page components before their modules had finished evaluating (every Settings, viewer, and queue
+  window crashed in CI, run 39989092928); top-level await is now banned in app code by ESLint.
 - **The menu bar can switch a few ms before the webview**: `setUiLanguage` (Rust) fires immediately while the webview
   awaits its chunk.
 - **A stale startup hint shows the hinted language for a few ms** before the setting applies, the same class as the old

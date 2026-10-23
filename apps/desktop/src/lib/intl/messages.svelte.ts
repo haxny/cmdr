@@ -602,24 +602,35 @@ export async function _loadAllCatalogsForTests(): Promise<void> {
   await Promise.all(shippedLocales.map(loadCatalog))
 }
 
-// The first render must find its catalog already here, or every `t()` in it reads
-// English for a frame. So the module waits (top-level await; Safari 15+) for the
-// catalogs the window will most likely speak: the one the last switch in any window
-// landed on, else the webview's own language. The remembered one also becomes the
-// language until `appearance.language` applies, so a language picked against the OS
-// shows from the first frame. A chunk that won't load leaves the window on the
-// webview's language (English, at worst) rather than blank.
-const startupCatalog = rememberedStartupCatalog(shippedLocales)
-await (ensureCatalogs(startupCatalog ?? defaultUiLocale()) ?? Promise.resolve()).then(
-  () => {
-    if (startupCatalog === null) return
-    setUiLocaleOverride(startupCatalog)
-    setDocumentLanguage(startupCatalog)
-  },
-  (error: unknown) => {
-    warnCatalogLoad('Starting without the catalog for {locale}: it did not load: {error}', {
-      locale: startupCatalog ?? defaultUiLocale(),
-      error,
-    })
-  },
-)
+/**
+ * Settles once this window's starting catalogs are loaded: the ones the last switch in
+ * any window landed on (`startup-catalog.ts`), else the webview's own language's. The
+ * remembered one also becomes the language until `appearance.language` applies, so a
+ * language picked against the OS shows from the first frame. Never rejects: a chunk that
+ * won't load leaves the window on the webview's language (English, at worst).
+ *
+ * The first render must not start before this, or every `t()` in it reads English for a
+ * frame. The root `+layout.ts` `load` awaits it, which gates every window's first render.
+ *
+ * ❌ Not a top-level `await`. WebKitGTK 2.52 (the Linux E2E webview) resolved a secondary
+ * window's route-node `import()` while this module's top-level await was still pending,
+ * so the page component ran before its own module body had finished: every Settings,
+ * viewer, and queue window crashed on `undefined is not a function` (CI run 39989092928).
+ * `no-restricted-syntax` in `eslint.config.js` bans top-level await in app code.
+ */
+export const startupCatalogsReady: Promise<void> = (() => {
+  const startupCatalog = rememberedStartupCatalog(shippedLocales)
+  return (ensureCatalogs(startupCatalog ?? defaultUiLocale()) ?? Promise.resolve()).then(
+    () => {
+      if (startupCatalog === null) return
+      setUiLocaleOverride(startupCatalog)
+      setDocumentLanguage(startupCatalog)
+    },
+    (error: unknown) => {
+      warnCatalogLoad('Starting without the catalog for {locale}: it did not load: {error}', {
+        locale: startupCatalog ?? defaultUiLocale(),
+        error,
+      })
+    },
+  )
+})()

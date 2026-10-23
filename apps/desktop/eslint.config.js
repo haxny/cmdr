@@ -358,6 +358,24 @@ export default tseslint.config(
       // formatter. Turned OFF for `*.test.ts` below (tests legitimately
       // construct `Intl.NumberFormat`/`DateTimeFormat` to compute expecteds).
       'cmdr/no-raw-locale-format': 'error',
+      // No top-level `await` in app code. In the i18n runtime it made WebKitGTK resolve a
+      // secondary window's route-node `import()` before that module had finished evaluating,
+      // so every Settings, viewer, and queue window crashed on `undefined is not a function`
+      // while the main window looked fine. Gate startup work explicitly instead (the root
+      // `+layout.ts` `load` awaits `startupCatalogsReady`). Off for tests and `test-setup.ts`.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'AwaitExpression:not(:function AwaitExpression)',
+          message:
+            'No top-level await in app code: WebKit can run an importer before this module finishes. Export a promise and await it in a startup gate (see `startupCatalogsReady`).',
+        },
+        {
+          selector: 'ForOfStatement[await=true]:not(:function ForOfStatement)',
+          message:
+            'No top-level for-await in app code: WebKit can run an importer before this module finishes. Export a promise and await it in a startup gate.',
+        },
+      ],
       // Catalina's WebKit has no `Intl.ListFormat` (JavaScriptCore installs it only
       // against ICU 67+), so a bare `new Intl.ListFormat` crashed the main window at
       // startup (cmdr-reports#80). `createListFormat` in `#lib/intl/list-format` is
@@ -480,8 +498,10 @@ export default tseslint.config(
     //   exercise the IPC contract.
     // - no-dynamic-delete: fixture resets delete dynamic keys off mock objects.
     // Runtime code keeps all three on (console routes through `getAppLogger`).
-    files: ['test/**', 'src/**/*.test.ts', 'src/lib/test-a11y.ts'],
+    files: ['test/**', 'src/**/*.test.ts', 'src/lib/test-a11y.ts', 'src/test-setup.ts'],
     rules: {
+      // Test files and the Vitest setup await at top level on purpose (catalog preload).
+      'no-restricted-syntax': 'off',
       'no-console': 'off',
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/no-dynamic-delete': 'off',

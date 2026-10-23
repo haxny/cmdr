@@ -166,6 +166,9 @@ describe('the catalog a new window starts with', () => {
     vi.resetModules()
     const messages = await import('./messages.svelte')
     const locale = await import('./locale')
+    // The gate every window passes before its first render: the root layout's `load`.
+    const { load } = await import('../../routes/+layout')
+    await load()
     return { ...messages, ...locale }
   }
 
