@@ -11,7 +11,8 @@
 #[cfg(doc)]
 use super::Volume; // the knobs' docs link the trait methods each one bends
 use super::{
-    BackendKind, ConnectionState, IndexWalk, LandedModified, NodeIdentity, SpaceInfo, StreamWritten, VolumeError,
+    BackendKind, ConnectionState, IndexWalk, LandedModified, NodeIdentity, SpaceInfo, StreamWritten, SupportedDates,
+    VolumeError,
 };
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
@@ -202,6 +203,13 @@ pub struct InMemoryVolume {
     /// backend whose listing agrees with `get_metadata`. Set via
     /// [`Self::with_landed_times_reported`].
     reports_landed_times: bool,
+    /// The dates listings and `get_metadata` keep from what the entries
+    /// carry; any other date is dropped on the way out. Default
+    /// [`SupportedDates::ALL`]; set via [`Self::with_supported_dates`].
+    listed_dates: SupportedDates,
+    /// What [`Volume::supported_dates`] claims. Equal to `listed_dates` unless
+    /// [`Self::with_dates_claimed_as`] made the double lie.
+    claimed_dates: SupportedDates,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -241,6 +249,8 @@ impl InMemoryVolume {
             transfer_holds: None,
             listing_upload_secs: None,
             reports_landed_times: false,
+            listed_dates: SupportedDates::ALL,
+            claimed_dates: SupportedDates::ALL,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }
@@ -264,6 +274,38 @@ impl InMemoryVolume {
     pub fn with_landed_times_reported(mut self) -> Self {
         self.reports_landed_times = true;
         self
+    }
+
+    /// Makes this double list only `dates` beyond the modification date, and
+    /// claim exactly those through [`Volume::supported_dates`]: a volume
+    /// without an added date (`SupportedDates::CREATED`, an smbfs mount) or
+    /// with neither (`SupportedDates::NONE`, an S3 bucket). Entries keep what
+    /// they were seeded with; the dates are dropped on the way out.
+    pub fn with_supported_dates(mut self, dates: SupportedDates) -> Self {
+        self.listed_dates = dates;
+        self.claimed_dates = dates;
+        self
+    }
+
+    /// Makes [`Volume::supported_dates`] claim `dates` whatever the listings
+    /// carry: narrower than what it lists, it's a backend that fills a date it
+    /// never claimed, the lie `conformance::assert_listing_dates_are_claimed`
+    /// exists to catch.
+    pub fn with_dates_claimed_as(mut self, dates: SupportedDates) -> Self {
+        self.claimed_dates = dates;
+        self
+    }
+
+    /// `entry` as a listing or `get_metadata` hands it out: without the dates
+    /// this double doesn't list ([`Self::with_supported_dates`]).
+    fn as_listed(&self, mut entry: FileEntry) -> FileEntry {
+        if !self.listed_dates.created {
+            entry.created_at = None;
+        }
+        if !self.listed_dates.added {
+            entry.added_at = None;
+        }
+        entry
     }
 
     /// Makes [`Volume::connection_state`] report `state`, so this volume passes

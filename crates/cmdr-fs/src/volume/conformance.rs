@@ -27,6 +27,7 @@ mod directory_creation;
 mod forced_rename;
 mod link_delete;
 mod link_move;
+mod listed_dates;
 mod metadata;
 mod modification_date;
 
@@ -37,6 +38,7 @@ pub use directory_creation::{
 pub use forced_rename::assert_forced_rename_keeps_a_non_empty_dir;
 pub use link_delete::assert_delete_of_a_link_to_a_folder_removes_the_link_alone;
 pub use link_move::assert_a_link_to_a_folder_moves_as_the_link;
+pub use listed_dates::assert_listing_dates_are_claimed;
 pub use metadata::{
     BIRTH_SECS, assert_apply_metadata_keeps, assert_read_stream_reports_the_listed_metadata,
     assert_write_from_stream_keeps_metadata,

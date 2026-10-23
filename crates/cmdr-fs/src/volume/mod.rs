@@ -1115,6 +1115,26 @@ pub trait Volume: Send + Sync {
         crate::metadata::MetadataCaps::NONE
     }
 
+    /// Which dates beyond the modification date this volume's listing of the
+    /// directory `path` carries: [`SupportedDates`]. The listing engine reads
+    /// it to decide whether a sort by Created or Added can order rows here, or
+    /// falls back to Modified.
+    ///
+    /// Per directory, because the local root volume lists folders on other
+    /// filesystems (an exFAT stick under `/Volumes` records no added date);
+    /// every other backend answers for itself and ignores `path`. Async
+    /// because the local answer is a `statfs` of `path`, which a stalled
+    /// network mount can hang: ❌ never call it under a lock.
+    ///
+    /// Default [`SupportedDates::NONE`]: a backend that fills a date claims
+    /// it. ❗ Filling a date it doesn't claim fails
+    /// `conformance::assert_listing_dates_are_claimed`. Each backend's answer:
+    /// `crates/cmdr-fs/DETAILS.md` § "Which dates each volume lists".
+    fn supported_dates<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = SupportedDates> + Send + 'a>> {
+        let _ = path;
+        Box::pin(async { SupportedDates::NONE })
+    }
+
     /// Whether this volume accepts mutations at all: creating files and
     /// directories, renaming, and deleting.
     ///
@@ -2156,6 +2176,7 @@ pub mod scan_walk;
 pub mod secret_store;
 pub mod server_side;
 pub mod share_link;
+mod supported_dates;
 pub mod tls;
 mod transfer_hold;
 mod transport_fault;
@@ -2193,6 +2214,7 @@ pub use error::{ErrnoField, VolumeError};
 pub use ids::*;
 pub use server_side::{RenameWork, ServerCopyProgress, SubtreeTally};
 pub use share_link::{ShareLink, ShareLinkExpiry};
+pub use supported_dates::SupportedDates;
 // The app-path schemes live beside the translation they feed; re-exported here
 // so callers keep `volume::sftp_app_root` and friends.
 pub use in_memory::InMemoryVolume;
@@ -2226,6 +2248,8 @@ mod connection_cell_test;
 mod connection_reporter_test;
 #[cfg(test)]
 mod entry_kind_test;
+#[cfg(test)]
+mod in_memory_dates_test;
 #[cfg(test)]
 mod in_memory_scan_test;
 #[cfg(test)]

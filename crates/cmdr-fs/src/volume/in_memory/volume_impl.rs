@@ -9,8 +9,8 @@ use crate::ignore_poison::RwLockIgnorePoison;
 use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 use crate::volume::{
     BackendKind, ConnectionState, CopyScanResult, IndexWalk, LaneKey, NodeIdentity, RenameWork, ScanConflict,
-    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
-    WriteAccess, WriteMode,
+    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, SupportedDates, Volume, VolumeError,
+    VolumeReadStream, WriteAccess, WriteMode,
 };
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -132,7 +132,7 @@ impl Volume for InMemoryVolume {
                     let parent = Self::parent_of(entry_path);
                     parent == target_dir
                 })
-                .map(|(_, entry)| entry.metadata.clone())
+                .map(|(_, entry)| self.as_listed(entry.metadata.clone()))
                 .map(|mut listed| {
                     if let Some(upload) = self.listing_upload_secs
                         && !listed.is_directory
@@ -158,7 +158,7 @@ impl Volume for InMemoryVolume {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
-        Box::pin(async move { self.stat_with(path, FileEntry::clone) })
+        Box::pin(async move { self.stat_with(path, |entry| self.as_listed(entry.clone())) })
     }
 
     fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
@@ -486,6 +486,10 @@ impl Volume for InMemoryVolume {
 
     fn metadata_caps(&self) -> MetadataCaps {
         self.metadata_caps
+    }
+
+    fn supported_dates<'a>(&'a self, _path: &'a Path) -> Pin<Box<dyn Future<Output = SupportedDates> + Send + 'a>> {
+        Box::pin(async move { self.claimed_dates })
     }
 
     fn scan_for_copy<'a>(
