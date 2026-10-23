@@ -108,6 +108,33 @@ describe('parseCspReports', () => {
     expect(v.directive).toBe('img-src')
   })
 
+  it('reads the disposition and script sample in both shapes', () => {
+    const [legacy] = parseCspReports({
+      'csp-report': {
+        'document-uri': 'https://getcmdr.com/',
+        'blocked-uri': 'inline',
+        'effective-directive': 'script-src-elem',
+        disposition: 'report',
+        'script-sample': ';window.__cmdrRReady',
+      },
+    })
+    expect(legacy).toMatchObject({ disposition: 'report', sample: ';window.__cmdrRReady' })
+
+    const [reportingApi] = parseCspReports([
+      {
+        type: 'csp-violation',
+        body: {
+          documentURL: 'https://getcmdr.com/',
+          blockedURL: 'inline',
+          effectiveDirective: 'script-src-elem',
+          disposition: 'enforce',
+          sample: 'console.log(1)',
+        },
+      },
+    ])
+    expect(reportingApi).toMatchObject({ disposition: 'enforce', sample: 'console.log(1)' })
+  })
+
   it('returns nothing for junk', () => {
     expect(parseCspReports(null)).toEqual([])
     expect(parseCspReports('nope')).toEqual([])
@@ -221,6 +248,48 @@ describe('POST /csp-report', () => {
     expect(res.status).toBe(204)
     expect(fetchMock).not.toHaveBeenCalled()
     expect(store.size).toBe(0)
+  })
+
+  it('logs a report-only violation on our page with its sample, and never alerts on it', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const { kv, store } = createKv()
+    const bindings = createBindings({ CSP_ALERTS: kv })
+
+    // Would alert if enforced: a real network URL blocked on our own page.
+    const network = await post(legacyReport({ ...likeButtonViolation, disposition: 'report' }), bindings)
+    // The strict policy's whole point: an inline script the build didn't hash.
+    const inline = await post(
+      reportingApiReport({
+        documentURL: 'https://getcmdr.com/pricing/?utm_source=x',
+        blockedURL: 'inline',
+        effectiveDirective: 'script-src-elem',
+        disposition: 'report',
+        sample: ';Paddle.Initialize({ token: "live_x" })',
+        sourceFile: 'https://getcmdr.com/pricing/',
+      }),
+      bindings,
+      'application/reports+json',
+    )
+    // Someone else's page reporting to us is nobody's concern.
+    await post(
+      legacyReport({ ...likeButtonViolation, 'document-uri': 'https://evil.test/', disposition: 'report' }),
+      bindings,
+    )
+
+    expect(network.status).toBe(204)
+    expect(inline.status).toBe(204)
+    expect(cspAlerts(bindings)).toEqual([])
+    expect(store.size).toBe(0)
+    const logged = log.mock.calls.map((call) => call[1] as Record<string, unknown>)
+    expect(logged).toHaveLength(2)
+    expect(logged[1]).toEqual({
+      directive: 'script-src-elem',
+      blockedUrl: 'inline',
+      documentUrl: 'https://getcmdr.com/pricing/',
+      sourceFile: 'https://getcmdr.com/pricing/',
+      sample: ';Paddle.Initialize({ token: "live_x" })',
+    })
+    log.mockRestore()
   })
 
   it('answers 204 to a malformed body without alerting', async () => {

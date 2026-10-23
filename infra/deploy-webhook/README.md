@@ -39,6 +39,15 @@ sudo usermod -aG systemd-journal deploy-cmdr
 
 After that, `deploy-cmdr` can run `journalctl` to see service logs (read-only, no sudo needed).
 
+## Cloudflare cache purge
+
+After the new container is up, `deploy-website.sh` purges Cloudflare's cache for the getcmdr.com zone, since Cloudflare
+keeps pages at the edge for up to an hour (`apps/website/DETAILS.md` § Edge caching). A deploy whose purge fails exits 1
+with an `ERROR` line in the log. The token is a Cloudflare API token that can only purge this zone's cache. systemd
+hands it to the listener through `EnvironmentFile=/etc/cmdr/deploy-webhook.env` (root-owned, mode `0640`, group
+`deploy-cmdr`), which holds one line: `CLOUDFLARE_PURGE_TOKEN=...`. Its source of truth is `CMDR_CLOUDFLARE_PURGE_TOKEN`
+in the sops secrets store.
+
 ## Security
 
 The webhook uses HMAC-SHA256 signature verification. Only requests signed with the correct secret are accepted. The

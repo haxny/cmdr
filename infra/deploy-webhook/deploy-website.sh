@@ -35,10 +35,31 @@ docker compose up -d
 echo "Verifying container is running..."
 sleep 2
 if docker compose ps --status running | grep -q getcmdr-static; then
-    echo "=== Deployment succeeded ==="
+    echo "Container is running."
 else
     echo "=== ERROR: Container not running after deploy ==="
     docker compose logs --tail 20
+    exit 1
+fi
+
+# Cloudflare keeps pages at the edge for up to an hour (`Cloudflare-CDN-Cache-Control` in
+# nginx.conf), so the new site only shows everywhere once the old copies are gone. The token can
+# only purge this zone's cache; systemd hands it over from `/etc/cmdr/deploy-webhook.env`
+# (README.md). The zone id isn't a secret.
+echo "Purging Cloudflare's cache..."
+if [ -z "${CLOUDFLARE_PURGE_TOKEN:-}" ]; then
+    echo "=== ERROR: CLOUDFLARE_PURGE_TOKEN isn't set, so visitors may see the old site for up to an hour ==="
+    exit 1
+fi
+GETCMDR_ZONE_ID="3b1ddce127d21ce9802588dac5aee4e9"
+if curl -fsS --max-time 30 --retry 3 --retry-all-errors -X POST \
+    "https://api.cloudflare.com/client/v4/zones/$GETCMDR_ZONE_ID/purge_cache" \
+    -H "Authorization: Bearer $CLOUDFLARE_PURGE_TOKEN" \
+    -H "Content-Type: application/json" \
+    --data '{"purge_everything":true}' | grep -q '"success":true'; then
+    echo "=== Deployment succeeded ==="
+else
+    echo "=== ERROR: Cache purge failed, so visitors may see the old site for up to an hour ==="
     exit 1
 fi
 

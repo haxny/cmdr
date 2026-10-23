@@ -30,6 +30,10 @@ export interface CspViolation {
   blockedUrl: string
   directive: string
   sourceFile?: string
+  /** `report` when a `Content-Security-Policy-Report-Only` policy raised it: nothing was blocked. */
+  disposition?: string
+  /** The first 40 characters of a blocked inline script, when the directive has `'report-sample'`. */
+  sample?: string
 }
 
 function stringField(obj: Record<string, unknown>, key: string): string | undefined {
@@ -53,7 +57,16 @@ export function parseCspReports(payload: unknown): CspViolation[] {
     const blockedUrl = stringField(r, 'blocked-uri')
     const directive = stringField(r, 'effective-directive') ?? stringField(r, 'violated-directive')
     if (documentUrl === undefined || blockedUrl === undefined || directive === undefined) return []
-    return [{ documentUrl, blockedUrl, directive, sourceFile: stringField(r, 'source-file') }]
+    return [
+      {
+        documentUrl,
+        blockedUrl,
+        directive,
+        sourceFile: stringField(r, 'source-file'),
+        disposition: stringField(r, 'disposition'),
+        sample: stringField(r, 'script-sample'),
+      },
+    ]
   }
   if (!Array.isArray(payload)) return []
   const violations: CspViolation[] = []
@@ -64,7 +77,14 @@ export function parseCspReports(payload: unknown): CspViolation[] {
     const blockedUrl = stringField(b, 'blockedURL')
     const directive = stringField(b, 'effectiveDirective')
     if (documentUrl === undefined || blockedUrl === undefined || directive === undefined) continue
-    violations.push({ documentUrl, blockedUrl, directive, sourceFile: stringField(b, 'sourceFile') })
+    violations.push({
+      documentUrl,
+      blockedUrl,
+      directive,
+      sourceFile: stringField(b, 'sourceFile'),
+      disposition: stringField(b, 'disposition'),
+      sample: stringField(b, 'sample'),
+    })
   }
   return violations
 }
@@ -93,6 +113,7 @@ function parseHttpUrl(value: string | undefined): URL | null {
  * nothing to do there. Allowing it would add a tracker the privacy policy doesn't cover.
  */
 export function isActionableViolation(v: CspViolation): boolean {
+  if (v.disposition === 'report') return false
   if (v.directive === 'font-src') return false
   if (v.directive.startsWith('script-src') && withoutQuery(v.blockedUrl) === paddleRetainScriptUrl) return false
   const page = parseHttpUrl(v.documentUrl)
@@ -100,6 +121,31 @@ export function isActionableViolation(v: CspViolation): boolean {
   if (!parseHttpUrl(v.blockedUrl)) return false
   if (v.sourceFile && !parseHttpUrl(v.sourceFile)) return false
   return true
+}
+
+/**
+ * Whether a report-only violation is worth a log line: raised on our own page and not by an
+ * extension. Unlike an alert, `inline` and `eval` count here, because the Report-Only policy exists
+ * to show which inline scripts the build's hashes miss before that policy gets enforced. They're
+ * logged, never alerted: nothing was blocked, and the log is read on purpose
+ * (`apps/api-server/src/website/DETAILS.md` § CSP reports).
+ */
+export function isReportOnlyFinding(v: CspViolation): boolean {
+  if (v.disposition !== 'report') return false
+  const page = parseHttpUrl(v.documentUrl)
+  if (!page || page.protocol !== 'https:' || !ourPageHosts.has(page.hostname)) return false
+  if (v.sourceFile && !parseHttpUrl(v.sourceFile)) return false
+  return true
+}
+
+/** The violation as it may leave the Worker: no query strings, which can carry anything. */
+function cleanViolation(v: CspViolation) {
+  return {
+    directive: v.directive,
+    blockedUrl: withoutQuery(v.blockedUrl),
+    documentUrl: withoutQuery(v.documentUrl),
+    sourceFile: v.sourceFile ? withoutQuery(v.sourceFile) : undefined,
+  }
 }
 
 function withoutQuery(value: string): string {
@@ -128,12 +174,7 @@ async function claimAlert(kv: KVNamespace, v: CspViolation): Promise<boolean> {
 
 async function alertActionable(env: Bindings, violations: CspViolation[]): Promise<void> {
   for (const v of violations) {
-    const clean = {
-      directive: v.directive,
-      blockedUrl: withoutQuery(v.blockedUrl),
-      documentUrl: withoutQuery(v.documentUrl),
-      sourceFile: v.sourceFile ? withoutQuery(v.sourceFile) : undefined,
-    }
+    const clean = cleanViolation(v)
     console.warn('CSP violation on getcmdr.com', clean)
     if (!(await claimAlert(env.CSP_ALERTS, v))) continue
     await recordOpsEvent(env.TELEMETRY_DB, 'csp-violation', cspViolationMessage(clean))
@@ -161,7 +202,11 @@ cspReport.post('/csp-report', async (c) => {
     return c.body(null, 204)
   }
 
-  const actionable = parseCspReports(payload).filter(isActionableViolation)
+  const violations = parseCspReports(payload)
+  for (const v of violations.filter(isReportOnlyFinding)) {
+    console.log('CSP report-only violation on getcmdr.com', { ...cleanViolation(v), sample: v.sample })
+  }
+  const actionable = violations.filter(isActionableViolation)
   if (actionable.length > 0) {
     await scheduleBackground(c, alertActionable(c.env, actionable))
   }

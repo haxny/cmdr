@@ -162,6 +162,25 @@ was deleted.)
   connect-src), skipping `src/dev/` and `src/build/` (build-time-only modules, imported from component frontmatter and
   ❌ never from a client `<script>`), and the CSP's `report-uri` / `report-to` send production violations to the API
   server, which alerts Discord (`apps/api-server/src/website/DETAILS.md` § CSP reports).
+- **Inline scripts by hash (report-only for now)**: the enforced CSP still has `'unsafe-inline'` in `script-src`. A
+  second header, `Content-Security-Policy-Report-Only`, is the policy we're moving to: inline scripts allowed only by
+  hash, images only from us, remark42, and Paddle, plus `object-src 'none'` and `base-uri 'self'`.
+  `src/plugins/csp-hashes.ts` hashes every executable inline `<script>` in the built HTML into
+  `nginx-generated/csp-script-hashes.conf` (gitignored, copied by the Dockerfile), which sets `$csp_script_hashes` for
+  that header. It's one union across all pages because `<ClientRouter />` runs the next page's inline scripts under the
+  current page's policy, and it runs after every other integration because a hash covers exact bytes. Astro's built-in
+  `security.csp` can't do this: it doesn't support `<ClientRouter />` and only emits a `<meta>` policy, which can't
+  report. Report-only violations land in the Workers log, not an alert. To enforce, move the strict policy into
+  `Content-Security-Policy` once that log shows nothing of ours, with a Paddle sandbox checkout in between. Verified
+  with zero violations across five pages and client-side navigation in Chrome (local `nginx:alpine`, 2026-10-23).
+- **Edge caching**: nginx sends `Cloudflare-CDN-Cache-Control` (edge-only, browsers ignore it) on pages and markdown (an
+  hour) and on `.json` like `latest.json` (a minute); browsers still get `no-cache`. Cloudflare's cache rule for
+  getcmdr.com caches only responses that declare a lifetime, so Caddy's other routes on the host (Listmonk, Umami,
+  PostHog, the deploy hook) and nginx's `/download/latest` redirects stay uncached. Every deploy purges the zone
+  (`infra/deploy-webhook/deploy-website.sh`). Link-preview bots (`TelegramBot`, `Twitterbot`, and so on) skip the edge
+  cache, so they always reach nginx's access log; human page views served from the edge don't, and Umami counts them.
+  nginx doesn't compress: Cloudflare only compresses with Brotli or zstd when the origin sends plain bytes. The rule
+  itself lives in the infra repo (`cloudflare/getcmdr.com-cache.tf`).
 - **Always-latest download links**: `getcmdr.com/download/latest/<arch>` (and bare `/download/latest`, which hands out
   the universal build) is an nginx `return 302` to the API server's `/download/latest/<arch>`, query string preserved so
   `?ref=` and `?src=` survive. It lives in `nginx.conf`, not Astro, because a static build can only emit a meta-refresh

@@ -41,6 +41,8 @@ COPY --from=builder /app/apps/website/dist /usr/share/nginx/html
 # Copy nginx config
 COPY apps/website/nginx.conf /etc/nginx/conf.d/default.conf
 COPY apps/website/nginx-security-headers.conf /etc/nginx/snippets/security-headers.conf
+# The inline-script hashes the build computed for the CSP (src/plugins/csp-hashes.ts)
+COPY --from=builder /app/apps/website/nginx-generated/csp-script-hashes.conf /etc/nginx/snippets/csp-script-hashes.conf
 
 # The access log dir (see nginx.conf). Production bind-mounts a host dir over it; this keeps a plain
 # `docker run` writable too.

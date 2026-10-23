@@ -102,6 +102,16 @@ privacy policy doesn't cover. The ops alert then fires once per `(directive, blo
 `CSP_ALERTS`. Every actionable report also goes to the Workers log (`console.warn`), so the count is there even when the
 alert stays quiet.
 
+**Decision: report-only violations are logged, never alerted.** The site also sends a stricter
+`Content-Security-Policy-Report-Only` (inline scripts only by build-time hash, `apps/website/DETAILS.md` § Security
+headers). Its reports carry `disposition: "report"`, so `isActionableViolation` drops them, and `isReportOnlyFinding`
+logs the ones raised on our own page by non-extension code with `console.log`, including `inline` and `eval` and the
+browser's 40-character `sample` of the script. That log is how to tell an unhashed script of ours from an extension's
+before the strict policy is enforced: search the Workers logs (`../../DETAILS.md` § Cron alarms, layer 3) for the
+message `CSP report-only violation on getcmdr.com`. Known noise: Astro's `<ClientRouter />` inserts an empty
+`data:application/javascript,` script on its first client-side navigation (a timing marker), which both policies block
+harmlessly.
+
 **Privacy:** nothing about the visitor is stored. The KV key holds a directive and an origin, the IP only feeds the rate
 limiter, and page and blocked URLs lose their query strings before they reach the log or the alert.
 

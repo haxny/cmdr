@@ -68,7 +68,6 @@ Color scheme.
 - `site` must be set in `astro.config.ts` for RSS and OG image URLs.
 - Keep `compressHTML: true` (Astro 7's `'jsx'` breaks home + pricing).
 - **A new fetch origin goes in `connect-src`** (`nginx-security-headers.conf`), or prod silently blocks it.
-  [DETAILS.md](DETAILS.md) § Security headers.
-- Remark42 comments are off in dev: `docs/guides/deploying-remark42.md`.
+  [DETAILS.md](DETAILS.md) § Security headers.- Remark42 comments are off in dev: `docs/guides/deploying-remark42.md`.
 
 Patterns, analytics, baselines: `DETAILS.md`. Read it before any non-trivial work here.

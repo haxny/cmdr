@@ -17,6 +17,7 @@
 # But ignore website build artifacts and node_modules
 apps/website/node_modules
 apps/website/dist
+apps/website/nginx-generated
 apps/website/.astro
 apps/website/playwright-report
 apps/website/test-results

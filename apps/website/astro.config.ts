@@ -10,6 +10,8 @@ import { rehypeDownloadDropdown } from './src/plugins/download-dropdown.ts'
 import { rehypeBlogMedia } from './src/plugins/blog-media.ts'
 import { stripEmptySrcsetIntegration } from './src/plugins/strip-empty-srcset.ts'
 import { assetVersionsIntegration } from './src/plugins/asset-versions.ts'
+import { cspHashesIntegration } from './src/plugins/csp-hashes.ts'
+import { fileURLToPath } from 'node:url'
 import { blogEditorDevServer } from './src/dev/blog-editor/dev-server.mjs'
 
 // https://astro.build/config
@@ -33,8 +35,12 @@ export default defineConfig({
     sitemap({ filter: (page) => !page.includes('/visual-fixture') }),
     smartQuotesIntegration(),
     stripEmptySrcsetIntegration(),
-    // Last, so it versions the URLs in the HTML every other integration has finished writing.
+    // After every integration that rewrites HTML, so it versions the URLs they've finished writing.
     assetVersionsIntegration(),
+    // Truly last: a hash covers a script's exact bytes, so nothing may touch the HTML after it.
+    cspHashesIntegration({
+      snippetPath: fileURLToPath(new URL('./nginx-generated/csp-script-hashes.conf', import.meta.url)),
+    }),
   ],
   server: {
     port: parseInt(process.env.PORT || '4829', 10),
