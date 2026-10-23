@@ -275,6 +275,41 @@ describe('FullListHeader a11y', () => {
     )
   })
 
+  /** The date header's spoken name, and the chevron beside it. */
+  function dateHeader(target: HTMLElement): { name: string | null; chevron: HTMLElement | null } {
+    return {
+      name: target.querySelector('.header-date .sortable-header')?.getAttribute('aria-label') ?? null,
+      chevron: target.querySelector<HTMLElement>('.header-date .date-sort-chevron'),
+    }
+  }
+
+  // Each name starts with the visible label (WCAG 2.5.3), which is the date the cells show.
+  it('names the date header by the shown date and the sort state', async () => {
+    expect(dateHeader(await mountHeader({ sortBy: 'added', sortOrder: 'descending', dateColumn: 'added' })).name).toBe(
+      'Added, sorted descending',
+    )
+    expect(dateHeader(await mountHeader({ sortBy: 'name', dateColumn: 'modified' })).name).toBe('Modified, not sorted')
+  })
+
+  // A fallback: the user asked for Added, the cells show Modified, and the name says why.
+  it('names the shown date in a fallback, with the reason after the state', async () => {
+    const note = 'This location doesn’t record when items were added, so Cmdr sorts by date modified here.'
+    const target = await mountHeader({
+      sortBy: 'added',
+      sortOrder: 'descending',
+      dateColumn: 'modified',
+      dateFallbackNote: note,
+    })
+    expect(dateHeader(target).name).toBe(`Modified, sorted descending (${note})`)
+  })
+
+  it('names the chevron as a menu button', async () => {
+    const { chevron } = dateHeader(await mountHeader())
+    expect(chevron?.getAttribute('aria-label')).toBe('Choose a date to sort by')
+    expect(chevron?.getAttribute('aria-haspopup')).toBe('menu')
+    expect(chevron?.getAttribute('aria-expanded')).toBe('false')
+  })
+
   it('every branch at once has no a11y violations', async () => {
     await expectNoA11yViolations(
       await mountHeader({ showExtensionInName: true, gitColumnVisible: true, skipTransition: true, sortBy: 'size' }),

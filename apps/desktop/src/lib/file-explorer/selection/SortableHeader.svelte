@@ -64,11 +64,17 @@
     const isActive = $derived(column === currentSortColumn)
     /**
      * The button's spoken name carries the sort state ("Size, sorted descending"), since
-     * `aria-sort` needs a `columnheader` and this is a plain button. It starts with the
-     * visible label, so voice control finds it by what's on screen.
+     * `aria-sort` needs a `columnheader` and this is a plain button, then the fallback note
+     * when there is one, since the glyph that shows it is `aria-hidden`. It starts with the
+     * visible label, so voice control finds it by what's on screen (WCAG 2.5.3).
      */
-    const ariaLabel = $derived(
+    const sortState = $derived(
         tString('fileExplorer.columns.sortState', { column: label, order: isActive ? currentSortOrder : 'none' }),
+    )
+    const ariaLabel = $derived(
+        fallbackNote === undefined
+            ? sortState
+            : tString('fileExplorer.columns.sortStateFallback', { state: sortState, fallback: fallbackNote }),
     )
     /**
      * The tooltip names what the NEXT click does. That is normally this column's

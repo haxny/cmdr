@@ -7,11 +7,11 @@
  * with mixed entries (folder + file) visible after an await.
  */
 
-import { describe, it, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import BriefList from './BriefList.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
-import type { FileEntry } from '../types'
+import type { FileEntry, SortColumn } from '../types'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileRange: vi.fn(() => Promise.resolve([] as FileEntry[])),
@@ -183,5 +183,54 @@ describe('BriefList a11y', () => {
     })
     await tick()
     await expectNoA11yViolations(target)
+  })
+})
+
+// Brief shows a button per date, so the fallback note rides on the one the user asked for.
+describe('BriefList header names', () => {
+  async function headerNames(sort: { sortBy: SortColumn; effectiveSortBy: SortColumn }): Promise<(string | null)[]> {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(BriefList, {
+      target,
+      props: {
+        listingId: 'l1',
+        volumeId: 'root',
+        totalCount: 0,
+        includeHidden: false,
+        cursorIndex: -1,
+        isFocused: true,
+        hasParent: false,
+        parentPath: '',
+        currentPath: '/root',
+        sortOrder: 'descending',
+        onSelect: () => {},
+        onNavigate: () => {},
+        ...sort,
+      },
+    })
+    await tick()
+    const names = [...target.querySelectorAll('.sortable-header')].map((button) => button.getAttribute('aria-label'))
+    target.remove()
+    return names
+  }
+
+  it('names each date button by its label and sort state', async () => {
+    expect(await headerNames({ sortBy: 'added', effectiveSortBy: 'added' })).toEqual([
+      'Name, not sorted',
+      'Ext, not sorted',
+      'Size, not sorted',
+      'Modified, not sorted',
+      'Created, not sorted',
+      'Added, sorted descending',
+    ])
+  })
+
+  it('says why on the requested button in a fallback, and only there', async () => {
+    const names = await headerNames({ sortBy: 'added', effectiveSortBy: 'modified' })
+    expect(names.at(-1)).toBe(
+      'Added, sorted descending (This location doesn’t record when items were added, so Cmdr sorts by date modified here.)',
+    )
+    expect(names.slice(0, -1).every((name) => name?.endsWith('not sorted'))).toBe(true)
   })
 })

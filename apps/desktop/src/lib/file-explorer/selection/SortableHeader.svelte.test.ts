@@ -210,6 +210,22 @@ describe('SortableHeader sort state, spoken', () => {
     }
   })
 
+  // In a fallback the name carries the note too, after the state, so the glyph is never the
+  // only place it lives (the glyph itself is `aria-hidden`).
+  it('says why the rows follow another date, after the label and the state', () => {
+    const note = 'This location doesn’t record when items were added, so Cmdr sorts by date modified here.'
+    const header = setup({
+      column: 'added',
+      label: 'Added',
+      currentSortColumn: 'added',
+      currentSortOrder: 'descending',
+      fallbackNote: note,
+    })
+    expect(header.button.getAttribute('aria-label')).toBe(`Added, sorted descending (${note})`)
+    void unmount(header.component)
+    header.target.remove()
+  })
+
   it('follows a sort change live', () => {
     const header = setup({ column: 'size', currentSortColumn: 'name' })
     header.props.currentSortColumn = 'size'

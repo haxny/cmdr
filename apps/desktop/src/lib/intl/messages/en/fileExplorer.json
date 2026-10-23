@@ -1536,6 +1536,14 @@
     },
     "screenshot": "main-window.png"
   },
+  "fileExplorer.columns.sortStateFallback": "{state} ({fallback})",
+  "@fileExplorer.columns.sortStateFallback": {
+    "description": "What a screen reader says for a date column header button when the list can't sort by that date here and sorts by date modified instead: the header's usual spoken text, then the reason, as in “Added, sorted descending (This location doesn’t record when items were added, so Cmdr sorts by date modified here.)”. Never shown on screen. Keep the order: the state first, so the name still starts with the header's visible text, which voice control users say to press it.",
+    "placeholders": {
+      "state": "the header's usual spoken text from fileExplorer.columns.sortState, for example “Added, sorted descending”",
+      "fallback": "the full sentence from fileExplorer.sortFallback.created or fileExplorer.sortFallback.added"
+    }
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "description": "File-list column header for the per-file git status indicator. \"Git\" is the version-control tool name; keep it as-is."

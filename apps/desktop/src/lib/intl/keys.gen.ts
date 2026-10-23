@@ -1462,6 +1462,7 @@ export type MessageKey =
   | 'fileExplorer.columns.size'
   | 'fileExplorer.columns.sortByRelevance'
   | 'fileExplorer.columns.sortState'
+  | 'fileExplorer.columns.sortStateFallback'
   | 'fileExplorer.compareDirectories.couldNotFinish'
   | 'fileExplorer.compareDirectories.keptChanging'
   | 'fileExplorer.compareDirectories.marked'
