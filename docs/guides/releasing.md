@@ -711,7 +711,10 @@ commit.
   either is off, GitHub refuses the merge and `land` says so; the fast-forward works either way.
 - **A conflict GitHub can't merge** (rare: R changes only the version files, `Cargo.lock`, `LICENSE`, and the
   release-prep files): `land` stops. Merge by hand as in § Security-only patch release, step 7.
-- **Its PR runs CI once more** (~30 min), on R merged with the current `main`. Nothing users get waits for it.
+- **Its PR's CI reports green in about a minute when `main` hasn't moved since R's parent**: the run tests R's exact
+  tree, which the release's `run_all` run already passed, so `changes`' `verified` step skips every lane
+  (`docs/tooling/ci.md` § Landing doesn't re-run the suite). If `main` moved, the merged tree is new and the lanes run
+  (~30 min). Nothing users get waits for either.
 
 ## Release prep checks that abort before tagging
 

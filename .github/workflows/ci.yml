@@ -61,7 +61,8 @@ jobs:
     # `verified` and every lane output reads `false`: the lanes skip, `CI OK` reports green, and
     # the post-land jobs still run off the raw `*-changed` filter. A semantic clash between two
     # PRs that each passed alone surfaces on the next PR's run (it tests the PR merged with the
-    # current `main`) and on the release gate's full run. `ci-coverage` keeps every lane on this gate.
+    # current `main`) and on the release gate's full run. A PR whose tested tree already passed sets
+    # `verified` the same way (the `verified` step). `ci-coverage` keeps every lane on this gate.
     outputs:
       verified: ${{ steps.verified.outputs.verified }}
       same-tree: ${{ steps.same-tree.outputs.same-tree }}
@@ -78,26 +79,59 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # Push events only: a dispatch (the release gate's `run_all`) always runs in full. Only a
-      # completed, successful `CI OK` from GitHub Actions counts; this run's own is still pending.
-      # Verified means a green `CI OK` on this SHA itself (fast-forward), or this SHA is the
-      # `merge_commit_sha` of a merged PR into `main` whose head has one (GitHub rebase or squash
-      # merge). Keying on the push's head SHA is enough: a rebase merge pushes all the PR's
-      # commits at once, `github.sha` is the last, and GitHub reports exactly that one as the
-      # merge commit, so the earlier replayed commits never need a verdict of their own.
-      # An API hiccup falls back to a full run, never to a skip.
-      - name: Look for a green CI OK on this commit or its PR's head
+      # Pushes and pull requests: a dispatch (the release gate's `run_all`) always runs in full.
+      # Only a completed, successful `CI OK` from GitHub Actions counts; this run's own is still
+      # pending. An API hiccup falls back to running the lanes, never to a skip.
+      # - Push: verified means a green `CI OK` on this SHA itself (fast-forward), or this SHA is
+      #   the `merge_commit_sha` of a merged PR into `main` whose head has one (GitHub rebase or
+      #   squash merge). Keying on the push's head SHA is enough: a rebase merge pushes all the
+      #   PR's commits at once, `github.sha` is the last, and GitHub reports exactly that one as
+      #   the merge commit, so the earlier replayed commits never need a verdict of their own.
+      # - Pull request: verified means the tree this run tests (the merge ref's, checked out
+      #   here) is byte-identical to the PR head's, and the head already has a green `CI OK`. The
+      #   trees match exactly when the base hasn't moved past the head's parent, and since `main`
+      #   only moves forward, the run that went green tested that same tree. This is what lets a
+      #   release's merge-back (`pnpm land -merge`, its head the release commit, which the
+      #   release gate's `run_all` run already passed) report green in a minute instead of
+      #   re-running every lane its version bump lights up. If `main` moved, the merged tree is
+      #   new and the lanes run.
+      - name: Look for a green CI OK on this commit, its PR's head, or the same tree
         id: verified
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           green_ci_ok() {
             gh api "repos/$REPO/commits/$1/check-runs?check_name=CI%20OK&filter=all" \
               --jq '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length'
           }
+          if [[ "$EVENT" == "pull_request" ]]; then
+            if ! tested_tree=$(git rev-parse 'HEAD^{tree}') ||
+              ! head_tree=$(gh api "repos/$REPO/git/commits/$HEAD_SHA" --jq .tree.sha) ||
+              [[ -z "$tested_tree" || -z "$head_tree" ]]; then
+              echo "::warning::Couldn't read the trees of this run and of $HEAD_SHA; running the lanes."
+              exit 0
+            fi
+            if [[ "$tested_tree" != "$head_tree" ]]; then
+              echo "The base moved past $HEAD_SHA's parent, so this run tests a new tree ($tested_tree); running the lanes."
+              exit 0
+            fi
+            if ! count=$(green_ci_ok "$HEAD_SHA"); then
+              echo "::warning::Couldn't look up CI OK for $HEAD_SHA; running the lanes."
+              exit 0
+            fi
+            if [[ "$count" -gt 0 ]]; then
+              echo "verified=true" >>"$GITHUB_OUTPUT"
+              echo "This run tests $HEAD_SHA's exact tree ($head_tree), which already has a green CI OK, so the lanes skip."
+            else
+              echo "No green CI OK on $HEAD_SHA yet; running the lanes."
+            fi
+            exit 0
+          fi
           if ! count=$(green_ci_ok "$SHA"); then
             echo "::warning::Couldn't look up CI OK for $SHA; running every lane."
             count=0
@@ -1473,7 +1507,7 @@ jobs:
         run: ./scripts/check/check --check dashboard-build --ci
 
   # ===========================================
-  # Repo hygiene (no path gate; skips only on an already-verified `main` push or a PR that
+  # Repo hygiene (no path gate; skips only on an already-verified push or PR, or a PR that
   # changes no file)
   # ===========================================
   # Catches what per-app filters can't: oxfmt formats the whole monorepo (docs,
@@ -1485,7 +1519,7 @@ jobs:
     name: Repo hygiene
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Every run but an already-verified `main` push and a PR whose tree equals its base's (a
+    # Every run but an already-verified push or PR and a PR whose tree equals its base's (a
     # record-only commit changes no file, so there's nothing to check; see `changes`).
     needs: changes
     if: needs.changes.outputs.verified != 'true' && needs.changes.outputs.same-tree != 'true'

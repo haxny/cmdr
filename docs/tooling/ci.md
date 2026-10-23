@@ -83,7 +83,7 @@ with a reason.** When you rename one, CI fails until every workflow catches up. 
 
 ## The hygiene job
 
-Runs on every PR and unverified push (no path gate; § Landing doesn't re-run the suite), except a PR that changes no
+Runs on every unverified PR and push (no path gate; § Landing doesn't re-run the suite), except a PR that changes no
 file. Holds the checks whose inputs no per-app filter can cover:
 
 - `oxfmt` formats the whole monorepo (docs, configs, workflows). Before the hygiene job, a docs-only commit ran zero CI,
@@ -366,8 +366,8 @@ own there (§ macOS lane). `gradle-wrapper.yml` runs on PRs only when they touch
 
 ### Landing doesn't re-run the suite
 
-A landed commit already went green on its PR, and on a `push` the `changes` job's `verified` step recognizes it two
-ways:
+CI never re-tests a tree it already passed. The `changes` job's `verified` step recognizes three cases, two on a `push`
+and one on a PR. A landed commit already went green on its PR, and on a `push` it's recognized two ways:
 
 1. **Fast-forward** (`pnpm land` when `main` didn't move): the pushed SHA is the PR's head, so its own check runs
    (`checks: read`) carry a completed, successful `CI OK` from GitHub Actions.
@@ -383,8 +383,17 @@ the push in about a minute, and `deploy-website` runs off the raw `website-chang
 push, a PR whose head never went green, an earlier commit of a replayed series) runs in full; so does any failed lookup.
 (Verified on the first real land, run 39137865939, 2026-10-18: every lane skipped.)
 
+3. **A PR whose tested tree already passed**: a `pull_request` run tests `refs/pull/N/merge`, checked out in `changes`.
+   When that merge's tree is byte-identical to the PR head's tree (the base hasn't moved past the head's parent) and the
+   head already carries a green `CI OK` from GitHub Actions, the lanes skip. Since `main` only moves forward, the run
+   that went green tested that same tree. The case it's for is a release's merge-back (`pnpm land -merge`, whose head is
+   the release commit the release gate's `run_all` run passed): its version bump lights up every filter, and it used to
+   re-run the whole suite (31 min for v0.56.0's PR #712). A new push to the PR has no `CI OK` yet, so it runs as before;
+   a moved `main` makes a new tree, so it runs too. Not yet seen live: the next release's merge-back is its first real
+   test.
+
 - **Dispatches always run in full**, so the release's `run_all` run (`docs/guides/releasing.md` § The CI gate) is
-  unaffected: the lookup is push-only.
+  unaffected: the lookup runs on pushes and PRs only.
 - **Trust**: it trusts a `CI OK` from GitHub Actions on the SHA or on the merged PR's head, which is exactly what
   ruleset B trusts when it lets the push or the merge land. Fork PRs need no special case: their head still needs our
   own green `CI OK`.
