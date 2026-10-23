@@ -962,6 +962,16 @@ async fn export_honors_the_shared_handshake_contract() {
     .await;
 }
 
+/// The shared dates claim: a member carries its modification date and no other,
+/// as the default `supported_dates` claims.
+#[tokio::test]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let archive = TestArchive::from_entries(&[deflated("dir/b.txt", "world"), stored("dir/sub/c.txt", "x")]);
+    let volume = archive.volume();
+
+    cmdr_fs::volume::conformance::assert_listing_dates_are_claimed(&volume, Path::new("dir")).await;
+}
+
 /// The shared `NotFound`-payload assertion: a member that isn't in the archive
 /// reports its own name.
 #[tokio::test]

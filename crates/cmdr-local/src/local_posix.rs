@@ -10,7 +10,7 @@
 mod scan;
 mod streams;
 
-use crate::reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
+use crate::reading::{ListingTally, get_single_entry, list_directory_core_with_tally, supported_dates_of};
 use crate::space::{get_space_info_for_path, live_space_info_for_path};
 use cmdr_fs::entry::FileEntry;
 #[cfg(feature = "playwright-e2e")]
@@ -24,7 +24,8 @@ use cmdr_fs::volume::{
     CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
 use cmdr_fs::volume::{
-    EntryKind, ListingProgress, NodeIdentity, StreamLength, StreamWriteProgress, StreamWritten, WriteMode,
+    EntryKind, ListingProgress, NodeIdentity, StreamLength, StreamWriteProgress, StreamWritten, SupportedDates,
+    WriteMode,
 };
 use std::future::Future;
 use std::io;
@@ -665,6 +666,17 @@ impl Volume for LocalPosixVolume {
     /// [`Self::METADATA_CAPS`].
     fn metadata_caps(&self) -> MetadataCaps {
         Self::METADATA_CAPS
+    }
+
+    /// Per folder, from what the listers fill there (`supported_dates_of`): an
+    /// APFS folder carries both dates, an smbfs or exFAT one only Created.
+    fn supported_dates<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = SupportedDates> + Send + 'a>> {
+        let abs_path = self.resolve(path);
+        Box::pin(async move {
+            spawn_blocking(move || supported_dates_of(&abs_path))
+                .await
+                .expect("spawn_blocking supported_dates closure doesn't panic and the task is uncancelable")
+        })
     }
 
     fn scan_for_copy<'a>(

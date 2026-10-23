@@ -198,6 +198,29 @@ async fn smb_integration_is_writable_honors_the_shared_declaration_contract() {
     ensure_clean(&smb_vol, &base).await;
 }
 
+/// The shared dates claim, against a real SMB server: rows carry the server's
+/// creation time, which `supported_dates` claims, and never an added date.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_listing_dates_honor_the_shared_claim_contract() {
+    let smb_vol = Arc::new(make_docker_volume().await);
+    let base = test_dir_name();
+    ensure_clean(&smb_vol, &base).await;
+    smb_vol.create_directory(Path::new(&base)).await.unwrap();
+    smb_vol
+        .create_file(&Path::new(&base).join("dated.txt"), b"bytes")
+        .await
+        .unwrap();
+    smb_vol
+        .create_directory(&Path::new(&base).join("folder"))
+        .await
+        .unwrap();
+
+    cmdr_fs::volume::conformance::assert_listing_dates_are_claimed(smb_vol.as_ref(), Path::new(&base)).await;
+
+    ensure_clean(&smb_vol, &base).await;
+}
+
 /// The shared export-handshake assertion, against a real SMB server: the bytes
 /// stream back over smb2, and `supports_export()` says so.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

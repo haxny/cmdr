@@ -649,6 +649,15 @@ async fn is_writable_honors_the_shared_declaration_contract() {
     conformance::assert_writability_matches_the_mutations_offered(&browse.volume, &dir.join("scratch")).await;
 }
 
+/// A snapshot's rows carry the node's mtime and no other date, as the view's
+/// default `supported_dates` claims.
+#[tokio::test(flavor = "multi_thread")]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let browse = Browse::new().await;
+    let dir = browse.source_in("latest").await;
+    conformance::assert_listing_dates_are_claimed(&browse.volume, &dir).await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn not_found_honors_the_shared_path_payload_contract() {
     let browse = Browse::new().await;

@@ -116,8 +116,6 @@ fn populate_ref_columns(fe: &mut FileEntry, cat: Cat, name: &str, handle: &RepoH
             if let Ok(Some(id)) = resolve_ref_commit(handle, Cat::Branches, name) {
                 if let Ok(meta) = commit_meta(&repo, id) {
                     fe.modified_at = u64::try_from(meta.committer_secs).ok();
-                    fe.created_at = fe.modified_at;
-                    fe.added_at = fe.modified_at;
                 }
                 if let Some(ab) = ahead_behind_for_branch(&repo, name, id) {
                     fe.size = Some(u64::from(ab.ahead));
@@ -133,8 +131,6 @@ fn populate_ref_columns(fe: &mut FileEntry, cat: Cat, name: &str, handle: &RepoH
             if let Ok(Some(id)) = resolve_ref_commit(handle, Cat::Tags, name) {
                 if let Some(secs) = tag_or_commit_secs(&repo, id) {
                     fe.modified_at = u64::try_from(secs).ok();
-                    fe.created_at = fe.modified_at;
-                    fe.added_at = fe.modified_at;
                 }
                 fe.git_meta = Some(GitEntryMeta::TaggedCommit { id: id.to_string() });
             }
@@ -143,8 +139,6 @@ fn populate_ref_columns(fe: &mut FileEntry, cat: Cat, name: &str, handle: &RepoH
             if let Ok(id) = crate::log::resolve_commit_id(handle, name) {
                 if let Ok(meta) = commit_meta(&repo, id) {
                     fe.modified_at = u64::try_from(meta.committer_secs).ok();
-                    fe.created_at = fe.modified_at;
-                    fe.added_at = fe.modified_at;
                 }
                 if let Some(n) = files_changed_count(&repo, id) {
                     fe.size = Some(n);
@@ -161,8 +155,6 @@ fn populate_ref_columns(fe: &mut FileEntry, cat: Cat, name: &str, handle: &RepoH
                 && let Some(found) = entries.into_iter().nth(idx)
             {
                 fe.modified_at = found.modified_at;
-                fe.created_at = found.created_at;
-                fe.added_at = found.added_at;
                 fe.git_meta = found.git_meta;
             }
         }
@@ -171,8 +163,6 @@ fn populate_ref_columns(fe: &mut FileEntry, cat: Cat, name: &str, handle: &RepoH
                 && let Some(found) = entries.into_iter().find(|e| e.name == name)
             {
                 fe.modified_at = found.modified_at;
-                fe.created_at = found.created_at;
-                fe.added_at = found.added_at;
                 fe.git_meta = found.git_meta;
             }
         }
@@ -181,8 +171,6 @@ fn populate_ref_columns(fe: &mut FileEntry, cat: Cat, name: &str, handle: &RepoH
                 && let Some(found) = entries.into_iter().find(|e| e.name == name)
             {
                 fe.modified_at = found.modified_at;
-                fe.created_at = found.created_at;
-                fe.added_at = found.added_at;
                 fe.git_meta = found.git_meta;
             }
         }
@@ -325,8 +313,6 @@ pub fn list_branches(handle: &RepoHandle, repo_root: &Path) -> Result<Vec<FileEn
             let tip_id = tip.detach();
             if let Ok(meta) = commit_meta(&repo, tip_id) {
                 fe.modified_at = u64::try_from(meta.committer_secs).ok();
-                fe.created_at = fe.modified_at;
-                fe.added_at = fe.modified_at;
             }
             // Ahead/behind via upstream or fallback default branch.
             if let Some(ab) = ahead_behind_for_branch(&repo, &short, tip_id) {
@@ -380,8 +366,6 @@ pub fn list_tags(handle: &RepoHandle, repo_root: &Path) -> Result<Vec<FileEntry>
             let target_id = target.detach();
             if let Some(secs) = tag_or_commit_secs(&repo, target_id) {
                 fe.modified_at = u64::try_from(secs).ok();
-                fe.created_at = fe.modified_at;
-                fe.added_at = fe.modified_at;
             }
             // The wrapped commit, whose short form the cell shows. Annotated
             // tags peel to their commit through gix's `peel_to_id` chain when

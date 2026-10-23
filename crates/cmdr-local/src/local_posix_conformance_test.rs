@@ -163,6 +163,30 @@ async fn a_copy_keeps_the_source_date_per_the_shared_contract() {
     cmdr_fs::volume::conformance::assert_landed_time_agrees_with_get_metadata(&volume, Path::new("landed.txt")).await;
 }
 
+/// Local disk lists no date its `supported_dates` doesn't claim, for a file, a
+/// folder, and a link. On macOS the temp dir is APFS, so the claim is both
+/// dates; on Linux there's no added date.
+#[tokio::test]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let test_dir = TestDir::new("listed_dates_conformance_test");
+    let volume = LocalPosixVolume::local_folder("Test", &*test_dir, VolumeHost::detached());
+    volume.create_directory(Path::new("dated")).await.unwrap();
+    volume.create_directory(Path::new("dated/folder")).await.unwrap();
+    volume.create_file(Path::new("dated/file.txt"), b"bytes").await.unwrap();
+    std::os::unix::fs::symlink("file.txt", test_dir.join("dated/link")).unwrap();
+
+    cmdr_fs::volume::conformance::assert_listing_dates_are_claimed(&volume, Path::new("dated")).await;
+    let claimed = volume.supported_dates(Path::new("dated")).await;
+    #[cfg(target_os = "macos")]
+    assert_eq!(
+        claimed,
+        cmdr_fs::volume::SupportedDates::ALL,
+        "an APFS folder carries both dates"
+    );
+    #[cfg(not(target_os = "macos"))]
+    assert!(!claimed.added, "Linux records no added date");
+}
+
 /// A copy onto local disk dates the folders it created, once their contents
 /// landed.
 #[tokio::test]

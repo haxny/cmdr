@@ -189,10 +189,10 @@ fn commit_row(
     id: ObjectId,
     with_count: bool,
 ) -> Result<FileEntry, FriendlyGitError> {
-    // Author date drives display time. We pull the commit object once for the
-    // subject line and the author signature; gix caches loose objects so the
+    // The committer date is the row's date. We pull the commit object once for
+    // the subject line and the signature; gix caches loose objects so the
     // second hit is cheap.
-    let (subject, author_secs, committer_secs) = decode_commit_meta(repo, id)?;
+    let (subject, committer_secs) = decode_commit_meta(repo, id)?;
 
     let short = short_sha(&id);
     let entry_path = parent.join(&short);
@@ -203,8 +203,6 @@ fn commit_row(
     // users feel at home.
     fe.name = format!("{} {}", short, subject);
     fe.modified_at = Some(committer_secs as u64);
-    fe.created_at = Some(author_secs as u64);
-    fe.added_at = Some(author_secs as u64);
     // Files-changed vs. first parent. For an initial commit (no parent),
     // `files_changed_count` returns the total tree entry count, still a useful
     // "size of this snapshot" cue.
@@ -224,7 +222,7 @@ fn commit_row(
     Ok(fe)
 }
 
-fn decode_commit_meta(repo: &gix::Repository, id: ObjectId) -> Result<(String, i64, i64), FriendlyGitError> {
+fn decode_commit_meta(repo: &gix::Repository, id: ObjectId) -> Result<(String, i64), FriendlyGitError> {
     let commit = repo
         .find_commit(id)
         .map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?;
@@ -241,19 +239,13 @@ fn decode_commit_meta(repo: &gix::Repository, id: ObjectId) -> Result<(String, i
         .chars()
         .take(80)
         .collect::<String>();
-    let author = commit
-        .author()
-        .map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?;
     let committer = commit
         .committer()
-        .map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?;
-    let author_time = author
-        .time()
         .map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?;
     let committer_time = committer
         .time()
         .map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?;
-    Ok((subject, author_time.seconds, committer_time.seconds))
+    Ok((subject, committer_time.seconds))
 }
 
 fn short_sha(id: &ObjectId) -> String {

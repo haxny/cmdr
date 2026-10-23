@@ -80,8 +80,6 @@ pub fn list_tree(
         let entry_secs = per_file_dates.get(&name).copied().or(snapshot_secs);
         if let Some(s) = entry_secs {
             fe.modified_at = Some(s);
-            fe.created_at = Some(s);
-            fe.added_at = Some(s);
         }
         out.push(fe);
     }
@@ -159,8 +157,6 @@ pub fn get_tree_entry(
         .or_else(|| commit_committer_secs(&repo, commit_id));
     if let Some(s) = entry_secs {
         fe.modified_at = Some(s);
-        fe.created_at = Some(s);
-        fe.added_at = Some(s);
     }
     if matches!(kind, EntryKind::Tree)
         && let Some(bytes) = recursive_tree_size(&repo, commit_id, sub_path)

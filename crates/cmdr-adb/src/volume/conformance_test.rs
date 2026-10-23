@@ -35,6 +35,14 @@ async fn seeded() -> (FakeAdbServer, Arc<AdbVolume>) {
     (server, volume)
 }
 
+/// `STAT` and `LIST` carry an mtime and no other date, as the default
+/// `supported_dates` claims.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let (_server, volume) = seeded().await;
+    conformance::assert_listing_dates_are_claimed(volume.as_ref(), &fixture_path("/sdcard")).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_forceless_rename_refuses_an_existing_destination() {
     // `mv -n` exits 0 whether it moved or not, so the refusal here is the

@@ -26,8 +26,8 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
 use cmdr_fs::log_private::LogPrivate;
-use cmdr_fs::volume::ListingProgress;
 use cmdr_fs::volume::host::listings::ListingHost;
+use cmdr_fs::volume::{ListingProgress, SupportedDates};
 
 /// Whether a POSIX entry's `st_flags` carries `UF_HIDDEN`, what `chflags hidden`
 /// sets. macOS only; the flag doesn't exist on Linux, so this is always `false`
@@ -435,6 +435,26 @@ pub fn get_single_entry(path: &Path) -> Result<FileEntry, std::io::Error> {
         ..entry
     };
     Ok(entry)
+}
+
+/// Which dates a listing of the folder `dir` carries beyond the modification
+/// date, by construction from what the listers fill: the added date iff the
+/// folder takes the bulk lister (APFS and HFS+, whose `read_dir` fallback and
+/// `get_single_entry` fill it too), the creation date iff `dir`'s own `stat`
+/// carries a birth time (macOS: always, `st_birthtime`; Linux: `statx`
+/// returned `STATX_BTIME`, which is when `Metadata::created` answers).
+///
+/// Asks `dir` itself, not the volume: the root volume lists folders on other
+/// filesystems (an exFAT stick under `/Volumes`). Blocking (a `statfs` and a
+/// `stat`), so run it on `spawn_blocking`.
+pub(crate) fn supported_dates_of(dir: &Path) -> SupportedDates {
+    SupportedDates {
+        created: fs::metadata(dir).and_then(|metadata| metadata.created()).is_ok(),
+        #[cfg(target_os = "macos")]
+        added: bulk::dir_is_bulk_eligible(dir),
+        #[cfg(not(target_os = "macos"))]
+        added: false,
+    }
 }
 
 /// Builds an entry from its `lstat`: everything from the link itself, except

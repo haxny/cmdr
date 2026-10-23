@@ -83,6 +83,10 @@ async fn a_place_keeps_the_read_promises(service: FixtureService) {
     )
     .await;
     conformance::assert_not_found_carries_the_path(&volume, &volume.root().join(format!("{prefix}missing.txt"))).await;
+    // A folder holding the object: its listing and the object's HEAD may
+    // carry a creation date (`supported_dates` claims it), never an added one.
+    let folder = volume.root().join(prefix.trim_end_matches('/'));
+    conformance::assert_listing_dates_are_claimed(&volume, &folder).await;
 }
 
 async fn a_copy_scan_stops_when_told_and_asks_inside_the_walk(service: FixtureService) {

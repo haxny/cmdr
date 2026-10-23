@@ -97,6 +97,17 @@ async fn read_all(volume: &NfsVolume, path: &str) -> Vec<u8> {
     out
 }
 
+/// The shared dates claim, in the default lane: `fattr3` has no creation date,
+/// and the default `supported_dates` claims none.
+#[tokio::test]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let fake = FakeNfs::start_with(seeded()).await;
+    let volume = over_tcp(&fake).await;
+
+    cmdr_fs::volume::conformance::assert_listing_dates_are_claimed(&volume, &at(&volume, "/photos")).await;
+    cmdr_fs::volume::conformance::assert_listing_dates_are_claimed(&volume, &at(&volume, "/photos/2024")).await;
+}
+
 #[tokio::test]
 async fn a_listing_spans_pages_reports_each_batch_and_leaves_out_what_it_cant_name() {
     let fake = FakeNfs::start_with(seeded()).await;

@@ -389,6 +389,15 @@ impl Volume for SmbVolume {
         Self::METADATA_CAPS
     }
 
+    /// Every listing row and `stat` carries the server's creation time
+    /// (`mapping.rs`); SMB records no added date.
+    fn supported_dates<'a>(
+        &'a self,
+        _path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = cmdr_fs::volume::SupportedDates> + Send + 'a>> {
+        Box::pin(async { cmdr_fs::volume::SupportedDates::CREATED })
+    }
+
     fn supports_export(&self) -> bool {
         true
     }

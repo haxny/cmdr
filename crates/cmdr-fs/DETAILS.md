@@ -873,6 +873,10 @@ everywhere, which is the point.
   S3-shaped (`with_listing_upload_time` plus `with_landed_times_reported`), and broken, to show it catches a listing
   that disagrees with nothing reported. The contract: `crates/cmdr-operation-log/DETAILS.md` § "What a volume leaf's
   snapshot carries".
+- `assert_listing_dates_are_claimed` — no listed entry, nor its `get_metadata`, carries a creation or added date that
+  `Volume::supported_dates` doesn't claim (§ "Which dates each volume lists"). Run by EVERY backend, read-only ones
+  included (git, restic, archive); the in-memory double runs it honest, narrowed (`with_supported_dates`), and lying
+  (`with_dates_claimed_as`), to show it catches a claim that drifted from the mapping.
 
 `InMemoryVolume`, `LocalPosixVolume`, `AdbVolume`, and the Docker-gated `SmbVolume`, `SftpVolume`, and `WebdavVolume`
 run every one (InMemory's writability cell sits in `capabilities_test.rs`, next to the predicate it speaks for).
@@ -881,6 +885,41 @@ run every one (InMemory's writability cell sits in `capabilities_test.rs`, next 
 contract needs. `ArchiveVolume` is read-only: it runs the three that don't mutate and pins the rest of the ground with
 `every_mutation_is_unsupported`, and it is deliberately outside the conflict-scan one, since nothing copies INTO an
 archive through the volume. A backend that adds a mutation adds the matching call.
+
+### Which dates each volume lists
+
+`Volume::supported_dates(path)` answers which dates beyond Modified a listing of `path` fills; the listing engine sorts
+by Created or Added only where the claim holds and falls back to Modified elsewhere. A claim may be wider than one
+entry's data, never narrower. It's a trait predicate and NOT a `VolumeCapabilities` field: the engine is its only reader
+(the frontend learns the effective sort from the listing), and an unread published field drifts. Async and per path
+because the local answer is a `statfs` of the listed folder (the root volume lists folders on other filesystems), run on
+`spawn_blocking`; every other backend ignores the path. Each answer was read off the backend's mapping code
+(2026-10-23):
+
+- **Local** (`LocalPosixVolume`, `cmdr-local/src/reading.rs` `supported_dates_of`): by construction from what the
+  listers fill. Added iff the folder is bulk-eligible (APFS, HFS+: `bulk_eligible`, whose `read_dir` fallback and
+  `get_single_entry` fill it too); Created iff the folder's own `stat` carries a birth time (macOS always,
+  `st_birthtime`; Linux when `statx` returns `STATX_BTIME`). So an APFS folder claims both, an smbfs mount or an exFAT
+  stick Created only. `FilesystemKind` is a test oracle here, ❌ not the decider.
+- **SMB** (`cmdr-smb/src/volume/mapping.rs`): Created, from the server's `FILE_BASIC_INFORMATION` creation time on every
+  row and `stat`.
+- **MTP** (`cmdr-mtp/src/connection/directory_ops.rs` `entry_for_object`): Created, `ObjectInfo`'s capture date when the
+  device reports one.
+- **S3** (`cmdr-s3/src/volume/query.rs`): Created. A bucket row carries its creation date and an object's HEAD the birth
+  time a copy stored in its metadata; a plain object listing carries none.
+- **WebDAV** (`cmdr-webdav/src/volume/mapping.rs`, `propfind.rs`): Created, the PROPFIND `creationdate` when the server
+  answers one (Nextcloud's 1970 "unknown" reads as none). Server-dependent, so rows may still be `None` under the claim.
+- **SFTP** (v3 attributes), **NFS** (`fattr3`, `cmdr-nfs/src/volume/mapping.rs`), **ADB** (`STAT`/`LIST`), **archive**
+  (zip, tar, and 7z members), and **restic** (snapshot nodes): Modified only, the default.
+- **Git portal** (`cmdr-git`): Modified only, the default, and ❌ no row copies its mtime into either date. A copy would
+  turn a Created or Added sort there into a Modified sort with no fallback hint. Nothing in a git object is "added to a
+  folder", and a snapshot file has no birth date short of walking history for its first commit. A commit's author time
+  is a real second date, left out because one category claiming Created would sort every other category's rows by a date
+  they lack.
+- **`InMemoryVolume`**: every date by default (the reference); `with_supported_dates` plays a volume without one and
+  drops it from listings and stats, `with_dates_claimed_as` makes the claim lie.
+
+The app's `MockFileSystemProvider` (test-only) is not a `Volume`, so it claims nothing.
 
 ### Stream lengths and write progress
 

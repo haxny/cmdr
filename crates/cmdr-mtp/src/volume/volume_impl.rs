@@ -529,6 +529,15 @@ impl Volume for MtpVolume {
         true
     }
 
+    /// A row carries the device's `ObjectInfo` capture date when it reports one
+    /// (`connection/directory_ops.rs`, `entry_for_object`); PTP has no added date.
+    fn supported_dates<'a>(
+        &'a self,
+        _path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = cmdr_fs::volume::SupportedDates> + Send + 'a>> {
+        Box::pin(async { cmdr_fs::volume::SupportedDates::CREATED })
+    }
+
     fn supports_export(&self) -> bool {
         true
     }

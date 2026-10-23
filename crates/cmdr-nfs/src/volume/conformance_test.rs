@@ -31,6 +31,23 @@ async fn insecure_with_scratch(what: &str) -> (NfsVolume, std::path::PathBuf) {
     (volume, dir)
 }
 
+/// NFSv3 attributes have no creation date (`mapping.rs`), and the default
+/// `supported_dates` claims none.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the NFS fixture stack: nfs-servers/start.sh (nfs-fixture)"]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let (volume, dir) = insecure_with_scratch("listed-dates").await;
+    volume
+        .create_file(&dir.join("dated.txt"), b"bytes")
+        .await
+        .expect(FIXTURE);
+    volume.create_directory(&dir.join("folder")).await.expect(FIXTURE);
+
+    conformance::assert_listing_dates_are_claimed(&volume, &dir).await;
+
+    clean_deep(&volume, &dir).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the NFS fixture stack: nfs-servers/start.sh (nfs-fixture)"]
 async fn a_forceless_rename_refuses_an_existing_destination() {

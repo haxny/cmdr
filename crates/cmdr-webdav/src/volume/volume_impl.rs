@@ -140,6 +140,17 @@ impl Volume for WebdavVolume {
         }
     }
 
+    /// A row carries the PROPFIND's `creationdate` when the server answers one
+    /// (`mapping.rs`; Nextcloud's 1970 "unknown" reads as none, `propfind.rs`),
+    /// so a server that never does lists no creation dates under the claim.
+    /// WebDAV has no added date.
+    fn supported_dates<'a>(
+        &'a self,
+        _path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = cmdr_fs::volume::SupportedDates> + Send + 'a>> {
+        Box::pin(async { cmdr_fs::volume::SupportedDates::CREATED })
+    }
+
     /// A folder's creation and modification dates in one PROPPATCH, on a server
     /// that keeps dates; every class answers `NotApplicable` anywhere else
     /// (Apache `mod_dav` would store the PROPPATCH as dead properties and

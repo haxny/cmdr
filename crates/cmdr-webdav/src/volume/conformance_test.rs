@@ -89,6 +89,23 @@ async fn a_forced_rename_keeps_a_non_empty_folder() {
     clean(&volume, &dir).await;
 }
 
+/// The shared dates claim: Apache answers a `creationdate`, which
+/// `supported_dates` claims, and WebDAV has no added date.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let (volume, dir) = stock_server_with_scratch().await;
+    volume
+        .create_file(&dir.join("dated.txt"), b"bytes")
+        .await
+        .expect(FIXTURE);
+    volume.create_directory(&dir.join("folder")).await.expect(FIXTURE);
+
+    conformance::assert_listing_dates_are_claimed(&volume, &dir).await;
+
+    clean(&volume, &dir).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
 async fn create_file_refuses_to_clobber() {

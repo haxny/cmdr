@@ -83,7 +83,10 @@ fn list_commits_yields_entries_with_short_sha_and_subject() {
         assert!(fe.name.contains(' '), "expected sha + subject in {}", fe.name);
         assert_eq!(fe.icon_id, "git:commit");
         assert!(fe.is_directory);
-        assert!(fe.added_at.is_some(), "added_at drives date sort");
+        assert!(fe.modified_at.is_some(), "the committer date dates the row");
+        // The portal claims no date beyond Modified (`supported_dates`), so a
+        // Created or Added sort falls back to it rather than reading a copy.
+        assert_eq!((fe.created_at, fe.added_at), (None, None));
     }
     // Newest first ordering: top entry should match `git log -1`.
     let top_subject = String::from_utf8(git_cli_capture(&dir, &["log", "-1", "--format=%s"])).unwrap();

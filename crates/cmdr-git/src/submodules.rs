@@ -62,8 +62,6 @@ pub fn list_submodules(handle: &RepoHandle, repo_root: &Path) -> Result<Vec<File
                 && let Ok(time) = committer.time()
             {
                 fe.modified_at = u64::try_from(time.seconds).ok();
-                fe.created_at = fe.modified_at;
-                fe.added_at = fe.modified_at;
             }
         }
         out.push(fe);

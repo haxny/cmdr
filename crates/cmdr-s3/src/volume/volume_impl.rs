@@ -128,6 +128,17 @@ impl Volume for S3Volume {
         Self::METADATA_CAPS
     }
 
+    /// A bucket row carries its creation date, and an object's HEAD the birth
+    /// time a copy stored in its metadata (`query.rs`: `folder_entry`,
+    /// `object_entry`); a plain object listing has neither, and S3 records no
+    /// added date.
+    fn supported_dates<'a>(
+        &'a self,
+        _path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = cmdr_fs::volume::SupportedDates> + Send + 'a>> {
+        Box::pin(async { cmdr_fs::volume::SupportedDates::CREATED })
+    }
+
     #[allow(
         clippy::type_complexity,
         reason = "async trait method returns a pinned boxed future by design"

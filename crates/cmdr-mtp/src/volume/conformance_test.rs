@@ -103,6 +103,18 @@ async fn create_directory_all_honors_the_shared_file_in_the_way_contract() {
     device.teardown(test_connection_manager()).await;
 }
 
+/// The shared dates claim: rows carry the device's capture date as created,
+/// which `supported_dates` claims, and never an added date.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let _guard = device_lock().await;
+    let (device, volume) = connect_primed_volume(Some("/Documents")).await;
+
+    cmdr_fs::volume::conformance::assert_listing_dates_are_claimed(&volume, Path::new("/Documents")).await;
+
+    device.teardown(test_connection_manager()).await;
+}
+
 /// The shared writability-declaration assertion: `is_writable()` and what the
 /// device actually accepts say the same thing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

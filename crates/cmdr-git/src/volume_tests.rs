@@ -95,6 +95,24 @@ async fn export_honors_the_shared_handshake_contract() {
     cleanup(&dir);
 }
 
+/// The shared dates claim: the portal claims no date beyond Modified, and no
+/// row (a snapshot file, a branch, a commit) carries one, so a Created or Added
+/// sort falls back to Modified here.
+#[tokio::test]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let (dir, volume) = portal_over_a_repo("dates");
+
+    for listed in ["branches/main", "branches", "commits"] {
+        conformance::assert_listing_dates_are_claimed(&volume, &virtual_path(&dir, listed)).await;
+    }
+    assert_eq!(
+        volume.supported_dates(&virtual_path(&dir, "commits")).await,
+        cmdr_fs::volume::SupportedDates::NONE
+    );
+
+    cleanup(&dir);
+}
+
 /// The shared `NotFound` payload: a name that isn't in the snapshot reports the
 /// path the caller asked for, which is what the transfer layer renders as the
 /// user's own file name.

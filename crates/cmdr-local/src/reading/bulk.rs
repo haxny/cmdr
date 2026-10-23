@@ -343,12 +343,18 @@ fn fd_is_bulk_eligible(dir: &File) -> bool {
 /// listing does. Asks the PARENT: `statfs` on the path itself would follow a
 /// final symlink to wherever it points.
 pub(super) fn parent_is_bulk_eligible(path: &Path) -> bool {
-    let parent = match path.parent() {
-        Some(parent) if parent.as_os_str().is_empty() => Path::new("."),
-        Some(parent) => parent,
-        None => path,
-    };
-    let Ok(c_path) = CString::new(parent.as_os_str().as_bytes()) else {
+    match path.parent() {
+        Some(parent) if parent.as_os_str().is_empty() => dir_is_bulk_eligible(Path::new(".")),
+        Some(parent) => dir_is_bulk_eligible(parent),
+        None => dir_is_bulk_eligible(path),
+    }
+}
+
+/// Whether a listing of the folder `dir` takes the bulk lister: one `statfs`,
+/// which follows a link the way opening the folder does, so it answers for the
+/// filesystem the listing's `fstatfs` sees. `false` if `statfs` fails.
+pub(super) fn dir_is_bulk_eligible(dir: &Path) -> bool {
+    let Ok(c_path) = CString::new(dir.as_os_str().as_bytes()) else {
         return false;
     };
     let mut stat = std::mem::MaybeUninit::<libc::statfs>::uninit();

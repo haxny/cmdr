@@ -36,6 +36,26 @@ async fn stock_server_with_scratch(what: &str) -> (SftpVolume, String) {
     (volume, dir)
 }
 
+/// SFTP v3 attributes carry an mtime and no other date, as the default
+/// `supported_dates` claims.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn listing_dates_honor_the_shared_claim_contract() {
+    let (volume, dir) = stock_server_with_scratch("listed-dates").await;
+    volume
+        .create_file(Path::new(&format!("{dir}/dated.txt")), b"bytes")
+        .await
+        .expect(FIXTURE);
+    volume
+        .create_directory(Path::new(&format!("{dir}/folder")))
+        .await
+        .expect(FIXTURE);
+
+    conformance::assert_listing_dates_are_claimed(&volume, Path::new(&dir)).await;
+
+    clean_scratch(&volume, &dir).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
 async fn a_forceless_rename_refuses_an_existing_destination_on_a_posix_rename_server() {

@@ -95,7 +95,5 @@ fn populate_worktree_columns(fe: &mut FileEntry, wt_repo: &gix::Repository) {
         && let Ok(time) = committer.time()
     {
         fe.modified_at = u64::try_from(time.seconds).ok();
-        fe.created_at = fe.modified_at;
-        fe.added_at = fe.modified_at;
     }
 }

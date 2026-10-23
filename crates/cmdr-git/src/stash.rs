@@ -78,8 +78,6 @@ pub fn list_stashes(repo_root: &Path) -> Result<Vec<FileEntry>, FriendlyGitError
         fe.permissions = 0o755;
         let secs = time_str.parse::<u64>().ok();
         fe.modified_at = secs;
-        fe.created_at = secs;
-        fe.added_at = secs;
         // Subject conventionally looks like `WIP on main: <head subject>`
         // or `On main: <user message>`. Pull out the branch and surface
         // it as a friendly Size cell.
