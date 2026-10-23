@@ -1301,9 +1301,11 @@ var AllChecks = []CheckDefinition{
 		App:         AppWebsite,
 		Tech:        "🚀 Astro",
 		DependsOn:   []string{"website-build"},
-		IsFast:      true,
-		Inputs:      websiteInputs,
-		Run:         RunWebsiteDeadLinks,
+		// Not fast: `--fast` never builds, so it would judge whatever stale `dist/` is lying
+		// around and report links the source already fixed.
+		IsFast: false,
+		Inputs: websiteInputs,
+		Run:    RunWebsiteDeadLinks,
 	},
 	{
 		ID:          "desktop-bundle-size",
