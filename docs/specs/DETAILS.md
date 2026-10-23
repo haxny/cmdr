@@ -57,9 +57,9 @@ Read this before adding, wiping, or reorganizing a spec.
   time, keep a greedy regex fallback, and ratchet log sites over by crate. Issue:
   [#491](https://github.com/vdavid/cmdr/issues/491).
 - `date-sorts-plan.md`: **A fresh download with an old mtime doesn't land on top of Downloads**, because Cmdr can't sort
-  by Date added. `Added` and `Opened` sorts, one displayed-date rule, a per-volume `supported_dates` with a
-  requested-vs-effective sort, and a `getattrlistbulk` local lister gated on a benchmark. Issue:
-  [#691](https://github.com/vdavid/cmdr/issues/691).
+  by Date added. An `Added` sort, one displayed-date rule, a per-volume `supported_dates` with a requested-vs-effective
+  sort, and a `getattrlistbulk` local lister on APFS and HFS+. Last opened is split out to
+  [#694](https://github.com/vdavid/cmdr/issues/694). Issue: [#691](https://github.com/vdavid/cmdr/issues/691).
 
 ## Wiping a shipped spec
 

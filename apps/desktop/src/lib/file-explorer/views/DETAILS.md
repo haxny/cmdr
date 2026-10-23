@@ -619,7 +619,9 @@ header in DOM order, so pane chrome's ←/→ walk the row left to right, and it
 synthesized click, which would bubble to the pane and pull focus back to the list. `aria-expanded` holds while the show
 command is in flight (`popup()` blocks in Rust until the menu closes). Opening and picking go through
 `pane/sort-operations.ts` (`openDateSortMenu`, `pickSortColumn`): the menu checks the pane's REQUESTED column, and
-picking it does nothing.
+picking it does nothing. **Why native**: like every row, tab, and breadcrumb menu, a muda popup is OS-native,
+VoiceOver-ready, and keyboard-anchored through `MenuAnchor`. **Why the chevron is Full's only**: Brief already shows a
+button per date, so it gets the right-click alone, which keeps the two views' header gestures alike.
 
 **Decision**: The Full date column shows ONE date, `displayedDateColumn` (`../displayed-date.ts`) of the sort its rows
 were fetched under (`full-list-cache.svelte.ts`'s `rowsSort`, captured with the rows like their `..` row). Cells, the

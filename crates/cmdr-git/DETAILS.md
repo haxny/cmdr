@@ -515,6 +515,11 @@ language's plural rules. ❌ Never put a sentence in a variant.
 Cross-category Size sort is meaningless (ahead-count vs files-changed vs item count); that's an honest tradeoff. Each
 cell is self-explaining via its tooltip, which is also the aria-label.
 
+`modified_at` is the ONLY date a row carries: ❌ never copy it (or a commit's author time) into `created_at` /
+`added_at`. The portal claims Modified only (`supported_dates` keeps the trait default), so a Created or Added sort here
+falls back to Modified with the pane's hint; a copied date would silently turn that sort into a Modified sort with no
+hint. Why each date is left out: `crates/cmdr-fs/DETAILS.md` § "Which dates each volume lists".
+
 **Gotcha**: a commit id crosses IPC in FULL, and the cell shortens it to seven characters on the frontend. **Why**: the
 tooltip names the whole id, so shipping only the short form would mean shipping both. The seven is a display choice
 (`SHORT_ID_LENGTH` in `full-list-utils.ts`), which is where a display choice belongs.

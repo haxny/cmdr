@@ -175,6 +175,12 @@ re-list after a doubtful stream) and a doubtful record fill `added_at` with one 
 is bulk-eligible (`statfs` of the path itself would follow a final symlink). Elsewhere, no `added_at`. HFS+ records none
 for a symlink (verified on macOS 27.0.1, `reading_parity_test` on a `testing::disk_images` HFS+ image, 2026-10-22).
 
+- **Decision**: that parent `statfs` runs on every `get_single_entry`, ❌ no per-device eligibility cache. **Why**: a
+  cache keyed on `st_dev` and cleared by a kqueue `EVFILT_FS` thread was built, measured, and reverted: it saved ~1 µs
+  per call (APFS 4.5 → 3.3 µs; smbfs answers the warm `statfs` from its client cache, so no round trip either), which
+  doesn't pay for a resident thread and device-number-reuse races. Numbers and the revisit condition:
+  `docs/notes/getattrlistbulk-listing-benchmarks-2026-10.md` § "What a re-stat costs, and why it keeps its `statfs`".
+
 **Intended differences from a `read_dir` listing:**
 
 - A sandbox-protected entry (`/private/var/db/...`, where `lstat` gets `EPERM`) lists as what it is from bulk, where
@@ -339,9 +345,9 @@ app read of a local disk that doesn't go through a volume:
 
 - **The root**: `LocalPosixVolume`, `rename_local_exclusive` (the engine's landings and the in-flight sweep), and
   `rename_volume_error` (the app's single rename, which names the right path in its error).
-- **`reading`** (`list_directory_core`, `get_single_entry`; `list_directory`, `list_directory_with`, `Lister`, and
-  `added_at_by_path` are `testing`-gated, the last three for the parity cells and `examples/listing_bench`) and
-  **`mutation`** (`patch_listing_after_local_mutation`): the watcher, `tags.rs`, and `create.rs`'s instant row.
+- **`reading`** (`list_directory_core`, `get_single_entry`; `list_directory_with`, `Lister`, and `added_at_by_path` are
+  `testing`-gated, for the parity cells and `examples/listing_bench`) and **`mutation`**
+  (`patch_listing_after_local_mutation`): the watcher, `tags.rs`, and `create.rs`'s instant row.
 - **`space`** (`get_space_info_for_path`, `get_volume_space`) and **`live_space`** (`live_volume_space`,
   `expect_space_change`): the index's tier-2 progress, the copy pre-flight, the IPC command, and the space poller.
 - **The mount probes**: `filesystem_kind` (seven, counting `probe_mount_for_path`'s three platform arms), `mount_table`

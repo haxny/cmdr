@@ -79,6 +79,10 @@ suite:
 - `selection-info-feed.svelte.ts`: the entry under the cursor and the listing stats, with their debounce/throttle and
   the search-results snapshot mirror. `parent-entry.ts` builds the synthetic `..` row it and `entries-snapshot.ts`
   share. `snapshot-stats.ts` is the fold it uses in place of the stats IPC on a snapshot pane (§ Conventions).
+- `sort-fallback.ts`: the date-sort fallback's toast (raised only when a user-picked NEW column lands in Modified) and
+  `sortFallbackNote`, the one null-safe header note Full and Brief share. `sort-menu-sync.svelte.ts`: the ONE deduped
+  `$effect` pushing the focused pane's requested sort to View > Sort by's checkmarks. Both read the pane's
+  `effectiveSortBy`, the column its rows really follow: `../DETAILS.md` § Sorting, "Requested vs effective column".
 - `pane-footer.ts`: which parts of the status footer a view kind renders. Two answers, because they differ on exactly
   one pane: a search-results pane counts its rows like any folder but reports no free space.
 - `pane-key-router.ts` / `pane-pointer.ts`: keyboard routing and mouse handling for a focused pane.

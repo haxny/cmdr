@@ -1,7 +1,7 @@
 # cmdr-local
 
-The local disk: `LocalPosixVolume` (the `Volume` over a `std::fs` root), the `std::fs` reader, the one no-replace
-rename, local volume space, and the mount probes. Tauri-free; the app builds every local volume with its `VolumeHost`.
+The local disk: `LocalPosixVolume` (the `Volume` over a `std::fs` root), the local reader, the one no-replace rename,
+local volume space, and the mount probes. Tauri-free; the app builds every local volume with its `VolumeHost`.
 
 ## Module map
 

@@ -893,7 +893,8 @@ by Created or Added only where the claim holds and falls back to Modified elsewh
 entry's data, never narrower. It's a trait predicate and NOT a `VolumeCapabilities` field: the engine is its only reader
 (the frontend learns the effective sort from the listing), and an unread published field drifts. Async and per path
 because the local answer is a `statfs` of the listed folder (the root volume lists folders on other filesystems), run on
-`spawn_blocking`; every other backend ignores the path. Each answer was read off the backend's mapping code
+`spawn_blocking` beside the listing, ❌ never on an async worker or under the listing cache's lock (a stalled smbfs
+mount would hold it); every other backend ignores the path. Each answer was read off the backend's mapping code
 (2026-10-23):
 
 - **Local** (`LocalPosixVolume`, `cmdr-local/src/reading.rs` `supported_dates_of`): by construction from what the
@@ -924,8 +925,6 @@ because the local answer is a `statfs` of the listed folder (the root volume lis
   they lack.
 - **`InMemoryVolume`**: every date by default (the reference); `with_supported_dates` plays a volume without one and
   drops it from listings and stats, `with_dates_claimed_as` makes the claim lie.
-
-The app's `MockFileSystemProvider` (test-only) is not a `Volume`, so it claims nothing.
 
 ### Stream lengths and write progress
 

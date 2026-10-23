@@ -2410,7 +2410,9 @@ catches this after push, but the check catches it locally and instantly. It dete
 `foo.rs` pulls in through `#[path = "foo_tests.rs"] mod foo_tests;`) and scans the remaining files for ungated
 references. Gated declarations count from ANY file, resolved the way rustc resolves them, because a leaf file can keep
 its macOS half in a sibling: `text_editor.rs` declares
-`#[cfg(target_os = "macos")] #[path = "text_editor_macos.rs"] mod imp;`.
+`#[cfg(target_os = "macos")] #[path = "text_editor_macos.rs"] mod imp;`. A gated module's files are its own file AND the
+children in its sibling directory (Rust 2018 keeps both), falling back to the directory's `mod.rs` only without the
+file; dropping the file once the directory existed flagged every import in it (`moduleFiles`).
 
 Two name sets, with different reach because the two are named differently in code:
 

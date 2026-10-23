@@ -474,6 +474,10 @@ import { tooltip } from '#lib/tooltip/tooltip'
 <!-- Rich HTML (supports <br>, <span class="...">, etc.) -->
 <span use:tooltip={{ html: 'Line one<br>Line two' }}>...</span>
 
+<!-- Lazy rich HTML: built when the show delay ends (and on a live update while shown), so a per-row tooltip
+     costs nothing until hovered. An empty result shows nothing. -->
+<span use:tooltip={{ html: () => buildRowTooltip(entry) }}>...</span>
+
 <!-- Text + keyboard shortcut badge -->
 <span use:tooltip={{ text: 'Save', shortcut: '⌘S' }}>...</span>
 

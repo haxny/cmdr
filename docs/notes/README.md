@@ -31,11 +31,6 @@ Some notes here are load-bearing rather than historical. Those are grouped below
 
 **Load-bearing for a decision that hasn't been made yet:**
 
-- `getattrlistbulk-listing-benchmarks-2026-10.md` — whether the local listing should move to `getattrlistbulk` for the
-  "Date added" and "Last opened" sorts (#691): 1.4–1.6× faster warm and 2.5–2.7× cold-ish at 100k on APFS with the added
-  date free, slower on smbfs, and the four guards a production lister needs. **Finder's Last opened is not affordable
-  per entry and isn't one xattr**: it's Spotlight's `kMDItemLastUsedDate`. Read it before touching `reading.rs`'s
-  listing loop or wiring either date.
 - `ipc-dead-code-audit.md`: every frontend wrapper and Tauri command nothing called, as of 2026-10-03, with why. **Three
   are missing features, not leftovers** (no way to remove a saved AI key, MCP's "focus settings" does nothing, and
   indexing stops for memory without telling anyone), and three more are product calls. Read it before deleting an unused
@@ -92,6 +87,12 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   filenames are unaddressable without patching the crate).
 
 **Load-bearing as the evidence behind a decision that would otherwise look arbitrary:**
+
+- `getattrlistbulk-listing-benchmarks-2026-10.md` — why APFS and HFS+ folders list through `getattrlistbulk` and
+  everything else keeps `read_dir` (#691): the shipped lister is 1.4× faster warm at 100k with the added date free,
+  smbfs runs bulk 2.2× slower, and the guards a production lister needs. Also why a re-stat keeps its per-call `statfs`
+  (a device cache saved ~1 µs), and why **Finder's Last opened isn't affordable per entry and isn't one xattr**: it's
+  Spotlight's `kMDItemLastUsedDate` (#694). Read it before touching `reading.rs`'s listers or wiring Last opened.
 
 - `terminal-launch-sources-2026-09-04.md` — where every bundle id and launch recipe in the "open terminal here" table
   came from, each with its source and date, and the per-app survey behind the decision NOT to offer a window-vs-tab
