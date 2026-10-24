@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte'
     import { getCurrentWindow } from '@tauri-apps/api/window'
-    import { listen, type UnlistenFn } from '@tauri-apps/api/event'
     import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
     import { initializeShortcuts } from '#lib/shortcuts/index.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
@@ -20,7 +19,6 @@
 
     let initialized = $state(false)
     let hideEmpty = $state(false)
-    let unlistenFocusSelf: UnlistenFn | undefined
     let unlistenRectTracking: (() => void) | undefined
     let unsubscribeLanguage: (() => void) | undefined
 
@@ -60,14 +58,6 @@
             await initTextSize()
             initialized = true
 
-            // Already-open window self-focuses on a re-open (cross-window setFocus()
-            // doesn't reliably raise a window on macOS).
-            unlistenFocusSelf = await listen('focus-self', () => {
-                setTimeout(() => {
-                    void getCurrentWindow().setFocus()
-                }, 0)
-            })
-
             // Remember position/size within the session so a reopen lands in place.
             unlistenRectTracking = await trackOwnRect('shortcuts')
         } catch (error) {
@@ -77,7 +67,6 @@
 
     onDestroy(() => {
         unsubscribeLanguage?.()
-        unlistenFocusSelf?.()
         unlistenRectTracking?.()
         cleanupAccentColor()
         cleanupGlassMaterial()

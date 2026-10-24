@@ -2,7 +2,7 @@
     import { onMount, onDestroy, tick } from 'svelte'
     import { SvelteSet } from 'svelte/reactivity'
     import { getCurrentWindow } from '@tauri-apps/api/window'
-    import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+    import type { UnlistenFn } from '@tauri-apps/api/event'
     import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
@@ -63,7 +63,6 @@
     const store = createOperationsStore()
 
     let initialized = $state(false)
-    let unlistenFocusSelf: UnlistenFn | undefined
     let unlistenRectTracking: (() => void) | undefined
     let unsubscribeLanguage: (() => void) | undefined
     let unlistenSelectAll: UnlistenFn | undefined
@@ -486,14 +485,6 @@
             await initOperationSessions()
             initialized = true
 
-            // Already-open window self-focuses on a re-open (cross-window setFocus()
-            // doesn't reliably raise a window on macOS).
-            unlistenFocusSelf = await listen('focus-self', () => {
-                setTimeout(() => {
-                    void getCurrentWindow().setFocus()
-                }, 0)
-            })
-
             // Remember position/size within the session so a reopen lands in place.
             unlistenRectTracking = await trackOwnRect('queue')
 
@@ -511,7 +502,6 @@
 
     onDestroy(() => {
         drag.cancel()
-        unlistenFocusSelf?.()
         unlistenRectTracking?.()
         unlistenSelectAll?.()
         unlistenRowMenu?.()

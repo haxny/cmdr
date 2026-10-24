@@ -7,8 +7,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { getByLabel, once, warn, emitTo, webviewWindow } = vi.hoisted(() => ({
+const { getByLabel, once, warn, emitTo, webviewWindow, raiseChildWindow } = vi.hoisted(() => ({
   getByLabel: vi.fn<(label: string) => Promise<unknown>>(),
+  raiseChildWindow: vi.fn<(label: string) => Promise<void>>(() => Promise.resolve()),
   once: vi.fn<(event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>>(),
   warn: vi.fn(),
   emitTo: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
@@ -28,7 +29,10 @@ vi.mock('@tauri-apps/api/dpi', () => ({ LogicalPosition: vi.fn() }))
 vi.mock('@tauri-apps/api/event', () => ({ emitTo }))
 vi.mock('@tauri-apps/api/window', () => ({ Effect: {}, EffectState: {} }))
 // Reduce transparency on, so the only `once` the opener registers is the one under test.
-vi.mock('#lib/tauri-commands/index.js', () => ({ getShouldReduceTransparency: () => Promise.resolve(true) }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
+  getShouldReduceTransparency: () => Promise.resolve(true),
+  raiseChildWindow,
+}))
 vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
@@ -77,11 +81,25 @@ describe('openQueueWindow focus', () => {
     expect(webviewWindow).toHaveBeenCalledWith('queue', expect.objectContaining({ focus: true }))
   })
 
-  it('asks an already-open window to focus itself', async () => {
+  // Regression anchor (ERR-APXNK): a minimized queue window ignored the old
+  // `focus-self` event, because `setFocus()` is a no-op on a minimized or hidden
+  // window, so every later click on the corner chip silently did nothing.
+  it('has the backend raise an already-open window, minimized or not', async () => {
     getByLabel.mockResolvedValue({})
 
     await openQueueWindow()
 
-    expect(emitTo).toHaveBeenCalledWith('queue', 'focus-self')
+    expect(raiseChildWindow).toHaveBeenCalledExactlyOnceWith('queue')
+    expect(emitTo).not.toHaveBeenCalled()
+    expect(webviewWindow).not.toHaveBeenCalled()
+  })
+
+  it('logs a raise the backend refused, rather than failing silently', async () => {
+    getByLabel.mockResolvedValue({})
+    raiseChildWindow.mockRejectedValueOnce(new Error('no main thread'))
+
+    await openQueueWindow()
+
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 })

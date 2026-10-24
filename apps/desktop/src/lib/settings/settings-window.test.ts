@@ -10,18 +10,21 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { getByLabel, trackEvent } = vi.hoisted(() => ({
+const { getByLabel, trackEvent, raiseChildWindow, emitTo } = vi.hoisted(() => ({
   getByLabel: vi.fn<(label: string) => Promise<unknown>>(),
   trackEvent: vi.fn(() => Promise.resolve()),
+  raiseChildWindow: vi.fn<(label: string) => Promise<void>>(() => Promise.resolve()),
+  emitTo: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
 }))
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: Object.assign(vi.fn(), { getByLabel }) }))
 vi.mock('@tauri-apps/api/dpi', () => ({ LogicalPosition: vi.fn() }))
-vi.mock('@tauri-apps/api/event', () => ({ emitTo: () => Promise.resolve() }))
+vi.mock('@tauri-apps/api/event', () => ({ emitTo }))
 vi.mock('@tauri-apps/api/window', () => ({ Effect: {}, EffectState: {} }))
 vi.mock('#lib/tauri-commands/index.js', () => ({
   getShouldReduceTransparency: () => Promise.resolve(false),
   trackEvent,
+  raiseChildWindow,
 }))
 
 import { shortcutAnchorId, commandIdFromShortcutAnchor, openSettingsWindow } from './settings-window'
@@ -82,5 +85,22 @@ describe('openSettingsWindow analytics', () => {
     await openSettingsWindow('command')
     await openSettingsWindow('enter-menu')
     expect(trackEvent).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('openSettingsWindow on an already-open window', () => {
+  beforeEach(() => {
+    raiseChildWindow.mockClear()
+    emitTo.mockClear()
+    getByLabel.mockResolvedValue({})
+  })
+
+  // `setFocus()` is a no-op on a minimized or hidden window (ERR-APXNK, seen on
+  // the queue window), so the backend raises it, then the page refocuses search.
+  it('has the backend raise it, then asks for the search field', async () => {
+    await openSettingsWindow('command')
+
+    expect(raiseChildWindow).toHaveBeenCalledExactlyOnceWith('settings')
+    expect(emitTo).toHaveBeenCalledExactlyOnceWith('settings', 'focus-search')
   })
 })

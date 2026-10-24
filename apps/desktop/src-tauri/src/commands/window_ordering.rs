@@ -36,6 +36,95 @@ fn order_ns_window_back(ns_window: *mut objc2::runtime::AnyObject) -> Result<(),
     Ok(())
 }
 
+/// macOS: bring a child window back in front of the user, whatever state it's in: restore it from
+/// the Dock if minimized, order it in if hidden, and make it key.
+///
+/// ❗ Why not `Window::set_focus`: tao's macOS `set_focus` is a silent no-op on a minimized or
+/// hidden window (it checks `isMiniaturized` / `isVisible` first; tao 0.37.1,
+/// `platform_impl/macos/window.rs`). A minimized queue window then ignored every click on the
+/// corner chip (ERR-APXNK, 2026-10-24). `deminiaturize:` is animated, so a `set_focus` right
+/// after it would still see a minimized window; `makeKeyAndOrderFront:` has no such check.
+///
+/// MUST run on the AppKit main thread; the marker check below enforces it.
+#[cfg(target_os = "macos")]
+fn raise_ns_window(ns_window: *mut objc2::runtime::AnyObject) -> Result<(), String> {
+    use objc2::MainThreadMarker;
+    use objc2::msg_send;
+    use objc2::runtime::{AnyObject, Bool};
+    if MainThreadMarker::new().is_none() {
+        return Err("raise_ns_window must run on the AppKit main thread".into());
+    }
+    if ns_window.is_null() {
+        return Err("NSWindow pointer is null".into());
+    }
+    // SAFETY: `ns_window` is the live, non-null `NSWindow` Tauri owns for this webview (null-checked
+    // above), and we are on the AppKit main thread (`MainThreadMarker` checked above), which
+    // `-isMiniaturized`, `-deminiaturize:`, and `-makeKeyAndOrderFront:` all require. The two
+    // actions take an `id` sender (nil here) and return void, so there's no ownership to manage.
+    unsafe {
+        let minimized: Bool = msg_send![ns_window, isMiniaturized];
+        if minimized.as_bool() {
+            let _: () = msg_send![ns_window, deminiaturize: std::ptr::null_mut::<AnyObject>()];
+        }
+        let _: () = msg_send![ns_window, makeKeyAndOrderFront: std::ptr::null_mut::<AnyObject>()];
+    }
+    Ok(())
+}
+
+/// Bring an already-open child window (Settings, Keyboard shortcuts, the operation queue) to the
+/// front, restoring it first if it's minimized or hidden. The openers call this when the window
+/// already exists; E2E runs skip it there, so a test run never steals focus.
+///
+/// Best-effort: a failure leaves a log line, since the opener has nothing better to show.
+/// Non-generic (unlike its neighbors) so it reaches the typed `commands.*` bindings.
+#[tauri::command]
+#[specta::specta]
+pub fn raise_child_window(app: AppHandle, label: String) {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2::runtime::AnyObject;
+        // The raw NSWindow pointer isn't `Send`, so resolve the window and obtain it INSIDE the
+        // main-thread closure.
+        let app_for_main = app.clone();
+        let hopped = app.run_on_main_thread(move || {
+            let Some(window) = app_for_main.get_webview_window(&label) else {
+                // allowed-log-private: a Tauri window label of our own
+                log::warn!(target: "ui", "raise_child_window: no window with label {label}");
+                return;
+            };
+            match window.ns_window() {
+                Ok(ptr) => {
+                    if let Err(e) = raise_ns_window(ptr as *mut AnyObject) {
+                        log::warn!(target: "ui", "raise_child_window: raise_ns_window failed: {e}");
+                    }
+                }
+                Err(e) => log::warn!(target: "ui", "raise_child_window: ns_window() failed: {e}"),
+            }
+        });
+        if let Err(e) = hopped {
+            log::warn!(target: "ui", "raise_child_window: couldn't reach the main thread: {e}");
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        use tauri::Manager;
+        let Some(window) = app.get_webview_window(&label) else {
+            // allowed-log-private: a Tauri window label of our own
+            log::warn!(target: "ui", "raise_child_window: no window with label {label}");
+            return;
+        };
+        for (step, result) in [
+            ("unminimize", window.unminimize()),
+            ("show", window.show()),
+            ("set_focus", window.set_focus()),
+        ] {
+            if let Err(e) = result {
+                log::warn!(target: "ui", "raise_child_window: {step} failed: {e}");
+            }
+        }
+    }
+}
+
 /// Why the frontend is showing the main window. Decides whether the show also brings Cmdr to the
 /// front, which is a different question from whether the window becomes visible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, specta::Type)]

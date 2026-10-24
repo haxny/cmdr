@@ -314,6 +314,15 @@ export function closeChildWindow(label: string): Promise<void> {
   return commands.closeChildWindow(label)
 }
 
+/**
+ * Brings an already-open child window to the front, restoring it if it's minimized or hidden.
+ * The Settings, Keyboard shortcuts, and queue openers call it when their window exists. It runs in
+ * Rust because `setFocus()` silently does nothing on a minimized or hidden window.
+ */
+export function raiseChildWindow(label: string): Promise<void> {
+  return commands.raiseChildWindow(label)
+}
+
 /** Updates the menu accelerator for a command, called when a keyboard shortcut is changed. */
 export async function updateMenuAccelerator(commandId: string, shortcut: string): Promise<void> {
   const res = await commands.updateMenuAccelerator(commandId, shortcut)

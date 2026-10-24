@@ -18,9 +18,8 @@
 
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
-import { emitTo } from '@tauri-apps/api/event'
 import { Effect, EffectState } from '@tauri-apps/api/window'
-import { getShouldReduceTransparency } from '#lib/tauri-commands/index.js'
+import { getShouldReduceTransparency, raiseChildWindow } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { getEffectiveScale } from '#lib/text-size.svelte.js'
@@ -75,9 +74,12 @@ function windowBackground(reduceTransparency: boolean): [number, number, number,
 }
 
 /**
- * Opens the operation-queue window, or focuses it if already open (singleton,
- * like Settings). Cross-window `setFocus()` doesn't reliably raise a window on
- * macOS, so an already-open window self-focuses via the `focus-self` event.
+ * Opens the operation-queue window, or raises it if already open (singleton,
+ * like Settings). The backend's `raiseChildWindow` restores a minimized or
+ * hidden window too, which `setFocus()` silently refuses to touch.
+ *
+ * Both paths log at info: `queue` isn't a debug category, and a report saying
+ * "the queue won't open" needs the bundle to say which path ran.
  *
  * Every Tauri call is awaited in try/catch with a `log.warn`: window perms fail
  * SILENTLY, so a missing grant must surface as a log line, not a dead window.
@@ -91,17 +93,18 @@ export async function openQueueWindow(): Promise<void> {
   try {
     const existing = await WebviewWindow.getByLabel('queue')
     if (existing) {
+      log.info('Raising the existing operation-queue window')
       if (takesFocus) {
-        await emitTo('queue', 'focus-self')
+        await raiseChildWindow('queue')
       }
       return
     }
   } catch (error) {
-    log.warn('Failed to check for an existing queue window: {error}', { error })
+    log.warn('Failed to raise the existing queue window: {error}', { error })
     return
   }
 
-  log.debug('Creating new operation-queue window')
+  log.info('Creating new operation-queue window')
 
   const scale = getEffectiveScale()
   const width = BASE_WIDTH * scale

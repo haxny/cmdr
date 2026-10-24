@@ -11,8 +11,9 @@ A window is four pieces plus one decision:
   existing one: `lib/settings/settings-window.ts` (singleton, glass, text-size-scaled), `lib/file-viewer/open-viewer.ts`
   (multi-instance, cascading), or `lib/shortcuts/shortcuts-window.ts` (singleton, read-only). Reuse the shared helpers:
   `resolveChildPosition` (from `#lib/window-positioning`, places + clamps to the monitor), `decorateChildWindowTitle`
-  (dev/worktree title suffix), `getEffectiveScale` (size the window to the app-wide text size), and the `focus-self`
-  event so a singleton re-focuses instead of spawning a duplicate.
+  (dev/worktree title suffix), `getEffectiveScale` (size the window to the app-wide text size), and
+  `raiseChildWindow(label)` so a singleton comes back (even from the Dock) instead of spawning a duplicate. ❌ Not a
+  `setFocus()` in the window itself: it silently does nothing on a minimized or hidden window.
 - **A capability file**: `src-tauri/capabilities/<name>.json`, listing the window label and the minimal Tauri perms the
   window's own code calls. See `src-tauri/capabilities/CLAUDE.md`. Grant only what it uses.
 - **The route shell wiring** (in `+page.svelte`): init the stores it reads (`initializeSettings`, plus feature stores),

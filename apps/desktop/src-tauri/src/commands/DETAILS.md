@@ -305,6 +305,11 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   window opens behind whatever is frontmost (verified on macOS 15.5 with Tauri 2.11.5, from a user-reported background
   start after "Restart now", 2026-08-27). `order_window_to_back` is E2E-only z-ordering (order to back without focus),
   a no-op off macOS / outside E2E, and the E2E branch of `show_main_window` orders back instead of showing.
+  `raise_child_window(label)` is how a singleton opener (Settings, Keyboard shortcuts, the queue) brings its
+  already-open window back: on macOS it deminiaturizes if needed, then `makeKeyAndOrderFront:`. It deliberately skips
+  `set_focus`, which tao makes a silent no-op on a minimized or hidden window, so a minimized queue window used to
+  ignore every click on the corner chip (verified in the tao 0.37.1 source of its macOS `set_focus`, from
+  ERR-APXNK, 2026-10-24).
 - **`file_actions.rs`**: direct file actions from the palette / menus: `show_in_finder`, `get_info`, `open_in_editor`,
   `copy_to_clipboard`, and `cloud_make_available_offline` / `cloud_remove_download` (iCloud Drive download/eviction via
   `FileManager` ubiquity APIs; see `file_system/cloud_actions.rs`). `google_drive_links(path)` returns a Drive item's

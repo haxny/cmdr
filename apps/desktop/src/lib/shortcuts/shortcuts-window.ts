@@ -16,8 +16,8 @@
 
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
-import { emitTo } from '@tauri-apps/api/event'
 import { getAppLogger } from '#lib/logging/logger.js'
+import { raiseChildWindow } from '#lib/tauri-commands/index.js'
 import { getEffectiveScale } from '#lib/text-size.svelte.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '#lib/app-mode.js'
@@ -41,9 +41,9 @@ const MIN_HEIGHT = 420
 const MONITOR_HEIGHT_MARGIN = 80
 
 /**
- * Opens the Keyboard shortcuts window, or focuses it if already open (singleton,
- * like Settings). Cross-window `setFocus()` doesn't reliably raise a window on
- * macOS, so an already-open window self-focuses via the `focus-self` event.
+ * Opens the Keyboard shortcuts window, or raises it if already open (singleton,
+ * like Settings). The backend's `raiseChildWindow` restores a minimized or
+ * hidden window too, which `setFocus()` silently refuses to touch.
  */
 export async function openShortcutsWindow(): Promise<void> {
   // E2E suites stealing OS focus on each open make the host unusable; the plugin
@@ -53,7 +53,7 @@ export async function openShortcutsWindow(): Promise<void> {
   const existing = await WebviewWindow.getByLabel('shortcuts')
   if (existing) {
     if (!isE2e) {
-      await emitTo('shortcuts', 'focus-self')
+      await raiseChildWindow('shortcuts')
     }
     return
   }

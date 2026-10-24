@@ -1668,6 +1668,15 @@ export const commands = {
    */
   closeChildWindow: (label: string) => __TAURI_INVOKE<void>('close_child_window', { label }),
   /**
+   *  Bring an already-open child window (Settings, Keyboard shortcuts, the operation queue) to the
+   *  front, restoring it first if it's minimized or hidden. The openers call this when the window
+   *  already exists; E2E runs skip it there, so a test run never steals focus.
+   *
+   *  Best-effort: a failure leaves a log line, since the opener has nothing better to show.
+   *  Non-generic (unlike its neighbors) so it reaches the typed `commands.*` bindings.
+   */
+  raiseChildWindow: (label: string) => __TAURI_INVOKE<void>('raise_child_window', { label }),
+  /**
    *  Opens a viewer session for the given file.
    *  Returns session metadata + initial lines from the start of the file.
    *

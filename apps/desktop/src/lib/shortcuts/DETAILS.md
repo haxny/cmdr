@@ -405,9 +405,10 @@ exists to prevent. Instead the links emit the shared `open-settings` event (`req
 that the main window already handles via `onOpenSettings` (the same channel the MCP `dialog open settings` path uses).
 The main window owns the window-creation perms; the help window needs only `core:event:default`.
 
-- **Opener** (`shortcuts-window.ts`): a singleton `WebviewWindow` on the `/shortcuts` route (focuses if already open,
-  via the `focus-self` event like Settings). Narrow and tall (~1:3), both dimensions scaled by the effective text size,
-  the height capped to the target monitor so a tall window never spawns off-screen. Resizable; the list scrolls.
+- **Opener** (`shortcuts-window.ts`): a singleton `WebviewWindow` on the `/shortcuts` route (raises it if already open,
+  minimized or not, via `raiseChildWindow` like Settings). Narrow and tall (~1:3), both dimensions scaled by the
+  effective text size, the height capped to the target monitor so a tall window never spawns off-screen. Resizable; the
+  list scrolls.
 - **Route** (`routes/shortcuts/+page.svelte`): the window shell. Inits settings + shortcuts stores, accent color, and
   text size (so it tracks the app-wide font size). Escape closes (deferred past the event tick, like Settings/Viewer).
   Holds the "Hide features with no shortcut" checkbox state (off by default; hides commands whose effective list is

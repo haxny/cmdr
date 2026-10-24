@@ -21,7 +21,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { emitTo } from '@tauri-apps/api/event'
 import { Effect, EffectState } from '@tauri-apps/api/window'
-import { getShouldReduceTransparency, trackEvent } from '#lib/tauri-commands/index.js'
+import { getShouldReduceTransparency, raiseChildWindow, trackEvent } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { getEffectiveScale } from '#lib/text-size.svelte.js'
 import { tString } from '#lib/intl/messages.svelte.js'
@@ -153,10 +153,11 @@ export async function openSettingsWindow(surface: SettingsSurface, section?: str
 
   const existing = await WebviewWindow.getByLabel('settings')
   if (existing) {
-    // Emit to the settings window so it can self-focus. Cross-window setFocus()
-    // doesn't reliably bring a window to front on macOS.
+    // The backend raises it, restoring a minimized or hidden window too (`setFocus()`
+    // silently skips those). The page then puts the cursor back in its search field.
     if (!isE2e) {
-      await emitTo('settings', 'focus-self')
+      await raiseChildWindow('settings')
+      await emitTo('settings', 'focus-search')
     }
     if (section) {
       await emitTo('settings', 'navigate-to-section', { section, anchor })

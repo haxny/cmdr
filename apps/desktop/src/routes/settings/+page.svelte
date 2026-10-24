@@ -59,7 +59,7 @@
             contentScrollTop = contentElement.scrollTop
         }
     }
-    let unlistenFocusSelf: UnlistenFn | undefined
+    let unlistenFocusSearch: UnlistenFn | undefined
     let unlistenNavigate: UnlistenFn | undefined
     let unlistenMcpClose: UnlistenFn | undefined
     let unlistenWindowFocus: UnlistenFn | undefined
@@ -324,17 +324,11 @@
                 searchInput.focus()
             }
 
-            // Listen for focus-self events (from ⌘, when window is already open).
-            // Self-focusing is needed because cross-window setFocus() doesn't reliably
-            // bring a window to front on macOS.
-            unlistenFocusSelf = await listen('focus-self', () => {
-                // setTimeout(0) defers past the originating keydown handler;
-                // without it, macOS restores focus to the main window.
-                setTimeout(() => {
-                    void getCurrentWindow().setFocus()
-                    const input = document.querySelector('.search-container input.text-field-control')
-                    if (input instanceof HTMLElement) input.focus()
-                }, 0)
+            // ⌘, on an already-open window: the opener has the backend raise it, then
+            // asks for the search field so typing lands there again.
+            unlistenFocusSearch = await listen('focus-search', () => {
+                const input = document.querySelector('.search-container input.text-field-control')
+                if (input instanceof HTMLElement) input.focus()
             })
 
             // Cross-window deep-link: when the volume picker's "Network (disabled)" entry
@@ -408,7 +402,7 @@
         // Fire and forget - we can't await in onDestroy
         void Promise.all([flushSettingsChanges(), flushShortcutsSave()])
         // Clean up event listeners
-        unlistenFocusSelf?.()
+        unlistenFocusSearch?.()
         unlistenNavigate?.()
         unlistenMcpClose?.()
         unlistenWindowFocus?.()
