@@ -57,6 +57,11 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   a card on the reports board. § The reports repo.
 - **`report-cards.ts`**: what goes ON a card (titles, bodies, labels, the expiring personal comment); pure, no network.
   **`github-issues.ts`** is the GitHub transport (the privacy probe, filing, comments, labels, listing, the sweep).
+  Every GitHub call there and in `project-board.ts` goes through **`github-fetch.ts`**, which retries an idempotent
+  request (GET, PUT, DELETE, a GraphQL query) twice on a 5xx or a network error, 1 s then 3 s apart, and sends a
+  creating POST once, since it may have landed before its 5xx. The pause is `retry-pause.ts`, made instant for every
+  node test by `vitest-setup.ts`. Every caller is a cron job or the GitHub webhook's background work, so nobody waits on
+  the pause; keep it off any path a person waits on.
 - **`report-ratings.ts`**: the cron job that copies the triage agent's `Rating:` line onto a report card's Severity,
   Impact, and Size fields on the backlog board. § Card ratings.
 - **`report-digest.ts`**: the cron job that mails the three-hour digest and stamps what it sent. § Cron handler.

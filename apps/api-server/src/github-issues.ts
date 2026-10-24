@@ -12,6 +12,7 @@
  */
 
 import type { Bindings } from './types'
+import { githubFetch } from './github-fetch'
 import {
   buildErrorReportIssue,
   personalCommentExpiry,
@@ -75,7 +76,7 @@ function githubHeaders(token: string): Record<string, string> {
  */
 export async function isRepoPrivate(target: IssueTarget): Promise<boolean> {
   try {
-    const response = await fetch(`${GITHUB_API}/repos/${target.owner}/${target.repo}`, {
+    const response = await githubFetch(`${GITHUB_API}/repos/${target.owner}/${target.repo}`, {
       headers: githubHeaders(target.token),
     })
     if (!response.ok) {
@@ -116,7 +117,7 @@ export async function fileIssue(target: IssueTarget, input: FileIssueInput): Pro
 
   let issueNumber: number
   try {
-    const response = await fetch(`${GITHUB_API}/repos/${target.owner}/${target.repo}/issues`, {
+    const response = await githubFetch(`${GITHUB_API}/repos/${target.owner}/${target.repo}/issues`, {
       method: 'POST',
       headers: { ...githubHeaders(target.token), 'content-type': 'application/json' },
       body: JSON.stringify({ title: input.title, body: input.body, labels: input.labels }),
@@ -139,7 +140,7 @@ export async function fileIssue(target: IssueTarget, input: FileIssueInput): Pro
 
   if (input.personalComment) {
     try {
-      const response = await fetch(
+      const response = await githubFetch(
         `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/${String(issueNumber)}/comments`,
         {
           method: 'POST',
@@ -311,7 +312,7 @@ async function commentOnIssue(
   }
 
   try {
-    const response = await fetch(
+    const response = await githubFetch(
       `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/${String(issueNumber)}/comments`,
       {
         method: 'POST',
@@ -345,7 +346,7 @@ async function commentOnIssue(
  */
 async function addIssueLabels(target: IssueTarget, issueNumber: number, labels: string[]): Promise<void> {
   try {
-    const response = await fetch(
+    const response = await githubFetch(
       `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/${String(issueNumber)}/labels`,
       {
         method: 'POST',
@@ -377,7 +378,7 @@ export interface OpenCard {
  */
 export async function listOpenCards(target: IssueTarget, label: string): Promise<OpenCard[]> {
   const url = `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues?state=open&per_page=100&labels=${encodeURIComponent(label)}`
-  const response = await fetch(url, { headers: githubHeaders(target.token) })
+  const response = await githubFetch(url, { headers: githubHeaders(target.token) })
   if (!response.ok) {
     throw new Error(`GitHub issues: listing ${label} cards returned ${String(response.status)}`)
   }
@@ -446,7 +447,7 @@ export async function listExpiredPersonalComments(target: IssueTarget, today: st
 
   for (let page = 1; page <= 20; page++) {
     const url = `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/comments?per_page=${String(perPage)}&page=${String(page)}`
-    const response = await fetch(url, { headers: githubHeaders(target.token) })
+    const response = await githubFetch(url, { headers: githubHeaders(target.token) })
     if (!response.ok) {
       throw new Error(`GitHub issues: listing comments returned ${String(response.status)}`)
     }
@@ -470,7 +471,7 @@ export async function listExpiredPersonalComments(target: IssueTarget, today: st
 
 /** Delete one comment. Throws on failure so the cron's alarm path reports it. */
 export async function deleteComment(target: IssueTarget, commentId: number): Promise<void> {
-  const response = await fetch(
+  const response = await githubFetch(
     `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/comments/${String(commentId)}`,
     { method: 'DELETE', headers: githubHeaders(target.token) },
   )
@@ -507,7 +508,7 @@ export async function listCommentsUpdatedSince(
 
   for (let page = 1; page <= maxPages; page++) {
     const url = `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/comments?sort=updated&direction=asc&since=${encodeURIComponent(since)}&per_page=${String(perPage)}&page=${String(page)}`
-    const response = await fetch(url, { headers: githubHeaders(target.token) })
+    const response = await githubFetch(url, { headers: githubHeaders(target.token) })
     if (!response.ok) {
       throw new Error(`GitHub issues: listing comments returned ${String(response.status)}`)
     }

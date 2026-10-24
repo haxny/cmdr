@@ -22,6 +22,7 @@ export default defineConfig({
           include: ['src/**/*.test.ts'],
           exclude: workerdTests,
           environment: 'node',
+          setupFiles: ['./src/vitest-setup.ts'],
         },
       },
       './vitest.workerd.config.ts',

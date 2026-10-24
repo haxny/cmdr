@@ -29,6 +29,7 @@
  * leave the Worker.
  */
 
+import { githubFetch } from './github-fetch'
 import { constantTimeEqual } from './licensing/paddle'
 import type { Bindings } from './types'
 
@@ -93,22 +94,29 @@ export async function verifyGitHubWebhook(body: string, signature: string, secre
   return constantTimeEqual(signature.slice('sha256='.length), expected)
 }
 
-/** One GraphQL call. Returns the parsed data, or null when the call or the query failed. */
+/**
+ * One GraphQL call. Returns the parsed data, or null when the call or the query failed. `read` marks
+ * a query, which `githubFetch` may retry; a mutation goes out once.
+ */
 async function graphql(
   token: string,
   query: string,
-  variables?: Record<string, unknown>,
+  { variables, read = false }: { variables?: Record<string, unknown>; read?: boolean } = {},
 ): Promise<Record<string, unknown> | null> {
   try {
-    const response = await fetch(GITHUB_GRAPHQL, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${token}`,
-        'content-type': 'application/json',
-        'user-agent': USER_AGENT,
+    const response = await githubFetch(
+      GITHUB_GRAPHQL,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+          'user-agent': USER_AGENT,
+        },
+        body: JSON.stringify(variables ? { query, variables } : { query }),
       },
-      body: JSON.stringify(variables ? { query, variables } : { query }),
-    })
+      { idempotent: read },
+    )
     if (!response.ok) {
       console.error(`Project board: GraphQL returned ${String(response.status)}`)
       return null
@@ -175,7 +183,7 @@ async function isIssueOnBoard(target: BoardTarget, issueNodeId: string): Promise
   const data = await graphql(
     target.token,
     'query ($id: ID!) { node(id: $id) { ... on Issue { projectItems(first: 100) { nodes { project { id } } } } } }',
-    { id: issueNodeId },
+    { variables: { id: issueNodeId }, read: true },
   )
   const nodes = (data?.['node'] as { projectItems?: { nodes?: { project?: { id?: unknown } }[] } } | undefined)
     ?.projectItems?.nodes
@@ -232,7 +240,7 @@ export async function readBoardLayout(target: BoardTarget): Promise<BoardLayout>
         }
       }
     `,
-    { id: target.projectId },
+    { variables: { id: target.projectId }, read: true },
   )
   const node = data?.['node'] as
     | {
@@ -290,7 +298,7 @@ export async function listBoardItemsForRepo(
     `${GITHUB_API}/users/${layout.ownerLogin}/projectsV2/${String(layout.number)}/items?per_page=100&q=${encodeURIComponent(`repo:${repo}`)}`
 
   for (let page = 0; url && page < ITEM_PAGES; page++) {
-    const response = await fetch(url, {
+    const response = await githubFetch(url, {
       headers: {
         authorization: `Bearer ${target.token}`,
         accept: 'application/vnd.github+json',
@@ -349,6 +357,8 @@ export async function setItemFields(target: BoardTarget, itemId: string, values:
       )
     }
   })
-  const data = await graphql(target.token, `mutation(${declarations.join(', ')}) { ${mutations.join(' ')} }`, variables)
+  const data = await graphql(target.token, `mutation(${declarations.join(', ')}) { ${mutations.join(' ')} }`, {
+    variables,
+  })
   return data !== null
 }

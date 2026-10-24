@@ -7,6 +7,7 @@ import {
   deleteComment,
   fileIssue,
   isRepoPrivate,
+  listCommentsUpdatedSince,
   listExpiredPersonalComments,
   resolveIssueTarget,
   type IssueTarget,
@@ -406,6 +407,37 @@ describe('listExpiredPersonalComments', () => {
   it('throws on a failed listing rather than reporting nothing to delete', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ message: 'nope' }, 500)))
     await expect(listExpiredPersonalComments(target, '2026-09-18')).rejects.toThrow('500')
+  })
+})
+
+describe('listCommentsUpdatedSince', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  // Regression anchor: one 522 from GitHub threw "Card ratings" for the 2026-10-24T18:00 tick.
+  it('rides out a one-off 522 instead of throwing the rating job', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const comment = {
+      id: 9,
+      body: 'hi',
+      issue_url: 'https://api.github.com/repos/vdavid/cmdr-reports/issues/14',
+      user: { login: 'vdavid' },
+      created_at: '2026-10-24T10:00:00Z',
+      updated_at: '2026-10-24T10:00:00Z',
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response('', { status: 522 }))
+        .mockResolvedValueOnce(jsonResponse([comment])),
+    )
+
+    const { comments } = await listCommentsUpdatedSince(target, '2026-10-10T00:00:00Z', 5)
+
+    expect(comments.map((c) => c.id)).toEqual([9])
   })
 })
 
