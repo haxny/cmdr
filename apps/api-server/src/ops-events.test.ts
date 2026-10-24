@@ -63,9 +63,25 @@ describe('cronFailureMessage', () => {
       job: 'Crash cards',
       when: '2026-10-14T03:00:00.000Z',
       detail: 'x'.repeat(5000),
+      failedTicks: 1,
+      firstFailedAt: '2026-10-14T03:00:00.000Z',
     })
     expect(message).toContain('Crash cards')
     expect(message).toContain('2026-10-14T03:00:00.000Z')
+    expect(message).not.toContain('in a row')
     expect(message.length).toBeLessThan(1500)
+  })
+
+  it('says how long a streak has run, so the digest shows this is no blip', () => {
+    const message = cronFailureMessage({
+      job: 'Card ratings',
+      when: '2026-10-24T21:00:00.000Z',
+      detail: 'Error: GitHub issues: listing comments returned 522',
+      failedTicks: 2,
+      firstFailedAt: '2026-10-24T18:00:00.000Z',
+    })
+    expect(message).toBe(
+      'Cron job "Card ratings" threw on the 2026-10-24T21:00:00.000Z tick (making 2 ticks in a row since 2026-10-24T18:00:00.000Z), so its work didn\'t happen: Error: GitHub issues: listing comments returned 522. The other jobs on that tick still ran. Full stack: the Workers logs.',
+    )
   })
 })

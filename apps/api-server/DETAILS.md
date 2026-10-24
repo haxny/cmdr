@@ -51,7 +51,8 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
     means adding it there too, or it ships untested against the runtime it deploys to. § Test runtimes.
 - **`ops-events.ts`**: the operational notices (cron failures, eviction, CSP violations, signups) as D1 rows the digest
   mails. § Ops events.
-- **`cron-health.ts`**: `pingCronHealth`, the healthchecks.io dead-man's switch for the cron tick. § Cron alarms.
+- **`cron-health.ts`**: `pingCronHealth`, the healthchecks.io dead-man's switch for the cron tick. **`cron-streaks.ts`**
+  counts each job's failed ticks in a row, so a one-tick blip stays quiet. § Cron alarms.
 - **`report-outbox.ts`**: the cron jobs that file every pending crash, error report, feedback message, and amendment as
   a card on the reports board. § The reports repo.
 - **`report-cards.ts`**: what goes ON a card (titles, bodies, labels, the expiring personal comment); pure, no network.
@@ -426,6 +427,16 @@ cover that, and they cover different failures.
    `console.error` is written nowhere and is visible only to a live `wrangler tail`, which is how a job could throw
    every three hours indefinitely and leave no trace. Layers 1 and 2 wake someone; this is what they read.
 
+**A one-tick blip stays quiet** (`cron-streaks.ts`, table `cron_job_streaks`). The every-tick jobs alert only once
+they've thrown on two ticks in a row, then on every failing tick after that; a clean run starts the count over. Each of
+them redoes its own work on the next tick and none is urgent within three hours, so a lone GitHub 522 on "Card ratings"
+(2026-10-24) cost three emails for nothing. A held-back failure skips layers 1 and 2: it's logged, and the tick's
+success ping names it, so the healthchecks.io ping log still shows it. The daily jobs and the morning brief have no
+grace (`alertAfter` 1), since their next run is a day away. Decision/Why: the count fails toward alerting, so when D1
+can't read or write the streak, the failure alerts at once. A broken D1 must never be what hides a broken cron. Known
+gap: a job failing on alternate ticks never alerts; accepted, since a job that works every other tick is still doing its
+work.
+
 Both secrets are optional, and the cron behaves exactly as before when they're unset, so local dev and tests need no
 setup. `HEALTHCHECKS_PING_URL` is a capability URL (anyone holding it can report the check healthy), hence a secret.
 
@@ -445,7 +456,9 @@ setup. `HEALTHCHECKS_PING_URL` is a capability URL (anyone holding it can report
    ```
 
 Tests: `cron-alarm.test.ts` drives the real handler with a D1 that throws and asserts both channels fire, that a later
-job still runs after an earlier one throws, and that a dead alarm channel can't take the cron down.
+job still runs after an earlier one throws, and that a dead alarm channel can't take the cron down. Against a real
+SQLite, it pins the grace: one failed tick is held back, the second alerts on both channels, and a daily job alerts on
+its first. `cron-streaks.test.ts` covers the count itself.
 
 ## Data retention
 
@@ -476,6 +489,8 @@ triage value live in the other columns, and there's no privacy reason to lose th
   both under the license sections.
 - **`card_ratings`**: never swept. GitHub comment and issue numbers, the applied `Rating:` line, and timestamps; no
   personal data, so the privacy policy has nothing to promise about it.
+- **`cron_job_streaks`**: a row lives only while a cron job keeps throwing; its next clean run deletes it. A job label
+  and a tick time, no personal data. § Cron alarms.
 - **`license_adjustments`**: never swept, for the same audit reason; it's how we know a license was revoked by a refund.
   It holds no personal data (ids, amount, Paddle's reason), only purchase details the policy already covers.
 - **`heartbeat`**: rows DELETED after two years. Two years covers every window the dashboard computes (DAU, new

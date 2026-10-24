@@ -22,15 +22,27 @@ const CLEAN_TICK_BODY = 'All cron jobs finished.'
  * `/fail`, which trips the check immediately rather than waiting out the grace period, and puts the
  * job names in the ping body so the alert email says which one went.
  *
+ * `heldBack` names jobs that threw but are still within their grace (`cron-streaks.ts`). They don't
+ * trip the check; the success ping's body names them, so the check's ping log still shows the blip.
+ *
  * Never throws and never rejects: this runs last in the handler, and an alarm that can take down
  * the thing it watches is worse than no alarm.
  */
-export async function pingCronHealth(pingUrl: string, failedJobs: string[]): Promise<void> {
+export async function pingCronHealth(
+  pingUrl: string,
+  failedJobs: string[],
+  { heldBack = [] }: { heldBack?: string[] } = {},
+): Promise<void> {
   let end = pingUrl.length
   while (end > 0 && pingUrl[end - 1] === '/') end--
   const base = pingUrl.slice(0, end)
   const url = failedJobs.length > 0 ? `${base}/fail` : base
-  const body = failedJobs.length > 0 ? `These cron jobs threw: ${failedJobs.join(', ')}.` : CLEAN_TICK_BODY
+  const body =
+    failedJobs.length > 0
+      ? `These cron jobs threw: ${failedJobs.join(', ')}.`
+      : heldBack.length > 0
+        ? `These cron jobs threw once and alert if they throw again next tick: ${heldBack.join(', ')}.`
+        : CLEAN_TICK_BODY
 
   try {
     const res = await fetch(url, { method: 'POST', body })

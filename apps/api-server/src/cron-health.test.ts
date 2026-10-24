@@ -37,6 +37,19 @@ describe('pingCronHealth', () => {
     expect(calls[0]?.body).toBe('These cron jobs threw: Crash notifications, Retention sweep.')
   })
 
+  it('pings the bare URL for a job still within its grace, and names it in the body', async () => {
+    const calls = stubFetch()
+
+    await pingCronHealth('https://hc-ping.com/abc', [], { heldBack: ['Card ratings'] })
+
+    expect(calls).toEqual([
+      {
+        url: 'https://hc-ping.com/abc',
+        body: 'These cron jobs threw once and alert if they throw again next tick: Card ratings.',
+      },
+    ])
+  })
+
   it('tolerates a trailing slash on the configured URL', async () => {
     const calls = stubFetch()
 

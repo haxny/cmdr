@@ -86,6 +86,10 @@ export interface CronFailureInfo {
   when: string
   /** The thrown value, stringified. */
   detail: string
+  /** Ticks in a row the job has thrown, this one included (`cron-streaks.ts`). */
+  failedTicks: number
+  /** The `scheduledTime` of the streak's first tick, as ISO 8601. */
+  firstFailedAt: string
 }
 
 export function cronFailureMessage(info: CronFailureInfo): string {
@@ -93,7 +97,9 @@ export function cronFailureMessage(info: CronFailureInfo): string {
     info.detail.length > CRON_FAILURE_DETAIL_CAP
       ? `${info.detail.slice(0, CRON_FAILURE_DETAIL_CAP)}… (truncated)`
       : info.detail
-  return `Cron job "${info.job}" threw on the ${info.when} tick, so its work didn't happen: ${detail}. The other jobs on that tick still ran. Full stack: the Workers logs.`
+  const streak =
+    info.failedTicks > 1 ? ` (making ${String(info.failedTicks)} ticks in a row since ${info.firstFailedAt})` : ''
+  return `Cron job "${info.job}" threw on the ${info.when} tick${streak}, so its work didn't happen: ${detail}. The other jobs on that tick still ran. Full stack: the Workers logs.`
 }
 
 export interface EvictionInfo {
