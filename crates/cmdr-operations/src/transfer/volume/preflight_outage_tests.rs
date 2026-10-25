@@ -197,9 +197,12 @@ async fn a_cancel_while_the_scan_waits_cancels_it() {
     let op_id = op.id().to_owned();
     {
         let state = Arc::clone(&state);
+        let nas = Arc::clone(&nas);
         tokio::spawn(async move {
-            wait_until_async(WAIT, "the scan to wait for the share", || {
-                state.outage.waiting_for().is_some()
+            // The wait announces itself before its first dial, so a cancel on
+            // the announcement alone can beat that dial (#732).
+            wait_until_async(WAIT, "the scan to wait for the share and dial it", || {
+                state.outage.waiting_for().is_some() && nas.reconnect_attempts() >= 1
             })
             .await;
             engine.cancel_write_operation(&op_id, false);
