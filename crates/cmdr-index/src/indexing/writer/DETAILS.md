@@ -327,7 +327,9 @@ coverage must stay honest under every live mutation. Three rules, all in `writer
   (alongside `recursive_has_symlinks`). Resetting it here would flip an exact dir to "≥" on every file write — the
   headline lie this milestone prevents (pinned by `delta::tests::propagate_delta_by_id_preserves_min_subtree_epoch`).
   The ONE deliberate `0` is the new-dir zero-init `dir_stats` literal in `handle_upsert_entry_v2` (a live-created dir is
-  genuinely unlisted). Any `None`-branch fresh-row construction in `delta.rs` also gets `0`, never a stale default.
+  genuinely unlisted, and the reconciler queues a subtree rescan for it that lists it:
+  `../reconcile/reconciler/rescan/DETAILS.md`). Any `None`-branch fresh-row construction in `delta.rs` also gets `0`,
+  never a stale default.
 - **Propagate coverage on a TREE-SHAPE change, never a size change.** `propagate_min_subtree_epoch(conn, start_id)`
   (`delta.rs`) mirrors `propagate_recursive_has_symlinks` (walk the parent chain, recompute per dir, short-circuit when
   the stored value stabilizes — valid for `min` on both loss AND gain), but the per-dir recompute

@@ -14,6 +14,7 @@ use crate::indexing::IndexPathSpace;
 use crate::indexing::metadata::extract_metadata;
 use crate::indexing::paths::path_prefix::compute_parent_path;
 use crate::indexing::scanner;
+use crate::indexing::store::IndexStore;
 use crate::indexing::watch::watcher::FsChangeEvent;
 use crate::indexing::writer::{IndexWriter, WriteMessage};
 
@@ -146,9 +147,11 @@ mod skip_aggregator {
 /// When present, a regular file's in-place rewrite may be suppressed here (its
 /// last-seen size flushed later by [`EventReconciler::sweep_throttle`](super::EventReconciler::sweep_throttle)).
 ///
-/// `escalation` is an out-param for Leak B: when a create/modify event's parent
-/// chain is (partly) missing from the index, this sets it to the rescan anchor
-/// (the highest missing dir) instead of dropping the credit. The caller
+/// `escalation` is the subtree this event leaves the index unable to vouch for: when
+/// a create/modify event's parent chain is (partly) missing (Leak B), the rescan
+/// anchor is the highest missing dir, instead of dropping the credit; when the event
+/// creates a directory row, the anchor is that directory, whose contents nothing has
+/// listed yet. The caller
 /// (`process_live_event` live, buffered replay) owns the reconciler state and
 /// queues or defers it. `None` means nothing to escalate. A typed `PathBuf`
 /// out-param, never a string signal — no string-matching classification.
@@ -470,6 +473,17 @@ fn handle_creation_or_modification(
         return Some(Vec::new());
     }
 
+    // A directory row this upsert CREATES lands unlisted (`listed_epoch = 0`): the
+    // event says the folder is there, not what's in it (a folder moved in brings
+    // contents nobody reported). Queue its subtree so a walk lists it and lifts its
+    // coverage; without one it and every ancestor read "≥" until the next launch
+    // whenever its contents arrive in later batches, under a parent that resolves,
+    // where nothing escalates. The settle delay holds a brand-new anchor back, so
+    // short-lived build trees walk to a clean no-op.
+    if is_dir && !holds_directory_row(conn, parent_id, &name) {
+        *escalation = Some(path.to_path_buf());
+    }
+
     let _ = writer.send(WriteMessage::UpsertEntryV2 {
         parent_id,
         name,
@@ -492,6 +506,17 @@ fn handle_creation_or_modification(
     }
 
     Some(origins.clone())
+}
+
+/// Whether `parent_id` already holds a DIRECTORY row named `name`. A miss, a
+/// file row (a file→dir type change), or a failed read all answer `false`, so the
+/// caller queues a walk: one walk too many costs a listing, one too few leaves the
+/// folder unlisted.
+fn holds_directory_row(conn: &Connection, parent_id: i64, name: &str) -> bool {
+    let Ok(Some(id)) = IndexStore::resolve_component(conn, parent_id, name) else {
+        return false;
+    };
+    matches!(IndexStore::get_entry_by_id(conn, id), Ok(Some(entry)) if entry.is_directory)
 }
 
 /// The directory whose OWN listing a change at `path` alters: its immediate

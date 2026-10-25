@@ -100,6 +100,15 @@ sends `DeleteSubtreeById`, and the storm drop rule deliberately keeps a scope's 
 Worst case an escalation hop re-queues the highest missing dir once; that hop's parent IS in the DB, so it terminates on
 the stat-failure branch rather than escalating again.
 
+**A directory row an event creates is an anchor too** (`handle_creation_or_modification`, through the same `escalation`
+out-param). The row lands at `listed_epoch = 0`, since an event says a folder is there and not what's in it (a folder
+moved in brings contents nobody reported), and without a walk it and every ancestor read "≥" until the next launch. The
+escalation only covered the case where a child's event arrives in the same batch as its parent's creation; contents
+arriving in LATER batches resolve their parent fine, escalate nothing, and nothing ever listed the folder (#705, a demo
+tree deleted and recreated under a running app). Queueing every new directory sounds expensive and isn't: the settle
+delay holds each one back, a build tree that's gone by then walks to the clean no-op above, and a surviving tree's
+anchors collapse into its shallowest one at pick time. An upsert onto an existing directory row queues nothing.
+
 ## The rescan hourglass hold (`hold.rs`)
 
 A rescan root held in `PendingSizes` marks its whole chain pending in BOTH directions

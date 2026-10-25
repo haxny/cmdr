@@ -705,3 +705,66 @@ fn live_throttle_significant_jump_applies_immediately() {
 
     writer.shutdown();
 }
+
+// ── A folder created live ends up listed (#705) ──────────────────
+
+/// A folder created while the app runs must end up LISTED, so its size reads exact,
+/// not "≥". Its row arrives at `listed_epoch = 0` (a creation event says the folder
+/// is there, not what's in it), so something has to walk it.
+///
+/// The regression: when the folder's own creation and its contents arrive in
+/// separate batches, every event finds its parent already in the index, nothing
+/// escalates, and nothing ever walks the folder. It and every ancestor read "≥"
+/// until the next launch. Seen with a demo tree deleted and recreated under a
+/// running app.
+#[tokio::test]
+async fn a_folder_created_live_gets_walked_and_reads_exact() {
+    let (writer, dir, conn) = setup_test_writer();
+    let db_path = dir.path().join("test-reconciler.db");
+    let base = non_excluded_tempdir();
+    let space = IndexPathSpace::root();
+    ensure_path_in_db(&db_path, &space.absolute(&base.path().to_string_lossy()), &writer);
+
+    let mut reconciler = EventReconciler::new();
+    reconciler.switch_to_live();
+    reconciler.disable_rescan_throttle_for_test();
+    let mut origins = HashSet::new();
+
+    // Batch 1: the folder alone, as `mkdir` reports it.
+    let tree = base.path().join("tree");
+    std::fs::create_dir(&tree).unwrap();
+    let created_dir = make_event(&tree.to_string_lossy(), 1, created_dir_flags());
+    reconciler.process_live_event(&created_dir, &conn, &writer, &mut origins);
+    reconciler.flush_deletes(&writer);
+    writer.flush_blocking().unwrap();
+
+    // Batch 2: its contents, each under a parent the index now holds.
+    let file = tree.join("file.bin");
+    std::fs::write(&file, vec![0u8; 4096]).unwrap();
+    let created_file = make_event(&file.to_string_lossy(), 2, created_file_flags());
+    reconciler.process_live_event(&created_file, &conn, &writer, &mut origins);
+    reconciler.flush_deletes(&writer);
+    writer.flush_blocking().unwrap();
+
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(30), "the rescan queue to drain", || {
+        !reconciler.is_rescan_active_for_test() && reconciler.pending_rescans_snapshot().is_empty()
+    })
+    .await;
+    crate::indexing::writer::tests::settle_the_writer(&writer);
+
+    let tree_id = store::resolve_path(&conn, &space.absolute(&tree.to_string_lossy()))
+        .unwrap()
+        .expect("the folder is indexed");
+    let listed = IndexStore::get_listed_epoch_by_id(&conn, tree_id).unwrap().unwrap_or(0);
+    assert!(
+        listed > 0,
+        "a folder created live must get listed, else its size reads \"≥\" forever"
+    );
+    let stats = IndexStore::get_dir_stats_by_id(&conn, tree_id)
+        .unwrap()
+        .expect("dir_stats row");
+    assert!(stats.min_subtree_epoch > 0, "the folder's subtree reads exact");
+    assert_eq!(stats.recursive_logical_size, 4096);
+
+    writer.shutdown();
+}

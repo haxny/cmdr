@@ -351,8 +351,9 @@ fn upsert_insert_new(
                         recursive_dir_count: 0,
                         recursive_has_symlinks: false,
                         // A live-created dir is unlisted (no scanner walked its
-                        // contents), so `0` is correct/honest. A later verifier
-                        // scan stamps it and lifts coverage.
+                        // contents), so `0` is correct/honest. The subtree rescan
+                        // the live reconciler queues for it stamps it and lifts
+                        // coverage.
                         min_subtree_epoch: 0,
                     }],
                 ) {
