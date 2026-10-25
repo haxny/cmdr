@@ -65,6 +65,7 @@ mod durability;
 mod error_classification;
 mod eta;
 mod event_sinks;
+mod finished_trees;
 mod free_space;
 mod handle;
 // Two engines share nothing.
@@ -123,6 +124,8 @@ mod transfer;
 mod transfer_sides;
 mod transfer_tree;
 mod tree_view;
+#[cfg(test)]
+mod tree_view_tests;
 mod types;
 mod unblocked_removal;
 mod unique_name;

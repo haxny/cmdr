@@ -56,6 +56,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
     hooks.opsChanged.push(cb)
     return Promise.resolve(() => {})
   }),
+  releaseTransferTree: vi.fn(() => Promise.resolve()),
   listOperations: vi.fn(() => Promise.resolve(hooks.seed)),
   DEFAULT_VOLUME_ID: 'root',
 }))

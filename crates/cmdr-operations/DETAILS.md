@@ -202,8 +202,9 @@ The full top-level inventory is here:
   `CachedScanResult` carries it to the operation the way it carries `per_path`, a `Compress` walk samples the size
   estimate, and a `Delete` walk keeps totals only. `transfer_tree/` is that tree (its own `CLAUDE.md`), installed on
   `WriteOperationState::transfer_tree` once a copy's, move's, or compress's scan is done; `tree_view.rs` answers
-  `get_transfer_tree_view` from it. Conflicts and overwrite: `conflict.rs` (policy), `conflict_preflight.rs` (the
-  transfer dialog's BEFORE-the-write check, § "The pre-flight conflict check"), `unique_name.rs` (the ` (N)` namer),
+  `get_transfer_tree_view` from it, and from `finished_trees.rs` once the operation settled (kept until its dialog
+  releases it, or a TTL). Conflicts and overwrite: `conflict.rs` (policy), `conflict_preflight.rs` (the transfer
+  dialog's BEFORE-the-write check, § "The pre-flight conflict check"), `unique_name.rs` (the ` (N)` namer),
   `conflict_slot.rs` (the one-answer-wins slot behind `resolve_write_conflict`), `conflict_policy_cell.rs` (the policy a
   running copy or move reports, § "The live policy and the start time a row reports"), `overwrite.rs` (tests in
   `overwrite_tests.rs`), `look_alike.rs` (a name a byte-exact volume holds in another Unicode spelling, and where a new
@@ -1262,7 +1263,7 @@ verbs read one-to-one:
   `retry_failed_operation`, `dismiss_failed_operation`, `dismiss_all_failed_operations`, `resolve_write_conflict`,
   `pending_write_conflict`, `continue_without_gone_sources`, `pending_sources_gone`, `answer_locked_sources`,
   `pending_locked_sources` (the two parked questions, each an answer plus a read for a surface that arrives late), and
-  `transfer_tree_view`.
+  `transfer_trees` (a facade: `view` a window, `release` a settled one's kept tree).
 - **Busy volumes and the sink adapter**: `busy_volume_ids` (Eject's guard), `register_external_volume_op` /
   `release_external_volume_op` (drag-out's busy volume, macOS), and `retain_failure` (the app's sink adapter keeps a
   failed op on the queue).

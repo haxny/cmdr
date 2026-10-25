@@ -17,8 +17,9 @@ landed. These are the product calls (David, 2026-10-11) the code holds:
 - **Rows below the work really are next**: every driver starts files in tree order
   (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Processing order"). Parallel drivers show several active rows.
 - **One axis for every folder bar**: the operation's bottleneck (files or bytes), the same one its ETA follows.
-- **Out of scope**, each its own follow-up: skipping the rest of a folder, keeping the tree after the operation ends
-  (#261), trees for delete, trash, and edits inside an existing archive, and remembering a resized dialog's height.
+- **Out of scope**, each its own follow-up: skipping the rest of a folder, keeping a FAILED operation's tree on its
+  error dialog (#261), trees for delete, trash, and edits inside an existing archive, and remembering a resized dialog's
+  height.
 
 ## Using it
 
@@ -62,6 +63,12 @@ per interval, and the last tick of a burst always gets its trailing pull, so the
 engine ticks once per file, so a run of tiny files pulled back to back, past the five pulls a second per view the budget
 allows. **Why a clock**: the E2E app gets no animation frames, so a frame-gated pull never came there. Toggles, Follow,
 and scrolls skip the throttle: they're a person's, and rare.
+
+**The settle is a tick too** (`transfer-progress-state.svelte.ts`'s `progressTick` changes on `write-settled`), and the
+backend keeps a settled operation's tree until the progress dialog's teardown calls `releaseTransferTree`
+(`crates/cmdr-operations/src/transfer_tree/DETAILS.md` § "The view command"). **Why**: a transfer faster than the
+throttle (a server-side copy of 36 files, #702) settled before the trailing pull came back, and the done dialog kept
+rows that said every file was still waiting.
 
 **Decision: no tree event; each view pulls on the operation's own `write-progress`.** **Why**: a broadcast tick can't
 know what each view expanded or scrolled to, so it would either flood every window with rows nobody shows or need

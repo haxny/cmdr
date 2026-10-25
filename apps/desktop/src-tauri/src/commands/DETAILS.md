@@ -20,6 +20,8 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   is a claim about the volume's own writes, so on SMB a cached answer to "re-read this" would be a lie. Logs at debug
   `target: "refresh_listing"` on short-circuit.
   `write_ops.rs`: create, copy, move, delete, trash, scan preview, conflict resolution, synthetic diff helpers.
+  `operations.rs`: the operation manager (list, cancel, pause, resume, reorder, dismiss, retry) and the transfer tree
+  (`get_transfer_tree_view`, `release_transfer_tree`), mirroring the frontend's `tauri-commands/operations.ts`.
   `volume_copy.rs`: cross-volume copy/move/compress/scan. The three transfer commands are pass-throughs that build the
   `TauriEventSink` and hand everything to `Operations::start_volume_{copy, move, compress}`, which own the volume
   + destination-path resolution and the archive forks so a backend caller reaches the same routing

@@ -65,6 +65,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   getOperationLogDetail: vi.fn(() => Promise.resolve(null)),
   rollbackOperation: vi.fn(() => Promise.resolve({ inverseOpId: 'op-2' })),
+  releaseTransferTree: vi.fn(() => Promise.resolve()),
   listOperations: vi.fn(() =>
     Promise.resolve<OperationSnapshot[]>([
       {

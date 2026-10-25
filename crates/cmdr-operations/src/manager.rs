@@ -70,12 +70,13 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::{OpKind, OperationId};
 
+use super::finished_trees::FinishedTrees;
 use super::host::{EngineHost, OperationErrorReport};
 use super::scan_cache::{self, ScanPreviews};
 use super::state::{WriteOperationRegistry, WriteOperationState};
 use super::status_cache::StatusCache;
 pub(crate) use super::types::RollbackSupport;
-use super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
+use super::types::{LifecycleStatus, ProgressAxis, WriteOperationError, WriteOperationType};
 
 mod reorder;
 mod wire;
@@ -278,6 +279,9 @@ pub(crate) struct OperationManager {
     /// The engine's scan previews, which an op claims when it registers and
     /// abandons when it leaves without consuming.
     previews: Arc<ScanPreviews>,
+    /// Settled operations' trees, kept while their dialog shows them
+    /// (`finished_trees.rs`). Handed over as each op settles.
+    finished_trees: Arc<FinishedTrees>,
     /// The engine this manager belongs to, handed to each start it admits.
     /// Weak: the engine owns the manager.
     engine: Weak<super::Inner>,
@@ -316,6 +320,7 @@ impl OperationManager {
             registry,
             status,
             previews,
+            finished_trees: Arc::new(FinishedTrees::new()),
             engine,
             admission_passes: AtomicU64::new(0),
             emits: AtomicU64::new(0),
@@ -585,6 +590,7 @@ impl OperationManager {
     /// without admitting anything. The shared core of `on_settled` (happy
     /// path) and the `Drop` safety net. Idempotent.
     fn free_and_remove(&self, operation_id: &OperationId) {
+        self.keep_finished_tree(operation_id);
         let (removed, claimed_preview) = {
             let mut inner = self.inner.lock_ignore_poison();
             match inner.records.remove(operation_id) {
@@ -608,6 +614,28 @@ impl OperationManager {
             self.registry.forget(operation_id);
             self.status.unregister(operation_id.as_str());
         }
+    }
+
+    /// Hands a settling op's tree to `finished_trees`, so the dialog showing it
+    /// can still pull its final rows (#702: a copy that settled faster than the
+    /// view's pull left every row waiting). ❗ BEFORE the record goes: a view
+    /// asks the kept trees first, then the record, so one always answers.
+    fn keep_finished_tree(&self, operation_id: &OperationId) {
+        if !self.inner.lock_ignore_poison().records.contains_key(operation_id) {
+            return;
+        }
+        let Some(state) = self.registry.get(operation_id) else {
+            return;
+        };
+        let Some(tree) = state.transfer_tree.shared() else {
+            return;
+        };
+        let axis = state
+            .last_progress()
+            .and_then(|event| event.bottleneck)
+            .unwrap_or(ProgressAxis::Bytes);
+        self.finished_trees
+            .keep(&self.host.runtime(), operation_id.clone(), tree, axis);
     }
 
     /// Cancels a Queued op WITHOUT spawning it: drops it from the registry and
@@ -731,6 +759,11 @@ impl OperationManager {
 
     /// This op's type, for a surface that has only its id. `None` once the
     /// record is gone.
+    /// Settled operations' trees, for a view that asks after the settle.
+    pub(crate) fn finished_trees(&self) -> &FinishedTrees {
+        &self.finished_trees
+    }
+
     pub(super) fn operation_type_of(&self, operation_id: &OperationId) -> Option<WriteOperationType> {
         self.inner
             .lock_ignore_poison()

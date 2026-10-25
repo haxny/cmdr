@@ -85,6 +85,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   // The backend registers the operation before the start command returns, so a
   // session that seeds itself finds it. An empty list would tell the session the
   // transfer was already over.
+  releaseTransferTree: vi.fn(() => Promise.resolve()),
   listOperations: vi.fn(() =>
     Promise.resolve<OperationSnapshot[]>([
       {

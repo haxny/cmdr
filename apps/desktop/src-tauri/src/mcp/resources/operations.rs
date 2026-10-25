@@ -82,7 +82,8 @@ pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
                 .is_some()
                 .then(|| {
                     engine
-                        .transfer_tree_view(&operation_id, &TransferTreeViewRequest::following_the_work())
+                        .transfer_trees()
+                        .view(&operation_id, &TransferTreeViewRequest::following_the_work())
                         .ok()
                 })
                 .flatten();

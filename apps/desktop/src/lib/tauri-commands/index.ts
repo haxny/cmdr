@@ -385,7 +385,7 @@ export type {
   WriteSourcesGoneEvent,
 } from './operations'
 // The live transfer tree's one window per call (progress dialog + queue).
-export { getTransferTreeView } from './operations'
+export { getTransferTreeView, releaseTransferTree } from './operations'
 export type {
   ProgressAxis,
   TransferTreeAncestor,

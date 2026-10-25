@@ -123,6 +123,7 @@ export function tauriCommandsMock() {
     pauseOperation: vi.fn(() => Promise.resolve()),
     resumeOperation: vi.fn(() => Promise.resolve()),
     listOperations: vi.fn(() => Promise.resolve<OperationSnapshot[]>([])),
+    releaseTransferTree: vi.fn(() => Promise.resolve()),
     DEFAULT_VOLUME_ID: 'root',
   }
 }

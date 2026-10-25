@@ -993,6 +993,12 @@ export const commands = {
       __TAURI_INVOKE('get_transfer_tree_view', { operationId, request }),
     ),
   /**
+   *  The progress dialog showing this operation's tree closed. A settled
+   *  operation keeps its tree for that dialog's last pulls; this lets it go
+   *  before its safety TTL does. A no-op for a running operation.
+   */
+  releaseTransferTree: (operationId: string) => __TAURI_INVOKE<void>('release_transfer_tree', { operationId }),
+  /**
    *  Cancels one operation, keeping already-copied files. A Queued op is dropped
    *  without ever spawning; a Running/Paused op routes through the existing
    *  keep-partials cancel path.
@@ -18111,7 +18117,7 @@ export type TransferTreeView = {
 export type TransferTreeViewError =
   /**
    *  No operation by that id: it never existed, or it has settled and its
-   *  tree went with it.
+   *  tree was released or expired (`finished_trees.rs`).
    */
   | { type: 'unknown_operation' }
   /**

@@ -4,10 +4,11 @@ Read this before any non-trivial work here. Must-knows: `CLAUDE.md`. What the tr
 the frontend half: `apps/desktop/src/lib/file-operations/transfer-tree/DETAILS.md`. Issue:
 [#382](https://github.com/vdavid/cmdr/issues/382).
 
-**Budget for a million-file job**: ≤ 64 B per node in memory (below), freed when the operation settles; ≤ 200 rows per
-view answer and ≤ 2,000 hand toggles each way per request; O(depth) per file boundary and O(|expansion| + 200) per view.
-**Why it's held this tight**: volume scans never kept a per-file record before this tree, so the tree is the one thing a
-huge remote copy holds that it didn't, and the local engine's own file list already costs ~4× it.
+**Budget for a million-file job**: ≤ 64 B per node in memory (below), freed when its dialog closes after the operation
+settles (at most 10 minutes later); ≤ 200 rows per view answer and ≤ 2,000 hand toggles each way per request; O(depth)
+per file boundary and O(|expansion| + 200) per view. **Why it's held this tight**: volume scans never kept a per-file
+record before this tree, so the tree is the one thing a huge remote copy holds that it didn't, and the local engine's
+own file list already costs ~4× it.
 
 ## Where a tree comes from
 
@@ -115,7 +116,8 @@ over its scrolled-past rows (the sticky headers), without a second request. At m
 `get_transfer_tree_view(operation_id, request)` (`../tree_view.rs`, its own leaf because it looks the operation up in
 the manager and the state registry, which sit above this module) answers:
 
-- `Err(UnknownOperation)`: no operation by that id (never existed, or settled, and its tree went with it).
+- `Err(UnknownOperation)`: no operation by that id (never existed, or settled and its kept tree was released or
+  expired).
 - `Err(NotATransfer)`: an operation type that never builds a tree (delete, trash, rename, an edit inside an existing
   archive).
 - `Ok` with `ready: false`: queued, scanning, or a tree a bug turned off. Every other field is empty.
@@ -123,8 +125,17 @@ the manager and the state registry, which sit above this module) answers:
   (`../eta.rs`), `Bytes` before there was one, so every folder bar fills along the same axis the header's ETA follows.
 
 No event of its own: a view calls it on mount and on each `write-progress` tick, which keeps the backend stateless per
-view. The command is `async` so it never answers on the main thread: a window is microseconds, but it takes the tree's
-lock, which a subtree-at-once report holds for as long as the subtree is big.
+view.
+
+**A settled operation's tree outlives it, until its dialog lets go** (`../finished_trees.rs`). The manager hands each
+tree over as the op settles, BEFORE it drops the record, and the command asks the kept trees first, so a view never
+falls between the two. `release_transfer_tree` (the progress dialog's teardown) drops it, and a 10-minute TTL catches a
+release that never came. **Why**: a view pulls at most every 200 ms, so a transfer faster than that (a server-side copy
+of 36 files, #702) settled before the pull that would show its end, and the done dialog kept rows that said every file
+was still waiting. The dialog pulls once more on `write-settled` to fetch them. Every finished tree is kept, viewed or
+not: whether a view ever asked can't decide it, because the fastest transfers settle before their first pull. The
+command is `async` so it never answers on the main thread: a window is microseconds, but it takes the tree's lock, which
+a subtree-at-once report holds for as long as the subtree is big.
 
 The other reader is `cmdr://state`: each running or paused operation row asks for
 `TransferTreeViewRequest::following_the_work()` (no toggles, `Follow { lead: 0 }`, `MAX_LIMIT` rows) and renders its

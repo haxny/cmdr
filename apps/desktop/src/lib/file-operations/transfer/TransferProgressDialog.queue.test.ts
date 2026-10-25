@@ -88,6 +88,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
       if (at >= 0) operationsChangedCbs.splice(at, 1)
     })
   }),
+  releaseTransferTree: vi.fn(() => Promise.resolve()),
   listOperations: listOperationsMock,
   DEFAULT_VOLUME_ID: 'root',
 }))

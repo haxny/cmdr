@@ -13,10 +13,6 @@
       "lines": 800,
       "reason": "TODO: two seams sit beside the request path and only share imports with it. Move the policy-guarded HTTP client (`policy_guarded_http_client`, `policy_guarded_redirects`, `follow_allowed_hop`, `remote_destination`, `remote_endpoint`, `parse_endpoint`) into `client_policy.rs`, and the provider-error mapping (`AiError` with its `Display`, `ai_error_for_status`, `provider_error_detail`, `map_genai_error`) into `client_errors.rs`, about 140 lines out together. What stays is `AiBackend`, the three `chat_completion*` entry points, the model-specific option tweaks, and the response logging, which is what callers mean by the AI client."
     },
-    "apps/desktop/src-tauri/src/commands/file_system/write_ops.rs": {
-      "lines": 811,
-      "reason": "TODO: the operation-manager commands (the \"Operation manager (queue + lifecycle)\" section: `list_operations`, `get_transfer_tree_view`, cancel / pause / resume, move, dismiss, and `retry_failed_operation`) are their own concern and mirror the frontend's `tauri-commands/operations.ts`; move them into `commands/file_system/operations.rs` and repoint their `ipc.rs` registrations. What stays is the write starters, scan previews, conflicts, and the instant mutations."
-    },
     "apps/desktop/src-tauri/src/crash_reporter/mod.rs": {
       "lines": 812,
       "reason": "TODO: the panic path is its own concern and already has `panic_courier.rs` and `panic_courier_tests.rs` as neighbors. Move `install_panic_hook`, `contained_panic_warning`, `PanicDisposition`, `handle_panic`, `write_first_crash_report`, `build_panic_report`, and the message/backtrace helpers (`extract_panic_message`, `sanitize_panic_message`, `sanitize_thread_name`, `cap_chars`, `cap_panic_message`, `parse_backtrace_frames`, `current_image_base_hex`) into `panic_hook.rs`, about 260 lines. `mod.rs` keeps the `CrashReport` shape, `init`, the pending-report read/write, and the active-settings snapshot."
@@ -109,13 +105,13 @@
       "lines": 1208,
       "reason": "TODO: the script is orchestration only (`transfer-scan-state.svelte.ts`, `transfer-conflict-check.svelte.ts`, `transfer-dest-exists.svelte.ts`, and `transfer-dialog-logic.ts` hold the logic), and the conflicts block already lives in `TransferConflictsSection.svelte`. One presentational block can still follow the `ScanPhaseBody.svelte` and `CompressEstimateLine.svelte` precedent: a `TransferScanTallies.svelte` for the `.scan-stats` row plus the `scan.scanFailure` retry notice (about 45 markup and 50 style). That leaves `handleConfirm` and `handleCancel`, whose dense rationale comments are the part of this file worth protecting."
     },
-    "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.parity.test.ts": {
-      "lines": 1218,
-      "reason": "One table: every `WriteOperationError` variant's en wording per operation, pinned case by case so a copy edit lands in the catalog AND here. It grows by one case per new refusal wording; splitting by variant would scatter the table a reviewer reads top to bottom."
-    },
     "apps/desktop/src/lib/file-operations/transfer/TransferProgressDialog.svelte": {
       "lines": 914,
       "reason": "TODO: one dialog with three modes (running, a clash, and the done state of #484), and most of its length is the markup's own why-comments. The cleanest split is per mode: the running footer (Pause/Resume, Queue/Background, Cancel, the cancel-time Close, `TransferRollbackControls`, ~70 lines with their comments) into a `TransferRunningActions.svelte` taking `progress` and `rollback`, and the done mode's footer plus its Undo question into a `TransferDoneActions.svelte` taking `progress` and `doneUndo`. Both only render and call methods on the two controllers, so nothing would have to be threaded back."
+    },
+    "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.parity.test.ts": {
+      "lines": 1218,
+      "reason": "One table: every `WriteOperationError` variant's en wording per operation, pinned case by case so a copy edit lands in the catalog AND here. It grows by one case per new refusal wording; splitting by variant would scatter the table a reviewer reads top to bottom."
     },
     "apps/desktop/src/lib/file-operations/transfer/transfer-progress-state.svelte.ts": {
       "lines": 1003,
@@ -241,13 +237,13 @@
       "lines": 983,
       "reason": "TODO: split; two blocks aren't directory ops at all. `handle_device_disconnected` plus the `disconnect_test_hooks` tally (roughly 90 lines) is session teardown and belongs beside its documented counterpart in `session_reset.rs`, and `clear_all_listing_caches` / `clear_listing_caches_for_device` / `invalidate_listing_cache` (roughly 55 lines) belong in `cache.rs`, which already owns `ListingCache`. Then move the background scan path (`list_directory_for_scan` and `list_directory_inner_with_progress`, roughly 270 lines of yield-point and metadata-batch work that foreground listings deliberately avoid) to a sibling `scan_listing.rs`, leaving the foreground path with `fresh_cached_listing`, `finalize_listing`, and `entry_for_object` at roughly 530 lines."
     },
-    "crates/cmdr-mtp/src/volume/volume_impl.rs": {
-      "lines": 806,
-      "reason": "TODO: the one `impl Volume` block can't span files, but `rename`'s body (about 120 lines: the no-clobber `exists` probe, the twin-aware handle resolution, and the forced-rename path) is real logic, not dispatch. Move it into a `pub(super)` inherent `rename_impl` in a new `volume/rename.rs`, leaving a one-line delegator, the shape `cmdr-smb`'s `volume_impl.rs` and `cmdr-local`'s `local_posix.rs` already follow; that leaves about 690 lines of dispatch and capability answers."
-    },
     "crates/cmdr-mtp/src/connection/mod.rs": {
       "lines": 1204,
       "reason": "TODO: split; the file even carries a comment listing which impl blocks live in submodules, and two more belong there. Move `connect` with `resolve_device_location_id`, `open_device`, `probe_write_capability`, and `get_storages` (roughly 400 lines, one device-open conversation end to end) to `connect.rs`, and the storage-level handlers `handle_storage_added`, `handle_storage_removed`, `invalidate_storage_cache`, and `get_live_storage_space` (roughly 230) to `storage_ops.rs`. That leaves the vocabulary (`MtpDisconnectReason`, `DeviceWatch`, `MtpObjectInfo`, `ConnectedDeviceInfo`, `DeviceEntry`), the `MtpConnectionManager` struct, the priority-gate accessors, `disconnect`, and the small path and icon helpers at roughly 500 lines."
+    },
+    "crates/cmdr-mtp/src/volume/volume_impl.rs": {
+      "lines": 806,
+      "reason": "TODO: the one `impl Volume` block can't span files, but `rename`'s body (about 120 lines: the no-clobber `exists` probe, the twin-aware handle resolution, and the forced-rename path) is real logic, not dispatch. Move it into a `pub(super)` inherent `rename_impl` in a new `volume/rename.rs`, leaving a one-line delegator, the shape `cmdr-smb`'s `volume_impl.rs` and `cmdr-local`'s `local_posix.rs` already follow; that leaves about 690 lines of dispatch and capability answers."
     },
     "crates/cmdr-operation-log/src/rollback.rs": {
       "lines": 947,

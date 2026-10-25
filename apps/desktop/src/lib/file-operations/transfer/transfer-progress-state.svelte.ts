@@ -50,7 +50,12 @@
  * need no reactivity. Don't convert them to `$state`.
  */
 
-import { cancelOperation, type TransferActivity, type WriteCancelledEvent } from '#lib/tauri-commands/index.js'
+import {
+  cancelOperation,
+  releaseTransferTree,
+  type TransferActivity,
+  type WriteCancelledEvent,
+} from '#lib/tauri-commands/index.js'
 import { showQueueHandoffToast } from '#lib/file-operations/queue/queue-handoff-toast.js'
 import {
   beginForegroundClaim,
@@ -875,7 +880,14 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     // The catch-all release: completion, cancel, error, and any other unmount
     // all land here. `clearForegroundOperation` no-ops if a later dialog already
     // took the slot.
-    if (operationId) clearForegroundOperation(operationId)
+    if (operationId) {
+      clearForegroundOperation(operationId)
+      // The backend keeps a settled operation's tree for this dialog's last
+      // pulls; nothing shows it now, so it can go before its safety TTL.
+      releaseTransferTree(operationId).catch((error: unknown) => {
+        log.warn('Releasing the transfer tree of op={operationId} failed: {error}', { operationId, error })
+      })
+    }
     clearWindDownTimers()
     clearSettledWithoutEndingTimer()
   }
@@ -997,9 +1009,14 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     get activity(): TransferActivity | null {
       return session()?.progress?.activity ?? null
     },
-    /** The last progress tick, for a view that pulls on each (the transfer tree). */
+    /** The last progress tick, for a view that pulls on each (the transfer tree),
+     *  and the settle after it: a transfer faster than the tree's throttled pull
+     *  settles before the pull that would show its end, so the settle is the tick
+     *  that fetches its final rows (the backend keeps a finished tree until
+     *  `destroy` releases it). */
     get progressTick(): unknown {
-      return session()?.progress ?? null
+      const op = session()
+      return [op?.progress ?? null, op?.settleEventReceived ?? false]
     },
     /** This operation's backend id, `null` until the start command answers. The
      *  dialog needs it to exclude itself from the queue it's asking about. */

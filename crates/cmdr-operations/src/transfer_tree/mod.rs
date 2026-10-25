@@ -188,6 +188,12 @@ impl TransferTreeSlot {
         self.tree.get()
     }
 
+    /// The tree itself, for the manager to keep past the settle
+    /// (`finished_trees.rs`). `None` before the scan built one.
+    pub(crate) fn shared(&self) -> Option<Arc<TransferTree>> {
+        self.tree.get().cloned()
+    }
+
     /// What a driver reports through: the tree, or nothing to report to.
     pub(crate) fn reporter(&self) -> TreeReporter {
         TreeReporter::new(self.tree.get().cloned())

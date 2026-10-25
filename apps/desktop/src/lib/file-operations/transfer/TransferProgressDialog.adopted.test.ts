@@ -52,6 +52,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   pauseOperation: vi.fn(() => Promise.resolve()),
   resumeOperation: vi.fn(() => Promise.resolve()),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
+  releaseTransferTree: vi.fn(() => Promise.resolve()),
   listOperations: vi.fn(() =>
     Promise.resolve<OperationSnapshot[]>([
       {

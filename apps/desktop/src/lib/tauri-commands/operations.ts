@@ -86,6 +86,13 @@ export async function getTransferTreeView(
   return res.status === 'ok' ? res.data : { refusal: res.error }
 }
 
+/** The dialog showing an operation's tree closed. A settled operation keeps its
+ *  tree so that dialog can pull its final rows; this lets it go before the
+ *  backend's safety TTL does. A no-op for a running operation. */
+export async function releaseTransferTree(operationId: string): Promise<void> {
+  await commands.releaseTransferTree(operationId)
+}
+
 /** Cancel one operation, keeping already-copied files (rollback = false). A
  *  queued op is dropped before it spawns; a running/paused op stops and keeps
  *  partials. */

@@ -30,6 +30,8 @@ vi.mock('../progress-readout', async (importOriginal) =>
 vi.mock('#lib/logging/logger.js', async () => (await import('./test-transfer-progress-harness.svelte')).loggerMock())
 
 import { createTransferProgressState } from './transfer-progress-state.svelte'
+import { releaseTransferTree } from '#lib/tauri-commands/index.js'
+import { dependOn } from '#lib/utils/reactivity.js'
 import { listeners, snapshot, useTransferProgressState } from './test-transfer-progress-harness.svelte'
 
 const { startedState } = useTransferProgressState(createTransferProgressState)
@@ -114,6 +116,38 @@ describe('createTransferProgressState: the done state', () => {
     complete()
 
     expect(state.done?.elapsedMs).toBe(60_000)
+  })
+
+  it('ticks the tree once more when the operation settles, so it pulls the final rows', async () => {
+    // #702: a copy faster than the tree's 200 ms pull settled before the pull
+    // that would have shown its end, and the done dialog kept rows that said
+    // every file was still waiting. The settle is the tick that fetches them.
+    const { state } = await startedState({ keepOpenWhenDone: () => true, onDoneClosed: vi.fn() })
+    let ticks = 0
+    const stop = $effect.root(() => {
+      $effect(() => {
+        dependOn(state.progressTick)
+        ticks++
+      })
+    })
+    complete()
+    const beforeSettle = ticks
+
+    if (!listeners.settled) throw new Error('settle subscriber never registered')
+    listeners.settled({ operationId: 'op-1', operationType: 'copy' })
+    flushSync()
+
+    expect(ticks).toBeGreaterThan(beforeSettle)
+    stop()
+  })
+
+  it('lets the backend drop the finished tree when the dialog goes away', async () => {
+    const { state } = await startedState({ keepOpenWhenDone: () => true, onDoneClosed: vi.fn() })
+    complete()
+
+    state.destroy()
+
+    expect(releaseTransferTree).toHaveBeenCalledWith('op-1')
   })
 
   it('has no time to report when the backend never said when it started', async () => {
