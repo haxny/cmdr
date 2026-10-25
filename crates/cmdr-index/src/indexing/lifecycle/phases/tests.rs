@@ -519,11 +519,33 @@ impl Drive {
         IndexStore::get_meta(&conn, key).ok().flatten()
     }
 
-    /// Wait for the machine to report it has nothing left to do.
+    /// Wait for the machine to report it has nothing left to do, AND for every
+    /// machine that started on this drive to have run its last line.
+    ///
+    /// ⚠️ "Not scanning" alone is not the end: `finish` clears `working` BEFORE it
+    /// announces the closing `Idle`, so a test counting events off that answer
+    /// raced the machine's own tail and read one phase change short (#732).
     fn wait_for_the_machine(&self) {
         cmdr_fs::testing::wait_until(std::time::Duration::from_secs(30), "the phases to finish", || {
             !self.index.status(self.volume_id).is_ok_and(|status| status.scanning)
+                && super::exits::count(self.volume_id) >= self.machines_started()
         });
+    }
+
+    /// How many phase machines announced a run on this drive. Each one ends with
+    /// one entry in `exits`.
+    fn machines_started(&self) -> usize {
+        self.events
+            .events()
+            .into_iter()
+            .filter(|event| {
+                matches!(
+                    event,
+                    crate::indexing::events::IndexEvent::ScanStarted { volume_id, covered_in_phases: true, .. }
+                        if volume_id == self.volume_id
+                )
+            })
+            .count()
     }
 
     fn scans_started(&self) -> usize {
