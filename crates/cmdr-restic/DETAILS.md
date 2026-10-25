@@ -154,8 +154,9 @@ never does.
   MiB): the adapter answers rustic's `list_with_size(Index)` with the load's listing, and each `read_full(Index)` takes
   that file from the feed, blocking its decoder until it's in, so the bytes go the moment rustic has them. A cancel
   answers at once; reads in flight are DETACHED and stop at their next chunk, ❌ never aborted (a read dropped inside a
-  device transaction can wedge a phone), and a decoder waiting on the feed hears `Cancelled`. The same path serves every
-  index size: ❌ no cutoff where rustic reads the files itself.
+  device transaction can wedge a phone), a read spawned before the cancel whose task only runs after it opens nothing
+  (`read_one` checks first), and a decoder waiting on the feed hears `Cancelled`. The same path serves every index size:
+  ❌ no cutoff where rustic reads the files itself.
 - **What the window reads ahead.** rustic's decoders each walk a contiguous run of the listing, starting wherever rayon
   split it, so the feed reads, in order: a file a decoder waits on (always, window or not), the file after each one
   asked for, then the listing in order. Reading ahead stops at four files in flight (`READS_AHEAD`) or when the window

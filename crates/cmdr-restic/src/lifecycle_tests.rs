@@ -340,14 +340,14 @@ async fn the_last_waiter_leaving_cancels_the_load_and_the_next_listing_starts_fr
     let listing = spawn_listing(&volume, latest(ROOT), Some(cancel.clone()));
     wait_until_async(WITHIN, "the load is reading", || parent.in_flight() > 0).await;
 
-    let cancelled_at = std::time::Instant::now();
+    // The gate stays shut until the answer is in, so any answer at all is one
+    // that didn't wait on the reads: no wall clock needed to say "at once".
     cancel.cancel();
-    let answer = listing.await.expect("task");
+    let answer = tokio::time::timeout(WITHIN, listing)
+        .await
+        .expect("the pane hears without the reads finishing")
+        .expect("task");
     assert!(matches!(answer, Err(VolumeError::Cancelled(_))), "got {answer:?}");
-    assert!(
-        cancelled_at.elapsed() < Duration::from_secs(1),
-        "the pane hears at once"
-    );
 
     // The reads held at the gate finish their round trip, and nothing new starts.
     let started = parent.index_reads();

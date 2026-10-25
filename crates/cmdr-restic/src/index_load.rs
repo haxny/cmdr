@@ -331,6 +331,11 @@ async fn read_one(
     start: Start,
     feed: Arc<IndexFeed>,
 ) -> Result<(), VolumeError> {
+    // Its task can first run well after the load was cancelled (a busy
+    // runtime): a read that never left opens nothing.
+    if feed.cancel().is_cancelled() {
+        return Ok(());
+    }
     let mut stream = parent.open_read_stream(&path).await?;
     let mut bytes = Vec::with_capacity(usize::try_from(start.reserve).unwrap_or(0));
     while let Some(chunk) = stream.next_chunk().await {

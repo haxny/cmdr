@@ -119,3 +119,26 @@ async fn rustic_decodes_the_index_on_the_loads_own_pool() {
         "every file was served to a thread of the load's pool: {threads:?}"
     );
 }
+
+/// ❗ A read the feed let start before a cancel, whose task only runs after it,
+/// opens nothing: the reads in flight finish their round trip, but no new one
+/// leaves for the parent once nobody wants the index. On a loaded box a
+/// spawned read's task can first run long after its load was cancelled.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_read_whose_task_runs_after_the_cancel_opens_nothing() {
+    let fixture = fixture().await;
+    let dir = Path::new(ROOT).join("index");
+    let files = super::index_files(fixture.parent.as_ref(), &dir).await.expect("listed");
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let (progress, _) = tokio::sync::watch::channel(None);
+    let feed = Arc::new(super::IndexFeed::new(files, u64::MAX, cancel.clone(), progress));
+    let start = feed.next_read().expect("a read may start");
+    cancel.cancel();
+
+    // An empty parent: any open answers `NotFound`.
+    let empty: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("naspi"));
+    let path = dir.join(&*start.id.to_hex());
+    let read = super::read_one(empty, path, start, feed).await;
+
+    assert!(read.is_ok(), "the read opened its file after the cancel: {read:?}");
+}
