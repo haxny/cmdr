@@ -180,6 +180,12 @@ async fn a_dial_every_joined_attempt_called_off_leaves_nothing_behind() {
         "adb-called-off-second",
     ));
     wait_until_joined("adb-called-off-second", SERIAL, 2).await;
+    // Joining happens before the spawned dial reaches the wire, so a cancel on
+    // the join alone can call it off before it asks anything (0 dials seen).
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "the dial to reach the phone", || {
+        dials_seen(&fake) == 1
+    })
+    .await;
 
     assert!(cancel_connect("adb-called-off-first"));
     assert!(cancel_connect("adb-called-off-second"));
