@@ -5,8 +5,9 @@
 //! drop or to another repo, and the next file paid a reload.
 
 use crate::event_sinks::{CollectorEventSink, OperationEventSink};
+use crate::manager::{DeferredStart, ManagedTaskGuard, OperationDescriptor};
 use crate::testing::{TestOperations, pause_write_operation, resume_write_operation};
-use crate::types::VolumeCopyConfig;
+use crate::types::{OperationSummaryText, RollbackSupport, VolumeCopyConfig, WriteOperationType};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
@@ -14,6 +15,7 @@ use cmdr_operation_log::types::{Initiator, OperationId};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::oneshot;
 
 const WITHIN: Duration = Duration::from_secs(10);
 
@@ -35,13 +37,46 @@ async fn volumes(name: &str) -> (Arc<InMemoryVolume>, Arc<dyn Volume>) {
     (source, dest)
 }
 
-/// Starts a copy of both files, paused before its first one.
+/// Holds `source`'s lane with a placeholder operation until the returned sender
+/// fires, so a copy started meanwhile waits Queued.
+async fn hold_the_lane(engine: &TestOperations, source: &InMemoryVolume) -> oneshot::Sender<()> {
+    let id = OperationId::from(format!("lane-holder-{}", source.lane_key().as_str()));
+    let (started_tx, started_rx) = oneshot::channel();
+    let (release_tx, release_rx) = oneshot::channel::<()>();
+    let descriptor = OperationDescriptor {
+        operation_id: id.clone(),
+        operation_type: WriteOperationType::Copy,
+        lanes: vec![source.lane_key()],
+        volume_ids: vec![],
+        summary: OperationSummaryText::default(),
+        rollback_support: RollbackSupport::Supported,
+        preview_id: None,
+        reverses: None,
+    };
+    let deferred: DeferredStart = Box::new(move |ops: crate::Operations| {
+        Box::pin(async move {
+            let guard = ManagedTaskGuard::new(ops.manager(), id.clone());
+            let _ = started_tx.send(());
+            let _ = release_rx.await;
+            guard.disarm();
+            ops.manager().on_settled(&id);
+        })
+    });
+    engine.manager().spawn_managed(descriptor, engine.new_state(), deferred);
+    started_rx.await.expect("the placeholder holds the lane");
+    release_tx
+}
+
+/// Starts a copy of both files, paused before its first one. It waits Queued
+/// behind [`hold_the_lane`] until the pause is in: started on free lanes, it
+/// could finish both files before the pause lands (a raced test, #732).
 async fn paused_copy(
     engine: &TestOperations,
     source: &Arc<InMemoryVolume>,
     dest: &Arc<dyn Volume>,
     events: &Arc<CollectorEventSink>,
 ) -> OperationId {
+    let lane = hold_the_lane(engine, source).await;
     let sink: Arc<dyn OperationEventSink> = Arc::clone(events) as Arc<dyn OperationEventSink>;
     let started = engine
         .copy_between_volumes(
@@ -60,6 +95,7 @@ async fn paused_copy(
         .expect("the copy starts");
     let id = OperationId::from(started.operation_id);
     assert!(pause_write_operation(engine, &id), "the copy is live");
+    lane.send(()).expect("the placeholder still holds the lane");
     id
 }
 
