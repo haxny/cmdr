@@ -527,6 +527,11 @@
         text-align: left;
         color: var(--color-text-primary);
         font-size: var(--font-size-sm);
+        /* Words stay whole. The body's inherited `overflow-wrap: anywhere` gives
+           every flex item here a one-character minimum, so a squeezed head broke
+           "You" into "Yo / u" (#700). `break-word` still breaks a word that alone
+           outgrows the line, but never shrinks an item below its longest word. */
+        overflow-wrap: break-word;
     }
 
     .op-head:hover {
@@ -542,8 +547,12 @@
         font-weight: 600;
     }
 
+    /* Wraps between its parts (who, the dot, when) rather than inside them, so a
+       long initiator ("Agent, avec vos modifications") or a narrow row moves the
+       time down a line. */
     .op-meta {
         display: inline-flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--spacing-xs);
         color: var(--color-text-tertiary);

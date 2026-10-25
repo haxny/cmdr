@@ -156,11 +156,15 @@ exception is visible at the one place it applies instead of the rule being off f
 so a padded `<p>` can't pass on its box alone) of each title and its first body section.
 
 **The body wraps unbreakable tokens** (`overflow-wrap: anywhere`). A path, a URL, or a long filename has no break
-opportunity inside its last segment, so without it the string overflows the inset and runs to the panel edge. A dialog
-with a button layout the footer can't express (a grid of choices, equal-width buttons) keeps its buttons in `children`
-behind the rule's opt-out, right-aligns them itself, and keeps them from wrapping itself too (the clash prompt's grid
-sizes to `max-content`); genuinely centered content (spinners, progress bars, numeric readouts, hero panels like
-`AboutWindow`) stays centered.
+opportunity inside its last segment, so without it the string overflows the inset and runs to the panel edge.
+**Gotcha/Why: it also gives every flex or grid item in the body a one-character minimum width**, so a squeezed row
+breaks a short label mid-word ("Yo / u" in the operation log's head at 125 % zoom, "Resu / me" in its rollback
+controls). A row of labels in a body therefore resets it: `overflow-wrap: break-word` on the row keeps words whole (only
+a word that alone outgrows the line breaks), and a label that must stay on one line (a pill, a button, a status word)
+sets `white-space: nowrap`, as `Button`, `Chip`, and `StatusBadge` do. A dialog with a button layout the footer can't
+express (a grid of choices, equal-width buttons) keeps its buttons in `children` behind the rule's opt-out, right-aligns
+them itself, and keeps them from wrapping itself too (the clash prompt's grid sizes to `max-content`); genuinely
+centered content (spinners, progress bars, numeric readouts, hero panels like `AboutWindow`) stays centered.
 
 **The panel must never become a containing block for `position: fixed`.** The drag offset rides on `left` / `top`
 against the panel's own `position: relative`. ❌ Don't move it to a `transform`, and don't add `filter`,

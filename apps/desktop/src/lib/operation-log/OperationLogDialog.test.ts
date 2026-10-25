@@ -10,6 +10,7 @@ import { mount, tick } from 'svelte'
 import type { NotRollbackableReason, OperationRow } from '#lib/ipc/bindings.js'
 import type { OperationLogDetail } from '#lib/tauri-commands/index.js'
 import OperationLogDialog from './OperationLogDialog.svelte'
+import operationLogDialogSource from './OperationLogDialog.svelte?raw'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { operationLogState, closeOperationLog } from './operation-log-trigger.svelte'
 import { RollbackRefusalFailure } from './rollback-refusal'
@@ -106,6 +107,17 @@ describe('OperationLogDialog', () => {
     expect(target.textContent).toContain('AI client')
     // One collapsible row per operation.
     expect(target.querySelectorAll('.op').length).toBe(2)
+  })
+
+  // Read off the stylesheet: the unit environment carries no CSS, so
+  // `getComputedStyle` can't answer. `ModalDialog`'s body sets `overflow-wrap:
+  // anywhere`, which every row inherits and which gives each flex item a
+  // one-character minimum, so a squeezed head broke "You" into "Yo / u" at 125 %
+  // zoom (#700). `break-word` keeps words whole unless one alone outgrows the line,
+  // and the meta line wraps between its parts rather than inside them.
+  it('keeps the head’s words whole however narrow the row gets', () => {
+    expect(operationLogDialogSource).toMatch(/\.op-head\s*\{[^}]*overflow-wrap:\s*break-word/)
+    expect(operationLogDialogSource).toMatch(/\.op-meta\s*\{[^}]*flex-wrap:\s*wrap/)
   })
 
   it('shows the ALPHA badge', async () => {

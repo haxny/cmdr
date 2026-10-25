@@ -30,5 +30,7 @@
         color: var(--color-text-primary);
         border-radius: var(--radius-xs);
         line-height: var(--font-line-height-flat);
+        /* A pill never wraps; inside a dialog body it would inherit `overflow-wrap: anywhere`. */
+        white-space: nowrap;
     }
 </style>

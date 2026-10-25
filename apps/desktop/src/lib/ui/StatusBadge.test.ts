@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount, unmount } from 'svelte'
 import StatusBadge from './StatusBadge.svelte'
+import statusBadgeSource from './StatusBadge.svelte?raw'
 
 function mountBadge(status: 'alpha' | 'beta') {
   const target = document.createElement('div')
@@ -15,6 +16,13 @@ describe('StatusBadge', () => {
     const badge = target.querySelector('.feature-status-badge')
     expect(badge?.textContent).toBe('alpha')
     await unmount(component)
+  })
+
+  // Off the stylesheet: the unit environment carries no CSS. A badge sits in flex
+  // rows inside dialog bodies, whose inherited `overflow-wrap: anywhere` would let a
+  // squeezed pill break mid-word.
+  it('never wraps', () => {
+    expect(statusBadgeSource).toMatch(/\.feature-status-badge\s*\{[^}]*white-space:\s*nowrap/)
   })
 
   it('renders the beta status text', async () => {
