@@ -124,10 +124,10 @@ fn the_drive_keeps_indexing_at_its_new_mount_point(drive: &ColdDrive, patience: 
     let followed = drive.index.follow_volume_move(drive.volume_id);
     assert!(holds(drive, PROOF), "following the move deletes nothing it held");
 
-    // No redo possible: the gap file has to predate the move. The test doesn't wait
-    // for the first index to complete, so either restart can catch it: a completed
-    // drive's reconciles by LISTING its new root, and one still in phases replays
-    // the JOURNAL from the id it stored at the old root.
+    // No redo possible: the gap file has to predate the move. The drive's first
+    // index completed (`an_indexed_drive`), so the restart reconciles by LISTING
+    // its new root, which finds it on any watcher. The in-phases restart, which
+    // can only replay a JOURNAL, is `a_rename_between_a_walks_last_row_...`.
     cmdr_fs::testing::wait_until(
         patience,
         "the restart at the new mount point to replay what arrived in the gap",
@@ -328,13 +328,15 @@ fn a_rename_while_a_scan_starts_restarts_the_drive_at_the_handback() {
 /// (`pnpm check disk-images`, or `--include-slow` on a Mac).
 #[cfg(target_os = "macos")]
 mod real_journal {
-    use super::super::toggles::indexed;
+    use super::super::toggles::with_its_proof_row;
     use super::*;
 
     #[test]
     #[ignore = "real fseventsd replay; runs in the opt-in macOS disk-image lane"]
     fn fsevents_replays_a_renamed_drives_journal_from_the_id_stored_at_the_old_path() {
-        let drive = indexed(ColdDrive::watched_for_real("cover-move-real-journal-test"));
+        // ❌ Not `indexed`, which waits for the completion marker: a completed drive
+        // restarts by LISTING its new root, and the replay is what this pins.
+        let drive = with_its_proof_row(ColdDrive::watched_for_real("cover-move-real-journal-test"));
         the_drive_keeps_indexing_at_its_new_mount_point(&drive, std::time::Duration::from_secs(60));
     }
 }

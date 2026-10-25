@@ -20,17 +20,38 @@ fn turn_off(drive: &ColdDrive) {
 /// is one question with one answer.
 const PROOF: &str = "scope/found.txt";
 
-/// A drive with one file on it, already indexed and SETTLED.
+/// A drive with one file on it, already indexed and SETTLED: its first index
+/// has completed, and nothing is walking it.
 ///
-/// ⚠️ The settle is load-bearing, not tidiness: the first index announces itself
-/// asynchronously, so a `scans_started()` baseline read before it lands counts
-/// that walk against whatever the test does next.
+/// ⚠️ The settle is load-bearing, not tidiness, and it means COMPLETED, ❌ not
+/// "the proof row landed":
+/// - the first index announces itself asynchronously, so a `scans_started()`
+///   baseline read before it lands counts that walk against whatever the test
+///   does next;
+/// - a drive still in phases restarts as one, which catches what changed while it
+///   was down only by replaying a journal. inotify has none, so on Linux a rename
+///   landing before the completion marker left the gap file unfindable, and the
+///   move tests raced their own first index (#732). A test that wants the
+///   in-phases restart arranges it on purpose (`finish_gate`).
 pub(super) fn an_indexed_drive(volume_id: &'static str) -> ColdDrive {
     indexed(ColdDrive::new(volume_id))
 }
 
-/// The same drive turned on and indexed, from whichever fixture the test needs.
-pub(super) fn indexed(drive: ColdDrive) -> ColdDrive {
+/// The drive turned on, its first index completed.
+fn indexed(drive: ColdDrive) -> ColdDrive {
+    let drive = with_its_proof_row(drive);
+    cmdr_fs::testing::wait_until(
+        std::time::Duration::from_secs(20),
+        "the first index to complete",
+        || drive.has_completed() && !drive.index.status(drive.volume_id).is_ok_and(|status| status.scanning),
+    );
+    drive
+}
+
+/// The drive turned on, waited on only until its proof row lands: its first index
+/// may still be in phases, or may have completed. Only for a test that needs the
+/// in-phases state and accepts that race; the rest want [`indexed`].
+pub(super) fn with_its_proof_row(drive: ColdDrive) -> ColdDrive {
     std::fs::create_dir_all(drive.tree.path().join("scope")).expect("dirs");
     std::fs::write(drive.tree.path().join(PROOF), "x").expect("file");
     turn_on(&drive);

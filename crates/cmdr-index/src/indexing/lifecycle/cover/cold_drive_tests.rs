@@ -168,6 +168,13 @@ impl ColdDrive {
         IndexStore::read_current_epoch(&conn).expect("current epoch")
     }
 
+    /// Whether this drive's index carries its completion marker.
+    fn has_completed(&self) -> bool {
+        IndexStore::open_read_connection(&self.db_path())
+            .and_then(|conn| IndexStore::get_meta(&conn, "scan_completed_at"))
+            .is_ok_and(|stamp| stamp.is_some())
+    }
+
     /// Mark this drive's index as one whose scan completed.
     ///
     /// What makes a "Rescan now" on it a full (re)scan rather than a phased build,
