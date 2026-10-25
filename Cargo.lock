@@ -2030,6 +2030,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmdr-tags"
+version = "0.0.0"
+dependencies = [
+ "cmdr-media-meta",
+ "lofty",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "cmdr-update-trust"
 version = "0.0.0"
 dependencies = [
