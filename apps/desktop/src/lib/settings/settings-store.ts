@@ -30,6 +30,7 @@ import {
   type ManagedPolicyChange,
 } from '#lib/managed-policy/managed-policy.svelte.js'
 import { lockAllowsWrite, lockedValue } from '#lib/managed-policy/overlay.js'
+import { createSettingsWriter } from './settings-writer'
 
 const log = getAppLogger('settings')
 
@@ -51,8 +52,6 @@ interface SettingChangedPayload {
 // ============================================================================
 
 let storeInstance: Store | null = null
-let saveTimeout: ReturnType<typeof setTimeout> | null = null
-const SAVE_DEBOUNCE_MS = 500
 
 // In-memory cache of settings for synchronous access. A `Map` (not a plain
 // object) so unsetting a key on reset is a `.delete(id)` call, not the
@@ -61,18 +60,11 @@ const settingsCache = new Map<string, unknown>()
 
 // Ids an actor explicitly set: the Settings UI, the MCP `set_setting` tool, a
 // migration, or a key found already persisted at load. This is the sparse-
-// persistence ledger — `saveToStore` writes exactly these keys and nothing else.
+// persistence ledger — `writeChangedSettings` writes only these keys.
 // "Explicit" is a STRUCTURAL fact about which mutator ran, never a value
 // comparison against the default: a deliberate choice that equals the default
 // still belongs here, so it survives a future change to that default.
 const explicitlySet = new Set<SettingId>()
-
-// Ids THIS window set or reset since its last save: the patch `writeChangedSettings`
-// applies. Windows share one in-memory plugin store per file, and a window opened
-// inside another's save debounce never hears that window's newest value, so saving
-// its WHOLE ledger would delete or roll back a key it never saw. A change heard from
-// another window stays out: that window persists it. DETAILS § Sparse persistence.
-const changedHere = new Set<SettingId>()
 
 let initialized = false
 let crossWindowUnlisten: UnlistenFn | null = null
@@ -466,9 +458,7 @@ export function setSetting<K extends SettingId>(id: K, value: SettingsValues[K])
       log.debug('Restricted window: {id} change is session-only (not in the persist allowlist)', { id })
     }
   } else {
-    // Debounced save to disk
-    changedHere.add(id)
-    scheduleSave()
+    recordChange(id)
   }
 
   // Notify local listeners
@@ -499,8 +489,7 @@ export function persistSettingFromRestrictedWindow<K extends SettingId>(id: K, v
   const valueChanged = !isUnchanged(settingsCache.get(id), value)
   settingsCache.set(id, value)
   explicitlySet.add(id)
-  changedHere.add(id)
-  scheduleSave()
+  recordChange(id)
   if (valueChanged) notifyListeners(id, value)
   void emit(SETTING_CHANGED_EVENT, { id, value, explicit: true } satisfies SettingChangedPayload)
 }
@@ -519,8 +508,7 @@ export function seedSettingForE2E<K extends SettingId>(id: K, value: SettingsVal
   validateSettingValue(id, value)
   settingsCache.set(id, value)
   explicitlySet.add(id)
-  changedHere.add(id)
-  scheduleSave()
+  recordChange(id)
 }
 
 /**
@@ -557,8 +545,7 @@ export function resetSetting(id: SettingId): void {
     // forwarding (the persist command only carries a value, not a delete).
     log.debug('Restricted window: reset of {id} is session-only (not forwarded)', { id })
   } else {
-    changedHere.add(id)
-    scheduleSave()
+    recordChange(id)
   }
 
   notifyListeners(id, defaultValue)
@@ -587,57 +574,29 @@ export function isModified(id: SettingId): boolean {
 // Persistence
 // ============================================================================
 
-function scheduleSave(): void {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout)
-  }
+// This window's write path: each change reaches the plugin store at once, and
+// only the disk save is debounced, so a quit keeps it (`settings-writer.ts`).
+const writer = createSettingsWriter({
+  writePatch: writeChangedSettings,
+  saveToDisk: async () => {
+    const store = await getStore()
+    await store.save()
+    log.info('Settings saved')
+  },
+})
 
-  saveTimeout = setTimeout(() => {
-    void saveToStore().finally(() => {
-      saveTimeout = null
-    })
-  }, SAVE_DEBOUNCE_MS)
+/** A change this window made, set or reset: only these keys are ever written from here. */
+function recordChange(id: SettingId): void {
+  writer.record(id)
 }
 
 /**
- * Writes this window's changes to disk. Returns whether the write landed, so
- * `forceSave()` can report it; the debounced path ignores the result.
- *
- * Takes the pending changes up front, so one made during the write's awaits
- * waits for the save it scheduled. A failed attempt is retried once, and the
- * retry re-runs the WHOLE patch: an attempt can throw partway through, so
- * re-flushing alone would report keys that never reached the store. A patch
- * that never landed goes back into `changedHere` for the next save.
- */
-async function saveToStore(): Promise<boolean> {
-  log.debug('saveToStore() called')
-  const patch = [...changedHere]
-  changedHere.clear()
-
-  try {
-    await writeChangedSettings(patch)
-    return true
-  } catch (error) {
-    log.error('Failed to save settings: {error}', { error })
-    try {
-      log.debug('Retrying save...')
-      await writeChangedSettings(patch)
-      log.info('Retry save succeeded')
-      return true
-    } catch (retryError) {
-      log.error('Retry save failed: {error}', { error: retryError })
-      for (const id of patch) changedHere.add(id)
-      return false
-    }
-  }
-}
-
-/**
- * Applies `patch` to the shared store and saves it: an explicitly-set key is
- * written, any other one (this window reset it) is deleted, so it resolves back
- * to the registry default. Explicit is structural, NEVER a value compare against
- * the default. Keys this window didn't change aren't touched: another window may
- * hold a newer value this one never heard of.
+ * Applies `patch` to the shared store: an explicitly-set key is written, any
+ * other one (this window reset it) is deleted, so it resolves back to the
+ * registry default. Explicit is structural, NEVER a value compare against the
+ * default. Keys this window didn't change aren't touched: another window may
+ * hold a newer value this one never heard of. Stamps the schema version with the
+ * keys, so a quit before the disk write never leaves them unstamped.
  */
 async function writeChangedSettings(patch: readonly SettingId[]): Promise<void> {
   const store = await getStore()
@@ -655,8 +614,7 @@ async function writeChangedSettings(patch: readonly SettingId[]): Promise<void> 
   }
 
   await store.set('_schemaVersion', SCHEMA_VERSION)
-  await store.save()
-  log.info('Settings saved: {saved} explicit values, {removed} reset to default', {
+  log.debug('Settings handed to the store: {saved} explicit values, {removed} reset to default', {
     saved: savedCount,
     removed: removedCount,
   })
@@ -754,7 +712,8 @@ function notifyListeners<K extends SettingId>(id: K, value: SettingsValues[K]): 
 /**
  * Persists every explicitly-set value NOW, and reports whether the write landed.
  *
- * `setSetting` is fire-and-forget behind a 500 ms debounce, which is right for a
+ * `setSetting` is fire-and-forget, and its disk write waits out a 500 ms debounce
+ * (a quit keeps it, a crash inside the debounce doesn't). That's right for a
  * preference: the UI already reflects it, and a dropped write costs a re-toggle.
  * It's wrong for the settings that RECORD SOMETHING THAT HAPPENED — onboarding
  * finishing, the Full Disk Access answer, a terms acceptance. A lost write there
@@ -766,7 +725,7 @@ function notifyListeners<K extends SettingId>(id: K, value: SettingsValues[K]): 
  * Cancels any pending debounce (its work is subsumed) and always writes, even
  * with nothing pending: a caller asking "is it on disk?" wants the disk checked,
  * not the timer inspected. A restricted window has no store, so this reports
- * `false` without touching it — going through `saveToStore` would `log.error`,
+ * `false` without touching it — going through the writer would `log.error`,
  * which auto-reports on every viewer open.
  */
 export async function forceSave(): Promise<boolean> {
@@ -774,11 +733,7 @@ export async function forceSave(): Promise<boolean> {
     log.warn('forceSave() in a restricted window: no store here, nothing was written')
     return false
   }
-  if (saveTimeout) {
-    clearTimeout(saveTimeout)
-    saveTimeout = null
-  }
-  return saveToStore()
+  return writer.save()
 }
 
 /**
@@ -788,8 +743,8 @@ export async function forceSave(): Promise<boolean> {
  * is left unsaved.
  */
 export async function flushSettingsChanges(): Promise<boolean> {
-  if (restrictedWindowMode || changedHere.size === 0) return true
-  return forceSave()
+  if (restrictedWindowMode) return true
+  return writer.flush()
 }
 
 // ============================================================================

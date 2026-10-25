@@ -155,9 +155,16 @@ Mechanics (`settings-store.ts`):
   WHOLE ledger then deleted the new key, or wrote back the older value it loaded, and the next launch read the old value
   (a consent "no" from a toast could revert to "yes"). A closing window calls `flushSettingsChanges()`, which writes
   nothing when that window changed nothing. A key that leaves the registry needs a `migrateSettings()` case that deletes
-  it, and an invalid stored value is deleted at load. A failed write is retried once, and the retry re-runs the whole
-  patch (an attempt can throw partway through), so `forceSave()` answering `true` means every pending change landed; a
-  patch that never lands goes back for the next save.
+  it, and an invalid stored value is deleted at load. A failed write is retried once, and the retry re-pushes every
+  change that didn't land (an attempt can throw partway through), so `forceSave()` answering `true` means every pending
+  change landed; a patch that never lands goes back for the next save.
+- **A change reaches the plugin store at once; only the disk write is debounced** (`settings-writer.ts`, which owns
+  `changedHere`, the queue, and the debounce; `settings-store.ts` supplies what a write means). The plugin holds the
+  store in Rust memory and saves every loaded store at `RunEvent::Exit`, so a quit keeps anything that reached it. Store
+  writes go through one queue because the plugin's commands are async: two in flight could land out of order, a picker
+  preview on top of the pick made after it. ❌ Don't fold the store write back into the debounce: a quit inside it
+  dropped the change (#698, the language picker and `keepProgressOpenWhenDone`). Pinned by
+  `settings-store.quit.test.ts`.
 - **`resetSetting()` UNSETS** (drops from the ledger, deleted on this window's next save); it does not write the default
   back.
 - **`migrateSettings()` saves only when it changed a value or the file is already populated**, so a brand-new install
@@ -723,8 +730,9 @@ SMB credentials. See `src-tauri/src/secrets/CLAUDE.md`.
 
 ### Why debounced saves?
 
-Users often change multiple related settings in quick succession (e.g., tweaking slider values). Debouncing reduces disk
-I/O from potentially hundreds of writes to one per change batch.
+Users often change multiple related settings in quick succession (for example, tweaking slider values). Debouncing the
+disk write reduces disk I/O from potentially hundreds of writes to one per change batch. The cheap in-memory store write
+is not debounced (§ Sparse persistence), so a quit inside the window loses nothing.
 
 ### Why cross-window sync?
 
@@ -771,8 +779,10 @@ schema bump.
 
 ### Settings cache is write-through
 
-`setSetting()` updates both the in-memory cache and schedules a debounced save. If the app crashes between the cache
-update and the save, the change is lost. This is acceptable for settings (worst case: revert to old value on restart).
+`setSetting()` updates the in-memory cache, hands the change to the plugin store, and schedules a debounced disk save. A
+normal quit keeps it (the plugin saves at exit); a crash or force-quit inside the debounce loses it. This is acceptable
+for settings (worst case: revert to old value on restart); a setting that records something that happened awaits
+`forceSave()`.
 
 ### Shortcut menu sync is manual
 
