@@ -52,12 +52,14 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   `move_cross::move_volumes_with_progress` when a rename copies (§ "A same-volume move whose renames copy"), and
   `move_cross` names nothing back, so the edge stays one-way.
 - **`conflict.rs` DECIDES; two thin siblings act and answer.** The resolver keeps the policy (`resolve_volume_conflict`,
-  `apply_volume_conflict_resolution`, the conditional reduction). `landing.rs` answers where a name lands before any of
-  that (§ "Look-alike names and new-name spelling"). A file Overwrite's swap is no resolver's business either: the
-  resolver answers `Replaces::Swap`, and the write's own landing makes it (`../staged_write.rs`,
-  `WriteStaging::StageOverOriginal`), at every write site alike. `item_identity.rs` holds `is_the_same_item` /
-  `is_the_same_volume_path`, asked by three callers that resolve no conflict at all (`copy.rs`'s bulk skip,
-  `move_same.rs`, `../../routing.rs`'s pre-flight). Neither belongs behind a policy module the callers don't want.
+  `apply_volume_conflict_resolution`, the conditional reduction). `top_level_conflict.rs` is the serial copy's and
+  cross-volume move's top-level resolver closure, built from ONE capture set (`TopLevelConflicts`) so the two drivers
+  can't drift on what it reads. `landing.rs` answers where a name lands before any of that (§ "Look-alike names and
+  new-name spelling"). A file Overwrite's swap is no resolver's business either: the resolver answers `Replaces::Swap`,
+  and the write's own landing makes it (`../staged_write.rs`, `WriteStaging::StageOverOriginal`), at every write site
+  alike. `item_identity.rs` holds `is_the_same_item` / `is_the_same_volume_path`, asked by three callers that resolve no
+  conflict at all (`copy.rs`'s bulk skip, `move_same.rs`, `../../routing.rs`'s pre-flight). Neither belongs behind a
+  policy module the callers don't want.
 - **`conflict.rs`'s tests are three `#[path]` children, one per question the resolver answers**: `conflict_tests.rs`
   (merge safety, what a file Overwrite resolves to), `conflict_conditional_tests.rs` (`OverwriteSmaller` /
   `OverwriteOlder`, on hints and on `get_metadata`), and `conflict_cross_type_tests.rs` (a blanket policy never crosses

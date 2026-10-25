@@ -31,11 +31,9 @@ use super::super::super::types::{
 };
 use super::super::left_in_source::LeftInSource;
 use super::super::transfer_driver::{
-    ConflictDecision, ConflictDecisionInput, DriverConfig, LeafProgressLedger, PostLoopIntent, ResolveFut,
-    TransferContext, TransferFut, TransferOutcome, build_pre_skip_set, drive_transfer_serial_async,
-    emit_source_outcome,
+    DriverConfig, LeafProgressLedger, PostLoopIntent, TransferContext, TransferFut, TransferOutcome,
+    build_pre_skip_set, drive_transfer_serial_async, emit_source_outcome,
 };
-use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::DisplacedLedger;
 use super::preflight::SourceFileFacts;
 use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
@@ -309,95 +307,20 @@ pub async fn move_volumes_with_progress(
             state, &dest_volume, Some(Arc::clone(&op_probe)), super::landing::NewName::Respell,
             config.destination_name.as_deref(),
         ),
-        {
-            let source_volume = Arc::clone(&source_volume);
-            let dest_volume = Arc::clone(&dest_volume);
-            let state = Arc::clone(state);
-            let events = Arc::clone(&events);
-            let apply_to_all = Arc::clone(&apply_to_all_cell);
-            let source_hints = Arc::clone(&source_hints);
-            let config = config_owned.clone();
-            let operation_id = operation_id_owned.clone();
-            let op_probe_conflict = Arc::clone(&op_probe);
-            let displaced = Arc::clone(&displaced);
-            move |input: ConflictDecisionInput<'_>| -> ResolveFut<'_> {
-                let displaced = Arc::clone(&displaced);
-                let source_volume = Arc::clone(&source_volume);
-                let dest_volume = Arc::clone(&dest_volume);
-                let state = Arc::clone(&state);
-                let events = Arc::clone(&events);
-                let apply_to_all = Arc::clone(&apply_to_all);
-                let source_hints = Arc::clone(&source_hints);
-                let config = config.clone();
-                let operation_id = operation_id.clone();
-                let op_probe_conflict = Arc::clone(&op_probe_conflict);
-                let source_path_owned = input.source_path.to_path_buf();
-                let initial_dest_owned = input.initial_dest_path.to_path_buf();
-                let dest_size_hint = input.dest_size_hint;
-                Box::pin(async move {
-                    log::debug!(
-                        "move_between_volumes: conflict detected at {}",
-                        LogPrivate::path(&initial_dest_owned)
-                    );
-                    // Parked on a PERSON, unbounded by design and with nothing
-                    // else running. A dump that names it has explained the whole
-                    // stall; `paused=` covers the pause gate and nothing else
-                    // covered this.
-                    op_probe_conflict.set_driver_phase_at(
-                        super::super::transfer_probe::DriverPhase::ResolvingConflict,
-                        None,
-                        &initial_dest_owned,
-                    );
-                    // Reuse the cached scan hint so the conflict dialog
-                    // doesn't re-list the parent dir per conflict on MTP.
-                    let source_hint = source_hints.get(&source_path_owned).copied();
-                    let source_size_hint = source_hint.and_then(|h| (!h.is_directory).then_some(h.size));
-                    // `Some` only when the preflight produced a hint, so the
-                    // resolver keeps its trait-call fallback for the no-hint case.
-                    let source_is_directory_hint = source_hint.map(|h| h.is_directory);
-                    let resolved = resolve_volume_conflict(
-                        &source_volume,
-                        &source_path_owned,
-                        &dest_volume,
-                        &initial_dest_owned,
-                        &config,
-                        &*events,
-                        &operation_id,
-                        &state,
-                        &apply_to_all,
-                        source_size_hint,
-                        dest_size_hint,
-                        source_is_directory_hint,
-                    )
-                    .await;
-                    let resolved = resolved.map_err(|e| e.into_write_error())?;
-                    Ok(match resolved {
-                        None => {
-                            log::debug!(
-                                "move_between_volumes: skipping {} due to conflict resolution",
-                                LogPrivate::path(&source_path_owned)
-                            );
-                            // Credit the source's byte size so the Size bar
-                            // matches the file counter when every source is
-                            // skipped. Dirs report 0 in `source_hints` (the
-                            // recursive total isn't tracked there).
-                            let bytes_accounted = source_hint.map(|h| h.size).unwrap_or(0);
-                            ConflictDecision::Skip { bytes_accounted }
-                        }
-                        Some(rc) => {
-                            if let Some(aside) = rc.displaced {
-                                displaced.hold(aside);
-                            }
-                            ConflictDecision::Proceed {
-                                dest_path: rc.write_path,
-                                replaces: rc.replaces,
-                                dest_name_claimed: rc.reserved_placeholder,
-                            }
-                        }
-                    })
-                })
-            }
-        },
+        super::top_level_conflict::TopLevelConflicts {
+            source_volume: Arc::clone(&source_volume),
+            dest_volume: Arc::clone(&dest_volume),
+            state: Arc::clone(state),
+            events: Arc::clone(&events),
+            apply_to_all: Arc::clone(&apply_to_all_cell),
+            source_hints: Arc::clone(&source_hints),
+            config: config_owned.clone(),
+            operation_id: operation_id_owned.clone(),
+            op_probe: Some(Arc::clone(&op_probe)),
+            displaced: Arc::clone(&displaced),
+            log_label: "move_between_volumes",
+        }
+        .resolver(),
         {
             let source_volume = Arc::clone(&source_volume);
             let dest_volume = Arc::clone(&dest_volume);
