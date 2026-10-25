@@ -15,7 +15,17 @@ async fn must_scan_sub_dirs_queued() {
     // whose directory EXISTS and is young, so an absolute `/test/dir` made this test
     // depend on whatever else on the machine had just created one (it failed that way
     // once in a root-run Linux CI container, 2026-10-20).
-    reconciler.queue_must_scan_sub_dirs(dir.path().join("never-created"), &writer);
+    let anchor = dir.path().join("never-created");
+    // The walk of a missing anchor ends in under a millisecond and re-queues the
+    // ancestor its escalation resolves (`/private` on a Mac) into `pending_rescans`.
+    // Read straight after the enqueue, that raced the walk (#732), so the gate holds
+    // the started walk before its first read while the test looks.
+    let gate = rescan::gate::GateHandle::arm(&anchor);
+    reconciler.queue_must_scan_sub_dirs(anchor, &writer);
+    assert!(
+        gate.wait_until_held(Duration::from_secs(10)),
+        "the rescan thread reaches its walk"
+    );
 
     // Should not have any pending rescans after starting one
     // (it was popped from the set and started)
