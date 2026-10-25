@@ -45,6 +45,8 @@ type ContentionResult struct {
 	Name    string
 	Class   FailureClass
 	Verdict ContentionVerdict
+	// Panic is what the failing parallel run's panic said (`RustFailure.Panic`).
+	Panic string
 }
 
 // ContentionRunner runs the named tests under one nextest profile and returns the raw
@@ -91,6 +93,7 @@ func ClassifyContention(failures []RustFailure, run ContentionRunner, load LoadS
 			Name:    f.Name,
 			Class:   f.Class,
 			Verdict: VerdictContention, // upgraded below if it keeps failing
+			Panic:   f.Panic,
 		})
 		names = append(names, f.Name)
 	}

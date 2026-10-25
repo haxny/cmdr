@@ -145,6 +145,12 @@ func TestClassifyRustFailuresSeparatesCapKillsFromInTestDeadlines(t *testing.T) 
 	if plain.Class != ClassOther {
 		t.Errorf("plain class = %q, want %q", plain.Class, ClassOther)
 	}
+	if want := "src/downloads/ignore_set.rs:212:9: assertion `left == right` failed"; plain.Panic != want {
+		t.Errorf("plain panic = %q, want %q", plain.Panic, want)
+	}
+	if capKill.Panic != "" {
+		t.Errorf("a cap kill never panicked, got %q", capKill.Panic)
+	}
 }
 
 func TestClassifyRustFailuresIsEmptyOnACleanRun(t *testing.T) {

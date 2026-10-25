@@ -55,6 +55,10 @@ type RustFailure struct {
 	Name   string
 	Class  FailureClass
 	Detail string // for ClassInTestDeadline, the `wait_until` description
+	// Panic is where the test panicked and the first line of what it said
+	// (`src/foo.rs:42:5: assertion failed: …`), or empty when the output has none
+	// (a cap kill, a leak). The one trace a raced test leaves in a green log.
+	Panic string
 }
 
 // ansiSGRRE matches the colour escapes nextest writes into its output. It colours
@@ -101,6 +105,11 @@ var (
 	// The async twin appends " (at <caller>)", stripped from the captured description.
 	inTestDeadlineRE = regexp.MustCompile(`timed out after \S+ waiting for (.+?)\s*$`)
 	asyncCallerRE    = regexp.MustCompile(`\s*\(at [^)]*\)\s*$`)
+
+	// The panic header Rust prints, its message on the lines below:
+	//   thread 'a::b' (27302681) panicked at src/downloads/ignore_set.rs:212:9:
+	// The thread id is absent on older toolchains.
+	panicHeaderRE = regexp.MustCompile(`thread '[^']*'(?: \(\d+\))? panicked at (\S+?):?\s*$`)
 )
 
 // ParseFlakyTests returns every test that needed a retry to pass, deduped: nextest
@@ -162,33 +171,54 @@ func ClassifyRustFailures(output string) []RustFailure {
 	seen := map[key]bool{}
 	var failures []RustFailure
 
-	add := func(binary, name string, class FailureClass, detail string) {
-		k := key{binary, name}
+	add := func(failure RustFailure) {
+		k := key{failure.Binary, failure.Name}
 		if seen[k] {
 			return // the summary block repeats every FAIL/TIMEOUT line
 		}
 		seen[k] = true
-		failures = append(failures, RustFailure{Binary: binary, Name: name, Class: class, Detail: detail})
+		failures = append(failures, failure)
 	}
 
 	for i, line := range lines {
 		if m := timeoutLineRE.FindStringSubmatch(line); m != nil {
-			add(m[1], m[2], ClassNextestCap, "")
+			add(RustFailure{Binary: m[1], Name: m[2], Class: ClassNextestCap})
 			continue
 		}
 		if m := leakLineRE.FindStringSubmatch(line); m != nil {
-			add(m[1], m[2], ClassLeak, "")
+			add(RustFailure{Binary: m[1], Name: m[2], Class: ClassLeak})
 			continue
 		}
 		if m := failLineRE.FindStringSubmatch(line); m != nil {
-			class, detail := ClassOther, ""
+			failure := RustFailure{Binary: m[1], Name: m[2], Class: ClassOther, Panic: findPanic(lines, i+1)}
 			if desc, ok := findInTestDeadline(lines, i+1); ok {
-				class, detail = ClassInTestDeadline, desc
+				failure.Class, failure.Detail = ClassInTestDeadline, desc
 			}
-			add(m[1], m[2], class, detail)
+			add(failure)
 		}
 	}
 	return failures
+}
+
+// findPanic reads a failing test's captured output (up to the next status line) for
+// its panic: the location, then the first non-empty line of the message.
+func findPanic(lines []string, start int) string {
+	for i := start; i < len(lines); i++ {
+		if statusBoundaryRE.MatchString(lines[i]) {
+			return ""
+		}
+		m := panicHeaderRE.FindStringSubmatch(lines[i])
+		if m == nil {
+			continue
+		}
+		for j := i + 1; j < len(lines) && !statusBoundaryRE.MatchString(lines[j]); j++ {
+			if message := strings.TrimSpace(lines[j]); message != "" {
+				return m[1] + ": " + message
+			}
+		}
+		return m[1]
+	}
+	return ""
 }
 
 // findInTestDeadline scans a failing test's captured output (which runs until the next

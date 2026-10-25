@@ -152,7 +152,13 @@ func contentionWarnMessage(results []ContentionResult) string {
 		case VerdictContention:
 			starved = append(starved, r.Name)
 		case VerdictRaced:
-			raced = append(raced, r.Name)
+			// What it said under load: a green CI log carries nothing else, and a
+			// race passed alone can't be asked again.
+			if r.Panic != "" {
+				raced = append(raced, r.Name+": "+r.Panic)
+			} else {
+				raced = append(raced, r.Name)
+			}
 		default:
 			murky = append(murky, r.Name)
 		}
@@ -164,7 +170,7 @@ func contentionWarnMessage(results []ContentionResult) string {
 	}
 	if len(raced) > 0 {
 		parts = append(parts, fmt.Sprintf("%d failed an assertion and passed alone, so %s a race to fix (%s)",
-			len(raced), Pluralize(len(raced), "it's", "they're"), strings.Join(raced, ", ")))
+			len(raced), Pluralize(len(raced), "it's", "they're"), strings.Join(raced, "; ")))
 	}
 	if len(murky) > 0 {
 		parts = append(parts, fmt.Sprintf("%d needed headroom while the machine was still busy, so the cause is unsettled (%s)",

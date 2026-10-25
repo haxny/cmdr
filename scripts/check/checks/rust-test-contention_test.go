@@ -416,6 +416,26 @@ func TestAnInTestDeadlineThatPassesAloneIsStillContention(t *testing.T) {
 	}
 }
 
+// The warning is the only trace a raced test leaves in a green CI log, so it carries
+// what the parallel run's panic said: without it, a race can only be fixed by guessing.
+func TestARacedWarningCarriesItsFirstPanicLine(t *testing.T) {
+	f := &fakeRun{outputs: map[string]string{}}
+	trimmed := "        FAIL [   0.090s] (1/1) cmdr_lib raced::one\n" +
+		"  stderr ───\n\n" +
+		"    thread 'raced::one' (4242) panicked at src/foo.rs:42:5:\n" +
+		"    assertion `left == right` failed: the copy is live\n" +
+		"      left: 3\n     right: 4\n"
+	result, err := resolveRustFailure("rust tests failed", f.run, quiet, trimmed)
+
+	if err != nil {
+		t.Fatalf("a race that passed alone warns, got an error: %v", err)
+	}
+	want := "raced::one: src/foo.rs:42:5: assertion `left == right` failed: the copy is live"
+	if !strings.Contains(result.Message, want) {
+		t.Errorf("message missing %q: %q", want, result.Message)
+	}
+}
+
 // A race warns like contention, ❌ never described as starvation: the warn names it
 // a race to fix. A real failure beside it still keeps the run red.
 func TestARacedAssertionWarnsAndNamesTheRace(t *testing.T) {

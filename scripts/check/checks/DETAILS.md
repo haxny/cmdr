@@ -1524,6 +1524,9 @@ for reading its output:
 - **A "too-slow" or "real" verdict from the re-run is not a load excuse**, and a "raced" one (a warn) is a race to fix,
   not starvation. Those keep the lane red on purpose; reach for a control run (the same lane, alone, on a commit before
   the change) rather than re-running until it's green.
+- **A "raced" warning carries each test's panic from the failing parallel run** (`RustFailure.Panic`: the location and
+  the first message line). The warning is the only trace a raced test leaves in a green CI log, and the re-run that
+  passed it alone can't say what went wrong (#732: a month of raced verdicts had nothing to diagnose from).
 - **`pkill -f check.sh` does NOT stop a run.** The runner is a compiled Go binary under the `go-build` cache parented by
   `go run .`, and killing the wrapper orphans the whole tree of Playwright, Docker, and cargo children, which then keep
   competing with whatever you start next. Kill `go-build.*/check` and `go run \. --include-slow`, then confirm with `ps`
