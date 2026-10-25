@@ -303,13 +303,7 @@ async fn a_cancel_mid_copy_leaves_no_upload_and_the_source_intact(service: Fixtu
         unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty(),
         "a cancelled copy must be aborted on the server"
     );
-    assert!(
-        volume
-            .inner
-            .ledger
-            .open_under(&volume.inner.account(), &prefix)
-            .is_empty()
-    );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(!volume.exists(&at(&volume, &to)).await, "nothing was published");
     assert!(
         read_back(&volume, &at(&volume, &from)).await == bytes,
@@ -382,13 +376,7 @@ async fn a_source_replaced_mid_copy_fails_as_changed_and_publishes_nothing(servi
     assert!(matches!(outcome, Err(VolumeError::SourceChanged(_))), "got {outcome:?}");
     assert!(!volume.exists(&at(&volume, &to)).await, "nothing was published");
     assert!(unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty());
-    assert!(
-        volume
-            .inner
-            .ledger
-            .open_under(&volume.inner.account(), &prefix)
-            .is_empty()
-    );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(
         read_back(&volume, &at(&volume, &from)).await == replacement,
         "the new source stays whole"

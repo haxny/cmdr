@@ -655,6 +655,13 @@ abort it on the spot; what an abort can't reach (a crash, a dropped future, a se
   and bring the upload back (VersityGW does; AWS documents the race), so each round aborts and then lists the key's
   uploads, up to four rounds 200 ms apart, and only a listing without the upload ID forgets the record. Every preset's
   listing shows its unfinished uploads, R2 included (§ "Verified providers"); nothing special-cases a provider here.
+- **A failed write's abort answers at once; its confirming rounds run afterwards**
+  (`S3Volume::abort_and_confirm_later`): one abort inline, then the rounds on the host runtime, which hold the
+  `UploadGuard` so no sweep races them. Each round asks through the volume's client of THAT moment (`OnLiveVolume`): a
+  retired volume or a session that's down ends them, and a quit drops the task. Every end but a confirmed one leaves the
+  record for the next connect's sweep (the guard's `Drop`). Why: a server slow to list held every cancelled upload up to
+  four rounds before the cancel answered (`abort_confirm_test.rs`). The sweep keeps its rounds inline: it's background
+  work already.
 - **The sweep** (`S3VolumeInner::sweep_unfinished_uploads`) runs in the background at every connect and after a
   reconnect, and aborts the account's open records that no task in this process is running. A record the server confirms
   gone (aborted now or already) is forgotten; any other answer keeps it for the next connect. ❌ It never aborts an

@@ -9,7 +9,8 @@
 //!
 //! ❗ **The upload is recorded before its first part and forgotten only once
 //! it's completed or aborted** (`upload_ledger.rs`). Cancel and every failure
-//! abort it on the spot; an abort the server never answers, or a future
+//! abort it on the spot and confirm the abort in the background
+//! ([`S3Volume::abort_and_confirm_later`]); an abort never confirmed, or a future
 //! dropped mid-upload, leaves the record for the next connect's sweep. Parts of
 //! an unfinished upload are invisible in every listing and billed forever.
 
@@ -22,7 +23,7 @@ use bytes::Bytes;
 use cmdr_fs::error_detail::ErrorDetail;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
-use cmdr_fs::volume::{VolumeError, VolumeReadStream};
+use cmdr_fs::volume::{SelfHandle, VolumeError, VolumeReadStream};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use log::{debug, info, warn};
@@ -331,10 +332,9 @@ impl S3Volume {
                 Ok(total)
             }
             Err(e) => {
-                // Settled either way: forgotten when the server confirms the
-                // abort, kept for the next sweep when it doesn't.
-                abort_upload(client, &self.inner.ledger, &guard.upload).await;
-                guard.settled = true;
+                // One abort now; the rounds confirming it run afterwards, and
+                // what they can't confirm stays for the next sweep.
+                self.abort_and_confirm_later(client, guard).await;
                 // An upload the server ended under a `CreateNew` was most
                 // likely another writer taking the name: say so when the name
                 // is taken now, which is the refusal a `CreateNew` owes.
@@ -584,7 +584,8 @@ const ABORT_ROUND_GAP: Duration = Duration::from_millis(200);
 
 /// Aborts `upload` and settles its record: forgotten once the server's own
 /// listing no longer shows it, kept for the next sweep otherwise. Answers
-/// whether it settled.
+/// whether it settled. The sweep's way, which runs in the background already;
+/// a write's failure takes [`S3Volume::abort_and_confirm_later`].
 ///
 /// ❗ An abort's 204 isn't proof. A part request cut off a moment earlier can
 /// still land after it, and a server may then bring the upload back: AWS says
@@ -592,33 +593,113 @@ const ABORT_ROUND_GAP: Duration = Duration::from_millis(200);
 /// (fixture README). So each round aborts and then lists the key's uploads,
 /// and only a listing without this upload ID ends it.
 pub(super) async fn abort_upload(client: &S3Client, ledger: &UploadLedger, upload: &UnfinishedUpload) -> bool {
-    let Ok(request) = ops::abort_multipart_upload(client.profile(), &upload.bucket, &upload.key, &upload.upload_id)
-    else {
-        // A key that can't be addressed can't have an upload under it.
+    let settled = settle_abort(&OnClient { client, upload }, None).await;
+    if settled {
         ledger.finished(upload);
-        return true;
-    };
+    } else {
+        warn!(target: "volume", "s3: couldn't abort the upload of {}; the next connect tries again", LogPrivate::file_path(&upload.key));
+        ledger.abandoned(upload);
+    }
+    settled
+}
+
+/// What the abort rounds ask a server about one upload. Each answer is `None`
+/// when there's no one left to ask (the volume was retired, or its session is
+/// down), which ends the rounds and leaves the record for the next sweep.
+pub(super) trait UploadEnd {
+    /// Sends one abort: `Some(true)` when the server took it or no longer
+    /// knows the upload.
+    async fn abort(&self) -> Option<bool>;
+
+    /// Whether the server still lists the upload; `Some(None)` when it
+    /// answered nothing usable.
+    async fn still_listed(&self) -> Option<Option<bool>>;
+}
+
+/// The rounds: abort, then list, until a listing without the upload ends it
+/// (`true`), the rounds run out, or no one is left to ask (`false`).
+/// `first_abort` is an abort already sent, whose answer round one reads
+/// instead of sending another.
+pub(super) async fn settle_abort(upload: &impl UploadEnd, mut first_abort: Option<bool>) -> bool {
     for round in 0..ABORT_ROUNDS {
         if round > 0 {
             tokio::time::sleep(ABORT_ROUND_GAP).await;
         }
-        let answered = match client.exchange(request.clone(), QUERY_BUDGET).await {
-            Ok(answer) => {
-                answer.status.is_success() || S3Error::from_response(answer.status, &answer.text()).is_not_found()
-            }
-            Err(e) => {
-                debug!(target: "volume", "s3: aborting an upload of {} didn't reach the server: {e}", LogPrivate::file_path(&upload.key));
-                false
-            }
+        let answered = match first_abort.take() {
+            Some(answered) => answered,
+            None => match upload.abort().await {
+                Some(answered) => answered,
+                None => return false,
+            },
         };
-        if answered && still_listed(client, upload).await == Some(false) {
-            ledger.finished(upload);
-            return true;
+        if answered {
+            match upload.still_listed().await {
+                Some(Some(false)) => return true,
+                Some(_) => {}
+                None => return false,
+            }
         }
     }
-    warn!(target: "volume", "s3: couldn't abort the upload of {}; the next connect tries again", LogPrivate::file_path(&upload.key));
-    ledger.abandoned(upload);
     false
+}
+
+/// One upload asked through a client in hand (the sweep's).
+struct OnClient<'a> {
+    client: &'a S3Client,
+    upload: &'a UnfinishedUpload,
+}
+
+impl UploadEnd for OnClient<'_> {
+    async fn abort(&self) -> Option<bool> {
+        Some(send_abort(self.client, self.upload).await)
+    }
+
+    async fn still_listed(&self) -> Option<Option<bool>> {
+        Some(still_listed(self.client, self.upload).await)
+    }
+}
+
+/// One upload asked through whatever client the volume holds NOW, for rounds
+/// that outlive the write that started them: a volume retired (evicted,
+/// unmounted, replaced) or a session that's down ends them.
+struct OnLiveVolume {
+    volume: SelfHandle<S3VolumeInner>,
+    upload: UnfinishedUpload,
+}
+
+impl OnLiveVolume {
+    async fn client(&self) -> Option<Arc<S3Client>> {
+        self.volume.live()?.session.installed_client().await
+    }
+}
+
+impl UploadEnd for OnLiveVolume {
+    async fn abort(&self) -> Option<bool> {
+        Some(send_abort(&*self.client().await?, &self.upload).await)
+    }
+
+    async fn still_listed(&self) -> Option<Option<bool>> {
+        Some(still_listed(&*self.client().await?, &self.upload).await)
+    }
+}
+
+/// One `AbortMultipartUpload`: whether the server took it or no longer knows
+/// the upload.
+async fn send_abort(client: &S3Client, upload: &UnfinishedUpload) -> bool {
+    let Ok(request) = ops::abort_multipart_upload(client.profile(), &upload.bucket, &upload.key, &upload.upload_id)
+    else {
+        // A key that can't be addressed can't have an upload under it.
+        return true;
+    };
+    match client.exchange(request, QUERY_BUDGET).await {
+        Ok(answer) => {
+            answer.status.is_success() || S3Error::from_response(answer.status, &answer.text()).is_not_found()
+        }
+        Err(e) => {
+            debug!(target: "volume", "s3: aborting an upload of {} didn't reach the server: {e}", LogPrivate::file_path(&upload.key));
+            false
+        }
+    }
 }
 
 /// Whether the server still lists `upload` among its key's unfinished uploads,
@@ -633,6 +714,34 @@ async fn still_listed(client: &S3Client, upload: &UnfinishedUpload) -> Option<bo
     // One page answers it: the listing is in key order and this key's uploads
     // come first under a prefix that IS the key.
     Some(page.uploads.iter().any(|listed| listed.upload_id == upload.upload_id))
+}
+
+impl S3Volume {
+    /// A failed or cancelled write's abort: ONE abort sent now, so the write
+    /// answers at once, and the confirming rounds (list, abort again while a
+    /// late part brings the upload back) on the volume's runtime afterwards.
+    ///
+    /// The rounds hold `guard`, so the upload counts as in flight (no sweep
+    /// races them) until they settle it; any other end (rounds run out, the
+    /// volume retired or disconnected, the runtime shut down at quit and the
+    /// task dropped) leaves the record for the next connect's sweep through
+    /// the guard's `Drop`. Nothing waits on them.
+    pub(super) async fn abort_and_confirm_later(&self, client: &S3Client, guard: UploadGuard) {
+        let first = send_abort(client, &guard.upload).await;
+        let upload = OnLiveVolume {
+            volume: self.inner.session.self_handle(),
+            upload: guard.upload.clone(),
+        };
+        self.inner.host.runtime().spawn(async move {
+            let mut guard = guard;
+            if settle_abort(&upload, Some(first)).await {
+                guard.ledger.finished(&guard.upload);
+                guard.settled = true;
+            } else {
+                warn!(target: "volume", "s3: couldn't abort the upload of {}; the next connect tries again", LogPrivate::file_path(&guard.upload.key));
+            }
+        });
+    }
 }
 
 impl S3VolumeInner {

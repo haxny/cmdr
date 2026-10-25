@@ -159,6 +159,21 @@ pub async fn connect_fixture_with_host(service: FixtureService, bucket: Option<&
     }
 }
 
+/// Waits until `volume`'s ledger holds no upload open under `prefix`. A failed
+/// write's abort is confirmed in the background (`multipart_upload.rs`,
+/// `S3Volume::abort_and_confirm_later`), so its record goes a moment after the
+/// write answers.
+pub async fn wait_for_the_ledger_to_settle(volume: &S3Volume, prefix: &str) {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the abort's record to settle", || {
+        volume
+            .inner
+            .ledger
+            .open_under(&volume.inner.account(), prefix)
+            .is_empty()
+    })
+    .await;
+}
+
 /// A token unique to this process, minted once. ❗ Random rather than the pid:
 /// a suite inside a container sees small pids another run sees too.
 fn run_token() -> &'static str {

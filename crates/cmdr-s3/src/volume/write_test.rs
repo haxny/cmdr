@@ -260,13 +260,7 @@ async fn a_cancelled_overwrite_keeps_the_original(service: FixtureService) {
         unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty(),
         "the cancelled upload must be aborted on the server"
     );
-    assert!(
-        volume
-            .inner
-            .ledger
-            .open_under(&volume.inner.account(), &prefix)
-            .is_empty()
-    );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
 }
 
 /// An overwrite that finishes lands the new bytes and the source's date at

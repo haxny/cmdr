@@ -37,7 +37,7 @@ use log::{debug, warn};
 
 use super::S3Volume;
 use super::errors::map_s3_error;
-use super::multipart_upload::{abort_upload, upload_refusal};
+use super::multipart_upload::upload_refusal;
 use super::paths::{Target, target_of};
 use super::query::{body_error, landed_modified, stored_mtime};
 use super::upload::{WriteTarget, overwrite_for, retry_after};
@@ -631,8 +631,7 @@ impl S3Volume {
                 Ok(plan.total)
             }
             Err(e) => {
-                abort_upload(client, &self.inner.ledger, &guard.upload).await;
-                guard.settled = true;
+                self.abort_and_confirm_later(client, guard).await;
                 if gone.load(Ordering::Relaxed)
                     && target.mode.refuses_occupied()
                     && matches!(

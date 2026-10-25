@@ -332,6 +332,8 @@ impl S3Volume {
 }
 
 #[cfg(test)]
+mod abort_confirm_test;
+#[cfg(test)]
 mod account_move_test;
 #[cfg(test)]
 mod batch_retry_test;

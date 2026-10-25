@@ -108,6 +108,9 @@ struct World {
     /// Upload IDs another writer's PUT ended: each part sent to one is dropped
     /// unanswered.
     ended_uploads: Vec<String>,
+    /// `ListMultipartUploads` answers wait while this reads `false`
+    /// ([`FakeS3::hold_upload_listings`]).
+    upload_listings_open: Option<tokio::sync::watch::Receiver<bool>>,
 }
 
 /// An object GET's answer: close-delimited, with no `content-length`, and
@@ -121,13 +124,18 @@ struct GetBodies {
 pub(super) struct FakeS3 {
     addr: SocketAddr,
     world: Arc<Mutex<World>>,
+    upload_listings_open: tokio::sync::watch::Sender<bool>,
 }
 
 impl FakeS3 {
     pub(super) async fn start(answer_after: Duration) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let world = Arc::new(Mutex::new(World::default()));
+        let (upload_listings_open, listings_open) = tokio::sync::watch::channel(true);
+        let world = Arc::new(Mutex::new(World {
+            upload_listings_open: Some(listings_open),
+            ..World::default()
+        }));
         let serving = Arc::clone(&world);
         tokio::spawn(async move {
             while let Ok((mut socket, _)) = listener.accept().await {
@@ -144,7 +152,23 @@ impl FakeS3 {
                 });
             }
         });
-        Self { addr, world }
+        Self {
+            addr,
+            world,
+            upload_listings_open,
+        }
+    }
+
+    /// From now on, a `ListMultipartUploads` waits unanswered until
+    /// [`Self::release_upload_listings`]: the abort's confirming listing on a
+    /// server that's slow to answer it.
+    pub(super) fn hold_upload_listings(&self) {
+        self.upload_listings_open.send_replace(false);
+    }
+
+    /// Lets every held `ListMultipartUploads` answer, and the ones after it.
+    pub(super) fn release_upload_listings(&self) {
+        self.upload_listings_open.send_replace(true);
     }
 
     /// From now on, a PUT or a completion is committed and then left
@@ -611,6 +635,10 @@ async fn answer(
             "HTTP/1.1 204 No Content\r\nconnection: close\r\n\r\n".into()
         }
         ("GET", None, None) if param(query, "uploads").is_some() => {
+            let open = world.lock_ignore_poison().upload_listings_open.clone();
+            if let Some(mut open) = open {
+                let _ = open.wait_for(|open| *open).await;
+            }
             let world = world.lock_ignore_poison();
             let uploads: String = world
                 .uploads
