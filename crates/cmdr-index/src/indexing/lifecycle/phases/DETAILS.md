@@ -301,7 +301,7 @@ decision, so ❌ don't read either as wrong; ⚠️ do quote the app's figure fo
   to ask `working` between the launch route handing the volume over and the machine's handle landing on the manager, so
   `phases_have_work` answers from this instead: `Owed` from `register_a_phased_start` until the start is taken,
   `BeingStarted` for as long as `PhaseStart::run` is standing the machine up off the registry lock. That second window
-  has a driver thread already walking in it (`manager/phased.rs`).
+  already has a driver thread in it, parked at its `DriverGate` until the handle lands (`manager/phased.rs`).
 - **`walking`** — a walk is reading the disk right now. Feeds the verifier's `ground_in_flux` argument only; between
   roots there is nothing to race.
 - ❌ Never `mgr.ground_in_flux`: `cover_context_for` returns `None` while it is true, so the machine's own `cover()`
@@ -365,6 +365,12 @@ phase root, and writes the same value where `get_status` reads it.
 only the event would sit with no header until the run ended. It reports `None` once the machine has no work left, ❌
 never the phase it finished on. Anchored by
 `tests::interleaving::a_window_joining_mid_run_reads_the_running_phase_off_the_status`.
+
+**The driver waits at a `DriverGate` until its manager holds the handle.** `phases::start` spawns the thread, but the
+handle lands on the manager only once `start_pending_phases` re-takes the registry lock. A driver that announced its
+first phase in between told a window joining in that gap "no phase", and the transition-only event never repeated it, so
+the header stayed blank for the whole phase (#732, reproduced by stalling the starter 100 ms). Dropping the gate is the
+only release, so a start that unwinds or finds its manager gone still frees the thread and the volume's hold.
 
 ❌ **The phase is not the host's to derive.** An app-side home path can disagree with `IndexPathSpace` about firmlinks,
 which works on one machine and mislabels on another, so the crate classifies and the host only chooses words. ❌ Nor can

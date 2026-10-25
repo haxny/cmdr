@@ -38,8 +38,9 @@ use crate::indexing::writer::WriteMessage;
 ///
 /// ⚠️ **Every state but `No` counts as WORK** (`phases_have_work`), the window
 /// [`PhaseStart::run`] spends off the registry lock included. The driver thread
-/// can already be walking in there while `phases` is still `None`, and a scan
-/// entry that read "no work" would truncate the index underneath it.
+/// already exists in there, parked at its gate while `phases` is still `None`,
+/// and a scan entry that read "no work" would truncate the index it is about to
+/// walk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::indexing::lifecycle) enum PendingPhases {
     /// Nothing owed: this volume was never the machine's, or its machine is the
@@ -352,9 +353,17 @@ impl IndexManager {
         if self.pending_phases != PendingPhases::BeingStarted {
             return Some(started);
         }
+        let StartedPhases {
+            handle,
+            calibration,
+            gate,
+        } = started;
         self.pending_phases = PendingPhases::No;
-        self.scan_calibration = Some(started.calibration);
-        self.phases = Some(started.handle);
+        self.scan_calibration = Some(calibration);
+        self.phases = Some(handle);
+        // Only now may the driver announce anything: `get_status` reads the phase
+        // off the handle that just landed (`phases::DriverGate`).
+        drop(gate);
         None
     }
 
@@ -370,7 +379,7 @@ impl IndexManager {
     /// ⚠️ The pending state is half the answer, and ❌ not a nicety. Between the
     /// launch route handing this volume over and the machine's handle landing
     /// there is no handle to ask, and the second half of that window has a driver
-    /// thread already walking in it ([`PendingPhases`]).
+    /// thread already waiting to walk in it ([`PendingPhases`]).
     pub(in crate::indexing::lifecycle) fn phases_have_work(&self) -> bool {
         self.pending_phases != PendingPhases::No || self.phases.as_ref().is_some_and(|phases| phases.has_work())
     }
@@ -421,6 +430,7 @@ impl PhaseStart {
                 crate::indexing::store::ScanCalibrationSet::default()
             });
         let run_kind = ScanRunKind::classify(false, calibration_set.any.total_entries);
+        let (handle, gate) = phases::start(self.context);
         StartedPhases {
             calibration: ScanCalibration {
                 prior: calibration_set.for_kind(run_kind.calibration_kind()),
@@ -430,15 +440,20 @@ impl PhaseStart {
                 // the whole run, so there's no remainder to add.
                 steps_ahead: StepsAhead::default(),
             },
-            handle: phases::start(self.context),
+            handle,
+            gate,
         }
     }
 }
 
-/// A running phase machine on its way back to the manager that asked for it.
+/// A phase machine on its way back to the manager that asked for it, its driver
+/// held at the gate until it gets there. Dropping it anywhere else lets the
+/// driver go too (stopped first by [`stop`](Self::stop) when its manager went
+/// away), so a gated driver never outlives the start that built it.
 pub(in crate::indexing::lifecycle) struct StartedPhases {
     handle: phases::PhaseHandle,
     calibration: ScanCalibration,
+    gate: phases::DriverGate,
 }
 
 impl StartedPhases {

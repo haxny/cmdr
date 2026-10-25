@@ -266,12 +266,27 @@ pub(crate) struct MachineContext {
     pub branches: Arc<BranchWatch>,
 }
 
-/// Start covering a volume, and hand back what the manager holds on to.
+/// Holds a freshly spawned driver at its first line until its manager holds the
+/// [`PhaseHandle`], and lets it go when dropped.
+///
+/// ⚠️ The status response reads the phase off the handle, and the phase EVENT is
+/// transition-only. A driver announcing its first phase before the handle landed
+/// told a window reloading in that gap "no phase", and nothing would tell it again
+/// until the phase ended (#732). Dropping is the only release, so a start that
+/// unwinds or finds its manager gone still frees the thread, and with it the
+/// volume's hold.
+pub(crate) struct DriverGate {
+    _go: std::sync::mpsc::Sender<()>,
+}
+
+/// Start covering a volume, and hand back what the manager holds on to plus the
+/// [`DriverGate`] the driver waits behind. Drop the gate once the handle is where
+/// `get_status` reads it.
 ///
 /// The driver runs on a dedicated thread at `Utility` QoS rather than a runtime
 /// worker: everything it does is blocking (walks, flushes, database reads), and
 /// the whole point is to yield the machine to whoever the user is waiting on.
-pub(crate) fn start(context: MachineContext) -> PhaseHandle {
+pub(crate) fn start(context: MachineContext) -> (PhaseHandle, DriverGate) {
     let handle = PhaseHandle {
         walking: Arc::new(AtomicBool::new(false)),
         // True from here, not from the first walk: the volume is already the
@@ -329,8 +344,11 @@ pub(crate) fn start(context: MachineContext) -> PhaseHandle {
     .noting_visits(Arc::clone(&handle.visits))
     .spawn(Arc::clone(&handle.done));
 
+    let (go, gate) = std::sync::mpsc::channel::<()>();
     let spawned = std::thread::Builder::new().name("index-phases".into()).spawn(move || {
         cmdr_fs::thread_qos::set_current_thread_qos(cmdr_fs::thread_qos::QosClass::Utility);
+        // Nothing is ever sent: the gate opens when its sender drops (`DriverGate`).
+        let _ = gate.recv();
         #[cfg(test)]
         let exiting = machine.volume_id.clone();
         machine.run();
@@ -344,7 +362,7 @@ pub(crate) fn start(context: MachineContext) -> PhaseHandle {
         handle.working.store(false, Ordering::Relaxed);
         handle.done.store(true, Ordering::Relaxed);
     }
-    handle
+    (handle, DriverGate { _go: go })
 }
 
 /// This machine's home directory. A test drives a synthetic one, because the home
