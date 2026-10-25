@@ -291,6 +291,16 @@ impl LeafProgressLedger {
     }
 }
 
+/// Names the operation, for a `DriverConfig` that carries a ledger in a log
+/// line; the totals are the ledger's own business.
+impl std::fmt::Debug for LeafProgressLedger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LeafProgressLedger")
+            .field("operation_id", &self.operation_id)
+            .finish_non_exhaustive()
+    }
+}
+
 /// One top-level source's view of the operation's ledger.
 pub(in crate::transfer) struct SourceProgress {
     ledger: Arc<LeafProgressLedger>,

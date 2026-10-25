@@ -490,6 +490,7 @@ pub async fn move_within_same_volume_with_progress(
         pre_known_conflicts: config.pre_known_conflicts.clone(),
         // Rename-merge: no streaming, so the driver milestone is the only emit.
         emit_per_source_milestone: true,
+        skip_ledger: None,
         // Skips and failures from the driver, `Done` from `landed_whole`.
         report_source_outcomes: true,
     };

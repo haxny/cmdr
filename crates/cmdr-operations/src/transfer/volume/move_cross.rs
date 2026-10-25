@@ -188,6 +188,31 @@ pub async fn move_volumes_with_progress(
         bulk_skip_bytes += size;
     }
 
+    // Operation-wide leaf-file counter for the File progress bar, and what the
+    // completion reports. The driver's own `files_done` counts TOP-LEVEL sources
+    // (one folder = 1), but the bar's denominator is the preflight LEAF count,
+    // so the bar reads from this shared counter, which `LeafProgress::complete`
+    // bumps once per inner file and a top-level skip once
+    // (`DriverConfig::skip_ledger`). Seeded with the bulk-skipped leaves the
+    // driver credits up front.
+    let leaf_files_done = Arc::new(AtomicUsize::new(bulk_skip_files));
+    // ONE ledger for the whole move, so the leaves a folder streams at once
+    // each hold their own share of the in-flight byte total. Sources run one at
+    // a time here, and the driver keeps its own running `bytes_done` across
+    // them (it counts the skipped ones the leaves never see), so each iteration
+    // reseeds the settled half below rather than letting the ledger accumulate
+    // across sources.
+    let leaf_ledger = LeafProgressLedger::new(
+        Arc::clone(&events),
+        Arc::clone(state),
+        operation_id.to_string(),
+        WriteOperationType::Move,
+        Arc::clone(&leaf_files_done),
+        total_files,
+        total_bytes,
+        state.progress_interval,
+    );
+
     let driver_config = DriverConfig {
         operation_type: WriteOperationType::Move,
         phase: WriteOperationPhase::Copying,
@@ -195,6 +220,7 @@ pub async fn move_volumes_with_progress(
         pre_known_conflicts: config.pre_known_conflicts.clone(),
         // Streaming path: the leaf ledger owns leaf-granular milestones.
         emit_per_source_milestone: false,
+        skip_ledger: Some(Arc::clone(&leaf_ledger)),
         // Skips and failures from the driver, both `Done`s (copied, then
         // swept) from the closure below.
         report_source_outcomes: true,
@@ -213,13 +239,6 @@ pub async fn move_volumes_with_progress(
     // `volume::copy::copy_volumes_with_progress` for the full rationale.
     let config_owned: VolumeCopyConfig = config.clone();
     let operation_id_owned: String = operation_id.to_string();
-
-    // Operation-wide leaf-file counter for the File progress bar. The driver's
-    // own `files_done` counts TOP-LEVEL sources (one folder = 1), but the bar's
-    // denominator is the preflight LEAF count, so the bar reads from this shared
-    // counter, which `LeafProgress::complete` bumps once per inner
-    // file. Seeded with the bulk-skipped leaves the driver credits up front.
-    let leaf_files_done = Arc::new(AtomicUsize::new(bulk_skip_files));
 
     // Children a deep merge skipped. The driver only sees TOP-LEVEL sources, so
     // without this fold a folder move that skipped half its children would
@@ -382,7 +401,6 @@ pub async fn move_volumes_with_progress(
         {
             let source_volume = Arc::clone(&source_volume);
             let dest_volume = Arc::clone(&dest_volume);
-            let progress_interval = state.progress_interval;
             let state = Arc::clone(state);
             let events = Arc::clone(&events);
             let source_hints = Arc::clone(&source_hints);
@@ -395,22 +413,7 @@ pub async fn move_volumes_with_progress(
             // copy driver's, and the same number the in-flight table declares.
             let file_window = super::merge_ctx::FileWindow::new(concurrency);
             let last_progress_time: Arc<std::sync::Mutex<Instant>> = Arc::new(std::sync::Mutex::new(Instant::now()));
-            // ONE ledger for the whole move, so the leaves a folder streams at
-            // once each hold their own share of the in-flight byte total.
-            // Sources run one at a time here, and the driver keeps its own
-            // running `bytes_done` across them (it counts the skipped ones the
-            // leaves never see), so each iteration reseeds the settled half
-            // below rather than letting the ledger accumulate across sources.
-            let leaf_ledger = LeafProgressLedger::new(
-                Arc::clone(&events),
-                Arc::clone(&state),
-                operation_id.clone(),
-                WriteOperationType::Move,
-                Arc::clone(&leaf_files_done),
-                total_files,
-                total_bytes,
-                progress_interval,
-            );
+            let leaf_ledger = Arc::clone(&leaf_ledger);
             let deep_skipped_files = Arc::clone(&deep_skipped_files);
             let left_in_source = Arc::clone(&left_in_source);
             let journal_volumes = journal_volumes.clone();
@@ -728,7 +731,8 @@ pub async fn move_volumes_with_progress(
         "post-loop bookkeeping",
     );
 
-    let files_done = outcome.files_done_in_leaves(leaf_files_done.load(Ordering::Relaxed), bulk_skip_files);
+    // The ledger's count, ❌ never `outcome.files_done` (top-level sources).
+    let files_done = leaf_files_done.load(Ordering::Relaxed);
     let bytes_done = outcome.bytes_done;
     // Top-level skips the driver counted, PLUS the deep-merge children skipped
     // inside folder sources (invisible to the driver).

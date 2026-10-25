@@ -270,6 +270,11 @@ pub(super) enum TransferOutcome {
 /// the pre-known-conflict bulk-skip prelude plus per-iter Skip decisions
 /// (conflict resolver returning `Skip` and closure returning `Skipped`).
 /// The caller uses them to annotate the completion log.
+///
+/// ❗ The async driver's `files_done` counts TOP-LEVEL sources, so a single
+/// folder of 36 files ends at 1. A volume op with a `DriverConfig::skip_ledger`
+/// reports the ledger's counter instead (`DETAILS.md` § "The completion counts
+/// leaves").
 #[derive(Debug)]
 pub(super) struct TransferLoopOutcome {
     pub files_done: usize,
@@ -277,23 +282,6 @@ pub(super) struct TransferLoopOutcome {
     pub files_skipped: usize,
     pub bytes_skipped: u64,
     pub intent: PostLoopIntent,
-}
-
-impl TransferLoopOutcome {
-    /// The operation's file count in LEAVES, what its completion and cancel
-    /// events report, for a volume op whose leaves report into a
-    /// `LeafProgressLedger`.
-    ///
-    /// ❗ The async driver's own `files_done` counts TOP-LEVEL sources, so a
-    /// single folder of 36 files ends as 1 (#702: "Copied 1 file", "1 / 36"
-    /// beside a full byte bar). `leaves_counted` is the ledger's counter: every
-    /// leaf that landed, every child a deep merge skipped, and the bulk-skipped
-    /// leaves it was seeded with. The only thing it never sees is a top-level
-    /// source the driver skipped mid-loop, which counts as one, the way the
-    /// concurrent driver's `credit_skipped_source` counts it.
-    pub(in crate::transfer) fn files_done_in_leaves(&self, leaves_counted: usize, bulk_skip_files: usize) -> usize {
-        leaves_counted + self.files_skipped.saturating_sub(bulk_skip_files)
-    }
 }
 
 /// Why the loop ended. The caller branches on this to decide
@@ -440,6 +428,14 @@ pub(super) struct DriverConfig {
     /// regress the File bar at the end of a directory source (e.g. 9/9 → 1/9).
     /// Ignored by the sync driver, whose closure always owns its emits.
     pub emit_per_source_milestone: bool,
+    /// Where the ASYNC driver credits a top-level source it skips mid-loop.
+    /// `Some` for the streaming paths, whose file bar reads the leaf ledger's
+    /// counter: the skip goes through the ledger (and its ordered emit), ❌
+    /// never the driver's own count of SOURCES, which once stepped a folder's
+    /// "3 / 4" back to "2 / 4" (#702). `None` where the driver's counts are
+    /// the operation's (the same-volume rename-merge). Ignored by the sync
+    /// driver.
+    pub skip_ledger: Option<Arc<LeafProgressLedger>>,
     /// Whether the ASYNC driver reports the per-source verdicts IT decides on
     /// `write-source-item-done`: `Skipped` for a bulk pre-skip, a top-level
     /// Skip, or a closure's `Skipped`, and `Failed` for a closure's error (❌

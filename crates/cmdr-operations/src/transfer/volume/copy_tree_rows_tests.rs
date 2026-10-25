@@ -568,6 +568,71 @@ async fn a_one_folder_transfer_completes_counting_its_files_not_its_sources() {
     }
 }
 
+/// A top-level file skipped AFTER a folder streamed its files moves the file
+/// bar forward by one, ❌ never back to the driver's count of sources: the bar
+/// read "3 / 4" and then "2 / 4" for a moment before (#702's follow-up).
+#[tokio::test]
+async fn a_skipped_top_level_file_never_steps_the_file_bar_back() {
+    let engine = TestOperations::new();
+    for kind in ["copy", "move"] {
+        let (source, dest) = make_volumes();
+        for name in ["a.txt", "b.txt", "c.txt"] {
+            put(&source, &format!("/src/a folder/{name}"), b"incoming").await;
+        }
+        put(&source, "/src/z clash.txt", b"incoming").await;
+        put(&dest, "/z clash.txt", b"theirs").await;
+        let events = Arc::new(CollectorEventSink::new());
+        // No throttle, so every tick the drivers send is seen.
+        let state = Arc::new(engine.new_operation_state(Duration::ZERO));
+        let config = VolumeCopyConfig {
+            conflict_resolution: ConflictResolution::Skip,
+            progress_interval_ms: 0,
+            ..VolumeCopyConfig::default()
+        };
+        let sources = [PathBuf::from("/src/a folder"), PathBuf::from("/src/z clash.txt")];
+        let sink = Arc::clone(&events) as Arc<dyn OperationEventSink>;
+        let result = if kind == "copy" {
+            copy_volumes_with_progress(
+                sink,
+                "op-skip-tick",
+                &state,
+                Arc::clone(&source),
+                &sources,
+                Arc::clone(&dest),
+                Path::new("/"),
+                &config,
+            )
+            .await
+        } else {
+            super::super::move_cross::move_volumes_with_progress(
+                sink,
+                "op-skip-tick",
+                &state,
+                Arc::clone(&source),
+                &sources,
+                Arc::clone(&dest),
+                Path::new("/"),
+                &config,
+            )
+            .await
+        };
+        result.unwrap_or_else(|e| panic!("{kind}: {e:?}"));
+
+        let files: Vec<usize> = events
+            .progress
+            .lock_ignore_poison()
+            .iter()
+            .filter(|event| event.phase == WriteOperationPhase::Copying)
+            .map(|event| event.files_done)
+            .collect();
+        assert!(
+            files.windows(2).all(|pair| pair[0] <= pair[1]),
+            "{kind}: the file bar stepped back: {files:?}"
+        );
+        assert_eq!(files.last(), Some(&4), "{kind}: and it ends at every file: {files:?}");
+    }
+}
+
 /// A bug while recording the scan's tree costs the tree, never the copy: the
 /// scan goes on past it, every file lands, and the operation has no tree.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

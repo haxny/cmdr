@@ -33,6 +33,7 @@ pub(super) fn copy_config() -> DriverConfig {
         // Driver unit tests use bare closures that emit no progress of their
         // own, so they exercise the driver's per-source milestone path.
         emit_per_source_milestone: true,
+        skip_ledger: None,
         report_source_outcomes: false,
     }
 }

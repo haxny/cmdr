@@ -112,6 +112,37 @@ where
         }
     };
 
+    // A source skipped mid-loop moves the bars at once (throttled). With a
+    // `skip_ledger` the leaves own the counts, so the skip is credited there
+    // and sent in the ledger's order; otherwise the driver's own counts go out.
+    let tick_skipped =
+        |last_progress_time: &mut Instant, source: &Path, bytes_accounted: u64, files_done: usize, bytes_done: u64| {
+            let credited = config
+                .skip_ledger
+                .as_ref()
+                .map(|ledger| (ledger, ledger.credit_skipped_source(bytes_accounted)));
+            if last_progress_time.elapsed() < state.progress_interval {
+                return;
+            }
+            *last_progress_time = Instant::now();
+            let file_name = source.file_name().map(|n| n.to_string_lossy().to_string());
+            match credited {
+                Some((ledger, snapshot)) => ledger.emit(file_name, snapshot),
+                None => emit_progress_and_status(
+                    events,
+                    state,
+                    operation_id,
+                    config.operation_type,
+                    config.phase,
+                    file_name,
+                    files_done,
+                    total_files,
+                    bytes_done,
+                    total_bytes,
+                ),
+            }
+        };
+
     // ---- Pre-known-conflicts bulk-skip prelude. ----
     for source in sources.iter().filter(|source| pre_skip_paths.contains(*source)) {
         skipped_whole(source);
@@ -142,8 +173,6 @@ where
             total_bytes,
         );
     }
-
-    let progress_interval = state.progress_interval;
 
     // ---- Main loop. ----
     for source_path in sources {
@@ -232,21 +261,13 @@ where
                         files_skipped += 1;
                         bytes_skipped += bytes_accounted;
                         state.note_skipped(1, bytes_accounted);
-                        if last_progress_time.elapsed() >= progress_interval {
-                            last_progress_time = Instant::now();
-                            emit_progress_and_status(
-                                events,
-                                state,
-                                operation_id,
-                                config.operation_type,
-                                config.phase,
-                                source_path.file_name().map(|n| n.to_string_lossy().to_string()),
-                                files_done,
-                                total_files,
-                                bytes_done,
-                                total_bytes,
-                            );
-                        }
+                        tick_skipped(
+                            &mut last_progress_time,
+                            source_path,
+                            bytes_accounted,
+                            files_done,
+                            bytes_done,
+                        );
                         continue;
                     }
                     Ok(ConflictDecision::Proceed {
@@ -319,21 +340,13 @@ where
                 files_skipped += 1;
                 bytes_skipped += bytes_accounted;
                 state.note_skipped(1, bytes_accounted);
-                if last_progress_time.elapsed() >= progress_interval {
-                    last_progress_time = Instant::now();
-                    emit_progress_and_status(
-                        events,
-                        state,
-                        operation_id,
-                        config.operation_type,
-                        config.phase,
-                        source_path.file_name().map(|n| n.to_string_lossy().to_string()),
-                        files_done,
-                        total_files,
-                        bytes_done,
-                        total_bytes,
-                    );
-                }
+                tick_skipped(
+                    &mut last_progress_time,
+                    source_path,
+                    bytes_accounted,
+                    files_done,
+                    bytes_done,
+                );
             }
             Err(e) => {
                 failed_on(source_path, &e);

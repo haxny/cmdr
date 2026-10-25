@@ -89,9 +89,11 @@ in-flight line (`apps/desktop/src/lib/file-operations/transfer/DETAILS.md` § "T
 
 ### The completion counts leaves, ❌ never the async driver's `files_done`
 
-The async driver counts TOP-LEVEL sources, so one selected folder of 36 files ends its loop at `files_done = 1`. A
-volume op's `WriteCompleteEvent::files_processed` (and its cancel's) comes from
-`TransferLoopOutcome::files_done_in_leaves` instead: the `LeafProgressLedger`'s counter, plus the top-level sources the
-driver skipped mid-loop, which the ledger never sees. That matches the concurrent driver (whose tally IS the ledger's)
-and the local engine (whose driver iterates leaves), and it's what the done dialog's "N / total" and its "Copied N
-files" read. #702 shipped "Copied 1 file", "1 / 36" beside a full byte bar from the serial copy and cross-volume move.
+The async driver counts TOP-LEVEL sources, so one selected folder of 36 files ends its loop at `files_done = 1`. The
+streaming volume ops (`volume/copy_serial.rs`, `volume/move_cross.rs`) hand the driver their `LeafProgressLedger` as
+`DriverConfig::skip_ledger`, so a top-level source the driver skips mid-loop is credited there too (one file, its bytes,
+sent in the ledger's order), and their `WriteCompleteEvent::files_processed` (and the cancel's) is the ledger's counter.
+That matches the concurrent driver (whose tally IS the ledger's) and the local engine (whose driver iterates leaves),
+and it's what the done dialog's "N / total" and its "Copied N files" read. **Why**: #702 shipped "Copied 1 file", "1 /
+36" beside a full byte bar, and a skip's tick stepped a folder's "3 / 4" back to "2 / 4". The same-volume rename-merge
+passes `None`: its driver counts ARE the operation's (one item per rename).

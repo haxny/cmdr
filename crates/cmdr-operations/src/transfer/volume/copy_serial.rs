@@ -121,6 +121,27 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
 
     let mut copy_error: Option<WriteFailure> = None;
 
+    // Operation-wide leaf-file counter for the File progress bar, and what the
+    // completion reports: the driver's `files_done` counts top-level sources,
+    // but the bar's denominator is the preflight LEAF count, so
+    // `LeafProgress::complete` bumps this once per inner file and a top-level
+    // skip once (`DriverConfig::skip_ledger`).
+    let leaf_files_done = Arc::new(AtomicUsize::new(bulk_skip_files));
+    // ONE ledger for the whole copy, so the leaves a folder streams at once
+    // each hold their own share of the in-flight byte total. The driver keeps
+    // its own running `bytes_done` across sources (it counts the skipped ones
+    // the leaves never see), so each iteration reseeds the settled half below.
+    let leaf_ledger = LeafProgressLedger::new(
+        Arc::clone(&events),
+        Arc::clone(state),
+        operation_id.to_string(),
+        WriteOperationType::Copy,
+        Arc::clone(&leaf_files_done),
+        total_files,
+        total_bytes,
+        progress_interval,
+    );
+
     let driver_config = DriverConfig {
         operation_type: WriteOperationType::Copy,
         phase: WriteOperationPhase::Copying,
@@ -128,6 +149,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
         pre_known_conflicts: config.pre_known_conflicts.clone(),
         // Streaming path: the leaf ledger owns leaf-granular milestones.
         emit_per_source_milestone: false,
+        skip_ledger: Some(Arc::clone(&leaf_ledger)),
         // Skips and failures from the driver, `Done` from the closure below.
         report_source_outcomes: true,
     };
@@ -151,11 +173,6 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
     let copied_paths_for_closure = Arc::clone(&copied_paths);
     let created_dirs_for_closure = Arc::clone(&created_dirs);
     let source_hints_arc: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(std::mem::take(&mut source_hints));
-    // Operation-wide leaf-file counter for the File progress bar (see the
-    // matching note in `volume::r#move`): the driver's `files_done` counts
-    // top-level sources, but the bar's denominator is the preflight LEAF
-    // count, so `LeafProgress::complete` bumps this once per inner file.
-    let leaf_files_done = Arc::new(AtomicUsize::new(bulk_skip_files));
 
     let outcome = drive_transfer_serial_async(
         &*events,
@@ -283,21 +300,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
             let operation_id = operation_id_owned.clone();
             let config_for_merge = config_owned.clone();
             let merge_apply_to_all = Arc::clone(&apply_to_all_cell);
-            // ONE ledger for the whole copy, so the leaves a folder streams at
-            // once each hold their own share of the in-flight byte total. The
-            // driver keeps its own running `bytes_done` across sources (it
-            // counts the skipped ones the leaves never see), so each iteration
-            // reseeds the settled half below.
-            let leaf_ledger = LeafProgressLedger::new(
-                Arc::clone(&events),
-                Arc::clone(&state),
-                operation_id.clone(),
-                WriteOperationType::Copy,
-                Arc::clone(&leaf_files_done),
-                total_files,
-                total_bytes,
-                progress_interval,
-            );
+            let leaf_ledger = Arc::clone(&leaf_ledger);
             let deep_skipped_files = Arc::clone(&deep_skipped_files);
             let deep_skipped_bytes = Arc::clone(&deep_skipped_bytes);
             let journal_volumes = journal_volumes.clone();
@@ -638,7 +641,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
     let _ = std::mem::take(&mut *apply_to_all_cell.lock_ignore_poison());
     let _ = source_hints_arc;
 
-    let files_done = outcome.files_done_in_leaves(leaf_files_done.load(Ordering::Relaxed), bulk_skip_files);
+    // The ledger's count, ❌ never `outcome.files_done` (top-level sources).
+    let files_done = leaf_files_done.load(Ordering::Relaxed);
     let bytes_done = outcome.bytes_done;
     let files_skipped = outcome.files_skipped;
     let bytes_skipped = outcome.bytes_skipped;

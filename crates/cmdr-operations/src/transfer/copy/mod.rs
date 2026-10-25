@@ -460,6 +460,7 @@ pub(crate) fn copy_files_with_progress_inner(
         // Sync driver ignores these; `copy_single_item` owns its emits and the
         // closure below every verdict.
         emit_per_source_milestone: false,
+        skip_ledger: None,
         report_source_outcomes: false,
     };
 
