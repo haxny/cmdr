@@ -502,6 +502,7 @@ version = "0.0.0"
 dependencies = [
  "cmdr-adb",
  "cmdr-archive",
+ "cmdr-nfs",
  "cmdr-s3",
  "cmdr-webdav",
  "image",
@@ -520,6 +521,19 @@ dependencies = [
  "objc2-core-foundation",
  "reqwest",
  "url",
+]
+
+[[package]]
+name = "cmdr-nfs"
+version = "0.0.0"
+dependencies = [
+ "bytes",
+ "cmdr-fs",
+ "futures-util",
+ "libc",
+ "log",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

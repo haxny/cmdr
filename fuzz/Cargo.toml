@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["rt"] }
 
 cmdr-adb = { path = "../crates/cmdr-adb", features = ["fuzzing"] }
 cmdr-archive = { path = "../crates/cmdr-archive" }
+cmdr-nfs = { path = "../crates/cmdr-nfs", features = ["fuzzing"] }
 cmdr-s3 = { path = "../crates/cmdr-s3", features = ["fuzzing"] }
 cmdr-webdav = { path = "../crates/cmdr-webdav", features = ["fuzzing"] }
 
@@ -70,6 +71,13 @@ bench = false
 [[bin]]
 name = "webdav_propfind"
 path = "fuzz_targets/webdav_propfind.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "nfs_reply"
+path = "fuzz_targets/nfs_reply.rs"
 test = false
 doc = false
 bench = false

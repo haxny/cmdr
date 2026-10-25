@@ -67,7 +67,9 @@ Our own ONC RPC client, no dependency (§ "The dependency decision").
 
 - **`xdr.rs`**: a `Decoder` over one received record (`Bytes`). Every length is checked against the field's limit and
   then against what's left before anything is sliced; opaque data (a READ payload) is a zero-copy slice. An array count
-  is checked against its smallest element first, so a 4 GiB claim in a 100-byte record reserves nothing.
+  is checked against its smallest element first, so a 4 GiB claim in a 100-byte record reserves nothing. The `fuzzing`
+  feature exposes `fuzzing::reply`, which runs one record through `decode_reply` and every reply decoder (portmap,
+  MOUNT, NFSv3); the `nfs_reply` target drives it, seeded from the knfsd captures (`fuzz/DETAILS.md`).
 - **`transport.rs`**: `RpcConnection` is one TCP connection with a writer task and a reader task; calls pipeline and
   find their reply by XID (process-wide, randomly seeded, so no repeat across reconnects). The rules:
   - Dropping a call's future forgets its XID; a late reply is dropped. v3 is stateless, so ❌ never drop the connection
@@ -278,8 +280,8 @@ folder edited on a connected place moves the live params (`NfsVolume::set_start_
 Deliberately out, so a reader doesn't take the gap for a bug: NFSv4, Kerberos, NLM locks, NFS over UDP, and WebNFS
 public handles; Bonjour discovery of NFS servers (the hub says so in one line instead); `._` sidecars, read or written;
 a link whose target is absolute or leaves the export (shown as a link, opening it is `NotSupported`); background
-indexing and thumbnails past what `read_range` gives; server-side copy (v3 has none); `MKNOD`, `LINK`, and `SYMLINK`;
-and a fuzz target for the decoder (the `webdav_propfind` pattern would fit).
+indexing and thumbnails past what `read_range` gives; server-side copy (v3 has none); and `MKNOD`, `LINK`, and
+`SYMLINK`.
 
 ## The public surface is capped
 

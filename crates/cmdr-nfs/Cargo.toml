@@ -21,6 +21,10 @@ workspace = true
 #
 # Never enable in a production build.
 testing = ["cmdr-fs/testing"]
+# Exposes `fuzzing`, the entry point the `nfs_reply` target in `fuzz/` (repo
+# root) drives: every reply decoder over one record. Never enable in a
+# production build.
+fuzzing = []
 
 [dependencies]
 # The `Volume` trait, every type it exchanges, the id funnel and app-path
@@ -46,6 +50,9 @@ log = "0.4"
 libc = "0.2"
 
 [dev-dependencies]
+# Depending on ourselves turns `fuzzing` on for every DEV target and leaves it
+# off for the lib, so clippy lints the seam and a shipped build carries none.
+cmdr-nfs = { path = ".", features = ["fuzzing"] }
 # `simulate_loss`, `set_silence_timings`, and the recording event sink.
 cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
 # `start_paused` clocks for the transport's timing cells (the stuck-call resend,

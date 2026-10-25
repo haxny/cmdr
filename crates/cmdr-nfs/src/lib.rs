@@ -4,8 +4,13 @@
 //! Everything Cmdr says to an NFSv3 server: our own user-space client, so a
 //! `secure` export opens with no root and no OS mount.
 
+#[cfg(test)]
+use cmdr_nfs as _;
+
 pub(crate) mod dial;
 pub(crate) mod errors;
+#[cfg(feature = "fuzzing")]
+pub mod fuzzing;
 pub(crate) mod params;
 #[allow(
     dead_code,

@@ -2,7 +2,7 @@
 
 ## Why this crate looks the way it does
 
-- **One shared crate, not a `fuzz/` per crate.** Eight targets across four crates plus three app decoders share one
+- **One shared crate, not a `fuzz/` per crate.** Nine targets across five crates plus three app decoders share one
   instrumented build (one `target/`, one lock, one CI cache). Per-crate dirs would build the common dependency graph
   (tokio, quick-xml, the codecs) once per crate.
 - **Outside the workspace** (`[workspace]` in its own `Cargo.toml`): the sanitizer build needs nightly flags no other
@@ -20,6 +20,10 @@
 - `adb_shell`: shell v2 frames, bounded and unbounded, then `parse_df_k` on stdout.
 - `webdav_propfind`: `parse_multistatus` (namespaces, entities, hrefs, RFC 3339 and HTTP dates).
 - `s3_xml`: every S3 response parser over one body (`xml::parse_tree` plus the per-document readers).
+- `nfs_reply`: one reply record through `decode_reply`, then its results through every portmap, MOUNT, and NFSv3 decoder
+  (the record doesn't say which call it answers, so all of them); asserts a READ never yields more than `MAX_PAYLOAD`.
+  Seeds: the knfsd captures (`crates/cmdr-nfs/src/proto/testdata/knfsd/`, hex to binary, no record mark) plus hand-built
+  WRITE and COMMIT answers, which no capture has.
 - `archive_index`: `ArchiveIndex::parse` over in-memory zip, tar (plain, gzip, bzip2, xz, zstd), and 7z; walks the tree
   asserting every listed path is safe and consistent, then reads up to 256 KiB from each of the first three files.
 - `archive_entry_name`: `sanitize_entry_name` never accepts a name that escapes its root, and accepting is idempotent.

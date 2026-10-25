@@ -1880,6 +1880,7 @@ version = "0.0.0"
 dependencies = [
  "bytes",
  "cmdr-fs",
+ "cmdr-nfs",
  "futures-util",
  "libc",
  "log",

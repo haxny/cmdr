@@ -1,6 +1,6 @@
 # Fuzz targets
 
-libFuzzer targets (cargo-fuzz) for the code that parses bytes someone else chose: a phone over ADB, a WebDAV or S3
+libFuzzer targets (cargo-fuzz) for the code that parses bytes someone else chose: a phone over ADB, a WebDAV, S3, or NFS
 server, an archive, a PDF, or an image a user opens. Run them with `pnpm check fuzz` (`CMDR_FUZZ_SECONDS`, default 60
 per target); CI runs the same lane in `slow-checks.yml`.
 
@@ -8,8 +8,8 @@ per target); CI runs the same lane in `slow-checks.yml`.
 
 - `fuzz_targets/`: one file per target, each a thin call into a `fuzzing` module or a public API.
 - `seeds/<target>/`: the committed seed corpus. `corpus/` (grown), `artifacts/` (findings), `target/`: gitignored.
-- The seams live in the crates: `cmdr_adb::fuzzing`, `cmdr_webdav::fuzzing`, `cmdr_s3::fuzzing`, each behind that
-  crate's `fuzzing` feature (on in its dev builds, so clippy lints it).
+- The seams live in the crates: `cmdr_adb::fuzzing`, `cmdr_webdav::fuzzing`, `cmdr_s3::fuzzing`, `cmdr_nfs::fuzzing`,
+  each behind that crate's `fuzzing` feature (on in its dev builds, so clippy lints it).
 
 ## Must-knows
 

@@ -146,7 +146,7 @@ risk.
   - **Size caps before allocating**: the xz dictionary an archive asks for is capped, and a PDF page whose `Parent`
     chain loops reads as unparseable instead of recursing (`crates/cmdr-archive/src/read/DETAILS.md` § Resource caps,
     `apps/desktop/src-tauri/src/agent/tools/DETAILS.md`).
-  - **Fuzzing**: fuzz targets cover archive names and indexes, PDF, image headers, and the S3, WebDAV, and ADB wire
+  - **Fuzzing**: fuzz targets cover archive names and indexes, PDF, image headers, and the S3, WebDAV, NFS, and ADB wire
     parsers, on demand (`pnpm check fuzz`) and in the slow CI lane every six days (`fuzz/DETAILS.md`, which also lists
     the findings and the one open upstream issue).
 - **Residual risk**:
