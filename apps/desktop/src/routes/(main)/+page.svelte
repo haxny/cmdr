@@ -79,8 +79,8 @@
         type WindowServicesContext,
         startEarlyWindowServices,
         startWindowServices,
-        stopWindowServices,
     } from './window-services'
+    import { createMountScope } from '#lib/utils/mount-scope.js'
     import { SOFT_DIALOG_REGISTRY } from '#lib/ui/dialog-registry.js'
     import { isAnySoftDialogOpen } from '#lib/ui/open-dialogs.svelte.js'
     import { notifyOnboardingComplete, setOnboardingShowing } from '#lib/updates/updater.svelte.js'
@@ -178,12 +178,26 @@
     let appMode = $state<AppMode>(getAppMode())
     const showFunctionKeyBar = $derived(getShowFunctionKeyBar())
 
-    // Event handlers stored for cleanup
-    let handleKeyDown: ((e: KeyboardEvent) => void) | undefined
-    let handleQuickLookKey: ((e: KeyboardEvent) => void) | undefined
-    let handleMouseDown: ((e: MouseEvent) => void) | undefined
-    let handleMouseUp: ((e: MouseEvent) => void) | undefined
-    let uninstallEscapeStopClaims: (() => void) | undefined
+    /**
+     * Every teardown `onMount` starts, disposed by `onDestroy`. `onMount` is async, so the page
+     * can unmount while it's parked on an await (a route change mid-startup); anything it starts
+     * after that checks `isDisposed()` first or registers into this scope, which stops it on the
+     * spot. Without it, a remount stacked a second set of window listeners and every menu
+     * command ran twice.
+     */
+    const mountScope = createMountScope()
+
+    /** Adds a document listener for the page's lifetime, its removal handed to `mountScope`. */
+    function listenOnDocument<K extends keyof DocumentEventMap>(
+        type: K,
+        handler: (event: DocumentEventMap[K]) => void,
+        capture = false,
+    ): void {
+        document.addEventListener(type, handler, capture)
+        mountScope.add(() => {
+            document.removeEventListener(type, handler, capture)
+        })
+    }
 
     /** Opens the debug window (dev mode only) */
     async function openDebugWindow() {
@@ -360,8 +374,10 @@
         void registerKnownDialogs(SOFT_DIALOG_REGISTRY)
 
         // The window's fire-and-forget subscriptions, up before the awaits below can
-        // delay them (`window-services.ts` § Two start phases).
-        startEarlyWindowServices()
+        // delay them (`window-services.ts` § Two start phases). Not once the page is gone:
+        // they're window-wide singletons, so a late start would land on the next mount's.
+        if (mountScope.isDisposed()) return
+        startEarlyWindowServices(mountScope)
 
         // Load license status from cache (fast, no network)
         try {
@@ -399,6 +415,10 @@
 
         await resolveOnboardingMount(startupGatesCtx)
 
+        // The page may have unmounted during the awaits above. Everything below is the
+        // window's to start, so a gone page starts none of it (`mountScope`).
+        if (mountScope.isDisposed()) return
+
         // The best-effort notice for a Mac below the supported floor. Fire-and-forget:
         // it costs an IPC round trip, it's a once-per-machine cosmetic heads-up, and
         // nothing below it depends on the answer.
@@ -421,19 +441,17 @@
         // handlers. These must be registered BEFORE `startWindowServices()` because
         // that call may throw in non-Tauri environments (e.g. Playwright smoke tests).
         initShortcutDispatch()
+        mountScope.add(destroyShortcutDispatch)
 
-        handleKeyDown = handleGlobalKeyDown
-        handleQuickLookKey = handleQuickLookCloseKey
-        handleMouseDown = handleGlobalMouseDown
-        handleMouseUp = handleGlobalMouseUp
-        document.addEventListener('keydown', handleKeyDown)
-        uninstallEscapeStopClaims = installEscapeStopClaims()
-        document.addEventListener('keydown', handleQuickLookKey, true)
-        document.addEventListener('mousedown', handleMouseDown)
-        document.addEventListener('mouseup', handleMouseUp)
+        listenOnDocument('keydown', handleGlobalKeyDown)
+        mountScope.add(installEscapeStopClaims())
+        listenOnDocument('keydown', handleQuickLookCloseKey, true)
+        listenOnDocument('mousedown', handleGlobalMouseDown)
+        listenOnDocument('mouseup', handleGlobalMouseUp)
 
         // The listeners and stores that need the explorer handle and the command bus.
-        await startWindowServices(windowServicesCtx)
+        await startWindowServices(mountScope, windowServicesCtx)
+        if (mountScope.isDisposed()) return
 
         // Wait for Svelte to flush any pending DOM updates so DualPaneExplorer
         // (which renders when `showApp=true`) is in the DOM before we look for
@@ -456,21 +474,7 @@
     })
 
     onDestroy(() => {
-        destroyShortcutDispatch()
-        stopWindowServices()
-        if (handleKeyDown) {
-            document.removeEventListener('keydown', handleKeyDown)
-        }
-        if (handleQuickLookKey) {
-            document.removeEventListener('keydown', handleQuickLookKey, true)
-        }
-        if (handleMouseDown) {
-            document.removeEventListener('mousedown', handleMouseDown)
-        }
-        if (handleMouseUp) {
-            document.removeEventListener('mouseup', handleMouseUp)
-        }
-        uninstallEscapeStopClaims?.()
+        mountScope.dispose()
     })
 
     /**

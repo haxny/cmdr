@@ -5,9 +5,10 @@
  * This module owns the *logic* of wiring menu and MCP-dialog event listeners; the
  * component owns all `$state`. State crosses the boundary through `ListenerSetupContext`:
  * reads come in as getter functions and writes go out as setter callbacks, so the
- * captured closures always see live reactive values instead of a stale snapshot. The
- * shared `unlistenFns` array carries every registered unlisten back to the component's
- * `onDestroy` (important for HMR: stale listeners would otherwise stack on every reload).
+ * captured closures always see live reactive values instead of a stale snapshot. Every
+ * registered unlisten goes into the page's `MountScope`, which `onDestroy` disposes
+ * (important for HMR: stale listeners would otherwise stack on every reload). One that
+ * lands after the page unmounted runs at once, so a slow startup can't leak it.
  *
  * Runes can't live in a plain `.ts`, which is why the keydown handler, licensing init,
  * and onboarding gating stay in the component: they read/write `$state` directly.
@@ -72,6 +73,7 @@ import { openStaleDrivePreview } from '#lib/dialog-gallery/stale-drive-preview.j
 import { openOperationConflictPreview } from '#lib/dialog-gallery/operation-conflict-preview.js'
 import { openTransferProgressPreview } from '#lib/dialog-gallery/transfer-progress-preview.js'
 import { isE2eRun } from '#lib/app-mode.js'
+import type { MountScope } from '#lib/utils/mount-scope.js'
 import type { ExplorerAPI } from './explorer-api'
 import type { FriendlyError, TransferOperationType } from '#lib/file-explorer/types.js'
 
@@ -80,8 +82,8 @@ const log = getAppLogger('mainListeners')
 /**
  * The seam between the main component (owns `$state`) and the extracted listener
  * logic. Reads are getters so each fired listener sees live reactive values; writes
- * are setter callbacks. `unlistenFns` is the component-owned cleanup array (every
- * registered listener's unlisten is pushed here for `onDestroy` / HMR teardown).
+ * are setter callbacks. `scope` is the page's mount scope (every registered listener's
+ * unlisten goes here for `onDestroy` / HMR teardown).
  */
 export interface ListenerSetupContext {
   /** Live read of the explorer handle (`undefined` until `DualPaneExplorer` mounts; HMR can swap it). */
@@ -92,8 +94,8 @@ export interface ListenerSetupContext {
    * knows where a command came from.
    */
   dispatchers: Pick<CommandDispatchers, 'menu' | 'mouse'>
-  /** Component-owned cleanup array; every registered unlisten is pushed here. */
-  unlistenFns: UnlistenFn[]
+  /** The page's mount scope; every registered unlisten goes here. */
+  scope: MountScope
   /** Write-only dialog setters (the component owns the `$state`). */
   dialogs: {
     setAboutWindow: (show: boolean) => void
@@ -118,17 +120,17 @@ async function safeListenTauri(
 }
 
 /**
- * Builds a `listenTauri(event, handler)` bound to the given cleanup array: registers
- * the listener (no-op in a non-Tauri environment) and stores its unlisten for cleanup.
- * The component holds onto the returned function to also pass into `setupMcpListeners`,
- * so MCP and dialog listeners share one cleanup array.
+ * Builds a `listenTauri(event, handler)` bound to the given mount scope: registers
+ * the listener (no-op in a non-Tauri environment) and hands its unlisten to the scope.
+ * `startWindowServices` also passes one into `setupMcpListeners`, so MCP and dialog
+ * listeners share one scope.
  */
 export function makeListenTauri(
-  unlistenFns: UnlistenFn[],
+  scope: MountScope,
 ): (event: string, handler: (event: { payload: unknown }) => void) => Promise<void> {
   return async (event, handler) => {
     const unlisten = await safeListenTauri(event, handler)
-    if (unlisten) unlistenFns.push(unlisten)
+    if (unlisten) scope.add(unlisten)
   }
 }
 
@@ -136,9 +138,9 @@ export function makeListenTauri(
  * Registers a typed `on*` event wrapper and stores its unlisten for cleanup.
  * Swallows the non-Tauri-environment rejection, matching `listenTauri`.
  */
-async function pushTauri(unlistenFns: UnlistenFn[], register: () => Promise<UnlistenFn>): Promise<void> {
+async function pushTauri(scope: MountScope, register: () => Promise<UnlistenFn>): Promise<void> {
   try {
-    unlistenFns.push(await register())
+    scope.add(await register())
   } catch {
     // Not in a Tauri environment
   }
@@ -255,12 +257,12 @@ const viewSetModeCommand: CommandId = 'view.setMode'
 
 /** Set up menu-related event listeners. */
 export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<void> {
-  const { dispatchers, getExplorer, unlistenFns } = ctx
+  const { dispatchers, getExplorer, scope } = ctx
 
   // Single unified listener for all menu commands routed through "execute-command": the
   // native menu bar, the Dock menu, and other windows' emits all take the menu's road.
   try {
-    unlistenFns.push(
+    scope.add(
       await onExecuteCommand((payload) => {
         const { commandId } = payload
         // The Rust menu emit (`menu_id_to_command`) and cross-window emits send a bare
@@ -282,7 +284,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
   // payload is validated rather than `as`-cast: an unknown `mode` is dropped,
   // and an absent/unknown `pane` falls back to the focused pane (matching the
   // old in-component listener's `event.payload.pane ?? focusedPane`).
-  unlistenFns.push(
+  scope.add(
     await onViewModeChanged((payload) => {
       const mode: ViewMode | undefined = payload.mode === 'full' || payload.mode === 'brief' ? payload.mode : undefined
       if (!mode) return
@@ -301,7 +303,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
   // Both land as `settings-changed`, and writing the setting is all that's left
   // to do: both panes read it, and the applier's echo back to the menu is a
   // no-op set to the value the item already carries.
-  unlistenFns.push(
+  scope.add(
     await onSettingsChanged((payload) => {
       setSetting('listing.showHiddenFiles', payload.showHiddenFiles)
     }),
@@ -311,7 +313,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
   // `execute-command`) with `{ action, value }`; the dispatch maps each
   // value onto the focused-pane `sort.*` command. Validated, not `as`-cast:
   // an unknown `action`/`value` pair is dropped.
-  unlistenFns.push(
+  scope.add(
     await onMenuSort((payload) => {
       const command = menuSortToCommand(payload.action, payload.value)
       if (command) void dispatchers.menu(command)
@@ -320,7 +322,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
 
   // A file list header's Sort by popup. Off the `menu-sort` road on purpose: that one sorts
   // the FOCUSED pane, and a right-click on the other pane's header must sort that one.
-  unlistenFns.push(
+  scope.add(
     await onDateSortMenuPick((pick) => {
       void getExplorer()?.pickSortColumn(pick.pane, pick.column)
     }),
@@ -328,7 +330,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
 
   // Snapshot menus carry the primary right-clicked row through Rust. Do not
   // reread cursor/selection here: either may differ from the row the menu named.
-  unlistenFns.push(
+  scope.add(
     await onShowSearchResultInFolder((payload) => {
       const explorer = getExplorer()
       if (explorer) void revealSearchResultInPane(explorer, explorer.getFocusedPane(), payload.path)
@@ -340,7 +342,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
   // `mediaIndex.excludedFolders` and live-applies it (excluding retro-deletes the
   // folder's indexed rows backend-side). The helper rolls back + logs on failure, so a
   // rejection here needs no extra handling (a background privacy action, no toast).
-  unlistenFns.push(
+  scope.add(
     await onMediaIndexFolderExclusion((payload) => {
       void setFolderExcluded(payload.folder, payload.excluded).catch(() => {})
     }),
@@ -350,7 +352,7 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
   // the exclusion above, through the ONE chosen-folder path (`setFolderChosen`), so the
   // menu and the Settings list write the same setting and stay in agreement. Adding kicks
   // an indexing pass backend-side. The helper rolls back + logs on failure.
-  unlistenFns.push(
+  scope.add(
     await onMediaIndexFolderChoice((payload) => {
       void setFolderChosen(payload.folder, payload.chosen).catch(() => {})
     }),
@@ -358,24 +360,24 @@ export async function setupMenuListeners(ctx: ListenerSetupContext): Promise<voi
 
   // "Hide function key bar" from the bar's own right-click context menu: no
   // context to stash, so the handler just flips the setting and raises a toast.
-  unlistenFns.push(await onFunctionKeyBarHideRequested(handleFunctionKeyBarHideRequested))
+  scope.add(await onFunctionKeyBarHideRequested(handleFunctionKeyBarHideRequested))
 
   // A tag toggle (keyboard or context-menu circle) left files alone because their
   // existing tags couldn't be read: say so, or the person sees a color that didn't land.
-  unlistenFns.push(await onTagsSkipped(handleTagsSkipped))
+  scope.add(await onTagsSkipped(handleTagsSkipped))
 }
 
 /** Set up MCP dialog event listeners (close/focus). */
 export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<void> {
-  const { getExplorer, unlistenFns, dialogs, maybeRunWhatsNew } = ctx
-  const listenTauri = makeListenTauri(unlistenFns)
+  const { getExplorer, scope, dialogs, maybeRunWhatsNew } = ctx
+  const listenTauri = makeListenTauri(scope)
 
   // Settings with section (MCP-specific: "dialog open settings --section shortcuts").
   // The Rust MCP executor (`mcp/executor/dialogs.rs`) emits `{ section: <string> }`
   // — a BARE string, no anchor (the `dialog` tool has no anchor param, so MCP can't
   // deep-link to a row today; that's future work). Parse defensively (no `as` cast,
   // same discipline as `mcp-listeners.ts`) and wrap the bare string in an array.
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onOpenSettings((payload) => {
       const section = payload.section || undefined
       void openSettingsWindow('ipc', section ? [section] : undefined)
@@ -398,12 +400,12 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
   })
 
   // About dialog
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onCloseAbout(() => {
       dialogs.setAboutWindow(false)
     }),
   )
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onFocusAbout(() => {
       // Already shown, just ensure it's visible
       dialogs.setAboutWindow(true)
@@ -422,7 +424,7 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
   })
 
   // File viewer
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onOpenFileViewer((payload) => {
       if (payload.path) {
         // Open viewer for specific path, on the volume that holds it
@@ -433,17 +435,17 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
       }
     }),
   )
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onCloseFileViewer((payload) => {
       void closeFileViewer(payload.path ?? undefined)
     }),
   )
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onCloseAllFileViewers(() => {
       void closeAllFileViewers()
     }),
   )
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onFocusFileViewer((payload) => {
       void focusFileViewer(payload.path ?? undefined)
     }),
@@ -457,7 +459,7 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
   // Both early exits log at warn: `mainListeners` reaches release logs only from
   // warn up, and a Show that opened nothing is otherwise indistinguishable from a
   // request that never arrived.
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onForegroundOperationRequested((payload) => {
       void focusMainWindow()
       const rows = getMainWindowOperationRows()
@@ -481,7 +483,7 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
   // Show a folder another window asked for: today that is the settings window's
   // "Open memory folder". The path travels with the request because only Rust knows
   // it (it moves with the data dir), and the main window is the only one with panes.
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onRevealPath((payload) => {
       void revealFolderInFocusedPane(getExplorer(), payload.path)
     }),
@@ -490,7 +492,7 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
   // The Dock tile menu's bookmark rows open a favorite BY ID in the focused pane, so the
   // pane enters the volume the favorite names (and dials it when it's a saved place)
   // rather than whatever volume its path resolves to now.
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onOpenFavorite((payload) => {
       const explorer = getExplorer()
       if (!explorer) {
@@ -505,12 +507,12 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
   )
 
   // Confirmation dialog - handled by DualPaneExplorer
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onCloseConfirmation(() => {
       getExplorer()?.closeConfirmationDialog()
     }),
   )
-  await pushTauri(unlistenFns, () =>
+  await pushTauri(scope, () =>
     onFocusConfirmation(() => {
       // The confirmation dialog is a modal overlay in the main window.
       // If it's open, ensure the main window is focused so the dialog is visible.
@@ -654,7 +656,7 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
  * mouse button has no native-menu twin to double-fire.
  */
 export async function setupMouseNavListener(ctx: ListenerSetupContext): Promise<void> {
-  await pushTauri(ctx.unlistenFns, () =>
+  await pushTauri(ctx.scope, () =>
     onMouseNav((direction) => {
       void ctx.dispatchers.mouse(navCommandForDirection(direction))
     }),
@@ -671,7 +673,7 @@ export async function setupWindowFocusListener(ctx: ListenerSetupContext): Promi
       // native menu item re-reads in Rust on the same focus-gain, the palette row here.
       if (focused) void refreshCliCommandName()
     })
-    ctx.unlistenFns.push(unlisten)
+    ctx.scope.add(unlisten)
   } catch {
     // Not in Tauri environment
   }

@@ -99,7 +99,8 @@ land while startup is parked on an await (a test that mounts and ends synchronou
 registered after that point would outlive the component and read its dead deriveds (`derived_inert`). So register each
 teardown right after the await that created it: `if (!scope.add(unlisten)) return`. On a disposed scope `add` runs the
 teardown at once and answers `false`, which both frees the late listener and stops the rest of startup. Used by
-`DualPaneExplorer.svelte`.
+`DualPaneExplorer.svelte` and the main route (`routes/(main)/+page.svelte`, which threads it through
+`window-services.ts`).
 
 ## version.ts
 

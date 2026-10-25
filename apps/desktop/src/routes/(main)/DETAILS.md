@@ -13,10 +13,10 @@ here:
 
 - **`listener-setup.ts` is a plain `.ts` with NO runes**, so it can't hold `$state`. State crosses the boundary through
   a `ListenerSetupContext` of getter functions (reads) and setter callbacks (writes), which is what keeps the moved
-  closures reading LIVE reactive values instead of a stale capture. Every registered unlisten goes onto the
-  component-owned `unlistenFns` array so the one `onDestroy` loop tears them all down: without that, HMR stacks
-  duplicate listeners on every reload. The keydown handler, licensing init, and onboarding gating stay in `+page.svelte`
-  precisely because they read and write `$state` directly. On the dispatch side the mirror rule is that only
+  closures reading LIVE reactive values instead of a stale capture. Every registered unlisten goes into the page's
+  `MountScope` (`ctx.scope`) so the one `onDestroy` dispose tears them all down: without that, HMR stacks duplicate
+  listeners on every reload. The keydown handler, licensing init, and onboarding gating stay in `+page.svelte` precisely
+  because they read and write `$state` directly. On the dispatch side the mirror rule is that only
   `handleTextRegionShortcut` and `blockedByCapabilities` belong in the core; everything else is a handler.
 - **`global-keydown.ts` owns the keydown DECISION, `+page.svelte` owns the side effects.**
   `resolveGlobalKeyAction(event, onScreen)` is pure (`dispatch` / `openDebugWindow` / `suppress` / `unusedEscape` /
@@ -47,14 +47,23 @@ here:
   `startEarlyWindowServices()` runs at the very top of `onMount` and holds only fire-and-forget subscribers (the menu
   gate, the suggestions badge, the Ask Cmdr turn stream, the wake indicator): each of them can miss events that arrive
   before it subscribes, and the licence read plus the onboarding gate between them and phase 2 are real awaits.
-  `startWindowServices(ctx)` runs AFTER the document-level key handlers, because its first `listen` rejects outside
-  Tauri (the Playwright smoke tests) and the handlers have to survive that. `stopWindowServices()` drains both plus the
-  module-owned `unlistenFns` array. Same context discipline as `listener-setup.ts`: getters in, callbacks out, no
-  captured `$state`. Phase 2 ends with `startRevealActivationNotice()` and then `drainPendingReveals()`, which tells the
-  backend this window can now be handed an OS reveal that landed before it existed. ❌ Neither can move to phase 1: the
-  reveal is delivered over `mcp-nav-to-path`, so the drain has to sit after `setupMcpListeners`. ❌ And the notice has
-  to be subscribed BEFORE the drain, or a cold-launch reveal announces itself with nobody listening. See
+  `startWindowServices(scope, ctx)` runs AFTER the document-level key handlers, because its first `listen` rejects
+  outside Tauri (the Playwright smoke tests) and the handlers have to survive that. Both phases hand every teardown to
+  the page's `MountScope` (`#lib/utils/mount-scope.ts`), which `onDestroy` disposes; there is no separate stop call.
+  Same context discipline as `listener-setup.ts`: getters in, callbacks out, no captured `$state`. Phase 2 ends with
+  `startRevealActivationNotice()` and then `drainPendingReveals()`, which tells the backend this window can now be
+  handed an OS reveal that landed before it existed. ❌ Neither can move to phase 1: the reveal is delivered over
+  `mcp-nav-to-path`, so the drain has to sit after `setupMcpListeners`. ❌ And the notice has to be subscribed BEFORE
+  the drain, or a cold-launch reveal announces itself with nobody listening. See
   `apps/desktop/src-tauri/src/reveal/CLAUDE.md` and `apps/desktop/src/lib/reveal/CLAUDE.md`.
+- **The page can unmount while `onMount` is still starting it**, parked on one of its awaits (a route change
+  mid-startup). Whatever it started after that point used to stay subscribed for good, and the remount stacked a second
+  copy: two `execute-command` listeners, so one menu command ran twice. So `onMount` checks `mountScope.isDisposed()`
+  after its awaits before starting anything window-wide, and phase 2 is a list of steps that `startWindowServices` runs
+  in order, gating each on the scope. A step registers its own teardown: a start/stop singleton pair adds the stop
+  BEFORE awaiting the start (a dispose mid-start still reaches it), and a start that returns its unlisten adds that
+  AFTER (a disposed scope runs it on the spot). ❌ A new phase-2 subscription goes in the step list, never as a bare
+  `await` after `startWindowServices`. Pinned by `window-services.test.ts`.
 - **The window hands out one dispatcher per road (`dispatchers`), and which one a caller gets is a correctness
   question.** The road is the dispatch's source, which the dialog gate and the cross-source dedup both read (§ The
   dialog gate). The five user roads absorb a rejection: a few handlers reject on purpose, a user gesture has nobody to
