@@ -456,9 +456,10 @@ pub(in crate::indexing) async fn run_live_event_loop(
 ///
 /// Three-phase approach:
 ///
-/// **Phase 1: Directory creations:** Sort by path depth and process parents
-/// before children, then flush so the read connection sees the newly created
-/// rows when later phases resolve children.
+/// **Phase 1: Directory creations:** Sort by path depth and process one level
+/// at a time, flushing between levels so a nested new dir resolves the parent
+/// created just above it, then flush so the read connection sees the newly
+/// created rows when later phases resolve children.
 ///
 /// **Phase 1.5: Rename detection by inode:** For every event flagged
 /// `item_renamed` whose path still exists on disk, stat the path and look
@@ -518,10 +519,22 @@ pub(in crate::indexing) fn process_live_batch(
 
     let mut max_event_id = 0u64;
 
-    // Pass 1: process directory creations (shorter paths first = parents before children)
+    // Pass 1: process directory creations a level at a time, parents before children
     if !dir_creations.is_empty() {
-        dir_creations.sort_by_key(|(path, _)| path.len());
+        dir_creations.sort_by_key(|(path, _)| path_prefix::depth(path));
+        let mut level = path_prefix::depth(&dir_creations[0].0);
         for (path, event) in &dir_creations {
+            // Commit the level above before a child resolves its parent against it.
+            // Without this, `mkdir -p a/b` in one batch finds `a` still in the writer
+            // queue, so `a/b` escalates to a rescan the settle delay holds back, and
+            // until it walks, a listing of `a` can't resolve its folder (#705).
+            let depth = path_prefix::depth(path);
+            if depth != level {
+                level = depth;
+                tokio::task::block_in_place(|| {
+                    let _ = writer.flush_blocking();
+                });
+            }
             max_event_id = max_event_id.max(event.event_id);
             // ⚠️ Folded in EXPLICITLY. `pending_events.drain()` above empties the
             // input map into two vectors, and this is the one the later passes

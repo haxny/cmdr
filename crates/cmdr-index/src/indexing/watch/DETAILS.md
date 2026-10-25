@@ -226,7 +226,8 @@ Live mode:
   |-- Linux: inotify (via notify) -> same pipeline
   |-- The loop holds a READ connection for integer-keyed path resolution (never a write one)
   |-- Events deduplicated by normalized path, flushed every 1s; writer flush before emit ensures atomic dir_stats
-  |-- process_live_batch is three-phase: dir creates (depth-sorted) -> rename pre-pass (inode -> MoveEntryV2)
+  |-- process_live_batch is three-phase: dir creates (depth-sorted, flushed per level so `mkdir -p a/b` resolves `a`)
+  |          -> rename pre-pass (inode -> MoveEntryV2)
   |          -> remaining events (removal-storm coalescing). Flushes between phases so later phases see committed state.
 
 Cold-start replay (boot disk only, has_event_journal()):

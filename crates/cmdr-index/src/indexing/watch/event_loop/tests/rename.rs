@@ -96,7 +96,7 @@ fn seed_files_under(db_path: &Path, base: &str, n: usize, writer: &IndexWriter) 
 /// Run `process_live_batch` inside a multi-thread runtime (its flushes use
 /// `block_in_place`), returning the writer's `(DeleteEntryById, DeleteSubtreeById)`
 /// counts after a final flush.
-fn run_live_batch(
+pub(super) fn run_live_batch(
     pending_events: &mut HashMap<String, watcher::FsChangeEvent>,
     reconciler: &mut EventReconciler,
     writer: &IndexWriter,

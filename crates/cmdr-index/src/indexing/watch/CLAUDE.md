@@ -22,7 +22,8 @@ event loop that turns its stream into index writes.
   backpressured a slow replay drain into an FSEvents overflow → a forced full scan, throwing away a working replay. The
   LOOP bounds memory (`classify_ingestion_pressure`, `INGESTION_HARD_CAP` = 5,000,000 ≈ 1.5 GB).
 - **`process_live_batch` is three-phase, flushing between phases** so later phases see committed state: (1) dir
-  creations depth-sorted, (2) the `detect_renames_by_inode` pre-pass, (3) the rest, with removal-storm coalescing.
+  creations depth-sorted and flushed per level, (2) the `detect_renames_by_inode` pre-pass, (3) the rest, with
+  removal-storm coalescing.
 - **Renames are detected by INODE, not intent** (`detect_renames_by_inode` → `MoveEntryV2`, preserving `entry_id` and
   `dir_stats`). ❌ Never revert to `DeleteSubtreeById` + `UpsertEntryV2`: that wipes the renamed dir's `dir_stats` and
   drops its subtree until a full scan heals it. (Inode is null on FAT/exFAT — `../paths/DETAILS.md`.)
