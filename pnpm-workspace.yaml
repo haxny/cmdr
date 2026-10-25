@@ -71,7 +71,7 @@ overrides:
   brace-expansion@1: ^1.1.21
   brace-expansion@5: ^5.0.12
   compression@1: ^1.8.2
-  fast-uri@3: ^3.1.8
+  fast-uri@3: ^3.1.9
   # `satori` pins `fflate` to exactly 0.7.3, even in its latest release.
   fflate@0.7: ^0.8.0
   http-cache-semantics@4: ^4.3.0
@@ -82,8 +82,12 @@ overrides:
   qs@6: ^6.16.0
   # `miniflare` (under `wrangler` and `@cloudflare/vitest-plugin`) pins these exactly.
   sharp@0.35: ^0.35.4
-  undici@7: ^7.29.1
-  undici@8: ^8.10.2
+  undici@7: ^7.30.1
+  undici@8: ^8.12.2
+  # `astro`, `@astrojs/*`, `knip`, and `@cloudflare/vitest-plugin` ask for zod 4
+  # with ranges still allowing 4.6.5. Zod 3 (under Lighthouse CI) can't be moved
+  # this way; it's ignored, by version, in `osv-scanner.toml`.
+  zod@4: ^4.6.6
   smol-toml@1: ^1.9.0
   source-map-js@1: ^1.2.2
   # Cross-major, both only under `@lhci/cli` (Lighthouse CI, whose latest release

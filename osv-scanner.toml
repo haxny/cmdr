@@ -87,3 +87,11 @@ reason = "extract-zip 2.0.1, via @puppeteer/browsers under Lighthouse CI (websit
 [[IgnoredVulns]]
 id = "GHSA-jmr9-qjv8-65gv"
 reason = "extract-zip 2.0.1: same Lighthouse CI-only path as GHSA-7pqw-9j4j-h8q3. No fixed version exists."
+
+# Scoped to one version, so the zod 4 line (which has the fix, pinned in `pnpm-workspace.yaml`) stays watched.
+[[PackageOverrides]]
+name = "zod"
+version = "3.25.76"
+ecosystem = "npm"
+vulnerability.ignore = true
+reason = "zod 3.25.76 (GHSA-mrhx-c7xc-m3w5, memory exhaustion validating oversized collections), via chromium-bidi under puppeteer-core under Lighthouse CI (@lhci/cli, a website devDependency), validating protocol messages from the Chrome it launched against our own built site. The only fix is zod 4.6.6, a major chromium-bidi doesn't take yet. Verified with `pnpm why zod -r`, 2026-10-25."
