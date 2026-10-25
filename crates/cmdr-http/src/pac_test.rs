@@ -1,7 +1,6 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::Ordering;
 
 use super::*;
 
@@ -10,18 +9,15 @@ const SCRIPT: &str = r#"function FindProxyForURL(url, host) {
   return "DIRECT";
 }"#;
 
-/// Serves `body` as a PAC file on `127.0.0.1` and counts the requests. A `None` body accepts
-/// connections and never answers, like a PAC host that hangs.
-fn pac_server(body: Option<&'static str>) -> (String, Arc<AtomicUsize>) {
+/// Serves `body` as a PAC file on `127.0.0.1`. A `None` body accepts connections and never
+/// answers, like a PAC host that hangs.
+fn pac_server(body: Option<&'static str>) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback port");
     let address = listener.local_addr().expect("a bound address");
-    let hits = Arc::new(AtomicUsize::new(0));
-    let counter = hits.clone();
     std::thread::spawn(move || {
         let mut held = Vec::new();
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
-            counter.fetch_add(1, Ordering::SeqCst);
             let mut request = [0u8; 2048];
             let _ = stream.read(&mut request);
             match body {
@@ -36,7 +32,7 @@ fn pac_server(body: Option<&'static str>) -> (String, Arc<AtomicUsize>) {
             }
         }
     });
-    (format!("http://{address}/proxy.pac"), hits)
+    format!("http://{address}/proxy.pac")
 }
 
 fn url(s: &str) -> Url {
@@ -56,7 +52,7 @@ fn via_proxy() -> Vec<Entry> {
 
 #[test]
 fn a_pac_file_routes_each_host_its_own_way() {
-    let (pac, _) = pac_server(Some(SCRIPT));
+    let pac = pac_server(Some(SCRIPT));
     let evaluator = MacPac::new(TIMEOUT);
     let source = PacSource::Url(pac);
     assert_eq!(
@@ -114,23 +110,25 @@ fn cfnetwork_drops_the_versioned_socks_keywords() {
 
 #[test]
 fn an_answer_is_cached_per_host() {
-    let (pac, hits) = pac_server(Some(SCRIPT));
+    let pac = pac_server(Some(SCRIPT));
     let evaluator = MacPac::new(TIMEOUT);
     let source = PacSource::Url(pac);
-    assert_eq!(
-        evaluator.evaluate(&source, &url("https://example.com")),
-        Some(via_proxy())
-    );
-    // One evaluation can take CFNetwork more than one fetch (three, on macOS 27.0), so the cache is
-    // judged by what the repeats add: nothing.
-    let after_first = hits.load(Ordering::SeqCst);
-    for _ in 0..2 {
+    // Judged by the evaluations run, ❌ never by the server's hits: one evaluation can take
+    // CFNetwork more than one fetch (three, on macOS 27.0), and a late one can land after the
+    // answer is back, which raced the old count in CI.
+    for _ in 0..3 {
         assert_eq!(
             evaluator.evaluate(&source, &url("https://example.com")),
             Some(via_proxy())
         );
     }
-    assert_eq!(hits.load(Ordering::SeqCst), after_first);
+    assert_eq!(evaluator.evaluations.load(Ordering::SeqCst), 1);
+    // Per host: another one runs the PAC for itself.
+    assert_eq!(
+        evaluator.evaluate(&source, &url("https://other.test")),
+        Some(vec![Entry::Direct])
+    );
+    assert_eq!(evaluator.evaluations.load(Ordering::SeqCst), 2);
 }
 
 #[test]
@@ -151,7 +149,7 @@ fn an_unreachable_pac_fails_without_waiting_out_the_timeout() {
 
 #[test]
 fn a_pac_host_that_never_answers_is_given_up_on() {
-    let (pac, _) = pac_server(None);
+    let pac = pac_server(None);
     let evaluator = MacPac::new(Duration::from_millis(300));
     let started = Instant::now();
     assert_eq!(

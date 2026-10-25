@@ -103,8 +103,11 @@ a callback on a run loop. reqwest's closure is synchronous, so `MacPac::evaluate
 A thread per miss, not a long-lived run-loop thread: misses are rare (one per host per five minutes), and a fresh thread
 needs no cross-thread wakeup source and holds nothing while idle.
 
-One evaluation can make CFNetwork fetch the PAC more than once (three connections per evaluation on macOS 27.0,
-`pac_test.rs::an_answer_is_cached_per_host`), which is why the cache test counts what the repeats add.
+One evaluation can make CFNetwork fetch the PAC more than once (three connections per evaluation on macOS 27.0), a late
+one can land after the answer is back, and CFNetwork keeps the fetched file, so a changed PAC doesn't show in its next
+answer either (verified on macOS 27.0, by switching the served script mid-test, 2026-10-25). So neither the server's
+hits nor the answers tell a cache hit from a miss: `pac_test.rs::an_answer_is_cached_per_host` reads `MacPac`'s
+test-only `evaluations` count.
 
 ❗ The two `Execute…` functions are declared in `pac.rs` with raw pointers rather than taken from `objc2-cf-network`
 0.3.2: its `CFProxyAutoConfigurationResultCallback` types the proxy list as `NonNull`, and CFNetwork passes null when

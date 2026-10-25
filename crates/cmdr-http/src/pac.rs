@@ -50,6 +50,11 @@ pub(crate) struct MacPac {
     /// One evaluation at a time: a burst of first connections to one host (an S3 upload's parts)
     /// waits for the first answer instead of running the same PAC N times.
     turn: Mutex<()>,
+    /// Evaluations run so far, so a test can see the cache answer. CFNetwork keeps a fetched PAC
+    /// file and can fetch it again after answering, so neither its answers nor the server's hits
+    /// tell a cache hit from a miss.
+    #[cfg(test)]
+    evaluations: std::sync::atomic::AtomicUsize,
 }
 
 impl MacPac {
@@ -58,6 +63,8 @@ impl MacPac {
             timeout,
             cache: Mutex::new(HashMap::new()),
             turn: Mutex::new(()),
+            #[cfg(test)]
+            evaluations: std::sync::atomic::AtomicUsize::new(0),
         }
     }
 
@@ -87,6 +94,8 @@ impl Pac for MacPac {
         if let Some(answer) = self.cached(&key) {
             return answer;
         }
+        #[cfg(test)]
+        self.evaluations.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let answer = evaluate_on_own_thread(source.clone(), url.as_str().to_string(), self.timeout);
         if answer.is_none() {
             // allowed-log-private: cmdr-http can't depend on cmdr-fs, and a keyed `host="…"` is redacted exactly
