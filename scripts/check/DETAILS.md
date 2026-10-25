@@ -870,7 +870,8 @@ output formatting, clearer failure messages. Auto-installed by the check script 
 
 **Decision**: Auto-fix locally, check-only in CI. **Why**: Developers get instant fixes locally (less friction), CI
 ensures code is properly formatted before merge. Controlled by the `--ci` flag. Formatters/linters fix files locally,
-report only in CI. `runOxfmtCheck` and `runESLintCheck` in `checks/common.go` handle both modes.
+report only in CI. `runOxfmtCheck` and `runESLintCheck` in `checks/common.go` handle both modes. ESLint's local fix
+never runs type-aware rules: `checks/DETAILS.md` § "ESLint never auto-fixes with type information".
 
 **Decision**: Skip `pnpm install` when lockfile is unchanged. **Why**: `pnpm install` takes ~20s and pegs all CPUs even
 when deps haven't changed. A marker file (`node_modules/.pnpm-install-marker`) stores `pnpm-lock.yaml`'s mtime after

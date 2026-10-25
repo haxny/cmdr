@@ -11,6 +11,12 @@ import betterTailwindcss from 'eslint-plugin-better-tailwindcss'
 import globals from 'globals'
 import noConfusableCallbackParams from '../../eslint-plugins/no-confusable-callback-params.js'
 
+/* global process */
+// ESLINT_NO_TYPECHECK=1 is the check runner's local `--fix` pass: type-aware rules and
+// unused-directive reporting off, so a tree that doesn't typecheck can't steer an auto-fix. The
+// full config then runs check-only. Why: `scripts/check/checks/eslint-passes.go`.
+const noTypecheck = process.env.ESLINT_NO_TYPECHECK === '1'
+
 export default tseslint.config(
   {
     ignores: ['dist', 'dist-analytics', 'node_modules', '.astro', 'test-results'],
@@ -179,4 +185,13 @@ export default tseslint.config(
     plugins: { cmdr: { rules: { 'no-confusable-callback-params': noConfusableCallbackParams } } },
     rules: { 'cmdr/no-confusable-callback-params': 'error' },
   },
+  ...(noTypecheck
+    ? [
+        tseslint.configs.disableTypeChecked,
+        { linterOptions: { reportUnusedDisableDirectives: 'off' } },
+        // Without the TypeScript program the parser doesn't see tsconfig's DOM `lib`, so `no-undef`
+        // flags type names like `RequestInit`. It has no fixer, and the full pass still runs it.
+        { files: ['**/*.ts'], rules: { 'no-undef': 'off' } },
+      ]
+    : []),
 )

@@ -2,7 +2,6 @@ package checks
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -23,16 +22,7 @@ func RunDesktopESLint(ctx *CheckContext) (CheckResult, error) {
 		fileCount = len(strings.Split(strings.TrimSpace(findOutput), "\n"))
 	}
 
-	var cmd *exec.Cmd
-	if ctx.CI {
-		cmd = exec.Command("pnpm", "lint")
-	} else {
-		cmd = exec.Command("pnpm", "lint:fix")
-	}
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "ESLINT_NO_TYPECHECK=1")
-
-	output, err := RunCommand(cmd, true)
+	output, err := runESLintPasses(dir, nonTypeAwareESLintPasses(ctx.CI))
 	if err != nil {
 		if ctx.CI {
 			return CheckResult{}, fmt.Errorf("lint errors found, run pnpm lint:fix locally\n%s", indentOutput(output))

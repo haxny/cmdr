@@ -39,8 +39,9 @@ func RunDesktopESLintTypecheckTypescript(ctx *CheckContext) (CheckResult, error)
 }
 
 // runScopedESLintTypecheck runs `eslint <scopeArgs>` with the full config
-// (no ESLINT_NO_TYPECHECK), auto-fixing locally and check-only in CI.
-// countExts feeds an approximate src file count for the success message.
+// (no ESLINT_NO_TYPECHECK), check-only in every mode: `eslint-passes.go` says
+// why type-aware rules never auto-fix. countExts feeds an approximate src file
+// count for the success message.
 func runScopedESLintTypecheck(ctx *CheckContext, label string, scopeArgs, countExts []string) (CheckResult, error) {
 	dir := filepath.Join(ctx.RootDir, "apps", "desktop")
 
@@ -63,19 +64,9 @@ func runScopedESLintTypecheck(ctx *CheckContext, label string, scopeArgs, countE
 		fileCount = len(strings.Split(strings.TrimSpace(findOutput), "\n"))
 	}
 
-	args := append([]string{"exec", "eslint"}, scopeArgs...)
-	if !ctx.CI {
-		args = append(args, "--fix")
-	}
-	cmd := exec.Command("pnpm", args...)
-	cmd.Dir = dir
-
-	output, err := RunCommand(cmd, true)
+	output, err := runESLintPasses(dir, typeAwareESLintPasses(scopeArgs))
 	if err != nil {
-		if ctx.CI {
-			return CheckResult{}, fmt.Errorf("type-aware lint errors (%s), run pnpm lint:fix locally\n%s", label, indentOutput(output))
-		}
-		return CheckResult{}, fmt.Errorf("eslint found unfixable errors (%s)\n%s", label, indentOutput(output))
+		return CheckResult{}, fmt.Errorf("type-aware lint errors (%s); this lane never auto-fixes (#622), so fix them by hand\n%s", label, indentOutput(output))
 	}
 
 	if fileCount > 0 {

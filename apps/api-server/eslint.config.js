@@ -9,6 +9,12 @@ import tseslint from 'typescript-eslint'
 import globals from 'globals'
 import noConfusableCallbackParams from '../../eslint-plugins/no-confusable-callback-params.js'
 
+/* global process */
+// ESLINT_NO_TYPECHECK=1 is the check runner's local `--fix` pass: type-aware rules and
+// unused-directive reporting off, so a tree that doesn't typecheck can't steer an auto-fix. The
+// full config then runs check-only. Why: `scripts/check/checks/eslint-passes.go`.
+const noTypecheck = process.env.ESLINT_NO_TYPECHECK === '1'
+
 /**
  * Node-only globals and built-in modules, banned across `src/**`.
  *
@@ -163,4 +169,7 @@ export default tseslint.config(
       ],
     },
   },
+  ...(noTypecheck
+    ? [tseslint.configs.disableTypeChecked, { linterOptions: { reportUnusedDisableDirectives: 'off' } }]
+    : []),
 )

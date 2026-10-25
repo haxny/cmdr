@@ -227,7 +227,8 @@ below for the section-aware patterns to follow.
   `MiseGoVersion`, since a tool built by an older Go can't parse a newer stdlib (that mismatch reads as
   `method must have no type parameters` inside `math/rand`, which names neither the tool nor its age).
 - **`runOxfmtCheck(ctx, ...)`** / **`runESLintCheck(ctx, ...)`** — auto-fix locally, check-only under `--ci`.
-  Centralizes the dual-mode behavior so individual checks don't reinvent it.
+  Centralizes the dual-mode behavior so individual checks don't reinvent it. Every ESLint lane plans its invocations in
+  `eslint-passes.go` (see the Key decision "ESLint never auto-fixes with type information").
 - **`indentOutput(s)`** — indents captured stdout/stderr for error messages.
 - **`trimBuildNoise(s)`** — cuts everything before the last `Compiling …` line; when no such line exists (build failed
   before cargo ran), returns input verbatim.
@@ -2589,6 +2590,20 @@ checks (`eslint-typecheck-svelte`, `eslint-typecheck-ts`) run the whole config w
 so stale disable comments are still caught. In CI they get their own per-push job (`desktop-svelte-eslint-typecheck`)
 beside `desktop-svelte`, so their 2–4 min don't lengthen it. They used to run only in the every-six-days slow workflow,
 where 25 errors (one a real toast-timeout bug) sat on a green `main` (2026-10-21).
+
+**Decision**: ESLint never auto-fixes with type information. **Why**: a type-aware rule judges code against the
+TypeScript program, so while the tree doesn't typecheck (another agent's half-written change in a shared worktree, a
+half-regenerated `bindings.ts`) it misjudges correct code, and `--fix` rewrites it. On 2026-10-20 one local run stripped
+needed `void` reads from a `$effect`, deleted a live `eslint-disable-next-line complexity`, and dropped a needed `as`
+cast across six files nobody was editing (#622). Guarding on "does the program build" would race the very edits that
+cause it, so the invariant is structural instead, planned in `eslint-passes.go` and pinned by
+`TestESLintPassesNeverFixWithTypeAwareRules`: any pass with `--fix` sets `ESLINT_NO_TYPECHECK=1` (every app's
+`eslint.config.js` then turns the type-aware rules and unused-directive reporting off) and passes
+`--fix-type problem,suggestion,layout`, so even a misconfigured rule set can't delete an `eslint-disable`. Per lane: the
+desktop's fast `eslint` lane is that fix pass; the two `eslint-typecheck-*` lanes are check-only in every mode; the
+single-lane apps (`api-server`, `website`, `dashboard`) run the fix pass and then the full config check-only, the final
+pass being the verdict. The cost: type-aware findings (`no-unnecessary-type-assertion`, `no-unnecessary-condition`,
+unused directives) are reported, never fixed, so an agent fixes them by hand.
 
 **Decision**: `desktop-svelte-kit-sync` runs before every check that needs the TypeScript program. **Why**:
 `apps/desktop/tsconfig.json` extends `$app/tsconfig`, the gitignored `node_modules/$app/tsconfig.json` sync generates,

@@ -86,13 +86,11 @@ Before merging more, know the two traps:
 - **Merged files audit a shared jsdom document.** axe resolves ARIA id references document-wide, and components that
   portal (menus, popovers) audit the whole `document.body`, so a merged file needs
   `afterEach(() => { document.body .innerHTML = '' })` or one block's leftovers land inside the next block's audit.
-- **Type a mutable stub with an annotation, ❌ never an `as` assertion, and re-run the tests AFTER eslint.**
-  `eslint-typecheck-ts` auto-fixes: `no-unnecessary-type-assertion` strips
-  `(() => undefined) as (id: string) => unknown` down to `() => undefined`, and `no-confusing-void-expression` then
-  rewrites the delegating `(id) => stubs.getSetting(id)` into `(id) => { stubs.getSetting(id); }`, which silently
-  returns `undefined` from every stub. Tests that passed before the lint run fail after it. Write
-  `(_id: string): unknown => undefined` instead, and always run the lane once more once the auto-fixers have had their
-  pass.
+- **Type a mutable stub with an annotation, ❌ never an `as` assertion.** `eslint-typecheck-ts` reports
+  `no-unnecessary-type-assertion` on `(() => undefined) as (id: string) => unknown`, and applying its suggested fix
+  (`() => undefined`) makes `no-confusing-void-expression` push the delegating `(id) => stubs.getSetting(id)` toward
+  `(id) => { stubs.getSetting(id); }`, which silently returns `undefined` from every stub. Write
+  `(_id: string): unknown => undefined` instead, and re-run the tests after any lint-driven edit.
 
 Also watch the wall-clock: on a contended machine the lane's own runtime swings 55-110 s run to run, which swamps the
 few seconds one directory buys. Measure the directory in isolation and read the CPU totals (`transform`, `import`,

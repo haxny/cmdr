@@ -469,7 +469,8 @@ func parseOxfmtFileCount(output string) int {
 	return 0
 }
 
-// runESLintCheck runs ESLint check/fix for a given directory.
+// runESLintCheck runs ESLint for a given app directory: locally a fix pass without type
+// information, then the full config check-only (`appESLintPasses`).
 // extensions are the file extensions to count (like []string{"*.ts", "*.svelte", "*.js"}).
 // If requireConfig is true, skips when eslint.config.js is missing.
 func runESLintCheck(ctx *CheckContext, dir string, extensions []string, requireConfig bool) (CheckResult, error) {
@@ -489,19 +490,12 @@ func runESLintCheck(ctx *CheckContext, dir string, extensions []string, requireC
 		fileCount = len(strings.Split(strings.TrimSpace(findOutput), "\n"))
 	}
 
-	var cmd *exec.Cmd
-	if ctx.CI {
-		cmd = exec.Command("pnpm", "lint")
-	} else {
-		cmd = exec.Command("pnpm", "lint:fix")
-	}
-	cmd.Dir = dir
-	output, err := RunCommand(cmd, true)
+	output, err := runESLintPasses(dir, appESLintPasses(ctx.CI))
 	if err != nil {
 		if ctx.CI {
-			return CheckResult{}, fmt.Errorf("lint errors found, run pnpm lint:fix locally\n%s", indentOutput(output))
+			return CheckResult{}, fmt.Errorf("lint errors found, run `pnpm check` locally to auto-fix the safe ones\n%s", indentOutput(output))
 		}
-		return CheckResult{}, fmt.Errorf("eslint found unfixable errors\n%s", indentOutput(output))
+		return CheckResult{}, fmt.Errorf("eslint found errors it can't safely auto-fix\n%s", indentOutput(output))
 	}
 
 	if fileCount > 0 {
