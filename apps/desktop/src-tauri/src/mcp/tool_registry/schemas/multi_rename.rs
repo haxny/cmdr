@@ -20,7 +20,7 @@ pub fn multi_rename_schema() -> Value {
             },
             "nameMask": {
                 "type": "string",
-                "description": "Name mask (default [N]). Placeholders: [N] name, [N2-5] / [N-3] ranges, [E] extension, [C] counter ([C10+5:3] = start 10, step 5, 3 digits), [P] parent folder, [G] grandparent, [Y] [M] [D] [h] [m] [s] and [YMD] modified time, [U] / [L] / [F] / [n] upper, lower, words, or original case for what follows. [[ is a literal [."
+                "description": "Name mask (default [N]). Placeholders: [N] name, [N2-5] / [N-3] ranges, [E] extension, [C] counter ([C10+5:3] = start 10, step 5, 3 digits), [P] parent folder, [G] grandparent, [Y] [M] [D] [h] [m] [s] and [YMD] modified time, [U] / [L] / [F] / [n] upper, lower, words, or original case for what follows. [[ is a literal [. Media fields read each file's EXIF and tags: [=exif.taken:YMD] (date taken; [=exif.taken|modified:YMD] falls back to the modified date), exif.camera / make / model / lens / iso / focal / width / height / orientation, tag.title / artist / albumartist / album / track / disc / year / genre / comment ([=tag.track:2] pads to two digits). A file without the field is a noValue row, one that can't be read unreadable. A call reads at most 2,000 media files; past that it's refused as specError tooManyMediaFiles."
             },
             "extensionMask": {
                 "type": "string",

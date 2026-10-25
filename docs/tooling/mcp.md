@@ -300,6 +300,7 @@ cursor item). Every sheet knob is optional. A dry run (the default) previews eac
 ./scripts/mcp-call.sh multi_rename '{"nameMask":"Lisbon [C:3]","limit":10}'            # preview the first 10 rows
 ./scripts/mcp-call.sh multi_rename '{"nameMask":"Lisbon [C:3]","filter":"problems"}'   # only the rows that can't go
 ./scripts/mcp-call.sh multi_rename '{"nameMask":"Lisbon [C:3]","dryRun":false,"rationale":"Number the trip photos"}'
+./scripts/mcp-call.sh multi_rename '{"nameMask":"[=exif.taken|modified:YMD] [N]"}'     # by date taken (reads EXIF, max 2,000 files)
 ```
 
 ## Where is this instance's CPU going?

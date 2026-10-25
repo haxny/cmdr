@@ -461,6 +461,40 @@ impl SessionMedia {
         self.kick(&mut inner);
     }
 
+    /// Takes what `other` (a session over the same folder) read: each file waiting here
+    /// that `other` read for the same listing facts gets its answer.
+    pub(crate) fn adopt(&self, other: &SessionMedia) {
+        // One lock at a time: `other`'s answers are copied out before ours is taken.
+        let answers: Vec<(Arc<str>, Stamp, MediaRead)> = other
+            .lock()
+            .files
+            .iter()
+            .filter(|(_, cached)| matches!(cached.state, MediaRead::Read(_) | MediaRead::Unreadable))
+            .map(|(name, cached)| (Arc::clone(name), cached.stamp, cached.state.clone()))
+            .collect();
+        let mut inner = self.lock();
+        for (name, stamp, state) in answers {
+            if inner.is_waiting(&name) && inner.files[&name].stamp == stamp {
+                inner.set_state(&name, state);
+            }
+        }
+        let Inner { queue, files, .. } = &mut *inner;
+        queue.retain(|name| files.get(name).is_some_and(|c| c.state.is_reading()));
+    }
+
+    /// Reads every waiting file with `loader`, inline, and returns once each is read,
+    /// unreadable, or cancelled. For a preview with no sheet (the MCP `multi_rename` tool).
+    pub(crate) async fn read_all(self: &Arc<Self>, loader: Loader) {
+        {
+            let mut inner = self.lock();
+            if inner.running || inner.queue.is_empty() || self.is_cancelled() {
+                return;
+            }
+            inner.running = true;
+        }
+        Arc::clone(self).run(Arc::new(loader)).await;
+    }
+
     /// A copy of the cache as one preview's [`MediaLookup`], so the preview runs
     /// without the lock. [`Lookup::finish`] re-queues the files it found changed.
     pub(crate) fn lookup(self: &Arc<Self>) -> Lookup {

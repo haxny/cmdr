@@ -174,8 +174,12 @@ answers the sheet.
 - **Rows see media through `RowFacts.media: RowMedia`** (`Reading`, `Read(&MediaFacts)`, `Unreadable`, `NotMedia`).
   `plan::preview` / `preview_names` take a `&dyn MediaLookup`, whose `media(&FileEntry)` answers each row; the entry
   carries size and modification time, so a lookup can tell a file that changed since it was read. `NoMedia` answers
-  `NotMedia` for every row: the MCP tool (which refuses media masks first, `Compiled::uses_media`) and the plan tests
+  `NotMedia` for every row: the MCP tool (for a mask without media fields, `Compiled::uses_media`) and the plan tests
   pass it. The session passes its cache's `Lookup`.
+- **The MCP `multi_rename` tool shares this cache and loader** with no sheet: it seeds its own `SessionMedia`, takes an
+  open session's answers over the same folder (`SessionMedia::adopt`, same listing stamp only, one lock at a time),
+  and awaits `SessionMedia::read_all` (the same `run`, inline, no re-queue behind it). Cap and cancel:
+  `../mcp/executor/DETAILS.md`.
 - **The cache** (`SessionMedia`, one per session, `Arc`-shared with its loader): each file's `MediaRead` (`Reading`,
   `Read(Arc<MediaFacts>)`, `Unreadable`, `NotMedia`) with the listing's size and modified time it was read for, the
   read queue, the files in flight, and running counts for `MediaProgress`. `session::open` seeds it from the listing:

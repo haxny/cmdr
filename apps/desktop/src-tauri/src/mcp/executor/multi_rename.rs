@@ -9,6 +9,9 @@
 //! - **The preview is the sheet's own** (`multi_rename::plan::preview_names`), against the
 //!   folder's entries as the pane's listing holds them, so a row's status here is the status
 //!   the sheet would show. A dry run pages it with `start` / `limit`.
+//! - **Media fields (`[=exif.taken]`, `[=tag.artist]`) read through the sheet's own cache and
+//!   loader** (`read_media`), inline: an open sheet's reads over the same folder are taken, the
+//!   rest read before the preview, capped at `MAX_MEDIA_READS`, stopped if the call goes away.
 //! - **`dryRun: false` stages the ready rows as ONE rename group** on the suggested-ops spine
 //!   (`agent::suggested_ops::propose`), the same review surface Ask Cmdr's proposals use. The
 //!   user approves or rejects it there; the bridge renames on approval, with its live drift
@@ -16,6 +19,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -24,6 +28,7 @@ use tauri::{AppHandle, Manager, Runtime};
 use super::{ToolError, ToolResult, fit_to_result_budget, resolve_pane_target_paths, target_pane_state};
 use crate::agent::AgentDb;
 use crate::agent::store::proposals::{GroupIntent, NewGroup, NewRename, NewSweep, OpSnapshot};
+use crate::multi_rename::media::{Loader, SessionMedia};
 use crate::multi_rename::plan::{Compiled, MultiRenameSpec, NameEdits, NoMedia, PreviewRow, RowStatus, preview_names};
 use cmdr_fs::entry::FileEntry;
 
@@ -301,25 +306,92 @@ fn spec_error(error: crate::multi_rename::plan::SpecError) -> ToolError {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum ToolSpecRefusal {
-    /// A mask uses `[=source.field]`. Only the sheet reads files' EXIF and tags;
-    /// here every row would read as having none, or quietly take the modified date.
-    MediaFieldsNeedTheSheet,
+    /// A mask uses `[=source.field]` and more than `max` of the files would have to be
+    /// read for it: too slow for one call on a slow volume (S3, MTP), and the sheet
+    /// reads in the background with progress.
+    TooManyMediaFiles { files: usize, max: usize },
 }
 
-/// `spec`, compiled for a preview with no media read behind it: a mask with media
-/// fields is refused rather than previewed wrong.
 fn compile(spec: &MultiRenameSpec) -> Result<Compiled, ToolError> {
-    let compiled = Compiled::new(spec).map_err(spec_error)?;
-    if compiled.uses_media() {
-        let data = serde_json::to_value(ToolSpecRefusal::MediaFieldsNeedTheSheet).unwrap_or(Value::Null);
-        return Err(ToolError::invalid_params(
-            "Media fields like [=exif.taken] or [=tag.artist] need the Multi-rename sheet, which reads each file's EXIF \
-             and tags; this tool can't. Ask the user to open the sheet (⌃M), or use a mask without them. See \
-             data.specError.",
-        )
+    Compiled::new(spec).map_err(spec_error)
+}
+
+/// The most media files one call reads for a mask with media fields: at a few per
+/// second on a slow volume, still an answer in minutes. Files an open sheet over the
+/// same folder already read don't count.
+const MAX_MEDIA_READS: usize = 2_000;
+
+/// Stops the read when the call goes away (the client hung up and the request's
+/// future is dropped): no new read starts, and one in flight stops at its next fetch.
+struct CancelOnDrop(Arc<SessionMedia>);
+
+impl Drop for CancelOnDrop {
+    fn drop(&mut self) {
+        self.0.cancel();
+    }
+}
+
+/// The EXIF and tags behind a media mask's preview, through the sheet's own cache and
+/// loader (`multi_rename::media`), so every value, `NoValue`, `Unreadable`, and
+/// `|modified` fallback is the sheet's. Seeded from the same `siblings` the preview
+/// runs on, it takes what the `open` sheets over this folder already read, refuses past
+/// `max_reads` files left to read, and reads the rest before returning.
+async fn read_media(
+    folder: &Path,
+    names: &[String],
+    siblings: &[FileEntry],
+    open: &[Arc<SessionMedia>],
+    loader: Loader,
+    max_reads: usize,
+) -> Result<Arc<SessionMedia>, ToolError> {
+    let media = Arc::new(SessionMedia::seed(
+        "mcp-multi-rename",
+        folder.to_path_buf(),
+        names,
+        siblings,
+    ));
+    for sheet in open {
+        media.adopt(sheet);
+    }
+    let progress = media.progress();
+    let to_read = progress.total - progress.read;
+    if to_read > max_reads {
+        let refusal = ToolSpecRefusal::TooManyMediaFiles {
+            files: to_read,
+            max: max_reads,
+        };
+        let data = serde_json::to_value(refusal).unwrap_or(Value::Null);
+        return Err(ToolError::invalid_params(format!(
+            "The mask's media fields need {} read for their EXIF and tags, and one call reads at most {}. Select \
+             fewer files, or ask the user to open the Multi-rename sheet (⌃M), which reads them in the background. \
+             See data.specError.",
+            crate::pluralize::pluralize(to_read as u64, "file"),
+            crate::pluralize::pluralize(max_reads as u64, "file"),
+        ))
         .with_data(json!({ "specError": data })));
     }
-    Ok(compiled)
+    // Dropped at the end too, which is harmless: nothing reads after `read_all`.
+    let _stop = CancelOnDrop(Arc::clone(&media));
+    media.read_all(loader).await;
+    Ok(media)
+}
+
+/// The sheet's preview of `names`, with the files' media facts when the mask has
+/// media fields (`media`), else none.
+fn preview(
+    compiled: &Compiled,
+    folder: &Path,
+    names: &[String],
+    siblings: &[FileEntry],
+    media: Option<&Arc<SessionMedia>>,
+) -> Vec<PreviewRow> {
+    let edits = NameEdits::default();
+    match media {
+        // No `Lookup::finish`: the media was read for exactly these `siblings`, so no row
+        // found its file changed, and no loader waits for a re-queue.
+        Some(media) => preview_names(compiled, folder, names, siblings, &edits, &media.lookup()),
+        None => preview_names(compiled, folder, names, siblings, &edits, &NoMedia),
+    }
 }
 
 pub async fn execute_multi_rename<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
@@ -344,12 +416,20 @@ pub async fn execute_multi_rename<R: Runtime>(app: &AppHandle<R>, params: &Value
         .cached_entries(&volume_id, &folder)
         .ok_or_else(|| ToolError::internal("The pane's listing isn't available yet"))?;
     let compiled = compile(&request.spec)?;
+    let media = if compiled.uses_media() {
+        let open = crate::multi_rename::session::media_over(&volume_id, &folder);
+        // No one watches this read's progress: the call's answer is its end.
+        let loader = Loader::for_volume(volume_id.clone(), Arc::new(|_| {}));
+        Some(read_media(&folder, &names, &siblings, &open, loader, MAX_MEDIA_READS).await?)
+    } else {
+        None
+    };
 
     // A mask and a regex per row: off the async worker for a big folder.
     let (rows, siblings) = tokio::task::spawn_blocking({
         let folder = folder.clone();
         move || {
-            let rows = preview_names(&compiled, &folder, &names, &siblings, &NameEdits::default(), &NoMedia);
+            let rows = preview(&compiled, &folder, &names, &siblings, media.as_ref());
             (rows, siblings)
         }
     })

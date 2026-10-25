@@ -12,7 +12,7 @@
 //! (`move_row`).
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
@@ -246,6 +246,17 @@ pub(crate) fn prioritize_media(session_id: &str, rows: &[usize]) -> Result<(), M
     let wanted = rows.iter().filter_map(|&row| names.get(row)).map(String::as_str);
     media.prioritize(names.first().map(String::as_str), wanted);
     Ok(())
+}
+
+/// The media caches of the open sessions over the folder `dir` on `volume_id`, so a
+/// preview without a sheet (the MCP `multi_rename` tool) can take what they read.
+pub(crate) fn media_over(volume_id: &str, dir: &Path) -> Vec<Arc<SessionMedia>> {
+    SESSIONS
+        .lock_ignore_poison()
+        .values()
+        .filter(|s| s.volume_id == volume_id && s.dir == dir)
+        .map(|s| Arc::clone(&s.media))
+        .collect()
 }
 
 /// Drops idle sessions, then the least recently used until one more fits under `cap`.

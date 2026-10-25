@@ -84,24 +84,17 @@ fn bad_params_are_refused_with_the_field_named() {
     parse_request(&json!({ "names": "a.jpg" })).expect_err("names must be an array");
 }
 
-/// The tool has no session to read EXIF and tags, so a media field would read as "no
-/// value" (or quietly as the modified date) on every row: it's refused, typed.
+/// A media field is a mask like any other: the tool reads the files' EXIF and tags itself.
+/// A mask that doesn't parse is still the sheet's typed spec error.
 #[test]
-fn a_mask_with_media_fields_is_refused_as_needing_the_sheet() {
+fn a_mask_with_media_fields_compiles_and_a_bad_mask_is_a_typed_spec_error() {
     for spec in [
         json!({ "nameMask": "[=exif.taken|modified:YMD] [N]" }),
         json!({ "extensionMask": "[=tag.genre]" }),
     ] {
         let request = parse_request(&spec).expect("valid params");
-        let err = compile(&request.spec).err().expect("refused");
-        assert_eq!(
-            err.data,
-            Some(json!({ "specError": { "type": "mediaFieldsNeedTheSheet" } })),
-            "{spec}"
-        );
+        assert!(compile(&request.spec).expect("compiles").uses_media(), "{spec}");
     }
-    let request = parse_request(&json!({ "nameMask": "[N] [C:2]" })).expect("valid params");
-    assert!(compile(&request.spec).is_ok(), "no media field, no refusal");
     let request = parse_request(&json!({ "nameMask": "[N" })).expect("valid params");
     let err = compile(&request.spec).err().expect("a bad mask");
     assert_eq!(err.data.expect("typed")["specError"]["type"], "nameMask");
@@ -229,4 +222,230 @@ fn a_batch_with_nothing_ready_is_refused_rather_than_staged_empty() {
         rename_group("root", Path::new(DIR), &rows, &folder, None).expect_err("nothing ready"),
         ProposalRefusal::NothingReady
     );
+}
+
+// ── Media fields ──────────────────────────────────────────────────────────────
+
+mod media {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+
+    use chrono::NaiveDate;
+    use cmdr_listing::testing::{TestListing, TestListingGuard};
+    use cmdr_local::reading::list_directory_core;
+    use cmdr_media_meta::{MediaFacts, MediaField, ReadError};
+
+    use super::*;
+    use crate::ignore_poison::IgnorePoison;
+    use crate::multi_rename::media::{FileJob, Loader};
+    use crate::multi_rename::session;
+    use crate::test_support::{TestDir, wait_until, wait_until_async};
+
+    /// Under nextest's 8 s limit, so a stuck read fails with the wait's message.
+    const WAIT: Duration = Duration::from_secs(5);
+
+    /// A scratch folder with `files`, its listing entries, and a cached listing on `root`.
+    fn folder(tag: &str, files: &[&str]) -> (TestDir, Vec<FileEntry>, TestListingGuard) {
+        let dir = TestDir::new(tag);
+        for name in files {
+            std::fs::write(dir.join(name), b"x").expect("scratch dir is writable");
+        }
+        let entries = list_directory_core(&dir, &crate::listing_host::backends::AppListings).expect("the dir lists");
+        let listing = TestListing::new()
+            .volume("root")
+            .path(dir.to_path_buf())
+            .entries(entries.clone())
+            .insert(crate::listing_host::listings(), tag);
+        (dir, entries, listing)
+    }
+
+    /// Which files a reader was handed.
+    #[derive(Clone, Default)]
+    struct Calls(Arc<Mutex<Vec<String>>>);
+
+    impl Calls {
+        fn is_empty(&self) -> bool {
+            self.0.lock_ignore_poison().is_empty()
+        }
+    }
+
+    fn loader(
+        calls: &Calls,
+        answer: impl Fn(&FileJob) -> Result<MediaFacts, ReadError> + Send + Sync + 'static,
+    ) -> Loader {
+        let calls = calls.clone();
+        Loader {
+            reader: Arc::new(move |job: &FileJob| {
+                calls.0.lock_ignore_poison().push(job.name.clone());
+                answer(job)
+            }),
+            emit: Arc::new(|_| {}),
+            parallel: 4,
+            volume_gone: Arc::new(|| false),
+        }
+    }
+
+    /// A photo taken on 2024-05-06, a song titled "Harder", one that won't parse, and
+    /// one with nothing in it.
+    fn facts(job: &FileJob) -> Result<MediaFacts, ReadError> {
+        match job.name.as_str() {
+            "photo.jpg" => Ok(MediaFacts {
+                taken: NaiveDate::from_ymd_opt(2024, 5, 6).and_then(|d| d.and_hms_opt(7, 8, 9)),
+                ..MediaFacts::default()
+            }),
+            "song.mp3" => Ok(MediaFacts {
+                title: Some("Harder".to_string()),
+                ..MediaFacts::default()
+            }),
+            "broken.jpg" => Err(ReadError::Io("not a JPEG".to_string())),
+            _ => Ok(MediaFacts::default()),
+        }
+    }
+
+    const FILES: [&str; 5] = ["photo.jpg", "song.mp3", "broken.jpg", "blank.jpg", "notes.txt"];
+
+    /// The folder's files in the listing's order, which is the order a sheet over every row renames in.
+    fn names(entries: &[FileEntry]) -> Vec<String> {
+        entries.iter().map(|e| e.name.clone()).collect()
+    }
+
+    fn specs() -> Vec<MultiRenameSpec> {
+        [
+            json!({ "nameMask": "[=exif.taken:YMD] [N]" }),
+            json!({ "nameMask": "[=exif.taken|modified:YMD] [N]" }),
+            json!({ "nameMask": "[=tag.title]" }),
+        ]
+        .iter()
+        .map(|params| parse_request(params).expect("valid params").spec)
+        .collect()
+    }
+
+    /// Opens a sheet session over the folder and reads it through with `loader`.
+    async fn read_sheet(listing: &TestListingGuard, loader: Loader) -> String {
+        let id = session::open(listing.id(), true, None, 0)
+            .expect("the session opens")
+            .session_id;
+        session::start_media_with(&id, loader).expect("the read starts");
+        wait_until_async(WAIT, "the sheet's media read", || {
+            session::media_progress(&id).is_ok_and(|p| p.done)
+        })
+        .await;
+        id
+    }
+
+    /// The tool's preview is the sheet's, row for row: same values, same `NoValue` and
+    /// `Unreadable`, same `|modified` fallback.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_media_mask_previews_exactly_as_the_sheet_does() {
+        let (dir, entries, listing) = folder("mcp-rename-media-same", &FILES);
+        let sheet = read_sheet(&listing, loader(&Calls::default(), facts)).await;
+
+        let media = read_media(
+            &dir,
+            &names(&entries),
+            &entries,
+            &[],
+            loader(&Calls::default(), facts),
+            MAX_MEDIA_READS,
+        )
+        .await
+        .expect("the tool reads");
+
+        for spec in specs() {
+            let compiled = compile(&spec).expect("compiles");
+            let ours = preview(&compiled, &dir, &names(&entries), &entries, Some(&media));
+            let theirs = session::preview_session(&sheet, &spec)
+                .expect("the sheet previews")
+                .rows;
+            assert_eq!(ours, theirs, "{}", spec.name_mask);
+        }
+        let compiled = compile(&specs()[0]).expect("compiles");
+        let rows = preview(&compiled, &dir, &names(&entries), &entries, Some(&media));
+        let mut statuses: Vec<_> = rows.iter().map(|r| (r.old_name.as_str(), r.status.clone())).collect();
+        statuses.sort_by_key(|(name, _)| *name);
+        let field = MediaField::ExifTaken;
+        assert_eq!(
+            statuses,
+            vec![
+                ("blank.jpg", RowStatus::NoValue { field }),
+                ("broken.jpg", RowStatus::Unreadable { field }),
+                ("notes.txt", RowStatus::NoValue { field }),
+                ("photo.jpg", RowStatus::Ready),
+                ("song.mp3", RowStatus::NoValue { field }),
+            ]
+        );
+        session::close(&sheet);
+    }
+
+    /// An open sheet already read the folder: the tool takes its values and reads nothing.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn an_open_sheets_reads_are_reused_rather_than_read_again() {
+        let (dir, entries, listing) = folder("mcp-rename-media-reuse", &FILES);
+        let sheet = read_sheet(&listing, loader(&Calls::default(), facts)).await;
+        let open = session::media_over("root", &dir);
+        assert_eq!(open.len(), 1, "the sheet's session is over this folder");
+
+        let calls = Calls::default();
+        let media = read_media(
+            &dir,
+            &names(&entries),
+            &entries,
+            &open,
+            loader(&calls, |_| Ok(MediaFacts::default())),
+            1,
+        )
+        .await
+        .expect("nothing left to read, so the cap doesn't bite");
+
+        assert!(calls.is_empty(), "read nothing");
+        let spec = &specs()[2];
+        let compiled = compile(spec).expect("compiles");
+        assert_eq!(
+            preview(&compiled, &dir, &names(&entries), &entries, Some(&media)),
+            session::preview_session(&sheet, spec).expect("the sheet previews").rows
+        );
+        session::close(&sheet);
+    }
+
+    /// Past the cap of files left to read, the tool refuses, typed, before reading any.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn more_media_files_to_read_than_the_cap_is_a_typed_refusal() {
+        let (dir, entries, _listing) = folder("mcp-rename-media-cap", &FILES);
+        let calls = Calls::default();
+
+        let err = read_media(&dir, &names(&entries), &entries, &[], loader(&calls, facts), 3)
+            .await
+            .err()
+            .expect("four media files, a cap of three");
+
+        assert_eq!(
+            err.data,
+            Some(json!({ "specError": { "type": "tooManyMediaFiles", "files": 4, "max": 3 } }))
+        );
+        assert!(calls.is_empty(), "read nothing");
+    }
+
+    /// A call that goes away (the client hung up) stops its read at the next fetch.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_dropped_call_cancels_its_read() {
+        let (dir, entries, _listing) = folder("mcp-rename-media-cancel", &["slow.jpg"]);
+        let seen: Arc<Mutex<Option<Arc<AtomicBool>>>> = Arc::default();
+        let reader_saw = Arc::clone(&seen);
+        let slow = loader(&Calls::default(), move |job| {
+            *reader_saw.lock_ignore_poison() = Some(Arc::clone(&job.cancel));
+            // On a blocking thread, so the sync wait is fine; bounded, so a broken cancel can't hang the runtime's
+            // shutdown (its panic makes the file unreadable, and the assert below fails).
+            wait_until(WAIT, "the call's cancel", || job.cancel.load(Ordering::Relaxed));
+            Err(ReadError::Cancelled)
+        });
+        let names = vec!["slow.jpg".to_string()];
+
+        let call = read_media(&dir, &names, &entries, &[], slow, MAX_MEDIA_READS);
+        let timed_out = tokio::time::timeout(Duration::from_millis(200), call).await;
+
+        assert!(timed_out.is_err(), "the read was still going");
+        let cancel = seen.lock_ignore_poison().clone().expect("the reader started");
+        assert!(cancel.load(Ordering::Relaxed), "dropping the call cancels the read");
+    }
 }

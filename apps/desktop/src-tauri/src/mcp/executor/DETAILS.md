@@ -90,10 +90,14 @@ Depth for the MCP tool-execution layer. `CLAUDE.md` holds the must-knows.
   sheet knob is an optional param under `MultiRenameSpec`'s own camelCase name (a test pins the schema declares each).
   Files come from `resolve_pane_target_paths` (`names`, else the selection, else the cursor item); the preview is the
   sheet's own `multi_rename::plan::preview_names` against the pane's cached listing, so a status here is the sheet's.
-  It has no session to read EXIF and tags, so a mask with a `[=source.field]` is refused as
-  `data.specError: { type: 'mediaFieldsNeedTheSheet' }` (`compile`). **Why:** previewed with `NoMedia`, every row would
-  read as having no value, or `|modified` would quietly put the modified date where the user expects a capture date.
-  The alternative, reading the files inline, is David's open call.
+  A mask with a `[=source.field]` reads the files' EXIF and tags inline (`read_media`) through the sheet's own
+  `SessionMedia` cache and loader (`multi_rename/DETAILS.md` § Media fields), seeded from the same listing entries the
+  preview runs on, so values, `NoValue` / `Unreadable`, and the `|modified` fallback are the sheet's. **Decision:** an
+  open sheet over the same folder lends what it already read (`session::media_over` + `SessionMedia::adopt`, matched
+  by listing size and mtime); the rest is read before answering, at most `MAX_MEDIA_READS` (2,000) files left to read,
+  else the typed `data.specError: { type: 'tooManyMediaFiles', files, max }` before any read. **Why:** a dry run on S3
+  or MTP at a few files a second must still answer in minutes, and the sheet reads bigger batches in the background
+  with progress. A dropped call (the client hung up) cancels the read (`CancelOnDrop`). No progress is reported.
   `dryRun` (default true) pages the rows with `start` / `limit` (max 200, then `fit_to_result_budget`) and an
   `all` / `problems` filter, with counts over every row. `dryRun: false` stages ONLY the ready rows as one rename group
   on the suggested-ops spine (`agent::suggested_ops::propose`, no conversation), each op carrying its listing size,
