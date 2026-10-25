@@ -14,10 +14,10 @@
 //! The volume is thin (the hub, the repo's slot, the parent): everything costly
 //! lives in the shared [`ResticRepos`].
 
-use crate::hub::{RepoSlot, ResticRepos};
+use crate::hub::{IndexSource, RepoSlot, ResticRepos};
 use crate::path::{SnapshotRef, VIRTUAL_ENTRY_NAME, VirtualPath, classify};
-use crate::read_stream::{ResticReadStream, read_at};
-use crate::repo::{IndexedRepo, worker_crashed};
+use crate::read_stream::ResticReadStream;
+use crate::repo::{IndexedRepo, ResticError, worker_crashed};
 use crate::snapshots::{LATEST_FOLDER_NAME, Snapshot, SnapshotList};
 use crate::tree::{entry_of, folder_tree, modified_secs, node_at, permissions_of};
 use cmdr_fs::entry::FileEntry;
@@ -117,14 +117,50 @@ impl ResticVolume {
         })
     }
 
-    /// The indexed repo for `snapshot`, waiting on (or starting) its load, with
-    /// the load's progress handed to `on_progress`.
-    async fn indexed(
+    /// Where reads under `snapshot` get its index.
+    fn index_source(&self, snapshot: &Snapshot) -> IndexSource {
+        IndexSource {
+            hub: Arc::clone(&self.hub),
+            slot: Arc::clone(&self.slot),
+            parent: Arc::clone(&self.parent),
+            snapshot: snapshot.clone(),
+        }
+    }
+
+    /// Runs `work` on the blocking pool against the index holding `snapshot`
+    /// (waiting on, or starting, its load, with the progress handed to
+    /// `on_progress`), and hands back the index it ran on. A pack gone under the
+    /// index ([`ResticError::PackGone`], a prune elsewhere) reloads it once and
+    /// runs `work` again; a second miss, through the fresh index, stands.
+    async fn on_index<T, F>(
         &self,
         snapshot: &Snapshot,
         on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
-    ) -> Result<Arc<IndexedRepo>, VolumeError> {
-        self.hub.indexed(&self.slot, &self.parent, snapshot, on_progress).await
+        path: &Path,
+        work: F,
+    ) -> Result<(T, Arc<IndexedRepo>), VolumeError>
+    where
+        T: Send + 'static,
+        F: Fn(&IndexedRepo) -> Result<T, ResticError> + Send + Sync + 'static,
+    {
+        let source = self.index_source(snapshot);
+        let work = Arc::new(work);
+        let mut repo = source.get(on_progress).await?;
+        let mut reloaded = false;
+        loop {
+            let (task_repo, task_work) = (Arc::clone(&repo), Arc::clone(&work));
+            match self.blocking(path, move || Ok(task_work(&task_repo))).await? {
+                Err(ResticError::PackGone(_)) if !reloaded => {
+                    repo = source.reload(&repo, on_progress).await?;
+                    reloaded = true;
+                }
+                outcome => {
+                    return outcome
+                        .map(|value| (value, repo))
+                        .map_err(|err| err.into_volume_error(path));
+                }
+            }
+        }
     }
 
     /// Runs `work` on the blocking pool: every rustic call below reads through
@@ -155,13 +191,13 @@ impl ResticVolume {
             }
             VirtualPath::Snapshot(which, inner) => {
                 let resolved = self.resolve(&which, path, false).await?;
-                let repo = self.indexed(&resolved.snapshot, on_progress).await?;
-                let tree_root = resolved.snapshot.tree;
-                let at = dir.clone();
-                let tree = self
-                    .blocking(path, move || folder_tree(&repo, tree_root, &inner, &at))
-                    .await?
-                    .ok_or_else(|| not_found(path))?;
+                let (tree_root, at) = (resolved.snapshot.tree, dir.clone());
+                let (tree, _) = self
+                    .on_index(&resolved.snapshot, on_progress, path, move |repo| {
+                        folder_tree(repo, tree_root, &inner, &at)
+                    })
+                    .await?;
+                let tree = tree.ok_or_else(|| not_found(path))?;
                 let mut entries: Vec<FileEntry> = tree.nodes.iter().map(|node| entry_of(node, &dir)).collect();
                 entries.sort_by(|a, b| b.is_directory.cmp(&a.is_directory).then_with(|| a.name.cmp(&b.name)));
                 Ok(entries)
@@ -195,12 +231,13 @@ impl ResticVolume {
         path: &Path,
     ) -> Result<(Node, Arc<IndexedRepo>, Resolved), VolumeError> {
         let resolved = self.resolve(which, path, false).await?;
-        let repo = self.indexed(&resolved.snapshot, None).await?;
-        let (task_repo, tree_root, at) = (Arc::clone(&repo), resolved.snapshot.tree, self.absolute(path));
-        let node = self
-            .blocking(path, move || node_at(&task_repo, tree_root, &inner, &at))
-            .await?
-            .ok_or_else(|| not_found(path))?;
+        let (tree_root, at) = (resolved.snapshot.tree, self.absolute(path));
+        let (node, repo) = self
+            .on_index(&resolved.snapshot, None, path, move |repo| {
+                node_at(repo, tree_root, &inner, &at)
+            })
+            .await?;
+        let node = node.ok_or_else(|| not_found(path))?;
         Ok((node, repo, resolved))
     }
 
@@ -259,6 +296,8 @@ impl ResticVolume {
             .await?;
         Ok(ResticReadStream {
             repo,
+            source: self.index_source(&resolved.snapshot),
+            reloaded: false,
             file: Arc::new(file),
             runtime: self.hub.host().runtime(),
             path: path.to_path_buf(),
@@ -428,14 +467,12 @@ impl Volume for ResticVolume {
         len: usize,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            let stream = self.open_file(path).await?;
+            let mut stream = self.open_file(path).await?;
             if offset >= stream.size {
                 return Ok(Vec::new());
             }
             let offset = usize::try_from(offset).map_err(|_| VolumeError::NotSupported)?;
-            read_at(&stream.runtime, &stream.repo, &stream.file, offset, len)
-                .await
-                .map_err(|err| err.into_volume_error(path))
+            stream.read_at(offset, len).await
         })
     }
 
@@ -592,3 +629,7 @@ impl ScanSource for ResticVolume {
 #[cfg(test)]
 #[path = "volume_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "stale_index_tests.rs"]
+mod stale_index_tests;

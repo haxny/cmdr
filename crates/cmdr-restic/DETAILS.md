@@ -178,6 +178,14 @@ never does.
 - **Coverage and reloads.** A load records the snapshots listed when it started (restic writes a backup's index files
   before its snapshot file). A snapshot outside that set (a backup made since) loads again, beside the index serving,
   which keeps serving until the new one is in; readers holding the old `Arc` finish on it. Memory doubles for the swap.
+- **A prune elsewhere reloads too (#653).** `restic forget --prune` repacks the surviving snapshots' blobs into new
+  packs and deletes the old ones, but the snapshot ids stay, so coverage still says yes. A pack read the parent answers
+  `NotFound` comes back typed (`backend::PackGone` → `ResticError::PackGone`); the read lets go of that index
+  (`ResticRepos::reindexed`, only if it's still the one serving, so readers missing together share one load), waits on
+  the reload, and runs again: the tree walks through `ResticVolume::on_index`, a read stream mid-file through its
+  `IndexSource`. Once per read: a pack missing from a fresh index is a damaged repo and answers the parent's `NotFound`.
+  Decision/Why: a manual refresh (every root listing) doesn't reload the index; that would cost a full load and a
+  doubled index per refresh, and the first read that misses heals it anyway.
 - **A transfer's hold** (`Volume::hold_for_transfer` → `RepoSlot::hold_for_transfer`): a copy, move, or compress reading
   from the repo takes one when it starts running and drops it when it settles
   (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A transfer holds its source for its whole run"). While any
@@ -337,19 +345,21 @@ empty `locks/` too.
 
 ### Typed errors
 
-`ResticError` is what a host words: `WrongPassword`, `NotARepository`, `Volume(VolumeError)`, and
-`Unreadable { detail }` (rustic's `display_log()`, for the log and the technical details only). `classify` sorts a
-`RusticError` by type:
+`ResticError` is what a host words: `WrongPassword`, `NotARepository`, `Volume(VolumeError)`, `PackGone(VolumeError)`
+(worded as its `NotFound`), and `Unreadable { detail }` (rustic's `display_log()`, for the log and the technical details
+only). `classify` sorts a `RusticError` by type:
 
 1. **Wrong password**: `RusticError::is_incorrect_password()`. rustic attaches its own error code `C002` when no key
    accepts the password (`find_key_in_backend`), and this accessor is rustic's public, typed way to ask for it. The
    error's `kind` field isn't readable outside rustic in 0.13.0, so the code is the only typed signal there is. Pinned
    by `a_wrong_password_is_typed_and_the_right_one_then_opens`; if a rustic bump drops the code, that test fails.
-2. **Parent failure**: the adapter wraps every `VolumeError` with `RusticError::with_source`, so it rides in the error's
+2. **Pack gone**: a pack read the parent answers `NotFound` is wrapped as `PackGone` (its source the `NotFound`) and
+   found by `pack_gone_in`, before step 3. Pinned by `stale_index_tests`.
+3. **Parent failure**: the adapter wraps every `VolumeError` with `RusticError::with_source`, so it rides in the error's
    source chain; `volume_error_in` finds it by `downcast_ref`. Pinned by
    `a_parent_that_cant_answer_surfaces_its_typed_error`.
-3. **Not a repo**: anything else, when the config is gone (one more typed `list_with_size(Config)` asks the parent).
-4. **Unreadable** otherwise: a damaged repo, an unsupported version, or a crashed blocking task.
+4. **Not a repo**: anything else, when the config is gone (one more typed `list_with_size(Config)` asks the parent).
+5. **Unreadable** otherwise: a damaged repo, an unsupported version, or a crashed blocking task.
 
 A panic inside a blocking task comes back as a `JoinError`, which maps to `Unreadable`, ❌ never a crash.
 

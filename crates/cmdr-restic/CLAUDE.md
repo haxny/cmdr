@@ -27,6 +27,8 @@ English a user reads. The app's half: `apps/desktop/src-tauri/src/file_system/re
   detach it (a dropped device transaction wedges a phone). Progress is real bytes.
 - **Index files stream through `IndexFeed`'s bounded window at every size.** Any rustic call that fans out (the index
   build, a snapshot refresh) runs in `repo::on_own_pool`. ❌ Never on rayon's global pool: search and icons stall.
+- **A pack gone under a loaded index (a prune elsewhere) reloads it once**: read through `ResticVolume::on_index` or the
+  stream's `IndexSource`, ❌ never `indexed` plus a bare read.
 - **❌ Never evict an index in use**; eviction and the idle drop take the index only, ❌ never the password.
 - **Passwords go through `secret_store`**, filed only by `remember_password` after a verified unlock nobody cancelled.
   ❌ No hub-wide lock across scrypt, a Keychain call, or a parent read.

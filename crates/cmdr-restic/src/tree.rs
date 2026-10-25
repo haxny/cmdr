@@ -87,35 +87,36 @@ pub(crate) fn node_at(
     root: TreeId,
     inner: &[OsString],
     path: &Path,
-) -> Result<Option<Node>, VolumeError> {
+) -> Result<Option<Node>, ResticError> {
     let Some((last, folders)) = inner.split_last() else {
         return Ok(None);
     };
     let Some(tree) = folder_tree(repo, root, folders, path)? else {
         return Ok(None);
     };
-    Ok(child(&tree, last, path)?.cloned())
+    Ok(child(&tree, last, path).map_err(ResticError::Volume)?.cloned())
 }
 
 /// The tree of the folder at `inner` below the snapshot tree `root` (`inner`
 /// empty for the snapshot's own top level), or `None` when it isn't a folder in
-/// this snapshot. Blocking.
+/// this snapshot. Blocking. Typed as a [`ResticError`], so a caller tells a
+/// pack gone under a stale index from any other failure.
 pub(crate) fn folder_tree(
     repo: &IndexedRepo,
     root: TreeId,
     inner: &[OsString],
     path: &Path,
-) -> Result<Option<Tree>, VolumeError> {
-    let mut tree = tree_at(repo, root).map_err(|err| err.into_volume_error(path))?;
+) -> Result<Option<Tree>, ResticError> {
+    let mut tree = tree_at(repo, root)?;
     for name in inner {
-        let subtree = match child(&tree, name, path)? {
+        let subtree = match child(&tree, name, path).map_err(ResticError::Volume)? {
             Some(node) if node.is_dir() => node.subtree,
             _ => None,
         };
         let Some(id) = subtree else {
             return Ok(None);
         };
-        tree = tree_at(repo, id).map_err(|err| err.into_volume_error(path))?;
+        tree = tree_at(repo, id)?;
     }
     Ok(Some(tree))
 }

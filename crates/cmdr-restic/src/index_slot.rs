@@ -36,6 +36,12 @@ impl IndexSlot {
             .map(|ready| Arc::clone(&ready.repo))
     }
 
+    /// Takes the loaded index out when it's `stale`. A reader that let go of it
+    /// first (and maybe loaded the next one) leaves nothing to take.
+    pub(crate) fn let_go_of(&mut self, stale: &Arc<IndexedRepo>) -> Option<Ready> {
+        self.ready.take_if(|ready| Arc::ptr_eq(&ready.repo, stale))
+    }
+
     /// A place among the waiters of the load in flight through `parent`, when
     /// there's one nobody cancelled.
     pub(crate) fn joinable(&self, parent: &Arc<dyn Volume>) -> Option<Waiter> {

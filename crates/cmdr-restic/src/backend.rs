@@ -415,13 +415,54 @@ fn backend_error(err: VolumeError) -> Box<RusticError> {
     )
 }
 
+/// A pack read failing: the parent's error, typed as [`PackGone`] when the
+/// parent says the pack isn't there.
+fn pack_error(tpe: FileType, err: VolumeError) -> Box<RusticError> {
+    if tpe == FileType::Pack && matches!(err, VolumeError::NotFound(_)) {
+        return RusticError::with_source(
+            ErrorKind::Backend,
+            "A pack file the index names is gone from the repository.",
+            PackGone(err),
+        );
+    }
+    backend_error(err)
+}
+
+/// A pack the index names that the parent says is gone: a prune elsewhere
+/// repacked its blobs since the index was loaded (or the repo is damaged). Its
+/// source is the parent's `NotFound`, so [`volume_error_in`] still finds it.
+#[derive(Debug)]
+pub(crate) struct PackGone(pub(crate) VolumeError);
+
+impl std::fmt::Display for PackGone {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("a pack file is gone from the repository")
+    }
+}
+
+impl std::error::Error for PackGone {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
 /// The parent's [`VolumeError`] somewhere in `err`'s source chain, if a parent
 /// failure is what caused it. A typed downcast, never a look at message text.
 pub(crate) fn volume_error_in<'a>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a VolumeError> {
+    in_chain(err)
+}
+
+/// The [`PackGone`] somewhere in `err`'s source chain, if a missing pack is
+/// what caused it.
+pub(crate) fn pack_gone_in<'a>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a PackGone> {
+    in_chain(err)
+}
+
+fn in_chain<'a, T: std::error::Error + 'static>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a T> {
     let mut current = Some(err);
     while let Some(err) = current {
-        if let Some(volume_error) = err.downcast_ref::<VolumeError>() {
-            return Some(volume_error);
+        if let Some(found) = err.downcast_ref::<T>() {
+            return Some(found);
         }
         current = err.source();
     }
@@ -492,7 +533,7 @@ impl ReadBackend for VolumeBackend {
         }
         self.read_stream(&self.path_of(tpe, id), None)
             .map(Bytes::from)
-            .map_err(backend_error)
+            .map_err(|err| pack_error(tpe, err))
     }
 
     fn read_partial(&self, tpe: FileType, id: &Id, _cacheable: bool, offset: u32, length: u32) -> RusticResult<Bytes> {
@@ -505,13 +546,13 @@ impl ReadBackend for VolumeBackend {
             // repos in practice has `read_range`.
             Err(VolumeError::NotSupported) => {
                 let end = offset as usize + length;
-                let whole = self.read_stream(&path, Some(end)).map_err(backend_error)?;
+                let whole = self.read_stream(&path, Some(end)).map_err(|err| pack_error(tpe, err))?;
                 whole
                     .get(offset as usize..end.min(whole.len()))
                     .unwrap_or_default()
                     .to_vec()
             }
-            Err(err) => return Err(backend_error(err)),
+            Err(err) => return Err(pack_error(tpe, err)),
         };
         if window.len() != length {
             return Err(RusticError::new(

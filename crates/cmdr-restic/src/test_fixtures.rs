@@ -16,9 +16,9 @@ use rustic_core::jiff::Timestamp;
 use rustic_core::jiff::tz::TimeZone;
 use rustic_core::repofile::ConfigFile;
 use rustic_core::{
-    BackupOptions, BytesList, ConfigOptions, Credentials, FileType, Id, IndexedIdsStatus, KeyOptions, OpenStatus,
-    PathList, ReadBackend, Repository, RepositoryBackends, RepositoryOptions, RusticResult, SnapshotOptions,
-    StringList, WriteBackend,
+    BackupOptions, BytesList, ConfigOptions, Credentials, FileType, Id, IndexedIdsStatus, KeyOptions, LimitOption,
+    OpenStatus, PathList, PruneOptions, ReadBackend, Repository, RepositoryBackends, RepositoryOptions, RusticResult,
+    SnapshotOptions, StringList, WriteBackend,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -162,6 +162,38 @@ impl FixtureRepo {
             let path = root.join(path);
             if !volume.exists(&path).await {
                 volume.create_file(&path, &bytes).await.expect("fixture file");
+            }
+        }
+    }
+
+    /// Prunes the repo the way `restic prune --repack-all` on another machine
+    /// does: every blob moves to a new pack under a new index file, and the old
+    /// packs and index files are deleted at once. Snapshot ids don't change.
+    pub fn repack_all(&self) {
+        let options = PruneOptions::default()
+            .repack_all(true)
+            .instant_delete(true)
+            .max_repack(LimitOption::Unlimited);
+        let plan = self.repo.prune_plan(&options).expect("planning a prune in memory");
+        self.repo.prune(&options, plan).expect("pruning in memory");
+    }
+
+    /// [`write_into`](Self::write_into), then deletes the pack and index files
+    /// on `volume` the repo no longer has: what a prune leaves behind.
+    pub async fn sync_into(&self, volume: &dyn Volume, root: &Path) {
+        self.write_into(volume, root).await;
+        let kept: Vec<PathBuf> = self.files().into_iter().map(|(path, _)| root.join(path)).collect();
+        let mut dirs = vec![root.join("index")];
+        let data = root.join("data");
+        for entry in volume.list_directory(&data, None).await.expect("data/ lists") {
+            dirs.push(data.join(entry.name));
+        }
+        for dir in dirs {
+            for entry in volume.list_directory(&dir, None).await.expect("a repo folder lists") {
+                let path = dir.join(&entry.name);
+                if !entry.is_directory && !kept.contains(&path) {
+                    volume.delete(&path).await.expect("a pruned file deletes");
+                }
             }
         }
     }

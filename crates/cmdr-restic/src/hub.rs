@@ -445,6 +445,24 @@ impl ResticRepos {
         outcome.map_err(|err| Self::refused(slot, err))
     }
 
+    /// [`Self::indexed`] again after a read through `stale` hit a pack the
+    /// parent says is gone ([`ResticError::PackGone`]): a prune elsewhere
+    /// repacked blobs under snapshot ids the index still covers. Lets go of
+    /// `stale` unless a reader that hit it too already did, then waits on (or
+    /// starts) the load, so readers missing together share one reload.
+    pub(crate) async fn reindexed(
+        &self,
+        slot: &Arc<RepoSlot>,
+        parent: &Arc<dyn Volume>,
+        snapshot: &Snapshot,
+        stale: &Arc<IndexedRepo>,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+    ) -> Result<Arc<IndexedRepo>, VolumeError> {
+        let gone = lock(&slot.index).let_go_of(stale);
+        free_off_the_runtime(&self.host.runtime(), gone);
+        self.indexed(slot, parent, snapshot, on_progress).await
+    }
+
     /// Starts a load of `slot`'s index through `parent` and joins it. Runs under
     /// the slot's index lock, which it only takes to file the load: the load
     /// itself runs on its own task.
@@ -642,6 +660,40 @@ impl RepoSlot {
     /// place for the quiet period.
     pub(crate) fn touch_latest(&self) {
         lock(&self.latest).touch();
+    }
+}
+
+/// Where reads under one snapshot get its index: a read stream keeps one, so a
+/// pack gone mid-file loads the index again ([`ResticRepos::reindexed`]).
+#[derive(Clone)]
+pub(crate) struct IndexSource {
+    pub(crate) hub: Arc<ResticRepos>,
+    pub(crate) slot: Arc<RepoSlot>,
+    pub(crate) parent: Arc<dyn Volume>,
+    pub(crate) snapshot: Snapshot,
+}
+
+impl IndexSource {
+    /// The index holding the snapshot ([`ResticRepos::indexed`]).
+    pub(crate) async fn get(
+        &self,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+    ) -> Result<Arc<IndexedRepo>, VolumeError> {
+        self.hub
+            .indexed(&self.slot, &self.parent, &self.snapshot, on_progress)
+            .await
+    }
+
+    /// A fresh index after a read through `stale` found a pack gone
+    /// ([`ResticRepos::reindexed`]).
+    pub(crate) async fn reload(
+        &self,
+        stale: &Arc<IndexedRepo>,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+    ) -> Result<Arc<IndexedRepo>, VolumeError> {
+        self.hub
+            .reindexed(&self.slot, &self.parent, &self.snapshot, stale, on_progress)
+            .await
     }
 }
 

@@ -5,7 +5,7 @@
 //! `block_on`s the parent volume, which would panic on an async worker), so
 //! each method here is async and hops to a blocking thread once.
 
-use crate::backend::{VolumeBackend, volume_error_in};
+use crate::backend::{VolumeBackend, pack_gone_in, volume_error_in};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{Volume, VolumeError};
 use rustic_core::repofile::SnapshotFile;
@@ -56,6 +56,11 @@ pub(crate) enum ResticError {
     NotARepository,
     /// The volume the repo lives on couldn't answer (a dropped share, no access).
     Volume(VolumeError),
+    /// A pack the index names is gone (the parent's `NotFound`): a prune
+    /// elsewhere repacked its blobs since the index was loaded, so a read
+    /// reloads the index once and tries again (DETAILS § "Coverage and
+    /// reloads"). Through a fresh index, a damaged repo.
+    PackGone(VolumeError),
     /// rustic couldn't read the repo for another reason (a damaged or
     /// unsupported repo, a crashed worker).
     Unreadable {
@@ -71,7 +76,7 @@ impl ResticError {
         match self {
             Self::WrongPassword => VolumeError::NeedsPassword { wrong_attempt: true },
             Self::NotARepository => VolumeError::NotFound(path.display().to_string()),
-            Self::Volume(err) => err,
+            Self::Volume(err) | Self::PackGone(err) => err,
             Self::Unreadable { detail } => VolumeError::IoError {
                 message: detail.into(),
                 raw_os_error: None,
@@ -226,12 +231,16 @@ impl IndexedRepo {
 ///
 /// rustic marks a wrong password with its own error code, read through
 /// `is_incorrect_password()`. A parent failure rides in the error's source chain
-/// as the typed [`VolumeError`] the adapter put there. Anything else is a missing
+/// as the typed [`VolumeError`] the adapter put there, wrapped as
+/// [`PackGone`](crate::backend::PackGone) when it's a pack the parent says is gone. Anything else is a missing
 /// repo when the config is gone (asked of the parent again, which is cheap and
 /// typed), and unreadable otherwise. Runs on the blocking thread.
 fn classify(err: &RusticError, backend: &VolumeBackend) -> ResticError {
     if err.is_incorrect_password() {
         return ResticError::WrongPassword;
+    }
+    if let Some(gone) = pack_gone_in(err) {
+        return ResticError::PackGone(gone.0.clone());
     }
     if let Some(volume_error) = volume_error_in(err) {
         return ResticError::Volume(volume_error.clone());
