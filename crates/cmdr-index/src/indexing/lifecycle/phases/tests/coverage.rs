@@ -218,7 +218,12 @@ fn start_scan_refuses_while_a_phase_is_active() {
         },
         &[],
     );
+    // Parked in front of its first walk, so it still has work for as long as the
+    // test asks. The tree alone made that a bet on 400 folders outlasting a test
+    // thread the scheduler could stall (#732).
+    let gate = crate::indexing::lifecycle::phases::walk_gate::arm(drive.volume_id);
     drive.start();
+    gate.wait_until_parked();
 
     // The machine holds the volume from the moment it is handed over until it has
     // nothing queued, so this is a refusal rather than a race.
@@ -238,6 +243,7 @@ fn start_scan_refuses_while_a_phase_is_active() {
         "❌ a second run started over the top of the machine, which would have truncated the index"
     );
 
+    gate.release();
     drive.wait_for_the_machine();
     assert!(
         drive.frontier(&drive.path("")).is_empty(),
