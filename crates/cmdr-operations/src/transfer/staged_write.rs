@@ -48,6 +48,7 @@ use std::sync::Arc;
 use super::super::host::Announced;
 use super::super::in_flight_temps::{self, RecordHome};
 use super::super::state::WriteOperationState;
+use super::leftover_cleanup::{LeftBehind, finish_in_background};
 #[cfg(test)]
 use super::recovered_name::FinalizeFailure;
 use super::transfer_probe::{TaskPhase, set_task_phase};
@@ -404,7 +405,9 @@ impl StagedWrite {
     /// The write FAILED: the staged bytes are a partial, so remove them.
     ///
     /// Best-effort — the backend usually deleted its own partial already, and a
-    /// leftover `.cmdr-tmp-*` is untidy rather than dangerous.
+    /// leftover `.cmdr-tmp-*` is untidy rather than dangerous. On a destination
+    /// where the cut-off upload may land after the delete, the background
+    /// cleanup pass asks again later (`leftover_cleanup.rs`).
     ///
     /// A `SingleShot` write has nothing to remove: the destination promised the
     /// bytes either all landed or none did, and cleaning up after its own failed
@@ -420,6 +423,17 @@ impl StagedWrite {
         // the stop's cleanup takes it later, or the ledger does on the share's
         // next reconnect. Retired first, it would be forgotten on the share.
         match dest_volume.delete(temp.path()).await {
+            // The cut-off upload may land after this delete (a WebDAV server
+            // still reading the dropped PUT stores what arrived, #732), so the
+            // background pass asks again, and retires it then.
+            Ok(()) | Err(VolumeError::NotFound(_)) if dest_volume.cut_off_write_may_land_late() => {
+                finish_in_background(
+                    dest_volume,
+                    &self.state,
+                    home_of(self.home_volume.as_deref()),
+                    LeftBehind::landing_late(temp.path().to_path_buf()),
+                );
+            }
             Ok(()) | Err(VolumeError::NotFound(_)) => self.retire_temp(temp.path()),
             Err(e) => log::debug!(
                 target: "copy",

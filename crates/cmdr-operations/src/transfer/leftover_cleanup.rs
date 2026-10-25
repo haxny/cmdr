@@ -13,6 +13,14 @@
 //! comes here the same way, from its terminal
 //! (`archive_edit/engine.rs::EditLeftovers`), on the parent's drive.
 //!
+//! A temp a failed write's own delete DID take comes here too, on a destination
+//! where the cut-off upload may land after that delete
+//! (`Volume::cut_off_write_may_land_late`, WebDAV: the server reads the dropped
+//! PUT on its own schedule and stores what arrived, #732). `StagedWrite::abandon`
+//! hands it over still recorded, and the pass deletes it again once
+//! [`CleanupPolicy::late_landing_recheck`] has passed: a cancel stays as quick,
+//! and the late partial still goes.
+//!
 //! The pass, in order:
 //!
 //! 1. **A destination that's out gets one reconnect attempt**, the operation's
@@ -49,6 +57,7 @@
 //! [`CleanupPolicy::inline_budget`]: crate::outage_slot::CleanupPolicy::inline_budget
 //! [`CleanupPolicy::wait`]: crate::outage_slot::CleanupPolicy::wait
 //! [`CleanupPolicy::retry_after`]: crate::outage_slot::CleanupPolicy::retry_after
+//! [`CleanupPolicy::late_landing_recheck`]: crate::outage_slot::CleanupPolicy::late_landing_recheck
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -105,15 +114,28 @@ pub(crate) struct LeftBehind {
     pub(crate) out: Vec<PathBuf>,
     /// The destination answered and refused.
     pub(crate) refused: Vec<PathBuf>,
+    /// Gone at the delete, but a cut-off upload may still land there
+    /// (`Volume::cut_off_write_may_land_late`): asked again once
+    /// `CleanupPolicy::late_landing_recheck` has passed.
+    pub(crate) late: Vec<PathBuf>,
 }
 
 impl LeftBehind {
+    /// A temp gone at its delete on a destination where the cut-off upload
+    /// may still land, for the pass to ask about again.
+    pub(crate) fn landing_late(temp: PathBuf) -> Self {
+        Self {
+            late: vec![temp],
+            ..Self::default()
+        }
+    }
+
     fn is_empty(&self) -> bool {
-        self.out.is_empty() && self.refused.is_empty()
+        self.out.is_empty() && self.refused.is_empty() && self.late.is_empty()
     }
 
     fn len(&self) -> usize {
-        self.out.len() + self.refused.len()
+        self.out.len() + self.refused.len() + self.late.len()
     }
 }
 
@@ -211,6 +233,14 @@ async fn take_away(pass: &Pass, left: LeftBehind) -> Vec<PathBuf> {
         mut refused,
     } = delete_each(pass, left.out).await;
     refused.extend(left.refused);
+    if !left.late.is_empty() {
+        // The server may still be reading the dropped upload; a delete on a
+        // name that isn't there yet is the cheap way to be sure.
+        tokio::time::sleep(state.cleanup_policy.late_landing_recheck).await;
+        let round = delete_each(pass, left.late).await;
+        remaining.extend(round.remaining);
+        refused.extend(round.refused);
+    }
     let mut pause = state.cleanup_policy.retry_after;
     for _ in 0..REFUSAL_RETRIES {
         if refused.is_empty() {

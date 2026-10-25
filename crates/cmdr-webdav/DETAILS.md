@@ -191,7 +191,11 @@ same: `crates/cmdr-operations/DETAILS.md` § "Look-alike names". Unit cells: `sr
 `write_from_stream(CreateOrReplace)` is ONE streaming PUT to the path it's handed, with `Content-Length: size`, progress
 every 200 ms from a shared counter, and cancel by poisoning the body stream (the request aborts). Any failure DELETEs
 that path best-effort, the same contract SFTP's truncating open keeps (on a Nextcloud, a big file goes up in chunks
-instead, still onto that one path: § "Chunked uploads (Nextcloud)"). **Why**: the engine stages every write here
+instead, still onto that one path: § "Chunked uploads (Nextcloud)"). ❗ That DELETE can come before the server even
+opened the file: `mod_dav_fs` reads the dropped PUT on its own schedule and then stores the truncated body, after the
+DELETE answered 404 (1 in 10 cancelled uploads on the stock Apache fixture under `--stress-count 10`, 2026-10-25, #732).
+So the volume answers `cut_off_write_may_land_late`, and the engine's background cleanup pass asks the temp's name again
+a moment later (`crates/cmdr-operations/src/transfer/leftover_cleanup.rs`). **Why**: the engine stages every write here
 (`write_is_single_shot` keeps its `false` default, `crates/cmdr-operations/src/transfer/DETAILS.md` § "File writes are
 staged"), so the path IS its `.cmdr-tmp-*` temp, and its landing MOVE (`rename(force = false)`, `Overwrite: F`) is what
 gives the bytes the user's name and refuses a taken one. A second staging layer under that temp buys nothing and costs a

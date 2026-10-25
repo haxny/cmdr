@@ -241,13 +241,13 @@ fn hand_off_temps(
     };
     let left = if volume.connection_state().is_none_or(ConnectionState::is_live) {
         LeftBehind {
-            out: Vec::new(),
             refused: temps,
+            ..LeftBehind::default()
         }
     } else {
         LeftBehind {
             out: temps,
-            refused: Vec::new(),
+            ..LeftBehind::default()
         }
     };
     let scratch = [

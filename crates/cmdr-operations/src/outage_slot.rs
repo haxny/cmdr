@@ -119,6 +119,11 @@ pub struct CleanupPolicy {
     /// dropped write's handle close, or a dropped session's teardown, to reach
     /// the server.
     pub retry_after: Duration,
+    /// How long the background pass waits before it asks a temp's name again
+    /// on a destination where a cut-off upload may land after its delete
+    /// (`Volume::cut_off_write_may_land_late`): long enough for the server to
+    /// finish reading the dropped request.
+    pub late_landing_recheck: Duration,
 }
 
 impl Default for CleanupPolicy {
@@ -127,6 +132,7 @@ impl Default for CleanupPolicy {
             inline_budget: Duration::from_secs(5),
             wait: Duration::from_secs(20),
             retry_after: Duration::from_secs(3),
+            late_landing_recheck: Duration::from_secs(2),
         }
     }
 }

@@ -1924,6 +1924,19 @@ pub trait Volume: Send + Sync {
         false
     }
 
+    /// Whether an upload cut off mid-body may still LAND after the client gave
+    /// up on it: the server reads the request on its own schedule and stores
+    /// what arrived, so a delete sent right after the cut can come before the
+    /// file exists and answer "not found". A WebDAV server does (`mod_dav_fs`
+    /// keeps the truncated body). The transfer layer then asks the temp's name
+    /// again a moment later, on its background cleanup pass
+    /// (`crates/cmdr-operations/src/transfer/leftover_cleanup.rs`). Default
+    /// `false`: a file handle a protocol opens before any byte (SMB, SFTP, a
+    /// local disk) is gone once the write's own delete answered.
+    fn cut_off_write_may_land_late(&self) -> bool {
+        false
+    }
+
     /// Writes data from a stream to the given path.
     ///
     /// `on_progress` receives structured byte progress after each chunk is

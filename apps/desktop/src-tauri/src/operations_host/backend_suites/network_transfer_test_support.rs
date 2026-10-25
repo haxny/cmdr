@@ -50,6 +50,11 @@ const SETTLE_BUDGET: Duration = Duration::from_secs(6);
 /// whose conflict never comes still has room to say so before the cap lands.
 const CONFLICT_BUDGET: Duration = Duration::from_secs(5);
 
+/// The wait for a stopped copy's background cleanup pass, whose late-landing
+/// recheck comes `CleanupPolicy::late_landing_recheck` (2 s) after the stop.
+/// Under the same nextest cap.
+const LEFTOVER_PASS_BUDGET: Duration = Duration::from_secs(5);
+
 /// `fixture_budget`, or ten minutes when the scenario runs against a real
 /// account (`CMDR_S3_LIVE=1`, `s3_live_engine_test.rs`): a home uplink moves a
 /// 70 MiB upload in tens of seconds, not the fixture's two. The live runner
@@ -583,6 +588,12 @@ pub(super) async fn a_cancelled_upload_leaves_nothing_behind(remote: Arc<dyn Vol
     // its next chunk isn't left parked on a permit that never comes.
     source.gate.add_permits(1_000);
     running.settle().await;
+    // A destination where the dropped upload may land after the stop's delete
+    // (WebDAV, #732) has its temp asked again on the background pass, so
+    // "nothing left" is judged once that pass ends.
+    tokio::time::timeout(budget(LEFTOVER_PASS_BUDGET), running.engine.leftover_cleanups_settled())
+        .await
+        .expect("the background cleanup pass ends");
 
     // ❗ The premise, asserted rather than assumed: a copy that had already
     // finished would satisfy every claim below for the wrong reason.

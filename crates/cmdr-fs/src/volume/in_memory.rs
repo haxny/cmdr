@@ -154,6 +154,9 @@ pub struct InMemoryVolume {
     /// readable until then). Default `false`, where a write onto an existing
     /// name refuses whatever the mode. Set via [`Self::with_whole_publish`].
     publishes_writes_whole: bool,
+    /// What [`Volume::cut_off_write_may_land_late`] reports. Default `false`;
+    /// set via [`Self::with_cut_off_writes_landing_late`].
+    cut_off_writes_land_late: bool,
     /// Whether this volume renames like an object store: [`Volume::rename_work`]
     /// answers `CopyThenDelete` for every entry, and [`Volume::rename`] refuses
     /// with `NotSupported`, so a caller that forgot to ask gets caught. Default
@@ -238,6 +241,7 @@ impl InMemoryVolume {
             create_directory_not_found: false,
             composes_new_names: false,
             publishes_writes_whole: false,
+            cut_off_writes_land_late: false,
             renames_by_copy: false,
             delete_batches: std::sync::Mutex::new(Vec::new()),
             stat_failing: RwLock::new(HashSet::new()),
@@ -451,6 +455,13 @@ impl InMemoryVolume {
     /// the name exactly as it was.
     pub fn with_whole_publish(mut self) -> Self {
         self.publishes_writes_whole = true;
+        self
+    }
+
+    /// Makes [`Volume::cut_off_write_may_land_late`] answer `true`, standing in
+    /// for a WebDAV server: the cell itself puts the late-landing file in place.
+    pub fn with_cut_off_writes_landing_late(mut self) -> Self {
+        self.cut_off_writes_land_late = true;
         self
     }
 

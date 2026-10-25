@@ -796,6 +796,10 @@ impl Volume for InMemoryVolume {
         self.publishes_writes_whole
     }
 
+    fn cut_off_write_may_land_late(&self) -> bool {
+        self.cut_off_writes_land_late
+    }
+
     fn space_poll_interval(&self) -> Option<std::time::Duration> {
         None
     }

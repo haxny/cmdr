@@ -24,6 +24,7 @@ const QUICK_CLEANUP: CleanupPolicy = CleanupPolicy {
     inline_budget: Duration::from_secs(5),
     wait: Duration::from_secs(10),
     retry_after: Duration::from_millis(20),
+    late_landing_recheck: Duration::from_millis(20),
 };
 const QUICK_OUTAGE: OutagePolicy = OutagePolicy {
     budget: Duration::from_secs(30),

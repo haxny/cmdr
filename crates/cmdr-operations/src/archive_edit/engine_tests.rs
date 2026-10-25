@@ -224,6 +224,7 @@ async fn a_temp_a_stopped_edit_left_on_a_share_that_is_out_waits_for_the_drives_
                 inline_budget: Duration::from_secs(5),
                 wait: Duration::from_millis(50),
                 retry_after: Duration::from_millis(20),
+                late_landing_recheck: Duration::from_millis(20),
             }),
     );
     in_flight_temps::track_temp(&state, Some(RecordHome::volume_space(NAS_ID)), &temp);

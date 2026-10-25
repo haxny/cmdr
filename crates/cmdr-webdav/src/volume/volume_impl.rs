@@ -131,6 +131,15 @@ impl Volume for WebdavVolume {
         true
     }
 
+    /// `true`: a cancelled PUT is dropped mid-body, and the server reads it on
+    /// its own schedule. `mod_dav_fs` then stores the truncated body, after the
+    /// delete `put_streaming` sent at once had already answered 404 (verified
+    /// on httpd 2.4, `webdav-fixture-apache`, 1 in 10 cancelled uploads under
+    /// `--stress-count 10`, 2026-10-25).
+    fn cut_off_write_may_land_late(&self) -> bool {
+        true
+    }
+
     /// [`Self::DATE_KEEPING_CAPS`] on a server that keeps dates, else nothing.
     fn metadata_caps(&self) -> MetadataCaps {
         if self.keeps_dates() {

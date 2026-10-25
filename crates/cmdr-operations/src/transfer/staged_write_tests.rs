@@ -609,6 +609,35 @@ async fn abandon_removes_the_partial() {
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
 
+/// ❗ On a destination where a cut-off upload may land AFTER the abandon's
+/// delete (a WebDAV server still reading the dropped PUT, #732), the temp is
+/// asked again on the background pass, and stays recorded until then. The
+/// paused clock stands in for the recheck's wait.
+#[tokio::test(start_paused = true)]
+async fn a_cut_off_upload_that_lands_after_the_abandon_is_taken_on_the_recheck() {
+    let engine = TestOperations::new();
+    let state = state(&engine);
+    let inner = Arc::new(InMemoryVolume::new("dest").with_cut_off_writes_landing_late());
+    let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
+
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::Stage);
+    let temp = staged.target().to_path_buf();
+    // Nothing there yet: the server hasn't got to the dropped upload.
+    staged.abandon(&dest).await;
+    assert_eq!(
+        *state.in_flight_temps.lock_ignore_poison(),
+        vec![temp.clone()],
+        "kept on record until the recheck"
+    );
+    // The server stores what arrived only now.
+    inner.create_file(&temp, b"half").await.unwrap();
+
+    engine.leftover_cleanups_settled().await;
+
+    assert!(!inner.exists(&temp).await, "the recheck takes the late partial");
+    assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
+}
+
 /// ❗ An abandon whose delete the destination turns down (a share that's out, a
 /// handle still open) keeps the temp LISTED, so the stop's cleanup takes it
 /// later, or the ledger does on the share's next reconnect. Retired first, it

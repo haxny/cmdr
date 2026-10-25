@@ -43,6 +43,7 @@ async fn an_outage_the_operation_gave_up_on_gets_one_look_and_no_wait() {
                 inline_budget: Duration::from_secs(5),
                 wait: Duration::from_secs(60),
                 retry_after: Duration::from_millis(20),
+                late_landing_recheck: Duration::from_millis(20),
             }),
     );
     in_flight_temps::track_temp(&state, Some(RecordHome::volume_space(VOLUME_ID)), &temp);
@@ -61,6 +62,7 @@ async fn an_outage_the_operation_gave_up_on_gets_one_look_and_no_wait() {
         LeftBehind {
             out: vec![temp.clone()],
             refused: Vec::new(),
+            late: Vec::new(),
         },
     );
     tokio::time::timeout(Duration::from_secs(5), engine.leftover_cleanups_settled())
@@ -112,6 +114,7 @@ async fn a_temp_the_share_refuses_the_moment_it_is_back_goes_on_the_retries() {
                 inline_budget: Duration::from_secs(5),
                 wait: Duration::from_secs(60),
                 retry_after: Duration::from_millis(20),
+                late_landing_recheck: Duration::from_millis(20),
             }),
     );
     in_flight_temps::track_temp(&state, Some(RecordHome::volume_space(VOLUME_ID)), &temp);
@@ -126,6 +129,7 @@ async fn a_temp_the_share_refuses_the_moment_it_is_back_goes_on_the_retries() {
         LeftBehind {
             out: vec![temp.clone()],
             refused: Vec::new(),
+            late: Vec::new(),
         },
     );
     wait_until_async(Duration::from_secs(5), "the pass to dial the share", || {
