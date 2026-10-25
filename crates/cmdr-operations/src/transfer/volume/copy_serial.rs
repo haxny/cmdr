@@ -638,7 +638,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
     let _ = std::mem::take(&mut *apply_to_all_cell.lock_ignore_poison());
     let _ = source_hints_arc;
 
-    let files_done = outcome.files_done;
+    let files_done = outcome.files_done_in_leaves(leaf_files_done.load(Ordering::Relaxed), bulk_skip_files);
     let bytes_done = outcome.bytes_done;
     let files_skipped = outcome.files_skipped;
     let bytes_skipped = outcome.bytes_skipped;

@@ -86,3 +86,12 @@ byte-incomplete phone backups the incident left behind as done. There is also no
 `write-progress` payload carries one `currentFile` and no in-flight set, so the gap cannot be reconstructed there. What
 closes it is SURFACING the window — `TransferActivity::in_flight` on the same event, rendered by the stall notice's
 in-flight line (`apps/desktop/src/lib/file-operations/transfer/DETAILS.md` § "The stalled-transfer notice").
+
+### The completion counts leaves, ❌ never the async driver's `files_done`
+
+The async driver counts TOP-LEVEL sources, so one selected folder of 36 files ends its loop at `files_done = 1`. A
+volume op's `WriteCompleteEvent::files_processed` (and its cancel's) comes from
+`TransferLoopOutcome::files_done_in_leaves` instead: the `LeafProgressLedger`'s counter, plus the top-level sources the
+driver skipped mid-loop, which the ledger never sees. That matches the concurrent driver (whose tally IS the ledger's)
+and the local engine (whose driver iterates leaves), and it's what the done dialog's "N / total" and its "Copied N
+files" read. #702 shipped "Copied 1 file", "1 / 36" beside a full byte bar from the serial copy and cross-volume move.

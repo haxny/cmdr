@@ -728,7 +728,7 @@ pub async fn move_volumes_with_progress(
         "post-loop bookkeeping",
     );
 
-    let files_done = outcome.files_done;
+    let files_done = outcome.files_done_in_leaves(leaf_files_done.load(Ordering::Relaxed), bulk_skip_files);
     let bytes_done = outcome.bytes_done;
     // Top-level skips the driver counted, PLUS the deep-merge children skipped
     // inside folder sources (invisible to the driver).

@@ -760,5 +760,74 @@ async fn a_server_side_copy_whose_landing_reply_was_lost_lands_once() {
     );
 }
 
+/// ❗ #702: a folder the server copies file by file counts and shows every file
+/// the way a streamed folder does: each row done, the file count at N / N, and
+/// the completion tally naming every file. A server-side copy once ended at
+/// "1 / 36" with every row at 0 bytes while the byte bar read 100%.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_folder_copied_on_the_server_counts_and_shows_every_file() {
+    use crate::event_sinks::CollectorEventSink;
+    use crate::host::OperationEventSink;
+    use crate::transfer_tree::test_support::row_states;
+    use cmdr_fs::ignore_poison::IgnorePoison;
+
+    let engine = TestOperations::new();
+    let volume = ServerCopyVolume::new("nas", true);
+    volume
+        .inner
+        .create_directory_all(Path::new("/Photos/Lisbon trip"))
+        .await
+        .unwrap();
+    for n in 1..=5 {
+        volume
+            .inner
+            .create_file(Path::new(&format!("/Photos/Lisbon trip/{n}.jpg")), &[0xAB; 100])
+            .await
+            .unwrap();
+    }
+    volume.inner.create_directory_all(Path::new("/Backup")).await.unwrap();
+    let as_volume: Arc<dyn Volume> = volume.clone();
+    let events = Arc::new(CollectorEventSink::new());
+    let state = make_state(&engine);
+
+    super::super::copy_volumes_with_progress(
+        Arc::clone(&events) as Arc<dyn OperationEventSink>,
+        "op-server-copy-folder",
+        &state,
+        Arc::clone(&as_volume),
+        &[std::path::PathBuf::from("/Photos/Lisbon trip")],
+        Arc::clone(&as_volume),
+        Path::new("/Backup"),
+        &crate::VolumeCopyConfig::default(),
+    )
+    .await
+    .expect("the copy succeeds");
+
+    assert_eq!(volume.copies(), 5, "the server copied every file");
+    assert_eq!(volume.streamed(), 0, "and nothing streamed");
+    let rows = state
+        .transfer_tree
+        .get()
+        .expect("the scan installed a tree")
+        .read(row_states)
+        .expect("the tree is on");
+    assert_eq!(
+        rows,
+        vec![
+            "Lisbon trip/ done",
+            "  1.jpg done",
+            "  2.jpg done",
+            "  3.jpg done",
+            "  4.jpg done",
+            "  5.jpg done"
+        ]
+    );
+    let last = events.progress.lock_ignore_poison().last().cloned().expect("progress");
+    assert_eq!((last.files_done, last.files_total), (5, 5), "{last:?}");
+    assert_eq!((last.bytes_done, last.bytes_total), (500, 500), "{last:?}");
+    let complete = events.complete.lock_ignore_poison().last().cloned().expect("complete");
+    assert_eq!(complete.files_processed, 5, "{complete:?}");
+}
+
 /// A `ListingProgress` import keeps the forwarding macro's signatures nameable.
 const _: Option<ListingProgress> = None;

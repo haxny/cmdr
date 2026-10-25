@@ -100,10 +100,9 @@ async fn extract_out_copies_a_file_and_a_directory_subtree_out_of_a_zip() {
 
     let complete = events.complete.lock().unwrap();
     assert_eq!(complete.len(), 1, "one completion event");
-    // `files_processed` counts TOP-LEVEL source items (the file + the directory),
-    // not leaves — same as any local↔local directory copy. `bytes_processed` is
-    // the reliable full-transfer measure: all three inner files' bytes.
-    assert_eq!(complete[0].files_processed, 2, "two top-level sources");
+    // `files_processed` counts FILES (the top-level one + the directory's two),
+    // the same as a local copy and as the bar's own denominator.
+    assert_eq!(complete[0].files_processed, 3, "every file the copy landed");
     assert_eq!(complete[0].bytes_processed, 5 + 3 + 3, "all inner-file bytes copied");
 }
 

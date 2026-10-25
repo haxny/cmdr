@@ -279,6 +279,23 @@ pub(super) struct TransferLoopOutcome {
     pub intent: PostLoopIntent,
 }
 
+impl TransferLoopOutcome {
+    /// The operation's file count in LEAVES, what its completion and cancel
+    /// events report, for a volume op whose leaves report into a
+    /// `LeafProgressLedger`.
+    ///
+    /// ❗ The async driver's own `files_done` counts TOP-LEVEL sources, so a
+    /// single folder of 36 files ends as 1 (#702: "Copied 1 file", "1 / 36"
+    /// beside a full byte bar). `leaves_counted` is the ledger's counter: every
+    /// leaf that landed, every child a deep merge skipped, and the bulk-skipped
+    /// leaves it was seeded with. The only thing it never sees is a top-level
+    /// source the driver skipped mid-loop, which counts as one, the way the
+    /// concurrent driver's `credit_skipped_source` counts it.
+    pub(in crate::transfer) fn files_done_in_leaves(&self, leaves_counted: usize, bulk_skip_files: usize) -> usize {
+        leaves_counted + self.files_skipped.saturating_sub(bulk_skip_files)
+    }
+}
+
 /// Why the loop ended. The caller branches on this to decide
 /// rollback/commit/cancel emission.
 #[derive(Debug)]

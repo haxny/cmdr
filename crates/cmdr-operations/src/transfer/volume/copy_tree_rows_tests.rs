@@ -511,6 +511,63 @@ async fn a_cross_volume_move_reports_each_source_twice_and_the_sweep_has_the_las
     );
 }
 
+/// One folder takes the serial driver, which counts top-level sources; the
+/// completion still counts its files, so the done dialog reads "3 / 3", ❌
+/// never "1 / 3" (#702). A skipped top-level file counts as the one file it is.
+#[tokio::test]
+async fn a_one_folder_transfer_completes_counting_its_files_not_its_sources() {
+    let engine = TestOperations::new();
+    for kind in ["copy", "move"] {
+        let (source, dest) = make_volumes();
+        for name in ["a.txt", "b.txt", "c.txt"] {
+            put(&source, &format!("/src/folder/{name}"), b"incoming").await;
+        }
+        put(&source, "/src/clash.txt", b"incoming").await;
+        put(&dest, "/clash.txt", b"theirs").await;
+        let events = Arc::new(CollectorEventSink::new());
+        let state = make_state(&engine);
+        let config = VolumeCopyConfig {
+            conflict_resolution: ConflictResolution::Skip,
+            ..VolumeCopyConfig::default()
+        };
+        let sources = [PathBuf::from("/src/folder"), PathBuf::from("/src/clash.txt")];
+        let sink = Arc::clone(&events) as Arc<dyn OperationEventSink>;
+        let result = if kind == "copy" {
+            copy_volumes_with_progress(
+                sink,
+                "op-leaf-count",
+                &state,
+                Arc::clone(&source),
+                &sources,
+                Arc::clone(&dest),
+                Path::new("/"),
+                &config,
+            )
+            .await
+        } else {
+            super::super::move_cross::move_volumes_with_progress(
+                sink,
+                "op-leaf-count",
+                &state,
+                Arc::clone(&source),
+                &sources,
+                Arc::clone(&dest),
+                Path::new("/"),
+                &config,
+            )
+            .await
+        };
+        result.unwrap_or_else(|e| panic!("{kind}: {e:?}"));
+
+        let complete = events.complete.lock_ignore_poison().last().cloned().expect("complete");
+        assert_eq!(
+            (complete.files_processed, complete.files_skipped),
+            (4, 1),
+            "{kind}: three files landed and one was skipped: {complete:?}"
+        );
+    }
+}
+
 /// A bug while recording the scan's tree costs the tree, never the copy: the
 /// scan goes on past it, every file lands, and the operation has no tree.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -126,9 +126,9 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
 
     let complete = events.complete.lock().unwrap();
     assert_eq!(complete.len(), 1, "one completion event");
-    // `files_processed` counts TOP-LEVEL source items (the file + the folder);
+    // `files_processed` counts FILES (the top-level one + the folder's two);
     // `bytes_processed` is the full-transfer measure.
-    assert_eq!(complete[0].files_processed, 2, "two top-level sources");
+    assert_eq!(complete[0].files_processed, 3, "every file the copy landed");
     assert_eq!(complete[0].bytes_processed, 5 + 3 + 3, "every inner file's bytes");
     drop(complete);
 

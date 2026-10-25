@@ -19896,8 +19896,9 @@ export type WriteCancelledEvent = {
 /**
  *  Completion event payload.
  *
- *  `files_processed` counts every source the operation considered (transferred + skipped),
- *  matching the driver's `files_done`. `files_skipped` is the subset that was skipped via
+ *  `files_processed` counts every file the operation considered (transferred + skipped), in
+ *  LEAVES for a copy or move (a folder's files each count, never the folder as one), so the
+ *  done dialog's "N / total" meets the scan's file total. `files_skipped` is the subset that was skipped via
  *  conflict resolution (bulk pre-known-conflict skip, per-iter Skip from the resolver, or
  *  closure-side Skip such as same-inode self-copy). For delete/trash, skipping isn't a
  *  concept and the field is always 0. The FE uses both to compose user-facing summaries
