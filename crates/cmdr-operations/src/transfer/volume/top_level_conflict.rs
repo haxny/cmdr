@@ -73,6 +73,7 @@ impl TopLevelConflicts {
         let source_is_directory_hint = source_hint.map(|h| h.is_directory);
         log::debug!(
             "{}: conflict detected at {} (source_is_directory_hint={:?})",
+            // allowed-log-private: `log_label` is the driver's own fixed name, not a user value
             self.log_label,
             LogPrivate::path(&initial_dest),
             source_is_directory_hint,
@@ -103,6 +104,7 @@ impl TopLevelConflicts {
             None => {
                 log::debug!(
                     "{}: skipping {} due to conflict resolution",
+                    // allowed-log-private: `log_label` is the driver's own fixed name, not a user value
                     self.log_label,
                     LogPrivate::path(&source_path)
                 );
