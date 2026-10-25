@@ -26,8 +26,8 @@
 //! `PUT` body silent mid-request, and a server drops a silent body (Apache and
 //! nginx after about a minute). The source can't be read twice from here, so the
 //! cut-off upload is cleaned up, the write waits for the pause to lift, and it
-//! answers `ConnectionTimeout`, which the engine's per-file retry runs again from
-//! the first byte. `DETAILS.md` § "Pause".
+//! answers `PauseOutlasted`, which the engine's per-file retry runs again from
+//! the first byte without spending an attempt. `DETAILS.md` § "Pause".
 
 use std::ops::ControlFlow;
 use std::path::Path;
@@ -281,10 +281,11 @@ impl PutFailure {
     /// failure left on the server.
     ///
     /// ❗ A pause cut waits for the pause to lift FIRST, then answers
-    /// `ConnectionTimeout`, a transport fault the engine's per-file retry runs
-    /// again from the first byte. Answering at once would have the retry start
-    /// its new `PUT` straight into the pause, for the server to cut off again.
-    /// A cancel while waiting is `Cancelled`, like any other.
+    /// `PauseOutlasted`, which the engine's per-file retry runs again from the
+    /// first byte without counting an attempt (the person's pause caused it).
+    /// Answering at once would have the retry start its new `PUT` straight
+    /// into the pause, for the server to cut off again. A cancel while waiting
+    /// is `Cancelled`, like any other.
     pub(super) async fn settle(self, target: &str, volume_id: &str) -> VolumeError {
         match self {
             Self::Refused(error) => error,
@@ -297,7 +298,10 @@ impl PutFailure {
                 if pause.should_stop().await {
                     VolumeError::Cancelled(volume_id.to_string().into())
                 } else {
-                    VolumeError::ConnectionTimeout(target.to_string().into())
+                    VolumeError::PauseOutlasted(ErrorDetail::path_then(
+                        target,
+                        ": the server cut off the upload during a pause",
+                    ))
                 }
             }
         }

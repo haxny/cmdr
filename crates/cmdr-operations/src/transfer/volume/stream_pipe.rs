@@ -492,6 +492,18 @@ impl FileRun<'_> {
         lost: Option<LostConnection>,
     ) -> ControlFlow<Result<PipedFile, PathedVolumeError>> {
         let (dest_volume, dest_path, attempt) = (self.dest_volume, self.dest_path, self.attempt);
+        if retry::resends_without_an_attempt(&error, self.state) {
+            // The server dropped the upload during the person's pause, and the
+            // volume has waited for the resume: run the file again, attempt
+            // count untouched.
+            staged.abandon_attempt(dest_volume).await;
+            log::info!(
+                target: "copy",
+                "stream_pipe_file: the server outlasted a pause on {}; running the file again without spending an attempt",
+                LogPrivate::file_path(dest_path),
+            );
+            return ControlFlow::Continue(());
+        }
         if retry::should_retry(&error, attempt, self.state) {
             // The staged bytes are a partial of an attempt we're abandoning;
             // clear them BEFORE the next attempt starts, so a retried file

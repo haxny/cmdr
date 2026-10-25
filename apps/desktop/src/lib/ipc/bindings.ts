@@ -19270,6 +19270,18 @@ export type VolumeError =
     }
   // Connection timed out.
   | { type: 'connectionTimeout'; data: string }
+  /**
+   *  The server dropped a request that the operation's own pause left silent,
+   *  and the backend has already waited for that pause to lift. Carries what
+   *  the backend reported, for the technical-details panel.
+   *
+   *  A transport fault, but one the person's pause caused, ❌ never a failing
+   *  server: the transfer engine runs the file again without spending one of
+   *  its retry attempts, so any number of long pauses can't fail a file
+   *  (`cmdr-operations` `transfer/retry.rs`). Raised by a WebDAV upload whose
+   *  streaming `PUT` the server cut off mid-pause (`cmdr-webdav` `writes.rs`).
+   */
+  | { type: 'pauseOutlasted'; data: string }
   // Operation was cancelled by the user (progress callback returned Break).
   | { type: 'cancelled'; data: string }
   // The path is a directory, not a file (for example, SMB STATUS_FILE_IS_A_DIRECTORY).

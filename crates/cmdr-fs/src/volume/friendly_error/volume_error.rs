@@ -138,6 +138,9 @@ pub fn listing_error_from_volume_error(err: &VolumeError, path: &Path) -> Listin
         VolumeError::ReadOnly(_) => kinds::read_only(raw),
         VolumeError::StorageFull { .. } => kinds::storage_full(raw),
         VolumeError::ConnectionTimeout(_) => kinds::connection_timeout(raw),
+        // Write-only (a WebDAV upload the server cut off mid-pause); a listing
+        // never pauses. Read as the timeout it is.
+        VolumeError::PauseOutlasted(_) => kinds::connection_timeout(raw),
         VolumeError::Cancelled(_) => kinds::cancelled(raw),
         VolumeError::InvalidName(_) => kinds::invalid_name(&path_display, raw),
         VolumeError::DeletePending(_) => kinds::delete_pending(&path_display, raw),

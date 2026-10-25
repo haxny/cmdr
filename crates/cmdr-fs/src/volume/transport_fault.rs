@@ -26,6 +26,11 @@ pub enum TransportFault {
     /// A cached handle went stale and the backend has already refreshed it
     /// ([`VolumeError::StaleDestinationHandle`], MTP).
     StaleHandle,
+    /// The server dropped a request the operation's pause left silent, and the
+    /// backend waited the pause out ([`VolumeError::PauseOutlasted`]). The
+    /// person's pause caused it, so a retry policy ❌ must not count it as a
+    /// failed attempt.
+    PauseOutlasted,
     /// The OS reported a transport errno ([`is_transport_errno`]), typically from
     /// an OS-mounted network share. Carries it.
     TransportErrno(i32),
@@ -45,6 +50,7 @@ impl VolumeError {
             Self::DeviceDisconnected(_) => Some(TransportFault::ConnectionLost),
             Self::DeviceSessionReset(_) => Some(TransportFault::SessionReset),
             Self::StaleDestinationHandle(_) => Some(TransportFault::StaleHandle),
+            Self::PauseOutlasted(_) => Some(TransportFault::PauseOutlasted),
             Self::IoError {
                 raw_os_error: Some(code),
                 ..

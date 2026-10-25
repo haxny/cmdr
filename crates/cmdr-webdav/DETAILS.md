@@ -275,15 +275,15 @@ source straight into the body, and the source can't be read twice from inside a 
   off the source's `stop_signal`), which is exactly where the engine's pause parks it.
 - A `PUT` that then ends in a 408 or a cut connection is `PutFailure::CutByPause`: the caller removes what the upload
   left (the temp, or a chunked upload's collection) at once, the write waits for the pause to lift, and answers
-  `ConnectionTimeout`. That's a transport fault, so the engine's per-file retry runs the file again from its first byte
-  (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Retrying one FILE"), on a temp of its own; and it's ❌ not
-  `DeviceDisconnected`, which would drop a healthy client.
+  `PauseOutlasted`. That's a transport fault the person's pause caused, so the engine's per-file retry runs the file
+  again from its first byte WITHOUT spending an attempt (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Retrying
+  one FILE"), on a temp of its own: any number of long pauses can't fail the file (GitHub #621). It's ❌ not
+  `ConnectionTimeout`, which spends one of three attempts, and ❌ not `DeviceDisconnected`, which would drop a healthy
+  client.
 - ❗ **The wait comes before the answer**: answering at once would have the retry start its new `PUT` straight into the
-  pause, for the server to cut off again and spend the next attempt. A cancel during the wait is `Cancelled`.
+  pause, for the server to cut off again. A cancel during the wait is `Cancelled`.
 - **A server that waits out the pause costs nothing**: the body carries on where it stopped. Only an outlasted server
-  costs the bytes already sent, once.
-- **What it costs**: one of the file's three attempts per outlasted pause, so a third long pause on ONE file (with no
-  resume in between that finished it) fails that file. The silence watch (§ "Silent or slow") keeps asking `OPTIONS`
+  costs the bytes already sent, once per outlasted pause. The silence watch (§ "Silent or slow") keeps asking `OPTIONS`
   every 10 s while a paused upload waits, as it does for any waiting operation.
 - Pinned by `apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_pause_test.rs`: a pause past the fixture's
   patience resumes and lands byte-exact with no temp left, and a cancel during that wait leaves nothing.

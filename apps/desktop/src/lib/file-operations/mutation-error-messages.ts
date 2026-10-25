@@ -62,6 +62,8 @@ const VOLUME_MESSAGE: { [K in VolumeError['type']]: (error: Extract<VolumeError,
   readOnly: () => raw('errors.volume.readOnly'),
   storageFull: () => raw('errors.volume.storageFull'),
   connectionTimeout: () => raw('errors.volume.connectionTimeout'),
+  // The engine resends these itself; one reaches a person only as the timeout it was.
+  pauseOutlasted: () => raw('errors.volume.connectionTimeout'),
   cancelled: () => raw('errors.volume.cancelled'),
   isADirectory: (e) => raw('errors.volume.isADirectory', { path: e.data }),
   notADirectory: (e) => raw('errors.volume.notADirectory', { path: e.data }),
@@ -154,6 +156,7 @@ function volumeDetail(volume: VolumeError): string | null {
     case 'deviceSessionReset':
     case 'readOnly':
     case 'connectionTimeout':
+    case 'pauseOutlasted':
     case 'cancelled':
     case 'invalidName':
       return volume.data

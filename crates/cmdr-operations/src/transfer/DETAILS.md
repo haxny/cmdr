@@ -1907,18 +1907,18 @@ still left entirely to its backend.
 unanswered-create settle (`interrupted_landing::create_went_unanswered`), and the local engine's
 `error_classification.rs` all ask, so none keeps its own list. An exhaustive match, so a new variant can't inherit a
 retry by falling into a wildcard — adding one forces the decision; its `TransportFault` names the kind (timeout,
-connection lost, session reset, stale handle, transport errno). Retryable: `ConnectionTimeout` (where `smb2`'s
-`SendTimeout`, response `Timeout`, and `CreditStarvation` all land, via `ErrorKind::TimedOut`), `DeviceDisconnected` (a
-session-owning backend can rebuild its session in place, but ❗ NOT inside 1.25 s: once SMB marks a session
-`Disconnected` every call fails at once, and nothing in this loop reconnects it. Only a sub-second blip, where the
-session never read `Disconnected`, is rescued here; a longer outage is the next section's. On MTP the device really is
-gone and each attempt fails immediately, costing a bounded 1.25 s), `DeviceSessionReset` (its own doc says retrying
-works), `StaleDestinationHandle`, and an `IoError` whose errno `cmdr_fs::volume::is_transport_errno` accepts (EPIPE,
-ECONNRESET, ECONNABORTED, ENOTCONN, ETIMEDOUT, ENETDOWN, ENETUNREACH, EHOSTUNREACH, decided by `io::ErrorKind`) — the
-case where a write onto an OS-mounted share reports the blip as an errno rather than a typed backend error; the local
-engine maps the same set to `ConnectionInterrupted`. `Cancelled` and `NotConnected` (nothing is dialing it) are never
-faults. ❌ Everything else is a decision or a fact about the data: re-running the write fails the same way and only
-delays the report.
+connection lost, session reset, stale handle, pause outlasted, transport errno). Retryable: `ConnectionTimeout` (where
+`smb2`'s `SendTimeout`, response `Timeout`, and `CreditStarvation` all land, via `ErrorKind::TimedOut`),
+`DeviceDisconnected` (a session-owning backend can rebuild its session in place, but ❗ NOT inside 1.25 s: once SMB
+marks a session `Disconnected` every call fails at once, and nothing in this loop reconnects it. Only a sub-second blip,
+where the session never read `Disconnected`, is rescued here; a longer outage is the next section's. On MTP the device
+really is gone and each attempt fails immediately, costing a bounded 1.25 s), `DeviceSessionReset` (its own doc says
+retrying works), `StaleDestinationHandle`, and an `IoError` whose errno `cmdr_fs::volume::is_transport_errno` accepts
+(EPIPE, ECONNRESET, ECONNABORTED, ENOTCONN, ETIMEDOUT, ENETDOWN, ENETUNREACH, EHOSTUNREACH, decided by `io::ErrorKind`)
+— the case where a write onto an OS-mounted share reports the blip as an errno rather than a typed backend error; the
+local engine maps the same set to `ConnectionInterrupted`. `Cancelled` and `NotConnected` (nothing is dialing it) are
+never faults. ❌ Everything else is a decision or a fact about the data: re-running the write fails the same way and
+only delays the report.
 
 **❌ A cancel is never retryable, and outranks a retryable error.** `should_retry` checks `work_stopped` first, the
 backoff is a `select!` against `state.stop_work` (not a `sleep`), and a cancel that lands while an attempt is failing on
@@ -1933,6 +1933,16 @@ a session the backend has since rebuilt, the third finds a healthy connection); 
 blip. The bug this whole effort exists to kill is an infinite hang, so a retry loop that can spin forever would
 reintroduce it in a new costume — the cap is pinned by call count, not by hope
 (`a_destination_that_never_recovers_gives_up_at_the_attempt_cap`).
+
+**A resend the person's pause caused spends no attempt** (`retry::resends_without_an_attempt`, GitHub #621). A volume
+whose request the server dropped during the operation's pause, and which has already waited for the resume, answers
+`VolumeError::PauseOutlasted` (`TransportFault::PauseOutlasted`): `write_failed` clears the attempt's partial and runs
+the file again at once, attempt count untouched and no backoff. Counting it let three long pauses fail a big WebDAV
+upload though nothing went wrong (`crates/cmdr-webdav/DETAILS.md` § "Pause"). Still bounded: each one takes a pause the
+server outlasted, so the person drives the count, and a stop ends it like any retry. Any backend that can't resume a
+paused request in place answers the same; S3 doesn't need it, since it resends a buffered part itself
+(`crates/cmdr-s3/DETAILS.md` § "Pause"). Pinned by
+`volume/strategy_retry_tests.rs::pauses_the_server_outlasted_spend_no_attempt`.
 
 **A landing step a blip cut off takes the same retry, then resumes** (`retry::after_a_cut_off_landing_wait`). A rename,
 a swap's clearing delete, or a publish's replace that meets a transport fault with nothing to wait for

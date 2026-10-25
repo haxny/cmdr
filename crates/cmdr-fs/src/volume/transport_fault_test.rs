@@ -30,6 +30,10 @@ fn transport_blips_are_transport_faults() {
         VolumeError::StaleDestinationHandle("/Documents".into()).transport_fault(),
         Some(TransportFault::StaleHandle)
     );
+    assert_eq!(
+        VolumeError::PauseOutlasted("the server cut off a paused body".into()).transport_fault(),
+        Some(TransportFault::PauseOutlasted)
+    );
 }
 
 #[cfg(unix)]

@@ -35,7 +35,7 @@ use super::super::state::WriteOperationState;
 use super::transfer_probe::{TaskPhase, note_task_retry, set_task_phase};
 use super::volume_outage::OutageEnd;
 use cmdr_fs::log_error::LogError;
-use cmdr_fs::volume::VolumeError;
+use cmdr_fs::volume::{TransportFault, VolumeError};
 
 /// How many times one file's write may run in total, the first try included.
 ///
@@ -76,6 +76,21 @@ pub(super) fn backoff_after(failed_attempt: u32) -> Duration {
 /// about the data fails the same way again and only delays the report.
 pub(super) fn should_retry(err: &VolumeError, failed_attempt: u32, state: &Arc<WriteOperationState>) -> bool {
     !state.work_stopped() && failed_attempt < MAX_ATTEMPTS && err.transport_fault().is_some()
+}
+
+/// Should the file run again at once, spending NO attempt, after `err`? Only
+/// for a request the server dropped during the operation's own pause
+/// ([`TransportFault::PauseOutlasted`]), which the volume answers once the pause
+/// has lifted (GitHub #621).
+///
+/// - **Why free**: the person paused; nothing failed. Counting it let three long
+///   pauses on one big upload fail the file.
+/// - **Why no backoff**: the volume already waited out the pause, and the server
+///   it dropped is healthy.
+/// - **Still bounded**: each one takes a pause the server outlasted, so the
+///   person drives the count, and a stop ends it like any retry.
+pub(super) fn resends_without_an_attempt(err: &VolumeError, state: &Arc<WriteOperationState>) -> bool {
+    !state.work_stopped() && err.transport_fault() == Some(TransportFault::PauseOutlasted)
 }
 
 /// Waits out the backoff for `failed_attempt`, returning `false` the moment the

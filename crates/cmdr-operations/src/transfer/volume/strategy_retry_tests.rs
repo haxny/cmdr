@@ -114,6 +114,62 @@ async fn a_destination_that_never_recovers_gives_up_at_the_attempt_cap() {
     );
 }
 
+/// A resend the person's own pause caused spends no attempt (GitHub #621): a
+/// WebDAV server that outlasts a pause cuts the upload off, the volume waits for
+/// the resume and answers `PauseOutlasted`, and the file runs again. More long
+/// pauses than the attempt cap must still land the file whole.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pauses_the_server_outlasted_spend_no_attempt() {
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-pause-outlasted", make_state(&engine));
+    let source = source_with_payload().await;
+    let pauses = retry::MAX_ATTEMPTS as usize + 2;
+    let flaky = FlakyDest::new(
+        pauses,
+        VolumeError::PauseOutlasted("the server cut off a body the pause left silent".into()),
+    );
+    let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
+
+    let bytes = copy_one(&source, &dest, guard.state(), WriteStaging::Stage, "/a.txt")
+        .await
+        .expect("long pauses must never fail the file");
+
+    assert_eq!(bytes, PAYLOAD.len() as u64);
+    assert_eq!(
+        flaky.write_calls(),
+        pauses + 1,
+        "every cut-off pause, then the run that landed"
+    );
+    assert_eq!(flaky.read("/a.txt").await.as_deref(), Some(PAYLOAD));
+}
+
+/// With no attempt cap on them, what ends a run of cut-off pauses is the person:
+/// a cancel stops the resends and reads as the cancel it is.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancel_while_a_paused_upload_is_resent_ends_the_file_as_cancelled() {
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-pause-cancel", make_state(&engine));
+    let source = source_with_payload().await;
+    let flaky = FlakyDest::new(usize::MAX, VolumeError::PauseOutlasted("cut off".into()));
+    let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
+
+    let op_id = guard.id().to_owned();
+    let flaky_for_watcher = Arc::clone(&flaky);
+    tokio::spawn(async move {
+        cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "a few cut-off pauses", || {
+            flaky_for_watcher.write_calls() >= 5
+        })
+        .await;
+        engine.cancel_write_operation(&op_id, false);
+    });
+
+    let err = copy_one(&source, &dest, guard.state(), WriteStaging::Stage, "/a.txt")
+        .await
+        .expect_err("a cancelled copy must not report success");
+
+    assert!(matches!(err, VolumeError::Cancelled(_)), "got {err:?}");
+}
+
 /// A refusal is an answer, not a blip. Retrying it would fail identically twice
 /// more and delay the report the user is waiting for.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -468,9 +468,13 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         VolumeError::StorageFull { .. } => WriteOperationError::DestinationFull {
             path: context_path.to_string(),
         },
-        VolumeError::ConnectionTimeout(_) => WriteOperationError::ConnectionInterrupted {
-            path: context_path.to_string(),
-        },
+        // A pause the server outlasted gets here only when the per-file retry
+        // didn't run the file again (the work stopped): the connection WAS cut.
+        VolumeError::ConnectionTimeout(_) | VolumeError::PauseOutlasted(_) => {
+            WriteOperationError::ConnectionInterrupted {
+                path: context_path.to_string(),
+            }
+        }
         // The device's session died mid-write but the device is still attached
         // and a reopen is already running (MTP session reset). "Connection
         // interrupted, try again" is exactly right, and ❌ it must never become

@@ -84,6 +84,16 @@ pub enum VolumeError {
     },
     /// Connection timed out.
     ConnectionTimeout(ErrorDetail),
+    /// The server dropped a request that the operation's own pause left silent,
+    /// and the backend has already waited for that pause to lift. Carries what
+    /// the backend reported, for the technical-details panel.
+    ///
+    /// A transport fault, but one the person's pause caused, ❌ never a failing
+    /// server: the transfer engine runs the file again without spending one of
+    /// its retry attempts, so any number of long pauses can't fail a file
+    /// (`cmdr-operations` `transfer/retry.rs`). Raised by a WebDAV upload whose
+    /// streaming `PUT` the server cut off mid-pause (`cmdr-webdav` `writes.rs`).
+    PauseOutlasted(ErrorDetail),
     /// Operation was cancelled by the user (progress callback returned Break).
     Cancelled(ErrorDetail),
     /// The path is a directory, not a file (for example, SMB STATUS_FILE_IS_A_DIRECTORY).
@@ -255,6 +265,7 @@ impl ErrorLogText for VolumeError {
             Self::DeviceSessionReset(msg) => return detail_line(out, "Device session restarted: ", msg),
             Self::StorageFull { message } => return detail_line(out, "Storage full: ", message),
             Self::ConnectionTimeout(msg) => return detail_line(out, "Connection timed out: ", msg),
+            Self::PauseOutlasted(msg) => return detail_line(out, "The server stopped waiting through a pause: ", msg),
             Self::Cancelled(msg) => return detail_line(out, "Cancelled: ", msg),
             Self::InvalidName(msg) => return detail_line(out, "Name not usable at the destination: ", msg),
             Self::SignatureInvalid(msg) => return detail_line(out, "Reply refused, its signature didn't hold: ", msg),
