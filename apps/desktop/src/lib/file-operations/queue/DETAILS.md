@@ -351,9 +351,13 @@ The summary (`QueueRowSummary.svelte`, wording in `row-items.ts`) says what the 
 "Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder", from the snapshot's `items` (backend
 `crates/cmdr-operations/DETAILS.md` § "What a row says it acts on").
 
-- **What it acts on is always on display** (`flex-shrink: 0`), because it's what tells two copies to different places
-  apart. "2 folders and 1 file" when the starter said which is which, "3 items" when it didn't (MCP, compress). Its
-  tooltip lists the first 20 names, then "… and 1,980 more": the names are known at registration, so it costs nothing.
+- **What it acts on is always on display**, because it's what tells two copies to different places apart. "2 folders and
+  1 file" when the starter said which is which, "3 items" when it didn't (MCP, compress). Its tooltip lists the first 20
+  names, then "… and 1,980 more": the names are known at registration, so it costs nothing.
+- **The action and its items are one `.lead` box**: `flex-shrink: 0`, so the paths give way first, but
+  `max-width: 100%`, so once they're gone it ends in "…" inside the cell. The cell itself clips (`overflow: hidden`).
+  Why: with two non-shrinking spans and no clip, "Copying 1 folder" at the window's default width ran under the status
+  cell and drew over "Running" (#701).
 - **The source folder is its last segment**, the full path on hover, and gives way first (capped at 40% of the line).
 - **The destination is elided in the MIDDLE** (`useShortenMiddle`, breaking at `/`), so both the drive and the last
   folder stay readable; the full path is on hover and in an `sr-only` twin, since the elided span is `aria-hidden`.

@@ -54,11 +54,15 @@
 </script>
 
 <div class="summary-row queue-summary" role="gridcell" {id}>
-    <span class="op-label">{label}</span>
+    <!-- One box for the action and what it acts on, so the pair can end in one "…"
+         when even the paths gone can't make room (a narrow window, a long language). -->
+    <!-- What it acts on is always on display, so two copies to different places can
+         be told apart at a glance. The names behind the count are on hover. -->
+    <span class="lead"
+        ><span class="op-label">{label}</span>
+        {#if items}<span use:tooltip={itemsHover}>{itemsText}</span>{/if}</span
+    >
     {#if items}
-        <!-- Always on display, so two copies to different places can be told
-             apart at a glance. The names behind the count are on hover. -->
-        <span class="items" use:tooltip={itemsHover}>{itemsText}</span>
         {#if items.from !== null}
             <!-- A delete has no arrow to say which way, so its folder takes "in". -->
             <span class="path from" use:tooltip={items.from}
@@ -94,19 +98,25 @@
         gap: var(--spacing-xs);
         min-width: 0;
         font-size: var(--font-size-sm);
+        /* The backstop: whatever still doesn't fit is clipped here, ❌ never painted
+           over the status cell beside it (#701). */
+        overflow: hidden;
+    }
+
+    /* The action and what it acts on never give way while a path can: they're
+       what tells two rows apart. `max-width` caps this non-shrinking item at the
+       cell, so past that it ends in "…" rather than running under "Running". */
+    .lead {
+        flex-shrink: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--color-text-primary);
     }
 
     .op-label {
         font-weight: 500;
-        color: var(--color-text-primary);
-        flex-shrink: 0;
-    }
-
-    /* What it acts on never gives way: it's what tells two rows apart. */
-    .items {
-        flex-shrink: 0;
-        white-space: nowrap;
-        color: var(--color-text-primary);
     }
 
     .path {

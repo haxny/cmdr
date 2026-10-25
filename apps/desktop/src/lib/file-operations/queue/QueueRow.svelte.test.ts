@@ -398,7 +398,7 @@ describe('QueueRow', () => {
       },
     })
     expect(target.querySelector('.op-label')?.textContent.trim()).toBe('Copying')
-    expect(target.querySelector('.items')?.textContent.trim()).toBe('2 folders and 1 file')
+    expect(target.querySelector('.lead')?.textContent.replace(/\s+/g, ' ').trim()).toBe('Copying 2 folders and 1 file')
     expect(target.querySelector('.path.from')?.textContent.trim()).toBe('Dropbox')
     expect(target.querySelector('.path.dest')?.textContent.trim()).toBe('cmdr-s3-test/target/folder')
   })
