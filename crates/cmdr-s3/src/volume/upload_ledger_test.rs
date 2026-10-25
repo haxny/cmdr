@@ -5,7 +5,7 @@
 
 use cmdr_fs::testing::TestDir;
 
-use super::{UnfinishedUpload, UnsettledPut, UploadLedger};
+use super::{Record, UnfinishedUpload, UnsettledPut, UploadLedger, compact, replay};
 
 fn upload(account: &str, key: &str, id: &str) -> UnfinishedUpload {
     UnfinishedUpload {
@@ -263,4 +263,33 @@ fn a_moved_account_takes_its_logged_records_along() {
         later.leftovers("acct-move-new"),
         vec![upload("acct-move-new", "photos/big.mov", "id-move")]
     );
+}
+
+/// #704: on a fresh data dir the state folder doesn't exist yet, and a
+/// rewrite creates it rather than warning and dropping the records.
+#[test]
+fn a_rewrite_creates_the_state_folder_on_a_fresh_data_dir() {
+    let dir = TestDir::new("ledger_fresh_compact");
+    let log = dir.join("backend-state").join("s3").join("unfinished-uploads");
+    let open = Record::Upload(upload("acct-fresh-compact", "a.bin", "id-fresh"));
+
+    compact(&log, std::slice::from_ref(&open));
+
+    assert_eq!(replay(&log), vec![open]);
+}
+
+/// A connect's sweep on a fresh data dir has nothing to rewrite, so it writes
+/// nothing: no empty log, no folder.
+#[test]
+fn a_sweep_on_a_fresh_data_dir_writes_nothing() {
+    let dir = TestDir::new("ledger_fresh_sweep");
+    let state = dir.join("backend-state").join("s3");
+
+    assert!(
+        UploadLedger::at(Some(state.clone()))
+            .leftovers("acct-fresh-sweep")
+            .is_empty()
+    );
+
+    assert!(!state.exists(), "the sweep created {}", state.display());
 }

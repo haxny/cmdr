@@ -405,9 +405,7 @@ impl UploadLedger {
         let Some(log) = &self.log else {
             return;
         };
-        let written = log
-            .parent()
-            .map_or(Ok(()), std::fs::create_dir_all)
+        let written = create_parent(log)
             .and_then(|()| std::fs::OpenOptions::new().create(true).append(true).open(log))
             .and_then(|mut file| file.write_all(line(op, record).as_bytes()));
         if let Err(e) = written {
@@ -418,6 +416,11 @@ impl UploadLedger {
             );
         }
     }
+}
+
+/// Creates the log's folder: the state dir doesn't exist on a fresh data dir.
+fn create_parent(log: &std::path::Path) -> std::io::Result<()> {
+    log.parent().map_or(Ok(()), std::fs::create_dir_all)
 }
 
 /// One log line for `record`: four fields for an upload, five for a PUT.
@@ -508,11 +511,18 @@ fn parse_line(raw: &str) -> Option<(bool, Record)> {
 }
 
 /// Rewrites the log to `open`, through a sibling and a rename so a crash
-/// mid-write leaves the old log rather than half of a new one.
+/// mid-write leaves the old log rather than half of a new one. An absent log
+/// with nothing open stays absent: every connect sweeps, and a fresh data dir
+/// has no state folder yet (#704).
 fn compact(log: &std::path::Path, open: &[Record]) {
+    if open.is_empty() && !log.exists() {
+        return;
+    }
     let temp = log.with_extension("tmp");
     let text: String = open.iter().map(|record| line('+', record)).collect();
-    let rewritten = std::fs::write(&temp, text).and_then(|()| std::fs::rename(&temp, log));
+    let rewritten = create_parent(log)
+        .and_then(|()| std::fs::write(&temp, text))
+        .and_then(|()| std::fs::rename(&temp, log));
     if let Err(e) = rewritten {
         warn!(target: "volume", "s3: couldn't rewrite {}: {e}", LogPrivate::file_path(log));
     }

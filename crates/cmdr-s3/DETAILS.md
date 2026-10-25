@@ -640,10 +640,12 @@ abort it on the spot; what an abort can't reach (a crash, a dropped future, a se
 
 - **The record** (`upload_ledger.rs`): `<state dir>/unfinished-uploads` under `VolumeHost::state_dir("s3")`, one line
   per event (`+` when `CreateMultipartUpload` answers, `-` once completed or aborted; a five-field line is a PUT on
-  record, § "Writing"), every field percent-encoded, rewritten to the open records whenever a sweep reads it. A
-  process-wide registry marks uploads running in THIS process, and a guard marks a dropped upload abandoned. Without a
-  state directory (a test host) the record lives for the session. ❗ Being process-wide, a fixture cell asks it only
-  about its own scratch prefix (`open_under`), or another cell's open record of the same account fails it.
+  record, § "Writing"), every field percent-encoded, rewritten to the open records whenever a sweep reads it. Every
+  write creates the state folder first (a fresh data dir has none), and a sweep with no log and nothing open writes
+  nothing (#704). A process-wide registry marks uploads running in THIS process, and a guard marks a dropped upload
+  abandoned. Without a state directory (a test host) the record lives for the session. ❗ Being process-wide, a fixture
+  cell asks it only about its own scratch prefix (`open_under`), or another cell's open record of the same account fails
+  it.
 - **Decision/Why not the operation log**: the operation log is the durable journal of what happened to the USER's files,
   for undo and search, and its rows are paths a rollback can act on. An unfinished upload is protocol state that only
   this crate can act on (`AbortMultipartUpload`), keyed by an account and an upload ID; putting it there would mean a
