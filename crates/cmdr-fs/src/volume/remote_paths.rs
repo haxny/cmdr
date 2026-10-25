@@ -33,6 +33,7 @@
 //! root (`cmdr-webdav`'s `query.rs` does, from `is_root` and
 //! `get_space_info_impl`).
 
+use std::borrow::Cow;
 use std::path::{Component, Path, PathBuf};
 
 use super::{canonical_nfs_export, nfs_volume_id, sftp_volume_id, webdav_volume_id};
@@ -235,6 +236,51 @@ pub fn s3_app_root(host: &str, port: u16, access_key_id: &str) -> String {
 
 /// The scheme [`s3_app_root`] mints and [`server_of_path`] reads back.
 const S3_SCHEME: &str = "s3";
+
+/// `text` as a person reads it, or a log keeps it: every S3 app path's access key id taken out,
+/// wherever in the text it sits (`s3://AKIA…@host:443/photos` → `s3://host:443/photos`).
+///
+/// ❗ **Display only, ❌ never identity.** The key id stays in the app path because the account
+/// IS the endpoint plus the key ([`super::s3_volume_id`], [`server_of_path`]): a shown path
+/// doesn't route back to its volume, so a copied path or an MCP reply keeps the key. The key id
+/// isn't a secret, but it names the account, and a log or a screenshot travels (#706).
+///
+/// The account is what [`s3_app_root`] writes between `s3://` and the first `@`, ending at a `/`
+/// or anything a key id can't hold (a quote, a space, a log marker). The AWS CLI's
+/// `s3://bucket/key` has none, and other schemes' accounts aren't touched. Text without one
+/// comes back borrowed.
+pub fn without_s3_key_ids(text: &str) -> Cow<'_, str> {
+    const OPENER: &str = "s3://";
+    if !text.contains(OPENER) {
+        return Cow::Borrowed(text);
+    }
+    let mut out: Option<String> = None;
+    let mut copied = 0;
+    for (at, _) in text.match_indices(OPENER) {
+        let starts_a_word = text[..at]
+            .chars()
+            .next_back()
+            .is_none_or(|before| !before.is_alphanumeric() && !"+-.".contains(before));
+        let account_start = at + OPENER.len();
+        let after = &text[account_start..];
+        let account_len = after
+            .find(|c: char| !(c.is_ascii_alphanumeric() || "-_.~+=".contains(c)))
+            .unwrap_or(after.len());
+        if !starts_a_word || account_len == 0 || !after[account_len..].starts_with('@') {
+            continue;
+        }
+        let out = out.get_or_insert_with(|| String::with_capacity(text.len()));
+        out.push_str(&text[copied..account_start]);
+        copied = account_start + account_len + 1;
+    }
+    match out {
+        Some(mut out) => {
+            out.push_str(&text[copied..]);
+            Cow::Owned(out)
+        }
+        None => Cow::Borrowed(text),
+    }
+}
 
 /// The `nfs://<host>:<port>/<export segment>` prefix every app path on an NFS
 /// export carries, and the place's root: the tree under it is the EXPORT's, so a

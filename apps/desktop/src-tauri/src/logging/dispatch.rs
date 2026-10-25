@@ -224,7 +224,25 @@ fn write_file_line(out: fern::FormatCallback<'_>, message: &std::fmt::Arguments<
     // so becomes part of the dedup key; that's an accepted debug-mode tradeoff (see
     // `ram_gauge` § "Interaction with file-log dedup").
     let ram = super::ram_gauge::tag();
+    let message = message_text(message);
     out.finish(format_args!("{level:<5} {ram}{own}{target}  {message}"));
+}
+
+/// A record's text, with every S3 app path's access key id taken out
+/// (`cmdr_fs::volume::without_s3_key_ids`, #706). Both chains write through here, so no log
+/// site, ours or the frontend's, marked or not, can put a key id in a line.
+fn message_text<'a>(message: &std::fmt::Arguments<'a>) -> std::borrow::Cow<'a, str> {
+    use std::borrow::Cow;
+    match message.as_str() {
+        Some(text) => cmdr_fs::volume::without_s3_key_ids(text),
+        None => {
+            let text = message.to_string();
+            match cmdr_fs::volume::without_s3_key_ids(&text) {
+                Cow::Borrowed(_) => Cow::Owned(text),
+                Cow::Owned(shown) => Cow::Owned(shown),
+            }
+        }
+    }
 }
 
 /// Renders one terminal line: `HH:MM:SS.mmm LEVEL head::tail  message`.
@@ -264,10 +282,7 @@ fn write_terminal_line(
     let ram = super::ram_gauge::tag();
     // A marked value reads as itself here, markers gone (`redact::display_line`); the file
     // keeps them for the error reporter.
-    let text = message.as_str().map_or_else(
-        || std::borrow::Cow::Owned(message.to_string()),
-        std::borrow::Cow::Borrowed,
-    );
+    let text = message_text(message);
     let message = crate::redact::display_line(&text);
     out.finish(format_args!(
         "{ts} {level_color}{level:<5}{reset} {ram}{head_color}{head:<width$}{tail_color}{tail}{reset}  {message}",

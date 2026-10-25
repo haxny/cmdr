@@ -336,3 +336,42 @@ fn an_nfs_app_root_and_its_volume_id_agree_through_server_of_path() {
         assert_eq!(server.volume_id, nfs_volume_id("nas.local", 15481, export), "{export}");
     }
 }
+
+#[test]
+fn a_shown_s3_path_names_the_host_and_bucket_but_never_the_key_id() {
+    // #706: the key id identifies the account, and a person reads (or a log keeps) the place
+    // by its host and bucket.
+    let root = s3_app_root("s3.eu-west-1.amazonaws.com", 443, "AKIAEXAMPLEKEY");
+    assert_eq!(
+        without_s3_key_ids(&format!("{root}/photos/2025/a.jpg")),
+        "s3://s3.eu-west-1.amazonaws.com:443/photos/2025/a.jpg"
+    );
+    assert_eq!(without_s3_key_ids(&root), "s3://s3.eu-west-1.amazonaws.com:443");
+}
+
+#[test]
+fn every_s3_path_in_a_line_loses_its_key_id_and_nothing_else_changes() {
+    // Marked log spans, quotes, and another scheme's account all stay as they are.
+    let line =
+        "copy \u{FDD2}s3://GK00c0de@127.0.0.1:14480/b/x\u{FDEF} -> \"s3://AKIA2@h:443/c/\" (sftp://ada@nas:22/x)";
+    assert_eq!(
+        without_s3_key_ids(line),
+        "copy \u{FDD2}s3://127.0.0.1:14480/b/x\u{FDEF} -> \"s3://h:443/c/\" (sftp://ada@nas:22/x)"
+    );
+}
+
+#[test]
+fn text_without_an_s3_account_comes_back_untouched() {
+    for text in [
+        "/Users/ada/file.txt",
+        // The AWS CLI's spelling carries no account.
+        "s3://bucket/key@2x.png",
+        "mail ada@example.com about s3://bucket",
+        "xs3://key@host:1/b",
+    ] {
+        assert!(
+            matches!(without_s3_key_ids(text), Cow::Borrowed(t) if t == text),
+            "{text}"
+        );
+    }
+}

@@ -1,6 +1,7 @@
 import type { ActionReturn } from 'svelte/action'
 import { shortenMiddle, createPretextMeasure } from './shorten-middle'
 import { tooltip } from '#lib/tooltip/tooltip.js'
+import { displayPath } from './display-path'
 
 export interface ShortenMiddleParams {
   text: string
@@ -41,7 +42,9 @@ function readFont(node: HTMLElement): string {
 }
 
 /**
- * Svelte action that truncates text in the middle to fit its container width.
+ * Svelte action that truncates text in the middle to fit its container width. It shows the
+ * text (and its tooltip) through `displayPath`, so a path reads the way a person reads it
+ * whichever dialog or row hands one in: no twin pick, no S3 access key id (#706).
  * Uses `@chenglou/pretext` for pixel-accurate measurement (loaded async).
  * Before pretext loads, the full text is shown with CSS `text-overflow: ellipsis`.
  *
@@ -52,15 +55,15 @@ function readFont(node: HTMLElement): string {
  */
 export function useShortenMiddle(node: HTMLElement, params: ShortenMiddleParams): ActionReturn<ShortenMiddleParams> {
   let measureWidth: ((text: string) => number) | null = null
-  let currentText = params.text
+  let currentText = displayPath(params.text)
 
   // CSS fallback while pretext is loading
   node.style.overflow = 'hidden'
   node.style.textOverflow = 'ellipsis'
   node.style.whiteSpace = 'nowrap'
-  node.textContent = params.text
+  node.textContent = currentText
   function hoverText(truncated: boolean): string {
-    if (params.tooltip !== undefined) return params.tooltip
+    if (params.tooltip !== undefined) return displayPath(params.tooltip)
     return !params.tooltipWhenTruncated || truncated ? currentText : ''
   }
 
@@ -124,14 +127,15 @@ export function useShortenMiddle(node: HTMLElement, params: ShortenMiddleParams)
 
   return {
     update(newParams: ShortenMiddleParams) {
-      const textChanged = newParams.text !== currentText
+      const nextText = displayPath(newParams.text)
+      const textChanged = nextText !== currentText
       const tooltipChanged = newParams.tooltip !== params.tooltip
       params = newParams
       if (!textChanged) {
         if (tooltipChanged) applyTooltip(lastResult !== null && lastResult !== currentText)
         return
       }
-      currentText = newParams.text
+      currentText = nextText
       if (measureWidth) {
         truncate()
       } else {

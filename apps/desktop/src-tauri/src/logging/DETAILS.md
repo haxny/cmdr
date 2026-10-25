@@ -26,6 +26,12 @@ error reports). Two independent chains avoid the tradeoff.
 `mdns_sd` stays at Info in the file: its debug output was ~60% of a bundle's lines and of the log's disk use, and a
 report never ships a third-party crate's debug output anyway (next section).
 
+Both chains write a record's text through `dispatch.rs::message_text`, which takes every S3 app path's access key id out
+(`cmdr_fs::volume::without_s3_key_ids`: `s3://AKIA…@host:443/b` → `s3://host:443/b`, #706). It runs on the whole line,
+so a marked value, an unmarked one, and a frontend line all lose it, and no log site has to remember. The key id names
+the account, and the local log file is attached to feedback; report redaction would hash it anyway, but the file itself
+shouldn't hold it. It costs one formatted `String` per file line, which the coalescer's buffered line already paid.
+
 ## Line provenance
 
 Every file line our own code logs carries `·` right before its target (`DEBUG ·indexing::writer  …`); a third-party

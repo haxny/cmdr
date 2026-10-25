@@ -1,13 +1,23 @@
 /**
- * The path a person reads: a same-named twin's PICK taken out.
+ * The path a person reads: a same-named twin's PICK and an S3 account's access
+ * key id taken out.
  *
  * A device can hold two items with one name in a folder, so each one's row path
  * carries a pick segment (NUL plus a handle) right before the shared name:
  * `/DCIM/\u0000 4242/IMG_1.JPG` without the space. The backend needs it to reach
- * the right item, so `FileEntry.path` keeps it; a person never sees it. Every
- * place that turns a path, or text holding one, into something shown or copied
- * goes through here. The rule is `cmdr_fs::twin_path::shown` in Rust, and the
- * two stay in step: each pick segment goes, with the `/` that joined it.
+ * the right item, so `FileEntry.path` keeps it; a person never sees it. The rule
+ * is `cmdr_fs::twin_path::shown` in Rust, and the two stay in step: each pick
+ * segment goes, with the `/` that joined it.
+ *
+ * An S3 app path carries its account, `s3://<key id>@<host>:<port>/<bucket>/…`,
+ * because the account IS the endpoint plus the key. The key id isn't a secret,
+ * but it names the account, and a screenshot travels (#706), so a person reads
+ * `s3://<host>:<port>/<bucket>/…`. The rule is
+ * `cmdr_fs::volume::without_s3_key_ids` in Rust, which keeps it out of the logs.
+ *
+ * Every place that turns a path, or text holding one, into something SHOWN goes
+ * through `displayPath`. Something COPIED goes through `withoutPicks` only: a
+ * pasted S3 path has to find its account again (Go to path).
  */
 
 const PICK = '\u0000'
@@ -17,10 +27,27 @@ const PICK = '\u0000'
 const PICK_AT_START = /^\u0000\d+(?=\/|$)/
 
 /**
- * `text` with every pick segment taken out. Any other NUL stays (`file-row-a11y.ts`
- * splits a translated phrase on a bare one). Text without a NUL comes back as is.
+ * An S3 account: `s3://` at a word start, then the key id up to its `@`. The key-id
+ * class is `without_s3_key_ids`'s, so a `/`, a space, a quote, or a log marker ends it.
  */
+const S3_ACCOUNT = /(?<![\p{L}\p{N}+.-])s3:\/\/[A-Za-z0-9\-_.~+=]+@/gu
+
+/** `text` as a person reads it: every pick segment and every S3 access key id taken out. */
 export function displayPath(text: string): string {
+  return withoutS3KeyIds(withoutPicks(text))
+}
+
+/** `text` with every S3 app path's access key id taken out. Text without one comes back as is. */
+function withoutS3KeyIds(text: string): string {
+  return text.includes('s3://') ? text.replace(S3_ACCOUNT, 's3://') : text
+}
+
+/**
+ * `text` with every pick segment taken out, and nothing else changed. Any other NUL
+ * stays (`file-row-a11y.ts` splits a translated phrase on a bare one). Text without
+ * a NUL comes back as is.
+ */
+export function withoutPicks(text: string): string {
   if (!text.includes(PICK)) return text
   let out = ''
   let rest = text

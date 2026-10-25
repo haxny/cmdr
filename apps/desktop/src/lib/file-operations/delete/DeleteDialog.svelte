@@ -21,6 +21,7 @@
     import S3CostLine from '../S3CostLine.svelte'
     import { costRequestFor } from '../s3-cost-line'
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import { displayPath } from '#lib/utils/display-path.js'
     import Trans from '#lib/intl/Trans.svelte'
     import { t, tString } from '#lib/intl/messages.svelte.js'
     import type { ConfirmOptions, ConfirmOrigin, DeleteConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
@@ -405,7 +406,10 @@
         <!-- Source path. The tooltip is unconditional whenever `abbreviatePath` swapped a
              home directory for `~`, since then the line is short AND incomplete; otherwise
              it only steps in once the line runs out of room. -->
-        <div class="source-path" use:tooltip={{ text: sourceFolderPath, overflowOnly: abbreviatedPath === sourceFolderPath }}>
+        <div
+            class="source-path"
+            use:tooltip={{ text: displayPath(sourceFolderPath), overflowOnly: abbreviatedPath === sourceFolderPath }}
+        >
             {tString('fileOperations.delete.fromPath', { path: abbreviatedPath })}
         </div>
 

@@ -16,6 +16,7 @@
     import StatusBadge from '#lib/ui/StatusBadge.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { displayPath } from '#lib/utils/display-path.js'
     import { getBadgeStatus } from '#lib/feature-status.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import Trans from '#lib/intl/Trans.svelte'
@@ -376,15 +377,15 @@
                                                 <li class="item">
                                                     <span
                                                         class="item-path"
-                                                        use:tooltip={{ text: item.sourcePath, overflowOnly: true }}
-                                                        >{item.sourcePath}</span
+                                                        use:tooltip={{ text: displayPath(item.sourcePath), overflowOnly: true }}
+                                                        >{displayPath(item.sourcePath)}</span
                                                     >
                                                     {#if item.destPath != null}
                                                         <Icon name="chevron-right" size={12} />
                                                         <span
                                                             class="item-path"
-                                                            use:tooltip={{ text: item.destPath, overflowOnly: true }}
-                                                            >{item.destPath}</span
+                                                            use:tooltip={{ text: displayPath(item.destPath), overflowOnly: true }}
+                                                            >{displayPath(item.destPath)}</span
                                                         >
                                                     {/if}
                                                     <span class="item-outcome">{itemOutcomeLabel(item.outcome)}</span>

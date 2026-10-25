@@ -11,8 +11,9 @@ Small stateless helpers. Pure, no Svelte state, safe to import from plain `.ts` 
 `onMount`'s teardowns, safe against unmount mid-startup), `version.ts` (semver `major.minor.patch` ordering),
 `inline-size-action.ts` (the container-query stand-in), `scroll-box-size-action.ts` (a scroller's client box, scrollbars
 included), `boot-guard-keys.ts` (the three catalog keys the `app.html` boot guard shows), `unicode-fuzzy.ts` (the shared
-fuzzy matcher: any script, accent folding, exact CJK), `display-path.ts` (`displayPath`: a same-named twin's pick taken
-out of text a person reads). Per-file export catalogs: `DETAILS.md`.
+fuzzy matcher: any script, accent folding, exact CJK), `display-path.ts` (`displayPath`: a twin's pick and an S3 access
+key id taken out of text a person reads; `withoutPicks` for text a person copies). Per-file export catalogs:
+`DETAILS.md`.
 
 ## Must-knows
 

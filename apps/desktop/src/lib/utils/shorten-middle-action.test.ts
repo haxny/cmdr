@@ -91,6 +91,22 @@ describe('useShortenMiddle tooltips', () => {
     action.destroy?.()
   })
 
+  // #706: the copy dialog's From field showed the S3 access key id through here.
+  it('shows and hovers a path the way a person reads it, an S3 key id taken out', () => {
+    const el = makeNode()
+    const action = useShortenMiddle(el, { text: 's3://AKIAEXAMPLEKEY@127.0.0.1:14480/family-photos/2025' })
+    const shown = 's3://127.0.0.1:14480/family-photos/2025'
+
+    expect(el.textContent).toBe(shown)
+    expect(hover(el)?.textContent).toBe(shown)
+
+    el.dispatchEvent(new MouseEvent('mouseleave'))
+    action.update?.({ text: 's3://AKIAEXAMPLEKEY@127.0.0.1:14480/family-photos/2024' })
+    expect(el.textContent).toBe('s3://127.0.0.1:14480/family-photos/2024')
+
+    action.destroy?.()
+  })
+
   it('drops its tooltip when the node goes away', () => {
     const el = makeNode()
     const action = useShortenMiddle(el, { text: LONG_PATH })

@@ -19,7 +19,7 @@ import {
 import { TypedFailure } from '#lib/ipc/typed-failure.js'
 import type { SameKindTarget } from '#lib/file-explorer/pane/select-same-kind.js'
 import { throwIpcError } from './ipc-types'
-import { displayPath } from '#lib/utils/display-path.js'
+import { withoutPicks } from '#lib/utils/display-path.js'
 
 export type {
   DriveItemLinks,
@@ -313,12 +313,13 @@ export async function showInFinder(path: string): Promise<void> {
 
 /**
  * Copy text to clipboard. A path in it lands as a person pastes it: a same-named
- * twin's pick taken out (`displayPath`).
+ * twin's pick taken out (`withoutPicks`). An S3 path keeps its access key id, ❌ never
+ * `displayPath`: a pasted path has to find its account again in Go to path.
  * @param text - Text to copy.
  */
 export async function copyToClipboard(text: string): Promise<void> {
   // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic <R: Runtime> command, excluded from specta bindings (see the `ipc.rs` manifest)
-  await invoke('copy_to_clipboard', { text: displayPath(text) })
+  await invoke('copy_to_clipboard', { text: withoutPicks(text) })
 }
 
 /**

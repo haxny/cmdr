@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { displayPath } from './display-path'
+import { displayPath, withoutPicks } from './display-path'
 
 /** A twin's row path, the way the MTP backend lists it (`cmdr_fs::twin_path`). */
 function twinRowPath(folder: string, handle: number, name: string): string {
@@ -26,5 +26,28 @@ describe('displayPath', () => {
 
   it('leaves an ordinary path alone', () => {
     expect(displayPath('/Users/me/notes.txt')).toBe('/Users/me/notes.txt')
+  })
+
+  // #706: the key id names the account; a person reads the place by host and bucket.
+  it('names an S3 place by host and bucket, never by the access key id', () => {
+    expect(displayPath('s3://AKIAEXAMPLEKEY@s3.eu-west-1.amazonaws.com:443/photos/a.jpg')).toBe(
+      's3://s3.eu-west-1.amazonaws.com:443/photos/a.jpg',
+    )
+    expect(displayPath('Couldn’t copy “s3://GK00c0de@127.0.0.1:14480/b/x” to s3://AKIA2@h:443/c/')).toBe(
+      'Couldn’t copy “s3://127.0.0.1:14480/b/x” to s3://h:443/c/',
+    )
+  })
+
+  it('leaves an S3 address without an account, and other schemes’ accounts, alone', () => {
+    for (const text of ['s3://bucket/key@2x.png', 'sftp://ada@nas:22/x', 'xs3://key@host:1/b']) {
+      expect(displayPath(text)).toBe(text)
+    }
+  })
+})
+
+describe('withoutPicks', () => {
+  it('keeps an S3 path whole, since a copied path has to find its account again', () => {
+    const path = 's3://AKIAEXAMPLEKEY@h:443/photos/\u00004/a.jpg'
+    expect(withoutPicks(path)).toBe('s3://AKIAEXAMPLEKEY@h:443/photos/a.jpg')
   })
 })

@@ -199,6 +199,33 @@ fn the_terminal_strips_markers_and_the_file_keeps_them() {
     assert!(f.contains(&raw) && f.contains(&detail), "{f:?}");
 }
 
+/// #706: an S3 app path carries the account's access key id, and neither the file nor the
+/// terminal keeps it, marked or not: every line names the place by host and bucket.
+#[test]
+fn neither_chain_keeps_an_s3_access_key_id() {
+    use cmdr_fs::log_private::LogPrivate;
+    let _g = test_lock();
+    let d = build_dispatch_for_test(None, true, false);
+    let path = "s3://AKIAEXAMPLEKEY@s3.eu-west-1.amazonaws.com:443/photos/a.jpg";
+    let marked = format!("listing path={:?}", LogPrivate::dir_path(path));
+    dispatch(&*d.logger, log::Level::Info, "cmdr_lib::test", &marked);
+    dispatch(
+        &*d.logger,
+        log::Level::Info,
+        "cmdr_lib::test",
+        &format!("FE: newPath={path}"),
+    );
+
+    for (chain, text) in [("terminal", buf_to_string(&d.stdout)), ("file", buf_to_string(&d.file))] {
+        assert!(!text.contains("AKIAEXAMPLEKEY"), "{chain}: {text:?}");
+        assert_eq!(
+            text.matches("s3://s3.eu-west-1.amazonaws.com:443/photos/a.jpg").count(),
+            2,
+            "{chain}: {text:?}"
+        );
+    }
+}
+
 /// The headline: a Debug record reaches the file chain but is dropped from stdout
 /// when stdout is at its Info default. Per-output filtering: the whole point of
 /// this rewrite.

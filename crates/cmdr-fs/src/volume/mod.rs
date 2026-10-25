@@ -2225,7 +2225,7 @@ pub use patching::{PatchSource, patch_created, patch_deleted, patch_mutation, pa
 pub use read_stream::{SequentialExtract, VolumeRandomReader, VolumeReadStream};
 pub use remote_paths::{
     ServerPath, adb_app_root, adb_serial_of_path, nfs_app_root, s3_app_root, server_of_path, sftp_app_root,
-    webdav_app_root,
+    webdav_app_root, without_s3_key_ids,
 };
 pub use retirement::{Retirement, Retires, SelfHandle};
 pub use root_echo::{RootEcho, root_echo};
