@@ -3,8 +3,8 @@
 //! [`crate::agent`]; these commands only bridge the frontend to them.
 //!
 //! One file per command family, plus the wire shapes they share:
-//! - [`views`]: the wire event enum and the specta-typed display projections, with the
-//!   pure mappings that build them.
+//! - [`views`]: the specta-typed DTOs the commands share, with the pure mappings that build
+//!   them (one row's `MessageView` is `agent::chat::message_view`'s, re-exported).
 //! - [`chat`]: send + cancel — the send gate (Ask Cmdr's switch, then the slot), the envelope
 //!   snapshot, the cancel registry, and the `Channel` bridge.
 //! - [`attachments`]: resolving what the user attached, by reference only.

@@ -37,7 +37,7 @@ proposal spine. Depth: `DETAILS.md`.
   store's one delete; a thread that spent anything goes through `discard_conversation_keeping_cost`, which folds its
   cost onto that row first. `DETAILS.md` § v8.
 - **`content_blocks` is a backend-only column**: it carries the opaque provider reasoning blob, which must NEVER cross
-  to the frontend. `StoredMessage` is not a wire type; the IPC layer derives a display `MessageView`.
+  to the frontend. `StoredMessage` is not a wire type; `../chat/message_view.rs` derives a display `MessageView`.
 - **`role = 'event'` rows are UI timeline entries (typed `ConversationEvent`), NEVER transcript content.** The token
   lives outside `AgentRole` so the transcript loader can't feed one to a provider; a new reader of `messages` branches
   on `StoredContent` and decides what an event means. No `text_for_search`. ⚠️ Their limit: an outcome recorded only as

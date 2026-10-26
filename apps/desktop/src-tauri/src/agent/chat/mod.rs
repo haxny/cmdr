@@ -12,6 +12,8 @@
 //!   cached prefix).
 //! - [`session`]: what a turn needs resolved from live app state before it can run (the LLM
 //!   slot, the prompt budget, the context envelope). Shared by the rail and by a wake.
+//! - [`message_view`]: one stored row's display projection (`MessageView`), shared by the
+//!   history commands and the live stream (a persisted user row rides `UserPersisted`).
 //! - [`stream`]: the one conversation-keyed transport every turn's progress streams over,
 //!   shared by the rail's sends and by wakes.
 //! - [`runtime`]: the chat runtime that drives one user message to an answer —
@@ -26,6 +28,7 @@
 pub mod budget;
 pub mod cancel;
 pub mod context;
+pub mod message_view;
 pub mod runtime;
 pub mod session;
 pub mod stream;

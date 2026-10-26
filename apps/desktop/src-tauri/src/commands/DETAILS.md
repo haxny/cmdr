@@ -432,7 +432,8 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
 ## Decisions
 
 `agent/` is the one command domain split into a directory, because it carries five unrelated command families plus the
-wire DTOs they share: `views.rs` (the stream event enum, the specta display projections, and the pure mappings),
+wire DTOs they share: `views.rs` (the specta DTOs and their pure mappings; one row's `MessageView` projection lives in
+`../agent/chat/message_view.rs`, because the live stream carries it too, and is re-exported here),
 `chat.rs` (send + cancel), `attachments.rs`, `bulk_rename.rs`, `conversations.rs`, `legacy_opt_in.rs` (the one-time
 read of Ask Cmdr's old opt-in for the `askCmdr.enabled` mapping), `cost.rs`, `wake.rs` (the live-apply pushes for the
 proactive loop's settings and the Ask Cmdr switch). Cloud AI consent's commands live in `ai/cloud_consent.rs`. `mod.rs`

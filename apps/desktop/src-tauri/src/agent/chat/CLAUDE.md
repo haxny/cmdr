@@ -9,7 +9,8 @@ One message in, an answer out, crash-safe and within budget.
 - `runtime/`: the I/O-and-time half — `turn.rs` (`run_turn`), `mod.rs` (`ChatRuntime::send_message`
   and `wake`, both single-flight), `events.rs` + `dispatch.rs` (the two seams).
 - Leaves: `system_prompt.rs`, `session.rs`, `stream.rs` (`AskCmdrTurn`, a turn's one progress
-  transport), and `cancel.rs` (the in-flight-turn registry, keyed by conversation, so a wake can
+  transport), `message_view.rs` (one stored row's display projection, shared by history and the
+  stream), and `cancel.rs` (the in-flight-turn registry, keyed by conversation, so a wake can
   register too).
 
 ## Must-knows
