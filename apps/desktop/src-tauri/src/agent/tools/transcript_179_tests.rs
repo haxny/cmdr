@@ -3,10 +3,11 @@
 //!
 //! One NAS, two ids. The Tailscale share is saved and not connected, last root
 //! `/Volumes/naspi`, with a drive index on disk; the LAN share is live at
-//! `/Volumes/naspi-1` with no drive index. Both rows record one server GUID, one
-//! share name, and one username. Only the Tailscale share's importance store
-//! scored `invoices paid`. The model guessed `/Volumes/naspi/papers`, a dead mount
-//! point, and read `root`'s fresh, empty, "authoritative" answer three times.
+//! `/Volumes/naspi-1` with no drive index. Both rows record one server GUID, each
+//! by a signed-in session (David connected both), one share name, and one
+//! username. Only the Tailscale share's importance store scored `invoices paid`.
+//! The model guessed `/Volumes/naspi/papers`, a dead mount point, and read
+//! `root`'s fresh, empty, "authoritative" answer three times.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -24,6 +25,7 @@ use crate::location::resolve::{IndexSources, LocationInput, VolumeFact, VolumeFa
 use crate::location::same_share::ShareIdentity;
 use crate::mcp::resources::importance::tests::{scored_signals, write_db};
 use crate::mcp::resources::volumes::VolumeKind;
+use crate::network::server_guid::GuidProof;
 use crate::test_support::TestDir;
 
 const TAILSCALE: &str = "smb-100-127-48-122-445-naspi-david";
@@ -55,7 +57,11 @@ fn conversation_179_with(lan_root: &str, lan_state: ConnectionState) -> VolumeFa
             stored_as_of: stored.then_some(TAILSCALE_AS_OF),
             ..IndexSources::none(id)
         },
-        share: Some(ShareIdentity::new(Some(NASPOLYA), "naspi", Some("david"))),
+        share: Some(ShareIdentity::new(
+            Some((NASPOLYA, GuidProof::Authenticated)),
+            "naspi",
+            Some("david"),
+        )),
     };
     VolumeFacts {
         volumes: vec![
@@ -306,4 +312,30 @@ fn asked_on_the_disconnected_lan_share_the_tailscale_index_answers_via() {
     assert_eq!(wire["location"]["volumeId"], TAILSCALE);
     assert_eq!(wire["via"], json!({ "volumeId": LAN }));
     assert_eq!(child_names(&wire), ["2025", "hetzner-2026-09.pdf"]);
+}
+
+/// Had the Tailscale row's GUID only come from the background probe (whatever
+/// answered its saved address), its index could be anyone's: asked on the
+/// disconnected LAN share, the read misses with the Tailscale share as a
+/// `sameShareAs` hint, and nothing answers in the LAN share's place.
+#[test]
+fn a_probe_filled_tailscale_guid_never_answers_for_the_lan_share() {
+    let _serialized = cmdr_index::testing::host::test_lock();
+    let data = TestDir::new("conversation-179-probe-only");
+    let (_index, _installed) = cmdr_index::Index::builder().data_dir(&*data).install_for_test();
+    tailscale_index_on_disk(&data);
+    let mut facts = conversation_179_with("/Volumes/naspi-1", ConnectionState::Saved);
+    for v in facts.volumes.iter_mut().filter(|v| v.id == TAILSCALE) {
+        v.share = Some(ShareIdentity::new(
+            Some((NASPOLYA, GuidProof::Unauthenticated)),
+            "naspi",
+            Some("david"),
+        ));
+    }
+
+    let wire = list_dir(&facts, &data, LAN, &format!("/Volumes/naspi-1/{INVOICES}"));
+
+    assert_eq!(wire["miss"], "volumeNotConnected");
+    assert_eq!(wire["sameShareAs"], json!([TAILSCALE]));
+    assert!(wire.get("children").is_none() && wire.get("via").is_none());
 }

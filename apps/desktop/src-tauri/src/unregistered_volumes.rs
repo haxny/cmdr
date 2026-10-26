@@ -65,6 +65,7 @@ mod tests {
             mount_path: Some("/Volumes/public-unregistered-test".to_string()),
             pinned: true,
             server_guid: None,
+            server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
         });
 
         assert_eq!(why_unregistered(volume_id).await, Unregistered::NotConnected);

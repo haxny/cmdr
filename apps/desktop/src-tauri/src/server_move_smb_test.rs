@@ -29,6 +29,7 @@ fn mounted_row(address: &str, port: u16, share: &str, volume_id: &str) -> KnownN
         mount_path: Some(format!("/Volumes/{share}")),
         pinned: true,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     }
 }
 

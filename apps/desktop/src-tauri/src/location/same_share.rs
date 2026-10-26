@@ -9,14 +9,18 @@
 //!   [`ServerGuid`] can't hold the all-zero one) AND the same share name, ignoring
 //!   case. The GUID names the BOX, so it never groups alone. ❌ No fuzzy "possibly
 //!   the same": an unproven pair isn't grouped.
-//! - **Redirectable**: the same share, signed in as the same account. Another
-//!   account can see different files on the same share, so a different-username
-//!   sibling stays a `sameShareAs` hint and never answers for the volume asked.
+//! - **Redirectable**: the same share, signed in as the same account, with BOTH
+//!   GUIDs recorded by a session that signed in ([`GuidProof::Authenticated`]).
+//!   Another account can see different files on the same share, and a GUID the
+//!   probe or a guest session filled is only whatever answered a saved address,
+//!   so either sibling stays a `sameShareAs` hint and never answers for (or takes
+//!   a write meant for) the volume asked.
 //!
 //! Pure over [`VolumeFacts`]; `facts.rs` reads each share's identity off the
-//! saved-share store (`serverGuid`) and the live sessions (`network::smb_server_guid`).
+//! saved-share store (`serverGuid`, `serverGuidProof`) and the live sessions
+//! (`network::smb_server_guid`).
 
-use crate::network::server_guid::ServerGuid;
+use crate::network::server_guid::{GuidProof, ServerGuid};
 use cmdr_fs::volume::app_paths::rebase;
 use serde::Serialize;
 
@@ -26,8 +30,8 @@ use super::resolve::{ResolvedLocation, VolumeFact, VolumeFacts};
 /// What proves which share a volume is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ShareIdentity {
-    /// `None` until a session or the probe learned it.
-    pub server_guid: Option<ServerGuid>,
+    /// `None` until a session or the probe learned it; with how it was learned.
+    server_guid: Option<(ServerGuid, GuidProof)>,
     /// Case- and NFC-folded, so `naspi` and `NASPI` are one share.
     share_name: String,
     /// The account the share is opened as, folded; `None` for a guest.
@@ -37,9 +41,9 @@ pub(crate) struct ShareIdentity {
 impl ShareIdentity {
     /// An identity from the stored fields: a GUID that doesn't parse (malformed or
     /// all zeros) is no GUID, and a `Guest` sign-in is no account.
-    pub(crate) fn new(server_guid: Option<&str>, share_name: &str, username: Option<&str>) -> Self {
+    pub(crate) fn new(server_guid: Option<(&str, GuidProof)>, share_name: &str, username: Option<&str>) -> Self {
         Self {
-            server_guid: server_guid.and_then(ServerGuid::parse),
+            server_guid: server_guid.and_then(|(guid, proof)| Some((ServerGuid::parse(guid)?, proof))),
             share_name: fold(share_name),
             username: username
                 .filter(|name| !name.is_empty() && !name.eq_ignore_ascii_case("guest"))
@@ -47,16 +51,22 @@ impl ShareIdentity {
         }
     }
 
-    /// Proven the same share: one server GUID, one share name.
+    /// Proven the same share: one server GUID, one share name. A hint whichever
+    /// way each GUID was learned.
     pub(crate) fn same_share(&self, other: &Self) -> bool {
-        matches!((&self.server_guid, &other.server_guid), (Some(a), Some(b)) if a == b)
+        matches!((&self.server_guid, &other.server_guid), (Some((a, _)), Some((b, _))) if a == b)
             && self.share_name == other.share_name
     }
 
-    /// The same share, opened as the same account: a read on one may be answered
-    /// by the other.
+    /// The same share, opened as the same account, with BOTH GUIDs recorded by a
+    /// signed-in session: a read on one may be answered by the other.
     pub(crate) fn redirectable(&self, other: &Self) -> bool {
-        self.same_share(other) && self.username == other.username
+        self.same_share(other) && self.signed_in() && other.signed_in() && self.username == other.username
+    }
+
+    /// Whether a session that signed in as the share's account recorded the GUID.
+    fn signed_in(&self) -> bool {
+        matches!(self.server_guid, Some((_, GuidProof::Authenticated)))
     }
 }
 
@@ -99,7 +109,7 @@ impl VolumeFacts {
     }
 
     /// The members of `id`'s share that may answer a read on it, `id` first:
-    /// itself, then every same-share, same-account sibling.
+    /// itself, then every redirectable sibling.
     fn redirect_group(&self, id: &str) -> Vec<&VolumeFact> {
         let Some(asked) = self.get(id) else {
             return Vec::new();

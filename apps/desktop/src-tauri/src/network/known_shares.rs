@@ -77,6 +77,12 @@ pub struct KnownNetworkShare {
     /// [`record_server_guid`], never by a row an add or a mount files.
     #[serde(default)]
     pub server_guid: Option<String>,
+    /// Share rows: how `server_guid` was learned. Only `authenticated` on both rows
+    /// lets one answer for the other (`location::same_share`). Written with the
+    /// GUID; a row saved before the field reads `unauthenticated` until a signed-in
+    /// session records its GUID again.
+    #[serde(default)]
+    pub server_guid_proof: GuidProof,
 }
 
 impl KnownNetworkShare {
@@ -239,8 +245,9 @@ pub fn update_known_share(share: KnownNetworkShare) {
             .find(|s| share_key(&s.server_name, &s.share_name) == key)
         {
             // The server's identity outlives a reconnect that doesn't bring one.
-            let server_guid = share.server_guid.or(existing.server_guid.take());
-            *existing = KnownNetworkShare { server_guid, ..share };
+            let mut share = share;
+            keep_recorded_guid(&mut share, existing);
+            *existing = share;
         } else {
             cache.known_network_shares.push(share);
         }
@@ -309,6 +316,14 @@ fn same_share_row(a: &KnownNetworkShare, b: &KnownNetworkShare, hosts: &[Network
         .any(|x| names(b).iter().any(|y| same_machine(x, y, hosts)))
 }
 
+/// Keeps the GUID `existing` recorded, with its proof, when `row` brings none.
+fn keep_recorded_guid(row: &mut KnownNetworkShare, existing: &mut KnownNetworkShare) {
+    if row.server_guid.is_none() {
+        row.server_guid = existing.server_guid.take();
+        row.server_guid_proof = existing.server_guid_proof;
+    }
+}
+
 /// Files `row` (a share row) in `rows`, replacing the one for the same share.
 ///
 /// What a replace keeps: the pin (only `set_share_pinned` moves one, except that
@@ -338,7 +353,7 @@ fn upsert_share_row(
             row.pinned = existing.pinned || first_mount;
             row.volume_id = row.volume_id.or(existing.volume_id.take());
             row.mount_path = row.mount_path.or(existing.mount_path.take());
-            row.server_guid = row.server_guid.or(existing.server_guid.take());
+            keep_recorded_guid(&mut row, existing);
             row.port = row.port.or(existing.port);
             let is_add = row.address.is_none();
             if is_add && row.username.is_none() && existing.username.is_some() {
@@ -526,9 +541,11 @@ pub fn share_by_volume_id(volume_id: &str) -> Option<KnownNetworkShare> {
     saved_shares().into_iter().find(|row| place_id(row) == volume_id)
 }
 
-/// Records `guid` on the share row whose place is `volume_id`, by `proof`'s rule.
-/// Touches no other field. Answers `None` when no share row has that place, else
-/// whether the row's GUID changed.
+/// Records `guid` on the share row whose place is `volume_id`, by `proof`'s rule:
+/// an unauthenticated GUID only fills a missing one; an authenticated one
+/// overwrites, and proves the GUID a probe filled. The proof that won is recorded
+/// with it. Touches no other field. Answers `None` when no share row has that
+/// place, else whether the row's GUID or its proof changed.
 fn record_guid_in(rows: &mut [KnownNetworkShare], volume_id: &str, guid: &str, proof: GuidProof) -> Option<bool> {
     let row = rows
         .iter_mut()
@@ -538,10 +555,12 @@ fn record_guid_in(rows: &mut [KnownNetworkShare], volume_id: &str, guid: &str, p
         .as_deref()
         .and_then(crate::network::server_guid::ServerGuid::parse)
         .is_some();
-    if (holds_one && proof == GuidProof::Unauthenticated) || row.server_guid.as_deref() == Some(guid) {
+    let unchanged = row.server_guid.as_deref() == Some(guid) && row.server_guid_proof == proof;
+    if (holds_one && proof == GuidProof::Unauthenticated) || unchanged {
         return Some(false);
     }
     row.server_guid = Some(guid.to_string());
+    row.server_guid_proof = proof;
     Some(true)
 }
 

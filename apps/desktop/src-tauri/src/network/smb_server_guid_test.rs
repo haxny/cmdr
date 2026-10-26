@@ -18,6 +18,7 @@ fn row(address: &str, share: &str, guid: Option<&str>) -> KnownNetworkShare {
         mount_path: Some(format!("/Volumes/{share}")),
         pinned: true,
         server_guid: guid.map(str::to_string),
+        server_guid_proof: GuidProof::Unauthenticated,
     }
 }
 

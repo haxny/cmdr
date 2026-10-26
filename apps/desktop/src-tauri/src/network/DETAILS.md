@@ -756,8 +756,16 @@ the migration, and what Forget does). What the code has to defend:
 One NAS reached by its LAN IP and by Tailscale mounts as two volumes with two ids. The only proof they're one share is
 the GUID the server answers NEGOTIATE with, paired with the share name (the GUID names the BOX, so it never groups
 alone). `server_guid.rs` holds it as `ServerGuid`, which can't be all zeros (smb2 fills `Guid::ZERO` before a negotiate
-lands); `smb_server_guid.rs` records it, as a saved row's `serverGuid` (`docs/specs/saved-smb-shares.md` § The store).
-Ask Cmdr's tools read it to treat the two ids as one (`../location/same_share.rs`).
+lands); `smb_server_guid.rs` records it, as a saved row's `serverGuid` (`docs/specs/saved-smb-shares.md` § The store),
+with how it was learned beside it as `serverGuidProof` (`GuidProof`: `authenticated` or `unauthenticated`). Ask Cmdr's
+tools read both to treat the two ids as one (`../location/same_share.rs`): any GUID makes a `sameShareAs` hint, and only
+an `authenticated` one on BOTH rows lets one id answer for the other.
+
+- **The proof that won is the one recorded** (`known_shares::record_guid_in`): a fill by the probe or a guest session
+  records `unauthenticated`; a signed-in session records `authenticated`, whether it overwrote the GUID or confirmed the
+  one a probe filled. Nothing moves a proof down. A row saved before the field reads `unauthenticated` until a signed-in
+  session records its GUID again, and every refresh of a row (a remount, a share-list reconnect) keeps the GUID and its
+  proof together (`keep_recorded_guid`).
 
 - **A direct session coming up records its GUID** (`record_session_guid`, from both `smb_upgrade` install paths, read
   off `SmbVolume::diagnostics` with no I/O). Signed in as an account it OVERWRITES the row's (a NAS restored or

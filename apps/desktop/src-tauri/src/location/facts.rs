@@ -22,6 +22,9 @@ use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;
 use crate::mcp::resources::volumes::VolumeKind;
+use crate::network::known_shares::KnownNetworkShare;
+use crate::network::server_guid::ServerGuid;
+use crate::network::smb_server_guid::LiveShare;
 
 /// Every root each volume answered at this session, by volume id, oldest first.
 ///
@@ -253,38 +256,48 @@ impl StoredScan {
     }
 }
 
-/// Which server, share, and account an SMB volume is: its saved row's, else what
-/// its live direct session answered (`network::smb_server_guid`). A saved row with
-/// no GUID yet borrows the live session's, since both name the one volume id.
+/// Which server, share, and account an SMB volume is ([`identity_of`]).
 fn share_identity(volume_id: &str) -> Option<ShareIdentity> {
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
-        let live = crate::network::smb_server_guid::live_share(volume_id);
-        if let Some(row) = crate::network::known_shares::share_by_volume_id(volume_id) {
-            let row_guid = row
-                .server_guid
-                .as_deref()
-                .and_then(crate::network::server_guid::ServerGuid::parse);
-            let guid = row_guid.or_else(|| live.map(|live| live.server_guid));
-            return Some(ShareIdentity::new(
-                guid.as_ref().map(crate::network::server_guid::ServerGuid::as_str),
-                &row.share_name,
-                row.username.as_deref(),
-            ));
-        }
-        live.map(|live| {
-            ShareIdentity::new(
-                Some(live.server_guid.as_str()),
-                &live.share_name,
-                live.username.as_deref(),
-            )
-        })
+        identity_of(
+            crate::network::known_shares::share_by_volume_id(volume_id).as_ref(),
+            crate::network::smb_server_guid::live_share(volume_id).as_ref(),
+        )
     }
     #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let _ = volume_id;
         None
     }
+}
+
+/// A share's identity from its saved row, else from what its live direct session
+/// answered (`network::smb_server_guid`). A saved row with no GUID yet borrows the
+/// live session's, since both name the one volume id. Each GUID keeps the proof
+/// it was learned with. Pure.
+#[cfg_attr(
+    not(any(target_os = "macos", target_os = "linux")),
+    allow(
+        dead_code,
+        reason = "only the SMB platforms read a share's identity; the tests call it everywhere"
+    )
+)]
+pub(crate) fn identity_of(row: Option<&KnownNetworkShare>, live: Option<&LiveShare>) -> Option<ShareIdentity> {
+    let live_guid = live.map(|live| (live.server_guid.as_str(), live.proof));
+    let Some(row) = row else {
+        return live.map(|live| ShareIdentity::new(live_guid, &live.share_name, live.username.as_deref()));
+    };
+    let row_guid = row
+        .server_guid
+        .as_deref()
+        .filter(|guid| ServerGuid::parse(guid).is_some())
+        .map(|guid| (guid, row.server_guid_proof));
+    Some(ShareIdentity::new(
+        row_guid.or(live_guid),
+        &row.share_name,
+        row.username.as_deref(),
+    ))
 }
 
 /// One volume's facts. `stored` is what its database on disk records, read for a

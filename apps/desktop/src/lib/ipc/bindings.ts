@@ -4260,11 +4260,18 @@ export const commands = {
       pinned?: boolean
       /**
        *  Share rows: the GUID the share's server answered NEGOTIATE with, in
-       *  `cmdr_smb::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+       *  `crate::network::server_guid::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
        *  and its Tailscale address) are one server. Written only through
        *  [`record_server_guid`], never by a row an add or a mount files.
        */
       serverGuid?: string | null
+      /**
+       *  Share rows: how `server_guid` was learned. Only `authenticated` on both rows
+       *  lets one answer for the other (`location::same_share`). Written with the
+       *  GUID; a row saved before the field reads `unauthenticated` until a signed-in
+       *  session records its GUID again.
+       */
+      serverGuidProof?: GuidProof
     } | null>('get_known_share_by_name', { serverName, shareName }),
   // Updates or adds a known network share after successful connection.
   updateKnownShare: (
@@ -9728,6 +9735,27 @@ export type GuessedNfsIdentity = {
   source: NfsIdentitySourceWire
 }
 
+/**
+ *  How a server GUID was learned. It decides whether the GUID may replace one a
+ *  row already holds, and whether it proves enough to let one member of a share
+ *  answer for another (`location::same_share`). Stored beside the GUID as
+ *  `serverGuidProof`.
+ */
+export type GuidProof =
+  /**
+   *  From a session that signed in as the share's account: the latest truth
+   *  about the box, so it overwrites (a NAS restored or replaced mints a new GUID).
+   */
+  | 'authenticated'
+  /**
+   *  From a credential-free NEGOTIATE probe of a saved address, or a guest
+   *  session: whatever answers there may not be the share's server (a hotel
+   *  network can hand out the saved LAN IP), so it only FILLS a missing GUID,
+   *  and only ever makes a `sameShareAs` hint. The default: a row saved before
+   *  Cmdr kept the proof can't show a sign-in recorded its GUID.
+   */
+  | 'unauthenticated'
+
 // A single recent-search entry, persisted verbatim.
 export type HistoryEntry = {
   id: string
@@ -10485,11 +10513,18 @@ export type KnownNetworkShare = {
   pinned?: boolean
   /**
    *  Share rows: the GUID the share's server answered NEGOTIATE with, in
-   *  `cmdr_smb::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+   *  `crate::network::server_guid::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
    *  and its Tailscale address) are one server. Written only through
    *  [`record_server_guid`], never by a row an add or a mount files.
    */
   serverGuid?: string | null
+  /**
+   *  Share rows: how `server_guid` was learned. Only `authenticated` on both rows
+   *  lets one answer for the other (`location::same_share`). Written with the
+   *  GUID; a row saved before the field reads `unauthenticated` until a signed-in
+   *  session records its GUID again.
+   */
+  serverGuidProof?: GuidProof
 }
 
 // One SFTP server the user has connected to, and how to reach it again.

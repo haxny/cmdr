@@ -283,7 +283,10 @@ fn rows_of_one_proven_share_name_each_other() {
     use crate::location::same_share::ShareIdentity;
     let identity = || {
         Some(ShareIdentity::new(
-            Some("6ba7b810-9dad-11d1-80b4-00c04fd430c8"),
+            Some((
+                "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+                crate::network::server_guid::GuidProof::Authenticated,
+            )),
             "naspi",
             None,
         ))

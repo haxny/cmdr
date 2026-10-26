@@ -519,6 +519,7 @@ async fn approving_a_group_on_a_share_nobody_connected_is_refused_as_not_connect
         mount_path: Some("/Volumes/public-bridge-test".to_string()),
         pinned: true,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
     let dir = TestDir::new("bridge_not_connected");
     let (conn, reporting, group_id) = trash_group_on(&dir, volume_id);

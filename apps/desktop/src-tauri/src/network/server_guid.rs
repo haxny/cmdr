@@ -9,6 +9,7 @@
 //! lands, and a server may answer it. [`ServerGuid`] can't hold one, so two rows
 //! that never learned their server can't match on it.
 
+use serde::{Deserialize, Serialize};
 use smb2::pack::Guid;
 
 /// A server's non-zero GUID, in its canonical lowercase text form
@@ -50,16 +51,22 @@ impl ServerGuid {
     }
 }
 
-/// How a server GUID was learned, which decides whether it may replace one a row
-/// already holds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// How a server GUID was learned. It decides whether the GUID may replace one a
+/// row already holds, and whether it proves enough to let one member of a share
+/// answer for another (`location::same_share`). Stored beside the GUID as
+/// `serverGuidProof`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub enum GuidProof {
     /// From a session that signed in as the share's account: the latest truth
     /// about the box, so it overwrites (a NAS restored or replaced mints a new GUID).
     Authenticated,
     /// From a credential-free NEGOTIATE probe of a saved address, or a guest
     /// session: whatever answers there may not be the share's server (a hotel
-    /// network can hand out the saved LAN IP), so it only FILLS a missing GUID.
+    /// network can hand out the saved LAN IP), so it only FILLS a missing GUID,
+    /// and only ever makes a `sameShareAs` hint. The default: a row saved before
+    /// Cmdr kept the proof can't show a sign-in recorded its GUID.
+    #[default]
     Unauthenticated,
 }
 

@@ -1,5 +1,5 @@
 //! The proof rules: GUID plus share name groups, GUID alone never does, and only
-//! the same account redirects.
+//! the same account, with both GUIDs recorded by a sign-in, redirects.
 
 use super::*;
 use crate::location::resolve::IndexSources;
@@ -35,8 +35,14 @@ fn facts(volumes: Vec<VolumeFact>) -> VolumeFacts {
     }
 }
 
+/// David's share, its GUID (if any) recorded by a signed-in session.
 fn david(guid: Option<&str>, share_name: &str) -> ShareIdentity {
-    ShareIdentity::new(guid, share_name, Some("david"))
+    ShareIdentity::new(guid.map(|g| (g, GuidProof::Authenticated)), share_name, Some("david"))
+}
+
+/// David's share, its GUID filled by the credential-free probe.
+fn probed(guid: &str, share_name: &str) -> ShareIdentity {
+    ShareIdentity::new(Some((guid, GuidProof::Unauthenticated)), share_name, Some("david"))
 }
 
 #[test]
@@ -100,7 +106,7 @@ fn the_same_share_under_two_accounts_is_grouped_but_never_redirected() {
             "lan",
             "/Volumes/naspi-1",
             true,
-            ShareIdentity::new(Some(BOX), "naspi", Some("dori")),
+            ShareIdentity::new(Some((BOX, GuidProof::Authenticated)), "naspi", Some("dori")),
         ),
     ]);
     let asked = crate::location::resolve::resolve(
@@ -127,7 +133,7 @@ fn a_volume_not_connected_miss_names_the_same_share() {
             "lan",
             "/Volumes/naspi-1",
             false,
-            ShareIdentity::new(Some(BOX), "naspi", Some("dori")),
+            ShareIdentity::new(Some((BOX, GuidProof::Authenticated)), "naspi", Some("dori")),
         ),
     ]);
     let asked = crate::location::resolve::resolve(
@@ -147,8 +153,146 @@ fn a_volume_not_connected_miss_names_the_same_share() {
 /// A guest sign-in is no account, whichever way it was spelled.
 #[test]
 fn guest_sessions_are_one_account() {
-    let guest = |guid| ShareIdentity::new(guid, "public", Some("Guest"));
-    assert!(guest(Some(BOX)).redirectable(&ShareIdentity::new(Some(BOX), "public", None)));
+    let guid = Some((BOX, GuidProof::Authenticated));
+    assert_eq!(
+        ShareIdentity::new(guid, "public", Some("Guest")),
+        ShareIdentity::new(guid, "public", None)
+    );
+}
+
+/// `papers` on the volume `id`, rooted at `root`, resolved.
+fn papers_on(facts: &VolumeFacts, id: &str, root: &str) -> ResolvedLocation {
+    crate::location::resolve::resolve(
+        facts,
+        &crate::location::resolve::LocationInput {
+            volume_id: Some(id.to_string()),
+            path: format!("{root}/papers"),
+        },
+    )
+    .expect("resolves")
+}
+
+/// Asserts `asked` has `sibling` as a `sameShareAs` hint and nothing more: it
+/// answers its own reads, and no member stands in for it.
+fn only_a_hint(facts: &VolumeFacts, asked: &str, root: &str, sibling: &str) {
+    assert_eq!(facts.same_share_as(asked), [sibling], "still a hint");
+    assert_eq!(
+        facts.readers(&papers_on(facts, asked, root)).len(),
+        1,
+        "only {asked} reads"
+    );
+    assert_eq!(facts.preferred_member(asked).map(|v| v.id.as_str()), Some(asked));
+    assert_eq!(facts.redirect_group_ids(asked), [asked]);
+}
+
+/// ❗ Whatever answers a probe of a saved address (a hotel network handing out the
+/// NAS's LAN IP) must not stand in for the share, in either direction: both GUIDs
+/// need a sign-in behind them.
+#[test]
+fn a_probe_filled_guid_on_either_member_only_ever_makes_a_hint() {
+    let ts_probed = facts(vec![
+        share("ts", "/Volumes/naspi", false, probed(BOX, "naspi")),
+        share("lan", "/Volumes/naspi-1", true, david(Some(BOX), "naspi")),
+    ]);
+    only_a_hint(&ts_probed, "ts", "/Volumes/naspi", "lan");
+    only_a_hint(&ts_probed, "lan", "/Volumes/naspi-1", "ts");
+
+    let lan_probed = facts(vec![
+        share("ts", "/Volumes/naspi", false, david(Some(BOX), "naspi")),
+        share("lan", "/Volumes/naspi-1", true, probed(BOX, "naspi")),
+    ]);
+    only_a_hint(&lan_probed, "ts", "/Volumes/naspi", "lan");
+}
+
+/// A guest session proves nothing about the box either: two guest members of one
+/// share stay a hint.
+#[test]
+fn a_guest_sessions_guid_only_ever_makes_a_hint() {
+    let guest = || ShareIdentity::new(Some((BOX, GuidProof::Unauthenticated)), "public", None);
+    let facts = facts(vec![
+        share("ts", "/Volumes/public", false, guest()),
+        share("lan", "/Volumes/public-1", true, guest()),
+    ]);
+
+    only_a_hint(&facts, "ts", "/Volumes/public", "lan");
+}
+
+/// `list_dir`'s last tier reads the freshest index a not-connected member left on
+/// disk. A probe-only member's index, however fresh, is never that pick.
+#[test]
+fn a_probe_only_member_is_never_the_offline_index_pick() {
+    let mut lan = share("lan", "/Volumes/naspi-1", false, david(Some(BOX), "naspi"));
+    lan.index.stored = true;
+    lan.index.stored_as_of = Some(50);
+    let mut ts = share("ts", "/Volumes/naspi", false, probed(BOX, "naspi"));
+    ts.index.stored = true;
+    ts.index.stored_as_of = Some(100);
+    let facts = facts(vec![lan, ts]);
+
+    let readers = facts.readers(&papers_on(&facts, "lan", "/Volumes/naspi-1"));
+
+    assert_eq!(
+        readers
+            .iter()
+            .map(|r| r.location.volume_id.as_str())
+            .collect::<Vec<_>>(),
+        ["lan"]
+    );
+    assert_eq!(facts.preferred_member("lan").map(|v| v.id.as_str()), Some("lan"));
+}
+
+/// Each GUID keeps the proof it was learned with on its way into the facts: a
+/// saved row's own, else the live session's along with its GUID.
+#[test]
+fn a_shares_identity_carries_the_proof_its_guid_was_recorded_with() {
+    use crate::location::facts::identity_of;
+    use crate::network::known_shares::{AuthOptions, ConnectionMode, KnownNetworkShare};
+    use crate::network::server_guid::ServerGuid;
+    use crate::network::smb_server_guid::LiveShare;
+
+    let row = |guid: Option<&str>, proof| KnownNetworkShare {
+        server_name: "naspolya".to_string(),
+        share_name: "naspi".to_string(),
+        protocol: "smb".to_string(),
+        last_connected_at: "2026-10-26T00:00:00Z".to_string(),
+        last_connection_mode: ConnectionMode::Credentials,
+        last_known_auth_options: AuthOptions::CredentialsOnly,
+        username: Some("david".to_string()),
+        address: None,
+        port: None,
+        volume_id: None,
+        mount_path: None,
+        pinned: true,
+        server_guid: guid.map(str::to_string),
+        server_guid_proof: proof,
+    };
+    let live = |proof| LiveShare {
+        server_guid: ServerGuid::parse(BOX).expect("a GUID"),
+        proof,
+        share_name: "naspi".to_string(),
+        username: Some("david".to_string()),
+    };
+
+    assert_eq!(
+        identity_of(Some(&row(Some(BOX), GuidProof::Unauthenticated)), None),
+        Some(probed(BOX, "naspi"))
+    );
+    assert_eq!(
+        identity_of(Some(&row(Some(BOX), GuidProof::Authenticated)), None),
+        Some(david(Some(BOX), "naspi"))
+    );
+    assert_eq!(
+        identity_of(
+            Some(&row(None, GuidProof::Unauthenticated)),
+            Some(&live(GuidProof::Authenticated))
+        ),
+        Some(david(Some(BOX), "naspi")),
+        "a row with no GUID borrows the session's, proof and all"
+    );
+    assert_eq!(
+        identity_of(None, Some(&live(GuidProof::Unauthenticated))),
+        Some(probed(BOX, "naspi"))
+    );
 }
 
 #[test]

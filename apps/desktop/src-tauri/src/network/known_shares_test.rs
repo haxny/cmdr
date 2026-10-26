@@ -155,6 +155,7 @@ fn test_known_share_serialization() {
         mount_path: None,
         pinned: false,
         server_guid: None,
+        server_guid_proof: GuidProof::Unauthenticated,
     };
 
     let json = serde_json::to_string_pretty(&share).unwrap();
@@ -189,6 +190,7 @@ fn test_store_serialization() {
                 mount_path: None,
                 pinned: false,
                 server_guid: None,
+                server_guid_proof: GuidProof::Unauthenticated,
             },
             KnownNetworkShare {
                 server_name: "Bravo".to_string(),
@@ -204,6 +206,7 @@ fn test_store_serialization() {
                 mount_path: None,
                 pinned: false,
                 server_guid: None,
+                server_guid_proof: GuidProof::Unauthenticated,
             },
         ],
         direct_connection_opt_outs: Vec::new(),
@@ -249,6 +252,7 @@ fn test_in_memory_operations() {
             mount_path: None,
             pinned: false,
             server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -289,6 +293,7 @@ fn test_username_hints() {
             mount_path: None,
             pinned: false,
             server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
         c.known_network_shares.push(KnownNetworkShare {
             server_name: "Server2".to_string(),
@@ -304,6 +309,7 @@ fn test_username_hints() {
             mount_path: None,
             pinned: false,
             server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -342,6 +348,7 @@ fn a_username_hint_is_found_under_every_name_form_of_its_server() {
             mount_path: None,
             pinned: false,
             server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -390,6 +397,7 @@ fn the_newest_username_on_a_server_wins() {
                 mount_path: None,
                 pinned: false,
                 server_guid: None,
+                server_guid_proof: GuidProof::Unauthenticated,
             });
         }
     }
@@ -436,6 +444,7 @@ fn concurrent_in_memory_updates_no_lost_writes() {
                     mount_path: None,
                     pinned: false,
                     server_guid: None,
+                    server_guid_proof: GuidProof::Unauthenticated,
                 });
             }
         }));
@@ -483,6 +492,7 @@ fn concurrent_read_during_write() {
             mount_path: None,
             pinned: false,
             server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -509,6 +519,7 @@ fn concurrent_read_during_write() {
                     mount_path: None,
                     pinned: false,
                     server_guid: None,
+                    server_guid_proof: GuidProof::Unauthenticated,
                 });
             }
         }
@@ -574,6 +585,7 @@ fn rapid_sequential_updates_same_share() {
                     mount_path: None,
                     pinned: false,
                     server_guid: None,
+                    server_guid_proof: GuidProof::Unauthenticated,
                 });
             }
         }
@@ -621,6 +633,7 @@ fn mounted(
         mount_path: Some(format!("/Volumes/{share}")),
         pinned: false,
         server_guid: None,
+        server_guid_proof: GuidProof::Unauthenticated,
     }
 }
 
@@ -1139,91 +1152,5 @@ fn one_row_that_doesnt_read_keeps_the_rest_and_a_copy() {
 
 // -- Server GUIDs --
 
-const BOX: &str = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-const OTHER_BOX: &str = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0";
-
-/// ❗ **A probe's answer only FILLS a missing GUID.** Whatever answers on a saved
-/// address isn't proven to be the share's server, so it can't replace one a
-/// signed-in session recorded.
-#[test]
-fn an_unauthenticated_guid_fills_a_missing_one_and_never_overwrites() {
-    let mut rows = vec![mounted(
-        "192.168.1.111",
-        "192.168.1.111",
-        "naspi",
-        Some("david"),
-        "smb-lan",
-    )];
-
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Unauthenticated),
-        Some(true)
-    );
-    assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
-
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, GuidProof::Unauthenticated),
-        Some(false),
-        "a probe finding a row that holds a GUID writes nothing"
-    );
-    assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
-}
-
-/// ❗ **A signed-in session's GUID overwrites**: a NAS restored or replaced mints a
-/// new one, and the latest authenticated answer is the truth.
-#[test]
-fn an_authenticated_guid_overwrites_the_stored_one() {
-    let mut rows = vec![mounted(
-        "192.168.1.111",
-        "192.168.1.111",
-        "naspi",
-        Some("david"),
-        "smb-lan",
-    )];
-    rows[0].server_guid = Some(BOX.to_string());
-
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, GuidProof::Authenticated),
-        Some(true)
-    );
-    assert_eq!(rows[0].server_guid.as_deref(), Some(OTHER_BOX));
-    assert_eq!(rows[0].username.as_deref(), Some("david"), "no other field moves");
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-nope", BOX, GuidProof::Authenticated),
-        None
-    );
-}
-
-/// A stored all-zero GUID is no GUID, so a probe may fill it.
-#[test]
-fn a_stored_zero_guid_counts_as_missing() {
-    let mut rows = vec![mounted("192.168.1.111", "192.168.1.111", "naspi", None, "smb-lan")];
-    rows[0].server_guid = Some("00000000-0000-0000-0000-000000000000".to_string());
-
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Unauthenticated),
-        Some(true)
-    );
-    assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
-}
-
-/// A later mount files a row with no GUID; the share's recorded one stays.
-#[test]
-fn a_remount_keeps_the_recorded_guid() {
-    let mut rows = vec![mounted(
-        "192.168.1.111",
-        "192.168.1.111",
-        "naspi",
-        Some("david"),
-        "smb-lan",
-    )];
-    rows[0].server_guid = Some(BOX.to_string());
-
-    upsert_share_row(
-        &mut rows,
-        mounted("192.168.1.111", "192.168.1.111", "naspi", Some("david"), "smb-lan"),
-        &[],
-    );
-
-    assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
-}
+#[path = "known_shares_guid_test.rs"]
+mod guid;

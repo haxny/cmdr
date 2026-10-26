@@ -69,6 +69,7 @@ async fn a_share_that_never_mounted_has_nothing_to_dial() {
         mount_path: None,
         pinned: false,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     };
     let answer = connect_saved_share(row, DialTicket::now(), "never-mounted", None, None).await;
     assert!(matches!(answer, ServerConnectOutcome::Unreachable), "got {answer:?}");

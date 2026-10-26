@@ -190,6 +190,7 @@ fn a_named_smb_host_keeps_its_name_once_its_shares_were_listed() {
         mount_path: None,
         pinned: false,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     };
 
     let servers = saved_servers(vec![named_manual_entry(smb_host, "Office NAS")], vec![history], &[]);
@@ -834,6 +835,7 @@ fn share_row(
         mount_path: volume_id.map(|_| format!("/Volumes/{share}")),
         pinned: volume_id.is_some(),
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     }
 }
 

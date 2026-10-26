@@ -453,8 +453,12 @@ unindexed live share). Two rules, both proof-based:
   never groups alone, and an all-zero GUID is no GUID (`apps/desktop/src-tauri/src/network/server_guid.rs`). Where the GUIDs come from, and why a
   probe's only fills: `apps/desktop/src-tauri/src/network/DETAILS.md` § "Which server a share is on". ❌ No fuzzy "possibly the same". It shows as
   `sameShareAs: [volumeId]` on `list_volumes` rows, `important_folders`' overview, and not-connected misses.
-- **Redirectable**: the same share AND the same account (a guest is no account). Another account can see different files
-  on the same share, so a different-username sibling stays a `sameShareAs` hint and never answers in its place.
+- **Redirectable**: the same share AND the same account (a guest is no account) AND both GUIDs recorded by a session
+  that signed in as that account (`serverGuidProof: authenticated` on both rows, or the live session's own proof).
+  Another account can see different files on the same share, and a GUID the probe or a guest session filled only says
+  what answered a saved address (a hotel network can hand out the NAS's LAN IP), so either sibling stays a
+  `sameShareAs` hint and never answers in its place, for reads (`readers`, `preferred_member`, `redirect_group_ids`)
+  and for anything that re-addresses a write.
 - **Preference is per read** (`list_dir`, `read/listing/readers.rs`): across the volume asked and its redirectable
   siblings, the first member and source in order live index → live readdir → freshest index on disk answers, the
   volume asked first within each tier. A sibling's answer carries its own `location` plus `via: { volumeId }` naming the

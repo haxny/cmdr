@@ -326,7 +326,11 @@ fn one_share(lan_username: &str) -> VolumeFacts {
             TAILSCALE => "david",
             _ => continue,
         };
-        v.share = Some(ShareIdentity::new(Some(BOX), "naspi", Some(username)));
+        v.share = Some(ShareIdentity::new(
+            Some((BOX, crate::network::server_guid::GuidProof::Authenticated)),
+            "naspi",
+            Some(username),
+        ));
     }
     facts
 }

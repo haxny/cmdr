@@ -365,6 +365,7 @@ async fn a_destination_on_a_saved_share_nobody_connected_says_so() {
         mount_path: Some("/Volumes/naspi-suggested-ops-test".to_string()),
         pinned: true,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
 
     let state = destination_state(&move_to(volume_id, "/Volumes/naspi-suggested-ops-test/Installers")).await;

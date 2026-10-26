@@ -27,15 +27,19 @@ the account, and each SHARE is a place under it. What changes is that a share pl
 - `address`: what the mount dialed (an IP or hostname), where `serverName` is the name the person knows the host by (the
   hub's grouping key, and the Keychain's).
 - `port` (absent means 445), `volumeId`, `mountPath` (where the last mount sat), `pinned`.
-- `serverGuid`: the GUID the share's server answered NEGOTIATE with (`cmdr_smb::ServerGuid`'s text form, never all
-  zeros), which proves two rows of one share name (a NAS by its LAN and its Tailscale address) are one share. Every
-  upsert keeps it; only its own two writers set it (`known_shares::record_server_guid`,
+- `serverGuid`: the GUID the share's server answered NEGOTIATE with (`network::server_guid::ServerGuid`'s text form,
+  never all zeros), which proves two rows of one share name (a NAS by its LAN and its Tailscale address) are one share.
+  Every upsert keeps it; only its own two writers set it (`known_shares::record_server_guid`,
   `apps/desktop/src-tauri/src/network/smb_server_guid.rs`):
   - **A direct session comes up** (both `smb_upgrade` install paths): signed in as an account, it OVERWRITES (a NAS
     restored or replaced mints a new GUID); as a guest, it only fills.
   - **The background probe**: a credential-free NEGOTIATE of the saved address, only for rows with no GUID whose share
     name another row shares, at startup and when a share row is saved. It only FILLS: whatever answers on a saved LAN IP
     on a hotel network isn't proven to be the share's server.
+- `serverGuidProof`: `authenticated` (a signed-in session recorded `serverGuid`) or `unauthenticated` (the probe or a
+  guest session did; also what a row saved before the field reads as). Written with the GUID, kept with it by every
+  upsert. Only two `authenticated` rows let one share id answer for the other:
+  `apps/desktop/src-tauri/src/network/DETAILS.md` § "Which server a share is on".
 
 Writers, all upserts on the share's key:
 

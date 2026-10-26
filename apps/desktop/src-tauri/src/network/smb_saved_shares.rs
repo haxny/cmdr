@@ -86,6 +86,7 @@ pub async fn remember_mount(mounted: MountedShare<'_>) -> Option<String> {
         mount_path: volume_id.as_ref().map(|_| mounted.mount_path.to_string()),
         pinned: false,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
     if let Some(completed) = completed {
         crate::server_move::smb::complete(completed).await;
@@ -137,6 +138,7 @@ pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>
         mount_path: None,
         pinned: false,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
     crate::network::smb_server_guid::schedule_probe(Duration::ZERO);
     crate::volume_broadcast::emit_volumes_changed();
@@ -215,6 +217,7 @@ fn favorited_share_row(
         mount_path: Some(mount_path.to_string()),
         pinned: false,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     }
 }
 

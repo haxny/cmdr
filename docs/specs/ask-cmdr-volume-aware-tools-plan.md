@@ -137,7 +137,8 @@ Evidence: prod `main.db` conversation 179 (read-only `sqlite3`), the prod data d
    addressed to one member is answered by the first member (and source) that can answer it in that order, and says so
    (`via: { volumeId }`, `source`). Redirection across members needs both rows to record the SAME username: another
    account can see different files on the same share. Without it, the read answers for the requested volume and
-   `sameShareAs` stays a hint.
+   `sameShareAs` stays a hint. It also needs both GUIDs recorded by a signed-in session
+   (`docs/specs/ask-cmdr-filing-proposals-plan.md` decision 7): a probe-filled or guest GUID only ever makes the hint.
 9. **`list_dir` answers from where the folder actually is**, marked by `source`:
    - `index`: the volume's live drive index lists the folder (today's path).
    - `live`: the volume is live but has no drive index, or its index doesn't list this folder. ONE bounded readdir

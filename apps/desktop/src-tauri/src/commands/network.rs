@@ -226,6 +226,7 @@ pub fn update_known_share(
         mount_path: None,
         pinned: false,
         server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     };
 
     known_shares::update_known_share(share);
