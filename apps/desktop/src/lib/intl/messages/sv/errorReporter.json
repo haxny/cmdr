@@ -229,6 +229,10 @@
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
   },
+  "errorReporter.preview.unavailableToast": "Det gick inte att öppna förhandsvisningen. Försök igen om en stund.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
   "errorReporter.prefill.reference": "Referens: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

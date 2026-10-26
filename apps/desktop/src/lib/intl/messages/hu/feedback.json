@@ -28,6 +28,10 @@
   "@feedback.dialog.includeLogs": {
     "sourceHash": "983e536"
   },
+  "feedback.dialog.viewLogs": "Az elküldendő naplók megtekintése",
+  "@feedback.dialog.viewLogs": {
+    "sourceHash": "7461c4e"
+  },
   "feedback.dialog.moreWays": "<github>Böngészhetsz és szavazhatsz a GitHubon</github>, vagy <call>foglalhatsz egy hívást</call> Daviddel.",
   "@feedback.dialog.moreWays": {
     "sourceHash": "5a26a7c"

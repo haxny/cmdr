@@ -229,6 +229,10 @@
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
   },
+  "errorReporter.preview.unavailableToast": "Die Vorschau ließ sich nicht öffnen. Versuche es gleich noch einmal.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
   "errorReporter.prefill.reference": "Referenz: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

@@ -228,6 +228,10 @@
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
   },
+  "errorReporter.preview.unavailableToast": "無法開啟預覽。請稍後再試一次。",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
   "errorReporter.prefill.reference": "參考：{code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

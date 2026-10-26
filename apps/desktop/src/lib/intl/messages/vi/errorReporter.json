@@ -228,6 +228,10 @@
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
   },
+  "errorReporter.preview.unavailableToast": "Không mở được bản xem trước. Hãy thử lại sau giây lát.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
   "errorReporter.prefill.reference": "Tham chiếu: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

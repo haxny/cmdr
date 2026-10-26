@@ -228,6 +228,10 @@
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
   },
+  "errorReporter.preview.unavailableToast": "Не удалось открыть просмотр. Попробуйте еще раз чуть позже.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
   "errorReporter.prefill.reference": "Код: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

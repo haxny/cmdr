@@ -228,6 +228,10 @@
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
   },
+  "errorReporter.preview.unavailableToast": "Não foi possível abrir a pré-visualização. Tente novamente em instantes.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
   "errorReporter.prefill.reference": "Referência: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"
