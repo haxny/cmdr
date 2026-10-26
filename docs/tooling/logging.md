@@ -190,6 +190,29 @@ RUST_LOG=trace pnpm dev
   Finder rather than opening a file. Also bundled into error reports sent via **Help > Send error report…** (passes
   through the shared redactor first)
 
+## Ask Cmdr chats (reading a past conversation)
+
+The debug log doesn't hold Ask Cmdr transcripts. Every chat, with each tool call and tool result, lives in the agent
+store `main.db`, so reading one needs no MCP and no running app:
+
+- **Where**: Prod `~/Library/Application Support/com.veszelovszki.cmdr/main.db`, dev
+  `…/com.veszelovszki.cmdr-dev/main.db`, a worktree `…/com.veszelovszki.cmdr-dev-<slug>/main.db`. WAL mode, so open it
+  read-only while the app runs.
+- **Find the chat**:
+  `sqlite3 -readonly main.db "SELECT id, title, origin, datetime(updated_at,'unixepoch') FROM conversations ORDER BY updated_at DESC LIMIT 10;"`.
+  Timestamps are UTC unix seconds; `origin = 'notification'` rows are wake threads.
+- **Read it**:
+  `sqlite3 -readonly main.db "SELECT seq, role, content_blocks FROM messages WHERE conversation_id = <id> ORDER BY seq;" > <scratchpad>/chat.txt`,
+  then read the file. `content_blocks` is typed JSON (`text`, `tool_call`, `tool_result`); tool results can be large.
+- **What it proposed**: the `propose_suggestions` tool call carries the groups as the agent sent them; the stored
+  sweeps, groups, and ops are `proposal_sets` / `proposals` / `proposal_ops` in the same file
+  (`apps/desktop/src-tauri/src/agent/store/proposals/CLAUDE.md`).
+- **The exact prompts sent to the provider**: only when Settings has `logLlmCalls` on (dev default on, prod default
+  off), under `{app data dir}/llm-logs/thread-<conversation id>/`. Format:
+  `apps/desktop/src-tauri/src/ai/llm_log/CLAUDE.md`.
+- `content_blocks` can hold the provider's opaque reasoning blob: fine to read locally, ❌ never paste it into an issue
+  or a public file, and the same goes for the user's paths and file names (this repo is public).
+
 ## Log format
 
 ```

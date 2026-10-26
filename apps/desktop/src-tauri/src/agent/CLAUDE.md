@@ -38,6 +38,8 @@ the surface, so every later slice grows here too.
   on a worker thread (it holds a non-`Send` connection across awaits) and streams over `chat::stream`, one
   conversation-keyed event a wake shares. Register a new command in the `ipc.rs` manifest. Frontend:
   `apps/desktop/src/lib/ask-cmdr/CLAUDE.md`.
+- **Reading a user's past chat** (prod or dev, tool calls included): it's in `main.db`, no MCP needed. Recipe:
+  `docs/tooling/logging.md` § Ask Cmdr chats.
 
 Layout rationale, the proposal tier, the **invariants register** (where a bare `(invariant 6)` citation resolves), the
 principles, and the **decision log** (where `agent decision D49` resolves): `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or advising.

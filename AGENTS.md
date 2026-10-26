@@ -93,7 +93,7 @@ Writing them:
   lives). Two "icon" docs: a UI glyph is `docs/guides/icons.md`; the app icon and every logo raster come from
   `brand/logos/cmdr.svg` via `docs/guides/updating-icon.md`.
 - **Debugging a running app / reading logs**: [This](docs/tooling/logging.md) is the first stop, before `Console.app` or
-  grepping code. All (FE & BE) log paths, format, and `RUST_LOG` recipes.
+  grepping code. All (FE & BE) log paths, format, and `RUST_LOG` recipes, plus how to read a past Ask Cmdr chat.
 - **CPU, RAM, or idle cost**: `docs/notes/performance/README.md` first.
 - **A report from a USER** (`ERR-XXXXX`, a crash, in-app feedback): `docs/tooling/feedback-and-error-digest.md`. The
   logging doc above covers the LOCAL app and won't find one.
