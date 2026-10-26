@@ -89,11 +89,11 @@
   },
   "suggestedOps.facts.from": "From",
   "@suggestedOps.facts.from": {
-    "description": "Short label before the folder the suggested files are in now, in the fact lines under a suggestion's title. Followed by a folder path."
+    "description": "Short label before the folder the suggested files are in now, in the fact lines under a suggestion's title. Followed by a folder path. The label sits in its own column with no colon or other separator after it, the way Finder's Get Info labels do."
   },
   "suggestedOps.facts.to": "To",
   "@suggestedOps.facts.to": {
-    "description": "Short label before where the files would go (a drive name and a folder path, or the Trash), in the fact lines under a suggestion's title."
+    "description": "Short label before where the files would go (a drive name and a folder path, or the Trash), in the fact lines under a suggestion's title. The label sits in its own column with no colon or other separator after it."
   },
   "suggestedOps.facts.folder": "Folder",
   "@suggestedOps.facts.folder": {
@@ -113,7 +113,7 @@
   },
   "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Trash",
   "@suggestedOps.reversible.trash": {
-    "description": "Pill on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does."
+    "description": "Pill on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does. \"It\" and \"they\" are the suggested files; a language that needs a noun can say \"the file\" / \"the files\"."
   },
   "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
   "@suggestedOps.reversible.moveBack": {
@@ -241,15 +241,15 @@
   },
   "suggestedOps.sourceNotConnected": "Cmdr isn’t connected to the drive these files are on, so their sizes and dates are from when the AI suggested this.",
   "@suggestedOps.sourceNotConnected": {
-    "description": "Note above a suggestion's file list when the files sit on a saved server, share, or phone Cmdr hasn't connected to, so it couldn't look at them now. The sizes and dates shown are the ones recorded when the AI made the suggestion."
+    "description": "Note above a suggestion's file list when the files sit on a saved server, share, or phone Cmdr hasn't connected to, so it couldn't look at them now. The sizes and dates shown are the ones recorded when the AI made the suggestion. \"Dates\" means the files' last-modified dates, not data."
   },
   "suggestedOps.sourceGone": "The drive these files were on isn’t here any more, so their sizes and dates are from when the AI suggested this.",
   "@suggestedOps.sourceGone": {
-    "description": "Note above a suggestion's file list when the drive or server holding the files was disconnected or removed, so Cmdr couldn't look at them now. The sizes and dates shown are the ones recorded when the AI made the suggestion."
+    "description": "Note above a suggestion's file list when the drive or server holding the files was disconnected or removed, so Cmdr couldn't look at them now. The sizes and dates shown are the ones recorded when the AI made the suggestion. \"Dates\" means the files' last-modified dates, not data."
   },
   "suggestedOps.factUnknown": "Unknown",
   "@suggestedOps.factUnknown": {
-    "description": "Shown in a file's Size or Last modified column when Cmdr has no value at all: it couldn't check the file now and recorded nothing when the AI made the suggestion. Never a zero, which would read as an empty file."
+    "description": "Shown in a file's Size or Last modified column when Cmdr has no value at all: it couldn't check the file now and recorded nothing when the AI made the suggestion. Never a zero, which would read as an empty file. The same string stands in for either a size or a date, so in a gendered language pick a form that reads right for both (or a neutral one)."
   },
   "suggestedOps.includeFile": "Include {name}",
   "@suggestedOps.includeFile": {

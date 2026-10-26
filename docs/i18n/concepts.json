@@ -1542,6 +1542,7 @@
     "distinct": ["move-to-trash"],
     "en": "Go to trash",
     "match": ["go to trash", "go to the trash"],
+    "notMatch": ["you can undo this"],
     "sense": "Opening the trash of the drive the pane is on."
   },
   "got-it": {
@@ -2291,6 +2292,8 @@
     "match": ["note", "notes"],
     "notMatch": [
       "note that",
+      "approval note",
+      "close the note",
       "read the note",
       "notes.txt",
       "update notes",
