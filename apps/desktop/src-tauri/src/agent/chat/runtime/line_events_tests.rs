@@ -184,11 +184,13 @@ async fn a_multi_tool_turn_resolves_each_round_then_finishes_each_call_then_answ
             calls: vec![
                 ResolvedCall {
                     call_id: "fake-call-0".into(),
+                    tool: "app_state".into(),
                     subject: ToolSubject::Panes,
                     repeat_of: None,
                 },
                 ResolvedCall {
                     call_id: "fake-call-1".into(),
+                    tool: "list_volumes".into(),
                     subject: ToolSubject::Drives,
                     repeat_of: None,
                 },
@@ -201,6 +203,7 @@ async fn a_multi_tool_turn_resolves_each_round_then_finishes_each_call_then_answ
             message_id: rows[1],
             calls: vec![ResolvedCall {
                 call_id: "fake-call-0".into(),
+                tool: "list_volumes".into(),
                 subject: ToolSubject::Drives,
                 repeat_of: Some(LineRef {
                     message_id: rows[0],

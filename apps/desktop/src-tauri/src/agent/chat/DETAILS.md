@@ -630,9 +630,10 @@ one agree. Per round, in order:
 1. `ToolCallStarted { call_id, tool }` per call WHILE its arguments stream (so no subject yet).
    A nameless call gets one and is then dropped from the final message (`llm/DETAILS.md`).
 2. The assistant row persists, then ONE `ToolCallsResolved { message_id, calls }`: every call
-   of the final message, in order, each with its argument-only subject and `repeat_of` (the
-   turn's first identical call, by `AgentToolCall::identity_key`, the repeat breaker's key).
-   It stamps the row id onto the round, adds a call whose start never came, and lets the rail
+   of the final message, in order, each with its tool's wire name, its argument-only subject,
+   and `repeat_of` (the turn's first identical call, by `AgentToolCall::identity_key`, the
+   repeat breaker's key). It stamps the row id onto the round, adds a call whose start never
+   came (the tool name is what gives that line its label), and lets the rail
    drop a started call the batch doesn't list.
 3. Per call: dispatch, persist its result row, THEN `ToolCallFinished { message_id, call_id,
    outcome, subject }` (the subject refined by the result). ⚠️ **Persist, then emit**: the

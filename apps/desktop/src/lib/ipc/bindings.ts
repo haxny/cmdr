@@ -14878,11 +14878,14 @@ export type ResolveLocationResult = {
 }
 
 /**
- *  One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: what it looks at
- *  (from its arguments alone), and the earlier identical call of this turn it repeats, if any.
+ *  One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: which tool, what it
+ *  looks at (from its arguments alone), and the earlier identical call of this turn it repeats, if
+ *  any. The tool's wire name rides along so a line whose `ToolCallStarted` never came is still
+ *  added with its label.
  */
 export type ResolvedCall = {
   callId: string
+  tool: string
   subject: ToolSubject
   repeatOf: LineRef | null
 }

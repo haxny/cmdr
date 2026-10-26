@@ -277,6 +277,7 @@ fn tool_line_events_carry_the_line_identity_and_typed_facts() {
         message_id: 12,
         calls: vec![ResolvedCall {
             call_id: "fake-call-0".into(),
+            tool: "list_volumes".into(),
             subject: ToolSubject::Drives,
             repeat_of: Some(LineRef {
                 message_id: 10,
@@ -291,6 +292,7 @@ fn tool_line_events_carry_the_line_identity_and_typed_facts() {
             "messageId": 12,
             "calls": [{
                 "callId": "fake-call-0",
+                "tool": "list_volumes",
                 "subject": { "kind": "drives" },
                 "repeatOf": { "messageId": 10, "callId": "fake-call-0" },
             }],

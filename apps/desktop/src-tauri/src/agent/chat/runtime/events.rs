@@ -123,12 +123,15 @@ pub enum AgentChatEvent {
     },
 }
 
-/// One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: what it looks at
-/// (from its arguments alone), and the earlier identical call of this turn it repeats, if any.
+/// One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: which tool, what it
+/// looks at (from its arguments alone), and the earlier identical call of this turn it repeats, if
+/// any. The tool's wire name rides along so a line whose `ToolCallStarted` never came is still
+/// added with its label.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedCall {
     pub call_id: String,
+    pub tool: String,
     pub subject: ToolSubject,
     pub repeat_of: Option<LineRef>,
 }

@@ -414,6 +414,7 @@ fn resolve_calls(
         .iter()
         .map(|call| ResolvedCall {
             call_id: call.call_id.clone(),
+            tool: call.tool.as_wire_name().to_string(),
             subject: subject_of(call, None, memory_root),
             repeat_of: marks
                 .get(&LineRef {
