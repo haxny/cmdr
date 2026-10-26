@@ -1717,7 +1717,7 @@
     "screenshot": "transfer-error-destination_not_found.png"
   },
   "errors.write.destinationNotAFolder.title": "A file is in the way",
-  "errors.write.destinationNotAFolder.message": "Cmdr couldn’t create the destination folder, because there’s a file at {path}, where a folder needs to be. Nothing was written, and the originals are untouched.",
+  "errors.write.destinationNotAFolder.message": "Cmdr couldn’t create the destination folder, because there’s a file at “{path}”, where a folder needs to be. Nothing was written, and the originals are untouched.",
   "errors.write.destinationNotAFolder.suggestion": "Pick another destination, or rename or move that file and try again.",
   "@errors.write.destinationNotAFolder.title": {
     "description": "Title of the copy/move error dialog when the destination folder couldn't be created because a file sits where that folder, or one of the folders above it, has to be. Plain text. Nothing was copied or moved.",
@@ -2103,14 +2103,14 @@
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
   "errors.write.replySignatureRefused.title": "Server reply refused",
-  "errors.write.replySignatureRefused.message": "The server’s reply wasn’t signed, so Cmdr stopped.",
+  "errors.write.replySignatureRefused.message": "The server’s reply had no valid signature, so Cmdr stopped.",
   "errors.write.replySignatureRefused.suggestion": "A flaky network device can cause this, and so can someone tampering with traffic between you and the server. Reconnect, and if it happens again, check your network.",
   "@errors.write.replySignatureRefused.title": {
     "description": "Title of the copy/move error dialog when a network share (SMB) answered on a secured (signed) connection with a reply that didn't carry its signature, so Cmdr refused the reply and stopped the transfer. Short. Plain text. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "transfer-error-reply_signature_refused.png"
   },
   "@errors.write.replySignatureRefused.message": {
-    "description": "Body of the copy/move error dialog for that case: Cmdr didn't trust a reply without the server's signature, so it stopped. One sentence, plain text. “Signed” means carrying the server's signature (its proof the reply is really from it).",
+    "description": "Body of the copy/move error dialog for that case: Cmdr didn't trust a reply without a valid server signature, so it stopped. One sentence, plain text. The signature is the server's proof the reply is really from it. Same sentence as errors.volume.signatureInvalid.",
     "screenshot": "transfer-error-reply_signature_refused.png"
   },
   "@errors.write.replySignatureRefused.suggestion": {
@@ -3312,7 +3312,7 @@
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },
-  "errors.volume.noContent": "“{path}” is a link or a special file, so it has no contents for Cmdr to copy.",
+  "errors.volume.noContent": "“{path}” is a symbolic link or a special file, so it has no contents for Cmdr to copy.",
   "@errors.volume.noContent": {
     "description": "Shown when someone copies, on its own, an item that has no contents of its own to copy: a symbolic link, or a special system file such as a device or a named pipe (for example inside a restic backup). Inside a copied folder Cmdr skips such items quietly; this message is for when the item was the only thing selected. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the path. Inline one-line message in a brief toast or under a name field. Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "mkdir-confirmation-too-long.png",
@@ -3336,7 +3336,7 @@
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },
-  "errors.volume.signatureInvalid": "The server’s reply wasn’t signed, so Cmdr stopped.",
+  "errors.volume.signatureInvalid": "The server’s reply had no valid signature, so Cmdr stopped.",
   "@errors.volume.signatureInvalid": {
     "description": "Shown when a network share's reply on a secured (signed) connection didn't carry a valid signature, so Cmdr refused it instead of trusting it. A flaky network device can cause this; so can someone tampering with the connection. Inline one-line message under the name field in Cmdr's Rename / New folder / New file flow, or in a brief toast. Plain text, one sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "mkdir-confirmation-too-long.png",
@@ -3402,13 +3402,13 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.serverRequest.blockedByPolicy": "Your organization turned this off for Cmdr.",
+  "errors.serverRequest.blockedByPolicy": "Your organization turned this feature off for Cmdr.",
   "@errors.serverRequest.blockedByPolicy": {
-    "description": "Shown when the person's organization (their employer's IT team, through a device management profile) switched off this kind of request, for example sending crash or error reports, so Cmdr sent nothing. Nothing is broken and trying again won't change it. Surface: follows a short lead sentence that names what didn't happen (\"The report didn't go out.\", \"Couldn't send the error report.\", \"Cmdr couldn't check for updates.\"), in the crash report dialog, a toast, or Settings > Updates. Plain text, one short sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "description": "Shown when the person's organization (their employer's IT team, through a device management profile) switched off this kind of request, for example sending crash or error reports, so Cmdr sent nothing. “This feature” is whatever the lead sentence names (sending reports, checking for updates). Nothing is broken and trying again won't change it. Surface: follows a short lead sentence that names what didn't happen (\"The report didn't go out.\", \"Couldn't send the error report.\", \"Cmdr couldn't check for updates.\"), in the crash report dialog, a toast, or Settings > Updates. Plain text, one short sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.busy": "Cmdr is still moving files there. Try again once that finishes.",
+  "errors.eject.busy": "Cmdr is still working with files there. Try again once that finishes.",
   "@errors.eject.busy": {
     "description": "Shown when a copy, move, or delete is still reading from or writing to the drive, so ejecting now could truncate a file. Tell the person to wait rather than to force it. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "error-message-example.png",
