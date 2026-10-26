@@ -98,6 +98,9 @@ uuid = { version = "1.19.0", features = ["v4"] }
 # The zstd ENCODER for `.tar.zst` fixtures (the shipped path decodes with the
 # pure-Rust `ruzstd`). Dev-only, so no C dependency reaches a shipped build.
 zstd = "0.14"
+# The zip writer's `zstd` feature, so a fixture can carry a method-93 (zstd) entry
+# for rc-zip's zstd decoder. Test builds only; shipped builds keep the line above.
+zip = { version = "9.0.5", default-features = false, features = ["zstd"] }
 # `CancellationToken`, for the cancelable-listing test. Same version and feature
 # shape as `cmdr-fs`'s, so no second copy enters the graph.
 tokio-util = { version = "0.7.18", default-features = false }

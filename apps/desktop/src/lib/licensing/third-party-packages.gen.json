@@ -575,13 +575,13 @@
     },
     {
       "name": "compression-codecs",
-      "version": "0.4.38",
+      "version": "0.4.46",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/Nullus157/async-compression"
     },
     {
       "name": "compression-core",
-      "version": "0.4.32",
+      "version": "0.4.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/Nullus157/async-compression"
     },
@@ -4583,14 +4583,14 @@
     },
     {
       "name": "zstd",
-      "version": "0.13.3",
-      "license": "MIT",
+      "version": "0.14.3",
+      "license": "BSD-3-Clause",
       "url": "https://github.com/gyscos/zstd-rs"
     },
     {
       "name": "zstd-safe",
-      "version": "7.2.4",
-      "license": "MIT OR Apache-2.0",
+      "version": "8.2.0",
+      "license": "BSD-3-Clause",
       "url": "https://github.com/gyscos/zstd-rs"
     },
     {
