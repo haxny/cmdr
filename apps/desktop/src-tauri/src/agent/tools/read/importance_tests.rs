@@ -106,6 +106,41 @@ fn every_row_is_a_location_on_its_volumes_root() {
     );
 }
 
+/// "What matters on the NAS": a `volumeId` alone ranks that whole volume, connected
+/// or not.
+#[test]
+fn a_volume_id_alone_ranks_that_volume() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let rows = [
+        ("/papers", scored_signals(PathClass::UserContent, NOW)),
+        ("/photos", scored_signals(PathClass::UserContent, NOW)),
+    ];
+    write_db(dir.path(), LAN, &rows, NOW);
+    write_db(dir.path(), TAILSCALE, &rows, NOW);
+    write_db(
+        dir.path(),
+        "root",
+        &[("/Users/test/Projects", scored_signals(PathClass::ProjectRoot, NOW))],
+        NOW,
+    );
+
+    let lan = important(dir.path(), json!({ "volumeId": LAN }));
+    assert_eq!(
+        locations(&lan),
+        [loc(LAN, "/Volumes/naspi-1/papers"), loc(LAN, "/Volumes/naspi-1/photos")]
+    );
+    assert!(lan.get("under").is_none());
+
+    let offline = important(dir.path(), json!({ "volumeId": TAILSCALE, "threshold": 0.0 }));
+    assert_eq!(
+        locations(&offline),
+        [
+            loc(TAILSCALE, "/Volumes/naspi/papers"),
+            loc(TAILSCALE, "/Volumes/naspi/photos")
+        ]
+    );
+}
+
 #[test]
 fn a_volume_that_cant_be_placed_yields_no_rows_and_is_named_unplaced() {
     let dir = tempfile::tempdir().expect("temp dir");
