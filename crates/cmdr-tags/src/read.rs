@@ -98,12 +98,18 @@ fn number_part(values: Vec<String>) -> Vec<String> {
 }
 
 /// Puts `values` under `field` unless they're empty. Multi-value fields keep every value;
-/// number fields keep only the number.
+/// every other field keeps only the first value found. Number fields keep only the number.
 fn put(tags: &mut FileTags, field: TagField, values: Vec<String>) {
-    let values = match field {
+    let mut values = match field {
         TagField::Track | TagField::Disc => number_part(values),
         _ => clean(values),
     };
+    if !field.is_multi() {
+        if tags.fields.contains_key(&field) {
+            return;
+        }
+        values.truncate(1);
+    }
     if !values.is_empty() {
         tags.fields.entry(field).or_default().extend(values);
     }
@@ -117,11 +123,11 @@ fn put_extra(tags: &mut FileTags, key: String, values: Vec<String>) {
     }
 }
 
-/// The front cover among `pictures`: type `CoverFront`, else (when `fall_back`) the first.
-fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture>, fall_back: bool) -> Option<Cover> {
+/// The front cover among `pictures`: type `CoverFront`, else the first.
+fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture>) -> Option<Cover> {
     let pictures: Vec<&Picture> = pictures.collect();
     let front = pictures.iter().find(|p| p.pic_type() == PictureType::CoverFront);
-    let chosen = front.or_else(|| pictures.first().filter(|_| fall_back))?;
+    let chosen = front.or_else(|| pictures.first())?;
     Some(Cover {
         mime: chosen.mime_type().map_or(UNKNOWN_MIME, |m| m.as_str()).to_owned(),
         data: chosen.data().to_vec(),
@@ -204,7 +210,7 @@ fn read_id3(id3: &Id3v2Tag) -> FileTags {
             put_id3(&mut tags, field, &raw);
         }
     }
-    tags.cover = pick_cover(id3_pictures(id3), false);
+    tags.cover = pick_cover(id3_pictures(id3));
     tags
 }
 
@@ -303,7 +309,7 @@ fn read_ilst(ilst: &Ilst) -> FileTags {
     if !tags.fields.contains_key(&TagField::Genre) {
         put(&mut tags, TagField::Genre, gen_values);
     }
-    tags.cover = ilst.pictures().and_then(|p| pick_cover(p, true));
+    tags.cover = ilst.pictures().and_then(pick_cover);
     tags
 }
 
@@ -340,6 +346,6 @@ fn read_vorbis(comments: &VorbisComments, pictures: &[(Picture, PictureInformati
             None => put_extra(&mut tags, key, vec![value.to_owned()]),
         }
     }
-    tags.cover = pick_cover(pictures.iter().map(|(picture, _)| picture), true);
+    tags.cover = pick_cover(pictures.iter().map(|(picture, _)| picture));
     tags
 }

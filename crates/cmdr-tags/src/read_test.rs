@@ -2,10 +2,13 @@
 
 use std::path::Path;
 
+use cmdr_media_meta::test_fixtures::cover;
 use cmdr_media_meta::test_fixtures::mp3_frames;
 use lofty::id3::v2::Id3v2Tag;
 use lofty::mp4::Ilst;
 use lofty::ogg::tag::VorbisComments;
+use lofty::picture::PictureType;
+use lofty::tag::Accessor;
 
 use crate::model::{FileTags, TagError, TagField};
 use crate::read::read_tags;
@@ -67,12 +70,17 @@ fn reads_id3v23_fields_and_txxx_performer() {
 }
 
 #[test]
-fn reads_id3v24_null_separated_artists_as_two_values() {
+fn reads_real_id3v24_null_separated_artists_as_two_values() {
     let dir = tempfile::tempdir().unwrap();
     let mut tag = Id3v2Tag::new();
     text_frame(&mut tag, "TPE1", "Serhij Rudenko\0Sergej Rudenko");
     text_frame(&mut tag, "TCON", "audiokniha; thriller");
-    let path = write_mp3(dir.path(), "a.mp3", &tag);
+    let path = write_mp3_v24(dir.path(), "a.mp3", &tag);
+    assert_eq!(
+        std::fs::read(&path).unwrap()[3],
+        4,
+        "the file carries an ID3v2.4 header"
+    );
 
     let tags = read(&path);
 
@@ -226,4 +234,106 @@ fn missing_file_is_an_io_error() {
         matches!(result, Err(TagError::Io(std::io::ErrorKind::NotFound, _))),
         "{result:?}"
     );
+}
+
+#[test]
+fn id3_cover_falls_back_to_the_first_picture() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    id3_picture(&mut tag, 77, PictureType::Other);
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+
+    let cover = read(&path).cover.expect("the only picture is the cover");
+
+    assert_eq!(cover.data.len(), 77);
+}
+
+#[test]
+fn id3_front_cover_beats_other_pictures() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    id3_picture(&mut tag, 11, PictureType::Other);
+    id3_picture(&mut tag, 22, PictureType::CoverFront);
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+
+    assert_eq!(read(&path).cover.expect("a cover").data.len(), 22);
+}
+
+#[test]
+fn single_value_fields_keep_the_first_value() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    comm_in(&mut tag, *b"eng", "first");
+    comm_in(&mut tag, *b"ces", "second");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+
+    assert_eq!(field(&read(&path), TagField::Comment).len(), 1);
+}
+
+#[test]
+fn reads_every_m4a_field_and_cover() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    fourcc_text(&mut ilst, *b"\xA9alb", "Kniha");
+    fourcc_text(&mut ilst, *b"\xA9ART", "Autor");
+    fourcc_text(&mut ilst, *b"aART", "Autor");
+    fourcc_text(&mut ilst, *b"\xA9nam", "Kapitola");
+    fourcc_text(&mut ilst, *b"\xA9day", "2020");
+    fourcc_text(&mut ilst, *b"\xA9cmt", "Poznamka");
+    ilst.set_track(3);
+    ilst.set_track_total(12);
+    ilst.set_disk(1);
+    ilst.insert_picture(cover(90));
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+
+    let tags = read(&path);
+
+    let expected = [
+        (TagField::Album, "Kniha"),
+        (TagField::Artist, "Autor"),
+        (TagField::AlbumArtist, "Autor"),
+        (TagField::Title, "Kapitola"),
+        (TagField::Date, "2020"),
+        (TagField::Comment, "Poznamka"),
+        (TagField::Track, "3"),
+        (TagField::Disc, "1"),
+    ];
+    assert_eq!(tags.fields.len(), expected.len(), "{:?}", tags.fields);
+    for (f, value) in expected {
+        assert_eq!(field(&tags, f), strings(&[value]), "{f:?}");
+    }
+    let cover = tags.cover.expect("a cover");
+    assert_eq!((cover.mime.as_str(), cover.data.len()), ("image/jpeg", 90));
+    assert!(tags.extras.is_empty(), "{:?}", tags.extras);
+}
+
+fn ogg_comments() -> VorbisComments {
+    let mut comments = VorbisComments::new();
+    comments.push("ARTIST".to_owned(), "Serhij Rudenko".to_owned());
+    comments.push("ARTIST".to_owned(), "Sergej Rudenko".to_owned());
+    comments.push("custom".to_owned(), "Hodnota".to_owned());
+    comments
+}
+
+fn assert_ogg_family(path: &Path) {
+    let tags = read(path);
+    assert_eq!(
+        field(&tags, TagField::Artist),
+        strings(&["Serhij Rudenko", "Sergej Rudenko"])
+    );
+    assert_eq!(tags.extras.get("CUSTOM"), Some(&strings(&["Hodnota"])));
+    let cover = tags.cover.expect("a cover");
+    assert_eq!((cover.mime.as_str(), cover.data.len()), ("image/jpeg", 250));
+}
+
+#[test]
+fn reads_ogg_vorbis_artists_extras_and_cover() {
+    let dir = tempfile::tempdir().unwrap();
+    assert_ogg_family(&write_ogg_vorbis(dir.path(), "a.ogg", ogg_comments(), 250));
+}
+
+#[test]
+fn reads_opus_artists_extras_and_cover() {
+    let dir = tempfile::tempdir().unwrap();
+    assert_ogg_family(&write_opus(dir.path(), "a.opus", ogg_comments(), 250));
 }
