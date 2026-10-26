@@ -9,6 +9,10 @@
     "scripts/check/checks/registry.go": "append-only check registry (one CheckDefinition entry per check); line count tracks the number of checks, not splittable logic"
   },
   "files": {
+    "apps/desktop/src-tauri/src/network/known_shares_test.rs": {
+      "lines": 1229,
+      "reason": "TODO: split by the section comments the file already has. The `-- Server GUIDs --` and `-- A host that moved to a new address --` sections each test one writer of the store and come out whole as `known_shares_guid_test.rs` and `known_shares_move_test.rs`, included the same `#[path]` way; the row builders they share (`mounted`, `added`, `store_of`, `on_port`) move to a small `known_shares_test_support.rs` beside them."
+    },
     "apps/desktop/src-tauri/src/crash_reporter/mod.rs": {
       "lines": 812,
       "reason": "TODO: the panic path is its own concern and already has `panic_courier.rs` and `panic_courier_tests.rs` as neighbors. Move `install_panic_hook`, `contained_panic_warning`, `PanicDisposition`, `handle_panic`, `write_first_crash_report`, `build_panic_report`, and the message/backtrace helpers (`extract_panic_message`, `sanitize_panic_message`, `sanitize_thread_name`, `cap_chars`, `cap_panic_message`, `parse_backtrace_frames`, `current_image_base_hex`) into `panic_hook.rs`, about 260 lines. `mod.rs` keeps the `CrashReport` shape, `init`, the pending-report read/write, and the active-settings snapshot."
