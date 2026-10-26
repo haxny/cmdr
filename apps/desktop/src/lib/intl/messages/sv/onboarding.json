@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Massbyt namn",
+  "onboarding.stepAi.table.rowRename": "Byt namn på många filer",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Du använder gränssnittet för massbyte av namn för att manuellt ställa in mönstret, granska och tillämpa.",
+  "onboarding.stepAi.table.renameWithout": "Du ställer in ett namnmönster för hand i Massbyt namn, sedan granskar och tillämpar du det.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Du säger ”lägg till ISO-datumprefix”, agenten ställer in ditt namnmönster, du granskar och tillämpar som du vill.",
   "@onboarding.stepAi.table.renameWith": {

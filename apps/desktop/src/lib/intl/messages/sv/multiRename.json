@@ -134,15 +134,15 @@
   },
   "multiRename.presets.saveAs": "Spara som förinställning…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Byt namn…",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Uppdatera med aktuella fält",
+  "multiRename.presets.update": "Uppdatera med aktuella inställningar",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Flytta upp",
   "@multiRename.presets.moveUp": {
@@ -644,7 +644,7 @@
   },
   "multiRename.swapsSkipped": "{count, plural, one {Hoppade över # namnbyte} other {Hoppade över # namnbyten}} där filer byter namn med varandra. Byt namn på de filerna en i taget.",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "”Massbyt namn” fungerar inte i arkiv",
   "@multiRename.archiveTitle": {
@@ -754,9 +754,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "Namnet på mappen en nivå längre upp",
+  "multiRename.placeholderHelp.grandparent": "Namnet på mappen ovanför filens mapp",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Börjar på {start}",
   "@multiRename.placeholderHelp.counterStart": {

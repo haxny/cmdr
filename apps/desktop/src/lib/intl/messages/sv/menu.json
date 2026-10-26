@@ -654,9 +654,9 @@
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"
   },
-  "menu.volume.editFavoriteShortcut": "Ange genväg…",
+  "menu.volume.editFavoriteShortcut": "Ange genvägstangent…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Ta bort",
   "@menu.volume.removeFavorite": {

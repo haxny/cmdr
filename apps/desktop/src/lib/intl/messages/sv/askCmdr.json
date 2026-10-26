@@ -260,9 +260,9 @@
   "@askCmdr.error.provider": {
     "sourceHash": "d536cce"
   },
-  "askCmdr.event.chatMemoryChanged": "Chattens minne rymmer nu {tokens, number} token",
+  "askCmdr.event.chatMemoryChanged": "Chattens minne rymmer nu {tokens, plural, one {# token} other {# tokens}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "{count, plural, one {# tidigare sökning} other {# tidigare sökningar}} togs bort för att passa modellens kontext.",
   "@askCmdr.event.contextTrimmed": {
@@ -637,9 +637,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "Det gick inte att hitta {countText} {count, plural, one {fil: den} other {filer: de}} har flyttats eller raderats sedan namnbytet.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Det gick inte att hitta {countText} {count, plural, one {objekt} other {objekt}}, som har flyttats eller raderats sedan namnbytet.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} lämnades som den är: det gamla namnet är taget igen.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

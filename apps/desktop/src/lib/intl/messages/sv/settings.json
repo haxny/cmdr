@@ -2449,9 +2449,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Behövs för att kunna ångra. När det här är avstängt loggar Cmdr inte nya kopieringar, flyttar, namnbyten eller raderingar, så du kan inte ångra dem. Din befintliga historik finns kvar, och det som finns i den kan du fortfarande ångra.",
+  "settings.operationLog.enabled.description": "När det här är avstängt loggar Cmdr inte nya kopieringar, flyttar, namnbyten eller raderingar, så du kan inte ångra dem. Din befintliga historik finns kvar, och det som finns i den kan du fortfarande ångra.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "åtgärd, åtgärder, logg, åtgärdslogg, historik, registrera, spela in, inspelning, ångra, journal, integritet, stäng av",
   "@settings.operationLog.enabled.keywords": {
@@ -2682,17 +2682,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "Upp till {ceiling}",
+  "settings.managed.summary.upTo": "Upp till version {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Bara manuell kontroll",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "Upp till {ceiling}, bara manuell kontroll",
+  "settings.managed.summary.upToManualChecksOnly": "Upp till version {ceiling}, bara manuell kontroll",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Bara lokal AI",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3301,9 +3301,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr raderar allt som Cmdr sparar på den här Macen, totalt {sizeText}, och avslutas sedan. Det här går inte att ångra.",
+  "settings.dataWipe.introWithSize": "Cmdr raderar allt som Cmdr sparar på den här Macen ({sizeText}) och avslutas sedan. Det här går inte att ångra.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Det här försvinner",
   "@settings.dataWipe.goesHeading": {

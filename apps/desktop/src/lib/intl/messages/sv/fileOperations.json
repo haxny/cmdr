@@ -70,7 +70,7 @@
   },
   "fileOperations.trash.undoGone": "Det finns inget att lägga tillbaka: {count, plural, one {objektet} other {objekten}} finns inte längre i papperskorgen.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {objekt} other {objekt}} fanns inte längre i papperskorgen.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -269,9 +269,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Den här platsen börjar redan i {rootFolder}, så den här sökvägen leder till {resolvedPath}. Menade du {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Sökvägar här börjar redan inne i {rootFolder}, så den här sökvägen leder till {resolvedPath}. Menade du {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Använd kortare sökväg",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -535,7 +535,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Du har avbrutit den här kopieringen. Filerna som kopierats hittills ligger kvar där de är.} move {Du har avbrutit den här flytten. Filerna som flyttats hittills ligger kvar där de hamnade.} compress {Du har avbrutit den här komprimeringen.} delete {Du har avbrutit den här raderingen. Filerna som raderats hittills är borta och resten finns kvar.} trash {Du har avbrutit den här flytten till papperskorgen. Filerna som flyttats hittills ligger kvar i papperskorgen och resten ligger kvar där de var.} other {Du har avbrutit den här åtgärden.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Avbryter… (rensar upp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -787,7 +787,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {och ytterligare {countText} objekt} other {och ytterligare {countText} objekt}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Kopiera resten} move {Flytta resten} delete {Radera resten} trash {Flytta resten till papperskorgen} other {Fortsätt med resten}}",
   "@fileOperations.sourcesGone.continue": {

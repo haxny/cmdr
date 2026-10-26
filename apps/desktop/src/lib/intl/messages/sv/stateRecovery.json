@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr kunde inte läsa din ångringshistorik, så historiken börjar om",
+  "stateRecovery.operationLog.title": "Cmdr kunde inte läsa din åtgärdslogg, så loggen börjar om",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr kunde inte läsa dina chattar i Ask Cmdr, så chattlistan börjar om",
+  "stateRecovery.chatHistory.title": "Cmdr kunde inte läsa dina chattar i Ask Cmdr, så chattlistan är tom",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr kunde inte läsa dina favoriter, så listan är tom",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr kunde inte läsa dina senaste sökvägar i ”Gå till mapp”, så listan börjar om",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr kunde inte läsa dina senaste sökningar, så listan börjar om",
   "@stateRecovery.searchHistory.title": {
