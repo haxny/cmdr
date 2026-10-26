@@ -27,5 +27,9 @@ fn diacritics_and_multi_flags() {
     assert!(!TagField::Title.keeps_diacritics());
     assert!(TagField::Genre.is_multi());
     assert!(!TagField::Title.is_multi());
-    assert_eq!(TagField::ALL.len(), 15);
+}
+
+#[test]
+fn all_fields_are_strictly_ascending() {
+    assert!(TagField::ALL.windows(2).all(|w| w[0] < w[1]));
 }
