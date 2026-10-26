@@ -301,8 +301,9 @@ or the next contributor re-litigates them. `docs/i18n/en-GB/style.md` is the wor
 `docs/i18n/en-AU/style.md` shows a second overlay pointing at a sibling instead of restating it.
 
 Don't record a `sameAsSourceJustification` on an overlay key. `gen-locale-skeleton.ts` refuses an overlay tag outright,
-since it mirrors the entire `en` catalog, and `sync-locale-keys.ts` skips overlays for the same reason: a new English
-key needs no work here, the variant inherits the base language's translation. Full rules, and what each check does:
+since it mirrors the entire `en` catalog, and `sync-locale-keys.ts` adds no keys to an overlay for the same reason: a
+new English key needs no work here, the variant inherits the base language's translation. Its `--restamp <key>` does
+reach an overlay's forks, stamping the hash of the value each one overrides. Full rules, and what each check does:
 `i18n.md` § Overlay catalogs.
 
 ## New feature → add strings and translate to ALL languages
@@ -317,7 +318,8 @@ The routine maintenance loop, run for every change that adds or edits user-facin
    existing translations. It moves KEYS only: a kept key's `@key` block, `sourceHash` included, is never rewritten, so
    syncing can't clear a staleness warning that nobody has answered. Then hand each locale's new/changed keys to a
    translator agent with a brief: `pnpm i18n:brief --lang <tag> --changed-since <ref>` (or `--keys` for the feature's
-   namespace). The coverage check lists exactly what's still English.
+   namespace). The coverage check lists exactly what's still English. A string that quotes a button or other label goes
+   in the same batch as that label's own key, so the translator quotes a label that exists instead of inventing one.
 3. **Run the checks** (same set as step 5 above). `desktop-i18n-stale` is the safety net here: editing an `en` value
    changes its hash, so EVERY locale's translation of that key reads as stale until re-translated and re-hashed. You
    can't silently leave a locale behind on a copy edit: the stale warning lists exactly which keys each locale owes.

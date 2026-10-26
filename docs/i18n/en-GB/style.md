@@ -203,8 +203,9 @@ on the reasoning above. Every regional English CLDR knows about now reaches an o
 - **Stamp `@key.sourceHash` from the base `en` value you override**, so a later English copy edit marks the fork stale.
 - **A value identical to base `en` is a coverage finding**, and the fix is always to delete the key. `@key.sourceHash`
   and `reviewed` apply; `sameAsSourceJustification` does not.
-- `gen-locale-skeleton.ts` refuses overlay tags and `sync-locale-keys.ts` skips them, both on purpose: they'd mirror all
-  3,263 English keys. These catalogs are written by hand, which is what keeps them small.
+- `gen-locale-skeleton.ts` refuses overlay tags and `sync-locale-keys.ts` adds no keys to them, both on purpose: they'd
+  mirror all 3,263 English keys. These catalogs are written by hand, which is what keeps them small.
+  `sync-locale-keys.ts en-GB --restamp <key>` stamps a fork with the hash of the `en` value it overrides.
 - ICU rules are inherited from the source: double every apostrophe (`''`) in ICU families, keep them single in the raw
   `errors.*` and native `menu.*` families, and match every `{placeholder}` and `<tag>` name to base `en` exactly.
   `settings.appearance.tintTriggerAria` is the trap: its only "color" is the `{colorName}` placeholder NAME, so it must

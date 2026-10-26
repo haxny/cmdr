@@ -31,7 +31,9 @@ style guide disagree, the style guide's general rule wins unless the ruling says
   that contains it unbroken, with no typo tolerance.
 - **ICU**: keep every {placeholder}, <tag>…</tag>, and plural/select structure exactly; translate only the text between
   them. Reorder placeholders only as grammar needs; the set stays identical. Write plural branches for YOUR language's
-  CLDR categories, not English's. Double every apostrophe (' becomes '').
+  CLDR categories, not English's. A CLDR `one` isn't "exactly one" (Russian `one` also covers 21 and 101): wording
+  that's only right for a single item goes in an `=1` arm, and the displayed count stays in the ordinary `one` branch.
+  Double every apostrophe (' becomes '').
 - **Raw families (no ICU)**: `errors.*` and the native `menu.*`, `licensing.windowTitle.*`, `main.instanceLock.*`. Use
   NORMAL apostrophes (a doubled '' renders as two on a real menu), keep {token} verbatim, treat <…> as literal text, and
   pass markdown through untouched.

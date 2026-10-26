@@ -135,6 +135,7 @@ is evidence, not a verdict. Considered and deliberately NOT forked:
   goes into that test's list and this file together.
 - The tense has no complete sweep (a compound perfect can be right, see above); that test holds only its loudest frames
   (`ha podido`, `ha ido mal`). Review a new `es` string's tense by eye.
-- `gen-locale-skeleton.ts` refuses overlay tags and `sync-locale-keys.ts` skips them; this catalog is written by hand.
+- `gen-locale-skeleton.ts` refuses overlay tags and `sync-locale-keys.ts` adds no keys to them; this catalog is written
+  by hand. `sync-locale-keys.ts es-419 --restamp <key>` stamps a fork with the hash of the `es` value it overrides.
 - No `terms.json`: the termbase covers full translations only (`docs/i18n/termbase.md`), so the rulings live here.
 - Open questions for a Latin American reviewer: `review-queue.md`.
