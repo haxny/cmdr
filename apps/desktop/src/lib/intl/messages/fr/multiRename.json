@@ -134,15 +134,15 @@
   },
   "multiRename.presets.saveAs": "Enregistrer comme présélection…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Renommer…",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Mettre à jour avec les champs actuels",
+  "multiRename.presets.update": "Mettre à jour avec les réglages actuels",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Avancer",
   "@multiRename.presets.moveUp": {
@@ -645,7 +645,7 @@
   },
   "multiRename.swapsSkipped": "{count, plural, one {# renommage ignoré, car il permute des noms} many {# renommages ignorés, car ils permutent des noms} other {# renommages ignorés, car ils permutent des noms}}. Renommez ces fichiers un par un.",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "« Renommer par lot » ne fonctionne pas dans les archives",
   "@multiRename.archiveTitle": {
@@ -755,9 +755,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "Le nom du dossier au-dessus de celui-ci",
+  "multiRename.placeholderHelp.grandparent": "Le nom du dossier qui contient le dossier du fichier",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Commence à {start}",
   "@multiRename.placeholderHelp.counterStart": {

@@ -2453,9 +2453,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Nécessaire pour annuler. Tant que cette option est désactivée, Cmdr n’enregistre pas les copies, déplacements, renommages et suppressions effectués pendant ce temps, et vous ne pouvez donc pas les annuler. Votre historique actuel est conservé et vous pouvez toujours annuler ce qu’il contient.",
+  "settings.operationLog.enabled.description": "Tant que cette option est désactivée, Cmdr n’enregistre pas les nouvelles copies, déplacements, renommages et suppressions, et vous ne pouvez donc pas les annuler. Votre historique actuel est conservé et vous pouvez toujours annuler ce qu’il contient.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "opération, opérations, historique, enregistrer, enregistrement, annuler, retour en arrière, journal, confidentialité, désactiver",
   "@settings.operationLog.enabled.keywords": {
@@ -2687,7 +2687,7 @@
   },
   "settings.managed.summary.upTo": "Jusqu’à la version {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Recherche manuelle uniquement",
   "@settings.managed.summary.manualChecksOnly": {
@@ -2695,7 +2695,7 @@
   },
   "settings.managed.summary.upToManualChecksOnly": "Jusqu’à la version {ceiling}, recherche manuelle uniquement",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "En local uniquement",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3304,9 +3304,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr supprime tout ce qu’il conserve sur ce Mac, soit {sizeText}, puis quitte. Cette opération est irréversible.",
+  "settings.dataWipe.introWithSize": "Cmdr supprime tout ce qu’il conserve sur ce Mac ({sizeText}), puis quitte. Cette opération est irréversible.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Ce qui disparaît",
   "@settings.dataWipe.goesHeading": {

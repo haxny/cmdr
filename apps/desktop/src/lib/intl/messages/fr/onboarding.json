@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Renommage en masse",
+  "onboarding.stepAi.table.rowRename": "Renommer de nombreux fichiers",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Vous utilisez l’interface de renommage par lot pour définir manuellement le modèle de renommage, vérifier et appliquer.",
+  "onboarding.stepAi.table.renameWithout": "Vous définissez un modèle de renommage à la main dans « Renommer par lot », puis vous le vérifiez et l’appliquez.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Vous dites « ajouter un préfixe de date ISO », l’agent règle votre modèle de renommage, vous vérifiez et appliquez à votre guise.",
   "@onboarding.stepAi.table.renameWith": {

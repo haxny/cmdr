@@ -51,6 +51,13 @@
     "forms": "bare `Ajouter à X` with no explicit object, like Apple (Ajouter au Dock, Ajouter aux favoris, Ajouter à votre rapport d’incident); progress `Ajout…`; participle agrees with its noun (Note ajoutée)",
     "sources": "macOS Finder/AppKit (\"Ajouter à la barre latérale\", \"Ajouter au Dock\", \"Ajouter aux favoris\")"
   },
+  "administrator": {
+    "accept": ["administrateur", "administrateurs"],
+    "chosen": "administrateur",
+    "confidence": "high",
+    "forms": "an administrator password → un mot de passe d’administrateur; administrator rights → des droits d’administrateur; the person running a server → l’administrateur du serveur; the person who manages a Mac → la personne qui gère ce Mac (style.md gender rule)",
+    "sources": "macOS (« saisir un nom et un mot de passe d’administrateur »); catalog (errors.write.permissionDenied.suggestion.needsAdminMac, main.cliCommand.canceled)"
+  },
   "advanced": {
     "chosen": "Avancé",
     "confidence": "high",
@@ -350,6 +357,19 @@
     "confidence": "high",
     "forms": "Cmdr blocked X from reaching Y → Cmdr a empêché X de joindre Y; macOS blocked access → macOS a empêché Cmdr d’accéder à …",
     "sources": "catalog: errors.listing.notPermitted.explanation; MS terminology FRA has bloqué, overruled by docs/i18n/fr/style.md"
+  },
+  "blocked-by": {
+    "accept": ["empêché", "empêche"],
+    "avoid": [
+      {
+        "form": "bloquer",
+        "why": "style.md bans bloqué as a verdict word"
+      }
+    ],
+    "chosen": "empêcher",
+    "confidence": "high",
+    "forms": "Cmdr blocked X from Y → Cmdr a empêché X de Y; macOS blocked → macOS a empêché",
+    "sources": "catalog (securityNotices.mcpForeignOrigin.title, errors: macOS a empêché Cmdr d’accéder); MS terminology FRA gives bloquer, excluded by the voice rule"
   },
   "brief-view": {
     "accept": ["brève"],
@@ -3303,6 +3323,13 @@
     "forms": "Mode suivi : suivre les changements",
     "sources": "descriptive FR; matches de Folgen"
   },
+  "tamper": {
+    "accept": ["trafique", "trafiquer", "trafiquée", "falsifi"],
+    "chosen": "trafiquer",
+    "confidence": "tentative",
+    "forms": "someone tampering with traffic → quelqu’un qui trafique les échanges; with the connection → quelqu’un trafique la connexion",
+    "sources": "catalog (four shipped strings use trafiquer); MS terminology FRA falsifier (kept as accept for a formal register)"
+  },
   "tap": {
     "accept": ["appuyez"],
     "chosen": "appuyer",
@@ -3494,12 +3521,26 @@
     "forms": "Something went wrong → Un problème est survenu; ran into a problem → a rencontré un problème; quit unexpectedly → a quitté inopinément",
     "sources": "macOS Finder NE105 (a rencontré une erreur, with problème per style); AppKitErrors.json"
   },
+  "uninstall": {
+    "accept": ["désinstall"],
+    "chosen": "désinstaller",
+    "confidence": "high",
+    "forms": "Uninstall “cmdr” command → Désinstaller la commande « cmdr »; noun → désinstallation (Désinstallation de la commande « cmdr » impossible)",
+    "sources": "MS terminology FRA (désinstaller); catalog (menu.app.cliCommandUninstall)"
+  },
   "unlock": {
     "accept": ["déverrouillez", "déverrouillé"],
     "chosen": "Déverrouiller",
     "confidence": "high",
     "forms": "unlock an archive → la déverrouiller (the feminine archive, never {name})",
     "sources": "macOS AppKit (Déverrouiller)"
+  },
+  "unlock-device": {
+    "accept": ["déverrouill"],
+    "chosen": "déverrouiller",
+    "confidence": "high",
+    "forms": "unlock the phone → déverrouillez-le; Unlock the disk → Déverrouillez le disque",
+    "sources": "macOS (« Déverrouillez le disque et réessayez. »); catalog (adb and mtp hints)"
   },
   "unplug": {
     "accept": ["débranché", "branché", "déconnecté", "rebranch", "débranchez", "déconnexion"],

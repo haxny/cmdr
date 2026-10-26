@@ -71,9 +71,9 @@
   "@crashReporter.sentToast.message.report": {
     "sourceHash": "a676ed5"
   },
-  "crashReporter.sentToast.changeSettings": "Modifier dans Réglages > Mises à jour",
+  "crashReporter.sentToast.changeSettings": "Modifier dans les Réglages",
   "@crashReporter.sentToast.changeSettings": {
-    "sourceHash": "25d151d"
+    "sourceHash": "144d0bd"
   },
   "crashReporter.sentToast.sendLog": "Joindre le journal",
   "@crashReporter.sentToast.sendLog": {

@@ -316,9 +316,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "N’utilisez ici que des minuscules, des chiffres et des tirets.",
+  "servers.refusal.s3FieldMalformed": "N’utilisez ici que des lettres a–z, des chiffres 0–9 et des tirets.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Saisissez le point de terminaison sous la forme http:// ou https:// suivi d’un nom d’hôte, par exemple https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -346,7 +346,7 @@
   },
   "servers.refusal.shareMounted": "Le partage {name} est encore monté depuis l’ancienne adresse. Éjectez-le, puis enregistrez à nouveau.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr n’a pas pu éjecter le partage {name} et n’a donc rien enregistré. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -540,17 +540,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Le serveur a déménagé ? Saisissez son nouveau point de terminaison. Tous les compartiments de cette clé passent au nouveau point de terminaison, avec leurs favoris, leurs onglets ouverts et la clé d’accès secrète enregistrée.",
+  "servers.sheet.s3EndpointMoveHelp": "Le serveur a déménagé ? Saisissez son nouveau point de terminaison. Chaque compartiment de cette clé suit, avec ses favoris et ses onglets ouverts, et la clé d’accès secrète enregistrée suit aussi.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Le serveur a déménagé ? Saisissez sa nouvelle adresse. Ses favoris, ses onglets ouverts et son mot de passe enregistré passent à la nouvelle adresse.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Le serveur a déménagé ? Saisissez sa nouvelle adresse. Ses partages et son mot de passe enregistré passent à la nouvelle adresse, et les favoris et les onglets ouverts de chaque partage le suivent la première fois qu’il s’y ouvre.",
+  "servers.sheet.smbAddressMoveHelp": "Le serveur a déménagé ? Saisissez sa nouvelle adresse. Ses partages et son mot de passe enregistré passent à la nouvelle adresse, et les favoris et les onglets ouverts de chaque partage suivent dès que ce partage s’ouvre à la nouvelle adresse.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Nom d’utilisateur",
   "@servers.sheet.username": {
@@ -789,9 +789,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "J’ai vérifié",
+  "servers.hostKey.changedDisclosure": "J’ai vérifié la clé",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Empreinte de la clé",
   "@servers.hostKey.fingerprintLabel": {
@@ -821,9 +821,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "J’ai vérifié",
+  "servers.certificate.changedDisclosure": "J’ai vérifié le certificat",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Empreinte du certificat (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -873,9 +873,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Vous avez demandé à vous identifier avec votre compte, mais le serveur a proposé une session d’invité à la place. En général, cela signifie que le mot de passe n’était pas le bon. Plus rarement, cela signifie que la connexion est trafiquée.",
+  "servers.paneState.guestSessionRefusedHint": "Vous avez demandé à vous identifier avec votre compte, mais le serveur a proposé une session d’invité à la place. En général, cela signifie que le mot de passe n’était pas le bon. Plus rarement, cela signifie que quelqu’un trafique la connexion.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Essayer un autre mot de passe…",
   "@servers.paneState.tryAnotherPassword": {
