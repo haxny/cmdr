@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
@@ -97,17 +98,27 @@ struct CoverRef {
     mime: String,
 }
 
-/// An apply found in the store, for pruning.
+/// An apply directory found in the store, for pruning.
 struct Stored {
     name: String,
-    seq: u64,
+    age: Age,
     bytes: u64,
+}
+
+/// The pruning order, oldest first: applies whose manifest won't load (damaged, or written
+/// by another version) go before every recorded one, by the directory's modification time;
+/// recorded ones go by `seq`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Age {
+    Unloadable(SystemTime),
+    Recorded(u64),
 }
 
 impl UndoStore {
     /// Opens the store at `root`, creating it if needed. What a crash left behind goes: the
     /// staging directories of unfinished records, and the store's own temp files inside apply
-    /// directories (nothing else). An apply directory without a readable manifest is ignored.
+    /// directories (nothing else). An apply directory whose manifest won't load can't be
+    /// restored, but counts toward the limits and is pruned first.
     pub fn open(root: PathBuf, limits: UndoLimits) -> Result<Self, TagError> {
         fs::create_dir_all(&root)?;
         for item in fs::read_dir(&root)? {
@@ -137,7 +148,15 @@ impl UndoStore {
     pub fn record(&self, id: &ApplyId, paths: &[PathBuf]) -> Result<(), TagError> {
         let dir = self.apply_dir(id)?;
         let staging = self.root.join(format!(".{}{STAGING_SUFFIX}", id.0));
-        let seq = self.stored()?.iter().map(|s| s.seq + 1).max().unwrap_or(0);
+        let seq = self
+            .stored()?
+            .iter()
+            .filter_map(|s| match s.age {
+                Age::Recorded(seq) => Some(seq + 1),
+                Age::Unloadable(_) => None,
+            })
+            .max()
+            .unwrap_or(0);
         remove_dir_if_there(&staging)?;
         fs::create_dir(&staging)?;
         if let Err(err) = write_apply(&staging, seq, paths) {
@@ -216,29 +235,29 @@ impl UndoStore {
         }
     }
 
-    /// Every apply with a readable manifest.
+    /// Every apply directory, whether its manifest loads or not: one that doesn't (damaged, or
+    /// from another version) can't be restored but still takes space and counts.
     fn stored(&self) -> Result<Vec<Stored>, TagError> {
         let mut stored = Vec::new();
         for dir in apply_dirs(&self.root)? {
-            let Ok(manifest) = load_manifest(&dir) else { continue };
+            let age = match load_manifest(&dir) {
+                Ok(manifest) => Age::Recorded(manifest.seq),
+                Err(_) => Age::Unloadable(fs::metadata(&dir)?.modified()?),
+            };
             let mut bytes = 0;
             for item in fs::read_dir(&dir)? {
                 bytes += item?.metadata()?.len();
             }
             let name = dir.file_name().unwrap_or_default().to_string_lossy().into_owned();
-            stored.push(Stored {
-                name,
-                seq: manifest.seq,
-                bytes,
-            });
+            stored.push(Stored { name, age, bytes });
         }
         Ok(stored)
     }
 
-    /// Removes the oldest applies, never `keep`, until both limits hold.
+    /// Removes the oldest applies ([`Age`]), never `keep`, until both limits hold.
     fn prune(&self, keep: &str) -> Result<(), TagError> {
         let mut stored = self.stored()?;
-        stored.sort_by(|a, b| a.seq.cmp(&b.seq).then_with(|| a.name.cmp(&b.name)));
+        stored.sort_by(|a, b| a.age.cmp(&b.age).then_with(|| a.name.cmp(&b.name)));
         let mut count = stored.len();
         let mut bytes: u64 = stored.iter().map(|s| s.bytes).sum();
         for old in stored.iter().filter(|s| s.name != keep) {

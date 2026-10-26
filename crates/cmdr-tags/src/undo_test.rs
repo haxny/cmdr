@@ -579,3 +579,61 @@ fn record_reads_the_files_itself_and_stores_nothing_when_one_cannot_be_read() {
     assert!(matches!(err, TagError::Io(ErrorKind::NotFound, _)), "{err:?}");
     assert!(listing(root.path()).is_empty());
 }
+
+/// An apply directory whose manifest this store can't load, last modified `age_secs` ago.
+fn unloadable_apply(root: &Path, name: &str, manifest: &[u8], junk: usize, age_secs: u64) {
+    let dir = root.join(name);
+    fs::create_dir(&dir).unwrap();
+    fs::write(dir.join("manifest.json"), manifest).unwrap();
+    fs::write(dir.join("0.cover"), vec![0u8; junk]).unwrap();
+    let when = std::time::SystemTime::now() - std::time::Duration::from_secs(age_secs);
+    fs::File::open(&dir).unwrap().set_modified(when).unwrap();
+}
+
+#[test]
+fn damaged_and_unknown_version_applies_count_and_go_first_oldest_first() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let paths = tagged_files(files.path());
+    unloadable_apply(root.path(), "op-damaged", b"{\"version\":1,", 10, 300);
+    unloadable_apply(
+        root.path(),
+        "op-future",
+        b"{\"version\":9,\"seq\":7,\"entries\":[]}",
+        10,
+        100,
+    );
+    let limits = UndoLimits {
+        max_applies: 3,
+        max_bytes: u64::MAX,
+    };
+    let store = UndoStore::open(root.path().to_path_buf(), limits).unwrap();
+    store.record(&id("op-a"), &paths[2..]).unwrap();
+    assert_eq!(
+        listing(root.path()),
+        strings(&["op-a", "op-damaged", "op-future"]),
+        "three within the limit"
+    );
+
+    store.record(&id("op-b"), &paths[2..]).unwrap();
+
+    assert_eq!(listing(root.path()), strings(&["op-a", "op-b", "op-future"]));
+}
+
+#[test]
+fn a_large_damaged_apply_is_pruned_by_size_but_never_the_new_record() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let paths = tagged_files(files.path());
+    unloadable_apply(root.path(), "op-damaged", b"not json", 1_000_000, 60);
+    let limits = UndoLimits {
+        max_applies: 50,
+        max_bytes: 100_000,
+    };
+    let store = UndoStore::open(root.path().to_path_buf(), limits).unwrap();
+
+    store.record(&id("op-a"), &paths).unwrap();
+
+    assert_eq!(listing(root.path()), strings(&["op-a"]));
+    store.restore(&id("op-a"), &MUSIC).unwrap();
+}

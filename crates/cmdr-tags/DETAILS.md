@@ -143,7 +143,9 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
 - **`seq`** orders applies across the store (one more than the highest present). After each `record` the lowest go until
   both `UndoLimits` hold (default 50 applies and 512 MiB, manifests plus covers, each file counted once); the apply just
   recorded is never pruned, and a prune that fails is logged, not returned, since the record is complete. Recording an
-  existing `id` replaces it. Staging directories are neither applies nor counted.
+  existing `id` replaces it. Staging directories are neither applies nor counted. An apply directory whose manifest
+  won't load (damaged, or another manifest version) can't be restored but still counts toward both limits, and goes
+  first, oldest by the directory's modification time, so a pile of them can't fill the disk past `max_bytes`.
 - **`record(id, paths)` reads the files itself**, each with one parse (`read::read_snapshot`): the `FileTags` and the
   `RawTags` (track and disc totals, MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states
   of the file. Call it before the apply writes. A file that can't be read fails the whole record; nothing is stored.
