@@ -30,7 +30,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   openExternalUrl: (url: string) => openExternalUrlMock(url),
 }))
 
-vi.mock('#lib/file-viewer/open-viewer', () => ({ openFileViewer: openFileViewerMock }))
+vi.mock('#lib/file-viewer/open-viewer.js', () => ({ openFileViewer: openFileViewerMock }))
 
 // Only `reportsDisabled` matters to the dialog; a test flips it before mounting.
 const managedPolicy = vi.hoisted(() => ({ reportsDisabled: false }))

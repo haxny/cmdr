@@ -61,7 +61,7 @@ search conversion, `needsFetch()` three-point sampling): `DETAILS.md` § Gotchas
 ## Development
 
 ```typescript
-import { openFileViewer } from '#lib/file-viewer/open-viewer'
+import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 await openFileViewer('/path/to/file.txt')
 // A live view of a growing file: opens in tail mode, parked at the end
 await openFileViewer('/path/to/app.log', 'root', { tail: true })

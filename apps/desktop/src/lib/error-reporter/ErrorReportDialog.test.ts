@@ -39,7 +39,7 @@ const { api, addToast, logger } = vi.hoisted(() => ({
 vi.mock('#lib/tauri-commands/error-reporter.js', () => api)
 
 const { openFileViewer } = vi.hoisted(() => ({ openFileViewer: vi.fn(() => Promise.resolve()) }))
-vi.mock('#lib/file-viewer/open-viewer', () => ({ openFileViewer }))
+vi.mock('#lib/file-viewer/open-viewer.js', () => ({ openFileViewer }))
 
 vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),

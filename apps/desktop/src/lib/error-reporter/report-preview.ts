@@ -3,7 +3,7 @@
  * text file (the backend's `error_reporter/preview_file.rs`) and open it in the File viewer.
  */
 import type { ReportPreviewFile } from '#lib/ipc/bindings.js'
-import { openFileViewer } from '#lib/file-viewer/open-viewer'
+import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { addToast } from '#lib/ui/toast/index.js'
