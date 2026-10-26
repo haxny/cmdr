@@ -594,7 +594,9 @@ moves remove only originals whose bytes committed. Archive move-out passes the s
 The dialog refuses a complete target equal to its source; directory-targeted Paste/Duplicate callers retain the backend
 self-collision behavior below. Frontend interpretation: `apps/desktop/src/lib/file-operations/transfer/DETAILS.md` §
 "Single-item destinations". Regression coverage: `copy/named_copy_tests.rs`, `move_op/named_move_tests.rs`, the move
-journal suite, `volume/named_move_tests.rs`, and archive `copy_into_tests.rs`.
+journal suite, `volume/named_move_tests.rs`, archive `copy_into_tests.rs`, the routed-start refusals in
+`../named_leaf_entry_tests.rs`, the undo of every named route in `../named_leaf_undo_tests.rs`, and the wire shape in
+`../types/config_wire_tests.rs`.
 
 ### Self-collision (duplicating in place)
 

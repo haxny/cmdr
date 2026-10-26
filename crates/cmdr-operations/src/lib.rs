@@ -348,6 +348,10 @@ mod approved_op_parity_tests;
 mod journal_capture_tests;
 #[cfg(test)]
 mod journal_capture_volume_tests;
+#[cfg(test)]
+mod named_leaf_entry_tests;
+#[cfg(test)]
+mod named_leaf_undo_tests;
 // Every write path announces each own write before the syscall that makes it.
 #[cfg(test)]
 mod own_write_announce_tests;

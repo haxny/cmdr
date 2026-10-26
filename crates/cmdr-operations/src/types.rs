@@ -16,6 +16,8 @@
 use cmdr_operation_log::types::OpKind;
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+mod config_wire_tests;
 mod errors;
 mod events;
 mod known_size;
