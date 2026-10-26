@@ -32,18 +32,16 @@ and typed result shapes colocated here.
 - **Every result voices its coverage honestly** (spec §2.4): a lower bound, stale data, an unindexed volume, or a cut
   is a typed field in the result, never a wrong zero. Field by field: `DETAILS.md`.
 - **`Unrecognized` is out of the view AND out of dispatch.** `ToolId::from_wire_name` maps any non-view name to
-  `Unrecognized`; `refuse_unavailable` refuses it, and anything the registry calls `Write`, BEFORE `execute_tool`.
-  Keep `ToolId::KNOWN` 1:1 with `agent_tool_view()`.
-- **Two hand-authored allowlists guard the two widenings**, `EXPECTED_PROPOSE_TOOL_NAMES` and
-  `EXPECTED_MEMORY_TOOL_NAMES`, because no structural check proves a handler doesn't mutate or stays in the jail.
-  ❌ Never tag an entry `Propose` or `Memory` without adding it there; never expose a `Memory` tool to the ai-client
-  view.
+  `Unrecognized`; `refuse_unavailable` refuses it, any `Write`, and `Session` off a user-started turn, BEFORE
+  `execute_tool`. Keep `ToolId::KNOWN` 1:1 with `agent_tool_view()`.
+- **`Propose`, `Memory`, and `Session` are hand-allowlisted** (`EXPECTED_*_TOOL_NAMES`): nothing proves a handler
+  doesn't mutate, stays jailed, or dials only a saved place. ❌ Never tag one unlisted, or give AI clients `Memory`.
 - **A proposal claiming file CONTENTS must prove it.** `dispatch` feeds every non-elided `image_facts` result into the
   thread's `ImageFactsLedger`; a plan citing undelivered content is refused whole, and whatever elides a result owes
   the ledger a `revoke_call`. `propose/DETAILS.md`.
 - **Handlers never touch a live filesystem, except `inspect_file` and `list_dir`'s live read**: bounded, the thread
-  ABANDONED past a deadline (`unreachable`). `list_dir` reads live only where no index lists the folder, stops on the
-  turn's cancel token, is FDA-gated on the link-resolved target before any stat, and never shows ground the index's scanner skips (`DETAILS.md` § The
+  ABANDONED past a deadline (`unreachable`). Stop abandons any call but a `Propose` / `Memory` one
+  (`../chat/DETAILS.md`). `list_dir` reads live only where no index lists the folder, is FDA-gated on the link-resolved target before any stat, and never shows ground the index's scanner skips (`DETAILS.md` § The
   live source). `inspect_file` alone egresses contents (text windows, `find` snippets, PDF pages, archive entry names,
   EXIF incl. GPS; never bytes), each named in the cloud AI disclosure; a new KIND is a copy change plus a
   `CLOUD_AI_CONSENT_VERSION` bump. § Reading a file the way the viewer does.

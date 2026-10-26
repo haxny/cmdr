@@ -36,8 +36,20 @@ pub(super) use crate::agent::llm::types::{
     AgentUsage, ProviderTag, ToolDeclaration, ToolId,
 };
 pub(super) use crate::agent::store;
+pub(super) use crate::agent::types::TurnOrigin;
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
+
+/// The origin a test's opener stands for. Production callers state it; a test that isn't
+/// about origins takes the one its opener implies.
+pub(super) fn origin_of(user: Option<&UserTurn<'_>>) -> TurnOrigin {
+    match user {
+        Some(UserTurn::Text(_)) => TurnOrigin::Text,
+        Some(UserTurn::Wake(_)) => TurnOrigin::Wake,
+        Some(UserTurn::Outcomes(_)) => TurnOrigin::Outcomes,
+        None => TurnOrigin::Resume,
+    }
+}
 
 /// The prompt budget the turn fixtures assemble against: the conservative default, so no
 /// test trips budget pressure unless it means to.
@@ -68,9 +80,11 @@ pub(super) fn envelope() -> ContextEnvelope {
 }
 
 pub(super) fn params<'a>(conversation_id: i64, user_text: Option<&'a str>) -> TurnParams<'a> {
+    let user = user_text.map(UserTurn::Text);
     TurnParams {
         conversation_id,
-        user: user_text.map(UserTurn::Text),
+        origin: origin_of(user.as_ref()),
+        user,
         cmdr_md: None,
         memory: None,
         envelope: LEAK_ENVELOPE.get_or_init(envelope),
@@ -275,11 +289,7 @@ fn program_to_deltas(program: Program) -> Vec<Result<AgentDelta, AgentLlmError>>
 pub(super) struct OkDispatcher;
 
 impl ToolDispatcher for OkDispatcher {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        _cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -309,11 +319,7 @@ impl FailingDispatcher {
 }
 
 impl ToolDispatcher for FailingDispatcher {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        _cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.dispatched
                 .lock()
@@ -347,11 +353,7 @@ impl CountingOkDispatcher {
 }
 
 impl ToolDispatcher for CountingOkDispatcher {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        _cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.dispatched
                 .lock()
@@ -377,11 +379,7 @@ pub(super) struct SleepingDispatcher {
 }
 
 impl ToolDispatcher for SleepingDispatcher {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        _cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             // allowed-test-sleep: this stub's whole job is to burn wall-time budget, and under
             // `start_paused` the runtime advances the clock rather than waiting
@@ -405,11 +403,7 @@ pub(super) struct CancellingDispatcher {
 }
 
 impl ToolDispatcher for CancellingDispatcher {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        _cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.token.cancel();
             ToolDispatchOutcome {
@@ -426,25 +420,99 @@ impl ToolDispatcher for CancellingDispatcher {
 }
 
 /// Waits for the token the TURN hands it, the way a live `list_dir` read waits on a slow
-/// volume: it answers only once Stop fires. `reached` says the call is in flight.
+/// volume: it answers only once Stop fires, naming the folder it was reading. `reached` says
+/// the call is in flight.
 #[derive(Default)]
 pub(super) struct StopAwareDispatcher {
     pub(super) reached: tokio::sync::Notify,
 }
 
 impl ToolDispatcher for StopAwareDispatcher {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.reached.notify_one();
-            cancel.cancelled().await;
+            turn.cancel.cancelled().await;
             ToolDispatchOutcome {
                 result: AgentToolResult {
                     call_id: call.call_id.clone(),
-                    content: json!({ "miss": "cancelled" }),
+                    content: json!({ "miss": "cancelled", "location": { "path": "/Volumes/naspi-1" } }),
+                    elided: false,
+                },
+                proposal: None,
+            }
+        }
+        .boxed()
+    }
+}
+
+/// Holds its call open and never looks at the token: `reached` says the call is in flight,
+/// and `release` lets it answer `answer`, or never when there's none.
+pub(super) struct HeldDispatcher {
+    pub(super) reached: tokio::sync::Notify,
+    pub(super) release: tokio::sync::Notify,
+    answer: Option<Value>,
+}
+
+impl HeldDispatcher {
+    /// A handler stuck for good: a hung mount, a server that never answers.
+    pub(super) fn forever() -> Self {
+        Self {
+            reached: tokio::sync::Notify::new(),
+            release: tokio::sync::Notify::new(),
+            answer: None,
+        }
+    }
+
+    /// A handler mid-write that answers `answer` once released.
+    pub(super) fn until_released(answer: Value) -> Self {
+        Self {
+            answer: Some(answer),
+            ..Self::forever()
+        }
+    }
+}
+
+impl ToolDispatcher for HeldDispatcher {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
+        async move {
+            self.reached.notify_one();
+            let Some(answer) = &self.answer else {
+                return std::future::pending().await;
+            };
+            self.release.notified().await;
+            ToolDispatchOutcome {
+                result: AgentToolResult {
+                    call_id: call.call_id.clone(),
+                    content: answer.clone(),
+                    elided: false,
+                },
+                proposal: None,
+            }
+        }
+        .boxed()
+    }
+}
+
+/// Records the origin each call was handed, and answers it.
+#[derive(Default)]
+pub(super) struct OriginRecordingDispatcher {
+    seen: Mutex<Vec<TurnOrigin>>,
+}
+
+impl OriginRecordingDispatcher {
+    pub(super) fn seen(&self) -> Vec<TurnOrigin> {
+        self.seen.lock().expect("lock").clone()
+    }
+}
+
+impl ToolDispatcher for OriginRecordingDispatcher {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
+        async move {
+            self.seen.lock().expect("lock").push(turn.origin);
+            ToolDispatchOutcome {
+                result: AgentToolResult {
+                    call_id: call.call_id.clone(),
+                    content: json!({ "ok": true }),
                     elided: false,
                 },
                 proposal: None,

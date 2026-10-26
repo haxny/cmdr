@@ -47,6 +47,7 @@ use tokio_util::sync::CancellationToken;
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::ProviderTag;
 use crate::agent::store::{self, AgentStoreError};
+use crate::agent::types::TurnOrigin;
 use crate::ignore_poison::IgnorePoison;
 
 use super::cancel;
@@ -64,7 +65,7 @@ mod types;
 
 pub(crate) use analytics::send_refused;
 pub(crate) use cost::day_for;
-pub use dispatch::{AppHandleDispatcher, ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
+pub use dispatch::{AppHandleDispatcher, CallContext, ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
 pub use events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall};
 pub use turn::run_turn;
 pub use types::{TurnParams, TurnResult, UserTurn};
@@ -170,6 +171,7 @@ impl ChatRuntime {
         let dispatcher = AppHandleDispatcher::new(app.clone(), conversation_id);
         let params = TurnParams {
             conversation_id,
+            origin: TurnOrigin::Text,
             user: Some(UserTurn::Text(&text)),
             cmdr_md: cmdr_md.as_deref(),
             memory: memory.as_deref(),

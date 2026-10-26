@@ -265,6 +265,45 @@ impl ProposalOutcomes {
     }
 }
 
+/// Who started a turn: the user, or the app on its own.
+///
+/// Set by each caller of `run_turn`, ❌ never read off the opener's shape: a follow-up rides as
+/// `UserTurn::Outcomes` today, and the dispatch gate (`agent::tools::view`) must stay right if
+/// one day it doesn't. The turn hands it to every tool call, and analytics reports it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnOrigin {
+    /// The user typed into the rail.
+    Text,
+    /// The proactive loop noticed something and opened a thread of its own.
+    Wake,
+    /// The follow-up turn the app opens after the user turned a sweep down.
+    Outcomes,
+    /// A persisted thread driven again from its transcript at the user's request (a retry).
+    /// ⚠️ A replay the app starts on its own isn't this, and needs an origin of its own.
+    Resume,
+}
+
+impl TurnOrigin {
+    /// The stable analytics token (`ask_cmdr_turn`'s `origin`).
+    pub fn as_token(self) -> &'static str {
+        match self {
+            TurnOrigin::Text => "text",
+            TurnOrigin::Wake => "wake",
+            TurnOrigin::Outcomes => "outcomes",
+            TurnOrigin::Resume => "resume",
+        }
+    }
+
+    /// Whether the user started this turn. A background turn runs with nobody watching, so a
+    /// tool that reaches past the app (`Access::Session`) waits for one the user did start.
+    pub fn user_started(self) -> bool {
+        match self {
+            TurnOrigin::Text | TurnOrigin::Resume => true,
+            TurnOrigin::Wake | TurnOrigin::Outcomes => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

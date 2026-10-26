@@ -509,10 +509,11 @@ index: folder rows and the folder's own `size` are ABSENT, never the inode's 4 K
   token flips (SMB and MTP stop between round trips), at 10 s it's ABANDONED as `unreachable`. One in flight per
   volume: the slot frees only when the task really returns, so a second call behind a hung mount answers `unreachable`
   at once instead of parking another thread.
-- **Stop reaches it.** `ToolDispatcher::dispatch` takes the turn's `CancellationToken`, and `view::dispatch` routes
-  `list_dir` to `execute_list_dir_cancellable` with it: Stop answers `cancelled` at once (the call keeps its result
-  row) and the abandoned task frees its slot when it returns. An AI client's call gets a fresh token, and dropping it
-  (the client hanging up) flips the read's token too. Every other handler ignores the token today.
+- **Stop reaches it.** The turn races every call against Stop (`agent/chat/DETAILS.md` § Stop reaches every tool
+  call); `view::dispatch` also hands `list_dir` the turn's token through `execute_list_dir_cancellable`, so the read
+  stops itself and answers `cancelled` with its `location` before the turn's generic answer would. The abandoned task
+  frees its slot when it returns. An AI client's call gets a fresh token, and dropping it (the client hanging up)
+  flips the read's token too.
 - **The cap**: `LIVE_ENTRY_CAP` = 10,000 entries kept, the first ones in the provider's order (folders first, then
   names), so a capped folder pages over a stable set; the requested sort applies within it, with `truncated: true`,
   `totalIsLowerBound: true`, and `authoritative: false`. An `offset` at or past the cap is refused before reading,
@@ -661,19 +662,27 @@ and the system prompt requires the model to disclose "returned of total" wheneve
 
 ## The dispatch gate
 
-`view.rs::refuse_unavailable(call_id, tool)` is the runtime enforcement point:
+`view.rs::refuse_unavailable(call_id, tool, origin)` is the runtime enforcement point:
 
 - `ToolId::Unrecognized(_)` (any non-view name — a hallucinated `delete`, a typo) ⇒ a typed `{ available: false, … }`
   result, returned BEFORE `execute_tool`. The parse (`ToolId::from_wire_name`) is the choke point.
 - A known name the registry classifies `Access::Write`, or doesn't classify at all ⇒ also refused (a runtime backstop
   against a mis-tagged entry; belt to the structural `test_agent_tool_view_never_writes` suspenders).
+- An `Access::Session` tool on a turn the user didn't start (`wake`, `outcomes`) ⇒
+  `{ available: false, refusal: "refusedInBackground", … }`: a background connect can spin up a sleeping NAS's disks for
+  a digest nobody asked for (agent invariant 7).
 - Otherwise `None` ⇒ `dispatch` calls `execute_tool(app, Consumer::Agent, …)`, which itself refuses any name outside the
   agent view (a second, structural backstop).
 
-The access half lives in the pure `access_is_dispatchable(Option<Access>) -> bool`: `Read`, `Propose`, and `Memory`
-dispatch, `Write` and an unclassified name don't. It's separate so the rule is unit-testable against EVERY `Access` variant
-without authoring a tool per variant — with zero `Propose` tools in the registry, a name-driven test would cover the
-`Propose` arm vacuously, and the widened gate would go unexercised until some future commit.
+The access half lives in the pure `admit(Option<Access>, TurnOrigin) -> Admission`: `Read`, `Propose`, and `Memory`
+dispatch on every turn, `Session` only when `TurnOrigin::user_started` (`text`, `resume`), `Write` and an unclassified
+name never. It's separate so the rule is unit-testable against EVERY `Access` variant and origin without authoring a
+tool per variant: no `Session` tool ships yet, so a name-driven test would cover that arm vacuously.
+
+**The origin is the turn's, stated by its caller.** `TurnParams::origin` (`agent::types::TurnOrigin`) is set by
+`send_message` (`text`) and by the wake runner (`wake` / `outcomes`), and reaches every call in `CallContext` beside the
+turn's Stop. ❌ Never derive it from the opener: a follow-up rides as `UserTurn::Outcomes` today, and the gate must hold
+if that wrapping ever changes.
 
 The negative test (`view.rs`) drives the fake `AgentLlm`'s `CallRawTool("delete", …)` and asserts the refusal end to
 end; it was proven red (gate disabled ⇒ "delete" not refused) before green.
@@ -682,7 +691,8 @@ The refusal copy says Ask Cmdr can prepare a rename plan, suggest file operation
 notes in its own memory folder, but can't touch the user's files or approve a proposal, and reads a file's contents only
 through `inspect_file`. ⚠️ Keep it accurate as the tiers grow: it promised "couldn't change anything at all" until
 `Access::Memory`, and "can't read file contents" until `inspect_file`; a model told a false limit either refuses the
-question or invents the answer.
+question or invents the answer. It names no `Session` power while no `Session` tool ships: a claim the view can't back
+is the same lie pointed the other way.
 
 ### A propose result always answers `readyForReview`
 

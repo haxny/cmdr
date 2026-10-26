@@ -97,11 +97,14 @@ agent-only table**). Two per-entry dimensions express the split:
   `list_pane_files`, `important_folders`, `folder_importance`, `list_volumes`) plus `list_dir`, `operations_list` /
   `operations_get`, `search_photos`, and `image_facts`, shared into `[AiClient, Agent]` because their read schemas fit
   both readers unchanged. Agent handlers/schemas live under `../agent/tools/CLAUDE.md`, named by path from the entry.
-- **`access`** (`Read` / `Propose` / `Memory` / `Write`): whether the tool reads, asks, remembers, or mutates. `Write`
-  covers any mutation of the filesystem OR app state — nav, cursor, selection, tabs, dialogs, settings, connect/eject,
-  file ops, rollback-cancel; when in doubt, `Write`. Only genuine read surfaces (`search`, `ai_search`, `await`,
-  `operations_list`, `operations_get`) are `Read`. `Propose` is the third tier, described below; `Memory` is the
-  fourth, and the only one that writes anything at all.
+- **`access`** (`Read` / `Propose` / `Memory` / `Session` / `Write`): whether the tool reads, asks, remembers,
+  connects, or mutates. `Write` covers any mutation of the filesystem OR app state — nav, cursor, selection, tabs,
+  dialogs, settings, connect/eject, file ops, rollback-cancel; when in doubt, `Write`. Only genuine read surfaces
+  (`search`, `ai_search`, `await`, `operations_list`, `operations_get`) are `Read`. `Propose` is the third tier,
+  described below; `Memory` is the fourth, and the only one that writes anything at all. `Session` is the fifth: it
+  opens a session to a place the user saved, with stored credentials, and the agent's gate admits it only on a turn the
+  user started (agent invariant 7, `../agent/tools/DETAILS.md` § The dispatch gate). It's hand-allowlisted in
+  `EXPECTED_SESSION_TOOL_NAMES`, empty until a tool carries it.
 
 ⚠️ **`Access::Memory` was a deliberate widening of the app's central agent-safety invariant.** "The agent never changes
 anything" became "the agent writes only into `<data-dir>/ai/memory/`". Three things hold the narrowed promise: the jail
@@ -119,10 +122,11 @@ equals its list view (`test_dispatch_view_equals_list_view_per_consumer`).
 
 **Why `access` is independent of HTTP authentication.** Authenticating an external client says who may reach the MCP
 surface, not what the in-process Ask Cmdr agent may do. The explicit `access` dimension is the capability guarantee:
-the agent view must equal exactly its authored `[agent]` entries **and** every one must be `Access::Read` or
-`Access::Propose`, never `Access::Write`. The two structural tests (`test_agent_tool_view_is_exactly_expected_set` +
-`test_agent_tool_view_never_writes`) pin both halves against `EXPECTED_AGENT_TOOL_NAMES`. This is the line the plan
-calls the effort's most safety-critical invariant; the runtime side (`agent::tools::view::access_is_dispatchable`) adds
+the agent view must equal exactly its authored `[agent]` entries **and** every one must be `Access::Read`,
+`Access::Propose`, `Access::Memory`, or `Access::Session`, never `Access::Write`. The two structural tests
+(`test_agent_tool_view_is_exactly_expected_set` + `test_agent_tool_view_never_writes`) pin both halves against
+`EXPECTED_AGENT_TOOL_NAMES`. This is the line the plan calls the effort's most safety-critical invariant; the runtime
+side (`agent::tools::view::admit`) adds
 a matching check before dispatch so a mis-tagged entry is refused at runtime too.
 
 ### The `Propose` tier

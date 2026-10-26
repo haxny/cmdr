@@ -27,7 +27,7 @@ use crate::agent::chat::runtime::{ChatEventSink, ToolDispatcher, TurnParams, Tur
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::{ToolDeclaration, WakeDigest};
 use crate::agent::store::create_conversation;
-use crate::agent::types::ConversationOrigin;
+use crate::agent::types::{ConversationOrigin, TurnOrigin};
 
 const LOG_TARGET: &str = "agent::wake";
 
@@ -236,14 +236,26 @@ pub async fn run_prepared_wake(
 /// connection and the single-flight guard. Two places composing a wake's turn independently
 /// is how the two would drift.
 pub fn wake_turn_params<'a>(prepared: &'a PreparedWake, params: &'a RunWakeParams<'a>) -> TurnParams<'a> {
-    turn_params(prepared.conversation_id, UserTurn::Wake(&prepared.digest), params)
+    turn_params(
+        prepared.conversation_id,
+        TurnOrigin::Wake,
+        UserTurn::Wake(&prepared.digest),
+        params,
+    )
 }
 
 /// The shape both background turns share: a wake's digest and a rejection's outcomes differ
-/// only in what opens them, so everything else is written once.
-pub fn turn_params<'a>(conversation_id: i64, user: UserTurn<'a>, params: &'a RunWakeParams<'a>) -> TurnParams<'a> {
+/// only in what opens them and which background `origin` they are, so everything else is
+/// written once.
+pub fn turn_params<'a>(
+    conversation_id: i64,
+    origin: TurnOrigin,
+    user: UserTurn<'a>,
+    params: &'a RunWakeParams<'a>,
+) -> TurnParams<'a> {
     TurnParams {
         conversation_id,
+        origin,
         user: Some(user),
         cmdr_md: None,
         memory: params.memory,

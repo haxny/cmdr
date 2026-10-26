@@ -425,8 +425,8 @@ the test and this section together.
 
 Eight files plus `ChatRuntime` in `mod.rs`: `types.rs` (what a turn IS as data), `events.rs`
 (the `AgentChatEvent` seam and the typed `AgentErrorKind`), `dispatch.rs` (the
-`ToolDispatcher` seam and `AppHandleDispatcher`; every call carries the turn's cancel token, which `list_dir`'s live
-read stops on, `agent/tools/DETAILS.md` § The live source), `turn.rs` (`run_turn` and everything it
+`ToolDispatcher` seam and `AppHandleDispatcher`; every call carries a `CallContext`, the turn's origin and its Stop,
+and runs under `dispatch_until_stopped`, § Stop reaches every tool call), `turn.rs` (`run_turn` and everything it
 drives), `repeats.rs` (the turn's memory of calls that already failed), `cost.rs` (metering one
 completed `respond`), `cmdr_md.rs` (which `CMDR.md`, and how much of it), `analytics.rs` (the
 anonymous `ask_cmdr_turn` event). `mod.rs` re-exports all of it, so callers keep saying
@@ -523,7 +523,12 @@ refuses with it before a turn, and the LLM client's per-request policy backstop 
 
 `origin` splits the surfaces: `text` (the rail), `wake` (the proactive loop), `outcomes` (the
 follow-up turn a rejection opens), `resume` (a post-crash replay, which has no opener and
-would otherwise inflate whichever it was folded into). A refusal is always `text`; a wake never
+would otherwise inflate whichever it was folded into). It is `TurnParams::origin`
+(`agent::types::TurnOrigin`), stated by each caller rather than read off the opener, because the
+dispatch gate reads the same value per call: `Access::Session` tools run only on `text` and
+`resume` (`agent/tools/DETAILS.md` § The dispatch gate). No production caller resumes today; a
+resume is a user's retry, which is why it counts as user-started. ⚠️ A replay the APP starts on
+its own (say, after a crash, or of a wake thread) is not that, and needs an origin of its own. A refusal is always `text`; a wake never
 reaches that path. `provider` reads `unresolved` on a refusal, since every gate but the local
 window fires before the slot resolves and naming the settings value would claim a provider was chosen
 for a send that never chose one. ⚠️ **`origin: "wake"` is not the same
@@ -700,6 +705,22 @@ and drop it before releasing it, so at most one mark per thread exists and it is
 running turn's. `turn_in_flight_since_seq(id)` reads it: rows after the mark belong to the
 running turn, which is how a reload tells that turn's result-less calls (still running) from a
 crashed turn's (settled, no answer recorded).
+
+### Stop reaches every tool call
+
+`dispatch.rs::dispatch_until_stopped` is the ONE place Stop meets a tool call, for every tool and
+every dispatcher, test doubles included. A call that hasn't started when Stop lands is never
+dispatched; one in flight is raced against the token and abandoned (its future dropped), answering
+`{ miss: "cancelled", detail }`. Either way the call keeps its result row, so the next turn loads
+a whole call/result pair (crash case c). The race polls the call FIRST, so a handler holding the
+token (`list_dir`'s live read, `agent/tools/DETAILS.md` § The live source) answers with its own,
+more specific `cancelled` in the same poll.
+
+⚠️ **A `Propose` or `Memory` call is never abandoned mid-flight** (`stop_may_abandon`, exhaustive
+over `Access`). Both commit on a blocking thread that dropping the future doesn't stop, so
+abandoning would record `cancelled` beside a proposal the user can see, or a note the agent reads
+next turn. They run to their own bounded end with their real answer; the loop-top check then ends
+the turn.
 
 ## The event seam (`AgentChatEvent`)
 

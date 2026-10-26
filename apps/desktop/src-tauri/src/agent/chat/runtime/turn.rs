@@ -13,7 +13,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::analytics;
 use super::cost::meter_cost;
-use super::dispatch::{ToolDispatcher, dispatch_ok};
+use super::dispatch::{CallContext, ToolDispatcher, dispatch_ok, dispatch_until_stopped};
 use super::events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall, emit};
 use super::repeats::{FailedCalls, Repeat};
 use super::types::{TurnParams, TurnResult, TurnTally, UserTurn};
@@ -349,7 +349,11 @@ async fn drive(
         for call in calls {
             let (result, proposal) = match failed_calls.judge(call) {
                 Repeat::Fresh => {
-                    let dispatch = dispatcher.dispatch(call, cancel).await;
+                    let turn = CallContext {
+                        origin: params.origin,
+                        cancel,
+                    };
+                    let dispatch = dispatch_until_stopped(dispatcher, call, turn).await;
                     if !dispatch_ok(&dispatch.result) {
                         failed_calls.record_failure(call, &dispatch.result.content);
                     }

@@ -6,7 +6,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::super::*;
 use crate::agent::chat::context::ContextEnvelope;
-use crate::agent::chat::runtime::{ToolDispatchOutcome, ToolDispatcher, TurnResult};
+use crate::agent::chat::runtime::{CallContext, ToolDispatchOutcome, ToolDispatcher, TurnResult};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::fake::{FakeAgentLlm, ScriptedTurn};
 use crate::agent::llm::types::{AgentPart, AgentToolCall, AgentToolResult, ProviderTag, ToolId};
@@ -24,11 +24,7 @@ fn migrated_conn() -> Connection {
 struct NoTools;
 
 impl ToolDispatcher for NoTools {
-    fn dispatch<'a>(
-        &'a self,
-        call: &'a AgentToolCall,
-        _cancel: &'a CancellationToken,
-    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         Box::pin(async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -731,6 +727,7 @@ async fn a_rail_turn_calling_nothing_to_suggest_deletes_nothing() {
         &[],
         &TurnParams {
             conversation_id: id,
+            origin: crate::agent::types::TurnOrigin::Text,
             user: Some(UserTurn::Text("are we good?")),
             cmdr_md: None,
             memory: None,

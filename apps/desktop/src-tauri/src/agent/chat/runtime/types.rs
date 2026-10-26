@@ -13,7 +13,7 @@ use super::events::AgentErrorKind;
 use crate::agent::chat::context::ContextEnvelope;
 use crate::agent::llm::types::{AgentPart, CallSettings, ProviderTag, WakeDigest};
 use crate::agent::store::TurnStats;
-use crate::agent::types::ProposalOutcomes;
+use crate::agent::types::{ProposalOutcomes, TurnOrigin};
 
 /// What opens a turn: what the person typed, or what a wake noticed.
 ///
@@ -58,6 +58,9 @@ impl UserTurn<'_> {
 /// thread after a crash (fresh `respond` from the persisted transcript — crash case c).
 pub struct TurnParams<'a> {
     pub conversation_id: i64,
+    /// Who started the turn, stated by the caller rather than read off `user`'s shape: the
+    /// dispatch gate reads it per call (`agent::tools::view`).
+    pub origin: TurnOrigin,
     pub user: Option<UserTurn<'a>>,
     pub cmdr_md: Option<&'a str>,
     /// What the agent wrote about the user, already cut to this turn's share of the budget

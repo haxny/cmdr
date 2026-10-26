@@ -28,6 +28,7 @@ use crate::agent::chat::session::{capture_envelope, local_offset};
 use crate::agent::chat::stream::{AskCmdrStreamEvent, emit_turn_event, forward_to_windows};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::ProviderTag;
+use crate::agent::types::TurnOrigin;
 
 const LOG_TARGET: &str = "agent::wake";
 
@@ -68,6 +69,15 @@ impl BackgroundTurn {
         match self {
             BackgroundTurn::Wake(prepared) => UserTurn::Wake(&prepared.digest),
             BackgroundTurn::FollowUp(prepared) => UserTurn::Outcomes(&prepared.outcomes),
+        }
+    }
+
+    /// Which background turn this is, for the dispatch gate. Stated here rather than read off
+    /// [`Self::opener`], so the gate holds whatever a follow-up opens with.
+    fn origin(&self) -> TurnOrigin {
+        match self {
+            BackgroundTurn::Wake(_) => TurnOrigin::Wake,
+            BackgroundTurn::FollowUp(_) => TurnOrigin::Outcomes,
         }
     }
 
@@ -223,7 +233,7 @@ async fn run(app: AppHandle, slot: ResolvedSlot, turn: &BackgroundTurn) -> WakeC
                 slot.llm.as_ref(),
                 &watch,
                 params.tools,
-                &turn_params(conversation_id, turn.opener(), &params),
+                &turn_params(conversation_id, turn.origin(), turn.opener(), &params),
                 &sink,
                 &cancel_token,
             )

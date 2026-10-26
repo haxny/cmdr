@@ -56,8 +56,8 @@ no agent path can approve or apply it.
 action. There is no tool, and never will be a tool, that approves a proposal. Without that, `Propose` is `Write` with
 extra steps.
 
-The agent can look, speak, ask, and write its own notes (principle 3): no tool in its dispatch view touches the user's
-files. Names, paths, and metadata reach the provider on every turn; file contents reach it only on request, through
+The agent can look, speak, ask, write its own notes, and, when the user asks, connect a place they saved (principle 3):
+no tool in its dispatch view touches the user's files. Names, paths, and metadata reach the provider on every turn; file contents reach it only on request, through
 three read tools whose egress the cloud AI disclosure names item by item: `search_photos` and `image_facts` (image-derived
 text) and `inspect_file` (bounded text windows, `find` lines, PDF pages plus title and author, one level of archive
 entry names, EXIF including GPS). No tool can return bytes: every result DTO is text-only by construction, each pinned
@@ -71,7 +71,7 @@ file does not contain, and the model would reason about a file shape that isn't 
 `file_viewer/DETAILS.md` § "Rows, not lines"; this note exists because the agent path is the one that looks like it
 could ignore it. This is the privacy line and it is structural, not a runtime guard. The registry's `consumers` + `access`
 dimensions pin the agent's view to exactly its authored `[agent]` entries, every one `Access::Read`,
-`Access::Propose`, or `Access::Memory`, never `Access::Write`; the runtime's `ToolId` parse step is the runtime choke
+`Access::Propose`, `Access::Memory`, or `Access::Session`, never `Access::Write`; the runtime's `ToolId` parse step is the runtime choke
 point (an unrecognized name resolves to `ToolId::Unrecognized`, which is never in the agent view, so dispatch refuses
 it). A new KIND of content egress (a new tool, or a new field on an existing one) is a disclosure-copy change plus a
 `CLOUD_AI_CONSENT_VERSION` bump (`ai::cloud_consent`), never a silent widening; `docs/security.md` § Cloud AI egress,
@@ -89,6 +89,16 @@ folder is unreachable from the external MCP transport, whose own security story 
 (`image_facts` OCR, file names off disk) and what it writes rides the prefix of every later turn. The defences are in
 `memory/DETAILS.md` § The injection surface; don't weaken the fence in `chat/context.rs` or the placement of memory
 before the rules without reading it.
+
+**`Access::Session`: the second widening, and what holds it.** "It writes only into its memory folder" gains "and it
+may connect a place you saved, when you ask". A connect touches no file and no config, but it reaches past the app: a
+sleeping NAS spins up its disks, and a server logs a login. So it is held by three things. First, the gate admits it
+only on a turn the user started (`text` or `resume`); a wake or a follow-up gets a typed `refusedInBackground`
+(`tools/view.rs`), reading the turn's own origin, never the opener's shape. Second, a hand-authored allowlist
+(`EXPECTED_SESSION_TOOL_NAMES`), for the reason the other two have one. Third, what a `Session` tool may dial: a SAVED
+place, by volume id, with STORED credentials only. It can't add a host, type a password, or approve a key, which is
+exactly what an injected file name would want. The allowlist is empty until `connect_volume` (#749) lands; the gate
+and its tests stand ahead of it. No egress moves, so consent doesn't either (invariant 8).
 
 **Where a proposal LIVES.** `store/proposals/`, the durable spine in `main.db`, for every verb including rename. Its
 claim transaction binds an approval to a server-owned acceptance record rather than to the client's word. Proposals have
@@ -131,8 +141,13 @@ Each line is a pointer, not a restatement: the mechanism lives in the doc named 
    summaries describe deliveries and are never deliveries. `tools/propose/CLAUDE.md`, `tools/propose/DETAILS.md`
    § Evidence.
 7. **The agent proposes; only the user approves.** Approval originates in the frontend as a user action, and there is
-   no tool that approves. The agent's one write is its own memory folder, jailed and hand-allowlisted. `CLAUDE.md`,
-   § The agent can propose above, `memory/DETAILS.md`.
+   no tool that approves. The agent writes in one place only, its own memory folder (jailed and hand-allowlisted), and
+   opens a session in one way only: on a turn the user started, to a place the user saved, with credentials the user
+   stored (`Access::Session`, hand-allowlisted). That session adds or edits no file, server, account, credential, pin,
+   or setting; the saved place's own connection bookkeeping moves exactly as it does when the user connects it.
+   Because the user started that turn, a system dialog the connect raises (a Keychain access prompt) is acceptable; a
+   missing credential answers `needsCredentials` and raises nothing. `CLAUDE.md`, § The agent can propose above,
+   `memory/DETAILS.md`, `tools/DETAILS.md` § The dispatch gate.
 8. **No new egress category without a `CLOUD_AI_CONSENT_VERSION` bump**, and no bump without revisiting the whole
    disclosure (`ai::cloud_consent`, `../ai/DETAILS.md` § Cloud AI consent). `CLAUDE.md`.
 9. **Every cut, cap, or trim is visible** in the result, the log, and (where the user could be misled) the UI.
@@ -159,8 +174,9 @@ These govern anything the decision log below doesn't answer. `(principle 3)` cit
    absorbed deterministically and reaches the model only as one digest line at the next real wake.
 3. **Propose, never act.** No tool reaches the user's files; the only path to them is a proposal the user approves,
    executed by the ordinary file-op pipeline. This is also the structural prompt-injection defense: the worst a
-   malicious file can do is produce a weird suggestion in a review queue. The one bounded exception is the agent's own
-   memory folder (§ The agent can propose above).
+   malicious file can do is produce a weird suggestion in a review queue. The two bounded exceptions are the agent's
+   own memory folder and, on a turn the user started, a session to a place the user saved (§ The agent can propose
+   above, invariant 7).
 4. **Continuity through state, not transcript.** A wake gets a fresh, budgeted context assembled from the database and
    memory; only chat threads keep (bounded) transcripts.
 5. **Radical transparency, applied to the agent itself.** Every decision, proposal, and file read should be visible to

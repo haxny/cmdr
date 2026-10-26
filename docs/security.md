@@ -305,14 +305,22 @@ Ask Cmdr is the widest of these, so the rest of this section is its detail. Ask 
 (`askCmdr.enabled`); that's a feature switch, not consent.
 
 - **The agent can propose; only the user can approve.** The agent has no tool that touches the user's files. Its
-  dispatch view admits `Access::Read`, `Access::Propose`, and `Access::Memory` entries and never `Access::Write` (pinned
-  structurally in `mcp/tests/tool_registry_tests/access.rs`, and again at runtime in `agent/tools/view.rs`). A `Propose`
-  tool mutates nothing: it stages a proposal and opens a review surface. Approval originates in the frontend as a user
-  action, and there is no tool — and never will be one — that approves a proposal. No agent-visible tool can reach the
-  `autoConfirm` confirmation bypass. `Propose` adds no egress: proposals flow agent → user, never to the provider, so
-  consent is unchanged by it. What reaches the provider by default is file/folder names, paths, sizes, dates, and the
-  app-state envelope (spec §2.1); file contents reach it only through the two read tools below, on request. Depth:
-  `apps/desktop/src-tauri/src/mcp/DETAILS.md` § The `Propose` tier.
+  dispatch view admits `Access::Read`, `Access::Propose`, `Access::Memory`, and `Access::Session` entries and never
+  `Access::Write` (pinned structurally in `mcp/tests/tool_registry_tests/access.rs`, and again at runtime in
+  `agent/tools/view.rs`). A `Propose` tool mutates nothing: it stages a proposal and opens a review surface. Approval
+  originates in the frontend as a user action, and there is no tool — and never will be one — that approves a proposal.
+  No agent-visible tool can reach the `autoConfirm` confirmation bypass. `Propose` adds no egress: proposals flow agent
+  → user, never to the provider, so consent is unchanged by it. What reaches the provider by default is file/folder
+  names, paths, sizes, dates, and the app-state envelope (spec §2.1); file contents reach it only through the two read
+  tools below, on request. Depth: `apps/desktop/src-tauri/src/mcp/DETAILS.md` § The `Propose` tier.
+- **The agent may connect a place the user saved, and only when the user asked.** `Access::Session` opens a session to a
+  SAVED place by volume id with STORED credentials, and adds or edits no file, server, account, credential, pin, or
+  setting, so it can't add a host, type a password, or approve a key (what an injected file name would want). The
+  dispatch gate admits it only on a turn the user started; a wake or a follow-up is refused, typed, because a background
+  connect can wake a sleeping NAS nobody asked about. A Keychain prompt on a user-started turn is acceptable; a missing
+  credential raises nothing. No `Session` tool ships yet; any that does is hand-allowlisted in
+  `EXPECTED_SESSION_TOOL_NAMES`. No egress moves, so consent doesn't either. Canonical: agent invariant 7 in
+  `apps/desktop/src-tauri/src/agent/DETAILS.md`.
 - **The agent writes one folder, and what it writes egresses forever after.** `Access::Memory` covers `memory_write` and
   `memory_edit`, jailed to `<data-dir>/ai/memory/` (relative `.md` paths only, no `..`, no symlink along the chain,
   containment re-checked against a canonicalized parent) and capped at 64 KB. Two consequences worth stating plainly:

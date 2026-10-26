@@ -193,6 +193,149 @@ async fn stop_reaches_a_tool_call_that_is_waiting_on_a_slow_volume() {
     stopper.await.expect("the stopper ran");
 
     assert_eq!(result, TurnResult::Cancelled);
+    // The turn's own Stop race lets a handler that stops itself answer first, so the row
+    // names the folder it was reading rather than the generic `cancelled`.
+    assert_eq!(
+        persisted_tool_results(&conn, id),
+        vec![json!({ "miss": "cancelled", "location": { "path": "/Volumes/naspi-1" } })]
+    );
+}
+
+/// The tool results a thread persisted, in order.
+fn persisted_tool_results(conn: &Connection, id: i64) -> Vec<Value> {
+    store::list_messages(conn, id, 100, 0)
+        .expect("list")
+        .into_iter()
+        .filter_map(|message| match message.content {
+            store::StoredContent::Message { parts, .. } => match parts.into_iter().next() {
+                Some(AgentPart::ToolResult(result)) => Some(result.content),
+                _ => None,
+            },
+            store::StoredContent::Event(_) => None,
+        })
+        .collect()
+}
+
+/// Run a one-call turn whose call `dispatcher` holds open, pressing Stop once it's in flight.
+async fn stop_mid_call(conn: &Connection, id: i64, tool: ToolId, dispatcher: &HeldDispatcher) -> TurnResult {
+    let llm = ProgrammableLlm::new(vec![Program::Tools {
+        calls: vec![(tool, json!({}))],
+        usage: AgentUsage::default(),
+    }]);
+    let cancel = CancellationToken::new();
+    let (tx, _rx) = unbounded_channel();
+    let turn_params = params(id, Some("go"));
+    let turn = run_turn(&llm, dispatcher, conn, &[], &turn_params, &tx, &cancel);
+    let stop = async {
+        dispatcher.reached.notified().await;
+        cancel.cancel();
+        dispatcher.release.notify_one();
+    };
+    let (result, ()) = tokio::time::timeout(Duration::from_secs(5), async { tokio::join!(turn, stop) })
+        .await
+        .expect("Stop must end the turn");
+    result
+}
+
+#[tokio::test]
+async fn stop_abandons_an_in_flight_call_of_any_tool_and_records_it_cancelled() {
+    // A handler that never looks at the token (here one that would never return on its
+    // own) still lets go on Stop: the turn drops the call, and the thread keeps a result
+    // row for it so the next turn loads a whole call/result pair.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let dispatcher = HeldDispatcher::forever();
+
+    let result = stop_mid_call(&conn, id, ToolId::Search, &dispatcher).await;
+
+    assert_eq!(result, TurnResult::Cancelled);
+    assert_eq!(
+        persisted_tool_results(&conn, id),
+        vec![json!({ "miss": "cancelled", "detail": "The user stopped this turn before this call finished." })]
+    );
+}
+
+#[tokio::test]
+async fn stop_lets_a_call_that_may_be_writing_finish_with_its_real_answer() {
+    // A proposal or a memory note commits on a blocking thread that dropping the call can't
+    // stop. Recording `cancelled` beside a proposal the user can see would be a lie, so these
+    // run to their own end, and the turn stops right after.
+    for tool in [ToolId::ProposeSuggestions, ToolId::MemoryWrite] {
+        let conn = migrated_conn();
+        let id = conversation(&conn);
+        let dispatcher = HeldDispatcher::until_released(json!({ "readyForReview": true }));
+
+        let result = stop_mid_call(&conn, id, tool.clone(), &dispatcher).await;
+
+        assert_eq!(result, TurnResult::Cancelled, "{}", tool.as_wire_name());
+        assert_eq!(
+            persisted_tool_results(&conn, id),
+            vec![json!({ "readyForReview": true })],
+            "{} keeps what it really did",
+            tool.as_wire_name()
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_call_after_stop_is_never_dispatched() {
+    // Stop lands during the first of two calls in one message. The second never starts, even
+    // a proposal, and still gets its result row.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let llm = ProgrammableLlm::new(vec![Program::Tools {
+        calls: vec![
+            (ToolId::ListDir, json!({ "path": "/" })),
+            (ToolId::ProposeSuggestions, json!({})),
+        ],
+        usage: AgentUsage::default(),
+    }]);
+    let cancel = CancellationToken::new();
+    let dispatcher = CancellingDispatcher { token: cancel.clone() };
+    let (tx, _rx) = unbounded_channel();
+
+    let result = run_turn(&llm, &dispatcher, &conn, &[], &params(id, Some("go")), &tx, &cancel).await;
+
+    assert_eq!(result, TurnResult::Cancelled);
+    let results = persisted_tool_results(&conn, id);
+    assert_eq!(results.len(), 2, "both calls keep a result row");
+    assert_eq!(results[0], json!({ "ok": true }), "the first call ran");
+    assert_eq!(results[1]["miss"], "cancelled", "the second never started");
+}
+
+#[tokio::test]
+async fn every_call_hears_the_origin_its_caller_stated() {
+    // The gate reads the origin the CALLER states, never one inferred from the opener: here a
+    // background turn that opens with plain text still reaches its calls as a wake.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let llm = ProgrammableLlm::new(vec![
+        Program::Tools {
+            calls: vec![(ToolId::ListVolumes, json!({}))],
+            usage: AgentUsage::default(),
+        },
+        Program::Answer {
+            chunks: vec!["done".to_string()],
+            usage: AgentUsage::default(),
+        },
+    ]);
+    let dispatcher = OriginRecordingDispatcher::default();
+    let (tx, _rx) = unbounded_channel();
+    let mut turn_params = params(id, Some("looks like the user"));
+    turn_params.origin = TurnOrigin::Wake;
+
+    run_turn(
+        &llm,
+        &dispatcher,
+        &conn,
+        &[],
+        &turn_params,
+        &tx,
+        &CancellationToken::new(),
+    )
+    .await;
+
+    assert_eq!(dispatcher.seen(), vec![TurnOrigin::Wake]);
 }
 
 // ── Crash / persistence semantics ─────────────────────────────────────────────
@@ -567,6 +710,7 @@ async fn attachments_reach_the_llm_in_the_envelope_and_nothing_more() {
     };
     let params = TurnParams {
         conversation_id: id,
+        origin: TurnOrigin::Text,
         user: Some(UserTurn::Text("summarize this")),
         cmdr_md: None,
         memory: None,
