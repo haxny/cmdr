@@ -2296,9 +2296,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "Модель для чата. Оставьте пустым, чтобы использовать модель других возможностей ИИ Cmdr. Пример: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "Модель для чата. Оставьте пустым, чтобы использовать ту же модель, что и другие функции ИИ в Cmdr. Пример: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Как у ИИ Cmdr",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2929,25 +2929,26 @@
   },
   "settings.advanced.card.askCmdr": "Ask Cmdr",
   "@settings.advanced.card.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name Ask Cmdr stays verbatim (terms.json ask-cmdr ruling), like settings.section.askCmdr."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Группы инструментов после ответа",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Пока Ask Cmdr работает, он показывает, что просматривает. Выберите, сворачивать ли эти строки после ответа.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "sourceHash": "0be1969"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Сворачивать",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "sourceHash": "01052be"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Оставлять как было",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "sourceHash": "0aa6718"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "ассистент, помощник, чат, свернуть, развернуть, скрыть, инструменты, шаги, строки, ответ",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
     "sourceHash": "6a9f055"
   },

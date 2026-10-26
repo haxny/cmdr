@@ -132,7 +132,7 @@
   },
   "ai-tool": {
     "chosen": "eszköz",
-    "forms": "tool status chips: verbal noun while doing (Egy mappa listázása), -va/-ve participle when done (Egy mappa listázva), same object in both; Finding/Found → X keresése / X megtalálva; searching a log or a collection → X átvizsgálása / X átvizsgálva; fallback Working → Folyamatban, Used a tool → Egy eszköz használva",
+    "forms": "tool status chips: verbal noun while doing (Egy mappa listázása), -va/-ve participle when done (Egy mappa listázva), same object in both; Finding/Found → X keresése / X megtalálva; searching a log or a collection → X átvizsgálása / X átvizsgálva; fallback Working → Folyamatban, Used a tool → Egy eszköz használva; a named chip puts {name} as bare possessor ({name} listázása / {name} listázva) or after ide:/itt:; a query chip → Rákeresés / Rákeresve erre: „{query}” (keresve is no done state); Tried to X → Megpróbált/Megpróbálta X-ni, never Nem sikerült (a reason follows on the line)",
     "avoid": [
       {
         "form": "Átnevezési terv elkészült",
@@ -2244,6 +2244,13 @@
     "forms": "the Servers list → a Szerverek lista (a Szerverek listában, your → a Szerverek listádban); stops listing it → leveszi a listáról; Cmdr lists X (verb) → a Cmdr felsorolja",
     "confidence": "high",
     "sources": "Microsoft terminology (list → lista); macOS AppKit (méretlista, stíluslista); catalog (fileExplorer.navigation.forgetServerConfirm)"
+  },
+  "listing": {
+    "chosen": "listázás",
+    "accept": ["listáz", "Fájllista"],
+    "forms": "tool chip → {name} listázása / {name} listázva (the name as bare possessor); the Settings section keeps Fájllista",
+    "confidence": "high",
+    "sources": "macOS AppKit MenuCommands (List… → Listázás…); Total Commander (mappa listázás); Thunar (könyvtárlistázás); catalog (askCmdr.tool.listDir.doing Egy mappa listázása)"
   },
   "local": {
     "chosen": "helyi",

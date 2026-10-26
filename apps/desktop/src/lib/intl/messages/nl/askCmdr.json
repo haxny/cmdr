@@ -177,11 +177,11 @@
   "@askCmdr.tool.nothingToSuggest.done": {
     "sourceHash": "2287381"
   },
-  "askCmdr.tool.memoryWrite.doing": "Slaat een notitie over je op",
+  "askCmdr.tool.memoryWrite.doing": "Bewaart een notitie over je",
   "@askCmdr.tool.memoryWrite.doing": {
     "sourceHash": "9c2a59e"
   },
-  "askCmdr.tool.memoryWrite.done": "Notitie over je opgeslagen",
+  "askCmdr.tool.memoryWrite.done": "Notitie over je bewaard",
   "@askCmdr.tool.memoryWrite.done": {
     "sourceHash": "cb3d875"
   },
@@ -201,371 +201,372 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.listDir.folder.doing": "Listing <place>{name}</place>",
+  "askCmdr.tool.listDir.folder.doing": "Haalt de inhoud van <place>{name}</place> op",
   "@askCmdr.tool.listDir.folder.doing": {
     "sourceHash": "d9a6c6c"
   },
-  "askCmdr.tool.listDir.folder.done": "Listed <place>{name}</place>",
+  "askCmdr.tool.listDir.folder.done": "Inhoud van <place>{name}</place> opgehaald",
   "@askCmdr.tool.listDir.folder.done": {
     "sourceHash": "f079af1"
   },
-  "askCmdr.tool.listPaneFiles.selection.doing": "Listing your selection in <place>{name}</place>",
+  "askCmdr.tool.listPaneFiles.selection.doing": "Haalt je selectie in <place>{name}</place> op",
   "@askCmdr.tool.listPaneFiles.selection.doing": {
     "sourceHash": "7beaf97"
   },
-  "askCmdr.tool.listPaneFiles.selection.done": "Listed your selection in <place>{name}</place>",
+  "askCmdr.tool.listPaneFiles.selection.done": "Je selectie in <place>{name}</place> opgehaald",
   "@askCmdr.tool.listPaneFiles.selection.done": {
     "sourceHash": "497e22a"
   },
-  "askCmdr.tool.folderImportance.folder.doing": "Checking how important <place>{name}</place> is",
+  "askCmdr.tool.folderImportance.folder.doing": "Controleert het belang van <place>{name}</place>",
   "@askCmdr.tool.folderImportance.folder.doing": {
     "sourceHash": "59d84ca"
   },
-  "askCmdr.tool.folderImportance.folder.done": "Checked how important <place>{name}</place> is",
+  "askCmdr.tool.folderImportance.folder.done": "Belang van <place>{name}</place> gecontroleerd",
   "@askCmdr.tool.folderImportance.folder.done": {
     "sourceHash": "f167904"
   },
-  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Looking inside <place>{name}</place>} one {Looking inside <place>{name}</place> and {othersText} more} other {Looking inside <place>{name}</place> and {othersText} more}}",
+  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Kijkt in <place>{name}</place>} one {Kijkt in <place>{name}</place> en nog {othersText} bestand} other {Kijkt in <place>{name}</place> en nog {othersText} bestanden}}",
   "@askCmdr.tool.inspectFile.files.doing": {
     "sourceHash": "2038d00"
   },
-  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {Looked inside <place>{name}</place>} one {Looked inside <place>{name}</place> and {othersText} more} other {Looked inside <place>{name}</place> and {othersText} more}}",
+  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {In <place>{name}</place> gekeken} one {In <place>{name}</place> en nog {othersText} bestand gekeken} other {In <place>{name}</place> en nog {othersText} bestanden gekeken}}",
   "@askCmdr.tool.inspectFile.files.done": {
     "sourceHash": "63018e2"
   },
-  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Reading what’s in <place>{name}</place>} one {Reading what’s in <place>{name}</place> and {othersText} more} other {Reading what’s in <place>{name}</place> and {othersText} more}}",
+  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Leest wat er in <place>{name}</place> staat} one {Leest wat er in <place>{name}</place> en nog {othersText} foto staat} other {Leest wat er in <place>{name}</place> en nog {othersText} foto''s staat}}",
   "@askCmdr.tool.imageFacts.files.doing": {
     "sourceHash": "5e7fbe6"
   },
-  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Read what’s in <place>{name}</place>} one {Read what’s in <place>{name}</place> and {othersText} more} other {Read what’s in <place>{name}</place> and {othersText} more}}",
+  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Gelezen wat er in <place>{name}</place> staat} one {Gelezen wat er in <place>{name}</place> en nog {othersText} foto staat} other {Gelezen wat er in <place>{name}</place> en nog {othersText} foto''s staat}}",
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "b3df6a5"
   },
-  "askCmdr.tool.search.queryIn.doing": "Searching for “{query}” in <places>{placesText}</places>",
+  "askCmdr.tool.search.queryIn.doing": "Zoekt naar ‘{query}’ in <places>{placesText}</places>",
   "@askCmdr.tool.search.queryIn.doing": {
     "sourceHash": "b1570b4"
   },
-  "askCmdr.tool.search.queryIn.done": "Searched for “{query}” in <places>{placesText}</places>",
+  "askCmdr.tool.search.queryIn.done": "Gezocht naar ‘{query}’ in <places>{placesText}</places>",
   "@askCmdr.tool.search.queryIn.done": {
     "sourceHash": "b284755"
   },
-  "askCmdr.tool.search.query.doing": "Searching for “{query}”",
+  "askCmdr.tool.search.query.doing": "Zoekt naar ‘{query}’",
   "@askCmdr.tool.search.query.doing": {
     "sourceHash": "5b0939b"
   },
-  "askCmdr.tool.search.query.done": "Searched for “{query}”",
+  "askCmdr.tool.search.query.done": "Gezocht naar ‘{query}’",
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "04e348f"
   },
-  "askCmdr.tool.search.in.doing": "Searching in <places>{placesText}</places>",
+  "askCmdr.tool.search.in.doing": "Zoekt in <places>{placesText}</places>",
   "@askCmdr.tool.search.in.doing": {
     "sourceHash": "6588be5"
   },
-  "askCmdr.tool.search.in.done": "Searched in <places>{placesText}</places>",
+  "askCmdr.tool.search.in.done": "Gezocht in <places>{placesText}</places>",
   "@askCmdr.tool.search.in.done": {
     "sourceHash": "d3b7095"
   },
-  "askCmdr.tool.searchPhotos.query.doing": "Searching your photos for “{query}”",
+  "askCmdr.tool.searchPhotos.query.doing": "Doorzoekt je foto''s op ‘{query}’",
   "@askCmdr.tool.searchPhotos.query.doing": {
     "sourceHash": "b2e0e1f"
   },
-  "askCmdr.tool.searchPhotos.query.done": "Searched your photos for “{query}”",
+  "askCmdr.tool.searchPhotos.query.done": "Je foto''s doorzocht op ‘{query}’",
   "@askCmdr.tool.searchPhotos.query.done": {
     "sourceHash": "5b60316"
   },
-  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Preparing a plan to rename {countText} file} other {Preparing a plan to rename {countText} files}}",
+  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Bereidt een plan voor om de naam van {countText} bestand te wijzigen} other {Bereidt een plan voor om de namen van {countText} bestanden te wijzigen}}",
   "@askCmdr.tool.proposeRenamePlan.count.doing": {
     "sourceHash": "30c839d"
   },
-  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {Prepared a plan to rename {countText} file} other {Prepared a plan to rename {countText} files}}",
+  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {Plan voorbereid om de naam van {countText} bestand te wijzigen} other {Plan voorbereid om de namen van {countText} bestanden te wijzigen}}",
   "@askCmdr.tool.proposeRenamePlan.count.done": {
     "sourceHash": "2e2e790"
   },
-  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Preparing {countText} suggestion} other {Preparing {countText} suggestions}}",
+  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Bereidt {countText} suggestie voor} other {Bereidt {countText} suggesties voor}}",
   "@askCmdr.tool.proposeSuggestions.count.doing": {
     "sourceHash": "971e695"
   },
-  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {Prepared {countText} suggestion} other {Prepared {countText} suggestions}}",
+  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {{countText} suggestie voorbereid} other {{countText} suggesties voorbereid}}",
   "@askCmdr.tool.proposeSuggestions.count.done": {
     "sourceHash": "cbb1273"
   },
-  "askCmdr.tool.memoryWrite.file.doing": "Saving a note to <place>{name}</place>",
+  "askCmdr.tool.memoryWrite.file.doing": "Bewaart een notitie in <place>{name}</place>",
   "@askCmdr.tool.memoryWrite.file.doing": {
     "sourceHash": "364c7ec"
   },
-  "askCmdr.tool.memoryWrite.file.done": "Saved a note to <place>{name}</place>",
+  "askCmdr.tool.memoryWrite.file.done": "Notitie bewaard in <place>{name}</place>",
   "@askCmdr.tool.memoryWrite.file.done": {
     "sourceHash": "8e7a923"
   },
-  "askCmdr.tool.memoryWrite.file.tried": "Tried to save a note to <place>{name}</place>",
+  "askCmdr.tool.memoryWrite.file.tried": "Probeerde een notitie in <place>{name}</place> te bewaren",
   "@askCmdr.tool.memoryWrite.file.tried": {
     "sourceHash": "16921ce"
   },
-  "askCmdr.tool.memoryWrite.tried": "Tried to save a note",
+  "askCmdr.tool.memoryWrite.tried": "Probeerde een notitie te bewaren",
   "@askCmdr.tool.memoryWrite.tried": {
     "sourceHash": "25f76fa"
   },
-  "askCmdr.tool.memoryEdit.file.doing": "Updating <place>{name}</place>",
+  "askCmdr.tool.memoryEdit.file.doing": "Werkt <place>{name}</place> bij",
   "@askCmdr.tool.memoryEdit.file.doing": {
     "sourceHash": "17b6898"
   },
-  "askCmdr.tool.memoryEdit.file.done": "Updated <place>{name}</place>",
+  "askCmdr.tool.memoryEdit.file.done": "<place>{name}</place> bijgewerkt",
   "@askCmdr.tool.memoryEdit.file.done": {
     "sourceHash": "9dc9f76"
   },
-  "askCmdr.tool.memoryEdit.file.tried": "Tried to update <place>{name}</place>",
+  "askCmdr.tool.memoryEdit.file.tried": "Probeerde <place>{name}</place> bij te werken",
   "@askCmdr.tool.memoryEdit.file.tried": {
     "sourceHash": "aeb94cd"
   },
-  "askCmdr.tool.memoryEdit.tried": "Tried to update its notes",
+  "askCmdr.tool.memoryEdit.tried": "Probeerde zijn eigen notities bij te werken",
   "@askCmdr.tool.memoryEdit.tried": {
     "sourceHash": "015f12a"
   },
-  "askCmdr.tool.unknown.named.doing": "Asking for “{name}”",
+  "askCmdr.tool.unknown.named.doing": "Vraagt om ‘{name}’",
   "@askCmdr.tool.unknown.named.doing": {
     "sourceHash": "e220c3b"
   },
-  "askCmdr.tool.unknown.named.done": "Asked for “{name}”",
+  "askCmdr.tool.unknown.named.done": "Gevraagd om ‘{name}’",
   "@askCmdr.tool.unknown.named.done": {
     "sourceHash": "2a9ce37"
   },
-  "askCmdr.tool.showInPane": "Show {path} in a pane",
+  "askCmdr.tool.showInPane": "Toon {path} in een paneel",
   "@askCmdr.tool.showInPane": {
     "sourceHash": "98180ea"
   },
-  "askCmdr.tool.repeat": "Same as above",
+  "askCmdr.tool.repeat": "Zelfde als hierboven",
   "@askCmdr.tool.repeat": {
     "sourceHash": "87115ee"
   },
   "askCmdr.tool.outcomeSeparator": ", ",
   "@askCmdr.tool.outcomeSeparator": {
-    "sourceHash": "0a07f65"
+    "sourceHash": "0a07f65",
+    "sameAsSourceJustification": "Dutch uses the same comma plus space as English (Microsoft Dutch style guide punctuation); punctuation only, nothing to translate."
   },
-  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} item} other {{countText} items}}",
+  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} onderdeel} other {{countText} onderdelen}}",
   "@askCmdr.tool.outcome.items": {
     "sourceHash": "5fbad7e"
   },
-  "askCmdr.tool.outcome.itemsShown": "showed {shownText} of {totalText}",
+  "askCmdr.tool.outcome.itemsShown": "{shownText} van {totalText} getoond",
   "@askCmdr.tool.outcome.itemsShown": {
     "sourceHash": "87b4f4b"
   },
-  "askCmdr.tool.outcome.itemsShownAtLeast": "showed {shownText} of at least {totalText}",
+  "askCmdr.tool.outcome.itemsShownAtLeast": "{shownText} van minstens {totalText} getoond",
   "@askCmdr.tool.outcome.itemsShownAtLeast": {
     "sourceHash": "e57786f"
   },
-  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} match} other {{countText} matches}}",
+  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} resultaat} other {{countText} resultaten}}",
   "@askCmdr.tool.outcome.matches": {
     "sourceHash": "8804edf"
   },
-  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {{countText} match so far} other {{countText} matches so far}}",
+  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {{countText} resultaat tot nu toe} other {{countText} resultaten tot nu toe}}",
   "@askCmdr.tool.outcome.matchesSoFar": {
     "sourceHash": "712f992"
   },
-  "askCmdr.tool.outcome.nothingFound": "nothing found",
+  "askCmdr.tool.outcome.nothingFound": "niets gevonden",
   "@askCmdr.tool.outcome.nothingFound": {
     "sourceHash": "9772cc8"
   },
-  "askCmdr.tool.outcome.nothingFoundYet": "nothing found yet",
+  "askCmdr.tool.outcome.nothingFoundYet": "nog niets gevonden",
   "@askCmdr.tool.outcome.nothingFoundYet": {
     "sourceHash": "0d0778e"
   },
-  "askCmdr.tool.outcome.imageIndexingOff": "photo indexing is off",
+  "askCmdr.tool.outcome.imageIndexingOff": "het indexeren van afbeeldingen staat uit",
   "@askCmdr.tool.outcome.imageIndexingOff": {
     "sourceHash": "f9e5c29"
   },
-  "askCmdr.tool.outcome.semanticModelNotInstalled": "the photo search model isn’t installed",
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "het model voor semantisch zoeken is niet geïnstalleerd",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
     "sourceHash": "00c39e7"
   },
-  "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} ready to review} other {{countText} ready to review}}",
+  "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} klaar om te beoordelen} other {{countText} klaar om te beoordelen}}",
   "@askCmdr.tool.outcome.staged": {
     "sourceHash": "b0aba27"
   },
-  "askCmdr.tool.outcome.notStaged": "nothing to review",
+  "askCmdr.tool.outcome.notStaged": "niets te beoordelen",
   "@askCmdr.tool.outcome.notStaged": {
     "sourceHash": "40a1608"
   },
-  "askCmdr.tool.outcome.toolUnavailable": "not a tool it has",
+  "askCmdr.tool.outcome.toolUnavailable": "geen van zijn hulpmiddelen",
   "@askCmdr.tool.outcome.toolUnavailable": {
     "sourceHash": "9d46d4e"
   },
-  "askCmdr.tool.outcome.repeatedCall": "skipped: it tried this already",
+  "askCmdr.tool.outcome.repeatedCall": "overgeslagen: dat had het al geprobeerd",
   "@askCmdr.tool.outcome.repeatedCall": {
     "sourceHash": "059d9db"
   },
-  "askCmdr.tool.outcome.problem": "that didn’t go through",
+  "askCmdr.tool.outcome.problem": "dat lukte niet",
   "@askCmdr.tool.outcome.problem": {
     "sourceHash": "05a940f"
   },
-  "askCmdr.tool.outcome.memory.outsideMemory": "that’s outside its notes folder",
+  "askCmdr.tool.outcome.memory.outsideMemory": "dat valt buiten zijn notitiemap",
   "@askCmdr.tool.outcome.memory.outsideMemory": {
     "sourceHash": "c320cc4"
   },
-  "askCmdr.tool.outcome.memory.notMarkdown": "notes have to be Markdown files",
+  "askCmdr.tool.outcome.memory.notMarkdown": "notities moeten Markdown-bestanden zijn",
   "@askCmdr.tool.outcome.memory.notMarkdown": {
     "sourceHash": "a75dc2f"
   },
-  "askCmdr.tool.outcome.memory.noPath": "no note was named",
+  "askCmdr.tool.outcome.memory.noPath": "er is geen notitie opgegeven",
   "@askCmdr.tool.outcome.memory.noPath": {
     "sourceHash": "6392377"
   },
-  "askCmdr.tool.outcome.memory.directoryFull": "the notes folder is full",
+  "askCmdr.tool.outcome.memory.directoryFull": "de notitiemap is vol",
   "@askCmdr.tool.outcome.memory.directoryFull": {
     "sourceHash": "330a5d9"
   },
-  "askCmdr.tool.outcome.memory.noSuchFile": "that note isn’t there",
+  "askCmdr.tool.outcome.memory.noSuchFile": "die notitie bestaat niet",
   "@askCmdr.tool.outcome.memory.noSuchFile": {
     "sourceHash": "e11b4e5"
   },
-  "askCmdr.tool.outcome.memory.noMatch": "the text to change wasn’t in the note",
+  "askCmdr.tool.outcome.memory.noMatch": "de te wijzigen tekst staat niet in de notitie",
   "@askCmdr.tool.outcome.memory.noMatch": {
     "sourceHash": "ed063fe"
   },
-  "askCmdr.tool.outcome.memory.notUnique": "the text to change is in the note more than once",
+  "askCmdr.tool.outcome.memory.notUnique": "de te wijzigen tekst staat meer dan eens in de notitie",
   "@askCmdr.tool.outcome.memory.notUnique": {
     "sourceHash": "1527ba7"
   },
-  "askCmdr.tool.outcome.memory.unwritable": "the note couldn’t be written",
+  "askCmdr.tool.outcome.memory.unwritable": "de notitie kon niet worden geschreven",
   "@askCmdr.tool.outcome.memory.unwritable": {
     "sourceHash": "4edf07b"
   },
-  "askCmdr.tool.outcome.memory.unavailable": "its notes folder isn’t available",
+  "askCmdr.tool.outcome.memory.unavailable": "zijn notitiemap is niet beschikbaar",
   "@askCmdr.tool.outcome.memory.unavailable": {
     "sourceHash": "bcf32e3"
   },
-  "askCmdr.tool.outcome.memory.other": "the note wasn’t changed",
+  "askCmdr.tool.outcome.memory.other": "de notitie is niet gewijzigd",
   "@askCmdr.tool.outcome.memory.other": {
     "sourceHash": "00d5f3c"
   },
-  "askCmdr.tool.outcome.noAnswer": "no answer recorded",
+  "askCmdr.tool.outcome.noAnswer": "geen antwoord vastgelegd",
   "@askCmdr.tool.outcome.noAnswer": {
     "sourceHash": "43eb550"
   },
-  "askCmdr.tool.details": "What came back",
+  "askCmdr.tool.details": "Wat er terugkwam",
   "@askCmdr.tool.details": {
     "sourceHash": "79665b6"
   },
-  "askCmdr.tool.preview.loading": "Getting what came back",
+  "askCmdr.tool.preview.loading": "Ophalen wat er terugkwam",
   "@askCmdr.tool.preview.loading": {
     "sourceHash": "99e2019"
   },
-  "askCmdr.tool.preview.given": "Showed the model {givenText} of {totalText}",
+  "askCmdr.tool.preview.given": "Het model kreeg {givenText} van {totalText} te zien",
   "@askCmdr.tool.preview.given": {
     "sourceHash": "8384012"
   },
-  "askCmdr.tool.preview.givenSoFar": "Showed the model {givenText} of {totalText} found so far",
+  "askCmdr.tool.preview.givenSoFar": "Het model kreeg {givenText} te zien van {totalText} die tot nu toe gevonden zijn",
   "@askCmdr.tool.preview.givenSoFar": {
     "sourceHash": "2235a21"
   },
-  "askCmdr.tool.preview.firstRows": "{count, plural, one {Here’s the first one. Copy has the whole result.} other {Here are the first {countText}. Copy has the whole result.}}",
+  "askCmdr.tool.preview.firstRows": "{count, plural, one {Dit is de eerste. Met ‘Kopieer’ krijg je het hele resultaat.} other {Dit zijn de eerste {countText}. Met ‘Kopieer’ krijg je het hele resultaat.}}",
   "@askCmdr.tool.preview.firstRows": {
     "sourceHash": "1b695fc"
   },
-  "askCmdr.tool.preview.noRows": "There’s no list to show for this one. Copy has the whole result.",
+  "askCmdr.tool.preview.noRows": "Hier valt geen lijst te tonen. Met ‘Kopieer’ krijg je het hele resultaat.",
   "@askCmdr.tool.preview.noRows": {
     "sourceHash": "d80bc30"
   },
-  "askCmdr.tool.preview.problemLabel": "What the model was told:",
+  "askCmdr.tool.preview.problemLabel": "Wat het model te horen kreeg:",
   "@askCmdr.tool.preview.problemLabel": {
     "sourceHash": "edf1200"
   },
-  "askCmdr.tool.preview.setAside": "This result was set aside to make room, so there’s nothing left of it to show.",
+  "askCmdr.tool.preview.setAside": "Dit resultaat is opzijgezet om ruimte te maken, dus er is niets meer van te tonen.",
   "@askCmdr.tool.preview.setAside": {
     "sourceHash": "2b7a0ee"
   },
-  "askCmdr.tool.preview.notFound": "This result isn’t here anymore.",
+  "askCmdr.tool.preview.notFound": "Dit resultaat is er niet meer.",
   "@askCmdr.tool.preview.notFound": {
     "sourceHash": "eaa5a2c"
   },
-  "askCmdr.tool.preview.unavailable": "Cmdr can’t read this result right now.",
+  "askCmdr.tool.preview.unavailable": "Cmdr kan dit resultaat nu niet lezen.",
   "@askCmdr.tool.preview.unavailable": {
     "sourceHash": "5649f24"
   },
-  "askCmdr.tool.preview.line": "line {lineText}",
+  "askCmdr.tool.preview.line": "regel {lineText}",
   "@askCmdr.tool.preview.line": {
     "sourceHash": "7d8370c"
   },
-  "askCmdr.tool.preview.status.missing": "not there",
+  "askCmdr.tool.preview.status.missing": "niet aanwezig",
   "@askCmdr.tool.preview.status.missing": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.preview.status.unreadable": "couldn’t be read",
+  "askCmdr.tool.preview.status.unreadable": "kon niet worden gelezen",
   "@askCmdr.tool.preview.status.unreadable": {
     "sourceHash": "1e9c923"
   },
-  "askCmdr.tool.preview.status.unreachable": "out of reach",
+  "askCmdr.tool.preview.status.unreachable": "onbereikbaar",
   "@askCmdr.tool.preview.status.unreachable": {
     "sourceHash": "86f57c8"
   },
-  "askCmdr.tool.preview.status.unsupportedVolume": "on a drive it can’t look inside",
+  "askCmdr.tool.preview.status.unsupportedVolume": "op een schijf waar de AI niet in kan kijken",
   "@askCmdr.tool.preview.status.unsupportedVolume": {
     "sourceHash": "945bf7c"
   },
-  "askCmdr.tool.preview.status.notIndexed": "not indexed yet",
+  "askCmdr.tool.preview.status.notIndexed": "nog niet geïndexeerd",
   "@askCmdr.tool.preview.status.notIndexed": {
     "sourceHash": "c0da718"
   },
-  "askCmdr.tool.preview.copy": "Copy",
+  "askCmdr.tool.preview.copy": "Kopieer",
   "@askCmdr.tool.preview.copy": {
     "sourceHash": "e21f935"
   },
-  "askCmdr.tool.preview.copyLabel": "Copy the whole result as JSON",
+  "askCmdr.tool.preview.copyLabel": "Kopieer het hele resultaat als JSON",
   "@askCmdr.tool.preview.copyLabel": {
     "sourceHash": "91a0434"
   },
-  "askCmdr.tool.preview.copied": "Copied",
+  "askCmdr.tool.preview.copied": "Gekopieerd",
   "@askCmdr.tool.preview.copied": {
     "sourceHash": "8d525e5"
   },
-  "askCmdr.tool.preview.copyRefused": "The clipboard didn’t take it. Try again?",
+  "askCmdr.tool.preview.copyRefused": "Het klembord nam het niet aan. Opnieuw proberen?",
   "@askCmdr.tool.preview.copyRefused": {
     "sourceHash": "5b856ff"
   },
-  "askCmdr.toolGroup.summary": "Looked around: {parts}",
+  "askCmdr.toolGroup.summary": "Rondgekeken: {parts}",
   "@askCmdr.toolGroup.summary": {
     "sourceHash": "2808d11"
   },
-  "askCmdr.toolGroup.summaryRunning": "Looking around: {parts}",
+  "askCmdr.toolGroup.summaryRunning": "Kijkt rond: {parts}",
   "@askCmdr.toolGroup.summaryRunning": {
     "sourceHash": "db287ea"
   },
-  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} folder} other {{countText} folders}}",
+  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} map} other {{countText} mappen}}",
   "@askCmdr.toolGroup.folders": {
     "sourceHash": "3c46f04"
   },
-  "askCmdr.toolGroup.files": "{count, plural, one {{countText} file} other {{countText} files}}",
+  "askCmdr.toolGroup.files": "{count, plural, one {{countText} bestand} other {{countText} bestanden}}",
   "@askCmdr.toolGroup.files": {
     "sourceHash": "3c08428"
   },
-  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} search} other {{countText} searches}}",
+  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} zoekopdracht} other {{countText} zoekopdrachten}}",
   "@askCmdr.toolGroup.searches": {
     "sourceHash": "f280511"
   },
-  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} check} other {{countText} checks}}",
+  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} controle} other {{countText} controles}}",
   "@askCmdr.toolGroup.checks": {
     "sourceHash": "a09f7fb"
   },
-  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} plan} other {{countText} plans}}",
+  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} plan} other {{countText} plannen}}",
   "@askCmdr.toolGroup.plans": {
     "sourceHash": "bd332c0"
   },
-  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} note} other {{countText} notes}}",
+  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} notitie} other {{countText} notities}}",
   "@askCmdr.toolGroup.notes": {
     "sourceHash": "2623802"
   },
-  "askCmdr.toolGroup.other": "{count, plural, one {{countText} other step} other {{countText} other steps}}",
+  "askCmdr.toolGroup.other": "{count, plural, one {{countText} andere stap} other {{countText} andere stappen}}",
   "@askCmdr.toolGroup.other": {
     "sourceHash": "6108287"
   },
-  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {duration} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
+  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} toolaanroep} other {{callsText} toolaanroepen}} · {duration} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
   "@askCmdr.turnStats.summary": {
     "sourceHash": "a7d484d"
   },
-  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
+  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} toolaanroep} other {{callsText} toolaanroepen}} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
   "@askCmdr.turnStats.summaryNoDuration": {
     "sourceHash": "d768ba2"
   },
-  "askCmdr.turnStats.stopped": "Stopped · {summary}",
+  "askCmdr.turnStats.stopped": "Gestopt · {summary}",
   "@askCmdr.turnStats.stopped": {
     "sourceHash": "0f6ea99"
   },

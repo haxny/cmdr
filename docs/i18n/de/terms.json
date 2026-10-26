@@ -2462,6 +2462,9 @@
     "chosen": "Foto",
     "confidence": "high",
     "decision": "Image-content indexing on network drives",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "names the feature the user turns back on, which the catalog calls Bildindizierung everywhere (settings.section.imageIndexing, indexing.enrich.label); a name beats the prose split"
+    },
     "sources": "macOS AirDrop (1 Foto empfangen); Photos (In „Fotos“ öffnen)"
   },
   "pin": {
@@ -3953,6 +3956,13 @@
     "confidence": "high",
     "forms": "command, menu item, and sheet title → Mehrfach umbenennen (menu with … after a no-break space); the act in prose → das Umbenennen; one run as a noun → Mehrfach-Umbenennung (Letzte Mehrfach-Umbenennung widerrufen)",
     "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)"
+  },
+  "listing": {
+    "accept": ["aufgelistet", "Auflisten", "Dateiliste"],
+    "chosen": "auflisten",
+    "confidence": "high",
+    "forms": "Ask Cmdr tool line → <place>{name}</place> wird aufgelistet / <place>{name}</place> aufgelistet; the Settings section Listing → Dateiliste (settings.section.listing)",
+    "sources": "Double Commander de (Listing \"%s\" → »%s« auflisten); GNOME Nautilus de (Auflisten); catalog (askCmdr.tool.listDir.doing Ein Ordner wird aufgelistet)"
   },
   "load": {
     "accept": ["geladen", "Laden", "lade", "lädt", "lädst"],

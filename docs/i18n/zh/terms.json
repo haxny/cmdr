@@ -1890,6 +1890,13 @@
     "forms": "the Servers list “服务器”列表 (quoted, 列表 outside the quotes); the verb (Cmdr lists X) 列出",
     "sources": "macOS zh-CN Finder (最近使用的服务器的列表); catalog (43 uses)"
   },
+  "listing": {
+    "accept": ["列表"],
+    "chosen": "列出",
+    "confidence": "high",
+    "forms": "a tool line reading a folder → 正在列出 / 已列出; the settings section noun Listing → 列表",
+    "sources": "catalog (askCmdr.tool.listDir.* 正在列出一个文件夹; the list ruling already accepts 列出 for the verb); Double Commander zh-CN renders Listing as 列表 and \"Listing %s\" as 正在列表, a noun forced into a verb slot, so not reused"
+  },
   "local": {
     "chosen": "本地",
     "confidence": "high",
@@ -2424,6 +2431,10 @@
     "chosen": "照片",
     "confidence": "high",
     "decision": "Network-drive image indexing catalog",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "Names the setting, so it uses the feature name 图像索引 (settings.mediaIndex.*), not the warm 照片.",
+      "askCmdr.tool.outcome.semanticModelNotInstalled": "Names the model by the catalog’s own name 语义搜索模型 (the delete-model dialog), not a coined 照片搜索模型."
+    },
     "forms": "warm copy about the user's pictures 照片 (classifier 张); the feature is 图像",
     "sources": "macOS Photos"
   },

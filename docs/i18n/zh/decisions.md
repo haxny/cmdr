@@ -104,6 +104,11 @@ split. "gently" `很克制` over `温和地` (the promise is restraint). `始终
 Chat `聊天`, the list `聊天记录` (WeChat), `新建聊天`. `token` Latin with `个` (tentative). Usage `用量` over
 Microsoft's `使用情况`; Spending `花费`.
 
+## Tool lines (`askCmdr.tool.*`, `askCmdr.toolGroup.*`)
+
+`<place>` names stay bare and spaced (the link marks them); quoted `{query}` keeps `“…”`. "and N more" → `和另外 N 个`
+(`等 N 个` would count the first). "Tried to" → `尝试…`.
+
 ## Rename review + index scope (`askCmdr.renameReview.*`, `settings.mediaIndex.scope.*`)
 
 "needs attention" `需要先处理` (the English stays vague; tentative). Importance `重要性` everywhere

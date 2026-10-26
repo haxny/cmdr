@@ -1706,6 +1706,13 @@
     "confidence": "high",
     "sources": "macOS pt-BR Finder “Lista” (view as List); Microsoft pt-BR terminology list → lista; Nautilus pt_BR “Visão em lista”"
   },
+  "listing": {
+    "chosen": "listar",
+    "accept": ["Listando", "Listou", "Listagem"],
+    "forms": "Ask Cmdr tool line → Listando <place>{name}</place> / Listou <place>{name}</place>; the Settings section Listing → Listagem (settings.section.listing)",
+    "confidence": "high",
+    "sources": "Double Commander pt-BR (Listing → Listando, Listing \"%s\" → Listando \"%s\"); catalog (askCmdr.tool.listDir.doing Listando uma pasta)"
+  },
   "local": {
     "chosen": "local",
     "accept": ["locais", "localmente"],
@@ -2211,7 +2218,10 @@
     "chosen": "foto",
     "forms": "feminine: foto indexada; photo archive → acervo de fotos",
     "confidence": "confirmed",
-    "sources": "macOS pile (Fotos, 90+ hits)"
+    "sources": "macOS pile (Fotos, 90+ hits)",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "Names the image-indexing setting, which the catalog calls indexação de imagens (settings.mediaIndex.*); the English \"photo indexing\" is queued in source-queue.md."
+    }
   },
   "pin": {
     "chosen": "Fixar",

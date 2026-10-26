@@ -171,6 +171,11 @@ grammar in `style.md`, open questions in `review-queue.md`.
 - `detalhes da câmera`, never `metadados` / `dados EXIF`. `onde ela foi tirada`, since `localização` alone reads as the
   path.
 
+## Tool lines (`askCmdr.tool.*`, `askCmdr.toolGroup.*`, `askCmdr.turnStats.*`)
+
+- Bare third-person past (`Listou`, `Buscou`) like the shipped siblings; notes with no line subject name `a IA` or
+  `O Cmdr`, never a pronoun. `{countText} para revisar` dodges agreement; `Interrompida` agrees with `a resposta`.
+
 ## Cloud AI consent (`ai.cloudConsent.*`, `askCmdr.gate.*`)
 
 - `Ative “Permitir IA na nuvem”` reproduces the label; `Permita a IA` wouldn't. `serviço` (this family) vs `provedor`

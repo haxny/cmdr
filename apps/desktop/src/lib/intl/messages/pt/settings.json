@@ -2301,9 +2301,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "O modelo que o chat usa. Deixe em branco para usar o mesmo modelo dos outros recursos de IA do Cmdr. Exemplo: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "O modelo que o chat usa. Deixe em branco para usar o mesmo modelo dos outros recursos de IA do Cmdr. Exemplo: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Igual à IA do Cmdr",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2935,25 +2935,26 @@
   },
   "settings.advanced.card.askCmdr": "Ask Cmdr",
   "@settings.advanced.card.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Ask Cmdr is the chat panel's product name and stays verbatim (pt terms.json ask-cmdr, confirmed); siblings settings.section.askCmdr and settings.askCmdr.enabled.label ship the same."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Grupos de ferramentas quando a resposta chega",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Enquanto trabalha, o Ask Cmdr mostra o que está olhando. Escolha se essas linhas se recolhem quando a resposta chegar.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "sourceHash": "0be1969"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Recolher",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "sourceHash": "01052be"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Deixar como estavam",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "sourceHash": "0aa6718"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistente, chat, conversa, recolher, expandir, fechar, abrir, ferramentas, etapas, passos, resposta",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
     "sourceHash": "6a9f055"
   },

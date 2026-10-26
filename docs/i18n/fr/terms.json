@@ -1890,6 +1890,14 @@
     "forms": "the Servers list → la liste Serveurs (row name unquoted, as shipped); stops listing it → n’affiche plus",
     "sources": "MS terminology FRA (list → liste); catalog (la liste, 33 uses)"
   },
+  "listing": {
+    "accept": ["consultation", "consulté", "consulter"],
+    "chosen": "liste",
+    "confidence": "high",
+    "decision": "Ask Cmdr",
+    "forms": "the noun (a directory listing, the Listing settings section) → liste; the act on an Ask Cmdr tool line → Consultation du dossier {name} / A consulté le dossier {name}, like askCmdr.tool.listDir.*",
+    "sources": "Thunar fr (Detailed directory listing → Liste détaillée des répertoires); catalog (settings.section.listing → Liste; askCmdr.tool.listDir.* → Consultation d’un dossier / A consulté un dossier)"
+  },
   "local": {
     "accept": ["localement", "locaux", "locale", "locales"],
     "chosen": "local",
@@ -2395,6 +2403,9 @@
   "photo": {
     "chosen": "photo",
     "confidence": "high",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "names the setting: the switch is « Indexation des images » in the catalog (settings.section and mediaIndex keys), so the outcome quotes that name"
+    },
     "forms": "feminine (photo indexée, photos indexées); photo archive → archive de photos",
     "sources": "macOS"
   },

@@ -147,3 +147,22 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on the retired
   "undo by deleting what it writes" pill key). (fr)
 - The AI suggestions dialog keys ship without screenshots; the pills and fact lines need them most. (fr, hu)
+- `askCmdr.tool.outcome.imageIndexingOff` says "photo indexing", but the setting it points at is "Image indexing"
+  (`settings.mediaIndex.*`). Say in the description which setting name to quote, or align the English. Same split in
+  `askCmdr.tool.outcome.semanticModelNotInstalled` ("the photo search model") vs `settings.mediaIndex.clip.*` ("the
+  semantic search model"); zh-Hant quoted the settings names for both. (fr, de, es, pt, nl, ru, sv, vi, zh, zh-Hant)
+- `askCmdr.tool.*.done` with `<place>{name}</place>`: say the tag may wrap the name alone, so a language can put the
+  object's type noun outside it (`du dossier <place>{name}</place>`) to dodge elision and gender. (fr, ru)
+- `askCmdr.turnStats.stopped`: a bare "Stopped" must agree with an unnamed noun in gendered languages; say in the
+  description that it describes the answer (es chose `Detenida`, for `la respuesta`; pt chose `Interrompida`, for
+  `a resposta`; sv chose `Stoppat`, for `svaret`). (es, pt, ru, sv)
+- `settings.askCmdr.toolGroupsOnAnswer.description` makes "Ask Cmdr" the subject of a sentence about what the assistant
+  does, while the house line is that the brand names only the panel and prose says Cmdr or the AI. Say which the
+  description wants, or reword ("While the AI works…"). Note `dont-translate` fails a value that drops the source's
+  "Cmdr", so rewording to "the AI" needs the English changed first (ru kept Ask Cmdr for that reason; sv kept it as the
+  panel and made `AI:n` the one looking; zh-Hant kept `Ask Cmdr 在處理時`). (hu, ru, sv, zh-Hant)
+- `askCmdr.tool.search.queryIn.*` / `search.in.*`: pass the folder count beside `{placesText}` so a case language can
+  pick "in the folder X" vs "in the folders X and Y" (ru `в папке` / `в папках`). Without it, ru writes a plural label
+  colon (`в папках: Downloads`) even for one folder. (ru)
+- `askCmdr.tool.search.*.done`: "Searched for X" has no natural done-participle in some languages (hu `keresve` isn't a
+  finished state); say a locale may use a nearby verb ("looked up") as long as the doing/done pair shares it. (hu)

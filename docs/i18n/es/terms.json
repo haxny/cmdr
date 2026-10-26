@@ -99,7 +99,11 @@
   },
   "ai-tool": {
     "chosen": "herramienta",
-    "forms": "tool status lines: gerund for doing (Mirando dentro de los archivos), impersonal Se + preterite for done (Se buscó en tus fotos, Se usó una herramienta); Android platform tools → herramientas de plataforma de Android",
+    "forms": "tool status lines: gerund for doing (Mirando dentro de los archivos), impersonal Se + compound perfect for done (Se ha buscado en tus fotos, Se ha usado una herramienta) and Se ha intentado for a tried line, which es-419 forks to the preterite (Se buscó); a counted tool call → consulta (as lookup in askCmdr.event.contextTrimmed); Android platform tools → herramientas de plataforma de Android",
+    "exceptions": {
+      "askCmdr.turnStats.summary": "Counts tool calls, which the chat already calls consultas (askCmdr.event.contextTrimmed, askCmdr.error.repeatedToolCall); herramienta would name the tool, not the request.",
+      "askCmdr.turnStats.summaryNoDuration": "Same line as askCmdr.turnStats.summary without the time: consultas."
+    },
     "confidence": "high",
     "sources": "catalog (askCmdr.tool.*); MS (tool → herramienta)",
     "decision": "Ask Cmdr"
@@ -1841,6 +1845,13 @@
     "confidence": "high",
     "sources": "macOS Finder (visualización como lista); catalog la lista Servidores / la lista de servidores"
   },
+  "listing": {
+    "chosen": "listar",
+    "accept": ["list", "Lista"],
+    "forms": "progress gerund Listando (Listando los archivos…, Listando {name}); done Se ha listado {name}; the Settings section Listing → Lista (a topic noun)",
+    "confidence": "high",
+    "sources": "Double Commander (Listing → Listando, Listing \"%s\" → Listando «%s»); catalog fileOperations.transferTree.preparing, askCmdr.tool.listDir.*, settings.section.listing"
+  },
   "local": {
     "chosen": "local",
     "accept": ["locales"],
@@ -1878,8 +1889,8 @@
   },
   "look-inside": {
     "chosen": "mirar dentro de",
-    "accept": ["dentro de"],
-    "forms": "tool labels Mirando dentro de los archivos / Se miró dentro de los archivos",
+    "accept": ["dentro de", "mirar dentro"],
+    "forms": "tool labels Mirando dentro de los archivos / Se ha mirado dentro de los archivos (es-419 Se miró); a named file → Mirando dentro de {name}",
     "confidence": "tentative",
     "sources": "composed; macOS es dentro de for inside",
     "decision": "Mirar dentro de un archivo"
@@ -2331,6 +2342,9 @@
     "chosen": "foto",
     "accept": ["fotos"],
     "forms": "photos indexed → fotos indexadas; photo archive → colección de fotos",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "Names the setting that is off, whose feature name is la indexación de imágenes (decision Fotos en unidades de red: feature names keep imagen)."
+    },
     "confidence": "high",
     "sources": "macOS Finder/AirDrop (Recibiendo ^0 fotos)",
     "decision": "Fotos en unidades de red"

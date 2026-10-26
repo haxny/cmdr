@@ -2299,9 +2299,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "對話使用的模型。留空則使用和 Cmdr 其他 AI 功能相同的模型。例如：claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "對話使用的模型。留空則使用和 Cmdr 其他 AI 功能相同的模型。例如：claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "和 Cmdr 的 AI 相同",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2932,25 +2932,26 @@
   },
   "settings.advanced.card.askCmdr": "Ask Cmdr",
   "@settings.advanced.card.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the built-in AI panel, kept verbatim like `settings.section.askCmdr`, `settings.askCmdr.enabled.label`, and `askCmdr.title`, which carry the same justification."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "settings.askCmdr.toolGroupsOnAnswer.label": "收到回覆後的工具群組",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr 在處理時，會顯示它正在查看什麼。選擇它回覆之後，要不要把這些行收起來。",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "sourceHash": "0be1969"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "收起來",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "sourceHash": "01052be"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "維持我原本的樣子",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "sourceHash": "0aa6718"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "助理, 聊天, 對話, 收合, 展開, 摺疊, 收起, 工具, 步驟, 回答, 回覆",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
     "sourceHash": "6a9f055"
   },

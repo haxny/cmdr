@@ -61,8 +61,8 @@ or `terms.json` aren't repeated here.
 ## Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `settings.advanced.logLlmCalls.*`, `commands.askCmdrToggle.*`)
 
 - `Tokens` with English `-s` (OpenAI's German help); `Werkzeug` over `Tool` (end users see it).
-- Tool status pairs: doing is passive present (`Ein Ordner wird aufgelistet`), done drops `wird`; nominative subject
-  keeps them parallel. A bare infinitive reads as a command, never a status.
+- Tool lines: doing is passive present (`<place>{name}</place> wird aufgelistet`), done drops `wird`, „tried“ →
+  `nicht gespeichert`; never a bare infinitive (reads as a command).
 - Unarchive → `Archivierung aufheben` (the `Auswahl aufheben` pattern).
 
 ## Image-content indexing on network drives (`settings.mediaIndex.networkVolumes.*`, `search.imageResults.networkOff`, `search.imageResults.paused`)

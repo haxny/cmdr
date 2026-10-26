@@ -1868,6 +1868,24 @@
     "forms": "the Servers list → de lijst Servers (the hub's name after the noun); server list → serverlijst; stops listing it → haalt … uit de lijst; the verb list (apps, shares, names) → tonen, opsommen, noemen in prose",
     "sources": "catalog (servers.pinHint.body, settings.servers intro: in de lijst Servers), Microsoft Terminology (list → lijst)"
   },
+  "listing": {
+    "accept": [
+      "inhoud",
+      "mapinhoud",
+      "ophalen",
+      "opgehaald",
+      "haalt",
+      "laden",
+      "geladen",
+      "op te sommen",
+      "op een rij zetten",
+      "Lijst"
+    ],
+    "chosen": "inhoud ophalen",
+    "confidence": "tentative",
+    "forms": "AI tool line → Haalt de inhoud van <place>{name}</place> op / Inhoud van <place>{name}</place> opgehaald (sibling askCmdr.tool.listDir: Haalt mapinhoud op); a selection → Haalt je selectie in … op; a pane loading → laden (Nautilus Map wordt geladen…)",
+    "sources": "catalog (askCmdr.tool.listDir.doing/done), Thunar (de inhoud van deze map), Nautilus (Map wordt geladen…); no macOS or MS noun for a listing"
+  },
   "local": {
     "accept": ["lokale"],
     "chosen": "lokaal",
@@ -2388,6 +2406,10 @@
     "accept": ["foto''s", "foto's"],
     "chosen": "foto",
     "confidence": "high",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "Quotes the feature by its settled name (het indexeren van afbeeldingen, the index ruling), not the warm word; English's “photo indexing” is logged in source-queue.md.",
+      "askCmdr.tool.outcome.semanticModelNotInstalled": "Names the model as Settings does (het model voor semantisch zoeken, settings.mediaIndex.clip.deleteConfirmTitle), so the user can find it."
+    },
     "forms": "pl. foto''s (ICU-doubled apostrophe); photo archive → fotoarchief",
     "sources": "macOS (Foto's app, ^0 foto's ontvangen)"
   },

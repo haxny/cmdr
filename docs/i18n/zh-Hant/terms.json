@@ -141,6 +141,12 @@
     "note": "same word as the `reply` ruling: the catalog writes an AI answer and a server's answer both as 回覆",
     "sources": "MS reply → 回覆; catalog askCmdr.json, ai.json"
   },
+  "ai-tool": {
+    "chosen": "工具",
+    "confidence": "high",
+    "forms": "a tool call → 工具呼叫 ({callsText} 次工具呼叫); it doesn't have that tool → 它沒有這項工具; classifier 項 (已使用一項工具)",
+    "sources": "MS terminology (tool → 工具, HKG, TWN); catalog askCmdr.tool.unknown.done 已使用一項工具"
+  },
   "alias": {
     "chosen": "替身",
     "confidence": "confirmed",
@@ -2181,6 +2187,21 @@
     "decision": "Classifiers and list compounds",
     "sources": "AP-TW (53), AP-HK (58), live TW (75), live HK (71)"
   },
+  "listing": {
+    "avoid": [
+      {
+        "form": "清單",
+        "why": "MS's noun for a catalog listing; Cmdr's listing is the act of reading a folder, and 清單 is avoided under the list ruling"
+      }
+    ],
+    "chosen": "列出",
+    "confidence": "high",
+    "exceptions": {
+      "settings.section.listing": "A Settings section NAME (a noun), not the act of listing: the catalog's 列表."
+    },
+    "forms": "Ask Cmdr tool line → 正在列出 <place>{name}</place> / 已列出 <place>{name}</place>; the Settings section Listing → 列表 (settings.section.listing)",
+    "sources": "Nautilus / Dolphin zh-TW (僅能列出檔案, 在檔案前列出資料夾); catalog askCmdr.tool.listDir.doing 正在列出一個資料夾"
+  },
   "load": {
     "avoid": [
       {
@@ -2805,6 +2826,10 @@
     ],
     "chosen": "照片",
     "confidence": "high",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "English says photo indexing, but it names the setting the catalog calls 影像索引 (search.imageResults.networkOff, settings.mediaIndex.*), so the reader can find it.",
+      "askCmdr.tool.outcome.semanticModelNotInstalled": "Names the model the catalog calls 語意搜尋模型 (settings.mediaIndex.clip.deleteConfirmTitle); one model keeps one name."
+    },
     "forms": "classifier 張",
     "sources": "AP-TW"
   },

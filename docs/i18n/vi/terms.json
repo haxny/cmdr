@@ -76,7 +76,7 @@
   "ai-tool": {
     "chosen": "công cụ",
     "confidence": "high",
-    "forms": "tool status lines Đang … / Đã … (Đang liệt kê một thư mục, Đã xem bên trong tệp)",
+    "forms": "tool status lines Đang … / Đã … (Đang liệt kê một thư mục, Đã xem bên trong tệp); tool calls → lần gọi công cụ; shown to the AI → cho xem / cho mô hình xem (hiển thị is on screen), N of M → N trên M; outcome notes stay pronoun-free (không có công cụ này), never nó",
     "sources": "MS terminology (tool → công cụ); catalog"
   },
   "allow": {
@@ -1690,6 +1690,15 @@
     "confidence": "high",
     "forms": "the noun → danh sách (the Servers list → danh sách Máy chủ); the verb (Cmdr lists X) → liệt kê",
     "sources": "macOS Finder and AppKit (List → Danh sách, 29 hits); MS terminology (list → danh sách)"
+  },
+  "listing": {
+    "chosen": "liệt kê",
+    "confidence": "high",
+    "exceptions": {
+      "settings.section.listing": "A Settings section name (a noun for the listing options), so the noun Danh sách fits; liệt kê is the verb on tool lines."
+    },
+    "forms": "tool lines Đang liệt kê / Đã liệt kê <name>; the Settings section name stays Danh sách (settings.section.listing)",
+    "sources": "GNOME Nautilus and Xfce Thunar (Xem kiểu liệt kê, Chỉ liệt kê tập tin); catalog askCmdr.tool.listDir.* (Đang liệt kê một thư mục)"
   },
   "local": {
     "chosen": "cục bộ",

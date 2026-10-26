@@ -157,9 +157,8 @@ Labels `afbeelding`, warm rows `foto's`, as EN. In prose `het doorzoeken van afb
 ## Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `commands.askCmdrToggle.*`, `ai.cloudConsent.askCmdr.*`)
 
 - Tool lines: present while doing (`Kijkt in bestanden`), participle when done (`In bestanden gekeken`, tentative), one
-  verb per tool. `limiet`, never "budget"; `Zet hier neer om bij te voegen`.
-- `miniatuur`, `cameragegevens` (tentative), `PDF-pagina's`, `titel en auteur` (MS `functie` is a job).
-  `nooit hele bestanden` keeps the promise true.
+  verb per tool. `limiet`, never "budget"; `Zet hier neer om bij te voegen`.- `miniatuur`, `cameragegevens` (tentative),
+  `PDF-pagina's`, `titel en auteur` (MS `functie` is a job). `nooit hele bestanden` keeps the promise true.
 - `Wijzig # bestandsnaam` fits the button; `cyclus van naamwijzigingen`; `van naam wisselen` over mechanical `roteren`;
   recent-past status in the perfect.
 

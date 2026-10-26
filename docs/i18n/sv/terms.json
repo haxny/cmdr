@@ -1828,6 +1828,13 @@
     "forms": "listan; compound stem list- (Listfärgläggning); a named list by apposition: listan Servrar; compounds serverlista, värdlista, volymlista",
     "sources": "catalog (Uppdatera listan, Läser in listan…, Tillbaka till värdlistan); standard Swedish"
   },
+  "listing": {
+    "accept": ["listar", "listade", "Lista"],
+    "chosen": "lista",
+    "confidence": "high",
+    "forms": "Ask Cmdr tool line → Listar <place>{name}</place> / Listade <place>{name}</place>; a transfer listing files → Listar filerna…; the Settings section Listing → Lista (settings.section.listing)",
+    "sources": "KDE Dolphin sv (ett kompakt visningsläge som listar kataloger och filer); catalog (askCmdr.tool.listDir.doing Listar en mapp, fileOperations.transferTree.preparing Listar filerna…)"
+  },
   "local": {
     "accept": ["lokalt", "lokala"],
     "chosen": "lokal",
@@ -3012,7 +3019,7 @@
     "sources": "catalog common.sizeUnit.tebibyte; IEC 80000-13 (binary) / SI (decimal)"
   },
   "skip": {
-    "accept": ["hoppar över", "hoppade över", "hoppas över", "överhoppad", "hoppas"],
+    "accept": ["hoppar över", "hoppade över", "hoppas över", "överhoppad", "hoppas", "hoppades över"],
     "chosen": "hoppa över",
     "confidence": "high",
     "forms": "outcome chip Överhoppad (tentative)",

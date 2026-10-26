@@ -2402,6 +2402,7 @@
     "chosen": "поиск изображений",
     "accept": [
       "поиск фотограф",
+      "поиска фотограф",
       "поиск изображ",
       "поиска изображ",
       "поиске изображ",
@@ -2740,6 +2741,16 @@
     "forms": "your Servers list → список «Серверы»",
     "confidence": "high",
     "sources": "macOS AppKit (List → Список); Finder ViewOptionsWindow; MS"
+  },
+  "listing": {
+    "chosen": "просмотр",
+    "accept": ["просмотр", "чтение", "список"],
+    "forms": "the AI listing a folder → Просмотр папки {name} / Папка {name} просмотрена (askCmdr.tool.listDir.*); a pane or transfer reading a folder → Чтение папки…; the Settings section → Список файлов",
+    "confidence": "tentative",
+    "exceptions": {
+      "fileOperations.transferTree.preparing": "A transfer listing what it's about to copy reads to the user as counting (Подсчет файлов…), the established progress wording."
+    },
+    "sources": "TC 1207 Reading directory → «Чтение каталога...» (каталог swapped for папка per the folder ruling); catalog precedent askCmdr.tool.listDir.doing «Просмотр папки», settings.section.listing «Список файлов»"
   },
   "load": {
     "chosen": "загрузка",
@@ -3572,7 +3583,10 @@
     "accept": ["фото"],
     "forms": "фото is the indeclinable short form, fine in labels and tight UI; photo archive → фотоархив / архив фотографий",
     "confidence": "high",
-    "sources": "MS photo → «фотография», «фото»; macOS live Photo → «Фото», photo → «фото»"
+    "sources": "MS photo → «фотография», «фото»; macOS live Photo → «Фото», photo → «фото»",
+    "exceptions": {
+      "askCmdr.tool.outcome.imageIndexingOff": "Names the setting the user turns back on, so it quotes its label «Индексация изображений» (indexing.enrich.label) rather than the English's «photo indexing»."
+    }
   },
   "pin": {
     "chosen": "закрепить",

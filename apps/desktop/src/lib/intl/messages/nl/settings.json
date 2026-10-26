@@ -2307,9 +2307,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "Het model waarmee de chat werkt. Laat leeg om hetzelfde model te gebruiken als de andere AI-functies van Cmdr. Voorbeeld: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "Het model waarmee de chat werkt. Laat leeg om hetzelfde model te gebruiken als de andere AI-functies van Cmdr. Voorbeeld: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Hetzelfde als de AI van Cmdr",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2945,25 +2945,26 @@
   },
   "settings.advanced.card.askCmdr": "Ask Cmdr",
   "@settings.advanced.card.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name (the Ask Cmdr chat rail); kept verbatim in every locale, matches settings.section.askCmdr and settings.askCmdr.enabled.label."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Hulpmiddelgroepen zodra het antwoord er is",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Terwijl Ask Cmdr werkt, toont het waar het naar kijkt. Kies of die regels inklappen zodra het antwoord er is.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "sourceHash": "0be1969"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Klap ze in",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "sourceHash": "01052be"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Laat ze zoals ik ze had",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "sourceHash": "0aa6718"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistent, chat, inklappen, uitklappen, samenvouwen, verbergen, hulpmiddelen, stappen, antwoord, regels",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
     "sourceHash": "6a9f055"
   },
