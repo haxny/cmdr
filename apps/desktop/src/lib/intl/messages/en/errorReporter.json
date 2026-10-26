@@ -316,7 +316,7 @@
     "description": "Heading of the screen a Cmdr window shows when its content stopped working and couldn't be drawn. It replaces the whole window. Calm and plain; avoid the words \"error\" and \"failed\"."
   },
 
-  "errorReporter.pageCrash.body": "Cmdr ran into a problem it didn’t expect. Reloading usually helps. If it keeps happening, sending a report helps get it fixed.",
+  "errorReporter.pageCrash.body": "Cmdr ran into a problem it didn’t expect. Reloading usually helps. If it keeps happening, send a report so it gets fixed.",
   "@errorReporter.pageCrash.body": {
     "description": "Explanation under the heading of the screen a Cmdr window shows when its content stopped working. Below it are two buttons: Reload (redraws the window) and Send error report. Reassuring and matter-of-fact. \"Cmdr\" is the product name (do not translate). Avoid the words \"error\" and \"failed\"."
   },
