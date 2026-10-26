@@ -76,7 +76,7 @@
     },
     "screenshot": "transfer-dialog.png"
   },
-  "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nothing selected} other {{countText} selected}}",
+  "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nothing selected} one {{countText} selected} other {{countText} selected}}",
   "@fileExplorer.pane.selectedCount": {
     "description": "For screen readers only (never shown): how many files and folders are selected in the pane, said once the user pauses after selecting or deselecting, as in “3 selected”, or “Nothing selected” when the last one is deselected.",
     "placeholders": {
@@ -804,7 +804,7 @@
     "screenshot": "servers-hub.png",
     "screenshotNote": "Network (SMB) browsing and connection flow. This shows the servers list it starts from; your string appears here or on the closely related browsing, sign-in, or reconnect states reached from it."
   },
-  "fileExplorer.network.share.useGuest": "Use guest",
+  "fileExplorer.network.share.useGuest": "Browse as guest",
   "@fileExplorer.network.share.useGuest": {
     "description": "Button in an SMB server's share list header, shown while the list is signed in with an account on a server that also lets guests in. Lists the shares as a guest again, and stops using the account for this server. VERB phrase.",
     "screenshot": "servers-hub.png",
@@ -970,9 +970,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "description": "Button on the “Still waiting for this folder” screen. Stops waiting and returns the pane to the folder it showed before. Shown with the Esc key, which does the same."
   },
-  "fileExplorer.clipboard.copied": "Copied {countText} {count, plural, one {item} other {items}}",
+  "fileExplorer.clipboard.copied": "Copied {countText} {count, plural, one {item} other {items}}.",
   "@fileExplorer.clipboard.copied": {
-    "description": "Toast confirming files were copied to the system clipboard, e.g. \"Copied 3 items\".",
+    "description": "Toast confirming files were copied to the system clipboard, e.g. \"Copied 3 items.\" Ends with a period, like fileExplorer.clipboard.copiedPaths.",
     "placeholders": {
       "countText": "how many items, already formatted for display",
       "count": "the same number of items (drives the singular/plural form)"
@@ -1896,16 +1896,16 @@
   "@fileExplorer.git.repoChip.dirty": {
     "description": "One-word state shown after the branch name in the small branch pill of a pane’s path bar, when the repository has uncommitted changes. An adjective describing the working copy, lowercase in English because it follows the branch name after a dot. Very short."
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "On branch {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "On branch “{branch}”.",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar: names the branch the repository has open. Other sentences (fileExplorer.git.repoChip.tooltip.*) may follow it, joined by a space.",
+    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar: names the branch the repository has open. Other sentences (fileExplorer.git.repoChip.tooltip.*) may follow it, joined by a space. The branch name is quoted to set it apart; use whatever quotation marks your language writes a quoted name with.",
     "placeholders": {
       "branch": "the branch name, for example \"main\" (a name, never translated)"
     }
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "On unborn branch {branch} (no commits yet).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "On unborn branch “{branch}” (no commits yet).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, for a repository that has no commits yet. “Unborn” is git’s own word for a branch that has no commits; carry the concept if your language words it differently.",
+    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, for a repository that has no commits yet. “Unborn” is git’s own word for a branch that has no commits; carry the concept if your language words it differently. The branch name is quoted to set it apart; use whatever quotation marks your language writes a quoted name with.",
     "placeholders": {
       "branch": "the branch name, for example \"main\" (a name, never translated)"
     }
@@ -1917,9 +1917,9 @@
       "id": "the commit’s shortened identifier, for example a1b2c3d"
     }
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commits}} ahead, {behind, plural, one {{behindText} commit} other {{behindText} commits}} behind {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commits}} ahead, {behind, plural, one {{behindText} commit} other {{behindText} commits}} behind “{upstream}”.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "description": "Sentence in the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, after the sentence naming the branch. Compares the open branch with the remote branch it tracks. “Ahead” means the local branch has commits the remote one doesn’t; “behind” means the remote one has commits the local branch doesn’t.",
+    "description": "Sentence in the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, after the sentence naming the branch. Compares the open branch with the remote branch it tracks. “Ahead” means the local branch has commits the remote one doesn’t; “behind” means the remote one has commits the local branch doesn’t. The remote branch’s name is quoted to set it apart, like fileExplorer.git.tooltip.aheadBehind; use whatever quotation marks your language writes a quoted name with.",
     "placeholders": {
       "aheadText": "how many commits the local branch is ahead by, already formatted for display",
       "ahead": "the same number (drives the singular/plural form)",
@@ -2468,14 +2468,14 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "description": "Second line of the hover tooltip on a dimmed favorite in the favorites menu, under the folder's path: the folder was moved or deleted, or Cmdr can't tell which disk it was on. \"Anymore\" means \"no longer\"."
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} isn’t connected. Plug it in with a USB cable and unlock it, then try again.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "“{device}” isn’t connected. Plug it in with a USB cable and unlock it, then try again.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
     "description": "Info toast after the user picked a favorite folder on a phone that isn't plugged in, so the pane stayed where it was. Also the second line of that favorite's tooltip in the favorites menu. Says how to fix it: plug in by USB and unlock the phone.",
     "placeholders": {
       "device": "the phone's name, for example \"Pixel 7\""
     }
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "That storage on {device} isn’t available right now.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "The storage this folder was on isn’t available on {device} right now.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
     "description": "Info toast after the user picked a favorite folder on a phone that IS connected, but the storage the folder lived on (typically an SD card) isn't there now, so the pane stayed where it was. Also the second line of that favorite's tooltip in the favorites menu.",
     "placeholders": {
@@ -2489,13 +2489,13 @@
       "drive": "the drive's name, for example \"Samsung T7\""
     }
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Phones and cameras over MTP are turned off in Settings.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Phone and camera access over MTP is turned off in Settings.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "description": "Info toast after the user picked a favorite folder on a phone or camera, while Cmdr's MTP support (the USB protocol phones and cameras use for file transfer) is switched off in Settings, so the pane stayed where it was. The toast's button opens that setting. Keep \"MTP\" as is."
+    "description": "Info toast after the user picked a favorite folder on a phone or camera, while Cmdr's MTP support (the USB protocol phones and cameras use for file transfer) is switched off in Settings, so the pane stayed where it was. It's that Cmdr feature that's off, not the device. The toast's button opens that setting. Keep \"MTP\" as is."
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android phones are turned off in Settings.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android phone access is turned off in Settings.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "description": "Info toast after the user picked a favorite folder on an Android phone, while Cmdr's Android (ADB) support is switched off in Settings, so the pane stayed where it was. The toast's button opens that setting."
+    "description": "Info toast after the user picked a favorite folder on an Android phone, while Cmdr's Android (ADB) support is switched off in Settings, so the pane stayed where it was. It's that Cmdr feature that's off, not the phone. The toast's button opens that setting."
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr doesn’t know how to reach “{place}” anymore. Connect to it again from Servers, and this favorite works again.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2514,7 +2514,7 @@
   },
   "fileExplorer.navigation.favoriteUnreachable.openSettings": "Open settings",
   "@fileExplorer.navigation.favoriteUnreachable.openSettings": {
-    "description": "VERB phrase. Button on the toast saying phones are turned off in Settings: opens Cmdr's Settings at that switch."
+    "description": "VERB phrase. Button on the toast saying phone access is turned off in Settings: opens Cmdr's Settings at that switch."
   },
   "fileExplorer.navigation.favoriteUnreachable.openServers": "Show servers",
   "@fileExplorer.navigation.favoriteUnreachable.openServers": {

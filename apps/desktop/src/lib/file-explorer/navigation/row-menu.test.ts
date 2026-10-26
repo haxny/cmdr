@@ -256,7 +256,7 @@ describe('volumeRowMenu: a saved SMB share’s pin', () => {
 })
 
 describe('favoriteRowMenu', () => {
-  it('offers Rename, Set shortcut, and Remove, all keeping the menu up', () => {
+  it('offers Rename, Set shortcut key, and Remove, all keeping the menu up', () => {
     const menu = favoriteRowMenu()
     expect(shape(menu)).toEqual({
       actions: ['rename-favorite', 'edit-favorite-shortcut', 'remove-favorite'],

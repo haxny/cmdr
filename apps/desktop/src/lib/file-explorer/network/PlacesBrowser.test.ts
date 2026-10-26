@@ -604,8 +604,8 @@ describe('PlacesBrowser: the account it is signed in as', () => {
     await unmount(component)
   })
 
-  /** The way back: "Use guest" where guest is known to work, clearing the account. */
-  it('offers Use guest when signed in on a guest-allowing server, and goes back to guest', async () => {
+  /** The way back: "Browse as guest" where guest is known to work, clearing the account. */
+  it('offers Browse as guest when signed in on a guest-allowing server, and goes back to guest', async () => {
     h.listed.set(host.id, { kind: 'user', username: 'testuser' })
     h.guestWorks = true
     h.fetchShares.mockResolvedValue({ shares: [naspi], authMode: 'creds_required', fromCache: false })
@@ -614,11 +614,14 @@ describe('PlacesBrowser: the account it is signed in as', () => {
     await waitForShareList(target)
 
     const useGuest = must(
-      [...target.querySelectorAll('.header-row button')].find((b) => b.textContent.includes('Use guest')),
-      'the Use guest button',
+      [...target.querySelectorAll('.header-row button')].find((b) => b.textContent.includes('Browse as guest')),
+      'the Browse as guest button',
     ) as HTMLButtonElement
     useGuest.click()
     await vi.waitFor(() => {
+      // The button's own label says "as guest" too, so wait for it to go first.
+      const buttons = [...target.querySelectorAll('.header-row button')]
+      expect(buttons.some((b) => b.textContent.includes('Browse as guest'))).toBe(false)
       expect(target.querySelector('.header-row')?.textContent).toContain('as guest')
     })
     expect(h.setSmbAccountPreference).toHaveBeenCalledWith('Naspolya', null)

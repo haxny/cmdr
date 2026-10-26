@@ -334,7 +334,7 @@
         }
     }
 
-    /** "Use guest": the way back from an account, where a guest listing worked on this server. */
+    /** "Browse as guest": the way back from an account, where a guest listing worked on this server. */
     async function useGuest() {
         // ❗ The account goes FIRST: while it's set, the backend never lists this server as guest.
         await setSmbAccountPreference(host.name, null).catch(() => false)

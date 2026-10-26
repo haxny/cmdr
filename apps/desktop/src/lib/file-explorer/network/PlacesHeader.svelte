@@ -22,7 +22,7 @@
         shareCount: number
         onBack?: () => void
         onSignInAs: () => void
-        /** "Use guest", when there's a guest to go back to; absent, no button. */
+        /** "Browse as guest", when there's a guest to go back to; absent, no button. */
         onUseGuest?: () => void
         onForgetPassword: () => void
     }

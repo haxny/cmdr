@@ -156,7 +156,7 @@ describe('SignInSheet: the S3 form', () => {
     press('Add and open')
     await flush()
     expect(submissions).toEqual([])
-    expect(document.body.querySelector('#server-s3-zone-refusal')?.textContent).toContain('lowercase letters')
+    expect(document.body.querySelector('#server-s3-zone-refusal')?.textContent).toContain('a–z, 0–9, and dashes')
     expect(document.activeElement).toBe(field('server-s3-region'))
   })
 

@@ -403,7 +403,7 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.viewer.close", "Close"),
             ("menu.viewer.wordWrap", "Word wrap"),
             ("menu.volume.disconnectBusy", "Disconnect (busy)"),
-            ("menu.volume.editFavoriteShortcut", "Set shortcut…"),
+            ("menu.volume.editFavoriteShortcut", "Set shortcut key…"),
             ("menu.volume.eject", "Eject ({name})"),
             ("menu.volume.ejectBusy", "Eject ({name}) (busy)"),
             ("menu.volume.forgetSavedPasswordBusy", "Forget saved password (busy)"),

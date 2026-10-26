@@ -50,7 +50,7 @@ const shareStates = new SvelteMap<string, ShareState>()
  * keeps what the sign-in recorded, since it IS that listing.
  */
 const listedAccounts = new SvelteMap<string, SignedInAs>()
-/** Hosts a guest listing worked on this session: where "Use guest" is a real way back. */
+/** Hosts a guest listing worked on this session: where "Browse as guest" is a real way back. */
 const guestListingHosts = new SvelteSet<string>()
 const prefetchingHosts = new SvelteSet<string>()
 /** How many Servers views are on screen (two panes can each show one). */
@@ -419,7 +419,7 @@ export function forgetShareListsOfMachine(host: NetworkHost): void {
  * sign-in recorded. ❗ A guest listing never takes a KNOWN account back to guest: the
  * person chose it, and a background listing ("Sign in as testuser" read "as guest" three
  * seconds later, from the prefetch on the way back) is no one choosing anything.
- * "Use guest" goes through `setListedAccount`.
+ * "Browse as guest" goes through `setListedAccount`.
  */
 function noteListing(hostId: string, result: ShareListResult): void {
   if (result.authMode !== 'guest_allowed') return
@@ -427,7 +427,7 @@ function noteListing(hostId: string, result: ShareListResult): void {
   if (listedAccounts.get(hostId)?.kind !== 'user') listedAccounts.set(hostId, { kind: 'guest' })
 }
 
-/** Whether a guest listing worked on `hostId` this session, so "Use guest" can offer a way back. */
+/** Whether a guest listing worked on `hostId` this session, so "Browse as guest" can offer a way back. */
 export function guestListingWorked(hostId: string): boolean {
   return guestListingHosts.has(hostId)
 }

@@ -184,7 +184,7 @@ Always pass the resolved IP from mDNS discovery when one is available; fall back
 4. Never assume "guest only"; always offer "Sign in as…" when guest succeeds (can't distinguish guest-only from guest-or-creds at probe time)
 
 ❗ **"Sign in as…" sets that preference too** (`set_smb_account_preference` → `manual_servers::set_account`, saving
-the host when nobody typed it in; `None` is "Use guest" and clears it). So does a sign-in that got a refused SHARE
+the host when nobody typed it in; `None` is "Browse as guest" and clears it). So does a sign-in that got a refused SHARE
 mounted (`NetworkMountView`'s `remountWith`): without it, a share guests can list but not open asked for the password
 on every mount (cmdr-reports#27). And a listing that got no credentials signs in
 as the preferred account with the password this session already read (`account_listing_for`, over

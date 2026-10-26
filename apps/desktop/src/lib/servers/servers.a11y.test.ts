@@ -326,7 +326,7 @@ describe('the three renderers on their own', () => {
         identityEditable: false,
         addressEditable: false,
         identityHint: 'The provider, the access key ID, and the bucket are what name this place.',
-        regionRefusal: 'Use only lowercase letters, digits, and dashes here.',
+        regionRefusal: 'Use only a–z, 0–9, and dashes here.',
         onChange: () => {},
       },
     })

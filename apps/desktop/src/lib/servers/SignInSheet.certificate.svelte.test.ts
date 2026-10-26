@@ -112,7 +112,7 @@ describe('SignInSheet: the certificate step', () => {
     expect(document.body.textContent).toContain('The certificate for nas.local changed')
     expect(document.body.textContent).toContain('12:34:56')
     expect(document.body.textContent).not.toContain('Trust and connect')
-    expect(document.body.textContent).toContain('I’ve checked it')
+    expect(document.body.textContent).toContain('I’ve checked the certificate')
   })
 
   it('never calls a certificate a key', async () => {

@@ -429,9 +429,9 @@
       "host": "the NFS server’s hostname or address, like \"nas.local\""
     }
   },
-  "servers.refusal.s3FieldMalformed": "Use only lowercase letters, digits, and dashes here.",
+  "servers.refusal.s3FieldMalformed": "Use only a–z, 0–9, and dashes here.",
   "@servers.refusal.s3FieldMalformed": {
-    "description": "Under the Region, Location, or Account ID field of the S3 form, before anything was sent, when the typed value holds other characters. Short and instructive."
+    "description": "Under the Region, Location, or Account ID field of the S3 form, before anything was sent, when the typed value holds other characters. Only lowercase Latin letters a to z, the digits 0 to 9, and dashes pass, so keep the two ranges as written. Short and instructive."
   },
   "servers.refusal.endpointMalformed": "Enter the endpoint as http:// or https:// plus a host name, like https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -460,7 +460,7 @@
   "@servers.refusal.operationRunning": {
     "description": "Above the buttons of the edit server sheet, when the user changed a saved server's address while a copy, move, or delete on that server is still running, paused, or waiting its turn. Moving the server would cut that work off, so nothing was saved. The user can let it finish, or cancel it from its progress window, then press Save again. Keep the opening the same as fileExplorer.navigation.disconnectBusyTooltip (“Cmdr is still working with files on this server”), which says the same thing about Disconnect."
   },
-  "servers.refusal.shareMounted": "{name} is still mounted from the old address. Eject it, then save again.",
+  "servers.refusal.shareMounted": "The share {name} is still mounted from the old address. Eject it, then save again.",
   "@servers.refusal.shareMounted": {
     "description": "Under the Address field of the edit server sheet, when the user changed a saved SMB server's address while one of its shares (shared folders) is still mounted (connected as a disk) from the OLD address. Cmdr won't disconnect it on its own, since other apps may be using it, so nothing was saved. The user ejects the share (the same “Eject” as on the sidebar and in Finder), then presses Save again.",
     "placeholders": {
@@ -693,15 +693,15 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "description": "One line under the Start folder field for an NFS server: a folder inside the export to open, and leaving it empty opens the export’s top folder. “Export” is the NFS term for a folder a server shares."
   },
-  "servers.sheet.s3EndpointMoveHelp": "Did the server move? Type its new endpoint. Every bucket under this key comes along, with its favorites, open tabs, and saved secret access key.",
+  "servers.sheet.s3EndpointMoveHelp": "Did the server move? Type its new endpoint. Every bucket under this key comes along with its favorites and open tabs, and the saved secret access key comes too.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "description": "One line under the Endpoint field when the user is EDITING a saved S3 account on a self-hosted (“Other S3-compatible”) server, saying they can type the server's new endpoint (for example after it got a new IP address) and that every bucket saved under the same access key moves with it, losing nothing: favorites pointing into the buckets, tabs open on them, and the stored secret access key. “Secret access key” is the S3 term; use the same words as servers.sheet.secretAccessKey."
+    "description": "One line under the Endpoint field when the user is EDITING a saved S3 account on a self-hosted (“Other S3-compatible”) server, saying they can type the server's new endpoint (for example after it got a new IP address) and that every bucket saved under the same access key moves with it, losing nothing: favorites pointing into the buckets and tabs open on them come with each bucket, and the stored secret access key, which belongs to the account rather than to any one bucket, comes too. “Secret access key” is the S3 term; use the same words as servers.sheet.secretAccessKey."
   },
   "servers.sheet.addressMoveHelp": "Did the server move? Type its new address. Its favorites, open tabs, and saved password come along.",
   "@servers.sheet.addressMoveHelp": {
     "description": "One line under the Address field when the user is EDITING a saved SFTP or WebDAV server, saying they can type the server's new address (for example after a NAS got a new IP address) and that nothing tied to the server is lost: favorites pointing into it, tabs open on it, and the password stored for it all follow it to the new address."
   },
-  "servers.sheet.smbAddressMoveHelp": "Did the server move? Type its new address. Its shares and saved password come along, and each share’s favorites and open tabs follow it the first time it opens there.",
+  "servers.sheet.smbAddressMoveHelp": "Did the server move? Type its new address. Its shares and saved password come along, and each share’s favorites and open tabs follow once that share opens at the new address.",
   "@servers.sheet.smbAddressMoveHelp": {
     "description": "One line under the Address field when the user is EDITING a saved SMB server (a NAS or a Windows PC whose shared folders, called “shares”, the user opens), saying they can type the server's new address (for example after the NAS got a new IP address) and that nothing tied to it is lost: its saved shares and stored password move right away, while favorites and tabs pointing into a share move over the first time that share is opened at the new address. Keep the wording of the opening the same as servers.sheet.addressMoveHelp. “Shares” is the SMB term for a server's shared folders; use the same word your translation uses elsewhere in the Servers list.",
     "screenshot": "server-sign-in-edit.png"
@@ -989,7 +989,7 @@
     "description": "One line under the changed-key heading. Says both innocent and serious causes, and what to do first.",
     "screenshot": "server-sign-in-host-key-changed.png"
   },
-  "servers.hostKey.changedDisclosure": "I’ve checked it",
+  "servers.hostKey.changedDisclosure": "I’ve checked the key",
   "@servers.hostKey.changedDisclosure": {
     "description": "A collapsed section holding the button that trusts a CHANGED key. Deliberately behind a click, so trusting one is never a reflex. First person: the user speaking.",
     "screenshot": "server-sign-in-host-key-first-contact.png"
@@ -1035,7 +1035,7 @@
     "description": "One line under the changed-certificate heading. Says both innocent and serious causes, and what to do first.",
     "screenshot": "server-sign-in-certificate-changed.png"
   },
-  "servers.certificate.changedDisclosure": "I’ve checked it",
+  "servers.certificate.changedDisclosure": "I’ve checked the certificate",
   "@servers.certificate.changedDisclosure": {
     "description": "A collapsed section holding the button that trusts a CHANGED certificate. Deliberately behind a click, so trusting one is never a reflex. First person: the user speaking.",
     "screenshot": "server-sign-in-certificate-first-contact.png"
@@ -1124,7 +1124,7 @@
     "screenshot": "servers-hub.png",
     "screenshotNote": "Shown inside a file pane while it connects to a server: \"Connecting…\", \"Signed out\", a changed host key, or a \"Reconnecting…\" state with a countdown and Retry/Cancel controls. This shows the servers list those connections start from; your string appears in the pane, in the same network context."
   },
-  "servers.paneState.guestSessionRefusedHint": "You asked to sign in with your account, but the server offered a guest session instead. Usually that means the password was wrong. Rarely, it means something is tampering with the connection.",
+  "servers.paneState.guestSessionRefusedHint": "You asked to sign in with your account, but the server offered a guest session instead. Usually that means the password was wrong. Rarely, it means someone is tampering with the connection.",
   "@servers.paneState.guestSessionRefusedHint": {
     "description": "The lines under that heading: what happened, the usual innocent cause (a wrong password), and the rare serious one (tampering). Calm, not alarming. A “Try another password…” button (servers.paneState.tryAnotherPassword) and a Disconnect button sit right below it. Plain text, no markdown.",
     "screenshot": "servers-hub.png",

@@ -113,7 +113,7 @@ describe('SignInSheet: editing an SMB host', () => {
   it('says under the address that typing a new one moves the server', async () => {
     await renderSheet({ mode: 'edit', server: SMB_HOST })
     expect(document.body.querySelector('#server-address-help')?.textContent.trim()).toBe(
-      'Did the server move? Type its new address. Its shares and saved password come along, and each share’s favorites and open tabs follow it the first time it opens there.',
+      'Did the server move? Type its new address. Its shares and saved password come along, and each share’s favorites and open tabs follow once that share opens at the new address.',
     )
     expect(field('server-address').getAttribute('aria-describedby')).toBe('server-address-help')
   })
@@ -148,7 +148,7 @@ describe('SignInSheet: editing an SMB host', () => {
     await flush()
 
     expect(document.body.querySelector('#server-address-refusal')?.textContent.trim()).toBe(
-      'Photos is still mounted from the old address. Eject it, then save again.',
+      'The share Photos is still mounted from the old address. Eject it, then save again.',
     )
     expect(done).toEqual([])
   })

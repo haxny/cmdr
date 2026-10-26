@@ -204,7 +204,7 @@ describe('copyToClipboard', () => {
 
     expect(copyPathsToClipboardSpy).toHaveBeenCalledWith(['/a.txt', '/b.txt'])
     expect(getSelectionSnapshotSpy).not.toHaveBeenCalled()
-    expect(addToastSpy).toHaveBeenCalledWith('Copied 2 items', { level: 'info' })
+    expect(addToastSpy).toHaveBeenCalledWith('Copied 2 items.', { level: 'info' })
   })
 
   it('uses the singular noun when a single snapshot item is copied', async () => {
@@ -215,7 +215,7 @@ describe('copyToClipboard', () => {
 
     await createClipboardOperations(access, buildDialogs()).copyToClipboard()
 
-    expect(addToastSpy).toHaveBeenCalledWith('Copied 1 item', { level: 'info' })
+    expect(addToastSpy).toHaveBeenCalledWith('Copied 1 item.', { level: 'info' })
   })
 
   it('refuses a snapshot copy whose rows sit on an MTP storage, with the pane refusal wording', async () => {
@@ -370,7 +370,7 @@ describe('copyToClipboard', () => {
     // `..` is pane row 0, so pane rows 1 and 2 are backend rows 0 and 1.
     expect(getSelectionSnapshotSpy).toHaveBeenCalledWith('lst-9', false, [0, 1], 0)
     expect(copyPathsToClipboardSpy).toHaveBeenCalledWith(['/d/a', '/d/b'])
-    expect(addToastSpy).toHaveBeenCalledWith('Copied 2 items', { level: 'info' })
+    expect(addToastSpy).toHaveBeenCalledWith('Copied 2 items.', { level: 'info' })
   })
 
   it('copies the cursor row when nothing is selected', async () => {

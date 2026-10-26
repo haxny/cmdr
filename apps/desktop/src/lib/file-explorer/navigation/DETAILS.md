@@ -488,7 +488,7 @@ list can't disagree on where the rule goes.
   (`#lib/servers/DETAILS.md`, the "Reconnect automatically" paragraph); an unsaved one-shot connection has nothing to
   persist, so no checkbox. "Saved" and the switch's value come from `listSavedPlaces()`, read when the switcher opens
   (the hub has its saved list already, and re-reads it on the `volumes-changed` a flip emits).
-- **A favorite**: `Rename`, `Set shortcut…`, `Remove from favorites` (§ "The favorites menu").
+- **A favorite**: `Rename`, `Set shortcut key…`, `Remove from favorites` (§ "The favorites menu").
 
 **Both doors, one list.** → (or a hover) opens the submenu, and a right-click on the row opens the same one: the
 primitive does it (`#lib/ui/DETAILS.md` § Menu), so none of these rows raises a native popup. Picks carry the typed
@@ -684,9 +684,9 @@ Both native items are gated on `can_favorite`, the caller's `paneFolderCanBeFavo
 `add_favorite` refuses an archive-inner or protocol path, and offering an item that silently does nothing is worse than
 offering none. The `..` menu holds nothing else, so where the parent can't be favorited no menu pops at all.
 
-**Remove / Rename / Set shortcut** are per-item, in each favorite's → submenu (right-click opens the same one; the list
-is `row-menu.ts`'s `favoriteRowMenu`). A pick reaches `favorites.handleContextAction` through `select`, in the menu that
-owns the row, so no global event has to be told apart per pane. All three keep the menu up: Remove so a list can be
+**Remove / Rename / Set shortcut key** are per-item, in each favorite's → submenu (right-click opens the same one; the
+list is `row-menu.ts`'s `favoriteRowMenu`). A pick reaches `favorites.handleContextAction` through `select`, in the menu
+that owns the row, so no global event has to be told apart per pane. All three keep the menu up: Remove so a list can be
 tidied in a row, and the other two because editing happens in the row. Rename swaps the label for an inline `<input>` in
 the `label` snippet (Enter commits, Escape/blur cancels). `handleRenameKeyDown` calls `e.stopPropagation()` on EVERY
 key: the focused input owns its keystrokes, and the pane's Space-selection / type-to-jump DOM listeners aren't covered
@@ -696,7 +696,7 @@ the box keeps every keystroke. The broader guard is one level up: while ANY head
 swallows the key from the pane behind it, and `+page.svelte`'s `isExplorerOverlayOpen()` reads
 `explorerRef.isHeaderMenuOpen()` to suppress centralized dispatch.
 
-Set shortcut focuses a read-only inline capture at the right of the row. An unmodified letter assigns it,
+Set shortcut key focuses a read-only inline capture at the right of the row. An unmodified letter assigns it,
 Delete/Backspace clears it, and Escape cancels; the editor stops DOM propagation so typing cannot activate the menu or
 the pane behind it. The menu shows the new letter optimistically until `volumes-changed` catches up and drops the
 override on a rejected save. Assigning an occupied letter transfers it from the former favorite; the override hides that
