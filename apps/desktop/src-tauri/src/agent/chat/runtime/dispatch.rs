@@ -4,6 +4,8 @@
 //! The real impl routes through the agent's read-only dispatch view; tests inject a
 //! scripted double, so [`run_turn`](super::run_turn) needs no Tauri app.
 
+use std::path::PathBuf;
+
 use futures_util::future::{BoxFuture, FutureExt};
 use tauri::{AppHandle, Runtime};
 
@@ -27,6 +29,14 @@ pub trait ToolDispatcher: Send + Sync {
     /// double nothing; the real work is in [`AppHandleDispatcher`].
     fn revoke_evidence(&self, call_ids: &[String]) {
         let _ = call_ids;
+    }
+
+    /// The memory folder, so a tool line can name a `memory_write` path as a place to go
+    /// (`tools::line::subject_of`). App state, so it rides this seam beside the evidence. Default
+    /// `None`: the path then shows as plain text, which costs a test double nothing. ⚠️ A
+    /// wrapping dispatcher must forward it.
+    fn memory_root(&self) -> Option<PathBuf> {
+        None
     }
 }
 
@@ -75,6 +85,10 @@ impl<R: Runtime> ToolDispatcher for AppHandleDispatcher<R> {
             call_ids.len()
         );
         crate::agent::tools::propose::rename::revoke_image_facts_evidence(&self.app, call_ids);
+    }
+
+    fn memory_root(&self) -> Option<PathBuf> {
+        crate::agent::memory::store_for(&self.app).map(|store| store.root().to_path_buf())
     }
 }
 

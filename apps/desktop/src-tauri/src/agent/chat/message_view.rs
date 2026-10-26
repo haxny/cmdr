@@ -14,7 +14,7 @@ use crate::agent::store::{self, StoredMessage};
 use crate::agent::types::ProposalDecision;
 
 /// A message's role, on the wire.
-#[derive(Clone, Copy, Serialize, specta::Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum MessageRoleView {
     System,
@@ -39,7 +39,7 @@ impl From<AgentRole> for MessageRoleView {
 /// One display block of a message. A projection of the stored [`AgentPart`]s that DROPS
 /// the reasoning part entirely (the opaque provider blob is backend-only and never
 /// crosses IPC — the store's `content_blocks` invariant).
-#[derive(Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum MessageBlock {
     /// Assistant or user prose (rendered markdown-lite, entity-escaped first).
@@ -92,7 +92,7 @@ pub enum MessageBlock {
 
 /// One folder a wake's digest named outright, and what happened in it. Every count is a
 /// number: the rail owns every word around them.
-#[derive(Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WakeDigestFolderView {
     /// An absolute path, rendered as escaped plain text (never `{@html}`).
@@ -105,7 +105,7 @@ pub struct WakeDigestFolderView {
 
 /// The folders a wake's digest did not have room to name, summarized under a shared
 /// ancestor. Present so the collapsed block can admit how much it is not showing.
-#[derive(Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WakeDigestRollupView {
     /// An absolute path, rendered as escaped plain text (never `{@html}`).
@@ -115,7 +115,7 @@ pub struct WakeDigestRollupView {
 }
 
 /// A message as the rail displays it: id/seq/role, its display blocks, and token counts.
-#[derive(Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageView {
     pub id: i64,
@@ -201,9 +201,12 @@ pub fn to_message_view(message: StoredMessage) -> MessageView {
                 decisions: vec![decision],
             }],
         ),
-        // A kind a newer build wrote: an event view with nothing to draw, kept so the row's
-        // seq still holds its place in the timeline.
-        store::StoredContent::Event(store::ConversationEvent::Unknown) => (MessageRoleView::Event, Vec::new()),
+        // A turn's stats ride its last assistant view, not a line of their own; and a kind a
+        // newer build wrote has nothing to draw. Both stay an empty event view, so the row's seq
+        // still holds its place in the timeline.
+        store::StoredContent::Event(
+            store::ConversationEvent::TurnFinished { .. } | store::ConversationEvent::Unknown,
+        ) => (MessageRoleView::Event, Vec::new()),
     };
     MessageView {
         id: message.id,

@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AskCmdrSendOutcome, AskCmdrStreamEvent } from '#lib/tauri-commands/index.js'
+import type { ToolOutcome, ToolSubject } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
 const cancelMock = vi.fn<(id: number) => Promise<void>>()
@@ -81,6 +82,11 @@ import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
 
+/** What most tool-line tests need off `toolCallFinished`: a plain answer, and a refusal. */
+const ANSWERED: ToolOutcome = { kind: 'answered' }
+const REFUSED: ToolOutcome = { kind: 'refused', reason: { kind: 'problem' } }
+const UNPARSED: ToolSubject = { kind: 'unparsed' }
+
 /** Feed one stream event in as the backend emits it, for the thread the rail is on. A rail with
  * no thread yet is put on the named one first: production gets there through `started`, which
  * `adopts a new thread's id from its own started event` covers on its own. */
@@ -144,6 +150,7 @@ describe('sendMessage + streaming', () => {
       seq: 2,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
+      turn: null,
     })
     expect(assistantAt(1).streaming).toBe(false)
     expect(assistantAt(1).id).toBe(42)
@@ -156,8 +163,41 @@ describe('sendMessage + streaming', () => {
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'app_state' })
     expect(assistantAt(1).tools[0]).toMatchObject({ callId: 'c1', tool: 'app_state', running: true })
-    fire({ type: 'toolCallFinished', callId: 'c1', ok: true })
+    fire({ type: 'toolCallFinished', messageId: 1, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
     expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: true })
+  })
+
+  it('a refused outcome settles its line as not ok', () => {
+    sendMessage('look')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'delete' })
+    fire({ type: 'toolCallFinished', messageId: 1, callId: 'c1', outcome: REFUSED, subject: UNPARSED })
+    expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: false })
+  })
+
+  it('a finished call settles the line in the current bubble, never an earlier turn reusing its id', () => {
+    // Call ids collide across turns (a provider resets them per response), so the line is looked
+    // up in the bubble being streamed, not across the thread.
+    sendMessage('first')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+    fire({ type: 'toolCallFinished', messageId: 1, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
+    fire({
+      type: 'done',
+      messageId: 2,
+      seq: 2,
+      stop: 'completed',
+      usage: { promptTokens: 1, completionTokens: 1 },
+      turn: null,
+    })
+
+    // The second turn's start for `c1` was never heard (a reload landed after it).
+    sendMessage('second')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallFinished', messageId: 4, callId: 'c1', outcome: REFUSED, subject: UNPARSED })
+
+    expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: true })
+    expect(assistantAt(3).tools).toEqual([])
   })
 
   it('a repeated start for a call already on screen adds no second tool line', () => {
@@ -176,7 +216,7 @@ describe('sendMessage + streaming', () => {
     sendMessage('inspect this folder')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'finished', tool: 'list_dir' })
-    fire({ type: 'toolCallFinished', callId: 'finished', ok: true })
+    fire({ type: 'toolCallFinished', messageId: 1, callId: 'finished', outcome: ANSWERED, subject: UNPARSED })
     fire({ type: 'toolCallStarted', callId: 'unfinished', tool: 'list_volumes' })
     fire({ type: 'reasoningTick' })
 
@@ -186,6 +226,7 @@ describe('sendMessage + streaming', () => {
       seq: 2,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
+      turn: null,
     })
 
     expect(assistantAt(1).tools.map((tool) => tool.callId)).toEqual(['finished'])
@@ -195,7 +236,7 @@ describe('sendMessage + streaming', () => {
   it('a typed failure ends streaming and shows an honest notice', () => {
     sendMessage('hi')
     fire({ type: 'assistantStarted' })
-    fire({ type: 'failed', kind: 'rateLimited', detail: null, managed: null })
+    fire({ type: 'failed', kind: 'rateLimited', detail: null, managed: null, turn: null })
     expect(askCmdrState.streaming).toBe(false)
     // The empty assistant bubble is dropped; an error item takes its place.
     const last = askCmdrState.messages.at(-1)
@@ -208,7 +249,7 @@ describe('sendMessage + streaming', () => {
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
     fire({ type: 'textDelta', text: 'I found part of it.' })
 
-    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null })
+    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null, turn: null })
 
     expect(assistantAt(1).tools).toEqual([])
     expect(assistantAt(1)).toMatchObject({ thinking: false, streaming: false })
@@ -253,7 +294,13 @@ describe('sendMessage + streaming', () => {
   it("a failure with provider detail keeps the provider's wording for display", () => {
     sendMessage('hi')
     fire({ type: 'assistantStarted' })
-    fire({ type: 'failed', kind: 'provider', detail: 'HTTP 404: This model is unavailable for free.', managed: null })
+    fire({
+      type: 'failed',
+      kind: 'provider',
+      detail: 'HTTP 404: This model is unavailable for free.',
+      managed: null,
+      turn: null,
+    })
     const last = askCmdrState.messages.at(-1)
     expect(last).toEqual({
       kind: 'error',
@@ -392,6 +439,21 @@ describe('stopStreaming', () => {
     expect(askCmdrState.streaming).toBe(false)
     expect(assistantAt(1).streaming).toBe(false)
     expect(assistantAt(1).text).toBe('partial')
+  })
+
+  it("the backend's stopped event after a local stop changes nothing and lets the next turn stream", () => {
+    sendMessage('long one')
+    fire({ type: 'started' }, 3)
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'partial' })
+    stopStreaming()
+
+    fire({ type: 'stopped', turn: { toolCalls: 2, wallMs: 1200, promptTokens: 10, completionTokens: 2 } })
+    expect(assistantAt(1)).toMatchObject({ text: 'partial', streaming: false })
+    expect(askCmdrState.streaming).toBe(false)
+
+    fire({ type: 'textDelta', text: 'a later turn' })
+    expect(askCmdrState.streaming).toBe(true)
   })
 
   it('removes unfinished tool activity when the user cancels', () => {

@@ -65,7 +65,7 @@ mod types;
 pub(crate) use analytics::send_refused;
 pub(crate) use cost::day_for;
 pub use dispatch::{AppHandleDispatcher, ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
-pub use events::{AgentChatEvent, AgentErrorKind, ChatEventSink};
+pub use events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall};
 pub use turn::run_turn;
 pub use types::{TurnParams, TurnResult, UserTurn};
 
@@ -352,6 +352,8 @@ mod test_support;
 
 #[cfg(test)]
 mod context_budget_tests;
+#[cfg(test)]
+mod line_events_tests;
 #[cfg(test)]
 mod repeat_tests;
 #[cfg(test)]

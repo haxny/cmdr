@@ -12,6 +12,7 @@ use chrono::FixedOffset;
 use super::events::AgentErrorKind;
 use crate::agent::chat::context::ContextEnvelope;
 use crate::agent::llm::types::{AgentPart, ProviderTag, WakeDigest};
+use crate::agent::store::TurnStats;
 use crate::agent::types::ProposalOutcomes;
 
 /// What opens a turn: what the person typed, or what a wake noticed.
@@ -94,8 +95,28 @@ pub enum TurnResult {
 pub struct TurnTally {
     /// How many times the loop went back to the provider carrying tool results.
     pub tool_turns: usize,
+    /// How many tool calls got a result row, refusals and repeats included (a round can hold
+    /// several, so this is not `tool_turns`).
+    pub tool_calls: u32,
+    /// Summed across the turn's persisted assistant rows: the same per-row figures the cost
+    /// meter sums.
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
     /// How many tool calls staged a proposal for the user to review. The funnel's join to
     /// `suggestion_group_proposed`: turns with proposals but no proposal events downstream
     /// would be a real instrumentation bug, and nothing else could tell us.
     pub proposals: usize,
+}
+
+impl TurnTally {
+    /// What the turn spent, for its footer and its `TurnFinished` row: `None` for a turn that ran
+    /// no tool, so a tool-less turn looks the same live and reloaded.
+    pub fn stats(&self, wall_ms: u64) -> Option<TurnStats> {
+        (self.tool_calls > 0).then_some(TurnStats {
+            tool_calls: self.tool_calls,
+            wall_ms: Some(wall_ms),
+            prompt_tokens: self.prompt_tokens,
+            completion_tokens: self.completion_tokens,
+        })
+    }
 }

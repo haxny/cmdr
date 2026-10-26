@@ -14,15 +14,15 @@
  * rendering. `adoptLiveTurn` is the other half — after a reload there is no `assistantStarted`
  * left to hear, so any live event is taken as proof a turn is running.
  *
- * **Cancel finalizes locally.** The runtime returns `Cancelled` with NO terminal event, so a
- * stop won't be echoed back — `stopStreaming` finalizes the bubble itself, and the thread
- * goes on the stopped list so a late chunk can't resurrect the "working…" state.
+ * **Cancel finalizes locally.** `stopStreaming` finalizes the bubble itself, and the thread goes
+ * on the stopped list so a late chunk can't resurrect the "working…" state. The backend's own
+ * `stopped` terminal arrives later (the round's calls still run) and only clears that list.
  */
 
 import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import type { RailMessage } from './ask-cmdr-messages'
-import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import type { ManagedAiRefusal, ToolOutcome } from '#lib/ipc/bindings.js'
 import {
   discardStagedRenameProposals,
   openStagedRenameReview,
@@ -150,7 +150,7 @@ export function handleTurnEvent(turn: AskCmdrTurn): void {
 /** The events that end a turn. They're allowed through on a stopped thread so a `discarded`
  * can still take the thread away. */
 function isTerminal(event: TurnEvent): boolean {
-  return event.type === 'done' || event.type === 'failed' || event.type === 'discarded'
+  return event.type === 'done' || event.type === 'failed' || event.type === 'stopped' || event.type === 'discarded'
 }
 
 /** One answer the user gave to a suggestion, and the thread whose timeline it was written to. */
@@ -237,14 +237,6 @@ function applyStreamEvent(event: TurnEvent): void {
       adoptLiveTurn()
       applyThinking()
       return
-    case 'toolCallStarted':
-      adoptLiveTurn()
-      applyToolStarted(event.callId, event.tool)
-      return
-    case 'toolCallFinished':
-      adoptLiveTurn()
-      applyToolFinished(event.callId, event.ok)
-      return
     case 'proposalReady':
       // Staged, not shown: a big rename arrives as a run of plans, and the review opens over
       // all of them when the turn ends. See `ask-cmdr-rename-review.svelte.ts`.
@@ -256,6 +248,10 @@ function applyStreamEvent(event: TurnEvent): void {
     case 'failed':
       applyFailed(event.kind, event.detail, event.managed)
       return
+    case 'stopped':
+      // Terminal: it clears the stopped mark (`handleTurnEvent`). The local stop already
+      // finalized the bubble.
+      return
     case 'modelChanged':
       insertBeforeCurrentTurn({ kind: 'modelChange', model: event.model })
       return
@@ -266,15 +262,31 @@ function applyStreamEvent(event: TurnEvent): void {
       applyDiscarded()
       return
     default:
-      handleContextEvent(event)
+      handleLineOrContextEvent(event)
   }
 }
 
-/** The two events that report on the CONTEXT rather than on the answer: what the assembly set
- * aside, and what it cost. Split out so `applyStreamEvent` stays under the complexity ceiling
- * and both halves stay exhaustive. */
-function handleContextEvent(event: Extract<TurnEvent, { type: 'contextTrimmed' | 'contextUsage' }>): void {
+/** The events about a round's tool lines, and the two that report on the CONTEXT (what the
+ * assembly set aside, and what it cost). Split out so `applyStreamEvent` stays under the
+ * complexity ceiling and both halves stay exhaustive. */
+function handleLineOrContextEvent(
+  event: Extract<
+    TurnEvent,
+    { type: 'toolCallStarted' | 'toolCallsResolved' | 'toolCallFinished' | 'contextTrimmed' | 'contextUsage' }
+  >,
+): void {
   switch (event.type) {
+    case 'toolCallStarted':
+      adoptLiveTurn()
+      applyToolStarted(event.callId, event.tool)
+      return
+    case 'toolCallsResolved':
+      // The round's batch; the lines don't carry what it says yet.
+      return
+    case 'toolCallFinished':
+      adoptLiveTurn()
+      applyToolFinished(event.callId, outcomeOk(event.outcome))
+      return
     case 'contextTrimmed':
       applyContextTrimmed(event.elidedResults)
       return
@@ -362,13 +374,17 @@ function applyToolStarted(callId: string, tool: string): void {
   resetProgressWatchdog()
 }
 
+/** Whether a call got what it asked for: a refusal and a plan that staged nothing didn't. The
+ * same rule as the backend's `ToolOutcome::ok`. */
+function outcomeOk(outcome: ToolOutcome): boolean {
+  return outcome.kind !== 'refused' && outcome.kind !== 'notStaged'
+}
+
+/** Only within the CURRENT bubble: a call id alone collides across rounds and turns, so a
+ * thread-wide lookup could settle an earlier turn's line. The latest line with the id is this
+ * round's. */
 function applyToolFinished(callId: string, ok: boolean): void {
-  const tool = askCmdrState.messages
-    .findLast(
-      (message): message is Extract<RailMessage, { kind: 'assistant' }> =>
-        message.kind === 'assistant' && message.tools.some((candidate) => candidate.callId === callId),
-    )
-    ?.tools.find((candidate) => candidate.callId === callId)
+  const tool = currentAssistant()?.tools.findLast((candidate) => candidate.callId === callId)
   if (tool) {
     tool.running = false
     tool.ok = ok

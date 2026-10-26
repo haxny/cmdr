@@ -5,6 +5,8 @@
 //! The crash / mid-stream persistence contract it implements is in the module docs
 //! (`runtime/mod.rs`, cases (a)–(d)).
 
+use std::path::Path;
+
 use futures_util::StreamExt;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
@@ -12,27 +14,30 @@ use tokio_util::sync::CancellationToken;
 use super::analytics;
 use super::cost::meter_cost;
 use super::dispatch::{ToolDispatcher, dispatch_ok};
-use super::events::{AgentChatEvent, AgentErrorKind, ChatEventSink, emit};
+use super::events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall, emit};
 use super::repeats::{FailedCalls, Repeat};
 use super::types::{TurnParams, TurnResult, TurnTally};
 use super::{LOG_TARGET, context};
 use crate::agent::chat::context::{ElisionFacts, MAX_TOOL_TURNS, MAX_WALL_TIME, PrefixInputs};
+use crate::agent::chat::message_view::{MessageView, to_message_view};
 use crate::agent::chat::system_prompt::system_prompt;
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::{
     AgentDelta, AgentLlmError, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentToolResult,
     AgentUsage, ToolDeclaration,
 };
-use crate::agent::store::{self, AgentStoreError};
+use crate::agent::store::{self, AgentStoreError, TurnStats};
+use crate::agent::tools::line::{LineRef, outcome_of, repeat_marks, subject_of};
 
 /// Drive one turn to completion, persisting crash-safely and staying within budget.
 /// Pure of Tauri: it needs only the seams (`llm`, `dispatcher`), a write `Connection`,
 /// and the params — so it is fully unit-testable with a temp DB and fakes.
 ///
-/// The anonymous `ask_cmdr_turn` event is reported here rather than in either caller,
-/// because `drive` has a dozen early returns and this is the ONE place all of them meet.
-/// Without it the agent's funnel starts at the proposal layer, where a zero can't be told
-/// apart from an unused feature (`analytics.rs`).
+/// Everything that happens ONCE per turn, however it ended, happens here rather than in
+/// `drive`, because `drive` has a dozen early returns and this is the one place all of them
+/// meet: the `TurnFinished` row, the ONE terminal event (`Done`, `Failed`, or `Stopped`, each
+/// carrying what the turn spent), and the anonymous `ask_cmdr_turn` event (`analytics.rs`).
+/// Scattering any of them across those returns is how one gets missed.
 pub async fn run_turn(
     llm: &dyn AgentLlm,
     dispatcher: &dyn ToolDispatcher,
@@ -42,10 +47,78 @@ pub async fn run_turn(
     sink: &ChatEventSink,
     cancel: &CancellationToken,
 ) -> TurnResult {
+    let started = Instant::now();
     let mut tally = TurnTally::default();
-    let result = drive(llm, dispatcher, conn, tools, params, sink, cancel, &mut tally).await;
+    let end = drive(llm, dispatcher, conn, tools, params, sink, cancel, &mut tally).await;
+    let wall_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let stats = tally.stats(wall_ms);
+    if let Some(stats) = stats {
+        record_turn_finished(conn, params, stats);
+    }
+    let result = end.result();
+    emit(sink, end.into_event(stats));
     analytics::turn_finished(params, &result, &tally);
     result
+}
+
+/// How `drive` ended, before `run_turn` turns it into the turn's one terminal event.
+enum TurnEnd {
+    Answered {
+        message_id: i64,
+        seq: i64,
+        stop: AgentStopReason,
+        usage: AgentUsage,
+    },
+    /// `detail` is the source error's own wording, for display.
+    Failed {
+        kind: AgentErrorKind,
+        detail: Option<String>,
+    },
+    Cancelled,
+}
+
+impl TurnEnd {
+    fn failed(kind: AgentErrorKind) -> Self {
+        TurnEnd::Failed { kind, detail: None }
+    }
+
+    fn result(&self) -> TurnResult {
+        match self {
+            TurnEnd::Answered { message_id, .. } => TurnResult::Answered {
+                assistant_message_id: *message_id,
+            },
+            TurnEnd::Failed { kind, .. } => TurnResult::Failed(*kind),
+            TurnEnd::Cancelled => TurnResult::Cancelled,
+        }
+    }
+
+    fn into_event(self, turn: Option<TurnStats>) -> AgentChatEvent {
+        match self {
+            TurnEnd::Answered {
+                message_id,
+                seq,
+                stop,
+                usage,
+            } => AgentChatEvent::Done {
+                message_id,
+                seq,
+                stop,
+                usage,
+                turn,
+            },
+            TurnEnd::Failed { kind, detail } => AgentChatEvent::Failed { kind, detail, turn },
+            TurnEnd::Cancelled => AgentChatEvent::Stopped { turn },
+        }
+    }
+}
+
+/// Persist what a tool-running turn spent, after its last row. A persist problem is logged and
+/// dropped: a footer is worth no turn, and a reload rebuilds all but the wall time from the rows.
+fn record_turn_finished(conn: &rusqlite::Connection, params: &TurnParams<'_>, stats: TurnStats) {
+    let event = store::ConversationEvent::TurnFinished { stats };
+    if let Err(e) = store::append_event(conn, params.conversation_id, &event, params.now_secs) {
+        log::warn!(target: LOG_TARGET, "could not record what this turn spent: {e}");
+    }
 }
 
 /// The loop itself. `tally` counts as it goes, so an early return still reports the
@@ -64,7 +137,7 @@ async fn drive(
     sink: &ChatEventSink,
     cancel: &CancellationToken,
     tally: &mut TurnTally,
-) -> TurnResult {
+) -> TurnEnd {
     // The working transcript mirrors the durable rows; assembly reads it, persistence
     // writes the DB. Load the persisted history, then (for a new turn) the pending user
     // message — held in memory until the first `End` so a failed first attempt records
@@ -73,14 +146,10 @@ async fn drive(
         Ok(history) => history,
         Err(e) => {
             log::warn!(target: LOG_TARGET, "load transcript failed: {e}");
-            emit(
-                sink,
-                AgentChatEvent::Failed {
-                    kind: AgentErrorKind::Provider,
-                    detail: Some(e.to_string()),
-                },
-            );
-            return TurnResult::Failed(AgentErrorKind::Provider);
+            return TurnEnd::Failed {
+                kind: AgentErrorKind::Provider,
+                detail: Some(e.to_string()),
+            };
         }
     };
     let mut user_needs_persist = false;
@@ -99,6 +168,10 @@ async fn drive(
     // What already came back with a problem this turn, so an identical retry doesn't cost
     // another provider round trip for the same answer (`repeats.rs`).
     let mut failed_calls = FailedCalls::default();
+    // Every call of this turn so far, with the row that made it, for the repeat marks: the same
+    // function the reload projection runs over the stored rows, so the two can't disagree.
+    let mut turn_calls: Vec<(i64, AgentToolCall)> = Vec::new();
+    let memory_root = dispatcher.memory_root();
     // Read once per turn: a dev build reads the prompt file on each call, and every model call
     // of one turn must send the same prefix bytes.
     let system_prompt = system_prompt();
@@ -107,17 +180,10 @@ async fn drive(
         // Cancellation and both budgets are checked at the top, so no `respond` fires
         // once the user cancelled or a budget is spent — a runaway loop is impossible.
         if cancel.is_cancelled() {
-            return TurnResult::Cancelled;
+            return TurnEnd::Cancelled;
         }
         if started.elapsed() >= MAX_WALL_TIME || tally.tool_turns >= MAX_TOOL_TURNS {
-            emit(
-                sink,
-                AgentChatEvent::Failed {
-                    kind: AgentErrorKind::BudgetExhausted,
-                    detail: None,
-                },
-            );
-            return TurnResult::Failed(AgentErrorKind::BudgetExhausted);
+            return TurnEnd::failed(AgentErrorKind::BudgetExhausted);
         }
 
         let prefix = PrefixInputs {
@@ -150,9 +216,10 @@ async fn drive(
                 // persisted (crash case b). Surface the typed error plus the
                 // provider's own wording for display.
                 let detail = error.detail().map(str::to_string);
-                let kind = AgentErrorKind::from(error);
-                emit(sink, AgentChatEvent::Failed { kind, detail });
-                return TurnResult::Failed(kind);
+                return TurnEnd::Failed {
+                    kind: AgentErrorKind::from(error),
+                    detail,
+                };
             }
         };
 
@@ -170,14 +237,13 @@ async fn drive(
                 // The stream ended without an `End`: partial assistant text is discarded
                 // (crash case a). A user cancel is a clean stop, not a failure.
                 if cancel.is_cancelled() {
-                    return TurnResult::Cancelled;
+                    return TurnEnd::Cancelled;
                 }
                 let detail = stream_error.as_ref().and_then(|e| e.detail().map(str::to_string));
                 let kind = stream_error
                     .map(AgentErrorKind::from)
                     .unwrap_or(AgentErrorKind::UnfinishedReply);
-                emit(sink, AgentChatEvent::Failed { kind, detail });
-                return TurnResult::Failed(kind);
+                return TurnEnd::Failed { kind, detail };
             }
         };
 
@@ -188,14 +254,7 @@ async fn drive(
         // written, and a retry starts clean.
         if message.parts.is_empty() {
             log::warn!(target: LOG_TARGET, "assistant turn ended with no content; treating it as unfinished");
-            emit(
-                sink,
-                AgentChatEvent::Failed {
-                    kind: AgentErrorKind::UnfinishedReply,
-                    detail: None,
-                },
-            );
-            return TurnResult::Failed(AgentErrorKind::UnfinishedReply);
+            return TurnEnd::failed(AgentErrorKind::UnfinishedReply);
         }
 
         // A completed `respond`: record what the slot changed (first `End` only, BEFORE the
@@ -208,11 +267,12 @@ async fn drive(
             record_chat_memory_transition(conn, params, sink);
         }
         if user_needs_persist && let Some(user) = params.user {
+            let part = user.part();
             match store::append_message(
                 conn,
                 params.conversation_id,
                 AgentRole::User,
-                &[user.part()],
+                std::slice::from_ref(&part),
                 &user.search_text(),
                 None,
                 None,
@@ -220,9 +280,10 @@ async fn drive(
             ) {
                 Ok((message_id, seq)) => {
                     user_needs_persist = false;
-                    emit(sink, AgentChatEvent::UserPersisted { message_id, seq });
+                    let opener = opener_view(message_id, seq, part, params.now_secs);
+                    emit(sink, AgentChatEvent::UserPersisted { opener });
                 }
-                Err(e) => return persist_failed(sink, e),
+                Err(e) => return persist_failed(e),
             }
         }
 
@@ -238,37 +299,47 @@ async fn drive(
             params.now_secs,
         ) {
             Ok(ids) => ids,
-            Err(e) => return persist_failed(sink, e),
+            Err(e) => return persist_failed(e),
         };
+        tally.prompt_tokens = tally.prompt_tokens.saturating_add(usage.prompt_tokens);
+        tally.completion_tokens = tally.completion_tokens.saturating_add(usage.completion_tokens);
         transcript.push(message.clone());
         meter_cost(conn, params, usage);
 
         // Terminal vs. another tool turn.
-        let has_tool_calls = message.parts.iter().any(|p| matches!(p, AgentPart::ToolCall(_)));
-        if !has_tool_calls {
+        let calls: Vec<&AgentToolCall> = message
+            .parts
+            .iter()
+            .filter_map(|part| match part {
+                AgentPart::ToolCall(call) => Some(call),
+                _ => None,
+            })
+            .collect();
+        if calls.is_empty() {
             report_context_usage(conn, params.conversation_id, &assembled.elision, sink);
-            emit(
-                sink,
-                AgentChatEvent::Done {
-                    message_id: assistant_id,
-                    seq: assistant_seq,
-                    stop,
-                    usage,
-                },
-            );
-            return TurnResult::Answered {
-                assistant_message_id: assistant_id,
+            return TurnEnd::Answered {
+                message_id: assistant_id,
+                seq: assistant_seq,
+                stop,
+                usage,
             };
         }
 
         // Dispatch each tool call, persisting its result on its own row, then loop.
         tally.tool_turns += 1;
+        turn_calls.extend(calls.iter().map(|call| (assistant_id, (*call).clone())));
+        emit(
+            sink,
+            AgentChatEvent::ToolCallsResolved {
+                message_id: assistant_id,
+                calls: resolve_calls(assistant_id, &calls, &turn_calls, memory_root.as_deref()),
+            },
+        );
         // Set when a call the model was already warned about came back again. The turn ends
         // AFTER this message's calls are all answered, so no tool call is left without a
         // result row for the next turn to load.
         let mut stuck = false;
-        for part in &message.parts {
-            let AgentPart::ToolCall(call) = part else { continue };
+        for call in calls {
             let (result, proposal) = match failed_calls.judge(call) {
                 Repeat::Fresh => {
                     let dispatch = dispatcher.dispatch(call).await;
@@ -283,13 +354,8 @@ async fn drive(
                     (repeat_result(call, content), None)
                 }
             };
-            emit(
-                sink,
-                AgentChatEvent::ToolCallFinished {
-                    call_id: call.call_id.clone(),
-                    ok: dispatch_ok(&result),
-                },
-            );
+            let outcome = outcome_of(&call.tool, &result);
+            let subject = subject_of(call, Some(&result.content), memory_root.as_deref());
             let tool_message = AgentMessage {
                 role: AgentRole::Tool,
                 parts: vec![AgentPart::ToolResult(result)],
@@ -305,8 +371,19 @@ async fn drive(
                 None,
                 params.now_secs,
             ) {
-                return persist_failed(sink, e);
+                return persist_failed(e);
             }
+            tally.tool_calls = tally.tool_calls.saturating_add(1);
+            // Only now that the row exists: whoever fetches this result on the event finds it.
+            emit(
+                sink,
+                AgentChatEvent::ToolCallFinished {
+                    message_id: assistant_id,
+                    call_id: call.call_id.clone(),
+                    outcome,
+                    subject,
+                },
+            );
             if let Some(proposal) = proposal {
                 tally.proposals += 1;
                 emit(sink, AgentChatEvent::ProposalReady { proposal });
@@ -318,16 +395,50 @@ async fn drive(
         // isn't going to get past this on its own. End here, with a reason that says what
         // actually happened instead of leaving the user with "it hit its limit".
         if stuck {
-            emit(
-                sink,
-                AgentChatEvent::Failed {
-                    kind: AgentErrorKind::RepeatedToolCall,
-                    detail: None,
-                },
-            );
-            return TurnResult::Failed(AgentErrorKind::RepeatedToolCall);
+            return TurnEnd::failed(AgentErrorKind::RepeatedToolCall);
         }
     }
+}
+
+/// One round's calls as `ToolCallsResolved` lists them: what each looks at from its arguments,
+/// and the earlier identical call of the turn it repeats. `turn_calls` already holds this round.
+fn resolve_calls(
+    message_id: i64,
+    calls: &[&AgentToolCall],
+    turn_calls: &[(i64, AgentToolCall)],
+    memory_root: Option<&Path>,
+) -> Vec<ResolvedCall> {
+    let ordered: Vec<(i64, &AgentToolCall)> = turn_calls.iter().map(|(id, call)| (*id, call)).collect();
+    let marks = repeat_marks(&ordered);
+    calls
+        .iter()
+        .map(|call| ResolvedCall {
+            call_id: call.call_id.clone(),
+            subject: subject_of(call, None, memory_root),
+            repeat_of: marks
+                .get(&LineRef {
+                    message_id,
+                    call_id: call.call_id.clone(),
+                })
+                .cloned(),
+        })
+        .collect()
+}
+
+/// The persisted opener as the view history shows, for `UserPersisted`.
+fn opener_view(message_id: i64, seq: i64, part: AgentPart, created_at: i64) -> MessageView {
+    to_message_view(store::StoredMessage {
+        id: message_id,
+        seq,
+        content: store::StoredContent::Message {
+            role: AgentRole::User,
+            parts: vec![part],
+        },
+        text_for_search: String::new(),
+        prompt_tokens: None,
+        completion_tokens: None,
+        created_at,
+    })
 }
 
 /// The tool result for a call the repeat breaker held back: it was never dispatched, but the
@@ -457,16 +568,12 @@ fn announce_context_pressure(facts: &ElisionFacts, sink: &ChatEventSink, announc
     }
 }
 
-fn persist_failed(sink: &ChatEventSink, error: AgentStoreError) -> TurnResult {
+fn persist_failed(error: AgentStoreError) -> TurnEnd {
     log::warn!(target: LOG_TARGET, "persisting a chat message failed: {error}");
-    emit(
-        sink,
-        AgentChatEvent::Failed {
-            kind: AgentErrorKind::Provider,
-            detail: Some(error.to_string()),
-        },
-    );
-    TurnResult::Failed(AgentErrorKind::Provider)
+    TurnEnd::Failed {
+        kind: AgentErrorKind::Provider,
+        detail: Some(error.to_string()),
+    }
 }
 
 /// On the turn's first completed `respond`: if the effective model differs from the

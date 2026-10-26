@@ -156,10 +156,6 @@ fn wire(event: AgentChatEvent) -> Value {
 fn every_runtime_event_maps_to_its_tagged_wire_event() {
     assert_eq!(wire(AgentChatEvent::Queued), json!({ "type": "queued" }));
     assert_eq!(
-        wire(AgentChatEvent::UserPersisted { message_id: 4, seq: 1 }),
-        json!({ "type": "userPersisted", "messageId": 4, "seq": 1 })
-    );
-    assert_eq!(
         wire(AgentChatEvent::AssistantStarted),
         json!({ "type": "assistantStarted" })
     );
@@ -169,11 +165,8 @@ fn every_runtime_event_maps_to_its_tagged_wire_event() {
     );
     assert_eq!(wire(AgentChatEvent::ReasoningTick), json!({ "type": "reasoningTick" }));
     assert_eq!(
-        wire(AgentChatEvent::ToolCallFinished {
-            call_id: "call-1".into(),
-            ok: false,
-        }),
-        json!({ "type": "toolCallFinished", "callId": "call-1", "ok": false })
+        wire(AgentChatEvent::Stopped { turn: None }),
+        json!({ "type": "stopped", "turn": null })
     );
     assert_eq!(
         wire(AgentChatEvent::ModelChanged {
@@ -218,6 +211,7 @@ fn done_carries_the_persisted_identity_stop_reason_and_usage() {
                 prompt_tokens: 900,
                 completion_tokens: 120,
             },
+            turn: None,
         }),
         json!({
             "type": "done",
@@ -225,6 +219,94 @@ fn done_carries_the_persisted_identity_stop_reason_and_usage() {
             "seq": 5,
             "stop": "toolCall",
             "usage": { "promptTokens": 900, "completionTokens": 120 },
+            "turn": null,
+        })
+    );
+}
+
+/// What a tool-running turn spent rides every terminal event, so a stopped or failed turn shows
+/// it too: numbers only, the rail owns the words.
+#[test]
+fn terminal_events_carry_what_the_turn_spent() {
+    let stats = TurnStats {
+        tool_calls: 3,
+        wall_ms: Some(4_250),
+        prompt_tokens: 1_800,
+        completion_tokens: 90,
+    };
+    let expected = json!({ "toolCalls": 3, "wallMs": 4250, "promptTokens": 1800, "completionTokens": 90 });
+    assert_eq!(wire(AgentChatEvent::Stopped { turn: Some(stats) })["turn"], expected);
+    let failed = wire(AgentChatEvent::Failed {
+        kind: AgentErrorKind::BudgetExhausted,
+        detail: None,
+        turn: Some(stats),
+    });
+    assert_eq!(failed["turn"], expected);
+}
+
+/// The persisted opener crosses as the same view history shows, with its identity on the event
+/// too, so a rail that reloaded before the row landed can insert it.
+#[test]
+fn user_persisted_carries_the_opener_as_history_shows_it() {
+    use crate::agent::chat::message_view::{MessageBlock, MessageRoleView};
+    let opener = MessageView {
+        id: 4,
+        seq: 1,
+        role: MessageRoleView::User,
+        blocks: vec![MessageBlock::Text { text: "hi".into() }],
+        prompt_tokens: None,
+        completion_tokens: None,
+        created_at: 100,
+    };
+    let event = wire(AgentChatEvent::UserPersisted { opener });
+    assert_eq!(event["type"], "userPersisted");
+    assert_eq!(event["messageId"], 4);
+    assert_eq!(event["seq"], 1);
+    assert_eq!(event["opener"]["blocks"], json!([{ "type": "text", "text": "hi" }]));
+}
+
+/// A line is `(messageId, callId)` on the wire: the call id alone collides across rounds. The
+/// subject and outcome cross as typed facts, never a sentence.
+#[test]
+fn tool_line_events_carry_the_line_identity_and_typed_facts() {
+    use crate::agent::tools::line::LineRef;
+    let resolved = wire(AgentChatEvent::ToolCallsResolved {
+        message_id: 12,
+        calls: vec![ResolvedCall {
+            call_id: "fake-call-0".into(),
+            subject: ToolSubject::Drives,
+            repeat_of: Some(LineRef {
+                message_id: 10,
+                call_id: "fake-call-0".into(),
+            }),
+        }],
+    });
+    assert_eq!(
+        resolved,
+        json!({
+            "type": "toolCallsResolved",
+            "messageId": 12,
+            "calls": [{
+                "callId": "fake-call-0",
+                "subject": { "kind": "drives" },
+                "repeatOf": { "messageId": 10, "callId": "fake-call-0" },
+            }],
+        })
+    );
+    let finished = wire(AgentChatEvent::ToolCallFinished {
+        message_id: 12,
+        call_id: "fake-call-0".into(),
+        outcome: ToolOutcome::Answered,
+        subject: ToolSubject::Drives,
+    });
+    assert_eq!(
+        finished,
+        json!({
+            "type": "toolCallFinished",
+            "messageId": 12,
+            "callId": "fake-call-0",
+            "outcome": { "kind": "answered" },
+            "subject": { "kind": "drives" },
         })
     );
 }
@@ -238,15 +320,17 @@ fn failed_carries_the_typed_kind_and_the_providers_own_wording_verbatim() {
         wire(AgentChatEvent::Failed {
             kind: AgentErrorKind::RateLimited,
             detail: Some("quota resets at 14:00".into()),
+            turn: None,
         }),
-        json!({ "type": "failed", "kind": "rateLimited", "detail": "quota resets at 14:00", "managed": null })
+        json!({ "type": "failed", "kind": "rateLimited", "detail": "quota resets at 14:00", "managed": null, "turn": null })
     );
     assert_eq!(
         wire(AgentChatEvent::Failed {
             kind: AgentErrorKind::BudgetExhausted,
             detail: None,
+            turn: None,
         }),
-        json!({ "type": "failed", "kind": "budgetExhausted", "detail": null, "managed": null })
+        json!({ "type": "failed", "kind": "budgetExhausted", "detail": null, "managed": null, "turn": null })
     );
 }
 
@@ -258,8 +342,9 @@ fn a_managed_failure_carries_the_organizations_reason() {
         wire(AgentChatEvent::Failed {
             kind: AgentErrorKind::ManagedByOrganization(ManagedAiRefusal::CloudAiOff),
             detail: None,
+            turn: None,
         }),
-        json!({ "type": "failed", "kind": "managedByOrganization", "detail": null, "managed": "cloudAiOff" })
+        json!({ "type": "failed", "kind": "managedByOrganization", "detail": null, "managed": "cloudAiOff", "turn": null })
     );
 }
 

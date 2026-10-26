@@ -175,6 +175,7 @@ describe('picking a turn up part-way through', () => {
       seq: 3,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
+      turn: null,
     })
 
     expect(askCmdrState.streaming).toBe(false)

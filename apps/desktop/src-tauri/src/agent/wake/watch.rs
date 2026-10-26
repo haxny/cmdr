@@ -100,4 +100,8 @@ impl ToolDispatcher for WakeToolWatch<'_> {
     fn revoke_evidence(&self, call_ids: &[String]) {
         self.inner.revoke_evidence(call_ids);
     }
+
+    fn memory_root(&self) -> Option<std::path::PathBuf> {
+        self.inner.memory_root()
+    }
 }

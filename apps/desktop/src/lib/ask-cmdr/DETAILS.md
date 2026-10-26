@@ -44,9 +44,10 @@ Three things follow from the subscription being conversation-keyed rather than p
 - **A thread can disappear under the rail.** A quiet wake opens a thread, thinks in it, and deletes it seconds later;
   `discarded` is the only way a subscriber can learn that, since there is nothing left to re-read. The rail steps off
   into an empty chat and the session list drops the row.
-- **A stopped turn stays stopped.** A cancel gets no terminal event back, so the backend dribbles a chunk or two more.
-  Those would otherwise read as a live turn and re-enter "working…" with nothing coming to clear it, so the thread goes
-  on a stopped list until it is sent to again.
+- **A stopped turn stays stopped.** After a cancel the backend dribbles a chunk or two more (and the round's remaining
+  tool calls still run) before its `stopped` terminal arrives. Those would otherwise read as a live turn and re-enter
+  "working…", so the thread goes on a stopped list until a terminal event (`done`, `failed`, `stopped`, `discarded`) or
+  a new send clears it.
 
 `sendMessage` optimistically appends a `{ kind: 'user' }` item and flips `streaming` on, then calls
 `sendAskCmdrMessage`. Events drive the render (`applyStreamEvent`), each delegating to a tiny mutator so the switch
@@ -58,8 +59,14 @@ stays simple:
 - `textDelta` → append to the last assistant's `text`; clear its `thinking`.
 - `reasoningTick` → set the last assistant's `thinking` (a subtle "thinking…" line; the reasoning content itself never
   crosses).
-- `toolCallStarted` / `toolCallFinished` → push / update a `RailToolCall` (the collapsible "looked at X" line;
-  `ok = false` is a refusal or handler problem).
+- `toolCallStarted` / `toolCallFinished` → push / update a `RailToolCall` (the collapsible "looked at X" line).
+  `toolCallFinished` carries the line's identity (`messageId` + `callId`), its typed `outcome`, and its refined
+  `subject`; today the reducer derives `ok` from the outcome (`refused` and `notStaged` aren't ok, the backend's
+  `ToolOutcome::ok` rule) and finds the line by `callId` within the CURRENT bubble only, because ids collide across
+  rounds and turns. `toolCallsResolved` (one per round: every call of the final message, with subjects and repeat marks)
+  is ignored for now.
+- `stopped` → the backend's terminal for a cancelled turn. Today it only clears the stopped mark; the local stop already
+  finalized the bubble.
 - `done` → finalize the bubble, stamp its persisted id, `streaming = false`.
 - `failed` → drop an empty bubble, push a typed `{ kind: 'error' }` item, `streaming = false`. The item carries the
   source error's own wording (`detail`, when the backend has one — a retired model slug, a quota reset time) under the
@@ -93,9 +100,13 @@ same model and size, or the interactive override masks the changed shared model)
 user switched threads is dropped locally (the rows still show on revisit). History renders the same lines via the
 `event`-role fold in `buildRailMessages`. Backend mechanics: `src-tauri/src/agent/chat/DETAILS.md` § Slot-change events.
 
-**Cancel finalizes locally.** The runtime returns `Cancelled` with no terminal event, so `stopStreaming` cancels the
-backend AND finalizes the current bubble itself, then puts the thread on the stopped list so the chunks still in flight
-are ignored rather than re-adopted as a live turn.
+**Cancel finalizes locally.** `stopStreaming` cancels the backend AND finalizes the current bubble itself, then puts the
+thread on the stopped list so the chunks still in flight are ignored rather than re-adopted as a live turn; the
+backend's `stopped` arrives once the round's calls have run.
+
+**Terminal events carry the turn's stats.** `done`, `failed`, and `stopped` carry `turn: TurnStats | null` (tool calls,
+wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. The rail doesn't show it
+yet.
 
 History loads through `getAskCmdrConversation` on rail open (bootstrapping the most recent thread) and folds `tool`-role
 result rows into their assistant tool line by `callId`, so the thread shows one line per call.
@@ -114,9 +125,10 @@ Two things the block owes the reader: the collapsed summary counts the rolled-up
 with what expanding shows), and the rollup line stays, because admitting how many folders the digest had no room for is
 the point of having one.
 
-**Live, the digest arrives on the next load, not mid-turn.** `userPersisted` carries an id and no content, so a rail
-opened onto a wake already in flight shows the answer streaming above an empty spot until the thread is re-read.
-Widening that event to carry the block is the fix if it ever matters.
+**Live, the digest arrives on the next load, not mid-turn.** `userPersisted` carries the persisted opener as a
+`MessageView` (`opener`), but the reducer only stamps the id today, so a rail opened onto a wake already in flight shows
+the answer streaming above an empty spot until the thread is re-read. Inserting `opener` when the rail lacks it is the
+fix.
 
 ## What the user answered about a suggestion
 
@@ -172,8 +184,8 @@ What the reducer has to get right:
   `settleDecisionsHeardWhileLoading`). The load's read can be a moment older than the decision, and it replaces the list
   the line was shown in, or the rail isn't on that thread yet.
 
-The sweep-wide `user`-role row still arrives on the next load, exactly like the digest: it opens a turn, and
-`userPersisted` carries no content.
+The sweep-wide `user`-role row still arrives on the next load, exactly like the digest: it opens a turn, and the reducer
+doesn't insert `userPersisted`'s `opener` yet.
 
 ## The staged-proposal toast
 

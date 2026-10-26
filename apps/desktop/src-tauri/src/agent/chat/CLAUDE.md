@@ -37,6 +37,9 @@ One message in, an answer out, crash-safe and within budget.
   Don't bump one silently.
 - **The event seam is `AgentChatEvent` over an `UnboundedSender`**, forwarded onto one
   conversation-keyed event: ❌ never key a turn to the invoke that started it, or a reload loses it.
+- **Terminal events come only from `run_turn`, once per turn**, carrying its stats; `drive`
+  returns how it ended. A tool result row persists BEFORE its `ToolCallFinished`, and a line is
+  `(message_id, call_id)`: ids collide across rounds. `DETAILS.md` § What the stream says.
 
 The whole call, the constants, the crash cases, and the runtime file by file: `DETAILS.md`. Read it
 before any non-trivial work here: editing, planning, reorganizing, or advising.

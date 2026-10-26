@@ -77,10 +77,14 @@ async fn max_tool_turns_halts_before_the_ninth_respond() {
         "exactly MAX_TOOL_TURNS respond calls fire; the ninth never does"
     );
     assert!(
-        drain(&mut rx).contains(&AgentChatEvent::Failed {
-            kind: AgentErrorKind::BudgetExhausted,
-            detail: None,
-        }),
+        drain(&mut rx).iter().any(|e| matches!(
+            e,
+            AgentChatEvent::Failed {
+                kind: AgentErrorKind::BudgetExhausted,
+                detail: None,
+                turn: Some(_),
+            }
+        )),
         "the budget-exhausted notice is emitted"
     );
 }
@@ -193,6 +197,7 @@ async fn crash_a_stream_dropped_mid_text_persists_nothing() {
     assert!(events.contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::UnfinishedReply,
         detail: None,
+        turn: None,
     }));
     assert!(
         !events.iter().any(|e| matches!(e, AgentChatEvent::UserPersisted { .. })),
@@ -236,6 +241,7 @@ async fn an_assistant_turn_with_nothing_in_it_is_an_unfinished_reply() {
     assert!(drain(&mut rx).contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::UnfinishedReply,
         detail: None,
+        turn: None,
     }));
 }
 
@@ -273,7 +279,7 @@ async fn crash_c_completed_turns_persist_and_a_retry_resumes_from_them() {
     // Turn 1's rows survive: user, assistant(tool_call), and the tool result. The
     // crashed turn 2's assistant row is absent.
     let persisted = store::list_messages(&conn, id, 100, 0).expect("list");
-    let roles: Vec<AgentRole> = persisted.iter().map(stored_role).collect();
+    let roles = transcript_roles(&persisted);
     assert_eq!(
         roles,
         vec![AgentRole::User, AgentRole::Assistant, AgentRole::Tool],
@@ -386,11 +392,7 @@ async fn end_to_end_multi_tool_turn_dispatches_and_answers() {
     assert!(matches!(result, TurnResult::Answered { .. }));
 
     // Persisted: user, assistant(2 tool calls), 2 tool results, assistant(answer).
-    let roles: Vec<AgentRole> = store::list_messages(&conn, id, 100, 0)
-        .expect("list")
-        .iter()
-        .map(stored_role)
-        .collect();
+    let roles = transcript_roles(&store::list_messages(&conn, id, 100, 0).expect("list"));
     assert_eq!(
         roles,
         vec![
@@ -405,7 +407,7 @@ async fn end_to_end_multi_tool_turn_dispatches_and_answers() {
     let events = drain(&mut rx);
     let tool_finished = events
         .iter()
-        .filter(|e| matches!(e, AgentChatEvent::ToolCallFinished { ok: true, .. }))
+        .filter(|e| matches!(e, AgentChatEvent::ToolCallFinished { outcome, .. } if outcome.ok()))
         .count();
     assert_eq!(tool_finished, 2, "both tool calls dispatched and finished ok");
     assert!(
@@ -472,6 +474,7 @@ async fn a_pre_stream_provider_error_persists_nothing_and_is_typed() {
     assert!(drain(&mut rx).contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::Provider,
         detail: Some("programmable: script exhausted".to_string()),
+        turn: None,
     }));
 }
 
@@ -500,6 +503,7 @@ async fn a_mid_stream_provider_error_carries_its_detail() {
     assert!(drain(&mut rx).contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::Provider,
         detail: Some("HTTP 404: model gone".to_string()),
+        turn: None,
     }));
 }
 

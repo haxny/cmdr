@@ -20,7 +20,9 @@ Two implementations:
   `exec_chat_stream_request` (the prompt-only helpers can't express a multipart tool loop).
 - `FakeAgentLlm` (`fake.rs`) is scripted with `ScriptedTurn`s (one consumed per `respond`) and records every `messages`
   slice via `calls_seen()`, so a test asserts the exact assembled prompts. `CallRawTool(name, args)` emits a raw tool
-  name to exercise the read-only parse gate.
+  name to exercise the read-only parse gate. Each turn's `End` reports zero usage, or what `script_with_usage` gives it. Call ids are
+  `fake-call-{index}` PER ROUND, so they collide across rounds on purpose: the tool-line tests rely on it (❌ don't
+  make them unique).
 
 ## `AgentPart` ⇄ genai `ContentPart` mapping
 

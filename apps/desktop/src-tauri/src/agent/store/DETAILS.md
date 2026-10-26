@@ -64,6 +64,20 @@ tolerant parse, one unknown row made the thread impossible to open AND to send i
   load it or send into it). Open beta, auto-update, and rare downgrades make that acceptable; every build from this one
   on reads a newer kind as `Unknown`.
 
+### What a turn spent (`TurnFinished`)
+
+`run_turn` appends `ConversationEvent::TurnFinished { stats: TurnStats }` after the last row of every turn that ran at
+least one tool, answered, failed, or stopped alike. `TurnStats` holds the tool-call count, the wall time, and the turn's
+summed per-row `prompt_tokens` / `completion_tokens` (the cost meter's figures, so per-turn footers add up to the
+thread's cost).
+
+- **Decision/Why an event row, not a column**: the wall time can't be derived on reload (every row of a turn carries
+  the same `now_secs`), so it must be stored, and an event row needs no migration. Everything else in it is derivable
+  from the rows, so a missing row (an older turn, or a crash before it) loses only the wall time.
+- **The downgrade cost** (accepted): a build from before the `Unknown` tolerant parse can't load, or send into, a thread
+  holding this row. A tolerant build reads it as `Unknown` and shows nothing for it.
+- A persist problem writing it is logged and dropped: a footer is worth no turn.
+
 ## FTS5 comes from `bundled`, not a feature
 
 rusqlite 0.39 has no `fts5` feature; the FTS5 module is compiled into the `bundled` SQLite amalgamation by default. So

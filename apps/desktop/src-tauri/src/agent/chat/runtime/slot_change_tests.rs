@@ -220,6 +220,7 @@ fn row_shape(message: &store::StoredMessage) -> &'static str {
         store::StoredContent::Event(store::ConversationEvent::ModelChanged { .. }) => "model",
         store::StoredContent::Event(store::ConversationEvent::ChatMemoryChanged { .. }) => "memory",
         store::StoredContent::Event(store::ConversationEvent::ProposalDecided { .. }) => "decision",
+        store::StoredContent::Event(store::ConversationEvent::TurnFinished { .. }) => "turn",
         store::StoredContent::Event(store::ConversationEvent::Unknown) => "unknown",
     }
 }

@@ -55,10 +55,14 @@ async fn an_identical_call_that_already_failed_is_never_dispatched_a_third_time(
         "three round trips, not eight: run it, tell the model repeating won't work, then stop"
     );
     assert!(
-        drain(&mut rx).contains(&AgentChatEvent::Failed {
-            kind: AgentErrorKind::RepeatedToolCall,
-            detail: None,
-        }),
+        drain(&mut rx).iter().any(|e| matches!(
+            e,
+            AgentChatEvent::Failed {
+                kind: AgentErrorKind::RepeatedToolCall,
+                detail: None,
+                turn: Some(_),
+            }
+        )),
         "the user is told the turn got stuck, not that it ran out of room"
     );
 }

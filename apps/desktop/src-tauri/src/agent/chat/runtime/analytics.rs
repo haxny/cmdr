@@ -126,6 +126,7 @@ mod tests {
             &TurnTally {
                 tool_turns: 3,
                 proposals: 1,
+                ..TurnTally::default()
             },
         );
 
@@ -195,6 +196,7 @@ mod tests {
             &TurnTally {
                 tool_turns: 1,
                 proposals: 0,
+                ..TurnTally::default()
             },
         );
 

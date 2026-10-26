@@ -36,13 +36,21 @@ pub enum ScriptedTurn {
 
 /// A scripted, deterministic agent LLM. Cheap to build; drive it with `respond`.
 pub struct FakeAgentLlm {
-    turns: Mutex<VecDeque<ScriptedTurn>>,
+    /// Each turn with the usage its `End` reports.
+    turns: Mutex<VecDeque<(ScriptedTurn, AgentUsage)>>,
     calls_seen: Mutex<Vec<Vec<AgentMessage>>>,
 }
 
 impl FakeAgentLlm {
-    /// Builds a fake that plays `turns` in order, one per `respond` call.
+    /// Builds a fake that plays `turns` in order, one per `respond` call, each reporting zero
+    /// usage.
     pub fn script(turns: Vec<ScriptedTurn>) -> Self {
+        Self::script_with_usage(turns.into_iter().map(|turn| (turn, AgentUsage::default())).collect())
+    }
+
+    /// The same, with the usage each turn's `End` reports, so what a turn spends adds up to real
+    /// numbers.
+    pub fn script_with_usage(turns: Vec<(ScriptedTurn, AgentUsage)>) -> Self {
         Self {
             turns: Mutex::new(turns.into()),
             calls_seen: Mutex::new(Vec::new()),
@@ -67,7 +75,7 @@ impl AgentLlm for FakeAgentLlm {
         async move {
             self.calls_seen.lock_ignore_poison().push(messages.to_vec());
 
-            let turn = self
+            let (turn, usage) = self
                 .turns
                 .lock_ignore_poison()
                 .pop_front()
@@ -75,9 +83,11 @@ impl AgentLlm for FakeAgentLlm {
 
             let deltas = match turn {
                 ScriptedTurn::Fail(error) => return Err(error),
-                ScriptedTurn::Say(chunks) => say_deltas(chunks),
-                ScriptedTurn::CallTools(calls) => tool_call_deltas(calls.into_iter().collect()),
-                ScriptedTurn::CallRawTool(name, args) => tool_call_deltas(vec![(ToolId::from_wire_name(&name), args)]),
+                ScriptedTurn::Say(chunks) => say_deltas(chunks, usage),
+                ScriptedTurn::CallTools(calls) => tool_call_deltas(calls.into_iter().collect(), usage),
+                ScriptedTurn::CallRawTool(name, args) => {
+                    tool_call_deltas(vec![(ToolId::from_wire_name(&name), args)], usage)
+                }
             };
 
             let cancel_signal = cancel.clone();
@@ -91,7 +101,7 @@ impl AgentLlm for FakeAgentLlm {
 }
 
 /// Streams the chunks as text deltas, then an `End` carrying the joined answer.
-fn say_deltas(chunks: Vec<String>) -> Vec<Result<AgentDelta, AgentLlmError>> {
+fn say_deltas(chunks: Vec<String>, usage: AgentUsage) -> Vec<Result<AgentDelta, AgentLlmError>> {
     let joined = chunks.concat();
     let mut deltas: Vec<Result<AgentDelta, AgentLlmError>> =
         chunks.into_iter().map(|chunk| Ok(AgentDelta::Text(chunk))).collect();
@@ -102,7 +112,7 @@ fn say_deltas(chunks: Vec<String>) -> Vec<Result<AgentDelta, AgentLlmError>> {
     };
     deltas.push(Ok(AgentDelta::End {
         stop: AgentStopReason::Completed,
-        usage: AgentUsage::default(),
+        usage,
         message,
     }));
     deltas
@@ -111,7 +121,10 @@ fn say_deltas(chunks: Vec<String>) -> Vec<Result<AgentDelta, AgentLlmError>> {
 /// Emits a `ToolCallStarted` per call, then an `End` (stop `ToolCall`) whose message
 /// carries the tool-call parts for the runtime to dispatch (and refuse, for an
 /// `Unrecognized` name).
-fn tool_call_deltas(calls: Vec<(ToolId, serde_json::Value)>) -> Vec<Result<AgentDelta, AgentLlmError>> {
+fn tool_call_deltas(
+    calls: Vec<(ToolId, serde_json::Value)>,
+    usage: AgentUsage,
+) -> Vec<Result<AgentDelta, AgentLlmError>> {
     let mut deltas: Vec<Result<AgentDelta, AgentLlmError>> = Vec::new();
     let mut parts = Vec::new();
     for (index, (tool, arguments)) in calls.into_iter().enumerate() {
@@ -134,7 +147,7 @@ fn tool_call_deltas(calls: Vec<(ToolId, serde_json::Value)>) -> Vec<Result<Agent
     };
     deltas.push(Ok(AgentDelta::End {
         stop: AgentStopReason::ToolCall,
-        usage: AgentUsage::default(),
+        usage,
         message,
     }));
     deltas

@@ -6264,8 +6264,12 @@ export type AskCmdrStreamEvent =
   | { type: 'started' }
   // The send queued behind this thread's running turn (drives "working… stop?").
   | { type: 'queued' }
-  // The user's message was persisted (on the first `respond` `End`).
-  | { type: 'userPersisted'; messageId: number; seq: number }
+  /**
+   *  The turn's opener was persisted (on the first `respond` `End`). `opener` is the row as
+   *  history shows it (its `id` and `seq` are `message_id` and `seq`), so a rail that reloaded
+   *  before it landed can insert it.
+   */
+  | { type: 'userPersisted'; messageId: number; seq: number; opener: MessageView }
   // A new assistant turn began streaming (no id yet — the row lands on `Done`).
   | { type: 'assistantStarted' }
   // A chunk of assistant text.
@@ -6277,15 +6281,27 @@ export type AskCmdrStreamEvent =
    *  built frontend-side from `tool`, never a backend string).
    */
   | { type: 'toolCallStarted'; callId: string; tool: string }
-  // A tool call finished dispatching (`ok = false` for a refusal or handler problem).
-  | { type: 'toolCallFinished'; callId: string; ok: boolean }
+  /**
+   *  A round's assistant row persisted: every call of its final message, in order, with what
+   *  each looks at and the earlier call of the turn it repeats. One per round, before any call
+   *  runs.
+   */
+  | { type: 'toolCallsResolved'; messageId: number; calls: ResolvedCall[] }
+  /**
+   *  A tool call's result row persisted. The line is `(message_id, call_id)`, never the call
+   *  id alone: ids collide across rounds. `subject` is refined by the result.
+   */
+  | { type: 'toolCallFinished'; messageId: number; callId: string; outcome: ToolOutcome; subject: ToolSubject }
   /**
    *  Display-only rename rows for the review surface. The frontend must send
    *  only opaque ids back when a later user action approves them.
    */
   | { type: 'proposalReady'; proposal: RenameProposalSnapshot }
-  // The turn produced its final answer, carrying the persisted assistant id.
-  | { type: 'done'; messageId: number; seq: number; stop: StopReasonView; usage: UsageView }
+  /**
+   *  The turn produced its final answer, carrying the persisted assistant id. `usage` is the
+   *  last model call's; `turn` is what the whole turn spent, `None` when it ran no tool.
+   */
+  | { type: 'done'; messageId: number; seq: number; stop: StopReasonView; usage: UsageView; turn: TurnStats | null }
   /**
    *  The turn ended without an answer, typed and honest (rendered without the words
    *  "error"/"failed" — the frontend owns the copy). `detail` is the source error's own
@@ -6301,7 +6317,11 @@ export type AskCmdrStreamEvent =
        *  `managedByOrganization`, so the rail words that rule.
        */
       managed: ManagedAiRefusal | null
+      // What the turn spent, when it ran a tool. `None` too for a refusal from outside a turn.
+      turn: TurnStats | null
     }
+  // The turn was stopped (the rail's Stop, or the status corner stopping a wake). Terminal.
+  | { type: 'stopped'; turn: TurnStats | null }
   /**
    *  The conversation's effective model changed since its previous turn; the persisted
    *  event row's identity rides along. The rail inserts the line BEFORE this turn's
@@ -10181,6 +10201,9 @@ export type IndexStatusResponse = {
   leftAfterCatchUpMs: number | null
 }
 
+// Why a photo tool's index couldn't answer.
+export type IndexUnavailableReason = 'imageIndexingOff' | 'semanticModelNotInstalled'
+
 /**
  *  Who initiated the operation. `AgentEdited` is mixed provenance: the
  *  in-app agent proposed the batch and the user retyped at least one name while reviewing
@@ -10655,6 +10678,16 @@ export type LineChunk = {
   end: ChunkEnd
   totalRows: TotalRows
   totalBytes: number
+}
+
+/**
+ *  A line's identity: the assistant row that made the call, plus the call's id. ❌ Never the
+ *  call id alone: ids collide across rounds (the fake mints `fake-call-{index}` per round, and
+ *  Gemini's reset per response).
+ */
+export type LineRef = {
+  messageId: number
+  callId: string
 }
 
 // Cancelled event payload
@@ -11900,6 +11933,28 @@ export type MemoryDiagnostics = {
    */
   truncated: boolean
 }
+
+/**
+ *  [`MemoryRefusal`] without its data, plus the two refusals a stored result can carry that
+ *  no `MemoryRefusal` is: the folder being unreachable, and a token this build doesn't know.
+ *
+ *  The token is the contract: a tool result stores `refused: <token>`, and
+ *  [`from_token`](Self::from_token) reads it back, so the rail can say which refusal it was
+ *  without reading the model-facing sentence.
+ */
+export type MemoryRefusalKind =
+  | 'outsideMemory'
+  | 'notMarkdown'
+  | 'noPath'
+  | 'directoryFull'
+  | 'noSuchFile'
+  | 'noMatch'
+  | 'notUnique'
+  | 'unwritable'
+  // The memory folder couldn't be reached this session (the data dir didn't resolve).
+  | 'unavailable'
+  // A token this build doesn't know (a newer build wrote it).
+  | 'other'
 
 // One distinct region size under a tag.
 export type MemoryRegionSize = {
@@ -14511,6 +14566,16 @@ export type RecoveredOriginal = {
   keptAt: string
 }
 
+// Why the call was turned down.
+export type RefusalReason =
+  // `available: false`: not a tool the agent has.
+  | { kind: 'toolUnavailable' }
+  // The repeat breaker: an identical call already failed this turn.
+  | { kind: 'repeatedCall' }
+  // The schema gate or the handler said no (the JSON can't tell those two apart).
+  | { kind: 'problem' }
+  | { kind: 'memory'; refusal: MemoryRefusalKind }
+
 /**
  *  Typed errors from a registration attempt. The FE branches on `kind`;
  *  never match on the message string.
@@ -14770,6 +14835,16 @@ export type RescanReason =
 export type ResolveLocationResult = {
   location: Location | null
   timedOut: boolean
+}
+
+/**
+ *  One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: what it looks at
+ *  (from its arguments alone), and the earlier identical call of this turn it repeats, if any.
+ */
+export type ResolvedCall = {
+  callId: string
+  subject: ToolSubject
+  repeatOf: LineRef | null
 }
 
 // Result of re-sorting a directory listing.
@@ -18161,6 +18236,78 @@ export type TimedOut<T> = {
   timedOut: boolean
 }
 
+// What came back. Read off OUR OWN result keys, never wording.
+export type ToolOutcome =
+  // A paged list: `returned` rows of `total` (absent when the tool doesn't know it).
+  | { kind: 'items'; returned: number; total: number | null; lowerBound: boolean }
+  /**
+   *  `search` / `search_photos`. `match_count` counts PAST the row cap, so it is never a
+   *  `total`; `lower_bound` when ground is still uncovered.
+   */
+  | { kind: 'matches'; returned: number; matchCount: number; lowerBound: boolean }
+  /**
+   *  A search that matched nothing. With `lower_bound` that's "none found YET", ❌ never "no
+   *  matches".
+   */
+  | { kind: 'nothingFound'; lowerBound: boolean }
+  // A single-object answer.
+  | { kind: 'answered' }
+  // The index a photo tool reads isn't there to answer.
+  | { kind: 'indexUnavailable'; reason: IndexUnavailableReason }
+  // A propose tool staged `count` operations for the user to review.
+  | { kind: 'staged'; count: number }
+  // A propose tool staged nothing (`readyForReview: false`).
+  | { kind: 'notStaged' }
+  // A memory note landed.
+  | { kind: 'saved' }
+  | { kind: 'refused'; reason: RefusalReason }
+
+// What one call looked at. Every path is absolute (`~` expanded); every string is bounded.
+export type ToolSubject =
+  // `app_state`: both panes.
+  | { kind: 'panes' }
+  /**
+   *  `list_pane_files`, from its RESULT: the folder and whether only the selection was
+   *  listed. Both `None` until the call returns (or when it was refused).
+   */
+  | { kind: 'focusedPane'; folder: string | null; selectionOnly: boolean | null }
+  // `list_dir`, `folder_importance`.
+  | { kind: 'folder'; path: string }
+  // `inspect_file`, `image_facts`: the first path asked about and how many were.
+  | { kind: 'files'; firstPath: string; count: number }
+  // `search`: the name pattern, plus the scope's INCLUDE paths (excludes dropped).
+  | { kind: 'search'; query: string | null; scopePaths: string[] }
+  // `search_photos`.
+  | { kind: 'photoSearch'; query: string }
+  | { kind: 'importantFolders' }
+  // `list_volumes`.
+  | { kind: 'drives' }
+  // `operations_list`.
+  | { kind: 'operationLog' }
+  // `operations_get`.
+  | { kind: 'operation'; id: string }
+  // `propose_rename_plan`: how many renames the plan carries.
+  | { kind: 'renamePlan'; count: number }
+  // `list_suggestions`.
+  | { kind: 'suggestions' }
+  // `get_suggestion_group`.
+  | { kind: 'suggestionGroup' }
+  // `propose_suggestions`: how many groups the sweep carries.
+  | { kind: 'suggestionSweep'; count: number }
+  | { kind: 'nothingToSuggest' }
+  /**
+   *  `memory_write`, `memory_edit`: `path` is the model's own, RELATIVE to the memory folder.
+   *  `absolute` is set only when it lands inside the folder, and only then is it a place to go.
+   */
+  | { kind: 'memoryFile'; path: string; absolute: string | null }
+  /**
+   *  A name outside the agent's view (hallucinated, a typo). An empty `name` is a legacy
+   *  nameless call.
+   */
+  | { kind: 'unknownTool'; name: string }
+  // A known tool whose arguments don't carry what it needs.
+  | { kind: 'unparsed' }
+
 /**
  *  The top-level items an operation landed nothing for, split the way the
  *  user's SELECTION is.
@@ -18619,6 +18766,25 @@ export type TrustedHostKey = {
   fingerprint: string
   // When it was approved, ISO 8601, so the settings screen can show it.
   approvedAt: string
+}
+
+/**
+ *  What one turn spent, summed across its rounds: the turn line's footer. Numbers only, so the
+ *  rail words it in the user's language and nothing English is frozen in `main.db`.
+ *
+ *  Tokens are each assistant row's own `prompt_tokens` / `completion_tokens`, the same figures
+ *  the cost meter sums, so a thread's per-turn footers add up to its cost footer.
+ */
+export type TurnStats = {
+  // Tool calls that came back with a result row, refusals and repeats included.
+  toolCalls: number
+  /**
+   *  Wall time from the turn's start to its end. `None` only for a turn recorded before this
+   *  was measured, whose stats are rebuilt from its rows.
+   */
+  wallMs: number | null
+  promptTokens: number
+  completionTokens: number
 }
 
 /**

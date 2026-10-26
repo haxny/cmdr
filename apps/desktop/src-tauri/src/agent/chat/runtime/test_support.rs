@@ -100,11 +100,27 @@ pub(super) fn drain(rx: &mut UnboundedReceiver<AgentChatEvent>) -> Vec<AgentChat
 
 /// The transcript role of a persisted row; panics on an event row (these tests assert
 /// transcript shape, so an unexpected event row should fail loudly).
-pub(super) fn stored_role(message: &store::StoredMessage) -> AgentRole {
+fn stored_role(message: &store::StoredMessage) -> AgentRole {
     match &message.content {
         store::StoredContent::Message { role, .. } => *role,
         store::StoredContent::Event(event) => panic!("expected a transcript row, got event {event:?}"),
     }
+}
+
+/// The transcript roles of a thread's rows, skipping the turn's own `TurnFinished` stats row
+/// (`line_events_tests.rs` asserts those) and panicking on any other event row, like
+/// [`stored_role`].
+pub(super) fn transcript_roles(messages: &[store::StoredMessage]) -> Vec<AgentRole> {
+    messages
+        .iter()
+        .filter(|m| {
+            !matches!(
+                m.content,
+                store::StoredContent::Event(store::ConversationEvent::TurnFinished { .. })
+            )
+        })
+        .map(stored_role)
+        .collect()
 }
 
 pub(super) fn leading_text(message: &AgentMessage) -> &str {
@@ -121,6 +137,13 @@ pub(super) enum Program {
     Answer { chunks: Vec<String>, usage: AgentUsage },
     /// Emit these tool calls, then a clean `End` (ToolCall) with this usage.
     Tools {
+        calls: Vec<(ToolId, Value)>,
+        usage: AgentUsage,
+    },
+    /// Start a call under `stray_call_id` that the final message doesn't hold (what a nameless
+    /// call the provider seam dropped looks like), then emit `calls` as [`Program::Tools`] does.
+    ToolsAfterStrayStart {
+        stray_call_id: String,
         calls: Vec<(ToolId, Value)>,
         usage: AgentUsage,
     },
@@ -217,6 +240,18 @@ fn program_to_deltas(program: Program) -> Vec<Result<AgentDelta, AgentLlmError>>
                     at: 0,
                 },
             }));
+            deltas
+        }
+        Program::ToolsAfterStrayStart {
+            stray_call_id,
+            calls,
+            usage,
+        } => {
+            let mut deltas = vec![Ok(AgentDelta::ToolCallStarted {
+                call_id: stray_call_id,
+                tool: ToolId::Unrecognized(String::new()),
+            })];
+            deltas.extend(program_to_deltas(Program::Tools { calls, usage }));
             deltas
         }
         // No `End`: the stream just ends after the text (a provider drop / crash).

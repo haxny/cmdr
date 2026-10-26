@@ -106,7 +106,14 @@ const REVISION = 3
 
 /** End the streaming turn, which is what opens the review over everything staged. */
 function finishTurn(): void {
-  fire({ type: 'done', messageId: 1, seq: 1, stop: 'completed', usage: { promptTokens: 1, completionTokens: 1 } })
+  fire({
+    type: 'done',
+    messageId: 1,
+    seq: 1,
+    stop: 'completed',
+    usage: { promptTokens: 1, completionTokens: 1 },
+    turn: null,
+  })
 }
 
 /** The first row on show, whichever batch staged it. */

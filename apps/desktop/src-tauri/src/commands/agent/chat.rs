@@ -134,8 +134,9 @@ fn slot_event_view(recorded: RecordedSlotEvent) -> MessageView {
                 decisions: vec![decision],
             }]
         }
-        // Never written, so never recorded here; an empty event view if it ever were.
-        store::ConversationEvent::Unknown => Vec::new(),
+        // Never recorded here (the turn writes its own stats; `Unknown` is never written); an
+        // empty event view if either ever were.
+        store::ConversationEvent::TurnFinished { .. } | store::ConversationEvent::Unknown => Vec::new(),
     };
     MessageView {
         id: recorded.message_id,
@@ -240,6 +241,7 @@ pub async fn ask_cmdr_send_message(
                         kind: AgentErrorKindView::Provider,
                         detail: Some(e.to_string()),
                         managed: None,
+                        turn: None,
                     },
                 );
                 return;
@@ -299,6 +301,7 @@ async fn drive_turn(
                 kind: AgentErrorKindView::Provider,
                 detail: None,
                 managed: None,
+                turn: None,
             },
         );
         return;
@@ -332,6 +335,7 @@ async fn drive_turn(
                 kind: AgentErrorKindView::Provider,
                 detail: Some(e.to_string()),
                 managed: None,
+                turn: None,
             },
         );
     }

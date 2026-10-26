@@ -34,6 +34,10 @@ pub enum ConversationEvent {
     /// outlives every locale pass, exactly as a wake's digest does, so the rail says it in the
     /// user's language and nothing English is frozen in `main.db`.
     ProposalDecided { decision: ProposalDecision },
+    /// A turn that ran at least one tool ended (answered, failed, or stopped), and this is what
+    /// it spent. Written after the turn's last row, so its wall time survives a reload: every
+    /// row of a turn carries the same clock, so the time can't be derived from them.
+    TurnFinished { stats: TurnStats },
     /// A row whose `kind` this build doesn't know: a newer build wrote it, and this one runs on
     /// the same `main.db` after a downgrade. Read-only. It parses so the thread still loads AND
     /// sends (the history page and the transcript loader both read every row), and the row is
@@ -42,6 +46,23 @@ pub enum ConversationEvent {
     /// a decode error.
     #[serde(other)]
     Unknown,
+}
+
+/// What one turn spent, summed across its rounds: the turn line's footer. Numbers only, so the
+/// rail words it in the user's language and nothing English is frozen in `main.db`.
+///
+/// Tokens are each assistant row's own `prompt_tokens` / `completion_tokens`, the same figures
+/// the cost meter sums, so a thread's per-turn footers add up to its cost footer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnStats {
+    /// Tool calls that came back with a result row, refusals and repeats included.
+    pub tool_calls: u32,
+    /// Wall time from the turn's start to its end. `None` only for a turn recorded before this
+    /// was measured, whose stats are rebuilt from its rows.
+    pub wall_ms: Option<u64>,
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
 }
 
 /// The `messages.role` token for event rows. Kept OUTSIDE `AgentRole` on purpose: an

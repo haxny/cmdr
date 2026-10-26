@@ -399,13 +399,14 @@ model that reads it can act on it and never reaches step 2.
 ### The turn event (`analytics.rs`), and why it is the funnel's denominator
 
 `run_turn` is a thin wrapper: it makes a `TurnTally`, calls `drive` (the loop, with every
-early return it always had), and reports one `ask_cmdr_turn` on the way out. The wrapper
+early return it always had), and on the way out writes the `TurnFinished` row, emits the ONE
+terminal event, and reports one `ask_cmdr_turn` (§ The turn's end, below). The wrapper
 exists because `drive` returns from a dozen places and this is the only point all of them
 meet; scattering a capture across those returns is how one gets missed.
 
-The tally is a `&mut` the loop increments as it goes (`tool_turns`, and `proposals` for tool
-calls that staged something to review), so a turn that fails on its fourth tool round still
-reports four, not zero.
+The tally is a `&mut` the loop increments as it goes (`tool_turns`, `tool_calls`, the summed
+`prompt_tokens` / `completion_tokens`, and `proposals` for tool calls that staged something to
+review), so a turn that fails on its fourth tool round still reports four, not zero.
 
 **Why the event has to exist at all.** The proposal events downstream
 (`../suggested_ops/analytics.rs`) carry the agent's north-star acceptance rate, and a zero on
@@ -572,8 +573,10 @@ already streamed plus that notice; a forced tool-less final answer is a document
 refinement, deliberately not built in v1 (it would need its own bounding). Cancellation is
 checked at the top of the loop (a clean stop between tool boundaries) and when a stream ends
 without `End` while the token is set (a user stop, distinguished from a crash) — both return
-`TurnResult::Cancelled` with no `Failed` event; stream-cancel itself drops the reqwest body
-via the token threaded into `AgentLlm::respond`.
+`TurnResult::Cancelled`, whose one terminal event is `Stopped` (never `Failed`); stream-cancel
+itself drops the reqwest body via the token threaded into `AgentLlm::respond`. Dispatch is NOT
+cancellable: a Stop mid-round still runs and persists the round's remaining calls, and the
+check at the top of the loop then ends the turn.
 
 The tokens live in `cancel.rs`, one process-global map keyed by conversation id, holding a LIST
 of registrations per thread. ⚠️ **Not one token per thread**: a send registers BEFORE it waits
@@ -614,9 +617,53 @@ is a thin adapter:
    `ChatRuntime::send_message(app, &llm, provider, model, conversation_id, text, envelope,
    offset, tx, cancel)`.
 3. `to_wire_event` maps `AgentChatEvent` → the wire `AskCmdrStreamEvent`: `AssistantStarted`
-   carries no id (map to a bubble-start); the persisted assistant id arrives on `Done`. A
-   refusal or handler problem surfaces as `ToolCallFinished { ok: false }`. NEVER forward a
-   reasoning blob or provider state — the events already exclude them.
+   carries no id (map to a bubble-start); a round's assistant id arrives on its
+   `ToolCallsResolved`, the answer round's on `Done`. NEVER forward a reasoning blob or
+   provider state — the events already exclude them.
+
+### What the stream says about each tool line
+
+A line's facts are typed (`agent/tools/line/`: `ToolSubject`, `ToolOutcome`, repeat marks) and
+computed by the same pure functions the reload projection runs, so a live line and a reloaded
+one agree. Per round, in order:
+
+1. `ToolCallStarted { call_id, tool }` per call WHILE its arguments stream (so no subject yet).
+   A nameless call gets one and is then dropped from the final message (`llm/DETAILS.md`).
+2. The assistant row persists, then ONE `ToolCallsResolved { message_id, calls }`: every call
+   of the final message, in order, each with its argument-only subject and `repeat_of` (the
+   turn's first identical call, by `AgentToolCall::identity_key`, the repeat breaker's key).
+   It stamps the row id onto the round, adds a call whose start never came, and lets the rail
+   drop a started call the batch doesn't list.
+3. Per call: dispatch, persist its result row, THEN `ToolCallFinished { message_id, call_id,
+   outcome, subject }` (the subject refined by the result). ⚠️ **Persist, then emit**: the
+   event is what tells the rail the result can be fetched, so it must never race the row;
+   `line_events_tests.rs` pins it by failing the persist.
+
+⚠️ **A line is `(message_id, call_id)`, never the call id alone.** Ids collide across rounds as
+the norm: the fake mints `fake-call-{index}` per round (keep it that way; it is the regression
+fixture) and Gemini resets them per response.
+
+`memory_write` paths become a place to go only against the memory folder, which is app state,
+so `ToolDispatcher::memory_root` hands it over (default `None`: a plain-text path). A wrapping
+dispatcher (`wake/watch.rs`) must forward it.
+
+`UserPersisted { opener }` carries the persisted opener as the `MessageView` history shows
+(`message_view.rs`), so a rail that reloaded before the row landed can insert it.
+
+### The turn's end
+
+`drive` returns how it ended (`TurnEnd`: answered with id/seq/stop/usage, failed with kind +
+detail, or cancelled) and emits no terminal event itself. `run_turn` then, once per turn:
+
+1. builds `TurnStats` from the tally plus its own wall clock (`None` when no tool ran, so a
+   tool-less turn looks the same live and reloaded);
+2. appends `ConversationEvent::TurnFinished` when there are stats, after the turn's last row
+   (a persist problem is logged and dropped; `store/DETAILS.md` § What a turn spent);
+3. emits exactly one of `Done`, `Failed`, or `Stopped`, each carrying `turn: Option<TurnStats>`.
+
+⚠️ Stats ride the TERMINAL event, never a trailing one: the rail reads any non-terminal event
+after a turn as a live turn. A `Failed` from outside a turn (the command layer's refusals and
+spawn failures) carries `turn: None`. `Done.usage` stays the LAST call's usage.
 
 ### One transport, keyed by conversation (`stream.rs`)
 
@@ -668,8 +715,8 @@ can't cite it), `cost_tests.rs` (what the real shapes cost), and `test_support.r
 transcript builders and budgets they share). The runtime tests split the same way, over
 `runtime/test_support.rs`: `tests.rs` (single-flight, the per-message budgets, cancellation,
 the crash cases, cost, the typed error surface, and the attachment + send gates),
-`repeat_tests.rs` (the repeat breaker), `context_budget_tests.rs`, `slot_change_tests.rs`, and
-`wake_tests.rs`. Put a new test in the module whose concern it matches rather than growing
+`repeat_tests.rs` (the repeat breaker), `line_events_tests.rs` (the tool-line events and the
+turn's stats), `context_budget_tests.rs`, `slot_change_tests.rs`, and `wake_tests.rs`. Put a new test in the module whose concern it matches rather than growing
 `tests.rs`.
 
 Every `context.rs` test runs with no tokio runtime (the core is pure). The runtime tests
