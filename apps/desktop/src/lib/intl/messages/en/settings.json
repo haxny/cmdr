@@ -1637,7 +1637,7 @@
   },
   "settings.fileOperations.adbEnabled.description": "Reach the whole filesystem of an Android phone that has USB debugging turned on, which MTP can’t show you. Needs the Android platform tools (the “adb” command) on this Mac. Leaving this on costs nothing if you have no Android tooling installed.",
   "@settings.fileOperations.adbEnabled.description": {
-    "description": "Help text for the ADB toggle. \"USB debugging\" and \"platform tools\" are labels the reader has to find on their own phone and in Google’s own docs, so render them the way the vendor’s localized Android shows them in your language, ❌ never keep the English. \"Android\", \"MTP\", and the command name “adb” stay as-is."
+    "description": "Help text for the ADB toggle. \"USB debugging\" is a label the reader has to find on their own phone, so render it the way the vendor’s localized Android shows it in your language, ❌ never keep the English. \"platform tools\" is the name of Google’s download: where Google’s own localized docs translate it, use their wording, and where they keep it in English (most languages do), keep the English too. \"Android\", \"MTP\", and the command name “adb” stay as-is."
   },
   "settings.fileOperations.adbEnabled.keywords": "usb debugging, developer options, phone, device",
   "@settings.fileOperations.adbEnabled.keywords": {
@@ -2489,7 +2489,7 @@
   },
   "settings.behavior.openTerminalHereApp.label": "Open terminal here uses",
   "@settings.behavior.openTerminalHereApp.label": {
-    "description": "Label of the dropdown that picks which terminal app the \"Open terminal here\" action launches, in Settings > Behavior > Navigation & file ops. \"Open terminal here\" is Cmdr's own command name (it opens a terminal at the folder you're looking at), so translate it the same way as the command of that name. The sentence continues in the dropdown beside it, which names an app: \"Open terminal here uses [Ghostty]\".",
+    "description": "Label of the dropdown that picks which terminal app the \"Open terminal here\" action launches, in Settings > Behavior > Navigation & file ops. \"Open terminal here\" is Cmdr's own command name (it opens a terminal at the folder you're looking at), so translate it the same way as the command of that name. The sentence continues in the dropdown beside it, which names an app: \"Open terminal here uses [Ghostty]\". If your language can’t continue a label into an app name (a case language would have to inflect the dropdown value), a noun label like \"Terminal app\" is fine.",
     "screenshot": "settings-behavior-navigation-and-file-ops.png"
   },
   "settings.behavior.openTerminalHereApp.description": "Cmdr lists the terminal apps it finds on this Mac. To use one it doesn’t know, pick “Choose an app…”.",
@@ -3202,7 +3202,7 @@
   },
   "settings.managed.summary.onDeviceOnly": "On-device only",
   "@settings.managed.summary.onDeviceOnly": {
-    "description": "Value beside 'AI' in the 'Managed by your organization' card: the organization allows only the AI model that runs on this Mac, so nothing goes to a cloud AI service. Short."
+    "description": "Value beside 'AI' in the 'Managed by your organization' card: the organization allows only the AI model that runs on this Mac, so nothing goes to a cloud AI service. Short. “On-device AI” is the AI that the provider option “Local LLM” (settings.ai.provider.opt.local) runs: the same model on this Mac, so the two names point at one thing."
   },
   "settings.managed.summary.cloudHostsOnly": "Cloud AI only through {hosts}",
   "@settings.managed.summary.cloudHostsOnly": {
@@ -3579,7 +3579,7 @@
   },
   "settings.updates.emailPlaceholder": "you@example.com",
   "@settings.updates.emailPlaceholder": {
-    "description": "Placeholder inside the beta-contact email field in Settings, showing the expected shape. Localize the LOCAL part to your language's natural word for \"you\" (German \"du@\", French \"vous@\"), and keep the \"example.com\" domain: it's the domain reserved for examples (RFC 2606), so it can never be someone's real address. All three email placeholders (settings.updates.emailPlaceholder, common.attachEmailPlaceholder, onboarding.stepBeta.emailPlaceholder) must use the SAME address in your language.",
+    "description": "Placeholder inside the beta-contact email field in Settings, showing the expected shape. Localize the LOCAL part to your language's natural word for \"you\" (German \"du@\", French \"vous@\"); if your script can’t be typed in an email address (Cyrillic, for example), use a generic Latin word like \"name@\" instead, and keep the \"example.com\" domain: it's the domain reserved for examples (RFC 2606), so it can never be someone's real address. All three email placeholders (settings.updates.emailPlaceholder, common.attachEmailPlaceholder, onboarding.stepBeta.emailPlaceholder) must use the SAME address in your language.",
     "screenshot": "settings-updates.png"
   },
   "settings.updates.checkForUpdates": "Check for updates",
@@ -3891,7 +3891,7 @@
   },
   "settings.adb.install.intro": "Install the Android platform tools, then choose Re-check:",
   "@settings.adb.install.intro": {
-    "description": "Line introducing a copyable terminal command, shown only when \"adb\" was not found. \"Re-check\" must match the button label settings.adb.recheck word for word. \"Android platform tools\" is the name of the download; use the wording Google’s own localized docs use. The command itself is never translated."
+    "description": "Line introducing a copyable terminal command, shown only when \"adb\" was not found. \"Re-check\" must match the button label settings.adb.recheck word for word. \"Android platform tools\" is the name of the download: where Google’s own localized docs translate it, use their wording, and where they keep it in English (most languages do), keep the English too. “choose Re-check” means clicking that button; use your language’s usual verb for clicking a button. The command itself is never translated."
   },
   "settings.adb.pathPlaceholder": "Cmdr looks for adb the usual way",
   "@settings.adb.pathPlaceholder": {
@@ -3920,7 +3920,7 @@
   },
   "settings.dataWipe.description": "Delete everything Cmdr keeps on this Mac: settings, saved passwords, histories, indexes, and downloaded models. Cmdr quits afterwards.",
   "@settings.dataWipe.description": {
-    "description": "Explanation under that heading, beside the delete button. \"Cmdr\" is the app's name; don't translate it.",
+    "description": "Explanation under that heading, beside the delete button. It describes what the button does; it isn’t an instruction to the user, so a descriptive form (“Deletes everything…”) is fine. \"Cmdr\" is the app's name; don't translate it.",
     "screenshot": "settings-updates.png"
   },
   "settings.dataWipe.button": "Delete all Cmdr data",
@@ -4008,7 +4008,7 @@
   },
   "settings.dataWipe.stays": "Your own files, everything on your drives and servers, and the Cmdr app itself. Data on Cmdr’s servers stays too; the privacy policy says how to have it deleted.",
   "@settings.dataWipe.stays": {
-    "description": "Paragraph under \"What stays\": none of the user's files are touched, nor the app, nor what Cmdr's online servers hold (the website's privacy policy explains how to request deletion there)."
+    "description": "Paragraph under \"What stays\": none of the user's files are touched, nor the app, nor what Cmdr's own online servers hold (Cmdr’s servers, never the user's). “the privacy policy” is plain text, not a link: it's the policy on Cmdr's website, which explains how to request deletion there."
   },
   "settings.dataWipe.cancel": "Cancel",
   "@settings.dataWipe.cancel": {
@@ -4036,7 +4036,7 @@
   },
   "settings.dataWipe.refused.interrupted": "Something stopped Cmdr partway, so some data may be left. Try again?",
   "@settings.dataWipe.refused.interrupted": {
-    "description": "Shown in the dialog when the delete stopped unexpectedly before finishing. Inviting the user to press the button again."
+    "description": "Shown in the dialog when the delete stopped unexpectedly before finishing. “Try again?” invites the user to press the dialog's delete button again; it isn't a button itself."
   },
   "settings.dataWipe.doneTitle": "Cmdr deleted its data",
   "@settings.dataWipe.doneTitle": {

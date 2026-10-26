@@ -779,7 +779,7 @@
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
     "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed files didn't get their old names back and why. This version is used when the reason applies to two or more files, so the line counts them instead of naming them. This reason: the files are no longer where Cmdr renamed them, and aren't back under their old names either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
     "placeholders": {
-      "countText": "How many files this reason applies to, ready to drop into the sentence (e.g. 1,234). Always two or more.",
+      "countText": "How many files this reason applies to, ready to drop into the sentence (e.g. 1,234). Two or more in English, but keep the one branch: languages like Russian use their “one” form for 21, 101, and so on.",
       "count": "The same number of files (decides whether the noun is singular or plural)."
     }
   },

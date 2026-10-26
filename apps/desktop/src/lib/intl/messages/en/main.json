@@ -221,7 +221,7 @@
   },
   "main.cliCommand.takenByOther": "There’s already a different “cmdr” in /usr/local/bin, so Cmdr left it alone. Remove or rename it, then try again.",
   "@main.cliCommand.takenByOther": {
-    "description": "Info toast (macOS) when the user asked to install the cmdr terminal command, but some other program already put something called cmdr in /usr/local/bin. Cmdr never overwrites it. /usr/local/bin is a folder path, cmdr a literal command name, Cmdr the app's name: keep all three as they are."
+    "description": "Info toast (macOS) when the user asked to install the cmdr terminal command, but some other program already put something called cmdr in /usr/local/bin. That “cmdr” is usually a file or a symbolic link another tool installed, not a folder. Cmdr never overwrites it. /usr/local/bin is a folder path, cmdr a literal command name, Cmdr the app's name: keep all three as they are."
   },
   "main.cliCommand.notInApplications": "Move Cmdr to your Applications folder first. From anywhere else, the “cmdr” command would stop working the moment Cmdr moves.",
   "@main.cliCommand.notInApplications": {
