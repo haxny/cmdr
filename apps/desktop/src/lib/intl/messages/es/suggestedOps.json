@@ -49,7 +49,7 @@
   },
   "suggestedOps.agentReasonSpoken": "Por qué, según la IA:",
   "@suggestedOps.agentReasonSpoken": {
-    "sourceHash": "52f75a3"
+    "sourceHash": "0c0a448"
   },
   "suggestedOps.fileCount": "{countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
   "@suggestedOps.fileCount": {
