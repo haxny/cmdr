@@ -196,3 +196,29 @@ fn the_stores_sweep_reader_answers_for_a_sweep_and_for_no_sweep() {
             .is_none()
     );
 }
+
+/// The agent reads the same "can't run" the user sees, from the same rule
+/// (`suggested_ops::facts::source_run_blocker`): a trash group on a volume with no Trash is
+/// one it should withdraw or turn into a move, never one it calls undoable (#747).
+#[test]
+fn the_agent_hears_that_a_trash_group_on_a_volume_without_a_trash_cant_run() {
+    use crate::agent::suggested_ops::facts::RunBlocker;
+    use crate::file_system::volume::InMemoryVolume;
+    use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
+
+    let volume_id = "suggestions-list-no-trash-test";
+    let _registration = TestVolumeRegistration::install(volume_id, std::sync::Arc::new(InMemoryVolume::new("naspi")));
+    let mut on_share = summary(1, 10, 2, 2, None);
+    on_share.group.source_volume_id = volume_id.to_string();
+
+    let out = to_group_summary(on_share);
+
+    assert_eq!(out.run_blocker, Some(RunBlocker::NoTrash));
+    assert_eq!(
+        out.reversible,
+        Reversibility::RestoreMove,
+        "the verb's own promise, as the dialog shows it"
+    );
+    let wire = serde_json::to_value(&out).expect("serializes");
+    assert_eq!(wire["runBlocker"], "noTrash");
+}
