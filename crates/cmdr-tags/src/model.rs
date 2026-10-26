@@ -102,8 +102,9 @@ pub struct FileTags {
     pub fields: BTreeMap<TagField, Vec<String>>,
     /// The front cover, if any.
     pub cover: Option<Cover>,
-    /// Text items the editor doesn't manage, by format-native key. Shown, never
-    /// written.
+    /// Text items the editor doesn't manage, by format-native key. A write keeps the
+    /// file's own values for a key both have, removes a key missing here, and adds a key
+    /// the file lacks (how an undo brings one back).
     pub extras: BTreeMap<String, Vec<String>>,
 }
 

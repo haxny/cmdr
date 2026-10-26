@@ -51,9 +51,13 @@ parse the reader uses drops what lofty can't decode (a `covr` atom with one unkn
 `VORBIS_COMMENT` block), and saving from it would delete those from the file; strictly, such a file is refused as
 `TagError::Parse`. Reading stays lenient. Then the writer removes everything its reader maps to a managed field
 (aliases, duplicates, and case variants of TXXX descriptions, freeform names, and Vorbis keys included), removes the
-extras that `FileTags::extras` no longer has a key for, then writes one frame, atom, or key per field. Extras are never
-written: one still in `extras` stays as the file has it. Single-value fields write their first value only (the reader
-shows only that one), so a second `COMM` or a `TYER` beside `TDRC` goes away.
+extras that `FileTags::extras` no longer has a key for, then writes one frame, atom, or key per field. An extra the file
+has and `extras` keeps stays as the file has it (its values in `extras` are ignored). An extra in `extras` that the file
+lacks is added, so an undo can put back one an edit removed: a `TXXX` with that description (values null-separated), a
+freeform atom of that name under mean `com.apple.iTunes` (one UTF-8 entry per value; an extra that had another mean
+comes back under the iTunes one), or that Vorbis key once per value. A key the reader would take for a managed field (or
+a Vorbis total) is never added. Single-value fields write their first value only (the reader shows only that one), so a
+second `COMM` or a `TYER` beside `TDRC` goes away.
 
 - **MP3**: text is UTF-8 in memory; lofty writes UTF-16 for v2.3. The date is a `TDRC` timestamp that lofty splits into
   `TYER` (+ `TDAT`, `TIME`); a date it can't parse fails the write, because lofty would drop it silently. lofty's v2.3

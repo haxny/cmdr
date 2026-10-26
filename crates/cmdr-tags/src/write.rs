@@ -1,5 +1,5 @@
-//! Write the managed fields and the cover into an audio file, and remove the extras the
-//! caller dropped, leaving every other frame, atom, and key as it was. One private function
+//! Write the managed fields and the cover into an audio file, remove the extras the caller
+//! dropped and add the ones the file lacks, leaving every other frame, atom, and key as it was. One private function
 //! per tag container, all saved through [`save_safely`].
 //!
 //! Each writer is the inverse of its reader in `read.rs`: it removes everything the reader
@@ -33,7 +33,7 @@ use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::{
     FREEFORM_FIELDS, ITUNES_MEAN, JOIN, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS, cover_position,
     format_of_path, fourcc_field, frame_field, freeform_field, id3_pictures, parse_error, parse_options, read_from,
-    read_id3, read_ilst, read_vorbis, txxx_field,
+    read_id3, read_ilst, read_vorbis, txxx_field, vorbis_field,
 };
 use crate::save::save_safely;
 
@@ -53,10 +53,11 @@ pub struct WriteOptions {
 
 /// Writes `tags` into the audio file at `path` with a safe overwrite. Afterwards the file
 /// holds exactly `tags.fields` for the managed fields (an absent field is removed),
-/// `tags.cover` as the cover (`None` removes it; other pictures stay), and only those
-/// extras of the file that `tags.extras` still has a key for. Extras are never written:
-/// one absent from `tags.extras` is removed, one present is left as the file has it.
-/// Everything else in the file is untouched.
+/// `tags.cover` as the cover (`None` removes it; other pictures stay), and the extras
+/// `tags.extras` has a key for: one the file has is left as the file has it, one it lacks is
+/// added (ID3 `TXXX`, MP4 freeform under the iTunes mean, a Vorbis key; so an undo can put
+/// back an extra an edit removed), and one absent from `tags.extras` is removed. An extra
+/// named like a managed key is never added. Everything else in the file is untouched.
 ///
 /// The file is parsed strictly first (an item lofty can't decode refuses the write as
 /// [`TagError::Parse`] rather than vanishing from the saved file), and the saved copy must
@@ -204,11 +205,12 @@ fn expected_tags(
             fields.insert(*field, read_back);
         }
     }
-    let extras = current
+    let extras = tags
         .extras
-        .iter()
-        .filter(|(key, _)| tags.extras.contains_key(*key))
+        .keys()
+        .filter_map(|key| current.extras.get_key_value(key))
         .map(|(key, values)| (key.clone(), values.clone()))
+        .chain(added_extras(current, tags, format))
         .collect();
     Ok(FileTags {
         fields,
@@ -224,6 +226,34 @@ fn dropped_extras(current: &FileTags, tags: &FileTags) -> BTreeSet<String> {
         .keys()
         .filter(|key| !tags.extras.contains_key(*key))
         .cloned()
+        .collect()
+}
+
+/// The extras `tags` has that the file lacks, which the write adds: keys that aren't empty
+/// and that the reader of `format` wouldn't take for a managed field (or a Vorbis total),
+/// with their values trimmed and empties dropped, as the reader reports them.
+fn added_extras(current: &FileTags, tags: &FileTags, format: AudioFormat) -> Vec<(String, Vec<String>)> {
+    let managed = |key: &str| match format {
+        AudioFormat::Mp3 => txxx_field(key).is_some(),
+        AudioFormat::Mp4 => freeform_field(key).is_some(),
+        AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => {
+            let key = key.to_ascii_uppercase();
+            vorbis_field(&key).is_some() || VORBIS_TOTALS.contains(&key.as_str())
+        }
+    };
+    tags.extras
+        .iter()
+        .filter(|(key, _)| !key.is_empty() && !current.extras.contains_key(*key) && !managed(key))
+        .map(|(key, values)| {
+            let values: Vec<String> = values
+                .iter()
+                .map(|v| v.trim())
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned)
+                .collect();
+            (key.clone(), values)
+        })
+        .filter(|(_, values)| !values.is_empty())
         .collect()
 }
 
@@ -356,7 +386,11 @@ fn write_id3(
         Frame::UserText(f) if dropped.contains(f.description.as_ref()) => false,
         _ => !is_managed_id3(frame, opts.kind),
     });
-    for frame in frames.into_iter().chain(new_cover) {
+    // An extra's values go in one TXXX, null-separated, which the reader splits again.
+    let extras = added_extras(current, tags, AudioFormat::Mp3)
+        .into_iter()
+        .map(|(key, values)| Frame::UserText(ExtendedTextFrame::new(TextEncoding::UTF8, key, values.join("\0"))));
+    for frame in frames.into_iter().chain(extras).chain(new_cover) {
         id3.insert(frame);
     }
     refuse_frame_loss(id3, opts.allow_frame_loss)
@@ -491,7 +525,10 @@ fn write_ilst(
     if tags.cover != current.cover {
         set_ilst_cover(ilst, tags.cover.as_ref());
     }
-    for atom in atoms.into_iter().flatten() {
+    let extras = added_extras(current, tags, AudioFormat::Mp4)
+        .into_iter()
+        .filter_map(|(key, values)| freeform(Cow::Owned(key), &values));
+    for atom in atoms.into_iter().flatten().chain(extras) {
         ilst.insert(atom);
     }
     Ok(())
@@ -557,12 +594,18 @@ fn freeform_atom(field: TagField, values: &[String]) -> Result<Option<Atom<'stat
         .iter()
         .find(|(_, f)| *f == field)
         .map_or_else(|| unreachable_field(field), |(name, _)| Ok(*name))?;
+    Ok(freeform(Cow::Borrowed(name), values))
+}
+
+/// A freeform atom `name` under the iTunes mean, one UTF-8 data entry per value (`None` for
+/// no values).
+fn freeform(name: Cow<'static, str>, values: &[String]) -> Option<Atom<'static>> {
     let ident = AtomIdent::Freeform {
         mean: Cow::Borrowed(ITUNES_MEAN),
-        name: Cow::Borrowed(name),
+        name,
     };
     let data = values.iter().map(|v| AtomData::UTF8(v.clone())).collect();
-    Ok(Atom::from_collection(ident, data))
+    Atom::from_collection(ident, data)
 }
 
 /// A `trkn` / `disk` atom: `len` bytes, the number in bytes 2-3 and the total in 4-5.
@@ -592,7 +635,7 @@ fn write_vorbis_family(
 ) -> Result<(VorbisComments, FileTags), TagError> {
     let mut comments = comments.clone();
     let current = read_vorbis(&comments, comments.pictures().iter().map(|(p, _)| p));
-    write_vorbis(&mut comments, &current, tags, values, opts);
+    write_vorbis(&mut comments, &current, tags, values, opts, format);
     if tags.cover != current.cover {
         set_ogg_cover(&mut comments, tags.cover.as_ref())?;
     }
@@ -603,13 +646,15 @@ fn write_vorbis_family(
 
 /// Removes every managed key and total (in any letter case) and every dropped extra,
 /// keeping the other items in order, then writes the managed values, one item per value,
-/// and `TRACKTOTAL` after the track when the caller knows the total.
+/// `TRACKTOTAL` after the track when the caller knows the total, and the extras the file
+/// lacks, one item per value.
 fn write_vorbis(
     comments: &mut VorbisComments,
     current: &FileTags,
     tags: &FileTags,
     values: &Values,
     opts: &WriteOptions,
+    format: AudioFormat,
 ) {
     let dropped = dropped_extras(current, tags);
     let kept: Vec<(String, String)> = comments
@@ -634,6 +679,11 @@ fn write_vorbis(
         }
         if let (TagField::Track, Some(total)) = (field, opts.track_total) {
             comments.push("TRACKTOTAL".to_owned(), total.to_string());
+        }
+    }
+    for (key, values) in added_extras(current, tags, format) {
+        for value in values {
+            comments.push(key.clone(), value);
         }
     }
 }

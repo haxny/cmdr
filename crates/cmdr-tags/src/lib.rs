@@ -35,6 +35,8 @@ mod text_test;
 #[cfg(test)]
 mod tools_test;
 #[cfg(test)]
+mod write_extras_test;
+#[cfg(test)]
 mod write_test;
 
 pub use format::{AudioFormat, format_of};

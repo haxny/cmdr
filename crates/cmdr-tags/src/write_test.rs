@@ -95,17 +95,17 @@ fn parse_options() -> ParseOptions {
     ParseOptions::new().read_properties(false)
 }
 
-fn raw_id3(path: &Path) -> Id3v2Tag {
+pub(crate) fn raw_id3(path: &Path) -> Id3v2Tag {
     let file = MpegFile::read_from(&mut File::open(path).unwrap(), parse_options()).unwrap();
     file.id3v2().cloned().unwrap_or_default()
 }
 
-fn raw_ilst(path: &Path) -> Ilst {
+pub(crate) fn raw_ilst(path: &Path) -> Ilst {
     let file = Mp4File::read_from(&mut File::open(path).unwrap(), parse_options()).unwrap();
     file.ilst().cloned().unwrap_or_default()
 }
 
-fn raw_flac(path: &Path) -> FlacFile {
+pub(crate) fn raw_flac(path: &Path) -> FlacFile {
     FlacFile::read_from(&mut File::open(path).unwrap(), parse_options()).unwrap()
 }
 
@@ -126,7 +126,7 @@ fn id3_pictures(tag: &Id3v2Tag) -> Vec<&Picture> {
         .collect()
 }
 
-fn txxx_descriptions(tag: &Id3v2Tag) -> Vec<String> {
+pub(crate) fn txxx_descriptions(tag: &Id3v2Tag) -> Vec<String> {
     tag.into_iter()
         .filter_map(|f| match f {
             Frame::UserText(t) => Some(t.description.to_string()),
@@ -135,7 +135,7 @@ fn txxx_descriptions(tag: &Id3v2Tag) -> Vec<String> {
         .collect()
 }
 
-fn freeform_data<'a>(ilst: &'a Ilst, name: &str) -> Vec<&'a AtomData> {
+pub(crate) fn freeform_data<'a>(ilst: &'a Ilst, name: &str) -> Vec<&'a AtomData> {
     ilst.into_iter()
         .filter(|a| matches!(a.ident(), AtomIdent::Freeform { name: n, .. } if n == name))
         .flat_map(|a| a.data())
@@ -148,7 +148,7 @@ fn fourcc(ilst: &Ilst, code: [u8; 4]) -> Vec<&AtomData> {
         .unwrap_or_default()
 }
 
-fn utf8(value: &str) -> AtomData {
+pub(crate) fn utf8(value: &str) -> AtomData {
     AtomData::UTF8(value.to_owned())
 }
 

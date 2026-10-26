@@ -27,7 +27,7 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
   values join with `"; "`.
 - **Track is plain** (`3`); `3/12` only when the caller passes a known total.
 - **MP3 is written as ID3v2.3**, and frames, atoms, and keys we don't manage are left untouched on write. Unmanaged text
-  items surface read-only in `FileTags::extras`; dropping a key there removes it on write.
+  items surface in `FileTags::extras`; dropping a key there removes it on write, and a key the file lacks is added.
 - **Concrete lofty tag types, not the generic `Tag`**: the generic one loses format-native keys we depend on (why, in
   `DETAILS.md`).
 - **A write is safe-overwrite** (`save_safely`): temp clone in the same directory, save, read back and compare with the
