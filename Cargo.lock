@@ -1555,6 +1555,7 @@ dependencies = [
  "cmdr-s3",
  "cmdr-sftp",
  "cmdr-smb",
+ "cmdr-tags",
  "cmdr-update-trust",
  "cmdr-webdav",
  "cocoon",
@@ -2026,6 +2027,20 @@ dependencies = [
  "specta",
  "tokio",
  "tokio-util",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "cmdr-tags"
+version = "0.0.0"
+dependencies = [
+ "cmdr-media-meta",
+ "lofty",
+ "log",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
  "unicode-normalization",
 ]
 

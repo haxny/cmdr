@@ -381,9 +381,9 @@ All under `apps/desktop/src-tauri/src/`.
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
 `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-http`, `cmdr-listing`,
-`cmdr-collation`, `cmdr-local`, `cmdr-media-meta`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust`
-carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against the
-`cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
+`cmdr-collation`, `cmdr-local`, `cmdr-media-meta`, `cmdr-operation-log`, `cmdr-operations`, `cmdr-tags`, and
+`cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against
+the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
 `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`,
 `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` at the numbers their audits landed on. The two dev CLIs and
 the vendored fork are ordinary members.
@@ -454,6 +454,8 @@ the vendored fork are ordinary members.
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`
   refuses a bare reqwest client. See `crates/cmdr-http/CLAUDE.md`
+- `crates/cmdr-tags/`: the tag editor's engine: read and write the text tags and front cover of MP3, M4A/M4B, FLAC, Ogg
+  Vorbis, and Opus files (field map, clean-up tools, undo store, safe overwrite). See `crates/cmdr-tags/CLAUDE.md`
 - `crates/cmdr-update-trust/`: what makes a macOS update archive a Cmdr release (the installer's extraction plus Cmdr's
   Developer ID code signature), shared by the updater and the release gate binary `cmdr-vet-update`. See
   `crates/cmdr-update-trust/CLAUDE.md`
