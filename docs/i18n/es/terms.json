@@ -1568,9 +1568,6 @@
   "go-to-trash": {
     "chosen": "Ir a la papelera",
     "confidence": "high",
-    "exceptions": {
-      "suggestedOps.reversible.trash": "the files go to the trash (va / van a la papelera), not the command that opens it"
-    },
     "sources": "macOS Finder (Ir a la papelera)"
   },
   "got-it": {
