@@ -184,9 +184,13 @@ generic path kept only the variant name; the failure's message carries both.
 - **An Approve the engine refused to START gives the group back.** `refused`, `nothingToRun`, and `couldNotStart` all
   mean nothing ran and the group is `pending` again (`apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § "The
   approval bridge"). The reason shows under the group's buttons and sits in `refusals` by group id until that group is
-  answered again or the dialog closes. `refused` carries the `WriteOperationError` itself, so `suggested-ops-refusal.ts`
-  words it through `getUserFriendlyMessage` with the verb mapped to the transfer wording. Only the two suggestion-only
-  refusals carry `suggestedOps.refusal.*` copy.
+  answered again or the dialog next opens. `refused` carries the `WriteOperationError` itself, so
+  `suggested-ops-refusal.ts` words it through `getUserFriendlyMessage` with the verb mapped to the transfer wording.
+  Only the two suggestion-only refusals carry `suggestedOps.refusal.*` copy.
+- **Closing leaves the review state in place; the next open drops it** (`forgetLastReview`). Clearing `reviews` in the
+  tick that unmounts the dialog pulls each row's op out from under its cells mid-teardown (Ark's checkbox reads
+  `checked` on the way out), and the throw takes the main window down to its crash panel. Regression anchor:
+  `SuggestedOpsDialog.close.test.ts`; the E2E dialog-inset sweep first caught it as a wedged app.
 - **Decision: Approve stays enabled while a group's rows are loading or couldn't load** (David, 2026-09-25, #155). Its
   count comes from `COUNT(*)`, so the button says exactly how many ops it approves even before any row shows. ❌ Don't
   gate Approve on the op window.

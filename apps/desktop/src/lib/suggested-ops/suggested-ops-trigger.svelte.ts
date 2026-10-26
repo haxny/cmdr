@@ -279,14 +279,24 @@ export function toggleAllOps(groupId: number): void {
 /** Live only while the dialog is open: the badge owns the session-long subscription. */
 let unlistenChanges: UnlistenFn | null = null
 
+/**
+ * Closes the dialog. The last review's state stays put until the next open drops it:
+ * clearing it here, in the tick that unmounts the dialog, pulls each row's op out from
+ * under its cells mid-teardown (Ark's checkbox reads `checked` on the way out), and the
+ * throw takes the whole main window down to its crash panel.
+ */
 export function closeSuggestedOps(): void {
   suggestedOpsState.open = false
+  unlistenChanges?.()
+  unlistenChanges = null
+}
+
+/** Every review, refusal, and notice the last open left behind. Only while nothing renders them. */
+function forgetLastReview(): void {
   suggestedOpsState.decisionNotice = null
   suggestedOpsState.reviews.clear()
   factsRequested.clear()
   suggestedOpsState.refusals.clear()
-  unlistenChanges?.()
-  unlistenChanges = null
 }
 
 /**
@@ -296,6 +306,8 @@ export function closeSuggestedOps(): void {
  */
 export async function openSuggestedOps(): Promise<void> {
   if (suggestedOpsState.open) return
+  // Before `open` flips, so the dialog mounts over a clean slate and never sees the old one.
+  forgetLastReview()
   suggestedOpsState.open = true
   await subscribeWhileOpen()
   await refreshSuggestions()

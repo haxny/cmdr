@@ -511,12 +511,13 @@ describe('an approval that refuses to start', () => {
     expect(suggestedOpsState.refusals.has(BIG)).toBe(false)
   })
 
-  it('forgets the reasons when the dialog closes', async () => {
+  it('forgets the reasons by the next time the dialog opens', async () => {
     approveMock.mockResolvedValueOnce(notConnected)
     await openSuggestedOps()
     await approveGroup(BIG)
 
     closeSuggestedOps()
+    await openSuggestedOps()
 
     expect(suggestedOpsState.refusals.size).toBe(0)
   })
@@ -828,13 +829,14 @@ describe('a read or an answer that does not happen', () => {
 })
 
 describe('closing', () => {
-  it('drops every review and its deselection', async () => {
+  it('reopens over a fresh review, with the last one’s deselection gone', async () => {
     await openSuggestedOps()
     toggleOp(BIG, pending(1))
 
     closeSuggestedOps()
-
     expect(suggestedOpsState.open).toBe(false)
-    expect(suggestedOpsState.reviews.size).toBe(0)
+    await openSuggestedOps()
+
+    expect(isOpSelected(BIG, pending(1))).toBe(true)
   })
 })
