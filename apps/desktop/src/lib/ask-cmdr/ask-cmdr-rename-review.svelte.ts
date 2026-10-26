@@ -70,6 +70,8 @@ export function openStagedRenameReview(): void {
     })),
     preflighting: false,
     expired: false,
+    revision: proposal.revision,
+    changed: false,
     requestVersion: 0,
   }))
   const review = askCmdrState.renameReview
@@ -208,9 +210,10 @@ export async function applyRenameReview(): Promise<void> {
   const review = askCmdrState.renameReview
   if (!review || review.proposals.some((proposal) => proposal.preflighting)) return
   const pending = review.proposals
-    .filter((proposal) => !proposal.expired)
+    .filter((proposal) => !proposal.expired && !proposal.changed)
     .map((proposal) => ({
       proposalId: proposal.proposalId,
+      revision: proposal.revision,
       allowedRowIds: proposal.rows.filter((row) => row.allowed && !row.blockedReason).map((row) => row.rowId),
     }))
     .filter((batch) => batch.allowedRowIds.length > 0)
@@ -222,13 +225,16 @@ export async function applyRenameReview(): Promise<void> {
   let applied = 0
   for (const batch of pending) {
     try {
-      const started = await applyBulkRename(batch.proposalId, batch.allowedRowIds)
+      const started = await applyBulkRename(batch.proposalId, batch.revision, batch.allowedRowIds)
       applied += 1
       const swapsSkipped = started.swapsLeftOut
       noteRenameApplied(started.operationId, batch.allowedRowIds.length - swapsSkipped, swapsSkipped)
       dropAppliedProposal(batch.proposalId)
     } catch (e) {
-      log.warn('starting the rename plan failed: {error}', { error: e })
+      // The agent amended this batch since the user read it: nothing ran. Say so on the batch,
+      // keep its rows where they are, and stop, like any other refusal.
+      if (isListChanged(e)) markChanged(batch.proposalId)
+      else log.warn('starting the rename plan failed: {error}', { error: e })
       break
     }
   }
@@ -362,6 +368,17 @@ export function discardRenameReview(): void {
   closeRenameReview()
 }
 
+/** An apply the backend refused because the plan's revision moved: the typed `BulkRenameError`
+ *  variant, carried as a field on the thrown error (`throwIpcError`). */
+function isListChanged(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'type' in error && error.type === 'listChanged'
+}
+
+function markChanged(proposalId: string): void {
+  const proposal = liveProposal(proposalId)
+  if (proposal) proposal.changed = true
+}
+
 async function refreshRenamePreflight(proposalId: string): Promise<void> {
   const proposal = liveProposal(proposalId)
   if (!proposal) return
@@ -373,12 +390,16 @@ async function refreshRenamePreflight(proposalId: string): Promise<void> {
   // that row reviewable again. Apply still submits only the user's allowed ids.
   const allowedRowIds = proposal.rows.map((row) => row.rowId)
   try {
-    const result = await preflightBulkRename(proposalId, allowedRowIds)
+    const result = await preflightBulkRename(proposalId, proposal.revision, allowedRowIds)
     const current = liveProposal(proposalId)
     if (!current || current.requestVersion !== version) return
     current.preflighting = false
     current.expired = result.status === 'expired'
     if (current.expired) return
+    if (result.status === 'listChanged') {
+      current.changed = true
+      return
+    }
     for (const row of current.rows) {
       const backend = result.rows.find((candidate) => candidate.rowId === row.rowId)
       row.blockedReason = backend?.status === 'blocked' ? backend.reason : null

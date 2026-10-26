@@ -76,6 +76,8 @@ function batch(rows: GalleryRenameRow[], extra: { expired?: boolean; preflightin
     })),
     preflighting: extra.preflighting ?? false,
     expired: extra.expired ?? false,
+    revision: 1,
+    changed: false,
     requestVersion: 0,
   }
 }

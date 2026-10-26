@@ -47,8 +47,9 @@
 
     const review = $derived(askCmdrState.renameReview)
     const proposals = $derived(review?.proposals ?? [])
-    /** The batches still answerable: an expired one has nothing left to decide. */
-    const liveProposals = $derived(proposals.filter((proposal) => !proposal.expired))
+    /** The batches still answerable: an expired one has nothing left to decide, and one the agent
+     *  changed since it was shown can't run until it's read again. */
+    const liveProposals = $derived(proposals.filter((proposal) => !proposal.expired && !proposal.changed))
     const allRows = $derived(liveProposals.flatMap((proposal) => proposal.rows))
     const allowedCount = $derived(allRows.filter((row) => row.allowed && !row.blockedReason).length)
     const blockedCount = $derived(allRows.filter((row) => row.blockedReason).length)
@@ -81,6 +82,7 @@
     type ListRow =
         | { kind: 'folder'; key: string; folder: string }
         | { kind: 'expired'; key: string }
+        | { kind: 'changed'; key: string }
         | { kind: 'file'; key: string; proposalId: string; row: BulkRenameReviewRow }
 
     const listRows = $derived.by<ListRow[]>(() => {
@@ -95,6 +97,8 @@
                 flat.push({ kind: 'expired', key: `expired:${proposal.proposalId}` })
                 return
             }
+            // Announced above its rows, never swapped under the reader; Apply leaves it out.
+            if (proposal.changed) flat.push({ kind: 'changed', key: `changed:${proposal.proposalId}` })
             for (const row of proposal.rows) {
                 flat.push({ kind: 'file', key: `row:${row.rowId}`, proposalId: proposal.proposalId, row })
             }
@@ -356,6 +360,9 @@
         ></span>
     {:else if item.kind === 'expired'}
         <span class="batch-expired" role="status">{tString('askCmdr.renameReview.expired')}</span>
+    {:else if item.kind === 'changed'}
+        <!-- The suggestions dialog's wording for the same event, so the two reviews say it alike. -->
+        <span class="batch-expired" role="status">{tString('suggestedOps.changedUnderReview')}</span>
     {/if}
 {/snippet}
 
