@@ -14,6 +14,7 @@ event into a confirmation toast, whose button reopens the SAME report for a note
 - `ErrorReportDialog.svelte`: one dialog, both modes. `ErrorReportToastContent.svelte`: the post-send toast for both
   outcomes (`kind` picks the sentence).
 - `BundleSavedToastContent.svelte`: the "saved to disk" toast (path + Reveal in Finder).
+- `report-preview.ts`: the whole bundle in the File viewer (here and in feedback).
 - `auto-send-toast.svelte.ts` + `AutoSendToastContent.svelte`: Flow B listener and toast. Both toasts render
   `SentReportToastBody.svelte` (optional title, sentence + id badge, right-aligned actions).
 - `breadcrumbs.ts`: fire-and-forget `recordBreadcrumb(event)` over the generated closed `BreadcrumbEvent` union; its
@@ -30,8 +31,8 @@ event into a confirmation toast, whose button reopens the SAME report for a note
   note and offers only Close. Same for a throwing lookup.
 - ❌ **Nothing reactive may be read in the preview effect's synchronous phase**, or a keystroke rebuilds a multi-MB
   bundle and re-mints the id under the cursor. `displayedManifest` overlays the live note and email instead.
-- **Char counting uses `Array.from(userNote).length`** (code points), matching the Rust validator's `.chars().count()`;
-  `userNote.length` would let emoji-heavy notes pass the FE cap then fail server-side. Caps in `DETAILS.md`.
+- **Count note chars by code point** (`Array.from(userNote).length`), matching Rust's `.chars().count()`; `.length` lets
+  emoji-heavy notes pass here and fail server-side. Caps in `DETAILS.md`.
 - **The reply-to email rides every USER-INITIATED send, amend included**: typing an address into the amend dialog IS the
   explicit per-report consent the Flow-B-never-email rule is about. `apps/desktop/src/lib/attach-email/CLAUDE.md` owns
   the rules; auto-send itself still ships `email: None` structurally (`error_reporter/DETAILS.md` § Flow-B-never-email).

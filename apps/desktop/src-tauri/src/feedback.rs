@@ -114,18 +114,20 @@ pub fn build_payload(feedback: String, email: Option<String>, error_report_id: O
 /// Send the feedback, and the logs with it when `include_logs` is set and the organization's
 /// policy allows error reports.
 ///
-/// The logs are a Flow A bundle ([`BundleScope::flow_a_default`], the past five hours) under a
-/// freshly minted `ERR-XXXXX`, with [`LOGS_NOTE`] as its note and no reply-to: the address, if
-/// any, rides on the feedback, and `AttachedEmail` belongs to the error-report dialog.
+/// The logs are [`logs_request`]'s bundle under `logs_report_id` when the person previewed them
+/// (the id the preview file was built under, so the redaction's hashes match what they saw), or
+/// a freshly minted `ERR-XXXXX` when they didn't.
 pub async fn send_with_optional_logs<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     text: String,
     email: Option<String>,
     include_logs: bool,
+    logs_report_id: Option<String>,
     server_url: &str,
 ) -> SendFeedbackResult {
     let logs_allowed = include_logs && server_request::check_policy(Egress::ErrorReport).await.is_ok();
-    let report_id = logs_allowed.then(error_reporter::generate_short_id);
+    // Vetted here, not only in the bundle build: the feedback names this id before the bundle exists.
+    let report_id = logs_allowed.then(|| error_reporter::resolve_bundle_id(logs_report_id));
     let payload = build_payload(text, email, report_id);
     let result = send_then_attach_logs(&payload, server_url, |id| upload_logs(app, id)).await;
     // Asked for logs the policy won't send: the feedback is in, the logs aren't, and the dialog
@@ -159,17 +161,24 @@ where
     }
 }
 
+/// The bundle the feedback's logs travel as: Flow A's past five hours under `id`, with
+/// [`LOGS_NOTE`] as its note and no reply-to (the address, if any, rides on the feedback, and
+/// `AttachedEmail` belongs to the error-report dialog). One place, so the preview file and the
+/// upload can't drift apart.
+pub fn logs_request(id: Option<String>) -> BundleRequest {
+    BundleRequest {
+        kind: BundleKind::User,
+        scope: BundleScope::flow_a_default(),
+        id,
+        user_note: Some(LOGS_NOTE.to_string()),
+        email: None,
+    }
+}
+
 /// Build and upload the Flow A bundle under `id`. Answers whether it landed; the why goes to
 /// the log.
 async fn upload_logs<R: tauri::Runtime>(app: &tauri::AppHandle<R>, id: String) -> bool {
-    let request = BundleRequest {
-        kind: BundleKind::User,
-        scope: BundleScope::flow_a_default(),
-        id: Some(id),
-        user_note: Some(LOGS_NOTE.to_string()),
-        email: None,
-    };
-    let bundle = match error_reporter::build_bundle(app, request).await {
+    let bundle = match error_reporter::build_bundle(app, logs_request(Some(id))).await {
         Ok(bundle) => bundle,
         Err(detail) => {
             log::warn!(target: "cmdr_lib::feedback", "Couldn't build the logs for feedback: {detail}");

@@ -1,6 +1,7 @@
 //! "Send feedback" Tauri command. Thin IPC wrapper; the validation, payload assembly, and
 //! network logic live in [`crate::feedback`].
 
+use crate::error_reporter::preview_file::{self, ReportPreviewError, ReportPreviewFile};
 use crate::feedback::{self, SendFeedbackResult};
 
 /// Server URL for feedback ingestion. Debug builds hit the local Worker; release hits production.
@@ -23,6 +24,7 @@ pub async fn send_feedback(
     feedback_text: String,
     email: Option<String>,
     include_logs: bool,
+    logs_report_id: Option<String>,
 ) -> SendFeedbackResult {
     let text = match feedback::prepared_feedback_text(&feedback_text) {
         Ok(t) => t,
@@ -31,5 +33,17 @@ pub async fn send_feedback(
             return SendFeedbackResult::Invalid;
         }
     };
-    feedback::send_with_optional_logs(&app, text, email, include_logs, FEEDBACK_URL).await
+    feedback::send_with_optional_logs(&app, text, email, include_logs, logs_report_id, FEEDBACK_URL).await
+}
+
+/// Writes the logs the feedback would carry as one text file for the File viewer. Nothing leaves
+/// the Mac. Pass the `id` an earlier look returned to rewrite the same report; `send_feedback`
+/// takes it as `logs_report_id`, so the logs ship under the id (and redaction) that was viewed.
+#[tauri::command]
+#[specta::specta]
+pub async fn write_feedback_logs_preview_file(
+    app: tauri::AppHandle,
+    id: Option<String>,
+) -> Result<ReportPreviewFile, ReportPreviewError> {
+    preview_file::write_preview(&app, feedback::logs_request(id)).await
 }

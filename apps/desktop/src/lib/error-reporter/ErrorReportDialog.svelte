@@ -31,8 +31,11 @@
         prepareErrorReportPreview,
         sendErrorReport,
         saveErrorReportToDisk,
+        writeErrorReportPreviewFile,
         type PreviewPayload,
     } from '#lib/tauri-commands/error-reporter.js'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { openReportPreview } from './report-preview'
 
     import ErrorReportToastContent from './ErrorReportToastContent.svelte'
     import BundleSavedToastContent from './BundleSavedToastContent.svelte'
@@ -221,6 +224,21 @@
         }
     }
 
+    // Compose mode's "What's about to be sent": the whole bundle, in the File viewer. Built from the
+    // note and address as they stand, under the previewed id, so it's the report Send would ship.
+    let openingPayload = $state(false)
+
+    async function handleViewPayload() {
+        if (!preview || openingPayload) return
+        openingPayload = true
+        try {
+            const email = reportsOff ? undefined : attachEmail.emailToAttach
+            await openReportPreview(() => writeErrorReportPreviewFile(userNote || undefined, email, preview?.id))
+        } finally {
+            openingPayload = false
+        }
+    }
+
     async function handleCopyId() {
         if (!preview) return
         await navigator.clipboard.writeText(preview.id)
@@ -356,19 +374,34 @@
             <AttachEmailCheckbox email={attachEmail} />
         {/if}
 
-        <button
-            class="details-toggle"
-            onclick={() => (detailsExpanded = !detailsExpanded)}
-            aria-expanded={detailsExpanded}
-        >
-            <span class="toggle-arrow" class:expanded={detailsExpanded}>&#x25B8;</span>
-            {isAmend ? tString('errorReporter.amend.detailsToggle') : tString('errorReporter.dialog.detailsToggle')}
-            {#if preview}
-                <span class="size-hint">(<Size bytes={preview.sizeBytes} />)</span>
-            {/if}
-        </button>
+        {#if isAmend}
+            <!-- What already went: no bundle is kept after an auto-send, so the samples it shipped
+                 with are what's left to show, in place. -->
+            <button
+                class="details-toggle"
+                onclick={() => (detailsExpanded = !detailsExpanded)}
+                aria-expanded={detailsExpanded}
+            >
+                <span class="toggle-arrow" class:expanded={detailsExpanded}>&#x25B8;</span>
+                {tString('errorReporter.amend.detailsToggle')}
+                {#if preview}
+                    <span class="size-hint">(<Size bytes={preview.sizeBytes} />)</span>
+                {/if}
+            </button>
+        {:else}
+            <p class="view-payload">
+                <LinkButton
+                    onclick={() => void handleViewPayload()}
+                    disabled={preview === null || openingPayload || noteOverLimit}
+                    >{tString('errorReporter.dialog.detailsToggle')}</LinkButton
+                >
+                {#if preview}
+                    <span class="size-hint">(<Size bytes={preview.sizeBytes} />)</span>
+                {/if}
+            </p>
+        {/if}
 
-        {#if detailsExpanded && preview}
+        {#if isAmend && detailsExpanded && preview}
             <div class="details-container">
                 <h3 class="details-heading">{tString('errorReporter.dialog.manifestHeading')}</h3>
                 <pre class="details-block">{JSON.stringify(displayedManifest, null, 2)}</pre>
@@ -491,6 +524,14 @@
 
     .details-toggle:hover {
         color: var(--color-text-primary);
+    }
+
+    .view-payload {
+        display: flex;
+        align-items: baseline;
+        gap: var(--spacing-xs);
+        margin: 0 0 var(--spacing-sm);
+        font-size: var(--font-size-sm);
     }
 
     .toggle-arrow {

@@ -380,6 +380,8 @@ pub fn run() {
                 // "Open with" on a file inside an archive gets its own dir and prefix
                 // for the same reason, and its own startup-only reaper.
                 file_viewer::init_open_with_extract_dir(data_dir.join("open-with-extract"));
+                // The report dialogs' "see everything" files: per instance too, cleared at startup.
+                error_reporter::preview_file::init_report_preview_dir(data_dir.join("report-preview"));
             }
 
             // The write engine claims its leftover ledger: points it at the data dir

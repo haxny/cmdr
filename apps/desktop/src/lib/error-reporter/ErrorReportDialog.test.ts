@@ -28,6 +28,7 @@ const { api, addToast, logger } = vi.hoisted(() => ({
     amendErrorReport: vi.fn(),
     getAutoSentReportPreview: vi.fn(),
     saveErrorReportToDisk: vi.fn(),
+    writeErrorReportPreviewFile: vi.fn(),
     onErrorReportRequested: vi.fn(() => Promise.resolve(() => {})),
     requestErrorReportInMainWindow: vi.fn(() => Promise.resolve()),
   },
@@ -36,6 +37,9 @@ const { api, addToast, logger } = vi.hoisted(() => ({
 }))
 
 vi.mock('#lib/tauri-commands/error-reporter.js', () => api)
+
+const { openFileViewer } = vi.hoisted(() => ({ openFileViewer: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/file-viewer/open-viewer', () => ({ openFileViewer }))
 
 vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -183,6 +187,52 @@ describe('ErrorReportDialog failures', () => {
     expect(api.prepareErrorReportPreview).toHaveBeenCalledTimes(2)
     expect(target.textContent).toContain('ERR-AB23X')
     expect(button(target, tString('errorReporter.dialog.send'))?.disabled).toBe(false)
+  })
+})
+
+describe('ErrorReportDialog: what’s about to be sent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    api.prepareErrorReportPreview.mockResolvedValue(preview)
+    api.writeErrorReportPreviewFile.mockResolvedValue({ path: '/data/report-preview/ERR-AB23X.txt', id: 'ERR-AB23X' })
+  })
+
+  afterEach(async () => {
+    if (mounted) {
+      await unmount(mounted.instance)
+      mounted.target.remove()
+      mounted = undefined
+    }
+    closeErrorReportDialog()
+  })
+
+  function viewLink(target: HTMLElement): HTMLButtonElement | undefined {
+    return button(target, tString('errorReporter.dialog.detailsToggle'))
+  }
+
+  it('opens the whole bundle, with the note as typed and the previewed id, in the File viewer', async () => {
+    openErrorReportDialog({ from: 'helpMenu', initialNote: 'It froze' })
+    const target = await mountDialog()
+
+    viewLink(target)?.click()
+    await settle()
+
+    expect(api.writeErrorReportPreviewFile).toHaveBeenCalledWith('It froze', undefined, 'ERR-AB23X')
+    expect(openFileViewer).toHaveBeenCalledWith('/data/report-preview/ERR-AB23X.txt')
+    // The viewer is the preview now: no in-place snippet of the bundle.
+    expect(target.querySelector('.details-container')).toBeNull()
+  })
+
+  it('says so in a toast, and opens nothing, when the file couldn’t be made', async () => {
+    openErrorReportDialog({ from: 'helpMenu' })
+    api.writeErrorReportPreviewFile.mockRejectedValueOnce(new Error('write: No space left on device (os error 28)'))
+    const target = await mountDialog()
+
+    viewLink(target)?.click()
+    await settle()
+
+    expect(openFileViewer).not.toHaveBeenCalled()
+    expect(lastToastMessage()).toBe(tString('errorReporter.preview.unavailableToast'))
   })
 })
 

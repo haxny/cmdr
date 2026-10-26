@@ -6,7 +6,9 @@
 
 use crate::error_reporter::{
     self, AttachedEmail, BundleKind, BundleManifest, BundleRequest, BundleScope, FLOW_A_BUNDLE_CAP_MB,
-    breadcrumbs::BreadcrumbEvent, settings_defaults::SettingValue,
+    breadcrumbs::BreadcrumbEvent,
+    preview_file::{self, ReportPreviewError, ReportPreviewFile},
+    settings_defaults::SettingValue,
 };
 use crate::managed_policy::Egress;
 use crate::server_request::{self, ServerRequestError};
@@ -216,6 +218,25 @@ pub async fn amend_error_report(
     let url = error_reporter::error_report_amend_url(&target.id);
     let id = error_reporter::auto_sent::amend(target, &url, note, AttachedEmail::from_flow_a_dialog(email)).await?;
     Ok(AmendResult { id })
+}
+
+/// Build the bundle the send would ship, with the note and address as they stand, and write it
+/// as one text file for the File viewer. Nothing leaves the Mac.
+///
+/// Pass the preview's `id`: the redaction context is keyed by it, so the hashed values in the
+/// file are the ones the send carries. The log window still ends at "now" on each build, so
+/// the send may carry a few lines newer than the file.
+#[tauri::command]
+#[specta::specta]
+pub async fn write_error_report_preview_file(
+    app: tauri::AppHandle,
+    user_note: Option<String>,
+    email: Option<String>,
+    id: Option<String>,
+) -> Result<ReportPreviewFile, ReportPreviewError> {
+    let request = flow_a_request(id, user_note, email)
+        .map_err(|e| ReportPreviewError::BundleUnavailable { detail: e.to_string() })?;
+    preview_file::write_preview(&app, request).await
 }
 
 /// Build the bundle and write it to the app data dir as a `.zip`; nothing leaves the Mac. Two

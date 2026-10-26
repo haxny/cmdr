@@ -18,17 +18,17 @@ describe('sendFeedback wrapper', () => {
     vi.clearAllMocks()
   })
 
-  it('forwards the text, email, and logs choice and returns the typed result', async () => {
+  it('forwards the text, email, logs choice, and previewed logs id, and returns the typed result', async () => {
     vi.mocked(commands.sendFeedback).mockResolvedValueOnce({ kind: 'sent' })
-    const result = await sendFeedback('great app', 'tester@example.com', true)
-    expect(commands.sendFeedback).toHaveBeenCalledWith('great app', 'tester@example.com', true)
+    const result = await sendFeedback('great app', 'tester@example.com', true, 'ERR-AB23X')
+    expect(commands.sendFeedback).toHaveBeenCalledWith('great app', 'tester@example.com', true, 'ERR-AB23X')
     expect(result).toEqual({ kind: 'sent' })
   })
 
-  it('coerces an omitted email to null (Rust Option::None)', async () => {
+  it('coerces an omitted email and logs id to null (Rust Option::None)', async () => {
     vi.mocked(commands.sendFeedback).mockResolvedValueOnce({ kind: 'sent' })
     await sendFeedback('great app', undefined, false)
-    expect(commands.sendFeedback).toHaveBeenCalledWith('great app', null, false)
+    expect(commands.sendFeedback).toHaveBeenCalledWith('great app', null, false, null)
   })
 
   it('passes through feedback that went without its logs', async () => {

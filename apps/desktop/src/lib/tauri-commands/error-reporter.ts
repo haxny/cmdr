@@ -8,9 +8,11 @@ import {
   type BreadcrumbEvent,
   type ErrorReportAutoSent,
   type OpenErrorReport,
+  type ReportPreviewFile,
   type SystemSnapshot,
 } from '#lib/ipc/bindings.js'
 import { throwErrorReportSendError } from '#lib/error-reporter/error-report-send-error.js'
+import { throwReportPreviewError } from '#lib/error-reporter/report-preview-error.js'
 import { throwIpcError } from './ipc-types'
 
 export interface ActiveSettingsSnapshot {
@@ -142,6 +144,22 @@ export async function amendErrorReport(userNote?: string, email?: string): Promi
 export async function saveErrorReportToDisk(userNote?: string, email?: string, id?: string): Promise<string> {
   const res = await commands.saveErrorReportToDisk(userNote ?? null, email ?? null, id ?? null)
   if (res.status === 'error') throwIpcError(res.error)
+  return res.data
+}
+
+/**
+ * Build the bundle the send would ship, with the note and address as they stand, and write it as
+ * one text file for the File viewer. Returns its path and the id it was built under.
+ *
+ * Pass the preview's `id`, so the file's redaction (keyed by id) matches the send's.
+ */
+export async function writeErrorReportPreviewFile(
+  userNote?: string,
+  email?: string,
+  id?: string,
+): Promise<ReportPreviewFile> {
+  const res = await commands.writeErrorReportPreviewFile(userNote ?? null, email ?? null, id ?? null)
+  if (res.status === 'error') throwReportPreviewError(res.error)
   return res.data
 }
 

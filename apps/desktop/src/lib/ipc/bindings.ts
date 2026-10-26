@@ -2418,6 +2418,18 @@ export const commands = {
    */
   saveErrorReportToDisk: (userNote: string | null, email: string | null, id: string | null) =>
     typedError<string, string>(__TAURI_INVOKE('save_error_report_to_disk', { userNote, email, id })),
+  /**
+   *  Build the bundle the send would ship, with the note and address as they stand, and write it
+   *  as one text file for the File viewer. Nothing leaves the Mac.
+   *
+   *  Pass the preview's `id`: the redaction context is keyed by it, so the hashed values in the
+   *  file are the ones the send carries. The log window still ends at "now" on each build, so
+   *  the send may carry a few lines newer than the file.
+   */
+  writeErrorReportPreviewFile: (userNote: string | null, email: string | null, id: string | null) =>
+    typedError<ReportPreviewFile, ReportPreviewError>(
+      __TAURI_INVOKE('write_error_report_preview_file', { userNote, email, id }),
+    ),
   // Records one closed, diagnostic-safe event for the error-report manifest.
   recordBreadcrumb: (event: BreadcrumbEvent) => __TAURI_INVOKE<void>('record_breadcrumb', { event }),
   /**
@@ -2441,8 +2453,15 @@ export const commands = {
    *  syscalls that hang on dead mounts); its `reqwest` client carries its own 10 s timeout. The
    *  logs reuse the error reporter's bundle builder, which reads only the app's own log dir.
    */
-  sendFeedback: (feedbackText: string, email: string | null, includeLogs: boolean) =>
-    __TAURI_INVOKE<SendFeedbackResult>('send_feedback', { feedbackText, email, includeLogs }),
+  sendFeedback: (feedbackText: string, email: string | null, includeLogs: boolean, logsReportId: string | null) =>
+    __TAURI_INVOKE<SendFeedbackResult>('send_feedback', { feedbackText, email, includeLogs, logsReportId }),
+  /**
+   *  Writes the logs the feedback would carry as one text file for the File viewer. Nothing leaves
+   *  the Mac. Pass the `id` an earlier look returned to rewrite the same report; `send_feedback`
+   *  takes it as `logs_report_id`, so the logs ship under the id (and redaction) that was viewed.
+   */
+  writeFeedbackLogsPreviewFile: (id: string | null) =>
+    typedError<ReportPreviewFile, ReportPreviewError>(__TAURI_INVOKE('write_feedback_logs_preview_file', { id })),
   // Get the current app status (personal, commercial, or expired).
   getLicenseStatus: () => __TAURI_INVOKE<AppStatus>('get_license_status'),
   /**
@@ -14584,6 +14603,23 @@ export type RepoInfo = {
    *  in `is_dirty`).
    */
   isDirty: boolean
+}
+
+// Why a preview file couldn't be made. `detail` is for the log, never the UI.
+export type ReportPreviewError =
+  // The bundle couldn't be built from the logs, or didn't read back as a zip.
+  | { type: 'bundleUnavailable'; detail: string }
+  // The app data dir is unknown, or the file couldn't be written there.
+  | { type: 'notWritten'; detail: string }
+
+// A preview written to disk: where it is, and the report id it was built under.
+export type ReportPreviewFile = {
+  path: string
+  /**
+   *  The bundle's id. Pass it back to the send, so the redaction context (keyed by id) and the
+   *  report's name match what the person looked at.
+   */
+  id: string
 }
 
 // The sort a pane asked for: what View > Sort by checks.

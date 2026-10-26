@@ -370,17 +370,16 @@ describe('ErrorReportDialog', () => {
     expect(target.textContent).toContain('ERR-AB23X')
   })
 
-  it('expanding "What’s about to be sent" reveals the manifest', async () => {
+  // Opening it in the File viewer is `ErrorReportDialog.test.ts`'s; this pins that it's a live
+  // control once the preview resolves, not an in-place disclosure.
+  it('offers "What’s about to be sent" as an enabled link, not a disclosure', async () => {
     const target = await mountSettled()
-    const toggle = Array.from(target.querySelectorAll('button')).find((b) =>
+    const link = Array.from(target.querySelectorAll('button')).find((b) =>
       b.textContent.includes('What’s about to be sent'),
     )
-    if (!toggle) throw new Error('toggle missing')
-    toggle.click()
-    await tick()
-    expect(target.textContent).toContain('Manifest')
-    expect(target.textContent).toContain('Sample of first')
-    expect(target.textContent).toContain('Sample of last')
+    if (!link) throw new Error('link missing')
+    expect(link.disabled).toBe(false)
+    expect(link.hasAttribute('aria-expanded')).toBe(false)
   })
 
   it('typing in the textarea updates the note', async () => {

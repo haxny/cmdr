@@ -17,14 +17,20 @@ import { GITHUB_ISSUES_URL, BOOK_A_CALL_URL } from '#lib/beta-links.js'
 const sendFeedbackMock =
   vi.fn<(payload: { feedbackText: string; email?: string; includeLogs: boolean }) => Promise<{ kind: string }>>()
 const openExternalUrlMock = vi.fn<(url: string) => Promise<void>>(() => Promise.resolve())
+const writeLogsPreviewMock = vi.fn<(id?: string) => Promise<{ path: string; id: string }>>()
+const openFileViewerMock = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
-  sendFeedback: (text: string, email: string | undefined, includeLogs: boolean) =>
-    sendFeedbackMock({ feedbackText: text, email, includeLogs }),
+  // The logs' report id rides along only once a preview minted one.
+  sendFeedback: (text: string, email: string | undefined, includeLogs: boolean, logsReportId?: string) =>
+    sendFeedbackMock({ feedbackText: text, email, includeLogs, ...(logsReportId ? { logsReportId } : {}) }),
+  writeFeedbackLogsPreviewFile: (id?: string) => writeLogsPreviewMock(id),
   openExternalUrl: (url: string) => openExternalUrlMock(url),
 }))
+
+vi.mock('#lib/file-viewer/open-viewer', () => ({ openFileViewer: openFileViewerMock }))
 
 // Only `reportsDisabled` matters to the dialog; a test flips it before mounting.
 const managedPolicy = vi.hoisted(() => ({ reportsDisabled: false }))
@@ -405,6 +411,42 @@ describe('FeedbackDialog logs', () => {
     expect(addToastMock).toHaveBeenCalledWith(tString('feedback.sentWithoutLogsToast'), { level: 'info' })
     // The feedback is in, so there's nothing to retry here.
     expect(feedbackFlow.open).toBe(false)
+  })
+
+  it('offers to show the logs only while the box is ticked', async () => {
+    const target = await mountDialog()
+    const viewLogs = tString('feedback.dialog.viewLogs')
+    expect(findButton(target, viewLogs)).toBeUndefined()
+
+    logsCheckbox(target)?.click()
+    await tick()
+    expect(findButton(target, viewLogs)).toBeDefined()
+    await expectNoA11yViolations(target)
+  })
+
+  it('opens the logs in the File viewer, then sends them under the id that was shown', async () => {
+    writeLogsPreviewMock.mockResolvedValue({ path: '/data/report-preview/ERR-AB23X.txt', id: 'ERR-AB23X' })
+    const target = await mountDialog()
+    feedbackFlow.open = true
+    await typeFeedback(target, 'NetAuthSysAgent got stuck')
+    logsCheckbox(target)?.click()
+    await tick()
+
+    findButton(target, tString('feedback.dialog.viewLogs'))?.click()
+    await tick()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(writeLogsPreviewMock).toHaveBeenCalledWith(undefined)
+    expect(openFileViewerMock).toHaveBeenCalledWith('/data/report-preview/ERR-AB23X.txt')
+
+    findButton(target, 'Send feedback')?.click()
+    await tick()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(sendFeedbackMock).toHaveBeenCalledWith({
+      feedbackText: 'NetAuthSysAgent got stuck',
+      email: undefined,
+      includeLogs: true,
+      logsReportId: 'ERR-AB23X',
+    })
   })
 
   it('leaves the logs out when the organization turns reports off', async () => {

@@ -456,7 +456,7 @@ export { getDockPinState, addCmdrToDock } from './dock'
 // Beta-tester signup (subscribes the contact email; sends NO install id)
 export { betaSignup } from './beta-signup'
 export type { BetaSignupResult } from './beta-signup'
-export { sendFeedback } from './feedback'
+export { sendFeedback, writeFeedbackLogsPreviewFile } from './feedback'
 export type { SendFeedbackResult } from './feedback'
 
 // What's new popup

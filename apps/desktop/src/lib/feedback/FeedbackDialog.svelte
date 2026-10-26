@@ -17,7 +17,8 @@
     import TextArea from '#lib/ui/TextArea.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import { addToast } from '#lib/ui/toast/index.js'
-    import { sendFeedback, openExternalUrl } from '#lib/tauri-commands/index.js'
+    import { sendFeedback, openExternalUrl, writeFeedbackLogsPreviewFile } from '#lib/tauri-commands/index.js'
+    import { openReportPreview } from '#lib/error-reporter/report-preview.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import { t, tString } from '#lib/intl/messages.svelte.js'
     import Trans from '#lib/intl/Trans.svelte'
@@ -36,6 +37,10 @@
     const attachEmail = createAttachEmail()
     // Unticked every time the dialog opens: logs are a per-message choice, never a sticky one.
     let includeLogs = $state(false)
+    // The report id the logs were last shown under. The send reuses it, so the logs that go are
+    // the report the person looked at (the redaction is keyed by id). `null` until they look.
+    let logsReportId = $state<string | null>(null)
+    let openingLogs = $state(false)
     // The organization's policy can turn error reports off, and the logs travel as one.
     const reportsOff = $derived(getManagedPolicyView().reportsDisabled)
     let sending = $state(false)
@@ -56,7 +61,13 @@
         sending = true
         sendFailedMessage = null
         try {
-            const result = await sendFeedback(feedbackText, attachEmail.emailToAttach, includeLogs && !reportsOff)
+            const withLogs = includeLogs && !reportsOff
+            const result = await sendFeedback(
+                feedbackText,
+                attachEmail.emailToAttach,
+                withLogs,
+                withLogs ? (logsReportId ?? undefined) : undefined,
+            )
             if (result.kind === 'sent' || result.kind === 'sentWithoutLogs') {
                 // Sticky choice and a newly typed address are remembered only now: a
                 // half-typed one shouldn't become the reply channel for every report.
@@ -78,6 +89,17 @@
             }
         } finally {
             sending = false
+        }
+    }
+
+    async function handleViewLogs() {
+        if (openingLogs) return
+        openingLogs = true
+        try {
+            const id = await openReportPreview(() => writeFeedbackLogsPreviewFile(logsReportId ?? undefined))
+            if (id !== null) logsReportId = id
+        } finally {
+            openingLogs = false
         }
     }
 
@@ -184,6 +206,13 @@
         {#if !reportsOff}
             <div class="include-logs">
                 <Checkbox bind:checked={includeLogs}>{tString('feedback.dialog.includeLogs')}</Checkbox>
+                {#if includeLogs}
+                    <p class="view-logs">
+                        <LinkButton onclick={() => void handleViewLogs()} disabled={openingLogs}
+                            >{tString('feedback.dialog.viewLogs')}</LinkButton
+                        >
+                    </p>
+                {/if}
             </div>
         {/if}
 
@@ -240,6 +269,12 @@
     .include-logs {
         margin-bottom: var(--spacing-md);
         color: var(--color-text-secondary);
+    }
+
+    /* Lined up under the box's label (the 16px box plus its gap), so it reads as part of that choice. */
+    .view-logs {
+        margin: var(--spacing-xs) 0 0 calc(var(--spacing-lg) + var(--spacing-sm));
+        font-size: var(--font-size-sm);
     }
 
     .more-ways {
