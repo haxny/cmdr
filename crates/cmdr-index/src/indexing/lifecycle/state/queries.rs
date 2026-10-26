@@ -184,6 +184,16 @@ pub(crate) fn is_watching_for_test(volume_id: &str) -> bool {
     }
 }
 
+/// Whether this volume's start is still standing its manager up: reserved, and not
+/// `Running` yet.
+#[cfg(test)]
+pub(crate) fn is_initializing_for_test(volume_id: &str) -> bool {
+    INDEX_REGISTRY
+        .lock_ignore_poison()
+        .get(volume_id)
+        .is_some_and(|i| super::is_initializing_phase(&i.phase))
+}
+
 /// Check whether a volume's index is active (initializing, running, or momentarily
 /// detached for a scan start).
 ///

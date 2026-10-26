@@ -1649,6 +1649,7 @@ export type MessageKey =
   | 'fileExplorer.navigation.driveIndex.driveLeaving'
   | 'fileExplorer.navigation.driveIndex.durationMinSec'
   | 'fileExplorer.navigation.driveIndex.durationSec'
+  | 'fileExplorer.navigation.driveIndex.enabled'
   | 'fileExplorer.navigation.driveIndex.footer'
   | 'fileExplorer.navigation.driveIndex.menuDisable'
   | 'fileExplorer.navigation.driveIndex.menuEnable'

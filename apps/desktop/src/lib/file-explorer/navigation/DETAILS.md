@@ -812,9 +812,10 @@ yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches,
   first-connect prompt waits (`isReadyForFirstConnectPrompt`). ❗ Offering the enable for an ADB phone still waiting for
   its USB debugging tap is what produced `ERR-JUCNB`.
 - **Status stays live by SUBSCRIPTION, not polling** (`drive-index-manager.svelte.ts`): it listens to
-  `index-freshness-changed`, `index-scan-started`, and `index-scan-complete`, refetching the named volume's status on
-  each (the events alone don't carry the last-scan facts). The active-drive badge also refetches when the active drive
-  changes; dropdown rows refetch on open.
+  `index-freshness-changed`, `index-scan-started`, `index-scan-complete`, and `index-scan-aborted`, refetching the named
+  volume's status on each (the events alone don't carry the last-scan facts). The abort is what turns a start that
+  announced Scanning and then failed back to gray. The active-drive badge also refetches when the active drive changes;
+  dropdown rows refetch on open.
 - **A scanning badge shows the SHARED live status body**, not a bespoke string — the same `IndexingDriveRow` body the
   corner indicator renders (heading off), so the two surfaces match exactly (count + elapsed for a first scan, or
   bar+percent+ETA for a calibrated rescan; see `#lib/indexing` DETAILS § Status indicator tooltip content). The badge
@@ -886,7 +887,10 @@ yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches,
 - **What an enable/rescan owes the user is the pure `driveIndexActionFeedback`**, off the TYPED outcome, never message
   text. `VolumeBreadcrumb` runs the answer (toast it, or route a `refusal`), so the whole contract is unit-testable
   without mounting anything. Its seven arms:
-  - `started` → **silent**: the badge going blue is the feedback.
+  - `started` → **silent** for a rescan (the badge going blue is the feedback); for an enable, a five-second `info`
+    toast (`enabled`) on top, because turning a drive on is a lasting choice made from a 10px dot. The dot itself turns
+    blue the moment the backend reserves the volume, before its launch work:
+    `crates/cmdr-index/src/indexing/lifecycle/DETAILS.md` § Freshness.
   - `deferred_until_search_ends` → the promise toast (`info`), worded per action (`deferredEnable` /`deferredRescan`). A
     search walking the same drive blocks a truncating scan, so the backend REMEMBERS the request and runs it when the
     walk ends (model: `crates/cmdr-index/src/indexing/lifecycle/DETAILS.md` § The two single-flight questions a scan has

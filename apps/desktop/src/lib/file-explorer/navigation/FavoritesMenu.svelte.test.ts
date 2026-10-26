@@ -70,6 +70,7 @@ vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
   onIndexScanStarted: () => Promise.resolve(() => {}),
   onIndexScanComplete: () => Promise.resolve(() => {}),
+  onIndexScanAborted: () => Promise.resolve(() => {}),
 }))
 
 vi.mock('../network/direct-connect', () => ({ connectDirectly: vi.fn(() => Promise.resolve({ kind: 'connected' })) }))

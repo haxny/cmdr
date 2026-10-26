@@ -13,6 +13,7 @@ import type {
   IndexScanStartedEvent,
   IndexScanCompleteEvent,
   IndexFreshnessChangedEvent,
+  IndexScanAbortedEvent,
   VolumeIndexStatus,
 } from '#lib/ipc/bindings.js'
 
@@ -21,6 +22,7 @@ import type {
 let onStarted: ((p: IndexScanStartedEvent) => void) | undefined
 let onComplete: ((p: IndexScanCompleteEvent) => void) | undefined
 let onFreshness: ((p: IndexFreshnessChangedEvent) => void) | undefined
+let onAborted: ((p: IndexScanAbortedEvent) => void) | undefined
 
 const noopUnlisten = vi.fn()
 
@@ -35,6 +37,10 @@ vi.mock('#lib/tauri-commands/indexing.js', () => ({
   },
   onIndexFreshnessChanged: (cb: (p: IndexFreshnessChangedEvent) => void) => {
     onFreshness = cb
+    return Promise.resolve(noopUnlisten)
+  },
+  onIndexScanAborted: (cb: (p: IndexScanAbortedEvent) => void) => {
+    onAborted = cb
     return Promise.resolve(noopUnlisten)
   },
   getVolumeIndexStatusById,
@@ -100,7 +106,7 @@ async function makeManager() {
 }
 
 beforeEach(() => {
-  onStarted = onComplete = onFreshness = undefined
+  onStarted = onComplete = onFreshness = onAborted = undefined
   vi.clearAllMocks()
   getVolumeIndexStatusById.mockResolvedValue({ status: 'error', error: 'stubbed' })
 })
@@ -139,6 +145,19 @@ describe('drive index manager — freshness status', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(mgr.statusMap.get('smb-a')?.freshness).toBe('fresh')
+  })
+
+  // A start announces Scanning before its launch work, and one that then fails
+  // ends the run with `ScanAborted`. Without the refetch the dot pulses blue for
+  // a volume that has no index.
+  it('refetches on scan abort, so a start that failed after turning the dot blue goes gray', async () => {
+    const mgr = await makeManager()
+    getVolumeIndexStatusById.mockResolvedValue({ status: 'ok', data: { ...status('local-a', null), enabled: false } })
+    onAborted?.({ volumeId: 'local-a' })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(getVolumeIndexStatusById).toHaveBeenCalledWith('local-a')
+    expect(mgr.statusMap.get('local-a')?.enabled).toBe(false)
   })
 })
 

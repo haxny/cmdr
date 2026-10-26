@@ -204,9 +204,20 @@ describe('driveIndexRefusalMessageKey', () => {
 })
 
 describe('driveIndexActionFeedback', () => {
-  it('says nothing when the scan started: the badge already shows it', () => {
+  it('says nothing when a rescan started: the badge already shows it', () => {
     expect(driveIndexActionFeedback('rescan', { status: 'ok', data: { status: 'started' } })).toEqual({
       kind: 'silent',
+    })
+  })
+
+  // Turning a drive on is a choice that sticks, made from a tiny dot, so it gets
+  // a word of confirmation on top of the dot turning blue.
+  it('confirms a drive it turned on, for five seconds', () => {
+    expect(driveIndexActionFeedback('enable', { status: 'ok', data: { status: 'started' } })).toEqual({
+      kind: 'toast',
+      key: 'fileExplorer.navigation.driveIndex.enabled',
+      level: 'info',
+      timeoutMs: 5000,
     })
   })
 

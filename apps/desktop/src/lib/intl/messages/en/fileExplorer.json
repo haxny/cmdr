@@ -2939,6 +2939,13 @@
       "name": "the drive’s display name (e.g. Backups)"
     }
   },
+  "fileExplorer.navigation.driveIndex.enabled": "Turned on indexing for {name}.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "description": "Short confirmation toast after the drive menu’s \"Turn on indexing for this drive\" succeeded; it disappears after five seconds. The drive’s dot turns blue at the same time, so this only confirms the click landed. Use the same verb as that menu item.",
+    "placeholders": {
+      "name": "the drive’s display name (e.g. Backups)"
+    }
+  },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr is indexing {name} right now. The scan you asked for starts as soon as that finishes.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {
     "description": "Toast shown when the drive menu’s \"Rescan now\" (or \"Turn on indexing\") can’t start yet because a full walk of the same drive is already running. Cmdr remembers the request and runs it when that walk finishes, so this is a promise, not a refusal. Avoid the words “error” and “failed”.",

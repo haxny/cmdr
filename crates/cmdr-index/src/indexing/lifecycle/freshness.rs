@@ -188,8 +188,8 @@ impl Freshness {
 /// an event journal on launch — `true` for local disk (FSEvents replay),
 /// `false` for SMB/MTP (no journal).
 ///
-/// - No completed scan ⇒ `None` (the caller starts a fresh scan; gray until it
-///   begins, then Scanning).
+/// - No completed scan ⇒ `None` (the caller starts a fresh scan, and announces
+///   Scanning as soon as its reservation wins: `state/startup.rs`).
 /// - Completed scan + journaled (local) ⇒ `Fresh` (replay restores continuity).
 /// - Completed scan + NOT journaled (SMB/MTP) ⇒ `Stale`. We weren't watching
 ///   while the app was off, so we can't claim Fresh. This is the core of the

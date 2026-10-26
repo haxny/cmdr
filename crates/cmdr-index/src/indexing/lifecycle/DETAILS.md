@@ -834,6 +834,12 @@ Load-bearing rules:
   non-journaled index (SMB/MTP/external) loads **Stale**, a journaled one (local) loads **Fresh**, no-completed-scan
   loads `None` (gray → fresh scan). Seeded at reservation from the volume `kind`. This is correct and honest, not a bug:
   we weren't watching while off.
+- **A `None` seed turns Scanning at the reservation**, not at the walk's own `ScanStarted`. `start_indexing_for` fires
+  `ScanStarted` on the new instance's handle right after `try_reserve_initializing_phase` wins (`IndexTheVolume` only: a
+  writer-only start walks nothing), because the launch work between the two (the launch route's reads, a rebuild's
+  truncate) ran 14 s on a real boot disk with the badge gray and the user's enable looking dead (2026-10-26). If the
+  start then fails before `Running`, it emits `ScanAborted` so the badge refetches and goes gray. Pinned by
+  `phases/tests/menu_actions.rs::turning_a_drive_on_announces_scanning_before_the_launch_work`.
 - **Scan transitions.** `ScanStarted` ⇒ Scanning; a CLEAN `ScanCompleted` ⇒ Fresh (only the `Ok` arm reaches it); a
   FAILED LOCAL scan/reconcile ⇒ `ScanFailed` ⇒ Stale. A clean trait scan on a volume NOTHING watches
   (`IndexVolumeKind::has_live_watch`, false only for ADB) fires `ScanCompletedUnwatched` ⇒ Stale instead, with

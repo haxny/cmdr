@@ -37,6 +37,7 @@ vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
   onIndexScanStarted: () => Promise.resolve(() => {}),
   onIndexScanComplete: () => Promise.resolve(() => {}),
+  onIndexScanAborted: () => Promise.resolve(() => {}),
 }))
 
 vi.mock('#lib/ui/toast/index.js', () => ({
@@ -82,14 +83,24 @@ describe('drive-badges', () => {
     dispose = undefined
   })
 
-  it('a started scan says nothing: the dot going blue is the feedback', async () => {
+  it('a started rescan says nothing: the dot going blue is the feedback', async () => {
+    rescanDriveIndex.mockReturnValueOnce(ok({ status: 'started' }))
+    const badges = create()
+    badges.runAction(drive.id, 'rescan')
+    await vi.waitFor(() => {
+      expect(rescanDriveIndex).toHaveBeenCalledWith(drive.id)
+    })
+    expect(addToast).not.toHaveBeenCalled()
+  })
+
+  it('turning a drive on confirms it in a toast that leaves after five seconds', async () => {
     enableDriveIndex.mockReturnValueOnce(ok({ status: 'started' }))
     const badges = create()
     badges.runAction(drive.id, 'enable')
     await vi.waitFor(() => {
-      expect(enableDriveIndex).toHaveBeenCalledWith(drive.id)
+      expect(addToast).toHaveBeenCalled()
     })
-    expect(addToast).not.toHaveBeenCalled()
+    expect(addToast.mock.calls[0][1]).toEqual({ level: 'info', timeoutMs: 5000 })
   })
 
   it('a deferred rescan promises it in a toast, so the button never looks dead', async () => {
