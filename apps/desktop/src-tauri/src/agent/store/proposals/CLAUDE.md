@@ -35,8 +35,8 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
   `open_write_connection`, which runs the ladder on every connection open: a sweep there would reclassify a group that
   is genuinely executing.
 - **`GroupIntent` makes the wrong shapes unrepresentable.** Each variant carries the target its executor binds AND its
-  op shape, so a trash group with a destination, or a move group whose ops carry their own, can't be built. Reversibility
-  falls out of the same enum. Add a verb by adding a variant, never by adding a check.
+  op shape, so a trash group with a destination can't be built. Per-verb reversibility falls out of the same enum (per-volume:
+  `../../suggested_ops/facts.rs`). Add a verb by adding a variant, never a check.
 - **`completed` is written on SETTLE, whatever the operation did**, because the question it answers is "still in
   flight, or not?" Marking only on success leaves a cancelled group `approved`, so the next launch calls it
   `interrupted` — a claim the app died, about an operation the user stopped. Per-op statuses carry the rest.

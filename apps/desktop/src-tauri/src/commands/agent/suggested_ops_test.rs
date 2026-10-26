@@ -102,6 +102,91 @@ fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
     }
 }
 
+/// Read-time facts that say nothing beyond the destination state.
+fn facts(destination_state: DestinationState) -> GroupReadFacts {
+    GroupReadFacts {
+        destination_state,
+        destination_volume_name: None,
+        source_folder: None,
+        reversible: Reversibility::RestoreMove,
+    }
+}
+
+fn listed(id: &str, name: &str, supports_trash: bool) -> crate::volume_listing::LocationInfo {
+    crate::volume_listing::LocationInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        path: format!("/Volumes/{id}"),
+        category: crate::volume_listing::LocationCategory::AttachedVolume,
+        icon: None,
+        is_ejectable: false,
+        mount_is_read_only: false,
+        is_disk_image: false,
+        is_cloud_mount: false,
+        fs_type: None,
+        supports_trash,
+        connection_state: None,
+        pinned: None,
+        landing_path: None,
+        device_readiness: None,
+        usb_speed: None,
+        capabilities: None,
+        favorite_shortcut: None,
+        favorite_target: None,
+        root_label: None,
+        mount_account: None,
+    }
+}
+
+/// A trash group says "you can undo this" only when its source volume has a trash: on a NAS
+/// share without one, the files are gone for good, and the dialog must say so (#747).
+#[test]
+fn a_trash_group_promises_undo_only_on_a_volume_with_a_trash() {
+    let mut trash = group(1, 1, ProposalVerb::Trash).group;
+    trash.destination = None;
+    let volumes = [
+        listed("root", "Macintosh HD", true),
+        listed("smb-naspi", "naspi on 192.168.1.5", false),
+    ];
+
+    let on_root = read_facts(&trash, &volumes, DestinationState::NotApplicable, None);
+    trash.source_volume_id = "smb-naspi".into();
+    let on_share = read_facts(&trash, &volumes, DestinationState::NotApplicable, None);
+    trash.source_volume_id = "nothing-lists-this".into();
+    let on_unlisted = read_facts(&trash, &volumes, DestinationState::NotApplicable, None);
+
+    assert_eq!(on_root.reversible, Reversibility::RestoreMove);
+    assert_eq!(on_share.reversible, Reversibility::Irreversible);
+    assert_eq!(
+        on_unlisted.reversible,
+        Reversibility::Irreversible,
+        "unknown earns no promise"
+    );
+}
+
+/// The header names the destination's volume as the switcher does, falling back to the source
+/// volume for a rename (whose parent lives there), and names nothing for trash.
+#[test]
+fn the_destination_volume_is_named_as_the_switcher_names_it() {
+    let volumes = [
+        listed("root", "Macintosh HD", true),
+        listed("smb-naspi", "naspi on 192.168.1.5", false),
+    ];
+    let mut moving = group(1, 1, ProposalVerb::Move).group;
+    moving.destination_volume_id = Some("smb-naspi".into());
+    let mut renaming = group(2, 1, ProposalVerb::Rename).group;
+    renaming.destination_volume_id = None;
+    let mut trashing = group(3, 1, ProposalVerb::Trash).group;
+    trashing.destination = None;
+
+    let name = |group: &ProposalGroup| {
+        read_facts(group, &volumes, DestinationState::NotApplicable, None).destination_volume_name
+    };
+    assert_eq!(name(&moving).as_deref(), Some("naspi on 192.168.1.5"));
+    assert_eq!(name(&renaming).as_deref(), Some("Macintosh HD"));
+    assert_eq!(name(&trashing), None);
+}
+
 fn sweep(id: i64) -> ProposalSweep {
     ProposalSweep {
         id,
@@ -117,7 +202,15 @@ fn sweep(id: i64) -> ProposalSweep {
 /// which is the failure this whole surface exists to prevent.
 #[test]
 fn a_group_view_carries_every_fact_the_user_judges_it_by() {
-    let view = to_group_view(group(7, 2, ProposalVerb::Move), DestinationState::WillBeCreated);
+    let view = to_group_view(
+        group(7, 2, ProposalVerb::Move),
+        GroupReadFacts {
+            destination_state: DestinationState::WillBeCreated,
+            destination_volume_name: Some("Macintosh HD".into()),
+            source_folder: Some("/Users/someone/Downloads".into()),
+            reversible: Reversibility::RestoreMove,
+        },
+    );
 
     assert_eq!(view.group_id, 7);
     assert_eq!(view.sweep_id, 2);
@@ -127,6 +220,8 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
     assert_eq!(view.rationale.as_deref(), Some("They all look like invoices."));
     assert_eq!(view.source_volume_id, "root");
     assert_eq!(view.destination.as_deref(), Some("/Users/someone/Documents/Invoices"));
+    assert_eq!(view.destination_volume_name.as_deref(), Some("Macintosh HD"));
+    assert_eq!(view.source_folder.as_deref(), Some("/Users/someone/Downloads"));
     assert_eq!(view.reversible, Reversibility::RestoreMove);
     assert_eq!(view.destination_state, DestinationState::WillBeCreated);
     assert_eq!(view.live_op_count, 5);
@@ -141,7 +236,7 @@ fn a_selector_built_group_reports_its_provenance() {
     let mut summary = group(1, 1, ProposalVerb::Trash);
     summary.group.selector = Some("{\"root\":\"~/Downloads\"}".into());
 
-    assert!(to_group_view(summary, DestinationState::NotApplicable).from_selector);
+    assert!(to_group_view(summary, facts(DestinationState::NotApplicable)).from_selector);
 }
 
 /// An index that held nothing must stay absent all the way to the row. A zero would render
@@ -274,15 +369,21 @@ async fn a_destination_whose_volume_refuses_the_check_is_unknown() {
 fn groups_fold_under_the_sweep_that_produced_them() {
     let rows = vec![
         (
-            to_group_view(group(1, 10, ProposalVerb::Move), DestinationState::Exists),
+            to_group_view(group(1, 10, ProposalVerb::Move), facts(DestinationState::Exists)),
             Some(sweep(10)),
         ),
         (
-            to_group_view(group(2, 10, ProposalVerb::Trash), DestinationState::NotApplicable),
+            to_group_view(
+                group(2, 10, ProposalVerb::Trash),
+                facts(DestinationState::NotApplicable),
+            ),
             Some(sweep(10)),
         ),
         (
-            to_group_view(group(3, 11, ProposalVerb::Delete), DestinationState::NotApplicable),
+            to_group_view(
+                group(3, 11, ProposalVerb::Delete),
+                facts(DestinationState::NotApplicable),
+            ),
             Some(sweep(11)),
         ),
     ];
@@ -303,7 +404,7 @@ fn groups_fold_under_the_sweep_that_produced_them() {
 #[test]
 fn groups_whose_sweep_row_is_missing_are_still_shown() {
     let rows = vec![(
-        to_group_view(group(1, 42, ProposalVerb::Move), DestinationState::Exists),
+        to_group_view(group(1, 42, ProposalVerb::Move), facts(DestinationState::Exists)),
         None,
     )];
 

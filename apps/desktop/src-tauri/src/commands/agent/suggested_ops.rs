@@ -28,8 +28,10 @@ use super::{now_secs, with_read_connection};
 use crate::agent::store::proposals::{AcceptanceOutcome, ClaimRefusal};
 use crate::agent::store::proposals::{
     GroupSummary, ProposalGroup, ProposalOp, ProposalSweep, count_ops, get_sweep, list_groups, page_ops,
+    shared_source_parent,
 };
 use crate::agent::suggested_ops::bridge::{ApprovalOutcome, ApprovalRefusal};
+use crate::agent::suggested_ops::facts::reversibility_on_source;
 use crate::agent::types::{OpStatus, ProposalStatus, ProposalVerb, Reversibility};
 use crate::file_system::volume::VolumeError;
 use cmdr_operations::{RenameStartError, WriteOperationError};
@@ -107,8 +109,15 @@ pub struct SuggestedGroupView {
     /// The shared destination folder, the rename parent, or the archive path. `None` for trash
     /// and delete, which bind no target at all.
     pub destination: Option<String>,
-    /// How far an approved group could be taken back. A fact to DISCLOSE; per the guiding
-    /// principle it is never a reason to refuse a group.
+    /// What the switcher calls the volume `destination` is on ("naspi on 192.168.1.5",
+    /// "Macintosh HD"). `None` when there's no destination, or no listed volume has that id.
+    pub destination_volume_name: Option<String>,
+    /// The folder every op sits directly in, so the dialog can name it once instead of on every
+    /// row. `None` when the ops span folders.
+    pub source_folder: Option<String>,
+    /// How far an approved group could be taken back, worked out NOW from the source volume's
+    /// real capabilities (a trash group on a volume with no trash can't be undone). A fact to
+    /// DISCLOSE; per the guiding principle it is never a reason to refuse a group.
     pub reversible: Reversibility,
     /// Whether that destination is already there, and so whether approving creates it.
     pub destination_state: DestinationState,
@@ -180,7 +189,9 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
         let mut out = Vec::with_capacity(groups.len());
         for summary in groups {
             let sweep = get_sweep(conn, summary.group.set_id)?;
-            out.push((summary, sweep));
+            // Streams the group's paths, stopping at the first one in another folder.
+            let source_folder = shared_source_parent(conn, summary.group.id)?;
+            out.push((summary, sweep, source_folder));
         }
         Ok(out)
     })
@@ -189,15 +200,72 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
 
     // The destination checks touch the filesystem, so they run OUTSIDE the database read, all
     // at once, each under its own deadline: one unresponsive mount costs one row's certainty
-    // and the list one budget, never N of them back to back.
-    let states =
-        futures_util::future::join_all(summaries.iter().map(|(summary, _)| destination_state(&summary.group))).await;
+    // and the list one budget, never N of them back to back. Beside them, the published volume
+    // list answers what each volume is called and whether it has a trash, from the same
+    // pipeline the switcher draws, so the dialog and the switcher can't disagree.
+    let (states, (volumes, _discovery_short)) = tokio::join!(
+        futures_util::future::join_all(
+            summaries
+                .iter()
+                .map(|(summary, _, _)| destination_state(&summary.group))
+        ),
+        crate::volume_listing::list_with_timeout(VOLUME_LISTING_TIMEOUT),
+    );
     let rows = summaries
         .into_iter()
         .zip(states)
-        .map(|((summary, sweep), state)| (to_group_view(summary, state), sweep))
+        .map(|((summary, sweep, source_folder), destination_state)| {
+            let facts = read_facts(&summary.group, &volumes, destination_state, source_folder);
+            (to_group_view(summary, facts), sweep)
+        })
         .collect();
     Ok(group_into_sweeps(rows))
+}
+
+/// How long the list waits for the published volume list. On a miss the names stay `None` and
+/// a trash group promises no undo, both of which say less rather than something wrong.
+const VOLUME_LISTING_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// What Cmdr itself knows about a group at read time, beside what the store froze.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GroupReadFacts {
+    destination_state: DestinationState,
+    destination_volume_name: Option<String>,
+    source_folder: Option<String>,
+    reversible: Reversibility,
+}
+
+/// Fold the published volume list into a group's facts. Pure over its inputs, so the per-volume
+/// rules are pinned by tests rather than by a running discovery.
+fn read_facts(
+    group: &ProposalGroup,
+    volumes: &[crate::volume_listing::LocationInfo],
+    destination_state: DestinationState,
+    source_folder: Option<String>,
+) -> GroupReadFacts {
+    let listed = |id: &str| volumes.iter().find(|volume| volume.id == id);
+    let destination_volume_name = group.destination.as_ref().and_then(|_| {
+        let id = group
+            .destination_volume_id
+            .as_deref()
+            .unwrap_or(group.source_volume_id.as_str());
+        listed(id).map(|volume| volume.name.clone())
+    });
+    let source_has_trash = listed(&group.source_volume_id).map(|volume| volume.supports_trash);
+    if group.verb == ProposalVerb::Trash && source_has_trash.is_none() {
+        log::debug!(
+            target: "agent::suggested_ops",
+            "group {}: no listed volume is {}, so the trash can't promise undo",
+            group.id,
+            group.source_volume_id
+        );
+    }
+    GroupReadFacts {
+        destination_state,
+        destination_volume_name,
+        source_folder,
+        reversible: reversibility_on_source(group.verb, group.reversible, source_has_trash),
+    }
 }
 
 /// One page of a group's ops, in `seq` order.
@@ -307,7 +375,7 @@ fn destination_check_applies(verb: ProposalVerb) -> bool {
     matches!(verb, ProposalVerb::Move | ProposalVerb::Copy | ProposalVerb::Extract)
 }
 
-fn to_group_view(summary: GroupSummary, destination_state: DestinationState) -> SuggestedGroupView {
+fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroupView {
     let group = summary.group;
     SuggestedGroupView {
         group_id: group.id,
@@ -318,8 +386,10 @@ fn to_group_view(summary: GroupSummary, destination_state: DestinationState) -> 
         rationale: group.rationale,
         source_volume_id: group.source_volume_id,
         destination: group.destination,
-        reversible: group.reversible,
-        destination_state,
+        destination_volume_name: facts.destination_volume_name,
+        source_folder: facts.source_folder,
+        reversible: facts.reversible,
+        destination_state: facts.destination_state,
         live_op_count: summary.live_op_count,
         total_op_count: summary.total_op_count,
         from_selector: group.selector.is_some(),

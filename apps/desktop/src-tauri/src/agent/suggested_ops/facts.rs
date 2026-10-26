@@ -156,26 +156,6 @@ pub fn reversibility_on_source(
     }
 }
 
-/// The folder every path sits directly in, or `None` when they don't all share one.
-///
-/// Streams: it holds one path at a time, so a 60 000-op group costs a pass, not a load.
-pub fn shared_parent<I, S>(paths: I) -> Option<String>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
-{
-    let mut shared: Option<String> = None;
-    for path in paths {
-        let parent = Path::new(path.as_ref()).parent()?.to_str()?;
-        match &shared {
-            None => shared = Some(parent.to_string()),
-            Some(seen) if seen == parent => {}
-            Some(_) => return None,
-        }
-    }
-    shared
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,24 +193,6 @@ mod tests {
             assert_eq!(reversibility_on_source(verb, stored, Some(false)), stored, "{verb:?}");
             assert_eq!(reversibility_on_source(verb, stored, None), stored, "{verb:?}");
         }
-    }
-
-    #[test]
-    fn a_shared_parent_is_named_only_when_every_path_has_it() {
-        assert_eq!(
-            shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Downloads/b.zip"]).as_deref(),
-            Some("/Users/someone/Downloads")
-        );
-        assert_eq!(
-            shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Desktop/b.zip"]),
-            None
-        );
-        assert_eq!(
-            shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Downloads/sub/b.zip"]),
-            None,
-            "a file one level down sits in a different folder"
-        );
-        assert_eq!(shared_parent(Vec::<String>::new()), None);
     }
 
     /// Present files carry their facts, a missing one says so, and a stat the volume couldn't

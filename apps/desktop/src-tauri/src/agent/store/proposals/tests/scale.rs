@@ -80,3 +80,37 @@ fn a_huge_group_pages_in_seq_order_without_gaps() {
     assert_eq!(last[49].seq, (HUGE - 1) as i64);
     assert!(first.iter().all(|op| op.status == OpStatus::Pending));
 }
+
+/// The review names a group's source folder once, so the store answers it by streaming the
+/// paths: 60 000 ops in one folder name it, and one op elsewhere (the very last) un-names it.
+#[test]
+fn the_shared_source_folder_streams_and_one_op_elsewhere_undoes_it() {
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, HUGE);
+    let before = read::tests_support::page_ops_calls();
+
+    assert_eq!(
+        shared_source_parent(&conn, group_id).expect("read").as_deref(),
+        Some("/Users/someone/Downloads")
+    );
+    assert_eq!(read::tests_support::page_ops_calls(), before, "it streams, never pages");
+
+    conn.execute(
+        "UPDATE proposal_ops SET source_path = '/Users/someone/Downloads/sub/late.dmg'
+         WHERE group_id = ?1 AND seq = ?2",
+        rusqlite::params![group_id, (HUGE - 1) as i64],
+    )
+    .expect("move the last op one folder down");
+    assert_eq!(
+        shared_source_parent(&conn, group_id).expect("read"),
+        None,
+        "a file one level down sits in a different folder"
+    );
+}
+
+/// A group with no ops has no folder to name.
+#[test]
+fn a_group_with_no_ops_has_no_shared_source_folder() {
+    let conn = migrated_conn();
+    assert_eq!(shared_source_parent(&conn, 9_999).expect("read"), None);
+}

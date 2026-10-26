@@ -202,6 +202,35 @@ pub fn page_ops(conn: &Connection, group_id: i64, limit: u32, offset: u32) -> Re
     Ok(out)
 }
 
+/// The folder every op of the group sits directly in, or `None` when they don't all share one
+/// (or the group has no ops).
+///
+/// STREAMS, one path in memory at a time, and stops at the first op in another folder: the
+/// review names the source folder once per group, and a group of 60 000 must not be loaded to
+/// do it. Every row counts, deselected ones too, because they're part of what was offered.
+pub fn shared_source_parent(conn: &Connection, group_id: i64) -> Result<Option<String>, AgentStoreError> {
+    let mut stmt = conn.prepare_cached("SELECT source_path FROM proposal_ops WHERE group_id = ?1 ORDER BY seq")?;
+    let mut rows = stmt.query(params![group_id])?;
+    let mut shared: Option<String> = None;
+    while let Some(row) = rows.next()? {
+        let path: String = row.get(0)?;
+        let Some(parent) = parent_of(&path) else {
+            return Ok(None);
+        };
+        match &shared {
+            None => shared = Some(parent.to_string()),
+            Some(seen) if seen == parent => {}
+            Some(_) => return Ok(None),
+        }
+    }
+    Ok(shared)
+}
+
+/// The folder `path` sits directly in. `None` for a root, which sits in nothing.
+fn parent_of(path: &str) -> Option<&str> {
+    std::path::Path::new(path).parent()?.to_str()
+}
+
 fn map_group_row(row: &rusqlite::Row<'_>) -> Result<ProposalGroup, AgentStoreError> {
     Ok(ProposalGroup {
         id: row.get(0)?,
