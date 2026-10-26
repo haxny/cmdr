@@ -460,6 +460,17 @@ mod tests {
     }
 
     #[test]
+    fn prompt_asks_for_a_sentence_before_each_batch_of_tool_calls() {
+        // The rail shows a turn's narration between the tool lines it explains. Without this
+        // ask, a live Sonnet narrated nothing, and a softer "before a batch" wording didn't
+        // move it either (`agent/prompts/DETAILS.md`).
+        assert!(
+            SYSTEM_PROMPT.contains("Every time you call tools, first write one short sentence"),
+            "must ask the model to say what it's checking before it calls tools"
+        );
+    }
+
+    #[test]
     fn prompt_forbids_the_error_and_failed_words() {
         // The prompt instructs the model to avoid "error"/"failed"; it may quote the
         // words while forbidding them, but must not use them as its own voice. We
