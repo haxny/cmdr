@@ -2,14 +2,16 @@
 //! an edit removed, and keeps the file's own values for an extra both have.
 
 use std::collections::BTreeMap;
+use std::fs;
 use std::path::Path;
 
 use lofty::id3::v2::Id3v2Tag;
 use lofty::mp4::{AtomIdent, Ilst};
 use lofty::ogg::tag::VorbisComments;
 
-use crate::model::FileTags;
+use crate::model::{FileTags, TagError};
 use crate::test_files::*;
+use crate::write::write_tags;
 use crate::write_test::{
     MUSIC, every_field, freeform_data, raw_flac, raw_id3, raw_ilst, read, strings, txxx_descriptions, utf8, write,
 };
@@ -137,17 +139,89 @@ fn extra_in_the_file_and_in_tags_stays_as_the_file_has_it() {
 }
 
 #[test]
-fn extra_named_like_a_managed_key_is_not_written() {
+fn an_extra_the_write_cannot_add_fails_the_write_naming_it() {
     let dir = tempfile::tempdir().unwrap();
     let mp3 = write_untagged_mp3(dir.path(), "a.mp3");
     let m4a = write_m4a(dir.path(), "a.m4a", &Ilst::new());
     let flac = write_flac(dir.path(), "a.flac", VorbisComments::new(), 0);
-    for (path, key) in [(&mp3, "performer"), (&m4a, "Performer"), (&flac, "PERFORMER")] {
+    for (path, key) in [
+        (&mp3, "performer"),
+        (&m4a, "Performer"),
+        (&flac, "PERFORMER"),
+        (&flac, "TRACKTOTAL"),
+    ] {
+        let before = fs::read(path).unwrap();
         let tags = FileTags {
             extras: extras_of(&[(key, &["Cizi"])]),
             ..every_field()
         };
-        write(path, &tags, &MUSIC);
-        assert_eq!(read(path), every_field(), "{path:?}");
+        assert_eq!(
+            write_tags(path, &tags, &MUSIC),
+            Err(TagError::UnwritableExtra(key.to_owned())),
+            "{path:?}"
+        );
+        assert_eq!(fs::read(path).unwrap(), before, "{path:?}: untouched");
     }
+}
+
+#[test]
+fn a_removed_foreign_mean_extra_with_a_managed_name_cannot_come_back() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    freeform(&mut ilst, "org.example", "PERFORMER", &["Cizi"]);
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+    let original = read(&path);
+    assert_eq!(original.extras, extras_of(&[("PERFORMER", &["Cizi"])]));
+    write(
+        &path,
+        &FileTags {
+            extras: BTreeMap::new(),
+            ..original.clone()
+        },
+        &MUSIC,
+    );
+
+    let result = write_tags(&path, &original, &MUSIC);
+
+    assert_eq!(result, Err(TagError::UnwritableExtra("PERFORMER".to_owned())));
+}
+
+#[test]
+fn vorbis_extra_keys_are_uppercased() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut comments = VorbisComments::new();
+    comments.push("KEEP".to_owned(), "soubor".to_owned());
+    let path = write_flac(dir.path(), "a.flac", comments, 0);
+    let tags = FileTags {
+        extras: extras_of(&[("keep", &["jine"]), ("mood", &["klidna"])]),
+        ..every_field()
+    };
+
+    write(&path, &tags, &MUSIC);
+
+    assert_eq!(
+        read(&path).extras,
+        extras_of(&[("KEEP", &["soubor"]), ("MOOD", &["klidna"])])
+    );
+}
+
+#[test]
+fn id3_extra_in_another_letter_case_renames_the_frame() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    txxx(&mut tag, "Mood", "klidna");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+    let tags = FileTags {
+        extras: extras_of(&[("MOOD", &["klidna"])]),
+        ..read(&path)
+    };
+
+    write(&path, &tags, &MUSIC);
+
+    assert_eq!(
+        txxx_descriptions(&raw_id3(&path)),
+        strings(&["MOOD"]),
+        "renamed, not doubled"
+    );
+    assert_eq!(read(&path).extras, extras_of(&[("MOOD", &["klidna"])]));
 }

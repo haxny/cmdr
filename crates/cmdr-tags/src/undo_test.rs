@@ -7,11 +7,13 @@ use std::path::{Path, PathBuf};
 use lofty::id3::v2::Id3v2Tag;
 use lofty::mp4::Ilst;
 use lofty::ogg::tag::VorbisComments;
+use lofty::tag::Accessor;
 
 use crate::model::{FileTags, TagError, TagField};
+use crate::read::{RawTags, read_raw};
 use crate::test_files::*;
 use crate::undo::{ApplyId, RestoreReport, UndoLimits, UndoStore};
-use crate::write_test::{MUSIC, jpeg, listing, read, strings, write};
+use crate::write_test::{BOOK, MUSIC, jpeg, listing, read, strings, write};
 
 const ROOMY: UndoLimits = UndoLimits {
     max_applies: 50,
@@ -82,6 +84,11 @@ fn restore_puts_the_snapshot_back_cover_and_removed_extra_included() {
     );
     for (path, tags) in &before {
         assert_eq!(read(path), *tags, "{path:?}");
+        assert_eq!(
+            read_raw(path).unwrap(),
+            RawTags::default(),
+            "{path:?}: no totals appear"
+        );
     }
 }
 
@@ -89,26 +96,49 @@ fn restore_puts_the_snapshot_back_cover_and_removed_extra_included() {
 fn record_keeps_covers_beside_the_manifest_not_in_it() {
     let files = tempfile::tempdir().unwrap();
     let root = tempfile::tempdir().unwrap();
-    let paths = tagged_files(files.path());
+    let path = write_flac(files.path(), "a.flac", VorbisComments::new(), 10_000);
+    let cover = read(&path).cover.unwrap().data;
+    assert_eq!(cover.len(), 10_000);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
 
-    store.record(&id("op-1"), &snapshot(&paths)).unwrap();
+    store.record(&id("op-1"), &snapshot(&[path])).unwrap();
 
     let apply = root.path().join("op-1");
-    assert_eq!(
-        listing(&apply),
-        strings(&["0.cover", "1.cover", "2.cover", "manifest.json"])
-    );
-    assert_eq!(
-        fs::read(apply.join("0.cover")).unwrap(),
-        read(&paths[0]).cover.unwrap().data
-    );
+    assert_eq!(listing(&apply), strings(&["0.cover", "manifest.json"]));
+    assert_eq!(fs::read(apply.join("0.cover")).unwrap(), cover);
     let manifest = fs::read(apply.join("manifest.json")).unwrap();
-    assert!(
-        manifest.len() < 2000,
-        "no cover bytes in the manifest ({} bytes)",
-        manifest.len()
+    assert!(manifest.len() < 1000, "{} bytes", manifest.len());
+    let json: serde_json::Value = serde_json::from_slice(&manifest).unwrap();
+    assert_eq!(
+        json["entries"][0]["cover"],
+        serde_json::json!({"file": "0.cover", "mime": "image/jpeg"})
     );
+}
+
+#[test]
+fn entries_with_the_same_cover_share_one_file() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let paths: Vec<PathBuf> = (1..=3)
+        .map(|n| write_flac(files.path(), &format!("{n}.flac"), VorbisComments::new(), 5_000))
+        .collect();
+    let before = snapshot(&paths);
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+
+    store.record(&id("op-1"), &before).unwrap();
+    for path in &paths {
+        change(path);
+    }
+    let report = store.restore(&id("op-1"), &MUSIC).unwrap();
+
+    assert_eq!(
+        listing(&root.path().join("op-1")),
+        strings(&["0.cover", "manifest.json"])
+    );
+    assert_eq!(report.restored, paths);
+    for (path, tags) in &before {
+        assert_eq!(read(path), *tags);
+    }
 }
 
 #[test]
@@ -377,4 +407,164 @@ fn an_id_must_be_one_safe_path_component() {
     }
     assert_eq!(listing(root.path()), strings(&["undo"]));
     assert!(listing(&root.path().join("undo")).is_empty());
+}
+
+#[test]
+fn restore_brings_back_track_and_disc_totals() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TRCK", "3/12");
+    text_frame(&mut tag, "TPOS", "1/2");
+    let mp3 = write_mp3(files.path(), "a.mp3", &tag);
+    let mut ilst = Ilst::new();
+    ilst.set_track(3);
+    ilst.set_track_total(12);
+    ilst.set_disk(1);
+    ilst.set_disk_total(2);
+    let m4b = write_m4a(files.path(), "b.m4b", &ilst);
+    let mut comments = VorbisComments::new();
+    for (key, value) in [
+        ("TRACKNUMBER", "3"),
+        ("TRACKTOTAL", "12"),
+        ("DISCNUMBER", "1"),
+        ("DISCTOTAL", "2"),
+    ] {
+        comments.push(key.to_owned(), value.to_owned());
+    }
+    let flac = write_flac(files.path(), "c.flac", comments, 0);
+    let paths = vec![mp3, m4b, flac];
+    let totals = RawTags {
+        track_total: Some(12),
+        disc_total: Some(2),
+        conductor: None,
+    };
+    let before = snapshot(&paths);
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    store.record(&id("op-1"), &before).unwrap();
+    for path in &paths {
+        assert_eq!(read_raw(path).unwrap(), totals, "{path:?}");
+        write(path, &read(path), &MUSIC);
+        assert_eq!(
+            read_raw(path).unwrap(),
+            RawTags::default(),
+            "{path:?}: the apply dropped the totals"
+        );
+    }
+
+    let report = store.restore(&id("op-1"), &MUSIC).unwrap();
+
+    assert_eq!(report.restored, paths);
+    for (path, tags) in &before {
+        assert_eq!(read(path), *tags, "{path:?}");
+        assert_eq!(read_raw(path).unwrap(), totals, "{path:?}");
+    }
+}
+
+#[test]
+fn restore_after_an_audiobook_apply_brings_back_composer_and_conductor() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TCOM", "Skladatel");
+    text_frame(&mut tag, "TPE3", "Dirigent");
+    let mp3 = write_mp3(files.path(), "a.mp3", &tag);
+    let mut ilst = Ilst::new();
+    fourcc_text(&mut ilst, *b"\xA9wrt", "Skladatel");
+    let m4b = write_m4a(files.path(), "b.m4b", &ilst);
+    let mut comments = VorbisComments::new();
+    comments.push("COMPOSER".to_owned(), "Skladatel".to_owned());
+    let flac = write_flac(files.path(), "c.flac", comments, 0);
+    let paths = vec![mp3.clone(), m4b, flac];
+    let before = snapshot(&paths);
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    store.record(&id("op-1"), &before).unwrap();
+    for path in &paths {
+        write(path, &read(path), &BOOK);
+        assert!(!read(path).fields.contains_key(&TagField::Composer), "{path:?}");
+    }
+    assert_eq!(read_raw(&mp3).unwrap().conductor, None);
+
+    // The caller's kind doesn't matter: a snapshot goes back as it was.
+    let report = store.restore(&id("op-1"), &BOOK).unwrap();
+
+    assert_eq!(report.restored, paths);
+    for (path, tags) in &before {
+        assert_eq!(read(path), *tags, "{path:?}");
+    }
+    assert_eq!(read_raw(&mp3).unwrap().conductor.as_deref(), Some("Dirigent"));
+}
+
+#[test]
+fn an_extra_that_cannot_come_back_fails_the_file() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    freeform(&mut ilst, "org.example", "PERFORMER", &["Cizi"]);
+    let path = write_m4a(files.path(), "a.m4a", &ilst);
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    store
+        .record(&id("op-1"), &snapshot(std::slice::from_ref(&path)))
+        .unwrap();
+    change(&path);
+
+    let report = store.restore(&id("op-1"), &MUSIC).unwrap();
+
+    assert_eq!(
+        report,
+        RestoreReport {
+            failed: vec![(path, TagError::UnwritableExtra("PERFORMER".to_owned()))],
+            ..RestoreReport::default()
+        }
+    );
+}
+
+#[test]
+fn open_removes_a_leftover_staging_record_and_only_the_store_s_temp_files() {
+    let root = tempfile::tempdir().unwrap();
+    let staging = root.path().join(".op-1.staging");
+    fs::create_dir(&staging).unwrap();
+    fs::write(staging.join("manifest.json"), b"{}").unwrap();
+    let apply = root.path().join("op-2");
+    fs::create_dir(&apply).unwrap();
+    for name in [
+        "manifest.json.aB3x9Z.tmp",
+        "0.cover.Qr7tY2.tmp",
+        "1.cover.tmp",
+        "notes.tmp",
+        "x.cover.a.b.tmp",
+    ] {
+        fs::write(apply.join(name), b"").unwrap();
+    }
+    let elsewhere = root.path().join("keep.tmp");
+    fs::write(&elsewhere, b"").unwrap();
+
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+
+    assert!(!staging.exists());
+    assert_eq!(listing(&apply), strings(&["notes.tmp", "x.cover.a.b.tmp"]));
+    assert!(elsewhere.exists());
+    let err = store.restore(&id("op-1"), &MUSIC).unwrap_err();
+    assert!(matches!(err, TagError::Io(ErrorKind::NotFound, _)), "{err:?}");
+}
+
+#[test]
+fn a_staging_record_is_neither_an_apply_nor_counted() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let paths = tagged_files(files.path());
+    let limits = UndoLimits {
+        max_applies: 1,
+        max_bytes: u64::MAX,
+    };
+    let store = UndoStore::open(root.path().to_path_buf(), limits).unwrap();
+    store.record(&id("op-a"), &snapshot(&paths[2..])).unwrap();
+    // A record another call is still building.
+    let staging = root.path().join(".op-z.staging");
+    fs::create_dir(&staging).unwrap();
+    fs::copy(root.path().join("op-a/manifest.json"), staging.join("manifest.json")).unwrap();
+
+    store.record(&id("op-b"), &snapshot(&paths[2..])).unwrap();
+
+    assert_eq!(listing(root.path()), strings(&[".op-z.staging", "op-b"]));
 }

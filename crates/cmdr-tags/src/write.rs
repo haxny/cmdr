@@ -31,11 +31,12 @@ use lofty::tag::items::Timestamp;
 use crate::format::AudioFormat;
 use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::{
-    FREEFORM_FIELDS, ITUNES_MEAN, JOIN, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS, cover_position,
-    format_of_path, fourcc_field, frame_field, freeform_field, id3_pictures, parse_error, parse_options, read_from,
-    read_id3, read_ilst, read_vorbis, txxx_field, vorbis_field,
+    FREEFORM_FIELDS, ITUNES_MEAN, JOIN, RawTags, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS,
+    cover_position, format_of_path, fourcc_field, frame_field, freeform_field, id3_pictures, parse_error,
+    parse_options, raw_id3, read_from, read_id3, read_ilst, read_raw_from, read_vorbis, txxx_field,
 };
 use crate::save::save_safely;
+use crate::write_extras::{added_extras, dropped_extras, upper_extra_keys};
 
 /// How a write maps fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,6 +46,9 @@ pub struct WriteOptions {
     /// The number of tracks, when the caller knows it: the track is then written `N/Total`
     /// (MP3), with `trkn`'s total (M4A), or with a `TRACKTOTAL` key (Vorbis); otherwise plain.
     pub track_total: Option<u32>,
+    /// The number of discs, when the caller knows it: the disc is then written `N/Total`
+    /// (MP3), with `disk`'s total (M4A), or with a `DISCTOTAL` key (Vorbis); otherwise plain.
+    pub disc_total: Option<u32>,
     /// Whether an MP3 write may drop the ID3v2.4-only frames ID3v2.3 has no place for
     /// (`TSOP`, `RVA2`, ...). When false, such a write fails with [`TagError::WouldDrop`],
     /// naming them, and the file stays as it was.
@@ -56,14 +60,51 @@ pub struct WriteOptions {
 /// `tags.cover` as the cover (`None` removes it; other pictures stay), and the extras
 /// `tags.extras` has a key for: one the file has is left as the file has it, one it lacks is
 /// added (ID3 `TXXX`, MP4 freeform under the iTunes mean, a Vorbis key; so an undo can put
-/// back an extra an edit removed), and one absent from `tags.extras` is removed. An extra
-/// named like a managed key is never added. Everything else in the file is untouched.
+/// back an extra an edit removed), and one absent from `tags.extras` is removed. Everything
+/// else in the file is untouched.
+///
+/// An extra the file lacks that can't be added (named like a managed key, say) fails the
+/// write as [`TagError::UnwritableExtra`].
 ///
 /// The file is parsed strictly first (an item lofty can't decode refuses the write as
 /// [`TagError::Parse`] rather than vanishing from the saved file), and the saved copy must
 /// read back as exactly the intended tags before it replaces the original.
 pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(), TagError> {
+    write_with(path, tags, opts, None)
+}
+
+/// Writes a snapshot back as it was: `tags`, the totals in `raw`, and on MP3 the conductor
+/// (`TPE3`) when `raw` has one, as music so a composer and a conductor stay. The undo store's
+/// write.
+pub(crate) fn restore_tags(
+    path: &Path,
+    tags: &FileTags,
+    raw: &RawTags,
+    allow_frame_loss: bool,
+) -> Result<(), TagError> {
+    let opts = WriteOptions {
+        kind: ContentKind::Music,
+        track_total: raw.track_total,
+        disc_total: raw.disc_total,
+        allow_frame_loss,
+    };
+    write_with(path, tags, &opts, raw.conductor.as_deref())
+}
+
+/// [`write_tags`], plus a `TPE3` to write on MP3 (`None` leaves the file's, or for an
+/// audiobook removes it).
+fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Option<&str>) -> Result<(), TagError> {
     let format = format_of_path(path)?;
+    // A zero total is no total: MP4 stores none as zero.
+    let opts = &WriteOptions {
+        track_total: opts.track_total.filter(|t| *t > 0),
+        disc_total: opts.disc_total.filter(|t| *t > 0),
+        ..*opts
+    };
+    let tags = &match format {
+        AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => upper_extra_keys(tags),
+        AudioFormat::Mp3 | AudioFormat::Mp4 => tags.clone(),
+    };
     let values = values_to_write(tags, opts.kind);
     let mut source = File::open(path)?;
     let parse = write_parse_options(format);
@@ -76,10 +117,16 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
             }
             let mut id3 = file.id3v2().cloned().unwrap_or_default();
             let current = read_id3(&id3);
-            write_id3(&mut id3, &current, tags, &values, opts)?;
+            let conductor = match (conductor, opts.kind) {
+                (Some(conductor), _) => Some(conductor.to_owned()),
+                (None, ContentKind::Audiobook) => None,
+                (None, ContentKind::Music) => raw_id3(&id3).conductor,
+            };
+            write_id3(&mut id3, &current, tags, &values, opts, conductor.as_deref())?;
             let expected = expected_tags(&current, tags, &values, format, &read_id3(&id3))?;
+            let raw = expected_raw(&values, opts, conductor);
             let v23 = LoftyWriteOptions::new().use_id3v23(true);
-            save_safely(path, |out| save(&id3, out, v23, format, &expected))
+            save_safely(path, |out| save(&id3, out, v23, format, &expected, &raw))
         }
         AudioFormat::Mp4 => {
             let file = Mp4File::read_from(&mut source, parse).map_err(parse_error)?;
@@ -87,7 +134,8 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
             let current = read_ilst(&ilst);
             write_ilst(&mut ilst, &current, tags, &values, opts)?;
             let expected = expected_tags(&current, tags, &values, format, &read_ilst(&ilst))?;
-            save_safely(path, |out| save(&ilst, out, defaults, format, &expected))
+            let raw = expected_raw(&values, opts, None);
+            save_safely(path, |out| save(&ilst, out, defaults, format, &expected, &raw))
         }
         AudioFormat::Flac => {
             let mut file = FlacFile::read_from(&mut source, parse).map_err(parse_error)?;
@@ -103,17 +151,20 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
                 }
             }
             let (comments, expected) = write_vorbis_family(&comments, tags, &values, opts, format)?;
-            save_safely(path, |out| save(&comments, out, defaults, format, &expected))
+            let raw = expected_raw(&values, opts, None);
+            save_safely(path, |out| save(&comments, out, defaults, format, &expected, &raw))
         }
         AudioFormat::OggVorbis => {
             let file = VorbisFile::read_from(&mut source, parse).map_err(parse_error)?;
             let (comments, expected) = write_vorbis_family(file.vorbis_comments(), tags, &values, opts, format)?;
-            save_safely(path, |out| save(&comments, out, defaults, format, &expected))
+            let raw = expected_raw(&values, opts, None);
+            save_safely(path, |out| save(&comments, out, defaults, format, &expected, &raw))
         }
         AudioFormat::Opus => {
             let file = OpusFile::read_from(&mut source, parse).map_err(parse_error)?;
             let (comments, expected) = write_vorbis_family(file.vorbis_comments(), tags, &values, opts, format)?;
-            save_safely(path, |out| save(&comments, out, defaults, format, &expected))
+            let raw = expected_raw(&values, opts, None);
+            save_safely(path, |out| save(&comments, out, defaults, format, &expected, &raw))
         }
     }
 }
@@ -210,7 +261,7 @@ fn expected_tags(
         .keys()
         .filter_map(|key| current.extras.get_key_value(key))
         .map(|(key, values)| (key.clone(), values.clone()))
-        .chain(added_extras(current, tags, format))
+        .chain(added_extras(current, tags, format)?)
         .collect();
     Ok(FileTags {
         fields,
@@ -219,42 +270,14 @@ fn expected_tags(
     })
 }
 
-/// The keys of the extras the file has (as the reader reports them) that `tags` dropped.
-fn dropped_extras(current: &FileTags, tags: &FileTags) -> BTreeSet<String> {
-    current
-        .extras
-        .keys()
-        .filter(|key| !tags.extras.contains_key(*key))
-        .cloned()
-        .collect()
-}
-
-/// The extras `tags` has that the file lacks, which the write adds: keys that aren't empty
-/// and that the reader of `format` wouldn't take for a managed field (or a Vorbis total),
-/// with their values trimmed and empties dropped, as the reader reports them.
-fn added_extras(current: &FileTags, tags: &FileTags, format: AudioFormat) -> Vec<(String, Vec<String>)> {
-    let managed = |key: &str| match format {
-        AudioFormat::Mp3 => txxx_field(key).is_some(),
-        AudioFormat::Mp4 => freeform_field(key).is_some(),
-        AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => {
-            let key = key.to_ascii_uppercase();
-            vorbis_field(&key).is_some() || VORBIS_TOTALS.contains(&key.as_str())
-        }
-    };
-    tags.extras
-        .iter()
-        .filter(|(key, _)| !key.is_empty() && !current.extras.contains_key(*key) && !managed(key))
-        .map(|(key, values)| {
-            let values: Vec<String> = values
-                .iter()
-                .map(|v| v.trim())
-                .filter(|v| !v.is_empty())
-                .map(str::to_owned)
-                .collect();
-            (key.clone(), values)
-        })
-        .filter(|(_, values)| !values.is_empty())
-        .collect()
+/// What the saved file's [`RawTags`] must be: each total when its number is written, and
+/// `conductor`.
+fn expected_raw(values: &Values, opts: &WriteOptions, conductor: Option<String>) -> RawTags {
+    RawTags {
+        track_total: opts.track_total.filter(|_| values.contains_key(&TagField::Track)),
+        disc_total: opts.disc_total.filter(|_| values.contains_key(&TagField::Disc)),
+        conductor,
+    }
 }
 
 /// A track or disc number as text: the number before any `/`, plus `/total` when known.
@@ -289,7 +312,7 @@ fn picture(cover: &Cover, kind: PictureType) -> Picture {
 }
 
 /// Saves `tag` into `out`, then reads `out` back as the writer parses and checks it holds
-/// `expected`. lofty has corrupted a container on save (0.25.4 truncates a FLAC whose
+/// `expected` and `raw`. lofty has corrupted a container on save (0.25.4 truncates a FLAC whose
 /// metadata runs to the end of the file when the metadata shrinks) and drops what it can't
 /// encode; a copy that doesn't parse or reads back differently never replaces the original.
 fn save<T: TagExt>(
@@ -298,15 +321,19 @@ fn save<T: TagExt>(
     options: LoftyWriteOptions,
     format: AudioFormat,
     expected: &FileTags,
+    raw: &RawTags,
 ) -> Result<(), TagError> {
     tag.save_to(out, options).map_err(write_error)?;
+    let unparseable = |e: TagError| TagError::Write(format!("the written file doesn't parse: {e}"));
     out.rewind()?;
-    let written = read_from(out, format, write_parse_options(format))
-        .map_err(|e| TagError::Write(format!("the written file doesn't parse: {e}")))?;
+    let written = read_from(out, format, write_parse_options(format)).map_err(unparseable)?;
+    out.rewind()?;
+    let written_raw = read_raw_from(out, format, write_parse_options(format)).map_err(unparseable)?;
     let differs: Vec<&str> = [
         ("fields", written.fields != expected.fields),
         ("cover", written.cover != expected.cover),
         ("extras", written.extras != expected.extras),
+        ("totals or conductor", written_raw != *raw),
     ]
     .into_iter()
     .filter_map(|(part, differs)| differs.then_some(part))
@@ -352,10 +379,11 @@ fn write_id3(
     tags: &FileTags,
     values: &Values,
     opts: &WriteOptions,
+    conductor: Option<&str>,
 ) -> Result<(), TagError> {
     let frames = values
         .iter()
-        .map(|(field, values)| id3_frame(*field, values, opts.track_total))
+        .map(|(field, values)| id3_frame(*field, values, opts))
         .collect::<Result<Vec<_>, _>>()?;
     let dropped = dropped_extras(current, tags);
     let cover_at = cover_position(id3_pictures(id3));
@@ -387,10 +415,11 @@ fn write_id3(
         _ => !is_managed_id3(frame, opts.kind),
     });
     // An extra's values go in one TXXX, null-separated, which the reader splits again.
-    let extras = added_extras(current, tags, AudioFormat::Mp3)
+    let extras = added_extras(current, tags, AudioFormat::Mp3)?
         .into_iter()
         .map(|(key, values)| Frame::UserText(ExtendedTextFrame::new(TextEncoding::UTF8, key, values.join("\0"))));
-    for frame in frames.into_iter().chain(extras).chain(new_cover) {
+    let conductor = conductor.map(|c| text_frame("TPE3", c.to_owned()));
+    for frame in frames.into_iter().chain(extras).chain(conductor).chain(new_cover) {
         id3.insert(frame);
     }
     refuse_frame_loss(id3, opts.allow_frame_loss)
@@ -418,15 +447,9 @@ fn refuse_frame_loss(id3: &Id3v2Tag, allowed: bool) -> Result<(), TagError> {
 
 /// The one frame `field` is written as. Text is UTF-8 here; lofty re-encodes it as UTF-16
 /// for ID3v2.3.
-fn id3_frame(field: TagField, values: &[String], track_total: Option<u32>) -> Result<Frame<'static>, TagError> {
+fn id3_frame(field: TagField, values: &[String], opts: &WriteOptions) -> Result<Frame<'static>, TagError> {
     let joined = values.join(JOIN);
-    let text = |id: &'static str, value: String| {
-        Frame::Text(TextInformationFrame::new(
-            FrameId::Valid(Cow::Borrowed(id)),
-            TextEncoding::UTF8,
-            value,
-        ))
-    };
+    let text = text_frame;
     Ok(match field {
         TagField::Title => text("TIT2", joined),
         TagField::Artist => text("TPE1", joined),
@@ -435,8 +458,8 @@ fn id3_frame(field: TagField, values: &[String], track_total: Option<u32>) -> Re
         TagField::Composer => text("TCOM", joined),
         TagField::Genre => text("TCON", joined),
         TagField::Publisher => text("TPUB", joined),
-        TagField::Track => text("TRCK", number_text(&joined, track_total)),
-        TagField::Disc => text("TPOS", number_text(&joined, None)),
+        TagField::Track => text("TRCK", number_text(&joined, opts.track_total)),
+        TagField::Disc => text("TPOS", number_text(&joined, opts.disc_total)),
         // A timestamp frame, which lofty splits into TYER (+ TDAT, TIME) for ID3v2.3.
         TagField::Date => Frame::Timestamp(TimestampFrame::new(
             FrameId::Valid(Cow::Borrowed("TDRC")),
@@ -456,6 +479,15 @@ fn id3_frame(field: TagField, values: &[String], track_total: Option<u32>) -> Re
             ))
         }
     })
+}
+
+/// A text information frame such as `TIT2`, in UTF-8 (lofty re-encodes it for ID3v2.3).
+fn text_frame(id: &'static str, value: String) -> Frame<'static> {
+    Frame::Text(TextInformationFrame::new(
+        FrameId::Valid(Cow::Borrowed(id)),
+        TextEncoding::UTF8,
+        value,
+    ))
 }
 
 /// A date lofty can write. lofty drops a date it can't parse from an ID3v2.3 tag without a
@@ -515,7 +547,7 @@ fn write_ilst(
     }
     let atoms = values
         .iter()
-        .map(|(field, values)| ilst_atoms(*field, values, opts.track_total))
+        .map(|(field, values)| ilst_atoms(*field, values, opts))
         .collect::<Result<Vec<_>, _>>()?;
     let dropped = dropped_extras(current, tags);
     ilst.retain(|atom| {
@@ -525,7 +557,7 @@ fn write_ilst(
     if tags.cover != current.cover {
         set_ilst_cover(ilst, tags.cover.as_ref());
     }
-    let extras = added_extras(current, tags, AudioFormat::Mp4)
+    let extras = added_extras(current, tags, AudioFormat::Mp4)?
         .into_iter()
         .filter_map(|(key, values)| freeform(Cow::Owned(key), &values));
     for atom in atoms.into_iter().flatten().chain(extras) {
@@ -567,7 +599,7 @@ fn set_ilst_cover(ilst: &mut Ilst, cover: Option<&Cover>) {
 
 /// The atoms `field` is written as. Genre goes in `©gen` (joined, for players that read
 /// only that) and in the freeform GENRE, one data entry per value.
-fn ilst_atoms(field: TagField, values: &[String], track_total: Option<u32>) -> Result<Vec<Atom<'static>>, TagError> {
+fn ilst_atoms(field: TagField, values: &[String], opts: &WriteOptions) -> Result<Vec<Atom<'static>>, TagError> {
     let text = |fourcc: [u8; 4]| Atom::new(AtomIdent::Fourcc(fourcc), AtomData::UTF8(values.join(JOIN)));
     Ok(match field {
         TagField::Title => vec![text(*b"\xA9nam")],
@@ -577,8 +609,8 @@ fn ilst_atoms(field: TagField, values: &[String], track_total: Option<u32>) -> R
         TagField::Composer => vec![text(*b"\xA9wrt")],
         TagField::Date => vec![text(*b"\xA9day")],
         TagField::Comment => vec![text(*b"\xA9cmt")],
-        TagField::Track => vec![number_atom(*b"trkn", &values.join(JOIN), track_total, 8)?],
-        TagField::Disc => vec![number_atom(*b"disk", &values.join(JOIN), None, 6)?],
+        TagField::Track => vec![number_atom(*b"trkn", &values.join(JOIN), opts.track_total, 8)?],
+        TagField::Disc => vec![number_atom(*b"disk", &values.join(JOIN), opts.disc_total, 6)?],
         TagField::Genre => std::iter::once(text(GEN))
             .chain(freeform_atom(field, values)?)
             .collect(),
@@ -635,7 +667,7 @@ fn write_vorbis_family(
 ) -> Result<(VorbisComments, FileTags), TagError> {
     let mut comments = comments.clone();
     let current = read_vorbis(&comments, comments.pictures().iter().map(|(p, _)| p));
-    write_vorbis(&mut comments, &current, tags, values, opts, format);
+    write_vorbis(&mut comments, &current, tags, values, opts, format)?;
     if tags.cover != current.cover {
         set_ogg_cover(&mut comments, tags.cover.as_ref())?;
     }
@@ -646,8 +678,8 @@ fn write_vorbis_family(
 
 /// Removes every managed key and total (in any letter case) and every dropped extra,
 /// keeping the other items in order, then writes the managed values, one item per value,
-/// `TRACKTOTAL` after the track when the caller knows the total, and the extras the file
-/// lacks, one item per value.
+/// `TRACKTOTAL` / `DISCTOTAL` after the track / disc when the caller knows the total, and
+/// the extras the file lacks, one item per value.
 fn write_vorbis(
     comments: &mut VorbisComments,
     current: &FileTags,
@@ -655,7 +687,8 @@ fn write_vorbis(
     values: &Values,
     opts: &WriteOptions,
     format: AudioFormat,
-) {
+) -> Result<(), TagError> {
+    let added = added_extras(current, tags, format)?;
     let dropped = dropped_extras(current, tags);
     let kept: Vec<(String, String)> = comments
         .take_items()
@@ -677,15 +710,21 @@ fn write_vorbis(
             };
             comments.push(key.to_owned(), value);
         }
-        if let (TagField::Track, Some(total)) = (field, opts.track_total) {
-            comments.push("TRACKTOTAL".to_owned(), total.to_string());
+        let total = match field {
+            TagField::Track => opts.track_total.map(|t| ("TRACKTOTAL", t)),
+            TagField::Disc => opts.disc_total.map(|t| ("DISCTOTAL", t)),
+            _ => None,
+        };
+        if let Some((key, total)) = total {
+            comments.push(key.to_owned(), total.to_string());
         }
     }
-    for (key, values) in added_extras(current, tags, format) {
+    for (key, values) in added {
         for value in values {
             comments.push(key.clone(), value);
         }
     }
+    Ok(())
 }
 
 /// Replaces (as a front cover) or removes the cover among `storage`'s pictures.

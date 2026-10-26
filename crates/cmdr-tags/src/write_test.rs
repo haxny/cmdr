@@ -29,9 +29,10 @@ use crate::write::{WriteOptions, write_tags};
 pub(crate) const MUSIC: WriteOptions = WriteOptions {
     kind: ContentKind::Music,
     track_total: None,
+    disc_total: None,
     allow_frame_loss: false,
 };
-const BOOK: WriteOptions = WriteOptions {
+pub(crate) const BOOK: WriteOptions = WriteOptions {
     kind: ContentKind::Audiobook,
     ..MUSIC
 };

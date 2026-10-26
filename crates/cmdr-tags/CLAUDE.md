@@ -10,8 +10,9 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
   (`fields`, `cover`, `extras`), `Cover`, `ContentKind`, `TagError`.
 - `format.rs`: `AudioFormat` and `format_of`, by extension only.
 - `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments), and the key tables.
-- `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader. `save.rs`: `save_safely`. Test
-  files are built in `test_files.rs` with lofty's concrete tag types.
+- `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader; `write_extras.rs` decides
+  which extras go and come. `save.rs`: `save_safely`. Test files are built in `test_files.rs` with lofty's concrete tag
+  types.
 - `shared.rs`: the foobar2000-style view. `shared_view` (per field `Empty`/`Same`/`Multiple`), `apply_edits` (`Edit`,
   `CoverEdit`), `changes` (the "what will change" list). Pure, never mutates input.
 - `undo.rs`: `UndoStore` (`record`, `repath`, `restore`, `forget`), the old tags of an apply, written back after
@@ -26,9 +27,10 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - **Artist = album artist = author; Performer = narrator; Composer is removed for audiobooks** (`ContentKind`).
 - **Genre is multi-value**: repeated Vorbis keys, one freeform data entry per value; where a format stores one string,
   values join with `"; "`.
-- **Track is plain** (`3`); `3/12` only when the caller passes a known total.
+- **Track and disc are plain** (`3`); `3/12` only when the caller passes a known total.
 - **MP3 is written as ID3v2.3**, and frames, atoms, and keys we don't manage are left untouched on write. Unmanaged text
-  items surface in `FileTags::extras`; dropping a key there removes it on write, and a key the file lacks is added.
+  items surface in `FileTags::extras`; dropping a key there removes it on write, and a key the file lacks is added
+  (`TagError::UnwritableExtra` when it can't be).
 - **Concrete lofty tag types, not the generic `Tag`**: the generic one loses format-native keys we depend on (why, in
   `DETAILS.md`).
 - **A write is safe-overwrite** (`save_safely`): temp clone in the same directory, save, read back and compare with the

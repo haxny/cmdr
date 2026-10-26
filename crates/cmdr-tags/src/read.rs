@@ -9,12 +9,13 @@ use std::path::Path;
 use lofty::config::ParseOptions;
 use lofty::file::AudioFile;
 use lofty::flac::FlacFile;
-use lofty::id3::v2::{Frame, Id3v2Tag};
+use lofty::id3::v2::{Frame, FrameId, Id3v2Tag};
 use lofty::mp4::{AtomData, AtomIdent, Ilst, Mp4File};
 use lofty::mpeg::MpegFile;
 use lofty::ogg::tag::VorbisComments;
 use lofty::ogg::{OggPictureStorage, OpusFile, VorbisFile};
 use lofty::picture::{Picture, PictureType};
+use serde::{Deserialize, Serialize};
 
 use crate::format::{AudioFormat, format_of};
 use crate::model::{Cover, FileTags, TagError, TagField};
@@ -69,6 +70,108 @@ pub(crate) fn read_from<R: Read + Seek>(
             let comments = file.vorbis_comments();
             Ok(read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)))
         }
+    }
+}
+
+/// What a file holds beyond [`FileTags`] that a write can change and an undo must put back:
+/// the track and disc totals (the reader shows plain numbers) and, on MP3, the conductor
+/// (`TPE3`, which an audiobook write removes).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RawTags {
+    pub(crate) track_total: Option<u32>,
+    pub(crate) disc_total: Option<u32>,
+    pub(crate) conductor: Option<String>,
+}
+
+/// Reads the [`RawTags`] of the audio file at `path`, parsing as [`read_tags`] does.
+pub(crate) fn read_raw(path: &Path) -> Result<RawTags, TagError> {
+    let format = format_of_path(path)?;
+    read_raw_from(&mut File::open(path)?, format, parse_options())
+}
+
+/// Reads the [`RawTags`] of `format` from `source` with `options`.
+pub(crate) fn read_raw_from<R: Read + Seek>(
+    source: &mut R,
+    format: AudioFormat,
+    options: ParseOptions,
+) -> Result<RawTags, TagError> {
+    Ok(match format {
+        AudioFormat::Mp3 => {
+            let file = MpegFile::read_from(source, options).map_err(parse_error)?;
+            file.id3v2().map(raw_id3).unwrap_or_default()
+        }
+        AudioFormat::Mp4 => {
+            let file = Mp4File::read_from(source, options).map_err(parse_error)?;
+            file.ilst().map(raw_ilst).unwrap_or_default()
+        }
+        AudioFormat::Flac => {
+            let file = FlacFile::read_from(source, options).map_err(parse_error)?;
+            file.vorbis_comments().map(raw_vorbis).unwrap_or_default()
+        }
+        AudioFormat::OggVorbis => raw_vorbis(
+            VorbisFile::read_from(source, options)
+                .map_err(parse_error)?
+                .vorbis_comments(),
+        ),
+        AudioFormat::Opus => raw_vorbis(
+            OpusFile::read_from(source, options)
+                .map_err(parse_error)?
+                .vorbis_comments(),
+        ),
+    })
+}
+
+/// The total in `"N/T"`; none for a plain number, a zero, or text that isn't a number.
+fn total_after_slash(value: &str) -> Option<u32> {
+    let (_, total) = value.split_once('/')?;
+    total.trim().parse().ok().filter(|t| *t > 0)
+}
+
+pub(crate) fn raw_id3(id3: &Id3v2Tag) -> RawTags {
+    let text = |id: &'static str| id3.get_text(&FrameId::Valid(id.into()));
+    RawTags {
+        track_total: text("TRCK").and_then(total_after_slash),
+        disc_total: text("TPOS").and_then(total_after_slash),
+        conductor: text("TPE3").map(str::trim).filter(|c| !c.is_empty()).map(str::to_owned),
+    }
+}
+
+fn raw_ilst(ilst: &Ilst) -> RawTags {
+    // Bytes 4-5 of a `trkn` / `disk` atom's data, 0 meaning none.
+    let total = |fourcc: [u8; 4]| match ilst.get(&AtomIdent::Fourcc(fourcc)).and_then(|a| a.data().next()) {
+        Some(AtomData::Unknown { data, .. }) if data.len() >= 6 => {
+            Some(u32::from(u16::from_be_bytes([data[4], data[5]]))).filter(|t| *t > 0)
+        }
+        _ => None,
+    };
+    RawTags {
+        track_total: total(*b"trkn"),
+        disc_total: total(*b"disk"),
+        conductor: None,
+    }
+}
+
+fn raw_vorbis(comments: &VorbisComments) -> RawTags {
+    // A total key wins over a `N/T` number.
+    let total = |keys: [&str; 2], number: &str| {
+        let keyed = comments.items().find_map(|(key, value)| {
+            keys.iter()
+                .any(|k| k.eq_ignore_ascii_case(key))
+                .then(|| value.trim().parse().ok().filter(|t: &u32| *t > 0))
+                .flatten()
+        });
+        keyed.or_else(|| {
+            comments
+                .items()
+                .find(|(key, _)| key.eq_ignore_ascii_case(number))
+                .and_then(|(_, value)| total_after_slash(value))
+        })
+    };
+    RawTags {
+        track_total: total(["TRACKTOTAL", "TOTALTRACKS"], "TRACKNUMBER"),
+        disc_total: total(["DISCTOTAL", "TOTALDISCS"], "DISCNUMBER"),
+        conductor: None,
     }
 }
 

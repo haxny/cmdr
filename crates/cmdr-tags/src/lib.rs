@@ -16,6 +16,7 @@ pub mod text;
 pub mod tools;
 mod undo;
 mod write;
+mod write_extras;
 
 #[cfg(test)]
 mod format_test;
@@ -37,6 +38,8 @@ mod undo_test;
 mod write_extras_test;
 #[cfg(test)]
 mod write_test;
+#[cfg(test)]
+mod write_totals_test;
 
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, TagError, TagField};

@@ -30,10 +30,13 @@ A FLAC's pictures are one list for this: the picture blocks, then the comments' 
 to the current one (MIME and bytes) is left as it is, type and description included. With the cover removed, the reader
 shows the next picture as the cover.
 
-Audiobooks also lose `TPE3` (conductor) on MP3. A known total (`WriteOptions::track_total`) goes in `TRCK` as `N/Total`,
-in `trkn`'s total slot, or as a `TRACKTOTAL` key (foobar2000's convention); without one the track is plain. Disc is
-always plain. Vorbis `TRACKTOTAL`, `TOTALTRACKS`, `DISCTOTAL`, and `TOTALDISCS` are managed: never extras, removed on
-write unless `TRACKTOTAL` is being written. The reader strips `/N` from track and disc in every format.
+Audiobooks also lose `TPE3` (conductor) on MP3. A known total (`WriteOptions::track_total` / `disc_total`) goes in
+`TRCK` / `TPOS` as `N/Total`, in `trkn` / `disk`'s total slot, or as a `TRACKTOTAL` / `DISCTOTAL` key (foobar2000's
+convention); without one the number is plain, and a total without its number isn't written. A zero total is no total.
+Vorbis `TRACKTOTAL`, `TOTALTRACKS`, `DISCTOTAL`, and `TOTALDISCS` are managed: never extras, removed on write unless
+`TRACKTOTAL` / `DISCTOTAL` is being written. The reader strips `/N` from track and disc in every format; the totals and
+an MP3's `TPE3` are read apart, as crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo
+store.
 
 M4A freeform atoms live under mean `com.apple.iTunes`. Reading prefers the freeform `GENRE` and never doubles values
 with `©gen` (which holds them joined with `"; "`).
@@ -55,9 +58,12 @@ extras that `FileTags::extras` no longer has a key for, then writes one frame, a
 has and `extras` keeps stays as the file has it (its values in `extras` are ignored). An extra in `extras` that the file
 lacks is added, so an undo can put back one an edit removed: a `TXXX` with that description (values null-separated), a
 freeform atom of that name under mean `com.apple.iTunes` (one UTF-8 entry per value; an extra that had another mean
-comes back under the iTunes one), or that Vorbis key once per value. A key the reader would take for a managed field (or
-a Vorbis total) is never added. Single-value fields write their first value only (the reader shows only that one), so a
-second `COMM` or a `TYER` beside `TDRC` goes away.
+comes back under the iTunes one), or that Vorbis key once per value (Vorbis extra keys are uppercased first, as the
+reader reports them; keys differing only in case merge). An extra the file lacks that can't be added (an empty key, no
+values, or a key the reader would take for a managed field or a Vorbis total, like a `PERFORMER` that was under a
+foreign MP4 mean) fails the write as `TagError::UnwritableExtra(key)`: never a silent skip. An ID3 extra in another
+letter case than the file's `TXXX` renames the frame (the old one is dropped, the new one added). Single-value fields
+write their first value only (the reader shows only that one), so a second `COMM` or a `TYER` beside `TDRC` goes away.
 
 - **MP3**: text is UTF-8 in memory; lofty writes UTF-16 for v2.3. The date is a `TDRC` timestamp that lofty splits into
   `TYER` (+ `TDAT`, `TIME`); a date it can't parse fails the write, because lofty would drop it silently. lofty's v2.3
@@ -79,8 +85,9 @@ second `COMM` or a `TYER` beside `TDRC` goes away.
   (`write_test::flac_unmanaged_blocks_survive`).
 
 After saving the copy, the writer reads it back (same strict parse) and compares it with what it meant to write: the
-fields as the reader reports them (joined values split, numbers and ID3 dates normalized), the cover, and the extras
-kept. Any difference refuses the write, so whatever lofty silently drops or changes never replaces the original.
+fields as the reader reports them (joined values split, numbers and ID3 dates normalized), the cover, the extras, and
+the `RawTags` (totals as passed, `TPE3` as kept, removed, or restored). Any difference refuses the write, so whatever
+lofty silently drops or changes never replaces the original.
 
 ## Safe overwrite
 
@@ -104,24 +111,31 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
 `TagError::Io(InvalidInput, _)`):
 
 ```
-<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<n>.cover","mime"}|null}]}
-<root>/<id>/<n>.cover       entry n's cover bytes
+<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"trackTotal","discTotal","conductor"}}]}
+<root>/<id>/<k>.cover       one file per distinct cover; entries with the same bytes share it
+<root>/.<id>.staging/       a record being built
 ```
 
-- **Manifest last.** `record` writes each cover, then the manifest, each to a `*.tmp` beside it, fsynced and renamed
-  (then the directory is fsynced). An apply without a readable `manifest.json` doesn't exist: restoring it is
-  `TagError::Io(NotFound, _)`, a damaged one `TagError::Parse`. `open` creates the root and removes leftover `*.tmp`
-  files inside apply directories, nothing else. A record that fails partway removes its directory.
+- **Staging, then swap.** `record` builds the whole record in `.<id>.staging` (each cover, then the manifest, each via
+  `<name>.<random>.tmp`, fsynced and renamed), removes any old `<id>`, and renames the staging directory into place. An
+  apply without a readable `manifest.json` doesn't exist: restoring it is `TagError::Io(NotFound, _)`, a damaged one
+  `TagError::Parse`. `open` creates the root, removes leftover `.<id>.staging` directories, and inside apply directories
+  removes only temp names the store makes (`manifest.json` or `<k>.cover`, optional `.<random>`, `.tmp`). A crash
+  between removing an old `<id>` and the rename loses that old record, which was being replaced anyway.
+- **Covers are deduplicated by content within a record** (sequential names, matched on the bytes, so no hash collision
+  can mix covers up): a 100-chapter M4B stores its cover once.
 - **`seq`** orders applies across the store (one more than the highest present). After each `record` the lowest go until
-  both `UndoLimits` hold (default 50 applies and 512 MiB, manifests plus covers); the apply just recorded is never
-  pruned, and a prune that fails is logged, not returned, since the record is complete. Recording an existing `id`
-  replaces it.
-- **`repath`** rewrites the manifest's paths after the apply renamed files: moves apply all at once (a swap works), and
-  a move whose source isn't recorded is ignored.
-- **`restore`** writes each entry back with `write_tags` and the caller's `WriteOptions`: a file not at its path is
-  `missing`, a write error is `failed` and the rest continue. `None` in `cover` removes the cover again, and an extra
-  the apply removed comes back because the writer adds extras the file lacks. It never deletes the record; the caller
-  `forget`s it.
-- **What a snapshot can't restore**: what `read_tags` doesn't report. A track total (`3/12`) comes back only if the
-  caller passes `track_total`, a disc total never (the reader shows plain numbers), and a composer only with
-  `ContentKind::Music`. An MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes`.
+  both `UndoLimits` hold (default 50 applies and 512 MiB, manifests plus covers, each file counted once); the apply just
+  recorded is never pruned, and a prune that fails is logged, not returned, since the record is complete. Recording an
+  existing `id` replaces it. Staging directories are neither applies nor counted.
+- **`raw`**: `record` also reads each file's `RawTags` (track and disc totals, MP3 `TPE3`), which `FileTags` doesn't
+  hold, so call it before the apply writes.
+- **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
+  works), and a move whose source isn't recorded is ignored.
+- **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
+  passes, so a composer comes back, with that entry's recorded totals, and `TPE3` when it had one. Of the caller's
+  `WriteOptions` only `allow_frame_loss` applies. A file not at its path is `missing`; any write error is `failed` (an
+  extra that can't come back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover
+  again. It never deletes the record; the caller `forget`s it.
+- **Limits**: an MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes` (one named like a managed key
+  can't come back: `failed`). Vorbis total keys come back under their canonical names (`TOTALTRACKS` as `TRACKTOTAL`).
