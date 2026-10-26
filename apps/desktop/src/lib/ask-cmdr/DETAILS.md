@@ -405,9 +405,11 @@ queued operation id. The dialog closes only after that operation has started.
 **Preflight and apply send the revision the review SHOWED** (`BulkRenameReviewProposal.revision`, from the
 `proposalReady` snapshot), never one read at click time. An agent amend bumps the plan's revision, so a batch amended
 since it was shown answers `listChanged` (a preflight status, or the typed `BulkRenameError` on apply): the batch is
-marked `changed`, keeps its rows where they are under the suggestions dialog's "The AI changed this suggestion while you
-were reading it." notice, and Apply leaves it out. Reading the revision at click time would bind whatever the agent
-amended the plan into, which nobody read. A user's own revise doesn't bump it: the binding digest covers that.
+marked `changed` and treated as stale. Nothing brings an amended rename plan back into this review (an amend comes
+through `propose_suggestions`, which emits no `proposalReady`), so the suggestions dialog's "The AI changed this
+suggestion while you were reading it." notice takes the batch's place, the way an expired batch's does, and Apply leaves
+it out. Reading the revision at click time would bind whatever the agent amended the plan into, which nobody read. A
+user's own revise doesn't bump it: the binding digest covers that.
 
 Backend preflight verifies every source still exists and blocks any missing source, including one removed after the
 dialog opened. The dialog deselects that row and shows a red, accessible warning; a matching watcher event rechecks it

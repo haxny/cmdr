@@ -54,7 +54,7 @@
     const allowedCount = $derived(allRows.filter((row) => row.allowed && !row.blockedReason).length)
     const blockedCount = $derived(allRows.filter((row) => row.blockedReason).length)
     const preflighting = $derived(proposals.some((proposal) => proposal.preflighting))
-    const allExpired = $derived(proposals.length > 0 && liveProposals.length === 0)
+    const allExpired = $derived(proposals.length > 0 && proposals.every((proposal) => proposal.expired))
     const renameLabel = $derived(tString('askCmdr.renameReview.rename', { count: allowedCount }))
 
     /** The folder a batch renames inside. A rename group binds one parent, so the first row
@@ -97,8 +97,13 @@
                 flat.push({ kind: 'expired', key: `expired:${proposal.proposalId}` })
                 return
             }
-            // Announced above its rows, never swapped under the reader; Apply leaves it out.
-            if (proposal.changed) flat.push({ kind: 'changed', key: `changed:${proposal.proposalId}` })
+            // The agent amended it since it was shown, and nothing brings the new version here, so
+            // its rows are no longer what would run: the notice takes their place, like an
+            // expired batch's, and Apply leaves it out.
+            if (proposal.changed) {
+                flat.push({ kind: 'changed', key: `changed:${proposal.proposalId}` })
+                return
+            }
             for (const row of proposal.rows) {
                 flat.push({ kind: 'file', key: `row:${row.rowId}`, proposalId: proposal.proposalId, row })
             }

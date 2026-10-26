@@ -229,7 +229,7 @@ describe('the revision the review showed', () => {
     expect(applyRenameMock).toHaveBeenCalledWith('proposal-1', 7, ['row-1'])
   })
 
-  it('announces a batch the agent amended, keeps its rows, and leaves it out of Apply', async () => {
+  it('marks a batch the agent amended as changed, and leaves it out of Apply', async () => {
     preflightRenameMock.mockResolvedValueOnce({ status: 'listChanged', rows: [] })
     sendMessage('rename them')
     stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'invoice-a.png')])
