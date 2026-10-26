@@ -120,7 +120,7 @@ fn top_under_with_a_threshold_ranks_by_score() {
 }
 
 /// `top_under` keeps the folder itself and its descendants, never a sibling that
-/// merely shares the prefix, and folds case the way the store keys paths.
+/// merely shares the prefix, and folds case the way the store keys paths (on macOS).
 #[test]
 fn top_under_reads_one_subtree_ranked() {
     let (index, _dir) = populated_index(&[
@@ -136,11 +136,15 @@ fn top_under_reads_one_subtree_ranked() {
         paths(index.top_under(10, None, "/home/docs/").expect("read")),
         vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"]
     );
-    assert_eq!(
-        paths(index.top_under(10, None, "/HOME/Docs").expect("read")),
-        vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"],
-        "matched by the folded key"
-    );
+    // The store keys on `normalize_for_comparison`, which folds case only where the
+    // filesystem does (macOS); Linux keys are case-sensitive.
+    if cfg!(target_os = "macos") {
+        assert_eq!(
+            paths(index.top_under(10, None, "/HOME/Docs").expect("read")),
+            vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"],
+            "matched by the folded key"
+        );
+    }
     assert_eq!(
         paths(index.top_under(1, Some(0.65), "/home/docs").expect("read")),
         vec!["/home/docs/tax"]
