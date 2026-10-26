@@ -76,7 +76,10 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
     `media_index`.
 - **`important_folders`** (`read/importance.rs`) — top-N or above-threshold across scored volumes, reusing
   `mcp::resources::importance::{snapshot_top, snapshot_threshold, snapshot_overview}` (which read every scored volume,
-  including offline ones). The overview carries each volume's current generation for staleness.
+  including offline ones). The overview carries each volume's current generation for staleness. Each row carries a terse
+  `why` (its top three signals) and `folded` (near-duplicate descendants merged into it); an optional `under` (a path on
+  `volume`) narrows to one subtree, whose own children then get rows. Folding, `why`, and `under` live in the snapshot
+  layer: `mcp/resources/DETAILS.md` § `cmdr://importance`.
 - **`folder_importance`** (`read/importance.rs`) — one folder's `PathImportance` (`snapshot_path`): Scored (score +
   `Explanation` breakdown + `stale` from asOf vs the volume's current `recompute_generation`), Floored (with reason), or
   Unscored. Offline-capable.
@@ -171,7 +174,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,263 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,319 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)

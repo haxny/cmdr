@@ -104,19 +104,52 @@ fn above_threshold_is_inclusive_at_the_edge() {
     );
 }
 
-/// `top_above_threshold` keeps the ranking `above_threshold` drops: score desc and
+/// `top_under` with a threshold keeps the ranking `above_threshold` drops: score desc and
 /// inclusive at the bound.
 #[test]
-fn top_above_threshold_ranks_by_score() {
+fn top_under_with_a_threshold_ranks_by_score() {
     let (index, _dir) = populated_index(&[
         ("/exactly", 0.50, PathClass::Neutral),
         ("/above", 0.51, PathClass::UserContent),
         ("/top", 0.90, PathClass::ProjectRoot),
         ("/below", 0.49, PathClass::Neutral),
     ]);
-    let hits = index.top_above_threshold(10, 0.50).expect("top_above_threshold");
+    let hits = index.top_under(10, Some(0.50), "/").expect("top_under");
     let paths: Vec<&str> = hits.iter().map(|w| w.path.as_str()).collect();
     assert_eq!(paths, vec!["/top", "/above", "/exactly"]);
+}
+
+/// `top_under` keeps the folder itself and its descendants, never a sibling that
+/// merely shares the prefix, and folds case the way the store keys paths.
+#[test]
+fn top_under_reads_one_subtree_ranked() {
+    let (index, _dir) = populated_index(&[
+        ("/home/docs", 0.40, PathClass::UserContent),
+        ("/home/docs/tax", 0.70, PathClass::UserContent),
+        ("/home/docs/tax/2026", 0.60, PathClass::UserContent),
+        ("/home/docsish", 0.95, PathClass::Neutral),
+        ("/home/other", 0.90, PathClass::Neutral),
+    ]);
+    let paths = |hits: Vec<ScoredWeight>| hits.into_iter().map(|w| w.path).collect::<Vec<_>>();
+
+    assert_eq!(
+        paths(index.top_under(10, None, "/home/docs/").expect("read")),
+        vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"]
+    );
+    assert_eq!(
+        paths(index.top_under(10, None, "/HOME/Docs").expect("read")),
+        vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"],
+        "matched by the folded key"
+    );
+    assert_eq!(
+        paths(index.top_under(1, Some(0.65), "/home/docs").expect("read")),
+        vec!["/home/docs/tax"]
+    );
+    assert_eq!(
+        index.top_under(10, None, "/").expect("read").len(),
+        5,
+        "`/` is the volume"
+    );
 }
 
 /// `explain` recomputes the per-signal breakdown from the STORED signals via the

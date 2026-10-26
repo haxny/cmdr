@@ -14,7 +14,8 @@ use tauri::{AppHandle, Runtime};
 
 use super::expand_tilde;
 use crate::mcp::resources::importance::{
-    PathImportance, RankedFolder, VolumeOverview, snapshot_overview, snapshot_path, snapshot_threshold, snapshot_top,
+    PathImportance, RankedFolder, RankedScope, VolumeOverview, snapshot_overview, snapshot_path, snapshot_threshold,
+    snapshot_top,
 };
 use crate::mcp::{ToolError, ToolResult};
 use cmdr_index::importance::{Explanation, FloorReason, ImportanceIndex, SignalSet};
@@ -28,7 +29,19 @@ const DEFAULT_TOP_N: usize = 20;
 pub struct RankedFolderOut {
     pub volume: String,
     pub path: String,
+    /// Rounded to three decimals: more digits are noise and cost tokens.
     pub score: f64,
+    /// The row's strongest signals, like `projectRoot, changed today, 6 visits`.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub why: String,
+    /// Near-duplicate descendants folded into this row; pass its path as `under` to
+    /// list them.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub folded: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -65,7 +78,9 @@ pub(crate) fn build_important_folders(
             .map(|f| RankedFolderOut {
                 volume: f.volume_id,
                 path: f.path,
-                score: f.score,
+                score: (f.score * 1000.0).round() / 1000.0,
+                why: f.why,
+                folded: f.folded,
             })
             .collect(),
         truncated,
@@ -87,7 +102,8 @@ pub fn important_folders_schema() -> Value {
         "properties": {
             "top": { "type": "integer", "description": "Default 20; ignored when threshold is set." },
             "threshold": { "type": "number", "description": "Every folder scoring at or above this (0-1) instead of a top-N." },
-            "volume": { "type": "string", "description": "One volume id (see list_volumes); omit for all scored volumes." }
+            "volume": { "type": "string", "description": "One volume id (see list_volumes); omit for all scored volumes." },
+            "under": { "type": "string", "description": "Only folders at or below this path on volume; ~ expands." }
         },
         "additionalProperties": false
     })
@@ -95,12 +111,16 @@ pub fn important_folders_schema() -> Value {
 
 pub async fn execute_important_folders<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
     let data_dir = crate::config::resolved_app_data_dir(app).map_err(ToolError::internal)?;
-    let volume = params.get("volume").and_then(|v| v.as_str());
+    let under = params.get("under").and_then(|v| v.as_str()).map(expand_tilde);
+    let scope = RankedScope {
+        volume: params.get("volume").and_then(|v| v.as_str()),
+        under: under.as_deref(),
+    };
     let overview = snapshot_overview(&data_dir);
 
     let result = if let Some(threshold) = params.get("threshold").and_then(|v| v.as_f64()) {
         let (folders, truncated) =
-            snapshot_threshold(&data_dir, threshold, volume).map_err(ToolError::invalid_params)?;
+            snapshot_threshold(&data_dir, threshold, scope, now_secs()).map_err(ToolError::invalid_params)?;
         build_important_folders(folders, truncated, overview)
     } else {
         let n = params
@@ -108,7 +128,7 @@ pub async fn execute_important_folders<R: Runtime>(app: &AppHandle<R>, params: &
             .and_then(|v| v.as_u64())
             .map(|n| n as usize)
             .unwrap_or(DEFAULT_TOP_N);
-        let folders = snapshot_top(&data_dir, n, volume).map_err(ToolError::invalid_params)?;
+        let folders = snapshot_top(&data_dir, n, scope, now_secs()).map_err(ToolError::invalid_params)?;
         build_important_folders(folders, false, overview)
     };
     serde_json::to_value(&result).map_err(|e| ToolError::internal(e.to_string()))
@@ -254,12 +274,18 @@ mod tests {
             RankedFolder {
                 volume_id: "root".to_string(),
                 path: "/Users/x/Projects".to_string(),
-                score: 0.9,
+                score: 0.912_345,
+                why: "projectRoot, changed today".to_string(),
+                folded: 4,
+                signals: cmdr_index::importance::FolderSignals::neutral(),
             },
             RankedFolder {
                 volume_id: "root".to_string(),
                 path: "/Users/x/Documents".to_string(),
                 score: 0.7,
+                why: String::new(),
+                folded: 0,
+                signals: cmdr_index::importance::FolderSignals::neutral(),
             },
         ];
         let overview = vec![VolumeOverview {
@@ -270,9 +296,17 @@ mod tests {
         }];
         let out = build_important_folders(folders, true, overview);
         assert_eq!(out.folders[0].path, "/Users/x/Projects");
-        assert_eq!(out.folders[0].score, 0.9);
+        assert_eq!(out.folders[0].score, 0.912, "rounded to three decimals");
         assert!(out.truncated);
         assert_eq!(out.volumes[0].generation, 5);
+
+        let json = serde_json::to_value(&out).unwrap();
+        assert_eq!(json["folders"][0]["why"], "projectRoot, changed today");
+        assert_eq!(json["folders"][0]["folded"], 4);
+        assert!(
+            json["folders"][1].get("why").is_none() && json["folders"][1].get("folded").is_none(),
+            "an empty why and a zero fold stay off the wire"
+        );
     }
 
     #[test]

@@ -28,12 +28,15 @@ home-relative; defaults to `$HOME`); `with_weights` overrides the weights `expla
   the reason (`nameDenylisted` / `hiddenOrSystem` / `underFlooredAncestor`, in that precedence) is derived live from the
   path — the single derivation `explain`'s floored breakdown also uses. A caller that only wants the number can use
   `WeightLookup::score()`, which flattens floored and unscored to `0.0`.
-- `top_n(n)` / `top_above_threshold(n, t)` — ranked folders (score DESC, ties by path ASC). `above_threshold(t)` — every
-  folder at or above `t`, UNORDERED: its callers build a lookup table, so a sort of every scored folder would buy
-  nothing. Both threshold reads are INCLUSIVE at the bound (a folder exactly at `t` is returned); `top_above_threshold`
-  combines the `LIMIT` and `WHERE score >= t` in one bounded query, which is how the MCP resource's capped threshold
-  read fetches `cap + 1` to detect truncation without loading the whole tail. The agent's summary gate and media-ML's
-  enrich-important-first.
+- `top_n(n)` — ranked folders (score DESC, ties by path ASC): media-ML's enrich-important-first and the tuning bin.
+  `above_threshold(t)` — every folder at or above `t`, UNORDERED: its callers build a lookup table, so a sort of every
+  scored folder would buy nothing.
+- `top_under(n, threshold, under)` — the ranked read with an optional threshold and an optional subtree in one bounded
+  query (`LIMIT` + `WHERE score >= t` + the subtree range), which is how the MCP resource and `important_folders` fetch
+  one past their window to detect a cut without loading the whole tail. The subtree is served by the same BINARY
+  `path_folded` range the incremental's subtree read uses (`../writer.rs`, `SUBTREE_READ_SQL`), so a small subtree on a
+  big volume is an index search; `/` or empty means the whole volume. Both threshold reads are INCLUSIVE at the bound (a
+  folder exactly at `t` is returned).
 - `scored_folder_count()` — the `weights` row count (a `COUNT(*)`, no deserialization), for the overview surface.
 - `for_each_nonzero_weight(visit)` — STREAMS every `(path, score)` with a non-zero score (floored folders omitted), for
   a consumer that folds one snapshot into its own in-memory form and ranks many candidates against it rather than
@@ -56,11 +59,11 @@ still good, and only a re-weighting consumer loses the raw vector for that one r
   streaming one `for_each_nonzero_weight` snapshot per recompute via `subscribe`. Match quality dominates; importance is
   a within-band boost. The blend design, weight-map lifecycle, and degradation contract live in
   `apps/desktop/src-tauri/src/search/DETAILS.md` § "Importance ranking" (single-source).
-- **The MCP `cmdr://importance` resource.** It exposes `lookup` / `top_n` / `above_threshold` / `top_above_threshold` /
-  `explain` / `scored_folder_count` to agents, enumerating scored volumes offline via `scored_volume_ids` (the
-  `importance-{id}.db` files on disk) and opening each index with the kind's `signal_availability` mask so `explain`
-  sums to the stored score. It's the offline-unmounted read made a user-facing feature. Builder and modes:
-  `apps/desktop/src-tauri/src/mcp/DETAILS.md` § "Resources" (the `cmdr://importance` builder).
+- **The MCP `cmdr://importance` resource.** It exposes `lookup` / `top_under` / `explain` / `scored_folder_count` to
+  agents, enumerating scored volumes offline via `scored_volume_ids` (the `importance-{id}.db` files on disk) and
+  opening each index with the kind's `signal_availability` mask so `explain` sums to the stored score. It's the
+  offline-unmounted read made a user-facing feature. Builder and modes: `apps/desktop/src-tauri/src/mcp/DETAILS.md` §
+  "Resources" (the `cmdr://importance` builder).
 - **Media-ML enrichment.** It orders its passes by importance and asks "has importance scored this volume?" through the
   row count, not the generation (`ImportanceIndex::is_scored`).
 

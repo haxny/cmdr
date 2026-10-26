@@ -280,7 +280,7 @@ impl ImportanceIndex {
     /// Unordered because its callers fold the rows into a lookup table, and ranking
     /// every scored folder (~90k on a big home) costs SQLite an external sort for
     /// nothing. A caller that wants the ranking uses
-    /// [`top_above_threshold`](ImportanceIndex::top_above_threshold).
+    /// [`top_under`](ImportanceIndex::top_under).
     pub fn above_threshold(&self, threshold: f64) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
         if !self.db_path.exists() {
             return Ok(Vec::new());
@@ -288,16 +288,29 @@ impl ImportanceIndex {
         self.with_conn(|conn| read_at_least(conn, threshold))
     }
 
-    /// The top `n` folders scoring at or above `threshold`, highest first — the
-    /// `top_n` cap and the `above_threshold` filter in one bounded query. The
-    /// `cmdr://importance?threshold=` read fetches `cap + 1` this way to detect
-    /// truncation without loading the whole tail (a low threshold can match every
-    /// scored folder). A missing DB reads empty, not an error.
-    pub fn top_above_threshold(&self, n: usize, threshold: f64) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
+    /// The top `n` folders at or under `under`, highest first, optionally only those
+    /// scoring at or above `threshold` (inclusive) — the `top_n` cap, the
+    /// `above_threshold` filter, and a subtree in one bounded query. The
+    /// `cmdr://importance` reads fetch one past their window this way to detect a cut
+    /// without loading the whole tail (a low threshold can match every scored folder).
+    /// The subtree is served by the same BINARY `path_folded` range the incremental's
+    /// subtree read uses (`../writer.rs`, `SUBTREE_READ_SQL`), so a small subtree on a
+    /// big volume costs an index search, not a table scan. `/` (or an empty `under`)
+    /// means the whole volume. A missing DB reads empty, not an error.
+    pub fn top_under(
+        &self,
+        n: usize,
+        threshold: Option<f64>,
+        under: &str,
+    ) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
         if !self.db_path.exists() {
             return Ok(Vec::new());
         }
-        self.with_conn(|conn| read_ordered(conn, Some(n), Some(threshold)))
+        let under = under.trim_end_matches('/');
+        if under.is_empty() {
+            return self.with_conn(|conn| read_ordered(conn, Some(n), threshold));
+        }
+        self.with_conn(|conn| read_ordered_under(conn, n, threshold, under))
     }
 
     /// Stream every scored folder's `(path, score)` with a NON-ZERO score to `visit`.
@@ -414,7 +427,7 @@ fn read_scored_weight(conn: &rusqlite::Connection, path: &str) -> Result<Option<
 
 /// Read weights ordered by score descending (ties by path), optionally limited to
 /// the top `n` and/or filtered to `>= threshold`. One query serves `top_n` and
-/// `top_above_threshold`; the ORDER BY is stable so the two agree on ranking.
+/// `top_under` over a whole volume; the ORDER BY is stable so the reads agree on ranking.
 fn read_ordered(
     conn: &rusqlite::Connection,
     limit: Option<usize>,
@@ -438,6 +451,37 @@ fn read_ordered(
             .query_map([], row_to_scored_weight)?
             .collect::<Result<Vec<_>, _>>()?,
     };
+    Ok(out)
+}
+
+/// [`read_ordered`] restricted to `under` and its descendants. `?1` is the folder's
+/// own folded key and `?2`..`?3` the half-open range of its descendants (`/` is
+/// 0x2f, `0` is 0x30), the exact shape `writer::SUBTREE_READ_SQL` documents. An
+/// absent threshold binds `-1.0`, which every stored score clears.
+fn read_ordered_under(
+    conn: &rusqlite::Connection,
+    limit: usize,
+    threshold: Option<f64>,
+    under: &str,
+) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
+    let folded = normalize_for_comparison(under);
+    let mut stmt = conn.prepare_cached(
+        "SELECT path, score, signals, as_of_generation FROM weights \
+         WHERE (path_folded = ?1 OR (path_folded >= ?2 AND path_folded < ?3)) AND score >= ?4 \
+         ORDER BY score DESC, path ASC LIMIT ?5",
+    )?;
+    let out = stmt
+        .query_map(
+            rusqlite::params![
+                folded,
+                format!("{folded}/"),
+                format!("{folded}0"),
+                threshold.unwrap_or(-1.0),
+                i64::try_from(limit).unwrap_or(i64::MAX)
+            ],
+            row_to_scored_weight,
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(out)
 }
 

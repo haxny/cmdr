@@ -499,7 +499,7 @@ mcp_tools! {
         run: app_params crate::agent::tools::read::pane_listing::execute_list_pane_files
     },
     "important_folders" => {
-        desc: "List the most important folders across scored volumes (top-N, or at or above a threshold), highest first, each with its volume and score. Importance is Cmdr's offline signal, so an unmounted-but-scored drive still answers.",
+        desc: "List the most important folders across scored volumes (top-N, or at or above a threshold), highest first, each with its volume, score, and why. A row's `folded` counts near-duplicate subfolders merged into it; pass it as `under` to list them. Importance is Cmdr's offline signal, so an unmounted-but-scored drive still answers.",
         schema: crate::agent::tools::read::importance::important_folders_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Read,

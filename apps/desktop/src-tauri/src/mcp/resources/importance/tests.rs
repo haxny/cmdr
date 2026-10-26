@@ -188,7 +188,7 @@ fn top_n_ranks_highest_first_across_volumes() {
         now,
     );
 
-    let folders = snapshot_top(dir.path(), 2, None).expect("top");
+    let folders = snapshot_top(dir.path(), 2, RankedScope::default(), now).expect("top");
     assert_eq!(folders.len(), 2, "capped at n across the merged volumes");
     assert!(
         folders[0].score >= folders[1].score,
@@ -218,7 +218,7 @@ fn top_n_on_a_named_volume_scopes_to_it() {
         now,
     );
 
-    let folders = snapshot_top(dir.path(), 10, Some("smb-share")).expect("top");
+    let folders = snapshot_top(dir.path(), 10, on_volume("smb-share"), now).expect("top");
     assert_eq!(folders.len(), 1, "only the named volume's folders");
     assert_eq!(folders[0].path, "/mnt/c");
 }
@@ -227,7 +227,7 @@ fn top_n_on_a_named_volume_scopes_to_it() {
 fn top_n_on_an_unknown_volume_errors_honestly() {
     let dir = tempfile::tempdir().expect("temp dir");
     write_db(dir.path(), "root", &[("/a", low_score_signals())], 1_000);
-    let err = snapshot_top(dir.path(), 5, Some("nope")).expect_err("unknown volume errors");
+    let err = snapshot_top(dir.path(), 5, on_volume("nope"), 1_000).expect_err("unknown volume errors");
     assert!(err.contains("nope"), "the error names the volume: {err}");
 }
 
@@ -245,7 +245,7 @@ fn threshold_caps_rows_and_flags_truncation() {
         .collect();
     write_db(dir.path(), "root", &rows, now);
 
-    let (folders, truncated) = snapshot_threshold(dir.path(), 0.0, None).expect("threshold");
+    let (folders, truncated) = snapshot_threshold(dir.path(), 0.0, RankedScope::default(), now).expect("threshold");
     assert_eq!(folders.len(), THRESHOLD_ROW_CAP, "capped at the row cap");
     assert!(truncated, "more rows existed than the cap");
 
@@ -267,12 +267,200 @@ fn threshold_below_cap_is_not_truncated() {
         ],
         now,
     );
-    let (folders, truncated) = snapshot_threshold(dir.path(), 0.5, None).expect("threshold");
+    let (folders, truncated) = snapshot_threshold(dir.path(), 0.5, RankedScope::default(), now).expect("threshold");
     assert!(!truncated, "fewer than the cap ⇒ no truncation");
     assert!(
         folders.iter().all(|f| f.score >= 0.5),
         "only folders at or above the threshold"
     );
+}
+
+fn on_volume(volume: &str) -> RankedScope<'_> {
+    RankedScope {
+        volume: Some(volume),
+        under: None,
+    }
+}
+
+fn ranked(rows: &[(&str, f64)]) -> Vec<RankedFolder> {
+    rows.iter()
+        .map(|(path, score)| RankedFolder {
+            volume_id: "root".to_string(),
+            path: path.to_string(),
+            score: *score,
+            why: String::new(),
+            folded: 0,
+            signals: FolderSignals::neutral(),
+        })
+        .collect()
+}
+
+const HOME: &str = "/Users/test";
+
+fn paths_and_folds(folders: &[RankedFolder]) -> Vec<(&str, usize)> {
+    folders.iter().map(|f| (f.path.as_str(), f.folded)).collect()
+}
+
+// ── Folding near-duplicates ───────────────────────────────────────────────────
+
+/// The live root volume's shape (2026-10-26): a folder of projects scoring within a
+/// hair of its best project, the projects' own members below them. They fold into
+/// one row instead of filling the list; a descendant clearly above its parent and an
+/// unrelated folder keep their own.
+#[test]
+fn near_duplicate_descendants_fold_into_the_folder_above() {
+    let folders = collapse_descendants(
+        ranked(&[
+            ("/p/star", 0.995),
+            ("/p/cmdr", 0.95),
+            ("/p", 0.94),
+            ("/p/smb2", 0.939),
+            ("/p/cmdr/apps/desktop", 0.847),
+            ("/docs", 0.6),
+            ("/pp", 0.5),
+        ]),
+        None,
+        HOME,
+    );
+    assert_eq!(
+        paths_and_folds(&folders),
+        vec![("/p/star", 0), ("/p", 3), ("/docs", 0), ("/pp", 0)],
+        "cmdr, smb2, and cmdr's member fold into /p; /pp only shares a prefix"
+    );
+}
+
+/// The folder the caller asked `under` is the one thing that doesn't absorb: its
+/// children are what the caller wants listed. Their own members still fold.
+#[test]
+fn the_under_folder_lists_its_children() {
+    let folders = collapse_descendants(
+        ranked(&[
+            ("/p/cmdr", 0.95),
+            ("/p", 0.94),
+            ("/p/smb2", 0.9),
+            ("/p/cmdr/apps/desktop", 0.85),
+        ]),
+        Some("/p/"),
+        HOME,
+    );
+    assert_eq!(
+        paths_and_folds(&folders),
+        vec![("/p/cmdr", 1), ("/p", 0), ("/p/smb2", 0)]
+    );
+}
+
+/// Folding never crosses volumes: the same path on two volumes is two folders.
+#[test]
+fn folding_stays_on_one_volume() {
+    let mut rows = ranked(&[("/share", 0.9), ("/share/photos", 0.8)]);
+    rows[1].volume_id = "smb-share".to_string();
+    assert_eq!(collapse_descendants(rows, None, HOME).len(), 2);
+}
+
+/// When folding eats the whole first window, the read widens until it fills: the live
+/// root volume had 153 of its top 160 rows under one folder of projects.
+#[test]
+fn a_window_folded_away_widens_until_it_fills() {
+    let now = 1_000_000;
+    let dir = tempfile::tempdir().expect("temp dir");
+    let members: Vec<String> = (0..40).map(|i| format!("/Users/test/p/repo{i:02}")).collect();
+    let mut rows: Vec<(&str, FolderSignals)> = members
+        .iter()
+        .map(|p| (p.as_str(), scored_signals(PathClass::ProjectRoot, now)))
+        .collect();
+    rows.push(("/Users/test/p", scored_signals(PathClass::ProjectRoot, now)));
+    rows.push(("/Users/test/Documents", low_score_signals()));
+    write_db(dir.path(), "root", &rows, now);
+
+    let folders = snapshot_top(dir.path(), 2, RankedScope::default(), now).expect("top");
+    assert_eq!(
+        paths_and_folds(&folders),
+        vec![("/Users/test/p", 40), ("/Users/test/Documents", 0)]
+    );
+    assert!(!folders[0].why.is_empty(), "a returned row says why");
+}
+
+/// `$HOME`, its ancestors, and a volume root never absorb: on the live root volume
+/// (2026-10-26) `~` at 0.50 swallowed `Documents` at 0.51 and fifty more, leaving one
+/// generic row where the user files things.
+#[test]
+fn home_and_its_ancestors_never_absorb() {
+    let folders = collapse_descendants(
+        ranked(&[
+            ("/Users/test/Documents", 0.51),
+            ("/Users/test", 0.50),
+            ("/Users/test/Documents/tax", 0.45),
+            ("/Users", 0.42),
+            ("/", 0.3),
+            ("/Users/test/Music", 0.3),
+        ]),
+        None,
+        HOME,
+    );
+    assert_eq!(
+        paths_and_folds(&folders),
+        vec![
+            ("/Users/test/Documents", 1),
+            ("/Users/test", 0),
+            ("/Users", 0),
+            ("/", 0),
+            ("/Users/test/Music", 0)
+        ]
+    );
+}
+
+#[test]
+fn under_reads_only_that_subtree_through_the_snapshot() {
+    let now = 1_000_000;
+    let dir = tempfile::tempdir().expect("temp dir");
+    write_db(
+        dir.path(),
+        "root",
+        &[
+            ("/Users/test/Documents", scored_signals(PathClass::UserContent, now)),
+            ("/Users/test/Documents/tax", scored_signals(PathClass::UserContent, now)),
+            ("/Users/test/projects", scored_signals(PathClass::ProjectRoot, now)),
+        ],
+        now,
+    );
+    let scope = RankedScope {
+        volume: Some("root"),
+        under: Some("/Users/test/Documents"),
+    };
+    let folders = snapshot_top(dir.path(), 10, scope, now).expect("top");
+    let mut paths: Vec<&str> = folders.iter().map(|f| f.path.as_str()).collect();
+    paths.sort_unstable();
+    assert_eq!(paths, vec!["/Users/test/Documents", "/Users/test/Documents/tax"]);
+
+    let text = build_importance_resource(dir.path(), Some("top=5&under=/Users/test/Documents"), now);
+    assert!(!text.contains("/Users/test/projects"), "outside `under`: {text}");
+    assert!(
+        text.contains("under '/Users/test/Documents'"),
+        "the header names the scope: {text}"
+    );
+}
+
+/// `why` names the strongest signals in a few words each, strongest first, and
+/// drops the ones that say nothing (visibility, a neutral path class).
+#[test]
+fn why_names_the_strongest_signals_tersely() {
+    let now = 1_000_000;
+    let mut signals = scored_signals(PathClass::ProjectRoot, now);
+    signals.marker_depth = Some(0);
+    signals.visit_count = Some(6);
+    let explanation = explain(&signals, &SignalSet::all(), &Weights::default(), now);
+    let why = why_text(&signals, &explanation, now);
+    assert!(why.starts_with("projectRoot"), "the path class leads: {why}");
+    assert!(why.contains("changed today"), "{why}");
+    assert_eq!(why.split(", ").count(), 3, "three reasons at most: {why}");
+    assert!(!why.contains("visib"), "{why}");
+
+    let quiet = why_text(
+        &low_score_signals(),
+        &explain(&low_score_signals(), &SignalSet::all(), &Weights::default(), now),
+        now,
+    );
+    assert!(!quiet.contains("neutral"), "a neutral class isn't a reason: {quiet}");
 }
 
 // ── no query (overview) ────────────────────────────────────────────────────────

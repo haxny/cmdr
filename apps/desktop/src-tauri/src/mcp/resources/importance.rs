@@ -10,6 +10,9 @@
 //!   scored volumes, merged).
 //! - `?threshold=<f>` — folders scoring at or above `f`, row count capped with a
 //!   truncation note (a low threshold can match every scored folder).
+//! - Both ranked modes take `&under=<path>` (only that folder and below), fold
+//!   near-duplicate descendants into the row above them ([`collapse_descendants`]),
+//!   and say why each row scores ([`why_text`]).
 //! - no query — a usage summary plus a per-volume overview, so an agent's first
 //!   blind read teaches it the syntax.
 //!
@@ -24,7 +27,8 @@ use std::path::Path;
 
 use cmdr_index::importance::read::scored_volume_ids;
 use cmdr_index::importance::{
-    Explanation, FloorReason, ImportanceIndex, ScoredWeight, SignalKind, SignalSet, WeightLookup,
+    Explanation, FloorReason, FolderSignals, ImportanceIndex, PathClass, ScoredWeight, SignalKind, SignalSet,
+    WeightLookup, Weights, explain,
 };
 
 use super::indexing::format_number;
@@ -54,13 +58,49 @@ pub(crate) enum PathImportance {
 }
 
 /// One ranked folder in a top-N / threshold list: which volume it lives on, its
-/// path, and its score.
+/// path, its score, why it scores (its top signals, terse), and how many of its
+/// descendants were folded into it.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RankedFolder {
     pub volume_id: String,
     pub path: String,
     pub score: f64,
+    /// Its strongest signals in reading order, like `projectRoot, changed today, 6 visits`.
+    /// Filled once the list is final, so a folded-away row never pays for it.
+    pub why: String,
+    /// Descendants within the read window folded into this row ([`collapse_descendants`]).
+    pub folded: usize,
+    /// The stored signals `why` is phrased from.
+    pub signals: FolderSignals,
 }
+
+/// Where a ranked read looks: one volume or all, and optionally only at or below one
+/// folder. `under` is a path ON `volume` (or on each scored volume when `volume` is
+/// `None`); `~` expands.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct RankedScope<'a> {
+    pub volume: Option<&'a str>,
+    pub under: Option<&'a str>,
+}
+
+/// How much higher than an ancestor in the list a descendant must score to keep its
+/// own row. A descendant scoring lower (`cmdr/apps/desktop` under `cmdr`) always
+/// folds; one scoring only slightly higher is a near-duplicate too. On the live root
+/// volume (2026-10-26) a folder of projects scored within 0.01 of its best project
+/// (`~/projects-git/vdavid` 0.84, `cmdr` 0.85), so without a margin the projects
+/// split arbitrarily between their own rows and the parent's by score noise.
+const CLEARLY_HIGHER: f64 = 0.05;
+
+/// The first read window, in rows per returned row. Folding can eat most of a window
+/// (on the live root volume, 2026-10-26, 153 of the top 160 rows sat under
+/// `~/projects-git/vdavid`), so a window that folds below `n` grows by this factor
+/// until it fills or reaches [`MAX_FOLD_WINDOW`].
+const COLLAPSE_OVERFETCH: usize = 8;
+
+/// The most rows one ranked read takes per volume. Each row is a small JSON parse, so
+/// this bounds a read to tens of milliseconds even on a home whose top rows all sit in
+/// one tree.
+const MAX_FOLD_WINDOW: usize = 20_000;
 
 /// One volume's line in the no-query overview.
 #[derive(Debug, Clone, PartialEq)]
@@ -151,68 +191,212 @@ fn ranked_volumes(data_dir: &Path, volume: Option<&str>) -> Result<Vec<String>, 
     }
 }
 
-/// Merge per-volume `ScoredWeight`s into a ranked `RankedFolder` list, highest score
-/// first (ties by path for determinism), capped at `cap`. Returns the list and
-/// whether it was truncated (more rows existed than `cap`).
-fn merge_ranked(per_volume: Vec<(String, Vec<ScoredWeight>)>, cap: usize) -> (Vec<RankedFolder>, bool) {
-    let mut folders: Vec<RankedFolder> = per_volume
-        .into_iter()
-        .flat_map(|(volume_id, weights)| {
-            weights.into_iter().map(move |w| RankedFolder {
-                volume_id: volume_id.clone(),
-                path: w.path,
-                score: w.score.value(),
-            })
-        })
-        .collect();
+/// Read up to `fetch` rows per requested volume (at or under `scope.under`, at or
+/// above `threshold`), shape each into a [`RankedFolder`] (with no `why` yet), and
+/// merge them highest score first (ties by path for determinism). The `bool` says
+/// whether some volume had more rows than `fetch`, so a caller can tell its window was
+/// cut.
+fn read_ranked(
+    data_dir: &Path,
+    scope: RankedScope<'_>,
+    under: &str,
+    fetch: usize,
+    threshold: Option<f64>,
+) -> Result<(Vec<RankedFolder>, bool), String> {
+    let mut window_cut = false;
+    let mut folders = Vec::new();
+    for volume_id in ranked_volumes(data_dir, scope.volume)? {
+        let index = ImportanceIndex::open(data_dir, &volume_id, available_for(&volume_id));
+        let weights = index.top_under(fetch + 1, threshold, under).unwrap_or_default();
+        window_cut |= weights.len() > fetch;
+        folders.extend(weights.into_iter().take(fetch).map(|w| RankedFolder {
+            volume_id: volume_id.clone(),
+            path: w.path,
+            score: w.score.value(),
+            why: String::new(),
+            folded: 0,
+            signals: w.signals,
+        }));
+    }
     folders.sort_by(|a, b| {
         b.score
             .partial_cmp(&a.score)
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| a.path.cmp(&b.path))
     });
-    let truncated = folders.len() > cap;
-    folders.truncate(cap);
-    (folders, truncated)
+    Ok((folders, window_cut))
 }
 
-/// The top `n` folders by score across the requested volume(s).
-pub(crate) fn snapshot_top(data_dir: &Path, n: usize, volume: Option<&str>) -> Result<Vec<RankedFolder>, String> {
+/// Read, fold, and grow the window until folding leaves MORE than `keep` rows, the
+/// volume runs out, or the window reaches [`MAX_FOLD_WINDOW`]. Returns the folded
+/// list (untruncated, `why` still empty) and whether the last window was cut.
+fn read_folded(
+    data_dir: &Path,
+    scope: RankedScope<'_>,
+    keep: usize,
+    threshold: Option<f64>,
+) -> Result<(Vec<RankedFolder>, bool), String> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let under = scope.under.map(|u| expand_tilde(u, &home));
+    let mut fetch = (keep * COLLAPSE_OVERFETCH).clamp(1, MAX_FOLD_WINDOW);
+    loop {
+        let (ranked, window_cut) = read_ranked(data_dir, scope, under.as_deref().unwrap_or(""), fetch, threshold)?;
+        let folders = collapse_descendants(ranked, under.as_deref(), &home);
+        if folders.len() > keep || !window_cut || fetch == MAX_FOLD_WINDOW {
+            return Ok((folders, window_cut));
+        }
+        fetch = (fetch * COLLAPSE_OVERFETCH).min(MAX_FOLD_WINDOW);
+    }
+}
+
+/// Phrase each final row's `why` against its own volume's signal availability, so the
+/// reasons match the breakdown that produced its score.
+fn annotate_why(folders: &mut [RankedFolder], now_secs: u64) {
+    for folder in folders {
+        let available = available_for(&folder.volume_id);
+        let explanation = explain(&folder.signals, &available, &Weights::default(), now_secs);
+        folder.why = why_text(&folder.signals, &explanation, now_secs);
+    }
+}
+
+/// Fold near-duplicate descendants into the folder above them, over a list ranked
+/// highest first. A row folds into a kept ancestor (same volume) unless it scores at
+/// least [`CLEARLY_HIGHER`] above it; the ancestor's `folded` counts it (plus whatever
+/// had folded into it). Rows keep their ranked order.
+///
+/// Some folders never absorb, so their children keep their own rows: the `under`
+/// folder the caller asked about (listing its children is what asking means), and
+/// `$HOME`, its ancestors, and a volume root, which would otherwise swallow
+/// `Documents` and friends into one generic row. Their children's own descendants
+/// still fold into them.
+pub(crate) fn collapse_descendants(ranked: Vec<RankedFolder>, under: Option<&str>, home: &str) -> Vec<RankedFolder> {
+    let anchor = under.map(|u| u.trim_end_matches('/'));
+    let home = home.trim_end_matches('/');
+    let absorbs = |folder: &RankedFolder| {
+        let path = folder.path.trim_end_matches('/');
+        !path.is_empty()
+            && anchor.is_none_or(|a| !path.eq_ignore_ascii_case(a))
+            && !(home == path || is_strictly_under(home, path))
+    };
+    let mut kept: Vec<RankedFolder> = Vec::new();
+    for mut row in ranked {
+        // A kept ancestor ranks at or above this row, so this row can't be clearly higher.
+        if let Some(ancestor) = kept
+            .iter_mut()
+            .find(|k| k.volume_id == row.volume_id && absorbs(k) && is_strictly_under(&row.path, &k.path))
+        {
+            ancestor.folded += 1 + row.folded;
+            continue;
+        }
+        // Kept descendants that ranked above this row only by a hair fold into it.
+        if absorbs(&row) {
+            kept.retain(|k| {
+                let near_duplicate = k.volume_id == row.volume_id
+                    && is_strictly_under(&k.path, &row.path)
+                    && k.score < row.score + CLEARLY_HIGHER;
+                if near_duplicate {
+                    row.folded += 1 + k.folded;
+                }
+                !near_duplicate
+            });
+        }
+        kept.push(row);
+    }
+    kept
+}
+
+/// Whether `path` sits strictly below `ancestor` (`/` is everything's ancestor).
+fn is_strictly_under(path: &str, ancestor: &str) -> bool {
+    path.strip_prefix(ancestor.trim_end_matches('/'))
+        .is_some_and(|rest| rest.starts_with('/') && rest.len() > 1)
+}
+
+/// The top `n` folders by score across the requested scope, near-duplicates folded.
+pub(crate) fn snapshot_top(
+    data_dir: &Path,
+    n: usize,
+    scope: RankedScope<'_>,
+    now_secs: u64,
+) -> Result<Vec<RankedFolder>, String> {
     let n = n.min(TOP_N_MAX);
-    let volumes = ranked_volumes(data_dir, volume)?;
-    let per_volume = volumes
-        .into_iter()
-        .map(|volume_id| {
-            let index = ImportanceIndex::open(data_dir, &volume_id, available_for(&volume_id));
-            let weights = index.top_n(n).unwrap_or_default();
-            (volume_id, weights)
-        })
-        .collect();
-    // Merge to a global top-N: each volume gave its own top-n, so n of the union.
-    Ok(merge_ranked(per_volume, n).0)
+    let (mut folders, _) = read_folded(data_dir, scope, n, None)?;
+    folders.truncate(n);
+    annotate_why(&mut folders, now_secs);
+    Ok(folders)
 }
 
-/// Folders scoring at or above `threshold` across the requested volume(s), capped.
-/// Returns the (capped) list and whether more existed than the cap.
+/// Folders scoring at or above `threshold` across the requested scope, near-duplicates
+/// folded, capped. Returns the (capped) list and whether more existed than the cap.
 pub(crate) fn snapshot_threshold(
     data_dir: &Path,
     threshold: f64,
-    volume: Option<&str>,
+    scope: RankedScope<'_>,
+    now_secs: u64,
 ) -> Result<(Vec<RankedFolder>, bool), String> {
-    let volumes = ranked_volumes(data_dir, volume)?;
-    let per_volume = volumes
-        .into_iter()
-        .map(|volume_id| {
-            let index = ImportanceIndex::open(data_dir, &volume_id, available_for(&volume_id));
-            // Fetch cap+1 per volume so the merge can tell it truncated without
-            // loading the whole above-threshold tail.
-            let weights = index
-                .top_above_threshold(THRESHOLD_ROW_CAP + 1, threshold)
-                .unwrap_or_default();
-            (volume_id, weights)
-        })
+    let (mut folders, window_cut) = read_folded(data_dir, scope, THRESHOLD_ROW_CAP, Some(threshold))?;
+    let truncated = window_cut || folders.len() > THRESHOLD_ROW_CAP;
+    folders.truncate(THRESHOLD_ROW_CAP);
+    annotate_why(&mut folders, now_secs);
+    Ok((folders, truncated))
+}
+
+/// A folder's strongest signals as a terse phrase list, the ones that actually added
+/// points, strongest first: `projectRoot, changed today, 6 visits`. At most three.
+pub(crate) fn why_text(signals: &FolderSignals, explanation: &Explanation, now_secs: u64) -> String {
+    const MAX_REASONS: usize = 3;
+    let mut contributions: Vec<_> = explanation
+        .contributions
+        .iter()
+        .filter(|c| c.contribution > 0.0)
         .collect();
-    Ok(merge_ranked(per_volume, THRESHOLD_ROW_CAP))
+    contributions.sort_by(|a, b| {
+        b.contribution
+            .partial_cmp(&a.contribution)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    contributions
+        .into_iter()
+        .filter_map(|c| signal_reason(c.signal, signals, now_secs))
+        .take(MAX_REASONS)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// One signal's reason in a few words, or `None` when it says nothing useful (the
+/// constant visibility term, a neutral path class).
+fn signal_reason(signal: SignalKind, signals: &FolderSignals, now_secs: u64) -> Option<String> {
+    match signal {
+        SignalKind::PathClass => match signals.path_class {
+            PathClass::ProjectRoot => Some("projectRoot".to_string()),
+            PathClass::UserContent => Some("userContent".to_string()),
+            PathClass::SystemOrCache | PathClass::Neutral => None,
+        },
+        SignalKind::ProjectMarker => match signals.marker_depth? {
+            0 => Some("has project files".to_string()),
+            _ => Some("holds projects".to_string()),
+        },
+        SignalKind::MtimeRecency => signals.mtime_secs.map(|t| format!("changed {}", age(now_secs, t))),
+        SignalKind::VisitActivity => signals
+            .visit_count
+            .map(|n| crate::pluralize::pluralize(u64::from(n), "visit")),
+        SignalKind::LastUsed => signals.last_used_secs.map(|t| format!("opened {}", age(now_secs, t))),
+        SignalKind::ExtensionDiversity => Some(format!(
+            "{}, {}",
+            crate::pluralize::pluralize(u64::from(signals.file_count), "file"),
+            crate::pluralize::pluralize(u64::from(signals.distinct_extension_count), "type")
+        )),
+        SignalKind::Visibility => None,
+    }
+}
+
+/// How long ago `then` was, in days: `today`, `yesterday`, or `12d ago`.
+fn age(now_secs: u64, then: u64) -> String {
+    const DAY: u64 = 24 * 60 * 60;
+    match now_secs.saturating_sub(then) / DAY {
+        0 => "today".to_string(),
+        1 => "yesterday".to_string(),
+        days => format!("{days}d ago"),
+    }
 }
 
 /// Every scored volume's overview line (id, kind, generation, folder count).
@@ -321,16 +505,26 @@ pub(crate) fn build_path_text(raw_path: &str, snapshot: &PathImportance) -> Stri
 }
 
 /// Build the `?top=` / `?threshold=` ranked list. Each row is
-/// `rank. score  volume  path` so an agent can scan by score and see which volume a
-/// folder lives on.
+/// `rank. score  volume  path  (why) [+N folded]` so an agent can scan by score, see
+/// which volume a folder lives on, and see what it hides.
 pub(crate) fn build_ranked_text(header: &str, folders: &[RankedFolder], truncated_note: Option<&str>) -> String {
     let mut lines = vec![header.to_string()];
     if folders.is_empty() {
         lines.push("  (no folders match)".to_string());
     }
     for (i, f) in folders.iter().enumerate() {
+        let why = if f.why.is_empty() {
+            String::new()
+        } else {
+            format!("  ({})", f.why)
+        };
+        let folded = if f.folded == 0 {
+            String::new()
+        } else {
+            format!(" [+{} folded]", f.folded)
+        };
         lines.push(format!(
-            "  {}. {}  {}  {}",
+            "  {}. {}  {}  {}{why}{folded}",
             i + 1,
             format_score(f.score),
             f.volume_id,
@@ -354,6 +548,9 @@ pub(crate) fn build_overview_text(volumes: &[VolumeOverview]) -> String {
         "  ?path=<abs-path>        one folder's score + signal breakdown, or why it floors (~ expands)".to_string(),
         "  ?top=<n>&volume=<id>    the top-N folders by score (volume optional ⇒ all scored volumes)".to_string(),
         "  ?threshold=<f>          folders scoring at or above f (0.0-1.0), capped".to_string(),
+        "  &under=<path>           with top or threshold: only folders at or below path; its children get own rows"
+            .to_string(),
+        "Near-duplicate descendants fold into the folder above them ([+N folded]).".to_string(),
         String::new(),
     ];
 
@@ -381,6 +578,13 @@ pub(crate) fn build_overview_text(volumes: &[VolumeOverview]) -> String {
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 
+/// The ` on volume 'x' under '/p'` tail of a ranked header, empty for the whole set.
+fn scope_label(scope: RankedScope<'_>) -> String {
+    let volume = scope.volume.map(|v| format!(" on volume '{v}'")).unwrap_or_default();
+    let under = scope.under.map(|u| format!(" under '{u}'")).unwrap_or_default();
+    format!("{volume}{under}")
+}
+
 /// Parse `cmdr://importance`'s query and render the matching mode. `now_secs` is
 /// injected so the `?path=` recency breakdown is deterministic under test.
 pub(crate) fn build_importance_resource(data_dir: &Path, query: Option<&str>, now_secs: u64) -> String {
@@ -391,14 +595,18 @@ pub(crate) fn build_importance_resource(data_dir: &Path, query: Option<&str>, no
         return build_path_text(path, &snapshot);
     }
 
+    let ranked_scope = RankedScope {
+        volume: q.get("volume").map(String::as_str),
+        under: q.get("under").map(String::as_str),
+    };
+
     if let Some(top) = q.get("top") {
         let Ok(n) = top.parse::<usize>() else {
             return format!("Invalid `top` value '{top}': expected a whole number, for example `?top=20`.");
         };
-        let volume = q.get("volume").map(String::as_str);
-        return match snapshot_top(data_dir, n, volume) {
+        return match snapshot_top(data_dir, n, ranked_scope, now_secs) {
             Ok(folders) => {
-                let scope = volume.map(|v| format!(" on volume '{v}'")).unwrap_or_default();
+                let scope = scope_label(ranked_scope);
                 let header = format!(
                     "Top {} by importance{scope}:",
                     crate::pluralize::pluralize(n as u64, "folder")
@@ -415,10 +623,9 @@ pub(crate) fn build_importance_resource(data_dir: &Path, query: Option<&str>, no
                 "Invalid `threshold` value '{threshold}': expected a number 0.0-1.0, for example `?threshold=0.5`."
             );
         };
-        let volume = q.get("volume").map(String::as_str);
-        return match snapshot_threshold(data_dir, value, volume) {
+        return match snapshot_threshold(data_dir, value, ranked_scope, now_secs) {
             Ok((folders, truncated)) => {
-                let scope = volume.map(|v| format!(" on volume '{v}'")).unwrap_or_default();
+                let scope = scope_label(ranked_scope);
                 let header = format!("Folders scoring at or above {}{scope}:", format_score(value));
                 let note = truncated.then(|| {
                     format!(
