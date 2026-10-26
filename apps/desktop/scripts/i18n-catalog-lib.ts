@@ -543,6 +543,10 @@ export const BRAND_WORDS: readonly string[] = Object.freeze([
   'Rust', // tech name
   'Svelte', // tech name
   'Safari', // Apple's browser; Apple keeps the name English in every locale, and Cmdr's WebKit IS it
+  'git', // the version-control tool, as prose names it ("your git history")
+  'Git', // the same tool as a label names it (the Git column, Settings › File systems › Git)
+  'ADB', // Android Debug Bridge, a protocol name like MTP
+  'Kindle', // Amazon's e-reader, a product name
   // NOT here: "Quick Look" and other Apple FEATURE names Apple localizes per-OS
   // (fr "Coup d’œil", de "Übersicht", es "Vista rápida"). They must be translated
   // to match the user's macOS, not kept verbatim. Only Apple feature/product names
