@@ -60,12 +60,17 @@
         padding: var(--spacing-md);
     }
 
+    /* Wraps at spaces and breaks only a token that alone outgrows the line (a long
+       path), so a command stays readable: `break-all` split `/dev/null` and
+       `bInterfaceSubClass` wherever a line happened to end. `min-width: 0` is what
+       lets the flex item shrink below a long path instead of widening the box. */
     .text {
         flex: 1;
+        min-width: 0;
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
         color: var(--color-text-primary);
-        word-break: break-all;
+        overflow-wrap: break-word;
         line-height: var(--font-line-height-normal);
         background: none;
         padding: 0;

@@ -316,7 +316,6 @@
         margin: var(--spacing-sm) 0 0;
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
-        word-break: break-all;
     }
 
     .hint.warning {
