@@ -12,11 +12,11 @@ mod model;
 mod read;
 mod save;
 pub mod text;
+pub mod tools;
 mod write;
 
 // Dependencies the later tasks (read, write, tools, undo) use; declared now so the
 // crate's manifest is final. Each `as _` goes when its first user lands.
-use regex as _;
 use serde_json as _;
 
 #[cfg(test)]
@@ -29,6 +29,8 @@ mod save_test;
 mod test_files;
 #[cfg(test)]
 mod text_test;
+#[cfg(test)]
+mod tools_test;
 #[cfg(test)]
 mod write_test;
 

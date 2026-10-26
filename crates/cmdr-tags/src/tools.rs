@@ -1,0 +1,231 @@
+//! Pure clean-up tools over a session's files. Each takes the files in session order and
+//! returns new `FileTags`; the input is never mutated.
+
+use std::sync::LazyLock;
+
+use regex::Regex;
+
+use crate::model::{FileTags, TagField};
+use crate::text::{remove_diacritics, sentence_case, title_case};
+
+/// How [`change_case`] rewrites a value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaseTool {
+    /// First letter upper, the rest lower.
+    Sentence,
+    /// Every word starts upper, the rest lower.
+    Title,
+    /// All lower.
+    Lower,
+    /// All upper.
+    Upper,
+}
+
+/// Matches "Čte: Tomáš Jirman": a narrator cue, then 1-4 capitalized words. `(?i)` would let
+/// `\p{Lu}` match lowercase too, so the name words switch it off.
+static NARRATOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b(?:čte|čtou|cte|ctou|interpret|vypráví|vypravi)\s*:\s*((?-i:\p{Lu}\p{L}*)(?:\s+(?-i:\p{Lu}\p{L}*)){0,3})")
+        .expect("narrator regex is valid")
+});
+
+/// Applies `edit` to every value of the given fields; a field that ends up empty is removed.
+fn map_fields(files: &[FileTags], fields: &[TagField], edit: impl Fn(&str) -> String) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            for field in fields {
+                if let Some(values) = out.fields.get_mut(field) {
+                    *values = values.iter().map(|v| edit(v)).filter(|v| !v.is_empty()).collect();
+                    if values.is_empty() {
+                        out.fields.remove(field);
+                    }
+                }
+            }
+            out
+        })
+        .collect()
+}
+
+/// Changes the case of every value in `fields`.
+pub fn change_case(files: &[FileTags], fields: &[TagField], tool: CaseTool) -> Vec<FileTags> {
+    map_fields(files, fields, |value| match tool {
+        CaseTool::Sentence => sentence_case(value),
+        CaseTool::Title => title_case(value),
+        CaseTool::Lower => value.to_lowercase(),
+        CaseTool::Upper => value.to_uppercase(),
+    })
+}
+
+/// Strips diacritics from `fields`, skipping the ones that keep them (comment, description, www).
+pub fn strip_diacritics(files: &[FileTags], fields: &[TagField]) -> Vec<FileTags> {
+    let stripped: Vec<TagField> = fields.iter().copied().filter(|f| !f.keeps_diacritics()).collect();
+    map_fields(files, &stripped, remove_diacritics)
+}
+
+fn is_prefix_separator(c: char) -> bool {
+    matches!(c, ' ' | '_' | '.' | '-')
+}
+
+/// The leading number of a string, and the rest after it.
+fn split_number(text: &str) -> Option<(u32, &str)> {
+    let digits = text.find(|c: char| !c.is_ascii_digit()).unwrap_or(text.len());
+    let number = text[..digits].parse().ok()?;
+    Some((number, &text[digits..]))
+}
+
+/// The title without its leading track number, if it starts with the file's track (or the
+/// track before it, for a book whose preface is "00").
+fn without_track_prefix(title: &str, track: u32) -> Option<String> {
+    let (number, rest) = split_number(title)?;
+    if number != track && number + 1 != track {
+        return None;
+    }
+    let after = rest.trim_start_matches(is_prefix_separator);
+    let separators = &rest[..rest.len() - after.len()];
+    if separators.is_empty() || after.is_empty() {
+        return None;
+    }
+    Some(if separators.contains('_') {
+        after.replace('_', " ")
+    } else {
+        after.to_string()
+    })
+}
+
+/// Removes a leading track number from the title when it equals the file's track or track - 1.
+/// Files without a numeric track stay as they are.
+pub fn strip_track_prefix(files: &[FileTags]) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            let track = file
+                .fields
+                .get(&TagField::Track)
+                .and_then(|v| v.first())
+                .and_then(|t| split_number(t.trim()))
+                .map(|(n, _)| n);
+            let title = file.fields.get(&TagField::Title).and_then(|v| v.first());
+            if let (Some(track), Some(title)) = (track, title)
+                && let Some(stripped) = without_track_prefix(title, track)
+            {
+                out.fields.insert(TagField::Title, vec![stripped]);
+            }
+            out
+        })
+        .collect()
+}
+
+/// Numbers the files `start`, `start + 1`, ... in session order. Disc is untouched.
+pub fn renumber(files: &[FileTags], start: u32) -> Vec<FileTags> {
+    files
+        .iter()
+        .enumerate()
+        .map(|(index, file)| {
+            let mut out = file.clone();
+            let number = u32::try_from(index).map_or(u32::MAX, |i| start.saturating_add(i));
+            out.fields.insert(TagField::Track, vec![number.to_string()]);
+            out
+        })
+        .collect()
+}
+
+/// Sets the album artist to a copy of the artist where there is none yet.
+pub fn album_artist_from_artist(files: &[FileTags]) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            if !file.fields.contains_key(&TagField::AlbumArtist)
+                && let Some(artist) = file.fields.get(&TagField::Artist)
+            {
+                out.fields.insert(TagField::AlbumArtist, artist.clone());
+            }
+            out
+        })
+        .collect()
+}
+
+/// Finds "Čte: Name Surname" in `text`; returns the name and the text without the cue.
+fn take_narrator(text: &str) -> Option<(String, String)> {
+    let caps = NARRATOR.captures(text)?;
+    let whole = caps.get(0)?;
+    let name = caps.get(1)?.as_str();
+    let mut end = whole.end();
+    if text[end..].starts_with(['.', ',']) {
+        end += 1;
+    }
+    let before = text[..whole.start()].trim_end();
+    let after = text[end..].trim_start();
+    let joined = if before.is_empty() || after.is_empty() {
+        format!("{before}{after}")
+    } else {
+        format!("{before} {after}")
+    };
+    let rest = joined.trim_start_matches(['.', ',']).trim().to_string();
+    Some((remove_diacritics(name), rest))
+}
+
+/// Moves a narrator named in the comment (else the title) to Performer and cuts the cue from
+/// its source. A file that already has a Performer is left alone.
+pub fn narrator_from_text(files: &[FileTags]) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            if file.fields.contains_key(&TagField::Performer) {
+                return out;
+            }
+            for source in [TagField::Comment, TagField::Title] {
+                let Some(text) = file.fields.get(&source).and_then(|v| v.first()) else {
+                    continue;
+                };
+                if let Some((name, rest)) = take_narrator(text) {
+                    out.fields.insert(TagField::Performer, vec![name]);
+                    if rest.is_empty() {
+                        out.fields.remove(&source);
+                    } else {
+                        out.fields.insert(source, vec![rest]);
+                    }
+                    break;
+                }
+            }
+            out
+        })
+        .collect()
+}
+
+fn fold(text: &str) -> String {
+    remove_diacritics(text).to_lowercase()
+}
+
+/// Removes the title where it only repeats the album (ignoring case and diacritics).
+pub fn clear_redundant_titles(files: &[FileTags]) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            let title = file.fields.get(&TagField::Title).and_then(|v| v.first());
+            let album = file.fields.get(&TagField::Album).and_then(|v| v.first());
+            if let (Some(title), Some(album)) = (title, album)
+                && fold(title) == fold(album)
+            {
+                out.fields.remove(&TagField::Title);
+            }
+            out
+        })
+        .collect()
+}
+
+/// Drops the given unmanaged text items (by their format-native keys).
+pub fn remove_extras(files: &[FileTags], keys: &[String]) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            out.extras.retain(|key, _| !keys.contains(key));
+            out
+        })
+        .collect()
+}
