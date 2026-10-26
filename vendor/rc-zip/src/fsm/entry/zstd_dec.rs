@@ -67,10 +67,18 @@ impl Decompressor for ZstdDec {
                     in_buf = &in_buf[n..];
 
                     // if we wrote some of the input, and we haven't gotten any
-                    // output, then we need to loop
-                    if n > 0 && n < in_buf.len() && self.internal_buf_mut().is_empty() {
-                        trace!("fed _some_ to the decoder and no output yet, keep going");
-                        continue;
+                    // output, then we need to loop. The decoder stops taking
+                    // input once its output buffer fills, so input left over
+                    // here is more of the stream, never a trailer: with output
+                    // pending, hand it out and let the caller feed the rest.
+                    if n > 0 && !in_buf.is_empty() {
+                        if self.internal_buf_mut().is_empty() {
+                            trace!("fed _some_ to the decoder and no output yet, keep going");
+                            continue;
+                        }
+                        trace!("fed _some_ to the decoder, handing out its output first");
+                        self.copy_to_out(out, &mut outcome);
+                        return Ok(outcome);
                     }
 
                     match has_more_input {
