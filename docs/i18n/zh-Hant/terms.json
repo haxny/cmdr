@@ -313,6 +313,9 @@
   "archive-chat": {
     "chosen": "封存",
     "confidence": "high",
+    "exceptions": {
+      "suggestedOps.facts.archive": "English sense: the NOUN label before the zip file a compress suggestion creates (the archive concept, 封存檔), not archiving a chat."
+    },
     "forms": "same word as the archive-file noun, unambiguous in context",
     "sources": "AP-TW = AP-HK (Archive → 封存)"
   },
@@ -1540,6 +1543,13 @@
     "forms": "frame rate → 影格率",
     "sources": "AP QuickTime (TW = HK; HK frame rate 格率)"
   },
+  "from-to": {
+    "accept": ["目標"],
+    "chosen": "來源",
+    "confidence": "high",
+    "forms": "paired headings and fact labels 來源 / 目標 (transfer dialog, scan phase 來源：, suggestedOps.facts.from/.to)",
+    "sources": "catalog fileOperations.transferDialog.sourceGroupTitle/targetGroupTitle, fileOperations.scanPhase.fromLabel; DC zh-TW 從: / 到: passed over (catalog outranks pile)"
+  },
   "full-disk-access": {
     "avoid": [
       {
@@ -2387,7 +2397,7 @@
     "sources": "AP-TW = AP-HK (無法裝載卷宗…, 卸除伺服器)"
   },
   "move": {
-    "accept": ["移至", "移到", "移出", "移走"],
+    "accept": ["移至", "移到", "移出", "移走", "移回", "移過去"],
     "avoid": [
       {
         "form": "搬移",
@@ -2396,7 +2406,7 @@
     ],
     "chosen": "移動",
     "confidence": "high",
-    "forms": "F6 and prose → 移動; move to X → 移到 X / 移至垃圾桶; move out of a device → 移出; moved away → 移走",
+    "forms": "F6 and prose → 移動; move to X → 移到 X / 移至垃圾桶; move out of a device → 移出; moved away → 移走; move back → 移回原處; move them there → 移過去",
     "sources": "AP-HK, MS, TC, DC"
   },
   "move-to-trash": {
@@ -3733,8 +3743,8 @@
   "suggestion": {
     "chosen": "建議",
     "confidence": "high",
-    "forms": "one AI-suggested group → 這項建議; suggest again → 再建議一次; Suggested operations → 建議的操作",
-    "sources": "AP-TW (12) = AP-HK (11) + MS zh-Hant (101); catalog suggestedOps.title, askCmdr.wakeToast.title"
+    "forms": "the AI suggestions dialog (title, View-menu item, palette command) → AI 建議, like fileOperations.mkdir.aiSuggestionsHeader and suggestedOps.indicatorTooltip; in prose 「AI 建議」對話方塊; one AI-suggested group → 這項建議; suggest again → 再建議一次; a batch heading → 剛剛建議的 / {countText} 分鐘前建議的 / 今天 {time} 建議的",
+    "sources": "AP-TW (12) = AP-HK (11) + MS zh-Hant (101); catalog fileOperations.mkdir.aiSuggestionsHeader, suggestedOps.indicatorTooltip, askCmdr.wakeToast.title"
   },
   "supported": {
     "chosen": "支援",
@@ -3886,6 +3896,13 @@
     "chosen": "縮圖",
     "confidence": "high",
     "sources": "AP-HK Preview, MS (HKG, TWN), DC, NAU"
+  },
+  "time-ago": {
+    "accept": ["剛剛"],
+    "chosen": "前",
+    "confidence": "high",
+    "forms": "{durationText}前; a count → {count} 分鐘前 (spaced against the numeral); a moment ago → 剛剛; a batch heading → {countText} 分鐘前建議的",
+    "sources": "NAU zh-TW (%d 天前), catalog ui.toast.age, queryUi.age.minutes"
   },
   "time-left": {
     "chosen": "剩餘",

@@ -75,3 +75,6 @@ worth keeping).
   rendered, dodging the disk sense of `格式化`.
 - **`共享資料夾` for an NFS export** (`servers.sheet.nfsExport` and every `nfs*` / `refusal.export*` key): shares the
   SMB share's word, so the two protocols' folders read alike; Synology DSM zh-TW says `共用資料夾`, MS/Linux `匯出`.
+- **AI 建議 batch headings and pills** (`suggestedOps.sweepWhen.*`, `.reversible.*`, `.irreversible.*`): headings end in
+  `建議的` (`今天 {time} 建議的`), pills open `可以還原：` / `無法還原：`, and the reason label is `理由：`. Confirm
+  they read naturally in the dialog, and that `{date} 建議的` reads right after an ISO date.

@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "建議的操作",
+  "commands.suggestedOpsShow.label": "AI 建議",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "檢視 AI 建議的檔案操作，決定要執行哪些",
   "@commands.suggestedOpsShow.description": {

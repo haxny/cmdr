@@ -470,6 +470,14 @@
     ],
     "zh-Hant": [
       {
+        "source": "Archive",
+        "reason": "Two senses of one English word. `封存` archives an Ask Cmdr chat (`askCmdr.sessions.archive`, Apple's Archive verb); `封存檔` is the zip FILE a compress suggestion creates (`suggestedOps.facts.archive`, the archive concept), a noun label before a file path."
+      },
+      {
+        "source": "Why",
+        "reason": "`為什麼？` is onboarding's question asking why Cmdr needs Full Disk Access (`onboarding.stepFda.why`). `理由：` labels the AI's explanation of a suggestion (`suggestedOps.agentReason`); a bare `為什麼：` before a statement reads as an unanswered question."
+      },
+      {
         "source": "Added",
         "reason": "Two senses of one English word. `fileExplorer.columns.added` is a date column header, so it takes Finder's date label `加入日期` (LocalizableMerged N169.38, zh-TW and zh-HK alike), parallel with its siblings `製作日期` and `修改日期`. `已加入` is a state: a file git added (`fileExplorer.git.status.added`) and a shortcut the user added (`shortcuts.list.addedTooltip`)."
       },
