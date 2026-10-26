@@ -267,7 +267,7 @@ describe('disclosure', () => {
     const host = mountDialog()
 
     expect(host.textContent).toContain('They all look like installers to me.')
-    expect(host.textContent).toContain('The AI’s reason')
+    expect(host.textContent).toContain('Why, according to the AI:')
   })
 
   it('says why a move can be undone', () => {
@@ -507,7 +507,7 @@ describe('the parts on their own', () => {
     mount(AgentReason, { target: host, props: { text: 'They all look like invoices.' } })
     flushSync()
     await expectNoA11yViolations(host)
-    expect(host.textContent).toContain('The AI’s reason')
+    expect(host.textContent).toContain('Why, according to the AI:')
   })
 
   it('SuggestedOpsGroup renders a group with no violations', async () => {
