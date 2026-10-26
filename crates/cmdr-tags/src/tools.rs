@@ -21,12 +21,22 @@ pub enum CaseTool {
     Upper,
 }
 
-/// Matches "Čte: Tomáš Jirman": a narrator cue, then 1-4 capitalized words. `(?i)` would let
-/// `\p{Lu}` match lowercase too, so the name words switch it off.
+/// Matches "Čte: Tomáš Jirman, Eva Nováková": a narrator cue, then one or more names joined by
+/// ", " / " a " / " and ". A name is 1-4 capitalized words (hyphens and apostrophes allowed) or
+/// initials like "J."; words are separated by blanks, never newlines. `(?i)` would let `\p{Lu}`
+/// match lowercase too, so the name words switch it off.
 static NARRATOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(?:čte|čtou|cte|ctou|interpret|vypráví|vypravi)\s*:\s*((?-i:\p{Lu}\p{L}*)(?:\s+(?-i:\p{Lu}\p{L}*)){0,3})")
-        .expect("narrator regex is valid")
+    let word = r"(?-i:\p{Lu}\.|\p{Lu}[\p{L}'’-]*)";
+    let name = format!(r"{word}(?:[ \t]+{word}){{0,3}}");
+    let pattern = format!(
+        r"(?i)\b(?:čte|čtou|cte|ctou|interpret|vypráví|vypravi)[ \t]*:[ \t]*({name}(?:(?:[ \t]*,[ \t]*|[ \t]+(?-i:a|and)[ \t]+){name})*)"
+    );
+    Regex::new(&pattern).expect("narrator regex is valid")
 });
+
+/// Separates several narrators inside one matched segment.
+static NARRATOR_SEPARATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[ \t]*,[ \t]*|[ \t]+(?:a|and)[ \t]+").expect("separator regex is valid"));
 
 /// Applies `edit` to every value of the given fields; a field that ends up empty is removed.
 fn map_fields(files: &[FileTags], fields: &[TagField], edit: impl Fn(&str) -> String) -> Vec<FileTags> {
@@ -78,7 +88,7 @@ fn split_number(text: &str) -> Option<(u32, &str)> {
 /// track before it, for a book whose preface is "00").
 fn without_track_prefix(title: &str, track: u32) -> Option<String> {
     let (number, rest) = split_number(title)?;
-    if number != track && number + 1 != track {
+    if number != track && number.checked_add(1) != Some(track) {
         return None;
     }
     let after = rest.trim_start_matches(is_prefix_separator);
@@ -110,7 +120,7 @@ pub fn strip_track_prefix(files: &[FileTags]) -> Vec<FileTags> {
             if let (Some(track), Some(title)) = (track, title)
                 && let Some(stripped) = without_track_prefix(title, track)
             {
-                out.fields.insert(TagField::Title, vec![stripped]);
+                set_first(&mut out, TagField::Title, &stripped);
             }
             out
         })
@@ -147,13 +157,32 @@ pub fn album_artist_from_artist(files: &[FileTags]) -> Vec<FileTags> {
         .collect()
 }
 
-/// Finds "Čte: Name Surname" in `text`; returns the name and the text without the cue.
-fn take_narrator(text: &str) -> Option<(String, String)> {
+/// Replaces the first value of `field` (the rest stay), or removes that value when `text` is empty.
+fn set_first(tags: &mut FileTags, field: TagField, text: &str) {
+    let Some(values) = tags.fields.get_mut(&field) else {
+        return;
+    };
+    if text.is_empty() {
+        values.remove(0);
+    } else {
+        values[0] = text.to_string();
+    }
+    if values.is_empty() {
+        tags.fields.remove(&field);
+    }
+}
+
+/// Finds "Čte: Name Surname" in `text`; returns the names and the text without the cue.
+fn take_narrator(text: &str) -> Option<(Vec<String>, String)> {
     let caps = NARRATOR.captures(text)?;
     let whole = caps.get(0)?;
-    let name = caps.get(1)?.as_str();
+    let names = NARRATOR_SEPARATOR
+        .split(caps.get(1)?.as_str())
+        .map(remove_diacritics)
+        .collect();
     let mut end = whole.end();
-    if text[end..].starts_with(['.', ',']) {
+    let tail = &text[end..];
+    if tail.starts_with(',') || (tail.starts_with('.') && !tail.starts_with("..")) {
         end += 1;
     }
     let before = text[..whole.start()].trim_end();
@@ -163,8 +192,14 @@ fn take_narrator(text: &str) -> Option<(String, String)> {
     } else {
         format!("{before} {after}")
     };
-    let rest = joined.trim_start_matches(['.', ',']).trim().to_string();
-    Some((remove_diacritics(name), rest))
+    let trimmed = joined.trim();
+    let rest = if trimmed.starts_with("..") {
+        trimmed
+    } else {
+        trimmed.trim_start_matches(['.', ',']).trim_start()
+    };
+    let rest = rest.to_string();
+    Some((names, rest))
 }
 
 /// Moves a narrator named in the comment (else the title) to Performer and cuts the cue from
@@ -181,13 +216,9 @@ pub fn narrator_from_text(files: &[FileTags]) -> Vec<FileTags> {
                 let Some(text) = file.fields.get(&source).and_then(|v| v.first()) else {
                     continue;
                 };
-                if let Some((name, rest)) = take_narrator(text) {
-                    out.fields.insert(TagField::Performer, vec![name]);
-                    if rest.is_empty() {
-                        out.fields.remove(&source);
-                    } else {
-                        out.fields.insert(source, vec![rest]);
-                    }
+                if let Some((names, rest)) = take_narrator(text) {
+                    out.fields.insert(TagField::Performer, names);
+                    set_first(&mut out, source, &rest);
                     break;
                 }
             }

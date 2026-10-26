@@ -169,7 +169,103 @@ fn remove_extras_drops_only_the_named_keys() {
 }
 
 #[test]
-fn tools_return_new_values_and_leave_the_input_unchanged() {
+fn narrator_handles_hyphens_initials_and_newlines() {
+    let out = narrator_from_text(&[
+        file(&[(TagField::Comment, "Čte: Jiří Dvořák-Ondříček.")]),
+        file(&[(TagField::Comment, "Čte: J. Novák")]),
+        file(&[(TagField::Comment, "Čte: Jan Novák\nPovídky o psech")]),
+    ]);
+    assert_eq!(
+        get(&out[0], TagField::Performer),
+        Some(vec!["Jiri Dvorak-Ondricek".into()])
+    );
+    assert!(!out[0].fields.contains_key(&TagField::Comment));
+    assert_eq!(get(&out[1], TagField::Performer), Some(vec!["J. Novak".into()]));
+    assert_eq!(get(&out[2], TagField::Performer), Some(vec!["Jan Novak".into()]));
+    assert_eq!(one(&out[2], TagField::Comment).as_deref(), Some("Povídky o psech"));
+}
+
+#[test]
+fn narrator_splits_several_names() {
+    let out = narrator_from_text(&[
+        file(&[(TagField::Comment, "čtou: Jan Novák a Eva Nováková.")]),
+        file(&[(TagField::Comment, "Čte: Jan Novák, Eva Nováková and Petr Svoboda")]),
+    ]);
+    assert_eq!(
+        get(&out[0], TagField::Performer),
+        Some(vec!["Jan Novak".into(), "Eva Novakova".into()])
+    );
+    assert!(!out[0].fields.contains_key(&TagField::Comment));
+    assert_eq!(get(&out[1], TagField::Performer).map(|v| v.len()), Some(3));
+}
+
+#[test]
+fn narrator_regressions() {
+    for text in ["interpretace: Jan Novák", "přečte: Jan Novák"] {
+        let input = [file(&[(TagField::Comment, text)])];
+        assert_eq!(narrator_from_text(&input), input.to_vec(), "{text}");
+    }
+    let mid = narrator_from_text(&[file(&[(TagField::Comment, "Povídky. Čte: Jan Novák. Konec")])]);
+    assert_eq!(get(&mid[0], TagField::Performer), Some(vec!["Jan Novak".into()]));
+    assert_eq!(one(&mid[0], TagField::Comment).as_deref(), Some("Povídky. Konec"));
+    let comma = narrator_from_text(&[file(&[(TagField::Comment, "Čte: Jan Novák, povídky")])]);
+    assert_eq!(one(&comma[0], TagField::Comment).as_deref(), Some("povídky"));
+    let cap = narrator_from_text(&[file(&[(TagField::Comment, "Čte: Aa Bb Cc Dd Ee")])]);
+    assert_eq!(get(&cap[0], TagField::Performer), Some(vec!["Aa Bb Cc Dd".into()]));
+    assert_eq!(one(&cap[0], TagField::Comment).as_deref(), Some("Ee"));
+    let ellipsis = narrator_from_text(&[file(&[(TagField::Comment, "Čte: Jan Novák... a dál")])]);
+    assert_eq!(one(&ellipsis[0], TagField::Comment).as_deref(), Some("... a dál"));
+}
+
+#[test]
+fn only_the_first_value_is_rewritten() {
+    let mut multi = file(&[(TagField::Comment, "Čte: Jan Novák."), (TagField::Comment, "druhy")]);
+    multi
+        .fields
+        .entry(TagField::Title)
+        .or_default()
+        .extend(["01 Prvni".to_string(), "Druhy".to_string()]);
+    multi.fields.insert(TagField::Track, vec!["1".into()]);
+    let out = narrator_from_text(&[multi.clone()]);
+    assert_eq!(get(&out[0], TagField::Comment), Some(vec!["druhy".into()]));
+    let out = strip_track_prefix(&[multi]);
+    assert_eq!(
+        get(&out[0], TagField::Title),
+        Some(vec!["Prvni".into(), "Druhy".into()])
+    );
+}
+
+#[test]
+fn track_prefix_does_not_overflow() {
+    let input = [file(&[(TagField::Title, "4294967295 Konec"), (TagField::Track, "1")])];
+    assert_eq!(strip_track_prefix(&input), input.to_vec());
+}
+
+#[test]
+fn multi_value_case_and_diacritics() {
+    let input = [file(&[
+        (TagField::Genre, "ŽÁNR JEDEN"),
+        (TagField::Genre, "druhý žánr"),
+    ])];
+    let sentence = change_case(&input, &[TagField::Genre], CaseTool::Sentence);
+    assert_eq!(
+        get(&sentence[0], TagField::Genre),
+        Some(vec!["Žánr jeden".into(), "Druhý žánr".into()])
+    );
+    let title = change_case(&input, &[TagField::Genre], CaseTool::Title);
+    assert_eq!(
+        get(&title[0], TagField::Genre),
+        Some(vec!["Žánr Jeden".into(), "Druhý Žánr".into()])
+    );
+    let stripped = strip_diacritics(&input, &[TagField::Genre]);
+    assert_eq!(
+        get(&stripped[0], TagField::Genre),
+        Some(vec!["ZANR JEDEN".into(), "druhy zanr".into()])
+    );
+}
+
+#[test]
+fn tools_return_changed_copies_and_leave_the_input_unchanged() {
     let mut tags = file(&[
         (TagField::Title, "01 JEFFREY"),
         (TagField::Track, "1"),
@@ -180,13 +276,25 @@ fn tools_return_new_values_and_leave_the_input_unchanged() {
     tags.extras.insert("ITUNESMEDIATYPE".into(), vec!["2".into()]);
     let input = vec![tags];
     let snapshot = input.clone();
-    let _ = change_case(&input, &[TagField::Artist], CaseTool::Lower);
-    let _ = strip_diacritics(&input, &[TagField::Artist]);
-    let _ = strip_track_prefix(&input);
-    let _ = renumber(&input, 5);
-    let _ = album_artist_from_artist(&input);
-    let _ = narrator_from_text(&input);
-    let _ = clear_redundant_titles(&input);
-    let _ = remove_extras(&input, &["ITUNESMEDIATYPE".to_string()]);
+    let keys = ["ITUNESMEDIATYPE".to_string()];
+    let outputs = [
+        change_case(&input, &[TagField::Artist], CaseTool::Lower),
+        strip_diacritics(&input, &[TagField::Comment, TagField::Artist, TagField::Title]),
+        strip_track_prefix(&input),
+        renumber(&input, 5),
+        album_artist_from_artist(&input),
+        narrator_from_text(&input),
+        remove_extras(&input, &keys),
+    ];
+    // strip_diacritics changes nothing here (no diacritics in the stripped fields); the rest do.
+    for (i, out) in outputs.iter().enumerate() {
+        if i == 1 {
+            assert_eq!(out, &snapshot);
+        } else {
+            assert_ne!(out, &snapshot, "tool {i} should change something");
+        }
+    }
+    // The title equals the album once case is ignored, so it is cleared.
+    assert_ne!(clear_redundant_titles(&input), snapshot);
     assert_eq!(input, snapshot);
 }
