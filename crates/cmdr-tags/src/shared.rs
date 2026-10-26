@@ -9,6 +9,7 @@ use crate::model::{Cover, FileTags, TagField};
 
 /// What one field looks like across the selected files.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum SharedValue {
     /// No file has the field.
@@ -21,6 +22,7 @@ pub enum SharedValue {
 
 /// What to do with the front cover of every file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum CoverEdit {
     /// Leave covers as they are.
@@ -33,6 +35,7 @@ pub enum CoverEdit {
 
 /// One user edit against the shared view.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum Edit {
     /// The shared row was edited: set the field on every file. Empty values remove it.

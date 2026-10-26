@@ -276,6 +276,8 @@ All under `apps/desktop/src-tauri/src/`.
   itself runs in JS
 - `multi_rename/`: Multi-Rename Tool engine (Total Commander's masks, search & replace, diacritics), preview, apply
   through the bulk-rename executor, presets. `apps/desktop/src-tauri/src/multi_rename/CLAUDE.md`
+- `tag_editor/`: the opt-in Tags tab of Multi-Rename, an in-memory tag session per rename session over the `cmdr-tags`
+  engine. `apps/desktop/src-tauri/src/tag_editor/CLAUDE.md`
 - `go_to_path/`: "Go to folder" backend: pure path resolution + fixed-cap recent-paths store. IPC in
   `commands/go_to_path.rs`
 - `recents/`: The persisted recents list all three of those keep (dedupe, cap, durable JSON file, quarantine). A

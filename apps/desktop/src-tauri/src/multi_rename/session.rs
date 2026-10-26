@@ -188,6 +188,24 @@ pub(crate) fn open(
     Ok(MultiRenameOpened { session_id, count })
 }
 
+/// Where a session's files are: the volume, the folder, and the files in the CURRENT rename
+/// order. The tag editor keys its edits by path and walks this order for its view, so a
+/// reorder never moves an edit to another file.
+pub(crate) struct SessionFiles {
+    pub volume_id: String,
+    pub dir: PathBuf,
+    pub names: Arc<[String]>,
+}
+
+/// The session's [`SessionFiles`], read-only.
+pub(crate) fn files_of(session_id: &str) -> Result<SessionFiles, MultiRenameError> {
+    with_session(session_id, |s| SessionFiles {
+        volume_id: s.volume_id.clone(),
+        dir: s.dir.clone(),
+        names: Arc::clone(&s.names),
+    })
+}
+
 /// Starts reading the session's media files in the background, reporting
 /// through `emit`. Call it on the async executor, once the session is open.
 pub(crate) fn start_media(session_id: &str, emit: ProgressEmit) -> Result<(), MultiRenameError> {

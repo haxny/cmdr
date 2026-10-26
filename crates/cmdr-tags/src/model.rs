@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// A text field the editor manages. The order is the editor's display order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum TagField {
     /// Track or book title.
@@ -88,6 +89,7 @@ impl TagField {
 
 /// A front cover: its MIME type and the encoded image bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Cover {
     /// MIME type, like `image/jpeg`.
     pub mime: String,

@@ -132,8 +132,8 @@ cmdr-collation = { path = "../../../crates/cmdr-collation" }
 # What photos, videos, and music files say about themselves (EXIF, capture dates,
 # tags), read through any volume, for Multi-Rename's `[=source.field]` placeholders.
 cmdr-media-meta = { path = "../../../crates/cmdr-media-meta" }
-# The tag engine; Multi-Rename shares its diacritics table.
-cmdr-tags = { path = "../../../crates/cmdr-tags" }
+# The tag engine; Multi-Rename shares its diacritics table, and the tag editor drives it.
+cmdr-tags = { path = "../../../crates/cmdr-tags", features = ["specta"] }
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 tauri-plugin-mcp-bridge = "0.13"

@@ -1,0 +1,343 @@
+//! A tag session against real audio files and a real Multi-Rename session: reads, in-memory
+//! edits that follow their files through a reorder, tools over the whole session, and the
+//! rules for remote and unreadable files.
+
+use std::path::Path;
+
+use cmdr_listing::testing::{TestListing, TestListingGuard};
+use cmdr_local::reading::list_directory_core;
+use cmdr_media_meta::test_fixtures::{m4a_file, mp3_frames};
+use cmdr_tags::shared::{CoverEdit, Edit, SharedValue};
+use cmdr_tags::tools::TagTool;
+use cmdr_tags::{Cover, FileTags, TagField, WriteOptions, read_tags, write_tags};
+
+use super::session::{TagEditorError, changes, close, edit, open, tool};
+use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
+use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};
+use crate::test_support::TestDir;
+
+fn tags(pairs: &[(TagField, &str)]) -> FileTags {
+    let mut tags = FileTags::default();
+    for (field, value) in pairs {
+        tags.fields.entry(*field).or_default().push((*value).to_string());
+    }
+    tags
+}
+
+/// A folder of `files` (name and bytes), listed under `volume`.
+fn folder(tag: &str, volume: &str, files: &[(&str, Vec<u8>)]) -> (TestDir, TestListingGuard) {
+    let dir = TestDir::new(tag);
+    for (name, bytes) in files {
+        std::fs::write(dir.join(name), bytes).expect("scratch dir is writable");
+    }
+    let listing = TestListing::new()
+        .volume(volume)
+        .path(dir.to_path_buf())
+        .entries(list_directory_core(&dir, &crate::listing_host::backends::AppListings).expect("the dir lists"))
+        .insert(crate::listing_host::listings(), tag);
+    (dir, listing)
+}
+
+/// Writes `pairs` into the tag of the audio file `name` in `dir`.
+fn tag_file(dir: &Path, name: &str, pairs: &[(TagField, &str)]) {
+    write_tags(&dir.join(name), &tags(pairs), &WriteOptions::default()).expect("the tags write");
+}
+
+/// Three mp3s `a`, `b`, `c` with a title and album each, plus a jpg and a txt.
+fn album(tag: &str) -> (TestDir, TestListingGuard, String) {
+    let (dir, listing) = folder(
+        tag,
+        "root",
+        &[
+            ("a.mp3", mp3_frames()),
+            ("b.mp3", mp3_frames()),
+            ("c.mp3", mp3_frames()),
+            ("cover.jpg", vec![1, 2, 3]),
+            ("notes.txt", b"x".to_vec()),
+        ],
+    );
+    tag_file(&dir, "a.mp3", &[(TagField::Title, "Alpha"), (TagField::Album, "Book")]);
+    tag_file(&dir, "b.mp3", &[(TagField::Title, "Beta"), (TagField::Album, "Book")]);
+    tag_file(&dir, "c.mp3", &[(TagField::Title, "Gamma"), (TagField::Album, "Other")]);
+    let session = open_rename(listing.id(), true, None, 0).expect("the rename session opens");
+    (dir, listing, session.session_id)
+}
+
+fn titles(view: &TagEditorView) -> Vec<(String, Option<String>)> {
+    view.tracks
+        .iter()
+        .map(|row| (row.file_name.clone(), row.title.clone()))
+        .collect()
+}
+
+fn set_title(row: usize, title: &str) -> Edit {
+    Edit::SetOne {
+        row,
+        field: TagField::Title,
+        values: vec![title.to_string()],
+    }
+}
+
+fn on_disk(dir: &Path, name: &str) -> FileTags {
+    read_tags(&dir.join(name)).expect("the file reads")
+}
+
+fn shared(view: &TagEditorView, field: TagField) -> &SharedValue {
+    &view
+        .shared
+        .iter()
+        .find(|row| row.field == field)
+        .expect("a row per field")
+        .value
+}
+
+#[test]
+fn open_lists_only_supported_audio() {
+    let (dir, listing) = folder(
+        "tag-editor-open",
+        "root",
+        &[
+            ("a.mp3", mp3_frames()),
+            ("b.m4a", m4a_file()),
+            ("c.jpg", vec![1]),
+            ("d.txt", vec![2]),
+        ],
+    );
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let view = open(&session.session_id).expect("the tag session opens");
+    let names: Vec<&str> = view.tracks.iter().map(|row| row.file_name.as_str()).collect();
+    assert_eq!(names, vec!["a.mp3", "b.m4a"]);
+    assert!(view.editable);
+    assert_eq!(view.read_only_reason, None);
+    assert!(!view.dirty);
+    drop(dir);
+    close(&session.session_id);
+    close_rename(&session.session_id);
+}
+
+#[test]
+fn shared_view_shows_multiple_values() {
+    let (_dir, _listing, id) = album("tag-editor-shared");
+    let view = open(&id).expect("opens");
+    assert_eq!(shared(&view, TagField::Album), &SharedValue::Multiple);
+    assert_eq!(shared(&view, TagField::Artist), &SharedValue::Empty);
+    assert!(
+        view.shared
+            .iter()
+            .all(|row| !matches!(row.field, TagField::Title | TagField::Track))
+    );
+    assert_eq!(view.cover, CoverSummary::Empty);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn set_all_writes_every_file_in_memory_only() {
+    let (dir, _listing, id) = album("tag-editor-set-all");
+    open(&id).expect("opens");
+    let view = edit(
+        &id,
+        vec![Edit::SetAll {
+            field: TagField::Album,
+            values: vec!["One book".to_string()],
+        }],
+    )
+    .expect("edits");
+    assert_eq!(
+        shared(&view, TagField::Album),
+        &SharedValue::Same(vec!["One book".to_string()])
+    );
+    assert!(view.dirty);
+    assert!(view.tracks.iter().all(|row| row.changed));
+    for name in ["a.mp3", "b.mp3", "c.mp3"] {
+        let album = on_disk(&dir, name).fields.get(&TagField::Album).cloned();
+        assert_ne!(album, Some(vec!["One book".to_string()]), "{name} is untouched on disk");
+    }
+    let listed = changes(&id).expect("changes");
+    assert_eq!(listed.len(), 3);
+    assert_eq!(listed[0].file_name, "a.mp3");
+    assert_eq!(listed[0].fields, vec![TagField::Album]);
+    close(&id);
+    close_rename(&id);
+}
+
+/// Review focus 1: reorder after editing, every edit stays with its file.
+#[test]
+fn edits_follow_files_after_reorder() {
+    let (_dir, _listing, id) = album("tag-editor-reorder");
+    let first = open(&id).expect("opens");
+    assert_eq!(first.tracks[0].file_name, "a.mp3");
+
+    edit(&id, vec![set_title(0, "Alpha edited")]).expect("edits row 0");
+    move_row(&id, 0, RowMove::Down).expect("a goes below b");
+    move_row(&id, 1, RowMove::Down).expect("a goes below c");
+
+    let view = edit(&id, vec![]).expect("a refresh");
+    assert_eq!(
+        titles(&view),
+        vec![
+            ("b.mp3".to_string(), Some("Beta".to_string())),
+            ("c.mp3".to_string(), Some("Gamma".to_string())),
+            ("a.mp3".to_string(), Some("Alpha edited".to_string())),
+        ]
+    );
+    // A row index names the row as shown NOW: row 0 is b.
+    let view = edit(&id, vec![set_title(0, "Beta edited")]).expect("edits row 0");
+    assert_eq!(view.tracks[0].title.as_deref(), Some("Beta edited"));
+    assert_eq!(view.tracks[2].title.as_deref(), Some("Alpha edited"));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn tool_renumber_uses_current_order() {
+    let (_dir, _listing, id) = album("tag-editor-renumber");
+    open(&id).expect("opens");
+    move_row(&id, 2, RowMove::Up).expect("c goes above b");
+    let view = tool(&id, TagTool::Renumber { start: 1 }).expect("renumbers");
+    let numbered: Vec<(&str, Option<&str>)> = view
+        .tracks
+        .iter()
+        .map(|row| (row.file_name.as_str(), row.track.as_deref()))
+        .collect();
+    assert_eq!(
+        numbered,
+        vec![("a.mp3", Some("1")), ("c.mp3", Some("2")), ("b.mp3", Some("3"))]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_single_file_session_renumbers_to_no_track() {
+    let (dir, listing) = folder("tag-editor-single", "root", &[("only.mp3", mp3_frames())]);
+    tag_file(&dir, "only.mp3", &[(TagField::Track, "4")]);
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let view = open(&session.session_id).expect("opens");
+    assert_eq!(view.tracks[0].track.as_deref(), Some("4"));
+    let view = tool(&session.session_id, TagTool::Renumber { start: 1 }).expect("renumbers");
+    assert_eq!(view.tracks[0].track, None);
+    close(&session.session_id);
+    close_rename(&session.session_id);
+}
+
+#[test]
+fn non_local_session_is_read_only() {
+    let (_dir, listing) = folder("tag-editor-remote", "smb-share", &[("a.mp3", mp3_frames())]);
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let view = open(&session.session_id).expect("opens read-only");
+    assert!(!view.editable);
+    assert_eq!(view.read_only_reason, Some(ReadOnlyReason::RemoteVolume));
+    assert!(view.tracks.is_empty(), "an unreachable volume lists no tracks");
+    assert_eq!(edit(&session.session_id, vec![]), Err(TagEditorError::ReadOnly));
+    assert_eq!(
+        tool(&session.session_id, TagTool::StripTrackPrefix),
+        Err(TagEditorError::ReadOnly)
+    );
+    close(&session.session_id);
+    close_rename(&session.session_id);
+}
+
+#[test]
+fn unreadable_file_is_listed_not_written() {
+    let (dir, listing) = folder(
+        "tag-editor-unreadable",
+        "root",
+        &[
+            ("a.mp3", mp3_frames()),
+            ("bad.flac", vec![0x42; 64]),
+            ("c.mp3", mp3_frames()),
+        ],
+    );
+    tag_file(&dir, "a.mp3", &[(TagField::Title, "Alpha")]);
+    tag_file(&dir, "c.mp3", &[(TagField::Title, "Gamma")]);
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let id = session.session_id;
+    let view = open(&id).expect("opens");
+    assert_eq!(view.tracks.len(), 3);
+    assert_eq!(view.tracks[1].file_name, "bad.flac");
+    assert!(matches!(
+        view.tracks[1].read_error,
+        Some(ReadErrorCode::Parse | ReadErrorCode::Unreadable | ReadErrorCode::Io)
+    ));
+    assert_eq!(view.tracks[0].read_error, None);
+
+    // The shown row 2 is c, though it is the second READABLE file; row 1 (bad) is dropped.
+    let view = edit(&id, vec![set_title(2, "Gamma edited"), set_title(1, "Never")]).expect("edits");
+    assert_eq!(view.tracks[2].title.as_deref(), Some("Gamma edited"));
+    assert_eq!(view.tracks[1].title, None);
+    assert!(!view.tracks[1].changed);
+    let listed = changes(&id).expect("changes");
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].file_name, "c.mp3");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn diacritics_union_reported() {
+    let (_dir, _listing, id) = album("tag-editor-diacritics");
+    let view = open(&id).expect("opens");
+    assert!(view.diacritics.is_empty());
+    let view = edit(
+        &id,
+        vec![
+            set_title(0, "Příběh"),
+            Edit::SetOne {
+                row: 1,
+                field: TagField::Comment,
+                values: vec!["Čte: Jan".to_string()],
+            },
+            Edit::SetOne {
+                row: 2,
+                field: TagField::Album,
+                values: vec!["Labutí".to_string()],
+            },
+        ],
+    )
+    .expect("edits");
+    // Comment keeps its diacritics, so it is not reported.
+    assert_eq!(view.diacritics, vec![TagField::Title, TagField::Album]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn cover_edit_is_summarized_and_extras_are_listed() {
+    let (_dir, _listing, id) = album("tag-editor-cover");
+    open(&id).expect("opens");
+    let cover = Cover {
+        mime: "image/png".to_string(),
+        data: vec![0; 12],
+    };
+    let view = edit(
+        &id,
+        vec![Edit::Cover {
+            edit: CoverEdit::Set(cover),
+        }],
+    )
+    .expect("edits");
+    assert!(matches!(
+        view.cover,
+        CoverSummary::Same {
+            bytes: 12,
+            width: None,
+            height: None,
+            ..
+        }
+    ));
+    assert!(view.extras.is_empty());
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_closed_or_unopened_session_is_typed() {
+    let (_dir, _listing, id) = album("tag-editor-closed");
+    assert_eq!(edit(&id, vec![]), Err(TagEditorError::NotOpen));
+    open(&id).expect("opens");
+    close(&id);
+    assert_eq!(tool(&id, TagTool::StripTrackPrefix), Err(TagEditorError::NotOpen));
+    close_rename(&id);
+    assert_eq!(open(&id), Err(TagEditorError::NoSession));
+}

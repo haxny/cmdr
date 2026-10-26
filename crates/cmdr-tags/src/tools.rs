@@ -11,6 +11,7 @@ use crate::text::{remove_diacritics, sentence_case, title_case};
 
 /// How [`change_case`] rewrites a value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum CaseTool {
     /// First letter upper, the rest lower.
@@ -25,6 +26,7 @@ pub enum CaseTool {
 
 /// Every tool as one serializable value, so the app and the MCP server share one tool set.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum TagTool {
     /// [`change_case`] on `fields`.
