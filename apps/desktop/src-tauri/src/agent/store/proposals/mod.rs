@@ -42,7 +42,7 @@ pub use claim::{
 pub use complete::{CompleteOutcome, mark_group_completed, record_op_outcome};
 pub use read::{
     GroupSummary, ProposalOp, ProposalSweep, count_ops, count_pending, get_group, get_sweep, list_groups, page_ops,
-    rejected_groups_since, shared_source_parent,
+    rejected_groups_since,
 };
 pub use recovery::recover_interrupted_groups;
 pub use thread_line::{RunningLine, ThreadLine, open_running_line, rewrite_line, running_lines, settle_line};
@@ -255,6 +255,9 @@ pub struct ProposalGroup {
     /// Bumped by every amend (`repropose_group`); 0 at creation. An approval names the revision
     /// the user read, and preflight refuses any other ([`AcceptanceOutcome::RevisionChanged`]).
     pub revision: i64,
+    /// The folder every op sits directly in, written with the op list ([`shared_parent`]); `None`
+    /// when the ops span folders.
+    pub source_folder: Option<String>,
 }
 
 /// Decode a stored token, or report which column held what.
@@ -264,4 +267,21 @@ pub(super) fn decode_token<T>(
     parse: fn(&str) -> Option<T>,
 ) -> Result<T, super::AgentStoreError> {
     parse(&token).ok_or(super::AgentStoreError::Decode { column, value: token })
+}
+
+/// The folder every one of `paths` sits directly in, or `None` when they don't all share one
+/// (or there are none). Stops at the first path elsewhere. Written to `proposals.source_folder`
+/// whenever a group's op list is (creation, amend), so the review names the folder from one
+/// column instead of streaming 60 000 paths on every refresh.
+pub(super) fn shared_parent<'a>(paths: impl IntoIterator<Item = &'a str>) -> Option<String> {
+    let mut shared: Option<&str> = None;
+    for path in paths {
+        let parent = std::path::Path::new(path).parent()?.to_str()?;
+        match shared {
+            None => shared = Some(parent),
+            Some(seen) if seen == parent => {}
+            Some(_) => return None,
+        }
+    }
+    shared.map(str::to_string)
 }

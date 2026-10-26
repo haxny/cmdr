@@ -111,6 +111,7 @@ fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
             created_at: 100,
             decided_at: None,
             revision: 0,
+            source_folder: Some("/Users/someone/Downloads".into()),
         },
         live_op_count: 5,
         total_op_count: 7,
@@ -122,7 +123,6 @@ fn facts(destination_state: DestinationState) -> GroupReadFacts {
     GroupReadFacts {
         destination_state,
         destination_volume_name: None,
-        source_folder: None,
         run_blocker: None,
     }
 }
@@ -187,11 +187,11 @@ fn a_trash_group_on_a_volume_without_a_trash_says_it_cant_run() {
     let mut trash = group(1, 1, ProposalVerb::Trash).group;
     trash.destination = None;
 
-    let on_root = read_facts(&trash, volume_facts(), DestinationState::NotApplicable, None);
+    let on_root = read_facts(&trash, volume_facts(), DestinationState::NotApplicable);
     trash.source_volume_id = "smb-naspi".into();
-    let on_share = read_facts(&trash, volume_facts(), DestinationState::NotApplicable, None);
+    let on_share = read_facts(&trash, volume_facts(), DestinationState::NotApplicable);
     trash.source_volume_id = "smb-saved".into();
-    let on_unconnected = read_facts(&trash, volume_facts(), DestinationState::NotApplicable, None);
+    let on_unconnected = read_facts(&trash, volume_facts(), DestinationState::NotApplicable);
 
     assert_eq!(on_root.run_blocker, None);
     assert_eq!(on_share.run_blocker, Some(RunBlocker::NoTrash));
@@ -216,7 +216,7 @@ fn the_destination_volume_is_named_even_before_anyone_connects_it() {
     trashing.destination = None;
 
     let name = |group: &ProposalGroup| {
-        read_facts(group, volume_facts(), DestinationState::NotApplicable, None).destination_volume_name
+        read_facts(group, volume_facts(), DestinationState::NotApplicable).destination_volume_name
     };
     assert_eq!(name(&moving).as_deref(), Some("naspi on 192.168.1.5"));
     assert_eq!(name(&onto_saved).as_deref(), Some("archive on 192.168.1.5"));
@@ -247,7 +247,6 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
         GroupReadFacts {
             destination_state: DestinationState::WillBeCreated,
             destination_volume_name: Some("Macintosh HD".into()),
-            source_folder: Some("/Users/someone/Downloads".into()),
             run_blocker: Some(RunBlocker::NoTrash),
         },
     );

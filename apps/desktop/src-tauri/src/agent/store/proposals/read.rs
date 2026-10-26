@@ -58,7 +58,7 @@ pub struct GroupSummary {
 }
 
 const GROUP_COLUMNS: &str = "id, set_id, seq, verb, status, source_volume_id, destination, destination_volume_id,
-     reversible, display_name, rationale, selector, created_at, decided_at, revision";
+     reversible, display_name, rationale, selector, created_at, decided_at, revision, source_folder";
 
 /// Read one group header. `None` when there's no such group.
 pub fn get_group(conn: &Connection, group_id: i64) -> Result<Option<ProposalGroup>, AgentStoreError> {
@@ -136,8 +136,8 @@ pub fn list_groups(conn: &Connection, status: Option<ProposalStatus>) -> Result<
     while let Some(row) = rows.next()? {
         out.push(GroupSummary {
             group: map_group_row(row)?,
-            live_op_count: row.get(15)?,
-            total_op_count: row.get(16)?,
+            live_op_count: row.get(16)?,
+            total_op_count: row.get(17)?,
         });
     }
     Ok(out)
@@ -202,35 +202,6 @@ pub fn page_ops(conn: &Connection, group_id: i64, limit: u32, offset: u32) -> Re
     Ok(out)
 }
 
-/// The folder every op of the group sits directly in, or `None` when they don't all share one
-/// (or the group has no ops).
-///
-/// STREAMS, one path in memory at a time, and stops at the first op in another folder: the
-/// review names the source folder once per group, and a group of 60 000 must not be loaded to
-/// do it. Every row counts, deselected ones too, because they're part of what was offered.
-pub fn shared_source_parent(conn: &Connection, group_id: i64) -> Result<Option<String>, AgentStoreError> {
-    let mut stmt = conn.prepare_cached("SELECT source_path FROM proposal_ops WHERE group_id = ?1 ORDER BY seq")?;
-    let mut rows = stmt.query(params![group_id])?;
-    let mut shared: Option<String> = None;
-    while let Some(row) = rows.next()? {
-        let path: String = row.get(0)?;
-        let Some(parent) = parent_of(&path) else {
-            return Ok(None);
-        };
-        match &shared {
-            None => shared = Some(parent.to_string()),
-            Some(seen) if seen == parent => {}
-            Some(_) => return Ok(None),
-        }
-    }
-    Ok(shared)
-}
-
-/// The folder `path` sits directly in. `None` for a root, which sits in nothing.
-fn parent_of(path: &str) -> Option<&str> {
-    std::path::Path::new(path).parent()?.to_str()
-}
-
 fn map_group_row(row: &rusqlite::Row<'_>) -> Result<ProposalGroup, AgentStoreError> {
     Ok(ProposalGroup {
         id: row.get(0)?,
@@ -248,6 +219,7 @@ fn map_group_row(row: &rusqlite::Row<'_>) -> Result<ProposalGroup, AgentStoreErr
         created_at: row.get(12)?,
         decided_at: row.get(13)?,
         revision: row.get(14)?,
+        source_folder: row.get(15)?,
     })
 }
 

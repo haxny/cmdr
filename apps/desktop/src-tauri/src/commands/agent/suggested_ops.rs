@@ -30,7 +30,6 @@ use super::{now_secs, with_read_connection};
 use crate::agent::store::proposals::{AcceptanceOutcome, ClaimRefusal, OpSelection};
 use crate::agent::store::proposals::{
     GroupSummary, ProposalGroup, ProposalOp, ProposalSweep, count_ops, get_group, get_sweep, list_groups, page_ops,
-    shared_source_parent,
 };
 use crate::agent::suggested_ops::bridge::{ApprovalOutcome, ApprovalRefusal};
 use crate::agent::suggested_ops::facts::{RunBlocker, SourceStat, run_blocker, stat_deadline, stat_sources};
@@ -205,9 +204,7 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
         let mut out = Vec::with_capacity(groups.len());
         for summary in groups {
             let sweep = get_sweep(conn, summary.group.set_id)?;
-            // Streams the group's paths, stopping at the first one in another folder.
-            let source_folder = shared_source_parent(conn, summary.group.id)?;
-            out.push((summary, sweep, source_folder));
+            out.push((summary, sweep));
         }
         Ok(out)
     })
@@ -217,17 +214,13 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
     // The destination checks touch the filesystem, so they run OUTSIDE the database read, all
     // at once, each under its own deadline: one unresponsive mount costs one row's certainty
     // and the list one budget, never N of them back to back.
-    let states = futures_util::future::join_all(
-        summaries
-            .iter()
-            .map(|(summary, _, _)| destination_state(&summary.group)),
-    )
-    .await;
+    let states =
+        futures_util::future::join_all(summaries.iter().map(|(summary, _)| destination_state(&summary.group))).await;
     let manager = crate::file_system::volume::manager::get_volume_manager();
     let rows = summaries
         .into_iter()
         .zip(states)
-        .map(|((summary, sweep, source_folder), destination_state)| {
+        .map(|((summary, sweep), destination_state)| {
             let facts = read_facts(
                 &summary.group,
                 VolumeFacts {
@@ -235,7 +228,6 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
                     saved_name: &crate::server_volumes::saved_place_name,
                 },
                 destination_state,
-                source_folder,
             );
             (to_group_view(summary, facts), sweep)
         })
@@ -248,7 +240,6 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
 struct GroupReadFacts {
     destination_state: DestinationState,
     destination_volume_name: Option<String>,
-    source_folder: Option<String>,
     run_blocker: Option<RunBlocker>,
 }
 
@@ -260,8 +251,6 @@ struct VolumeFacts<'a> {
     saved_name: &'a dyn Fn(&str) -> Option<String>,
 }
 
-/// Fold what the volumes say into a group's facts. No I/O: a registry lookup and a predicate
-/// per group, so the list never runs a volume discovery to describe a suggestion.
 /// The volume `destination` is on: its own id, or the source volume's for a rename (whose parent
 /// lives there). `None` when the verb binds no destination.
 fn destination_volume_id_of(group: &ProposalGroup) -> Option<&str> {
@@ -274,12 +263,9 @@ fn destination_volume_id_of(group: &ProposalGroup) -> Option<&str> {
     )
 }
 
-fn read_facts(
-    group: &ProposalGroup,
-    volumes: VolumeFacts<'_>,
-    destination_state: DestinationState,
-    source_folder: Option<String>,
-) -> GroupReadFacts {
+/// Fold what the volumes say into a group's facts. No I/O: a registry lookup and a predicate
+/// per group, so the list never runs a volume discovery to describe a suggestion.
+fn read_facts(group: &ProposalGroup, volumes: VolumeFacts<'_>, destination_state: DestinationState) -> GroupReadFacts {
     let destination_volume_name = destination_volume_id_of(group).and_then(|id| match (volumes.registered)(id) {
         Some(volume) => Some(volume.name().to_string()),
         None => (volumes.saved_name)(id),
@@ -288,7 +274,6 @@ fn read_facts(
     GroupReadFacts {
         destination_state,
         destination_volume_name,
-        source_folder,
         run_blocker: run_blocker(group.verb, source.as_deref()),
     }
 }
@@ -527,7 +512,7 @@ fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroup
         destination: group.destination,
         destination_volume_name: facts.destination_volume_name,
         destination_volume_id,
-        source_folder: facts.source_folder,
+        source_folder: group.source_folder,
         reversible: group.reversible,
         run_blocker: facts.run_blocker,
         destination_state: facts.destination_state,

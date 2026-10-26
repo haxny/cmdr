@@ -28,6 +28,7 @@ fn summary(group_id: i64, set_id: i64, live: u64, total: u64, selector: Option<&
             created_at: NOW,
             decided_at: None,
             revision: 0,
+            source_folder: None,
         },
         live_op_count: live,
         total_op_count: total,

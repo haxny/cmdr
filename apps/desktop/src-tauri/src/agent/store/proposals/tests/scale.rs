@@ -81,36 +81,74 @@ fn a_huge_group_pages_in_seq_order_without_gaps() {
     assert!(first.iter().all(|op| op.status == OpStatus::Pending));
 }
 
-/// The review names a group's source folder once, so the store answers it by streaming the
-/// paths: 60 000 ops in one folder name it, and one op elsewhere (the very last) un-names it.
+/// The review names a group's source folder once, so it's written with the op list and read
+/// from one column: 60 000 ops in one folder name it, and reading it back costs no op row.
 #[test]
-fn the_shared_source_folder_streams_and_one_op_elsewhere_undoes_it() {
+fn a_huge_groups_source_folder_is_one_column_read() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, HUGE);
     let before = read::tests_support::page_ops_calls();
 
+    let group = get_group(&conn, group_id).expect("read").expect("exists");
+
+    assert_eq!(group.source_folder.as_deref(), Some("/Users/someone/Downloads"));
+    assert_eq!(read::tests_support::page_ops_calls(), before, "no op row was read");
+}
+
+/// The folder follows the op list: one op elsewhere un-names it, a subfolder counts as
+/// elsewhere, and an amend rewrites it.
+#[test]
+fn the_source_folder_is_shared_by_every_op_or_none() {
     assert_eq!(
-        shared_source_parent(&conn, group_id).expect("read").as_deref(),
+        shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Downloads/b.zip"]).as_deref(),
         Some("/Users/someone/Downloads")
     );
-    assert_eq!(read::tests_support::page_ops_calls(), before, "it streams, never pages");
-
-    conn.execute(
-        "UPDATE proposal_ops SET source_path = '/Users/someone/Downloads/sub/late.dmg'
-         WHERE group_id = ?1 AND seq = ?2",
-        rusqlite::params![group_id, (HUGE - 1) as i64],
-    )
-    .expect("move the last op one folder down");
     assert_eq!(
-        shared_source_parent(&conn, group_id).expect("read"),
+        shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Downloads/sub/b.zip"]),
         None,
         "a file one level down sits in a different folder"
     );
-}
+    assert_eq!(shared_parent([]), None);
 
-/// A group with no ops has no folder to name.
-#[test]
-fn a_group_with_no_ops_has_no_shared_source_folder() {
     let conn = migrated_conn();
-    assert_eq!(shared_source_parent(&conn, 9_999).expect("read"), None);
+    let group_id = group_with_ops(&conn, 3);
+    let mut amended = NewGroup {
+        intent: GroupIntent::Trash {
+            sources: vec![
+                NewOp {
+                    source_path: "/Users/someone/Desktop/a.png".into(),
+                    snapshot: None,
+                },
+                NewOp {
+                    source_path: "/Users/someone/Documents/b.pdf".into(),
+                    snapshot: None,
+                },
+            ],
+        },
+        source_volume_id: "root".into(),
+        display_name: "two folders".into(),
+        rationale: None,
+        selector: None,
+    };
+    repropose_group(&conn, group_id, &amended, 200).expect("re-propose");
+    assert_eq!(
+        get_group(&conn, group_id).expect("read").expect("exists").source_folder,
+        None
+    );
+
+    amended.intent = GroupIntent::Trash {
+        sources: vec![NewOp {
+            source_path: "/Users/someone/Desktop/a.png".into(),
+            snapshot: None,
+        }],
+    };
+    repropose_group(&conn, group_id, &amended, 210).expect("re-propose");
+    assert_eq!(
+        get_group(&conn, group_id)
+            .expect("read")
+            .expect("exists")
+            .source_folder
+            .as_deref(),
+        Some("/Users/someone/Desktop")
+    );
 }
