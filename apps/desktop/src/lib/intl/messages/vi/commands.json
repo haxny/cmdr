@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Thao tác được đề xuất",
+  "commands.suggestedOpsShow.label": "Gợi ý AI",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Xem lại các thao tác tệp mà AI đề xuất và quyết định điều gì sẽ chạy",
   "@commands.suggestedOpsShow.description": {

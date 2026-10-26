@@ -169,6 +169,7 @@ GNOME / Thunar / Dolphin / Total Commander; catalog consistency over a pile-idea
 ## Thao tác được đề xuất (`suggestedOps.*`, `commands.suggestedOpsShow.*`, `askCmdr.decision.*`)
 
 - approve → `Phê duyệt` over macOS `Chấp nhận` (receiving AirDrop); reject → `Từ chối`.
+- Name `Gợi ý AI`, as `fileOperations.mkdir.aiSuggestions*`. `Why:` → `Lý do:` (labels an answer; `Tại sao?` asks).
 
 ## Nhân bản (`commands.fileDuplicate.*`)
 

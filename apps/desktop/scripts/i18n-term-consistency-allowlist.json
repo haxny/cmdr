@@ -382,6 +382,14 @@
     ],
     "vi": [
       {
+        "source": "Archive",
+        "reason": "Two concepts: `Lưu trữ` hides an Ask Cmdr chat (`askCmdr.sessions.archive`, concept archive-chat); `Tệp nén` labels the zip a compress suggestion creates (`suggestedOps.facts.archive`, concept archive)."
+      },
+      {
+        "source": "Why",
+        "reason": "Question vs label: `Tại sao?` is the onboarding link that ASKS why (`onboarding.stepFda.why`); `Lý do:` labels the AI's answer before its explanation (`suggestedOps.agentReason`), where `Tại sao:` reads unnatural in Vietnamese."
+      },
+      {
         "source": "Start",
         "reason": "Two different things in Multi-rename. `Số bắt đầu` is the counter's first number (`multiRename.counterEditor.start`, beside the step and digits fields); `Điểm đầu` is the first edge of a character range (`multiRename.rangeEditor.start`, paired with `Điểm cuối` and the `Tính từ đầu`/`Tính từ cuối` options). A range edge isn't a number, and `Số bắt đầu` beside `Điểm cuối` would read as a number field."
       },

@@ -276,7 +276,7 @@ Vietnamese has no grammatical number, so one form covers all counts.
   the settings section, and the on/off switch, and is gone from every sentence that merely described the behavior. So a
   sentence subject is `Cmdr` (`Cmdr theo dõi các thư mục…`) while a surface name stays `cài đặt Ask Cmdr`. ❌ Don't put
   `Ask Cmdr` back into the sentences.
-- **Where English says "the AI", Vietnamese says `AI`, not `Cmdr`.** The `suggestedOps.*` family (`Lý do của AI`,
+- **Where English says "the AI", Vietnamese says `AI`, not `Cmdr`.** The `suggestedOps.*` family (`Lý do, theo AI:`,
   `AI đã đề xuất những thao tác này`) deliberately names the model, because its neighbours with Cmdr as the subject
   (`suggestedOps.reversible.moveBack`) claim the opposite thing (what the app VERIFIED). Collapsing the two subjects
   destroys the whole point of the pair.

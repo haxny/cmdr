@@ -212,7 +212,8 @@
     "chosen": "Lưu trữ",
     "confidence": "high",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "English-sense: the zip-file row kind (concept `archive`), not a chat; `tệp nén` carries it."
+      "fileExplorer.list.rowKind.archive": "English-sense: the zip-file row kind (concept `archive`), not a chat; `tệp nén` carries it.",
+      "suggestedOps.facts.archive": "English-sense: the zip file a compress suggestion creates (concept `archive`), not a chat; `Tệp nén`."
     },
     "forms": "archive → Lưu trữ, archived → đã lưu trữ, unarchive → Bỏ lưu trữ",
     "sources": "macOS Finder AR40 (Archive → Lưu trữ); Bỏ lưu trữ mirrors Gmail/Zalo (tentative)"
@@ -1214,6 +1215,13 @@
     "confidence": "high",
     "forms": "disk space → dung lượng đĩa; no room left → không còn dung lượng trống; Low disk space → Sắp hết dung lượng đĩa",
     "sources": "macOS PhotosUI (Low Disk Space → Sắp hết dung lượng ổ đĩa); catalog"
+  },
+  "from-to": {
+    "accept": ["Từ", "Đến"],
+    "chosen": "Từ / Đến",
+    "confidence": "high",
+    "forms": "group headings and fact labels → Từ / Đến; with a colon → Từ:",
+    "sources": "catalog (fileOperations.transferDialog.sourceGroupTitle Từ, targetGroupTitle Đến, scanPhase.fromLabel Từ:); the destination ruling's To heading → Đến"
   },
   "full-disk-access": {
     "proseAccept": ["truy cập toàn bộ đĩa"],
@@ -2900,7 +2908,8 @@
     "accept": ["gợi ý"],
     "chosen": "đề xuất",
     "confidence": "high",
-    "forms": "Suggested operations → Thao tác được đề xuất",
+    "decision": "Thao tác được đề xuất",
+    "forms": "the AI suggestions dialog, its View menu item, and palette entry → Gợi ý AI (as fileOperations.mkdir.aiSuggestions*); prose and headings inside it → đề xuất",
     "sources": "catalog"
   },
   "supported": {
@@ -3050,6 +3059,13 @@
     "confidence": "high",
     "sources": "macOS AppKit WindowTabs, MS, KDE Dolphin, Xfce Thunar (Hình thu nhỏ)"
   },
+  "time-ago": {
+    "accept": ["vừa xong"],
+    "chosen": "trước",
+    "confidence": "high",
+    "forms": "{durationText} trước / {count} phút trước; a heading → Đề xuất {countText} phút trước",
+    "sources": "macOS Finder GROUP_PREVIOUS30DAYS (^0 ngày trước); catalog (ui.toast.age, queryUi.age.*)"
+  },
   "time-left": {
     "chosen": "còn",
     "confidence": "high",
@@ -3127,7 +3143,7 @@
   "undo": {
     "chosen": "hoàn tác",
     "confidence": "high",
-    "forms": "button Hoàn tác (not Hủy); This can't be undone → Bạn không thể hoàn tác việc này",
+    "forms": "button Hoàn tác (not Hủy); This can't be undone → Bạn không thể hoàn tác việc này; the suggestion pills → Có thể hoàn tác: … / Không thể hoàn tác: …",
     "sources": "macOS ME13 / AppKit (Undo → Hoàn tác), Finder"
   },
   "unexpected": {
@@ -3136,6 +3152,13 @@
     "confidence": "high",
     "forms": "Something went wrong → Có gì đó không ổn; quit unexpectedly → thoát bất ngờ",
     "sources": "macOS AppKitErrors (thoát bất ngờ); catalog"
+  },
+  "unknown": {
+    "accept": ["không rõ"],
+    "chosen": "không xác định",
+    "confidence": "high",
+    "forms": "a bare value → Không xác định (stands for a size or a date alike); (unknown) in a progress line → (không rõ)",
+    "sources": "macOS Finder vi (Không xác định); catalog (ai.local.modelUnknown Không xác định, fileOperations.transferProgress.sizeUnknown (không rõ))"
   },
   "unlock": {
     "accept": ["mở được"],
@@ -3334,9 +3357,6 @@
     "chosen": "ghi",
     "confidence": "high",
     "decision": "Hộp thoại thoát khi thao tác đang chạy",
-    "exceptions": {
-      "suggestedOps.reversibleDeleteWritten": "Matches the sibling `fileOperations.rollbackConfirm.bodyUndoByDeleting` wording, `những gì … tạo ra`."
-    },
     "forms": "partly written → đã được ghi một phần (predicative); half-written file → tệp ghi dở (attributive)",
     "sources": "macOS Finder (ghi đè)"
   },

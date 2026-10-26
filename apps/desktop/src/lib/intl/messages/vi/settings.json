@@ -1682,15 +1682,15 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
-  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "settings.suggestedOps.suppressApprovalNotice.label": "Ẩn ghi chú phê duyệt trong Gợi ý AI",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
     "sourceHash": "33f9993"
   },
-  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "settings.suggestedOps.suppressApprovalNotice.description": "Hộp thoại Gợi ý AI mở ra với một ghi chú cho biết AI đã đề xuất những gì có trong đó và không có gì chạy cho đến khi bạn phê duyệt. Bật mục này (hoặc đóng ghi chú bằng nút ×) để không hiển thị ghi chú nữa.",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
     "sourceHash": "8d7605d"
   },
-  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "đề xuất, gợi ý, duyệt, đồng ý, ghi chú, cảnh báo, thông báo, biểu ngữ, tắt, ẩn, AI",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
