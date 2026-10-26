@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "A Cmdr nem tudta beolvasni a visszavonási előzményeidet, ezért tiszta lappal indulnak",
+  "stateRecovery.operationLog.title": "A Cmdr nem tudta beolvasni a műveletnaplódat, ezért a napló tiszta lappal indul",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "A Cmdr nem tudta beolvasni az Ask Cmdr-csevegéseidet, ezért tiszta lappal indulnak",
+  "stateRecovery.chatHistory.title": "A Cmdr nem tudta beolvasni az Ask Cmdr-csevegéseidet, ezért a csevegések listája üresen indul",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "A Cmdr nem tudta beolvasni a kedvenceidet, ezért a lista üresen indul",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "A Cmdr nem tudta beolvasni az „Ugrás mappához” ablak legutóbbi bejegyzéseit, ezért a lista tiszta lappal indul",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "A Cmdr nem tudta beolvasni a legutóbbi kereséseidet, ezért a lista tiszta lappal indul",
   "@stateRecovery.searchHistory.title": {

@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Tömeges átnevezés",
+  "onboarding.stepAi.table.rowRename": "Sok fájl átnevezése",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "A csoportos átnevezés felületén kézzel állítod be az átnevezési mintát, átnézed és alkalmazod.",
+  "onboarding.stepAi.table.renameWithout": "A Csoportos átnevezés eszközben kézzel állítasz be egy átnevezési mintát, aztán átnézed és alkalmazod.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Azt mondod: „adj ISO dátum-előtagot”, az ágens beállítja az átnevezési mintát, te pedig tetszés szerint átnézed és alkalmazod.",
   "@onboarding.stepAi.table.renameWith": {

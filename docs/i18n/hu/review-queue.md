@@ -52,8 +52,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   an adverbial phrase, not a noun.
 
 - **Server sheet coinages with no pile attestation**: `Nem kapcsolódik: {name}` (pane heading for a chosen not-connected
-  state), `Bejelentkezés másként…`, `Váltás vendégre`, `{username} felhasználóként`, and `smb:// kezdetű cím`. Each is
-  grammatical; a native ear should confirm they read naturally.
+  state), `Bejelentkezés másként…`, `{username} felhasználóként`, and `smb:// kezdetű cím`. Each is grammatical; a
+  native ear should confirm they read naturally.
 
 - **AI tool chips** (`askCmdr.tool.*`): the verbal-noun / `-va/-ve` pair is a novel construction; `inspectFile`'s
   `Fájlok átnézése` / `Fájlok átnézve` only hints at looking inside. `nothingToSuggest.done`

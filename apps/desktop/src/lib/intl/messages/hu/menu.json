@@ -658,7 +658,7 @@
   },
   "menu.volume.editFavoriteShortcut": "Billentyűparancs beállítása…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Eltávolítás",
   "@menu.volume.removeFavorite": {

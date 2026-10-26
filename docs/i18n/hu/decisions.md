@@ -328,7 +328,7 @@ Bare `csomagok` stays wider than `Alkalmazáscsomagok`, as English splits them. 
 - Open X to Y → a `-hoz/-hez` purpose noun (`a kapcsolódáshoz`), never `hogy`.
 - `Elfelejted ezt a szervert: „{name}”?`; the browser keeps `gép` and unquoted `{hostName}`. `Semmit nem csatol le`.
   Aria `{name} leválasztása`.
-- `{username} felhasználóként` / `vendégként`; `Bejelentkezés másként…` (`Mentés másként`); `Váltás vendégre`;
+- `{username} felhasználóként` / `vendégként`; `Bejelentkezés másként…` (`Mentés másként`); `Böngészés vendégként`;
   `Hozzáadás mindenképp` (AppKit).
 - Not connected (chosen) → `Nem kapcsolódik: {name}` (AppKit), ❌ not `Nincs csatlakoztatva`. Optional field
   `Nem kötelező` (MS); an optional step `választható`.
@@ -343,11 +343,11 @@ hits), `NAS-t`.
 
 - Trust button `Beállítás megbízhatóként` (UsersGroups). `valami beékelődött közéd és a szerver közé` (Apple's stem, no
   attack named).
-- ⚠️ The pane line keeps `kapcsolód-`, the sheet `csatlakoz-`: `Csatlakozás` is forced by
-  `fileExplorer.network.connect`, and the button becomes `Csatlakozás…`. Don't sweep them together.
+- ⚠️ The pane line keeps `kapcsolód-`, the sheet `csatlakoz-` (`fileExplorer.network.connect` forces `Csatlakozás…`).
+  Don't sweep them together.
 - `Megjegyzés a kulcskarikában`, no `jelszó` (SFTP may save a passphrase); `Kulcsjelmondat`.
-- `Kijelentkezve innen: {name}` keeps the pane lines nominal; `Ellenőriztem`. `az ssh-agent` (esz-esz-há);
-  `Nextcloud-cím`.
+- `Kijelentkezve innen: {name}` keeps the pane lines nominal; `Ellenőriztem a kulcsot` / `a tanúsítványt`.
+  `az ssh-agent` (esz-esz-há); `Nextcloud-cím`.
 
 ## Az automatikus újracsatlakozás (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
 

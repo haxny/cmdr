@@ -1177,9 +1177,9 @@
   "@errors.write.destinationNotAFolder.title": {
     "sourceHash": "d371870"
   },
-  "errors.write.destinationNotAFolder.message": "A Cmdr nem tudta létrehozni a célmappát, mert egy fájl van itt, ahol mappának kellene lennie: {path}. Semmi sem íródott ki, és az eredetiek érintetlenek.",
+  "errors.write.destinationNotAFolder.message": "A Cmdr nem tudta létrehozni a célmappát, mert ott, ahol mappának kellene lennie, egy fájl van: „{path}”. Semmi sem íródott ki, és az eredetiek érintetlenek.",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "dfebb59"
+    "sourceHash": "98178cb"
   },
   "errors.write.destinationNotAFolder.suggestion": "Válassz másik célt, vagy nevezd át vagy helyezd át azt a fájlt, és próbáld újra.",
   "@errors.write.destinationNotAFolder.suggestion": {
@@ -1457,9 +1457,9 @@
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
   },
-  "errors.write.replySignatureRefused.message": "A szerver válasza nem volt aláírva, ezért a Cmdr leállt.",
+  "errors.write.replySignatureRefused.message": "A szerver válaszán nem volt érvényes aláírás, ezért a Cmdr leállt.",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.write.replySignatureRefused.suggestion": "Ezt okozhatja egy rosszul működő hálózati eszköz, de az is, ha valaki beavatkozik a közted és a szerver közötti forgalomba. Csatlakoztasd újra, és ha ismét előfordul, ellenőrizd a hálózatodat.",
   "@errors.write.replySignatureRefused.suggestion": {
@@ -2175,7 +2175,7 @@
   },
   "errors.volume.noContent": "„{path}” szimbolikus link vagy speciális fájl, ezért nincs olyan tartalma, amelyet a Cmdr átmásolhatna.",
   "@errors.volume.noContent": {
-    "sourceHash": "cebab92"
+    "sourceHash": "8b56bde"
   },
   "errors.volume.ambiguousName": "Több elem is illik erre az útvonalra a szerveren: „{path}”, ezért a Cmdr nem választott. Válaszd ki inkább a mappájából.",
   "@errors.volume.ambiguousName": {
@@ -2189,9 +2189,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
-  "errors.volume.signatureInvalid": "A szerver válasza nem volt aláírva, ezért a Cmdr leállt.",
+  "errors.volume.signatureInvalid": "A szerver válaszán nem volt érvényes aláírás, ezért a Cmdr leállt.",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.volume.ioError": "A kötet nem tudta befejezni a műveletet.",
   "@errors.volume.ioError": {
@@ -2233,13 +2233,13 @@
   "@errors.serverRequest.unexpected": {
     "sourceHash": "5be7ebd"
   },
-  "errors.serverRequest.blockedByPolicy": "A szervezeted kikapcsolta ezt a Cmdrben.",
+  "errors.serverRequest.blockedByPolicy": "A szervezeted kikapcsolta ezt a funkciót a Cmdrben.",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   },
-  "errors.eject.busy": "A Cmdr még fájlokat mozgat ott. Próbáld újra, amint ez befejeződik.",
+  "errors.eject.busy": "A Cmdr még fájlokkal dolgozik ott. Próbáld újra, amint ez befejeződik.",
   "@errors.eject.busy": {
-    "sourceHash": "560c0db"
+    "sourceHash": "4054483"
   },
   "errors.eject.volumeNotFound": "Ez a meghajtó már nincs csatlakoztatva, így nincs mit kiadni.",
   "@errors.eject.volumeNotFound": {

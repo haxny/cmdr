@@ -79,6 +79,19 @@
       "settings.appearance.tintGroupDescription": "adds a tint → háttérszínezést ad: the natural verb for giving a visual effect."
     }
   },
+  "administrator": {
+    "chosen": "rendszergazda",
+    "accept": ["rendszergazd"],
+    "forms": "administrator password → rendszergazdai jelszó; administrator rights → rendszergazdai jogosultság; a server's administrator → a rendszergazda",
+    "avoid": [
+      {
+        "form": "adminisztrátor",
+        "why": "macOS Finder's word, but the catalog ships rendszergazda 8× and Microsoft prefers it (72× vs 25×); one word covers both senses"
+      }
+    ],
+    "confidence": "high",
+    "sources": "catalog (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac, errors.listing.quotaExceeded.suggestion); ms (administrator → rendszergazda); macOS Finder (adminisztrátori név és jelszó, outvoted by the catalog)"
+  },
   "advanced": {
     "chosen": "Speciális",
     "confidence": "high",
@@ -382,7 +395,7 @@
   "blocked": {
     "chosen": "blokkolva",
     "accept": ["megakadályoz", "foglalja", "blokkol"],
-    "forms": "a rename row preflight won't let through → blokkolva (overwriteTooltip, the status {blocked} blokkolva); macOS blocked access → a macOS megakadályozta; Cmdr blocked a web page from its MCP server → A Cmdr blokkolta egy weboldal hozzáférését az MCP-szerverhez",
+    "forms": "a rename row preflight won't let through → blokkolva (overwriteTooltip, the status {blocked} blokkolva); an actor blocking something is blocked-by (megakadályoz)",
     "avoid": [
       {
         "form": "letiltva",
@@ -391,6 +404,18 @@
     ],
     "confidence": "tentative",
     "sources": "descriptive; not an error word"
+  },
+  "blocked-by": {
+    "chosen": "megakadályoz",
+    "forms": "macOS blocked Cmdr from X → A macOS megakadályozta, hogy a Cmdr …; Cmdr blocked a web page from reaching X → A Cmdr megakadályozta, hogy egy weboldal elérje …",
+    "avoid": [
+      {
+        "form": "blokkolta",
+        "why": "blokkolva is the blocked status (a rename preflight won't let through); keep the actor sense apart"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "catalog (errors.listing.notPermitted.explanation, securityNotices.mcpForeignOrigin.title); ms (block → letilt, the settings sense)"
   },
   "brief-view": {
     "chosen": "Rövid",
@@ -604,7 +629,7 @@
       "nézd át",
       "átvizsgál"
     ],
-    "forms": "progress Ellenőrzés…; Checking for changes → Változások ellenőrzése; Checking for conflicts → Ütközések keresése; Re-check button → Újraellenőrzés; I've checked it → Ellenőriztem",
+    "forms": "progress Ellenőrzés…; Checking for changes → Változások ellenőrzése; Checking for conflicts → Ütközések keresése; Re-check button → Újraellenőrzés; I've checked the key / the certificate → Ellenőriztem a kulcsot / Ellenőriztem a tanúsítványt",
     "confidence": "high",
     "sources": "macOS Finder (BN9 „^0” tartalmának ellenőrzése); TextToSpeech VB_CHECK_AGAIN (Check Again = Újraellenőrzés)"
   },
@@ -1613,7 +1638,7 @@
   },
   "git-unborn": {
     "chosen": "még nincs commit",
-    "forms": "the pill → {branch} (még nincs commit); the tooltip → Aktuális ág: {branch} (még nincs commit). The concept is carried by the parenthesis, never a literal születetlen.",
+    "forms": "the pill → {branch} (még nincs commit); the tooltip → Aktuális ág: „{branch}” (még nincs commit). The concept is carried by the parenthesis, never a literal születetlen.",
     "confidence": "tentative",
     "sources": "descriptive (the English pill’s own gloss, no commits yet); no pile source has unborn branch"
   },
@@ -1846,7 +1871,7 @@
   },
   "guest": {
     "chosen": "vendég",
-    "forms": "Connect as guest → Csatlakozás vendégként; as guest → vendégként (pairs with {username} felhasználóként); Use guest → Váltás vendégre; guest access → vendéghozzáférés",
+    "forms": "Connect as guest → Csatlakozás vendégként; as guest → vendégként (pairs with {username} felhasználóként); Browse as guest → Böngészés vendégként; guest access → vendéghozzáférés",
     "confidence": "high",
     "sources": "macOS NetAuthAgent (GUEST Vendég, EINFO_NO_ACCESS_GUEST)"
   },
@@ -3632,6 +3657,19 @@
     "confidence": "tentative",
     "sources": "descriptive (no pile term)"
   },
+  "tamper": {
+    "chosen": "beavatkozik",
+    "accept": ["beavatkoz"],
+    "forms": "someone tampering with traffic → valaki beavatkozik a forgalomba; with the connection → beavatkozik a kapcsolatba; with updates → beavatkozik a frissítésekbe",
+    "avoid": [
+      {
+        "form": "illetéktelen módosítás",
+        "why": "Microsoft's noun reads like a legal notice, not Cmdr's calm voice"
+      }
+    ],
+    "confidence": "high",
+    "sources": "catalog (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid, securityNotices.updateNotGenuine.body, 5× in all); ms (tamper → illetéktelen módosítás, rejected)"
+  },
   "tap": {
     "chosen": "koppint",
     "confidence": "high",
@@ -3794,11 +3832,25 @@
     "confidence": "high",
     "sources": "macOS Finder (NE105 A(z) „^0” hibába ütközött.); catalog reconciliation"
   },
+  "uninstall": {
+    "chosen": "eltávolítás",
+    "accept": ["eltávolít"],
+    "forms": "the menu item → „cmdr” parancs eltávolítása; the toast → A „cmdr” parancs eltávolítva.; Couldn't uninstall → Nem sikerült eltávolítani",
+    "confidence": "high",
+    "sources": "ms (uninstall → eltávolítás); catalog (menu.app.cliCommandUninstall, commands.appToggleCliCommand.uninstall.label)"
+  },
   "unlock": {
     "chosen": "Feloldás",
     "accept": ["felold", "oldd fel", "fel nem old", "fel van oldva", "fel kell old", "oldotta fel"],
     "confidence": "high",
     "sources": "macOS AppKit (Feloldás)"
+  },
+  "unlock-device": {
+    "chosen": "felold",
+    "accept": ["oldd fel", "feloldá", "fel van oldva", "fel kell old"],
+    "forms": "unlock the phone → oldd fel a telefon zárolását; after the phone was just named → oldd fel a zárolását",
+    "confidence": "high",
+    "sources": "ms (unlock → felold, feloldás); macOS DiskUtility (Oldja fel a lemez védettségét); catalog (errors.listing.deviceDisconnected.suggestion: oldd fel a zárolását)"
   },
   "unplug": {
     "chosen": "kihúz",
@@ -4082,7 +4134,7 @@
       },
       {
         "form": "kötegelt átnevezés",
-        "why": "a second name for the same tool; onboarding.stepAi.table.renameWithout should be realigned to csoportos átnevezés"
+        "why": "a second name for the same tool"
       }
     ],
     "confidence": "high",

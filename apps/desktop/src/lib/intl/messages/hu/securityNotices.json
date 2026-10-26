@@ -7,13 +7,13 @@
   "@securityNotices.dismiss": {
     "sourceHash": "48845bf"
   },
-  "securityNotices.mcpForeignOrigin.title": "A Cmdr blokkolta egy weboldal hozzáférését az MCP-szerverhez",
+  "securityNotices.mcpForeignOrigin.title": "A Cmdr megakadályozta, hogy egy weboldal elérje az MCP-szervert",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
   "securityNotices.mcpForeignOrigin.body": "A böngésződben megnyitott egyik weboldal megpróbált kapcsolatba lépni a Cmdrrel. Semmi sem jutott be. Ha ez továbbra is előfordul, zárd be a nem megbízható lapokat.",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP-beállítások",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "A Cmdr elutasított egy választ egy hálózati megosztástól",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "A Cmdr elutasított egy választ egy szervertől",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
-  "securityNotices.smbSignatureRefused.body": "Nem volt rajta a szerver aláírása, ezért a Cmdr nem tekintette megbízhatónak. Ezt okozhatja egy rosszul működő hálózati eszköz, de az is, ha valaki beavatkozik a közted és a szerver közötti forgalomba. Csatlakoztasd újra, és ha ismét előfordul, ellenőrizd a hálózatodat.",
+  "securityNotices.smbSignatureRefused.body": "A válaszon nem volt rajta a szerver aláírása, ezért a Cmdr nem tekintette megbízhatónak. Ezt okozhatja egy rosszul működő hálózati eszköz, de az is, ha valaki beavatkozik a közted és a szerver közötti forgalomba. Csatlakoztasd újra, és ha ismét előfordul, ellenőrizd a hálózatodat.",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "Újracsatlakozás",
   "@securityNotices.smbSignatureRefused.reconnect": {

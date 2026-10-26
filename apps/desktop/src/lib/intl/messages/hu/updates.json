@@ -56,9 +56,9 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Készen áll a Cmdr {version}, de a Cmdr nem tudja magától telepíteni",
+  "updates.unwritable.adminHeadline": "Megjelent a Cmdr {version}, de a Cmdr nem tudja magától telepíteni",
   "@updates.unwritable.adminHeadline": {
-    "sourceHash": "a0c72ea"
+    "sourceHash": "8e6aecc"
   },
   "updates.unwritable.adminDetail": "{path} egy másik fiókhoz tartozik. A frissítéshez töltsd le a Cmdrt a <website>getcmdr.com</website> oldalról, és húzd az Alkalmazások mappába. A macOS ekkor elkéri a jelszavadat.",
   "@updates.unwritable.adminDetail": {

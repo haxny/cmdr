@@ -315,9 +315,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Ide csak kisbetűket, számjegyeket és kötőjeleket írj.",
+  "servers.refusal.s3FieldMalformed": "Ide csak a–z betűket, 0–9 számjegyeket és kötőjelet írj.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "A végpontot http:// vagy https:// előtaggal és egy gépnévvel add meg, például https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -345,7 +345,7 @@
   },
   "servers.refusal.shareMounted": "Ez a megosztás még a régi címről van csatolva: „{name}”. Add ki, aztán ments újra.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "A Cmdr nem tudta kiadni ezt a megosztást: „{name}”, ezért nem mentett semmit. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -539,17 +539,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Elköltözött a szerver? Írd be az új végpontját. Az ehhez a kulcshoz tartozó összes bucket átkerül az új végpontra, a kedvenceivel, a nyitott lapjaival és a mentett titkos hozzáférési kulccsal együtt.",
+  "servers.sheet.s3EndpointMoveHelp": "Elköltözött a szerver? Írd be az új végpontját. Az ehhez a kulcshoz tartozó összes bucket átkerül a kedvenceivel és a nyitott lapjaival együtt, ahogy a mentett titkos hozzáférési kulcs is.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Elköltözött a szerver? Írd be az új címét. A kedvencei, a nyitott lapjai és a mentett jelszava is átkerülnek az új címre.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Elköltözött a szerver? Írd be az új címét. A megosztásai és a mentett jelszava is átkerülnek az új címre, az egyes megosztások kedvencei és nyitott lapjai pedig akkor kerülnek át, amikor a megosztás először megnyílik ott.",
+  "servers.sheet.smbAddressMoveHelp": "Elköltözött a szerver? Írd be az új címét. A megosztásai és a mentett jelszava is átkerülnek, az egyes megosztások kedvencei és nyitott lapjai pedig akkor, amikor az adott megosztás megnyílik az új címen.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Felhasználónév",
   "@servers.sheet.username": {
@@ -789,9 +789,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Ellenőriztem",
+  "servers.hostKey.changedDisclosure": "Ellenőriztem a kulcsot",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "A kulcs ujjlenyomata",
   "@servers.hostKey.fingerprintLabel": {
@@ -821,9 +821,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Ellenőriztem",
+  "servers.certificate.changedDisclosure": "Ellenőriztem a tanúsítványt",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "A tanúsítvány ujjlenyomata (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -873,9 +873,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "A fiókoddal kérted a bejelentkezést, de a szerver helyette vendégmunkamenetet ajánlott fel. Ez általában azt jelenti, hogy a jelszó nem volt jó. Ritkán pedig azt, hogy valami beavatkozik a kapcsolatba.",
+  "servers.paneState.guestSessionRefusedHint": "A fiókoddal kérted a bejelentkezést, de a szerver helyette vendégmunkamenetet ajánlott fel. Ez általában azt jelenti, hogy a jelszó nem volt jó. Ritkán pedig azt, hogy valaki beavatkozik a kapcsolatba.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Másik jelszó kipróbálása…",
   "@servers.paneState.tryAnotherPassword": {

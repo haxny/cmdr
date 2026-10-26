@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Nincs mit visszahelyezni: {count, plural, one {már nincs a Kukában} other {már nincsenek a Kukában}}.",
+  "fileOperations.trash.undoGone": "Nincs mit visszahelyezni: {count, plural, one {az elem már nem volt a Kukában} other {az elemek már nem voltak a Kukában}}.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {elem} other {elem}} már nem volt a Kukában.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -269,9 +269,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Ez a hely már ebben a mappában kezdődik: {rootFolder}. Így ez az útvonal ide vezet: {resolvedPath}. Erre gondoltál: {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Az ide írt útvonalak eleve ebben a mappában kezdődnek: {rootFolder}. Így a beírt útvonal ide vezet: {resolvedPath}. Erre gondoltál: {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Rövidebb útvonal használata",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -535,7 +535,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Megszakítottad ezt a másolást. Az eddig átmásolt fájlok ott maradnak, ahol vannak.} move {Megszakítottad ezt az áthelyezést. Az eddig áthelyezett fájlok ott maradnak, ahová kerültek.} compress {Megszakítottad ezt a tömörítést.} delete {Megszakítottad ezt a törlést. Az eddig törölt fájlok eltűntek, a többi még megvan.} trash {Megszakítottad ezt a Kukába helyezést. Az eddig áthelyezett fájlok a Kukában maradnak, a többi ott van, ahol volt.} other {Megszakítottad ezt a műveletet.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Megszakítás… (rendrakás)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -787,7 +787,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {és {countText} további elem} other {és {countText} további elem}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {A többi másolása} move {A többi áthelyezése} delete {A többi törlése} trash {A többi áthelyezése a Kukába} other {Folytatás a többivel}}",
   "@fileOperations.sourcesGone.continue": {
