@@ -1686,15 +1686,15 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
-  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "settings.suggestedOps.suppressApprovalNotice.label": "Ocultar a nota de aprovação em Sugestões da IA",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
     "sourceHash": "33f9993"
   },
-  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "settings.suggestedOps.suppressApprovalNotice.description": "A caixa de diálogo Sugestões da IA abre com uma nota dizendo que a IA sugeriu o que está nela e que nada é executado até você aprovar. Ative isto (ou feche a nota pelo ×) para não mostrar mais a nota.",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
     "sourceHash": "8d7605d"
   },
-  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "sugestão, sugestões, aprovar, aprovação, aviso, alerta, faixa, banner, mensagem, esconder, IA, inteligência artificial",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },

@@ -294,6 +294,10 @@
     ],
     "pt": [
       {
+        "source": "Archive",
+        "reason": "Two concepts: `Arquivar` hides an Ask Cmdr chat (`askCmdr.sessions.archive`, concept archive-chat); `Arquivo compactado` labels the zip a compress suggestion creates (`suggestedOps.facts.archive`, concept archive)."
+      },
+      {
         "source": "Both",
         "reason": "Gender agreement, not drift: `Ambos` agrees with files and folders (`queryUi.filters.type.both`), `Ambas` with notifications (`…downloadsNotifications.opt.both`)."
       },
@@ -324,6 +328,10 @@
       {
         "source": "Search",
         "reason": "Noun vs verb: `Busca` names the Settings section beside nouns like `Aparência` and `Indexação` (`settings.section.search`); `Buscar` is the button that runs a search and the dialog title."
+      },
+      {
+        "source": "Unknown",
+        "reason": "Gender agreement, not drift: `Desconhecido` agrees with a model (`ai.local.modelUnknown`); `suggestedOps.factUnknown` stands for both a size (masculine) and a date (feminine), so it takes the neutral `Sem informação`."
       }
     ],
     "sv": [

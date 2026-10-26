@@ -292,3 +292,8 @@ grammar in `style.md`, open questions in `review-queue.md`.
 
 - `O que sua organização gerencia`, `Só verificação manual`: no agreeing participle. `*Off` agrees with its row (macOS
   Notifications).
+
+## AI suggestions (`suggestedOps.*`)
+
+- `Sugestões da IA`, as `fileOperations.mkdir.aiSuggestions*`. `Por quê:` (tonic, as `Por quê?`); aria
+  `Por quê, segundo a IA:`.

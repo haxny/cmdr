@@ -189,7 +189,8 @@
     "confidence": "confirmed",
     "sources": "MS terminology pt-BR (archive → arquivar, Archived → Arquivado)",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "The zip/tar file kind (concept archive), not a chat: arquivo compactado."
+      "fileExplorer.list.rowKind.archive": "The zip/tar file kind (concept archive), not a chat: arquivo compactado.",
+      "suggestedOps.facts.archive": "The archive file a compress suggestion creates (concept archive), not a chat: Arquivo compactado."
     }
   },
   "ask": {
@@ -1263,6 +1264,13 @@
     "forms": "formatted as FAT32 → formatado como FAT32",
     "confidence": "high",
     "sources": "macOS Disk Utility (Formato); standard pt-BR"
+  },
+  "from-to": {
+    "chosen": "De / Para",
+    "accept": ["De", "Para"],
+    "forms": "group headings and fact labels → De / Para; with a colon → De:",
+    "confidence": "high",
+    "sources": "catalog (fileOperations.transferDialog.sourceGroupTitle De, targetGroupTitle Para, scanPhase.fromLabel De:); standard pt-BR"
   },
   "free-space": {
     "chosen": "espaço livre",
@@ -3117,6 +3125,18 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (Tamanho da miniatura:); MS terminology pt-BR; Thunar"
   },
+  "time-ago": {
+    "chosen": "há",
+    "forms": "há {count}min / há {durationText}; a heading → Sugerido há {countText} minutos",
+    "avoid": [
+      {
+        "form": "atrás",
+        "why": "Nautilus pt-BR writes 2 dias atrás, but the catalog settled há (ui.toast.age, queryUi.age.*); one app, one form"
+      }
+    ],
+    "confidence": "high",
+    "sources": "catalog (ui.toast.age há {durationText}, queryUi.age.* há {count}…); GNOME Nautilus pt-BR (Uma semana atrás) as the rejected alternative"
+  },
   "time-left": {
     "chosen": "restante",
     "forms": "{duration} restantes (fileOperations.transferProgress.etaRemaining, reused by the chip)",
@@ -3221,6 +3241,16 @@
       }
     ],
     "sources": "MS terminology pt-BR desinstalar; catalog menu.app.cliCommandUninstall"
+  },
+  "unknown": {
+    "chosen": "desconhecido",
+    "accept": ["desconhecid"],
+    "forms": "a bare value for a masculine noun → Desconhecido; (unknown) → (desconhecido)",
+    "confidence": "high",
+    "sources": "macOS pt-BR (Desconhecido, (desconhecido), <desconhecido>); catalog (ai.local.modelUnknown Desconhecido, fileOperations.transferProgress.sizeUnknown)",
+    "exceptions": {
+      "suggestedOps.factUnknown": "One string stands in for a size (o tamanho) and a date (a data), so a gendered desconhecido/desconhecida can't agree with both: the neutral Sem informação."
+    }
   },
   "unlock": {
     "chosen": "Desbloquear",
