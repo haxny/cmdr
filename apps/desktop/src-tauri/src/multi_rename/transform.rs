@@ -4,7 +4,6 @@
 
 use regex::{Regex, RegexBuilder};
 use unicode_normalization::UnicodeNormalization;
-use unicode_normalization::char::is_combining_mark;
 
 /// Search & replace, as the sheet's fields and switches set it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -296,58 +295,8 @@ fn change_case(text: &str, case: CaseChange) -> String {
     }
 }
 
-/// `text` without diacritics on Latin and Greek letters: each such letter is
-/// decomposed (NFD) and its combining marks dropped, plus a table for the letters
-/// that don't decompose (`ł`, `đ`, `ø`, `ß`, `æ`, `œ`, `þ`, `ı`), like foobar2000's
-/// `$ascii()`. Every other script is left exactly as it is: a kana's dakuten, a
-/// Devanagari or Thai vowel sign, and Cyrillic `й` / `ё` are part of the letter,
-/// not decoration.
+/// `text` without diacritics on Latin and Greek letters; the table lives in `cmdr-tags`
+/// so the tag editor and Multi-Rename strip identically.
 pub fn remove_diacritics(text: &str) -> String {
-    if text.is_ascii() {
-        return text.to_string();
-    }
-    let mut out = String::with_capacity(text.len());
-    for c in text.nfc() {
-        if let Some(replacement) = undecomposed(c) {
-            out.push_str(replacement);
-        } else if is_latin_or_greek(c) {
-            out.extend(c.to_string().nfd().filter(|m| !is_combining_mark(*m)));
-        } else {
-            out.push(c);
-        }
-    }
-    out
-}
-
-/// Latin (Basic through Extended Additional) and Greek letters: the scripts whose
-/// marks are diacritics a name can do without.
-fn is_latin_or_greek(c: char) -> bool {
-    matches!(c as u32, 0x00C0..=0x024F | 0x1E00..=0x1EFF | 0x0370..=0x03FF | 0x1F00..=0x1FFF)
-}
-
-fn undecomposed(c: char) -> Option<&'static str> {
-    Some(match c {
-        'ł' => "l",
-        'Ł' => "L",
-        'đ' => "d",
-        'Đ' => "D",
-        'ø' => "o",
-        'Ø' => "O",
-        'ß' => "ss",
-        'ẞ' => "SS",
-        'æ' => "ae",
-        'Æ' => "Ae",
-        'œ' => "oe",
-        'Œ' => "Oe",
-        'þ' => "th",
-        'Þ' => "Th",
-        'ð' => "d",
-        'Ð' => "D",
-        'ı' => "i",
-        'ħ' => "h",
-        'Ħ' => "H",
-        'ŧ' => "t",
-        'Ŧ' => "T",
-        _ => return None,
-    })
+    cmdr_tags::text::remove_diacritics(text)
 }

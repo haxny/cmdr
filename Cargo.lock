@@ -1555,6 +1555,7 @@ dependencies = [
  "cmdr-s3",
  "cmdr-sftp",
  "cmdr-smb",
+ "cmdr-tags",
  "cmdr-update-trust",
  "cmdr-webdav",
  "cocoon",
