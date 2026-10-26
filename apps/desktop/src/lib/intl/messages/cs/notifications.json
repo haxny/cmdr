@@ -1,0 +1,6 @@
+{
+  "notifications.permissionDenied": "Oznámení macOS jsou vypnutá. Otevři Nastavení systému a povol je.",
+  "@notifications.permissionDenied": {
+    "sourceHash": "4fef9ce"
+  }
+}
