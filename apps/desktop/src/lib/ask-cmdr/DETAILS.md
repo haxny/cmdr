@@ -194,6 +194,11 @@ a quieter note saying what came back. Every word is ours: the backend sends type
   folder (`absolute`); otherwise it's plain text. Click → `revealPath({ path, kind })`, a prop handed down from
   `routes/(main)/+page.svelte` (`revealPathInBestPane`, over the `navigate-and-select` primitives), then
   `returnFocusToPane()`. Only subject paths reach it, ❌ never a raw search scope string.
+- **Gotcha: a path link can't be ellipsized from outside.** A `LinkButton` is a `<button>`, an atomic inline box, so the
+  label's `text-overflow` replaced the whole link and every word after it: a long PDF name rendered as "Looked inside …"
+  (seen live, 2026-10-26). A label holding a path (`with-places`) is a flex row instead, where only the path shrinks and
+  truncates itself; `white-space: pre` keeps the spaces a flex row would drop at its pieces' edges. The preview's linked
+  row names truncate themselves the same way, beside a size that stays on their line.
 - **What came back** (`toolOutcomeText`): a `Record` over every outcome kind. Counts, "showed N of M" when the model got
   part of a list, "so far" / "yet" for a lower bound (❌ never "nothing found" while ground is uncovered), one note per
   refusal reason and per `MemoryRefusalKind`, and nothing for `answered` / `saved` (the label and glyph say it). A

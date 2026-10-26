@@ -99,7 +99,11 @@
             <Icon name="circle-x" size={13} aria-hidden="true" />
         {/if}
     </span>
-    <span class="label" use:tooltip={{ text: labelText, overflowOnly: true }}>
+    <span
+        class="label"
+        class:with-places={label.place !== null || label.places.length > 0}
+        use:tooltip={{ text: labelText, overflowOnly: true }}
+    >
         <Trans key={label.key} params={label.params} snippets={{ place: placeTag, places: placesTag }} />
     </span>
     {#if repeat}
@@ -152,8 +156,32 @@
         white-space: nowrap;
     }
 
+    /* A path link is a `<button>`, an atomic inline box: the label's ellipsis can't cut inside it,
+       so it swallowed the whole path and every word after it ("Looked inside …"). With a path in
+       it, the label lays its pieces out in a row instead, and only the path gives way: "Looked
+       inside Från Säbys kö… and 1 more". `pre` keeps the spaces at the pieces' edges, which a
+       flex row would otherwise drop. */
+    .label.with-places {
+        display: flex;
+        white-space: pre;
+    }
+
     .place {
         font-family: var(--font-mono);
+    }
+
+    .with-places .place {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .with-places .place :global(.link-button) {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .repeat {

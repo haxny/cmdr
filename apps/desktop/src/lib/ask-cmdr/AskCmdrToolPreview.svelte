@@ -76,9 +76,13 @@
             <ul class="rows">
                 {#each ready.preview.rows as row, index (index)}
                     <li class="row">
+                        <span class="head">
                         {#if row.path !== null && row.kind !== 'other'}
                             {@const target = { ...row, path: row.path }}
-                            <span class="name" use:tooltip={{ text: row.path, overflowOnly: true }}>
+                            <!-- Always on, like a tool line's path: the link truncates itself, so
+                                 its box never reads as overflowing, and the full path says more
+                                 than the name anyway. -->
+                            <span class="name" use:tooltip={row.path}>
                                 <LinkButton
                                     aria-label={tString('askCmdr.tool.showInPane', { path: row.path })}
                                     onclick={() => void show(target)}>{row.name}</LinkButton
@@ -98,6 +102,7 @@
                         {#if row.status !== null}
                             <span class="meta">{previewStatusText(row.status)}</span>
                         {/if}
+                        </span>
                         {#if row.snippet !== null}
                             <span class="snippet">{row.snippet}</span>
                         {/if}
@@ -144,19 +149,33 @@
 
     .row {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    /* The name gives way first, so its size stays on its line however long the name is. */
+    .head {
+        display: flex;
         align-items: baseline;
-        gap: 0 var(--spacing-xs);
+        gap: var(--spacing-xs);
         min-width: 0;
     }
 
     .name {
         min-width: 0;
-        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         font-family: var(--font-mono);
+    }
+
+    /* A linked name is a `<button>`, an atomic inline box the ellipsis above can't cut into, so
+       it truncates itself. */
+    .name :global(.link-button) {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .meta {
@@ -166,7 +185,6 @@
 
     /* A search hit's line of text: its own row under the name, so a long line wraps there. */
     .snippet {
-        flex-basis: 100%;
         min-width: 0;
         overflow-wrap: anywhere;
         color: var(--color-text-tertiary);
