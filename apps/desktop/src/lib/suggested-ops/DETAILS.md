@@ -39,9 +39,11 @@ principle rules out: an approved op is a user-started op.
 ## The file list
 
 Every group shows its files right away (`SuggestedOpFiles.svelte`): the first `INITIAL_ROWS` (10), then "Show 20 more"
-and "Show all N" under the list. The list is a `ColumnList` with `table` semantics (its rows hold checkboxes) over a
-windowed source whose `count` is the rows shown. The frame is sized to exactly the shown rows up to `MAX_VISIBLE_ROWS`
-(20) and scrolls past that, so "Show all" on 60,000 rows is a 20-row viewport drawing a window, never 60,000 DOM rows.
+and "Show all N" on the row under the list, opposite the group's Reject and action buttons (the group hands them in as
+the `actions` snippet, so a short group spends one row on its footer, not two). The list is a `ColumnList` with `table`
+semantics (its rows hold checkboxes) over a windowed source whose `count` is the rows shown. The frame is sized to
+exactly the shown rows up to `MAX_VISIBLE_ROWS` (20) and scrolls past that, so "Show all" on 60,000 rows is a 20-row
+viewport drawing a window, never 60,000 DOM rows.
 
 **Rows read like file rows**: the icon from the shared icon cache (keyed `ext:<ext>` like the backend's
 `derive_icon_id`), the name mid-truncated to keep the extension, then the facts. When every op shares one folder
@@ -72,10 +74,16 @@ whose window isn't loaded renders `ColumnList`'s placeholder and `opAt` answers 
 Opening the dialog reads every group's first page side by side (`Promise.all`), so seven groups cost one round trip of
 latency, not seven.
 
-**Live facts** are read for the drawn rows only, once per op (`ensureLiveFacts`): one bounded stat per row the user
-actually sees, through the backend's shared stat budget. A page that lands after the list drew its rows still gets them
-(the review remembers its last `range`). A read that throws un-marks its ops, so the next scroll asks again, and is
-logged rather than surfaced: the labelled snapshot is an honest answer while it's missing.
+**Live facts** are read for the drawn rows only, once per op (`ensureLiveFacts` →
+`liveSuggestedOpFacts(groupId, offset, limit)`, one call per contiguous span of rows not yet asked about): one bounded
+stat per row the user actually sees, through the backend's shared stat budget. A page that lands after the list drew its
+rows still gets them (the review remembers its last `range`). The answer is typed:
+
+- **A source that can't be asked at all** (`sourceNotConnected`, `sourceGone`) sets the review's `sourceUnreachable`:
+  the group stops asking, and one line above the list says why its sizes and dates are from suggestion time, rather than
+  a clock glyph on every row standing in for an explanation. "Show the new version" clears it and asks again.
+- **Anything else** (a store refusal, an unknown group, a throw) un-marks the span, so the next scroll asks again, and
+  is logged rather than surfaced: the labelled snapshot is an honest answer while the live one is missing.
 
 **The wire.** Approving sends the group id plus the ids the user turned OFF, so the common case carries an empty list at
 any size.

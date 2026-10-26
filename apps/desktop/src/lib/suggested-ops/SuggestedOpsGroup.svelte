@@ -98,10 +98,11 @@
         </div>
     {/if}
 
-    <SuggestedOpFiles {group} />
+    <SuggestedOpFiles {group} {actions} />
 
-    <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each suggestion's own Reject / approve pair, one per group in the list; the dialog has no footer actions of its own -->
-    <div class="actions">
+    {#snippet actions()}
+        <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each suggestion's own Reject / approve pair, one per group in the list; the dialog has no footer actions of its own -->
+        <div class="actions">
         <Button disabled={busy} onclick={() => void rejectGroup(group.groupId)}>
             {tString('suggestedOps.reject')}
         </Button>
@@ -112,7 +113,8 @@
         >
             {tString(approveKey(group.verb), { countText: formatInteger(count), count })}
         </Button>
-    </div>
+        </div>
+    {/snippet}
 
     {#if refusal}
         <!-- An approval that didn't start gave the group back: it's pending again and nothing
@@ -157,6 +159,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: var(--spacing-xs);
+        padding-inline-start: 0;
         list-style: none;
     }
 
@@ -184,6 +187,8 @@
         grid-template-columns: max-content minmax(0, 1fr);
         column-gap: var(--spacing-sm);
         row-gap: var(--spacing-xxs);
+        /* The global list inset would push the facts off the title's edge. */
+        padding-inline-start: 0;
         font-size: var(--font-size-sm);
     }
 
@@ -206,7 +211,7 @@
 
     .actions {
         display: flex;
-        justify-content: flex-end;
+        margin-left: auto;
         gap: var(--spacing-sm);
     }
 
@@ -232,6 +237,11 @@
     .refusal-label {
         color: var(--color-text-secondary);
         font-weight: 600;
+    }
+
+    .refusal-message,
+    .refusal-suggestion {
+        margin: 0;
     }
 
     .refusal-message {

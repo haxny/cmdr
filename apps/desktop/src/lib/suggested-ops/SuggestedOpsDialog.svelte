@@ -35,7 +35,7 @@
     {#if suggestedOpsState.decisionNotice}
         <!-- Above the list rather than inside a group: after the re-read the group may be gone
              (its approval did land), and the notice still has to be read. -->
-        <p class="notice notice-problem" role="alert">{tString(suggestedOpsState.decisionNotice)}</p>
+        <p class="decision-notice" role="alert">{tString(suggestedOpsState.decisionNotice)}</p>
     {/if}
 
     <!-- A re-read keeps the groups on screen: only the FIRST read has nothing to show yet.
@@ -67,8 +67,9 @@
 </ModalDialog>
 
 <style>
+    /* Every paragraph here sets its own margin: the global one is a prose rhythm. */
     .lede {
-        margin-bottom: var(--spacing-lg);
+        margin: 0 0 var(--spacing-lg);
         color: var(--color-text-secondary);
         font-size: var(--font-size-md);
     }
@@ -85,6 +86,17 @@
         color: var(--color-error-text);
     }
 
+    /* The one notice above the list, so it reads as a banner over what follows, in the tint
+       a group's own change notice uses for the same urgency. */
+    .decision-notice {
+        margin: 0 0 var(--spacing-lg);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        background: var(--color-error-bg);
+        color: var(--color-error-text);
+        font-size: var(--font-size-sm);
+    }
+
     .sweep + .sweep {
         margin-top: var(--spacing-xl);
     }
@@ -97,6 +109,7 @@
     }
 
     .sweep-meta {
+        margin: 0;
         color: var(--color-text-tertiary);
         font-size: var(--font-size-sm);
         font-weight: 500;

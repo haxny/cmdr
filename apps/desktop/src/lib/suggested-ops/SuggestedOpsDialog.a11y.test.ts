@@ -410,3 +410,35 @@ describe('honest absence', () => {
     expect(host.querySelector('.refusal')).toBeNull()
   })
 })
+
+/** The dialog's parts, each audited on its own as well, so a part reused elsewhere stays clean. */
+describe('the parts on their own', () => {
+  async function audit(component: Parameters<typeof mount>[0], props: Record<string, unknown>): Promise<HTMLElement> {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    mount(component, { target: host, props })
+    flushSync()
+    await expectNoA11yViolations(host)
+    return host
+  }
+
+  it('AgentReason labels the AI’s words', async () => {
+    const AgentReason = (await import('./AgentReason.svelte')).default
+    const host = await audit(AgentReason, { text: 'They all look like invoices.' })
+    expect(host.textContent).toContain('The AI’s reason')
+  })
+
+  it('SuggestedOpsGroup renders a group with no violations', async () => {
+    const SuggestedOpsGroup = (await import('./SuggestedOpsGroup.svelte')).default
+    const host = await audit(SuggestedOpsGroup, { group: group() })
+    expect(host.textContent).toContain('Move 3 files')
+  })
+
+  it('SuggestedOpFiles renders a file list with no violations', async () => {
+    const SuggestedOpFiles = (await import('./SuggestedOpFiles.svelte')).default
+    const { createRawSnippet } = await import('svelte')
+    const actions = createRawSnippet(() => ({ render: () => '<span></span>' }))
+    const host = await audit(SuggestedOpFiles, { group: group(), actions })
+    expect(host.textContent).toContain('invoice-jan.pdf')
+  })
+})

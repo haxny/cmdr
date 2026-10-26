@@ -6,6 +6,7 @@
     // because a group of 60,000 ops is legitimate. Size and Last modified are what the disk says
     // NOW; a value that moved since the suggestion shows both, a file that's gone says so, and
     // one Cmdr couldn't check falls back to the creation snapshot, labelled as that.
+    import type { Snippet } from 'svelte'
     import ColumnList from '#lib/ui/ColumnList.svelte'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import Icon from '#lib/ui/Icon.svelte'
@@ -47,9 +48,12 @@
 
     interface Props {
         group: SuggestedGroupView
+        /** The group's decision buttons, right-aligned on the row under the list, opposite
+         *  "Show more" / "Show all", so a short group doesn't spend two rows on its footer. */
+        actions: Snippet
     }
 
-    const { group }: Props = $props()
+    const { group, actions }: Props = $props()
 
     const review = $derived(reviewOf(group.groupId))
     const shown = $derived(shownRows(group))
@@ -306,8 +310,9 @@
     />
 </div>
 
-{#if remaining > 0}
+<div class="list-footer">
     <div class="more">
+        {#if remaining > 0}
         <LinkButton onclick={() => { showMoreRows(group.groupId) }}>
             {tString('suggestedOps.showMore', {
                 countText: formatInteger(Math.min(SHOW_MORE_STEP, remaining)),
@@ -319,8 +324,10 @@
                 {tString('suggestedOps.showAll', { countText: formatInteger(total), count: total })}
             </LinkButton>
         {/if}
+        {/if}
     </div>
-{/if}
+    {@render actions()}
+</div>
 
 <style>
     /* Its height is `frameHeight`, inline: it depends on how many rows show. */
@@ -333,15 +340,22 @@
     }
 
     .source-note {
-        margin-bottom: var(--spacing-xs);
+        margin: 0 0 var(--spacing-xs);
         color: var(--color-text-secondary);
         font-size: var(--font-size-sm);
+    }
+
+    .list-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-sm);
     }
 
     .more {
         display: flex;
         gap: var(--spacing-md);
-        margin-top: var(--spacing-xs);
         font-size: var(--font-size-sm);
     }
 
