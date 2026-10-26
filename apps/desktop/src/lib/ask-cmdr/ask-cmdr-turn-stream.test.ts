@@ -188,8 +188,8 @@ describe('picking a turn up part-way through', () => {
   })
 
   /** After a cancel the backend keeps dribbling for a chunk or two before its `stopped`.
-   *  Without the stopped list those chunks would read as a live turn and put the rail back
-   *  into "working…" or open a bubble the stop already settled away. */
+   *  Without the pending stop those chunks would read as a live turn and put the rail back
+   *  into "working…" or grow a bubble the stop already ended. */
   it('a chunk arriving after the user stopped does not restart the turn', async () => {
     sendMessage('long one')
     fire(OPEN_THREAD, { type: 'started' })
@@ -201,7 +201,9 @@ describe('picking a turn up part-way through', () => {
     fire(OPEN_THREAD, { type: 'textDelta', text: ' and more' })
 
     expect(askCmdrState.streaming).toBe(false)
-    // Nothing of that turn was stored yet, so the stop left no bubble, and the chunk opens none.
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant'])
+    // Nothing of that turn was stored, so its terminal leaves no bubble.
+    fire(OPEN_THREAD, { type: 'stopped', turn: null })
     expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user'])
   })
 })

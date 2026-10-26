@@ -1,12 +1,11 @@
 /**
  * The rail's streaming state machine: sending appends a user message and streams the
- * answer into the last assistant bubble; stop cancels and finalizes locally (the runtime
- * sends no terminal event on cancel); width persists; the soft-cap nudge trips past the
- * constant.
+ * answer into the last assistant bubble; width persists; the soft-cap nudge trips past the
+ * constant. Stop and a reload mid-turn: `ask-cmdr-stop-and-reload.test.ts`.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageBlock, MessageView } from '#lib/tauri-commands/index.js'
+import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageView } from '#lib/tauri-commands/index.js'
 import type { ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
@@ -72,7 +71,6 @@ import {
   removeAttachment,
   sendMessage,
   setRailWidth,
-  stopStreaming,
   switchToThread,
   THREAD_SOFT_CAP_MESSAGES,
   type RailMessage,
@@ -444,71 +442,6 @@ describe('slot settings changes', () => {
       resolveRecord([eventRow(9, [{ type: 'modelChanged', model: 'model-two' }])])
       await vi.advanceTimersByTimeAsync(0)
       expect(askCmdrState.messages).toEqual([])
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-})
-
-describe('stopStreaming', () => {
-  /** A round of `partial` narration whose row persisted, then a second round still streaming. */
-  function streamPastOneRound(): void {
-    sendMessage('long one')
-    fire({ type: 'started' }, 3)
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'partial' })
-    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
-    fire({ type: 'toolCallsResolved', messageId: 5, calls: [resolved('c1', 'list_dir')] })
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'never stored' })
-  }
-
-  it('cancels the active turn and settles it locally to what persisted', () => {
-    streamPastOneRound()
-    stopStreaming()
-    expect(cancelMock).toHaveBeenCalledWith(3)
-    expect(askCmdrState.streaming).toBe(false)
-    expect(assistantAt(1)).toMatchObject({ id: 5, streaming: false })
-    expect(textOf(assistantAt(1))).toBe('partial')
-    // The call that was running has no result row yet, so it settles with no outcome.
-    expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: false, outcome: null }])
-  })
-
-  it("the backend's stopped event after a local stop changes nothing and lets the next turn stream", () => {
-    streamPastOneRound()
-    stopStreaming()
-
-    fire({ type: 'stopped', turn: STATS })
-    expect(assistantAt(1)).toMatchObject({ streaming: false })
-    expect(textOf(assistantAt(1))).toBe('partial')
-    expect(askCmdrState.streaming).toBe(false)
-
-    fire({ type: 'textDelta', text: 'a later turn' })
-    expect(askCmdrState.streaming).toBe(true)
-  })
-
-  it('drops a bubble nothing of which persisted', () => {
-    sendMessage('long one')
-    fire({ type: 'started' }, 3)
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'partial' })
-    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
-
-    stopStreaming()
-
-    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user'])
-  })
-
-  it('settles the turn when the progress watchdog times out', async () => {
-    vi.useFakeTimers()
-    try {
-      streamPastOneRound()
-
-      await vi.advanceTimersByTimeAsync(90_000)
-
-      expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: false, outcome: null }])
-      expect(assistantAt(1)).toMatchObject({ thinking: false, stalled: false, streaming: false })
-      expect(askCmdrState.messages.at(-1)).toEqual({ kind: 'error', errorKind: 'timeout' })
     } finally {
       vi.useRealTimers()
     }
@@ -959,123 +892,5 @@ describe('switchToThread', () => {
     expect(askCmdrState.conversationId).toBeNull()
     expect(askCmdrState.messages).toEqual([])
     expect(askCmdrState.loadingHistory).toBe(false)
-  })
-})
-
-describe('a reload mid-turn', () => {
-  /** A thread page whose turn has been running since row `since`. */
-  function runningThread(rows: MessageView[], since: number) {
-    return {
-      conversation: conversationRow(9),
-      totalMessages: rows.length,
-      messages: rows,
-      lastContextUsage: null,
-      turnInFlightSinceSeq: since,
-    }
-  }
-
-  /** The backend says a turn runs here, so the rail is in it at once, before any live event:
-   *  Stop shows, and the line still waiting for its result keeps waiting. */
-  it('adopts the running turn on load and keeps writing into its bubble', async () => {
-    const call: MessageBlock = {
-      type: 'toolCall',
-      callId: 'c1',
-      tool: 'app_state',
-      subject: PANES,
-      outcome: null,
-      repeatOf: null,
-    }
-    getMock.mockResolvedValue(
-      runningThread(
-        [
-          { ...userMessage(1, 1), turnId: 1 },
-          { ...assistantRow(2, 2, 'Checking.'), blocks: [call], turnId: 1 },
-        ],
-        0,
-      ),
-    )
-    await switchToThread(9)
-    expect(askCmdrState.streaming).toBe(true)
-    expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: true }])
-
-    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: PANES })
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'Here.' })
-    fire({
-      type: 'done',
-      messageId: 4,
-      seq: 4,
-      stop: 'completed',
-      usage: { promptTokens: 1, completionTokens: 1 },
-      turn: STATS,
-    })
-
-    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant'])
-    expect(assistantAt(1)).toMatchObject({ id: 4, streaming: false, stats: STATS })
-    expect(assistantAt(1).rounds.map((round) => round.messageId)).toEqual([2, 4])
-    expect(linesOf(assistantAt(1))).toMatchObject([{ running: false, outcome: ANSWERED }])
-  })
-
-  /** Reloaded before the running turn's first row landed: the bubble on screen is the previous
-   *  turn's, so the live events open one of their own, and its opener, which the load never saw,
-   *  goes in above it once it persists. */
-  it('opens a new bubble for a turn with no row yet, and puts its opener above it', async () => {
-    getMock.mockResolvedValue(
-      runningThread(
-        [
-          { ...userMessage(1, 1), turnId: 1 },
-          { ...assistantRow(2, 2, 'First.'), turnId: 1 },
-        ],
-        2,
-      ),
-    )
-    await switchToThread(9)
-    expect(askCmdrState.streaming).toBe(true)
-
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'Second.' })
-    fire({
-      type: 'userPersisted',
-      messageId: 3,
-      seq: 3,
-      opener: { ...userMessage(3, 3), blocks: [{ type: 'text', text: 'and now?' }], turnId: 3 },
-    })
-
-    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant', 'user', 'assistant'])
-    expect(askCmdrState.messages[0]).toMatchObject({ id: 1, text: 'm1' })
-    expect(askCmdrState.messages[2]).toEqual({ kind: 'user', id: 3, text: 'and now?', attachments: [] })
-    expect(assistantAt(1).rounds.map((round) => round.text)).toEqual(['First.'])
-    expect(assistantAt(3)).toMatchObject({ turnId: 3, streaming: true, rounds: [{ text: 'Second.' }] })
-  })
-
-  /** A wake (or a rejected sweep's follow-up) opens its turn with no user bubble typed here. Its
-   *  opener goes in as its own item; the user bubble of an EARLIER turn keeps its own id. */
-  it("inserts the opener of a turn nobody typed here, leaving an earlier bubble's id alone", () => {
-    askCmdrState.messages = [
-      { kind: 'user', id: 1, text: 'hi', attachments: [] },
-      {
-        kind: 'assistant',
-        id: 2,
-        turnId: 1,
-        rounds: [{ messageId: 2, text: 'Hello.', calls: [] }],
-        thinking: false,
-        stalled: false,
-        streaming: false,
-        stats: null,
-      },
-    ]
-
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'I noticed something.' })
-    fire({
-      type: 'userPersisted',
-      messageId: 5,
-      seq: 5,
-      opener: { ...userMessage(5, 5), blocks: [{ type: 'wakeDigest', folders: [], rollups: [] }], turnId: 5 },
-    })
-
-    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant', 'wakeDigest', 'assistant'])
-    expect(askCmdrState.messages[0]).toMatchObject({ kind: 'user', id: 1 })
-    expect(assistantAt(3).turnId).toBe(5)
   })
 })

@@ -50,9 +50,8 @@ Three things follow from the subscription being conversation-keyed rather than p
   `discarded` is the only way a subscriber can learn that, since there is nothing left to re-read. The rail steps off
   into an empty chat and the session list drops the row.
 - **A stopped turn stays stopped.** After a cancel the backend dribbles a chunk or two more (and the round's remaining
-  tool calls still run) before its `stopped` terminal arrives. Those would otherwise read as a live turn and re-enter
-  "working…", so the thread goes on a stopped list until a terminal event (`done`, `failed`, `stopped`, `discarded`) or
-  a new send clears it.
+  tool calls still run) before its terminal arrives. Those would otherwise read as a live turn and re-enter "working…",
+  so the thread holds a pending stop until that terminal: § Stop is local first, settled by the backend.
 
 **One bubble per turn, made of rounds.** An assistant item (`AssistantItem`, `ask-cmdr-messages.ts`) is one turn:
 `rounds` (one per model call: `{ messageId, text, calls }`), `turnId` (the opener row's id), and `stats`. A round's text
@@ -97,8 +96,9 @@ stays simple:
   refused the turn, nothing sent) words the rule that refused through `managedAiRefusalMessage`: the send refusal and
   the `failed` event carry it as `managed` beside the unit kind. `askCmdr.error.managedByOrganization` is the fallback
   when none came.
-- `stopped` → the backend's terminal for a cancelled turn. Today it only clears the stopped mark; the local stop already
-  finalized the bubble.
+- `stopped` → the backend's terminal for a cancelled turn. After the rail's own Stop it settles the stopped bubble (§
+  Stop is local first). With no stop pending here (the status corner stopped a wake) it ends the turn like `done`
+  (`endTurn`: stats, finalize, `streaming = false`, the review), so the watchdog never calls an ended turn a timeout.
 - `modelChanged` / `chatMemoryChanged` → insert a `{ kind: 'modelChange' }` / `{ kind: 'chatMemoryChange' }` timeline
   line BEFORE the current user bubble (the change happened between the turns; the backend already persisted the event
   row). Both go through the one `insertBeforeCurrentTurn` helper. `chatMemoryChanged` carries a token COUNT and the rail
@@ -111,12 +111,13 @@ stays simple:
 - `proposalDecided` → not a turn event at all, and handled before the reducer: § How an open thread stays current.
 
 **Every terminal path uses the same finalizer, and it settles the bubble the way a reload reads the stored rows**
-(`finalizeAssistant` + `settleRounds`): rounds without a `messageId` are dropped (they never reached `End`, so nothing
-was stored: crash case a), calls still running settle with no outcome (no result row exists), empty rounds go, the
-bubble takes its last persisted round's id, and a bubble with nothing left is removed. This covers `done`, `failed`, the
-local stop, the progress-watchdog timeout, and a send invocation that rejects before stream events can report a typed
-failure. Tradeoff, chosen for live-equals-reload: a turn that ends without an answer loses the text of the round it was
-streaming, because a reload wouldn't show it either.
+(`settleAssistant` + `settleRounds`): rounds without a `messageId` are dropped (they never reached `End`, so nothing was
+stored: crash case a), calls still running settle with no outcome (no result row exists), empty rounds go, the bubble
+takes its last persisted round's id, and a bubble with nothing left is removed. This covers `done`, `failed`, `stopped`,
+a stopped turn's terminal, and a send invocation that rejects before stream events can report a typed failure. Tradeoff,
+chosen for live-equals-reload: a turn that ends without an answer loses the text of the round it was streaming, because
+a reload wouldn't show it either. A Stop defers that loss to the terminal: the round may still reach `End` and be
+stored.
 
 **Slot-change events, live path.** `settings-applier.ts` calls the trigger's `noteSlotSettingChanged()` on the five
 slot-affecting settings (`ai.provider` / `ai.cloudProvider` / `ai.cloudProviderConfigs` / `askCmdr.interactiveModel` /
@@ -128,13 +129,32 @@ same model and size, or the interactive override masks the changed shared model)
 user switched threads is dropped locally (the rows still show on revisit). History renders the same lines via the
 `event`-role fold in `buildRailMessages`. Backend mechanics: `src-tauri/src/agent/chat/DETAILS.md` § Slot-change events.
 
-**Cancel finalizes locally.** `stopStreaming` cancels the backend AND finalizes the current bubble itself, then puts the
-thread on the stopped list so the chunks still in flight are ignored rather than re-adopted as a live turn; the
-backend's `stopped` arrives once the round's calls have run.
+**Stop is local first, settled by the backend** (`stopStreaming`, `PendingStop`). The click cancels the backend and ends
+the turn ON SCREEN at once: `streaming = false`, the bubble's cursor and "thinking…" off, the watchdog cleared, the
+review opened over what was staged. The bubble itself keeps everything, the round still streaming and its running lines
+included, because dispatch isn't cancellable: the round's calls run on and store their results, and the round may still
+reach `End`. The thread holds a pending stop (oldest first, per thread) carrying the bubble, the user item typed for the
+turn, and the send that started it. Until the stopped turn's terminal:
+
+- `toolCallsResolved` resolves the stopped bubble's last round, `toolCallFinished` settles its line by
+  `(messageId, callId)`, and `userPersisted` patches the stopped turn's own user item (or inserts its opener above its
+  bubble). None of them adopts the turn.
+- `proposalReady` stages AND opens the review at once: the turn is over on screen, so no turn end is coming to show it.
+- Everything else is dropped. That holds after a new send too: the new turn queues behind the stopped one on the
+  backend's single-flight lock, so until the stopped turn's terminal, every event of the thread is still its.
+
+The FIRST terminal of any kind (`done`, `failed`, `stopped`) consumes the oldest pending stop of its thread, wherever
+the rail is now: `done` stamps the last round as the answer and keeps it, `failed` and `stopped` drop a round that never
+reached `End`, and all three attach `turn` and settle the bubble. No error item for a `failed`: the user stopped it. It
+never touches `streaming`, the watchdog, or the review (they ended at the click, and a send since may own them).
+`discarded` drops the thread's pending stops and goes on to the reducer. A send the backend refused ran no turn, so no
+terminal will come: the refusal withdraws its own stop. A thread load forgets the thread's pending stops: if that turn
+still runs, the fold shows it running and the load adopts it, and its terminal ends it like any other. The progress
+watchdog's timeout is a Stop too (`stopStreaming`, then a `timeout` item).
 
 **Terminal events carry the turn's stats.** `done`, `failed`, and `stopped` carry `turn: TurnStats | null` (tool calls,
-wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. `done` and `failed` put
-it on the bubble's `stats`; the rail doesn't render it yet.
+wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. Each puts it on the
+bubble's `stats`, a stopped turn's included; the rail doesn't render it yet.
 
 **History folds into the same bubbles** (`buildRailMessages`, `ask-cmdr-history.ts`), loaded through
 `getAskCmdrConversation` on rail open. Rows group by the backend's `turnId` (never a frontend guess at turn edges): each
@@ -652,11 +672,12 @@ The app has no real AI provider under E2E, so `commands/agent/chat.rs::resolve_a
 scripted `FakeAgentLlm` when `CMDR_E2E_ASK_CMDR_FAKE=1` (set for the whole E2E run by the
 `desktop-svelte-e2e-playwright` check). It streams a fixed "Hi! I'm the test assistant." so `ask-cmdr.spec.ts` can
 assert send-and-render deterministically, zero network. The scripted turn is Say-only (no tools), so no tool dispatch
-runs. `ask-cmdr-trigger.test.ts` covers the full event model (tool lines, stop, soft cap, message paging, attachments)
-with mocked events, and `ask-cmdr-turn-parity.test.ts` the round reducer and live-equals-reload;
-`ask-cmdr-sessions.test.ts` covers list paging/search/rename/archive. The E2E spec also drives the sessions path
-end-to-end (create two threads, search finds the right one via real FTS over the persisted messages, switch works) — it
-seeds a per-run nonce into the message text so search never matches a thread left by an earlier run.
+runs. `ask-cmdr-trigger.test.ts` covers the full event model (tool lines, soft cap, message paging, attachments) with
+mocked events, `ask-cmdr-stop-and-reload.test.ts` a Stop and a reload mid-turn, and `ask-cmdr-turn-parity.test.ts` the
+round reducer and live-equals-reload; `ask-cmdr-sessions.test.ts` covers list paging/search/rename/archive. The E2E spec
+also drives the sessions path end-to-end (create two threads, search finds the right one via real FTS over the persisted
+messages, switch works) — it seeds a per-run nonce into the message text so search never matches a thread left by an
+earlier run.
 
 **The fake gets its own prompt budget.** It answers as a LOCAL provider with no local server behind it, so the real
 resolution would size its budget from `ai.localContextSize` — a setting the harness has no reason to touch, and whose
