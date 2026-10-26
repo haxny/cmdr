@@ -49,6 +49,7 @@ use crate::agent::llm::types::ProviderTag;
 use crate::agent::store::{self, AgentStoreError};
 use crate::ignore_poison::IgnorePoison;
 
+use super::cancel;
 use super::context::{self, ContextEnvelope};
 use cmdr_md::read_cmdr_md;
 
@@ -161,6 +162,7 @@ impl ChatRuntime {
 
         // Single-flight: a concurrent send for this thread queues behind this guard.
         let _guard = self.locks.acquire(conversation_id, &sink).await;
+        let _in_flight = mark_in_flight(&conn, conversation_id);
 
         let cmdr_md = read_cmdr_md();
         let memory = crate::agent::memory::read_for_turn(app, prompt_budget);
@@ -208,6 +210,7 @@ impl ChatRuntime {
     ) -> Result<TurnResult, AgentStoreError> {
         let conn = store::open_write_connection(&self.db_path)?;
         let _guard = self.locks.acquire(params.conversation_id, sink).await;
+        let _in_flight = mark_in_flight(&conn, params.conversation_id);
         Ok(run_turn(llm, dispatcher, &conn, tools, params, sink, cancel).await)
     }
 
@@ -267,6 +270,21 @@ impl ChatRuntime {
         }
 
         Ok(recorded)
+    }
+}
+
+/// Mark the thread's turn as running since its last row, for a reload to tell this turn's
+/// result-less calls from a crashed turn's. Taken only while holding the single-flight lock, so
+/// the mark is this turn's and no other's; it drops (before the lock does) when the turn ends.
+/// A store that can't say its last row leaves the turn unmarked: a reload then reads it as
+/// settled, which only loses the running spinner.
+fn mark_in_flight(conn: &rusqlite::Connection, conversation_id: i64) -> Option<cancel::InFlightMark> {
+    match store::last_seq(conn, conversation_id) {
+        Ok(since_seq) => Some(cancel::mark_in_flight(conversation_id, since_seq)),
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "couldn't mark the running turn: {e}");
+            None
+        }
     }
 }
 

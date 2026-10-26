@@ -575,15 +575,31 @@ without `End` while the token is set (a user stop, distinguished from a crash) �
 `TurnResult::Cancelled` with no `Failed` event; stream-cancel itself drops the reqwest body
 via the token threaded into `AgentLlm::respond`.
 
-The tokens live in `cancel.rs`, one process-global map keyed by conversation id (single-flight
-means at most one turn per thread, so the id is a sufficient key). ⚠️ **It sits here rather
+The tokens live in `cancel.rs`, one process-global map keyed by conversation id, holding a LIST
+of registrations per thread. ⚠️ **Not one token per thread**: a send registers BEFORE it waits
+for the single-flight lock (`commands/agent/chat.rs`, so an immediate Stop finds it; a wake
+registers before its lock too), so a send queued behind a running turn is registered while that
+turn still is. One slot per thread let the queued send overwrite the running turn's token, which
+made the running turn unstoppable and let its exit unregister the queued one. Each
+`CancelRegistration` is its own entry (tagged by a generation), `cancel_turn` trips every entry
+of the thread (a Stop during `Queued` stops both), and dropping a registration removes only its
+own. ❌ Don't fix it by registering under the lock: the Stop-before-the-thread-runs race comes
+back. ⚠️ **It sits here rather
 than in `commands/agent/chat.rs` because a WAKE registers in it too**: `agent/wake/runner.rs`
 is below `commands/` and may not import upward, and a wake is a multi-second background turn
 spending the user's money, which `docs/design-principles.md` requires be cancelable. One
 registry means `ask_cmdr_cancel` stops either kind of turn without knowing which it is, and the
-status corner's stop button is that same command with the id its event carries. `CancelGuard`
-clears the entry on every exit, so a turn that returned early can't leave a token for the next
-turn on the same thread to be stopped by.
+status corner's stop button is that same command with the id its event carries. The
+registration is RAII: it clears its entry on every exit, so a turn that returned early can't
+leave a token for the next turn on the same thread to be stopped by.
+
+**The in-flight mark.** The same module records, per thread, the running turn's seq high-water
+mark: the thread's last `seq` when the turn took the single-flight lock (`store::last_seq`, `-1`
+for an empty thread). `ChatRuntime::send_message` and `wake` set it right after acquiring the lock
+and drop it before releasing it, so at most one mark per thread exists and it is always the
+running turn's. `turn_in_flight_since_seq(id)` reads it: rows after the mark belong to the
+running turn, which is how a reload tells that turn's result-less calls (still running) from a
+crashed turn's (settled, no answer recorded).
 
 ## The event seam (`AgentChatEvent`)
 

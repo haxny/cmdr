@@ -41,9 +41,10 @@ pub use query::{
     ConversationCost, ConversationDetail, ConversationRow, ConversationSearchHit, CostDay, CostRecord, CostSummary,
     StoredContent, StoredMessage, append_message, archive_conversation, conversation_context_usage, conversation_cost,
     conversation_last_chat_memory, conversation_last_model, cost_summary, create_conversation, delete_conversation,
-    discard_conversation_keeping_cost, get_conversation, list_conversations, list_messages, proactive_tokens_for_day,
-    quiet_wakes_conversation, record_cost, rename_conversation, sanitize_fts_query, search_conversations,
-    set_conversation_context_usage, set_conversation_last_chat_memory, set_conversation_last_model,
+    discard_conversation_keeping_cost, get_conversation, last_seq, list_conversations, list_messages,
+    proactive_tokens_for_day, quiet_wakes_conversation, record_cost, rename_conversation, sanitize_fts_query,
+    search_conversations, set_conversation_context_usage, set_conversation_last_chat_memory,
+    set_conversation_last_model,
 };
 
 /// The durable store's file name in the app data dir. Peer to `operation-log.db`.

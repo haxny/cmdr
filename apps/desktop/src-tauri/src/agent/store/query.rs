@@ -361,6 +361,16 @@ pub fn list_messages(
     Ok(out)
 }
 
+/// The conversation's highest `seq` so far, or `-1` for a thread with no rows yet, so "rows
+/// after it" is every row either way.
+pub fn last_seq(conn: &Connection, conversation_id: i64) -> Result<i64, AgentStoreError> {
+    Ok(conn.query_row(
+        "SELECT COALESCE(MAX(seq), -1) FROM messages WHERE conversation_id = ?1",
+        rusqlite::params![conversation_id],
+        |row| row.get(0),
+    )?)
+}
+
 /// Append a message to a conversation, returning `(message_id, seq)`. The per-conversation
 /// `seq` is derived (max + 1) and the conversation's `updated_at` is bumped, both inside
 /// one transaction so the seq can't race and the two writes commit together. `parts` are

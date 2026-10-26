@@ -190,9 +190,9 @@ async fn run(app: AppHandle, slot: ResolvedSlot, turn: &BackgroundTurn) -> WakeC
     // ⚠️ A real token, registered under this thread's id. A background turn is a multi-second
     // action spending the user's money, and `docs/design-principles.md` requires those be
     // cancelable; the status corner's stop button is `ask_cmdr_cancel` with this id, the same
-    // call the rail's stop makes. The guard clears the entry on every exit below.
-    let cancel_token = cancel::register_cancel(conversation_id);
-    let _cancel_guard = cancel::CancelGuard::new(conversation_id);
+    // call the rail's stop makes. The registration clears its entry on every exit below.
+    let cancel_registration = cancel::register_cancel(conversation_id);
+    let cancel_token = cancel_registration.token();
 
     let Some(runtime) = app.try_state::<ChatRuntime>() else {
         log::warn!(target: LOG_TARGET, "the chat runtime is not registered; the turn has nowhere to run");

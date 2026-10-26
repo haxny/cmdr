@@ -22,18 +22,16 @@
 //!
 //! ## Cancellation
 //!
-//! Cancel is keyed by `conversation_id` (single-flight means at most one active turn per
-//! thread; the frontend disables the composer while a turn streams, so a thread never has
-//! two concurrent sends). The command resolves/creates the conversation id up front, emits
-//! `Started` on it, and registers the turn's [`CancellationToken`] under that id;
-//! [`ask_cmdr_cancel`] trips it. The registry itself is `agent::chat::cancel`, one level
+//! Cancel is keyed by `conversation_id`. The command resolves/creates the conversation id up
+//! front, emits `Started` on it, and registers the turn's cancel token under that id BEFORE the
+//! turn waits for the thread's single-flight lock, so a send queued behind a running turn holds
+//! its own registration beside that turn's; [`ask_cmdr_cancel`] trips every one of them. The registry itself is `agent::chat::cancel`, one level
 //! down, because a WAKE registers in it too and may not import upward.
 
 use std::path::Path;
 
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::unbounded_channel;
-use tokio_util::sync::CancellationToken;
 
 use super::{
     AskCmdrSendRefusal, AttachmentRef, LOG_TARGET, MessageBlock, MessageRoleView, MessageView, ModelWindowView,
@@ -227,7 +225,8 @@ pub async fn ask_cmdr_send_message(
     // this thread's `llm-logs/thread-{id}/` directory.
     let llm = llm_kind.into_llm(conversation_id);
 
-    // Register the cancel token before spawning so a stop that arrives immediately hits it.
+    // Register the cancel token before spawning so a stop that arrives immediately hits it. The
+    // registration moves onto the turn's thread and unregisters when it drops there, on every exit.
     let cancel = cancel::register_cancel(conversation_id);
 
     std::thread::spawn(move || {
@@ -243,7 +242,6 @@ pub async fn ask_cmdr_send_message(
                         managed: None,
                     },
                 );
-                cancel::unregister_cancel(conversation_id);
                 return;
             }
         };
@@ -265,8 +263,8 @@ pub async fn ask_cmdr_send_message(
 }
 
 /// Run one turn to completion on the current-thread runtime: capture the envelope, forward
-/// the runtime's events onto the conversation's stream, drive the chat runtime, and
-/// unregister the cancel token when done.
+/// the runtime's events onto the conversation's stream, and drive the chat runtime. The cancel
+/// registration drops (unregistering) when this returns, even on an early return or a panic.
 #[allow(
     clippy::too_many_arguments,
     reason = "the turn's full input set, moved onto a worker thread"
@@ -283,11 +281,8 @@ async fn drive_turn(
     text: String,
     attachments: Vec<AttachmentRef>,
     denied_names: Vec<String>,
-    cancel: CancellationToken,
+    cancel: cancel::CancelRegistration,
 ) {
-    // RAII: drop the registry entry when the turn ends, even on an early return/panic.
-    let _guard = cancel::CancelGuard::new(conversation_id);
-
     let envelope = capture_envelope(
         &app,
         attachments.iter().map(AttachmentRef::to_envelope).collect(),
@@ -326,7 +321,7 @@ async fn drive_turn(
         envelope,
         offset,
         tx,
-        cancel,
+        cancel.token(),
     );
     let (_, result) = tokio::join!(forward, drive);
     if let Err(e) = result {
