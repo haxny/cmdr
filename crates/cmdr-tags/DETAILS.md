@@ -5,23 +5,23 @@
 One `TagField` maps to a native key per format. Reading also accepts the aliases in the last column; a write removes
 those aliases so the file never carries two copies.
 
-| Field       | MP3 (ID3v2.3)                      | M4A/M4B (`ilst`)                                | FLAC / Ogg / Opus | Read aliases            |
-| ----------- | ---------------------------------- | ----------------------------------------------- | ----------------- | ----------------------- |
-| Title       | `TIT2`                             | `©nam`                                          | `TITLE`           |                         |
-| Artist      | `TPE1`                             | `©ART`                                          | `ARTIST`          |                         |
-| AlbumArtist | `TPE2`                             | `aART`                                          | `ALBUMARTIST`     | `ALBUM ARTIST` (Vorbis) |
-| Album       | `TALB`                             | `©alb`                                          | `ALBUM`           |                         |
-| Performer   | `TXXX:Performer`                   | freeform `PERFORMER`                            | `PERFORMER`       |                         |
-| Composer    | `TCOM`                             | `©wrt`                                          | `COMPOSER`        |                         |
-| Date        | `TYER` / `TDRC` (lofty downgrades) | `©day`                                          | `DATE`            |                         |
-| Genre       | `TCON`                             | freeform `GENRE` (one entry per value) + `©gen` | `GENRE`, repeated |                         |
-| Publisher   | `TPUB`                             | freeform `publisher`                            | `PUBLISHER`       |                         |
-| Translator  | `TXXX:Translator`                  | freeform `translator`                           | `TRANSLATOR`      |                         |
-| Track       | `TRCK`                             | `trkn`                                          | `TRACKNUMBER`     |                         |
-| Disc        | `TPOS`                             | `disk`                                          | `DISCNUMBER`      | `TXXX:DiscNumber` (MP3) |
-| Comment     | `COMM` (lang `eng`, empty desc.)   | `©cmt`                                          | `COMMENT`         | `TXXX:Comment` (MP3)    |
-| Description | `TXXX:Description`                 | freeform `description`                          | `DESCRIPTION`     |                         |
-| Www         | `TXXX:www`                         | freeform `www`                                  | `WWW`             |                         |
+| Field       | MP3 (ID3v2.3)                      | M4A/M4B (`ilst`)                       | FLAC / Ogg / Opus | Read aliases            |
+| ----------- | ---------------------------------- | -------------------------------------- | ----------------- | ----------------------- |
+| Title       | `TIT2`                             | `©nam`                                 | `TITLE`           |                         |
+| Artist      | `TPE1`                             | `©ART`                                 | `ARTIST`          |                         |
+| AlbumArtist | `TPE2`                             | `aART`                                 | `ALBUMARTIST`     | `ALBUM ARTIST` (Vorbis) |
+| Album       | `TALB`                             | `©alb`                                 | `ALBUM`           |                         |
+| Performer   | `TXXX:Performer`                   | freeform `PERFORMER`                   | `PERFORMER`       |                         |
+| Composer    | `TCOM`                             | `©wrt`                                 | `COMPOSER`        |                         |
+| Date        | `TYER` / `TDRC` (lofty downgrades) | `©day`                                 | `DATE`            |                         |
+| Genre       | `TCON`                             | freeform `GENRE` (one entry per value) | `GENRE`, repeated | `©gen` (MP4)            |
+| Publisher   | `TPUB`                             | freeform `publisher`                   | `PUBLISHER`       |                         |
+| Translator  | `TXXX:Translator`                  | freeform `translator`                  | `TRANSLATOR`      |                         |
+| Track       | `TRCK`                             | `trkn`                                 | `TRACKNUMBER`     |                         |
+| Disc        | `TPOS`                             | `disk`                                 | `DISCNUMBER`      | `TXXX:DiscNumber` (MP3) |
+| Comment     | `COMM` (lang `eng`, empty desc.)   | `©cmt`                                 | `COMMENT`         | `TXXX:Comment` (MP3)    |
+| Description | `TXXX:Description`                 | freeform `description`                 | `DESCRIPTION`     |                         |
+| Www         | `TXXX:www`                         | freeform `www`                         | `WWW`             |                         |
 
 Cover: `APIC` type 3 (MP3), `covr` (M4A), `METADATA_BLOCK_PICTURE` or a FLAC picture block. "The cover" is the first
 front-cover picture, else the first untyped (`Other`) picture (`read::cover_position`, shared by reader and writer);
@@ -40,8 +40,11 @@ is plain, and a total without its number isn't written. A zero total is no total
 written. The reader strips `/N` from track and disc in every format; the totals and an MP3's `TPE3` are read apart, as
 crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo store.
 
-M4A freeform atoms live under mean `com.apple.iTunes`. Reading prefers the freeform `GENRE` and never doubles values
-with `©gen` (which holds them joined with `"; "`).
+M4A freeform atoms live under mean `com.apple.iTunes`. Genre is written only as the freeform `GENRE`, and a write
+removes `©gen`: foobar2000 on macOS shows `©gen` and `GENRE` together, doubled; Plexamp reads only `©gen` and so loses
+the genre (user's choice, 2026-10-26). Reading prefers the freeform `GENRE` and falls back to `©gen` (values joined with
+`"; "`) only when there is no `GENRE`, so a file tagged by iTunes shows its genre and a write moves it to `GENRE`. A
+`©gen` whose values differ from the shown genre fails the write as `WouldDrop("©gen")` (below).
 
 Every reader splits a multi-value field's value on `"; "`, Vorbis included (a tagger may write `GENRE=a; b` instead of
 repeating the key); the writer writes Vorbis values as repeated keys. Single-value fields are never split.

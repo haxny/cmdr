@@ -143,7 +143,7 @@ pub(crate) fn freeform_data<'a>(ilst: &'a Ilst, name: &str) -> Vec<&'a AtomData>
         .collect()
 }
 
-fn fourcc(ilst: &Ilst, code: [u8; 4]) -> Vec<&AtomData> {
+pub(crate) fn fourcc(ilst: &Ilst, code: [u8; 4]) -> Vec<&AtomData> {
     ilst.get(&AtomIdent::Fourcc(code))
         .map(|a| a.data().collect())
         .unwrap_or_default()
@@ -683,8 +683,10 @@ fn m4a_round_trip_all_fields() {
     );
 }
 
+/// Genre goes only in the freeform GENRE, one entry per value: foobar2000 on macOS shows `©gen`
+/// and GENRE together, doubled (user, 2026-10-26).
 #[test]
-fn m4a_writes_gen_and_freeform_genre() {
+fn m4a_writes_genre_only_as_freeform() {
     let dir = tempfile::tempdir().unwrap();
     let mut ilst = Ilst::new();
     fourcc_text(&mut ilst, *b"\xA9gen", "stary");
@@ -698,7 +700,7 @@ fn m4a_writes_gen_and_freeform_genre() {
     );
 
     let raw = raw_ilst(&path);
-    assert_eq!(fourcc(&raw, *b"\xA9gen"), vec![&utf8("audiokniha; thriller")]);
+    assert!(fourcc(&raw, *b"\xA9gen").is_empty(), "the old ©gen is gone");
     assert_eq!(
         freeform_data(&raw, "GENRE"),
         vec![&utf8("audiokniha"), &utf8("thriller")]

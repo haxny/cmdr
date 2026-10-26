@@ -543,8 +543,9 @@ fn unreachable_field<T>(field: TagField) -> Result<T, TagError> {
 const COVR: [u8; 4] = *b"covr";
 const GEN: [u8; 4] = *b"\xA9gen";
 
-/// Whether the writer replaces the atom: every four-character atom the reader maps (and
-/// `©gen`), and the managed freeform names under the iTunes mean, in any letter case.
+/// Whether the writer replaces the atom: every four-character atom the reader maps, `©gen`
+/// (removed: genre goes only in the freeform GENRE), and the managed freeform names under the
+/// iTunes mean, in any letter case.
 fn is_managed_atom(ident: &AtomIdent<'_>) -> bool {
     match ident {
         AtomIdent::Fourcc(fourcc) => *fourcc == GEN || fourcc_field(fourcc).is_some(),
@@ -621,8 +622,8 @@ fn set_ilst_cover(ilst: &mut Ilst, cover: Option<&Cover>) {
     }
 }
 
-/// The atoms `field` is written as. Genre goes in `©gen` (joined, for players that read
-/// only that) and in the freeform GENRE, one data entry per value.
+/// The atoms `field` is written as. Genre goes only in the freeform GENRE, one data entry per
+/// value: with `©gen` beside it, foobar2000 on macOS shows every genre twice.
 fn ilst_atoms(field: TagField, values: &[String], opts: &WriteOptions) -> Result<Vec<Atom<'static>>, TagError> {
     let text = |fourcc: [u8; 4]| Atom::new(AtomIdent::Fourcc(fourcc), AtomData::UTF8(values.join(JOIN)));
     Ok(match field {
@@ -635,12 +636,12 @@ fn ilst_atoms(field: TagField, values: &[String], opts: &WriteOptions) -> Result
         TagField::Comment => vec![text(*b"\xA9cmt")],
         TagField::Track => vec![number_atom(*b"trkn", &values.join(JOIN), opts.track_total, 8)?],
         TagField::Disc => vec![number_atom(*b"disk", &values.join(JOIN), opts.disc_total, 6)?],
-        TagField::Genre => std::iter::once(text(GEN))
-            .chain(freeform_atom(field, values)?)
-            .collect(),
-        TagField::Performer | TagField::Publisher | TagField::Translator | TagField::Description | TagField::Www => {
-            freeform_atom(field, values)?.into_iter().collect()
-        }
+        TagField::Genre
+        | TagField::Performer
+        | TagField::Publisher
+        | TagField::Translator
+        | TagField::Description
+        | TagField::Www => freeform_atom(field, values)?.into_iter().collect(),
     })
 }
 

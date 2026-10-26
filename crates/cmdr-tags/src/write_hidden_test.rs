@@ -14,7 +14,9 @@ use lofty::ogg::tag::VorbisComments;
 use crate::model::{FileTags, TagError, TagField};
 use crate::test_files::*;
 use crate::write::{WriteOptions, write_tags};
-use crate::write_test::{MUSIC, raw_flac, raw_id3, read, strings, txxx_descriptions, write};
+use crate::write_test::{
+    MUSIC, fourcc, freeform_data, raw_flac, raw_id3, raw_ilst, read, strings, txxx_descriptions, utf8, write,
+};
 
 const LOSSY: WriteOptions = WriteOptions {
     allow_frame_loss: true,
@@ -165,6 +167,50 @@ fn an_m4a_gen_beside_a_differing_freeform_genre_refuses_the_write() {
     let path = write_m4a(dir.path(), "a.m4a", &ilst);
 
     refused(&path, &["\u{a9}gen"]);
+
+    write(&path, &retitled(&path), &LOSSY);
+    assert!(fourcc(&raw_ilst(&path), *b"\xA9gen").is_empty());
+    assert_eq!(freeform_data(&raw_ilst(&path), "GENRE"), vec![&utf8("Pop")]);
+}
+
+#[test]
+fn an_m4a_gen_equal_to_the_freeform_genre_goes_silently() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    fourcc_text(&mut ilst, *b"\xA9gen", "audiokniha; thriller");
+    freeform(&mut ilst, "com.apple.iTunes", "GENRE", &["audiokniha", "thriller"]);
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+
+    write(&path, &retitled(&path), &MUSIC);
+
+    let raw = raw_ilst(&path);
+    assert!(fourcc(&raw, *b"\xA9gen").is_empty());
+    assert_eq!(
+        freeform_data(&raw, "GENRE"),
+        vec![&utf8("audiokniha"), &utf8("thriller")]
+    );
+}
+
+/// An iTunes-tagged file has only `©gen`: the write moves its genre to the freeform GENRE.
+#[test]
+fn an_m4a_with_only_gen_moves_the_genre_to_freeform() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    fourcc_text(&mut ilst, *b"\xA9gen", "audiokniha; thriller");
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+
+    write(&path, &retitled(&path), &MUSIC);
+
+    let raw = raw_ilst(&path);
+    assert!(fourcc(&raw, *b"\xA9gen").is_empty());
+    assert_eq!(
+        freeform_data(&raw, "GENRE"),
+        vec![&utf8("audiokniha"), &utf8("thriller")]
+    );
+    assert_eq!(
+        read(&path).fields[&TagField::Genre],
+        strings(&["audiokniha", "thriller"])
+    );
 }
 
 #[test]
