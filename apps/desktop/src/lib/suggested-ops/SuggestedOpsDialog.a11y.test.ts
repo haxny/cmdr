@@ -23,6 +23,7 @@ const { actions, store } = vi.hoisted(() => ({
     toggle: vi.fn<(payload: { groupId: number; opId: number }) => void>(),
     showMore: vi.fn<(id: number) => void>(),
     showAll: vi.fn<(id: number) => void>(),
+    toggleAll: vi.fn<(id: number) => void>(),
   },
   // A plain object rather than `$state`: each test mounts a fresh dialog, so the values only
   // have to be right at mount time.
@@ -57,6 +58,12 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
+const settings = vi.hoisted(() => ({ suppressed: false, set: vi.fn() }))
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getSetting: () => settings.suppressed,
+  setSetting: settings.set,
+}))
 vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return { getCachedIcon: () => undefined, iconCacheVersion: writable(0), prefetchIcons: () => Promise.resolve() }
@@ -70,6 +77,9 @@ vi.mock('./suggested-ops-trigger.svelte', () => ({
   approveGroup: actions.approve,
   closeSuggestedOps: actions.close,
   ensureOpWindow: (groupId: number, startIndex: number) => actions.ensure({ groupId, startIndex }),
+  isOpSelected: (_groupId: number, opId: number) => !store.review.deselected.has(opId),
+  selectionState: () => (store.review.deselected.size === 0 ? 'all' : 'some'),
+  toggleAllOps: actions.toggleAll,
   opAt: (_groupId: number, index: number) => store.ops[index] ?? null,
   rejectGroup: actions.reject,
   reloadGroup: actions.reload,
@@ -129,6 +139,7 @@ function seed(groupOverrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  settings.suppressed = false
   document.body.innerHTML = ''
   store.state.loading = false
   store.state.loadError = false
@@ -302,6 +313,65 @@ describe('disclosure', () => {
     const host = mountDialog()
 
     expect(host.textContent).toContain('Matched by a pattern')
+  })
+})
+
+describe('the approval note and the sweep heading', () => {
+  it('closes the note for good from its ×', () => {
+    settings.suppressed = false
+    const host = mountDialog()
+    expect(host.textContent).toContain('Nothing runs until you approve it.')
+
+    host.querySelector<HTMLButtonElement>('[aria-label="Don’t show this again"]')?.click()
+    flushSync()
+
+    expect(settings.set).toHaveBeenCalledWith('suggestedOps.suppressApprovalNotice', true)
+    expect(host.textContent).not.toContain('Nothing runs until you approve it.')
+  })
+
+  it('keeps the note hidden once the user closed it', () => {
+    settings.suppressed = true
+    const host = mountDialog()
+    settings.suppressed = false
+
+    expect(host.textContent).not.toContain('Nothing runs until you approve it.')
+  })
+
+  it('heads an older sweep with when it was suggested', () => {
+    const host = mountDialog()
+
+    expect(host.querySelector('.sweep-heading')?.textContent).toMatch(/^Suggested /)
+  })
+
+  it('leaves out the heading for a lone sweep from the last ten minutes', () => {
+    seed()
+    ;(store.state.sweeps[0] as unknown as { createdAt: number }).createdAt = Math.floor(Date.now() / 1000) - 60
+    const host = mountDialog()
+
+    expect(host.querySelector('.sweep-heading')).toBeNull()
+    expect(host.textContent).toContain('Ten new files in Downloads.')
+  })
+})
+
+describe('selection from the header', () => {
+  it('ticks or unticks every file from the header box', () => {
+    const host = mountDialog()
+
+    const header = host.querySelector<HTMLElement>('[aria-label="Include all files"]')
+    expect(header).not.toBeNull()
+    header?.click()
+
+    expect(actions.toggleAll).toHaveBeenCalledWith(7)
+  })
+})
+
+describe('a new name', () => {
+  it('shows after an arrow for any verb, not only a rename', () => {
+    ;(store.ops[0] as unknown as { newName: string }).newName = 'Invoice 2026-01.pdf'
+    const host = mountDialog()
+
+    expect(host.textContent).toContain('Invoice 2026-01.pdf')
+    expect(host.textContent).toContain('New name')
   })
 })
 

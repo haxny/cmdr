@@ -4,7 +4,7 @@
  * A refusal the write engine gave (a phone nobody connected, a drive that left, no space) is
  * the same `WriteOperationError` a clicked operation would have hit, so it reads through the
  * same `errors.write.*` pipeline (`../file-operations/transfer/transfer-error-messages.ts`):
- * the suggestion says exactly what the transfer dialog would. Only the two refusals that exist
+ * the suggestion says exactly what the transfer dialog would. Only the refusals that exist
  * for suggestions alone carry their own copy.
  */
 
@@ -51,6 +51,11 @@ export function refusalReason(refusal: GroupRefusal, verb: SuggestedGroupView['v
       return {
         message: tString('suggestedOps.refusal.couldNotStart.message'),
         suggestion: tString('suggestedOps.refusal.couldNotStart.suggestion'),
+      }
+    case 'nothingSelected':
+      return {
+        message: tString('suggestedOps.refusal.nothingSelected.message'),
+        suggestion: tString('suggestedOps.refusal.nothingSelected.suggestion'),
       }
   }
 }

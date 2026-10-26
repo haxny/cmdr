@@ -5,11 +5,31 @@
   },
   "suggestedOps.description": "The AI suggested these. Nothing runs until you approve it.",
   "@suggestedOps.description": {
-    "description": "Line under the dialog title. Makes clear that opening the dialog changes nothing by itself."
+    "description": "Warning note at the top of the AI suggestions dialog: the AI made these suggestions, and opening the dialog runs nothing. The user can close it for good with its × (suggestedOps.approvalNoticeDismiss), and bring it back in Settings > Advanced."
   },
-  "suggestedOps.sweepMeta": "Suggested {date}",
-  "@suggestedOps.sweepMeta": {
-    "description": "Line above a batch of suggestions saying when the AI made them. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-26 12:22\"."
+  "suggestedOps.approvalNoticeDismiss": "Don’t show this again",
+  "@suggestedOps.approvalNoticeDismiss": {
+    "description": "Tooltip and screen-reader name of the × that closes the note at the top of the AI suggestions dialog (suggestedOps.description) for good. It can be turned back on in Settings > Advanced."
+  },
+  "suggestedOps.sweepWhen.justNow": "Suggested just now",
+  "@suggestedOps.sweepWhen.justNow": {
+    "description": "Heading above a batch of AI suggestions made less than a minute ago."
+  },
+  "suggestedOps.sweepWhen.minutesAgo": "Suggested {countText} {count, plural, one {minute} other {minutes}} ago",
+  "@suggestedOps.sweepWhen.minutesAgo": {
+    "description": "Heading above a batch of AI suggestions made within the last hour. {countText} is the number of whole minutes (1–59), already formatted."
+  },
+  "suggestedOps.sweepWhen.today": "Suggested today at {time}",
+  "@suggestedOps.sweepWhen.today": {
+    "description": "Heading above a batch of AI suggestions made earlier today. {time} is the time of day in the user's format, for example \"14:04\" or \"2:04 PM\"."
+  },
+  "suggestedOps.sweepWhen.yesterday": "Suggested yesterday at {time}",
+  "@suggestedOps.sweepWhen.yesterday": {
+    "description": "Heading above a batch of AI suggestions made yesterday. {time} is the time of day in the user's format, for example \"14:04\" or \"2:04 PM\"."
+  },
+  "suggestedOps.sweepWhen.earlier": "Suggested {date}",
+  "@suggestedOps.sweepWhen.earlier": {
+    "description": "Heading above a batch of AI suggestions made before yesterday. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-20 12:22\"."
   },
   "suggestedOps.empty": "Nothing is waiting for you right now.",
   "@suggestedOps.empty": {
@@ -19,9 +39,17 @@
   "@suggestedOps.loadFailed": {
     "description": "Shown when reading the suggestion list threw. Distinct from the empty state, which would read as the agent having suggested nothing."
   },
-  "suggestedOps.agentReason": "The AI’s reason",
+  "suggestedOps.agentReason": "Why:",
   "@suggestedOps.agentReason": {
-    "description": "Label above the AI's own words explaining a suggestion. Load-bearing: it marks the text below it as the AI's claim rather than as something Cmdr checked. The facts Cmdr checked itself (folders, sizes, dates) sit beside it without a label. The apostrophe is U+2019."
+    "description": "Bold label leading the AI's own explanation of a suggestion, on the same line as the explanation. Short on purpose; its tooltip (suggestedOps.agentReasonTooltip) and its screen-reader form (suggestedOps.agentReasonSpoken) say the words are the AI's. Keep the colon or your language's equivalent."
+  },
+  "suggestedOps.agentReasonTooltip": "The AI’s own words. Cmdr didn’t check them.",
+  "@suggestedOps.agentReasonTooltip": {
+    "description": "Tooltip on the \"Why:\" label (suggestedOps.agentReason) before the AI's explanation of a suggestion. Load-bearing: it marks the text as the AI's claim rather than something Cmdr verified."
+  },
+  "suggestedOps.agentReasonSpoken": "The AI’s reason:",
+  "@suggestedOps.agentReasonSpoken": {
+    "description": "What a screen reader says in place of the visible \"Why:\" label (suggestedOps.agentReason), before the AI's explanation of a suggestion. Load-bearing: it names the AI as the source, which the short visible label leaves to its tooltip."
   },
   "suggestedOps.fileCount": "{countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.fileCount": {
@@ -167,6 +195,10 @@
   "@suggestedOps.columnInclude": {
     "description": "Screen-reader-only heading of the tick-box column in a suggestion's file list. A ticked file is part of the approval."
   },
+  "suggestedOps.includeAll": "Include all files",
+  "@suggestedOps.includeAll": {
+    "description": "Screen-reader name of the tick box in the header of a suggestion's file list. Ticking it includes every file in the approval, unticking it includes none; it shows a dash when only some are ticked."
+  },
   "suggestedOps.columnName": "Name",
   "@suggestedOps.columnName": {
     "description": "Column heading for the name of each file a suggestion would touch."
@@ -177,7 +209,7 @@
   },
   "suggestedOps.columnNewName": "New name",
   "@suggestedOps.columnNewName": {
-    "description": "Column heading for the name a rename would give the file."
+    "description": "Screen-reader text between a file's current name and the name a suggestion would give it, read as \"invoice.pdf, New name, Invoice 2026-07.pdf\". Visually an arrow stands in for it. A short noun phrase."
   },
   "suggestedOps.columnSize": "Size",
   "@suggestedOps.columnSize": {
@@ -262,6 +294,14 @@
   "suggestedOps.refusal.nothingToRun.suggestion": "Check that they’re still there, then approve it again, or reject it.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "description": "What to do next, under suggestedOps.refusal.nothingToRun.message. \"It\" is the suggestion; the approve button and Reject are on it."
+  },
+  "suggestedOps.refusal.nothingSelected.message": "None of the files you ticked are in this suggestion any more, so nothing ran.",
+  "@suggestedOps.refusal.nothingSelected.message": {
+    "description": "Reason shown under a suggestion whose approval didn't start because none of the files the person had ticked were still part of it (the AI changed the suggestion in the meantime). The suggestion is back on the list. Followed by suggestedOps.refusal.nothingSelected.suggestion."
+  },
+  "suggestedOps.refusal.nothingSelected.suggestion": "Tick the files you want, then approve it again.",
+  "@suggestedOps.refusal.nothingSelected.suggestion": {
+    "description": "What to do next, under suggestedOps.refusal.nothingSelected.message. \"It\" is the suggestion; the tick boxes are on each file row and the approve button is on the suggestion."
   },
   "suggestedOps.refusal.couldNotStart.message": "Cmdr couldn’t turn this suggestion into an operation, so nothing ran.",
   "@suggestedOps.refusal.couldNotStart.message": {

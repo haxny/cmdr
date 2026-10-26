@@ -11,7 +11,6 @@
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import Icon from '#lib/ui/Icon.svelte'
     import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
-    import Size from '#lib/ui/Size.svelte'
     import DateLabel from '#lib/ui/DateLabel.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import Button from '#lib/ui/Button.svelte'
@@ -23,8 +22,13 @@
     } from '#lib/ui/column-list-types.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
-    import { formatByteSize } from '#lib/units/index.js'
-    import { formatDateTime, getUseAppIconsForDocuments } from '#lib/settings/reactive-settings.svelte.js'
+    import {
+        formatDateTime,
+        getFileSizeFormat,
+        getFileSizeUnit,
+        getUseAppIconsForDocuments,
+    } from '#lib/settings/reactive-settings.svelte.js'
+    import { formatSizeForDisplay, formatSizeText } from '#lib/file-explorer/selection/selection-info-utils.js'
     import { getCachedIcon, iconCacheVersion, prefetchIcons } from '#lib/icon-cache.js'
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
     import { dependOn } from '#lib/utils/reactivity.js'
@@ -32,12 +36,15 @@
     import {
         SHOW_MORE_STEP,
         ensureOpWindow,
+        isOpSelected,
         opAt,
         reviewOf,
         showAllRows,
         showMoreRows,
+        selectionState,
         showRange,
         shownRows,
+        toggleAllOps,
         toggleOp,
         totalRows,
     } from './suggested-ops-trigger.svelte'
@@ -100,7 +107,7 @@
         {
             id: 'include',
             label: tString('suggestedOps.columnInclude'),
-            labelHidden: true,
+            header: includeHeader,
             width: { kind: 'fixed', px: 16 },
             clip: false,
             cell: includeCell,
@@ -124,20 +131,10 @@
                       cell: folderCell,
                   } satisfies ColumnListColumn<SuggestedOpView>,
               ]),
-        ...(group.verb === 'rename'
-            ? [
-                  {
-                      id: 'new-name',
-                      label: tString('suggestedOps.columnNewName'),
-                      width: { kind: 'share', minPx: 120 },
-                      cell: newNameCell,
-                  } satisfies ColumnListColumn<SuggestedOpView>,
-              ]
-            : []),
         {
             id: 'size',
             label: tString('suggestedOps.columnSize'),
-            width: { kind: 'fixed', ch: 12 },
+            width: { kind: 'fixed', ch: 14 },
             align: 'end',
             tone: 'secondary',
             clip: false,
@@ -158,8 +155,12 @@
         return rowFacts(op, review?.liveFacts.get(op.opId))
     }
 
+    /** The size column's own options, so a size here reads exactly as the file panes show it:
+     *  the same unit choice (`listing.sizeUnit`) and the same 1000/1024 base. */
+    const sizeOptions = $derived({ unit: getFileSizeUnit(), format: getFileSizeFormat() })
+
     function sizeText(bytes: number | null): string {
-        return bytes === null ? tString('suggestedOps.factUnknown') : formatByteSize(bytes)
+        return bytes === null ? tString('suggestedOps.factUnknown') : formatSizeText(bytes, sizeOptions)
     }
 
     function dateText(seconds: number | null): string {
@@ -167,10 +168,26 @@
     }
 </script>
 
+<!-- Ticks or unticks every op, mixed when the rows disagree. Unticking all is an empty
+     "only these" set, so it costs the wire nothing at any size. -->
+{#snippet includeHeader()}
+    {@const state = selectionState(group.groupId)}
+    <span class="include">
+        <Checkbox
+            checked={state === 'all'}
+            indeterminate={state === 'some'}
+            onCheckedChange={() => {
+                toggleAllOps(group.groupId)
+            }}
+            ariaLabel={tString('suggestedOps.includeAll')}
+        />
+    </span>
+{/snippet}
+
 {#snippet includeCell({ row }: ColumnListCellContext<SuggestedOpView>)}
     <span class="include">
         <Checkbox
-            checked={!review?.deselected.has(row.opId)}
+            checked={isOpSelected(group.groupId, row.opId)}
             onCheckedChange={() => {
                 toggleOp(group.groupId, row.opId)
             }}
@@ -189,17 +206,28 @@
     </span>
 {/snippet}
 
-<!-- Mid-truncating, so the extension stays visible; the full name rides the tooltip. -->
+<!-- Mid-truncating, so the extension stays visible; the full name rides the tooltip. A new name,
+     whatever the verb, follows an arrow in the same cell. -->
 {#snippet nameCell({ row }: ColumnListCellContext<SuggestedOpView>)}
-    <span
-        class="shortened"
-        use:useShortenMiddle={{
-            text: fileName(row.sourcePath),
-            preferBreakAt: '.',
-            startRatio: 0.7,
-            tooltipWhenTruncated: true,
-        }}
-    ></span>
+    <span class="name-cell">
+        <span
+            class="shortened"
+            use:useShortenMiddle={{
+                text: fileName(row.sourcePath),
+                preferBreakAt: '.',
+                startRatio: 0.7,
+                tooltipWhenTruncated: true,
+            }}
+        ></span>
+        {#if row.newName}
+            <span class="arrow" aria-hidden="true"><Icon name="arrow-right" size={12} /></span>
+            <span class="sr-only">{tString('suggestedOps.columnNewName')}</span>
+            <span
+                class="shortened new-name"
+                use:useShortenMiddle={{ text: row.newName, preferBreakAt: '.', startRatio: 0.7, tooltipWhenTruncated: true }}
+            ></span>
+        {/if}
+    </span>
 {/snippet}
 
 {#snippet folderCell({ row }: ColumnListCellContext<SuggestedOpView>)}
@@ -211,13 +239,6 @@
             startRatio: 0.3,
             tooltipWhenTruncated: true,
         }}
-    ></span>
-{/snippet}
-
-{#snippet newNameCell({ row }: ColumnListCellContext<SuggestedOpView>)}
-    <span
-        class="shortened"
-        use:useShortenMiddle={{ text: row.newName ?? '', preferBreakAt: '.', startRatio: 0.7, tooltipWhenTruncated: true }}
     ></span>
 {/snippet}
 
@@ -237,7 +258,13 @@
                     />
                 </span>
             {/if}
-            {#if facts.size !== null}<Size bytes={facts.size} />{/if}
+            {#if facts.size !== null}
+                <span class="size"
+                    >{#each formatSizeForDisplay(facts.size, sizeOptions) as part, i (i)}<span class={part.tierClass}
+                            >{part.value}</span
+                        >{/each}</span
+                >
+            {/if}
         {:else if facts.kind === 'missing'}
             <span class="missing">{tString('suggestedOps.fileMissing')}</span>
         {:else}
@@ -390,6 +417,29 @@
         display: block;
         overflow: hidden;
         white-space: nowrap;
+    }
+
+    /* The old and new names split the column, each shortening in the middle on its own. */
+    .name-cell {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        min-width: 0;
+    }
+
+    .name-cell .shortened {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .arrow {
+        display: inline-flex;
+        flex-shrink: 0;
+        color: var(--color-text-tertiary);
+    }
+
+    .new-name {
+        font-weight: 400;
     }
 
     .fact {

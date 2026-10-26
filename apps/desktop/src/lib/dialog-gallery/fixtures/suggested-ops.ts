@@ -44,6 +44,9 @@ interface FixtureGroup {
   sourceFolder?: string | null
   destination?: string | null
   destinationVolumeName?: string | null
+  /** The destination's volume id: 'root' for this Mac. A NAS share stays `null`, as a saved share nobody
+   *  connected arrives, so its pill shows the name and the generic icon. */
+  destinationVolumeId?: string | null
   reversible?: SuggestedGroupView['reversible']
   runBlocker?: SuggestedGroupView['runBlocker']
   destinationState?: SuggestedGroupView['destinationState']
@@ -66,6 +69,7 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     sourceFolder: group.sourceFolder === undefined ? DOWNLOADS : group.sourceFolder,
     destination: group.destination ?? null,
     destinationVolumeName: group.destinationVolumeName ?? null,
+    destinationVolumeId: group.destinationVolumeId ?? null,
     reversible: group.reversible ?? 'restoreMove',
     runBlocker: group.runBlocker ?? null,
     destinationState: group.destinationState ?? (group.destination ? 'exists' : 'notApplicable'),
@@ -211,6 +215,7 @@ const DOWNLOADS_CLEANUP: FixtureGroup[] = [
     sourceFolder: null,
     destination: '/Users/sam/Dropbox/Taxes/2026',
     destinationVolumeName: 'Macintosh HD',
+    destinationVolumeId: 'root',
     reversible: 'deleteWhatWasWritten',
     files: [
       { name: 'K4-2026.pdf', folder: DOWNLOADS, size: 88_000, modified: daysAgo(9) },
@@ -241,6 +246,7 @@ const HARD_CASES: FixtureGroup[] = [
     sourceFolder: '/Users/sam/Pictures/2025',
     destination: '/Users/sam/Pictures/2025.zip',
     destinationVolumeName: 'Macintosh HD',
+    destinationVolumeId: 'root',
     reversible: 'irreversible',
     files: [{ name: 'Summer', size: null, modified: daysAgo(300) }],
   },

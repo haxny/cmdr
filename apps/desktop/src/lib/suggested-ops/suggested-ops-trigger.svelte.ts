@@ -8,10 +8,10 @@
  *   60,000 is legitimate, so nothing loads a group to show it: each group's list knows its
  *   `total` from a `COUNT(*)` and fetches the rows its viewport actually reaches. The list starts
  *   at `INITIAL_ROWS` and grows only when the user asks.
- * - **Deselection is a set of op ids per group, and there is deliberately no "deselect all".**
- *   Approving sends the ids the user turned OFF, so "all of them" is the empty set and the wire
- *   stays small at any group size. Turning down a whole group is what Reject is for; a
- *   deselect-all would have to enumerate 60,000 ids to say the same thing.
+ * - **Selection is a two-mode set per group**: "all except these ids" or "only these ids". Select
+ *   all and select none each reset to an empty set in the matching mode, so the wire stays small
+ *   in both directions at any group size: the user ticks or unticks a few rows by hand, never
+ *   60,000.
  * - **A group that changed under an open review is ANNOUNCED, never swapped.** The rows the
  *   user is reading stay put and a notice offers the reload, because re-ordering a list
  *   somebody is halfway through deciding on is how a wrong row gets approved.
@@ -70,8 +70,8 @@ export interface GroupReview {
   windowError: boolean
   /** How many rows the list shows: `INITIAL_ROWS`, grown by "Show more" or "Show all". */
   shown: number
-  /** Op ids the user turned off. Survives scrolling: it is keyed by op id, not by row position. */
-  deselected: SvelteSet<number>
+  /** Which ops are ticked. Survives scrolling: it is keyed by op id, not by row position. */
+  selection: OpSelection
   /** Set when the agent amended this group, or a re-read found its op count moved. */
   changedUnderReview: boolean
   /** What the disk says now, per op id, for the rows that have been on screen. */
@@ -83,11 +83,29 @@ export interface GroupReview {
   range: { start: number; end: number }
 }
 
+/**
+ * Which of a group's ops would run. `allExcept`: every op but `ids` (the default, all ticked).
+ * `only`: just `ids`. A header tick or untick resets `ids` to empty in the matching mode, so
+ * the set only ever holds the rows the user flipped by hand.
+ */
+export interface OpSelection {
+  mode: 'allExcept' | 'only'
+  ids: SvelteSet<number>
+}
+
+/** Every op ticked: the state a group opens in. */
+export function selectAllSelection(): OpSelection {
+  return { mode: 'allExcept', ids: new SvelteSet<number>() }
+}
+
 /** Why the last Approve or Reject didn't happen, as the notice the dialog shows. */
 export type DecisionNotice = Extract<MessageKey, 'suggestedOps.decisionNotRecorded' | 'suggestedOps.approvalUnsure'>
 
 /** Why an approval didn't start. The group is pending again, and the dialog shows this under it. */
-export type GroupRefusal = Extract<ApprovalResultView, { kind: 'refused' | 'nothingToRun' | 'couldNotStart' }>
+export type GroupRefusal = Extract<
+  ApprovalResultView,
+  { kind: 'refused' | 'nothingToRun' | 'nothingSelected' | 'couldNotStart' }
+>
 
 interface SuggestedOpsState {
   open: boolean
@@ -133,7 +151,7 @@ export function newGroupReview(): GroupReview {
     windowLoading: false,
     windowError: false,
     shown: INITIAL_ROWS,
-    deselected: new SvelteSet<number>(),
+    selection: selectAllSelection(),
     changedUnderReview: false,
     liveFacts: new SvelteMap<number, LiveFact>(),
     sourceUnreachable: null,
@@ -180,12 +198,39 @@ export function showAllRows(groupId: number): void {
   if (review && group) review.shown = totalRows(group)
 }
 
-/** How many ops of a group would actually run: everything live, minus what the user turned
- *  off. Derived from the COUNT, so it's right even for rows never fetched. */
+/** How many ops of a group would actually run. Derived from the COUNT and the hand-flipped
+ *  ids, so it's right even for rows never fetched. */
 export function approvableCount(groupId: number): number {
   const group = groupById(groupId)
+  const selection = reviewOf(groupId)?.selection
   if (!group) return 0
-  return Math.max(0, group.liveOpCount - (reviewOf(groupId)?.deselected.size ?? 0))
+  if (!selection) return group.liveOpCount
+  if (selection.mode === 'only') return selection.ids.size
+  return Math.max(0, group.liveOpCount - selection.ids.size)
+}
+
+/** Whether one op is ticked. */
+export function isOpSelected(groupId: number, opId: number): boolean {
+  const selection = reviewOf(groupId)?.selection
+  if (!selection) return true
+  return selection.mode === 'allExcept' ? !selection.ids.has(opId) : selection.ids.has(opId)
+}
+
+/** The header checkbox: every op ticked, none, or a mix. */
+export function selectionState(groupId: number): 'all' | 'none' | 'some' {
+  const group = groupById(groupId)
+  const count = approvableCount(groupId)
+  if (count === 0) return 'none'
+  if (group && count >= group.liveOpCount) return 'all'
+  return 'some'
+}
+
+/** The header checkbox's click: a full list unticks everything, anything else ticks everything. */
+export function toggleAllOps(groupId: number): void {
+  const review = reviewOf(groupId)
+  if (!review) return
+  review.selection =
+    selectionState(groupId) === 'all' ? { mode: 'only', ids: new SvelteSet<number>() } : selectAllSelection()
 }
 
 /** Live only while the dialog is open: the badge owns the session-long subscription. */
@@ -291,8 +336,8 @@ function dropReview(groupId: number): void {
 /**
  * "Show the new version" on a group the agent changed: read its rows again from the top.
  *
- * Deselection survives on purpose. An op the user turned off stays off if the new version
- * still has it; dropping the set would quietly turn their "no" back into a "yes".
+ * The selection survives on purpose. An op the user turned off stays off if the new version
+ * still has it; resetting it would quietly turn their "no" back into a "yes".
  */
 export async function reloadGroup(groupId: number): Promise<void> {
   const review = reviewOf(groupId)
@@ -438,14 +483,14 @@ export function opAt(groupId: number, index: number): SuggestedOpView | null {
   return held.ops[index - held.offset] ?? null
 }
 
-/** Turn one op off, or back on. */
+/** Turn one op off, or back on. In either mode that's flipping its membership in `ids`. */
 export function toggleOp(groupId: number, opId: number): void {
-  const deselected = reviewOf(groupId)?.deselected
-  if (!deselected) return
-  if (deselected.has(opId)) {
-    deselected.delete(opId)
+  const ids = reviewOf(groupId)?.selection.ids
+  if (!ids) return
+  if (ids.has(opId)) {
+    ids.delete(opId)
   } else {
-    deselected.add(opId)
+    ids.add(opId)
   }
 }
 
@@ -467,8 +512,8 @@ export async function approveGroup(groupId: number): Promise<void> {
   suggestedOpsState.decisionNotice = null
   suggestedOpsState.refusals.delete(groupId)
   try {
-    const deselected = [...(reviewOf(groupId)?.deselected ?? [])]
-    const result = await approveSuggestedGroup(groupId, deselected)
+    const selection = reviewOf(groupId)?.selection ?? selectAllSelection()
+    const result = await approveSuggestedGroup(groupId, { mode: selection.mode, opIds: [...selection.ids] })
     if (isRefusalToStart(result)) suggestedOpsState.refusals.set(groupId, result)
     if (result.kind === 'started') {
       await refreshSuggestions()
@@ -496,6 +541,7 @@ function isRefusalToStart(result: ApprovalResultView): result is GroupRefusal {
   switch (result.kind) {
     case 'refused':
     case 'nothingToRun':
+    case 'nothingSelected':
     case 'couldNotStart':
       return true
     case 'started':

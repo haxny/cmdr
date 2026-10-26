@@ -34,8 +34,9 @@ describe('refusalReason', () => {
     expect(reason.message).toContain('hasn’t connected')
   })
 
-  it('has its own words for the two refusals only suggestions have', () => {
+  it('has its own words for the refusals only suggestions have', () => {
     expect(refusalReason({ kind: 'nothingToRun' }, 'trash').message).toContain('nothing ran')
+    expect(refusalReason({ kind: 'nothingSelected' }, 'move').message).toContain('nothing ran')
     expect(refusalReason({ kind: 'couldNotStart' }, 'move').message).toContain('nothing ran')
   })
 })

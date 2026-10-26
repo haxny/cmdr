@@ -1993,6 +1993,18 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "description": "Search keywords for the “Suppress the Space-key Quick Look hint” setting (settings.fileExplorer.suppressQuickLookHint.label) in Settings > Advanced. What it does: hides the reminder that Space selects in Cmdr and ⇧Space opens Quick Look (the macOS preview). Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
   },
+  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "@settings.suggestedOps.suppressApprovalNotice.label": {
+    "description": "Advanced-section label for the toggle that hides the note at the top of the AI suggestions dialog (suggestedOps.description). \"AI suggestions\" is that dialog's title (suggestedOps.title); keep the two matching."
+  },
+  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "@settings.suggestedOps.suppressApprovalNotice.description": {
+    "description": "Help text for the toggle that hides the note at the top of the AI suggestions dialog. \"AI suggestions\" is the dialog's title (suggestedOps.title); the × is the note's close button."
+  },
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "@settings.suggestedOps.suppressApprovalNotice.keywords": {
+    "description": "Search keywords for the “Suppress the approval note in AI suggestions” setting (settings.suggestedOps.suppressApprovalNotice.label) in Settings > Advanced. What it does: hides the note at the top of the AI suggestions dialog saying nothing runs until you approve it. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Number of closed tabs to remember per pane",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "description": "Advanced-section label for the number input setting how many recently closed tabs to keep per pane. \"pane\" is one of the two file lists.",

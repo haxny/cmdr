@@ -9,22 +9,30 @@ We do not trust the agent. A suggestion can be formally valid and factually hall
 tell which, so the dialog's job is not to vet the suggestion; it is to lay it out for the user to decide. Everything
 here follows from that.
 
-**The AI's words and Cmdr's facts sit side by side, and only the AI's are labelled.** `AgentReason` heads the rationale
-with "The AI's reason" at the text's own size and weight 600, so the label reads as a heading rather than a footnote,
-and the quote is plain (not italic) secondary text behind a left rule. Cmdr's facts go unlabelled: the source folder and
-the full destination (volume name, then path) in a `From` / `To` list right under the header, and the live Size and Last
+**The AI's words and Cmdr's facts sit side by side, and only the AI's are labelled.** `AgentReason` leads the rationale
+with a bold "Why:" on the same line (David's call, 2026-10-26): short to the eye, with a tooltip saying these are the
+AI's own words, and a screen reader hears "The AI's reason:" in its place, so the source is named on every channel.
+Cmdr's facts go unlabelled: the source and the full destination in a `From` / `To` list right under the header, each
+volume as a soft pill with the volume picker's own icon (`VolumePill`, `getIconForVolume`), and the live Size and Last
 modified columns. The juxtaposition is the mechanism: a user checks a claim against something the agent could not
 invent. An unlabelled rationale would read as a finding, which is exactly the failure this surface exists to prevent.
 
 **Top to bottom is the order a decision is made in** (`SuggestedOpsGroup.svelte`): title, file count, and the pills that
-change the answer on one header row; the facts; the AI's reason; the file list; then Reject and the action button. A
-sweep opens with a meta line ("Suggested 2026-10-26 12:22", in the user's date format) and the sweep's own reason.
+change the answer on one header row (wrapping inside a pill when a reason runs long); the facts; the AI's reason; the
+file list; then Reject and the action button. A sweep opens with a heading for the groups under it, in words
+(`sweepWhen`: "Suggested 15 minutes ago", "Suggested yesterday at 14:04", the user's date format for anything older,
+with the exact moment in a tooltip), then the sweep's own reason. A lone sweep from the last ten minutes gets no heading
+(`sweepHeadingHidden`): the user just asked for it, and the line would say nothing.
+
+**The approval note is a warning the user can close for good.** "The AI suggested these. Nothing runs until you approve
+it." opens the dialog in the house warning look, and its × sets `suggestedOps.suppressApprovalNotice`, the same
+suppress-switch pattern as the other hints in Settings > Advanced > Hints and warnings, which is where it comes back.
 Groups are separated by a hairline, not boxed: seven stacked bordered cards read as busy, and the file list is already
 the one framed well in each group.
 
 **The button names the action** (`approveKey`): "Move 4 files", "Move 5 files to Trash", "Delete 3 files", "Extract 2
-archives", and the count is what would actually run (`liveOpCount` minus the deselection). It never changes wording with
-the list's state. An irreversible group's button is the `danger` variant, so the one press that can't be taken back
+archives", and the count is what would actually run (`approvableCount`, from the selection). It never changes wording
+with the list's state. An irreversible group's button is the `danger` variant, so the one press that can't be taken back
 looks like it.
 
 **The undo pill says why** (`reversibilityKey`): "You can undo this: they go to the Trash", "…: Cmdr can move them
@@ -54,7 +62,13 @@ viewport drawing a window, never 60,000 DOM rows.
 **Rows read like file rows**: the icon from the shared icon cache (keyed `ext:<ext>` like the backend's
 `derive_icon_id`), the name mid-truncated to keep the extension, then the facts. When every op shares one folder
 (`sourceFolder` on the group), the folder is said once in the facts and the rows show names only; when they don't, the
-facts say "Several folders" and a Folder column appears. A rename adds a New name column.
+facts say "Several folders" and a Folder column appears. A new name follows the old one after an arrow, for ANY verb
+whose op carries one (a move or copy that renames on the way, not only a rename), and a screen reader hears "New name"
+for the arrow.
+
+**Sizes read exactly as the file panes show them**: the size column's own `formatSizeForDisplay` with the pane's options
+(`listing.sizeUnit` and the 1000/1024 base), not `<Size>`, which forces the dynamic unit. A user who picked "MB" for
+their panes sees MB here too.
 
 **Size and Last modified are what the disk says now** (`rowFacts` in `suggested-ops-copy.ts`):
 
@@ -91,12 +105,16 @@ rows still gets them (the review remembers its last `range`). The answer is type
 - **Anything else** (a store refusal, an unknown group, a throw) un-marks the span, so the next scroll asks again, and
   is logged rather than surfaced: the labelled snapshot is an honest answer while the live one is missing.
 
-**The wire.** Approving sends the group id plus the ids the user turned OFF, so the common case carries an empty list at
-any size.
+**The wire, and the selection.** A group's selection (`OpSelection`) is a two-mode set: `allExcept` these ids (the
+default, everything ticked) or `only` these ids. The header box ticks everything (`allExcept`, empty) or nothing
+(`only`, empty), and a row's box flips its id's membership in either mode, so the set only ever holds the rows the user
+flipped by hand. Approving sends the mode and those ids, so the wire stays small in both directions at any group size:
+"all but three" and "only these three" of 60,000 are both three ids. The header reads mixed whenever the count sits
+between none and all.
 
-**Decision: there is no "deselect all", and that is not an omission.** Turning every row off IS rejecting the group,
-which Reject already does in one call. A deselect-all would have to enumerate 60,000 op ids across IPC to express the
-same decision. The affordance exists under the honest name.
+**Decision: select all / none exists, in the two-mode form** (David, 2026-10-26). It replaced a deliberate "no deselect
+all", whose reason was the wire: a one-mode "ids turned OFF" set would have had to enumerate 60,000 ids to say "none".
+The `only` mode removes that cost, so the affordance is cheap.
 
 ## A group that changes under an open review
 
@@ -112,7 +130,7 @@ and the rows stay exactly where they are; the notice offers "Show the new versio
 **Decision: the notice keys on `reason`, never on `groupId` alone.** An amendment and the user's own approval carry the
 SAME id. Keying on the id would raise "The AI changed this" the instant the user approved something. A test pins it.
 
-**Decision: a reload keeps the deselection.** An op the user turned off stays off if the new version still has it.
+**Decision: a reload keeps the selection.** An op the user turned off stays off if the new version still has it.
 Clearing the set would quietly turn their "no" into a "yes" on the next approve, which is the unsafe direction. A stale
 id (an op the new version dropped) costs nothing: the backend ignores ids outside the group's live set.
 

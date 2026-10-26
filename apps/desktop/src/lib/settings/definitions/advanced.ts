@@ -168,6 +168,18 @@ export const advancedSettings: SettingDefinitionSource[] = [
     component: 'switch',
   },
   {
+    id: 'suggestedOps.suppressApprovalNotice',
+    section: ['Advanced'],
+    cardKey: 'settings.advanced.card.hintsAndWarnings',
+    labelKey: 'settings.suggestedOps.suppressApprovalNotice.label',
+    descriptionKey: 'settings.suggestedOps.suppressApprovalNotice.description',
+    keywordsKey: 'settings.suggestedOps.suppressApprovalNotice.keywords',
+    terms: ['ai'],
+    type: 'boolean',
+    default: false,
+    component: 'switch',
+  },
+  {
     id: 'fileExplorer.tabs.closedTabHistorySize',
     section: ['Advanced'],
     cardKey: 'settings.advanced.card.historyAndLimits',

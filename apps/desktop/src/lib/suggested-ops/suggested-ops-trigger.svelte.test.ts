@@ -11,7 +11,7 @@ import type { SuggestedOpPage, SuggestedSweepView, SuggestionsChanged } from '#l
 const listMock = vi.fn<() => Promise<SuggestedSweepView[]>>()
 const pageMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<SuggestedOpPage>>()
 const rejectMock = vi.fn<(g: number) => Promise<{ kind: string }>>()
-const approveMock = vi.fn<(g: number, deselected: number[]) => Promise<{ kind: string }>>()
+const approveMock = vi.fn<(g: number, selection: { mode: string; opIds: number[] }) => Promise<{ kind: string }>>()
 const factsMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<unknown>>()
 
 /** The subscriber the store installs while the dialog is open. */
@@ -21,7 +21,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   listSuggestedOps: () => listMock(),
   pageSuggestedOps: (g: number, o: number, l: number) => pageMock({ groupId: g, offset: o, limit: l }),
   rejectSuggestedGroup: (g: number) => rejectMock(g),
-  approveSuggestedGroup: (g: number, deselected: number[]) => approveMock(g, deselected),
+  approveSuggestedGroup: (g: number, selection: { mode: string; opIds: number[] }) => approveMock(g, selection),
   liveSuggestedOpFacts: (g: number, o: number, l: number) => factsMock({ groupId: g, offset: o, limit: l }),
   onSuggestionsChanged: (cb: (p: SuggestionsChanged) => void) => {
     emit = cb
@@ -40,6 +40,9 @@ import {
   SHOW_MORE_STEP,
   approvableCount,
   approveGroup,
+  isOpSelected,
+  selectionState,
+  toggleAllOps,
   closeSuggestedOps,
   ensureOpWindow,
   opAt,
@@ -300,7 +303,7 @@ describe('approving', () => {
 
     await approveGroup(BIG)
 
-    expect(approveMock).toHaveBeenCalledWith(BIG, [4, 9])
+    expect(approveMock).toHaveBeenCalledWith(BIG, { mode: 'allExcept', opIds: [4, 9] })
   })
 
   it('carries an empty list when the whole group is approved, at any size', async () => {
@@ -308,7 +311,7 @@ describe('approving', () => {
 
     await approveGroup(BIG)
 
-    expect(approveMock).toHaveBeenCalledWith(BIG, [])
+    expect(approveMock).toHaveBeenCalledWith(BIG, { mode: 'allExcept', opIds: [] })
   })
 
   it('sends only that group’s deselection', async () => {
@@ -318,7 +321,7 @@ describe('approving', () => {
 
     await approveGroup(7)
 
-    expect(approveMock).toHaveBeenCalledWith(7, [])
+    expect(approveMock).toHaveBeenCalledWith(7, { mode: 'allExcept', opIds: [] })
   })
 
   it('closes the dialog once nothing is left to decide', async () => {
@@ -380,7 +383,7 @@ describe('an approval that refuses to start', () => {
   })
 
   it('gives every refusal to start a reason, not only a volume one', async () => {
-    for (const result of [{ kind: 'nothingToRun' }, { kind: 'couldNotStart' }]) {
+    for (const result of [{ kind: 'nothingToRun' }, { kind: 'nothingSelected' }, { kind: 'couldNotStart' }]) {
       approveMock.mockResolvedValueOnce(result)
       await openSuggestedOps()
 
@@ -432,7 +435,7 @@ describe('an approval that refuses to start', () => {
   })
 })
 
-describe('deselection', () => {
+describe('selection', () => {
   it('survives the row scrolling out of the loaded window', async () => {
     await openSuggestedOps()
     toggleOp(BIG, 3)
@@ -440,7 +443,7 @@ describe('deselection', () => {
     await ensureOpWindow(BIG, 5_000)
 
     expect(opAt(BIG, 3)).toBeNull()
-    expect(reviewOf(BIG)?.deselected.has(3)).toBe(true)
+    expect(isOpSelected(BIG, 3)).toBe(false)
   })
 
   it('counts what would actually run from the COUNT, not from the rows in memory', async () => {
@@ -458,10 +461,10 @@ describe('deselection', () => {
     toggleOp(BIG, 1)
     toggleOp(BIG, 1)
 
-    expect(reviewOf(BIG)?.deselected.has(1)).toBe(false)
+    expect(isOpSelected(BIG, 1)).toBe(true)
   })
 
-  it('keeps each group’s deselection to itself', async () => {
+  it('keeps each group’s selection to itself', async () => {
     listMock.mockResolvedValue([sweep([group(7, 3), group(8, 3)])])
     await openSuggestedOps()
 
@@ -469,6 +472,39 @@ describe('deselection', () => {
 
     expect(approvableCount(7)).toBe(2)
     expect(approvableCount(8)).toBe(3)
+  })
+
+  it('unticks everything from the header with an empty "only" set, at any size', async () => {
+    await openSuggestedOps()
+
+    toggleAllOps(BIG)
+
+    expect(selectionState(BIG)).toBe('none')
+    expect(approvableCount(BIG)).toBe(0)
+    expect(reviewOf(BIG)?.selection).toMatchObject({ mode: 'only' })
+    expect(reviewOf(BIG)?.selection.ids.size).toBe(0)
+  })
+
+  it('sends only the rows ticked by hand after unticking everything', async () => {
+    await openSuggestedOps()
+    toggleAllOps(BIG)
+    toggleOp(BIG, 5)
+    toggleOp(BIG, 6)
+
+    await approveGroup(BIG)
+
+    expect(approveMock).toHaveBeenCalledWith(BIG, { mode: 'only', opIds: [5, 6] })
+  })
+
+  it('reads a mix as mixed, and ticks everything from there', async () => {
+    await openSuggestedOps()
+    toggleOp(BIG, 1)
+    expect(selectionState(BIG)).toBe('some')
+
+    toggleAllOps(BIG)
+
+    expect(selectionState(BIG)).toBe('all')
+    expect(isOpSelected(BIG, 1)).toBe(true)
   })
 })
 
@@ -561,7 +597,7 @@ describe('a group that changed under the review', () => {
 
     expect(reviewOf(BIG)?.changedUnderReview).toBe(false)
     expect(pageMock).toHaveBeenCalledTimes(1)
-    expect(reviewOf(BIG)?.deselected.has(2)).toBe(true)
+    expect(isOpSelected(BIG, 2)).toBe(false)
   })
 })
 

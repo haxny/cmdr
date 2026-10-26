@@ -20,6 +20,7 @@
     import { approveKey, reversibilityKey, runBlockerKeys } from './suggested-ops-copy'
     import AgentReason from './AgentReason.svelte'
     import SuggestedOpFiles from './SuggestedOpFiles.svelte'
+    import VolumePill from './VolumePill.svelte'
 
     interface Props {
         group: SuggestedGroupView
@@ -76,14 +77,17 @@
          reason below can be read against. -->
     <dl class="facts selectable">
         <dt>{tString(group.verb === 'rename' ? 'suggestedOps.facts.folder' : 'suggestedOps.facts.from')}</dt>
-        <dd class="path">{group.sourceFolder ?? tString('suggestedOps.facts.severalFolders')}</dd>
+        <dd>
+            <VolumePill volumeId={group.sourceVolumeId} name={null} />
+            <span class="path">{group.sourceFolder ?? tString('suggestedOps.facts.severalFolders')}</span>
+        </dd>
         {#if group.verb === 'trash'}
             <dt>{tString('suggestedOps.facts.to')}</dt>
             <dd>{tString('suggestedOps.facts.trash')}</dd>
         {:else if group.destination !== null && group.verb !== 'rename' && group.verb !== 'delete'}
             <dt>{tString(group.verb === 'compress' ? 'suggestedOps.facts.archive' : 'suggestedOps.facts.to')}</dt>
             <dd>
-                {#if group.destinationVolumeName}<span class="volume">{group.destinationVolumeName}</span>{/if}
+                <VolumePill volumeId={group.destinationVolumeId} name={group.destinationVolumeName} />
                 <span class="path">{group.destination}</span>
             </dd>
         {/if}
@@ -182,7 +186,9 @@
         color: var(--color-text-secondary);
         font-size: var(--font-size-sm);
         line-height: var(--font-line-height-tight);
-        white-space: nowrap;
+        /* A long reason wraps inside its pill rather than pushing past the dialog edge. */
+        max-width: 100%;
+        overflow-wrap: break-word;
     }
 
     /* "Can't be undone" has to look different from the neutral pills beside it: it's the one
@@ -197,7 +203,8 @@
         display: grid;
         grid-template-columns: max-content minmax(0, 1fr);
         column-gap: var(--spacing-sm);
-        row-gap: var(--spacing-xxs);
+        row-gap: var(--spacing-xs);
+        align-items: center;
         /* The global list inset would push the facts off the title's edge. */
         padding-inline-start: 0;
         font-size: var(--font-size-sm);
@@ -209,11 +216,6 @@
 
     .facts dd {
         color: var(--color-text-primary);
-    }
-
-    .volume {
-        margin-right: var(--spacing-xs);
-        font-weight: 600;
     }
 
     .path {

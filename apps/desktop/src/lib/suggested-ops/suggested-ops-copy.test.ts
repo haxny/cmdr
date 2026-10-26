@@ -14,6 +14,8 @@ import {
   reversibilityKey,
   rowFacts,
   runBlockerKeys,
+  sweepHeadingHidden,
+  sweepWhen,
 } from './suggested-ops-copy'
 
 function op(overrides: Partial<SuggestedOpView> = {}): SuggestedOpView {
@@ -100,5 +102,29 @@ describe('paths', () => {
     expect(fileIconId('/a/Report.PDF')).toBe('ext:pdf')
     expect(fileIconId('/a/Makefile')).toBe('file')
     expect(fileIconId('/a/.zshrc')).toBe('file')
+  })
+})
+
+describe('a sweep heading', () => {
+  // 2026-10-26 15:00 local time.
+  const now = new Date(2026, 9, 26, 15, 0, 0).getTime()
+  const at = (date: Date) => Math.floor(date.getTime() / 1000)
+
+  it('says minutes for the first hour', () => {
+    expect(sweepWhen(at(new Date(2026, 9, 26, 14, 59, 30)), now)).toEqual({ kind: 'justNow' })
+    expect(sweepWhen(at(new Date(2026, 9, 26, 14, 45, 0)), now)).toEqual({ kind: 'minutesAgo', minutes: 15 })
+  })
+
+  it('names the calendar day after that, not a 24-hour window', () => {
+    expect(sweepWhen(at(new Date(2026, 9, 26, 9, 0, 0)), now)).toEqual({ kind: 'today' })
+    expect(sweepWhen(at(new Date(2026, 9, 25, 23, 50, 0)), now)).toEqual({ kind: 'yesterday' })
+    expect(sweepWhen(at(new Date(2026, 9, 24, 23, 50, 0)), now)).toEqual({ kind: 'earlier' })
+  })
+
+  it('hides only for a lone sweep from the last ten minutes', () => {
+    const recent = at(new Date(2026, 9, 26, 14, 55, 0))
+    expect(sweepHeadingHidden(1, recent, now)).toBe(true)
+    expect(sweepHeadingHidden(2, recent, now)).toBe(false)
+    expect(sweepHeadingHidden(1, at(new Date(2026, 9, 26, 14, 40, 0)), now)).toBe(false)
   })
 })

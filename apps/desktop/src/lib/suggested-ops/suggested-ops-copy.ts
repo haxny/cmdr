@@ -129,3 +129,38 @@ export function fileIconId(path: string): string {
   if (dot <= 0 || dot === name.length - 1) return 'file'
   return `ext:${name.slice(dot + 1).toLowerCase()}`
 }
+
+/** How long ago a sweep was suggested, in the words its heading uses. */
+export type SweepWhen =
+  | { kind: 'justNow' }
+  | { kind: 'minutesAgo'; minutes: number }
+  | { kind: 'today' }
+  | { kind: 'yesterday' }
+  | { kind: 'earlier' }
+
+/**
+ * A sweep's age as the heading says it: "just now" under a minute, minutes for the first hour,
+ * then "today at" / "yesterday at" a time, and the full date for anything older. Calendar days
+ * are local, so "yesterday" means the user's yesterday, not 24 hours.
+ */
+export function sweepWhen(createdAtSeconds: number, nowMs: number): SweepWhen {
+  const ageMs = nowMs - createdAtSeconds * 1000
+  if (ageMs < 60_000) return { kind: 'justNow' }
+  if (ageMs < 60 * 60_000) return { kind: 'minutesAgo', minutes: Math.floor(ageMs / 60_000) }
+  const created = new Date(createdAtSeconds * 1000)
+  const startOfToday = new Date(nowMs)
+  startOfToday.setHours(0, 0, 0, 0)
+  if (created >= startOfToday) return { kind: 'today' }
+  const startOfYesterday = new Date(startOfToday)
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1)
+  if (created >= startOfYesterday) return { kind: 'yesterday' }
+  return { kind: 'earlier' }
+}
+
+/** How recent a lone sweep has to be for its heading to say nothing worth a line. */
+export const FRESH_SWEEP_MS = 10 * 60_000
+
+/** A single sweep from the last ten minutes needs no heading: the user just asked for it. */
+export function sweepHeadingHidden(sweepCount: number, createdAtSeconds: number, nowMs: number): boolean {
+  return sweepCount === 1 && nowMs - createdAtSeconds * 1000 < FRESH_SWEEP_MS
+}
