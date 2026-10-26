@@ -1564,10 +1564,7 @@
     "chosen": "Zum Papierkorb gehen",
     "confidence": "high",
     "decision": "Papierkorb-Toast: Widerrufen und Zurücklegen",
-    "sources": "catalog sibling frame (Zum übergeordneten Ordner gehen)",
-    "exceptions": {
-      "suggestedOps.reversible.trash": "English sense: the files go to the Trash on approval, not the Go to trash command; in den Papierkorb follows move-to-trash"
-    }
+    "sources": "catalog sibling frame (Zum übergeordneten Ordner gehen)"
   },
   "got-it": {
     "avoid": [
@@ -2193,9 +2190,7 @@
       "feedback.dialog.description": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
       "feedback.dialog.invalid": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
       "feedback.sentToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
-      "feedback.sentWithoutLogsToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
-      "settings.suggestedOps.suppressApprovalNotice.label": "English sense: the app's own notice at the top of the AI suggestions dialog, not text the user writes, so it's a Hinweis",
-      "settings.suggestedOps.suppressApprovalNotice.description": "English sense: the app's own notice at the top of the AI suggestions dialog, not text the user writes, so it's a Hinweis"
+      "feedback.sentWithoutLogsToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface"
     },
     "sources": "MS terminology (note → Notiz); catalog (errorReporter.dialog.noteLabel)"
   },
