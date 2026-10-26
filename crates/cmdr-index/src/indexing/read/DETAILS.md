@@ -132,27 +132,32 @@ most of the drive and this would be a full descent — on a call the badge makes
 Don't lift the gate. A mount-rooted volume with no recorded `volume_path` reports nothing rather than falling back to
 `/`, which would answer for the boot disk instead.
 
-- `list_dir_children(path)` — the immediate children a directory's rows describe, for the agent's `list_dir` tool. ⚠️ It
-  answers `None` for a directory that has a ROW but no LISTING (`listed_epoch == 0`), not just for one with no row: rows
-  sit under an unlisted directory routinely (FSEvents verification upserts children without marking their parent listed,
-  and the cover walk materializes a frontier path's ancestor chain at epoch 0), and they are a lower bound on what is
-  there. A `Vec<EntryRow>` carries nowhere to say so, and the consumer's contract is that a lower-bound read has to say
-  so, hence "not indexed" rather than a partial listing. `> 0` rather than "at the current epoch" matches the coverage
-  descent rule: an old listing is stale, not absent (Decision 5 trusts it).
-- `get_dir_stats(path)` / `get_dir_stats_batch(paths)` — resolve the volume via `routing::volume_id_for_local_path`,
-  delegate to `*_on_volume`, and read dir aggregates off the volume's `ReadPool` (mapping the path via
-  `routing::index_read_path`). `dir_stats_from` derives the same `{complete, stale}` booleans as enrichment;
-  `get_dir_stats_on_volume` reads `current_epoch` inside its `with_conn`, `get_dir_stats_batch_on_volume` once per call.
-  The FE copies the booleans onto the `FileEntry` (including the `..` parent row, which renders from the current dir's
-  own stats, so a partially-scanned dir shows `..` as `≥`/`—`).
+**Every per-path read is keyed by a volume the CALLER names** (`list_dir_children_on_volume`, `get_dir_stats_on_volume`,
+`get_dir_stats_batch_on_volume`, and the `Index::list_children` / `dir_stats` / `dir_stats_batch` methods over them). A
+caller holding only a path asks `Index::volume_id_for_path` first. Why: a path picking its own index is a second
+resolution beside the caller's, and the two disagree exactly where it hurts. A dead mount point routes to `root`, so the
+agent's `list_dir` once answered for a NAS path out of the boot disk's index.
 
-The IPC boundary stays path-based; the volume is resolved internally. The path-based commands map an SMB-mounted path to
-its `smb_volume_id`, an `mtp://` path to its `{device}:{storage}` id, a registered local external mount to its own id,
-and the boot disk (plus cloud-drive folders) to `root` — routing owned by `../paths/DETAILS.md`. The routed reads skip
-cleanly (`get_read_pool_for` → `None`) when the resolved volume has no registered index, so an unindexed SMB share or a
-mounted-but-unindexed external drive costs zero DB work — which is also why such a drive reports `off` rather than
-inheriting `root`'s freshness. The MCP server consumes these read APIs too (`cmdr://indexing`, the `await index_status`
-condition), never re-deriving freshness.
+- `list_dir_children_on_volume(volume_id, path)` — the immediate children a directory's rows describe, for the agent's
+  `list_dir` tool. ⚠️ It answers `None` for a directory that has a ROW but no LISTING (`listed_epoch == 0`), not just
+  for one with no row: rows sit under an unlisted directory routinely (FSEvents verification upserts children without
+  marking their parent listed, and the cover walk materializes a frontier path's ancestor chain at epoch 0), and they
+  are a lower bound on what is there. A `Vec<EntryRow>` carries nowhere to say so, and the consumer's contract is that a
+  lower-bound read has to say so, hence "not indexed" rather than a partial listing. `> 0` rather than "at the current
+  epoch" matches the coverage descent rule: an old listing is stale, not absent (Decision 5 trusts it).
+- `get_dir_stats_on_volume(volume_id, path)` / `get_dir_stats_batch_on_volume(volume_id, paths)` — read dir aggregates
+  off the volume's `ReadPool` (mapping the path via `routing::index_read_path`). `dir_stats_from` derives the same
+  `{complete, stale}` booleans as enrichment; `get_dir_stats_on_volume` reads `current_epoch` inside its `with_conn`,
+  `get_dir_stats_batch_on_volume` once per call. The FE copies the booleans onto the `FileEntry` (including the `..`
+  parent row, which renders from the current dir's own stats, so a partially-scanned dir shows `..` as `≥`/`—`).
+
+The IPC boundary stays path-based; the command resolves the volume (`Index::volume_id_for_path`) before it reads. The
+path-based commands map an SMB-mounted path to its `smb_volume_id`, an `mtp://` path to its `{device}:{storage}` id, a
+registered local external mount to its own id, and the boot disk (plus cloud-drive folders) to `root` — routing owned by
+`../paths/DETAILS.md`. The routed reads skip cleanly (`get_read_pool_for` → `None`) when the resolved volume has no
+registered index, so an unindexed SMB share or a mounted-but-unindexed external drive costs zero DB work — which is also
+why such a drive reports `off` rather than inheriting `root`'s freshness. The MCP server consumes these read APIs too
+(`cmdr://indexing`, the `await index_status` condition), never re-deriving freshness.
 
 ## Expected totals (`expected_totals.rs`)
 

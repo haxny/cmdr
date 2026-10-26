@@ -310,6 +310,9 @@ All under `apps/desktop/src-tauri/src/`.
   a timeout, appends every device provider's storages (`device_volumes.rs`), and enriches from the registry;
   `commands/volumes.rs` and `volume_broadcast.rs` both publish what it returns. See
   `apps/desktop/src-tauri/src/volumes/CLAUDE.md`
+- `location/`: the `Location` pair, plus the tools' location resolver: a pure core that places a `path` + optional
+  `volumeId` on one volume or answers a typed miss with `nearby` candidates, the one volume-root function, and the
+  in-memory volume facts and earlier-roots record it reads. Contract: `agent/tools/DETAILS.md` § The location contract
 - `space_poller/`: Live disk-space polling (per-volume-type intervals, emitting only what the readout would draw
   differently, paused while the main window is hidden) plus the low-disk-space hysteresis warning
 - `main_window_visibility.rs`: whether the main window can be seen, as its webview reports it; the idle redraw work

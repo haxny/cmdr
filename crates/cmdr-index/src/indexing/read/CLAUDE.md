@@ -36,7 +36,8 @@ volume-keyed handle tables.
   frontier. Rests on the `EXCLUSION_POLICY_KEY` stamp: stale or absent ⇒ nothing is trusted.
 - **Enrichment logs once per changed result, via `EnrichResultMemo`.** ❌ No per-pass line: an idle pane triggers this
   ~2/s.
-- ⚠️ **An UNLISTED directory's rows aren't its contents**, so `list_dir_children` answers `None` there.
+- ⚠️ **An UNLISTED directory's rows aren't its contents**, so `list_dir_children_on_volume` answers `None` there.
+- **Per-path reads take the volume from the caller**, ❌ never from the path: a dead mount point routes to `root`.
 
 Owned elsewhere: the `dir_stats` ledger, honest sizes, and epochs in `../writer/CLAUDE.md`; the registry, handle
 bootstrap, phase, and freshness in `../lifecycle/CLAUDE.md`; path routing in `../paths/CLAUDE.md`.

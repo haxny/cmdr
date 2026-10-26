@@ -29,8 +29,9 @@ impl OperationIndex for AppOperationIndex {
     }
 
     fn recursive_size(&self, path: &Path) -> Option<KnownSize> {
+        let path = path.to_string_lossy();
         index()
-            .dir_stats(&path.to_string_lossy())
+            .dir_stats(&index().volume_id_for_path(&path), &path)
             .ok()
             .flatten()
             .and_then(|stats| prompt_size(&stats))

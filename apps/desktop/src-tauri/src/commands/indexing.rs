@@ -87,13 +87,19 @@ pub async fn get_index_status() -> Result<IndexStatusResponse, String> {
 #[tauri::command]
 #[specta::specta]
 pub async fn get_dir_stats(path: String) -> Result<Option<DirStats>, String> {
-    index().dir_stats(&path).map_err(|e| e.to_string())
+    index()
+        .dir_stats(&index().volume_id_for_path(&path), &path)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn get_dir_stats_batch(paths: Vec<String>) -> Result<Vec<Option<DirStats>>, String> {
-    index().dir_stats_batch(&paths).map_err(|e| e.to_string())
+    // One directory's children, so they share a volume: the first path names it.
+    let volume_id = paths
+        .first()
+        .map_or_else(|| ROOT_VOLUME_ID.to_string(), |path| index().volume_id_for_path(path));
+    index().dir_stats_batch(&volume_id, &paths).map_err(|e| e.to_string())
 }
 
 /// How much disk every drive's index takes up, in bytes, WAL sidecars included.

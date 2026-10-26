@@ -35,10 +35,11 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
 - **`list_pane_files`** (`read/pane_listing.rs`) — up to 200 compact rows from the focused pane's existing Rust
   listing cache. It uses the current selection when present, otherwise the whole folder, and returns the exact volume
   ID plus one shared parent path for `propose_rename_plan`. It never queries the index or starts a filesystem listing.
-- **`list_dir`** (`read/listing.rs`, shared `[AiClient, Agent]`) — a directory's immediate children
-  (`indexing::list_dir_children`, a path-based helper beside `get_dir_stats`) plus its own recursive size stats
-  (`get_dir_stats`) and a `Coverage` block. `Ok(None)` children ⇒ typed "not in index" / "no index", distinguished by
-  whether the volume is indexed. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
+- **`list_dir`** (`read/listing.rs`, shared `[AiClient, Agent]`) — takes `path` + optional `volumeId`, resolved
+  once (§ The location contract), then reads THAT volume's index: its immediate children (`Index::list_children`) plus
+  its own recursive size stats (`Index::dir_stats`) and a `Coverage` block naming `source: index`. The result echoes
+  `location`. `Ok(None)` children ⇒ typed "not in index" / "no index", distinguished by whether the volume is indexed;
+  a resolved volume that isn't connected answers `volumeNotConnected`, and an unplaceable one the resolver's miss. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
   `type` narrows to files or folders. **`sortBy: "size"` is the disk-usage answer for ONE folder's children**;
   `search` with the same sort ranks a whole drive — see § One tool, both questions.
   Every number also arrives spoken (`sizeHuman`, `modifiedHuman`, `recursiveSizeHuman`, `totalHuman` /
@@ -174,7 +175,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,672 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,710 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -364,6 +365,57 @@ Three properties make the size ordering an honest disk-usage answer:
 `offset + returned`" safe: an unstable order would silently skip or double-count rows, and double-counting a folder is
 double-counting its bytes.
 
+## The location contract
+
+Every tool that takes a place speaks one shape, placed by one resolver (`apps/desktop/src-tauri/src/location/resolve.rs`, pure over
+`VolumeFacts`; table tests in `resolve_tests.rs`, the prod story in `transcript_179_tests.rs`). `list_dir` speaks it
+today.
+
+**Shapes.** An INPUT is the flat pair `path` + optional `volumeId` (`LocationInput`): flat so an AI client's schema stays
+two strings, `volumeId` optional so `~/Downloads` or `/Volumes/naspi-1/papers` simply works. An OUTPUT carries
+`location`, the wire shape of `crate::location::Location`, `{ "volumeId", "path" }`, so a result's two fields are a
+valid next input. `path` is always the APP path: the string the panes, `search` rows, `inspect_file`, and
+`propose_suggestions` use. ❌ Never a share-relative path on the wire; translating into a store's own path space
+(index-relative, importance-relative) happens inside the tool.
+
+**Resolution.**
+
+- A leading `~` expands to this machine's home (app paths start with `/` or a scheme, so `~` can mean nothing else).
+- **Named** (`volumeId` given): an unknown id is `unknownVolume`. A path under the volume's root resolves, connected or
+  not (`live: false` for a saved share: whether it answers is the TOOL's call). A path under a root the volume held
+  earlier is rebased onto the current one and answers with `rebasedFrom`; earlier roots are the saved share's last mount
+  path plus every root it held this session (`facts.rs::RootHistory`, fed by `on_volume_arrival` and by every facts
+  read). Anything else is `pathOutsideVolume` with the volume's `root`.
+- **Bare**: the deepest LIVE root that holds the path wins. A path inside a mount area (`/Volumes/<name>` on macOS) is
+  never the boot disk's, so with nothing live mounted there it's `noVolumeAtPath`. ❌ No saved-root tier: two saved
+  shares can share one last root, and a reused mount point would resolve to the wrong one. Only an explicit `volumeId`
+  reaches a not-connected volume.
+- **One root rule** (`volume_root`): the live mount (or scheme) root when registered, else the index's `volume_path`
+  meta, else the saved row's last mount path. The facts shell fills the meta tier only once something reads a stopped
+  volume's DB; today a saved share's root is its last mount path.
+- **Facts are in-memory** (`facts.rs`): the registry's live set, the saved-server and saved-share stores, the cached
+  device list, and the index's own state. ❌ No `statfs`, mount-table read, or full volume listing, so a resolve can't
+  wait on a wedged mount. That's also why the resolver doesn't reuse `resolve_location`'s filesystem arm: its `statfs`
+  answers `root` for a dead mount point, exactly the lie this contract exists to stop. The scheme arms read the same
+  stores the facts do, with the same deepest-root rule (`app_paths::path_is_under`).
+- **A volume is not always its own index.** `ResolvedLocation.index.volume_id` names the index holding the rows: a cloud
+  drive in `~/Library/CloudStorage` is its own volume but `root`'s index walks it. A live volume's index is wherever
+  the index routes its ROOT; a volume that isn't live has only its own (routing a dead mount point answers `root`).
+  `location` keeps the volume's id; index reads use the index's.
+
+**Misses** (`apps/desktop/src-tauri/src/location/miss.rs`) are an `Ok` result, the memory tools' refusal pattern (§ The two tools that
+write): `{ miss, location, detail, root?, nearby?, sameShareAs? }`. `location` echoes what was asked (tilde-expanded),
+`detail` names a next move. Tokens: `unknownVolume`, `pathOutsideVolume` (carries `root`), `noVolumeAtPath`, and
+`volumeNotConnected`, which a tool answers when the volume resolved but none of its sources can (`volume_not_connected`,
+shared). ❌ Never an empty listing, ❌ never `authoritative: true` for ground nothing read.
+
+**`nearby` and `candidate`.** Every not-connected miss carries `nearby` (possibly empty) and `sameShareAs` (empty until
+same-share members are proven). Each `nearby` entry is `{ volumeId, name, kind, connectionState?, root, candidate }`,
+where `candidate` is the requested place re-rooted onto that volume (`/Volumes/naspi/papers` →
+`{ smb-192-…, /Volumes/naspi-1/papers }`), so the next call is a copy, not arithmetic. Picked in order: volumes whose
+mount name shares the requested `/Volumes/<name>` stem (macOS appends `-N` to a second mount), else volumes whose root
+holds the path, else every remote volume; live first, at most 8, never the volume the miss is about.
+
 ## The honesty (coverage) contract
 
 `read/listing.rs::coverage` is the single builder for index freshness honesty: it reuses `status_token` +
@@ -546,9 +598,9 @@ a rename plan's content claim checkable; the guardrail, its refusal shape, and t
 
 ## Cross-module symbols the toolset reuses
 
-- `indexing::read::queries::list_dir_children` — a path-based helper (re-exported from `crate::indexing`); the child-listing
-  analog of `get_dir_stats`, wrapping the read-pool + `index_read_path` + `resolve_path` + `IndexStore::list_children_on`
-  wiring so the tool stays path-based (it lives in `indexing`, its elegant home).
+- `Index::list_children` / `dir_stats` / `dir_stats_batch` — volume-keyed: the caller names the volume the resolver
+  placed, so a path can't pick a second index (`crates/cmdr-index/src/indexing/read/DETAILS.md`).
+- `crate::location` — the resolver every location-taking tool shares (§ The location contract).
 - `mcp::resources::volumes::VolumeKind::token` — `pub(crate)` so the volume mapper reuses the one kind→token mapping.
 - `mcp` re-exports `Access`, `Consumer`, `agent_tool_view`, `execute_tool`, `tool_access`, `ToolError`, `ToolResult` as
   `pub(crate)` for the agent runtime. `snapshot_volumes` and the `importance::snapshot_*` functions are `pub(crate)` too.

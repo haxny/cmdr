@@ -139,7 +139,7 @@ async fn a_phone_over_adb_finishes_its_scan_stale_because_nothing_watches_it() {
         "and its status says nothing watches it, so the stale copy doesn't blame a disconnect"
     );
     let children = index
-        .list_children(&format!("{root}/sdcard"))
+        .list_children(&volume_id, &format!("{root}/sdcard"))
         .expect("the scanned folder is readable")
         .expect("the scanned folder is in the index");
     assert_eq!(children.len(), 2, "the walk read both files: {children:?}");
@@ -213,7 +213,7 @@ async fn a_handle_scans_an_in_memory_volume_and_reports_to_its_own_sink() {
 
     // And the index can answer for what it just walked, through the handle only.
     let children = index
-        .list_children(root)
+        .list_children(volume_id, root)
         .expect("the scanned root is readable")
         .expect("the scanned root is in the index");
     let mut names: Vec<&str> = children.iter().map(|row| row.name.as_str()).collect();

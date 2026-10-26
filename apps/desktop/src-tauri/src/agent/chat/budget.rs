@@ -98,7 +98,7 @@ const _: () = assert!(MAX_TOOL_RESULT_TOKENS < DEFAULT_PROMPT_TOKEN_BUDGET);
 /// that tool: the suggested-ops trio cost about 1,100 tokens of schema between them, which
 /// is roughly four files off a 16,000-token rename batch, and `search`, the most expensive
 /// single declaration, costs 560 even trimmed. Keep a new schema terse.
-pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 6_672;
+pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 6_710;
 
 /// What one `image_facts` row costs at the corpus' average OCR length.
 pub const IMAGE_FACTS_TOKENS_PER_FILE: usize = 269;

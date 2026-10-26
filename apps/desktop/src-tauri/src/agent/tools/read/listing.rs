@@ -1,7 +1,11 @@
 //! The `list_dir` tool, over the drive index.
 //!
-//! It REUSES the shipped index query cores (`indexing::list_dir_children`,
-//! `get_dir_stats`, `get_dir_stats_batch`) — it reads the index and SQLite only,
+//! The location is placed ONCE by `crate::location`'s resolver, and that volume's
+//! index answers: a dead mount point is a typed miss, ❌ never a second routing of
+//! the path onto `root`'s index (`agent/tools/DETAILS.md` § The location contract).
+//!
+//! It REUSES the shipped index query cores (`Index::list_children`, `dir_stats`,
+//! `dir_stats_batch`) — it reads the index and SQLite only,
 //! never the disk, so it's safe on a dead mount. It never re-derives listing
 //! logic. The one thing no index query does is rank a folder's children by size,
 //! so `sortBy: "size"` batches `get_dir_stats` over the subdirectories and sorts
@@ -35,9 +39,12 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime};
 
-use super::{expand_tilde, join_child_path};
+use super::join_child_path;
 use crate::file_system::volume::SpaceInfo;
 use crate::index_host::index;
+use crate::location::Location;
+use crate::location::miss::{LocationMissResult, volume_not_connected};
+use crate::location::resolve::{LocationInput, VolumeFacts, resolve};
 use crate::mcp::resources::indexing::status_token;
 use crate::mcp::{ToolError, ToolResult};
 use crate::search::format_size;
@@ -56,12 +63,22 @@ const DEFAULT_LIMIT: usize = 50;
 /// a caller from asking for a page nothing could carry.
 const MAX_LIMIT: usize = 1_000;
 
-/// The index's honesty for a read: its freshness token, whether reads are
-/// authoritative (`fresh` only), and a plain-language caveat when they aren't (or
-/// when the path isn't in the index).
+/// Where a listing's rows came from. Every answer names it, so a read from
+/// anywhere but the volume's live index can't pass for one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ListSource {
+    /// The volume's live drive index.
+    Index,
+}
+
+/// The index's honesty for a read: where the rows came from, its freshness token,
+/// whether reads are authoritative (`fresh` only), and a plain-language caveat
+/// when they aren't (or when the path isn't in the index).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Coverage {
+    pub source: ListSource,
     /// `fresh` / `scanning` / `stale` / `off`. The shared token every surface uses.
     pub index_status: String,
     /// Reads are authoritative only when the index is `fresh` AND lists the folder.
@@ -93,6 +110,7 @@ pub(crate) fn coverage(enabled: bool, freshness: Option<Freshness>, indexed: boo
         None
     };
     Coverage {
+        source: ListSource::Index,
         index_status: status_token(enabled, freshness).to_string(),
         authoritative,
         note,
@@ -391,7 +409,8 @@ fn remainder(stats: &DirStats, rows: &[ChildEntry], total: usize, opts: &ListOpt
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListDirResult {
-    pub path: String,
+    /// The folder this answers for, as a `{ volumeId, path }` a next call can take.
+    pub location: Location,
     pub coverage: Coverage,
     /// Which volume this folder is on, with its capacity and free space.
     pub volume: VolumeBlock,
@@ -486,7 +505,7 @@ fn compare_unknown_last(a: Option<u64>, b: Option<u64>, order: Order) -> std::cm
 /// say so (`total` / `returned` / `offset` / `truncated`). The order is deterministic,
 /// so "the next `limit` after `offset`" is a stable, resumable window.
 pub(crate) fn build_list_dir(
-    path: &str,
+    location: &Location,
     page: Option<Page>,
     stats: Option<&DirStats>,
     volume: &VolumeView,
@@ -506,8 +525,9 @@ pub(crate) fn build_list_dir(
         (Some(fitted), Some(total), Some(stats)) => remainder(stats, &fitted.items, total, opts),
         _ => None,
     };
+    let path = location.path.as_str();
     ListDirResult {
-        path: path.to_string(),
+        location: location.clone(),
         coverage: coverage(volume.enabled, volume.freshness, indexed),
         volume: volume.block.clone(),
         size: stats
@@ -527,6 +547,7 @@ pub fn list_dir_schema() -> Value {
         "type": "object",
         "properties": {
             "path": { "type": "string", "description": "Absolute or ~-relative folder to list. Relay the coverage block and any lower-bound size rather than a total the index can't back." },
+            "volumeId": { "type": "string", "description": "The volume the path is on, from list_volumes or a result's location. Omit for a path on a connected volume." },
             "sortBy": {
                 "type": "string",
                 "enum": ["name", "size", "modified"],
@@ -543,38 +564,64 @@ pub fn list_dir_schema() -> Value {
 }
 
 pub async fn execute_list_dir<R: Runtime>(_app: &AppHandle<R>, params: &Value) -> ToolResult {
-    let path = required_path(params)?;
+    let input =
+        LocationInput::from_params(params).ok_or_else(|| ToolError::invalid_params("Missing 'path' parameter"))?;
     let opts = ListOptions::from_params(params)?;
+    let facts = VolumeFacts::now().await;
+    let resolved = match resolve(&facts, &input) {
+        Ok(resolved) => resolved,
+        Err(miss) => return to_value(&LocationMissResult::from(miss)),
+    };
+    // The drive index is this tool's only source, and a volume that isn't
+    // registered has no live index to read.
+    if !resolved.live {
+        return to_value(&volume_not_connected(&facts, &resolved));
+    }
+    let location = &resolved.location;
+    // The index that holds this volume's rows, which for a cloud drive is `root`'s.
+    let index_id = resolved.index.volume_id.as_str();
     let rows = index()
-        .list_children(&path)
+        .list_children(index_id, &location.path)
         .map_err(|e| ToolError::internal(e.to_string()))?;
     let stats = index()
-        .dir_stats(&path)
+        .dir_stats(index_id, &location.path)
         .map_err(|e| ToolError::internal(e.to_string()))?;
-    let status = index().volume_status_for_path(&path);
-    let space = crate::mcp::resources::volumes::space_summary(&status.volume_id);
+    let status = index().volume_status(index_id);
+    let space = crate::mcp::resources::volumes::space_summary(&location.volume_id);
     // Resolved ONCE, then asked per row. Every size below is only as honest as the
     // walked ground in here: without it a folder mid-walk reads as a settled floor,
     // which is exactly when its number is furthest from the truth.
     let volume = VolumeView {
         enabled: status.enabled,
         freshness: status.freshness,
-        block: VolumeBlock::new(status.volume_id.clone(), space),
-        walked_roots: index()
-            .status(&status.volume_id)
-            .map(|s| s.walked_roots)
-            .unwrap_or_default(),
+        block: VolumeBlock::new(location.volume_id.clone(), space),
+        walked_roots: index().status(index_id).map(|s| s.walked_roots).unwrap_or_default(),
     };
 
     let page = match rows {
         None => None,
         Some(rows) => {
             let children: Vec<ChildEntry> = rows.iter().map(child_from_row).collect();
-            Some(page_with_folder_sizes(&path, children, &opts, &volume.walked_roots)?)
+            let folder = IndexedFolder {
+                index_id,
+                path: &location.path,
+            };
+            Some(page_with_folder_sizes(&folder, children, &opts, &volume.walked_roots)?)
         }
     };
-    let result = build_list_dir(&path, page, stats.as_ref(), &volume, &opts);
-    serde_json::to_value(&result).map_err(|e| ToolError::internal(e.to_string()))
+    to_value(&build_list_dir(location, page, stats.as_ref(), &volume, &opts))
+}
+
+/// The listed folder as the index knows it: which index holds its rows, and its
+/// app path. One value, so a child's size can't be asked of a different index
+/// than the one that listed it.
+struct IndexedFolder<'a> {
+    index_id: &'a str,
+    path: &'a str,
+}
+
+fn to_value(result: &impl Serialize) -> ToolResult {
+    serde_json::to_value(result).map_err(|e| ToolError::internal(e.to_string()))
 }
 
 /// Page the children, giving every folder row the recursive size that makes it
@@ -586,18 +633,18 @@ pub async fn execute_list_dir<R: Runtime>(_app: &AppHandle<R>, params: &Value) -
 /// browse of a 20k-entry folder to one small batch. Same rows either way — only the
 /// number of `dir_stats` lookups differs.
 fn page_with_folder_sizes(
-    path: &str,
+    folder: &IndexedFolder<'_>,
     children: Vec<ChildEntry>,
     opts: &ListOptions,
     walked_roots: &[String],
 ) -> Result<Page, ToolError> {
     if opts.sort_by == SortBy::Size {
-        let children = with_folder_sizes(path, children, walked_roots)?;
+        let children = with_folder_sizes(folder, children, walked_roots)?;
         return Ok(sort_and_page(children, opts));
     }
     let page = sort_and_page(children, opts);
     Ok(Page {
-        rows: with_folder_sizes(path, page.rows, walked_roots)?,
+        rows: with_folder_sizes(folder, page.rows, walked_roots)?,
         total: page.total,
     })
 }
@@ -611,7 +658,7 @@ fn page_with_folder_sizes(
 /// inside one child moves that child and the folder above it, and leaves its
 /// siblings settled.
 fn with_folder_sizes(
-    path: &str,
+    folder: &IndexedFolder<'_>,
     mut children: Vec<ChildEntry>,
     walked_roots: &[String],
 ) -> Result<Vec<ChildEntry>, ToolError> {
@@ -626,10 +673,10 @@ fn with_folder_sizes(
     }
     let paths: Vec<String> = dir_indices
         .iter()
-        .map(|&i| join_child_path(path, &children[i].name))
+        .map(|&i| join_child_path(folder.path, &children[i].name))
         .collect();
     let stats = index()
-        .dir_stats_batch(&paths)
+        .dir_stats_batch(folder.index_id, &paths)
         .map_err(|e| ToolError::internal(e.to_string()))?;
     for ((&i, stats), child_path) in dir_indices.iter().zip(stats).zip(&paths) {
         match stats {
@@ -648,16 +695,6 @@ fn with_folder_sizes(
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
-
-/// The required `path` param, tilde-expanded (agents send `~/…`).
-fn required_path(params: &Value) -> Result<String, ToolError> {
-    let raw = params
-        .get("path")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| ToolError::invalid_params("Missing 'path' parameter"))?;
-    Ok(expand_tilde(raw))
-}
 
 /// Map an index `EntryRow` into the model-facing child shape. Typed against the
 /// row's fields. A folder's `size` starts as its own logical size and is replaced

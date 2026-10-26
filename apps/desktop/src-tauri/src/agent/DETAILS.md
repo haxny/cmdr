@@ -193,8 +193,10 @@ Vocabulary: "the agent" is this feature; external MCP consumers are "AI clients"
 - **D4**: No custom collation in `main.db`. Why: it stays inspectable with plain `sqlite3`; the index DB's
   `platform_case` collation forced a custom query tool. Built.
 - **D5**: Everything keys by `(volume_id, rel_path)`, and a `volumes` table ships early. Why: NAS, S3, and FTP need
-  arrives soon, and retrofitting keys is brutal. Partly built: agent rows key by volume; no `volumes` table, no stable
-  volume identity. Reuse the `Location` vocabulary (`src/location.rs`) rather than minting a parallel pair type.
+  arrives soon, and retrofitting keys is brutal. Partly built: agent rows key by volume, and the tools speak the
+  `Location` vocabulary (`src/location/`): inputs take `path` + optional `volumeId`, outputs carry `location`, and one
+  resolver places both (`tools/DETAILS.md` § The location contract). No `volumes` table, no stable volume identity yet.
+  ❌ Never mint a parallel pair type.
 - **D6**: Only the local volume is active at first; SMB, MTP, and S3 knowledge deferred. Why: staleness and reconnect
   semantics differ per volume type; don't block the spine on them.
 - **D7**: Staleness is per volume and first-class; the agent caveats answers ("as of May 28"). Why: it makes answering

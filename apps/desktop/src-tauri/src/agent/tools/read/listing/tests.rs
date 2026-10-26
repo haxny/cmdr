@@ -74,6 +74,14 @@ fn fresh_volume() -> VolumeView {
     }
 }
 
+/// A folder on the boot disk: the location every shaper test lists.
+fn at(path: &str) -> Location {
+    Location {
+        volume_id: "root".to_string(),
+        path: path.to_string(),
+    }
+}
+
 fn page_of(children: Vec<ChildEntry>) -> Page {
     let total = children.len();
     Page { rows: children, total }
@@ -93,7 +101,7 @@ fn a_huge_folder_listing_is_paged_not_shipped_whole() {
     };
     let children: Vec<ChildEntry> = (0..20_000).map(child).collect();
     let page = sort_and_page(children, &opts);
-    let result = build_list_dir("/downloads", Some(page), None, &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/downloads"), Some(page), None, &fresh_volume(), &opts);
 
     let rows = result.children.as_ref().expect("an indexed listing");
     assert_eq!(result.total, Some(20_000), "the honest denominator survives");
@@ -111,7 +119,7 @@ fn a_huge_folder_listing_is_paged_not_shipped_whole() {
 fn a_normal_folder_listing_is_returned_whole() {
     let opts = ListOptions::default();
     let page = sort_and_page((0..30).map(child).collect(), &opts);
-    let result = build_list_dir("/photos", Some(page), None, &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/photos"), Some(page), None, &fresh_volume(), &opts);
     assert_eq!(result.total, Some(30));
     assert_eq!(result.returned, Some(30));
     assert!(!result.truncated);
@@ -122,7 +130,7 @@ fn unindexed_volume_returns_typed_no_index_not_a_wrong_zero() {
     // children None + not enabled ⇒ "off" + a "not indexed" note, never an
     // empty-but-authoritative listing.
     let result = build_list_dir(
-        "/nas/share",
+        &at("/nas/share"),
         None,
         None,
         &VolumeView {
@@ -142,7 +150,13 @@ fn unindexed_volume_returns_typed_no_index_not_a_wrong_zero() {
 
 #[test]
 fn indexed_but_missing_path_is_a_distinct_not_in_index_note() {
-    let result = build_list_dir("/Users/x/new", None, None, &fresh_volume(), &ListOptions::default());
+    let result = build_list_dir(
+        &at("/Users/x/new"),
+        None,
+        None,
+        &fresh_volume(),
+        &ListOptions::default(),
+    );
     assert_eq!(result.coverage.index_status, "fresh");
     assert!(
         result
@@ -160,7 +174,7 @@ fn indexed_but_missing_path_is_a_distinct_not_in_index_note() {
 #[test]
 fn a_folder_the_index_doesnt_list_is_never_authoritative() {
     let result = build_list_dir(
-        "/Volumes/naspi/papers",
+        &at("/Volumes/naspi/papers"),
         None,
         None,
         &fresh_volume(),
@@ -173,7 +187,7 @@ fn a_folder_the_index_doesnt_list_is_never_authoritative() {
 fn list_dir_surfaces_lower_bound_and_updating_flags() {
     let stats = dir_stats(1_000, false, false, true);
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![row("sub", RowKind::Folder, None)])),
         Some(&stats),
         &fresh_volume(),
@@ -190,7 +204,7 @@ fn a_listing_names_its_volume_and_how_full_it_is() {
     // A folder size is only actionable next to the drive's free space, so the
     // volume block rides along on every listing rather than costing a second call.
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![])),
         None,
         &VolumeView {
@@ -221,7 +235,7 @@ fn an_unwatched_volume_has_no_human_space_either() {
     // Present exactly when the byte counterparts are: a "0 B" free would read as a
     // full disk.
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![])),
         None,
         &fresh_volume(),
@@ -240,7 +254,7 @@ fn a_lower_bound_size_carries_the_symbol_inside_the_string() {
     // treats the separate `sizeIsLowerBound` flag.
     let stats = dir_stats(2_000_000_000_000, false, false, false);
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![lower_bound_row("archive", 1_000_000_000_000)])),
         Some(&stats),
         &fresh_volume(),
@@ -266,7 +280,7 @@ fn a_lower_bound_size_carries_the_symbol_inside_the_string() {
 fn folder_size(path: &str, stats: &DirStats, walking: &[&str]) -> SizeStats {
     let ground: Vec<String> = walking.iter().map(|r| (*r).to_string()).collect();
     build_list_dir(
-        path,
+        &at(path),
         Some(page_of(vec![])),
         Some(stats),
         &VolumeView {
@@ -395,7 +409,7 @@ fn an_unknown_size_says_nothing_rather_than_zero() {
 fn an_exact_size_carries_no_symbol() {
     let stats = dir_stats(1_024, true, false, false);
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![row("a-file", RowKind::File, Some(1_024))])),
         Some(&stats),
         &fresh_volume(),
@@ -411,7 +425,7 @@ fn an_unknown_size_has_no_human_form_rather_than_zero_bytes() {
     // A folder with no `dir_stats` row is unknown, not empty. A rendered "0 B"
     // would be a number the index can't back.
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![row("mystery", RowKind::Folder, None)])),
         None,
         &fresh_volume(),
@@ -425,7 +439,7 @@ fn an_unknown_size_has_no_human_form_rather_than_zero_bytes() {
 #[test]
 fn a_modified_epoch_comes_with_the_date_it_means() {
     let result = build_list_dir(
-        "/Users/x",
+        &at("/Users/x"),
         Some(page_of(vec![child(0)])),
         None,
         &fresh_volume(),
@@ -458,7 +472,7 @@ fn five_child_page(limit: usize, folder_stats: &DirStats) -> ListDirResult {
         ],
         &opts,
     );
-    build_list_dir("/p", Some(page), Some(folder_stats), &fresh_volume(), &opts)
+    build_list_dir(&at("/p"), Some(page), Some(folder_stats), &fresh_volume(), &opts)
 }
 
 #[test]
@@ -501,7 +515,7 @@ fn the_remainder_is_omitted_when_a_returned_child_size_is_unknown() {
         ],
         &opts,
     );
-    let result = build_list_dir("/p", Some(page), Some(&stats), &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/p"), Some(page), Some(&stats), &fresh_volume(), &opts);
     assert_eq!(result.returned, Some(2));
     assert!(result.remainder.is_none(), "an unknown size silences the remainder");
 }
@@ -520,7 +534,7 @@ fn the_remainder_is_omitted_without_a_folder_total_to_subtract_from() {
         ],
         &opts,
     );
-    let result = build_list_dir("/p", Some(page), None, &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/p"), Some(page), None, &fresh_volume(), &opts);
     assert!(result.remainder.is_none());
 }
 
@@ -552,7 +566,7 @@ fn the_remainder_is_approximate_when_a_returned_child_is_a_lower_bound() {
         vec![lower_bound_row("a-archive", 100), row("b", RowKind::File, Some(200))],
         &opts,
     );
-    let result = build_list_dir("/p", Some(page), Some(&stats), &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/p"), Some(page), Some(&stats), &fresh_volume(), &opts);
     let rem = result.remainder.expect("one child wasn't shown");
     assert_eq!(rem.count, 1);
     assert!(rem.is_approximate);
@@ -587,7 +601,7 @@ fn a_filtered_listing_has_no_remainder_at_all() {
         ],
         &opts,
     );
-    let result = build_list_dir("/p", Some(page), Some(&stats), &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/p"), Some(page), Some(&stats), &fresh_volume(), &opts);
     assert_eq!(result.total, Some(2));
     assert!(result.remainder.is_none());
 }
@@ -612,7 +626,7 @@ fn the_wire_shape_carries_every_spoken_field_in_camel_case() {
         &opts,
     );
     let result = build_list_dir(
-        "/Users/x/Media",
+        &at("/Users/x/Media"),
         Some(page),
         Some(&stats),
         &VolumeView {
@@ -639,7 +653,7 @@ fn the_wire_shape_carries_every_spoken_field_in_camel_case() {
 #[test]
 fn an_unindexed_folder_has_no_remainder() {
     let result = build_list_dir(
-        "/nas/share",
+        &at("/nas/share"),
         None,
         None,
         &VolumeView {
@@ -762,7 +776,7 @@ fn a_last_page_is_not_flagged_truncated() {
         ..Default::default()
     };
     let page = sort_and_page((0..10).map(child).collect(), &opts);
-    let result = build_list_dir("/p", Some(page), None, &fresh_volume(), &opts);
+    let result = build_list_dir(&at("/p"), Some(page), None, &fresh_volume(), &opts);
     assert_eq!(result.returned, Some(2));
     assert_eq!(result.offset, 8);
     assert!(!result.truncated);
@@ -800,4 +814,74 @@ fn limit_is_clamped_to_something_a_result_can_carry() {
     );
     assert_eq!(ListOptions::from_params(&json!({ "limit": 0 })).unwrap().limit, 1);
     assert_eq!(ListOptions::from_params(&json!({})).unwrap().limit, DEFAULT_LIMIT);
+}
+
+/// A named volume that isn't connected resolves, and with no source to answer
+/// from, `list_dir` says so with somewhere else to look: ❌ never an empty listing.
+#[test]
+fn a_not_connected_volume_answers_volume_not_connected_with_nearby_and_same_share_as() {
+    use crate::location::resolve::{IndexSources, VolumeFact, VolumeFacts};
+    use crate::mcp::resources::volumes::VolumeKind;
+    use cmdr_fs::volume::ConnectionState;
+    use serde_json::json;
+
+    let share = |id: &str, root: &str, live: bool| VolumeFact {
+        id: id.to_string(),
+        name: format!("naspi ({id})"),
+        kind: VolumeKind::Smb,
+        root: root.to_string(),
+        live,
+        connection_state: Some(if live {
+            ConnectionState::Direct
+        } else {
+            ConnectionState::Saved
+        }),
+        earlier_roots: Vec::new(),
+        index: IndexSources::none(id),
+    };
+    let facts = VolumeFacts {
+        volumes: vec![
+            share("saved", "/Volumes/naspi", false),
+            share("live", "/Volumes/naspi-1", true),
+        ],
+        mount_areas: vec!["/Volumes".to_string()],
+    };
+    let input = LocationInput {
+        volume_id: Some("saved".to_string()),
+        path: "/Volumes/naspi/papers".to_string(),
+    };
+    let resolved = resolve(&facts, &input).expect("a named volume resolves");
+    assert!(!resolved.live);
+
+    let wire = serde_json::to_value(volume_not_connected(&facts, &resolved)).expect("serializes");
+    assert_eq!(wire["miss"], "volumeNotConnected");
+    assert_eq!(
+        wire["location"],
+        json!({ "volumeId": "saved", "path": "/Volumes/naspi/papers" })
+    );
+    assert_eq!(
+        wire["nearby"],
+        json!([{
+            "volumeId": "live",
+            "name": "naspi (live)",
+            "kind": "smb",
+            "connectionState": "direct",
+            "root": "/Volumes/naspi-1",
+            "candidate": { "volumeId": "live", "path": "/Volumes/naspi-1/papers" },
+        }]),
+        "the volume the miss is about isn't its own suggestion"
+    );
+    assert_eq!(wire["sameShareAs"], json!([]));
+    assert!(wire["detail"].as_str().is_some_and(|d| d.contains("isn't connected")));
+}
+
+#[test]
+fn every_index_answer_names_its_source_and_location() {
+    use serde_json::json;
+
+    let result = build_list_dir(&at("/Users/x"), None, None, &fresh_volume(), &ListOptions::default());
+    let wire = serde_json::to_value(&result).expect("serializes");
+    assert_eq!(wire["coverage"]["source"], "index");
+    assert_eq!(wire["location"], json!({ "volumeId": "root", "path": "/Users/x" }));
+    assert!(wire.get("path").is_none(), "the location replaces the bare path");
 }

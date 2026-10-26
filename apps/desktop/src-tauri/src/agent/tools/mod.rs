@@ -28,6 +28,9 @@ pub mod read;
 pub mod suggestions;
 pub mod view;
 
+#[cfg(test)]
+mod transcript_179_tests;
+
 use crate::agent::llm::types::{ToolDeclaration, ToolId};
 use crate::mcp::agent_tool_view;
 

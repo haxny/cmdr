@@ -573,6 +573,11 @@ pub fn run() {
             network::load_s3_stores(app.handle());
             network::load_nfs_stores(app.handle());
 
+            // The tools' location resolver remembers every root a volume held, seeded
+            // with each saved share's last mount path, so a path a model got before a
+            // remount still resolves after it. After the share store above (its seed).
+            location::facts::start_root_history();
+
             // Load persisted recent search history into the in-memory cache.
             search::history::RECENT_SEARCHES.load(app.handle());
 

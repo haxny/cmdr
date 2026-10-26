@@ -75,7 +75,7 @@ async fn index_it(index: &Index, volume_id: &str) {
 /// The names the index holds under `dir`, sorted; empty when it holds none.
 fn names_under(index: &Index, dir: &str) -> Vec<String> {
     let mut names: Vec<String> = index
-        .list_children(dir)
+        .list_children(&index.volume_id_for_path(dir), dir)
         .ok()
         .flatten()
         .map(|rows| rows.into_iter().map(|row| row.name).collect())
@@ -86,7 +86,11 @@ fn names_under(index: &Index, dir: &str) -> Vec<String> {
 
 /// The recursive logical size the index holds for `dir`, if it holds one.
 fn size_under(index: &Index, dir: &str) -> Option<u64> {
-    index.dir_stats(dir).ok().flatten().map(|stats| stats.recursive_size)
+    index
+        .dir_stats(&index.volume_id_for_path(dir), dir)
+        .ok()
+        .flatten()
+        .map(|stats| stats.recursive_size)
 }
 
 /// How many requests the fake server has received so far. ❗ Every request, not

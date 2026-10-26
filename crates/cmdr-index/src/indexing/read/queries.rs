@@ -354,14 +354,6 @@ pub fn get_dir_stats_on_volume(volume_id: &str, path: &str) -> Result<Option<Dir
     })?
 }
 
-/// Look up recursive stats for a single directory, resolving the owning volume
-/// from the path. IPC stays path-based (see `commands/indexing.rs`); the volume
-/// is resolved internally via [`volume_id_for_local_path`] (a registered external
-/// mount routes to its own index; the boot disk to `root`).
-pub fn get_dir_stats(path: &str) -> Result<Option<DirStats>, String> {
-    get_dir_stats_on_volume(&volume_id_for_local_path(path), path)
-}
-
 /// Batch lookup of dir_stats for multiple paths on a volume.
 pub fn get_dir_stats_batch_on_volume(volume_id: &str, paths: &[String]) -> Result<Vec<Option<DirStats>>, String> {
     let pool = match get_read_pool_for(volume_id) {
@@ -434,21 +426,22 @@ fn dir_stats_from(path: String, s: &store::DirStatsById, current_epoch: u64, pen
     }
 }
 
-/// List the immediate children of a directory from a volume's index (names,
-/// folder/file, per-child size + mtime), resolving the owning volume from the
-/// path. `Ok(None)` means the volume has no live index (no read pool) or the path
-/// isn't in the index (unresolved) — the caller surfaces a typed "no index" /
-/// "not found" rather than a misleading empty listing. Reads the index only; it
-/// never touches the disk (so it's safe on a dead mount). Mirrors
-/// [`get_dir_stats`]'s pool/resolve wiring.
-pub fn list_dir_children(path: &str) -> Result<Option<Vec<store::EntryRow>>, String> {
-    let volume_id = volume_id_for_local_path(path);
-    let pool = match get_read_pool_for(&volume_id) {
+/// List the immediate children of a directory from `volume_id`'s index (names,
+/// folder/file, per-child size + mtime). The caller names the volume, so a path
+/// the router would place elsewhere (a dead mount point routes to `root`) can't
+/// pick a second index. `Ok(None)` means the volume has no live index (no read
+/// pool) or the path isn't in the index (unresolved) — the caller surfaces a typed
+/// "no index" / "not found" rather than a misleading empty listing. Reads the
+/// index only; it never touches the disk (so it's safe on a dead mount). Mirrors
+/// [`get_dir_stats_on_volume`]'s pool/resolve wiring, firmlink normalization
+/// included.
+pub fn list_dir_children_on_volume(volume_id: &str, path: &str) -> Result<Option<Vec<store::EntryRow>>, String> {
+    let pool = match get_read_pool_for(volume_id) {
         Some(p) => p,
         None => return Ok(None),
     };
     let normalized = firmlinks::normalize_path(path);
-    let index_path = match index_read_path(&volume_id, &normalized) {
+    let index_path = match index_read_path(volume_id, &normalized) {
         Some(p) => p,
         None => return Ok(None),
     };
@@ -483,19 +476,6 @@ fn listed_children_on(
         return Ok(None);
     }
     Ok(Some(IndexStore::list_children_on(entry_id, conn)?))
-}
-
-/// Batch lookup of dir_stats, resolving the owning volume from the paths. The
-/// IPC `get_dir_stats_batch` sends one directory's children, which all live on
-/// one volume; resolving from the first path is sufficient. Routes via
-/// [`volume_id_for_local_path`] (a registered external mount → its own index; the
-/// boot disk → `root`).
-pub fn get_dir_stats_batch(paths: &[String]) -> Result<Vec<Option<DirStats>>, String> {
-    let volume_id = paths
-        .first()
-        .map(|p| volume_id_for_local_path(p))
-        .unwrap_or_else(|| ROOT_VOLUME_ID.to_string());
-    get_dir_stats_batch_on_volume(&volume_id, paths)
 }
 
 #[cfg(test)]

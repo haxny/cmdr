@@ -537,27 +537,28 @@ impl Index {
         crate::indexing::read::enrichment::enrich_entries_with_index_on_volume(volume_id, entries);
     }
 
-    /// The recursive size, file count, and directory count under one path, or
-    /// `None` when the index doesn't cover it.
-    pub fn dir_stats(&self, path: &str) -> Result<Option<DirStats>, IndexError> {
-        crate::indexing::read::queries::get_dir_stats(path).map_err(Into::into)
+    /// The recursive size, file count, and directory count under one path of
+    /// `volume_id`, or `None` when that volume's index doesn't cover it. The caller
+    /// names the volume (a dead mount point's path routes to `root`); one holding
+    /// only a path asks [`volume_id_for_path`](Self::volume_id_for_path) first.
+    pub fn dir_stats(&self, volume_id: &str, path: &str) -> Result<Option<DirStats>, IndexError> {
+        crate::indexing::read::queries::get_dir_stats_on_volume(volume_id, path).map_err(Into::into)
     }
 
-    /// [`dir_stats`](Self::dir_stats) for many paths in one pass, answering in
-    /// the order asked.
-    pub fn dir_stats_batch(&self, paths: &[String]) -> Result<Vec<Option<DirStats>>, IndexError> {
-        crate::indexing::read::queries::get_dir_stats_batch(paths).map_err(Into::into)
+    /// [`dir_stats`](Self::dir_stats) for many paths of one volume, in the order asked.
+    pub fn dir_stats_batch(&self, volume_id: &str, paths: &[String]) -> Result<Vec<Option<DirStats>>, IndexError> {
+        crate::indexing::read::queries::get_dir_stats_batch_on_volume(volume_id, paths).map_err(Into::into)
     }
 
-    /// What the index has under one directory, without touching the disk.
+    /// What `volume_id`'s index has under one directory, without touching the disk.
     ///
     /// `None` when the path isn't indexed, which includes a directory that HAS a
     /// row but that nothing has listed: rows under it are a lower bound (FSEvents
     /// verification and the cover walk's chain materialization both create that
     /// shape), and there is nothing in a `Vec<EntryRow>` for a caller to read that
     /// caveat off.
-    pub fn list_children(&self, path: &str) -> Result<Option<Vec<EntryRow>>, IndexError> {
-        crate::indexing::read::queries::list_dir_children(path).map_err(Into::into)
+    pub fn list_children(&self, volume_id: &str, path: &str) -> Result<Option<Vec<EntryRow>>, IndexError> {
+        crate::indexing::read::queries::list_dir_children_on_volume(volume_id, path).map_err(Into::into)
     }
 
     /// What a copy or move of `sources` is about to cost, from what the index

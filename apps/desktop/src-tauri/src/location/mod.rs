@@ -10,8 +10,17 @@
 //! turns a bare path into a `Location` and is the specta-export vehicle that
 //! lands both types in `bindings.ts`. Distinct from `volumes::LocationInfo`,
 //! which describes a volume/favorite, not a navigable destination.
+//!
+//! The tools' location resolver lives here too: `resolve.rs` (the pure core and
+//! the one root function), `facts.rs` (the in-memory volume facts it reads, and
+//! the earlier-roots record), and `miss.rs` (a miss as a tool result). Its
+//! contract: `agent/tools/DETAILS.md` § The location contract.
 
 use serde::{Deserialize, Serialize};
+
+pub(crate) mod facts;
+pub(crate) mod miss;
+pub(crate) mod resolve;
 
 /// A navigable destination: a path together with the volume it lives on.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
