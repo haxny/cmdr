@@ -87,6 +87,9 @@ pub struct RenameProposal {
     /// that can't be asked here, let alone answered wrong.
     pub volume_id: String,
     pub rows: Vec<RenameProposalRow>,
+    /// The group's `revision` (every amend bumps it). The review sends back the one it showed,
+    /// and preflight and apply refuse a different one as `listChanged`.
+    pub revision: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,6 +107,9 @@ pub struct RenameProposalRow {
 #[serde(rename_all = "camelCase")]
 pub struct RenameProposalSnapshot {
     pub proposal_id: String,
+    /// The revision this snapshot shows. Send it with `preflight_bulk_rename` and
+    /// `apply_bulk_rename`: an agent amend since then answers `listChanged`.
+    pub revision: i64,
     pub rows: Vec<RenameProposalRowSnapshot>,
 }
 
@@ -133,6 +139,7 @@ impl RenameProposal {
     pub fn snapshot(&self) -> RenameProposalSnapshot {
         RenameProposalSnapshot {
             proposal_id: self.proposal_id.clone(),
+            revision: self.revision,
             rows: self.rows.iter().map(|row| row.snapshot(&self.volume_id)).collect(),
         }
     }
@@ -353,6 +360,7 @@ pub fn load(conn: &Connection, proposal_id: &str) -> Result<Option<RenameProposa
         proposal_id: group_id.to_string(),
         volume_id: group.source_volume_id,
         rows,
+        revision: group.revision,
     }))
 }
 

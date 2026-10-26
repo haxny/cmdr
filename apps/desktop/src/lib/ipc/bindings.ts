@@ -3612,16 +3612,18 @@ export const commands = {
    *  Revalidates the user-selected subset of a server-owned rename proposal. The
    *  frontend supplies opaque ids only, never source paths or destination names.
    */
-  preflightBulkRename: (proposalId: string, allowedRowIds: string[]) =>
+  preflightBulkRename: (proposalId: string, revision: number, allowedRowIds: string[]) =>
     typedError<BulkRenamePreflight, BulkRenameError>(
-      __TAURI_INVOKE('preflight_bulk_rename', { proposalId, allowedRowIds }),
+      __TAURI_INVOKE('preflight_bulk_rename', { proposalId, revision, allowedRowIds }),
     ),
   /**
    *  Starts the user-approved subset of a server-owned rename plan. Paths and
    *  names never cross this IPC boundary: the frontend submits only opaque ids.
    */
-  applyBulkRename: (proposalId: string, allowedRowIds: string[]) =>
-    typedError<BulkRenameStarted, BulkRenameError>(__TAURI_INVOKE('apply_bulk_rename', { proposalId, allowedRowIds })),
+  applyBulkRename: (proposalId: string, revision: number, allowedRowIds: string[]) =>
+    typedError<BulkRenameStarted, BulkRenameError>(
+      __TAURI_INVOKE('apply_bulk_rename', { proposalId, revision, allowedRowIds }),
+    ),
   /**
    *  Replaces one row's proposed name with the one the user typed in the review, and answers the
    *  row as the dialog should now show it. The name is validated server-side; the row keeps no
@@ -6553,6 +6555,11 @@ export type BulkRenameError =
    *  the plan has to be looked at again before it can run.
    */
   | { type: 'needsAnotherLook' }
+  /**
+   *  The agent amended the plan since the revision the review showed, so nothing ran. The
+   *  review re-reads the plan.
+   */
+  | { type: 'listChanged' }
   // The plan has no rows left to apply.
   | { type: 'nothingToApply' }
   // The row edit was turned down (the name, the row id, or the store).
@@ -6595,7 +6602,15 @@ export type BulkRenamePreflightRow = {
   warnings: BulkRenameWarning[]
 }
 
-export type BulkRenamePreflightStatus = 'ready' | 'blocked' | 'expired'
+export type BulkRenamePreflightStatus =
+  | 'ready'
+  | 'blocked'
+  | 'expired'
+  /**
+   *  The agent amended the plan since the revision the review showed. Nothing was recorded;
+   *  the review re-reads the plan before the user can apply it.
+   */
+  | 'listChanged'
 
 export type BulkRenameRowStatus = 'ready' | 'blocked'
 
@@ -14615,6 +14630,11 @@ export type RenameProposalRowSnapshot = {
 
 export type RenameProposalSnapshot = {
   proposalId: string
+  /**
+   *  The revision this snapshot shows. Send it with `preflight_bulk_rename` and
+   *  `apply_bulk_rename`: an agent amend since then answers `listChanged`.
+   */
+  revision: number
   rows: RenameProposalRowSnapshot[]
 }
 

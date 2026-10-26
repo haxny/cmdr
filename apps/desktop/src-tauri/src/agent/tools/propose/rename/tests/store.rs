@@ -660,3 +660,58 @@ async fn a_staged_rename_plan_freezes_each_rows_creation_snapshot() {
     assert_eq!(ops[1].snapshot_size, None);
     assert_eq!(ops[1].snapshot_mtime, None);
 }
+
+/// A rename review carries the revision it showed, and an agent amend since refuses its
+/// acceptance as `RevisionChanged` instead of recording the amended plan (#747 review). The
+/// staged snapshot starts at revision 0 and a re-loaded proposal reads the bumped one.
+#[test]
+fn a_rename_review_of_an_amended_plan_records_nothing() {
+    let conn = migrated_conn();
+    let shown = staged(
+        &conn,
+        vec![draft_row(
+            "/shots/a.png",
+            "b.png",
+            EvidenceSource::Filename,
+            "the old name",
+        )],
+    );
+    assert_eq!(shown.revision, 0);
+    assert_eq!(
+        shown.snapshot().revision,
+        0,
+        "the review receives the revision it shows"
+    );
+    let group_id = last_group_id(&conn);
+    crate::agent::store::proposals::repropose_group(
+        &conn,
+        group_id,
+        &crate::agent::store::proposals::NewGroup {
+            intent: crate::agent::store::proposals::GroupIntent::Rename {
+                parent: "/shots".into(),
+                renames: vec![crate::agent::store::proposals::NewRename {
+                    source_path: "/shots/a.png".into(),
+                    new_name: "something else.png".into(),
+                    snapshot: None,
+                }],
+            },
+            source_volume_id: "root".into(),
+            display_name: "amended".into(),
+            rationale: None,
+            selector: None,
+        },
+        210,
+    )
+    .expect("amend");
+
+    let outcome = super::super::preflight::record_user_acceptance(&conn, &shown, &[shown.rows[0].row_id.clone()])
+        .expect("record");
+
+    assert!(
+        matches!(
+            outcome,
+            Some(crate::agent::store::proposals::AcceptanceOutcome::RevisionChanged { shown: 0, found: 1 })
+        ),
+        "{outcome:?}"
+    );
+}
