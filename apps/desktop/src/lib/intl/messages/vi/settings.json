@@ -2047,7 +2047,7 @@
   "@settings.revealHandler.heldByOtherApp": {
     "sourceHash": "4b956ef"
   },
-  "settings.revealHandler.uninstallWarning": "<lead>Hãy tắt mục này trước khi gỡ Cmdr.</lead> macOS vẫn tiếp tục gửi “Hiển thị trong Finder” đến đây, và khi không còn Cmdr thì những lần bấm đó lặng lẽ không làm gì cả.",
+  "settings.revealHandler.uninstallWarning": "<lead>Hãy tắt mục này trước khi gỡ cài đặt Cmdr.</lead> macOS vẫn tiếp tục gửi “Hiển thị trong Finder” đến đây, và khi không còn Cmdr thì những lần bấm đó lặng lẽ không làm gì cả.",
   "@settings.revealHandler.uninstallWarning": {
     "sourceHash": "9464597"
   },
@@ -2440,9 +2440,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Cần mục này để hoàn tác. Khi tắt, Cmdr không ghi lại các lần sao chép, di chuyển, đổi tên hay xóa mới, nên bạn không thể hoàn tác chúng. Lịch sử hiện có vẫn được giữ, và bạn vẫn có thể hoàn tác những gì có trong đó.",
+  "settings.operationLog.enabled.description": "Khi tắt mục này, Cmdr không ghi lại các lần sao chép, di chuyển, đổi tên hay xóa mới, nên bạn không thể hoàn tác chúng. Lịch sử hiện có vẫn được giữ, và bạn vẫn có thể hoàn tác những gì có trong đó.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "thao tác, nhật ký, nhật ký thao tác, lịch sử, ghi lại, ghi, hoàn tác, quyền riêng tư, tắt",
   "@settings.operationLog.enabled.keywords": {
@@ -2673,17 +2673,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "Tối đa {ceiling}",
+  "settings.managed.summary.upTo": "Tối đa phiên bản {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Chỉ kiểm tra thủ công",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "Tối đa {ceiling}, chỉ kiểm tra thủ công",
+  "settings.managed.summary.upToManualChecksOnly": "Tối đa phiên bản {ceiling}, chỉ kiểm tra thủ công",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Chỉ trên thiết bị",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3291,9 +3291,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr sẽ xóa {sizeText} dữ liệu đang giữ trên máy Mac này, rồi thoát. Bạn không thể hoàn tác việc này.",
+  "settings.dataWipe.introWithSize": "Cmdr sẽ xóa mọi thứ đang giữ trên máy Mac này ({sizeText}), rồi thoát. Bạn không thể hoàn tác việc này.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Những gì bị xóa",
   "@settings.dataWipe.goesHeading": {

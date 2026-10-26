@@ -7,9 +7,9 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
-  "whatsNew.securityNotice.title": "Phiên bản này đã khắc phục {count, plural, other {# vấn đề bảo mật}}.",
+  "whatsNew.securityNotice.title": "Các bản cập nhật gần đây đã khắc phục {count, plural, other {# vấn đề bảo mật}}.",
   "@whatsNew.securityNotice.title": {
-    "sourceHash": "26e4d7e"
+    "sourceHash": "7926316"
   },
   "whatsNew.securityNotice.readAdvisory": "Đọc thông báo bảo mật",
   "@whatsNew.securityNotice.readAdvisory": {

@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Không có gì để đưa trở lại: {count, plural, other {đã không còn ở trong thùng rác nữa}}.",
+  "fileOperations.trash.undoGone": "Không có gì để đưa trở lại: {count, plural, =1 {mục đó không còn ở trong thùng rác nữa} other {các mục đó không còn ở trong thùng rác nữa}}.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, other {mục}} không còn ở trong thùng rác nữa.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -268,9 +268,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Vị trí này vốn đã bắt đầu ở {rootFolder}, nên đường dẫn này dẫn tới {resolvedPath}. Có phải ý bạn là {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Đường dẫn ở đây vốn đã bắt đầu bên trong {rootFolder}, nên đường dẫn bạn nhập dẫn tới {resolvedPath}. Có phải ý bạn là {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Dùng đường dẫn ngắn hơn",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -534,7 +534,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Bạn đã hủy thao tác sao chép này. Các tệp đã sao chép đến giờ vẫn nằm nguyên tại chỗ.} move {Bạn đã hủy thao tác di chuyển này. Các tệp đã di chuyển đến giờ vẫn nằm ở nơi đã chuyển tới.} compress {Bạn đã hủy thao tác nén này.} delete {Bạn đã hủy thao tác xóa này. Các tệp đã xóa đến giờ không còn nữa và các tệp còn lại vẫn còn nguyên.} trash {Bạn đã hủy thao tác chuyển vào thùng rác này. Các tệp đã chuyển đến giờ vẫn nằm trong thùng rác và các tệp còn lại vẫn ở chỗ cũ.} other {Bạn đã hủy thao tác này.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Đang hủy… (đang dọn dẹp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -786,7 +786,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, other {và thêm {countText} mục nữa}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Sao chép các mục còn lại} move {Di chuyển các mục còn lại} delete {Xóa các mục còn lại} trash {Chuyển các mục còn lại vào thùng rác} other {Tiếp tục với các mục còn lại}}",
   "@fileOperations.sourcesGone.continue": {

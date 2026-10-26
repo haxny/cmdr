@@ -273,7 +273,7 @@ the catalog's drift:
 ## Toast sau khi hoàn tác thao tác đang chạy (`fileOperations.cancelRollback.*`, `rollbackConfirm.body`)
 
 - Where English matches `askCmdr.renameUndo.skipReason.*` (`folderNotEmpty.*`), values match word for word; this set
-  counts `mục` ("item"), the rename set `tệp`.
+  counts `mục` ("item"), the rename set `tệp`, except where its English says "item" (`vanished.counted` → `mục`).
 - Left X where it is → `Giữ nguyên`. after Cmdr put it there → `đưa nó tới đó` over `ghi nó vào đó` (copy only).
   `failed.*` leaves the frame (the drive refused): `Không hoàn tác được …`.
 - `leftBehind` and the four `rollbackConfirm.body*` share `Cmdr bỏ qua những gì nó không chắc chắn`. `stagedLeftover.*`

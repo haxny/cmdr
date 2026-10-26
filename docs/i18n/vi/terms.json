@@ -3474,5 +3474,76 @@
     "confidence": "high",
     "forms": "Not a valid name → Tên không hợp lệ; isn't valid → không hợp lệ; a license valid until a date → có hiệu lực đến {date}; Validity → Hiệu lực",
     "sources": "Total Commander vi (608 Tên tập tin được chỉ rõ không hợp lệ!; 1908 says Tên không đúng); GNOME Nautilus vi (The name “%s” is not valid → Tên “%s” không hợp lệ); MS terminology (invalid → không hợp lệ); catalog (errors.write.invalidName.title, ai.cloud.authError, licensing.dialog.validityValidUntil Có hiệu lực đến)"
+  },
+  "administrator": {
+    "chosen": "quản trị viên",
+    "accept": ["quyền quản trị"],
+    "confidence": "high",
+    "forms": "administrator password → mật khẩu quản trị viên; administrator rights → quyền quản trị; contact your administrator → liên hệ quản trị viên của bạn",
+    "avoid": [
+      {
+        "form": "người quản trị",
+        "why": "MS variant; macOS Finder and AppKit say quản trị viên"
+      }
+    ],
+    "sources": "macOS Finder N15 (yêu cầu tên và mật khẩu quản trị viên), AppKit AppKitErrors (Liên hệ quản trị viên của bạn); MS terminology (quản trị viên, người quản trị); catalog main.cliCommand.canceled, errors.write.permissionDenied.suggestion.* (quyền quản trị)"
+  },
+  "uninstall": {
+    "chosen": "gỡ cài đặt",
+    "confidence": "high",
+    "forms": "Uninstall “cmdr” command → Gỡ cài đặt lệnh “cmdr”; Uninstalled → Đã gỡ cài đặt; before you uninstall Cmdr → trước khi gỡ cài đặt Cmdr",
+    "avoid": [
+      {
+        "form": "gỡ bỏ",
+        "why": "the remove-from-a-list verb; taking software off the Mac is gỡ cài đặt, the opposite of cài đặt"
+      },
+      {
+        "form": "dỡ cài đặt",
+        "why": "MS variant spelling; MS also lists the everyday gỡ cài đặt"
+      }
+    ],
+    "sources": "MS terminology (uninstall → gỡ cài đặt, dỡ cài đặt); catalog menu.app.cliCommandUninstall, commands.appToggleCliCommand.uninstall.label (Gỡ cài đặt lệnh “cmdr”); no macOS pile string"
+  },
+  "tamper": {
+    "chosen": "can thiệp",
+    "confidence": "tentative",
+    "forms": "someone tampering with the connection → ai đó can thiệp vào kết nối; tampering with traffic → can thiệp vào dữ liệu truyền",
+    "avoid": [
+      {
+        "form": "xáo trộn",
+        "why": "MS terminology; reads as shuffling or messing up, not a deliberate attack"
+      }
+    ],
+    "sources": "catalog (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid, securityNotices.smbSignatureRefused.body, servers.paneState.guestSessionRefusedHint); MS terminology (tamper → xáo trộn); no macOS pile string"
+  },
+  "unlock-device": {
+    "chosen": "mở khóa",
+    "confidence": "high",
+    "forms": "plug it in and unlock it → cắm điện thoại … và mở khóa máy",
+    "sources": "macOS AppKit (Mở khóa), as the unlock ruling; catalog fileExplorer.navigation.favoriteUnreachable.phoneUnplugged and the MTP readiness strings (mở khóa và đang ở chế độ truyền tệp)"
+  },
+  "blocked-by": {
+    "chosen": "chặn",
+    "confidence": "high",
+    "forms": "Cmdr blocked X from doing Y → Cmdr đã chặn X + verb (securityNotices.mcpForeignOrigin.title); macOS blocked Cmdr → macOS đã chặn Cmdr",
+    "sources": "MS terminology (Blocked → bị chặn); catalog (errors.listing.notPermitted.explanation macOS đã chặn, securityNotices.mcpForeignOrigin.title), the same root as the blocked ruling"
+  },
+  "ai-reply": {
+    "chosen": "câu trả lời",
+    "confidence": "high",
+    "forms": "the AI's reply → câu trả lời của AI; a server's reply is the respond concept (phản hồi), not this one",
+    "sources": "catalog (askCmdr.error.unfinishedReply, ai.translateError.parseError.title, askCmdr.softCap.message, ai.cloudConsent.logsNote)",
+    "exceptions": {
+      "securityNotices.smbSignatureRefused.body": "English-sense: the reply is an SMB server's signed response (respond concept, phản hồi), not an AI reply"
+    }
+  },
+  "reply": {
+    "chosen": "câu trả lời",
+    "confidence": "high",
+    "forms": "the AI's reply → câu trả lời; a server's reply is the respond concept (phản hồi), not this one",
+    "sources": "catalog (askCmdr.error.unfinishedReply Câu trả lời chưa hoàn tất được, ai.translateError.parseError.title)",
+    "exceptions": {
+      "securityNotices.smbSignatureRefused.body": "English-sense: the reply is an SMB server's signed response (respond concept, phản hồi), not an AI reply"
+    }
   }
 }

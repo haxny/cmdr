@@ -7,13 +7,13 @@
   "@securityNotices.dismiss": {
     "sourceHash": "48845bf"
   },
-  "securityNotices.mcpForeignOrigin.title": "Cmdr đã chặn một trang web kết nối tới máy chủ MCP của Cmdr",
+  "securityNotices.mcpForeignOrigin.title": "Cmdr đã chặn một trang web kết nối tới máy chủ MCP",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
   "securityNotices.mcpForeignOrigin.body": "Một trang web đang mở trong trình duyệt của bạn đã cố liên lạc với Cmdr. Không có gì lọt vào được. Nếu việc này cứ tiếp diễn, hãy đóng các tab bạn không tin cậy.",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "Cài đặt MCP",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr đã từ chối phản hồi từ một mục chia sẻ mạng",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr đã từ chối phản hồi từ một máy chủ",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
-  "securityNotices.smbSignatureRefused.body": "Phản hồi này không có chữ ký của máy chủ, nên Cmdr không tin cậy nó. Một thiết bị mạng chập chờn có thể gây ra chuyện này, và ai đó can thiệp vào dữ liệu truyền giữa bạn và máy chủ cũng vậy. Hãy kết nối lại, và nếu việc này xảy ra lần nữa, hãy kiểm tra mạng của bạn.",
+  "securityNotices.smbSignatureRefused.body": "Phản hồi này không có chữ ký của máy chủ, nên Cmdr không tin cậy phản hồi đó. Một thiết bị mạng chập chờn có thể gây ra chuyện này, và ai đó can thiệp vào dữ liệu truyền giữa bạn và máy chủ cũng vậy. Hãy kết nối lại, và nếu việc này xảy ra lần nữa, hãy kiểm tra mạng của bạn.",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "Kết nối lại",
   "@securityNotices.smbSignatureRefused.reconnect": {

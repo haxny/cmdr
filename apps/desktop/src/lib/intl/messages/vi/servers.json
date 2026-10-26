@@ -315,9 +315,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Ở đây chỉ dùng chữ thường, chữ số và dấu gạch ngang.",
+  "servers.refusal.s3FieldMalformed": "Ở đây chỉ dùng a–z, 0–9 và dấu gạch ngang.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Hãy nhập điểm cuối dưới dạng http:// hoặc https:// cùng với tên máy chủ, ví dụ https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -345,7 +345,7 @@
   },
   "servers.refusal.shareMounted": "Mục chia sẻ {name} vẫn đang được gắn kết từ địa chỉ cũ. Hãy tháo mục chia sẻ này, rồi nhấn Lưu lần nữa.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr không thể tháo mục chia sẻ {name}, nên chưa lưu gì. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -539,17 +539,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Máy chủ đã chuyển đi nơi khác? Hãy nhập điểm cuối mới. Mọi bộ chứa thuộc khóa này sẽ đi theo, cùng mục ưa thích, các tab đang mở và khóa truy cập bí mật đã lưu.",
+  "servers.sheet.s3EndpointMoveHelp": "Máy chủ đã chuyển đi nơi khác? Hãy nhập điểm cuối mới. Mọi bộ chứa thuộc khóa này sẽ đi theo cùng mục ưa thích và các tab đang mở của bộ chứa đó, và khóa truy cập bí mật đã lưu cũng đi theo.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Máy chủ đã chuyển đi nơi khác? Hãy nhập địa chỉ mới. Mục ưa thích, các tab đang mở và mật khẩu đã lưu của máy chủ sẽ đi theo.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Máy chủ đã chuyển đi nơi khác? Hãy nhập địa chỉ mới. Các mục chia sẻ và mật khẩu đã lưu của máy chủ sẽ đi theo, còn mục ưa thích và các tab đang mở của từng mục chia sẻ sẽ đi theo vào lần đầu mục chia sẻ đó được mở ở địa chỉ mới.",
+  "servers.sheet.smbAddressMoveHelp": "Máy chủ đã chuyển đi nơi khác? Hãy nhập địa chỉ mới. Các mục chia sẻ và mật khẩu đã lưu của máy chủ sẽ đi theo, còn mục ưa thích và các tab đang mở của từng mục chia sẻ sẽ đi theo khi mục chia sẻ đó được mở ở địa chỉ mới.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Tên người dùng",
   "@servers.sheet.username": {
@@ -788,9 +788,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Tôi đã kiểm tra rồi",
+  "servers.hostKey.changedDisclosure": "Tôi đã kiểm tra khóa rồi",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Dấu vân tay của khóa",
   "@servers.hostKey.fingerprintLabel": {
@@ -820,9 +820,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Tôi đã kiểm tra rồi",
+  "servers.certificate.changedDisclosure": "Tôi đã kiểm tra chứng nhận rồi",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Dấu vân tay của chứng nhận (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -872,9 +872,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Bạn đã yêu cầu đăng nhập bằng tài khoản của bạn, nhưng máy chủ lại cho vào với tư cách khách. Thường thì điều đó có nghĩa là mật khẩu không đúng. Trong một số ít trường hợp, đó là dấu hiệu có thứ gì đó đang can thiệp vào kết nối.",
+  "servers.paneState.guestSessionRefusedHint": "Bạn đã yêu cầu đăng nhập bằng tài khoản của bạn, nhưng máy chủ lại cho vào với tư cách khách. Thường thì điều đó có nghĩa là mật khẩu không đúng. Trong một số ít trường hợp, đó là dấu hiệu có ai đó đang can thiệp vào kết nối.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Thử mật khẩu khác…",
   "@servers.paneState.tryAnotherPassword": {

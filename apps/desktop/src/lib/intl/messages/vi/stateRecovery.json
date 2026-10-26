@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr không đọc được lịch sử hoàn tác của bạn, nên lịch sử bắt đầu lại từ đầu",
+  "stateRecovery.operationLog.title": "Cmdr không đọc được nhật ký thao tác của bạn, nên nhật ký bắt đầu lại từ đầu",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr không đọc được các cuộc trò chuyện Ask Cmdr của bạn, nên danh sách trò chuyện bắt đầu lại từ đầu",
+  "stateRecovery.chatHistory.title": "Cmdr không đọc được các cuộc trò chuyện Ask Cmdr của bạn, nên danh sách trò chuyện đang trống",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr không đọc được mục ưa thích của bạn, nên danh sách đang trống",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr không đọc được các mục gần đây trong “Đi tới thư mục”, nên danh sách bắt đầu lại từ đầu",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr không đọc được các tìm kiếm gần đây của bạn, nên danh sách bắt đầu lại từ đầu",
   "@stateRecovery.searchHistory.title": {
