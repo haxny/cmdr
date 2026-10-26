@@ -17727,6 +17727,11 @@ export type SuggestedGroupView = {
   rationale: string | null
   sourceVolumeId: string
   /**
+   *  What the source volume is called: the registered volume's own name, or a saved place's
+   *  while nobody has connected it. `None` when nothing knows that id.
+   */
+  sourceVolumeName: string | null
+  /**
    *  The shared destination folder, the rename parent, or the archive path. `None` for trash
    *  and delete, which bind no target at all.
    */

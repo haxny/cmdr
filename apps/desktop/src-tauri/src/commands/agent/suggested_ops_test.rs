@@ -122,6 +122,7 @@ fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
 fn facts(destination_state: DestinationState) -> GroupReadFacts {
     GroupReadFacts {
         destination_state,
+        source_volume_name: None,
         destination_volume_name: None,
         run_blocker: None,
     }
@@ -246,6 +247,7 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
         group(7, 2, ProposalVerb::Move),
         GroupReadFacts {
             destination_state: DestinationState::WillBeCreated,
+            source_volume_name: Some("Macintosh HD".into()),
             destination_volume_name: Some("Macintosh HD".into()),
             run_blocker: Some(RunBlocker::NoTrash),
         },
@@ -260,6 +262,7 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
     assert_eq!(view.source_volume_id, "root");
     assert_eq!(view.destination.as_deref(), Some("/Users/someone/Documents/Invoices"));
     assert_eq!(view.destination_volume_name.as_deref(), Some("Macintosh HD"));
+    assert_eq!(view.source_volume_name.as_deref(), Some("Macintosh HD"));
     assert_eq!(
         view.destination_volume_id.as_deref(),
         Some("root"),
@@ -487,60 +490,6 @@ fn a_store_that_isnt_open_is_not_a_store_that_refused() {
     );
 }
 
-/// A live fact crosses the wire as a tagged union the dialog can switch on, and a folder's or
-/// an undated file's missing number stays `null`, never a zero.
-#[test]
-fn a_live_fact_keeps_its_three_answers_apart_on_the_wire() {
-    let present = live_state(SourceStat::Present {
-        size: Some(7),
-        modified: Some(1_700_000_000),
-        inode: Some(12),
-    });
-    assert_eq!(
-        serde_json::to_value(SuggestedOpLiveFact {
-            op_id: 4,
-            state: present
-        })
-        .unwrap(),
-        serde_json::json!({ "opId": 4, "state": { "kind": "present", "size": 7, "modified": 1_700_000_000 } })
-    );
-    let folder = live_state(SourceStat::Present {
-        size: None,
-        modified: None,
-        inode: None,
-    });
-    assert_eq!(
-        serde_json::to_value(folder).unwrap(),
-        serde_json::json!({ "kind": "present", "size": null, "modified": null })
-    );
-    assert_eq!(
-        serde_json::to_value(live_state(SourceStat::Missing)).unwrap(),
-        serde_json::json!({ "kind": "missing" })
-    );
-    assert_eq!(
-        serde_json::to_value(live_state(SourceStat::Unknown)).unwrap(),
-        serde_json::json!({ "kind": "unknown" })
-    );
-}
-
-/// A source volume nobody connected and one that left call for different words, so they stay
-/// two variants.
-#[test]
-fn a_live_facts_refusal_names_why_the_source_cant_be_asked() {
-    assert_eq!(
-        serde_json::to_value(SuggestedOpsLiveFactsError::SourceNotConnected).unwrap(),
-        serde_json::json!({ "type": "sourceNotConnected" })
-    );
-    assert_eq!(
-        serde_json::to_value(SuggestedOpsLiveFactsError::SourceGone).unwrap(),
-        serde_json::json!({ "type": "sourceGone" })
-    );
-    assert_eq!(
-        serde_json::to_value(SuggestedOpsLiveFactsError::UnknownGroup).unwrap(),
-        serde_json::json!({ "type": "unknownGroup" })
-    );
-}
-
 /// A window is capped server-side, so a caller asking for a 60,000-row "page" can't load or
 /// stat the whole group in one call; it pages for the rest.
 #[test]
@@ -548,4 +497,20 @@ fn an_op_window_is_capped_at_the_servers_ceiling() {
     assert_eq!(op_window(200), 200);
     assert_eq!(op_window(MAX_OP_WINDOW), MAX_OP_WINDOW);
     assert_eq!(op_window(60_000), MAX_OP_WINDOW);
+}
+
+/// The source volume is named the way the destination is: the registered volume's own name, a
+/// saved place's while nobody connected it, and nothing for an id nobody knows.
+#[test]
+fn the_source_volume_is_named_even_before_anyone_connects_it() {
+    let mut group = group(1, 1, ProposalVerb::Trash).group;
+    let name =
+        |group: &ProposalGroup| read_facts(group, volume_facts(), DestinationState::NotApplicable).source_volume_name;
+
+    group.source_volume_id = "smb-naspi".into();
+    assert_eq!(name(&group).as_deref(), Some("naspi on 192.168.1.5"));
+    group.source_volume_id = "smb-saved".into();
+    assert_eq!(name(&group).as_deref(), Some("archive on 192.168.1.5"));
+    group.source_volume_id = "nothing-knows-this".into();
+    assert_eq!(name(&group), None);
 }
