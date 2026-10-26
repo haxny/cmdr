@@ -110,6 +110,10 @@
         <span class="repeat" id={repeatId}>{tString('askCmdr.tool.repeat')}</span>
     {/if}
     {#if outcome !== null}
+        <!-- A dot on screen, a comma for a screen reader: "Listed Desktop · showed 5 of 6" reads as
+             two parts of one line, never as one run-on sentence. -->
+        <span class="dot" aria-hidden="true">·</span>
+        <span class="sr-only">{tString('askCmdr.tool.outcomeSeparator')}</span>
         <span class="outcome" use:tooltip={{ text: outcome, overflowOnly: true }}>{outcome}</span>
     {/if}
     <button
@@ -191,6 +195,11 @@
         background: var(--color-bg-tertiary);
         color: var(--color-text-secondary);
         white-space: nowrap;
+    }
+
+    .dot {
+        flex: none;
+        color: var(--color-text-tertiary);
     }
 
     .outcome {

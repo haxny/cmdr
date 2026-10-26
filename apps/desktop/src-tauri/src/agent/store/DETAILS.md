@@ -69,11 +69,12 @@ tolerant parse, one unknown row made the thread impossible to open AND to send i
 `run_turn` appends `ConversationEvent::TurnFinished { stats: TurnStats }` after the last row of every turn that ran at
 least one tool, answered, failed, or stopped alike. `TurnStats` holds the tool-call count, the wall time, and the turn's
 summed per-row `prompt_tokens` / `completion_tokens` (the cost meter's figures, so per-turn footers add up to the
-thread's cost).
+thread's cost), plus `stopped` (the turn ended on a cancel, so the footer can say "Stopped" after a reload).
 
 - **Decision/Why an event row, not a column**: the wall time can't be derived on reload (every row of a turn carries
-  the same `now_secs`), so it must be stored, and an event row needs no migration. Everything else in it is derivable
-  from the rows, so a missing row (an older turn, or a crash before it) loses only the wall time.
+  the same `now_secs`), so it must be stored, and an event row needs no migration. A missing row (an older turn, or a
+  crash before it) loses the wall time and `stopped` (`#[serde(default)]`: an older row reads as not stopped); the
+  rest is derivable from the rows.
 - **The downgrade cost** (accepted): a build from before the `Unknown` tolerant parse can't load, or send into, a thread
   holding this row. A tolerant build reads it as `Unknown` and shows nothing for it.
 - A persist problem writing it is logged and dropped: a footer is worth no turn.

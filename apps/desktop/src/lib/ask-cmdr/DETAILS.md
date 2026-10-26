@@ -201,8 +201,11 @@ a quieter note saying what came back. Every word is ours: the backend sends type
   row names truncate themselves the same way, beside a size that stays on their line.
 - **What came back** (`toolOutcomeText`): a `Record` over every outcome kind. Counts, "showed N of M" when the model got
   part of a list, "so far" / "yet" for a lower bound (❌ never "nothing found" while ground is uncovered), one note per
-  refusal reason and per `MemoryRefusalKind`, and nothing for `answered` / `saved` (the label and glyph say it). A
-  settled call with no outcome says no answer was recorded.
+  refusal reason and per `MemoryRefusalKind`, and nothing for `answered` / `saved` (the label and glyph say it), nor for
+  a `files` subject's `items` count that answered every path the label names (`restatesSubject`: "Looked inside X and 1
+  more" never adds "2 items"; a partial answer still says "showed 1 of 2"). A settled call with no outcome says no
+  answer was recorded. A muted `·` (`aria-hidden`) sets the note apart on screen, and a visually hidden
+  `askCmdr.tool.outcomeSeparator` (a comma) does it for a screen reader, so the two never read as one sentence.
 - **The repeat tag** (`showsRepeatTag`) marks a call with `repeatOf`, and the link's `aria-describedby` points at it.
   The breaker's own `refused: repeatedCall` already says so in its note, so it gets no tag.
 - **Not a live region.** Lines carry no `role="status"` / `aria-busy`: a 12-call turn would chatter. The last round's
@@ -210,7 +213,9 @@ a quieter note saying what came back. Every word is ours: the backend sends type
 - **The stats line** (`AskCmdrTurnStats.svelte`, `turnStatsText`) sits under any bubble whose `stats` ran a tool,
   answered, failed, or stopped: calls, wall time (`formatMilliseconds`, left out for an old turn with `wallMs: null`),
   and tokens. Tokens are the cost meter's (`totalTokens`: prompt plus completion per row), so the turns add up to the
-  thread's `AskCmdrCostFooter`.
+  thread's `AskCmdrCostFooter`. A stopped turn leads with "Stopped" (`TurnStats.stopped`, set by `run_turn` on a cancel
+  and stored in the `TurnFinished` row, so live and reload agree). A turn stored before that field existed reads as not
+  stopped, and a stopped turn that ran no tool has no stats line, so it gets no marker either.
 
 ## Groups and the expanded line
 

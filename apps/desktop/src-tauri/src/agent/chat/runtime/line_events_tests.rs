@@ -222,6 +222,7 @@ async fn a_multi_tool_turn_resolves_each_round_then_finishes_each_call_then_answ
         "summed over every round"
     );
     assert!(stats.wall_ms.is_some());
+    assert!(!stats.stopped, "an answered turn wasn't stopped");
     assert_eq!(
         turn_finished_rows(&conn, id),
         vec![stats],
@@ -361,6 +362,7 @@ async fn a_failed_turn_that_ran_tools_still_reports_and_records_what_it_spent() 
         (stats.tool_calls, stats.prompt_tokens, stats.completion_tokens),
         (1, 50, 5)
     );
+    assert!(!stats.stopped, "a failed turn wasn't stopped");
     assert_eq!(turn_finished_rows(&conn, id), vec![stats]);
 }
 
@@ -408,6 +410,10 @@ async fn a_cancel_mid_dispatch_still_runs_the_round_and_stops_with_stats_that_co
         other => panic!("expected a stopped terminal with stats, got {other:?}"),
     };
     assert_eq!((stats.tool_calls, stats.prompt_tokens), (2, 70));
+    assert!(
+        stats.stopped,
+        "a stopped turn says so, and the stored row keeps it for a reload"
+    );
     assert_eq!(turn_finished_rows(&conn, id), vec![stats]);
 }
 

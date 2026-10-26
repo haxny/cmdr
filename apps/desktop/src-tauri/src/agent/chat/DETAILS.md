@@ -656,8 +656,8 @@ dispatcher (`wake/watch.rs`) must forward it.
 `drive` returns how it ended (`TurnEnd`: answered with id/seq/stop/usage, failed with kind +
 detail, or cancelled) and emits no terminal event itself. `run_turn` then, once per turn:
 
-1. builds `TurnStats` from the tally plus its own wall clock (`None` when no tool ran, so a
-   tool-less turn looks the same live and reloaded);
+1. builds `TurnStats` from the tally plus its own wall clock and whether the turn was cancelled
+   (`stopped`), `None` when no tool ran, so a tool-less turn looks the same live and reloaded;
 2. appends `ConversationEvent::TurnFinished` when there are stats, after the turn's last row
    (a persist problem is logged and dropped; `store/DETAILS.md` § What a turn spent);
 3. emits exactly one of `Done`, `Failed`, or `Stopped`, each carrying `turn: Option<TurnStats>`.

@@ -63,6 +63,10 @@ pub struct TurnStats {
     pub wall_ms: Option<u64>,
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
+    /// The user (or the progress watchdog) stopped the turn, so the footer says so after a reload
+    /// too. `false` for a turn recorded before this was stored: its rows can't tell a stop apart.
+    #[serde(default)]
+    pub stopped: bool,
 }
 
 /// The `messages.role` token for event rows. Kept OUTSIDE `AgentRole` on purpose: an

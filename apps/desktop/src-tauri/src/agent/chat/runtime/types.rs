@@ -110,13 +110,15 @@ pub struct TurnTally {
 
 impl TurnTally {
     /// What the turn spent, for its footer and its `TurnFinished` row: `None` for a turn that ran
-    /// no tool, so a tool-less turn looks the same live and reloaded.
-    pub fn stats(&self, wall_ms: u64) -> Option<TurnStats> {
+    /// no tool, so a tool-less turn looks the same live and reloaded. `stopped` rides along so the
+    /// footer can say a stopped turn was stopped, live and after a reload alike.
+    pub fn stats(&self, wall_ms: u64, stopped: bool) -> Option<TurnStats> {
         (self.tool_calls > 0).then_some(TurnStats {
             tool_calls: self.tool_calls,
             wall_ms: Some(wall_ms),
             prompt_tokens: self.prompt_tokens,
             completion_tokens: self.completion_tokens,
+            stopped,
         })
     }
 }

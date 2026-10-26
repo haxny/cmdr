@@ -412,6 +412,10 @@
   "@askCmdr.tool.repeat": {
     "description": "A small tag at the end of an Ask Cmdr tool line saying the assistant made this exact request earlier in the same answer, so the person can tell a repeat apart from new work. Not a fault. Sentence case, no period."
   },
+  "askCmdr.tool.outcomeSeparator": ", ",
+  "@askCmdr.tool.outcomeSeparator": {
+    "description": "Read by screen readers only, never shown: the pause between an Ask Cmdr tool line’s label and the short note on what came back, so “Listed Desktop” and “showed 5 of 6” read as two parts of one line. On screen a middle dot separates them. Use your language’s comma and its usual spacing."
+  },
   "askCmdr.tool.outcome.items": "{count, plural, one {{countText} item} other {{countText} items}}",
   "@askCmdr.tool.outcome.items": {
     "description": "What came back, shown after a tool line’s label in a quieter color: how many entries a list returned (files in a folder, drives, folders). Lowercase where your language allows, like a short note after the label.",
@@ -714,6 +718,13 @@
       "calls": "The same count as a number, to pick the plural form.",
       "tokensText": "How many tokens, as a formatted number.",
       "tokens": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.turnStats.stopped": "Stopped · {summary}",
+  "@askCmdr.turnStats.stopped": {
+    "description": "The quiet cost line under an Ask Cmdr answer that the person stopped before it finished (with the Stop button, or because it stopped making progress). “Stopped” marks that the answer is incomplete on purpose, not broken. Sentence case. Keep the middle dot as the separator, matching the rest of the line.",
+    "placeholders": {
+      "summary": "The rest of the line, already worded, for example “3 tool calls · 4.2s · 1,800 tokens”."
     }
   },
   "askCmdr.error.noKey": "Add your API key in settings to start chatting.",

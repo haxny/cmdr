@@ -55,6 +55,22 @@ describe('AskCmdrToolLine', () => {
     expect(target.querySelector('.outcome')?.textContent).toBe('3 items')
   })
 
+  it('sets what came back apart: a dot on screen, a comma for a screen reader', () => {
+    const { target } = render(call({ kind: 'folder', path: '/Users/me/Desktop' }))
+    const dot = target.querySelector('.dot')
+    expect(dot?.textContent).toBe('·')
+    expect(dot?.getAttribute('aria-hidden')).toBe('true')
+    // What a screen reader reads: everything but the hidden dot, in order.
+    const spoken = [...target.querySelectorAll('.label, .sr-only, .outcome')].map((el) => el.textContent).join('')
+    expect(spoken.trim()).toBe('Listed Desktop, 3 items')
+  })
+
+  it('draws no separator when nothing came back worth saying', () => {
+    const { target } = render(call({ kind: 'folder', path: '/a' }, { outcome: { kind: 'answered' } }))
+    expect(target.querySelector('.dot')).toBeNull()
+    expect(target.querySelector('.sr-only')).toBeNull()
+  })
+
   it('shows a folder in a pane, then hands focus back to the panes', async () => {
     const { target, revealPath } = render(call({ kind: 'folder', path: '/Users/me/Downloads' }))
     const [link] = links(target)
@@ -146,6 +162,17 @@ describe('AskCmdrTurnStats', () => {
   it('words an answered or stopped turn’s spend, with its time', () => {
     const target = renderStats({ toolCalls: 4, wallMs: 12_300, promptTokens: 2000, completionTokens: 345 })
     expect(target.textContent.trim()).toBe('4 tool calls · 12.3s · 2,345 tokens')
+  })
+
+  it('marks a stopped turn', () => {
+    const target = renderStats({
+      toolCalls: 2,
+      wallMs: 1_500,
+      promptTokens: 10,
+      completionTokens: 5,
+      stopped: true,
+    })
+    expect(target.textContent.trim()).toBe('Stopped · 2 tool calls · 1.5s · 15 tokens')
   })
 
   it('leaves the time out for a turn recorded before it was measured', () => {

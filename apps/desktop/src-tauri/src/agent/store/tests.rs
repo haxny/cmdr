@@ -275,6 +275,18 @@ fn agent_role_tokens_round_trip_and_are_unique() {
     assert_token_round_trip(&roles, |r| r.as_token(), AgentRole::from_token);
 }
 
+/// A `TurnFinished` row written before turns stored whether they were stopped still loads, as a
+/// turn that wasn't: its rows can't tell a stop apart, so the footer claims nothing.
+#[test]
+fn a_turn_finished_row_from_before_stopped_was_stored_loads_as_not_stopped() {
+    let old = r#"{"kind":"turnFinished","stats":{"toolCalls":2,"wallMs":900,"promptTokens":40,"completionTokens":4}}"#;
+    let event: ConversationEvent = serde_json::from_str(old).expect("an old row still parses");
+    let ConversationEvent::TurnFinished { stats } = event else {
+        panic!("expected TurnFinished, got {event:?}");
+    };
+    assert_eq!((stats.tool_calls, stats.stopped), (2, false));
+}
+
 /// Cloud AI consent round-trips through the `meta` table: absent → recorded (version +
 /// timestamp) → cleared. A partial/absent record reads as no consent, so the gate stays closed.
 #[test]

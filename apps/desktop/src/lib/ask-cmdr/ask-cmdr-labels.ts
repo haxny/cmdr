@@ -296,13 +296,25 @@ const INDEX_UNAVAILABLE_KEYS: Record<IndexUnavailableReason, MessageKey> = {
 
 /**
  * What came back, as the short note after a line's label. `null` while the call runs, and for a
- * plain answer or a saved note, where the label and the glyph already say it all. A settled call
- * with no outcome (a stopped or crashed turn) says no answer was recorded.
+ * plain answer or a saved note, where the label and the glyph already say it all, and for a count
+ * the label already names (`restatesSubject`). A settled call with no outcome (a stopped or crashed
+ * turn) says no answer was recorded.
  */
 export function toolOutcomeText(call: RailToolCall): string | null {
   if (call.running) return null
   if (call.outcome === null) return tString('askCmdr.tool.outcome.noAnswer')
+  if (restatesSubject(call.subject, call.outcome)) return null
   return outcomeText(call.outcome)
+}
+
+/**
+ * Whether the outcome only repeats how many paths the label already names: "Looked inside X and 1
+ * more" answered for both paths would add "2 items". A partial answer (some paths got no row) still
+ * says so.
+ */
+function restatesSubject(subject: ToolSubject | null, outcome: ToolOutcome): boolean {
+  if (subject?.kind !== 'files' || outcome.kind !== 'items' || outcome.lowerBound) return false
+  return outcome.returned === subject.count && outcome.total === subject.count
 }
 
 type OutcomeOf<K extends ToolOutcome['kind']> = Extract<ToolOutcome, { kind: K }>
@@ -349,7 +361,7 @@ function outcomeText(outcome: ToolOutcome): string | null {
  * What a turn spent, as the quiet line under its bubble: tool calls, wall time, and tokens. The
  * tokens are the cost meter's (prompt plus completion per row), so a thread's turns add up to its
  * cost footer. `null` for a turn with no stats or no tool call; a turn recorded before wall time
- * was measured leaves the time out.
+ * was measured leaves the time out, and a stopped turn leads with saying so.
  */
 export function turnStatsText(stats: TurnStats | null): string | null {
   if (stats === null || stats.toolCalls === 0) return null
@@ -360,8 +372,11 @@ export function turnStatsText(stats: TurnStats | null): string | null {
     tokens,
     tokensText: formatInteger(tokens),
   }
-  if (stats.wallMs === null) return tString('askCmdr.turnStats.summaryNoDuration', params)
-  return tString('askCmdr.turnStats.summary', { ...params, duration: formatMilliseconds(stats.wallMs) })
+  const summary =
+    stats.wallMs === null
+      ? tString('askCmdr.turnStats.summaryNoDuration', params)
+      : tString('askCmdr.turnStats.summary', { ...params, duration: formatMilliseconds(stats.wallMs) })
+  return stats.stopped === true ? tString('askCmdr.turnStats.stopped', { summary }) : summary
 }
 
 const ERROR_KEYS: Record<AskCmdrErrorKind, MessageKey> = {

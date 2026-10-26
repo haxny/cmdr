@@ -18895,6 +18895,11 @@ export type TurnStats = {
   wallMs: number | null
   promptTokens: number
   completionTokens: number
+  /**
+   *  The user (or the progress watchdog) stopped the turn, so the footer says so after a reload
+   *  too. `false` for a turn recorded before this was stored: its rows can't tell a stop apart.
+   */
+  stopped?: boolean
 }
 
 /**

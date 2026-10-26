@@ -180,6 +180,18 @@ describe('toolOutcomeText', () => {
     expect(settled({ kind: 'saved' })).toBeNull()
   })
 
+  it('says nothing more when the count only repeats the paths the label names, and keeps a partial answer', () => {
+    const files: ToolSubject = { kind: 'files', firstPath: '/a/notes.txt', count: 2 }
+    const outcomeOf = (tool: string, outcome: ToolOutcome): string | null =>
+      toolOutcomeText(call(tool, files, { outcome }))
+    const all: ToolOutcome = { kind: 'items', returned: 2, total: 2, lowerBound: false }
+    expect(outcomeOf('inspect_file', all)).toBeNull()
+    expect(outcomeOf('image_facts', all)).toBeNull()
+    expect(outcomeOf('inspect_file', { kind: 'items', returned: 1, total: 2, lowerBound: false })).toBe('showed 1 of 2')
+    // A folder's count is news: the label names the folder, not how much it holds.
+    expect(toolOutcomeText(call('list_dir', { kind: 'folder', path: '/a' }, { outcome: all }))).toBe('2 items')
+  })
+
   it('says nothing while the call runs, and that no answer was recorded for a settled one without', () => {
     expect(toolOutcomeText(call('list_dir', null, { running: true, outcome: null }))).toBeNull()
     expect(settled(null)).toBe('no answer recorded')
@@ -246,6 +258,15 @@ describe('turnStatsText', () => {
   it('leaves the time out for a turn recorded before it was measured', () => {
     expect(turnStatsText({ toolCalls: 2, wallMs: null, promptTokens: 10, completionTokens: 5 })).toBe(
       '2 tool calls · 15 tokens',
+    )
+  })
+
+  it('leads with "Stopped" for a turn the user stopped', () => {
+    expect(turnStatsText({ toolCalls: 2, wallMs: 4200, promptTokens: 10, completionTokens: 5, stopped: true })).toBe(
+      'Stopped · 2 tool calls · 4.2s · 15 tokens',
+    )
+    expect(turnStatsText({ toolCalls: 2, wallMs: 4200, promptTokens: 10, completionTokens: 5, stopped: false })).toBe(
+      '2 tool calls · 4.2s · 15 tokens',
     )
   })
 

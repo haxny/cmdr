@@ -51,7 +51,7 @@ pub async fn run_turn(
     let mut tally = TurnTally::default();
     let end = drive(llm, dispatcher, conn, tools, params, sink, cancel, &mut tally).await;
     let wall_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
-    let stats = tally.stats(wall_ms);
+    let stats = tally.stats(wall_ms, matches!(end, TurnEnd::Cancelled));
     if let Some(stats) = stats {
         record_turn_finished(conn, params, stats);
     }
