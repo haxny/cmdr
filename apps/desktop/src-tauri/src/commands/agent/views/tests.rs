@@ -156,7 +156,17 @@ fn identity_seq_and_token_counts_survive_the_projection() {
     assert_eq!(view.created_at, 1_780_000_000);
 }
 
-/// thing to the model.
+/// A kind a newer build wrote projects to an event view with no blocks, keeping its id and
+/// seq so the timeline (and paging) stay whole after a downgrade.
+#[test]
+fn an_unknown_event_row_projects_to_an_empty_event_view_at_its_seq() {
+    let view = to_message_view(stored(store::StoredContent::Event(ConversationEvent::Unknown)));
+
+    assert!(matches!(view.role, MessageRoleView::Event));
+    assert!(view.blocks.is_empty());
+    assert_eq!((view.id, view.seq), (7, 3));
+}
+
 // ── The `From` impls ───────────────────────────────────────────────────────────
 
 #[test]

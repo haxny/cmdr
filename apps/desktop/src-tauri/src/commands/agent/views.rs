@@ -333,6 +333,9 @@ pub(super) fn to_message_view(message: StoredMessage) -> MessageView {
                 decisions: vec![decision],
             }],
         ),
+        // A kind a newer build wrote: an event view with nothing to draw, kept so the row's
+        // seq still holds its place in the timeline.
+        store::StoredContent::Event(store::ConversationEvent::Unknown) => (MessageRoleView::Event, Vec::new()),
     };
     MessageView {
         id: message.id,

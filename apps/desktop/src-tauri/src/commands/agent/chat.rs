@@ -136,6 +136,8 @@ fn slot_event_view(recorded: RecordedSlotEvent) -> MessageView {
                 decisions: vec![decision],
             }]
         }
+        // Never written, so never recorded here; an empty event view if it ever were.
+        store::ConversationEvent::Unknown => Vec::new(),
     };
     MessageView {
         id: recorded.message_id,

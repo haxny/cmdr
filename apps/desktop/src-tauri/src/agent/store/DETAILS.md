@@ -49,6 +49,21 @@ merge. The reader (`map_message_row`) branches on the role token into `StoredCon
 so the transcript loader can't feed an event to a provider. `text_for_search` stays empty
 — a model name is not conversation content and never matches search.
 
+### An event kind this build doesn't know
+
+A new event kind is a forward-compat hazard with no schema bump to refuse it: the row lands in a `main.db` an older
+build may open after a downgrade. `list_messages` feeds BOTH the history page and the transcript loader, so before the
+tolerant parse, one unknown row made the thread impossible to open AND to send into.
+
+- **Decision/Why**: `ConversationEvent` carries `#[serde(other)] Unknown`. An unknown `kind` parses to it and the ROW
+  IS KEPT (paging counts rows, so dropping it would shift every offset); the views project it to an event view with no
+  blocks, and the transcript loader skips it like any event. Only an unknown `kind` is tolerated: a known kind with a
+  body that doesn't parse is still `ContentBlocks` corruption.
+- `Unknown` is read-only: `append_event` debug-asserts it never gets written.
+- **The accepted downgrade gap**: a build from BEFORE this tolerant parse still refuses such a thread whole (it can't
+  load it or send into it). Open beta, auto-update, and rare downgrades make that acceptable; every build from this one
+  on reads a newer kind as `Unknown`.
+
 ## FTS5 comes from `bundled`, not a feature
 
 rusqlite 0.39 has no `fts5` feature; the FTS5 module is compiled into the `bundled` SQLite amalgamation by default. So

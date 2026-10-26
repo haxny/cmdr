@@ -34,6 +34,14 @@ pub enum ConversationEvent {
     /// outlives every locale pass, exactly as a wake's digest does, so the rail says it in the
     /// user's language and nothing English is frozen in `main.db`.
     ProposalDecided { decision: ProposalDecision },
+    /// A row whose `kind` this build doesn't know: a newer build wrote it, and this one runs on
+    /// the same `main.db` after a downgrade. Read-only. It parses so the thread still loads AND
+    /// sends (the history page and the transcript loader both read every row), and the row is
+    /// kept rather than dropped because paging counts rows. ❌ Never written: [`append_event`]
+    /// refuses it. Only an unknown `kind` lands here; a known kind with a broken body is still
+    /// a decode error.
+    #[serde(other)]
+    Unknown,
 }
 
 /// The `messages.role` token for event rows. Kept OUTSIDE `AgentRole` on purpose: an
@@ -50,12 +58,37 @@ pub fn append_event(
     event: &ConversationEvent,
     now: i64,
 ) -> Result<(i64, i64), AgentStoreError> {
+    debug_assert!(
+        !matches!(event, ConversationEvent::Unknown),
+        "an Unknown event is read-only: it stands for a kind a newer build wrote"
+    );
     let content_blocks = serde_json::to_string(event).map_err(AgentStoreError::ContentBlocks)?;
     insert_message_row(
         conn,
         conversation_id,
         EVENT_ROLE_TOKEN,
         &content_blocks,
+        "",
+        None,
+        None,
+        now,
+    )
+}
+
+/// Append an event row with arbitrary `content_blocks`, the way a newer build writes a kind
+/// this one doesn't know. Tests only: production writes go through [`append_event`].
+#[cfg(test)]
+pub fn append_raw_event_row(
+    conn: &Connection,
+    conversation_id: i64,
+    content_blocks: &str,
+    now: i64,
+) -> Result<(i64, i64), AgentStoreError> {
+    insert_message_row(
+        conn,
+        conversation_id,
+        EVENT_ROLE_TOKEN,
+        content_blocks,
         "",
         None,
         None,
