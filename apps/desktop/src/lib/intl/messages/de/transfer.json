@@ -59,9 +59,9 @@
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr konnte nicht bestätigen, dass die Kopien vollständig auf den Datenträger geschrieben sind. Falls das Laufwerk abgezogen wurde oder Probleme macht, prüfe die Kopien, bevor du dich darauf verlässt.",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr konnte nicht bestätigen, dass die Kopien vollständig auf das Laufwerk geschrieben sind. Falls es abgezogen wurde oder Probleme macht, prüfe die Kopien, bevor du dich darauf verlässt.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Dieser Server kann {classes} nicht speichern, deshalb sind diese Angaben nicht mitgekommen.",
   "@transfer.metadataLeftBehind": {

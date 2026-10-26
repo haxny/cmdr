@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Massenumbenennung",
+  "onboarding.stepAi.table.rowRename": "Viele Dateien umbenennen",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Du legst über die Stapel-Umbenennung das Umbenennungsmuster von Hand fest, prüfst und wendest es an.",
+  "onboarding.stepAi.table.renameWithout": "Du legst in „Mehrfach umbenennen“ von Hand ein Umbenennungsmuster fest, dann prüfst du es und wendest es an.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Du sagst „ISO-Datum voranstellen“, der Agent setzt dein Umbenennungsmuster, du prüfst und wendest es an, wie du magst.",
   "@onboarding.stepAi.table.renameWith": {

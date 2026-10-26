@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Es gibt nichts zurückzulegen: {count, plural, one {das Objekt ist} other {die Objekte sind}} nicht mehr im Papierkorb.",
+  "fileOperations.trash.undoGone": "Es gibt nichts zurückzulegen: {count, plural, one {das Objekt war} other {die Objekte waren}} nicht mehr im Papierkorb.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {Objekt war} other {Objekte waren}} nicht mehr im Papierkorb.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -269,9 +269,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Dieser Ort beginnt schon in {rootFolder}, also führt dieser Pfad zu {resolvedPath}. Meintest du {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Pfade in diesem Feld beginnen bereits in {rootFolder}, deshalb führt dein Pfad zu {resolvedPath}. Meintest du {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Kürzeren Pfad verwenden",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -535,7 +535,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Du hast das Kopieren abgebrochen. Die bisher kopierten Dateien bleiben, wo sie sind.} move {Du hast das Bewegen abgebrochen. Die bisher bewegten Dateien bleiben dort, wo sie gelandet sind.} compress {Du hast das Komprimieren abgebrochen.} delete {Du hast das Löschen abgebrochen. Die bisher gelöschten Dateien sind weg, die übrigen sind noch da.} trash {Du hast das Bewegen in den Papierkorb abgebrochen. Die bisher bewegten Dateien bleiben im Papierkorb, die übrigen sind noch dort, wo sie waren.} other {Du hast diesen Vorgang abgebrochen.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Wird abgebrochen … (wird aufgeräumt)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -788,7 +788,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "und {countText} {count, plural, one {weiteres Objekt} other {weitere Objekte}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Rest kopieren} move {Rest bewegen} delete {Rest löschen} trash {Rest in den Papierkorb bewegen} other {Rest erledigen}}",
   "@fileOperations.sourcesGone.continue": {

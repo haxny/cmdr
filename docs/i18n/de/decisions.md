@@ -378,15 +378,16 @@ Deliberate splits (don't unify):
 - The `*BusyTooltip` trio shares `Cmdr arbeitet noch mit Dateien auf diesem … . …, sobald das erledigt ist.`; eject says
   `Wirf das Gerät aus` (`es` could be Cmdr).
 - `Die Verbindung wurde unterbrochen.`, never `abgebrochen`.
-- A certificate or key takes the dative (`vertraut dem Zertifikat … nicht`); both `*.changedDisclosure` say
-  `Ich habe das geprüft`. In prose `der Schlüssel von {host}`, never `Hostschlüssel` nor `{host}s Schlüssel`.
+- A certificate or key takes the dative (`vertraut dem Zertifikat … nicht`); `*.changedDisclosure` names its noun
+  (`Ich habe den Schlüssel geprüft`). In prose `der Schlüssel von {host}`, never `Hostschlüssel` nor
+  `{host}s Schlüssel`.
 - `Anmeldemethode` over Apple's `Authentifizierungsmethode`; `Das Passwort hat für {username} nicht geklappt.`, never
   `ungültig`.
 - Back-references say `den Server`: in `connectionTooltipNeedsHostKey` two masculine nouns precede it.
 - Dialog titles equal their menu items; `Freigabe vergessen` copies `Server vergessen`. Forget toasts take Cmdr as
   subject: bare `{hostName} vergessen` reads as an order, `ließ sich nicht vergessen` as „unforgettable“.
 - `als {username}`, `als Gast` lowercase after the name; buttons `Anmelden als …` (Finder `SN1`) and
-  `Gastzugriff verwenden`.
+  `Als Gast durchsehen` (browse verb).
 
 ## Die Server-Übersicht: Spalten, Zustände und die Zeile im Volume-Umschalter (`servers.hub.*`, `commands.servers*`, `fileExplorer.navigation.server*`/`.pinRefusedToast`/`.networkVolume`, `shortcuts.scope.servers`/`.places`)
 
@@ -413,7 +414,7 @@ Apple's Connect to Server dialog (`NetAuthAgent.app` `Localizable.loctable`) is 
 - `Dem neuen Schlüssel vertrauen`; „something is sitting between you and it“ →
   `sich zwischen dich und den Server schalten`, never `Man-in-the-Middle`.
 - Legend `Verbindungsmodus` (names the control, like `Protokoll`). `Erste Verbindung zu {host}` describes, never
-  commands. `Der Schlüssel von {host} hat sich geändert`; `Ich habe ihn geprüft` (both candidates masculine).
+  commands. `Der Schlüssel von {host} hat sich geändert`.
 - „the server's owner“ → `die Person, die den Server betreibt` (`Betreiber` is generic masculine).
   `Cmdr hat die Verbindung zu {name} gestoppt`, never `abgebrochen`.
 - `Hinzufügen` / `Hinzufügen und öffnen` / `Trotzdem hinzufügen` share a stem; the help line says `speichert`.

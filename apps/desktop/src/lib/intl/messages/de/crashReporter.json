@@ -71,9 +71,9 @@
   "@crashReporter.sentToast.message.report": {
     "sourceHash": "a676ed5"
   },
-  "crashReporter.sentToast.changeSettings": "In Einstellungen > Updates ändern",
+  "crashReporter.sentToast.changeSettings": "In den Einstellungen ändern",
   "@crashReporter.sentToast.changeSettings": {
-    "sourceHash": "25d151d"
+    "sourceHash": "144d0bd"
   },
   "crashReporter.sentToast.sendLog": "Protokoll anhängen",
   "@crashReporter.sentToast.sendLog": {

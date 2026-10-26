@@ -167,9 +167,9 @@
   "@main.cliCommand.installed": {
     "sourceHash": "5b72efe"
   },
-  "main.cliCommand.uninstalled": "Befehl „cmdr“ entfernt.",
+  "main.cliCommand.uninstalled": "Befehl „cmdr“ deinstalliert.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "43e8d91"
+    "sourceHash": "edac691"
   },
   "main.cliCommand.alreadyInstalled": "Der Befehl „cmdr“ ist bereits installiert.",
   "@main.cliCommand.alreadyInstalled": {
@@ -179,17 +179,17 @@
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Nichts geändert. Um den Befehl „cmdr“ hinzuzufügen oder zu entfernen, brauchst du ein Administratorpasswort.",
+  "main.cliCommand.canceled": "Nichts geändert. Um den Befehl „cmdr“ zu installieren oder zu deinstallieren, brauchst du ein Administratorpasswort.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "d51acb1"
+    "sourceHash": "31fd0a0"
   },
   "main.cliCommand.installFailed": "Der Befehl „cmdr“ ließ sich nicht installieren. Prüfe, ob /usr/local/bin beschreibbar ist, und versuche es dann erneut.",
   "@main.cliCommand.installFailed": {
     "sourceHash": "de500b0"
   },
-  "main.cliCommand.uninstallFailed": "Der Befehl „cmdr“ ließ sich nicht entfernen. Prüfe, ob /usr/local/bin beschreibbar ist, und versuche es dann erneut.",
+  "main.cliCommand.uninstallFailed": "Der Befehl „cmdr“ ließ sich nicht deinstallieren. Prüfe, ob /usr/local/bin beschreibbar ist, und versuche es dann erneut.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "c066530"
+    "sourceHash": "fe4f2fe"
   },
   "main.cliCommand.homebrew": "Homebrew hat den Befehl „cmdr“ zusammen mit Cmdr installiert, also ist er in deinem Terminal schon da. Er verschwindet, wenn du Cmdr mit Homebrew deinstallierst.",
   "@main.cliCommand.homebrew": {
@@ -199,9 +199,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Bewege Cmdr zuerst in deinen Ordner „Programme“. Von jedem anderen Ort aus würde der Befehl „cmdr“ nicht mehr funktionieren, sobald Cmdr bewegt wird.",
+  "main.cliCommand.notInApplications": "Bewege Cmdr zuerst in deinen Ordner „Programme“. Wenn du den Befehl „cmdr“ von einem anderen Ort aus installierst, funktioniert er nicht mehr, sobald Cmdr bewegt wird.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "c9e3fc3"
+    "sourceHash": "e011785"
   },
   "main.cliCommand.notProductionBuild": "Das ist ein Entwicklungs-Build von Cmdr, deshalb lässt er den Befehl „cmdr“ unverändert. Verwende dafür die Kopie von Cmdr in deinem Ordner „Programme“.",
   "@main.cliCommand.notProductionBuild": {

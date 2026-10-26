@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr konnte deinen Verlauf zum Rückgängigmachen nicht lesen, deshalb startet er von vorn",
+  "stateRecovery.operationLog.title": "Cmdr konnte dein Vorgangsprotokoll nicht lesen, deshalb startet das Protokoll von vorn",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr konnte deine Ask-Cmdr-Chats nicht lesen, deshalb starten sie von vorn",
+  "stateRecovery.chatHistory.title": "Cmdr konnte deine Ask-Cmdr-Chats nicht lesen, deshalb startet die Chat-Liste leer",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr konnte deine Favoriten nicht lesen, deshalb startet die Liste leer",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr konnte deine letzten Einträge in „Gehe zu Ordner“ nicht lesen, deshalb startet die Liste von vorn",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr konnte deine letzten Suchen nicht lesen, deshalb startet die Liste von vorn",
   "@stateRecovery.searchHistory.title": {

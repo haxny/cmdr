@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nichts ausgewählt} one {{countText} ausgewählt} other {{countText} ausgewählt}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Kein Name enthält „{pattern}“} one {{countText} Name enthält „{pattern}“} other {{countText} Namen enthalten „{pattern}“}}",
   "@fileExplorer.pane.filterMatches": {
@@ -521,9 +521,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Gastzugriff verwenden",
+  "fileExplorer.network.share.useGuest": "Als Gast durchsehen",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "Anmelden als …",
   "@fileExplorer.network.share.signInAs": {
@@ -633,9 +633,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {Objekt} other {Objekte}} kopiert",
+  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {Objekt} other {Objekte}} kopiert.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Abweichende Dateien ausgewählt: {leftCountText} {leftCount, plural, one {Datei} other {Dateien}} links und {rightCountText} {rightCount, plural, one {Datei} other {Dateien}} rechts.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1286,21 +1286,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "Auf Branch {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Auf Branch „{branch}“.",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "Auf ungeborenem Branch {branch} (noch keine Commits).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "Auf ungeborenem Branch „{branch}“ (noch keine Commits).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Losgelöst bei {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} Commit} other {{aheadText} Commits}} voraus, {behind, plural, one {{behindText} Commit} other {{behindText} Commits}} zurück gegenüber {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} Commit} other {{aheadText} Commits}} voraus, {behind, plural, one {{behindText} Commit} other {{behindText} Commits}} zurück gegenüber „{upstream}“.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "Der Arbeitsbaum enthält nicht committete Änderungen.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1686,25 +1686,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} ist nicht verbunden. Schließ das Telefon mit einem USB-Kabel an und entsperre es, dann versuche es erneut.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "„{device}“ ist nicht verbunden. Schließe das Telefon mit einem USB-Kabel an und entsperre es, dann versuche es erneut.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Dieser Speicher auf {device} ist gerade nicht verfügbar.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Der Speicher, auf dem dieser Ordner lag, ist auf {device} gerade nicht verfügbar.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "„{drive}“ ist nicht verbunden. Verbinde das Laufwerk, dann versuche es erneut.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Telefone und Kameras über MTP sind in den Einstellungen ausgeschaltet.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Der Zugriff auf Telefone und Kameras über MTP ist in den Einstellungen ausgeschaltet.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android-Telefone sind in den Einstellungen ausgeschaltet.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Der Zugriff auf Android-Telefone ist in den Einstellungen ausgeschaltet.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr weiß nicht mehr, wie es „{place}“ erreicht. Verbinde dich unter „Server“ erneut damit, dann funktioniert dieser Favorit wieder.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2027,6 +2027,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr durchsucht {name} gerade. Die Indizierung startet, sobald das fertig ist.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Indizierung für {name} eingeschaltet.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr indiziert {name} gerade. Der gewünschte Durchlauf startet, sobald das fertig ist.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

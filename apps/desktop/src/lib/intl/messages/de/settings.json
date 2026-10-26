@@ -2449,9 +2449,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Wird zum Rückgängigmachen gebraucht. Solange das aus ist, zeichnet Cmdr nicht auf, was du neu kopierst, bewegst, umbenennst oder löschst, und du kannst es nicht rückgängig machen. Dein bisheriger Verlauf bleibt erhalten, und was darin steht, kannst du weiterhin rückgängig machen.",
+  "settings.operationLog.enabled.description": "Solange das ausgeschaltet ist, zeichnet Cmdr nicht auf, was du neu kopierst, bewegst, umbenennst oder löschst, und du kannst es nicht rückgängig machen. Dein bisheriger Verlauf bleibt erhalten, und was darin steht, kannst du weiterhin rückgängig machen.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "Vorgang, Vorgänge, Protokoll, Verlauf, aufzeichnen, Aufzeichnung, widerrufen, rückgängig, Journal, Datenschutz, Privatsphäre, ausschalten",
   "@settings.operationLog.enabled.keywords": {
@@ -2682,17 +2682,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "Bis {ceiling}",
+  "settings.managed.summary.upTo": "Bis Version {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Nur manuelle Update-Suche",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "Bis {ceiling}, nur manuelle Update-Suche",
+  "settings.managed.summary.upToManualChecksOnly": "Bis Version {ceiling}, nur manuelle Update-Suche",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Nur lokal",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3306,7 +3306,7 @@
   },
   "settings.dataWipe.introWithSize": "Cmdr löscht alles, was es auf diesem Mac speichert ({sizeText}), und beendet sich dann. Das lässt sich nicht rückgängig machen.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Was gelöscht wird",
   "@settings.dataWipe.goesHeading": {

@@ -1782,7 +1782,7 @@
     "sources": "macOS (Eingabequelle)"
   },
   "install": {
-    "accept": ["Installiere", "installiert", "Installieren", "Installation"],
+    "accept": ["Installiere", "installiert", "Installieren", "Installation", "installierst"],
     "chosen": "installieren",
     "confidence": "high",
     "forms": "button Installieren; an instruction → Installiere …; the noun → Installation (die Installation abschließen)",
@@ -3750,7 +3750,7 @@
     "chosen": "ungeboren",
     "confidence": "high",
     "accept": ["ungeborenem", "ungeborener", "ungeborenen", "noch keine Commits"],
-    "forms": "Auf ungeborenem Branch {branch} (noch keine Commits).; the pill → {branch} (noch keine Commits)",
+    "forms": "Auf ungeborenem Branch „{branch}“ (noch keine Commits).; the pill → {branch} (noch keine Commits)",
     "sources": "git po/de.po („ungeborener Branch“, „Noch keine Commits“, „Auf Branch “); reference pile has no git sense"
   },
   "git-conflicted": {
@@ -3950,10 +3950,7 @@
     "chosen": "Mehrfach umbenennen",
     "confidence": "high",
     "forms": "command, menu item, and sheet title → Mehrfach umbenennen (menu with … after a no-break space); the act in prose → das Umbenennen; one run as a noun → Mehrfach-Umbenennung (Letzte Mehrfach-Umbenennung widerrufen)",
-    "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)",
-    "exceptions": {
-      "onboarding.stepAi.table.renameWithout": "pre-existing onboarding prose (Stapel-Umbenennung); not this batch's key, left for a follow-up alignment with Mehrfach umbenennen"
-    }
+    "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)"
   },
   "load": {
     "accept": ["geladen", "Laden", "lade", "lädt", "lädst"],
@@ -3991,5 +3988,46 @@
     "confidence": "high",
     "forms": "Not a valid name → Kein gültiger Name; isn't valid → ist ungültig",
     "sources": "macOS Finder de (Der eingegebene Name ist ungültig.; Ungültiger Schlüssel); MS terminology; catalog (licensing.dialog.validityValidUntil Gültig bis, ai.cloud.authError ungültig)"
+  },
+  "administrator": {
+    "accept": ["Administratorpasswort", "Administratorrechte", "Administrators", "Administration"],
+    "chosen": "Administrator",
+    "confidence": "high",
+    "forms": "administrator password → Administratorpasswort; administrator rights → Administratorrechte; the person, gender-neutral → die Administration / Systemadministration",
+    "sources": "macOS Finder N15/N17 (Administratorname und -passwort); catalog (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac)"
+  },
+  "blocked-by": {
+    "accept": ["blockiert", "blockier", "verwehrt"],
+    "chosen": "blockieren",
+    "confidence": "high",
+    "forms": "Cmdr blocked a web page → Cmdr hat eine Webseite blockiert; macOS blocked access → hat … den Zugriff verwehrt",
+    "sources": "MS terminology (block → Blockieren); catalog (securityNotices.mcpForeignOrigin.title)"
+  },
+  "tamper": {
+    "accept": ["manipuliert", "manipulier"],
+    "chosen": "manipulieren",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → jemand den Datenverkehr manipuliert",
+    "sources": "MS terminology (tamper → manipulieren, “to maliciously modify data”); catalog (errors.shareList.signatureInvalid, securityNotices.smbSignatureRefused.body)"
+  },
+  "uninstall": {
+    "accept": ["deinstalliert", "deinstallier"],
+    "chosen": "deinstallieren",
+    "confidence": "high",
+    "forms": "menu item Befehl „cmdr“ deinstallieren; toast Befehl „cmdr“ deinstalliert",
+    "avoid": [
+      {
+        "form": "entfernen",
+        "why": "removing an item from a list; the menu item says deinstallieren, so its toasts follow it"
+      }
+    ],
+    "sources": "MS terminology (uninstall → deinstallieren); catalog (menu.app.cliCommandUninstall); macOS de pile has no uninstall string"
+  },
+  "unlock-device": {
+    "accept": ["entsperr", "entsperrt"],
+    "chosen": "entsperren",
+    "confidence": "high",
+    "forms": "unlock the phone → entsperre das Telefon",
+    "sources": "MS terminology (unlock a device/phone → entsperren); macOS Finder (Datei … entsperren); catalog (fileExplorer.navigation.favoriteUnreachable.phoneUnplugged)"
   }
 }

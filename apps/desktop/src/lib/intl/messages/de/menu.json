@@ -657,9 +657,9 @@
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"
   },
-  "menu.volume.editFavoriteShortcut": "Kurzbefehl festlegen …",
+  "menu.volume.editFavoriteShortcut": "Taste für Kurzbefehl festlegen …",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Entfernen",
   "@menu.volume.removeFavorite": {
