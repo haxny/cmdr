@@ -456,3 +456,68 @@ fn a_selection_crosses_the_wire_tagged_by_its_mode() {
         OpSelection::all_except(&[])
     );
 }
+
+/// An earlier "no" survives a refused start (#747 review): the user deselected two ops, the
+/// engine refused, the group came back. A review that seeds its ticks from the stored statuses
+/// sends only what it flipped, so those two stay out without the review naming them, and the
+/// one it re-ticked comes back.
+#[test]
+fn from_stored_keeps_an_earlier_no_and_applies_only_the_flips() {
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, 5);
+    let all = page_ops(&conn, group_id, 100, 0).expect("ops");
+    record_acceptance(
+        &conn,
+        group_id,
+        0,
+        &OpSelection::all_except(&[all[1].id, all[3].id]),
+        200,
+    )
+    .expect("first preflight");
+
+    let AcceptanceOutcome::Accepted { binding } = record_acceptance(
+        &conn,
+        group_id,
+        0,
+        &OpSelection::FromStored {
+            exclude_op_ids: vec![all[0].id],
+            include_op_ids: vec![all[3].id],
+        },
+        210,
+    )
+    .expect("second preflight") else {
+        panic!("preflight refused");
+    };
+
+    assert_eq!(binding.op_count, 3);
+    let statuses: Vec<OpStatus> = page_ops(&conn, group_id, 100, 0)
+        .expect("ops")
+        .iter()
+        .map(|op| op.status)
+        .collect();
+    assert_eq!(
+        statuses,
+        vec![
+            OpStatus::Excluded,
+            OpStatus::Excluded,
+            OpStatus::Pending,
+            OpStatus::Pending,
+            OpStatus::Pending
+        ],
+        "op 1 stays out from the earlier review, op 0 is the new no, op 3 came back"
+    );
+}
+
+#[test]
+fn from_stored_crosses_the_wire_tagged_by_its_mode() {
+    assert_eq!(
+        serde_json::from_value::<OpSelection>(
+            serde_json::json!({ "mode": "fromStored", "excludeOpIds": [1], "includeOpIds": [] })
+        )
+        .unwrap(),
+        OpSelection::FromStored {
+            exclude_op_ids: vec![1],
+            include_op_ids: vec![]
+        }
+    );
+}

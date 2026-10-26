@@ -171,6 +171,9 @@ pub struct SuggestedOpView {
     pub source_path: String,
     /// The name this source becomes. `Some` only under a rename group.
     pub new_name: Option<String>,
+    /// `excluded` when an earlier review turned this op off (an approval the engine then refused to
+    /// start leaves it so). Seed the tick from it and approve with `fromStored`, so that "no"
+    /// survives without the review naming ops it never loaded.
     pub status: OpStatus,
     /// What the index held for this file when the group was frozen. `None` when the index had
     /// nothing, which the row says in words: never a zero, which reads as an empty file.

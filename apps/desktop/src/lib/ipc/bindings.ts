@@ -13125,7 +13125,8 @@ export type OpKind = 'copy' | 'move' | 'delete' | 'trash' | 'rename' | 'createFo
 
 /**
  *  Which of a group's ops the user kept, in whichever form is SMALL: a review that turned a few
- *  off sends those, one that turned a few on sends those. Ids only, never values: the
+ *  off sends those, one that turned a few on sends those, and one that started from the last
+ *  review's ticks sends only its flips. Ids only, never values: the
  *  acceptance record the claim trusts is computed here, server-side, from the rows.
  */
 export type OpSelection =
@@ -13133,6 +13134,12 @@ export type OpSelection =
   | { mode: 'allExcept'; opIds: number[] }
   // Only these ops. Empty is refused as [`AcceptanceOutcome::NothingSelected`], never run.
   | { mode: 'only'; opIds: number[] }
+  /**
+   *  What the last review left (an earlier "no" stays `excluded`, which `SuggestedOpView.status`
+   *  shows), with these flipped: the form for a review that seeded its ticks from the stored
+   *  statuses, so it never has to name an op it didn't load.
+   */
+  | { mode: 'fromStored'; excludeOpIds: number[]; includeOpIds: number[] }
 
 /**
  *  Where one op sits, stored in `proposal_ops.status`. Per-op statuses are what make a
@@ -17786,6 +17793,11 @@ export type SuggestedOpView = {
   sourcePath: string
   // The name this source becomes. `Some` only under a rename group.
   newName: string | null
+  /**
+   *  `excluded` when an earlier review turned this op off (an approval the engine then refused to
+   *  start leaves it so). Seed the tick from it and approve with `fromStored`, so that "no"
+   *  survives without the review naming ops it never loaded.
+   */
   status: OpStatus
   /**
    *  What the index held for this file when the group was frozen. `None` when the index had

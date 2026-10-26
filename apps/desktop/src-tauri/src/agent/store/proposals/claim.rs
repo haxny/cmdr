@@ -17,7 +17,8 @@ pub struct OpBinding {
 }
 
 /// Which of a group's ops the user kept, in whichever form is SMALL: a review that turned a few
-/// off sends those, one that turned a few on sends those. Ids only, never values: the
+/// off sends those, one that turned a few on sends those, and one that started from the last
+/// review's ticks sends only its flips. Ids only, never values: the
 /// acceptance record the claim trusts is computed here, server-side, from the rows.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
@@ -26,6 +27,13 @@ pub enum OpSelection {
     AllExcept { op_ids: Vec<i64> },
     /// Only these ops. Empty is refused as [`AcceptanceOutcome::NothingSelected`], never run.
     Only { op_ids: Vec<i64> },
+    /// What the last review left (an earlier "no" stays `excluded`, which `SuggestedOpView.status`
+    /// shows), with these flipped: the form for a review that seeded its ticks from the stored
+    /// statuses, so it never has to name an op it didn't load.
+    FromStored {
+        exclude_op_ids: Vec<i64>,
+        include_op_ids: Vec<i64>,
+    },
 }
 
 impl OpSelection {
@@ -136,19 +144,42 @@ pub fn record_acceptance(
         tx.prepare_cached("UPDATE proposal_ops SET status = ?2 WHERE group_id = ?1 AND status = ?3")?
             .execute(params![group_id, to.as_token(), from.as_token()])
     };
-    let (start_from, toggled, ids) = match selection {
+    let (excluding, including): (&[i64], &[i64]) = match selection {
         // Start from everything the group offers, then turn these off.
-        OpSelection::AllExcept { op_ids } => (OpStatus::Pending, OpStatus::Excluded, op_ids),
+        OpSelection::AllExcept { op_ids } => {
+            set_all(OpStatus::Excluded, OpStatus::Pending)?;
+            (op_ids, &[])
+        }
         // Start from nothing, then turn these on.
-        OpSelection::Only { op_ids } => (OpStatus::Excluded, OpStatus::Pending, op_ids),
+        OpSelection::Only { op_ids } => {
+            set_all(OpStatus::Pending, OpStatus::Excluded)?;
+            (&[], op_ids)
+        }
+        // Start from what the last review left, then flip these.
+        OpSelection::FromStored {
+            exclude_op_ids,
+            include_op_ids,
+        } => (exclude_op_ids, include_op_ids),
     };
-    set_all(toggled, start_from)?;
-    let mut toggle =
+    let mut flip =
         tx.prepare_cached("UPDATE proposal_ops SET status = ?3 WHERE group_id = ?1 AND id = ?2 AND status = ?4")?;
-    for op_id in ids {
-        toggle.execute(params![group_id, op_id, toggled.as_token(), start_from.as_token()])?;
+    for op_id in excluding {
+        flip.execute(params![
+            group_id,
+            op_id,
+            OpStatus::Excluded.as_token(),
+            OpStatus::Pending.as_token()
+        ])?;
     }
-    drop(toggle);
+    for op_id in including {
+        flip.execute(params![
+            group_id,
+            op_id,
+            OpStatus::Pending.as_token(),
+            OpStatus::Excluded.as_token()
+        ])?;
+    }
+    drop(flip);
 
     let binding = live_binding(&tx, group_id)?;
     if binding.op_count == 0 {
