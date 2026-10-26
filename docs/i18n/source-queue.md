@@ -144,6 +144,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `approve` ruling (nl) said suggested-ops buttons use the infinitive, against the button-imperative rule; check other
   locales' rulings for the same conflict. (nl)
 - `suggestedOps.approvalNoticeDismiss` and the shipped "Don't show again" keys mean the same; align the English. (hu)
-- Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on
-  `suggestedOps.reversibleDeleteWritten`). (fr)
+- Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on the retired
+  "undo by deleting what it writes" pill key). (fr)
 - The AI suggestions dialog keys ship without screenshots; the pills and fact lines need them most. (fr, hu)
