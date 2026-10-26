@@ -42,7 +42,7 @@ would make the dialog say the wrong thing in one of the two cases.
 
 **Why the claim leaves op statuses alone.** A claim that also flipped its ops to a `queued` status would break the
 concurrency story: the winner's change alters the live op set, so a concurrent loser computes a different binding and
-refuses with a MISMATCH instead of the honest stale status. Per-op execution statuses are the executor's to write (M2).
+refuses with a MISMATCH instead of the honest stale status. Per-op execution statuses are the executor's to write.
 
 **Why comparing the ops against themselves wouldn't work.** Once the agent can re-propose a pending group, "do the ops
 match the ops?" is a tautology. The record held APART from the rows it describes is the whole mechanism; the transaction
@@ -81,7 +81,7 @@ reviewable, and a half-written GROUP is what would matter — that one is atomic
 - `interrupted` — the app restarted while approved. Frozen: nothing here knows which ops ran, so the user re-approves
   (minting a NEW group with a fresh preflight, the old group's rows staying put so the decision record stays whole and
   analytics count one re-approval rather than two proposals) or discards.
-- `completed` — every op reached a terminal outcome. Written by the executor (M2).
+- `completed` — every op reached a terminal outcome. Written by the executor.
 - `rejected` — the user said no.
 
 `OpStatus`: `pending` (in the live set) / `excluded` (deselected at review, row kept) / `done` / `skipped` / `failed`.

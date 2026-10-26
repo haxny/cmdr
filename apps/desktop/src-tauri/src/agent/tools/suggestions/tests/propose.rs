@@ -56,8 +56,8 @@ fn a_selector_resolves_once_at_creation_and_freezes_what_it_found() {
     assert!(group.selector.is_some(), "the pattern rides along for display");
     assert_eq!(group.source_volume_id, "root", "the selector's root names the volume");
 
-    // The resolved rows carry the index's snapshot, which is what M2 checks against at
-    // apply time.
+    // The resolved rows carry the index's snapshot: display only, since execution binds a live
+    // stat at preflight.
     let ops = page_ops(&conn, group_id, 10, 0).expect("ops");
     assert_eq!(ops.len(), 2);
     assert_eq!(ops[0].snapshot_size, Some(4_096));

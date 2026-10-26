@@ -162,7 +162,7 @@ fn remembered(store: &MemoryStore) -> String {
     std::fs::read_to_string(store.root().join(crate::agent::memory::OUTCOMES_FILE)).unwrap_or_default()
 }
 
-/// A "no" in the review is a judgment about the proposal, and the whole point of M4 is that the
+/// A "no" in the review is a judgment about the proposal, and the whole point is that the
 /// agent hears it. The lesson goes into the memory ring with no model call, so an approval and
 /// a rejection teach it equally.
 #[test]

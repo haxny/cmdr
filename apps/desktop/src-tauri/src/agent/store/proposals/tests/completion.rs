@@ -1,4 +1,4 @@
-//! What execution writes back, and the one interaction that made M4a load-bearing: a group
+//! What execution writes back, and the one interaction that makes it load-bearing: a group
 //! that finished must survive the next launch recovery sweep.
 
 use super::super::*;
