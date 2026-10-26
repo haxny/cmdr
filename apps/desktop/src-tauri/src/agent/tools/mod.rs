@@ -20,6 +20,7 @@
 //! See `CLAUDE.md` for the must-knows (reuse the core; the honesty contract; the
 //! Unrecognized-out-of-view invariant) and `DETAILS.md` for the tool catalog.
 
+pub mod line;
 pub mod memory;
 pub mod propose;
 pub mod quiet;

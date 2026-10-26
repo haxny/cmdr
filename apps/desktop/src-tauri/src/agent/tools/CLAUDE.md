@@ -14,6 +14,7 @@ and typed result shapes colocated here.
 - `memory.rs`: `memory_write` + `memory_edit`, the only tools that write; every rule lives in `../memory/`.
 - `quiet.rs`: `nothing_to_suggest`, a pure SIGNAL: the wake path acts on the call, a rail turn calling it is inert.
 - `view.rs`: `dispatch` + `refuse_unavailable`, the no-write choke point. `mod.rs`: `agent_tool_declarations()`.
+- `line/`: what the rail's tool line says about a call (subject, outcome, preview, repeat mark). `line/CLAUDE.md`.
 
 ## Must-knows
 
@@ -39,13 +40,13 @@ and typed result shapes colocated here.
   thread's `ImageFactsLedger`; a plan citing undelivered content is refused whole, and whatever elides a result owes
   the ledger a `revoke_call`. `propose/DETAILS.md`.
 - **Handlers never touch a live filesystem, except `inspect_file`**: up to 200 files per call on blocking threads
-  (5 s per path, 20 s per call); past a deadline the row is `unreachable`, the thread is ABANDONED, and the unanswered
-  paths are named. It rides `file_viewer`'s seams and the pane's archive routing, never its own (`DETAILS.md` § Reading
-  a file the way the viewer does), and alone egresses contents: text windows, `find` snippets, PDF pages plus title
-  and author, archive entry names, EXIF incl. GPS; never bytes. The cloud AI disclosure names each (its Ask Cmdr
-  contents item and rule); a new KIND of content is a copy change plus a `CLOUD_AI_CONSENT_VERSION` bump.
+  (5 s per path, 20 s per call); past a deadline the row is `unreachable` and the thread is ABANDONED. It rides
+  `file_viewer`'s seams and the pane's archive routing, never its own (`DETAILS.md` § Reading a file the way the viewer
+  does), and alone egresses contents (the list: `../CLAUDE.md`); a new KIND of content is a copy change plus a
+  `CLOUD_AI_CONSENT_VERSION` bump.
 - **New agent tool** = registry entry + handler/schema/result here + a `ToolId` variant + `EXPECTED_AGENT_TOOL_NAMES`
-  + `ToolId::KNOWN` + a rail label in `ask-cmdr-labels.ts` (a missing label shows "Working"; a test pins it).
+  + `ToolId::KNOWN` + a `line/` subject, outcome, and preview arm + a rail label in `ask-cmdr-labels.ts` (a missing
+  label shows "Working"; a test pins it).
 
 The two-view registry model, the tool catalog, the honesty and size contracts, and the dispatch gate: `DETAILS.md`.
 Read it before any non-trivial work here: editing, planning, reorganizing, or advising.

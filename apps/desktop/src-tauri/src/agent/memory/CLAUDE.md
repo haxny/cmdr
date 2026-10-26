@@ -9,8 +9,8 @@ Depth: `DETAILS.md`.
 - `store.rs`: `MemoryStore` — the caps, the write, the edit, `forget_all`, and `read_for_prompt`, the slice a turn
   carries.
 - `outcomes.rs`: `outcomes.md`, the fixed-size ring the app writes mechanically, and its reserve.
-- `jail.rs`: the one path check both tools call.
-- `refusal.rs`: `MemoryRefusal`. Its own module so the jail and the store can both name it without a module cycle.
+- `jail.rs`: the one path check both tools call, plus `shown_location`, its lexical half for DISPLAY (never a gate).
+- `refusal.rs`: `MemoryRefusal` and `MemoryRefusalKind` (the token read back), apart to avoid a module cycle.
 - `mod.rs`: `memory_root` / `store_for` / `read_for_turn`, the only lines that need an `AppHandle`.
 
 The tool handlers live with the rest of the toolset (`../tools/memory.rs`); the prompt fence lives with prompt assembly
@@ -35,15 +35,14 @@ The tool handlers live with the rest of the toolset (`../tools/memory.rs`); the 
   `MEMORY_MODEL_MAX_BYTES` (cap minus reserve); a refusal quotes its own `cap`, ❌ never the folder constant.
 - **Both files ride every turn**, which keeps "no read or list tool" true. Add both the moment a file lands here that
   is not auto-fed.
-- **A refusal is TYPED and names a way out.** A full folder tells the model to prune (`MemoryRefusal::DirectoryFull`
-  with its numbers), ❌ never fails silently; `MemoryRefusal::token()` is what anything downstream matches on.
+- **A refusal is TYPED and names a way out.** A full folder tells the model to prune (`DirectoryFull` with its
+  numbers); downstream reads the token back through `MemoryRefusalKind::from_token`, never the sentence.
 - **Unreadable is not absent.** Under a bare `read_to_string(..).ok()` a non-UTF8 or permission-denied hub file leaves
   the agent believing it has never remembered anything, so it starts the user over. Both cases are logged;
   `record_outcome` skips a decision rather than write over an unreadable `outcomes.md`.
-- **Writes go through `config::durable_write_json`.** A settings control invites the user into this folder while the
-  agent may be writing in it, so a torn file is reachable rather than theoretical.
+- **Writes go through `config::durable_write_json`**: the user can be in this folder while the agent writes.
 - **The user has two controls, and both are the user's reach into an app-managed folder**: Settings › Ask Cmdr opens it
   in a pane (`reveal-path`, because the path is `CMDR_DATA_DIR`-dependent and only Rust knows it) and wipes it
   (`forget_all`, `.md` only). `DETAILS.md` § The two controls the user gets.
-- **`~/.cmdr/CMDR.md` is a different thing** and stays where it is: user-authored config, in the user's voice, fed
-  AFTER the rules. This folder is app-managed state the agent authors, fed before them.
+- **`~/.cmdr/CMDR.md` is a different thing**: user-authored config fed AFTER the rules; this folder is app-managed
+  state the agent authors, fed before them.

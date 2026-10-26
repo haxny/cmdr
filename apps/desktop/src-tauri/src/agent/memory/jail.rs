@@ -24,13 +24,7 @@ pub const MEMORY_EXTENSION: &str = "md";
 /// the jail, only after the symlink walk clears it), canonicalized, and re-checked for
 /// containment; the file name is a single validated `Normal` component joined onto it.
 pub(super) fn resolve(root: &Path, requested: &str) -> Result<PathBuf, MemoryRefusal> {
-    let relative = lexically_inside(requested)?;
-    let Some(extension) = relative.extension() else {
-        return Err(MemoryRefusal::NotMarkdown);
-    };
-    if !extension.eq_ignore_ascii_case(MEMORY_EXTENSION) {
-        return Err(MemoryRefusal::NotMarkdown);
-    }
+    let relative = lexical_markdown(requested)?;
 
     // A link anywhere along the chain, including the file itself, is an escape a lexical check
     // cannot see: `link.md` is a perfectly clean relative path.
@@ -56,6 +50,26 @@ pub(super) fn resolve(root: &Path, requested: &str) -> Result<PathBuf, MemoryRef
 
     let name = relative.file_name().ok_or(MemoryRefusal::NoPath)?;
     Ok(canonical_parent.join(name))
+}
+
+/// Where `requested` would sit inside `root`, by the jail's LEXICAL checks only: no syscall,
+/// no directory created. For SHOWING a path the agent named (the rail's tool line), where
+/// `None` means "not a place inside memory", so the path stays plain text. ❌ Never a write
+/// gate: only [`resolve`] walks symlinks and checks containment on disk.
+pub fn shown_location(root: &Path, requested: &str) -> Option<PathBuf> {
+    lexical_markdown(requested).ok().map(|relative| root.join(relative))
+}
+
+/// The two lexical checks: inside the folder, and Markdown.
+fn lexical_markdown(requested: &str) -> Result<PathBuf, MemoryRefusal> {
+    let relative = lexically_inside(requested)?;
+    let Some(extension) = relative.extension() else {
+        return Err(MemoryRefusal::NotMarkdown);
+    };
+    if !extension.eq_ignore_ascii_case(MEMORY_EXTENSION) {
+        return Err(MemoryRefusal::NotMarkdown);
+    }
+    Ok(relative)
 }
 
 /// The lexical half: a non-empty relative path made only of ordinary components.

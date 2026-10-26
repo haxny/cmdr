@@ -40,9 +40,8 @@ pub(super) enum Repeat {
     Stuck(Value),
 }
 
-/// The per-turn ledger. Keyed by the tool's wire name plus its whole arguments object, both
-/// serialized: `serde_json`'s `Map` is a `BTreeMap`, so two calls that mean the same thing
-/// render the same bytes whatever order the provider emitted their keys in.
+/// The per-turn ledger, keyed by [`AgentToolCall::identity_key`]: the tool's wire name plus its
+/// whole arguments object, the same key the rail's repeat mark uses.
 #[derive(Default)]
 pub(super) struct FailedCalls {
     seen: HashMap<String, Failure>,
@@ -58,7 +57,7 @@ struct Failure {
 impl FailedCalls {
     /// Whether `call` may run, and what to hand back if it may not.
     pub(super) fn judge(&mut self, call: &AgentToolCall) -> Repeat {
-        let Some(failure) = self.seen.get_mut(&key(call)) else {
+        let Some(failure) = self.seen.get_mut(&call.identity_key()) else {
             return Repeat::Fresh;
         };
         if failure.warned {
@@ -72,7 +71,7 @@ impl FailedCalls {
     /// synthesized repeat can't deepen its own record.
     pub(super) fn record_failure(&mut self, call: &AgentToolCall, content: &Value) {
         self.seen.insert(
-            key(call),
+            call.identity_key(),
             Failure {
                 content: content.clone(),
                 warned: false,
@@ -85,11 +84,6 @@ const REFUSED: &str = "This exact call already came back with this, and it answe
      or tell the user what you couldn't do; sending it again does nothing.";
 
 const STUCK: &str = "This exact call has now been sent three times with nothing changed, so the turn ends here.";
-
-fn key(call: &AgentToolCall) -> String {
-    // A unit separator, so no tool name plus arguments can collide with another pair.
-    format!("{}\u{1f}{}", call.tool.as_wire_name(), call.arguments)
-}
 
 /// The failed result plus the two keys that make it a repeat notice. The original content is
 /// kept whole, so `dispatch_ok` still reads it as a problem and the model still reads what to

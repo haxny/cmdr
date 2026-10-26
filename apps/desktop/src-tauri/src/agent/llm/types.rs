@@ -321,6 +321,18 @@ pub struct AgentToolCall {
     pub reasoning: Option<ReasoningState>,
 }
 
+impl AgentToolCall {
+    /// What makes two calls "the same call": the tool's wire name plus its whole arguments
+    /// object. `serde_json`'s `Map` is a `BTreeMap`, so two calls that mean the same thing
+    /// render the same bytes whatever order the provider emitted their keys in. The call id
+    /// is NOT part of it (ids collide across rounds). One definition for the repeat breaker
+    /// (`chat/runtime/repeats.rs`) and the rail's repeat mark (`agent/tools/line/`).
+    pub fn identity_key(&self) -> String {
+        // A unit separator, so no tool name plus arguments can collide with another pair.
+        format!("{}\u{1f}{}", self.tool.as_wire_name(), self.arguments)
+    }
+}
+
 /// The result of executing a tool, fed back to the model. `elided` records that
 /// the runtime collapsed this result to a stub for the context budget; the
 /// content already reflects the elision when set.

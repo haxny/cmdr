@@ -70,6 +70,19 @@ that matters:
 Every escape attempt has a test in `tests.rs`, and each asserts both the typed refusal AND that nothing landed outside.
 Asserting only the `Err` would pass for a refusal that wrote first.
 
+**`shown_location(root, requested)` is steps 1 and 2 only**, joined onto the root: no syscall, no directory created.
+It exists so the rail's tool line can turn the path a memory call named into a place to go
+(`../tools/line/DETAILS.md`), and `None` keeps the path plain text. ❌ Never a write gate: it skips the symlink walk
+and the containment re-check.
+
+## Refusal tokens (`refusal.rs`)
+
+A refusal reaches the model as `{ saved: false, refused: <token>, detail }`. `MemoryRefusal::token()` writes the
+token; `MemoryRefusalKind::from_token` reads it back for anything downstream (the rail's tool line), so nothing parses
+`detail`. The kind is `MemoryRefusal` without its data, plus `Unavailable` (the folder couldn't be reached, which
+`tools/memory.rs` answers without a `MemoryRefusal`) and `Other` (a token this build doesn't know). `token()` goes
+through the kind's own token, so the writer and the reader can't drift; a test round-trips every variant.
+
 ## The two caps
 
 **`MEMORY_DIR_MAX_BYTES` = 64 KB, across every `.md` under the root.** A disk guard. `used_bytes()` walks the folder and
