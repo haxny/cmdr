@@ -5,9 +5,10 @@
 //! - The files are the Multi-Rename session's supported audio files at `open`. The session's
 //!   names are fixed, so a reorder only changes the ORDER: the view walks the CURRENT names and
 //!   looks each file up by path, and an edit never moves to another file.
-//! - Each file carries a [`Fingerprint`] taken just before it was read. A write must call
-//!   [`unchanged_on_disk`] first and refuse a file whose fingerprint moved (something else
-//!   rewrote or renamed it since). Nothing re-reads a file behind the user's edits.
+//! - Each file carries a [`Fingerprint`] taken just before it was read (or after the app's own
+//!   write, `mark_written`). The writer (`apply.rs`) re-checks it right before each write and
+//!   refuses a file whose fingerprint moved (something else rewrote or renamed it since). Only
+//!   an undo re-reads a file behind the user's edits (`reload`), dropping that file's edits.
 //! - Closing or evicting the Multi-Rename session closes its tag session.
 //!
 //! ❌ No file read under `SESSIONS`' lock: reads happen first, the lock only swaps results in.
@@ -28,7 +29,7 @@ use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
-const LOCAL_VOLUME_ID: &str = "root";
+pub(super) const LOCAL_VOLUME_ID: &str = "root";
 
 /// Why a tag-editor call didn't answer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -44,6 +45,8 @@ pub enum TagEditorError {
     UnknownTrack,
     /// A file couldn't be read.
     Read { path: String, detail: String },
+    /// The undo store refused: recording before a write (nothing was written), or an undo.
+    Undo { error: TagError },
 }
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
@@ -75,35 +78,47 @@ pub struct FileChangeView {
     pub extras: bool,
 }
 
-/// What identifies a file's state on disk: size, modification time, and (on unix) inode.
-/// A rewrite, a replace, and a rename-over each move at least one.
+/// What identifies a file's state on disk: size, modification time, and (on unix) inode and
+/// status-change time. A rewrite, a replace, and a rename-over each move at least one; the
+/// ctime also catches a write that put the mtime back (`touch -r`, a copy keeping dates).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct Fingerprint {
     size: u64,
     modified: Option<SystemTime>,
     inode: Option<u64>,
+    changed: Option<(i64, i64)>,
 }
 
 impl Fingerprint {
-    fn of(path: &Path) -> Option<Self> {
+    /// The file's fingerprint now; `None` when it can't be stat'ed. Blocking: ❌ not under a lock.
+    pub(super) fn of(path: &Path) -> Option<Self> {
         let meta = std::fs::metadata(path).ok()?;
+        let (inode, changed) = unix_ids(&meta);
         Some(Self {
             size: meta.len(),
             modified: meta.modified().ok(),
-            inode: inode_of(&meta),
+            inode,
+            changed,
         })
+    }
+
+    /// Whether the file at `path` still has `recorded`, a fingerprint taken earlier. No
+    /// recorded fingerprint counts as changed. Blocking: ❌ not under a lock.
+    pub(super) fn holds(recorded: Option<&Self>, path: &Path) -> bool {
+        recorded.is_some_and(|recorded| Self::of(path).as_ref() == Some(recorded))
     }
 }
 
+/// The inode and the status-change time (seconds, nanoseconds).
 #[cfg(unix)]
-fn inode_of(meta: &std::fs::Metadata) -> Option<u64> {
+fn unix_ids(meta: &std::fs::Metadata) -> (Option<u64>, Option<(i64, i64)>) {
     use std::os::unix::fs::MetadataExt;
-    Some(meta.ino())
+    (Some(meta.ino()), Some((meta.ctime(), meta.ctime_nsec())))
 }
 
 #[cfg(not(unix))]
-fn inode_of(_meta: &std::fs::Metadata) -> Option<u64> {
-    None
+fn unix_ids(_meta: &std::fs::Metadata) -> (Option<u64>, Option<(i64, i64)>) {
+    (None, None)
 }
 
 /// A file read from disk.
@@ -120,11 +135,6 @@ pub(super) struct Loaded {
 impl Loaded {
     pub(super) fn changed(&self) -> bool {
         self.disk != self.edited
-    }
-
-    /// Whether the file at `path` is still the one that was read.
-    pub(super) fn unchanged_on_disk(&self, path: &Path) -> bool {
-        self.fingerprint.is_some() && self.fingerprint == Fingerprint::of(path)
     }
 }
 
@@ -151,9 +161,12 @@ struct TagSession {
 
 static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// The session's audio files in its current order, and what the tab may do with them.
+/// The session's audio files in its current order, where they are, and what the tab may do
+/// with them.
 struct Layout {
     access: Access,
+    volume_id: String,
+    dir: PathBuf,
     tracks: Vec<PathBuf>,
 }
 
@@ -175,6 +188,8 @@ fn layout_of(files: &SessionFiles) -> Layout {
             editable: local,
             reason: (!local).then_some(ReadOnlyReason::RemoteVolume),
         },
+        volume_id: files.volume_id.clone(),
+        dir: files.dir.clone(),
         tracks,
     }
 }
@@ -247,10 +262,20 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
         .iter()
         .map(|path| (path.clone(), read_entry(path)))
         .collect();
-    let mut sessions = SESSIONS.lock_ignore_poison();
-    let session = sessions.entry(session_id.to_string()).or_default();
-    session.by_path = by_path;
-    Ok(view_of(&layout, session))
+    let view = {
+        let mut sessions = SESSIONS.lock_ignore_poison();
+        let session = sessions.entry(session_id.to_string()).or_default();
+        session.by_path = by_path;
+        view_of(&layout, session)
+    };
+    // The rename session may have closed during the read, after its close hook already ran:
+    // it removes its own session before calling the hook, so asking again now (lock order
+    // rename → tag, never nested) catches every such close.
+    if files_of(session_id).is_err() {
+        close(session_id);
+        return Err(TagEditorError::NoSession);
+    }
+    Ok(view)
 }
 
 /// Drops entries whose path isn't in the layout any more.
@@ -380,13 +405,107 @@ pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> 
 /// Whether the file at `path` is still the one the session read, so a write may go ahead. A
 /// path that isn't a readable track of the session is not: refuse it.
 pub(crate) fn unchanged_on_disk(session_id: &str, path: &Path) -> Result<bool, TagEditorError> {
-    with_session(session_id, |_, session| {
+    // The fingerprint is copied out under the lock; the stat runs after it.
+    let recorded = with_session(session_id, |_, session| {
         Ok(session
             .by_path
             .get(path)
             .and_then(Entry::loaded)
-            .is_some_and(|loaded| loaded.unchanged_on_disk(path)))
+            .map(|loaded| loaded.fingerprint.clone()))
+    })?;
+    Ok(recorded.is_some_and(|fingerprint| Fingerprint::holds(fingerprint.as_ref(), path)))
+}
+
+/// A file the write would change: its path, the tags to write, and the fingerprint of the
+/// copy the session read (or last wrote).
+pub(super) struct Pending {
+    pub path: PathBuf,
+    pub tags: FileTags,
+    pub fingerprint: Option<Fingerprint>,
+}
+
+/// Where a session's files are, for the writer's media-cache refresh.
+pub(super) struct Target {
+    pub volume_id: String,
+    pub dir: PathBuf,
+}
+
+/// The readable files whose edited tags differ from the disk's, in current order, minus those
+/// `skip` says. Refuses a read-only session. Copies only: no file is touched.
+pub(super) fn pending(
+    session_id: &str,
+    skip: &dyn Fn(&Path) -> bool,
+) -> Result<(Target, Vec<Pending>), TagEditorError> {
+    with_session(session_id, |layout, session| {
+        require_editable(layout)?;
+        let pending = layout
+            .tracks
+            .iter()
+            .filter(|path| !skip(path))
+            .filter_map(|path| {
+                let loaded = session.by_path.get(path)?.loaded()?;
+                loaded.changed().then(|| Pending {
+                    path: path.clone(),
+                    tags: loaded.edited.clone(),
+                    fingerprint: loaded.fingerprint.clone(),
+                })
+            })
+            .collect();
+        let target = Target {
+            volume_id: layout.volume_id.clone(),
+            dir: layout.dir.clone(),
+        };
+        Ok((target, pending))
     })
+}
+
+/// After the app's own write: each file's disk copy becomes `written` and its fingerprint the
+/// one taken after the write, so the next apply doesn't take the write for someone else's.
+/// The edited copy stays (an edit made during the write is kept, and still shows as a change).
+/// A no-op for a session or file that's gone.
+pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags, Option<Fingerprint>)>) {
+    let mut sessions = SESSIONS.lock_ignore_poison();
+    let Some(session) = sessions.get_mut(session_id) else {
+        return;
+    };
+    for (path, tags, fingerprint) in written {
+        if let Some(Entry::Loaded(loaded)) = session.by_path.get_mut(&path) {
+            loaded.disk = tags;
+            loaded.fingerprint = fingerprint;
+        }
+    }
+}
+
+/// Reads `paths` again (after an undo rewrote them) and puts them in the session in place of
+/// what it held, edits to them dropped. Paths the session doesn't hold are left out. Reads
+/// happen before the lock; a no-op when the session is gone.
+pub(super) fn reload(session_id: &str, paths: &[PathBuf]) {
+    let held: Vec<PathBuf> = {
+        let sessions = SESSIONS.lock_ignore_poison();
+        let Some(session) = sessions.get(session_id) else {
+            return;
+        };
+        paths
+            .iter()
+            .filter(|path| session.by_path.contains_key(*path))
+            .cloned()
+            .collect()
+    };
+    let fresh: Vec<(PathBuf, Entry)> = held
+        .into_iter()
+        .map(|path| {
+            let entry = read_entry(&path);
+            (path, entry)
+        })
+        .collect();
+    let mut sessions = SESSIONS.lock_ignore_poison();
+    if let Some(session) = sessions.get_mut(session_id) {
+        for (path, entry) in fresh {
+            if let Some(slot) = session.by_path.get_mut(&path) {
+                *slot = entry;
+            }
+        }
+    }
 }
 
 /// Ends the tag session, dropping its edits. A no-op when it's already gone.

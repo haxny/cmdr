@@ -461,6 +461,21 @@ impl SessionMedia {
         self.kick(&mut inner);
     }
 
+    /// Forgets what the cache read for the media files `names` (the tag editor wrote them):
+    /// each is `Reading` again, first in the queue, and the loader runs if started and idle.
+    pub(crate) fn reread(self: &Arc<Self>, names: &[String]) {
+        let mut inner = self.lock();
+        for name in names.iter().rev() {
+            let key = match inner.files.get_key_value(name.as_str()) {
+                Some((key, cached)) if cached.state.is_media() => Arc::clone(key),
+                _ => continue,
+            };
+            inner.set_state(&key, MediaRead::Reading);
+            inner.queue.push_front(key);
+        }
+        self.kick(&mut inner);
+    }
+
     /// Takes what `other` (a session over the same folder) read: each file waiting here
     /// that `other` read for the same listing facts gets its answer.
     pub(crate) fn adopt(&self, other: &SessionMedia) {

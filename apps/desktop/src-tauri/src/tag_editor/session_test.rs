@@ -16,7 +16,7 @@ use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
 use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};
 use crate::test_support::TestDir;
 
-fn tags(pairs: &[(TagField, &str)]) -> FileTags {
+pub(super) fn tags(pairs: &[(TagField, &str)]) -> FileTags {
     let mut tags = FileTags::default();
     for (field, value) in pairs {
         tags.fields.entry(*field).or_default().push((*value).to_string());
@@ -25,7 +25,7 @@ fn tags(pairs: &[(TagField, &str)]) -> FileTags {
 }
 
 /// A folder of `files` (name and bytes), listed under `volume`.
-fn folder(tag: &str, volume: &str, files: &[(&str, Vec<u8>)]) -> (TestDir, TestListingGuard) {
+pub(super) fn folder(tag: &str, volume: &str, files: &[(&str, Vec<u8>)]) -> (TestDir, TestListingGuard) {
     let dir = TestDir::new(tag);
     for (name, bytes) in files {
         std::fs::write(dir.join(name), bytes).expect("scratch dir is writable");
@@ -39,12 +39,12 @@ fn folder(tag: &str, volume: &str, files: &[(&str, Vec<u8>)]) -> (TestDir, TestL
 }
 
 /// Writes `pairs` into the tag of the audio file `name` in `dir`.
-fn tag_file(dir: &Path, name: &str, pairs: &[(TagField, &str)]) {
+pub(super) fn tag_file(dir: &Path, name: &str, pairs: &[(TagField, &str)]) {
     write_tags(&dir.join(name), &tags(pairs), &WriteOptions::default()).expect("the tags write");
 }
 
 /// Three mp3s `a`, `b`, `c` with a title and album each, plus a jpg and a txt.
-fn album(tag: &str) -> (TestDir, TestListingGuard, String) {
+pub(super) fn album(tag: &str) -> (TestDir, TestListingGuard, String) {
     let (dir, listing) = folder(
         tag,
         "root",
@@ -70,11 +70,11 @@ fn titles(view: &TagEditorView) -> Vec<(String, Option<String>)> {
         .collect()
 }
 
-fn path_of(dir: &Path, name: &str) -> String {
+pub(super) fn path_of(dir: &Path, name: &str) -> String {
     dir.join(name).to_string_lossy().into_owned()
 }
 
-fn set_title(dir: &Path, name: &str, title: &str) -> TagEdit {
+pub(super) fn set_title(dir: &Path, name: &str, title: &str) -> TagEdit {
     TagEdit::SetOne {
         path: path_of(dir, name),
         field: TagField::Title,
@@ -82,7 +82,7 @@ fn set_title(dir: &Path, name: &str, title: &str) -> TagEdit {
     }
 }
 
-fn on_disk(dir: &Path, name: &str) -> FileTags {
+pub(super) fn on_disk(dir: &Path, name: &str) -> FileTags {
     read_tags(&dir.join(name)).expect("the file reads")
 }
 

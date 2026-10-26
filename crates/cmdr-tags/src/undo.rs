@@ -54,6 +54,7 @@ impl Default for UndoLimits {
 
 /// What a restore did, per file, in the order the files were recorded.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub struct RestoreReport {
     /// Files whose old tags are back.
@@ -203,6 +204,34 @@ impl UndoStore {
             })
             .collect();
         write_manifest(&dir, &Manifest { entries, ..manifest })
+    }
+
+    /// Keeps only the entries whose recorded path is in `keep`, and the covers they use, so a
+    /// restore writes back exactly the files the apply wrote (a file it skipped or failed on
+    /// keeps whatever it holds). A path in `keep` that isn't recorded is ignored.
+    pub fn retain(&self, id: &ApplyId, keep: &[PathBuf]) -> Result<(), TagError> {
+        let dir = self.apply_dir(id)?;
+        let manifest = load_manifest(&dir)?;
+        let entries: Vec<Entry> = manifest
+            .entries
+            .into_iter()
+            .filter(|entry| keep.contains(&entry.path))
+            .collect();
+        let used: Vec<String> = entries
+            .iter()
+            .filter_map(|entry| entry.cover.as_ref().map(|cover| cover.file.clone()))
+            .collect();
+        write_manifest(&dir, &Manifest { entries, ..manifest })?;
+        // The manifest no longer names the others; a cover left behind only takes space.
+        for item in fs::read_dir(&dir)? {
+            let item = item?;
+            let name = item.file_name().to_string_lossy().into_owned();
+            if is_cover_name(&name) && !used.contains(&name) {
+                fs::remove_file(item.path())?;
+            }
+        }
+        sync_dir(&dir);
+        Ok(())
     }
 
     /// Writes each recorded file's old tags back as they were: as music (so an MP3's `TPE3`

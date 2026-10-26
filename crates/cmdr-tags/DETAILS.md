@@ -171,6 +171,8 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   of the file. Call it before the apply writes. A file that can't be read fails the whole record; nothing is stored.
 - **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
   works), and a move whose source isn't recorded is ignored.
+- **`retain(id, keep)`** drops the entries whose path isn't in `keep`, and the covers only they used, so an app that
+  recorded every file it meant to write can narrow the record to the files it did write before anyone restores it.
 - **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
   passes, with that entry's recorded totals, and `TPE3` when it had one. Of the caller's `WriteOptions` only
   `allow_frame_loss` applies. A file not at its path is `missing`; any write error is `failed` (an extra that can't come

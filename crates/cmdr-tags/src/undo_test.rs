@@ -639,3 +639,45 @@ fn a_large_damaged_apply_is_pruned_by_size_but_never_the_new_record() {
     assert_eq!(listing(root.path()), strings(&["op-a"]));
     store.restore(&id("op-a"), &MUSIC).unwrap();
 }
+
+#[test]
+fn retain_keeps_only_the_named_files_and_their_covers() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let paths = tagged_files(files.path());
+    let before = snapshot(&paths);
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
+    for path in &paths {
+        change(path);
+    }
+    // The apply wrote only the first and last file; the middle one keeps its new tags.
+    let middle = read(&paths[1]);
+
+    store
+        .retain(
+            &id("op-1"),
+            &[paths[0].clone(), paths[2].clone(), files.path().join("never.mp3")],
+        )
+        .unwrap();
+    let report = store.restore(&id("op-1"), &MUSIC).unwrap();
+
+    assert_eq!(report.restored, vec![paths[0].clone(), paths[2].clone()]);
+    assert_eq!(read(&paths[0]), before[0].1);
+    assert_eq!(read(&paths[1]), middle);
+    assert_eq!(read(&paths[2]), before[2].1);
+    // The middle file's cover went with its entry.
+    let covers = listing(&root.path().join("op-1"))
+        .into_iter()
+        .filter(|name| name.ends_with(".cover"))
+        .count();
+    assert_eq!(covers, 2);
+}
+
+#[test]
+fn retain_of_an_unknown_apply_is_not_found() {
+    let root = tempfile::tempdir().unwrap();
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    let err = store.retain(&id("op-1"), &[]).unwrap_err();
+    assert!(matches!(err, TagError::Io(ErrorKind::NotFound, _)), "{err:?}");
+}

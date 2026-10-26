@@ -133,6 +133,7 @@ pub struct FileTags {
 /// What kind of content a batch of files is, which decides how fields map
 /// (audiobooks drop ID3's `TPE3`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum ContentKind {
     /// Spoken-word books.
@@ -144,12 +145,18 @@ pub enum ContentKind {
 /// Why a tag read or write didn't happen. Serialized as `{"type": "<variant>", "data": ...}`
 /// (camelCase variant names), an `Io` kind as its `std::io::ErrorKind` name (`"NotFound"`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum TagError {
     /// The file's format isn't one the editor handles.
     NotSupported,
     /// A filesystem failure, with its kind and the OS message.
-    Io(#[serde(with = "io_kind")] std::io::ErrorKind, String),
+    Io(
+        #[serde(with = "io_kind")]
+        #[cfg_attr(feature = "specta", specta(type = String))]
+        std::io::ErrorKind,
+        String,
+    ),
     /// The file's tags couldn't be parsed.
     Parse(String),
     /// The tags couldn't be written.

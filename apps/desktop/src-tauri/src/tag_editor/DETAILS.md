@@ -7,8 +7,9 @@ store's lock. Without `restart` an existing tag session comes back with its edit
 Every other call runs under the lock on in-memory tags and first drops entries that left the layout.
 
 Guaranteed: the file set is the one at `open` (Multi-Rename's names are fixed per session, a reorder only changes the
-order); each file has a `Fingerprint` (size, mtime, inode) taken before its read, and `unchanged_on_disk` tells a writer
-whether it still holds; closing or evicting the rename session closes the tag session (hooks in
+order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and `unchanged_on_disk` tells
+whether it still holds (stat'ed outside the lock); after the app's own write `mark_written` makes the written tags the
+disk copy and takes a fresh fingerprint; closing or evicting the rename session closes the tag session (hooks in
 `multi_rename/session.rs`), and a `NoSession` answer removes a leftover one. Not done: nothing re-reads or follows a
 file that something else renamed.
 
@@ -17,10 +18,44 @@ file that something else renamed.
 - **Codes, not text.** `ReadOnlyReason` and `ReadErrorCode` serialize as camelCase strings (`remoteVolume`,
   `unreadable`, `unsupported`, `io`, `parse`); the UI words them. Why: the app's copy changes, the codes don't.
 - **`specta` feature on `cmdr-tags`.** The engine's `TagField`, `Edit`, `SharedValue`, `CoverEdit`, `Cover`, `TagTool`,
-  and `CaseTool` derive `specta::Type` behind the feature, which the app enables, so commands name them without mirror
-  types.
+  `CaseTool`, `ContentKind`, `TagError` (its `io::ErrorKind` as a string), and `RestoreReport` derive `specta::Type`
+  behind the feature, which the app enables, so commands name them without mirror types.
+- **No orphan tag session.** A rename session that closes while `open` reads runs its close hook before the tag session
+  exists. `open` asks `files_of` again after inserting (never under the tag lock: order rename → tag) and drops what it
+  inserted if the rename session is gone.
 - **Cover size** comes from the image header (`image`), under `contain_panics`; `None` when unreadable.
 - **`TagEditorError::Read`** is reserved for the commands; a failed read of one file is a row, not an error.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.
+
+## Write and undo
+
+`apply(app, session_id, ApplyRequest { kind, allowFrameLoss, skip })` (`apply.rs`):
+
+1. `pending` copies out the readable files whose edited tags differ from the disk's, in current order, minus `skip`;
+   a read-only session refuses (`ReadOnly`).
+2. Each file's fingerprint is checked (stat outside every lock); a moved one is `changedOnDisk`, never written.
+3. `UndoStore::record(tags-<unix millis>-<session>, paths)` BEFORE any write; a refusal is `TagEditorError::Undo` and
+   nothing is written. Millis never repeat within the process, so two applies can't share (and replace) a record.
+4. Each file is re-checked right before its write (the TOCTOU window shrinks to one stat), then `write_tags` with
+   `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }`. `WouldDrop` → `wouldDrop`, any other
+   error → `failed`, a lofty panic (`contain_panics`) → `failed` with `TagError::Write`.
+5. `UndoStore::retain` narrows the record to the files written (`forget` when none), so an undo never rewrites a file
+   the apply skipped, failed on, or found changed. A refusal here is logged: the files are already written.
+6. `mark_written`, then `multi_rename::media::SessionMedia::reread` for the written names in every session over the
+   folder (`media_over`), so `[=tag.*]` previews show the new values.
+
+`undo(app, apply_id)` (`undo.rs`) restores (`allow_frame_loss: false`), forgets the record when nothing failed (kept
+for a retry otherwise), re-reads the restored files into the tag session named in the id if it's still open, and
+re-reads them in the media cache. It works after the session closed: the record holds paths.
+
+The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer).
+Tests call `apply_with` / `undo_with` with their own store.
+
+**Non-UTF-8 paths.** Paths cross IPC as lossy strings (`TrackRow::path`). Such a file is listed and written like any
+other, but `TagEdit::SetOne` can't name it (`UnknownTrack`, its `SetAll` edits still apply), and `skip` compares the
+lossy form, so a skip may cover two files whose names differ only in invalid bytes (the safe direction).
+
+**Known gap.** A media read already in flight when the write lands may store the old facts; the next listing change
+(the write moves the file's mtime) queues it again.
