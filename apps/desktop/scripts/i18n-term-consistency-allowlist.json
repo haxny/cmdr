@@ -208,6 +208,10 @@
         "reason": "Two senses of one English word. `fileExplorer.columns.added` is a date column header, so it takes Finder's date label `Toevoegingsdatum` (LocalizableMerged N169.38), parallel with its siblings `Aanmaakdatum` and `Bewerkingsdatum`. `Toegevoegd` is a state: a file git added (`fileExplorer.git.status.added`) and a shortcut the user added (`shortcuts.list.addedTooltip`)."
       },
       {
+        "source": "Archive",
+        "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`Archiveer`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip file a compress suggestion creates (`Archief`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
+      },
+      {
         "source": "Back",
         "reason": "`Terug` is the standalone back button in a list you drill into (network browser, share list, mount sheet). `Vorige` is the paired previous/next of the Go menu and the onboarding wizard, where macOS Dutch pairs `Vorige` with `Volgende`. See `docs/i18n/nl/terms.json` `back`."
       },
@@ -224,8 +228,8 @@
         "reason": "The menu bar's Edit menu is Apple's own title `Wijzig`; F4 and the context-menu item open a file in an editor, which this catalog names `Bewerk`. Never replace a menu-bar title with the ordinary word."
       },
       {
-        "source": "File",
-        "reason": "The menu bar's File menu is Apple's own Dutch title `Archief`; the suggested-ops column names an ordinary file, `Bestand`."
+        "source": "Last modified",
+        "reason": "`Bewerkingsdatum` is Finder's Date Modified column header (`suggestedOps.columnModified`, beside `fileExplorer.columns`); the date balloon lists participles (`fileExplorer.dateTooltip.lastModified` → `Laatst gewijzigd`, with `Aangemaakt`, `Laatst geopend`). The `modified` ruling in `docs/i18n/nl/terms.json`."
       },
       {
         "source": "From",

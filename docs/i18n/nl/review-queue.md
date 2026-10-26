@@ -119,6 +119,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **`benaderen` → `openen` in error prose** (`errors.listing.notFound.explanation` and siblings): "access" as `openen`
   reads casual but slightly narrows the sense; confirm.
 - **`Er staan AI-suggesties klaar.`** (`suggestedOps.indicatorTooltip`) over `Er wachten AI-suggesties`.
+- **The AI-suggesties pills** (`suggestedOps.reversible.*`, `.blocked.noTrash`): `terugverplaatsen` (moveBack) over
+  `terugzetten`, which is the trash’s Put Back; `Niet uitvoerbaar:` as the terse pill opener; `Meenemen` /
+  `{name} meenemen` for the include tick boxes, after `Extensie meenemen`.
+- **Sweep headings** (`suggestedOps.sweepWhen.*`): participle last (`Vandaag om {time} voorgesteld`,
+  `Op {date} voorgesteld`); confirm over a leading `Voorgesteld …`.
 - **`Klik om er een te kiezen in instellingen.`** (`askCmdr.wake.needsApiKey`): "set up" became "kiezen".
 - **`dus het lijkt goed te bevallen`** (`main.dockPinNudge.body`): freer than "it seems to be working for you".
 - **`staat nog open`** for a mounted disk image (`errors.eject.unmountRefusedByDiskImage`) vs `is nog gekoppeld`;

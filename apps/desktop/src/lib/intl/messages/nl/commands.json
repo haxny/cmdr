@@ -1251,9 +1251,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Voorgestelde bewerkingen",
+  "commands.suggestedOpsShow.label": "AI-suggesties",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Beoordeel de bestandsbewerkingen die de AI heeft voorgesteld en bepaal wat er gebeurt",
   "@commands.suggestedOpsShow.description": {
