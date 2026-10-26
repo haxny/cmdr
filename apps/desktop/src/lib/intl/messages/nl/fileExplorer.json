@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Niets geselecteerd} one {{countText} geselecteerd} other {{countText} geselecteerd}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Geen naam bevat ‘{pattern}’} one {{countText} naam bevat ‘{pattern}’} other {{countText} namen bevatten ‘{pattern}’}}",
   "@fileExplorer.pane.filterMatches": {
@@ -523,9 +523,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Gebruik gasttoegang",
+  "fileExplorer.network.share.useGuest": "Blader als gast",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "Log in als…",
   "@fileExplorer.network.share.signInAs": {
@@ -635,9 +635,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {onderdeel} other {onderdelen}} gekopieerd",
+  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {onderdeel} other {onderdelen}} gekopieerd.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Afwijkende bestanden geselecteerd: {leftCountText} {leftCount, plural, one {bestand} other {bestanden}} links en {rightCountText} {rightCount, plural, one {bestand} other {bestanden}} rechts.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1293,21 +1293,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "Op branch {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Op branch ‘{branch}’.",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "Op nieuwe branch {branch} (nog geen commits).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "Op nieuwe branch ‘{branch}’ (nog geen commits).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Losgekoppeld op {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commits}} voor, {behind, plural, one {{behindText} commit} other {{behindText} commits}} achter op {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commits}} voor, {behind, plural, one {{behindText} commit} other {{behindText} commits}} achter op ‘{upstream}’.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "De working tree bevat wijzigingen die nog niet gecommit zijn.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1693,25 +1693,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} is niet aangesloten. Ontgrendel de telefoon, sluit hem met een USB-kabel aan en probeer het daarna opnieuw.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "‘{device}’ is niet aangesloten. Sluit de telefoon met een USB-kabel aan, ontgrendel hem en probeer het daarna opnieuw.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Die opslag op {device} is nu niet beschikbaar.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "De opslag waarop deze map stond, is nu niet beschikbaar op {device}.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "‘{drive}’ is niet verbonden. Sluit de schijf aan en probeer het daarna opnieuw.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Telefoons en camera''s via MTP staan uit in Instellingen.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Toegang tot telefoons en camera’s via MTP staat uit in Instellingen.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android-telefoons staan uit in Instellingen.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Toegang tot Android-telefoons staat uit in Instellingen.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr weet niet meer hoe het ‘{place}’ kan bereiken. Maak opnieuw verbinding via Servers, dan werkt deze favoriet weer.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2035,6 +2035,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr doorzoekt {name} op dit moment. Indexeren begint zodra dat klaar is.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Indexeren voor {name} aangezet.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr indexeert {name} op dit moment. De gevraagde scan begint zodra dat klaar is.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

@@ -318,9 +318,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Gebruik hier alleen kleine letters, cijfers en streepjes.",
+  "servers.refusal.s3FieldMalformed": "Gebruik hier alleen a–z, 0–9 en streepjes.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Voer het eindpunt in als http:// of https:// plus een hostnaam, zoals https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -346,9 +346,9 @@
   "@servers.refusal.operationRunning": {
     "sourceHash": "86e3a4d"
   },
-  "servers.refusal.shareMounted": "{name} is nog via het oude adres aangekoppeld. Werp de gedeelde map uit en bewaar dan opnieuw.",
+  "servers.refusal.shareMounted": "De gedeelde map {name} is nog via het oude adres aangekoppeld. Werp de gedeelde map uit en bewaar dan opnieuw.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr kon de gedeelde map {name} niet uitwerpen, dus er is niets bewaard. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -544,17 +544,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Is de server verhuisd? Typ het nieuwe eindpunt. Elke bucket onder deze sleutel gaat mee, met de favorieten, open tabbladen en de opgeslagen geheime toegangssleutel.",
+  "servers.sheet.s3EndpointMoveHelp": "Is de server verhuisd? Typ het nieuwe eindpunt. Elke bucket onder deze sleutel gaat mee, met zijn favorieten en open tabbladen, en de opgeslagen geheime toegangssleutel gaat ook mee.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Is de server verhuisd? Typ het nieuwe adres. De favorieten, open tabbladen en het opgeslagen wachtwoord gaan mee.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Is de server verhuisd? Typ het nieuwe adres. De gedeelde mappen en het opgeslagen wachtwoord gaan mee, en de favorieten en open tabbladen van elke gedeelde map volgen zodra die daar voor het eerst wordt geopend.",
+  "servers.sheet.smbAddressMoveHelp": "Is de server verhuisd? Typ het nieuwe adres. De gedeelde mappen en het opgeslagen wachtwoord gaan mee, en de favorieten en open tabbladen van elke gedeelde map volgen zodra die map op het nieuwe adres wordt geopend.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Gebruikersnaam",
   "@servers.sheet.username": {
@@ -794,9 +794,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Ik heb het gecontroleerd",
+  "servers.hostKey.changedDisclosure": "Ik heb de sleutel gecontroleerd",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Vingerafdruk van de sleutel",
   "@servers.hostKey.fingerprintLabel": {
@@ -826,9 +826,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Ik heb het gecontroleerd",
+  "servers.certificate.changedDisclosure": "Ik heb het certificaat gecontroleerd",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Vingerafdruk van het certificaat (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -878,9 +878,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Je vroeg om in te loggen met je account, maar de server bood in plaats daarvan een gastsessie aan. Meestal komt dat doordat het wachtwoord niet klopte. In zeldzame gevallen knoeit er iets met de verbinding.",
+  "servers.paneState.guestSessionRefusedHint": "Je vroeg om in te loggen met je account, maar de server bood in plaats daarvan een gastsessie aan. Meestal komt dat doordat het wachtwoord niet klopte. In zeldzame gevallen knoeit er iemand met de verbinding.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Probeer een ander wachtwoord…",
   "@servers.paneState.tryAnotherPassword": {

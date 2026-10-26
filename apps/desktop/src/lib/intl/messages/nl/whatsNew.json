@@ -7,9 +7,9 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
-  "whatsNew.securityNotice.title": "Deze versie heeft {count, plural, one {een beveiligingsprobleem} other {# beveiligingsproblemen}} opgelost.",
+  "whatsNew.securityNotice.title": "Recente updates hebben {count, plural, one {een beveiligingsprobleem} other {# beveiligingsproblemen}} opgelost.",
   "@whatsNew.securityNotice.title": {
-    "sourceHash": "26e4d7e"
+    "sourceHash": "7926316"
   },
   "whatsNew.securityNotice.readAdvisory": "Lees het beveiligingsadvies",
   "@whatsNew.securityNotice.readAdvisory": {

@@ -61,7 +61,7 @@
   },
   "transfer.durabilityUnconfirmedUnnamed": "Cmdr kon niet bevestigen dat de kopieën volledig naar de schijf zijn geschreven. Als de schijf werd losgekoppeld of defect raakt, controleer de kopieën dan voordat je erop vertrouwt.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Deze server kan {classes} niet opslaan, dus die gegevens zijn achtergebleven.",
   "@transfer.metadataLeftBehind": {

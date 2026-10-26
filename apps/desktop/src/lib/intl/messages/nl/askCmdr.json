@@ -261,9 +261,9 @@
   "@askCmdr.error.provider": {
     "sourceHash": "d536cce"
   },
-  "askCmdr.event.chatMemoryChanged": "Het chatgeheugen bevat nu {tokens, number} tokens",
+  "askCmdr.event.chatMemoryChanged": "Het chatgeheugen bevat nu {tokens, plural, one {# token} other {# tokens}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "{count, plural, one {# eerdere opzoeking} other {# eerdere opzoekingen}} weggelaten om binnen de context van het model te blijven.",
   "@askCmdr.event.contextTrimmed": {
@@ -640,9 +640,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "Kon {countText} {count, plural, one {bestand} other {bestanden}} niet vinden: ze zijn na de naamwijziging verplaatst of verwijderd.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Kon {countText} {count, plural, one {onderdeel niet vinden: het is} other {onderdelen niet vinden: ze zijn}} na de naamwijziging verplaatst of verwijderd.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} ongemoeid gelaten: de oude naam is weer in gebruik.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

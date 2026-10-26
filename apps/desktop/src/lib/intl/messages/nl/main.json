@@ -169,7 +169,7 @@
   },
   "main.cliCommand.uninstalled": "De opdracht ‘cmdr’ is verwijderd.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "43e8d91"
+    "sourceHash": "edac691"
   },
   "main.cliCommand.alreadyInstalled": "De opdracht ‘cmdr’ is al geïnstalleerd.",
   "@main.cliCommand.alreadyInstalled": {
@@ -179,9 +179,9 @@
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Er is niets veranderd. Voor het toevoegen of verwijderen van de opdracht ‘cmdr’ is een beheerderswachtwoord nodig.",
+  "main.cliCommand.canceled": "Er is niets veranderd. Voor het installeren of verwijderen van de opdracht ‘cmdr’ is een beheerderswachtwoord nodig.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "d51acb1"
+    "sourceHash": "31fd0a0"
   },
   "main.cliCommand.installFailed": "Kon de opdracht ‘cmdr’ niet installeren. Controleer of je schrijftoegang hebt tot /usr/local/bin en probeer het opnieuw.",
   "@main.cliCommand.installFailed": {
@@ -189,7 +189,7 @@
   },
   "main.cliCommand.uninstallFailed": "Kon de opdracht ‘cmdr’ niet verwijderen. Controleer of je schrijftoegang hebt tot /usr/local/bin en probeer het opnieuw.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "c066530"
+    "sourceHash": "fe4f2fe"
   },
   "main.cliCommand.homebrew": "Homebrew heeft de opdracht ‘cmdr’ samen met Cmdr geïnstalleerd, dus je terminal kent hem al. Hij verdwijnt als je Cmdr met Homebrew verwijdert.",
   "@main.cliCommand.homebrew": {
@@ -199,9 +199,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Verplaats Cmdr eerst naar de map ‘Apps’. Vanaf een andere plek zou de opdracht ‘cmdr’ niet meer werken zodra Cmdr verhuist.",
+  "main.cliCommand.notInApplications": "Verplaats Cmdr eerst naar de map ‘Apps’. Als je de opdracht ‘cmdr’ vanaf een andere plek installeert, werkt die niet meer zodra Cmdr verhuist.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "c9e3fc3"
+    "sourceHash": "e011785"
   },
   "main.cliCommand.notProductionBuild": "Dit is een ontwikkelversie van Cmdr, dus die laat de opdracht ‘cmdr’ ongemoeid. Gebruik hiervoor de Cmdr in de map ‘Apps’.",
   "@main.cliCommand.notProductionBuild": {

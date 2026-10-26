@@ -61,6 +61,13 @@
     "forms": "button Voeg … toe with the particle LAST (Voeg aan rapport toe, Voeg server toe…, Voeg huidige map aan favorieten toe); window title Toevoegen aan je foutrapport; participle toegevoegd",
     "sources": "macOS Finder (Add Password → Voeg wachtwoord toe, Add Tags → Voeg tags toe), AppKit (Voeg aan begin van knoppenbalk toe)"
   },
+  "administrator": {
+    "accept": ["beheerders", "beheerderswachtwoord", "beheerdersrechten", "systeembeheerder"],
+    "chosen": "beheerder",
+    "confidence": "high",
+    "forms": "compounds close up: beheerderswachtwoord, beheerdersrechten; the person running a server → de beheerder van de server / systeembeheerder",
+    "sources": "macOS Finder (beheerdersnaam); MS terminology (administrator → systeembeheerder); catalog (beheerdersrechten ×4, beheerder)"
+  },
   "advanced": {
     "chosen": "Geavanceerd",
     "confidence": "high",
@@ -86,6 +93,13 @@
     "confidence": "high",
     "forms": "AI provider → AI-aanbieder; naar je aanbieder",
     "sources": "general NL; catalog throughout (askCmdr.error.notConfigured)"
+  },
+  "ai-reply": {
+    "accept": ["antwoorden"],
+    "chosen": "antwoord",
+    "confidence": "tentative",
+    "forms": "het antwoord; an AI answer and a server reply are both antwoord in this catalog",
+    "sources": "catalog (errors.write.replySignatureRefused.title, securityNotices.smbSignatureRefused.*: antwoord); MS terminology reply → beantwoorden (the verb)"
   },
   "ai-tool": {
     "accept": ["hulpmiddelen", "tool", "tools"],
@@ -342,6 +356,13 @@
     "chosen": "geblokkeerd",
     "confidence": "high",
     "sources": "Microsoft Terminology (Blocked → Geblokkeerd); catalog askCmdr.renameReview.*, errors.listing.notPermitted.explanation (macOS blokkeerde)"
+  },
+  "blocked-by": {
+    "accept": ["blokkeert", "geblokkeerd", "blokkeren"],
+    "chosen": "blokkeerde",
+    "confidence": "high",
+    "forms": "past tense headline: Cmdr blokkeerde …; macOS blokkeerde de toegang van Cmdr tot …",
+    "sources": "catalog (errors.listing.notPermitted.explanation, securityNotices.mcpForeignOrigin.title)"
   },
   "brief-view": {
     "accept": ["beknopt"],
@@ -688,6 +709,13 @@
     "chosen": "paneelscheiding",
     "confidence": "tentative",
     "sources": "Total Commander (de scheiding tussen de bestandsvensters), Microsoft (divider → scheidingslijn), compounded with the pane ruling paneel; Double Commander says splitser"
+  },
+  "pattern": {
+    "accept": ["patronen", "naampatroon", "Patroon"],
+    "chosen": "patroon",
+    "confidence": "high",
+    "forms": "a rename pattern → naampatroon",
+    "sources": "MS terminology (pattern → patroon); catalog (patroon ×7, naampatroon ×3)"
   },
   "provider-console": {
     "chosen": "console",
@@ -1384,7 +1412,7 @@
     "accept": ["nieuwe branch"],
     "chosen": "nog geen commits",
     "confidence": "tentative",
-    "forms": "pill {branch} (nog geen commits); tooltip Op nieuwe branch {branch} (nog geen commits).",
+    "forms": "pill {branch} (nog geen commits); tooltip Op nieuwe branch ‘{branch}’ (nog geen commits).",
     "note": "Dutch has no settled word for git's unborn; carry the concept with nieuwe branch plus the parenthetical, never a literal ongeboren.",
     "sources": "no pile source (MS terminology and the file managers have no hit); built from the settled git-branch and git-commit rulings"
   },
@@ -2628,6 +2656,13 @@
     "confidence": "high",
     "sources": "macOS Finder (Replace → Vervang)"
   },
+  "reply": {
+    "accept": ["antwoorden", "antwoordde"],
+    "chosen": "antwoord",
+    "confidence": "high",
+    "forms": "het antwoord van de server; answered without → antwoordde zonder",
+    "sources": "catalog (errors.write.replySignatureRefused.title Antwoord van de server geweigerd, errors.shareList.signatureInvalid)"
+  },
   "report": {
     "accept": ["rapporten", "rapportdetails"],
     "chosen": "rapport",
@@ -3231,6 +3266,19 @@
     "forms": "kept verbatim; aria and tooltip explain it (volg bestandswijzigingen)",
     "sources": "technical term, no Dutch equivalent"
   },
+  "tamper": {
+    "accept": ["knoeit", "geknoeid", "knoeien"],
+    "chosen": "knoeien met",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → iemand die met het verkeer knoeit; rarely → In zeldzame gevallen knoeit er iemand met de verbinding",
+    "avoid": [
+      {
+        "form": "onrechtmatig wijzigen",
+        "why": "MS terminology form; bookish next to Cmdr’s calm voice, and the catalog already says knoeien (5 hits)"
+      }
+    ],
+    "sources": "catalog (knoeit ×5: errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid); MS terminology tamper → onrechtmatig wijzigen"
+  },
   "tap": {
     "accept": ["tik"],
     "chosen": "tik op",
@@ -3405,6 +3453,23 @@
     "forms": "Something went wrong → Er ging iets mis; the catch-all toast Er ging iets mis, en Cmdr kon niet achterhalen wat.",
     "sources": "macOS (een onverwachte fout)"
   },
+  "uninstall": {
+    "accept": ["verwijder", "verwijderd"],
+    "chosen": "verwijderen",
+    "confidence": "high",
+    "forms": "menu Verwijder opdracht ‘cmdr’; toast De opdracht ‘cmdr’ is verwijderd; Voor het installeren of verwijderen van …",
+    "avoid": [
+      {
+        "form": "installatie ongedaan maken",
+        "why": "MS’s secondary form; long, and clashes with the undo concept (ongedaan maken)"
+      },
+      {
+        "form": "de-installeren",
+        "why": "no Tier-1 or Tier-2 support"
+      }
+    ],
+    "sources": "MS terminology (uninstall → verwijderen, id 125612); catalog menu.app.cliCommandUninstall"
+  },
   "unlock": {
     "accept": ["ontgrendel", "ontgrendelt", "ontgrendeld", "beveiliging op"],
     "chosen": "Ontgrendelen",
@@ -3412,6 +3477,13 @@
     "decision": "Archieven",
     "forms": "the archive-password button Ontgrendelen; om het te ontgrendelen",
     "sources": "macOS AppKit (Ontgrendelen)"
+  },
+  "unlock-device": {
+    "accept": ["ontgrendel", "ontgrendeld"],
+    "chosen": "ontgrendelen",
+    "confidence": "high",
+    "forms": "imperative ontgrendel de telefoon / ontgrendel hem; Zorg dat je telefoon ontgrendeld is",
+    "sources": "MS terminology (unlock → ontgrendelen); catalog (errors.listing.deviceDisconnected.suggestion, errors.provider.macDroid.*)"
   },
   "unplug": {
     "accept": ["losgekoppeld", "koppel", "aangesloten", "aansluit", "verbroken", "niet verbonden"],
@@ -3443,7 +3515,7 @@
     ],
     "chosen": "update",
     "confidence": "high",
-    "forms": "noun update; verb bijwerken (Herstart om bij te werken; werkt de index bij); a menu item → Werk bij (Werk bij met huidige velden); Check for updates → Zoek naar updates; Software Update → Software-update; the Settings section Updates keeps the loanword capitalized (Updates en privacy)",
+    "forms": "noun update; verb bijwerken (Herstart om bij te werken; werkt de index bij); a menu item → Werk bij (Werk bij met huidige instellingen); Check for updates → Zoek naar updates; Software Update → Software-update; the Settings section Updates keeps the loanword capitalized (Updates en privacy)",
     "sources": "MS (update); macOS Software-update"
   },
   "upgrade": {

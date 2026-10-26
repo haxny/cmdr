@@ -217,9 +217,9 @@
   "@errorReporter.pageCrash.title": {
     "sourceHash": "c77d29c"
   },
-  "errorReporter.pageCrash.body": "Cmdr liep tegen een onverwacht probleem aan. Opnieuw laden helpt meestal. Als het blijft gebeuren, helpt het om een rapport te versturen, zodat het opgelost kan worden.",
+  "errorReporter.pageCrash.body": "Cmdr liep tegen een onverwacht probleem aan. Opnieuw laden helpt meestal. Blijft het gebeuren, verstuur dan een rapport, zodat het opgelost wordt.",
   "@errorReporter.pageCrash.body": {
-    "sourceHash": "09f93b8"
+    "sourceHash": "5cfe782"
   },
   "errorReporter.pageCrash.detailsLabel": "Technische details",
   "@errorReporter.pageCrash.detailsLabel": {

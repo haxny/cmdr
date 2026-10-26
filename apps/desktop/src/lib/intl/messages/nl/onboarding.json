@@ -237,13 +237,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Massaal namen wijzigen",
+  "onboarding.stepAi.table.rowRename": "Namen van veel bestanden wijzigen",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Je gebruikt de UI voor het massaal wijzigen van namen om het naampatroon handmatig in te stellen, na te kijken en toe te passen.",
+  "onboarding.stepAi.table.renameWithout": "Je stelt in ‘Wijzig meerdere namen’ handmatig een naampatroon in, kijkt het na en past het toe.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Je zegt ‘zet er een ISO-datum voor’, de agent stelt je naampatroon in, en je kijkt het na en past het naar eigen inzicht toe.",
   "@onboarding.stepAi.table.renameWith": {

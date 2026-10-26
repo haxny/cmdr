@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Er is niets terug te zetten: {count, plural, one {het onderdeel staat} other {de onderdelen staan}} niet meer in de prullenmand.",
+  "fileOperations.trash.undoGone": "Er is niets terug te zetten: {count, plural, one {het onderdeel stond} other {de onderdelen stonden}} niet meer in de prullenmand.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {onderdeel stond} other {onderdelen stonden}} niet meer in de prullenmand.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -269,9 +269,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Deze locatie begint al in {rootFolder}, dus dit pad leidt naar {resolvedPath}. Bedoelde je {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Paden hier beginnen al in {rootFolder}, dus dit pad leidt naar {resolvedPath}. Bedoelde je {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Gebruik korter pad",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -535,7 +535,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Je hebt het kopiëren geannuleerd. De bestanden die tot nu toe zijn gekopieerd, blijven waar ze zijn.} move {Je hebt het verplaatsen geannuleerd. De bestanden die tot nu toe zijn verplaatst, blijven waar ze terechtgekomen zijn.} compress {Je hebt het comprimeren geannuleerd.} delete {Je hebt het verwijderen geannuleerd. De bestanden die tot nu toe zijn verwijderd, zijn weg en de rest staat er nog.} trash {Je hebt het verplaatsen naar de prullenmand geannuleerd. De bestanden die tot nu toe zijn verplaatst, blijven in de prullenmand en de rest staat er nog.} other {Je hebt deze bewerking geannuleerd.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Bezig met annuleren… (opschonen)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -787,7 +787,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {en nog {countText} onderdeel} other {en nog {countText} onderdelen}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Kopieer de rest} move {Verplaats de rest} delete {Verwijder de rest} trash {Verplaats de rest naar de prullenmand} other {Ga door met de rest}}",
   "@fileOperations.sourcesGone.continue": {
