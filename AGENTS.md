@@ -87,6 +87,7 @@ Writing them:
   deferred, load via `ToolSearch` first). Read a subsystem's `C.md` proactively when running its tooling/tests without
   touching it (like `test/e2e-playwright/CLAUDE.md` before the E2E suite).
 - **Before planning**, read `docs/architecture.md`: the subsystem map (what + where + a pointer per area).
+- **Filing or triaging an issue**: `docs/tooling/backlog-board.md` (labels and board fields).
 - **A procedure** (release, screenshots, deps, adding a window): `docs/guides/` and the skills. Building a dialog,
   settings screen, window, or form control: `docs/guides/building-ui.md` (house primitives, and where each deeper doc
   lives). Two "icon" docs: a UI glyph is `docs/guides/icons.md`; the app icon and every logo raster come from
