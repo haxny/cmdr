@@ -1,8 +1,9 @@
 //! The rail's display projection of one stored row ([`MessageView`]), and the pure mapping that
 //! builds it. Everything here DROPS backend-only material: no reasoning blob, no provider state,
-//! no raw tool-result content ever crosses. A history page projects through [`thread`], which
-//! reads the rows around each one (its turn) to say what every tool line did and what each turn
-//! spent.
+//! and no raw tool-result content on a page or the stream. That content has ONE door,
+//! [`thread::ToolResultDetailView`], fetched for one line only when the user expands it. A history
+//! page projects through [`thread`], which reads the rows around each one (its turn) to say what
+//! every tool line did and what each turn spent.
 //!
 //! Below `commands/` because the live stream carries a view too: a persisted user row rides
 //! `UserPersisted` as a [`MessageView`], so a rail that reloaded before the row landed can show
