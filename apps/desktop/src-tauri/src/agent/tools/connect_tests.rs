@@ -13,7 +13,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::*;
 use crate::location::resolve::{IndexSources, VolumeFact, VolumeFacts};
-use crate::location::same_share::ShareIdentity;
+use crate::location::share_identity::ShareIdentity;
 use crate::mcp::resources::volumes::VolumeKind;
 use crate::network::server_guid::GuidProof;
 

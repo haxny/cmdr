@@ -3,7 +3,9 @@
 
 use super::*;
 use crate::location::resolve::IndexSources;
+use crate::location::share_identity::ShareIdentity;
 use crate::mcp::resources::volumes::VolumeKind;
+use crate::network::server_guid::GuidProof;
 use cmdr_fs::volume::ConnectionState;
 
 const BOX: &str = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";

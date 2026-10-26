@@ -317,7 +317,7 @@ fn scored_result_flags_stale_when_score_predates_recompute() {
 /// The two NAS ids as one proven share: one server GUID, one share name, and the
 /// account named `username` on the LAN member.
 fn one_share(lan_username: &str) -> VolumeFacts {
-    use crate::location::same_share::ShareIdentity;
+    use crate::location::share_identity::ShareIdentity;
     const BOX: &str = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
     let mut facts = facts();
     for v in &mut facts.volumes {

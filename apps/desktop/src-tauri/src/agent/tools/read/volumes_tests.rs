@@ -280,7 +280,7 @@ fn serializes_camel_case_and_omits_absent_fields() {
 /// both rows; a row nothing proves a sibling for carries no `sameShareAs`.
 #[test]
 fn rows_of_one_proven_share_name_each_other() {
-    use crate::location::same_share::ShareIdentity;
+    use crate::location::share_identity::ShareIdentity;
     let identity = || {
         Some(ShareIdentity::new(
             Some((

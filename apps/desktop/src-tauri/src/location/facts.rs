@@ -17,7 +17,7 @@ use std::sync::{LazyLock, Mutex};
 use cmdr_fs::volume::{BackendKind, ConnectionState, MountClass};
 
 use super::resolve::{IndexSources, RootSources, VolumeFact, VolumeFacts, volume_root};
-use super::same_share::ShareIdentity;
+use super::share_identity::ShareIdentity;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;

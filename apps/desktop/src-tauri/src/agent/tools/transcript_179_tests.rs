@@ -22,7 +22,7 @@ use crate::agent::tools::read::importance::important_folders_on;
 use crate::agent::tools::read::listing::{GatePolicy, LIVE_READ, ListOptions, LiveDeps, answer_read};
 use crate::location::miss::LocationMissResult;
 use crate::location::resolve::{IndexSources, LocationInput, VolumeFact, VolumeFacts, resolve};
-use crate::location::same_share::ShareIdentity;
+use crate::location::share_identity::ShareIdentity;
 use crate::mcp::resources::importance::tests::{scored_signals, write_db};
 use crate::mcp::resources::volumes::VolumeKind;
 use crate::network::server_guid::GuidProof;

@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::Location;
-use super::same_share::ShareIdentity;
+use super::share_identity::ShareIdentity;
 use crate::mcp::resources::volumes::{VolumeKind, connection_state_token};
 
 /// How many volumes a miss's `nearby` names at most.
