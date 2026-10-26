@@ -203,10 +203,15 @@ jobs:
       #   changing either can change any job's behavior, so everything reruns.
       # - `pnpm-lock.yaml` is in every Node-based filter so lockfile-only bumps
       #   (pnpm dedupe, transitive updates) still run the affected apps' checks.
+      # - `rust`, `svelte`, `desktop`, and `scripts` skip agent docs (`CLAUDE.md`, `DETAILS.md`): their
+      #   jobs never read them, while every docs check and `analytics-event-catalog` (which reads one)
+      #   run in `hygiene` on every change. Other `.md` files stay in: the agent prompts
+      #   (`src-tauri/src/agent/prompts/*.md`) and `CHANGELOG.md` compile into the app.
       - name: Detect file changes
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          predicate-quantifier: some-with-excludes
           filters: |
             rust:
               - 'apps/desktop/src-tauri/**'
@@ -225,6 +230,8 @@ jobs:
               - 'rust-toolchain.toml'
               - '.mise.toml'
               - '.github/workflows/ci.yml'
+              - '!**/CLAUDE.md'
+              - '!**/DETAILS.md'
             svelte:
               - 'apps/desktop/src/**'
               - 'apps/desktop/static/**'
@@ -241,6 +248,8 @@ jobs:
               - 'pnpm-lock.yaml'
               - '.mise.toml'
               - '.github/workflows/ci.yml'
+              - '!**/CLAUDE.md'
+              - '!**/DETAILS.md'
             desktop:
               # Gates the Linux E2E job, which builds the full app: frontend + the whole
               # Rust workspace, so the Rust workspace inputs belong here too.
@@ -251,6 +260,8 @@ jobs:
               - 'rust-toolchain.toml'
               - '.mise.toml'
               - '.github/workflows/ci.yml'
+              - '!**/CLAUDE.md'
+              - '!**/DETAILS.md'
             website:
               - 'apps/website/**'
               - '.dockerignore'
@@ -276,6 +287,8 @@ jobs:
               - 'apps/desktop/scripts/**'
               - '.mise.toml'
               - '.github/workflows/ci.yml'
+              - '!**/CLAUDE.md'
+              - '!**/DETAILS.md'
 
       # The Website job runs inside this image. Its visual baselines
       # (`apps/website/e2e/visual.spec.ts`) are pixel comparisons, so the renderer that verifies

@@ -44,6 +44,11 @@ Rules the filter block follows (comments in `ci.yml` restate these next to the f
   job's behavior, so everything reruns.
 - **`pnpm-lock.yaml` is in every Node-based filter** so lockfile-only bumps (`pnpm dedupe`, transitive updates) still
   run the affected apps' checks.
+- **`rust`, `svelte`, `desktop`, and `scripts` skip `CLAUDE.md` and `DETAILS.md`**
+  (`predicate-quantifier: some-with-excludes` plus `!` patterns), so an agent-docs edit no longer runs the half-hour
+  macOS lane. Their jobs never read those files; every docs check, and `analytics-event-catalog` (the one check that
+  reads a `DETAILS.md`), runs in `hygiene` on every change. Other `.md` files stay in: the agent prompts and
+  `CHANGELOG.md` compile into the app.
 
 The `ci-coverage` check (below) validates that every concrete path in the filter block exists, so a renamed config file
 can't silently rot a filter again (this happened: the filter watched `vite.config.ts` long after the file became
