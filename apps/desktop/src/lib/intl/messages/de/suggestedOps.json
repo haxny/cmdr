@@ -47,9 +47,9 @@
   "@suggestedOps.agentReasonTooltip": {
     "sourceHash": "aadab2c"
   },
-  "suggestedOps.agentReasonSpoken": "Begründung der KI:",
+  "suggestedOps.agentReasonSpoken": "Warum, laut der KI:",
   "@suggestedOps.agentReasonSpoken": {
-    "sourceHash": "52f75a3"
+    "sourceHash": "0c0a448"
   },
   "suggestedOps.fileCount": "{countText} {count, plural, one {Datei} other {Dateien}}",
   "@suggestedOps.fileCount": {
