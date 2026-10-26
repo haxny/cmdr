@@ -154,6 +154,21 @@ fn indexed_but_missing_path_is_a_distinct_not_in_index_note() {
     );
 }
 
+/// ❗ A fresh volume vouches only for the folders it lists. A model read
+/// `authoritative: true` beside "This folder isn't in the drive index" three times
+/// in one turn, about a NAS path that had routed to `root`, and trusted the bool.
+#[test]
+fn a_folder_the_index_doesnt_list_is_never_authoritative() {
+    let result = build_list_dir(
+        "/Volumes/naspi/papers",
+        None,
+        None,
+        &fresh_volume(),
+        &ListOptions::default(),
+    );
+    assert!(!result.coverage.authoritative, "the index read no ground here");
+}
+
 #[test]
 fn list_dir_surfaces_lower_bound_and_updating_flags() {
     let stats = dir_stats(1_000, false, false, true);

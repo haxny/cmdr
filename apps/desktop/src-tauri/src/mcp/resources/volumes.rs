@@ -350,10 +350,12 @@ pub(crate) async fn snapshot_volumes_from(locations: &[crate::volume_listing::Lo
             // Path-based status resolution routes each volume to its OWN index (see
             // `indexing::routing::volume_id_for_local_path`): a mounted-but-unindexed
             // external drive (`/Volumes/X`) reports `off`, not `root`'s freshness, so
-            // this can't disagree with `cmdr://indexing`. ❗ A scheme root
-            // (`mtp://…`, `sftp://…`) is not a path any router can place, so those
-            // are looked up by their volume id instead.
-            let status = if on_a_real_path {
+            // this can't disagree with `cmdr://indexing`. ❗ A server row (it carries
+            // a `connection_state`) and a scheme root (`mtp://…`, `sftp://…`) are
+            // looked up by their volume id instead: a scheme root is no path a router
+            // can place, and a saved share's path is its LAST mount point, which with
+            // nothing mounted there routes to `root` and would read `root`'s `fresh`.
+            let status = if on_a_real_path && loc.connection_state.is_none() {
                 index().volume_status_for_path(&loc.path)
             } else {
                 index().volume_status(&loc.id)
@@ -490,6 +492,53 @@ mod tests {
         assert_eq!(kind_for_location(Some("webdav"), false), VolumeKind::Webdav);
         // ❗ Before the session arm: an S3 place has a session, and isn't SMB.
         assert_eq!(kind_for_location(Some("s3"), true), VolumeKind::S3);
+    }
+
+    /// ❗ **A saved share's last mount path is not where its status lives.** With
+    /// nothing mounted there, the path routes to `root`, and the row read `root`'s
+    /// `fresh`: the model trusted it and went listing a share that wasn't there.
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn a_saved_share_never_reads_roots_freshness_off_its_dead_mount_path() {
+        use cmdr_index::IndexVolumeKind;
+        use cmdr_index::testing::reserve_initializing_index_for_test;
+
+        // A live `root` index reads `fresh`, which is what leaked through.
+        let _root = reserve_initializing_index_for_test(cmdr_index::ROOT_VOLUME_ID, IndexVolumeKind::Local);
+        assert_eq!(
+            index_status_token(&index().volume_status(cmdr_index::ROOT_VOLUME_ID)),
+            "fresh",
+            "precondition: root reads fresh"
+        );
+
+        let saved = crate::volume_listing::LocationInfo {
+            id: "smb-192-0-2-52-445-share-ada".to_string(),
+            name: "share on nas".to_string(),
+            path: "/Volumes/cmdr-test-never-mounted-share".to_string(),
+            category: crate::volumes::LocationCategory::Network,
+            icon: None,
+            is_ejectable: false,
+            fs_type: Some("smbfs".to_string()),
+            supports_trash: false,
+            mount_is_read_only: false,
+            is_disk_image: false,
+            is_cloud_mount: false,
+            connection_state: Some(cmdr_fs::volume::ConnectionState::Saved),
+            pinned: Some(true),
+            landing_path: None,
+            device_readiness: None,
+            usb_speed: None,
+            capabilities: None,
+            favorite_shortcut: None,
+            favorite_target: None,
+            root_label: None,
+            mount_account: None,
+        };
+        let volumes = snapshot_volumes_from(std::slice::from_ref(&saved)).await;
+        let _ = index().forget_volume(cmdr_index::ROOT_VOLUME_ID);
+
+        let row = volumes.iter().find(|v| v.id == saved.id).expect("the saved row");
+        assert_eq!(row.index_status, Some("off"), "its own id has no live index");
     }
 
     #[test]

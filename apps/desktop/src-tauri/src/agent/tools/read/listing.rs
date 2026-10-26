@@ -64,7 +64,7 @@ const MAX_LIMIT: usize = 1_000;
 pub struct Coverage {
     /// `fresh` / `scanning` / `stale` / `off`. The shared token every surface uses.
     pub index_status: String,
-    /// Reads are authoritative only when the index is `fresh`.
+    /// Reads are authoritative only when the index is `fresh` AND lists the folder.
     pub authoritative: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
@@ -75,7 +75,9 @@ pub struct Coverage {
 /// Reuses `status_token` + `Freshness::is_authoritative` so it can't drift from the
 /// rest of the app.
 pub(crate) fn coverage(enabled: bool, freshness: Option<Freshness>, indexed: bool) -> Coverage {
-    let authoritative = freshness.is_some_and(|f| f.is_authoritative());
+    // A fresh index vouches only for the folders it lists: unlisted ground was read
+    // by nobody, however fresh the volume.
+    let authoritative = indexed && freshness.is_some_and(|f| f.is_authoritative());
     let note = if !indexed {
         Some(if enabled {
             "This folder isn't in the drive index — it may be new, hidden, or outside the indexed area.".to_string()

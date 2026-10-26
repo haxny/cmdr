@@ -368,7 +368,9 @@ double-counting its bytes.
 
 `read/listing.rs::coverage` is the single builder for index freshness honesty: it reuses `status_token` +
 `Freshness::is_authoritative` (never re-derives the tokens) and attaches a plain-language note when a read isn't
-authoritative or the path isn't indexed. `SizeStats::from_dir_stats` carries the exact-vs-lower-bound / stale /
+authoritative or the path isn't indexed. `authoritative` needs both a `fresh` index AND a row for the folder: a fresh
+volume vouches for nothing it doesn't list (a model once read `authoritative: true` beside "isn't in the drive index"
+and trusted the bool). `SizeStats::from_dir_stats` carries the exact-vs-lower-bound / stale /
 has-symlinks flags verbatim from `DirStats`. Importance staleness is `asOfGeneration < recomputeGeneration`. These are
 the flags spec §2.4 makes load-bearing; the system prompt requires the model to voice them.
 
