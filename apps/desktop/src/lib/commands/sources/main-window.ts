@@ -35,7 +35,8 @@ export const mainWindowCommands: CommandSource[] = [
     nameKey: 'commands.navGoToPath.label',
     scope: 'Main window',
     showInPalette: true,
-    shortcuts: ['⌘G'],
+    // ⌘⇧G is Finder's "Go to Folder…"; ⌘G stays first, so it's the one the menu shows.
+    shortcuts: ['⌘G', '⌘⇧G'],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     descriptionKey: 'commands.navGoToPath.description',
     keywords: ['jump', 'navigate', 'goto'],
