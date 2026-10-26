@@ -33,7 +33,7 @@ const FILES: usize = 100;
 
 /// Every call: the system prompt plus the 19 tool declarations, before the user has said a word.
 const FIXED_OVERHEAD: usize = FIXED_PROMPT_OVERHEAD_TOKENS;
-const SYSTEM_PROMPT_TOKENS: usize = 1_994;
+const SYSTEM_PROMPT_TOKENS: usize = 2_347;
 const TOOL_DECLARATION_TOKENS: usize = 4_325;
 
 /// One `image_facts` row at [`OCR_CHARS`] of recognized text: the dominant per-file cost, and
