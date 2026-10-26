@@ -33,26 +33,12 @@ const VIRTUAL_FS_TYPES: &[&str] = &[
     "bpf",
 ];
 
-/// Determine whether a filesystem type supports trash.
-///
-/// Local filesystems (ext4, btrfs, xfs, zfs) support trash via the
-/// FreeDesktop.org trash spec. Network filesystems (NFS, CIFS, SSHFS)
-/// and non-native formats (FAT32/exFAT) don't reliably support it.
-/// Unknown types default to `true` (optimistic).
+/// Whether the OS keeps a Trash on a mount of this filesystem type: the one trash rule,
+/// `cmdr_fs::filesystem_kind::mount_has_trash`, shared with macOS and with `Volume::has_trash`.
+/// ❗ Verified on macOS only; on Linux the FreeDesktop trash on FAT, exFAT, and NTFS follows the
+/// same rule unverified, and a refusal there trashes nothing (`TrashRefused`), never deletes.
 pub fn supports_trash_for_fs_type(fs_type: Option<&str>) -> bool {
-    let Some(fs) = fs_type else { return true };
-    let fs_lower = fs.to_ascii_lowercase();
-
-    // Network filesystems don't support the FreeDesktop trash spec
-    if linux_mounts::is_network_fs_type(&fs_lower) {
-        return false;
-    }
-
-    match fs_lower.as_str() {
-        "ext4" | "ext3" | "ext2" | "btrfs" | "xfs" | "zfs" | "f2fs" | "reiserfs" => true,
-        "vfat" | "exfat" | "msdos" | "ntfs" | "fuseblk" => false,
-        _ => true,
-    }
+    cmdr_fs::filesystem_kind::mount_has_trash(None, fs_type)
 }
 
 /// Check if a filesystem type is virtual (not a real disk).
@@ -138,18 +124,20 @@ mod tests {
         assert!(!supports_trash_for_fs_type(Some("fuse.sshfs")));
     }
 
+    /// The same rule as macOS (`cmdr_fs::filesystem_kind::mount_has_trash`): a local disk type
+    /// keeps a Trash, a FUSE block mount doesn't.
     #[test]
     fn test_supports_trash_removable_formats() {
-        assert!(!supports_trash_for_fs_type(Some("vfat")));
-        assert!(!supports_trash_for_fs_type(Some("exfat")));
-        assert!(!supports_trash_for_fs_type(Some("ntfs")));
+        assert!(supports_trash_for_fs_type(Some("vfat")));
+        assert!(supports_trash_for_fs_type(Some("exfat")));
+        assert!(supports_trash_for_fs_type(Some("ntfs")));
         assert!(!supports_trash_for_fs_type(Some("fuseblk")));
     }
 
     #[test]
     fn test_supports_trash_unknown_and_none() {
-        assert!(supports_trash_for_fs_type(None));
-        assert!(supports_trash_for_fs_type(Some("somefs")));
+        assert!(!supports_trash_for_fs_type(None));
+        assert!(!supports_trash_for_fs_type(Some("somefs")));
     }
 
     #[test]

@@ -162,6 +162,14 @@ pub enum MountClass {
 }
 
 impl MountClass {
+    /// Whether the OS keeps a Trash for paths on this mount. `LocalDisk` is by construction a
+    /// mount [`mount_is_local_disk`](crate::filesystem_kind::mount_is_local_disk) admits, so this
+    /// is [`mount_has_trash`](crate::filesystem_kind::mount_has_trash) for a classified mount.
+    #[must_use]
+    pub fn has_trash(self) -> bool {
+        matches!(self, Self::LocalDisk)
+    }
+
     /// Whether a drive index can be turned on for a volume on this mount. ❗ Must
     /// say yes exactly where `Index::start_volume`'s routing would start one: the
     /// local walker for a local disk, the SMB gate's upgrade for a share.

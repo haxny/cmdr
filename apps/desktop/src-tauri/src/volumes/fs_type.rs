@@ -4,20 +4,12 @@
 
 use cmdr_local::statfs::{get_mount_info, statfs_string};
 
-/// Determine whether a filesystem type supports trash.
-///
-/// Local filesystems (APFS, HFS+, ext4, btrfs, xfs, zfs) support trash.
-/// Network filesystems (SMB, NFS, AFP, WebDAV, CIFS, FUSE-based SSH) and
-/// non-Mac formats (FAT32/exFAT) don't reliably support it. Unknown types
-/// default to `true` (optimistic: trash failure is caught at operation time).
+/// Whether the OS keeps a Trash on a mount of this filesystem type: the one trash rule,
+/// `cmdr_fs::filesystem_kind::mount_has_trash`, which `Volume::has_trash` derives from too, so
+/// the volume list and a suggestion's "can't run" can't disagree. A local disk, FAT32 and exFAT
+/// included, keeps one; a network or FUSE mount, or a type nobody recognizes, doesn't.
 pub fn supports_trash_for_fs_type(fs_type: Option<&str>) -> bool {
-    let Some(fs) = fs_type else { return true };
-    let fs_lower = fs.to_ascii_lowercase();
-    match fs_lower.as_str() {
-        "apfs" | "hfs" | "ext4" | "btrfs" | "xfs" | "zfs" => true,
-        "smbfs" | "nfs" | "afpfs" | "webdav" | "cifs" | "fuse.sshfs" | "msdos" | "exfat" => false,
-        _ => true,
-    }
+    cmdr_fs::filesystem_kind::mount_has_trash(None, fs_type)
 }
 
 pub fn is_smb_fs_type(fs_type: Option<&str>) -> bool {
@@ -119,10 +111,12 @@ mod tests {
         assert!(!supports_trash_for_fs_type(Some("fuse.sshfs")));
     }
 
+    /// FAT32 and exFAT keep a `.Trashes` like any local disk: `move_to_trash_sync` lands an item
+    /// in `/Volumes/<image>/.Trashes/<uid>/` (cmdr-fs `DETAILS.md` § "Which mounts keep a Trash").
     #[test]
     fn test_supports_trash_removable_formats() {
-        assert!(!supports_trash_for_fs_type(Some("msdos")));
-        assert!(!supports_trash_for_fs_type(Some("exfat")));
+        assert!(supports_trash_for_fs_type(Some("msdos")));
+        assert!(supports_trash_for_fs_type(Some("exfat")));
     }
 
     #[test]
@@ -134,18 +128,21 @@ mod tests {
         assert!(!supports_trash_for_fs_type(Some("SMBFS")));
         assert!(!supports_trash_for_fs_type(Some("NFS")));
         assert!(!supports_trash_for_fs_type(Some("CIFS")));
-        assert!(!supports_trash_for_fs_type(Some("ExFAT")));
-        assert!(!supports_trash_for_fs_type(Some("MSDOS")));
+        assert!(supports_trash_for_fs_type(Some("ExFAT")));
+        assert!(supports_trash_for_fs_type(Some("MSDOS")));
     }
 
     #[test]
-    fn test_supports_trash_unknown_defaults_true() {
+    fn test_supports_trash_on_a_known_local_disk_type() {
         assert!(supports_trash_for_fs_type(Some("ntfs")));
     }
 
+    /// An unknown or unread type promises nothing: `Volume::has_trash` reads it as a network
+    /// mount too, and the two must agree.
     #[test]
-    fn test_supports_trash_none_defaults_true() {
-        assert!(supports_trash_for_fs_type(None));
+    fn test_supports_trash_unknown_or_none_promises_nothing() {
+        assert!(!supports_trash_for_fs_type(None));
+        assert!(!supports_trash_for_fs_type(Some("zalgofs")));
     }
 
     // ========================================================================
