@@ -6,7 +6,7 @@
 //! `transfer_driver` module) can reach them through `super::test_support::…`.
 
 use super::super::super::state::WriteOperationState;
-use super::super::super::types::{ConflictResolution, WriteOperationPhase, WriteOperationType};
+use super::super::super::types::{ConflictResolution, TransferLeaves, WriteOperationPhase, WriteOperationType};
 use super::DriverConfig;
 use crate::testing::TestOperations;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -35,6 +35,7 @@ pub(super) fn copy_config() -> DriverConfig {
         emit_per_source_milestone: true,
         skip_ledger: None,
         report_source_outcomes: false,
+        leaves: TransferLeaves::default(),
     }
 }
 

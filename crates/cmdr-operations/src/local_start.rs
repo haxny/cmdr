@@ -26,7 +26,7 @@ use super::types::{
 };
 use super::validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
-    validate_source_names_are_distinct, validate_sources,
+    validate_source_names_are_distinct, validate_sources, validate_transfer_leaves,
 };
 use super::{OperationEventSink, Operations, journal, path_summary, scan_bridge, transfer_sides};
 
@@ -296,10 +296,9 @@ impl Operations {
         .await
     }
 
-    /// Starts a move operation in the background.
-    ///
-    /// Uses instant rename() for same-filesystem moves.
-    /// Uses atomic staging pattern for cross-filesystem moves.
+    /// Starts a move operation in the background: the same-`root` start, which
+    /// validates the config's leaves before anything is admitted
+    /// (`validation::validate_transfer_leaves`), then [`Self::local_move_start`].
     ///
     /// `expected_sources` is the caller's source binding, or `None` for the ordinary
     /// user-started case. `source_binding.rs`.
@@ -308,6 +307,43 @@ impl Operations {
         reason = "the manager's context alongside the op's own inputs"
     )]
     pub async fn move_files_start(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        sources: Vec<PathBuf>,
+        destination: PathBuf,
+        config: WriteOperationConfig,
+        volume_ids: Vec<String>,
+        lanes: Option<Vec<LaneKey>>,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+        sides: Option<transfer_sides::TransferSides>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        validate_transfer_leaves(&config.leaves, &sources, &destination)?;
+        self.local_move_start(
+            events,
+            sources,
+            destination,
+            config,
+            volume_ids,
+            lanes,
+            initiator,
+            expected_sources,
+            sides,
+        )
+        .await
+    }
+
+    /// Starts a local move in the background, its leaves already validated by
+    /// the start that reached it ([`Self::move_files_start`], or the routed
+    /// start through the both-local facade).
+    ///
+    /// Uses instant rename() for same-filesystem moves.
+    /// Uses atomic staging pattern for cross-filesystem moves.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the manager's context alongside the op's own inputs"
+    )]
+    pub(crate) async fn local_move_start(
         &self,
         events: Arc<dyn OperationEventSink>,
         sources: Vec<PathBuf>,

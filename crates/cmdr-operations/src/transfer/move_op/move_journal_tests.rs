@@ -622,7 +622,7 @@ async fn named_local_moves_journal_the_final_name_and_reverse_to_the_original() 
         fixture.write("src/original/nested/child.txt", b"payload");
         fixture.write("dst/keep.txt", b"keep");
         let config = WriteOperationConfig {
-            destination_name: Some("renamed".into()),
+            leaves: crate::types::TransferLeaves::single("renamed"),
             ..Default::default()
         };
         let sources = [fixture.path("src/original")];

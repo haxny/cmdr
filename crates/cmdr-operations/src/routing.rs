@@ -29,6 +29,7 @@ use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
 use super::transfer::volume::{PathRole, unregistered_volume_error};
 use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
+use super::validation::validate_transfer_leaves;
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
@@ -54,6 +55,18 @@ pub fn resolve_dest_path(dest_volume: &Arc<dyn Volume>, dest_path: String) -> Pa
         dest_path
     };
     cmdr_fs::volume::root_anchored(dest_volume.root(), Path::new(&expanded))
+}
+
+/// The folder a transfer's sources land in, as its engine takes it: a zip's
+/// inner path as given (the archive driver splits it at the boundary), any other
+/// destination resolved on its volume ([`resolve_dest_path`]). The routed start
+/// validates the leaves against this, once.
+fn landing_parent(dest_volume: &Arc<dyn Volume>, dest_path: String, into_zip: bool) -> PathBuf {
+    if into_zip {
+        PathBuf::from(dest_path)
+    } else {
+        resolve_dest_path(dest_volume, dest_path)
+    }
 }
 
 /// Whether transferring `source_path` to `dest_path` would land it on that very
@@ -302,16 +315,20 @@ impl crate::Operations {
             return Err(destination_takes_no_writes(&dest_volume));
         }
 
-        if dest_resolved.routed == Some(RoutedKind::Archive) {
-            if expected_sources.is_some() {
-                return Err(route_cannot_hold_a_binding("copy into a zip"));
-            }
+        let into_zip = dest_resolved.routed == Some(RoutedKind::Archive);
+        if into_zip && expected_sources.is_some() {
+            return Err(route_cannot_hold_a_binding("copy into a zip"));
+        }
+        let dest_path = landing_parent(&dest_volume, dest_path, into_zip);
+        validate_transfer_leaves(&config.leaves, &source_paths, &dest_path)?;
+
+        if into_zip {
             return self
                 .route_archive_copy_into_with_provenance(
                     events,
                     source_volume,
                     source_paths,
-                    PathBuf::from(&dest_path),
+                    dest_path,
                     dest_volume_id,
                     config.conflict_resolution,
                     config.progress_interval_ms,
@@ -319,12 +336,11 @@ impl crate::Operations {
                     config.compression_level,
                     config.preview_id.clone(),
                     super::journal::ArchiveProvenance::edit(initiator),
-                    config.destination_name.clone(),
+                    config.leaves.clone(),
                 )
                 .await;
         }
 
-        let dest_path = resolve_dest_path(&dest_volume, dest_path);
         self.copy_between_volumes(
             events,
             source_volume_id,
@@ -398,11 +414,20 @@ impl crate::Operations {
         // Move OUT of a zip. Takes precedence over the dest-archive branch: a
         // zip→zip move extracts out first (the dest-archive case degrades to a copy
         // failure inside the extract, never data loss).
-        if source_route == Some(RoutedKind::Archive) {
-            if expected_sources.is_some() {
-                return Err(route_cannot_hold_a_binding("move out of a zip"));
-            }
-            let dest_path = resolve_dest_path(&dest_volume, dest_path);
+        let out_of_zip = source_route == Some(RoutedKind::Archive);
+        // A move INTO a zip routes to the managed edit driver as one `{ add }`
+        // changeset; the local sources are deleted after the commit (move invariant).
+        let into_zip = !out_of_zip && dest_resolved.routed == Some(RoutedKind::Archive);
+        if out_of_zip && expected_sources.is_some() {
+            return Err(route_cannot_hold_a_binding("move out of a zip"));
+        }
+        if into_zip && expected_sources.is_some() {
+            return Err(route_cannot_hold_a_binding("move into a zip"));
+        }
+        let dest_path = landing_parent(&dest_volume, dest_path, into_zip);
+        validate_transfer_leaves(&config.leaves, &source_paths, &dest_path)?;
+
+        if out_of_zip {
             return self
                 .route_archive_move_out(
                     events,
@@ -417,18 +442,13 @@ impl crate::Operations {
                 .await;
         }
 
-        // A move INTO a zip routes to the managed edit driver as one `{ add }`
-        // changeset; the local sources are deleted after the commit (move invariant).
-        if dest_resolved.routed == Some(RoutedKind::Archive) {
-            if expected_sources.is_some() {
-                return Err(route_cannot_hold_a_binding("move into a zip"));
-            }
+        if into_zip {
             return self
                 .route_archive_copy_into_with_provenance(
                     events,
                     source_volume,
                     source_paths,
-                    PathBuf::from(&dest_path),
+                    dest_path,
                     dest_volume_id,
                     config.conflict_resolution,
                     config.progress_interval_ms,
@@ -436,12 +456,11 @@ impl crate::Operations {
                     config.compression_level,
                     config.preview_id.clone(),
                     super::journal::ArchiveProvenance::edit(initiator),
-                    config.destination_name.clone(),
+                    config.leaves.clone(),
                 )
                 .await;
         }
 
-        let dest_path = resolve_dest_path(&dest_volume, dest_path);
         self.move_between_volumes(
             events,
             source_volume_id,

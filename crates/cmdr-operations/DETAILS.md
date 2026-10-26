@@ -298,7 +298,7 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   legitimate transfer onto a case-sensitive volume. (Two sources differing only in Unicode form onto a share that
   composes new names both want the one composed name; the second one's landing refuses the occupied name with
   `DestinationExists`, never overwrites it.) Runs right after `validate_sources` in both `copy_files_start` and
-  `move_files_start`. Pinned by
+  `local_move_start`. Pinned by
   `validation_integration_test.rs::{two_sources_sharing_a_name_are_refused, sources_differing_only_in_case_are_allowed, distinct_source_names_are_allowed}`.
 - **`unique_name.rs::numbered_name(stem, ext, counter)` is the ONE ` (N)` formatter** (`counter 0` = bare, `1..` =
   ` (N)`). `find_unique_name`, `next_available_name`, `create_numbered.rs`, and the volume namer
@@ -1351,7 +1351,7 @@ so every storage on a device shares its lane); `SmbVolume` → its `volume_id` (
 defaulting to root so the ~169 existing `new(...)` sites are untouched and tests opt into same-lane vs different-lane.
 
 The both-local branches of `copy_between_volumes` / `move_between_volumes` compute the two lane keys from the live
-volume handles and pass them into `copy_files_start` / `move_files_start` as `Some(lanes)`. The plain local commands
+volume handles and pass them into `copy_files_start` / `local_move_start` as `Some(lanes)`. The plain local commands
 pass `None`, so the entry point derives a lane from `volume_ids` (`local_lanes`): empty → the `root` lane, else one lane
 per id. This is a faithful proxy for `lane_key()` on the path where no `Volume` handle is threaded through — it uses
 each id as an opaque whole, with no substring parsing.
@@ -2359,7 +2359,7 @@ indexing, and the panic-safe unregister paths below cover both signals. Don't ad
 - **Where `volume_ids` come from**: the `OperationDescriptor` each spawn site hands the manager. The cross-volume entry
   points (`copy_between_volumes`, `move_between_volumes`, `move_within_same_volume`) and the volume-aware delete carry
   the IDs; the both-local branch of `copy_between_volumes` (a local→USB / DMG copy) passes both IDs through
-  `copy_files_start` / `move_files_start` so the ejectable destination is still marked. The plain `move_files` / `trash`
+  `copy_files_start` / `local_move_start` so the ejectable destination is still marked. The plain `move_files` / `trash`
   commands pass an empty list — the unified transfer dialog only routes through them for same-`root` ops, where no
   ejectable volume is involved.
 - **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side

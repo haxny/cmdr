@@ -1,57 +1,79 @@
 //! An explicit transfer leaf (`transfer/DETAILS.md` § Named destinations) is
-//! refused at the routed start, before anything is admitted or written: a leaf
-//! that isn't one plain component, a leaf for more than one source, and a leaf
-//! too long for the filesystem.
+//! refused at the start, before anything is admitted or written: a leaf that
+//! isn't one plain component, a leaf for more than one source, and a leaf too
+//! long for the filesystem. Every start that takes a leaf validates it once
+//! (the routed copy and move, and the same-`root` move), and no engine below
+//! checks it again.
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use super::event_sinks::{CollectorEventSink, OperationEventSink};
-use super::types::{VolumeCopyConfig, WriteOperationError};
+use super::types::{VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult};
 use crate::testing::TestOperations;
+use crate::types::TransferLeaves;
 use cmdr_fs::testing::TestDir;
 use cmdr_operation_log::types::Initiator;
 
-/// Starts a routed copy or move on the local `root` volume, as the dialog does.
+/// The starts a leaf can arrive through.
+#[derive(Debug, Clone, Copy)]
+enum Start {
+    /// `start_volume_copy`, as the transfer dialog copies.
+    RoutedCopy,
+    /// `start_volume_move`, as the transfer dialog moves.
+    RoutedMove,
+    /// `move_files_start`, the same-`root` move command.
+    LocalMove,
+}
+
+const STARTS: [Start; 3] = [Start::RoutedCopy, Start::RoutedMove, Start::LocalMove];
+
+/// Starts a copy or move on the local `root` volume through `via`.
 async fn start(
     engine: &TestOperations,
-    is_move: bool,
+    via: Start,
     sources: Vec<PathBuf>,
     destination: &std::path::Path,
     leaf: &str,
-) -> Result<super::types::WriteOperationStartResult, WriteOperationError> {
+) -> Result<WriteOperationStartResult, WriteOperationError> {
     let events: Arc<dyn OperationEventSink> = Arc::new(CollectorEventSink::new());
+    let leaves = TransferLeaves::single(leaf);
     let config = VolumeCopyConfig {
-        destination_name: Some(leaf.to_string()),
+        leaves: leaves.clone(),
         ..VolumeCopyConfig::default()
     };
     let dest = destination.display().to_string();
-    if is_move {
-        engine
-            .start_volume_move(
-                events,
-                "root".into(),
-                sources,
-                "root".into(),
-                dest,
-                config,
-                Initiator::User,
-                None,
-            )
-            .await
-    } else {
-        engine
-            .start_volume_copy(
-                events,
-                "root".into(),
-                sources,
-                "root".into(),
-                dest,
-                config,
-                Initiator::User,
-                None,
-            )
-            .await
+    let (root, initiator) = ("root".to_string(), Initiator::User);
+    match via {
+        Start::RoutedCopy => {
+            engine
+                .start_volume_copy(events, root.clone(), sources, root, dest, config, initiator, None)
+                .await
+        }
+        Start::RoutedMove => {
+            engine
+                .start_volume_move(events, root.clone(), sources, root, dest, config, initiator, None)
+                .await
+        }
+        Start::LocalMove => {
+            let config = WriteOperationConfig {
+                leaves,
+                ..WriteOperationConfig::default()
+            };
+            engine
+                .move_files_start(
+                    events,
+                    sources,
+                    destination.to_path_buf(),
+                    config,
+                    vec![],
+                    None,
+                    initiator,
+                    None,
+                    None,
+                )
+                .await
+        }
     }
 }
 
@@ -73,13 +95,13 @@ fn assert_untouched(source: &std::path::Path, dest: &std::path::Path) {
 async fn a_leaf_that_is_not_one_plain_component_refuses_at_the_start() {
     let engine = TestOperations::new();
     engine.register_local_root();
-    for is_move in [false, true] {
+    for via in STARTS {
         for leaf in ["", ".", "..", "../escape.txt", "/absolute", "bad\0name"] {
             let (_tmp, source, dest) = fixture("named_leaf_entry_bad");
-            let result = start(&engine, is_move, vec![source.clone()], &dest, leaf).await;
+            let result = start(&engine, via, vec![source.clone()], &dest, leaf).await;
             assert!(
                 matches!(result, Err(WriteOperationError::InvalidName { .. })),
-                "move={is_move} leaf={leaf:?}: {result:?}"
+                "{via:?} leaf={leaf:?}: {result:?}"
             );
             assert_untouched(&source, &dest);
         }
@@ -90,14 +112,14 @@ async fn a_leaf_that_is_not_one_plain_component_refuses_at_the_start() {
 async fn a_leaf_for_more_than_one_source_refuses_at_the_start() {
     let engine = TestOperations::new();
     engine.register_local_root();
-    for is_move in [false, true] {
+    for via in STARTS {
         let (tmp, source, dest) = fixture("named_leaf_entry_batch");
         let other = tmp.join("other.txt");
         std::fs::write(&other, b"other").expect("other");
-        let result = start(&engine, is_move, vec![source.clone(), other], &dest, "backup.txt").await;
+        let result = start(&engine, via, vec![source.clone(), other], &dest, "backup.txt").await;
         assert!(
             matches!(result, Err(WriteOperationError::InvalidName { .. })),
-            "move={is_move}: {result:?}"
+            "{via:?}: {result:?}"
         );
         assert_untouched(&source, &dest);
     }
@@ -107,12 +129,12 @@ async fn a_leaf_for_more_than_one_source_refuses_at_the_start() {
 async fn a_leaf_too_long_for_the_filesystem_refuses_at_the_start() {
     let engine = TestOperations::new();
     engine.register_local_root();
-    for is_move in [false, true] {
+    for via in STARTS {
         let (_tmp, source, dest) = fixture("named_leaf_entry_long");
-        let result = start(&engine, is_move, vec![source.clone()], &dest, &"n".repeat(256)).await;
+        let result = start(&engine, via, vec![source.clone()], &dest, &"n".repeat(256)).await;
         assert!(
             matches!(result, Err(WriteOperationError::IoError { .. })),
-            "move={is_move}: {result:?}"
+            "{via:?}: {result:?}"
         );
         assert_untouched(&source, &dest);
     }

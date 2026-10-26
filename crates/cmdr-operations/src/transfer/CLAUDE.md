@@ -13,8 +13,8 @@ Drivers: `transfer_driver/CLAUDE.md`. File map: `DETAILS.md` § Files.
   `resolve_staging`. A non-overwrite landing REFUSES an occupied destination, a move's renames included
   (`move_op::rename_onto_free_name`); ❌ only a name the CALLER claimed earns `land`'s clear-and-rename
   (`staged_write::LandingName`).
-- **An explicit transfer leaf applies before conflict/identity checks**, on every engine; never copy then rename.
-  DETAILS § "Named destinations".
+- **An explicit leaf (`TransferLeaves`) applies before conflict/identity checks**, on every engine; never copy then
+  rename. Validated ONCE, at the start. DETAILS § "Named destinations".
 - **A source that would land on ITSELF is a duplicate, ❌ never a conflict**: settled by `dev+ino` per TOP-LEVEL source,
   before the loop. DETAILS § "Self-collision".
 - **A symlink is a LEAF to a same-volume move (cross-volume follows it) and to every copy's DESTINATION**: ask

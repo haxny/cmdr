@@ -392,11 +392,6 @@ pub(crate) fn move_files_with_progress_inner(
     destination: &Path,
     config: &WriteOperationConfig,
 ) -> Result<(), WriteOperationError> {
-    super::super::validation::validate_transfer_destination_name(
-        sources,
-        destination,
-        config.destination_name.as_deref(),
-    )?;
     // Handle dry-run mode
     if handle_dry_run(
         config.dry_run,
@@ -424,17 +419,10 @@ pub(crate) fn move_files_with_progress_inner(
     // its own staged copy over the original and then delete that original in
     // Phase 4.
     let (already_in_place, sources): (Vec<PathBuf>, Vec<PathBuf>) = sources.iter().cloned().partition(|source| {
-        source
-            .file_name()
-            .map(|name| {
-                let leaf = config
-                    .destination_name
-                    .as_deref()
-                    .map(Path::new)
-                    .unwrap_or_else(|| Path::new(name));
-                is_same_file(source, &destination.join(leaf))
-            })
-            .unwrap_or(false)
+        config
+            .leaves
+            .leaf_of(source)
+            .is_some_and(|leaf| is_same_file(source, &destination.join(leaf)))
     });
     for source in &already_in_place {
         log::info!(

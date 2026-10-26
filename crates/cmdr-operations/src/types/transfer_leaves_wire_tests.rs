@@ -2,7 +2,7 @@
 //! absent or `null` meaning "each source keeps its own name". The frontend and
 //! `bindings.ts` read exactly this shape.
 
-use super::{VolumeCopyConfig, WriteOperationConfig};
+use crate::types::{TransferLeaves, VolumeCopyConfig, WriteOperationConfig};
 use serde_json::{Value, json};
 
 fn write_config_round_trip(input: Value) -> Value {
@@ -27,12 +27,8 @@ fn a_volume_copy_config_reads_destination_name_as_its_leaf() {
     let mut named = base.clone();
     named["destinationName"] = json!("backup.txt");
     let config: VolumeCopyConfig = serde_json::from_value(named).expect("a volume config");
-    assert_eq!(volume_leaf(&config), Some("backup.txt"));
+    assert_eq!(config.leaves, TransferLeaves::single("backup.txt"));
 
     let config: VolumeCopyConfig = serde_json::from_value(base).expect("a volume config");
-    assert_eq!(volume_leaf(&config), None);
-}
-
-fn volume_leaf(config: &VolumeCopyConfig) -> Option<&str> {
-    config.destination_name.as_deref()
+    assert_eq!(config.leaves, TransferLeaves::default());
 }

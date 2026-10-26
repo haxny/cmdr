@@ -6,28 +6,28 @@
 //! one cycle. `DETAILS.md` § "Why `types` imports nothing".
 //!
 //! The event payloads, the error family, the queue row's summary, `KnownSize`,
-//! and what a stopped write left behind live one level down in
-//! `types/events.rs`, `types/errors.rs`, `types/queue_row.rs`,
-//! `types/known_size.rs`, and `types/leftovers.rs` (a leaf both events and
-//! errors carry, so neither imports the other) and are re-exported here, so
-//! every caller keeps its `types::WriteProgressEvent` /
+//! where a transfer's sources land, and what a stopped write left behind live
+//! one level down in `types/events.rs`, `types/errors.rs`, `types/queue_row.rs`,
+//! `types/known_size.rs`, `types/transfer_leaves.rs`, and `types/leftovers.rs`
+//! (a leaf both events and errors carry, so neither imports the other) and are
+//! re-exported here, so every caller keeps its `types::WriteProgressEvent` /
 //! `types::WriteOperationError` path.
 
 use cmdr_operation_log::types::OpKind;
 use serde::{Deserialize, Serialize};
 
-#[cfg(test)]
-mod config_wire_tests;
 mod errors;
 mod events;
 mod known_size;
 mod leftovers;
 mod queue_row;
+mod transfer_leaves;
 pub use errors::*;
 pub use events::*;
 pub use known_size::KnownSize;
 pub(crate) use leftovers::*;
 pub use queue_row::*;
+pub(crate) use transfer_leaves::TransferLeaves;
 
 /// One original the operation kept under a new name because its old name was
 /// occupied by the replacement. Shared by failure and cancellation payloads so
@@ -601,8 +601,8 @@ pub struct WriteOperationConfig {
     #[serde(default)]
     pub pre_known_conflicts: Vec<String>,
     /// Explicit leaf name for a single copy or move; the destination still names its parent.
-    #[serde(default)]
-    pub destination_name: Option<String>,
+    #[serde(default, rename = "destinationName")]
+    pub leaves: TransferLeaves,
     /// What a copy does when the destination looks too small. See [`SpaceShortfall`].
     #[serde(default)]
     pub space_shortfall: SpaceShortfall,
@@ -621,7 +621,7 @@ impl Default for WriteOperationConfig {
             preview_id: None,
             max_conflicts_to_show: default_max_conflicts_to_show(),
             pre_known_conflicts: Vec::new(),
-            destination_name: None,
+            leaves: TransferLeaves::default(),
             space_shortfall: SpaceShortfall::Refuse,
             source_kinds: None,
         }
@@ -746,8 +746,8 @@ pub struct VolumeCopyConfig {
     #[serde(default)]
     pub pre_known_conflicts: Vec<String>,
     /// Explicit leaf name for a single copy or move; the destination still names its parent.
-    #[serde(default)]
-    pub destination_name: Option<String>,
+    #[serde(default, rename = "destinationName")]
+    pub leaves: TransferLeaves,
     /// Deflate level (1..=9) for zip writes this op produces (compress, or
     /// copy/move INTO an archive); `None` = the crate default (level 6). The
     /// frontend reads the `behavior.archiveCompressionLevel` setting at dispatch
@@ -772,7 +772,7 @@ impl Default for VolumeCopyConfig {
             max_conflicts_to_show: 100,
             preview_id: None,
             pre_known_conflicts: Vec::new(),
-            destination_name: None,
+            leaves: TransferLeaves::default(),
             compression_level: None,
             space_shortfall: SpaceShortfall::Refuse,
             source_kinds: None,
@@ -788,7 +788,7 @@ impl From<&WriteOperationConfig> for VolumeCopyConfig {
             max_conflicts_to_show: config.max_conflicts_to_show,
             preview_id: config.preview_id.clone(),
             pre_known_conflicts: config.pre_known_conflicts.clone(),
-            destination_name: config.destination_name.clone(),
+            leaves: config.leaves.clone(),
             // `WriteOperationConfig` is the legacy local-only path (no archive
             // routing rides it), so the level has no source here.
             compression_level: None,

@@ -172,8 +172,7 @@ pub(crate) fn copy_files_with_progress_inner(
         sources.len()
     );
 
-    let mut dir_remap =
-        super::named_destination::initial_remap(sources, destination, config.destination_name.as_deref())?;
+    let mut dir_remap = super::named_destination::initial_remap(sources, destination, &config.leaves);
 
     // Handle dry-run mode
     if handle_dry_run(
@@ -234,7 +233,7 @@ pub(crate) fn copy_files_with_progress_inner(
     );
     state.transfer_tree.install(
         scan_result.order_by_transfer_tree(sources, &TreeOrder::active(state.scope().host())),
-        TreeLanding::under(destination, config.destination_name.as_deref()),
+        TreeLanding::under(destination, &config.leaves),
     );
     let tree = state.transfer_tree.reporter();
 
@@ -462,6 +461,7 @@ pub(crate) fn copy_files_with_progress_inner(
         emit_per_source_milestone: false,
         skip_ledger: None,
         report_source_outcomes: false,
+        leaves: config.leaves.clone(),
     };
 
     let mut file_iter = files_for_loop.iter();

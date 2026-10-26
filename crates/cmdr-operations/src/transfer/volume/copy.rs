@@ -172,12 +172,6 @@ impl crate::Operations {
         initiator: cmdr_operation_log::types::Initiator,
         expected_sources: Option<ExpectedSources>,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        super::super::super::validation::validate_transfer_destination_name(
-            &source_paths,
-            &dest_path,
-            config.destination_name.as_deref(),
-        )?;
-
         // Validate that volumes support the required operations
         if !source_volume.supports_export() {
             return Err(WriteOperationError::IoError {
@@ -211,7 +205,7 @@ impl crate::Operations {
                 max_conflicts_to_show: config.max_conflicts_to_show,
                 preview_id: config.preview_id,
                 pre_known_conflicts: config.pre_known_conflicts,
-                destination_name: config.destination_name,
+                leaves: config.leaves,
                 space_shortfall: config.space_shortfall,
                 source_kinds: config.source_kinds,
                 ..Default::default()
@@ -616,12 +610,6 @@ pub async fn copy_volumes_with_progress(
     dest_path: &Path,
     config: &VolumeCopyConfig,
 ) -> Result<(), WriteFailure> {
-    super::super::super::validation::validate_transfer_destination_name(
-        source_paths,
-        dest_path,
-        config.destination_name.as_deref(),
-    )
-    .map_err(WriteFailure::synthetic)?;
     log::debug!(
         "copy_volumes_with_progress: starting operation_id={}, {} sources",
         operation_id,
@@ -753,10 +741,9 @@ pub async fn copy_volumes_with_progress(
         &*events,
     )
     .await?;
-    state.transfer_tree.install(
-        preflight.tree.take(),
-        TreeLanding::under(dest_path, config.destination_name.as_deref()),
-    );
+    state
+        .transfer_tree
+        .install(preflight.tree.take(), TreeLanding::under(dest_path, &config.leaves));
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();
@@ -897,16 +884,10 @@ pub async fn copy_volumes_with_progress(
     // these to a free ` (N)` name instead of ever asking. Local twin:
     // `../copy/mod.rs`. `DETAILS.md` § "Self-collision (duplicating in place)".
     pre_skip_paths.retain(|source| {
-        source
-            .file_name()
-            .map(|name| {
-                let target_name = config
-                    .destination_name
-                    .as_deref()
-                    .map(Path::new)
-                    .unwrap_or_else(|| Path::new(name));
-                !is_the_same_item(&source_volume, source, &dest_volume, &dest_path.join(target_name))
-            })
+        config
+            .leaves
+            .leaf_of(source)
+            .map(|leaf| !is_the_same_item(&source_volume, source, &dest_volume, &dest_path.join(leaf)))
             .unwrap_or(true)
     });
 

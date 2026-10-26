@@ -784,7 +784,7 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
                 None,
                 None,
                 super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
-                Some("renamed.txt".into()),
+                crate::types::TransferLeaves::single("renamed.txt"),
             )
             .await
             .unwrap();
@@ -840,7 +840,7 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
                 None,
                 None,
                 super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
-                Some("renamed.txt".into()),
+                crate::types::TransferLeaves::single("renamed.txt"),
             )
             .await
             .unwrap();

@@ -150,7 +150,7 @@ mod tests {
         let original = VolumeCopyConfig {
             preview_id: Some("preview-1".into()),
             pre_known_conflicts: vec!["a.txt".into()],
-            destination_name: Some("renamed.txt".into()),
+            leaves: crate::types::TransferLeaves::single("renamed.txt"),
             conflict_resolution: crate::types::ConflictResolution::Skip,
             ..VolumeCopyConfig::default()
         };
@@ -168,7 +168,7 @@ mod tests {
 
         assert_eq!(retry.preview_id, None);
         assert!(retry.pre_known_conflicts.is_empty());
-        assert_eq!(retry.destination_name.as_deref(), Some("renamed.txt"));
+        assert_eq!(retry.leaves, crate::types::TransferLeaves::single("renamed.txt"));
         assert_eq!(retry.conflict_resolution, crate::types::ConflictResolution::Skip);
     }
 }

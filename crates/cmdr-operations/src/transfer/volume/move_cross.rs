@@ -68,12 +68,6 @@ pub async fn move_volumes_with_progress(
     dest_path: &Path,
     config: &VolumeCopyConfig,
 ) -> Result<(), WriteFailure> {
-    super::super::super::validation::validate_transfer_destination_name(
-        source_paths,
-        dest_path,
-        config.destination_name.as_deref(),
-    )
-    .map_err(WriteFailure::synthetic)?;
     // A volume this move needs is already gone (a Retry while the NAS is still
     // down): wait for it before the first step fails on it
     // (`preflight::wait_for_gone_volumes`).
@@ -131,10 +125,9 @@ pub async fn move_volumes_with_progress(
         &*events,
     )
     .await?;
-    state.transfer_tree.install(
-        preflight.tree.take(),
-        TreeLanding::under(dest_path, config.destination_name.as_deref()),
-    );
+    state
+        .transfer_tree
+        .install(preflight.tree.take(), TreeLanding::under(dest_path, &config.leaves));
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();
@@ -222,6 +215,7 @@ pub async fn move_volumes_with_progress(
         // Skips and failures from the driver, both `Done`s (copied, then
         // swept) from the closure below.
         report_source_outcomes: true,
+        leaves: config.leaves.clone(),
     };
 
     // Per-source state shared with the driver's closures via interior
@@ -305,7 +299,6 @@ pub async fn move_volumes_with_progress(
         &driver_config,
         super::landing::top_level_precheck(
             state, &dest_volume, Some(Arc::clone(&op_probe)), super::landing::NewName::Respell,
-            config.destination_name.as_deref(),
         ),
         super::top_level_conflict::TopLevelConflicts {
             source_volume: Arc::clone(&source_volume),

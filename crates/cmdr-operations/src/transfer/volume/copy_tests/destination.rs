@@ -165,7 +165,7 @@ async fn an_explicit_volume_copy_name_uses_the_requested_leaf_and_conflict_polic
     dest.create_file(Path::new("/renamed.txt"), b"old bytes").await.unwrap();
     for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
         let config = VolumeCopyConfig {
-            destination_name: Some("renamed.txt".into()),
+            leaves: crate::types::TransferLeaves::single("renamed.txt"),
             conflict_resolution: policy,
             ..Default::default()
         };
@@ -203,7 +203,7 @@ async fn an_explicit_volume_copy_folder_name_preserves_children_and_empty_folder
         .await
         .unwrap();
     let config = VolumeCopyConfig {
-        destination_name: Some("renamed".into()),
+        leaves: crate::types::TransferLeaves::single("renamed"),
         ..Default::default()
     };
     let result = copy_volumes_with_progress(

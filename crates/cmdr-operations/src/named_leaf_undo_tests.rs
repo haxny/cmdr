@@ -109,7 +109,7 @@ async fn undoing_a_named_local_copy_deletes_exactly_the_named_copy() {
         let state = Arc::new(rig.engine.new_operation_state(Duration::ZERO));
         journal::open_local_op(state.scope(), op_id, OpKind::Copy, Initiator::User, 1, Some("root"));
         let config = WriteOperationConfig {
-            destination_name: Some("backup".into()),
+            leaves: crate::types::TransferLeaves::single("backup"),
             ..Default::default()
         };
         let result = copy_files_with_progress_inner(
@@ -175,7 +175,7 @@ async fn undoing_a_named_volume_copy_deletes_exactly_the_named_copy() {
         Arc::clone(&dest) as Arc<dyn Volume>,
         Path::new("/"),
         &VolumeCopyConfig {
-            destination_name: Some("backup.txt".into()),
+            leaves: crate::types::TransferLeaves::single("backup.txt"),
             progress_interval_ms: 0,
             ..VolumeCopyConfig::default()
         },
@@ -241,7 +241,7 @@ async fn undoing_a_named_volume_move_restores_the_original_name() {
             1,
         );
         let config = VolumeCopyConfig {
-            destination_name: Some("renamed.txt".into()),
+            leaves: crate::types::TransferLeaves::single("renamed.txt"),
             progress_interval_ms: 0,
             ..VolumeCopyConfig::default()
         };

@@ -315,11 +315,6 @@ pub async fn move_within_same_volume_with_progress(
     dest_path: &Path,
     config: &VolumeCopyConfig,
 ) -> Result<(), WriteOperationError> {
-    super::super::super::validation::validate_transfer_destination_name(
-        source_paths,
-        dest_path,
-        config.destination_name.as_deref(),
-    )?;
     // Dest-inside-source guard: the rename-merge makes this path recursive for
     // the first time, so moving `/A` into `/A/sub` would re-discover and
     // re-rename the content it just moved. Reject `dest == source ||
@@ -367,17 +362,15 @@ pub async fn move_within_same_volume_with_progress(
     // down through its recursion and would rename every leaf onto itself or
     // shuffle it aside to `name (1)`. One volume by construction on this path,
     // so only the same-parent-plus-folded-leaf half of the identity question is
-    // left to ask. An explicit `destination_name` is the leaf asked about.
+    // left to ask. An explicit leaf (`TransferLeaves`) is the one asked about.
     // `../DETAILS.md` § "Self-collision (duplicating in place)".
     let (already_in_place, remaining): (Vec<PathBuf>, Vec<PathBuf>) =
         source_paths.iter().cloned().partition(|source| {
             config
-                .destination_name
-                .as_deref()
-                .map(Path::new)
-                .or_else(|| state.target_names.name_for(source).map(Path::new))
-                .map(|name| is_the_same_volume_path(source, &dest_path.join(name)))
-                .unwrap_or(false)
+                .leaves
+                .chosen_for(source)
+                .or_else(|| state.target_names.name_for(source))
+                .is_some_and(|name| is_the_same_volume_path(source, &dest_path.join(name)))
         });
     for source in &already_in_place {
         log::info!(
@@ -451,7 +444,7 @@ pub async fn move_within_same_volume_with_progress(
             |source| source_hints.get(source).is_some_and(|hint| hint.is_directory),
             &TreeOrder::active(state.scope().host()),
         ),
-        TreeLanding::under(dest_path, config.destination_name.as_deref()),
+        TreeLanding::under(dest_path, &config.leaves),
     );
 
     // Operation-log journaling for the same-volume move: the one volume id (as both
@@ -493,6 +486,7 @@ pub async fn move_within_same_volume_with_progress(
         skip_ledger: None,
         // Skips and failures from the driver, `Done` from `landed_whole`.
         report_source_outcomes: true,
+        leaves: config.leaves.clone(),
     };
 
     // Interior mutability shapes the apply-to-all latch into a Mutex cell so
@@ -517,13 +511,7 @@ pub async fn move_within_same_volume_with_progress(
         &pre_skip_paths,
         &driver_config,
         // A same-volume move keeps the entry it moves, name and all.
-        super::landing::top_level_precheck(
-            state,
-            &volume,
-            None,
-            super::landing::NewName::Keep,
-            config.destination_name.as_deref(),
-        ),
+        super::landing::top_level_precheck(state, &volume, None, super::landing::NewName::Keep),
         {
             let volume = Arc::clone(&volume);
             let state = Arc::clone(state);

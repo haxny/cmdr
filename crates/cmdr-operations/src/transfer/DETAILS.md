@@ -573,9 +573,19 @@ NAS.
 
 ### Named destinations
 
-`WriteOperationConfig::destination_name` and `VolumeCopyConfig::destination_name` supply an explicit leaf for one
-source. The destination argument remains its parent directory. `validation::validate_transfer_destination_name` checks
-the single-source count, leaf components, null bytes, and path limits before writes.
+`TransferLeaves` (`../types/transfer_leaves.rs`), the `leaves` field of both `WriteOperationConfig` and
+`VolumeCopyConfig`, says which name each top-level source lands as: its own, or, for a single source, an explicit leaf.
+The destination argument remains its parent directory. On the wire it stays the optional `destinationName`, one leaf.
+
+- **Every route asks it**: `leaf_of(source)` (the chosen leaf, else the source's own name) or `chosen_for(source)` (the
+  chosen leaf only, where a rename-by-move's target name may apply instead). No engine reads the leaf any other way, so
+  a route can't honor a name another forgets.
+- **Validated once, at the start, before the operation is admitted**: `validation::validate_transfer_leaves` checks the
+  single-source count, leaf components, null bytes, and path limits. The routed starts run it in `route_volume_copy` /
+  `route_volume_move` (so `start_volume_*` and a retry), against the folder the engine will land in (`landing_parent`: a
+  zip's inner path as given, any other destination resolved on its volume); the same-`root` `move_files_start` runs it
+  before `local_move_start`, which is what the both-local facade calls. ❌ No engine re-validates: a test that drives an
+  engine directly hands it leaves it already trusts.
 
 Native Copy seeds the shared `named_destination::initial_remap` before its identity check. The per-file loop and
 empty-directory pass use that map, so staging, journal entries, durability, and rollback refer to the requested paths.
@@ -586,17 +596,18 @@ identity would drop as already in place, renames on every volume. A native cross
 its staging directory and lands that same leaf at the destination; ordinary staging-to-final rebasing therefore journals
 and flushes the named files and directories. Original-source stamps and deletion ledgers continue naming the originals.
 
-Both-local volume facades forward the leaf into the native engines. Other volume copies and moves apply it in the serial
-driver's landing probe before conflict resolution. Same-volume Move's no-op guard also checks the requested leaf.
-Archive destinations carry it into the changeset's top-level inner path before conflicts and subtree expansion; archive
-moves remove only originals whose bytes committed. Archive move-out passes the same config to its extraction engine.
+Both-local volume facades forward the leaves into the native engines. Other volume copies and moves apply them in the
+serial async driver, which names each source's landing path (`DriverConfig::leaves`) before the landing probe and
+conflict resolution. Same-volume Move's no-op guard also checks the requested leaf. Archive destinations carry it into
+the changeset's top-level inner path before conflicts and subtree expansion; archive moves remove only originals whose
+bytes committed. Archive move-out passes the same config to its extraction engine.
 
 The dialog refuses a complete target equal to its source; directory-targeted Paste/Duplicate callers retain the backend
 self-collision behavior below. Frontend interpretation: `apps/desktop/src/lib/file-operations/transfer/DETAILS.md` §
 "Single-item destinations". Regression coverage: `copy/named_copy_tests.rs`, `move_op/named_move_tests.rs`, the move
 journal suite, `volume/named_move_tests.rs`, archive `copy_into_tests.rs`, the routed-start refusals in
 `../named_leaf_entry_tests.rs`, the undo of every named route in `../named_leaf_undo_tests.rs`, and the wire shape in
-`../types/config_wire_tests.rs`.
+`../types/transfer_leaves_wire_tests.rs`.
 
 ### Self-collision (duplicating in place)
 

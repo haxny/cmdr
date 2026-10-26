@@ -8,15 +8,21 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::types::{PermissionSide, WriteOperationError};
+use super::types::{PermissionSide, TransferLeaves, WriteOperationError};
 
 /// An explicit transfer leaf names exactly one source and never escapes its parent.
-pub(crate) fn validate_transfer_destination_name(
+///
+/// The ONE check of a transfer's leaves: the routed start runs it before the
+/// operation is admitted (`routing.rs`, `local_start.rs::move_files_start`), and
+/// every engine below trusts it.
+pub(crate) fn validate_transfer_leaves(
+    leaves: &TransferLeaves,
     sources: &[PathBuf],
     destination: &Path,
-    name: Option<&str>,
 ) -> Result<(), WriteOperationError> {
-    let Some(name) = name else { return Ok(()) };
+    let Some(name) = leaves.single_leaf() else {
+        return Ok(());
+    };
     let named_path = destination.join(name);
     if sources.len() != 1
         || sources[0].file_name().is_none()

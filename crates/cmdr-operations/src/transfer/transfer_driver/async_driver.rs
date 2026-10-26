@@ -204,9 +204,14 @@ where
             continue;
         }
 
-        // A rename that runs as a move names its source's new name here
-        // (`target_names.rs`); every other source keeps its own.
-        let initial_dest_path = if let Some(name) = state.target_names.name_for(source_path) {
+        // An explicit leaf names where the source lands (`TransferLeaves`), as
+        // does a rename that runs as a move (`target_names.rs`); every other
+        // source keeps its own name.
+        let landing_name = config
+            .leaves
+            .chosen_for(source_path)
+            .or_else(|| state.target_names.name_for(source_path));
+        let initial_dest_path = if let Some(name) = landing_name {
             dest_root.join(name)
         } else {
             dest_root.to_path_buf()

@@ -4,7 +4,7 @@
 //! Three strategies, decided by the volume relationship:
 //! - Same volume (same Arc): `volume.rename()` per file (instant for MTP MoveObject) — `move_same`,
 //!   which copies then deletes instead where the volume's renames copy (S3)
-//! - Both local: delegates to `move_files_start` (handles same-fs rename optimization)
+//! - Both local: delegates to `local_move_start` (handles same-fs rename optimization)
 //! - Cross-volume: copy to destination then delete sources — `move_cross`
 //!
 //! ❗ The dependency runs ONE way: this module names both engines, and neither
@@ -43,7 +43,7 @@ impl crate::Operations {
     ///
     /// Determines the best strategy based on volume relationship:
     /// - Same volume (same Arc): `volume.rename()` per file (instant for MTP MoveObject)
-    /// - Both local: delegates to `move_files_start` (handles same-fs rename optimization)
+    /// - Both local: delegates to `local_move_start` (handles same-fs rename optimization)
     /// - Cross-volume: copy to destination then delete sources
     ///
     /// Emits the standard write events (`write-progress`, `write-complete`, `write-error`).
@@ -65,11 +65,6 @@ impl crate::Operations {
         initiator: cmdr_operation_log::types::Initiator,
         expected_sources: Option<ExpectedSources>,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        super::super::super::validation::validate_transfer_destination_name(
-            &source_paths,
-            &dest_path,
-            config.destination_name.as_deref(),
-        )?;
         // Same volume: use native rename/move (instant for MTP), or copy then
         // delete where the volume's renames copy (`move_same.rs`).
         if Arc::ptr_eq(&source_volume, &dest_volume) {
@@ -117,7 +112,7 @@ impl crate::Operations {
                 max_conflicts_to_show: config.max_conflicts_to_show,
                 preview_id: config.preview_id,
                 pre_known_conflicts: config.pre_known_conflicts,
-                destination_name: config.destination_name,
+                leaves: config.leaves,
                 source_kinds: config.source_kinds,
                 ..Default::default()
             };
@@ -144,7 +139,7 @@ impl crate::Operations {
                 ),
             );
             return self
-                .move_files_start(
+                .local_move_start(
                     events,
                     absolute_sources,
                     absolute_dest,
