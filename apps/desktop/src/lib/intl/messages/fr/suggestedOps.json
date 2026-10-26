@@ -47,9 +47,9 @@
   "@suggestedOps.agentReasonTooltip": {
     "sourceHash": "aadab2c"
   },
-  "suggestedOps.agentReasonSpoken": "Raison donnée par l’IA :",
+  "suggestedOps.agentReasonSpoken": "Pourquoi, selon l’IA :",
   "@suggestedOps.agentReasonSpoken": {
-    "sourceHash": "52f75a3"
+    "sourceHash": "0c0a448"
   },
   "suggestedOps.fileCount": "{countText} {count, plural, one {fichier} many {fichiers} other {fichiers}}",
   "@suggestedOps.fileCount": {
