@@ -119,3 +119,37 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   locales write as imperatives (nl `Overschrijf indien ouder`, `Vraag voor elk`), so the caption reads “If a file
   already exists: Overwrite if older!” as a command. Consider dedicated noun-phrase or state labels for the caption
   (“Skip”, “Overwrite if older”) as `*PolicyName` keys. (all with an imperative/infinitive split: nl, de, hu, sv, …)
+- `askCmdr.renameUndo.skipReason.*.counted` (drift, nameTaken, unverifiable, failed): still say "file(s)" while
+  `vanished.counted` now says "item(s)", though a rename run can include folders. Move the family to "item". (de, vi)
+- `multiRename.swapsSkipped`, `askCmdr.renameUndo.swapsSkipped`: "Rename them one at a time" can point at the renames;
+  on S3 the swapped entries can be folders. Say "Rename those items one at a time" in both. Their count frames also
+  differ (`#` inside the branches vs `{countText}` first). (de, fr, hu, ru, sv)
+- `stateRecovery.operationLog.title`: "so it starts fresh" can mean Cmdr or the log; say "so the log starts fresh", like
+  the "the list starts empty" siblings. (fr, nl, pt, zh)
+- `fileExplorer.navigation.favoriteUnreachable.storageUnplugged`: `{device}` is bare while `.phoneUnplugged` now quotes
+  it; and the description says phone, though MTP also reaches cameras. Say which, and quote both. (hu, zh-Hant)
+- `fileExplorer.navigation.favoriteUnreachable.phoneUnplugged`: say a gendered language may keep a type noun before the
+  quoted `“{device}”` (es kept "El teléfono"); proposed rule: dropping a pronoun for a quoted name never forbids the
+  object's noun. (es)
+- `menu.volume.editFavoriteShortcut` is now "Set shortcut key…", but `fileExplorer.navigation.favoriteShortcutAriaLabel`
+  and `.favoriteShortcutSaveFailed` still say "shortcut", so ru has two names for one control. Align the family; the
+  menu item's description should also name the menu and say VERB. (ru, nl)
+- `reply` / `ai-reply` concepts match a server's reply (`securityNotices.smbSignatureRefused.body`,
+  `errors.volume.signatureInvalid`): the existing `server's reply` `notMatch` has a straight apostrophe, the English a
+  curly one. Add the curly form and "the reply didn’t carry"; consider merging the two concepts. (nl, pt, sv, vi)
+- `errors.volume.signatureInvalid`, `errors.write.replySignatureRefused.message`: "so Cmdr stopped" has no object, and
+  verbs like sv `stoppade` need one; say what stopped in the description, or write "stopped there". (sv)
+- `errors.eject.*`: the description lets the fragment start lowercase after the host's colon, but every shipped sibling
+  starts capitalized. Say it for the whole family. (hu)
+- Proposed rule: a version number or other insert after a word that must agree with it (an article that depends on
+  pronunciation, a case ending) goes in a colon slot (`settings.managed.summary.upTo`). (hu)
+- Proposed rule: a first-person checkbox label ("I’ve checked the key") may go impersonal where the first person would
+  gender the user (ru past tense). Say so in such descriptions. (ru)
+- `servers.refusal.s3FieldMalformed`: say a locale may name the classes ("letters a–z, digits 0–9") as long as both
+  ranges stay verbatim. (fr)
+- `errors.serverRequest.blockedByPolicy`: say which noun "this feature" should use (match
+  `onboarding.stepAi.table.colFeature`?). (fr)
+- `onboarding.stepAi.table.renameWithout`: "then review and apply it" leaves "it" to the reader; name the pattern. (pt)
+- `uninstall` concept: note it's removing software, not unmounting (zh-CN macOS uses `卸载` for both). (zh)
+- `fileOperations.trash.undoGone`: say a language without plural forms may use an `=1` arm when one item and many need
+  different words (zh, vi did, following `fileOperations.cancelRollback.doneMovingBack`). (zh, vi)
