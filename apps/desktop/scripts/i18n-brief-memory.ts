@@ -20,7 +20,8 @@ const STOPWORDS = new Set(
     'into our out all any also been being could did does doing each few here how just may might more most much ' +
     'must nor now off once only other over own same should some such than then there they them their what when ' +
     'where which while who whom why would yet about above after again against before below between both during ' +
-    'further itself through very too isn aren don doesn didn can couldn won wouldn shouldn let lets one two'
+    'further itself through very too isn aren don doesn didn can couldn won wouldn shouldn let lets one two ' +
+    'since hasn haven hadn wasn weren mustn needn'
   ).split(' '),
 )
 
@@ -36,7 +37,8 @@ const GENERIC_WORDS = new Set(
     'happens instead keeps kind know last later least less like likely little long look looks lot many mean means ' +
     'might moment need needs never next nothing often once otherwise part place please point possible probably ' +
     'quite rather ready really right says second see seems still sure take takes taken talks tell thing things think time ' +
-    'times took turned under until usually want way ways well whether whole within without work working yet'
+    'times took turned under until usually want way ways well whether whole within without work working yet ' +
+    'called got leaving longer others reach sitting usual'
   ).split(' '),
 )
 

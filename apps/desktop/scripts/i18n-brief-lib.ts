@@ -9,7 +9,8 @@
  * those keys. Every section is selected BY the batch, so its size tracks the
  * batch, not the history of the locale. Sections, in order:
  *
- *  - header: languages, how the keys were chosen, the reference pile, the style guide
+ *  - header: languages, how the keys were chosen, the reference pile, the style
+ *    guide, and the keys stale in the targets that the batch leaves out
  *  - instructions: the translator's standing instructions, single-sourced from
  *    `docs/i18n/translator-instructions.md` and rendered for the language(s)
  *  - principles: the shared judgment calls, single-sourced in
@@ -20,6 +21,8 @@
  *    from, `@key` description, placeholders/tags, current value(s), and the content
  *    words no concept covers ("No concept yet"); a search keyword list
  *    (`isSearchKeywordsKey`) gets a note that the termbase doesn't govern it instead
+ *  - overlays: a target language's regional overlays (`es-419`), the batch keys
+ *    they fork, and how to stamp a fork
  *  - terms: every concept whose `match` hits a batch key's English (keyword lists
  *    left out), plus those of
  *    its `distinct` neighbors whose words appear in the batch; sense once, then one
@@ -40,14 +43,17 @@ import { relative, isAbsolute, join } from 'node:path'
 import {
   BASE_LOCALE,
   BRAND_WORDS,
+  listLocales,
   loadCatalog,
   parseMessage,
   isRawKey,
   isSearchKeywordsKey,
   rawTokens,
+  resolveLocaleSource,
   visibleLiterals,
 } from './i18n-catalog-lib.ts'
 import type { Catalog } from './i18n-catalog-lib.ts'
+import { staleKeys } from './i18n-brief-select.ts'
 import { buildMemoryIndex, contentWords, isGenericWord, nearestKeys } from './i18n-brief-memory.ts'
 import type { MemoryIndex } from './i18n-brief-memory.ts'
 import {
@@ -89,6 +95,11 @@ export interface BriefOptions {
    * (the CLI finds it in git, `i18n-brief-history.ts`). Shown as a word diff.
    */
   previousEnglish?: Record<string, Record<string, string>>
+  /**
+   * Several translators run at once: the instructions route writes to shared files
+   * (`concepts.json`, `source-queue.md`) to per-locale proposals instead.
+   */
+  parallel?: boolean
 }
 
 /** One named section of the brief (`--stats` reports each). */
@@ -100,51 +111,6 @@ export interface BriefSection {
 /** The assembled brief. */
 export interface Brief {
   sections: BriefSection[]
-}
-
-/** Glob (`*` only) to an anchored regex over keys. */
-function keyGlob(pattern: string): RegExp {
-  const body = pattern
-    .split('*')
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('.*')
-  return new RegExp(`^${body}$`)
-}
-
-/**
- * Picks the batch. Every given selector narrows it: `patterns` (exact keys or `*`
- * globs), `missingIn` (keys absent from ANY of these locale catalogs), `changed`
- * (keys added or edited since a ref). Catalog order is kept.
- *
- * @throws when a pattern matches no English key, since a typo would otherwise
- *   produce a silently smaller batch
- */
-export function selectKeys({
-  en,
-  patterns,
-  missingIn,
-  changed,
-}: {
-  en: Record<string, string>
-  patterns?: readonly string[]
-  missingIn?: readonly Record<string, string>[]
-  changed?: ReadonlySet<string>
-}): string[] {
-  let keys = Object.keys(en)
-  if (patterns && patterns.length > 0) {
-    const globs = patterns.map((pattern) => ({ pattern, re: keyGlob(pattern) }))
-    const dead = globs.filter(({ re }) => !keys.some((key) => re.test(key))).map(({ pattern }) => pattern)
-    if (dead.length > 0) throw new Error(`No English key matches: ${dead.join(', ')}`)
-    keys = keys.filter((key) => globs.some(({ re }) => re.test(key)))
-  }
-  if (missingIn) keys = keys.filter((key) => missingIn.some((locale) => !(key in locale)))
-  if (changed) keys = keys.filter((key) => changed.has(key))
-  return keys
-}
-
-/** Keys added, or whose value changed, between `previous` and `current`, in current order. */
-export function changedKeys(current: Record<string, string>, previous: Record<string, string>): string[] {
-  return Object.keys(current).filter((key) => previous[key] !== current[key])
 }
 
 /**
@@ -196,6 +162,10 @@ interface BriefContext {
   opts: BriefOptions
   en: Catalog
   targets: Map<string, Record<string, string>>
+  /** keys stale in any target (`staleKeys`) that the batch leaves out */
+  staleOutside: string[]
+  /** each overlay of a target language (`es-419` for `es`) → its catalog */
+  overlays: Map<string, { base: string; messages: Record<string, string> }>
   termbases: Map<string, Termbase | undefined>
   concepts: Record<string, Concept>
   batch: Set<string>
@@ -245,7 +215,25 @@ function headerSection(ctx: BriefContext): BriefSection {
   lines.push(`- Mining recipes: \`${shown(join(docsRoot, 'reference-pile', 'how-to-mine.md'), opts.repoRoot)}\`.`)
   if (opts.excludeTargetValues)
     lines.push("- Blind run: the batch keys' current translations and the decision excerpts are withheld.")
+  if (ctx.staleOutside.length > 0) lines.push(staleOutsideLine(ctx.staleOutside))
   return { name: 'header', text: lines.join('\n') }
+}
+
+/** How many stale keys outside the batch the header names before summarizing the rest. */
+const MAX_STALE_NAMED = 10
+
+/**
+ * The header line naming keys the target languages translated from older English
+ * but the batch leaves out: an English edit committed beside a batch (a tab fix in
+ * an error suggestion) would otherwise ship stale until the stale check catches it.
+ */
+function staleOutsideLine(keys: readonly string[]): string {
+  const named = keys
+    .slice(0, MAX_STALE_NAMED)
+    .map((key) => `\`${key}\``)
+    .join(', ')
+  const more = keys.length > MAX_STALE_NAMED ? `, and ${String(keys.length - MAX_STALE_NAMED)} more` : ''
+  return `- Also stale in the target language(s), outside this batch: ${String(keys.length)} ${keys.length === 1 ? 'key' : 'keys'} (${named}${more}). Rerun with \`--include-stale\` to brief them too.`
 }
 
 /** "Dutch (nl)", or the bare tag when `Intl` doesn't know it. */
@@ -261,7 +249,32 @@ function languageName(tag: string): string {
  * every brief can't drift apart.
  */
 function instructionsSection(ctx: BriefContext): BriefSection {
-  return embeddedSection(ctx, { name: 'instructions', file: 'translator-instructions.md', heading: 'Instructions' })
+  const section = embeddedSection(ctx, {
+    name: 'instructions',
+    file: 'translator-instructions.md',
+    heading: 'Instructions',
+  })
+  if (!ctx.opts.parallel) return section
+  return { ...section, text: `${section.text}\n\n${parallelNote(ctx)}` }
+}
+
+/**
+ * What a parallel run changes: the shared files would race between translators,
+ * so their writes go to per-locale proposals the lead merges afterwards
+ * (`concepts-proposed.json` is validated by the termbase check meanwhile). Each
+ * locale's own files can't race, so they stay as the instructions say.
+ */
+function parallelNote(ctx: BriefContext): string {
+  const tag = ctx.multi ? '<tag>' : ctx.opts.langs[0]
+  return [
+    '### Parallel run',
+    '',
+    'Other translators work at the same time, so leave the shared files alone:',
+    '',
+    `- A new concept: write it to docs/i18n/${tag}/concepts-proposed.json (the concepts.json schema, a new ID), never to docs/i18n/concepts.json. The lead merges it.`,
+    '- A `notMatch` for an existing concept, or a source-queue proposal: put it in your Source feedback section only, never in docs/i18n/concepts.json or docs/i18n/source-queue.md. The lead applies it.',
+    `- Your own locale's files (its catalog, terms.json, decisions.md, review-queue.md) and \`sync-locale-keys.ts ${tag} --restamp\` stay as above: nobody else writes them.`,
+  ].join('\n')
 }
 
 /**
@@ -484,6 +497,39 @@ function termsSection(ctx: BriefContext): BriefSection {
   return { name: 'terms', text: lines.join('\n') }
 }
 
+/**
+ * The regional overlays of the target languages (`es-419` over `es`): which batch
+ * keys each already forks, and how to keep a fork in step. An overlay's fork is
+ * checked against the base value it overrides, so a base edit leaves it stale, and
+ * its hash is the hash of that base value, which `sync-locale-keys.ts --restamp`
+ * computes. Empty when no target language has an overlay.
+ */
+function overlaysSection(ctx: BriefContext): BriefSection {
+  if (ctx.overlays.size === 0) return { name: 'overlays', text: '' }
+  const lines = ['## Regional overlays']
+  for (const [tag, { base, messages }] of ctx.overlays) {
+    const forks = ctx.opts.keys.filter((key) => key in messages)
+    lines.push(
+      '',
+      `\`${tag}\` overlays \`${base}\`: it carries only the keys it forks, and every other key shows the \`${base}\` value.`,
+      '',
+    )
+    if (forks.length === 0) lines.push('- It forks none of this batch yet.')
+    else {
+      lines.push(`- It forks these batch keys; keep each fork's meaning in step with your new \`${base}\` value:`)
+      // A blind run withholds the fork's value along with the base translation it mirrors.
+      for (const key of forks) {
+        lines.push(`  - \`${key}\`${ctx.opts.excludeTargetValues ? '' : `: ${JSON.stringify(messages[key])}`}`)
+      }
+    }
+    lines.push(
+      `- A new or changed \`${base}\` value that uses a form \`${tag}\` replaces needs a fork there too (docs/i18n/${tag}/style.md lists the forms).`,
+      `- Stamp every fork you write or update with \`node scripts/sync-locale-keys.ts ${tag} --restamp <key>\` (in apps/desktop): it records the hash of the \`${base}\` value the fork overrides.`,
+    )
+  }
+  return { name: 'overlays', text: lines.join('\n') }
+}
+
 function memorySection(ctx: BriefContext): BriefSection {
   const count = ctx.multi ? 3 : 4
   const targets = ctx.opts.langs.map((tag) => ctx.targets.get(tag) ?? {})
@@ -621,28 +667,51 @@ function redactShipped(section: BriefSection, values: readonly string[]): BriefS
   return { ...section, text }
 }
 
+/** Every shipped overlay whose base is one of `langs` (`es-419` for `es`), with its own catalog only. */
+function overlaysOf(
+  langs: readonly string[],
+  messagesRoot: string | undefined,
+): Map<string, { base: string; messages: Record<string, string> }> {
+  const available = listLocales(messagesRoot)
+  const overlays = new Map<string, { base: string; messages: Record<string, string> }>()
+  for (const tag of available) {
+    const { overrides, isOverlay } = resolveLocaleSource(tag, available)
+    if (isOverlay && langs.includes(overrides)) {
+      overlays.set(tag, { base: overrides, messages: loadCatalog(tag, messagesRoot).messages })
+    }
+  }
+  return overlays
+}
+
 /** Loads everything once and builds every section. */
 export function buildBrief(opts: BriefOptions): Brief {
   const en = loadCatalog(BASE_LOCALE, opts.messagesRoot)
   const targets = new Map<string, Record<string, string>>()
+  const targetCatalogs: Catalog[] = []
   const termbases = new Map<string, Termbase | undefined>()
   let concepts: Record<string, Concept> = loadConceptsFor(undefined, opts.docsRoot)
   for (const tag of opts.langs) {
+    let catalog: Catalog = { messages: {}, metadata: {} }
     try {
-      targets.set(tag, loadCatalog(tag, opts.messagesRoot).messages)
+      catalog = loadCatalog(tag, opts.messagesRoot)
     } catch {
-      targets.set(tag, {})
+      // A language with no catalog yet: nothing translated, nothing stale.
     }
+    targets.set(tag, catalog.messages)
+    targetCatalogs.push(catalog)
     termbases.set(tag, loadTerms(tag, opts.docsRoot))
     concepts = { ...loadConceptsFor(tag, opts.docsRoot), ...concepts }
   }
+  const batch = new Set(opts.keys)
   const ctx: BriefContext = {
     opts,
     en,
     targets,
+    staleOutside: staleKeys(en.messages, targetCatalogs).filter((key) => !batch.has(key)),
+    overlays: overlaysOf(opts.langs, opts.messagesRoot),
     termbases,
     concepts,
-    batch: new Set(opts.keys),
+    batch,
     multi: opts.langs.length > 1,
     memory: buildMemoryIndex(en.messages),
   }
@@ -652,6 +721,7 @@ export function buildBrief(opts: BriefOptions): Brief {
     principlesSection(ctx),
     digestSection(ctx),
     keysSection(ctx),
+    overlaysSection(ctx),
     termsSection(ctx),
     memorySection(ctx),
   ]

@@ -216,13 +216,20 @@ A `###` section whose `##` parent also matches is left out, since the parent's b
 
 ## Tooling
 
-### `pnpm i18n:brief` (`apps/desktop/scripts/i18n-brief.ts`, assembly in `i18n-brief-lib.ts`, memory in `i18n-brief-memory.ts`)
+### `pnpm i18n:brief` (`apps/desktop/scripts/i18n-brief.ts`, assembly in `i18n-brief-lib.ts`, key selection in `i18n-brief-select.ts`, memory in `i18n-brief-memory.ts`)
 
 - `--lang nl` | `--lang nl,de` | `--lang all` (every full translation; overlays are refused).
 - Key selectors, which narrow each other when combined: `--keys a.b.c,servers.sheet.*` (exact keys or `*` globs; a
   pattern matching nothing is an error), `--keys-file <path>` (the same, one per line, `#` comments allowed),
   `--missing` (English keys absent from any target locale), `--changed-since <git-ref>` (English keys added or whose
-  value changed since the ref).
+  value changed since this branch left the ref: the diff is against `git merge-base <ref> HEAD`, so keys the ref changed
+  after the split stay out). A stray argument is an error, so `--keys a b` can't silently brief only `a`.
+- `--include-stale`: WIDENS the batch (a union, unlike the selectors above) with every key a target translated from
+  older English, the stale check's definition. Without it, the header names those keys so an English edit committed
+  beside the batch isn't missed.
+- `--parallel`: several translators run at once. The instructions gain a block routing writes to shared files elsewhere:
+  a new concept to `<tag>/concepts-proposed.json`, a `notMatch` or a source-queue proposal to the report's Source
+  feedback. Each locale's own files can't race, so they stay as usual.
 - `--out <file>` (default stdout), `--stats` (chars and rough tokens per section, to stderr).
 - `--exclude-target-values`: a blind run for A/B tests. Withholds the batch keys' current translations and the decision
   excerpts (a section citing a batch key discusses exactly those translations), drops a ruling's batch-key `exceptions`
@@ -250,6 +257,9 @@ Sections, each selected by the batch:
    words, and words fewer than three English keys use (a concept recurs). That line is how a missing concept ("offline")
    shows up as work instead of passing for settled. A search keyword list gets a one-line note instead (§ Search keyword
    lists below).
+   - Regional overlays, when a target language has one (`es-419` for `es`): the batch keys it already forks (values
+     withheld in a blind run), that a value using a form it replaces needs a fork, and the
+     `sync-locale-keys.ts <overlay> --restamp <key>` that stamps a fork with the hash of the base value it overrides.
 6. Terms in play: every concept whose `match` hits (and `notMatch` doesn't) a batch key's English. The sense, note, and
    hit keys print once; then one line per language with chosen / accept / prose only / forms / avoid / note /
    confidence, the `exceptions` for batch keys, and the `decision` heading, or "no ruling". Then up to eight `distinct`

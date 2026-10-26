@@ -8,8 +8,11 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildBrief, changedKeys, renderBrief, selectKeys } from './i18n-brief-lib.ts'
-import { nearestKeys } from './i18n-brief-memory.ts'
+import { buildBrief, renderBrief } from './i18n-brief-lib.ts'
+import { changedKeys, selectKeys, staleKeys } from './i18n-brief-select.ts'
+import { changeBase, parseBriefArgs } from './i18n-brief.ts'
+import { sourceHash } from './i18n-catalog-lib.ts'
+import { contentWords, isGenericWord, nearestKeys } from './i18n-brief-memory.ts'
 import type { BriefOptions } from './i18n-brief-lib.ts'
 
 describe('selectKeys', () => {
@@ -36,6 +39,59 @@ describe('selectKeys', () => {
 describe('changedKeys', () => {
   it('returns keys added or whose value changed, in current order', () => {
     expect(changedKeys({ a: '1', b: '2', c: '3' }, { a: '1', b: 'old' })).toEqual(['b', 'c'])
+  })
+})
+
+describe('staleKeys', () => {
+  it('returns keys a target translated from other English, or carries with no hash, in catalog order', () => {
+    const en = { 'a.x': 'X now', 'a.y': 'Y', 'a.z': 'Z' }
+    const target = {
+      messages: { 'a.x': 'x', 'a.y': 'y', 'a.z': 'z' },
+      metadata: { 'a.x': { sourceHash: sourceHash('X before') }, 'a.y': { sourceHash: sourceHash('Y') } },
+    }
+    expect(staleKeys(en, [target])).toEqual(['a.x', 'a.z'])
+  })
+})
+
+describe('parseBriefArgs', () => {
+  it('reads the flags', () => {
+    expect(parseBriefArgs(['--lang', 'nl', '--keys', 'a.b,c.*', '--include-stale', '--parallel'])).toMatchObject({
+      lang: 'nl',
+      keys: 'a.b,c.*',
+      includeStale: true,
+      parallel: true,
+    })
+  })
+  it('refuses a stray argument, so `--keys a b c` never silently briefs only `a`', () => {
+    expect(() => parseBriefArgs(['--lang', 'nl', '--keys', 'a.x', 'a.y', 'a.z'])).toThrow(/a\.y.*comma/s)
+  })
+})
+
+describe('changeBase', () => {
+  it('diffs against where the branch left the ref, so keys the ref changed since then stay out', () => {
+    const calls: string[][] = []
+    const base = changeBase('main', (args) => {
+      calls.push(args)
+      return args[0] === 'merge-base' ? 'abc123' : 'ok'
+    })
+    expect(base).toBe('abc123')
+    expect(calls).toContainEqual(['merge-base', 'main', 'HEAD'])
+  })
+  it('says so when the ref is unknown', () => {
+    expect(() => changeBase('nope', () => undefined)).toThrow(/"nope" isn't a git ref/)
+  })
+})
+
+describe('contentWords', () => {
+  it('leaves out function words, contraction stubs, and domains', () => {
+    const words = contentWords('a.b', 'It hasn’t worked since the move; see getcmdr.com')
+    for (const noise of ['hasn', 'since', 'getcmdr', 'com']) expect(words).not.toContain(noise)
+    expect(words).toEqual(['worked', 'move', 'see'])
+  })
+  it('counts everyday English as generic, never as a missing concept', () => {
+    for (const word of ['got', 'sitting', 'longer', 'called', 'others', 'reach', 'usual', 'leaving']) {
+      expect(isGenericWord(word), word).toBe(true)
+    }
   })
 })
 
@@ -123,6 +179,7 @@ describe('buildBrief (fixture tree)', () => {
       'queue.empty': 'Niets in de wachtrij',
       'queue.undo': 'Maak de bewerking ongedaan',
     })
+    write(join(messagesRoot, 'nl-BE', 'queue.json'), { 'queue.title': 'Wachtrij van bewerkingen' })
     write(join(messagesRoot, 'de', 'queue.json'), {
       'queue.empty': 'Nichts in der Warteschlange',
       'queue.undo': 'Vorgang rückgängig machen',
@@ -312,6 +369,30 @@ describe('buildBrief (fixture tree)', () => {
     expect(keys).toContain('Search keywords: hidden synonyms')
     expect(terms).toContain('No registered concept appears in this batch.')
     expect(terms).not.toContain('The file work Cmdr performs.')
+  })
+
+  it('names the overlay forks a batch touches, and how to restamp them against the parent', () => {
+    const overlays = buildBrief(opts).sections.find((section) => section.name === 'overlays')?.text ?? ''
+    expect(overlays).toContain('nl-BE')
+    expect(overlays).toContain('`queue.title`')
+    expect(overlays).not.toContain('`queue.row.label`')
+    expect(overlays).toContain('sync-locale-keys.ts nl-BE --restamp')
+    const de = buildBrief({ ...opts, langs: ['de'] }).sections.map((section) => section.name)
+    expect(de).not.toContain('overlays')
+  })
+
+  it('names the other keys stale in the target locales, so an English edit outside the batch is not missed', () => {
+    const header = buildBrief(opts).sections.find((section) => section.name === 'header')?.text ?? ''
+    // nl carries no hashes in the fixture, so every nl key it has is stale.
+    expect(header).toMatch(/stale.*`queue\.empty`.*`queue\.undo`.*--include-stale/s)
+    expect(header).not.toMatch(/stale.*`queue\.title`/s)
+  })
+
+  it('routes shared termbase and queue writes to proposals in a parallel run', () => {
+    const text = renderBrief(buildBrief({ ...opts, parallel: true }))
+    expect(text).toContain('docs/i18n/nl/concepts-proposed.json')
+    expect(text).toMatch(/Parallel run/)
+    expect(renderBrief(buildBrief(opts))).not.toMatch(/Parallel run/)
   })
 
   it('reports per-section sizes for --stats', () => {
