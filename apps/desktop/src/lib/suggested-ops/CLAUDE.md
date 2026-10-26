@@ -29,11 +29,12 @@ and per-op selection. Backend: `apps/desktop/src-tauri/src/commands/agent/sugges
   so instead, and its button explains rather than runs.
 - **Each group loads a WINDOW at a time** (`OP_WINDOW_SIZE`), sized by `COUNT(*)`, through `ColumnList`'s windowed
   source. A group of 60,000 is legitimate: ❌ nothing loads a group to show it, "Show all" included.
-- **Selection is a per-group TWO-MODE set: "all except these ids" or "only these ids".** Select all / none resets to an
-  empty set in the matching mode, so the wire stays small both ways. ❌ Never a one-mode set: "none" of 60,000 would
-  enumerate them all.
-- **A group that changed under the review is ANNOUNCED, never swapped**, Approve waits for its reload (`canApprove`),
-  and the reload keeps the selection: dropping it would quietly turn a "no" back into a "yes".
+- **Selection is the user's hand flips over a base** (`OpSelection`): the stored ticks (`fromStored`, where a review
+  opens, so an earlier "no" stays off), or all / none after the header box. ❌ Never enumerate ops the user didn't flip:
+  "none" of 60,000 would send them all.
+- **A group that changed under the review is ANNOUNCED, never swapped**, Approve waits for its reload (`canApprove`) and
+  sends the `revision` the user read, and the reload keeps the selection: dropping it would quietly turn a "no" back
+  into a "yes".
 - **A change notice keys on `reason`, not on the group id alone.** An approval and an amendment carry the same id.
 - **The badge is its own module, seeded once AND subscribed, never polled.** ❌ Don't drop the seed: suggestions never
   expire.

@@ -187,9 +187,9 @@
 {#snippet includeCell({ row }: ColumnListCellContext<SuggestedOpView>)}
     <span class="include">
         <Checkbox
-            checked={isOpSelected(group.groupId, row.opId)}
+            checked={isOpSelected(group.groupId, row)}
             onCheckedChange={() => {
-                toggleOp(group.groupId, row.opId)
+                toggleOp(group.groupId, row)
             }}
             ariaLabel={tString('suggestedOps.includeFile', { name: fileName(row.sourcePath) })}
         />

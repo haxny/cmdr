@@ -106,21 +106,23 @@ rows still gets them (the review remembers its last `range`). The answer is type
 - **Anything else** (a store refusal, an unknown group, a throw) un-marks the span, so the next scroll asks again, and
   is logged rather than surfaced: the labelled snapshot is an honest answer while the live one is missing.
 
-**The wire, and the selection.** A group's selection (`OpSelection`) is a two-mode set: `allExcept` these ids (the
-default, everything ticked) or `only` these ids. The header box ticks everything (`allExcept`, empty) or nothing
-(`only`, empty), and a row's box flips its id's membership in either mode, so the set only ever holds the rows the user
-flipped by hand. Approving sends the mode and those ids, so the wire stays small in both directions at any group size:
-"all but three" and "only these three" of 60,000 are both three ids. The header reads mixed whenever the count sits
-between none and all.
+**The wire, and the selection.** A group's selection (`OpSelection`) records only what the user flipped by hand, over
+one of three bases:
 
-**The count starts from every row, not the live set.** `allExcept` on the backend first re-offers every op, including
-ones an earlier approval excluded before the engine refused to start it (the group came back `pending` with `excluded`
-rows). A fresh review ticks them all, so `approvableCount` counts down from `totalOpCount` and the header says
-`totalOpCount` files: the button names exactly what would run.
+- **`fromStored`** (a review opens here): the stored ticks. An op an earlier review turned off (its approval then
+  refused to start) arrives `excluded` and opens unticked, so a reopened review keeps the user's "no" without loading
+  every op to find it. A row's box flips into `exclude` (a pending op turned off) or `include` (an excluded op turned
+  back on); the count is `liveOpCount - exclude + include`.
+- **`allExcept`** (after the header's select all): every op row but `ids`, counted down from `totalOpCount`.
+- **`only`** (after the header's select none): just `ids`.
 
-**Decision: select all / none exists, in the two-mode form** (David, 2026-10-26). It replaced a deliberate "no deselect
+Approving sends the base and the flipped ids, so the wire stays small in every direction at any group size: "all but
+three", "only these three", and "what I left last time, plus one" of 60,000 are each a few ids. The header reads mixed
+whenever the count sits between none and all; a group reopened with earlier "no"s starts mixed.
+
+**Decision: select all / none exists, as flips over a base** (David, 2026-10-26). It replaced a deliberate "no deselect
 all", whose reason was the wire: a one-mode "ids turned OFF" set would have had to enumerate 60,000 ids to say "none".
-The `only` mode removes that cost, so the affordance is cheap.
+The `only` base removes that cost, so the affordance is cheap.
 
 ## A group that changes under an open review
 
@@ -128,13 +130,14 @@ The agent may re-propose a pending group while the user reads it. Two signals ra
 and the rows stay exactly where they are; the notice offers "Show the new version" (`reloadGroup`).
 
 - **The event**: `suggestions-changed` with `reason: 'amended'` and that group's id.
-- **The count**: a re-read that finds the group's `totalOpCount` moved (the ROW count: `liveOpCount` also moves on the
-  user's own refused-to-start approval, which isn't a change). It misses an amendment that swapped a path but kept the
-  count, which is why the event matters; it catches a change while the subscription is down. Both stay.
+- **The revision**: a re-read that finds the group's `revision` past the review's `seenRevision` (the revision whose
+  rows are on screen). The counts are no signal: the user's own refused-to-start approval moves `liveOpCount` without
+  changing the group. It catches a change while the subscription is down. Both stay.
 
 ❌ Never swap the rows silently: the user is midway through a decision keyed to row positions. Approve waits for the
-reload (`canApprove`): the backend binds whatever the group holds at the click, so approving the version on screen would
-run the new one.
+reload (`canApprove`), and sends `seenRevision` with the selection, so even a race between a click and an amendment
+refuses as `listChanged` rather than running rows nobody read. `reloadGroup` moves `seenRevision` to the new revision as
+it loads the new rows.
 
 **Decision: the notice keys on `reason`, never on `groupId` alone.** An amendment and the user's own approval carry the
 SAME id. Keying on the id would raise "The AI changed this" the instant the user approved something. A test pins it.

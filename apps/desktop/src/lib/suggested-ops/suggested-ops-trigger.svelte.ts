@@ -8,10 +8,10 @@
  *   60,000 is legitimate, so nothing loads a group to show it: each group's list knows its
  *   `total` from a `COUNT(*)` and fetches the rows its viewport actually reaches. The list starts
  *   at `INITIAL_ROWS` and grows only when the user asks.
- * - **Selection is a two-mode set per group**: "all except these ids" or "only these ids". Select
- *   all and select none each reset to an empty set in the matching mode, so the wire stays small
- *   in both directions at any group size: the user ticks or unticks a few rows by hand, never
- *   60,000.
+ * - **Selection holds only what the user flipped by hand.** A review opens on the STORED ticks
+ *   (an earlier "no" stays off) and records flips against them; select all / none reset to an
+ *   empty set over all-or-nothing. Either way the wire stays small at any group size: the user
+ *   ticks or unticks a few rows by hand, never 60,000.
  * - **A group that changed under an open review is ANNOUNCED, never swapped.** The rows the
  *   user is reading stay put and a notice offers the reload, because re-ordering a list
  *   somebody is halfway through deciding on is how a wrong row gets approved.
@@ -22,6 +22,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { getAppLogger } from '#lib/logging/logger.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import {
+  type OpSelection as WireOpSelection,
   approveSuggestedGroup,
   listSuggestedOps,
   onSuggestionsChanged,
@@ -72,6 +73,9 @@ export interface GroupReview {
   shown: number
   /** Which ops are ticked. Survives scrolling: it is keyed by op id, not by row position. */
   selection: OpSelection
+  /** The group `revision` whose rows are on screen. Approve sends it, so the store refuses to
+   *  run a version the user hasn't read. Set when the review first reads, and on a reload. */
+  seenRevision: number | null
   /** Set when the agent amended this group, or a re-read found its op count moved. */
   changedUnderReview: boolean
   /** What the disk says now, per op id, for the rows that have been on screen. */
@@ -84,18 +88,31 @@ export interface GroupReview {
 }
 
 /**
- * Which of a group's ops would run. `allExcept`: every op but `ids` (the default, all ticked).
- * `only`: just `ids`. A header tick or untick resets `ids` to empty in the matching mode, so
- * the set only ever holds the rows the user flipped by hand.
+ * Which of a group's ops would run, as flips over a base.
+ *
+ * - `fromStored`: the stored ticks (an op an earlier review turned off arrives `excluded`) with
+ *   `exclude` turned off and `include` turned back on. The state a group opens in, so a reopened
+ *   review keeps the user's earlier "no"s without loading every op to find them.
+ * - `allExcept`: every op but `ids` (after the header's select all).
+ * - `only`: just `ids` (after the header's select none).
+ *
+ * The sets only ever hold rows the user flipped by hand.
  */
-export interface OpSelection {
-  mode: 'allExcept' | 'only'
-  ids: SvelteSet<number>
+export type OpSelection =
+  | { mode: 'fromStored'; exclude: SvelteSet<number>; include: SvelteSet<number> }
+  | { mode: 'allExcept' | 'only'; ids: SvelteSet<number> }
+
+/** The stored ticks, nothing flipped: the state a group opens in. */
+export function storedSelection(): OpSelection {
+  return { mode: 'fromStored', exclude: new SvelteSet<number>(), include: new SvelteSet<number>() }
 }
 
-/** Every op ticked: the state a group opens in. */
-export function selectAllSelection(): OpSelection {
-  return { mode: 'allExcept', ids: new SvelteSet<number>() }
+/** The selection as approve sends it. */
+function selectionWire(selection: OpSelection): WireOpSelection {
+  if (selection.mode === 'fromStored') {
+    return { mode: 'fromStored', excludeOpIds: [...selection.exclude], includeOpIds: [...selection.include] }
+  }
+  return { mode: selection.mode, opIds: [...selection.ids] }
 }
 
 /** Why the last Approve or Reject didn't happen, as the notice the dialog shows. */
@@ -151,7 +168,8 @@ export function newGroupReview(): GroupReview {
     windowLoading: false,
     windowError: false,
     shown: INITIAL_ROWS,
-    selection: selectAllSelection(),
+    selection: storedSelection(),
+    seenRevision: null,
     changedUnderReview: false,
     liveFacts: new SvelteMap<number, LiveFact>(),
     sourceUnreachable: null,
@@ -198,19 +216,25 @@ export function showAllRows(groupId: number): void {
   if (review && group) review.shown = totalRows(group)
 }
 
-/** How many ops of a group would actually run. Derived from the COUNT and the hand-flipped
+/** How many ops of a group would actually run. Derived from the COUNTs and the hand-flipped
  *  ids, so it's right even for rows never fetched.
  *
- *  `allExcept` counts down from EVERY op row (`totalOpCount`), not from `liveOpCount`: the
- *  backend starts that mode from everything the group offers, so an op an earlier,
- *  refused-to-start approval excluded runs again unless this review turns it off. */
+ *  `fromStored` starts from the stored live set (`liveOpCount`, which leaves out ops an earlier
+ *  review excluded); `allExcept` counts down from EVERY op row (`totalOpCount`), since the
+ *  backend starts that mode from everything the group offers. */
 export function approvableCount(groupId: number): number {
   const group = groupById(groupId)
   const selection = reviewOf(groupId)?.selection
   if (!group) return 0
-  if (!selection) return group.totalOpCount
-  if (selection.mode === 'only') return selection.ids.size
-  return Math.max(0, group.totalOpCount - selection.ids.size)
+  if (!selection) return group.liveOpCount
+  switch (selection.mode) {
+    case 'fromStored':
+      return Math.max(0, group.liveOpCount - selection.exclude.size + selection.include.size)
+    case 'only':
+      return selection.ids.size
+    case 'allExcept':
+      return Math.max(0, group.totalOpCount - selection.ids.size)
+  }
 }
 
 /** Whether Approve may run: not while the group changed under the review, since the version
@@ -219,11 +243,18 @@ export function canApprove(groupId: number): boolean {
   return reviewOf(groupId)?.changedUnderReview !== true && approvableCount(groupId) > 0
 }
 
-/** Whether one op is ticked. */
-export function isOpSelected(groupId: number, opId: number): boolean {
+/** Whether one op is ticked. Under the stored base, an op an earlier review excluded starts off. */
+export function isOpSelected(groupId: number, op: SuggestedOpView): boolean {
   const selection = reviewOf(groupId)?.selection
-  if (!selection) return true
-  return selection.mode === 'allExcept' ? !selection.ids.has(opId) : selection.ids.has(opId)
+  if (!selection) return op.status !== 'excluded'
+  switch (selection.mode) {
+    case 'fromStored':
+      return op.status === 'excluded' ? selection.include.has(op.opId) : !selection.exclude.has(op.opId)
+    case 'allExcept':
+      return !selection.ids.has(op.opId)
+    case 'only':
+      return selection.ids.has(op.opId)
+  }
 }
 
 /** The header checkbox: every op ticked, none, or a mix. */
@@ -239,8 +270,10 @@ export function selectionState(groupId: number): 'all' | 'none' | 'some' {
 export function toggleAllOps(groupId: number): void {
   const review = reviewOf(groupId)
   if (!review) return
-  review.selection =
-    selectionState(groupId) === 'all' ? { mode: 'only', ids: new SvelteSet<number>() } : selectAllSelection()
+  review.selection = {
+    mode: selectionState(groupId) === 'all' ? 'only' : 'allExcept',
+    ids: new SvelteSet<number>(),
+  }
 }
 
 /** Live only while the dialog is open: the badge owns the session-long subscription. */
@@ -302,16 +335,14 @@ function listenForChanges(): Promise<UnlistenFn> {
 /**
  * Re-read the waiting sweeps, then give every new group its review and first page.
  *
- * A group already under review keeps its rows: when its op count moved, it's announced, never
- * swapped. A group that's gone (answered elsewhere, or withdrawn) drops its review.
+ * A group already under review keeps its rows: when its revision moved past the one on screen,
+ * it's announced, never swapped. A group that's gone (answered elsewhere, or withdrawn) drops its review.
  */
 export async function refreshSuggestions(): Promise<void> {
   suggestedOpsState.loading = true
   suggestedOpsState.loadError = false
   const fresh: number[] = []
   try {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
-    const before = new Map(pendingGroups().map((group) => [group.groupId, group.totalOpCount]))
     suggestedOpsState.sweeps = await listSuggestedOps()
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
     const live = new Set<number>()
@@ -319,9 +350,12 @@ export async function refreshSuggestions(): Promise<void> {
       live.add(group.groupId)
       const review = reviewOf(group.groupId)
       if (!review) {
-        suggestedOpsState.reviews.set(group.groupId, newGroupReview())
+        const created = newGroupReview()
+        created.seenRevision = group.revision
+        suggestedOpsState.reviews.set(group.groupId, created)
         fresh.push(group.groupId)
-      } else if (before.has(group.groupId) && before.get(group.groupId) !== group.totalOpCount) {
+      } else if (review.seenRevision !== null && review.seenRevision !== group.revision) {
+        // The group moved since the rows on screen were read: announce it, never swap.
         review.changedUnderReview = true
       }
     }
@@ -352,12 +386,14 @@ function dropReview(groupId: number): void {
 export async function reloadGroup(groupId: number): Promise<void> {
   const review = reviewOf(groupId)
   if (!review) return
-  review.changedUnderReview = false
   review.window = null
   review.liveFacts.clear()
   review.sourceUnreachable = null
   factsRequested.delete(groupId)
   await refreshSuggestions()
+  // The rows about to load are the new version: that's the one the user now reads.
+  review.seenRevision = groupById(groupId)?.revision ?? review.seenRevision
+  review.changedUnderReview = false
   await ensureOpWindow(groupId, 0)
 }
 
@@ -506,14 +542,16 @@ export function opAt(groupId: number, index: number): SuggestedOpView | null {
   return held.ops[index - held.offset] ?? null
 }
 
-/** Turn one op off, or back on. In either mode that's flipping its membership in `ids`. */
-export function toggleOp(groupId: number, opId: number): void {
-  const ids = reviewOf(groupId)?.selection.ids
-  if (!ids) return
-  if (ids.has(opId)) {
-    ids.delete(opId)
+/** Turn one op off, or back on: flip its membership in whichever set records it against the base. */
+export function toggleOp(groupId: number, op: SuggestedOpView): void {
+  const selection = reviewOf(groupId)?.selection
+  if (!selection) return
+  const flips =
+    selection.mode !== 'fromStored' ? selection.ids : op.status === 'excluded' ? selection.include : selection.exclude
+  if (flips.has(op.opId)) {
+    flips.delete(op.opId)
   } else {
-    ids.add(opId)
+    flips.add(op.opId)
   }
 }
 
@@ -536,8 +574,12 @@ export async function approveGroup(groupId: number): Promise<void> {
   suggestedOpsState.decisionNotice = null
   suggestedOpsState.refusals.delete(groupId)
   try {
-    const selection = reviewOf(groupId)?.selection ?? selectAllSelection()
-    const result = await approveSuggestedGroup(groupId, { mode: selection.mode, opIds: [...selection.ids] })
+    const review = reviewOf(groupId)
+    const selection = review?.selection ?? storedSelection()
+    // The revision the user read, never the one the store holds now: an amendment that landed
+    // since refuses as `listChanged` instead of running rows nobody saw.
+    const revision = review?.seenRevision ?? groupById(groupId)?.revision ?? 0
+    const result = await approveSuggestedGroup(groupId, revision, selectionWire(selection))
     if (isRefusalToStart(result)) suggestedOpsState.refusals.set(groupId, result)
     if (result.kind === 'started') {
       await refreshSuggestions()

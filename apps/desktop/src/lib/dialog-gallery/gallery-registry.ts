@@ -452,7 +452,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       {
         id: 'changed-and-refused',
         label: 'Changed, refused, and unsure',
-        note: 'The AI changed one group under the review, another’s approval didn’t start, and the last approval’s outcome is unknown.',
+        note: 'The AI changed one group under the review (its Approve waits for the reload), another’s approval didn’t start and reopens with the file it unticked still off, and the last approval’s outcome is unknown.',
       },
       { id: 'empty', label: 'Nothing waiting' },
       { id: 'load-error', label: 'Couldn’t read the suggestions' },

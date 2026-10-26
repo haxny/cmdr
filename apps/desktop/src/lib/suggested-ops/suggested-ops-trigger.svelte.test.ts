@@ -11,7 +11,10 @@ import type { SuggestedOpPage, SuggestedSweepView, SuggestionsChanged } from '#l
 const listMock = vi.fn<() => Promise<SuggestedSweepView[]>>()
 const pageMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<SuggestedOpPage>>()
 const rejectMock = vi.fn<(g: number) => Promise<{ kind: string }>>()
-const approveMock = vi.fn<(g: number, selection: { mode: string; opIds: number[] }) => Promise<{ kind: string }>>()
+const approveMock =
+  vi.fn<
+    (payload: { groupId: number; revision: number; selection: Record<string, unknown> }) => Promise<{ kind: string }>
+  >()
 const factsMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<unknown>>()
 
 /** The subscriber the store installs while the dialog is open. */
@@ -21,7 +24,8 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   listSuggestedOps: () => listMock(),
   pageSuggestedOps: (g: number, o: number, l: number) => pageMock({ groupId: g, offset: o, limit: l }),
   rejectSuggestedGroup: (g: number) => rejectMock(g),
-  approveSuggestedGroup: (g: number, selection: { mode: string; opIds: number[] }) => approveMock(g, selection),
+  approveSuggestedGroup: (g: number, revision: number, selection: Record<string, unknown>) =>
+    approveMock({ groupId: g, revision, selection }),
   liveSuggestedOpFacts: (g: number, o: number, l: number) => factsMock({ groupId: g, offset: o, limit: l }),
   onSuggestionsChanged: (cb: (p: SuggestionsChanged) => void) => {
     emit = cb
@@ -60,6 +64,21 @@ import {
   toggleOp,
 } from './suggested-ops-trigger.svelte'
 
+/** An op row as the toggles see it: an id, and whether an earlier review turned it off. */
+function pending(opId: number) {
+  return {
+    opId,
+    sourcePath: `/x/${String(opId)}`,
+    newName: null,
+    status: 'pending',
+    snapshotSize: null,
+    snapshotModified: null,
+  } as const
+}
+function excluded(opId: number) {
+  return { ...pending(opId), status: 'excluded' } as const
+}
+
 function group(groupId: number, liveOpCount: number, overrides: Record<string, unknown> = {}) {
   return {
     groupId,
@@ -77,6 +96,7 @@ function group(groupId: number, liveOpCount: number, overrides: Record<string, u
     liveOpCount,
     totalOpCount: liveOpCount,
     fromSelector: false,
+    revision: 1,
     ...overrides,
   } as unknown as SuggestedSweepView['groups'][number]
 }
@@ -321,12 +341,16 @@ describe('live facts', () => {
 describe('approving', () => {
   it('sends the ids the user turned OFF, never the ones they kept', async () => {
     await openSuggestedOps()
-    toggleOp(BIG, 4)
-    toggleOp(BIG, 9)
+    toggleOp(BIG, pending(4))
+    toggleOp(BIG, pending(9))
 
     await approveGroup(BIG)
 
-    expect(approveMock).toHaveBeenCalledWith(BIG, { mode: 'allExcept', opIds: [4, 9] })
+    expect(approveMock).toHaveBeenCalledWith({
+      groupId: BIG,
+      revision: 1,
+      selection: { mode: 'fromStored', excludeOpIds: [4, 9], includeOpIds: [] },
+    })
   })
 
   it('carries an empty list when the whole group is approved, at any size', async () => {
@@ -334,17 +358,25 @@ describe('approving', () => {
 
     await approveGroup(BIG)
 
-    expect(approveMock).toHaveBeenCalledWith(BIG, { mode: 'allExcept', opIds: [] })
+    expect(approveMock).toHaveBeenCalledWith({
+      groupId: BIG,
+      revision: 1,
+      selection: { mode: 'fromStored', excludeOpIds: [], includeOpIds: [] },
+    })
   })
 
   it('sends only that group’s deselection', async () => {
     listMock.mockResolvedValue([sweep([group(7, 3), group(8, 3)])])
     await openSuggestedOps()
-    toggleOp(8, 1)
+    toggleOp(8, pending(1))
 
     await approveGroup(7)
 
-    expect(approveMock).toHaveBeenCalledWith(7, { mode: 'allExcept', opIds: [] })
+    expect(approveMock).toHaveBeenCalledWith({
+      groupId: 7,
+      revision: 1,
+      selection: { mode: 'fromStored', excludeOpIds: [], includeOpIds: [] },
+    })
   })
 
   it('closes the dialog once nothing is left to decide', async () => {
@@ -391,16 +423,33 @@ describe('approving', () => {
     expect(canApprove(BIG)).toBe(true)
   })
 
-  it('counts a re-offered op, since approving every op brings back one an earlier review turned off', async () => {
+  it('reopens with the earlier "no"s still off, and counts from the stored live set', async () => {
     // An earlier approval excluded 3 ops, then the engine refused to start: the group is
-    // pending again with 3 `excluded` rows, and a fresh review ticks all 10.
+    // pending again with 3 `excluded` rows, and the new review keeps them unticked.
     listMock.mockResolvedValue([sweep([group(BIG, 7, { totalOpCount: 10 })])])
     await openSuggestedOps()
 
-    expect(approvableCount(BIG)).toBe(10)
-    expect(selectionState(BIG)).toBe('all')
-    toggleOp(BIG, 0)
-    expect(approvableCount(BIG)).toBe(9)
+    expect(approvableCount(BIG)).toBe(7)
+    expect(selectionState(BIG)).toBe('some')
+    expect(isOpSelected(BIG, excluded(3))).toBe(false)
+    expect(isOpSelected(BIG, pending(4))).toBe(true)
+  })
+
+  it('ticks an earlier "no" back on as a flip against the stored ticks, never naming the rest', async () => {
+    listMock.mockResolvedValue([sweep([group(BIG, 7, { totalOpCount: 10 })])])
+    await openSuggestedOps()
+
+    toggleOp(BIG, excluded(3))
+    toggleOp(BIG, pending(4))
+
+    expect(isOpSelected(BIG, excluded(3))).toBe(true)
+    expect(approvableCount(BIG)).toBe(7)
+    await approveGroup(BIG)
+    expect(approveMock).toHaveBeenCalledWith({
+      groupId: BIG,
+      revision: 1,
+      selection: { mode: 'fromStored', excludeOpIds: [4], includeOpIds: [3] },
+    })
   })
 
   it('leaves the dialog usable when approving throws', async () => {
@@ -485,19 +534,19 @@ describe('an approval that refuses to start', () => {
 describe('selection', () => {
   it('survives the row scrolling out of the loaded window', async () => {
     await openSuggestedOps()
-    toggleOp(BIG, 3)
+    toggleOp(BIG, pending(3))
 
     await ensureOpWindow(BIG, 5_000)
 
     expect(opAt(BIG, 3)).toBeNull()
-    expect(isOpSelected(BIG, 3)).toBe(false)
+    expect(isOpSelected(BIG, pending(3))).toBe(false)
   })
 
   it('counts what would actually run from the COUNT, not from the rows in memory', async () => {
     await openSuggestedOps()
 
-    toggleOp(BIG, 1)
-    toggleOp(BIG, 2)
+    toggleOp(BIG, pending(1))
+    toggleOp(BIG, pending(2))
 
     expect(approvableCount(BIG)).toBe(59_998)
   })
@@ -505,17 +554,17 @@ describe('selection', () => {
   it('turns a row back on', async () => {
     await openSuggestedOps()
 
-    toggleOp(BIG, 1)
-    toggleOp(BIG, 1)
+    toggleOp(BIG, pending(1))
+    toggleOp(BIG, pending(1))
 
-    expect(isOpSelected(BIG, 1)).toBe(true)
+    expect(isOpSelected(BIG, pending(1))).toBe(true)
   })
 
   it('keeps each group’s selection to itself', async () => {
     listMock.mockResolvedValue([sweep([group(7, 3), group(8, 3)])])
     await openSuggestedOps()
 
-    toggleOp(7, 1)
+    toggleOp(7, pending(1))
 
     expect(approvableCount(7)).toBe(2)
     expect(approvableCount(8)).toBe(3)
@@ -529,29 +578,28 @@ describe('selection', () => {
     expect(selectionState(BIG)).toBe('none')
     expect(approvableCount(BIG)).toBe(0)
     expect(reviewOf(BIG)?.selection).toMatchObject({ mode: 'only' })
-    expect(reviewOf(BIG)?.selection.ids.size).toBe(0)
   })
 
   it('sends only the rows ticked by hand after unticking everything', async () => {
     await openSuggestedOps()
     toggleAllOps(BIG)
-    toggleOp(BIG, 5)
-    toggleOp(BIG, 6)
+    toggleOp(BIG, pending(5))
+    toggleOp(BIG, pending(6))
 
     await approveGroup(BIG)
 
-    expect(approveMock).toHaveBeenCalledWith(BIG, { mode: 'only', opIds: [5, 6] })
+    expect(approveMock).toHaveBeenCalledWith({ groupId: BIG, revision: 1, selection: { mode: 'only', opIds: [5, 6] } })
   })
 
   it('reads a mix as mixed, and ticks everything from there', async () => {
     await openSuggestedOps()
-    toggleOp(BIG, 1)
+    toggleOp(BIG, pending(1))
     expect(selectionState(BIG)).toBe('some')
 
     toggleAllOps(BIG)
 
     expect(selectionState(BIG)).toBe('all')
-    expect(isOpSelected(BIG, 1)).toBe(true)
+    expect(isOpSelected(BIG, pending(1))).toBe(true)
   })
 })
 
@@ -609,12 +657,23 @@ describe('a group that changed under the review', () => {
     await openSuggestedOps()
     const before = reviewOf(BIG)?.window?.ops[0]?.opId
 
-    // The agent amended the group: same id, different op count.
-    listMock.mockResolvedValueOnce([sweep([group(BIG, 9)])])
+    // The agent amended the group: same id, a new revision.
+    listMock.mockResolvedValueOnce([sweep([group(BIG, 9, { revision: 2 })])])
     await refreshSuggestions()
 
     expect(reviewOf(BIG)?.changedUnderReview).toBe(true)
     expect(reviewOf(BIG)?.window?.ops[0]?.opId).toBe(before)
+  })
+
+  it("stays quiet when only the counts moved, as the user's own refused approval moves them", async () => {
+    await openSuggestedOps()
+
+    // Same revision: an approval that excluded rows and then refused to start changes the live
+    // count, not the group.
+    listMock.mockResolvedValueOnce([sweep([group(BIG, 59_990, { totalOpCount: 60_000 })])])
+    await refreshSuggestions()
+
+    expect(reviewOf(BIG)?.changedUnderReview).toBe(false)
   })
 
   it('stays quiet when nothing about the group moved', async () => {
@@ -636,7 +695,7 @@ describe('a group that changed under the review', () => {
 
   it('reloads on request, and keeps what the user turned off', async () => {
     await openSuggestedOps()
-    toggleOp(BIG, 2)
+    toggleOp(BIG, pending(2))
     emit?.({ pendingGroupCount: 1, pendingOpCount: 3, groupId: BIG, reason: 'amended' })
     pageMock.mockClear()
 
@@ -644,7 +703,31 @@ describe('a group that changed under the review', () => {
 
     expect(reviewOf(BIG)?.changedUnderReview).toBe(false)
     expect(pageMock).toHaveBeenCalledTimes(1)
-    expect(isOpSelected(BIG, 2)).toBe(false)
+    expect(isOpSelected(BIG, pending(2))).toBe(false)
+  })
+})
+
+describe('the revision the user read', () => {
+  it('sends the revision whose rows are on screen', async () => {
+    listMock.mockResolvedValue([sweep([group(BIG, 60_000, { revision: 4 })])])
+    await openSuggestedOps()
+
+    await approveGroup(BIG)
+
+    expect(approveMock.mock.calls[0]?.[0]).toMatchObject({ groupId: BIG, revision: 4 })
+  })
+
+  it("won't approve a newer revision the user hasn't read, and sends it once they have", async () => {
+    await openSuggestedOps()
+    listMock.mockResolvedValue([sweep([group(BIG, 60_000, { revision: 2 })])])
+    await refreshSuggestions()
+
+    await approveGroup(BIG)
+    expect(approveMock).not.toHaveBeenCalled()
+
+    await reloadGroup(BIG)
+    await approveGroup(BIG)
+    expect(approveMock.mock.calls[0]?.[0]).toMatchObject({ groupId: BIG, revision: 2 })
   })
 })
 
@@ -747,7 +830,7 @@ describe('a read or an answer that does not happen', () => {
 describe('closing', () => {
   it('drops every review and its deselection', async () => {
     await openSuggestedOps()
-    toggleOp(BIG, 1)
+    toggleOp(BIG, pending(1))
 
     closeSuggestedOps()
 

@@ -81,7 +81,7 @@
     <dl class="facts selectable">
         <dt>{tString(group.verb === 'rename' ? 'suggestedOps.facts.folder' : 'suggestedOps.facts.from')}</dt>
         <dd>
-            <VolumePill volumeId={group.sourceVolumeId} name={null} />
+            <VolumePill volumeId={group.sourceVolumeId} name={group.sourceVolumeName} />
             <span class="path">{group.sourceFolder ?? tString('suggestedOps.facts.severalFolders')}</span>
         </dd>
         {#if group.verb === 'trash'}

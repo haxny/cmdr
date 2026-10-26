@@ -34,6 +34,8 @@ interface FixtureFile {
   newName?: string
   /** What the live check found. Omitted: present and unchanged. */
   live?: LiveFact
+  /** An earlier review turned it off (its approval then refused to start), so it opens unticked. */
+  excluded?: boolean
 }
 
 interface FixtureGroup {
@@ -66,6 +68,8 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     displayName: group.displayName,
     rationale: group.rationale ?? null,
     sourceVolumeId: 'root',
+    sourceVolumeName: 'Macintosh HD',
+    revision: 1,
     sourceFolder: group.sourceFolder === undefined ? DOWNLOADS : group.sourceFolder,
     destination: group.destination ?? null,
     destinationVolumeName: group.destinationVolumeName ?? null,
@@ -73,7 +77,7 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     reversible: group.reversible ?? 'restoreMove',
     runBlocker: group.runBlocker ?? null,
     destinationState: group.destinationState ?? (group.destination ? 'exists' : 'notApplicable'),
-    liveOpCount: total,
+    liveOpCount: total - group.files.filter((file) => file.excluded).length,
     totalOpCount: total,
     fromSelector: group.fromSelector ?? false,
   }
@@ -81,11 +85,12 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
 
 function review(group: FixtureGroup): GroupReview {
   const fresh = newGroupReview()
+  fresh.seenRevision = 1
   const ops: SuggestedOpView[] = group.files.map((file, index) => ({
     opId: index + 1,
     sourcePath: `${file.folder ?? group.sourceFolder ?? DOWNLOADS}/${file.name}`,
     newName: file.newName ?? null,
-    status: 'pending',
+    status: file.excluded ? 'excluded' : 'pending',
     snapshotSize: file.size,
     snapshotModified: file.modified,
   }))
@@ -280,7 +285,13 @@ export const suggestedOpsFixtures: Record<string, () => Patch> = {
     ]),
   'hard-cases': () => patch([{ sweepId: 2, createdAt: daysAgo(3), groups: HARD_CASES }]),
   'changed-and-refused': () => {
-    const seeded = patch([{ sweepId: 1, createdAt: hoursAgo(2), groups: DOWNLOADS_CLEANUP.slice(0, 2) }])
+    // The refused group's receipt was unticked before that approval, so it reopens unticked.
+    const [installers, invoices] = DOWNLOADS_CLEANUP
+    const refused = {
+      ...invoices,
+      files: invoices.files.map((file) => (file.name === 'receipt-ica.pdf' ? { ...file, excluded: true } : file)),
+    }
+    const seeded = patch([{ sweepId: 1, createdAt: hoursAgo(2), groups: [installers, refused] }])
     const changed = seeded.reviews?.get(101)
     if (changed) changed.changedUnderReview = true
     return {
