@@ -486,6 +486,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::cancel_bulk_rename_proposal,
                     crate::commands::agent::suggested_ops_list,
                     crate::commands::agent::suggested_ops_page,
+                    crate::commands::agent::suggested_ops_live_facts,
                     crate::commands::agent::suggested_ops_reject,
                     crate::commands::agent::suggested_ops_approve,
                     crate::commands::agent::ask_cmdr_record_slot_change,

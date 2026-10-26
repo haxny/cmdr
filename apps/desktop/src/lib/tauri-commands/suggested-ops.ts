@@ -12,7 +12,9 @@ import {
   events,
   type ApprovalResultView,
   type RejectResultView,
+  type SuggestedOpLiveFact,
   type SuggestedOpPage,
+  type SuggestedOpsLiveFactsError,
   type SuggestedSweepView,
   type SuggestionsChanged,
 } from '#lib/ipc/bindings.js'
@@ -32,6 +34,22 @@ export async function pageSuggestedOps(groupId: number, offset: number, limit: n
   const res = await commands.suggestedOpsPage(groupId, offset, limit)
   if (res.status === 'error') throwSuggestedOpsError(res.error)
   return res.data
+}
+
+/** What one window of a group's ops is like on disk NOW, beside the creation snapshot the page
+ *  carries. Per-file trouble is that file's `unknown`; a refusal means the source couldn't be asked
+ *  at all (not connected, gone, no such group), which the dialog words once per group. */
+export type SuggestedOpLiveFactsAnswer =
+  | { kind: 'facts'; facts: SuggestedOpLiveFact[] }
+  | { kind: 'refused'; reason: SuggestedOpsLiveFactsError }
+
+export async function liveSuggestedOpFacts(
+  groupId: number,
+  offset: number,
+  limit: number,
+): Promise<SuggestedOpLiveFactsAnswer> {
+  const res = await commands.suggestedOpsLiveFacts(groupId, offset, limit)
+  return res.status === 'error' ? { kind: 'refused', reason: res.error } : { kind: 'facts', facts: res.data }
 }
 
 /** The user said no to a group. Answers what actually happened: a group somebody already
@@ -62,11 +80,14 @@ export function onSuggestionsChanged(callback: (payload: SuggestionsChanged) => 
 export type {
   ApprovalResultView,
   DestinationState,
+  LiveFileState,
   SuggestionChange,
   SuggestionsChanged,
   RejectResultView,
   SuggestedGroupView,
+  SuggestedOpLiveFact,
   SuggestedOpPage,
+  SuggestedOpsLiveFactsError,
   SuggestedOpView,
   SuggestedSweepView,
 } from '#lib/ipc/bindings.js'

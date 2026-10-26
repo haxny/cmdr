@@ -437,3 +437,57 @@ fn a_store_that_isnt_open_is_not_a_store_that_refused() {
         serde_json::json!({ "type": "approvalDidntFinish" })
     );
 }
+
+/// A live fact crosses the wire as a tagged union the dialog can switch on, and a folder's or
+/// an undated file's missing number stays `null`, never a zero.
+#[test]
+fn a_live_fact_keeps_its_three_answers_apart_on_the_wire() {
+    let present = live_state(SourceStat::Present {
+        size: Some(7),
+        modified: Some(1_700_000_000),
+        inode: Some(12),
+    });
+    assert_eq!(
+        serde_json::to_value(SuggestedOpLiveFact {
+            op_id: 4,
+            state: present
+        })
+        .unwrap(),
+        serde_json::json!({ "opId": 4, "state": { "kind": "present", "size": 7, "modified": 1_700_000_000 } })
+    );
+    let folder = live_state(SourceStat::Present {
+        size: None,
+        modified: None,
+        inode: None,
+    });
+    assert_eq!(
+        serde_json::to_value(folder).unwrap(),
+        serde_json::json!({ "kind": "present", "size": null, "modified": null })
+    );
+    assert_eq!(
+        serde_json::to_value(live_state(SourceStat::Missing)).unwrap(),
+        serde_json::json!({ "kind": "missing" })
+    );
+    assert_eq!(
+        serde_json::to_value(live_state(SourceStat::Unknown)).unwrap(),
+        serde_json::json!({ "kind": "unknown" })
+    );
+}
+
+/// A source volume nobody connected and one that left call for different words, so they stay
+/// two variants.
+#[test]
+fn a_live_facts_refusal_names_why_the_source_cant_be_asked() {
+    assert_eq!(
+        serde_json::to_value(SuggestedOpsLiveFactsError::SourceNotConnected).unwrap(),
+        serde_json::json!({ "type": "sourceNotConnected" })
+    );
+    assert_eq!(
+        serde_json::to_value(SuggestedOpsLiveFactsError::SourceGone).unwrap(),
+        serde_json::json!({ "type": "sourceGone" })
+    );
+    assert_eq!(
+        serde_json::to_value(SuggestedOpsLiveFactsError::UnknownGroup).unwrap(),
+        serde_json::json!({ "type": "unknownGroup" })
+    );
+}

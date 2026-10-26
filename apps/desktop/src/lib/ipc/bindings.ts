@@ -3651,6 +3651,19 @@ export const commands = {
   suggestedOpsPage: (groupId: number, offset: number, limit: number) =>
     typedError<SuggestedOpPage, SuggestedOpsError>(__TAURI_INVOKE('suggested_ops_page', { groupId, offset, limit })),
   /**
+   *  The current size and date of one window of a group's ops, so the dialog can draw a page
+   *  from the frozen rows first and fill in what's true now as it arrives.
+   *
+   *  Every stat goes through the group's SOURCE volume, under one shared deadline per call
+   *  (`io_budget`: 2 s, at least 10 s on a live session), with the stats capped across every
+   *  caller by `facts.rs`'s `BlockingBudget`: the dialog re-asks on scroll faster than a slow
+   *  share answers.
+   */
+  suggestedOpsLiveFacts: (groupId: number, offset: number, limit: number) =>
+    typedError<SuggestedOpLiveFact[], SuggestedOpsLiveFactsError>(
+      __TAURI_INVOKE('suggested_ops_live_facts', { groupId, offset, limit }),
+    ),
+  /**
    *  The user said no to a group.
    *
    *  Conditional on `pending`, like every other transition: a group that already left it keeps
@@ -7762,7 +7775,13 @@ export type DestinationState =
   | 'exists'
   // Approving creates it, exactly as a user-started move into a missing folder would.
   | 'willBeCreated'
-  // The volume didn't answer in time, or isn't mounted.
+  /**
+   *  The destination's volume is one Cmdr knows (a saved share or server, a listed phone) but
+   *  nothing has connected it, so there's nothing to ask. Approving refuses until it's
+   *  connected, the same as a clicked move onto it would.
+   */
+  | 'notConnected'
+  // The volume didn't answer in time, refused the check, or left the registry.
   | 'unknown'
 
 // Which device backend an [`FavoriteReach::AccessOff`] favorite needs switched on.
@@ -11137,6 +11156,23 @@ export type ListingStatus =
   | { status: 'ready' }
   | { status: 'cancelled' }
   | { status: 'error'; message: string }
+
+/**
+ *  One source as its volume answers for it now. Three answers the dialog words differently,
+ *  so none collapses into another: a missing file is a fact, an unanswered stat is not.
+ */
+export type LiveFileState =
+  | {
+      kind: 'present'
+      // Bytes. `None` for a folder, whose own stat size means nothing to a user.
+      size: number | null
+      // Unix seconds.
+      modified: number | null
+    }
+  // The volume says nothing is at that path any more.
+  | { kind: 'missing' }
+  // The volume didn't answer within the deadline, or refused the stat.
+  | { kind: 'unknown' }
 
 // What starting a live search hands back before any of it has happened.
 export type LiveSearchStart = {
@@ -17648,8 +17684,19 @@ export type SuggestedGroupView = {
    */
   destination: string | null
   /**
-   *  How far an approved group could be taken back. A fact to DISCLOSE; per the guiding
-   *  principle it is never a reason to refuse a group.
+   *  What the switcher calls the volume `destination` is on ("naspi on 192.168.1.5",
+   *  "Macintosh HD"). `None` when there's no destination, or no listed volume has that id.
+   */
+  destinationVolumeName: string | null
+  /**
+   *  The folder every op sits directly in, so the dialog can name it once instead of on every
+   *  row. `None` when the ops span folders.
+   */
+  sourceFolder: string | null
+  /**
+   *  How far an approved group could be taken back, worked out NOW from the source volume's
+   *  real capabilities (a trash group on a volume with no trash can't be undone). A fact to
+   *  DISCLOSE; per the guiding principle it is never a reason to refuse a group.
    */
   reversible: Reversibility
   // Whether that destination is already there, and so whether approving creates it.
@@ -17663,6 +17710,12 @@ export type SuggestedGroupView = {
    *  provenance of a list the user didn't watch being built.
    */
   fromSelector: boolean
+}
+
+// What one op's source is like on disk right now, beside its creation snapshot.
+export type SuggestedOpLiveFact = {
+  opId: number
+  state: LiveFileState
 }
 
 // One page of a group's ops, plus the counts that place it in the whole.
@@ -17714,6 +17767,37 @@ export type SuggestedOpsError =
    *  is genuinely unknown; the dialog re-reads rather than guessing.
    */
   | { type: 'approvalDidntFinish' }
+  // Nothing above classifies it (a panicked task).
+  | {
+      type: 'unexpected'
+      // What the runtime reported, for the log.
+      detail: string
+    }
+
+/**
+ *  Why a live-facts read didn't happen at all. Per-file trouble is never an error: it's that
+ *  file's `Unknown`.
+ *
+ *  ❌ Not prose: the dialog words each variant itself; the log records the detail.
+ */
+export type SuggestedOpsLiveFactsError =
+  // The suggestion store isn't open: agent features are off, or the app is still starting.
+  | { type: 'storeNotOpen' }
+  // The store refused the read.
+  | {
+      type: 'store'
+      // What SQLite reported, for the log.
+      detail: string
+    }
+  // No group with that id, which usually means the list on screen is stale.
+  | { type: 'unknownGroup' }
+  /**
+   *  The group's source volume is one Cmdr knows (a saved share or server, a listed phone)
+   *  but nothing has connected it, so there's nothing to ask.
+   */
+  | { type: 'sourceNotConnected' }
+  // No volume is registered under the group's source volume id any more (a drive that left).
+  | { type: 'sourceGone' }
   // Nothing above classifies it (a panicked task).
   | {
       type: 'unexpected'
