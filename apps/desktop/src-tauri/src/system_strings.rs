@@ -106,6 +106,7 @@ pub struct LocalizedSystemStrings {
     pub files_and_folders: String,
     pub local_network: String,
     pub appearance: String,
+    pub automation: String,
 }
 
 impl LocalizedSystemStrings {
@@ -120,6 +121,7 @@ impl LocalizedSystemStrings {
             files_and_folders: "Files & Folders".to_string(),
             local_network: "Local Network".to_string(),
             appearance: "Appearance".to_string(),
+            automation: "Automation".to_string(),
         }
     }
 }
@@ -196,6 +198,7 @@ struct StringCatalog {
     files_and_folders: StringSource,
     local_network: StringSource,
     appearance: StringSource,
+    automation: StringSource,
 }
 
 #[cfg(target_os = "macos")]
@@ -226,6 +229,11 @@ const CATALOG: StringCatalog = StringCatalog {
         loctable: "/System/Library/ExtensionKit/Extensions/Appearance.appex/Contents/Resources/InfoPlist.loctable",
         key: "CFBundleDisplayName",
     },
+    automation: StringSource {
+        loctable: "/System/Library/ExtensionKit/Extensions/SecurityPrivacyExtension.appex/Contents/Resources/Localizable.loctable",
+        // (verified on macOS 27.0.1, `plutil -convert json`, 2026-10-26: en "Automation", hu "Automatizálás")
+        key: "AUTOMATION",
+    },
 };
 
 #[cfg(target_os = "macos")]
@@ -252,6 +260,7 @@ fn build_snapshot() -> LocalizedSystemStrings {
         files_and_folders: load_for(&CATALOG.files_and_folders).unwrap_or(defaults.files_and_folders.clone()),
         local_network: load_for(&CATALOG.local_network).unwrap_or(defaults.local_network.clone()),
         appearance: load_for(&CATALOG.appearance).unwrap_or(defaults.appearance.clone()),
+        automation: load_for(&CATALOG.automation).unwrap_or(defaults.automation.clone()),
     };
 
     log::debug!(
@@ -459,6 +468,7 @@ mod tests {
         assert!(!after.files_and_folders.is_empty());
         assert!(!after.local_network.is_empty());
         assert!(!after.appearance.is_empty());
+        assert!(!after.automation.is_empty());
         // Nothing moved the OS language between the two reads, so the rebuild
         // has to land on the same answer.
         assert_eq!(before.system_settings, after.system_settings);
@@ -477,6 +487,7 @@ mod tests {
         assert!(!s.files_and_folders.is_empty());
         assert!(!s.local_network.is_empty());
         assert!(!s.appearance.is_empty());
+        assert!(!s.automation.is_empty());
     }
 
     #[cfg(target_os = "macos")]

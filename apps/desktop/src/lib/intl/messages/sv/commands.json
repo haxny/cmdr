@@ -1216,11 +1216,11 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "För Visa info behöver Cmdr få styra Finder, och det är avstängt. Slå på Finder under Cmdr i Systeminställningar > Integritet och säkerhet > Automatisering.",
+  "commands.handler.getInfo.automationOff": "För Visa info behöver Cmdr få styra Finder, och det är avstängt. Slå på Finder under Cmdr i {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
     "sourceHash": "7e831ef"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Öppna inställningar för Automatisering",
+  "commands.handler.getInfo.openAutomationSettings": "Öppna inställningar för {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "f04940d"
   },

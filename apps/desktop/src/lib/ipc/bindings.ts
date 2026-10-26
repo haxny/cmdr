@@ -11182,6 +11182,7 @@ export type LocalizedSystemStrings = {
   filesAndFolders: string
   localNetwork: string
   appearance: string
+  automation: string
 }
 
 // A navigable destination: a path together with the volume it lives on.

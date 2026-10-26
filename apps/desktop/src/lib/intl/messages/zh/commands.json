@@ -1216,11 +1216,11 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "“显示简介”需要 Cmdr 能控制 Finder，但这项权限已关闭。去“系统设置 > 隐私与安全性 > 自动化”里打开 Cmdr 下面的 Finder。",
+  "commands.handler.getInfo.automationOff": "“显示简介”需要 Cmdr 能控制 Finder，但这项权限已关闭。去“{systemSettings} > {privacyAndSecurity} > {automation}”里打开 Cmdr 下面的 Finder。",
   "@commands.handler.getInfo.automationOff": {
     "sourceHash": "7e831ef"
   },
-  "commands.handler.getInfo.openAutomationSettings": "打开“自动化”设置",
+  "commands.handler.getInfo.openAutomationSettings": "打开“{automation}”设置",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "f04940d"
   },

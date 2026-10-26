@@ -42,6 +42,7 @@ const ENGLISH_DEFAULTS = {
   filesAndFolders: 'Files & Folders',
   localNetwork: 'Local Network',
   appearance: 'Appearance',
+  automation: 'Automation',
 }
 
 /**
@@ -63,6 +64,7 @@ async function hydrate(): Promise<void> {
     systemStrings.filesAndFolders = resolved.filesAndFolders
     systemStrings.localNetwork = resolved.localNetwork
     systemStrings.appearance = resolved.appearance
+    systemStrings.automation = resolved.automation
     initialized = true
     log.debug('System strings hydrated: {systemSettings}, {fullDiskAccess}', {
       systemSettings: resolved.systemSettings,

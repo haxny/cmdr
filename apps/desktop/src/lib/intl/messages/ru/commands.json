@@ -1216,11 +1216,11 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Чтобы открыть окно «Свойства», Cmdr нужно управлять Finder, а это выключено. Включите Finder под Cmdr в разделе «Системные настройки > Конфиденциальность и безопасность > Автоматизация».",
+  "commands.handler.getInfo.automationOff": "Чтобы открыть окно «Свойства», Cmdr нужно управлять Finder, а это выключено. Включите Finder под Cmdr в разделе «{systemSettings} > {privacyAndSecurity} > {automation}».",
   "@commands.handler.getInfo.automationOff": {
     "sourceHash": "7e831ef"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Открыть настройки «Автоматизация»",
+  "commands.handler.getInfo.openAutomationSettings": "Открыть настройки «{automation}»",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "f04940d"
   },

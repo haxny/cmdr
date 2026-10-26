@@ -1216,11 +1216,11 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Para Obtener información, Cmdr necesita controlar el Finder, y eso está desactivado. Activa el Finder debajo de Cmdr en Ajustes del Sistema > Privacidad y seguridad > Automatización.",
+  "commands.handler.getInfo.automationOff": "Para Obtener información, Cmdr necesita controlar el Finder, y eso está desactivado. Activa el Finder debajo de Cmdr en {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
     "sourceHash": "7e831ef"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Abrir los ajustes de Automatización",
+  "commands.handler.getInfo.openAutomationSettings": "Abrir los ajustes de {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "f04940d"
   },

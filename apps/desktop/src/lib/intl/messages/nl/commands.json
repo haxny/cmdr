@@ -1219,11 +1219,11 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Voor ‘Toon info’ moet Cmdr Finder kunnen besturen, en dat staat uit. Zet Finder onder Cmdr aan in Systeeminstellingen > Privacy en beveiliging > Automatisering.",
+  "commands.handler.getInfo.automationOff": "Voor ‘Toon info’ moet Cmdr Finder kunnen besturen, en dat staat uit. Zet Finder onder Cmdr aan in {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
     "sourceHash": "7e831ef"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Open instellingen voor Automatisering",
+  "commands.handler.getInfo.openAutomationSettings": "Open instellingen voor {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "f04940d"
   },

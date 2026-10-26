@@ -1216,11 +1216,11 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Để mở Lấy thông tin, Cmdr cần được điều khiển Finder, nhưng quyền này đang tắt. Hãy bật Finder bên dưới Cmdr trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật > Tự động hóa.",
+  "commands.handler.getInfo.automationOff": "Để mở Lấy thông tin, Cmdr cần được điều khiển Finder, nhưng quyền này đang tắt. Hãy bật Finder bên dưới Cmdr trong {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
     "sourceHash": "7e831ef"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Mở cài đặt Tự động hóa",
+  "commands.handler.getInfo.openAutomationSettings": "Mở cài đặt {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "f04940d"
   },

@@ -171,11 +171,7 @@
   "@commands.handler.viewDebugLog.disabled": {
     "sourceHash": "2bf377a"
   },
-  "commands.handler.getInfo.automationOff": "Para Obtener información, Cmdr necesita controlar el Finder, y eso está desactivado. Activa el Finder debajo de Cmdr en Configuración del Sistema > Privacidad y seguridad > Automatización.",
-  "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "3f4a837"
-  },
-  "commands.handler.getInfo.openAutomationSettings": "Abrir la configuración de Automatización",
+  "commands.handler.getInfo.openAutomationSettings": "Abrir la configuración de {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
     "sourceHash": "257d756"
   },
