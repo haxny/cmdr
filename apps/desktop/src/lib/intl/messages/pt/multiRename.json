@@ -133,15 +133,15 @@
   },
   "multiRename.presets.saveAs": "Salvar como pré-ajuste…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Renomear…",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Atualizar com os campos atuais",
+  "multiRename.presets.update": "Atualizar com os ajustes atuais",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Mover para cima",
   "@multiRename.presets.moveUp": {
@@ -637,9 +637,9 @@
   "@multiRename.selectionChanged": {
     "sourceHash": "357470f"
   },
-  "multiRename.swapsSkipped": "O Cmdr ignorou {count, plural, one {# renomeação que troca} many {# renomeações que trocam} other {# renomeações que trocam}} nomes. Renomeie esses arquivos um de cada vez.",
+  "multiRename.swapsSkipped": "O Cmdr ignorou {count, plural, one {# renomeação que troca} many {# renomeações que trocam} other {# renomeações que trocam}} nomes. Faça essas renomeações uma de cada vez.",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "“Renomear em lote” não funciona dentro de arquivos compactados",
   "@multiRename.archiveTitle": {
@@ -749,9 +749,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "O nome da pasta acima dessa",
+  "multiRename.placeholderHelp.grandparent": "O nome da pasta acima da pasta onde o arquivo está",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Começa em {start}",
   "@multiRename.placeholderHelp.counterStart": {

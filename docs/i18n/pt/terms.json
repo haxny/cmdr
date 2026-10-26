@@ -47,6 +47,13 @@
     "confidence": "high",
     "sources": "KDE Dolphin, Total Commander, Double Commander pt-BR (Adicionar ao/à …); macOS Finder pt_BR LocalizableMerged N169.38 / N230 (Data da Adição)"
   },
+  "administrator": {
+    "chosen": "administrador",
+    "accept": ["administradores"],
+    "confidence": "high",
+    "forms": "an administrator password → uma senha de administrador; administrator rights → permissões de administrador; the person who manages a Mac → quem gerencia este Mac",
+    "sources": "macOS pt-BR pile (senha de administrador); MS terminology pt-BR administrador; catalog (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac)"
+  },
   "advanced": {
     "chosen": "Avançado",
     "confidence": "high",
@@ -66,6 +73,12 @@
     "confidence": "high",
     "sources": "MS terminology pt-BR (provider → provedor)",
     "note": "The ai.cloudConsent `service` keys say serviço; provedor stays for provider."
+  },
+  "ai-reply": {
+    "chosen": "resposta",
+    "accept": ["respostas", "respond"],
+    "confidence": "high",
+    "sources": "MS terminology pt-BR resposta; catalog"
   },
   "ai-tool": {
     "chosen": "ferramenta",
@@ -271,6 +284,13 @@
     "forms": "a blocked rename → renomeação bloqueada; Cmdr blocked a web page from reaching X → O Cmdr bloqueou o acesso de uma página da web a X",
     "confidence": "high",
     "sources": "MS pt-BR (Blocked Contacts → Contatos Bloqueados); catalog askCmdr.renameReview.status (bloqueada)"
+  },
+  "blocked-by": {
+    "chosen": "bloquear",
+    "accept": ["bloqueou", "bloquead", "impediu", "impedi"],
+    "confidence": "high",
+    "forms": "Cmdr blocked X from reaching Y → O Cmdr bloqueou o acesso de X a Y; macOS blocked Cmdr from accessing → O macOS impediu o Cmdr de acessar",
+    "sources": "MS terminology pt-BR bloquear; Thunar/Nautilus pt-BR bloqueado; catalog securityNotices.mcpForeignOrigin.title"
   },
   "brief-view": {
     "chosen": "visualização resumida",
@@ -657,6 +677,13 @@
     "chosen": "divisor dos painéis",
     "confidence": "high",
     "sources": "Double Commander pt-BR (divisor), Microsoft pt-BR (divider, splitter → divisor)"
+  },
+  "pattern": {
+    "chosen": "padrão",
+    "accept": ["padrões"],
+    "confidence": "high",
+    "forms": "rename pattern → padrão de renomeação",
+    "sources": "MS terminology pt-BR padrão; Double Commander pt-BR; catalog onboarding.stepAi.table.renameWith"
   },
   "provider-console": {
     "chosen": "console",
@@ -2447,6 +2474,13 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR conflict sheet (Substituir)"
   },
+  "reply": {
+    "chosen": "resposta",
+    "accept": ["respostas", "respond"],
+    "confidence": "high",
+    "forms": "a server’s reply → a resposta do servidor",
+    "sources": "MS terminology pt-BR resposta; catalog (askCmdr, errors.write.replySignatureRefused.*)"
+  },
   "report": {
     "chosen": "relatório",
     "confidence": "confirmed",
@@ -3021,6 +3055,13 @@
     "confidence": "tentative",
     "sources": "shipped pt catalog (viewer.toolbar.tail.label); Microsoft pt-BR terminology acompanhar"
   },
+  "tamper": {
+    "chosen": "adulterar",
+    "accept": ["adulterando", "adulterad"],
+    "confidence": "tentative",
+    "forms": "someone tampering with traffic → alguém adulterando o tráfego; with the connection → alguém está adulterando a conexão",
+    "sources": "Thunar pt-BR adulterado (the pile’s only hit); catalog (errors.shareList.signatureInvalid, errors.write.replySignatureRefused.suggestion, securityNotices.smbSignatureRefused.body)"
+  },
   "tap": {
     "chosen": "tocar",
     "accept": ["toque"],
@@ -3168,11 +3209,31 @@
     "confidence": "confirmed",
     "sources": "shipped pt catalog"
   },
+  "uninstall": {
+    "chosen": "desinstalar",
+    "accept": ["desinstal"],
+    "confidence": "high",
+    "forms": "Uninstall “cmdr” command → Desinstalar o comando “cmdr”; toast → O Cmdr desinstalou o comando “cmdr”",
+    "avoid": [
+      {
+        "form": "remover (for the cmdr command)",
+        "why": "the menu item says Desinstalar; its toasts must use the same verb"
+      }
+    ],
+    "sources": "MS terminology pt-BR desinstalar; catalog menu.app.cliCommandUninstall"
+  },
   "unlock": {
     "chosen": "Desbloquear",
     "accept": ["desbloque"],
     "confidence": "high",
     "sources": "macOS AppKit (Desbloquear)"
+  },
+  "unlock-device": {
+    "chosen": "desbloquear",
+    "accept": ["desbloqueie", "desbloque"],
+    "confidence": "high",
+    "forms": "unlock it (a phone) → desbloqueie-o",
+    "sources": "macOS pt-BR pile (Desbloqueie); Android pt-BR desbloquear; catalog fileExplorer.navigation.favoriteUnreachable.phoneUnplugged"
   },
   "unplug": {
     "chosen": "desconectado",

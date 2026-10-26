@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Renomear em massa",
+  "onboarding.stepAi.table.rowRename": "Renomear muitos arquivos",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Você usa a interface de renomeação em lote para definir manualmente o padrão de renomeação, revisa e aplica.",
+  "onboarding.stepAi.table.renameWithout": "Você define à mão um padrão de renomeação em “Renomear em lote”, depois revisa e aplica.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Você diz “adicionar prefixo de data ISO”, o agente ajusta seu padrão de renomeação, você revisa e aplica à vontade.",
   "@onboarding.stepAi.table.renameWith": {

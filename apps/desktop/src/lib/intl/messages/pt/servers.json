@@ -316,9 +316,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Use apenas letras minúsculas, números e hifens aqui.",
+  "servers.refusal.s3FieldMalformed": "Use apenas a–z, 0–9 e hifens aqui.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Digite o ponto de extremidade como http:// ou https:// mais um nome de host, como https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -346,7 +346,7 @@
   },
   "servers.refusal.shareMounted": "O compartilhamento {name} ainda está montado pelo endereço antigo. Ejete-o e salve novamente.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "O Cmdr não conseguiu ejetar o compartilhamento {name}, então nada foi salvo. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -540,17 +540,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "O servidor mudou de lugar? Digite o novo ponto de extremidade dele. Todos os buckets desta chave vão junto, com os favoritos, as abas abertas e a chave de acesso secreta salva.",
+  "servers.sheet.s3EndpointMoveHelp": "O servidor mudou de lugar? Digite o novo ponto de extremidade dele. Todos os buckets desta chave vão junto, com os favoritos e as abas abertas de cada um, e a chave de acesso secreta salva também vai.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "O servidor mudou de lugar? Digite o novo endereço dele. Os favoritos, as abas abertas e a senha salva vão junto.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "O servidor mudou de lugar? Digite o novo endereço dele. Os compartilhamentos e a senha salva vão junto, e os favoritos e as abas abertas de cada compartilhamento acompanham o compartilhamento na primeira vez que ele for aberto lá.",
+  "servers.sheet.smbAddressMoveHelp": "O servidor mudou de lugar? Digite o novo endereço dele. Os compartilhamentos e a senha salva vão junto, e os favoritos e as abas abertas de cada compartilhamento acompanham assim que esse compartilhamento for aberto no novo endereço.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Nome de usuário",
   "@servers.sheet.username": {
@@ -790,9 +790,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Já conferi",
+  "servers.hostKey.changedDisclosure": "Já conferi a chave",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Impressão digital da chave",
   "@servers.hostKey.fingerprintLabel": {
@@ -822,9 +822,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Já conferi",
+  "servers.certificate.changedDisclosure": "Já conferi o certificado",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Impressão digital do certificado (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -874,9 +874,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Você pediu para iniciar a sessão com sua conta, mas o servidor ofereceu uma sessão de convidado. Em geral isso significa que a senha estava errada. Em casos raros, significa que algo está adulterando a conexão.",
+  "servers.paneState.guestSessionRefusedHint": "Você pediu para iniciar a sessão com sua conta, mas o servidor ofereceu uma sessão de convidado. Em geral isso significa que a senha estava errada. Em casos raros, significa que alguém está adulterando a conexão.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Tentar outra senha…",
   "@servers.paneState.tryAnotherPassword": {

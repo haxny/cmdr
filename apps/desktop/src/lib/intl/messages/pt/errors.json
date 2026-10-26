@@ -1177,9 +1177,9 @@
   "@errors.write.destinationNotAFolder.title": {
     "sourceHash": "d371870"
   },
-  "errors.write.destinationNotAFolder.message": "O Cmdr não conseguiu criar a pasta de destino, porque há um arquivo em {path}, onde precisa haver uma pasta. Nada foi gravado e os originais estão intactos.",
+  "errors.write.destinationNotAFolder.message": "O Cmdr não conseguiu criar a pasta de destino, porque há um arquivo em “{path}”, onde precisa haver uma pasta. Nada foi gravado e os originais estão intactos.",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "dfebb59"
+    "sourceHash": "98178cb"
   },
   "errors.write.destinationNotAFolder.suggestion": "Escolha outro destino, ou renomeie ou mova esse arquivo e tente de novo.",
   "@errors.write.destinationNotAFolder.suggestion": {
@@ -1457,9 +1457,9 @@
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
   },
-  "errors.write.replySignatureRefused.message": "A resposta do servidor não estava assinada, então o Cmdr parou.",
+  "errors.write.replySignatureRefused.message": "A resposta do servidor não tinha uma assinatura válida, então o Cmdr parou.",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.write.replySignatureRefused.suggestion": "Um dispositivo de rede instável pode causar isso, e também alguém adulterando o tráfego entre você e o servidor. Reconecte e, se acontecer de novo, verifique sua rede.",
   "@errors.write.replySignatureRefused.suggestion": {
@@ -2175,7 +2175,7 @@
   },
   "errors.volume.noContent": "“{path}” é um link simbólico ou um arquivo especial, então não tem conteúdo para o Cmdr copiar.",
   "@errors.volume.noContent": {
-    "sourceHash": "cebab92"
+    "sourceHash": "8b56bde"
   },
   "errors.volume.ambiguousName": "Mais de um item no servidor corresponde a “{path}”, então o Cmdr não escolheu nenhum. Escolha o item na pasta onde ele está.",
   "@errors.volume.ambiguousName": {
@@ -2189,9 +2189,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
-  "errors.volume.signatureInvalid": "A resposta do servidor não estava assinada, então o Cmdr parou.",
+  "errors.volume.signatureInvalid": "A resposta do servidor não tinha uma assinatura válida, então o Cmdr parou.",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.volume.ioError": "O volume não conseguiu concluir isso.",
   "@errors.volume.ioError": {
@@ -2233,13 +2233,13 @@
   "@errors.serverRequest.unexpected": {
     "sourceHash": "5be7ebd"
   },
-  "errors.serverRequest.blockedByPolicy": "Sua organização desativou isso no Cmdr.",
+  "errors.serverRequest.blockedByPolicy": "Sua organização desativou este recurso no Cmdr.",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   },
-  "errors.eject.busy": "O Cmdr ainda está movendo arquivos lá. Tente de novo assim que isso terminar.",
+  "errors.eject.busy": "O Cmdr ainda está trabalhando com arquivos lá. Tente de novo assim que isso terminar.",
   "@errors.eject.busy": {
-    "sourceHash": "560c0db"
+    "sourceHash": "4054483"
   },
   "errors.eject.volumeNotFound": "Esse disco não está mais conectado, então não há nada para ejetar.",
   "@errors.eject.volumeNotFound": {

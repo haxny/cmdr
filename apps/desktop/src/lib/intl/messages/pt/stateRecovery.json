@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "O Cmdr não conseguiu ler seu histórico de desfazer, então ele começa do zero",
+  "stateRecovery.operationLog.title": "O Cmdr não conseguiu ler seu Registro de operações, então o registro começa do zero",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "O Cmdr não conseguiu ler seus chats do Ask Cmdr, então os chats começam do zero",
+  "stateRecovery.chatHistory.title": "O Cmdr não conseguiu ler seus chats do Ask Cmdr, então a lista de chats começa vazia",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "O Cmdr não conseguiu ler seus favoritos, então a lista começa vazia",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "O Cmdr não conseguiu ler suas entradas recentes de “Ir para pasta”, então a lista começa do zero",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "O Cmdr não conseguiu ler suas buscas recentes, então a lista começa do zero",
   "@stateRecovery.searchHistory.title": {
