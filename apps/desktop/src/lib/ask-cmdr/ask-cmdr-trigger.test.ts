@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageView } from '#lib/tauri-commands/index.js'
+import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageBlock, MessageView } from '#lib/tauri-commands/index.js'
 import type { ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
@@ -78,7 +78,7 @@ import {
   type RailMessage,
   type RailToolCall,
 } from './ask-cmdr-trigger.svelte'
-import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
@@ -122,7 +122,7 @@ beforeEach(() => {
   listMock.mockResolvedValue([])
   sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID }))
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
   askCmdrState.open = false
@@ -521,6 +521,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     getMock.mockResolvedValue({
       conversation: conversationRow(9),
       totalMessages: 3,
+      turnInFlightSinceSeq: null,
       messages: [
         {
           id: 1,
@@ -591,6 +592,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     getMock.mockResolvedValue({
       conversation: conversationRow(9),
       totalMessages: 2,
+      turnInFlightSinceSeq: null,
       messages: [
         {
           id: 1,
@@ -637,7 +639,12 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     // Ask Cmdr off, or Cloud without consent: there's no chat to show, so nothing is fetched.
     gateMock.gate = 'cloudOff'
     listMock.mockResolvedValue([conversationRow(9)])
-    getMock.mockResolvedValue({ conversation: conversationRow(9), totalMessages: 0, messages: [] })
+    getMock.mockResolvedValue({
+      conversation: conversationRow(9),
+      totalMessages: 0,
+      messages: [],
+      turnInFlightSinceSeq: null,
+    })
     try {
       await openRail()
       expect(askCmdrState.open).toBe(true)
@@ -764,7 +771,7 @@ function detailPage(total: number, limit: number, offset: number) {
   const upper = Math.min(offset + limit, total)
   const messages = []
   for (let seq = offset; seq < upper; seq++) messages.push(userMessage(seq + 1, seq))
-  return { conversation: conversationRow(9), totalMessages: total, messages }
+  return { conversation: conversationRow(9), totalMessages: total, messages, turnInFlightSinceSeq: null }
 }
 
 describe('message paging (tail-first, load older)', () => {
@@ -840,6 +847,7 @@ describe('message paging (tail-first, load older)', () => {
       return Promise.resolve({
         conversation: conversationRow(9),
         totalMessages: total,
+        turnInFlightSinceSeq: null,
         messages: rows.slice(offset, offset + limit),
       })
     })
@@ -951,5 +959,123 @@ describe('switchToThread', () => {
     expect(askCmdrState.conversationId).toBeNull()
     expect(askCmdrState.messages).toEqual([])
     expect(askCmdrState.loadingHistory).toBe(false)
+  })
+})
+
+describe('a reload mid-turn', () => {
+  /** A thread page whose turn has been running since row `since`. */
+  function runningThread(rows: MessageView[], since: number) {
+    return {
+      conversation: conversationRow(9),
+      totalMessages: rows.length,
+      messages: rows,
+      lastContextUsage: null,
+      turnInFlightSinceSeq: since,
+    }
+  }
+
+  /** The backend says a turn runs here, so the rail is in it at once, before any live event:
+   *  Stop shows, and the line still waiting for its result keeps waiting. */
+  it('adopts the running turn on load and keeps writing into its bubble', async () => {
+    const call: MessageBlock = {
+      type: 'toolCall',
+      callId: 'c1',
+      tool: 'app_state',
+      subject: PANES,
+      outcome: null,
+      repeatOf: null,
+    }
+    getMock.mockResolvedValue(
+      runningThread(
+        [
+          { ...userMessage(1, 1), turnId: 1 },
+          { ...assistantRow(2, 2, 'Checking.'), blocks: [call], turnId: 1 },
+        ],
+        0,
+      ),
+    )
+    await switchToThread(9)
+    expect(askCmdrState.streaming).toBe(true)
+    expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: true }])
+
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: PANES })
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'Here.' })
+    fire({
+      type: 'done',
+      messageId: 4,
+      seq: 4,
+      stop: 'completed',
+      usage: { promptTokens: 1, completionTokens: 1 },
+      turn: STATS,
+    })
+
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant'])
+    expect(assistantAt(1)).toMatchObject({ id: 4, streaming: false, stats: STATS })
+    expect(assistantAt(1).rounds.map((round) => round.messageId)).toEqual([2, 4])
+    expect(linesOf(assistantAt(1))).toMatchObject([{ running: false, outcome: ANSWERED }])
+  })
+
+  /** Reloaded before the running turn's first row landed: the bubble on screen is the previous
+   *  turn's, so the live events open one of their own, and its opener, which the load never saw,
+   *  goes in above it once it persists. */
+  it('opens a new bubble for a turn with no row yet, and puts its opener above it', async () => {
+    getMock.mockResolvedValue(
+      runningThread(
+        [
+          { ...userMessage(1, 1), turnId: 1 },
+          { ...assistantRow(2, 2, 'First.'), turnId: 1 },
+        ],
+        2,
+      ),
+    )
+    await switchToThread(9)
+    expect(askCmdrState.streaming).toBe(true)
+
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'Second.' })
+    fire({
+      type: 'userPersisted',
+      messageId: 3,
+      seq: 3,
+      opener: { ...userMessage(3, 3), blocks: [{ type: 'text', text: 'and now?' }], turnId: 3 },
+    })
+
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant', 'user', 'assistant'])
+    expect(askCmdrState.messages[0]).toMatchObject({ id: 1, text: 'm1' })
+    expect(askCmdrState.messages[2]).toEqual({ kind: 'user', id: 3, text: 'and now?', attachments: [] })
+    expect(assistantAt(1).rounds.map((round) => round.text)).toEqual(['First.'])
+    expect(assistantAt(3)).toMatchObject({ turnId: 3, streaming: true, rounds: [{ text: 'Second.' }] })
+  })
+
+  /** A wake (or a rejected sweep's follow-up) opens its turn with no user bubble typed here. Its
+   *  opener goes in as its own item; the user bubble of an EARLIER turn keeps its own id. */
+  it("inserts the opener of a turn nobody typed here, leaving an earlier bubble's id alone", () => {
+    askCmdrState.messages = [
+      { kind: 'user', id: 1, text: 'hi', attachments: [] },
+      {
+        kind: 'assistant',
+        id: 2,
+        turnId: 1,
+        rounds: [{ messageId: 2, text: 'Hello.', calls: [] }],
+        thinking: false,
+        stalled: false,
+        streaming: false,
+        stats: null,
+      },
+    ]
+
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'I noticed something.' })
+    fire({
+      type: 'userPersisted',
+      messageId: 5,
+      seq: 5,
+      opener: { ...userMessage(5, 5), blocks: [{ type: 'wakeDigest', folders: [], rollups: [] }], turnId: 5 },
+    })
+
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant', 'wakeDigest', 'assistant'])
+    expect(askCmdrState.messages[0]).toMatchObject({ kind: 'user', id: 1 })
+    expect(assistantAt(3).turnId).toBe(5)
   })
 })

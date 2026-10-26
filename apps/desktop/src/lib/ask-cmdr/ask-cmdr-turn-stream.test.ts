@@ -56,7 +56,7 @@ vi.mock('./ask-cmdr-gate.svelte', () => ({
 }))
 
 import { askCmdrState, newChat, sendMessage, switchToThread, type RailMessage } from './ask-cmdr-trigger.svelte'
-import { resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 import { sessionsState } from './ask-cmdr-sessions.svelte'
 import { routeTurnEvent, startAskCmdrTurnStream, stopAskCmdrTurnStream } from './ask-cmdr-turn-stream.svelte'
 
@@ -96,7 +96,7 @@ beforeEach(() => {
   listenMock.mockReset()
   listenMock.mockResolvedValue(unlistenMock)
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
   askCmdrState.streaming = false

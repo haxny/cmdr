@@ -134,6 +134,49 @@ describe('buildRailMessages', () => {
     expect(assistantAt(items, 1).rounds[0].calls[0]).toMatchObject({ running: false, outcome: null })
   })
 
+  /** The backend says since which row a turn has been running. Its result-less calls are still
+   *  running, its bubble still streams (so the live events that follow write into it), and a
+   *  result-less call of an earlier turn stays settled: that turn crashed, it will never answer. */
+  it('folds the turn still running as running, and only that one', () => {
+    const decision = { verb: 'trash' as const, what: '/a', ops: 1, outcome: { kind: 'rejected' as const } }
+    const items = buildRailMessages({
+      ...detail([
+        view(1, 'user', [text('one')], { turnId: 1 }),
+        view(2, 'assistant', [toolCall('c1', { outcome: null })], { turnId: 1 }),
+        view(3, 'user', [text('two')], { turnId: 3 }),
+        view(4, 'assistant', [toolCall('c1', { outcome: null }), toolCall('c2')], { turnId: 3 }),
+        // Recorded after the running turn's newest row: still during that turn.
+        view(5, 'event', [{ type: 'proposalDecisions', decisions: [decision] }], { turnId: 3 }),
+      ]),
+      turnInFlightSinceSeq: 2,
+    })
+
+    expect(items.map((item) => item.kind)).toEqual(['user', 'assistant', 'user', 'proposalDecisions', 'assistant'])
+    expect(assistantAt(items, 1)).toMatchObject({ streaming: false, rounds: [{ calls: [{ running: false }] }] })
+    expect(assistantAt(items, 4)).toMatchObject({
+      streaming: true,
+      rounds: [
+        {
+          messageId: 4,
+          calls: [
+            { callId: 'c1', running: true },
+            { callId: 'c2', running: false },
+          ],
+        },
+      ],
+    })
+  })
+
+  /** A reload before the running turn's first row landed: every bubble on screen is an ended
+   *  turn's, so none is left open for the live events to write into. */
+  it('leaves every bubble closed when the running turn has no row yet', () => {
+    const items = buildRailMessages({
+      ...detail([view(1, 'user', [text('one')], { turnId: 1 }), view(2, 'assistant', [text('First.')], { turnId: 1 })]),
+      turnInFlightSinceSeq: 2,
+    })
+    expect(assistantAt(items, 1).streaming).toBe(false)
+  })
+
   /** A decision the user gave while the turn ran sits above that turn's bubble, where the live
    *  rail put it; one given after the turn stays after it. */
   it('hoists a mid-turn event above its bubble and leaves a post-turn one in place', () => {

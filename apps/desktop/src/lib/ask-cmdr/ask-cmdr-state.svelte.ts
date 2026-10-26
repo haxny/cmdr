@@ -135,36 +135,39 @@ export function hasOlderMessages(): boolean {
   return askCmdrState.historyCount < askCmdrState.messageTotal
 }
 
-export function currentAssistant(): AssistantItem | null {
+/**
+ * The bubble the running turn writes into: the last item, while it streams. An ended turn's
+ * bubble is never written into again, so the next turn (a wake, or one a reload caught before
+ * its first row landed) opens its own.
+ */
+export function streamingAssistant(): AssistantItem | null {
   const last = askCmdrState.messages.at(-1)
-  return last?.kind === 'assistant' ? last : null
+  return last?.kind === 'assistant' && last.streaming ? last : null
 }
 
-export function lastUserMessage(): Extract<RailMessage, { kind: 'user' }> | null {
-  for (let i = askCmdrState.messages.length - 1; i >= 0; i--) {
-    const message = askCmdrState.messages[i]
-    if (message.kind === 'user') return message
-  }
-  return null
+/** Settle the streaming bubble ({@link settleAssistant}), when there is one. */
+export function finalizeAssistant(): void {
+  const assistant = streamingAssistant()
+  if (assistant) settleAssistant(assistant)
 }
 
 /**
- * Settle the streaming assistant bubble the way a reload would read its stored rows: stop its
- * cursor, keep only the rounds that persisted (`settleRounds`: a round that never reached `End`
- * goes, a call still running settles with no outcome), take the last persisted round's id, and
- * drop the bubble if nothing of it was stored.
+ * Settle a turn's bubble the way a reload would read its stored rows: stop its cursor, keep only
+ * the rounds that persisted (`settleRounds`: a round that never reached `End` goes, a call still
+ * running settles with no outcome), take the last persisted round's id, and drop the bubble if
+ * nothing of it was stored.
  *
  * ⚠️ So a turn that ends without an answer loses the text of the round it was streaming: it was
  * never stored, and a reload wouldn't show it either.
  */
-export function finalizeAssistant(): void {
-  const assistant = currentAssistant()
-  if (!assistant) return
+export function settleAssistant(assistant: AssistantItem): void {
   assistant.streaming = false
   assistant.thinking = false
   assistant.stalled = false
   const lastPersisted = assistant.rounds.findLast((round) => round.messageId !== null)
   if (lastPersisted) assistant.id = lastPersisted.messageId
   assistant.rounds = settleRounds(assistant.rounds)
-  if (assistant.rounds.length === 0) askCmdrState.messages.pop()
+  if (assistant.rounds.length > 0) return
+  const at = askCmdrState.messages.indexOf(assistant)
+  if (at !== -1) askCmdrState.messages.splice(at, 1)
 }

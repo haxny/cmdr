@@ -21,6 +21,7 @@
 
 import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
+import { openerItem } from './ask-cmdr-history'
 import type { AssistantItem, RailMessage, RailToolCall, Round } from './ask-cmdr-messages'
 import type { LineRef, ManagedAiRefusal, ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 import {
@@ -28,13 +29,14 @@ import {
   openStagedRenameReview,
   stageRenameProposal,
 } from './ask-cmdr-rename-review.svelte'
-import { askCmdrState, currentAssistant, finalizeAssistant, lastUserMessage } from './ask-cmdr-state.svelte'
+import { askCmdrState, finalizeAssistant, streamingAssistant } from './ask-cmdr-state.svelte'
 import {
   cancelAskCmdr,
   sendAskCmdrMessage,
   type AskCmdrErrorKind,
   type AskCmdrStreamEvent,
   type AskCmdrTurn,
+  type MessageView,
   type ProposalDecision,
 } from '#lib/tauri-commands/index.js'
 
@@ -59,10 +61,29 @@ let stopTimer: ReturnType<typeof setTimeout> | null = null
 // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping only; nothing renders from it
 let stoppedTurns = new Set<number>()
 
-/** Forget every stopped turn. Test isolation only; production clears per thread. */
-export function resetStoppedTurns(): void {
+/**
+ * The user bubble `sendMessage` put up for the turn now starting, waiting for `userPersisted` to
+ * give it its id. Kept by reference because a turn can also open with no bubble typed here, and
+ * then the last user bubble on screen belongs to an EARLIER turn.
+ */
+let typedOpener: Extract<RailMessage, { kind: 'user' }> | null = null
+
+/** Forget every stopped turn and typed opener. Test isolation only; production clears per
+ * thread. */
+export function resetTurnBookkeeping(): void {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- see `stoppedTurns`
   stoppedTurns = new Set<number>()
+  typedOpener = null
+}
+
+/**
+ * A thread load put `conversationId` on screen. When the backend says a turn runs there, the rail
+ * is in that turn now: the load replays no `assistantStarted`, and the turn may stay quiet for a
+ * while (a long tool call), so waiting for its next event to adopt it would leave a running turn
+ * looking idle.
+ */
+export function resumeThread(turnRunning: boolean): void {
+  if (turnRunning) adoptLiveTurn()
 }
 
 // ── Sending + streaming ──────────────────────────────────────────────────────────
@@ -74,6 +95,8 @@ export function sendMessage(text: string): void {
   if (!trimmed || askCmdrState.streaming) return
   const attachments = askCmdrState.attachments
   askCmdrState.messages.push({ kind: 'user', id: null, text: trimmed, attachments })
+  // Through the state proxy, so `userPersisted` can find it in the list and patch it reactively.
+  typedOpener = askCmdrState.messages.at(-1) as Extract<RailMessage, { kind: 'user' }>
   askCmdrState.streaming = true
   resetProgressWatchdog()
   askCmdrState.attachments = []
@@ -206,12 +229,15 @@ function showDecision({ messageId, decision }: HeardDecision): void {
     if (decision.outcome.kind !== 'running') askCmdrState.messages[at] = line
     return
   }
-  const assistant = currentAssistant()
-  if (assistant?.streaming) {
-    askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, line)
-  } else {
-    askCmdrState.messages.push(line)
-  }
+  insertAboveBubble(line)
+}
+
+/** Add `item` just above the streaming bubble, which has to stay last for the next chunk to
+ * find, or at the end when no turn is streaming. */
+function insertAboveBubble(item: RailMessage): void {
+  const assistant = streamingAssistant()
+  if (assistant) askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, item)
+  else askCmdrState.messages.push(item)
 }
 
 function applyStreamEvent(event: TurnEvent): void {
@@ -223,7 +249,7 @@ function applyStreamEvent(event: TurnEvent): void {
       return
     case 'userPersisted':
       adoptLiveTurn()
-      applyUserPersisted(event.messageId)
+      applyUserPersisted(event.messageId, event.opener)
       return
     case 'assistantStarted':
       adoptLiveTurn()
@@ -309,14 +335,13 @@ function adoptLiveTurn(): void {
   resetProgressWatchdog()
 }
 
-/** The streaming bubble this turn writes into, created if the rail wasn't watching when it
- * started (a reload lands on a thread whose `assistantStarted` is already in the past). */
+/** The streaming bubble this turn writes into, created if there is none: the turn's first
+ * round, or a turn the rail wasn't watching when it started (a wake, or a reload that landed
+ * before the turn's first row). A reload that caught rows of the running turn folds its bubble
+ * still streaming, so the rest of the turn lands there. */
 function ensureAssistant(): AssistantItem {
-  const assistant = currentAssistant()
-  if (assistant) {
-    assistant.streaming = true
-    return assistant
-  }
+  const assistant = streamingAssistant()
+  if (assistant) return assistant
   const fresh: AssistantItem = {
     kind: 'assistant',
     id: null,
@@ -356,21 +381,27 @@ function applyContextUsage(estimatedTokens: number, budgetTokens: number, elided
 /** Show that the budget pushed older lookups out of this turn's context. It goes before the
  * streaming bubble, where the drop happened. */
 function applyContextTrimmed(elidedResults: number): void {
-  const assistant = currentAssistant()
-  const notice: RailMessage = { kind: 'contextTrimmed', count: elidedResults }
-  if (assistant) {
-    askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, notice)
-  } else {
-    askCmdrState.messages.push(notice)
-  }
+  insertAboveBubble({ kind: 'contextTrimmed', count: elidedResults })
 }
 
-/** The opener persisted: the user bubble gets its id, and the turn's bubble its turn identity. */
-function applyUserPersisted(messageId: number): void {
-  const user = lastUserMessage()
-  if (user) user.id = messageId
-  const assistant = currentAssistant()
-  if (assistant?.streaming) assistant.turnId = messageId
+/**
+ * The opener persisted: the user bubble this rail typed for the turn gets its id, and the turn's
+ * bubble its turn identity. A turn nobody typed here (a wake, a rejected sweep's follow-up, a
+ * send from before a reload) has no such bubble, so its opener goes in above the turn's bubble,
+ * unless the thread already shows it.
+ */
+function applyUserPersisted(messageId: number, opener: MessageView): void {
+  const typed = typedOpener
+  typedOpener = null
+  if (typed && askCmdrState.messages.includes(typed)) typed.id = messageId
+  else if (!askCmdrState.messages.some((item) => openerId(item) === messageId)) insertAboveBubble(openerItem(opener))
+  const assistant = streamingAssistant()
+  if (assistant) assistant.turnId = messageId
+}
+
+/** The row id of an item that can open a turn, `null` for every other kind. */
+function openerId(item: RailMessage): number | null {
+  return item.kind === 'user' || item.kind === 'wakeDigest' || item.kind === 'proposalDecisions' ? item.id : null
 }
 
 /** Into the current round even when its calls already started: the wire may interleave a
@@ -457,7 +488,7 @@ function findLine({ messageId, callId }: LineRef): RailToolCall | undefined {
 /** The answer round is text-only, so no `toolCallsResolved` stamped it: `done` does, BEFORE the
  * bubble settles, or settling would drop the answer as never stored. */
 function applyDone(messageId: number, stats: TurnStats | null): void {
-  const assistant = currentAssistant()
+  const assistant = streamingAssistant()
   if (assistant) {
     const last = assistant.rounds.at(-1)
     if (last?.messageId === null) last.messageId = messageId
@@ -477,7 +508,7 @@ function applyFailed(
   managed: ManagedAiRefusal | null = null,
   stats: TurnStats | null = null,
 ): void {
-  const assistant = currentAssistant()
+  const assistant = streamingAssistant()
   if (assistant) assistant.stats = stats
   finalizeAssistant()
   askCmdrState.messages.push({
@@ -514,7 +545,7 @@ function resetProgressWatchdog(): void {
   clearProgressWatchdog()
   if (!askCmdrState.streaming) return
   stallTimer = setTimeout(() => {
-    const assistant = currentAssistant()
+    const assistant = streamingAssistant()
     if (assistant?.streaming) assistant.stalled = true
   }, STALL_AFTER_MS)
   stopTimer = setTimeout(() => {

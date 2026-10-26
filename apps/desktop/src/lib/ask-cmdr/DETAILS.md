@@ -40,7 +40,12 @@ Three things follow from the subscription being conversation-keyed rather than p
 - **A reload keeps the answer.** The webview goes away mid-turn and the backend keeps writing into `main.db`; the
   reloaded rail lands on the same thread and the rest of the turn renders. There is no second `assistantStarted` to
   hear, so `adoptLiveTurn` treats ANY live event for the thread on screen as proof a turn is running, and the reducer
-  creates the streaming bubble if there isn't one (`ensureAssistant`).
+  creates the streaming bubble if there isn't one (`ensureAssistant`). The load itself adopts too when the backend says
+  a turn runs there (`turnInFlightSinceSeq`, `resumeThread`), so a turn sitting in a long tool call doesn't look idle
+  until its next event.
+- **Only a STREAMING bubble is written into** (`streamingAssistant`). An ended turn's bubble stays closed, so a turn the
+  rail never typed (a wake, or one a reload caught before its first row landed) opens its own. A reload that caught rows
+  of the running turn folds that bubble still streaming, which is how the rest of the turn lands in it.
 - **A thread can disappear under the rail.** A quiet wake opens a thread, thinks in it, and deletes it seconds later;
   `discarded` is the only way a subscriber can learn that, since there is nothing left to re-read. The rail steps off
   into an empty chat and the session list drops the row.
@@ -70,8 +75,11 @@ stays simple:
   every folded round is sealed, so the live chunks that follow get a round of their own.
 - `textDelta` → append to the current round's text, even after its calls started; clear `thinking`.
 - `reasoningTick` → set the bubble's `thinking` (a subtle "thinking…" line; the reasoning content itself never crosses).
-- `userPersisted` → the user item gets its id and the streaming bubble its `turnId` (it arrives after round 1 streamed,
-  on the first `End`).
+- `userPersisted` → the user item `sendMessage` typed for this turn (held by reference, never "the last user item") gets
+  its id, and the streaming bubble its `turnId` (it arrives after round 1 streamed, on the first `End`). A turn nobody
+  typed here (a wake, a rejected sweep's follow-up, a send from before a reload) has no such item, so the event's
+  `opener` view goes in above the streaming bubble as the item the fold would make of it (`openerItem`), unless the
+  thread already shows that row. Patching the last user item instead gave an EARLIER turn's bubble this turn's id.
 - `toolCallStarted` → add a running line to the current round, idempotent by `callId` within the round (ERR-FRMAR).
 - `toolCallsResolved` → the round's stored truth, once per tool round: stamp its `messageId` (sealing it), set each
   line's subject and `repeatOf` (and the tool's wire name), add a line whose start never came, and drop a started line
@@ -134,8 +142,12 @@ assistant row is one round (its text blocks joined, its `toolCall` blocks as lin
 and repeat mark), the bubble's id is the turn's last assistant row, and its stats ride that row's `turnStats`. An event
 row with `duringTurn` is hoisted above its turn's bubble (where the live rail's `showDecision` put it); the rest stay in
 place. An event row with no blocks (a turn's `TurnFinished` record, an unknown kind) draws nothing. Result-less calls
-fold settled. `ask-cmdr-turn-parity.test.ts` pins that the live reducer and the fold build EQUAL items for one scripted
-turn (interleaved deltas, two rounds reusing `fake-call-0`, a mid-turn and a post-turn decision).
+fold settled with no outcome (their turn ended without one), except in the turn still running: rows after the backend's
+`turnInFlightSinceSeq` are that turn's, so their result-less calls fold `running`, their bubble folds `streaming`, and
+an event row among them is hoisted above it (the turn is still going, so it is mid-turn). With no row after the mark
+yet, every bubble folds closed and the first live event opens a new one. `ask-cmdr-turn-parity.test.ts` pins that the
+live reducer and the fold build EQUAL items for one scripted turn (interleaved deltas, two rounds reusing `fake-call-0`,
+a mid-turn and a post-turn decision).
 
 ## What a wake's thread opens with
 

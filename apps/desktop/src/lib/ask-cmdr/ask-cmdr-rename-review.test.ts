@@ -53,7 +53,7 @@ import {
   sendMessage,
   setRenameRowAllowed,
 } from './ask-cmdr-trigger.svelte'
-import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
@@ -78,7 +78,7 @@ beforeEach(() => {
   cancelProposalMock.mockResolvedValue()
   undoOperationsMock.mockReset()
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
 })

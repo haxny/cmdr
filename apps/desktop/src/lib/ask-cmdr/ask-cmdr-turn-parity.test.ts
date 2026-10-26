@@ -44,7 +44,7 @@ vi.mock('./ask-cmdr-gate.svelte', () => ({
 }))
 
 import { askCmdrState, newChat, sendMessage, type RailMessage } from './ask-cmdr-trigger.svelte'
-import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import type { AssistantItem } from './ask-cmdr-messages'
 
@@ -99,7 +99,7 @@ function assistantAt(index: number): AssistantItem {
 
 beforeEach(() => {
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
   askCmdrState.streaming = false
@@ -180,12 +180,14 @@ describe('the live reducer, round by round', () => {
   /** A reload mid-turn folds every stored round sealed; the chunks still to come belong to a
    *  round of their own, never to a stored one. */
   it('opens a new round after a reload instead of writing into a stored one', () => {
-    askCmdrState.messages = buildRailMessages(
-      thread([
+    askCmdrState.messages = buildRailMessages({
+      ...thread([
         view(1, 'user', [{ type: 'text', text: 'look' }]),
         view(2, 'assistant', [{ type: 'text', text: 'Checking.' }]),
       ]),
-    )
+      // The turn has been running since before its opener.
+      turnInFlightSinceSeq: 0,
+    })
 
     fire({ type: 'textDelta', text: 'Found it.' })
 
