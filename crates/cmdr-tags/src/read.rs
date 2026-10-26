@@ -256,9 +256,20 @@ impl Mapped {
     }
 }
 
-/// The managed fields `items` show, in order: a multi-value field gathers every item's values;
-/// any other field shows only the first value found. A fallback item fills a field only when
-/// no other item did.
+/// `values` without exact repeats, in first-seen order.
+pub(crate) fn unique(values: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for value in values {
+        if !out.contains(&value) {
+            out.push(value);
+        }
+    }
+    out
+}
+
+/// The managed fields `items` show, in order: a multi-value field gathers every item's values,
+/// each value once (an alias beside its key, a repeated key); any other field shows only the
+/// first value found. A fallback item fills a field only when no other item did.
 fn shown_fields(items: &[Mapped]) -> BTreeMap<TagField, Vec<String>> {
     let mut fields: BTreeMap<TagField, Vec<String>> = BTreeMap::new();
     for pass_fallback in [false, true] {
@@ -271,11 +282,17 @@ fn shown_fields(items: &[Mapped]) -> BTreeMap<TagField, Vec<String>> {
                 continue;
             }
             match fields.get_mut(&item.field) {
-                Some(values) if item.field.is_multi() => values.extend(item.values.iter().cloned()),
+                Some(values) if item.field.is_multi() => {
+                    *values = unique(values.drain(..).chain(item.values.iter().cloned()));
+                }
                 Some(_) => {}
                 None => {
-                    let take = if item.field.is_multi() { usize::MAX } else { 1 };
-                    fields.insert(item.field, item.values.iter().take(take).cloned().collect());
+                    let values = if item.field.is_multi() {
+                        unique(item.values.iter().cloned())
+                    } else {
+                        item.values.iter().take(1).cloned().collect()
+                    };
+                    fields.insert(item.field, values);
                 }
             }
         }

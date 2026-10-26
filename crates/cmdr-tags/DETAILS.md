@@ -47,7 +47,10 @@ the genre (user's choice, 2026-10-26). Reading prefers the freeform `GENRE` and 
 `©gen` whose values differ from the shown genre fails the write as `WouldDrop("©gen")` (below).
 
 Every reader splits a multi-value field's value on `"; "`, Vorbis included (a tagger may write `GENRE=a; b` instead of
-repeating the key); the writer writes Vorbis values as repeated keys. Single-value fields are never split.
+repeating the key); the writer splits the caller's values the same way and writes Vorbis values as repeated keys.
+Single-value fields are never split. A multi-value field lists each value once, in first-seen order, however many items
+carry it (`ALBUMARTIST=X` beside `ALBUM ARTIST=X`, a repeated key, `TPE1` `"A\0A"`): it reads as `["X"]` and is written
+once, and the repeats go without a `WouldDrop`, since every value they hold is shown.
 
 `format_of` goes by extension, case-insensitively (`.M4B` is MP4); an unknown extension is `None`, and `read_tags` /
 `write_tags` report it as `TagError::NotSupported`.

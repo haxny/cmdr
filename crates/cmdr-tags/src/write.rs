@@ -35,7 +35,7 @@ use crate::read::{
     FREEFORM_FIELDS, ITUNES_MEAN, JOIN, RawTags, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS,
     cover_position, format_of_path, fourcc_field, frame_field, freeform_field, hidden_items, id3_items, id3_pictures,
     ilst_items, parse_error, parse_options, raw_id3, read_both_from, read_id3, read_ilst, read_vorbis, txxx_field,
-    vorbis_field, vorbis_items,
+    unique, vorbis_field, vorbis_items,
 };
 use crate::save::save_safely;
 use crate::write_extras::{added_extras, dropped_extras, upper_extra_keys};
@@ -217,28 +217,39 @@ fn refuse_tag_behind_junk(source: &mut File) -> Result<(), TagError> {
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 /// The managed values a write puts in the file, by field: trimmed, empties dropped, one
-/// value for a single-value field. A field missing here is removed from the file.
+/// value for a single-value field; a multi-value field's values split on [`JOIN`] and each
+/// kept once, as the readers show them. A field missing here is removed from the file.
 type Values = BTreeMap<TagField, Vec<String>>;
 
 fn values_to_write(tags: &FileTags) -> Values {
     tags.fields
         .iter()
         .filter_map(|(field, values)| {
-            let limit = if field.is_multi() { usize::MAX } else { 1 };
-            let values: Vec<String> = values
-                .iter()
-                .map(|v| v.trim())
-                .filter(|v| !v.is_empty())
-                .take(limit)
-                .map(str::to_owned)
-                .collect();
+            let values: Vec<String> = if field.is_multi() {
+                unique(
+                    values
+                        .iter()
+                        .flat_map(|v| v.split(JOIN))
+                        .map(str::trim)
+                        .filter(|v| !v.is_empty())
+                        .map(str::to_owned),
+                )
+            } else {
+                values
+                    .iter()
+                    .map(|v| v.trim())
+                    .filter(|v| !v.is_empty())
+                    .take(1)
+                    .map(str::to_owned)
+                    .collect()
+            };
             (!values.is_empty()).then_some((*field, values))
         })
         .collect()
 }
 
 /// What the saved file must read back as: `values` as the reader of `format` reports them
-/// (one-string formats split joined values; numbers and ID3 dates come back normalized),
+/// (numbers and ID3 dates come back normalized),
 /// `tags.cover`, and the file's extras that `tags` kept. With the cover removed, the reader
 /// falls back to another picture: `edited` is the tag as it will be saved, which says which.
 fn expected_tags(
@@ -253,14 +264,7 @@ fn expected_tags(
         let read_back: Vec<String> = match field {
             TagField::Track | TagField::Disc => values.iter().map(|v| number_text(v, None)).collect(),
             TagField::Date if format == AudioFormat::Mp3 => vec![timestamp(&values[0])?.to_string()],
-            // The readers split joined values of a multi-value field in every format.
-            _ if field.is_multi() => values
-                .iter()
-                .flat_map(|v| v.split(JOIN))
-                .map(str::trim)
-                .filter(|v| !v.is_empty())
-                .map(str::to_owned)
-                .collect(),
+            // A multi-value field's values are already split and unique, as the readers show them.
             _ => values.clone(),
         };
         let read_back = match (field, format) {

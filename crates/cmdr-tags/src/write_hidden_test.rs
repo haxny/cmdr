@@ -269,3 +269,57 @@ fn vorbis_multi_value_fields_split_a_joined_value() {
     }
     assert_eq!(read(&path), tags);
 }
+
+/// A multi-value field lists each value once, however many items carry it: an alias beside
+/// its key, a repeated key, a joined value repeating another.
+#[test]
+fn a_multi_value_field_gathered_from_several_items_lists_each_value_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(
+        dir.path(),
+        &[
+            ("ALBUMARTIST", "X"),
+            ("ALBUM ARTIST", "X"),
+            ("GENRE", "audiokniha"),
+            ("GENRE", "thriller; audiokniha"),
+            ("GENRE", "thriller"),
+        ],
+    );
+
+    let tags = read(&path);
+    assert_eq!(tags.fields[&TagField::AlbumArtist], strings(&["X"]));
+    assert_eq!(tags.fields[&TagField::Genre], strings(&["audiokniha", "thriller"]));
+
+    write(&path, &tags, &MUSIC);
+
+    assert_eq!(
+        vorbis(&path),
+        strings(&["ALBUMARTIST=X", "GENRE=audiokniha", "GENRE=thriller"])
+    );
+    assert_eq!(read(&path), tags);
+}
+
+#[test]
+fn an_id3_frame_repeating_a_value_shows_it_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TPE1", "A\0B\0A");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+
+    assert_eq!(read(&path).fields[&TagField::Artist], strings(&["A", "B"]));
+}
+
+/// The caller may hand the writer a value twice; the file gets it once, and the read-back
+/// check accepts that.
+#[test]
+fn a_value_given_twice_is_written_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(dir.path(), &[("TITLE", "Kniha")]);
+    let mut tags = read(&path);
+    tags.fields
+        .insert(TagField::Genre, strings(&["rock", "pop; rock", "rock"]));
+
+    write(&path, &tags, &MUSIC);
+
+    assert_eq!(vorbis(&path), strings(&["TITLE=Kniha", "GENRE=rock", "GENRE=pop"]));
+}

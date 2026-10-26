@@ -20,7 +20,8 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
   applied by the tools and the app, before writing.
 - **Artist = album artist = author; Performer = narrator; Composer = the music's author**, kept for audiobooks too; an
   audiobook write (`ContentKind`) removes only MP3's `TPE3`.
-- **Genre is multi-value**; one-string formats join values with `"; "`, and every reader splits on it.
+- **Genre is multi-value**; one-string formats join values with `"; "`, and every reader splits on it. A multi-value
+  field lists each value once.
 - **Track and disc are plain**; `N/Total` only when the caller passes a total.
 - **MP3 is written as ID3v2.3.** Unmanaged frames, atoms, and keys stay untouched; unmanaged text items are
   `FileTags::extras`.
