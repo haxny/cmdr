@@ -231,7 +231,8 @@
     "confidence": "high",
     "decision": "Ask Cmdr",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "a zip-file row kind, the archive concept (archive), not a chat being archived"
+      "fileExplorer.list.rowKind.archive": "a zip-file row kind, the archive concept (archive), not a chat being archived",
+      "suggestedOps.facts.archive": "a label naming the archive file a compress suggestion creates, the archive noun, not a chat being archived"
     },
     "forms": "badge Archivée (agrees with the implicit conversation); unarchive → Désarchiver (tentative, no pile hit)",
     "sources": "MS terminology FRA (archive verb → archiver)"
@@ -636,6 +637,9 @@
     "accept": ["ferme", "fermé", "fermiez", "fermeture"],
     "chosen": "Fermer",
     "confidence": "high",
+    "exceptions": {
+      "settings.suggestedOps.suppressApprovalNotice.description": "English-sense: closing a notice with its ×, which French words as the click (cliquez sur le × de la note), since a notice is dismissed, not closed."
+    },
     "forms": "closes a window or tab (Fermer l’onglet); a notice or toast is dismissed with Ignorer instead",
     "sources": "macOS AppKit (Document.json, WindowTabs.json); MS terminology FRA"
   },
@@ -1582,6 +1586,9 @@
   "go-to-trash": {
     "chosen": "Aller à la corbeille",
     "confidence": "high",
+    "exceptions": {
+      "suggestedOps.reversible.trash": "English-sense: the files go to the Trash (le fichier est placé dans la corbeille), the move-to-trash sense, not the Go to trash command."
+    },
     "forms": "the toast button and the command read identically",
     "sources": "catalog siblings (Aller au dossier parent, Aller au dernier téléchargement)"
   },
@@ -2008,6 +2015,9 @@
       "errors.write.trashRefused.message.other": "English-sense: moving to the trash is placer dans la corbeille.",
       "fileOperations.transferProgress.rollbackAlreadyLandedTooltip": "French names what the button no longer does (le retour en arrière n'est plus possible) instead of undoing the move.",
       "operationLog.summary.trash": "English-sense: moving to the trash is placer dans la corbeille.",
+      "suggestedOps.approve.trash": "English-sense: moving to the trash is placer dans la corbeille.",
+      "suggestedOps.blocked.noTrashTooltip": "English-sense: moving to the trash is placer dans la corbeille (les y placer).",
+      "suggestedOps.reversible.moveBack": "Moving files back where they were is remettre à sa place, the put-back verb Finder uses (Remettre).",
       "queryUi.recent.popoverHint": "English-sense: the arrow keys move the highlight, so naviguer.",
       "transfer.trash": "English-sense: moving to the trash is placer dans la corbeille."
     },
@@ -3246,7 +3256,7 @@
     "accept": ["suggéré", "suggère", "propose"],
     "chosen": "suggestion",
     "confidence": "high",
-    "forms": "Suggested operations → Opérations suggérées",
+    "forms": "AI suggestions (the dialog title, View menu item, palette command) → Suggestions de l’IA, the same as fileOperations.mkdir.aiSuggestionsAria; quoted in prose bare (la boîte de dialogue Suggestions de l’IA); a sweep heading → Suggéré … (Suggéré à l’instant, Suggéré hier à {time})",
     "sources": "catalog"
   },
   "supported": {
@@ -3397,6 +3407,12 @@
     "decision": "IA dans le cloud et lecture des fichiers",
     "sources": "macOS AppKit (Taille de vignette :); Total Commander; Double Commander"
   },
+  "time-ago": {
+    "chosen": "il y a",
+    "confidence": "high",
+    "forms": "{duration} ago → il y a {duration}, before the amount (Suggéré il y a 5 minutes)",
+    "sources": "catalog (ui.toast.age, fileExplorer.errorPane.minutesAgo); GNOME Nautilus (Il y a une semaine)"
+  },
   "time-left": {
     "chosen": "restant",
     "confidence": "high",
@@ -3527,6 +3543,13 @@
     "confidence": "high",
     "forms": "Uninstall “cmdr” command → Désinstaller la commande « cmdr »; noun → désinstallation (Désinstallation de la commande « cmdr » impossible)",
     "sources": "MS terminology FRA (désinstaller); catalog (menu.app.cliCommandUninstall)"
+  },
+  "unknown": {
+    "accept": ["inconnue", "inconnus", "inconnues"],
+    "chosen": "inconnu",
+    "confidence": "high",
+    "forms": "agrees with the value it stands for: a bare model → Inconnu; a size or date cell (la taille, la date) → Inconnue, like (inconnue) for a size",
+    "sources": "macOS (Moniteur inconnu, erreur inconnue); Nautilus/Thunar (Inconnu); catalog (ai.local.modelUnknown, fileOperations.transferProgress.sizeUnknown)"
   },
   "unlock": {
     "accept": ["déverrouillez", "déverrouillé"],
@@ -3750,9 +3773,6 @@
     "accept": ["écrit", "écriture", "écriv"],
     "chosen": "écrire",
     "confidence": "high",
-    "exceptions": {
-      "suggestedOps.reversibleDeleteWritten": "What the operation writes is what it creates (ce qui est créé): new files."
-    },
     "forms": "partly written → partiellement écrit; written so far → écrits jusqu’à présent; half-written → à moitié écrit",
     "sources": "catalog; macOS (partiellement disponible)"
   },

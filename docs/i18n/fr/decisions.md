@@ -106,6 +106,9 @@ and the top traps live in `style.md`; don't repeat them here.
 - rotate (through a cycle) → `permuter`; `faire pivoter` is images. `askCmdr.stalled` ends `…ou arrêter` (Stop).
 - "This can't be undone" → `Cette opération est irréversible` (Finder). reason → `raison` (`motif` is a pattern).
 - Rename undo → `Anciens noms restaurés pour N fichiers.`: `restaurer` for names, `remettre en place` for the trash.
+- AI suggestions (`suggestedOps.title`, `menu.view.suggestedOps`, `commands.suggestedOpsShow.label`) →
+  `Suggestions de l’IA`, one form with `fileOperations.mkdir.aiSuggestions*`. `Why:` → `Pourquoi :`; its spoken form
+  keeps `Raison donnée par l’IA :`.
 
 ## IA dans le cloud et lecture des fichiers (`ai.cloudConsent.*`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`, `askCmdr.tool.inspectFile.*`)
 

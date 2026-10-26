@@ -18,8 +18,8 @@
         "reason": "`Schließen` closes a dialog, toast, or notice that can come back; `Ausblenden` hides a queue row (`queue.row.dismiss`) or a hint line (`adb.hint.dismiss`) for good. A row can't be closed, and the @key says nothing is undone, retried, or deleted. The `dismiss` ruling in `docs/i18n/de/terms.json`."
       },
       {
-        "source": "File",
-        "reason": "`menu.bar.file` is the native File menu, which German macOS calls `Ablage` and its @key asks for Finder's own word; a table column (`suggestedOps.columnFile`) is plain `Datei`."
+        "source": "Archive",
+        "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`archivieren`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip file a compress suggestion creates (`Archiv`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
       },
       {
         "source": "Indexing now",
@@ -87,6 +87,14 @@
       }
     ],
     "fr": [
+      {
+        "source": "Archive",
+        "reason": "Two senses of one English word. `askCmdr.sessions.archive` is the VERB that hides a chat (`Archiver`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN labeling the zip file a compress suggestion creates (`Archive`, the `archive` ruling)."
+      },
+      {
+        "source": "Unknown",
+        "reason": "The adjective agrees with the value it stands for: `ai.local.modelUnknown` is a model (`Inconnu`); `suggestedOps.factUnknown` fills a size or date cell (la taille, la date: `Inconnue`), like `fileOperations.transferProgress.sizeUnknown` (`(inconnue)`)."
+      },
       {
         "source": "Archived",
         "reason": "Two senses of one English word. `askCmdr.sessions.archivedBadge` marks an archived chat (une conversation, feminine: `Archivée`); `fileExplorer.archivedFile.label` marks a file in an S3 cold-storage class (un fichier, masculine: `Archivé`). The badge agrees with its noun, so one form can't serve both."
