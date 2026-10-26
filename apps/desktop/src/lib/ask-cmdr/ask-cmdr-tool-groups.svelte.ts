@@ -120,18 +120,24 @@ export function toolDetail(key: string): ToolDetailState | undefined {
   return details.get(key)
 }
 
+/** The call an expanded line reads: its `LineRef`, plus which of its round's calls with that id it
+ * is (`DisplayLine.occurrence`). */
+export interface ToolLineTarget extends LineRef {
+  occurrence: number
+}
+
 /**
  * Open or close the line `key`, whose call is `ref`. The first open fetches what the call
  * returned; an answer arriving after the person moved to another thread is dropped, so it can't
  * land in a thread that isn't on screen.
  */
-export function toggleLineExpanded(key: string, ref: LineRef): void {
+export function toggleLineExpanded(key: string, ref: ToolLineTarget): void {
   if (expandedLines.delete(key)) return
   expandedLines.add(key)
   const conversationId = askCmdrState.conversationId
   if (details.has(key) || conversationId === null) return
   details.set(key, { status: 'loading' })
-  void askCmdrToolResult(conversationId, ref.messageId, ref.callId).then(
+  void askCmdrToolResult(conversationId, ref.messageId, ref.callId, ref.occurrence).then(
     (result) => {
       if (askCmdrState.conversationId !== conversationId) details.delete(key)
       else details.set(key, detailOf(result))

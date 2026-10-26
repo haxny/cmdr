@@ -15,14 +15,15 @@ interface ResultAsk {
   conversationId: number
   messageId: number
   callId: string
+  occurrence: number
 }
 const resultMock = vi.fn<(ask: ResultAsk) => Promise<AskCmdrToolResult>>()
 const settings = vi.hoisted(() => ({ toolGroupsOnAnswer: 'collapse' as 'collapse' | 'keep' }))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
-  askCmdrToolResult: (conversationId: number, messageId: number, callId: string) =>
-    resultMock({ conversationId, messageId, callId }),
+  askCmdrToolResult: (conversationId: number, messageId: number, callId: string, occurrence: number) =>
+    resultMock({ conversationId, messageId, callId, occurrence }),
   cancelAskCmdr: vi.fn(() => Promise.resolve()),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: vi.fn(() => Promise.resolve(null)),
@@ -259,23 +260,23 @@ describe('the expanded line', () => {
   it('fetches what the call returned on its first expand, by its line', async () => {
     askCmdrState.conversationId = THREAD_ID
     resultMock.mockResolvedValue(ready)
-    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1' })
+    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1', occurrence: 0 })
     expect(isLineExpanded('5:c1')).toBe(true)
     expect(toolDetail('5:c1')).toEqual({ status: 'loading' })
     await vi.waitFor(() => {
       expect(toolDetail('5:c1')).toEqual({ status: 'ready', detail: ready.found && ready.detail })
     })
-    expect(resultMock).toHaveBeenCalledWith({ conversationId: THREAD_ID, messageId: 5, callId: 'c1' })
+    expect(resultMock).toHaveBeenCalledWith({ conversationId: THREAD_ID, messageId: 5, callId: 'c1', occurrence: 0 })
 
-    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1' })
-    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1' })
+    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1', occurrence: 0 })
+    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1', occurrence: 0 })
     expect(resultMock).toHaveBeenCalledTimes(1)
   })
 
   it('says so calmly when the result is gone', async () => {
     askCmdrState.conversationId = THREAD_ID
     resultMock.mockResolvedValue({ found: false, reason: 'notFound' })
-    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1' })
+    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1', occurrence: 0 })
     await vi.waitFor(() => {
       expect(toolDetail('5:c1')).toEqual({ status: 'notFound' })
     })
@@ -285,7 +286,7 @@ describe('the expanded line', () => {
     askCmdrState.conversationId = THREAD_ID
     let answer: (result: AskCmdrToolResult) => void = () => {}
     resultMock.mockReturnValue(new Promise((resolve) => (answer = resolve)))
-    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1' })
+    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1', occurrence: 0 })
     askCmdrState.conversationId = 99
     answer(ready)
     await vi.waitFor(() => {
@@ -296,7 +297,7 @@ describe('the expanded line', () => {
   it('never puts the raw result into the message list', async () => {
     streamOneGroup()
     resultMock.mockResolvedValue(ready)
-    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1' })
+    toggleLineExpanded('5:c1', { messageId: 5, callId: 'c1', occurrence: 0 })
     await vi.waitFor(() => {
       expect(toolDetail('5:c1')?.status).toBe('ready')
     })

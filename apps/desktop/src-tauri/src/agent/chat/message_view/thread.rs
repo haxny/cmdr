@@ -116,14 +116,19 @@ pub struct ToolResultDetailView {
 }
 
 /// The expanded line for the call `call_id` of `rows[0]`, an assistant row followed by the rest
-/// of its turn (`store::row_and_rest_of_turn`). Pairs the way the page does, so it reads the same
-/// result the line's outcome came from. `None` when the row made no such call, or it has no
-/// result row.
-pub fn tool_result_detail(rows: Vec<StoredMessage>, call_id: &str) -> Option<ToolResultDetailView> {
+/// of its turn (`store::row_and_rest_of_turn`). `occurrence` picks among calls the row names with
+/// the same id (0 for the first), since a provider can repeat one within a round. Pairs the way
+/// the page does, so it reads the same result the line's outcome came from. `None` when the row
+/// made no such call, or it has no result row.
+pub fn tool_result_detail(rows: Vec<StoredMessage>, call_id: &str, occurrence: usize) -> Option<ToolResultDetailView> {
     let row = rows.first().filter(|row| is_role(row, AgentRole::Assistant))?;
     let calls = calls_of(row);
     let results = pair_results(&rows, 0, &calls);
-    let (call, result) = calls.iter().zip(results).find(|(call, _)| call.call_id == call_id)?;
+    let (call, result) = calls
+        .iter()
+        .zip(results)
+        .filter(|(call, _)| call.call_id == call_id)
+        .nth(occurrence)?;
     let result = result?;
     Some(ToolResultDetailView {
         preview: preview_of(&call.tool, result),

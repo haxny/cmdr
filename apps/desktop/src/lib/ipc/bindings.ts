@@ -3733,12 +3733,13 @@ export const commands = {
     >(__TAURI_INVOKE('ask_cmdr_get_conversation', { id, msgLimit, msgOffset })),
   /**
    *  What one tool line's call returned, for its expanded view: the curated preview plus the raw
-   *  result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds.
+   *  result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds, and
+   *  `occurrence` picks among calls one row names with the same id (0 for the first).
    *  ❌ The content is private (file text, EXIF incl. GPS): only the store's failure is logged.
    */
-  askCmdrToolResult: (conversationId: number, messageId: number, callId: string) =>
+  askCmdrToolResult: (conversationId: number, messageId: number, callId: string, occurrence: number) =>
     typedError<ToolResultDetailView, AskCmdrToolResultError>(
-      __TAURI_INVOKE('ask_cmdr_tool_result', { conversationId, messageId, callId }),
+      __TAURI_INVOKE('ask_cmdr_tool_result', { conversationId, messageId, callId, occurrence }),
     ),
   // Conversations newest-activity first, paged. Empty when the store never opened.
   askCmdrListConversations: (limit: number, offset: number, includeArchived: boolean) =>

@@ -43,7 +43,8 @@
     const expanded = $derived(expandable && isLineExpanded(line.key))
 
     function toggleExpanded(): void {
-        if (line.messageId !== null) toggleLineExpanded(line.key, { messageId: line.messageId, callId: tool.callId })
+        if (line.messageId === null) return
+        toggleLineExpanded(line.key, { messageId: line.messageId, callId: tool.callId, occurrence: line.occurrence })
     }
 
     // A settled call with no recorded outcome reads as done, not refused: its note says the rest.

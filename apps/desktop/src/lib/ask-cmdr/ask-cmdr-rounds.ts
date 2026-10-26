@@ -11,6 +11,9 @@ export interface DisplayLine {
   /** The line's round's row, `null` while the round still streams: with `call.callId`, the
    * line's identity. */
   messageId: number | null
+  /** Which of its round's calls with this id it is, 0 for the first: a provider can name one id
+   * twice in a round, and each line fetches its own result. */
+  occurrence: number
   call: RailToolCall
 }
 
@@ -59,7 +62,7 @@ function lineKeys(round: Round, roundIndex: number): DisplayLine[] {
     const occurrence = seen.get(call.callId) ?? 0
     seen.set(call.callId, occurrence + 1)
     const suffix = occurrence === 0 ? '' : `#${String(occurrence)}`
-    return { key: `${roundKey}:${call.callId}${suffix}`, messageId: round.messageId, call }
+    return { key: `${roundKey}:${call.callId}${suffix}`, messageId: round.messageId, occurrence, call }
   })
 }
 

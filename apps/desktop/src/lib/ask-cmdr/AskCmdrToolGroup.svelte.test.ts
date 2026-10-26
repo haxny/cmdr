@@ -38,7 +38,12 @@ function call(callId: string, overrides: Partial<RailToolCall> = {}): RailToolCa
 }
 
 function line(callId: string, overrides: Partial<RailToolCall> = {}, messageId: number | null = 5): DisplayLine {
-  return { key: `${messageId === null ? 'r0' : String(messageId)}:${callId}`, messageId, call: call(callId, overrides) }
+  return {
+    key: `${messageId === null ? 'r0' : String(messageId)}:${callId}`,
+    messageId,
+    occurrence: 0,
+    call: call(callId, overrides),
+  }
 }
 
 function target(): HTMLElement {
@@ -130,7 +135,14 @@ describe('the expand on a tool line', () => {
       expect(document.querySelector('.preview')?.textContent).toContain('Copy has the whole result')
     })
     expect(button.getAttribute('aria-expanded')).toBe('true')
-    expect(askCmdrToolResult).toHaveBeenCalledWith(3, 5, 'a')
+    expect(askCmdrToolResult).toHaveBeenCalledWith(3, 5, 'a', 0)
+  })
+
+  it('fetches its own result when its round names the same call id twice', () => {
+    askCmdrState.conversationId = 3
+    askCmdrToolResult.mockReturnValue(new Promise(() => {}))
+    expandOf({ ...line('a'), key: '5:a#1', occurrence: 1 }).click()
+    expect(askCmdrToolResult).toHaveBeenCalledWith(3, 5, 'a', 1)
   })
 })
 

@@ -63,7 +63,8 @@ pub async fn ask_cmdr_get_conversation(
 }
 
 /// What one tool line's call returned, for its expanded view: the curated preview plus the raw
-/// result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds.
+/// result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds, and
+/// `occurrence` picks among calls one row names with the same id (0 for the first).
 /// ❌ The content is private (file text, EXIF incl. GPS): only the store's failure is logged.
 #[tauri::command]
 #[specta::specta]
@@ -72,6 +73,7 @@ pub async fn ask_cmdr_tool_result(
     conversation_id: i64,
     message_id: i64,
     call_id: String,
+    occurrence: u32,
 ) -> Result<ToolResultDetailView, AskCmdrToolResultError> {
     let Some(db_path) = super::db_path(&app) else {
         return Err(AskCmdrToolResultError::StoreUnavailable);
@@ -83,7 +85,7 @@ pub async fn ask_cmdr_tool_result(
     .await;
     match read {
         Ok(Ok(rows)) => rows
-            .and_then(|rows| tool_result_detail(rows, &call_id))
+            .and_then(|rows| tool_result_detail(rows, &call_id, occurrence as usize))
             .ok_or(AskCmdrToolResultError::NotFound),
         Ok(Err(error)) => {
             log::warn!(target: super::LOG_TARGET, "ask_cmdr_tool_result: the store wouldn't read: {error}");

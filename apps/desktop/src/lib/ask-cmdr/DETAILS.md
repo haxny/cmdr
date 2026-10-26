@@ -17,8 +17,9 @@ Wrappers in `../tauri-commands/ask-cmdr.ts`:
   indicator.
 - `cancelAskCmdr(id)`, `getAskCmdrConversation(id, limit, offset)`, `listAskCmdrConversations(...)` — plain specta
   commands.
-- `askCmdrToolResult(conversationId, messageId, callId)` — what one line's call returned (the preview plus the raw JSON
-  for Copy), fetched on the user's expand: the one door a raw result crosses by. § Groups and the expanded line.
+- `askCmdrToolResult(conversationId, messageId, callId, occurrence)` — what one line's call returned (the preview plus
+  the raw JSON for Copy), fetched on the user's expand: the one door a raw result crosses by. § Groups and the expanded
+  line.
 - `preflightBulkRename` / `reviseBulkRenameRow` / `applyBulkRename` / `cancelBulkRenameProposal` — the review dialog's
   four actions. Only opaque ids cross, plus the one name the user typed.
 
@@ -237,8 +238,9 @@ alone, with no group chrome.
 **The expanded line.** Each line ends in its own expand control (a path link can't nest in a button), enabled only when
 a stored result exists: not while running, not before the round has a row, not on a settled `outcome: null` line
 (disabled, it's hidden but keeps its place so the row doesn't shift). The first expand calls `askCmdrToolResult` with
-the line's `(messageId, callId)` and the conversation on screen. Within one round, a duplicated call id fetches the
-first call's result (the backend pairs by occurrence for the page but the command takes the id alone).
+the line's `(messageId, callId)`, its `occurrence` (which of the round's calls with that id it is, so a provider naming
+one id twice in a round still fetches each line's own result, the way the backend pairs the page), and the conversation
+on screen.
 
 - **The cache is private**: a `SvelteMap` keyed by line key (it never proxies its values), never inside the deep
   `askCmdrState` message list, and ❌ never logged (the raw result can hold file text and EXIF incl. GPS). An answer

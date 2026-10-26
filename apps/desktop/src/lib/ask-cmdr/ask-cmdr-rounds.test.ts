@@ -66,6 +66,7 @@ describe('displaySegments', () => {
     const tools = segments[0]
     if (tools.kind !== 'tools') throw new Error('expected a tools segment')
     expect(tools.lines.map((line) => line.key)).toEqual(['r0:c1', 'r0:c1#1'])
+    expect(tools.lines.map((line) => line.occurrence)).toEqual([0, 1])
   })
 
   it('marks only the last round as live prose', () => {

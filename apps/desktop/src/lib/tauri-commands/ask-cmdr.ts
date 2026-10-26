@@ -209,16 +209,18 @@ export type AskCmdrToolResult =
   | { found: false; reason: AskCmdrToolResultError }
 
 /**
- * What the call `(messageId, callId)` of a thread returned, for its expanded line. The one door a
- * raw tool result crosses by: on the user's expand, never in the stream or a history page.
+ * What the call `(messageId, callId)` of a thread returned, for its expanded line; `occurrence`
+ * picks among the calls one row names with that id (0 for the first). The one door a raw tool
+ * result crosses by: on the user's expand, never in the stream or a history page.
  * ❌ Never log it: it can hold file text and photo locations.
  */
 export async function askCmdrToolResult(
   conversationId: number,
   messageId: number,
   callId: string,
+  occurrence: number,
 ): Promise<AskCmdrToolResult> {
-  const res = await commands.askCmdrToolResult(conversationId, messageId, callId)
+  const res = await commands.askCmdrToolResult(conversationId, messageId, callId, occurrence)
   return res.status === 'ok' ? { found: true, detail: res.data } : { found: false, reason: res.error }
 }
 
