@@ -80,7 +80,7 @@
   "ai-feature": {
     "chosen": "funciones de IA",
     "accept": ["la IA", "de IA", "a IA", "IA,", "IA.", "con IA"],
-    "forms": "AI features → funciones de IA; the AI as subject → la IA (La IA sugirió esto, Motivo de la IA)",
+    "forms": "AI features → funciones de IA; the AI as subject → la IA (La IA ha sugerido esto, Por qué, según la IA)",
     "confidence": "high",
     "sources": "catalog (settings.ai.tooltipOff, ai.translateError.timeout.title)"
   },
@@ -219,7 +219,8 @@
     "forms": "Archivar / Archivado / Desarchivar (tentative); distinct from archivo comprimido",
     "confidence": "high",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "a zip file's spoken kind, the archive concept (archivo comprimido), not hiding a chat"
+      "fileExplorer.list.rowKind.archive": "a zip file's spoken kind, the archive concept (archivo comprimido), not hiding a chat",
+      "suggestedOps.facts.archive": "labels the zip a compress suggestion creates, the archive concept (archivo comprimido), not hiding a chat"
     },
     "sources": "MS terminology (archive → archivar, Archived → Archivado)"
   },
@@ -1347,6 +1348,20 @@
     "sources": "macOS Finder (PE4.5 formato del volumen)",
     "decision": "FAT32"
   },
+  "from-to": {
+    "chosen": "Desde",
+    "accept": ["Desde", "Hacia"],
+    "forms": "From → Desde, To → Hacia, in the transfer dialog's headings, the scan phase's label, and a suggestion's fact lines alike",
+    "avoid": [
+      {
+        "form": "A (bare, for To)",
+        "why": "reads as a stray letter"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Double Commander (Desde / Hacia); catalog (fileOperations.transferDialog.*GroupTitle)",
+    "decision": "El interruptor de papelera y Desde / Hacia"
+  },
   "free-space": {
     "chosen": "espacio",
     "accept": ["libre"],
@@ -1553,6 +1568,9 @@
   "go-to-trash": {
     "chosen": "Ir a la papelera",
     "confidence": "high",
+    "exceptions": {
+      "suggestedOps.reversible.trash": "the files go to the trash (va / van a la papelera), not the command that opens it"
+    },
     "sources": "macOS Finder (Ir a la papelera)"
   },
   "got-it": {
@@ -1942,6 +1960,9 @@
       }
     ],
     "confidence": "high",
+    "exceptions": {
+      "suggestedOps.reversible.moveBack": "move it back → devolverlo a su sitio, the catalog's undo-a-move phrasing (commands.editUndoTrash.description)"
+    },
     "sources": "macOS Finder (label sense)"
   },
   "move-to-trash": {
@@ -3096,9 +3117,16 @@
   "suggestion": {
     "chosen": "sugerencia",
     "accept": ["suger", "sugier", "sugir", "propon"],
-    "forms": "Operaciones sugeridas; La IA sugirió esto (preterite)",
+    "forms": "the AI suggestions dialog, its menu item and palette command → Sugerencias de IA (same words as fileOperations.mkdir.aiSuggestions*); a batch heading → Sugerido hace 5 minutos; La IA ha sugerido esto",
+    "avoid": [
+      {
+        "form": "Operaciones sugeridas",
+        "why": "translated the dialog's old English name (Suggested ops); the name is now AI suggestions"
+      }
+    ],
     "confidence": "high",
-    "sources": "catalog (ui.combobox, askCmdr)"
+    "sources": "catalog (ui.combobox, askCmdr, fileOperations.mkdir.aiSuggestionsAria)",
+    "decision": "Operaciones sugeridas"
   },
   "supported": {
     "chosen": "compatible",
@@ -3250,6 +3278,12 @@
     "confidence": "high",
     "sources": "macOS AppKit WindowTabs, MS id 1057247, Nautilus, Total Commander"
   },
+  "time-ago": {
+    "chosen": "hace",
+    "forms": "{durationText} ago → hace {durationText}; Suggested 5 minutes ago → Sugerido hace 5 minutos",
+    "confidence": "high",
+    "sources": "catalog (ui.toast.age, queryUi.age.*)"
+  },
   "time-left": {
     "chosen": "restantes",
     "accept": ["queda", "restante"],
@@ -3349,6 +3383,13 @@
       "fileOperations.cancelRollback.reason.failed.named": "Undoing a transfer is Cmdr's rollback: revertir / la reversión."
     },
     "decision": "El aviso de la papelera"
+  },
+  "unknown": {
+    "chosen": "Desconocido",
+    "accept": ["desconocid", "desconoce"],
+    "forms": "a bare column value or label → Desconocido; in parentheses → (desconocido)",
+    "confidence": "high",
+    "sources": "macOS Finder (Unknown, SP70 → Desconocido); Nautilus, Thunar (Desconocido); catalog (ai.local.modelUnknown)"
   },
   "unexpected": {
     "chosen": "inesperado",
@@ -3588,8 +3629,7 @@
     "confidence": "high",
     "sources": "catalog; Nautilus (parcialmente copiado)",
     "exceptions": {
-      "fileOperations.cancelRollback.doneDeleting": "Items include folders, which aren't written: que Cmdr había creado.",
-      "suggestedOps.reversibleDeleteWritten": "Undo deletes what the op made, folders included: lo creado."
+      "fileOperations.cancelRollback.doneDeleting": "Items include folders, which aren't written: que Cmdr había creado."
     },
     "decision": "Transferencia atascada"
   },

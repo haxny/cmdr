@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Operaciones sugeridas",
+  "commands.suggestedOpsShow.label": "Sugerencias de IA",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Revisa las operaciones de archivos que ha sugerido la IA y decide qué se ejecuta",
   "@commands.suggestedOpsShow.description": {

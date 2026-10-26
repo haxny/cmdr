@@ -46,6 +46,10 @@
     "en-GB": [],
     "es": [
       {
+        "source": "Archive",
+        "reason": "Two senses of one English word. `askCmdr.sessions.archive` is the VERB that hides a chat (`Archivar`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN labeling the zip file a compress suggestion creates (`Archivo comprimido`, the `archive` ruling)."
+      },
+      {
         "source": "Both",
         "reason": "The pronoun agrees in gender with what it covers: `Ambos` for files and folders together (masculine plural), `Ambas` for the two kinds of notification (feminine). Neither fits the other's slot."
       },

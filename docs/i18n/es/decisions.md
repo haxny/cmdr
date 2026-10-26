@@ -172,8 +172,8 @@ them" → `Conservar los archivos` (a clitic would point at the replaced files).
 
 ## Operaciones sugeridas (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
 
-approve → `Aprobar` (❌ macOS `Aceptar`: it authorizes an action). "Undo by deleting what it writes" →
-`Deshacer eliminando lo creado` (`lo que crea` reads as `creer`).
+approve → `Aprobar` (❌ `Aceptar`). Title → `Sugerencias de IA`, as `mkdir.aiSuggestions*`. `Why:` → `Por qué:`; spoken
+`Por qué, según la IA:` keeps the visible words. `hoy, {time}` (❌ `a las`: 1 o'clock is `a la`).
 
 ## Duplicar (`commands.fileDuplicate.*`)
 
