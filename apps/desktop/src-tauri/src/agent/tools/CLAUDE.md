@@ -43,7 +43,7 @@ and typed result shapes colocated here.
   the ledger a `revoke_call`. `propose/DETAILS.md`.
 - **Handlers never touch a live filesystem, except `inspect_file` and `list_dir`'s live read**: bounded, the thread
   ABANDONED past a deadline (`unreachable`). `list_dir` reads live only where no index lists the folder, stops on the
-  turn's cancel token, and is FDA-gated and tier-excluded on the link-resolved target before any stat (`DETAILS.md` § The
+  turn's cancel token, is FDA-gated on the link-resolved target before any stat, and never shows ground the index's scanner skips (`DETAILS.md` § The
   live source). `inspect_file` alone egresses contents (text windows, `find` snippets, PDF pages, archive entry names,
   EXIF incl. GPS; never bytes), each named in the cloud AI disclosure; a new KIND is a copy change plus a
   `CLOUD_AI_CONSENT_VERSION` bump. § Reading a file the way the viewer does.

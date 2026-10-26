@@ -118,6 +118,12 @@ var surfaceGuardedCrates = []struct {
 		// folding it into `resume_after_reconnect` would make one call mean two things by
 		// volume kind. Why, in the audit doc below under "A drive whose mount point moved".
 		//
+		// Raised on 2026-10-26, `HandleMethods` 41 -> 42, for ONE method and no root promise:
+		// `Index::scan_skips`, the scanner's own exclusion policy for a path, so Ask Cmdr's
+		// live `list_dir` never shows ground the index skipped on purpose (#749). Copying the
+		// lists would fork the policy. Why, in the audit doc below under "Ground the scanner
+		// skips".
+		//
 		// ⚠️ WHICH BUCKET a grant lands in is not a choice, so read the right counter
 		// before assuming you have headroom. A value an event carries always spends a
 		// ROOT PROMISE, never `SubsystemItems`. Why, in the audit doc below, under
@@ -125,7 +131,7 @@ var surfaceGuardedCrates = []struct {
 		HandleType: "Index",
 		Ceilings: surfaceCeilings{
 			RootPromises:   53,
-			HandleMethods:  41,
+			HandleMethods:  42,
 			PublicModules:  17,
 			SubsystemItems: 156,
 		},

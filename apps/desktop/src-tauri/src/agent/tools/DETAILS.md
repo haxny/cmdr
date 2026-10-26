@@ -431,10 +431,14 @@ index: folder rows and the folder's own `size` are ABSENT, never the inode's 4 K
   first: it stats a link's target to resolve it, which for a link into `~/Documents` (or the first touch of a network
   mount) is the very TCC prompt the gate exists to prevent. Then the resolved target must sit under the volume's
   resolved root with no deeper live root holding it (a link off the volume is refused, naming where it lands, ❌ never
-  followed), and no component of it, the leaf included, may be in the system/build/cache tier
-  (`ExcludeRules::system_tier`, what a default search leaves out). The folder listed is the PHYSICAL one, spelled
-  under the volume's own root. A provider-addressed volume (direct SMB, MTP) reaches no local folder, so only the tier
-  applies: links are the server's.
+  followed). The folder listed is the PHYSICAL one, spelled under the volume's own root.
+- **Never ground the index skipped on purpose.** Every folder from the root down to the target, the leaf included, is
+  asked `Index::scan_skips` (the scanner's own `should_exclude`: junk basenames like `.Spotlight-V100` on any volume, a
+  root pseudo-filesystem, the boot disk's system prefixes), so a live read and the index answer the same way for one
+  folder. ❌ Not search's default-hidden tier (`SYSTEM_DIR_EXCLUDES`): the index lists `node_modules`, so a live read
+  must too. A provider-addressed volume (direct SMB, MTP) reaches no local folder, so only this check applies: links are
+  the server's. ⚠️ The scanner's pseudo-filesystem probe stats a `proc` / `sys` / `dev` at a volume root's parent, so
+  the check runs on the read's blocking thread, under its deadline.
 - **One bounded read** (`run_bounded`): its own task on the app's shared runtime (a turn's runtime is single-threaded
   and ends with the turn, and an abandoned read must still finish), `LIVE_READ` = 10 s with a 1 s grace: at 9 s its
   token flips (SMB and MTP stop between round trips), at 10 s it's ABANDONED as `unreachable`. One in flight per
@@ -456,7 +460,7 @@ Its misses ride the same shape as the resolver's (`LocationMissResult::on`, `loc
 `needsDiskAccess` (the FDA question is open, or macOS privacy refused the read; the `detail` says which),
 `unreachable` (past the deadline, another read on the volume still stuck, or the volume dropping mid-read), `notFound`
 (nothing there, a link loop, or a link off the volume, whose `detail` names the volume and path to ask instead),
-`excluded` (names the component, and that `search` with `excludeSystemDirs: false` sees inside), `permissionDenied`
+`excluded` (names the folder the index skips), `permissionDenied`
 (the folder's own permissions: Full Disk Access won't help), and `cancelled`.
 
 ## The honesty (coverage) contract

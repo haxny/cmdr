@@ -8,7 +8,7 @@
 //! - [`gate_local`]: for a volume whose paths are `std::fs` paths, the target is
 //!   resolved link by link and every place is checked against the Full Disk
 //!   Access gate BEFORE it's stat'ed, then against the volume's root, the other
-//!   live volumes, and the system/cache tier. Blocking; runs inside the read.
+//!   live volumes, and what the index's scanner skips. Blocking; runs inside the read.
 //! - [`run_bounded`]: the read runs as its own task, one per volume at a time,
 //!   past a deadline first asked to stop and then ABANDONED (a thread stuck in a
 //!   kernel call can't be cancelled), and raced against the turn's cancel.
@@ -35,12 +35,12 @@ use super::{
     to_value,
 };
 use crate::ignore_poison::IgnorePoison;
+use crate::index_host::index;
 use crate::location::Location;
 use crate::location::miss::{LocationMissResult, MissToken};
 use crate::location::resolve::{ResolvedLocation, VolumeFacts};
 use crate::mcp::resources::indexing::{format_number, status_token};
 use crate::mcp::{ToolError, ToolResult};
-use crate::search::excludes::ExcludeRules;
 
 /// The most entries a live read keeps. A hostile folder (200,000 build
 /// artifacts) must not become a 200,000-row sort for a page of 50.
@@ -108,7 +108,7 @@ pub(crate) enum LiveMiss {
         to: Option<OtherVolume>,
         path: String,
     },
-    /// A component of the target is in the system/cache tier.
+    /// The index's scanner skips a folder on the way to the target on purpose.
     Excluded {
         name: String,
     },
@@ -163,7 +163,7 @@ impl LiveMiss {
             LiveMiss::Excluded { name } => (
                 MissToken::Excluded,
                 format!(
-                    "`{name}` is a system, build, or cache folder that searches leave out, so Cmdr doesn't list it live. To see inside, search it with excludeSystemDirs false."
+                    "`{name}` is system data the drive index leaves out on purpose, so Cmdr doesn't list it either."
                 ),
             ),
             LiveMiss::PermissionDenied => (
@@ -204,9 +204,13 @@ impl GatePolicy {
     }
 }
 
+/// Whether the index's scanner skips a path on this volume on purpose
+/// (`Index::scan_skips`), injected so the tests need no registered volume.
+pub(crate) type ScanSkips = Arc<dyn Fn(&str) -> bool + Send + Sync>;
+
 /// What a live read is asked to read, and what it needs to judge where a link
-/// lands.
-#[derive(Debug, Clone)]
+/// lands and what the index left out.
+#[derive(Clone)]
 pub(crate) struct LiveTarget {
     /// The volume's root, as an app path.
     pub root: String,
@@ -214,6 +218,8 @@ pub(crate) struct LiveTarget {
     pub path: String,
     /// Every other live volume.
     pub others: Vec<OtherVolume>,
+    /// The scanner's exclusion policy for this volume.
+    pub skips: ScanSkips,
 }
 
 /// Gate a target on a volume whose paths are `std::fs` paths, and answer the
@@ -225,9 +231,6 @@ pub(crate) struct LiveTarget {
 /// resolve it, which for a link into `~/Documents` is the very prompt the gate
 /// exists to prevent.
 pub(crate) fn gate_local(target: &LiveTarget, policy: &GatePolicy) -> Result<String, LiveMiss> {
-    let rules = ExcludeRules::system_tier();
-    // As asked first, so `node_modules` is refused without a single stat.
-    excluded_under(&rules, &target.root, &target.path)?;
     let check = |place: &Path| {
         if policy.fda_pending && (policy.is_protected)(place) {
             Err(LiveMiss::NeedsDiskAccess(PrivacyGate::Pending))
@@ -252,8 +255,10 @@ pub(crate) fn gate_local(target: &LiveTarget, policy: &GatePolicy) -> Result<Str
             path: physical,
         });
     }
-    excluded_under(&rules, &root, &physical)?;
-    Ok(rebase(&physical, &root, &target.root).unwrap_or(physical))
+    // Judged in the volume's own spelling, the path space its scanner walks.
+    let listed = rebase(&physical, &root, &target.root).unwrap_or(physical);
+    skipped_by_the_index(target, &listed)?;
+    Ok(listed)
 }
 
 /// How deep a root sits: its length without a trailing slash, the same measure
@@ -262,20 +267,25 @@ fn depth(root: &str) -> usize {
     root.trim_end_matches('/').len()
 }
 
-/// The first component of `path` below `root` that the tier excludes, as a miss.
-/// The leaf counts too: asking for `node_modules` itself is asking to see inside.
-fn excluded_under(rules: &ExcludeRules, root: &str, path: &str) -> Result<(), LiveMiss> {
-    let Some(rest) = path_under(path, root) else {
+/// The first folder from the volume's root down to `path` (the leaf included)
+/// that the index's scanner skips on purpose, as a miss: a live read never shows
+/// ground the index deliberately left out, or one tool would answer two ways for
+/// the same folder. Each step is asked separately because the scanner judges one
+/// path at a time and never descends below a skipped one. Can stat (see
+/// `Index::scan_skips`), so it runs on the read's blocking thread.
+fn skipped_by_the_index(target: &LiveTarget, path: &str) -> Result<(), LiveMiss> {
+    let Some(rest) = path_under(path, &target.root) else {
         return Ok(());
     };
-    match rest
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .find(|part| rules.excludes_dir_name(part))
-    {
-        Some(name) => Err(LiveMiss::Excluded { name: name.to_string() }),
-        None => Ok(()),
+    let mut prefix = target.root.trim_end_matches('/').to_string();
+    for part in rest.split('/').filter(|part| !part.is_empty()) {
+        prefix.push('/');
+        prefix.push_str(part);
+        if (target.skips)(&prefix) {
+            return Err(LiveMiss::Excluded { name: part.to_string() });
+        }
     }
+    Ok(())
 }
 
 fn physical_string(
@@ -482,9 +492,11 @@ pub(crate) async fn read_live(
             .map_err(|_| LiveMiss::Unreachable(Stall::Failed))??
     } else {
         // A provider-addressed volume (direct SMB, MTP) reaches no local folder,
-        // so only the tier applies: links are the server's to resolve.
-        excluded_under(&ExcludeRules::system_tier(), &target.root, &target.path)?;
-        target.path.clone()
+        // so only the scanner's policy applies: links are the server's to resolve.
+        let path = target.path.clone();
+        tauri::async_runtime::spawn_blocking(move || skipped_by_the_index(&target, &target.path).map(|()| path))
+            .await
+            .map_err(|_| LiveMiss::Unreachable(Stall::Failed))??
     };
     if stop.is_cancelled() {
         return Err(LiveMiss::Cancelled);
@@ -549,6 +561,10 @@ pub(crate) async fn answer_live(ask: LiveAsk<'_>) -> ToolResult {
                 root: v.root.clone(),
             })
             .collect(),
+        skips: {
+            let volume_id = location.volume_id.clone();
+            Arc::new(move |path: &str| index().scan_skips(&volume_id, path))
+        },
     };
     let policy = ask.policy;
     let read = move |stop| read_live(volume, target, policy, stop);

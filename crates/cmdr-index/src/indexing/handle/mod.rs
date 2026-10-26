@@ -561,6 +561,17 @@ impl Index {
         crate::indexing::read::queries::list_dir_children_on_volume(volume_id, path).map_err(Into::into)
     }
 
+    /// Whether the scanner leaves `path` out of `volume_id`'s index on purpose: a
+    /// junk basename (`.Spotlight-V100`) on any volume, a pseudo-filesystem at a
+    /// volume root, and on the boot disk its system prefixes. For a reader that
+    /// lists the disk itself, so it never shows ground the index deliberately
+    /// skipped. One path, not its ancestors: ask each. ⚠️ Can stat (the
+    /// pseudo-filesystem probe), so call it off the async thread.
+    pub fn scan_skips(&self, volume_id: &str, path: &str) -> bool {
+        let scope = crate::indexing::paths::routing::exclusion_scope_for_volume(volume_id);
+        crate::indexing::scanner::should_exclude(path, &scope)
+    }
+
     /// What a copy or move of `sources` is about to cost, from what the index
     /// already knows: the file count and total bytes, without walking the disk.
     ///

@@ -48,30 +48,51 @@ fn physical(dir: &TestDir) -> String {
         .into_owned()
 }
 
+/// The real scanner policy, for a volume the index has never heard of: the junk
+/// basenames and root pseudo-filesystems every volume skips.
+fn scanner_policy() -> ScanSkips {
+    Arc::new(|path: &str| index().scan_skips("live-gate-test", path))
+}
+
 fn target(root: &str, path: &str) -> LiveTarget {
     LiveTarget {
         root: root.to_string(),
         path: path.to_string(),
         others: Vec::new(),
+        skips: scanner_policy(),
     }
 }
 
 // ── The gate ──────────────────────────────────────────────────────────────────
 
 #[test]
-fn a_folder_in_the_system_tier_is_refused_before_anything_is_read() {
-    let dir = TestDir::new("live-excluded");
+fn a_folder_the_index_skips_is_refused_and_so_is_anything_inside_it() {
+    let dir = TestDir::new("live-skipped");
+    std::fs::create_dir_all(dir.join(".Spotlight-V100/Store-V2")).expect("dirs");
     let root = physical(&dir);
-    // Neither exists: a stat would answer `NotFound`, so `Excluded` proves none ran.
-    for path in [format!("{root}/node_modules"), format!("{root}/app/node_modules/react")] {
+    for path in [
+        format!("{root}/.Spotlight-V100"),
+        format!("{root}/.Spotlight-V100/Store-V2"),
+    ] {
         assert_eq!(
             gate_local(&target(&root, &path), &answered()),
             Err(LiveMiss::Excluded {
-                name: "node_modules".to_string()
+                name: ".Spotlight-V100".to_string()
             }),
             "{path}"
         );
     }
+}
+
+#[test]
+fn a_folder_the_index_lists_is_listed_live_too_even_one_searches_hide() {
+    // The index walks `node_modules` (only search hides it by default), so a live
+    // read must answer for it the same way, or one tool answers two ways.
+    let dir = TestDir::new("live-node-modules");
+    std::fs::create_dir_all(dir.join("app/node_modules/react")).expect("dirs");
+    let root = physical(&dir);
+    let path = format!("{root}/app/node_modules");
+    assert_eq!(gate_local(&target(&root, &path), &answered()), Ok(path));
 }
 
 #[test]

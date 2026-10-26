@@ -92,18 +92,6 @@ impl ExcludeRules {
         }
     }
 
-    /// The system/build/cache tier alone, folding case: what a default search
-    /// leaves out. `list_dir`'s live read refuses a folder inside it, so it never
-    /// shows the model ground a search wouldn't.
-    pub(crate) fn system_tier() -> Self {
-        Self {
-            exact_names: Arc::new(SYSTEM_DIR_EXCLUDES.iter().map(|name| fold(name, true)).collect()),
-            name_patterns: Vec::new(),
-            path_prefixes: Arc::from([]),
-            case_insensitive: true,
-        }
-    }
-
     /// Whether anything is excluded at all, so a caller can skip the walk.
     pub(crate) fn is_empty(&self) -> bool {
         self.exact_names.is_empty() && self.name_patterns.is_empty() && self.path_prefixes.is_empty()

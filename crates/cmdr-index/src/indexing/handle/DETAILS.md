@@ -169,6 +169,18 @@ dead root by itself can't tell a rename from an unplug.
 It answers a `bool` (followed or not) rather than a typed outcome, because the host only logs it and a new enum would
 spend a root promise on a log line.
 
+## Ground the scanner skips: the fourth concept added since the audit
+
+Added 2026-10-26 (#749), `HandleMethods` 41 → 42 with no new root promise. Ask Cmdr's `list_dir` reads a folder live
+when no index lists it, and it must never show ground the index left out on purpose, or one tool answers two ways for
+the same folder depending on a source the model can't see. **`scan_skips(volume_id, path)`** is the scanner's own
+`should_exclude` under the scope the read side already derives (`exclusion_scope_for_volume`).
+
+Why no disposition fits: the policy is the scanner's and has to stay single-sourced, so copying `JUNK_BASENAMES` and the
+boot prefixes into the host is out; no existing method answers "would you have skipped this path"; and
+`SYSTEM_DIR_EXCLUDES` (the one exclusion list already promised) is search's default-hidden tier, which the scanner
+deliberately does NOT apply.
+
 ## The mapping
 
 ### The 14 the glob was hiding
