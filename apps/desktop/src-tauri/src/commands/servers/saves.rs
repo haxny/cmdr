@@ -4,7 +4,6 @@
 //! stays there.
 
 use super::nfs_places::nfs_place;
-use super::outcomes::{SavedEntry, saved_by_id};
 use super::s3_accounts::s3_place;
 use super::wire::ServerTarget;
 use crate::network::nfs_known_places::KnownNfsPlace;
@@ -16,6 +15,7 @@ use crate::network::sftp_known_servers::KnownSftpServer;
 use crate::network::sftp_volume_wiring;
 use crate::network::webdav_known_servers::KnownWebdavServer;
 use crate::network::webdav_volume_wiring;
+use crate::server_connect::{SavedEntry, saved_by_id};
 
 /// Saves `server` with no saved entry behind the request: an "Add anyway".
 ///

@@ -111,10 +111,12 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
     never-seeds rule. Neither refusal is something a person did, which is why they are an `Err` rather than an outcome:
     the frontend reads either as a `saved` row that went stale and moves on (reload or close), ❌ never a sentence
     (`apps/desktop/src/lib/servers/DETAILS.md` § The three arms).
-  - ❗ **It runs as one flight per place** (`connect_saved_place_shared` over `network/dial_flights.rs`), which Ask
-    Cmdr's `connect_volume` calls too: the registered-id refusal can't guard the 30 s a dial is out, so a second caller
-    joins the first dial instead of starting one. `cancel_server_connect` asks the flights first; the backends only
-    ever see the flight's own attempt id. Rules: the "Dialing a saved place" entry of `network/DETAILS.md`.
+  - ❗ **Both commands are thin over `server_connect/`**, below `commands` so Ask Cmdr's `connect_volume` dials through
+    the same core: one flight per place (`network/dial_flights.rs`), since the registered-id refusal can't guard the
+    30 s a dial is out, so a second caller joins the first dial instead of starting one. `cancel_server_connect` asks
+    the flights first; the backends only ever see the flight's own attempt id. `ServerConnectOutcome` and
+    `SavedPlaceRefusal` live there too, re-exported here. Rules: the "Dialing a saved place" entry of
+    `network/DETAILS.md`.
   - ❗ **An SMB host's identity is where it dials, address AND port** (`servers/smb_hosts.rs`), ❌ never the name a
     person gave it and never the address alone: one machine can run several servers (the Docker fixtures are ten on
     `localhost`). Its sign-in history and shares are filed under its discovery name (`localhost:11482`), so the listing

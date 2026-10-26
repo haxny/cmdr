@@ -188,6 +188,9 @@ All under `apps/desktop/src-tauri/src/`.
 - `file_viewer/`: Three-backend file viewer (FullLoad, ByteSeek, LineIndex)
 - `network/`: SMB's app-side half: mDNS discovery, share listing (smb2 + smbutil/smbclient fallback), mounting,
   Keychain, the auto-upgrade passes, and the frontend's connection events. The backend under it is `crates/cmdr-smb/`
+- `server_connect/`: dialing a saved server or share, one flight per place, plus the connect outcome every caller
+  branches on. Below `commands/servers.rs` and Ask Cmdr's `connect_volume`, which both dial through it. See
+  `apps/desktop/src-tauri/src/server_connect/mod.rs`
 - `clipboard/`: File clipboard (Cmd+C/X/V) with NSPasteboard interop; tracks cut state and validates at paste
 - `secrets/`: Pluggable secret storage: Keychain (macOS), Secret Service (Linux), encrypted-file fallback. Server
   passwords, AI keys, and the license key
@@ -269,7 +272,7 @@ All under `apps/desktop/src-tauri/src/`.
   `agent/outcomes.rs` closes the loop, recording what the user did with each proposal on the two channels that reach
   them and the agent. Its `agent/tools/` is the in-process toolset the chat dispatches, gated by access tier (`Read`,
   `Propose`, `Memory`, and `Session`, whose one tool, `connect_volume`, connects a saved place only on a turn the user
-  started, in one flight with the pane's own dial (`network/dial_flights.rs`); invariant 7 in
+  started, in one flight with the pane's own dial (`server_connect/`); invariant 7 in
   `apps/desktop/src-tauri/src/agent/DETAILS.md`); `agent/tools/read/inspect/` is the one tool that reads file contents,
   through `file_viewer`'s headless seam. See its `apps/desktop/src-tauri/src/agent/CLAUDE.md`
 - `downloads/`: `notify`-based `~/Downloads` watcher, FDA-gated, browser-rename-aware filter, Cmdr-own-write ignore set

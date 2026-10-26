@@ -27,28 +27,25 @@ use crate::network::saved_server_fields::{self, SavedServerOutcome};
 use crate::network::sftp_volume_wiring;
 use crate::network::webdav_volume_wiring;
 use crate::network::{
-    known_shares, manual_servers, nfs_known_places, s3_known_places, sftp_known_servers, smb_saved_shares,
-    webdav_known_servers,
+    known_shares, manual_servers, nfs_known_places, s3_known_places, sftp_known_servers, webdav_known_servers,
 };
 use cmdr_sftp::SftpConnectionParams;
-use cmdr_webdav::WebdavConnectionParams;
 
 mod nfs_places;
-mod outcomes;
 mod s3_accounts;
-mod saved_place_dial;
 mod saves;
 mod smb_hosts;
 mod target_ids;
 mod wire;
-use outcomes::{SavedEntry, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, saved_by_id};
+// The connect vocabulary lives below `commands` (`server_connect`), where Ask Cmdr dials too.
+use crate::server_connect::{
+    SavedEntry, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, saved_by_id, webdav_params,
+};
+pub use crate::server_connect::{SavedPlaceRefusal, ServerConnectOutcome};
 use s3_accounts::s3_accounts;
-pub(crate) use saved_place_dial::{SavedPlaceDial, connect_saved_place_shared};
 use saves::{save_edit, save_target};
 use smb_hosts::smb_hosts;
-pub use wire::{
-    SavedPlace, SavedPlaceRefusal, SavedServer, ServerConnectOutcome, ServerNameSource, ServerProtocol, ServerTarget,
-};
+pub use wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol, ServerTarget};
 
 // ============================================================================
 // Listing
@@ -176,7 +173,7 @@ fn saved_servers(
 /// the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
 /// the account.
 ///
-/// ❗ **One dial per place** (`network::dial_flights`): a second caller while a dial
+/// ❗ **One dial per place** (`server_connect`): a second caller while a dial
 /// is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
 /// instead of dialing again, which would register a second volume.
 #[tauri::command]
@@ -187,7 +184,7 @@ pub async fn connect_saved_place(
     secret: Option<SecretOffer>,
     username: Option<String>,
 ) -> Result<ServerConnectOutcome, SavedPlaceRefusal> {
-    connect_saved_place_shared(&volume_id, &attempt_id, secret, username).await
+    crate::server_connect::connect_saved_place(&volume_id, &attempt_id, secret, username).await
 }
 
 /// Dials a server the user just typed, in add mode.
@@ -277,25 +274,7 @@ pub async fn connect_server(
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_server_connect(attempt_id: String) -> bool {
-    // A saved place's caller waits on a shared dial under its own id; the backends
-    // only ever see the flight's.
-    let saved_place = saved_place_dial::cancel(&attempt_id);
-    saved_place || cancel_backend_attempts(&attempt_id)
-}
-
-/// Asks every backend's attempt table (and the two SMB dials no table files) to
-/// call off `attempt_id`.
-fn cancel_backend_attempts(attempt_id: &str) -> bool {
-    let attempt_id = attempt_id.to_string();
-    let sftp = sftp_volume_wiring::cancel_connect(&attempt_id);
-    let webdav = webdav_volume_wiring::cancel_connect(&attempt_id);
-    let s3 = s3_volume_wiring::cancel_connect(&attempt_id);
-    let nfs = nfs_volume_wiring::cancel_connect(&attempt_id);
-    let smb = smb_saved_shares::cancel_connect(&attempt_id);
-    let smb_share_list_mount = crate::network::cancel_mount(&attempt_id);
-    // The sheet's "Eject and save" runs under the same kind of id, and its Cancel is this one.
-    let eject_and_save = crate::server_move::smb::cancel_eject_and_save(&attempt_id);
-    sftp || webdav || s3 || nfs || smb || smb_share_list_mount || eject_and_save
+    crate::server_connect::cancel_connect(&attempt_id)
 }
 
 /// Drops a place's session and takes it out of the registry, answering whether
@@ -733,13 +712,6 @@ pub fn forget_saved_smb_host_password(
 // ============================================================================
 // Shared plumbing
 // ============================================================================
-
-/// Connection params for a saved WebDAV entry, or `None` when its address isn't
-/// an `http`/`https` URL.
-pub(super) fn webdav_params(url: &str, username: &str, remote_root: &str) -> Option<WebdavConnectionParams> {
-    let parsed = url::Url::parse(url.trim()).ok()?;
-    matches!(parsed.scheme(), "http" | "https").then(|| WebdavConnectionParams::new(parsed, username, remote_root))
-}
 
 #[cfg(test)]
 #[path = "servers_test.rs"]

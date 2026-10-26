@@ -14,13 +14,13 @@
 
 use std::time::Duration;
 
-use crate::commands::servers::ServerConnectOutcome;
 use crate::network::connect_wiring::{AttemptTable, DialTicket};
 use crate::network::known_shares::{self, AuthOptions, ConnectionMode, KnownNetworkShare};
 use crate::network::mount::MountError;
 use crate::network::one_shot_credentials::SecretOffer;
 use crate::network::os_mount_notice::FallbackNotice;
 use crate::network::{keychain, smb_upgrade};
+use crate::server_connect::ServerConnectOutcome;
 use cmdr_fs::log_private::LogPrivate;
 
 /// How long a Keychain read or write may take, the bound the secret commands use.

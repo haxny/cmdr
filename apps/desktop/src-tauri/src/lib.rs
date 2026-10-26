@@ -153,6 +153,9 @@ mod server_request;
 // that follows it. Gated with `network`, whose stores it moves.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod server_move;
+// Dialing a saved place, below `commands` and `agent`. Gated with `network`.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod server_connect;
 #[cfg(target_os = "macos")]
 pub mod services_menu;
 mod settings;

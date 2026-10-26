@@ -2,11 +2,10 @@
 //! hub row, and the saved entry a target describes. Split out of `servers.rs` to
 //! keep that file under its length cap; the facade's rationale stays there.
 
-use super::outcomes::outcome_from_nfs;
-use super::wire::{SavedPlace, SavedServer, ServerConnectOutcome, ServerNameSource, ServerProtocol, ServerTarget};
-use crate::network::connect_wiring::DialTicket;
+use super::wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol, ServerTarget};
 use crate::network::nfs_known_places::{self, KnownNfsPlace};
 use crate::network::nfs_volume_wiring;
+use crate::server_connect::{ServerConnectOutcome, outcome_from_nfs};
 
 /// Every saved NFS place, grouped under its SERVER: one [`SavedServer`] per host
 /// plus port, its places the saved exports, each with its own id, pin, and
@@ -114,10 +113,4 @@ pub(super) async fn connect(target: ServerTarget, attempt_id: &str) -> ServerCon
         return ServerConnectOutcome::Unreachable;
     };
     outcome_from_nfs(nfs_volume_wiring::connect_and_register(&server_name, place, attempt_id).await)
-}
-
-/// Dials a saved NFS place (`connect_saved_place`'s NFS arm). Nothing typed, so
-/// the server keeps the name it has.
-pub(super) async fn connect_saved(set_out: DialTicket, place: KnownNfsPlace, attempt_id: &str) -> ServerConnectOutcome {
-    outcome_from_nfs(nfs_volume_wiring::connect_and_register_since(set_out, "", place, attempt_id).await)
 }

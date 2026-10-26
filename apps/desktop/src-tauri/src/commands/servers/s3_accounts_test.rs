@@ -1,12 +1,12 @@
 //! An S3 account's places as the hub lists them: grouped under one account row,
 //! each with its own id and pin, and the account's id the one its root names.
 
-use super::super::outcomes::outcome_from_s3;
-use super::super::wire::{ServerConnectOutcome, ServerNameSource, ServerProtocol};
+use super::super::wire::{ServerNameSource, ServerProtocol};
 use super::{s3_accounts, s3_place};
 use crate::network::s3_known_places::{self, KnownS3Place, S3ProviderChoice};
 use crate::network::s3_volume_wiring::S3Connection;
 use crate::network::saved_server_fields::SavedServerOutcome;
+use crate::server_connect::{ServerConnectOutcome, outcome_from_s3};
 
 fn place(key: &str, bucket: Option<&str>, pinned: bool) -> KnownS3Place {
     KnownS3Place {

@@ -4871,7 +4871,7 @@ export const commands = {
    *  the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
    *  the account.
    *
-   *  ❗ **One dial per place** (`network::dial_flights`): a second caller while a dial
+   *  ❗ **One dial per place** (`server_connect`): a second caller while a dial
    *  is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
    *  instead of dialing again, which would register a second volume.
    */

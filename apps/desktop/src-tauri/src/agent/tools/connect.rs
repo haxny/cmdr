@@ -14,7 +14,7 @@
 //! - **Registered, waiting for a sign-in or a key** → `needsCredentials` /
 //!   `needsApproval`, no dial.
 //! - **Not registered** (a `saved` row) → the only dial, through
-//!   `commands::servers::connect_saved_place_shared` with no secret: one flight per
+//!   `server_connect::connect_saved_place` with no secret: one flight per
 //!   place, shared with a pane's own dial (`network::dial_flights`).
 //!
 //! Before any of that, a share reached by two addresses is one share (decision 15
@@ -39,12 +39,12 @@ use tauri::{AppHandle, Runtime};
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
-use crate::commands::servers::{SavedPlaceDial, SavedPlaceRefusal, ServerConnectOutcome};
 use crate::file_system::volume::manager::{ConnectionNews, connection_news, get_volume_manager};
 use crate::location::Location;
 use crate::location::resolve::{RootSources, VolumeFacts, volume_root};
 use crate::location::same_share::Via;
 use crate::mcp::{ToolError, ToolResult};
+use crate::server_connect::{SavedPlaceDial, SavedPlaceRefusal, ServerConnectOutcome};
 
 /// How long a call waits for a dropped volume's reconnect to settle. The backoff
 /// cycle's first attempt goes out after 2 s; past this the model is told it's still
@@ -416,7 +416,7 @@ impl<R: Runtime> ConnectPorts for AppPorts<'_, R> {
             // Nothing outside this call cancels it: Stop drops the future, which
             // leaves the dial's flight (`network::dial_flights`).
             let attempt_id = format!("ask-cmdr-connect-{}", uuid::Uuid::new_v4());
-            crate::commands::servers::connect_saved_place_shared(volume_id, &attempt_id, None, None).await
+            crate::server_connect::connect_saved_place(volume_id, &attempt_id, None, None).await
         }
         .boxed()
     }

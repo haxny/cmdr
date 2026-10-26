@@ -73,16 +73,6 @@ impl From<UnattendedReconnect> for SftpUnattendedReconnect {
     }
 }
 
-/// One host key, named the way a human checks it against `ssh-keygen -lf`.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct SftpHostKeyIdentity {
-    /// The SSH key-type name the server presented.
-    pub algorithm: String,
-    /// Its OpenSSH `SHA256:…` fingerprint.
-    pub fingerprint: String,
-}
-
 /// What approving a host key produced.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case", tag = "outcome")]

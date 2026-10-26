@@ -2,12 +2,12 @@
 //! one call it refuses.
 
 use super::*;
-use crate::commands::sftp::SftpHostKeyIdentity;
 use crate::network::manual_servers::ManualServerEntry;
 use crate::network::sftp_known_servers::KnownSftpServer;
 use crate::network::sftp_volume_wiring::SftpConnection;
 use crate::network::webdav_known_servers::KnownWebdavServer;
 use crate::network::webdav_volume_wiring::WebdavConnection;
+use crate::server_connect::outcome::SftpHostKeyIdentity;
 
 /// A host nobody else's cell uses, so this suite can share the process-global
 /// stores with whatever runs beside it.

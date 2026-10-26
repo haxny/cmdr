@@ -1,21 +1,17 @@
 //! Dialing a place the user saved: one flight per place, then the per-protocol dial.
-//!
-//! Every dial of a saved place comes through [`connect_saved_place_shared`]: the
-//! `connect_saved_place` command (the frontend's connect flow and sign-in sheet) and
-//! Ask Cmdr's `connect_volume`. A saved place registers its volume only once its dial
-//! lands, so the "already registered?" refusal can't guard the 30 s a dial is out;
-//! the flight (`network::dial_flights`) can.
 
 use std::sync::LazyLock;
 
 use cmdr_sftp::SftpConnectionParams;
 use tokio_util::sync::CancellationToken;
 
-use super::outcomes::{SavedEntry, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, saved_by_id};
-use super::{SavedPlaceRefusal, ServerConnectOutcome, cancel_backend_attempts, nfs_places, webdav_params};
+use super::outcome::{
+    SavedPlaceRefusal, ServerConnectOutcome, outcome_from_nfs, outcome_from_s3, outcome_from_sftp, outcome_from_webdav,
+};
+use super::saved::{SavedEntry, saved_by_id, webdav_params};
 use crate::network::dial_flights::{DialFlights, Share};
 use crate::network::one_shot_credentials::SecretOffer;
-use crate::network::{s3_volume_wiring, sftp_volume_wiring, smb_saved_shares, webdav_volume_wiring};
+use crate::network::{nfs_volume_wiring, s3_volume_wiring, sftp_volume_wiring, smb_saved_shares, webdav_volume_wiring};
 
 /// What one dial of a saved place answers.
 pub(crate) type SavedPlaceDial = Result<ServerConnectOutcome, SavedPlaceRefusal>;
@@ -23,14 +19,13 @@ pub(crate) type SavedPlaceDial = Result<ServerConnectOutcome, SavedPlaceRefusal>
 /// The saved-place dials out right now, by place.
 static SAVED_PLACE_DIALS: LazyLock<DialFlights<SavedPlaceDial>> = LazyLock::new(DialFlights::new);
 
-/// `connect_saved_place`'s body, for in-process callers too, so every dial of a saved
-/// place joins the one flight.
+/// Dials the saved place `volume_id`, joining a dial already out when it may.
 ///
 /// A caller holding nothing but stored credentials shares a dial already out; one
 /// carrying a typed secret or account dials its own, after it. `attempt_id` calls off
-/// only this caller (`cancel_server_connect`), as does dropping the future; the dial
-/// itself stops once nobody waits on it.
-pub(crate) async fn connect_saved_place_shared(
+/// only this caller ([`cancel_connect`]), as does dropping the future; the dial itself
+/// stops once nobody waits on it.
+pub(crate) async fn connect_saved_place(
     volume_id: &str,
     attempt_id: &str,
     secret: Option<SecretOffer>,
@@ -49,9 +44,29 @@ pub(crate) async fn connect_saved_place_shared(
         .unwrap_or(Ok(ServerConnectOutcome::Cancelled))
 }
 
-/// Calls off the saved-place caller `attempt_id`, answering whether one was waiting.
-pub(super) fn cancel(attempt_id: &str) -> bool {
-    SAVED_PLACE_DIALS.cancel(attempt_id)
+/// Calls off the connect running under `attempt_id`, whichever protocol owns it,
+/// answering whether one was.
+///
+/// A saved place's caller waits on a shared dial under its own id, which only the
+/// flight knows; the backends only ever see the flight's. Each backend holds its OWN
+/// attempt table, so this asks every one; an id nobody holds answers `false`, which a
+/// cancel racing a finished connect legitimately does.
+pub(crate) fn cancel_connect(attempt_id: &str) -> bool {
+    SAVED_PLACE_DIALS.cancel(attempt_id) || cancel_backend_attempts(attempt_id)
+}
+
+/// Asks every backend's attempt table (and the two SMB dials no table files) to
+/// call off `attempt_id`.
+fn cancel_backend_attempts(attempt_id: &str) -> bool {
+    let sftp = sftp_volume_wiring::cancel_connect(attempt_id);
+    let webdav = webdav_volume_wiring::cancel_connect(attempt_id);
+    let s3 = s3_volume_wiring::cancel_connect(attempt_id);
+    let nfs = nfs_volume_wiring::cancel_connect(attempt_id);
+    let smb = smb_saved_shares::cancel_connect(attempt_id);
+    let smb_share_list_mount = crate::network::cancel_mount(attempt_id);
+    // The sheet's "Eject and save" runs under the same kind of id, and its Cancel is this one.
+    let eject_and_save = crate::server_move::smb::cancel_eject_and_save(attempt_id);
+    sftp || webdav || s3 || nfs || smb || smb_share_list_mount || eject_and_save
 }
 
 /// One dial of a saved place, under an attempt id of its own: callers come and go,
@@ -144,7 +159,9 @@ async fn dial_saved_place_now(
             )
             .await,
         ),
-        SavedEntry::Nfs(entry) => nfs_places::connect_saved(set_out, entry, attempt_id).await,
+        SavedEntry::Nfs(entry) => {
+            outcome_from_nfs(nfs_volume_wiring::connect_and_register_since(set_out, "", entry, attempt_id).await)
+        }
         // A saved SMB share: mounted as its account, then connected the usual way.
         SavedEntry::Smb(row) => smb_saved_shares::connect_saved_share(row, set_out, attempt_id, secret, username).await,
     })
