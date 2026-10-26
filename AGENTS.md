@@ -145,8 +145,9 @@ commit: `pnpm check --fast && pnpm check svelte-tests-related`**, plus `pnpm che
 check runs only that one). `--fast` (~6 s) is light scanners only, no compilers, typecheckers, test suites, or
 formatters; `svelte-tests-related` runs the vitest files that reach your branch's changes; clippy (~25 s warm) catches
 in seconds what would otherwise cost a 30-minute CI cycle. CI runs the rest (§ Workflow). Scope by name
-(`pnpm check clippy`), tech (`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. Don't even try to tail
-the checker script.
+(`pnpm check clippy`), tech (`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. Full local run:
+`pnpm check`, then `pnpm check --only-slow` if green, both in the background (each can pass 10 min on a busy Mac). ❌
+Never `--include-slow`.
 
 ## Testing
 

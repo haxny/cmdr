@@ -188,9 +188,9 @@ went 34/34 green.
    to a **warn**; failing alone with 4x keeps it red. The output names which specs are which, prints each one's record
    from the per-test log, and gives the load average at re-run time.
 
-So a red `--include-slow` already carries its own verdict: read the headline before re-running anything. What still
-needs a human is a `too-slow` or `real` verdict, and the control run against the parent commit that decides whether your
-change caused it. Full ladder and its gotchas: `scripts/check/checks/DETAILS.md` § "The Playwright isolation re-run".
+So a red slow lane already carries its own verdict: read the headline before re-running anything. What still needs a
+human is a `too-slow` or `real` verdict, and the control run against the parent commit that decides whether your change
+caused it. Full ladder and its gotchas: `scripts/check/checks/DETAILS.md` § "The Playwright isolation re-run".
 
 **The lane also runs niced.** Both the shard apps and the Playwright processes launch at `nice -n 5`, which yields CPU
 only when it's contended, so the suite gets out of the way of whoever is using the machine. That trades some suite

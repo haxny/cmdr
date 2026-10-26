@@ -133,9 +133,9 @@ code does when a server declines, never what a server in the wild chose.
 
 - **Not in `core`, on purpose.** The image is ~1 GB against httpd's ~60 MB, and first boot runs the whole Nextcloud
   install before it binds a port (~25 s on a warm laptop). A default `pnpm check` never pays for it: the lane is
-  `desktop-rust-webdav-nextcloud`, which is slow-lane, so `--include-slow`, `pnpm check webdav-nextcloud`, or CI's own
-  step is what runs it. The port staying unbound IS the install still running, which is why `start.sh` gives this one
-  service a 300 s budget where httpd gets 120 s.
+  `desktop-rust-webdav-nextcloud`, which is slow-lane, so `--only-slow`, `pnpm check webdav-nextcloud`, or CI's own step
+  is what runs it. The port staying unbound IS the install still running, which is why `start.sh` gives this one service
+  a 300 s budget where httpd gets 120 s.
 - **Two accounts, and both are load-bearing.** `ada` / `openthedoor` carries a 5 GiB quota; `grace` / `openthedoor`
   keeps the stock unlimited one. Nextcloud answers `quota-available-bytes` with a real number for the first and with the
   negative sentinel `-3` for the second, which the backend reads as a bounded free-space figure and as an unbounded

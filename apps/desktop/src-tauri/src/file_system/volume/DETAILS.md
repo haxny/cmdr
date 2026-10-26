@@ -550,7 +550,7 @@ answers `Ok` only once both volumes went and the image detached; ejecting A whil
 scan covers every captured mount, not just the volume clicked), on a two-volume APFS container and on two HFS+
 partitions of one disk; and after that partial unmount the sibling still mounted gets its index back while the one that
 really went stays stopped (verified on macOS 27.0, hand run, 2026-09-16). They run in the opt-in disk-image lane: `pnpm check
-disk-images`, or any `pnpm check --include-slow` on a Mac (`scripts/check/checks/DETAILS.md` § "The disk-image lane").
+disk-images`, or any `pnpm check --only-slow` on a Mac (`scripts/check/checks/DETAILS.md` § "The disk-image lane").
 
 **A refusal is retried before anyone hears about it.** When `settle` answers `UnmountRefused`,
 `unmount_tool::settle_with_retries` runs the tool again after each pause in `REFUSAL_RETRY_BACKOFF` (0.5 s, 1 s, 1.5 s:
