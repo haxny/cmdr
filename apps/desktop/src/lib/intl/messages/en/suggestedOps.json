@@ -113,7 +113,7 @@
   },
   "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Trash",
   "@suggestedOps.reversible.trash": {
-    "description": "Pill on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does. \"It\" and \"they\" are the suggested files; a language that needs a noun can say \"the file\" / \"the files\"."
+    "description": "Pill on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does. \"It\" and \"they\" are the suggested files; a language that needs a noun can say \"the file\" / \"the files\". The items can be files or folders."
   },
   "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
   "@suggestedOps.reversible.moveBack": {
@@ -229,7 +229,7 @@
   },
   "suggestedOps.fileMissing": "Moved or deleted",
   "@suggestedOps.fileMissing": {
-    "description": "Shown in a file's Size column when the file isn't where the suggestion says any more: something moved or deleted it since. Approving skips it."
+    "description": "Shown in a file's Size column when the file isn't where the suggestion says any more: something moved or deleted it since. Approving skips it. The row can be a file or a folder."
   },
   "suggestedOps.snapshotOnly": "From when the AI suggested this",
   "@suggestedOps.snapshotOnly": {

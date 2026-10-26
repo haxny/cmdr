@@ -125,3 +125,25 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   different words (zh, vi did, following `fileOperations.cancelRollback.doneMovingBack`). (zh, vi)
 - `ai.cloud.timedOut` calls the AI provider "the server", while `ai.cloud.providerRefused` on the same row and both
   onboarding twins say "the service". Pick one noun; every locale mirrored the split. (all)
+- `fileOperations.transferProgress.undo`: “Undo” here reverses a whole finished operation (with confirmation), a fourth
+  sense beside text undo, Put Back, and an AI rename run. Say so in the `undo` concept’s sense so locales with split
+  words (nl `Herstel` / `Zet terug` / `Ongedaan maken`) pick deliberately. (all)
+- `multiRename.mediaButtonName` (aria of `mediaButton`) invites a compound (de `Medienfelder`) that contains the label
+  only as a substring; say whether WCAG 2.5.3 containment needs a whole word. (de; sv wrote `Fält för media`, since
+  `Mediefält` lacks `media`)
+- `suggestedOps.facts.archive` (noun, the zip) and `askCmdr.sessions.archive` (verb) share the English "Archive", so
+  every locale needs an `archive-chat` exception and an allowlist split. Rename one English label, or accept it. (all)
+- No `include` / `tick` concept: every locale ruled the file-list tick boxes (`columnInclude`, `includeAll`,
+  `includeFile`) ad hoc; proposed: an `include-in-approval` concept that never reuses the file-selection verb. (nl, ru,
+  sv)
+- `suggestedOps.factUnknown` stands for a size or a date, so gendered locales needed a neutral form or a split; consider
+  two keys. Also `suggestedOps.columnModified` ("Last modified") doubles as a tooltip phrase, long as a header. (pt, ru,
+  sv)
+- `suggestedOps.reversible.moveBack` / `renameBack` use `{count}` only to pick a pronoun; languages without number (vi,
+  zh) need a workaround noun. Propose a rule allowing such a `{count}` to go unused, or a number-free English. (vi)
+- `approve` ruling (nl) said suggested-ops buttons use the infinitive, against the button-imperative rule; check other
+  locales' rulings for the same conflict. (nl)
+- `suggestedOps.approvalNoticeDismiss` and the shipped "Don't show again" keys mean the same; align the English. (hu)
+- Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on
+  `suggestedOps.reversibleDeleteWritten`). (fr)
+- The AI suggestions dialog keys ship without screenshots; the pills and fact lines need them most. (fr, hu)
