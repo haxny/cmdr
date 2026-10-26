@@ -2,19 +2,26 @@
 //!
 //! Both REUSE the shipped `cmdr://importance` snapshot core
 //! (`mcp::resources::importance::snapshot_*`), which already handles the headline
-//! behaviors: reading across every scored volume, answering OFFLINE for an
-//! unmounted-but-scored drive (the importance stores outlive the mount), tilde
-//! expansion, and the floored-vs-unscored derivation. This file only shapes those
-//! typed snapshots into the agent's JSON and adds the staleness comparison
-//! (`asOfGeneration` vs the volume's current `recomputeGeneration`, spec §2.4).
+//! behaviors: answering OFFLINE for an unmounted-but-scored drive (the importance
+//! stores outlive the mount) and the floored-vs-unscored derivation. This file
+//! places each call on volumes through `crate::location`'s resolver, translates
+//! between app paths and each store's own path space at one seam
+//! ([`store_path`] / [`app_location`]), shapes the typed snapshots into the
+//! agent's JSON, and adds the staleness comparison (`asOfGeneration` vs the
+//! volume's current `recomputeGeneration`, spec §2.4).
 
+use std::path::Path;
+
+use cmdr_fs::volume::app_paths::rebase;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime};
 
-use super::expand_tilde;
+use crate::location::Location;
+use crate::location::miss::LocationMissResult;
+use crate::location::resolve::{LocationInput, LocationMiss, VolumeFacts, resolve};
 use crate::mcp::resources::importance::{
-    PathImportance, RankedFolder, RankedScope, VolumeOverview, snapshot_overview, snapshot_path, snapshot_threshold,
+    PathImportance, RankedFolder, RankedScope, VolumeOverview, snapshot_overview, snapshot_path_on, snapshot_threshold,
     snapshot_top,
 };
 use crate::mcp::{ToolError, ToolResult};
@@ -22,20 +29,43 @@ use cmdr_index::importance::{Explanation, FloorReason, ImportanceIndex, SignalSe
 
 const DEFAULT_TOP_N: usize = 20;
 
+// ── The path-space seam ───────────────────────────────────────────────────────
+
+/// `app_path` in its volume's importance store's path space: the store keeps its
+/// index's paths, volume-relative (`/papers` for `/Volumes/naspi-1/papers`) and
+/// absolute only on the boot disk, whose root is `/`. A cloud drive's store is
+/// relative to the DRIVE's root, though `root`'s index walks it, so this always
+/// takes the importance volume's own root, ❌ never the index's routing.
+fn store_path(app_path: &str, root: &str) -> Option<String> {
+    rebase(app_path, root, "/")
+}
+
+/// A store row's place on the wire: its path joined onto the volume's root (from
+/// the one root rule, so an offline share answers under its last root).
+fn app_location(volume_id: &str, store_path: &str, root: &str) -> Option<Location> {
+    rebase(store_path, "/", root).map(|path| Location {
+        volume_id: volume_id.to_string(),
+        path,
+    })
+}
+
+fn to_value(result: &impl Serialize) -> ToolResult {
+    serde_json::to_value(result).map_err(|e| ToolError::internal(e.to_string()))
+}
+
 // ── important_folders ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RankedFolderOut {
-    pub volume: String,
-    pub path: String,
+    pub location: Location,
     /// Rounded to three decimals: more digits are noise and cost tokens.
     pub score: f64,
     /// The row's strongest signals, like `projectRoot, changed today, 6 visits`.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub why: String,
-    /// Near-duplicate descendants folded into this row; pass its path as `under` to
-    /// list them.
+    /// Near-duplicate descendants folded into this row; pass its location as
+    /// `under` + `volumeId` to list them.
     #[serde(skip_serializing_if = "is_zero")]
     pub folded: usize,
 }
@@ -47,17 +77,24 @@ fn is_zero(n: &usize) -> bool {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VolumeOverviewOut {
-    pub volume: String,
+    pub volume_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
     /// The volume's current recompute generation (its scored-ness age marker).
     pub generation: u64,
     pub folder_count: u64,
+    /// Scored under an id no volume the app knows carries (a share once reached by
+    /// another address), so its rows have no root to stand on and are left out.
+    #[serde(skip_serializing_if = "crate::agent::tools::read::is_false")]
+    pub unplaced: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportantFoldersResult {
+    /// The `under` folder the ranking was scoped to, as resolved.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub under: Option<Location>,
     pub folders: Vec<RankedFolderOut>,
     /// `true` when more folders matched than were returned (threshold mode).
     #[serde(skip_serializing_if = "crate::agent::tools::read::is_false")]
@@ -66,28 +103,36 @@ pub struct ImportantFoldersResult {
     pub volumes: Vec<VolumeOverviewOut>,
 }
 
-/// Shape a ranked list plus the volume overview. Pure over the snapshot outputs.
+/// Shape a ranked list plus the volume overview, placing each row on its volume's
+/// root. A row whose volume `facts` can't place is left out (the read already
+/// skips those volumes; this keeps an invented root unrepresentable). Pure.
 pub(crate) fn build_important_folders(
     folders: Vec<RankedFolder>,
     truncated: bool,
     overview: Vec<VolumeOverview>,
+    facts: &VolumeFacts,
+    under: Option<Location>,
 ) -> ImportantFoldersResult {
     ImportantFoldersResult {
+        under,
         folders: folders
             .into_iter()
-            .map(|f| RankedFolderOut {
-                volume: f.volume_id,
-                path: f.path,
-                score: (f.score * 1000.0).round() / 1000.0,
-                why: f.why,
-                folded: f.folded,
+            .filter_map(|f| {
+                let root = &facts.get(&f.volume_id)?.root;
+                Some(RankedFolderOut {
+                    location: app_location(&f.volume_id, &f.path, root)?,
+                    score: (f.score * 1000.0).round() / 1000.0,
+                    why: f.why,
+                    folded: f.folded,
+                })
             })
             .collect(),
         truncated,
         volumes: overview
             .into_iter()
             .map(|v| VolumeOverviewOut {
-                volume: v.volume_id,
+                unplaced: facts.get(&v.volume_id).is_none(),
+                volume_id: v.volume_id,
                 kind: v.kind.map(|k| k.to_string()),
                 generation: v.generation,
                 folder_count: v.folder_count,
@@ -96,14 +141,73 @@ pub(crate) fn build_important_folders(
     }
 }
 
+/// A ranked read's scope, placed: one volume (and maybe a folder on it), or every
+/// volume the facts can place.
+struct PlacedScope {
+    volume_id: Option<String>,
+    /// The `under` folder as an app location, echoed in the result.
+    under: Option<Location>,
+    /// The same folder in the store's path space, what the read filters by.
+    under_in_store: Option<String>,
+    placed: Vec<String>,
+}
+
+impl PlacedScope {
+    fn ranked(&self) -> RankedScope<'_> {
+        RankedScope {
+            volume: self.volume_id.as_deref(),
+            under: self.under_in_store.as_deref(),
+            among: Some(&self.placed),
+        }
+    }
+}
+
+/// Place `volumeId` + `under` through the resolver. A bare `under` scopes the read
+/// to the one live volume that holds it.
+fn place_scope(facts: &VolumeFacts, volume_id: Option<&str>, under: Option<&str>) -> Result<PlacedScope, LocationMiss> {
+    let placed = facts.volumes.iter().map(|v| v.id.clone()).collect();
+    let Some(under) = under else {
+        if let Some(id) = volume_id
+            && facts.get(id).is_none()
+        {
+            // No folder was asked about, so the miss echoes an empty path.
+            return Err(LocationMiss::UnknownVolume {
+                requested: LocationInput {
+                    volume_id: Some(id.to_string()),
+                    path: String::new(),
+                },
+            });
+        }
+        return Ok(PlacedScope {
+            volume_id: volume_id.map(str::to_string),
+            under: None,
+            under_in_store: None,
+            placed,
+        });
+    };
+    let resolved = resolve(
+        facts,
+        &LocationInput {
+            volume_id: volume_id.map(str::to_string),
+            path: under.to_string(),
+        },
+    )?;
+    Ok(PlacedScope {
+        under_in_store: store_path(&resolved.location.path, &resolved.root),
+        volume_id: Some(resolved.location.volume_id.clone()),
+        under: Some(resolved.location),
+        placed,
+    })
+}
+
 pub fn important_folders_schema() -> Value {
     serde_json::json!({
         "type": "object",
         "properties": {
             "top": { "type": "integer", "description": "Default 20; ignored when threshold is set." },
             "threshold": { "type": "number", "description": "Every folder scoring at or above this (0-1) instead of a top-N." },
-            "volume": { "type": "string", "description": "One volume id (see list_volumes); omit for all scored volumes." },
-            "under": { "type": "string", "description": "Only folders at or below this path on volume; ~ expands." }
+            "volumeId": { "type": "string", "description": "One volume, from list_volumes or a row's location; omit for all scored volumes." },
+            "under": { "type": "string", "description": "Only folders at or below this folder (on volumeId when given); ~ expands." }
         },
         "additionalProperties": false
     })
@@ -111,27 +215,37 @@ pub fn important_folders_schema() -> Value {
 
 pub async fn execute_important_folders<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
     let data_dir = crate::config::resolved_app_data_dir(app).map_err(ToolError::internal)?;
-    let under = params.get("under").and_then(|v| v.as_str()).map(expand_tilde);
-    let scope = RankedScope {
-        volume: params.get("volume").and_then(|v| v.as_str()),
-        under: under.as_deref(),
-    };
-    let overview = snapshot_overview(&data_dir);
+    important_folders_on(&data_dir, &VolumeFacts::now().await, params, now_secs())
+}
 
-    let result = if let Some(threshold) = params.get("threshold").and_then(|v| v.as_f64()) {
-        let (folders, truncated) =
-            snapshot_threshold(&data_dir, threshold, scope, now_secs()).map_err(ToolError::invalid_params)?;
-        build_important_folders(folders, truncated, overview)
+/// `important_folders` over a data dir and the volume facts, so the whole call is
+/// testable without an app.
+pub(crate) fn important_folders_on(data_dir: &Path, facts: &VolumeFacts, params: &Value, now: u64) -> ToolResult {
+    let str_param = |key: &str| params.get(key).and_then(Value::as_str).filter(|s| !s.is_empty());
+    let scope = match place_scope(facts, str_param("volumeId"), str_param("under")) {
+        Ok(scope) => scope,
+        Err(miss) => return to_value(&LocationMissResult::from(miss)),
+    };
+    let overview = snapshot_overview(data_dir);
+
+    let (folders, truncated) = if let Some(threshold) = params.get("threshold").and_then(Value::as_f64) {
+        snapshot_threshold(data_dir, threshold, scope.ranked(), now).map_err(ToolError::invalid_params)?
     } else {
         let n = params
             .get("top")
-            .and_then(|v| v.as_u64())
+            .and_then(Value::as_u64)
             .map(|n| n as usize)
             .unwrap_or(DEFAULT_TOP_N);
-        let folders = snapshot_top(&data_dir, n, scope, now_secs()).map_err(ToolError::invalid_params)?;
-        build_important_folders(folders, false, overview)
+        let folders = snapshot_top(data_dir, n, scope.ranked(), now).map_err(ToolError::invalid_params)?;
+        (folders, false)
     };
-    serde_json::to_value(&result).map_err(|e| ToolError::internal(e.to_string()))
+    to_value(&build_important_folders(
+        folders,
+        truncated,
+        overview,
+        facts,
+        scope.under,
+    ))
 }
 
 // ── folder_importance ─────────────────────────────────────────────────────────
@@ -141,8 +255,7 @@ pub async fn execute_important_folders<R: Runtime>(app: &AppHandle<R>, params: &
 pub enum FolderImportanceResult {
     /// The folder has a stored weight, with its breakdown and staleness.
     Scored {
-        path: String,
-        volume: String,
+        location: Location,
         score: f64,
         as_of_generation: u64,
         recompute_generation: u64,
@@ -152,23 +265,25 @@ pub enum FolderImportanceResult {
         signals: Option<Explanation>,
     },
     /// The folder floors to zero by design, with why.
-    Floored { path: String, reason: String, note: String },
+    Floored {
+        location: Location,
+        reason: String,
+        note: String,
+    },
     /// The folder isn't scored and doesn't floor.
-    Unscored { path: String, note: String },
+    Unscored { location: Location, note: String },
 }
 
 /// The Scored result, deriving staleness from the two generations. Pure.
 pub(crate) fn scored_result(
-    path: String,
-    volume: String,
+    location: Location,
     score: f64,
     as_of_generation: u64,
     recompute_generation: u64,
     signals: Option<Explanation>,
 ) -> FolderImportanceResult {
     FolderImportanceResult::Scored {
-        path,
-        volume,
+        location,
         score,
         as_of_generation,
         recompute_generation,
@@ -178,7 +293,7 @@ pub(crate) fn scored_result(
 }
 
 /// The Floored result, labeling the reason (mirrors `cmdr://importance`'s labels).
-pub(crate) fn floored_result(path: String, reason: FloorReason) -> FolderImportanceResult {
+pub(crate) fn floored_result(location: Location, reason: FloorReason) -> FolderImportanceResult {
     let (label, note) = match reason {
         FloorReason::NameDenylisted => (
             "nameDenylisted",
@@ -194,15 +309,15 @@ pub(crate) fn floored_result(path: String, reason: FloorReason) -> FolderImporta
         ),
     };
     FolderImportanceResult::Floored {
-        path,
+        location,
         reason: label.to_string(),
         note: note.to_string(),
     }
 }
 
-pub(crate) fn unscored_result(path: String) -> FolderImportanceResult {
+pub(crate) fn unscored_result(location: Location) -> FolderImportanceResult {
     FolderImportanceResult::Unscored {
-        path,
+        location,
         note: "No stored weight — either this volume hasn't been scored yet, or the folder isn't in the index."
             .to_string(),
     }
@@ -212,7 +327,8 @@ pub fn folder_importance_schema() -> Value {
     serde_json::json!({
         "type": "object",
         "properties": {
-            "path": { "type": "string", "description": "Absolute or ~-relative folder path to explain." }
+            "path": { "type": "string", "description": "Absolute or ~-relative folder to explain." },
+            "volumeId": { "type": "string", "description": "The volume the path is on, from list_volumes or a result's location. Omit for a path on a connected volume." }
         },
         "required": ["path"],
         "additionalProperties": false
@@ -220,38 +336,49 @@ pub fn folder_importance_schema() -> Value {
 }
 
 pub async fn execute_folder_importance<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
-    let raw = params
-        .get("path")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| ToolError::invalid_params("Missing 'path' parameter"))?;
-    let path = expand_tilde(raw);
+    let input =
+        LocationInput::from_params(params).ok_or_else(|| ToolError::invalid_params("Missing 'path' parameter"))?;
     let data_dir = crate::config::resolved_app_data_dir(app).map_err(ToolError::internal)?;
+    folder_importance_on(&data_dir, &VolumeFacts::now().await, &input, now_secs())
+}
 
-    let result = match snapshot_path(&data_dir, &path, now_secs()) {
+/// `folder_importance` over a data dir and the volume facts: the resolver picks ONE
+/// volume, and only that volume's store answers.
+pub(crate) fn folder_importance_on(
+    data_dir: &Path,
+    facts: &VolumeFacts,
+    input: &LocationInput,
+    now: u64,
+) -> ToolResult {
+    let resolved = match resolve(facts, input) {
+        Ok(resolved) => resolved,
+        Err(miss) => return to_value(&LocationMissResult::from(miss)),
+    };
+    let volume_id = resolved.location.volume_id.as_str();
+    let in_store = store_path(&resolved.location.path, &resolved.root)
+        .ok_or_else(|| ToolError::internal("the resolver placed a path outside its volume's root"))?;
+
+    let result = match snapshot_path_on(data_dir, volume_id, &in_store, now) {
         PathImportance::Scored {
-            volume_id,
-            weight,
-            explanation,
+            weight, explanation, ..
         } => {
             // The volume's CURRENT generation, to flag a stale stored score. The
             // availability mask doesn't affect the generation read, so `all()` is fine.
-            let recompute = ImportanceIndex::open(&data_dir, &volume_id, SignalSet::all())
+            let recompute = ImportanceIndex::open(data_dir, volume_id, SignalSet::all())
                 .recompute_generation()
                 .unwrap_or(0);
             scored_result(
-                path,
-                volume_id,
+                resolved.location,
                 weight.score.value(),
                 weight.as_of_generation,
                 recompute,
                 explanation,
             )
         }
-        PathImportance::Floored { reason } => floored_result(path, reason),
-        PathImportance::Unscored => unscored_result(path),
+        PathImportance::Floored { reason } => floored_result(resolved.location, reason),
+        PathImportance::Unscored => unscored_result(resolved.location),
     };
-    serde_json::to_value(&result).map_err(|e| ToolError::internal(e.to_string()))
+    to_value(&result)
 }
 
 /// Wall-clock unix seconds for the `explain` recency terms. A tool call reads the
@@ -265,74 +392,5 @@ fn now_secs() -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn important_folders_passes_ranking_through_and_notes_truncation() {
-        let folders = vec![
-            RankedFolder {
-                volume_id: "root".to_string(),
-                path: "/Users/x/Projects".to_string(),
-                score: 0.912_345,
-                why: "projectRoot, changed today".to_string(),
-                folded: 4,
-                signals: cmdr_index::importance::FolderSignals::neutral(),
-            },
-            RankedFolder {
-                volume_id: "root".to_string(),
-                path: "/Users/x/Documents".to_string(),
-                score: 0.7,
-                why: String::new(),
-                folded: 0,
-                signals: cmdr_index::importance::FolderSignals::neutral(),
-            },
-        ];
-        let overview = vec![VolumeOverview {
-            volume_id: "root".to_string(),
-            kind: Some("local"),
-            generation: 5,
-            folder_count: 1_200,
-        }];
-        let out = build_important_folders(folders, true, overview);
-        assert_eq!(out.folders[0].path, "/Users/x/Projects");
-        assert_eq!(out.folders[0].score, 0.912, "rounded to three decimals");
-        assert!(out.truncated);
-        assert_eq!(out.volumes[0].generation, 5);
-
-        let json = serde_json::to_value(&out).unwrap();
-        assert_eq!(json["folders"][0]["why"], "projectRoot, changed today");
-        assert_eq!(json["folders"][0]["folded"], 4);
-        assert!(
-            json["folders"][1].get("why").is_none() && json["folders"][1].get("folded").is_none(),
-            "an empty why and a zero fold stay off the wire"
-        );
-    }
-
-    #[test]
-    fn scored_result_flags_stale_when_score_predates_recompute() {
-        let stale = scored_result("/p".to_string(), "root".to_string(), 0.8, 3, 5, None);
-        let FolderImportanceResult::Scored { stale: is_stale, .. } = stale else {
-            panic!("expected Scored");
-        };
-        assert!(is_stale, "as_of 3 < recompute 5 ⇒ stale");
-
-        let current = scored_result("/p".to_string(), "root".to_string(), 0.8, 5, 5, None);
-        let FolderImportanceResult::Scored { stale: is_stale, .. } = current else {
-            panic!("expected Scored");
-        };
-        assert!(!is_stale, "as_of == recompute ⇒ current");
-    }
-
-    #[test]
-    fn floored_and_unscored_carry_honest_reasons() {
-        let floored = floored_result("/x/node_modules".to_string(), FloorReason::NameDenylisted);
-        let json = serde_json::to_value(&floored).unwrap();
-        assert_eq!(json["status"], "floored");
-        assert_eq!(json["reason"], "nameDenylisted");
-
-        let unscored = serde_json::to_value(unscored_result("/x/new".to_string())).unwrap();
-        assert_eq!(unscored["status"], "unscored");
-        assert!(unscored["note"].as_str().unwrap().contains("No stored weight"));
-    }
-}
+#[path = "importance_tests.rs"]
+mod tests;

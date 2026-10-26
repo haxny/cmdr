@@ -77,14 +77,18 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
     would be a second index with its own enrichment pass, storage budget, and incremental reconcile, on the scale of
     `media_index`.
 - **`important_folders`** (`read/importance.rs`) — top-N or above-threshold across scored volumes, reusing
-  `mcp::resources::importance::{snapshot_top, snapshot_threshold, snapshot_overview}` (which read every scored volume,
-  including offline ones). The overview carries each volume's current generation for staleness. Each row carries a terse
-  `why` (its top three signals) and `folded` (near-duplicate descendants merged into it); an optional `under` (a path on
-  `volume`) narrows to one subtree, whose own children then get rows. Folding, `why`, and `under` live in the snapshot
-  layer: `mcp/resources/DETAILS.md` § `cmdr://importance`.
-- **`folder_importance`** (`read/importance.rs`) — one folder's `PathImportance` (`snapshot_path`): Scored (score +
+  `mcp::resources::importance::{snapshot_top, snapshot_threshold, snapshot_overview}` (which read offline volumes too).
+  Every row is a `location` on its volume's root (§ The location contract), with a terse `why` (its top three signals)
+  and `folded` (near-duplicate descendants merged into it). `volumeId` scopes to one volume; `under` (a folder, on
+  `volumeId` when given, else on the live volume holding it) narrows to one subtree, whose own children then get rows,
+  and echoes back as `under`. The overview carries each volume's current generation for staleness, and `unplaced: true`
+  for a store scored under an id no volume carries (the Bonjour-addressed share): its rows have no root to stand on, so
+  the read skips that store (`RankedScope.among`), ❌ never a row with an invented root. Folding, `why`, and `under` live
+  in the snapshot layer: `mcp/resources/DETAILS.md` § `cmdr://importance`.
+- **`folder_importance`** (`read/importance.rs`) — `path` + optional `volumeId`; the resolver picks ONE volume and only
+  its store answers (`snapshot_path_on`), so `/papers` on one share never answers for another's. Scored (score +
   `Explanation` breakdown + `stale` from asOf vs the volume's current `recompute_generation`), Floored (with reason), or
-  Unscored. Offline-capable.
+  Unscored, each with its `location`. Offline-capable: a named saved share resolves and its store still answers.
 - **`inspect_file`** (`read/inspect/`) — "what's in this file?" for up to 200 paths in one call. Each row: metadata
   (`sizeBytes` + `sizeHuman`, `modified` + `modifiedHuman`), the extension's `mime` beside `content.kind` (so a lying
   extension shows), and a typed `content` per kind. Text is a line window (`startLine` + `maxLines`, default 200, max
@@ -191,7 +195,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,713 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,765 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -384,8 +388,8 @@ double-counting its bytes.
 ## The location contract
 
 Every tool that takes a place speaks one shape, placed by one resolver (`apps/desktop/src-tauri/src/location/resolve.rs`, pure over
-`VolumeFacts`; table tests in `resolve_tests.rs`, the prod story in `transcript_179_tests.rs`). `list_dir` speaks it
-today.
+`VolumeFacts`; table tests in `resolve_tests.rs`, the prod story in `transcript_179_tests.rs`). `list_dir`,
+`important_folders`, and `folder_importance` speak it today.
 
 **Shapes.** An INPUT is the flat pair `path` + optional `volumeId` (`LocationInput`): flat so an AI client's schema stays
 two strings, `volumeId` optional so `~/Downloads` or `/Volumes/naspi-1/papers` simply works. An OUTPUT carries
@@ -419,6 +423,10 @@ valid next input. `path` is always the APP path: the string the panes, `search` 
   drive in `~/Library/CloudStorage` is its own volume but `root`'s index walks it. A live volume's index is wherever
   the index routes its ROOT; a volume that isn't live has only its own (routing a dead mount point answers `root`).
   `location` keeps the volume's id; index reads use the index's.
+- **An importance store keeps its index's paths** (volume-relative, absolute only on the boot disk), so the importance
+  tools translate at one seam (`read/importance.rs::store_path` / `app_location`): strip the resolved volume's root on
+  the way in, join it back on the way out. A cloud drive's store is relative to the drive's OWN root although `root`'s
+  index walks it, so the seam always takes the importance volume's root, ❌ never the index's routing.
 
 **Misses** (`apps/desktop/src-tauri/src/location/miss.rs`) are an `Ok` result, the memory tools' refusal pattern (§ The two tools that
 write): `{ miss, location, detail, root?, nearby?, sameShareAs? }`. `location` echoes what was asked (tilde-expanded),

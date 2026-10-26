@@ -12,7 +12,7 @@ use cmdr_index::importance::testing::{ImportanceWriter, WeightRow, importance_db
 use cmdr_index::importance::{FolderSignals, PathClass, SignalSet, Weights};
 
 /// A folder's signals for a scored row that carries a real, explainable breakdown.
-fn scored_signals(path_class: PathClass, now: u64) -> FolderSignals {
+pub(crate) fn scored_signals(path_class: PathClass, now: u64) -> FolderSignals {
     let mut s = FolderSignals::neutral();
     s.path_class = path_class;
     s.mtime_secs = Some(now); // fresh ⇒ recency contributes
@@ -24,7 +24,7 @@ fn scored_signals(path_class: PathClass, now: u64) -> FolderSignals {
 /// Write an `importance-{volume_id}.db` under `dir` with the given `(path, signals)`
 /// rows at generation 1. Each row's stored score is the scorer's own output for its
 /// signals, so `explain`'s recomputed breakdown matches the stored scalar.
-fn write_db(dir: &Path, volume_id: &str, rows: &[(&str, FolderSignals)], now: u64) {
+pub(crate) fn write_db(dir: &Path, volume_id: &str, rows: &[(&str, FolderSignals)], now: u64) {
     let db_path = importance_db_path(dir, volume_id);
     let writer = ImportanceWriter::spawn(&db_path).expect("spawn writer");
     let weight_rows: Vec<WeightRow> = rows
@@ -278,7 +278,7 @@ fn threshold_below_cap_is_not_truncated() {
 fn on_volume(volume: &str) -> RankedScope<'_> {
     RankedScope {
         volume: Some(volume),
-        under: None,
+        ..RankedScope::default()
     }
 }
 
@@ -426,6 +426,7 @@ fn under_reads_only_that_subtree_through_the_snapshot() {
     let scope = RankedScope {
         volume: Some("root"),
         under: Some("/Users/test/Documents"),
+        among: None,
     };
     let folders = snapshot_top(dir.path(), 10, scope, now).expect("top");
     let mut paths: Vec<&str> = folders.iter().map(|f| f.path.as_str()).collect();
@@ -564,7 +565,7 @@ fn tilde_in_a_path_expands_to_home() {
 }
 
 /// A folder that scores low but non-floored (neutral class, stale, monoculture-ish).
-fn low_score_signals() -> FolderSignals {
+pub(crate) fn low_score_signals() -> FolderSignals {
     let mut s = FolderSignals::neutral();
     s.path_class = PathClass::Neutral;
     s.mtime_secs = Some(0); // ancient ⇒ recency ~0

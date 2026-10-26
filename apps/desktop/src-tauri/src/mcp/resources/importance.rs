@@ -76,11 +76,14 @@ pub(crate) struct RankedFolder {
 
 /// Where a ranked read looks: one volume or all, and optionally only at or below one
 /// folder. `under` is a path ON `volume` (or on each scored volume when `volume` is
-/// `None`); `~` expands.
+/// `None`), in the store's own path space; `~` expands.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct RankedScope<'a> {
     pub volume: Option<&'a str>,
     pub under: Option<&'a str>,
+    /// With no `volume`, read only these volume ids: the ones a caller can place
+    /// (the agent's rows need a root to join onto). `None` reads every scored one.
+    pub among: Option<&'a [String]>,
 }
 
 /// How much higher than an ancestor in the list a descendant must score to keep its
@@ -161,14 +164,9 @@ pub(crate) fn snapshot_path(data_dir: &Path, raw_path: &str, now_secs: u64) -> P
     let path = expand_tilde(raw_path, &home);
 
     for volume_id in scored_volume_ids(data_dir) {
-        let index = ImportanceIndex::open(data_dir, &volume_id, available_for(&volume_id));
-        if let Ok(WeightLookup::Scored(weight)) = index.lookup(&path) {
-            let explanation = index.explain(&path, now_secs).ok().flatten();
-            return PathImportance::Scored {
-                volume_id,
-                weight,
-                explanation,
-            };
+        let found = snapshot_path_on(data_dir, &volume_id, &path, now_secs);
+        if matches!(found, PathImportance::Scored { .. }) {
+            return found;
         }
     }
 
@@ -180,14 +178,34 @@ pub(crate) fn snapshot_path(data_dir: &Path, raw_path: &str, now_secs: u64) -> P
     }
 }
 
+/// One folder's importance on ONE volume's store, `path` in that store's own path
+/// space (volume-relative, absolute only on the boot disk). Reads no other store,
+/// so a share's `/papers` never answers for another share's.
+pub(crate) fn snapshot_path_on(data_dir: &Path, volume_id: &str, path: &str, now_secs: u64) -> PathImportance {
+    let index = ImportanceIndex::open(data_dir, volume_id, available_for(volume_id));
+    match index.lookup(path) {
+        Ok(WeightLookup::Scored(weight)) => PathImportance::Scored {
+            volume_id: volume_id.to_string(),
+            weight,
+            explanation: index.explain(path, now_secs).ok().flatten(),
+        },
+        Ok(WeightLookup::Floored(reason)) => PathImportance::Floored { reason },
+        Ok(WeightLookup::Unscored) | Err(_) => PathImportance::Unscored,
+    }
+}
+
 /// The scored volumes to read for a ranked query: the one named `volume`, or all of
-/// them. Returns an honest error when a named volume has no importance data.
-fn ranked_volumes(data_dir: &Path, volume: Option<&str>) -> Result<Vec<String>, String> {
+/// them (only those in `among`, when given). Returns an honest error when a named
+/// volume has no importance data.
+fn ranked_volumes(data_dir: &Path, scope: RankedScope<'_>) -> Result<Vec<String>, String> {
     let all = scored_volume_ids(data_dir);
-    match volume {
+    match scope.volume {
         Some(v) if all.iter().any(|id| id == v) => Ok(vec![v.to_string()]),
         Some(v) => Err(format!("No importance data for volume '{v}'.")),
-        None => Ok(all),
+        None => Ok(all
+            .into_iter()
+            .filter(|id| scope.among.is_none_or(|among| among.contains(id)))
+            .collect()),
     }
 }
 
@@ -205,7 +223,7 @@ fn read_ranked(
 ) -> Result<(Vec<RankedFolder>, bool), String> {
     let mut window_cut = false;
     let mut folders = Vec::new();
-    for volume_id in ranked_volumes(data_dir, scope.volume)? {
+    for volume_id in ranked_volumes(data_dir, scope)? {
         let index = ImportanceIndex::open(data_dir, &volume_id, available_for(&volume_id));
         let weights = index.top_under(fetch + 1, threshold, under).unwrap_or_default();
         window_cut |= weights.len() > fetch;
@@ -598,6 +616,7 @@ pub(crate) fn build_importance_resource(data_dir: &Path, query: Option<&str>, no
     let ranked_scope = RankedScope {
         volume: q.get("volume").map(String::as_str),
         under: q.get("under").map(String::as_str),
+        among: None,
     };
 
     if let Some(top) = q.get("top") {
@@ -642,4 +661,4 @@ pub(crate) fn build_importance_resource(data_dir: &Path, query: Option<&str>, no
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
