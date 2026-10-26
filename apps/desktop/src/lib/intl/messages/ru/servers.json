@@ -315,9 +315,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Используйте здесь только строчные латинские буквы, цифры и дефисы.",
+  "servers.refusal.s3FieldMalformed": "Используйте здесь только a–z, 0–9 и дефисы.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Введите URL сервиса: http:// или https:// и имя хоста, например https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -345,7 +345,7 @@
   },
   "servers.refusal.shareMounted": "Общая папка {name} все еще подключена по старому адресу. Извлеките ее, а затем нажмите «Сохранить» еще раз.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr не удалось извлечь общую папку {name}, поэтому ничего не сохранено. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -539,17 +539,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Сервер переехал? Введите его новый URL сервиса. Все бакеты этого ключа перейдут туда же вместе с избранным, открытыми вкладками и сохраненным секретным ключом доступа.",
+  "servers.sheet.s3EndpointMoveHelp": "Сервер переехал? Введите его новый URL сервиса. Все бакеты этого ключа перейдут туда же вместе с избранным и открытыми вкладками, и сохраненный секретный ключ доступа тоже перейдет.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Сервер переехал? Введите его новый адрес. Избранное, открытые вкладки и сохраненный пароль перейдут вместе с ним.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Сервер переехал? Введите его новый адрес. Общие папки и сохраненный пароль перейдут вместе с ним, а избранное и открытые вкладки каждой общей папки перейдут следом, когда она впервые откроется по новому адресу.",
+  "servers.sheet.smbAddressMoveHelp": "Сервер переехал? Введите его новый адрес. Общие папки и сохраненный пароль перейдут вместе с ним, а избранное и открытые вкладки каждой общей папки перейдут следом, когда эта папка откроется по новому адресу.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Имя пользователя",
   "@servers.sheet.username": {
@@ -788,9 +788,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Проверка выполнена",
+  "servers.hostKey.changedDisclosure": "Ключ проверен",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Отпечаток ключа",
   "@servers.hostKey.fingerprintLabel": {
@@ -820,9 +820,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Проверка выполнена",
+  "servers.certificate.changedDisclosure": "Сертификат проверен",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Отпечаток сертификата (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -872,9 +872,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Вы хотели войти под своей учетной записью, но сервер вместо этого предложил гостевой сеанс. Обычно это значит, что пароль не подошел. В редких случаях дело во вмешательстве в соединение.",
+  "servers.paneState.guestSessionRefusedHint": "Вы хотели войти под своей учетной записью, но сервер вместо этого предложил гостевой сеанс. Обычно это значит, что пароль не подошел. В редких случаях это значит, что кто-то вмешивается в соединение.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Попробовать другой пароль…",
   "@servers.paneState.tryAnotherPassword": {

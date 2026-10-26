@@ -7,13 +7,13 @@
   "@securityNotices.dismiss": {
     "sourceHash": "48845bf"
   },
-  "securityNotices.mcpForeignOrigin.title": "Cmdr заблокировал доступ веб-страницы к своему серверу MCP",
+  "securityNotices.mcpForeignOrigin.title": "Cmdr заблокировал доступ веб-страницы к серверу MCP",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
-  "securityNotices.mcpForeignOrigin.body": "Сайт, открытый в вашем браузере, пытался связаться с Cmdr. Доступа он не получил. Если это повторяется, закройте вкладки, которым вы не доверяете.",
+  "securityNotices.mcpForeignOrigin.body": "Веб-страница, открытая в вашем браузере, пыталась связаться с Cmdr. Доступа она не получила. Если это повторяется, закройте вкладки, которым вы не доверяете.",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "Настройки MCP",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr отклонил ответ общей папки в сети",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr отклонил ответ сервера",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
   "securityNotices.smbSignatureRefused.body": "В ответе не было подписи сервера, поэтому Cmdr не стал ему доверять. Причиной может быть ненадежное сетевое устройство или чье-то вмешательство в трафик между вами и сервером. Подключитесь снова, а если это повторится, проверьте сеть.",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "Подключиться снова",
   "@securityNotices.smbSignatureRefused.reconnect": {

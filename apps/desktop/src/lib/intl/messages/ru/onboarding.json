@@ -237,11 +237,11 @@
   },
   "onboarding.stepAi.table.rowRename": "Групповое переименование",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Вы вручную задаете шаблон в окне группового переименования, проверяете и применяете.",
+  "onboarding.stepAi.table.renameWithout": "Вы вручную задаете шаблон в окне «Групповое переименование», а затем проверяете и применяете его.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Вы говорите «добавить дату в формате ISO в начало», агент задает шаблон, а вы проверяете и применяете по желанию.",
   "@onboarding.stepAi.table.renameWith": {

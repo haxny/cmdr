@@ -280,7 +280,7 @@ One tense per branch set; one folder is `в папке {folderName}`, ❌ `Ис�
 ## Eject toasts: the holders lead (`errors.eject.*`, `fileExplorer.navigation.eject*VolumeAriaLabel`)
 
 `{apps} еще держат там файлы открытыми.` (present, no gender, no doubled `приложения`); busy →
-`Cmdr еще работает с файлами на нем`. Labels quote the volume: `Извлечь «{name}»`.
+`Cmdr еще работает там с файлами`. Labels quote the volume: `Извлечь «{name}»`.
 
 ## Keychain apps (`ai.secretError.key*Body`, `servers.refusal.certificateUntrusted`)
 

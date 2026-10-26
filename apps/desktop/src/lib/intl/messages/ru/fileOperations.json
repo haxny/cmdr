@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Нечего восстанавливать: в Корзине уже нет {count, plural, =1 {этого объекта} one {этих объектов} few {этих объектов} many {этих объектов} other {этих объектов}}.",
+  "fileOperations.trash.undoGone": "Нечего восстанавливать: в Корзине уже не было {count, plural, =1 {этого объекта} one {этих объектов} few {этих объектов} many {этих объектов} other {этих объектов}}.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "В Корзине уже не было {countText} {count, plural, one {объекта} few {объектов} many {объектов} other {объекта}}.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -268,9 +268,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Это место уже начинается с папки {rootFolder}, поэтому этот путь ведет в {resolvedPath}. Может быть, вы имели в виду {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Пути здесь уже начинаются в папке {rootFolder}, поэтому этот путь ведет сюда: {resolvedPath}. Может быть, вы имели в виду {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Использовать короткий путь",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -534,7 +534,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Вы отменили это копирование. Уже скопированные файлы остаются на своих местах.} move {Вы отменили это перемещение. Уже перемещенные файлы остаются там, куда попали.} compress {Вы отменили это сжатие.} delete {Вы отменили это удаление. Уже удаленные файлы исчезли, а остальные на месте.} trash {Вы отменили это перемещение в Корзину. Уже перемещенные файлы остаются в Корзине, а остальные лежат там же, где были.} other {Вы отменили эту операцию.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Отмена… (очистка)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -786,7 +786,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {и еще {countText} объект} few {и еще {countText} объекта} many {и еще {countText} объектов} other {и еще {countText} объекта}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Скопировать остальные} move {Переместить остальные} delete {Удалить остальные} trash {Переместить остальные в Корзину} other {Продолжить с остальными}}",
   "@fileOperations.sourcesGone.continue": {

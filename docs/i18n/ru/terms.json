@@ -790,7 +790,7 @@
     "chosen": "проверить",
     "accept": ["провер"],
     "proseAccept": ["убед", "посмотр", "свер"],
-    "forms": "progress Проверка…; Re-check → Проверить снова; Check for updates → Проверить обновления; Not checked → Не проверено; I've checked it → Проверка выполнена",
+    "forms": "progress Проверка…; Re-check → Проверить снова; Check for updates → Проверить обновления; Not checked → Не проверено; I’ve checked the key / the certificate → Ключ проверен / Сертификат проверен (impersonal, so the user isn’t gendered)",
     "confidence": "high",
     "sources": "macOS Finder LocalizableMerged PW22 (Verifying → Проверка), BN5 (Verifying “^0” → Проверка диска «^0»); AppKit MenuCommands (Check Spelling → Проверить правописание); MS (check → проверить, verify → проверять); DC, Thunar (Проверка)"
   },
@@ -1769,7 +1769,8 @@
       "settings.developer.verboseLogging.description": "The saved log is named «Журнал на диске»; the file representation is implicit.",
       "settings.mediaIndex.showFileStatusIcons.label": "The setting targets images specifically, so the image type replaces generic file.",
       "onboarding.stepAi.table.selectWith": "The selection example names the image type directly.",
-      "settings.network.permissionIntroPrefix": "The type of transferred objects is implicit in the direct-transfer explanation."
+      "settings.network.permissionIntroPrefix": "The type of transferred objects is implicit in the direct-transfer explanation.",
+      "onboarding.stepAi.table.rowRename": "Row label in a noun-only column (Поиск, Выделение); «Групповое переименование» is the batch-rename name and already means renaming many files."
     },
     "confidence": "high",
     "sources": "macOS Finder (LocalizableMerged, InfoPlist); MS; every file manager"
@@ -2102,7 +2103,7 @@
   "git-unborn": {
     "chosen": "еще нет коммитов",
     "accept": ["еще нет коммитов", "без коммитов", "не начавш"],
-    "forms": "pill {branch} (no commits yet) → {branch} (еще нет коммитов); tooltip → Текущая ветка: {branch} (еще нет коммитов).",
+    "forms": "pill {branch} (no commits yet) → {branch} (еще нет коммитов); tooltip → Текущая ветка: «{branch}» (еще нет коммитов).",
     "avoid": [
       {
         "form": "нерожденная ветка",
@@ -4615,7 +4616,10 @@
       }
     ],
     "confidence": "high",
-    "sources": "MS: keyboard shortcut → сочетание клавиш; TC: Tastenkürzel → Сочетание клавиш; Thunar: Keyboard shortcut already in use → Сочетание клавиш уже используется; DC: Hotkeys → Горячие клавиши; AppKit Services: Shortcuts → Быстрые команды (the app)"
+    "sources": "MS: keyboard shortcut → сочетание клавиш; TC: Tastenkürzel → Сочетание клавиш; Thunar: Keyboard shortcut already in use → Сочетание клавиш уже используется; DC: Hotkeys → Горячие клавиши; AppKit Services: Shortcuts → Быстрые команды (the app)",
+    "exceptions": {
+      "menu.volume.editFavoriteShortcut": "A favorite takes one A–Z key, not a combination, and English says “shortcut key”: «Назначить клавишу…»."
+    }
   },
   "show": {
     "chosen": "Показать",
@@ -6108,5 +6112,59 @@
     ],
     "confidence": "high",
     "sources": "catalog errors.listing.ambiguousName.explanation «букву с диакритическим знаком»; MS terminology diacritic → диакритический знак; TC has no equivalent option"
+  },
+  "administrator": {
+    "chosen": "администратор",
+    "accept": ["администратор"],
+    "forms": "administrator password → пароль администратора; administrator rights → права администратора; a server’s administrator → администратор сервера; system administrator → системный администратор",
+    "confidence": "high",
+    "sources": "macOS Install Assistant (INSTALL_ASSISTANT_AUTH_WARNING … пароль администратора этого компьютера); MS (administrator → администратор, системный администратор); catalog (needsAdminMac, cliCommand.canceled)"
+  },
+  "blocked-by": {
+    "chosen": "заблокировать",
+    "accept": ["заблокир", "не дал", "не пустил"],
+    "forms": "Cmdr blocked X → Cmdr заблокировал X (masculine for Cmdr); macOS blocked → macOS заблокировала; a blocked web page → доступ веб-страницы заблокирован",
+    "avoid": [
+      {
+        "form": "запретить",
+        "why": "MS’s Block command sense (deny a permission); this concept is an actor turning a request away"
+      }
+    ],
+    "confidence": "high",
+    "sources": "MS (Blocked → заблокирован); catalog (errors.listing.notPermitted: macOS заблокировала доступ; securityNotices.mcpForeignOrigin.title)"
+  },
+  "tamper": {
+    "chosen": "вмешательство",
+    "accept": ["вмешат", "вмешив", "подмен"],
+    "forms": "someone tampering with traffic → чье-то вмешательство в трафик; someone is tampering with the connection → кто-то вмешивается в соединение",
+    "avoid": [
+      {
+        "form": "незаконно изменить",
+        "why": "MS’s legal register; reads as an accusation, and the copy stays calm"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "MS (tamper → незаконно изменить, rejected for register); catalog (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid: вмешательство)"
+  },
+  "uninstall": {
+    "chosen": "удалить",
+    "accept": ["удал"],
+    "forms": "Uninstall “cmdr” command → Удалить команду «cmdr»; uninstalled → удалена; install or uninstall → установить или удалить",
+    "avoid": [
+      {
+        "form": "деинсталлировать",
+        "why": "technical jargon; MS and the catalog’s menu item say удалить"
+      }
+    ],
+    "note": "Same verb as delete; the object (команда, программа) keeps it from reading as deleting files.",
+    "confidence": "high",
+    "sources": "MS (uninstall → удалить); catalog (menu.app.cliCommandUninstall: Удалить команду «cmdr»)"
+  },
+  "unlock-device": {
+    "chosen": "разблокировать",
+    "accept": ["разблокир"],
+    "forms": "unlock the phone → разблокируйте телефон; plug it in and unlock it → подключите его … и разблокируйте",
+    "confidence": "high",
+    "sources": "MS (unlock → разблокировать); catalog (errors.listing.notConnected.suggestion, errors.provider.macDroid.*: Разблокируйте телефон)"
   }
 }

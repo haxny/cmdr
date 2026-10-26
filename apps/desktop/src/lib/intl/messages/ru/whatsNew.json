@@ -7,9 +7,9 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
-  "whatsNew.securityNotice.title": "В этой версии {count, plural, =1 {устранена проблема безопасности} one {устранена # проблема безопасности} few {устранены # проблемы безопасности} many {устранено # проблем безопасности} other {устранено # проблемы безопасности}}.",
+  "whatsNew.securityNotice.title": "Недавние обновления устранили {count, plural, =1 {проблему безопасности} one {# проблему безопасности} few {# проблемы безопасности} many {# проблем безопасности} other {# проблемы безопасности}}.",
   "@whatsNew.securityNotice.title": {
-    "sourceHash": "26e4d7e"
+    "sourceHash": "7926316"
   },
   "whatsNew.securityNotice.readAdvisory": "Прочитать бюллетень безопасности",
   "@whatsNew.securityNotice.readAdvisory": {

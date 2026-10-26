@@ -2438,9 +2438,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Нужно для отмены. Пока этот параметр выключен, Cmdr не записывает новые операции копирования, перемещения, переименования и удаления, поэтому их нельзя отменить. Уже записанная история сохраняется, и то, что в ней есть, по-прежнему можно отменить.",
+  "settings.operationLog.enabled.description": "Пока этот параметр выключен, Cmdr не записывает новые операции копирования, перемещения, переименования и удаления, поэтому их нельзя отменить. Уже записанная история сохраняется, и то, что в ней есть, по-прежнему можно отменить.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "операция, операции, журнал, история, запись, записывать, отменить, отмена, конфиденциальность, выключить",
   "@settings.operationLog.enabled.keywords": {
@@ -2672,7 +2672,7 @@
   },
   "settings.managed.summary.upTo": "До версии {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Проверка только вручную",
   "@settings.managed.summary.manualChecksOnly": {
@@ -2680,7 +2680,7 @@
   },
   "settings.managed.summary.upToManualChecksOnly": "До версии {ceiling}, проверка только вручную",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Только на устройстве",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3288,9 +3288,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr удалит {sizeText} данных, которые хранит на этом Mac, и завершит работу. Это нельзя отменить.",
+  "settings.dataWipe.introWithSize": "Cmdr удалит все, что хранит на этом Mac ({sizeText}), и завершит работу. Это нельзя отменить.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Что будет удалено",
   "@settings.dataWipe.goesHeading": {

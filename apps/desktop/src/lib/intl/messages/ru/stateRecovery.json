@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr не удалось прочитать историю действий для отмены, поэтому история начинается заново",
+  "stateRecovery.operationLog.title": "Cmdr не удалось прочитать журнал операций, поэтому журнал начинается заново",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr не удалось прочитать ваши чаты Ask Cmdr, поэтому список чатов начинается заново",
+  "stateRecovery.chatHistory.title": "Cmdr не удалось прочитать ваши чаты Ask Cmdr, поэтому список чатов пока пуст",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr не удалось прочитать ваше избранное, поэтому список пока пуст",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr не удалось прочитать недавние записи в окне «Переход к папке», поэтому список начинается заново",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr не удалось прочитать ваши недавние запросы, поэтому список начинается заново",
   "@stateRecovery.searchHistory.title": {

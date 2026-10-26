@@ -656,9 +656,9 @@
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"
   },
-  "menu.volume.editFavoriteShortcut": "Назначить сочетание клавиш…",
+  "menu.volume.editFavoriteShortcut": "Назначить клавишу…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Убрать",
   "@menu.volume.removeFavorite": {
