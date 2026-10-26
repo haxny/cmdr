@@ -659,6 +659,12 @@
     "forms": "button Verbind; Connect to server → Verbind met server; Connect as guest → Verbind als gast; progress Verbinden met {name}…; status Verbonden; in a sentence verbinding maken; a phone plugged in by cable is aangesloten, not verbonden",
     "sources": "macOS Finder (Connect to server → Verbind met server, Connect As… → Verbind als…), AppKit (Connecting… → Verbinden…, Connected → Verbonden)"
   },
+  "learn-more": {
+    "chosen": "Meer over",
+    "confidence": "high",
+    "forms": "More about “X” → Meer over ‘X’",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
   "link": {
     "chosen": "link",
     "confidence": "high",

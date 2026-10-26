@@ -622,6 +622,12 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR ConnectToWindow, NetAuthAgent (Conectar)"
   },
+  "learn-more": {
+    "chosen": "Mais sobre",
+    "confidence": "high",
+    "forms": "More about “X” → Mais sobre “X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
   "link": {
     "chosen": "link",
     "confidence": "high",
@@ -2894,11 +2900,7 @@
     ],
     "confidence": "high",
     "sources": "shipped pt catalog (onboarding.wizard.stepProgress)",
-    "decision": "Onboarding",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The Multi-rename counter's increment, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling.",
-      "multiRename.placeholderHelp.counterAll": "The Multi-rename counter's increment, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling."
-    }
+    "decision": "Onboarding"
   },
   "stop": {
     "chosen": "Parar",

@@ -746,6 +746,12 @@
     "note": "`se connecter` is the network action; signing in is `s’identifier`.",
     "sources": "macOS Finder (\"Se connecter comme…\", MenuBar 266.title, MN1 « Connexion à « ^0 »… »)"
   },
+  "learn-more": {
+    "chosen": "En savoir plus sur",
+    "confidence": "high",
+    "forms": "More about “X” → En savoir plus sur « X »",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
   "link": {
     "chosen": "lien",
     "confidence": "high",
@@ -3172,11 +3178,7 @@
     "accept": ["Étape"],
     "confidence": "high",
     "forms": "Step 1 of 2: X → Étape 1 sur 2 : x (no-break space before the colon; the phase continues lowercase, as in ai.local.installStepExtracting)",
-    "sources": "MS terminology (step → étape); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The Multi-rename counter’s increment, not a stage: pas, as multiRename.counterEditor.step ships (Total Commander « Par pas de »).",
-      "multiRename.placeholderHelp.counterAll": "The Multi-rename counter’s increment, not a stage: pas, as multiRename.counterEditor.step ships (Total Commander « Par pas de »)."
-    }
+    "sources": "MS terminology (step → étape); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)"
   },
   "stop": {
     "accept": ["arrêt", "cesse"],
@@ -3632,6 +3634,7 @@
     "sources": "macOS (Volume, Volumes serveur)"
   },
   "volume-switcher": {
+    "accept": ["sélecteur"],
     "chosen": "sélecteur de volume",
     "confidence": "high",
     "forms": "singular volume; a tight menu item shortens to sélecteur, like English switcher (Épingler au sélecteur)",

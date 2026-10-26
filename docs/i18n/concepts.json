@@ -195,7 +195,7 @@
     "sense": "An application in general: Cmdr itself as \"the app\", another app on the Mac, the app that opens a file, a cloud provider's sync app."
   },
   "app-bundle": {
-    "distinct": ["package", "archive"],
+    "distinct": ["package", "archive", "macos-package"],
     "en": "app bundle",
     "match": ["app bundle", "app bundles"],
     "sense": "A folder macOS shows as one item (.app, .bundle, .framework)."
@@ -383,10 +383,17 @@
     "sense": "The viewer's Binary mode: the file's raw bytes as fixed-width character rows (Total Commander Lister's Binary), not base-2 digits."
   },
   "blocked": {
-    "distinct": ["deny", "busy"],
+    "distinct": ["deny", "busy", "blocked-by"],
     "en": "blocked",
     "match": ["blocked"],
-    "sense": "Something held back from proceeding: a proposed rename preflight won't let through, or an access macOS or another process prevents."
+    "notMatch": ["macos blocked", "cmdr blocked", "blocked by"],
+    "sense": "A status: a proposed rename that preflight won’t let through."
+  },
+  "blocked-by": {
+    "distinct": ["blocked", "deny"],
+    "en": "blocked",
+    "match": ["macos blocked", "cmdr blocked", "blocked by"],
+    "sense": "An actor (macOS, Cmdr, a policy) turning something away: an access refused, a web page stopped."
   },
   "bookmark": {
     "distinct": ["favorites"],
@@ -1309,7 +1316,7 @@
     "distinct": ["host-key"],
     "en": "fingerprint",
     "match": ["fingerprint", "fingerprints"],
-    "sense": "The hash that identifies a server's SSH key (SHA256:…)."
+    "sense": "The hash that identifies a server’s key: an SSH host key (SHA256:…), or the TLS certificate of a server Cmdr connects to."
   },
   "first-aid": {
     "distinct": ["disk-utility"],
@@ -1475,7 +1482,7 @@
     "distinct": ["tag", "git-branch", "git-commit"],
     "en": "tag (git)",
     "match": ["git tag", "git tags", "branches, tags", "tag tags", "tagged commit"],
-    "sense": "A git tag (a named pointer to a commit), browsable in the .git portal. Not a Finder color tag."
+    "sense": "A tag as a command-line label: a git tag (a named pointer to a commit, browsable in the .git portal) or a restic tag on a backup run. Not a Finder color tag."
   },
   "git-typechange": {
     "en": "type changed",
@@ -1986,13 +1993,19 @@
     "notMatch": ["some places"],
     "sense": "Where a file or command lives on disk, the places listed under a server, or where a photo was taken."
   },
+  "lock": {
+    "distinct": ["unlock", "locked"],
+    "en": "lock",
+    "match": ["locks the backup", "cmdr locked"],
+    "sense": "Locking a password-protected backup or archive again by forgetting its saved password: the opposite of unlock, never the Finder Locked flag."
+  },
   "locked": {
     "distinct": ["unlock", "read-only"],
     "en": "locked",
     "match": ["locked", "unlock the file"],
     "note": "Apple localizes the checkbox label; quote it the way the user's Finder shows it.",
     "notMatch": ["index is locked", "stay locked until", "cmdr locked"],
-    "sense": "The macOS Locked flag on a file (the Get Info checkbox) and removing it."
+    "sense": "The macOS Locked flag on a file (the Get Info checkbox), and unlocking it, in Finder or by Cmdr just for a move."
   },
   "log": {
     "distinct": ["operation-log"],
@@ -2012,6 +2025,12 @@
     "en": "whoever manages this Mac",
     "match": ["whoever manages this mac", "manages this mac"],
     "sense": "The person or organization that administers the user’s Mac, named without assuming who it is (an IT team, a parent, the user themselves)."
+  },
+  "macos-package": {
+    "distinct": ["app-bundle", "package"],
+    "en": "package (macOS)",
+    "match": ["=package", "package contents"],
+    "sense": "A folder macOS shows as one file, as Finder’s Show Package Contents names it (an app, a .bundle, a Photos library); an app bundle is one kind."
   },
   "mailing-list": {
     "en": "mailing list",
@@ -2373,7 +2392,7 @@
     "distinct": ["license"],
     "en": "organization",
     "match": ["organization", "organizations", "organisation"],
-    "sense": "The company or organization a commercial license is issued to."
+    "sense": "The company or organization a commercial license is issued to, or the employer or school that manages the Mac through device management (MDM)."
   },
   "original": {
     "distinct": ["source", "untouched"],
@@ -2408,9 +2427,10 @@
     "sense": "The account that owns a file or folder (shown in its permissions), or the person who runs a server."
   },
   "package": {
-    "distinct": ["app-bundle", "archive"],
+    "distinct": ["app-bundle", "archive", "macos-package"],
     "en": "package",
     "match": ["package", "packages"],
+    "notMatch": ["=package"],
     "sense": "A file that bundles other files (.jar, .apk, Office documents), or a Linux software package."
   },
   "page": {
@@ -2551,7 +2571,18 @@
   "previous-next": {
     "distinct": ["back"],
     "en": "Previous / Next",
-    "match": ["=previous", "=next", "next match", "previous match", "next step", "previous step"],
+    "match": [
+      "=previous",
+      "=next",
+      "next match",
+      "previous match",
+      "next step",
+      "previous step",
+      "previous operation",
+      "next operation",
+      "previous button",
+      "next button"
+    ],
     "sense": "A paired previous/next control (wizard steps, search matches, the Go menu)."
   },
   "privacy-and-security": {
@@ -3285,7 +3316,7 @@
     "en": "snapshot",
     "match": ["snapshot", "snapshots"],
     "notMatch": ["browse snapshots"],
-    "sense": "A frozen point-in-time copy: a git commit seen as a folder, or an APFS snapshot folder search skips."
+    "sense": "A frozen point-in-time copy: a git commit seen as a folder, an APFS snapshot folder search skips, or one run of a restic backup."
   },
   "software": {
     "distinct": ["app"],
@@ -3408,8 +3439,8 @@
     "en": "step",
     "match": ["step", "steps"],
     "note": "A bare Step label is the Multi-Rename counter's increment, not a stage.",
-    "notMatch": ["=step"],
-    "sense": "One numbered stage of the onboarding wizard, a setup guide, or an install (Step 2 of 4)."
+    "notMatch": ["=step", "step per file", "minus step"],
+    "sense": "One numbered stage of a multi-step flow: the onboarding wizard, a setup guide, an install, or an operation that runs in stages (Step 1 of 2: Compressing)."
   },
   "stop": {
     "distinct": ["cancel", "pause", "quit"],
@@ -3729,7 +3760,7 @@
     "match": ["undo", "undone", "undoing", "can't be undone"],
     "note": "Three different actions share the English word; many locales need three words.",
     "notMatch": ["undo the move", "nothing to undo here"],
-    "sense": "Reversing the last action (text undo, putting trashed files back, reverting an AI rename run)."
+    "sense": "Reversing an action: text undo, putting trashed files back, reverting an AI rename run, or reversing a whole finished operation (after a confirmation)."
   },
   "unexpected": {
     "en": "unexpected",
@@ -3748,16 +3779,28 @@
     "sense": "A value Cmdr can't determine (an unknown size, cost, or model)."
   },
   "unlock": {
-    "distinct": ["locked", "password-protected"],
+    "distinct": ["locked", "password-protected", "unlock-device", "lock"],
     "en": "unlock",
     "match": ["unlock", "unlocks", "unlocking", "unlocked"],
     "notMatch": [
       "unlock it in finder",
       "locked, and cmdr can't unlock",
       "cmdr can unlock it just for the move",
-      "cmdr can unlock them just for the move"
+      "cmdr can unlock them just for the move",
+      "uncheck locked",
+      "unlock them first in finder",
+      "phone, unlock it",
+      "unlock the device",
+      "phone is unlocked",
+      "cable and unlock it"
     ],
-    "sense": "Opening a password-protected archive with its password."
+    "sense": "Opening something password-protected with its password: an archive, a restic backup, or the Keychain or a keyring."
+  },
+  "unlock-device": {
+    "distinct": ["unlock"],
+    "en": "unlock (a device)",
+    "match": ["phone, unlock it", "unlock the device", "phone is unlocked", "cable and unlock it"],
+    "sense": "Unlocking a phone’s or other device’s screen so the Mac can reach its files."
   },
   "unplug": {
     "distinct": ["disconnect", "eject", "connect"],
@@ -3872,8 +3915,9 @@
   "volume-switcher": {
     "distinct": ["app-switcher"],
     "en": "volume switcher",
-    "match": ["volume switcher", "volume chooser"],
+    "match": ["volume switcher", "volume chooser", "switcher"],
     "note": "English calls it both switcher and chooser; give it one name.",
+    "notMatch": ["app switcher"],
     "sense": "The dropdown above a pane for picking a drive, favorite, or server."
   },
   "waiting": {

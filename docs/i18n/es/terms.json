@@ -679,6 +679,12 @@
     "confidence": "high",
     "sources": "macOS/Microsoft es (combinación de teclas, 7 hits in the pile); catalog combinación (shortcuts.conflict.*, downloads.shortcutRow.invalidCombo)"
   },
+  "learn-more": {
+    "chosen": "Más información sobre",
+    "confidence": "high",
+    "forms": "More about “X” → Más información sobre “X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
   "link": {
     "chosen": "enlace",
     "confidence": "high",
@@ -3030,11 +3036,7 @@
     ],
     "confidence": "high",
     "forms": "Step 1 of 2: X → Paso 1 de 2: X",
-    "sources": "shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting); MS terminology gives etapa (tiebreak only)",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The counter's step, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling.",
-      "multiRename.placeholderHelp.counterAll": "The counter's step, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling."
-    }
+    "sources": "shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting); MS terminology gives etapa (tiebreak only)"
   },
   "stop": {
     "chosen": "Detener",

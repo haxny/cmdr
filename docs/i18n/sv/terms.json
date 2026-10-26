@@ -681,6 +681,12 @@
     "forms": "ansluta, Anslut, Ansluter till {name}…, anslutning, ansluten; Connect as guest → Anslut som gäst",
     "sources": "macOS Finder (Anslut till server, Ansluter till ^0…)"
   },
+  "learn-more": {
+    "chosen": "Mer om",
+    "confidence": "high",
+    "forms": "More about “X” → Mer om ”X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
   "link": {
     "chosen": "länk",
     "confidence": "high",
@@ -3308,10 +3314,7 @@
     "accept": ["låsa upp", "låser upp", "upplåst", "låste inte upp"],
     "chosen": "lås upp",
     "confidence": "high",
-    "sources": "macOS AppKit (Lås upp)",
-    "exceptions": {
-      "errors.write.trashRefused.suggestion.locked": "English sense: removing Finder’s Locked flag (the locked concept), not an archive password, so it takes the Finder checkbox Låst; lås upp is the shared verb"
-    }
+    "sources": "macOS AppKit (Lås upp)"
   },
   "unplug": {
     "accept": [
