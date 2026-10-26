@@ -129,6 +129,9 @@ pub enum TagError {
     Parse(String),
     /// The tags couldn't be written.
     Write(String),
+    /// Saving an MP3 as ID3v2.3 would drop these frames (IDs, sorted), which ID3v2.3 has no
+    /// place for. Nothing was written; `WriteOptions::allow_frame_loss` writes anyway.
+    WouldDrop(Vec<String>),
 }
 
 impl fmt::Display for TagError {
@@ -138,6 +141,7 @@ impl fmt::Display for TagError {
             TagError::Io(kind, msg) => write!(f, "I/O error ({kind}): {msg}"),
             TagError::Parse(msg) => write!(f, "couldn't parse tags: {msg}"),
             TagError::Write(msg) => write!(f, "couldn't write tags: {msg}"),
+            TagError::WouldDrop(ids) => write!(f, "saving as ID3v2.3 would drop {}", ids.join(", ")),
         }
     }
 }

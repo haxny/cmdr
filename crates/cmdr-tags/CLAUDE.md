@@ -10,8 +10,8 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
   (`fields`, `cover`, `extras`), `Cover`, `ContentKind`, `TagError`.
 - `format.rs`: `AudioFormat` and `format_of`, by extension only.
 - `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments), and the key tables.
-- `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader, and `save_safely`. Test files
-  are built in `test_files.rs` with lofty's concrete tag types.
+- `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader. `save.rs`: `save_safely`. Test
+  files are built in `test_files.rs` with lofty's concrete tag types.
 - Later modules (tools, undo) land with their tasks; the undo store layout will be in `DETAILS.md`.
 
 ## Must-knows
@@ -28,9 +28,11 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
   items surface read-only in `FileTags::extras`; dropping a key there removes it on write.
 - **Concrete lofty tag types, not the generic `Tag`**: the generic one loses format-native keys we depend on (why, in
   `DETAILS.md`).
-- **A write is safe-overwrite** (`save_safely`): temp copy in the same directory, save, parse it back, fsync, rename
-  over the original. ❌ Never write in place. lofty has corrupted files on save; the parse-back is the guard
-  (`DETAILS.md`).
+- **A write is safe-overwrite** (`save_safely`): temp clone in the same directory, save, read back and compare with the
+  intended tags, fsync, rename over the original. ❌ Never write in place. lofty has corrupted files and dropped items
+  silently; the strict parse before and the comparison after are the guards (`DETAILS.md`).
+- **No silent loss on MP3**: frames ID3v2.3 can't hold fail the write as `TagError::WouldDrop` unless the caller sets
+  `allow_frame_loss`.
 - **`format_of` goes by extension, case-insensitively.** An unknown extension is `None`, reported as
   `TagError::NotSupported`.
 - **Errors are typed** (`TagError`); ❌ never classify one by its message text.

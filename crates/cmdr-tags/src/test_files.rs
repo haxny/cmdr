@@ -6,14 +6,14 @@ use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use cmdr_media_meta::test_fixtures::{cover, flac_stream, m4a_file, mp3_frames};
+use cmdr_media_meta::test_fixtures::{atom, concat, cover, flac_stream, ftyp, full, m4a_file, mp3_frames, mvhd_v0};
 use lofty::TextEncoding;
 use lofty::config::WriteOptions;
 use lofty::id3::v2::{CommentFrame, ExtendedTextFrame, Frame, FrameId, Id3v2Tag, TextInformationFrame};
 use lofty::mp4::{Atom, AtomData, AtomIdent, Ilst};
 use lofty::ogg::OggPictureStorage;
 use lofty::ogg::tag::VorbisComments;
-use lofty::picture::{PictureInformation, PictureType};
+use lofty::picture::{Picture, PictureInformation, PictureType};
 use lofty::tag::TagExt;
 
 /// Adds a text frame such as `TIT2`.
@@ -150,6 +150,99 @@ pub fn write_vorbis_stream(
         .save_to(&mut cursor, WriteOptions::default())
         .expect("lofty writes the Vorbis comments");
     write_bytes(dir, name, cursor.into_inner())
+}
+
+// ── Hand-built FLAC blocks ────────────────────────────────────────────────────
+
+/// FLAC metadata block types.
+pub const FLAC_APPLICATION: u8 = 2;
+/// See [`FLAC_APPLICATION`].
+pub const FLAC_SEEKTABLE: u8 = 3;
+/// See [`FLAC_APPLICATION`].
+pub const FLAC_VORBIS_COMMENT: u8 = 4;
+/// See [`FLAC_APPLICATION`].
+pub const FLAC_CUESHEET: u8 = 5;
+/// See [`FLAC_APPLICATION`].
+pub const FLAC_PICTURE: u8 = 6;
+
+/// A FLAC: STREAMINFO, then `blocks` (type, body) in order, then the stand-in audio frames.
+/// lofty's writer never sees these bytes, so a test controls exactly where each block sits.
+pub fn flac_with_blocks(blocks: &[(u8, Vec<u8>)]) -> Vec<u8> {
+    assert!(!blocks.is_empty(), "STREAMINFO alone is `flac_stream`");
+    let mut out = flac_stream();
+    out[4] = 0; // STREAMINFO is no longer the last block
+    for (i, (kind, body)) in blocks.iter().enumerate() {
+        let last = if i + 1 == blocks.len() { 0x80 } else { 0 };
+        let len = u32::try_from(body.len()).expect("a small test block").to_be_bytes();
+        out.push(kind | last);
+        out.extend(&len[1..]);
+        out.extend(body);
+    }
+    out.extend(flac_frames());
+    out
+}
+
+/// A Vorbis comment block body holding `entries` (`KEY=value`), without a framing bit.
+pub fn vorbis_comment_body(entries: &[String]) -> Vec<u8> {
+    let vendor = b"cmdr-test";
+    let mut body = u32::try_from(vendor.len()).unwrap().to_le_bytes().to_vec();
+    body.extend(vendor);
+    body.extend(u32::try_from(entries.len()).unwrap().to_le_bytes());
+    for entry in entries {
+        body.extend(u32::try_from(entry.len()).unwrap().to_le_bytes());
+        body.extend(entry.as_bytes());
+    }
+    body
+}
+
+/// `picture` as a `METADATA_BLOCK_PICTURE=...` comment entry (base64).
+pub fn picture_comment(picture: &Picture) -> String {
+    let encoded = picture.as_flac_bytes(PictureInformation::default(), true);
+    format!(
+        "METADATA_BLOCK_PICTURE={}",
+        String::from_utf8(encoded).expect("base64 is ASCII")
+    )
+}
+
+/// `picture` as a FLAC PICTURE block body.
+pub fn picture_block(picture: &Picture) -> Vec<u8> {
+    picture.as_flac_bytes(PictureInformation::default(), false)
+}
+
+// ── M4A with sample tables ────────────────────────────────────────────────────
+
+/// Bytes per chunk in [`m4a_with_chunks`].
+pub const CHUNK_LEN: usize = 64;
+
+/// An M4A whose one track has a chunk offset table (`moov.trak.mdia.minf.stbl.stco`) pointing
+/// at `chunks` chunks inside `mdat`, chunk `i` filled with byte `i + 1`, as in a real file
+/// whose `moov` comes before `mdat`. Growing the tag moves `mdat`, so every offset must move.
+pub fn m4a_with_chunks(chunks: u8) -> Vec<u8> {
+    let moov = |offsets: &[u32]| {
+        let mut table = u32::try_from(offsets.len()).unwrap().to_be_bytes().to_vec();
+        for offset in offsets {
+            table.extend(offset.to_be_bytes());
+        }
+        let stbl = atom(b"stbl", &atom(b"stco", &full(0, &table)));
+        let trak = atom(b"trak", &atom(b"mdia", &atom(b"minf", &stbl)));
+        atom(b"moov", &concat(&[&mvhd_v0(0), &trak]))
+    };
+    let head = ftyp(b"M4A ");
+    let count = usize::from(chunks);
+    let mdat_body_at = head.len() + moov(&vec![0; count]).len() + 8;
+    let offsets: Vec<u32> = (0..count)
+        .map(|i| u32::try_from(mdat_body_at + i * CHUNK_LEN).unwrap())
+        .collect();
+    let payload: Vec<u8> = (1..=chunks).flat_map(|i| [i; CHUNK_LEN]).collect();
+    concat(&[&head, &moov(&offsets), &atom(b"mdat", &payload)])
+}
+
+/// The offsets in the first `stco` of an MP4 file's bytes.
+pub fn stco_offsets(bytes: &[u8]) -> Vec<usize> {
+    let at = bytes.windows(4).position(|w| w == b"stco").expect("an stco atom");
+    let word = |pos: usize| u32::from_be_bytes(bytes[pos..pos + 4].try_into().unwrap()) as usize;
+    let count = word(at + 8);
+    (0..count).map(|i| word(at + 12 + 4 * i)).collect()
 }
 
 // ── Ogg ───────────────────────────────────────────────────────────────────────

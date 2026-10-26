@@ -21,6 +21,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Diacritics stripping for every written text field except Comment and Description.
 unicode-normalization = "0.1"
+# The one warning the safe overwrite logs (a directory fsync after the rename).
+log = "0.4"
 # The safe overwrite's temp file, created next to the file it replaces.
 tempfile = "3"
 

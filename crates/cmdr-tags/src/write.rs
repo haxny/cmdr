@@ -8,12 +8,12 @@
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{self, File};
-use std::io::{ErrorKind, Seek};
+use std::fs::File;
+use std::io::Seek;
 use std::path::Path;
 
 use lofty::TextEncoding;
-use lofty::config::WriteOptions as LoftyWriteOptions;
+use lofty::config::{ParseOptions, ParsingMode, WriteOptions as LoftyWriteOptions};
 use lofty::file::AudioFile;
 use lofty::flac::FlacFile;
 use lofty::id3::v2::{
@@ -31,19 +31,24 @@ use lofty::tag::items::Timestamp;
 use crate::format::AudioFormat;
 use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::{
-    FREEFORM_FIELDS, ITUNES_MEAN, JOIN, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, cover_position, format_of_path,
-    fourcc_field, frame_field, freeform_field, id3_pictures, parse_error, parse_options, read_id3, read_ilst,
-    read_vorbis, txxx_field,
+    FREEFORM_FIELDS, ITUNES_MEAN, JOIN, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS, cover_position,
+    format_of_path, fourcc_field, frame_field, freeform_field, id3_pictures, parse_error, parse_options, read_from,
+    read_id3, read_ilst, read_vorbis, txxx_field,
 };
+use crate::save::save_safely;
 
 /// How a write maps fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WriteOptions {
     /// Audiobooks drop the composer (and ID3's `TPE3`) whatever `FileTags` holds.
     pub kind: ContentKind,
-    /// The number of tracks, when the caller knows it: the track is then written `N/Total`,
-    /// otherwise plain `N`.
+    /// The number of tracks, when the caller knows it: the track is then written `N/Total`
+    /// (MP3), with `trkn`'s total (M4A), or with a `TRACKTOTAL` key (Vorbis); otherwise plain.
     pub track_total: Option<u32>,
+    /// Whether an MP3 write may drop the ID3v2.4-only frames ID3v2.3 has no place for
+    /// (`TSOP`, `RVA2`, ...). When false, such a write fails with [`TagError::WouldDrop`],
+    /// naming them, and the file stays as it was.
+    pub allow_frame_loss: bool,
 }
 
 /// Writes `tags` into the audio file at `path` with a safe overwrite. Afterwards the file
@@ -52,51 +57,69 @@ pub struct WriteOptions {
 /// extras of the file that `tags.extras` still has a key for. Extras are never written:
 /// one absent from `tags.extras` is removed, one present is left as the file has it.
 /// Everything else in the file is untouched.
+///
+/// The file is parsed strictly first (an item lofty can't decode refuses the write as
+/// [`TagError::Parse`] rather than vanishing from the saved file), and the saved copy must
+/// read back as exactly the intended tags before it replaces the original.
 pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(), TagError> {
     let format = format_of_path(path)?;
     let values = values_to_write(tags, opts.kind);
     let mut source = File::open(path)?;
+    let parse = write_parse_options(format);
     let defaults = LoftyWriteOptions::default();
     match format {
         AudioFormat::Mp3 => {
-            let file = MpegFile::read_from(&mut source, parse_options()).map_err(parse_error)?;
+            let file = MpegFile::read_from(&mut source, parse).map_err(parse_error)?;
             let mut id3 = file.id3v2().cloned().unwrap_or_default();
-            write_id3(&mut id3, tags, &values, opts)?;
-            save_safely(path, |out| {
-                save(&id3, out, LoftyWriteOptions::new().use_id3v23(true), format)
-            })
+            let current = read_id3(&id3);
+            write_id3(&mut id3, &current, tags, &values, opts)?;
+            let expected = expected_tags(&current, tags, &values, format, &read_id3(&id3))?;
+            let v23 = LoftyWriteOptions::new().use_id3v23(true);
+            save_safely(path, |out| save(&id3, out, v23, format, &expected))
         }
         AudioFormat::Mp4 => {
-            let file = Mp4File::read_from(&mut source, parse_options()).map_err(parse_error)?;
+            let file = Mp4File::read_from(&mut source, parse).map_err(parse_error)?;
             let mut ilst = file.ilst().cloned().unwrap_or_default();
-            write_ilst(&mut ilst, tags, &values, opts)?;
-            save_safely(path, |out| save(&ilst, out, defaults, format))
+            let current = read_ilst(&ilst);
+            write_ilst(&mut ilst, &current, tags, &values, opts)?;
+            let expected = expected_tags(&current, tags, &values, format, &read_ilst(&ilst))?;
+            save_safely(path, |out| save(&ilst, out, defaults, format, &expected))
         }
         AudioFormat::Flac => {
-            let mut file = FlacFile::read_from(&mut source, parse_options()).map_err(parse_error)?;
+            let mut file = FlacFile::read_from(&mut source, parse).map_err(parse_error)?;
             let mut comments = file.vorbis_comments().cloned().unwrap_or_default();
-            let current = read_vorbis(&comments, file.pictures());
-            write_vorbis(&mut comments, &current, tags, &values, opts);
-            set_ogg_cover(&mut file, tags.cover.as_ref())?;
             // Saving the comments rewrites every FLAC picture block from the comments' own
-            // pictures, so all of them move there, the block pictures first: the reader then
-            // finds the same cover.
-            let in_tag = comments.remove_pictures();
-            for (picture, info) in file.remove_pictures().into_iter().chain(in_tag) {
+            // pictures, so all of them move there first, in the reader's order (blocks, then
+            // the comments' own): the cover is then picked from the same list.
+            let in_comments = comments.remove_pictures();
+            for (picture, info) in file.remove_pictures().into_iter().chain(in_comments) {
                 comments.insert_picture(picture, Some(info)).map_err(write_error)?;
             }
-            save_safely(path, |out| save(&comments, out, defaults, format))
+            let (comments, expected) = write_vorbis_family(&comments, tags, &values, opts, format)?;
+            save_safely(path, |out| save(&comments, out, defaults, format, &expected))
         }
         AudioFormat::OggVorbis => {
-            let file = VorbisFile::read_from(&mut source, parse_options()).map_err(parse_error)?;
-            let comments = write_ogg(file.vorbis_comments(), tags, &values, opts)?;
-            save_safely(path, |out| save(&comments, out, defaults, format))
+            let file = VorbisFile::read_from(&mut source, parse).map_err(parse_error)?;
+            let (comments, expected) = write_vorbis_family(file.vorbis_comments(), tags, &values, opts, format)?;
+            save_safely(path, |out| save(&comments, out, defaults, format, &expected))
         }
         AudioFormat::Opus => {
-            let file = OpusFile::read_from(&mut source, parse_options()).map_err(parse_error)?;
-            let comments = write_ogg(file.vorbis_comments(), tags, &values, opts)?;
-            save_safely(path, |out| save(&comments, out, defaults, format))
+            let file = OpusFile::read_from(&mut source, parse).map_err(parse_error)?;
+            let (comments, expected) = write_vorbis_family(file.vorbis_comments(), tags, &values, opts, format)?;
+            save_safely(path, |out| save(&comments, out, defaults, format, &expected))
         }
+    }
+}
+
+/// How a write parses: strictly, so an item lofty can't decode fails the write instead of
+/// being dropped from the copy that gets saved. Vorbis comments also without implicit
+/// conversions, so lofty keeps `TRACKNUMBER` as the file has it instead of splitting a
+/// `3/12` into a `TRACKTOTAL` key of its own.
+fn write_parse_options(format: AudioFormat) -> ParseOptions {
+    let mut strict = parse_options().parsing_mode(ParsingMode::Strict);
+    match format {
+        AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => strict.implicit_conversions(false),
+        AudioFormat::Mp3 | AudioFormat::Mp4 => strict,
     }
 }
 
@@ -125,6 +148,57 @@ fn values_to_write(tags: &FileTags, kind: ContentKind) -> Values {
         .collect()
 }
 
+/// What the saved file must read back as: `values` as the reader of `format` reports them
+/// (one-string formats split joined values; numbers and ID3 dates come back normalized),
+/// `tags.cover`, and the file's extras that `tags` kept. With the cover removed, the reader
+/// falls back to another picture: `edited` is the tag as it will be saved, which says which.
+fn expected_tags(
+    current: &FileTags,
+    tags: &FileTags,
+    values: &Values,
+    format: AudioFormat,
+    edited: &FileTags,
+) -> Result<FileTags, TagError> {
+    let one_string = matches!(format, AudioFormat::Mp3 | AudioFormat::Mp4);
+    let mut fields = BTreeMap::new();
+    for (field, values) in values {
+        let read_back: Vec<String> = match field {
+            TagField::Track | TagField::Disc => values.iter().map(|v| number_text(v, None)).collect(),
+            TagField::Date if format == AudioFormat::Mp3 => vec![timestamp(&values[0])?.to_string()],
+            _ if field.is_multi() && one_string => values
+                .iter()
+                .flat_map(|v| v.split(JOIN))
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned)
+                .collect(),
+            _ => values.clone(),
+        };
+        let read_back = match (field, format) {
+            // `trkn` / `disk` hold a number, so "03" reads back as "3".
+            (TagField::Track | TagField::Disc, AudioFormat::Mp4) => read_back
+                .iter()
+                .map(|v| as_u16(v).map(|n| n.to_string()))
+                .collect::<Result<_, _>>()?,
+            _ => read_back,
+        };
+        if !read_back.is_empty() {
+            fields.insert(*field, read_back);
+        }
+    }
+    let extras = current
+        .extras
+        .iter()
+        .filter(|(key, _)| tags.extras.contains_key(*key))
+        .map(|(key, values)| (key.clone(), values.clone()))
+        .collect();
+    Ok(FileTags {
+        fields,
+        cover: tags.cover.clone().or_else(|| edited.cover.clone()),
+        extras,
+    })
+}
+
 /// The keys of the extras the file has (as the reader reports them) that `tags` dropped.
 fn dropped_extras(current: &FileTags, tags: &FileTags) -> BTreeSet<String> {
     current
@@ -144,6 +218,13 @@ fn number_text(value: &str, total: Option<u32>) -> String {
     }
 }
 
+/// A track or disc number (or total) as MP4 stores it.
+fn as_u16(text: &str) -> Result<u16, TagError> {
+    text.trim()
+        .parse::<u16>()
+        .map_err(|e| TagError::Write(format!("{text:?} isn't a track or disc number: {e}")))
+}
+
 fn write_error(e: impl std::fmt::Display) -> TagError {
     TagError::Write(e.to_string())
 }
@@ -159,56 +240,37 @@ fn picture(cover: &Cover, kind: PictureType) -> Picture {
     }
 }
 
-/// Saves `tag` into `out`, then parses `out` back as `format`. lofty has corrupted a
-/// container on save (0.25.4 truncates a FLAC whose metadata runs to the end of the file
-/// when the metadata shrinks); a copy that no longer parses never replaces the original.
-fn save<T: TagExt>(tag: &T, out: &mut File, options: LoftyWriteOptions, format: AudioFormat) -> Result<(), TagError> {
+/// Saves `tag` into `out`, then reads `out` back as the writer parses and checks it holds
+/// `expected`. lofty has corrupted a container on save (0.25.4 truncates a FLAC whose
+/// metadata runs to the end of the file when the metadata shrinks) and drops what it can't
+/// encode; a copy that doesn't parse or reads back differently never replaces the original.
+fn save<T: TagExt>(
+    tag: &T,
+    out: &mut File,
+    options: LoftyWriteOptions,
+    format: AudioFormat,
+    expected: &FileTags,
+) -> Result<(), TagError> {
     tag.save_to(out, options).map_err(write_error)?;
     out.rewind()?;
-    let parsed = match format {
-        AudioFormat::Mp3 => MpegFile::read_from(out, parse_options()).map(drop),
-        AudioFormat::Mp4 => Mp4File::read_from(out, parse_options()).map(drop),
-        AudioFormat::Flac => FlacFile::read_from(out, parse_options()).map(drop),
-        AudioFormat::OggVorbis => VorbisFile::read_from(out, parse_options()).map(drop),
-        AudioFormat::Opus => OpusFile::read_from(out, parse_options()).map(drop),
-    };
-    parsed.map_err(|e| TagError::Write(format!("the written file doesn't parse: {e}")))
-}
-
-// ── Safe overwrite ────────────────────────────────────────────────────────────
-
-/// Copies the file at `path` to a temp file in the same directory, lets `save` write the
-/// tags into the copy, fsyncs it, and renames it over the original. Any failure leaves the
-/// original as it was and removes the temp file. The copy keeps the original's permissions
-/// (and, on macOS, its extended attributes such as Finder tags); a symlink is followed, so
-/// the link stays a link. A read-only file is refused.
-pub(crate) fn save_safely(path: &Path, save: impl FnOnce(&mut File) -> Result<(), TagError>) -> Result<(), TagError> {
-    let target = fs::canonicalize(path)?;
-    let dir = target
-        .parent()
-        .ok_or_else(|| TagError::Write("the file has no parent directory".to_owned()))?;
-    let permissions = fs::metadata(&target)?.permissions();
-    if permissions.readonly() {
-        return Err(TagError::Io(
-            ErrorKind::PermissionDenied,
-            "the file is read-only".to_owned(),
-        ));
+    let written = read_from(out, format, write_parse_options(format))
+        .map_err(|e| TagError::Write(format!("the written file doesn't parse: {e}")))?;
+    let differs: Vec<&str> = [
+        ("fields", written.fields != expected.fields),
+        ("cover", written.cover != expected.cover),
+        ("extras", written.extras != expected.extras),
+    ]
+    .into_iter()
+    .filter_map(|(part, differs)| differs.then_some(part))
+    .collect();
+    if differs.is_empty() {
+        Ok(())
+    } else {
+        Err(TagError::Write(format!(
+            "the written file reads back with other {}",
+            differs.join(", ")
+        )))
     }
-    let mut temp = tempfile::Builder::new()
-        .prefix(".cmdr-tags-")
-        .suffix(".tmp")
-        .tempfile_in(dir)?;
-    // `fs::copy` carries permissions and, on macOS (`fcopyfile`), extended attributes.
-    fs::copy(&target, temp.path())?;
-    let file = temp.as_file_mut();
-    file.rewind()?;
-    save(file)?;
-    file.set_permissions(permissions)?;
-    file.sync_all()?;
-    temp.persist(&target).map_err(|e| TagError::from(e.error))?;
-    // The rename itself is durable only once the directory is synced.
-    File::open(dir)?.sync_all()?;
-    Ok(())
 }
 
 // ── ID3v2 ─────────────────────────────────────────────────────────────────────
@@ -230,30 +292,71 @@ fn is_managed_id3(frame: &Frame<'_>, kind: ContentKind) -> bool {
     }
 }
 
-fn write_id3(id3: &mut Id3v2Tag, tags: &FileTags, values: &Values, opts: &WriteOptions) -> Result<(), TagError> {
+/// The ID3v2.4 frames lofty 0.25.4's ID3v2.3 writer discards (`FRAMES_TO_DISCARD` in
+/// `id3/v2/write/frame.rs`): ID3v2.3 has no place for them.
+const DROPPED_BY_V23: [&str; 14] = [
+    "ASPI", "EQU2", "RVA2", "SEEK", "SIGN", "TDEN", "TDRL", "TDTG", "TMOO", "TPRO", "TSOA", "TSOP", "TSOT", "TSST",
+];
+
+fn write_id3(
+    id3: &mut Id3v2Tag,
+    current: &FileTags,
+    tags: &FileTags,
+    values: &Values,
+    opts: &WriteOptions,
+) -> Result<(), TagError> {
     let frames = values
         .iter()
         .map(|(field, values)| id3_frame(*field, values, opts.track_total))
         .collect::<Result<Vec<_>, _>>()?;
-    let dropped = dropped_extras(&read_id3(id3), tags);
+    let dropped = dropped_extras(current, tags);
     let cover_at = cover_position(id3_pictures(id3));
+    let cover_kept = tags.cover == current.cover;
+    let mut new_cover = tags.cover.as_ref().filter(|_| !cover_kept).map(|cover| {
+        Frame::Picture(AttachedPictureFrame::new(
+            TextEncoding::UTF8,
+            picture(cover, PictureType::CoverFront),
+        ))
+    });
     let mut picture_index = 0;
-    id3.retain(|frame| match frame {
+    // The cover is replaced where it stands, never re-inserted: `insert` would also replace any
+    // other picture lofty considers equal to the new one.
+    id3.retain_mut(|frame| match frame {
         Frame::Picture(_) => {
             picture_index += 1;
-            Some(picture_index - 1) != cover_at
+            if cover_kept || Some(picture_index - 1) != cover_at {
+                return true;
+            }
+            match new_cover.take() {
+                Some(new) => {
+                    *frame = new;
+                    true
+                }
+                None => false,
+            }
         }
         Frame::UserText(f) if dropped.contains(f.description.as_ref()) => false,
         _ => !is_managed_id3(frame, opts.kind),
     });
-    for frame in frames {
+    for frame in frames.into_iter().chain(new_cover) {
         id3.insert(frame);
     }
-    if let Some(cover) = &tags.cover {
-        let frame = AttachedPictureFrame::new(TextEncoding::UTF8, picture(cover, PictureType::CoverFront));
-        id3.insert(Frame::Picture(frame));
+    refuse_frame_loss(id3, opts.allow_frame_loss)
+}
+
+/// [`TagError::WouldDrop`] with the frames lofty's ID3v2.3 writer would discard from `id3`
+/// (v2.4-only and outdated v2.2 IDs), unless there are none or the caller allows it.
+fn refuse_frame_loss(id3: &Id3v2Tag, allowed: bool) -> Result<(), TagError> {
+    let lost: BTreeSet<String> = id3
+        .into_iter()
+        .filter(|f| !f.id().is_valid() || DROPPED_BY_V23.contains(&f.id_str()))
+        .map(|f| f.id_str().to_owned())
+        .collect();
+    if lost.is_empty() || allowed {
+        Ok(())
+    } else {
+        Err(TagError::WouldDrop(lost.into_iter().collect()))
     }
-    Ok(())
 }
 
 /// The one frame `field` is written as. Text is UTF-8 here; lofty re-encodes it as UTF-16
@@ -336,7 +439,13 @@ fn is_managed_atom(ident: &AtomIdent<'_>) -> bool {
     }
 }
 
-fn write_ilst(ilst: &mut Ilst, tags: &FileTags, values: &Values, opts: &WriteOptions) -> Result<(), TagError> {
+fn write_ilst(
+    ilst: &mut Ilst,
+    current: &FileTags,
+    tags: &FileTags,
+    values: &Values,
+    opts: &WriteOptions,
+) -> Result<(), TagError> {
     // lofty 0.25.4 panics (an unfinished `AtomWriterCompanion` asserts on drop) when it
     // can't encode an ilst, and a `covr` image type it doesn't know is such a case.
     if let Some(cover) = &tags.cover
@@ -351,12 +460,14 @@ fn write_ilst(ilst: &mut Ilst, tags: &FileTags, values: &Values, opts: &WriteOpt
         .iter()
         .map(|(field, values)| ilst_atoms(*field, values, opts.track_total))
         .collect::<Result<Vec<_>, _>>()?;
-    let dropped = dropped_extras(&read_ilst(ilst), tags);
+    let dropped = dropped_extras(current, tags);
     ilst.retain(|atom| {
         let dropped_extra = matches!(atom.ident(), AtomIdent::Freeform { name, .. } if dropped.contains(name.as_ref()));
         !is_managed_atom(atom.ident()) && !dropped_extra
     });
-    set_ilst_cover(ilst, tags.cover.as_ref());
+    if tags.cover != current.cover {
+        set_ilst_cover(ilst, tags.cover.as_ref());
+    }
     for atom in atoms.into_iter().flatten() {
         ilst.insert(atom);
     }
@@ -433,11 +544,6 @@ fn freeform_atom(field: TagField, values: &[String]) -> Result<Option<Atom<'stat
 
 /// A `trkn` / `disk` atom: `len` bytes, the number in bytes 2-3 and the total in 4-5.
 fn number_atom(fourcc: [u8; 4], value: &str, total: Option<u32>, len: usize) -> Result<Atom<'static>, TagError> {
-    let as_u16 = |text: &str| {
-        text.trim()
-            .parse::<u16>()
-            .map_err(|e| TagError::Write(format!("{text:?} isn't a track or disc number: {e}")))
-    };
     let number = as_u16(&number_text(value, None))?;
     let total = total.map_or(Ok(0), |t| as_u16(&t.to_string()))?;
     let mut data = vec![0u8; len];
@@ -452,22 +558,29 @@ fn number_atom(fourcc: [u8; 4], value: &str, total: Option<u32>, len: usize) -> 
 
 // ── Vorbis comments (FLAC, Ogg Vorbis, Opus) ──────────────────────────────────
 
-/// Ogg Vorbis and Opus keep their pictures in the comments.
-fn write_ogg(
+/// `comments` with the write applied (pictures included, which by now all live in the
+/// comments), and what the saved file must read back as.
+fn write_vorbis_family(
     comments: &VorbisComments,
     tags: &FileTags,
     values: &Values,
     opts: &WriteOptions,
-) -> Result<VorbisComments, TagError> {
+    format: AudioFormat,
+) -> Result<(VorbisComments, FileTags), TagError> {
     let mut comments = comments.clone();
-    let current = read_vorbis(&comments, comments.pictures());
+    let current = read_vorbis(&comments, comments.pictures().iter().map(|(p, _)| p));
     write_vorbis(&mut comments, &current, tags, values, opts);
-    set_ogg_cover(&mut comments, tags.cover.as_ref())?;
-    Ok(comments)
+    if tags.cover != current.cover {
+        set_ogg_cover(&mut comments, tags.cover.as_ref())?;
+    }
+    let edited = read_vorbis(&comments, comments.pictures().iter().map(|(p, _)| p));
+    let expected = expected_tags(&current, tags, values, format, &edited)?;
+    Ok((comments, expected))
 }
 
-/// Removes every managed key (in any letter case) and every dropped extra, keeping the
-/// other items in order, then writes the managed values, one item per value.
+/// Removes every managed key and total (in any letter case) and every dropped extra,
+/// keeping the other items in order, then writes the managed values, one item per value,
+/// and `TRACKTOTAL` after the track when the caller knows the total.
 fn write_vorbis(
     comments: &mut VorbisComments,
     current: &FileTags,
@@ -480,7 +593,8 @@ fn write_vorbis(
         .take_items()
         .filter(|(key, _)| {
             let key = key.to_ascii_uppercase();
-            VORBIS_FIELDS.iter().all(|(name, _)| *name != key) && !dropped.contains(&key)
+            let managed = VORBIS_FIELDS.iter().any(|(name, _)| *name == key) || VORBIS_TOTALS.contains(&key.as_str());
+            !managed && !dropped.contains(&key)
         })
         .collect();
     for (key, value) in kept {
@@ -490,11 +604,13 @@ fn write_vorbis(
         let Some(values) = values.get(&field) else { continue };
         for value in values {
             let value = match field {
-                TagField::Track => number_text(value, opts.track_total),
-                TagField::Disc => number_text(value, None),
+                TagField::Track | TagField::Disc => number_text(value, None),
                 _ => value.clone(),
             };
             comments.push(key.to_owned(), value);
+        }
+        if let (TagField::Track, Some(total)) = (field, opts.track_total) {
+            comments.push("TRACKTOTAL".to_owned(), total.to_string());
         }
     }
 }

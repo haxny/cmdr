@@ -10,6 +10,7 @@
 mod format;
 mod model;
 mod read;
+mod save;
 pub mod text;
 mod write;
 
@@ -22,6 +23,8 @@ use serde_json as _;
 mod format_test;
 #[cfg(test)]
 mod read_test;
+#[cfg(test)]
+mod save_test;
 #[cfg(test)]
 mod test_files;
 #[cfg(test)]

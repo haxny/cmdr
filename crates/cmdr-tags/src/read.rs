@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::{Read, Seek};
 use std::path::Path;
 
 use lofty::config::ParseOptions;
@@ -13,7 +14,7 @@ use lofty::mp4::{AtomData, AtomIdent, Ilst, Mp4File};
 use lofty::mpeg::MpegFile;
 use lofty::ogg::tag::VorbisComments;
 use lofty::ogg::{OggPictureStorage, OpusFile, VorbisFile};
-use lofty::picture::{Picture, PictureInformation, PictureType};
+use lofty::picture::{Picture, PictureType};
 
 use crate::format::{AudioFormat, format_of};
 use crate::model::{Cover, FileTags, TagError, TagField};
@@ -33,33 +34,49 @@ pub(crate) fn parse_error(e: impl std::fmt::Display) -> TagError {
 /// Formats the editor doesn't handle (WAV, ...) are [`TagError::NotSupported`].
 pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
     let format = format_of_path(path)?;
-    let mut file = File::open(path)?;
-    let options = parse_options();
+    read_from(&mut File::open(path)?, format, parse_options())
+}
+
+/// Reads the tags of `format` from `source` with `options`. The writer reads the file it
+/// just saved through here too, with its own strict options.
+pub(crate) fn read_from<R: Read + Seek>(
+    source: &mut R,
+    format: AudioFormat,
+    options: ParseOptions,
+) -> Result<FileTags, TagError> {
     match format {
         AudioFormat::Mp3 => {
-            let file = MpegFile::read_from(&mut file, options).map_err(parse_error)?;
+            let file = MpegFile::read_from(source, options).map_err(parse_error)?;
             Ok(file.id3v2().map(read_id3).unwrap_or_default())
         }
         AudioFormat::Mp4 => {
-            let file = Mp4File::read_from(&mut file, options).map_err(parse_error)?;
+            let file = Mp4File::read_from(source, options).map_err(parse_error)?;
             Ok(file.ilst().map(read_ilst).unwrap_or_default())
         }
         AudioFormat::Flac => {
-            let file = FlacFile::read_from(&mut file, options).map_err(parse_error)?;
-            let from_comments = file.vorbis_comments().map(|c| read_vorbis(c, file.pictures()));
-            Ok(from_comments.unwrap_or_else(|| read_vorbis(&VorbisComments::new(), file.pictures())))
+            let file = FlacFile::read_from(source, options).map_err(parse_error)?;
+            let empty = VorbisComments::new();
+            let comments = file.vorbis_comments().unwrap_or(&empty);
+            Ok(read_vorbis(comments, flac_pictures(&file)))
         }
         AudioFormat::OggVorbis => {
-            let file = VorbisFile::read_from(&mut file, options).map_err(parse_error)?;
+            let file = VorbisFile::read_from(source, options).map_err(parse_error)?;
             let comments = file.vorbis_comments();
-            Ok(read_vorbis(comments, comments.pictures()))
+            Ok(read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)))
         }
         AudioFormat::Opus => {
-            let file = OpusFile::read_from(&mut file, options).map_err(parse_error)?;
+            let file = OpusFile::read_from(source, options).map_err(parse_error)?;
             let comments = file.vorbis_comments();
-            Ok(read_vorbis(comments, comments.pictures()))
+            Ok(read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)))
         }
     }
+}
+
+/// A FLAC's pictures in the order the cover is picked from: the picture blocks, then the
+/// pictures in the comments (`METADATA_BLOCK_PICTURE`). The writer merges them in this order.
+fn flac_pictures(file: &FlacFile) -> impl Iterator<Item = &Picture> + Clone {
+    let in_comments = file.vorbis_comments().map(|c| c.pictures()).unwrap_or_default();
+    file.pictures().iter().chain(in_comments).map(|(picture, _)| picture)
 }
 
 /// Only tags are wanted; skipping the audio properties also spares a read of the stream.
@@ -359,6 +376,10 @@ pub(crate) const VORBIS_FIELDS: [(&str, TagField); 15] = [
     ("COMPOSER", TagField::Composer),
 ];
 
+/// Track and disc totals, which the writer manages too: it writes `TRACKTOTAL` when the
+/// caller passes a total and removes every other one. Never an extra.
+pub(crate) const VORBIS_TOTALS: [&str; 4] = ["TRACKTOTAL", "TOTALTRACKS", "DISCTOTAL", "TOTALDISCS"];
+
 /// The field a Vorbis key (uppercase) maps to.
 pub(crate) fn vorbis_field(key: &str) -> Option<TagField> {
     VORBIS_FIELDS
@@ -367,15 +388,19 @@ pub(crate) fn vorbis_field(key: &str) -> Option<TagField> {
         .map(|(_, field)| *field)
 }
 
-pub(crate) fn read_vorbis(comments: &VorbisComments, pictures: &[(Picture, PictureInformation)]) -> FileTags {
+pub(crate) fn read_vorbis<'a>(
+    comments: &VorbisComments,
+    pictures: impl Iterator<Item = &'a Picture> + Clone,
+) -> FileTags {
     let mut tags = FileTags::default();
     for (key, value) in comments.items() {
         let key = key.to_ascii_uppercase();
         match vorbis_field(&key) {
             Some(field) => put(&mut tags, field, vec![value.to_owned()]),
+            None if VORBIS_TOTALS.contains(&key.as_str()) => {}
             None => put_extra(&mut tags, key, vec![value.to_owned()]),
         }
     }
-    tags.cover = pick_cover(pictures.iter().map(|(picture, _)| picture));
+    tags.cover = pick_cover(pictures);
     tags
 }

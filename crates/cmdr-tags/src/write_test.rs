@@ -1,43 +1,46 @@
 //! `write_tags` round trips: write, then read back with `read_tags` and with lofty directly.
 
-use std::collections::BTreeMap;
+use std::borrow::Cow;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
 use cmdr_media_meta::test_fixtures::{cover, flac_stream, mp3_frames};
+use lofty::TextEncoding;
 use lofty::config::ParseOptions;
 use lofty::file::AudioFile;
 use lofty::flac::FlacFile;
-use lofty::id3::v2::{Frame, FrameId, Id3v2Tag, PrivateFrame};
-use lofty::mp4::{AtomData, AtomIdent, Ilst, Mp4File};
+use lofty::id3::v2::{AttachedPictureFrame, Frame, FrameId, Id3v2Tag, PrivateFrame, RelativeVolumeAdjustmentFrame};
+use lofty::mp4::{Atom, AtomData, AtomIdent, DataType, Ilst, Mp4File};
 use lofty::mpeg::MpegFile;
 use lofty::ogg::tag::VorbisComments;
 use lofty::ogg::{OggPictureStorage, OpusFile, VorbisFile};
-use lofty::picture::{Picture, PictureType};
+use lofty::picture::{MimeType, Picture, PictureType};
 
 use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::read_tags;
 use crate::test_files::*;
-use crate::write::{WriteOptions, save_safely, write_tags};
+use crate::write::{WriteOptions, write_tags};
 
-const MUSIC: WriteOptions = WriteOptions {
+pub(crate) const MUSIC: WriteOptions = WriteOptions {
     kind: ContentKind::Music,
     track_total: None,
+    allow_frame_loss: false,
 };
 const BOOK: WriteOptions = WriteOptions {
     kind: ContentKind::Audiobook,
-    track_total: None,
+    ..MUSIC
 };
 
-fn strings(values: &[&str]) -> Vec<String> {
+pub(crate) fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|v| (*v).to_owned()).collect()
 }
 
-fn read(path: &Path) -> FileTags {
+pub(crate) fn read(path: &Path) -> FileTags {
     read_tags(path).expect("the file reads")
 }
 
-fn write(path: &Path, tags: &FileTags, opts: &WriteOptions) {
+pub(crate) fn write(path: &Path, tags: &FileTags, opts: &WriteOptions) {
     write_tags(path, tags, opts).expect("the write succeeds");
 }
 
@@ -52,7 +55,7 @@ fn without(mut tags: FileTags, field: TagField) -> FileTags {
 }
 
 /// One value for every field, Artist with two.
-fn every_field() -> FileTags {
+pub(crate) fn every_field() -> FileTags {
     let values: [(TagField, &[&str]); 15] = [
         (TagField::Title, &["Kapitola 1"]),
         (TagField::Artist, &["A", "B"]),
@@ -77,7 +80,7 @@ fn every_field() -> FileTags {
     }
 }
 
-fn jpeg(len: usize, byte: u8) -> Cover {
+pub(crate) fn jpeg(len: usize, byte: u8) -> Cover {
     Cover {
         mime: "image/jpeg".to_owned(),
         data: vec![byte; len],
@@ -145,7 +148,7 @@ fn utf8(value: &str) -> AtomData {
     AtomData::UTF8(value.to_owned())
 }
 
-fn listing(dir: &Path) -> Vec<String> {
+pub(crate) fn listing(dir: &Path) -> Vec<String> {
     let mut names: Vec<String> = fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
@@ -450,6 +453,86 @@ fn mp3_audio_payload_is_untouched() {
     assert_eq!(after_id3(&fs::read(&path).unwrap()), after_id3(&before));
 }
 
+/// An ID3v2.4 tag with `TSOP` (performer sort) and `RVA2` (volume adjustment), frames
+/// ID3v2.3 has no place for.
+fn mp3_with_v24_only_frames(dir: &Path) -> PathBuf {
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TIT2", "Nazev");
+    text_frame(&mut tag, "TSOP", "Novotny, Jan");
+    tag.insert(Frame::RelativeVolumeAdjustment(RelativeVolumeAdjustmentFrame::new(
+        "normalize",
+        Cow::Owned(HashMap::new()),
+    )));
+    write_mp3_v24(dir, "a.mp3", &tag)
+}
+
+#[test]
+fn mp3_write_that_would_drop_v24_frames_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = mp3_with_v24_only_frames(dir.path());
+    let before = fs::read(&path).unwrap();
+    let names = listing(dir.path());
+
+    let result = write_tags(&path, &read(&path), &MUSIC);
+
+    assert_eq!(result, Err(TagError::WouldDrop(strings(&["RVA2", "TSOP"]))));
+    assert_eq!(fs::read(&path).unwrap(), before);
+    assert_eq!(listing(dir.path()), names);
+}
+
+#[test]
+fn mp3_frame_loss_allowed_writes_without_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = mp3_with_v24_only_frames(dir.path());
+    let opts = WriteOptions {
+        allow_frame_loss: true,
+        ..MUSIC
+    };
+
+    write(&path, &with(read(&path), TagField::Title, &["Novy"]), &opts);
+
+    let raw = raw_id3(&path);
+    assert!(!id3_has(&raw, "TSOP") && !id3_has(&raw, "RVA2"));
+    assert_eq!(id3_text(&raw, "TIT2"), Some("Novy"));
+    assert_eq!(fs::read(&path).unwrap()[3], 3, "written as ID3v2.3");
+}
+
+#[test]
+fn unchanged_cover_keeps_its_type_and_description() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    let picture = Picture::unchecked(vec![0xC1; 30])
+        .pic_type(PictureType::Other)
+        .mime_type(MimeType::Jpeg)
+        .description("predni strana")
+        .build();
+    tag.insert(Frame::Picture(AttachedPictureFrame::new(TextEncoding::UTF8, picture)));
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+
+    write(&path, &with(read(&path), TagField::Title, &["Novy"]), &MUSIC);
+
+    let raw = raw_id3(&path);
+    let pictures = id3_pictures(&raw);
+    assert_eq!(pictures.len(), 1);
+    assert_eq!(pictures[0].pic_type(), PictureType::Other);
+    assert_eq!(pictures[0].description(), Some("predni strana"));
+}
+
+#[test]
+fn value_that_reads_back_differently_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_untagged_mp3(dir.path(), "a.mp3");
+    let before = fs::read(&path).unwrap();
+    let names = listing(dir.path());
+
+    // ID3 separates values with NUL, so this title would read back as just "A".
+    let result = write_tags(&path, &with(FileTags::default(), TagField::Title, &["A\0B"]), &MUSIC);
+
+    assert!(matches!(result, Err(TagError::Write(_))), "{result:?}");
+    assert_eq!(fs::read(&path).unwrap(), before);
+    assert_eq!(listing(dir.path()), names);
+}
+
 // ── M4A ───────────────────────────────────────────────────────────────────────
 
 #[test]
@@ -594,24 +677,6 @@ fn unsupported_m4a_cover_type_is_refused() {
     assert_eq!(listing(dir.path()), names);
 }
 
-#[test]
-fn failed_save_leaves_original_and_no_temp() {
-    use std::io::Write;
-    let dir = tempfile::tempdir().unwrap();
-    let path = write_untagged_mp3(dir.path(), "a.mp3");
-    let before = fs::read(&path).unwrap();
-    let names = listing(dir.path());
-
-    let result = save_safely(&path, |out| {
-        out.write_all(b"half a tag")?;
-        Err(TagError::Write("stopped partway".to_owned()))
-    });
-
-    assert!(matches!(result, Err(TagError::Write(_))), "{result:?}");
-    assert_eq!(fs::read(&path).unwrap(), before);
-    assert_eq!(listing(dir.path()), names);
-}
-
 /// lofty 0.25.4 truncates a FLAC whose metadata runs to the end of the file when the
 /// metadata shrinks; the read-back check refuses the broken copy.
 #[test]
@@ -628,6 +693,62 @@ fn corrupting_save_is_refused() {
     assert!(matches!(result, Err(TagError::Write(_))), "{result:?}");
     assert_eq!(fs::read(&path).unwrap(), before);
     assert_eq!(listing(dir.path()), names);
+}
+
+/// lofty drops a whole `covr` atom it can't fully decode when reading leniently; writing from
+/// that reading would delete the cover, so the write refuses instead.
+#[test]
+fn strict_parse_failure_refuses_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    let covr = vec![
+        AtomData::Picture(cover(40)),
+        AtomData::Unknown {
+            code: DataType::Other(99),
+            data: vec![1, 2, 3],
+        },
+    ];
+    ilst.insert(Atom::from_collection(AtomIdent::Fourcc(*b"covr"), covr).unwrap());
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+    let before = fs::read(&path).unwrap();
+    let names = listing(dir.path());
+    assert_eq!(read(&path).cover, None, "the lenient reader drops the atom");
+
+    let result = write_tags(&path, &with(read(&path), TagField::Title, &["Novy"]), &MUSIC);
+
+    assert!(matches!(result, Err(TagError::Parse(_))), "{result:?}");
+    assert_eq!(fs::read(&path).unwrap(), before);
+    assert_eq!(listing(dir.path()), names);
+}
+
+#[test]
+fn m4a_chunk_offsets_follow_a_growing_tag() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_bytes(dir.path(), "a.m4b", m4a_with_chunks(3));
+    let chunk_at = |bytes: &[u8], offset: usize| bytes[offset..offset + CHUNK_LEN].to_vec();
+    let before = fs::read(&path).unwrap();
+    for (i, offset) in stco_offsets(&before).into_iter().enumerate() {
+        assert_eq!(chunk_at(&before, offset), vec![u8::try_from(i + 1).unwrap(); CHUNK_LEN]);
+    }
+
+    let tags = FileTags {
+        cover: Some(jpeg(20_000, 0x12)),
+        ..every_field()
+    };
+    write(&path, &tags, &MUSIC);
+
+    let after = fs::read(&path).unwrap();
+    assert!(after.len() > before.len() + 20_000);
+    let offsets = stco_offsets(&after);
+    assert_eq!(offsets.len(), 3);
+    for (i, offset) in offsets.into_iter().enumerate() {
+        assert_eq!(
+            chunk_at(&after, offset),
+            vec![u8::try_from(i + 1).unwrap(); CHUNK_LEN],
+            "chunk {i}"
+        );
+    }
+    assert_eq!(read(&path), tags);
 }
 
 // ── FLAC, Ogg, Opus ───────────────────────────────────────────────────────────
@@ -700,23 +821,172 @@ fn flac_audio_payload_is_untouched() {
     assert_eq!(after_flac_metadata(&fs::read(&path).unwrap()), frames.as_slice());
 }
 
+#[test]
+fn flac_track_total_written_only_when_given() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_flac(dir.path(), "a.flac", VorbisComments::new(), 0);
+    let tags = with(FileTags::default(), TagField::Track, &["3"]);
+    let comments = |path: &Path| raw_flac(path).vorbis_comments().cloned().unwrap_or_default();
+
+    write(
+        &path,
+        &tags,
+        &WriteOptions {
+            track_total: Some(12),
+            ..MUSIC
+        },
+    );
+    let raw = comments(&path);
+    assert_eq!(raw.get_all("TRACKNUMBER").collect::<Vec<_>>(), ["3"]);
+    assert_eq!(raw.get_all("TRACKTOTAL").collect::<Vec<_>>(), ["12"]);
+    assert_eq!(read(&path), tags, "the total is no extra");
+
+    write(&path, &tags, &MUSIC);
+    let raw = comments(&path);
+    assert_eq!(raw.get_all("TRACKNUMBER").collect::<Vec<_>>(), ["3"]);
+    assert_eq!(raw.get("TRACKTOTAL"), None);
+}
+
+#[test]
+fn flac_write_without_total_removes_old_totals() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut comments = VorbisComments::new();
+    for (key, value) in [
+        ("TRACKNUMBER", "3/12"),
+        ("TRACKTOTAL", "12"),
+        ("TOTALTRACKS", "12"),
+        ("DISCTOTAL", "2"),
+        ("TOTALDISCS", "2"),
+    ] {
+        comments.push(key.to_owned(), value.to_owned());
+    }
+    let path = write_flac(dir.path(), "a.flac", comments, 0);
+    let tags = read(&path);
+    assert_eq!(tags, with(FileTags::default(), TagField::Track, &["3"]));
+
+    write(&path, &tags, &MUSIC);
+
+    let raw = raw_flac(&path).vorbis_comments().cloned().unwrap_or_default();
+    let keys: Vec<_> = raw.items().map(|(key, value)| format!("{key}={value}")).collect();
+    assert_eq!(keys, ["TRACKNUMBER=3"]);
+}
+
+/// A FLAC with a back cover as a picture block and the front cover only inside the comments.
+fn flac_with_cover_in_comments(dir: &Path) -> PathBuf {
+    let mut back = cover(50);
+    back.set_pic_type(PictureType::CoverBack);
+    let front = cover(40);
+    let bytes = flac_with_blocks(&[
+        (FLAC_PICTURE, picture_block(&back)),
+        (FLAC_VORBIS_COMMENT, vorbis_comment_body(&[picture_comment(&front)])),
+    ]);
+    write_bytes(dir, "a.flac", bytes)
+}
+
+fn flac_picture_types(path: &Path) -> Vec<(PictureType, usize)> {
+    let file = raw_flac(path);
+    let in_comments = file
+        .vorbis_comments()
+        .map(|c| c.pictures().to_vec())
+        .unwrap_or_default();
+    file.pictures()
+        .iter()
+        .chain(&in_comments)
+        .map(|(p, _)| (p.pic_type(), p.data().len()))
+        .collect()
+}
+
+#[test]
+fn flac_cover_in_comments_is_the_cover_and_is_never_doubled() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with_cover_in_comments(dir.path());
+    assert_eq!(read(&path).cover.map(|c| c.data.len()), Some(40));
+
+    write(
+        &path,
+        &FileTags {
+            cover: Some(jpeg(60, 0x88)),
+            ..read(&path)
+        },
+        &MUSIC,
+    );
+    let mut pictures = flac_picture_types(&path);
+    pictures.sort_by_key(|(_, len)| *len);
+    assert_eq!(pictures, [(PictureType::CoverBack, 50), (PictureType::CoverFront, 60)]);
+
+    write(
+        &path,
+        &FileTags {
+            cover: None,
+            ..read(&path)
+        },
+        &MUSIC,
+    );
+    assert_eq!(flac_picture_types(&path), [(PictureType::CoverBack, 50)]);
+}
+
+#[test]
+fn flac_unmanaged_blocks_survive() {
+    let dir = tempfile::tempdir().unwrap();
+    let seek_point = [0u8; 18];
+    let application = [b"cmdr".as_slice(), &[7u8; 12]].concat();
+    let mut cuesheet = vec![0u8; 396];
+    cuesheet.extend([0u8; 36]); // one lead-out track, number 170
+    cuesheet[396 + 8] = 170;
+    let blocks = [
+        (FLAC_SEEKTABLE, seek_point.to_vec()),
+        (FLAC_APPLICATION, application.clone()),
+        (FLAC_CUESHEET, cuesheet.clone()),
+        (FLAC_VORBIS_COMMENT, vorbis_comment_body(&["TITLE=Stary".to_owned()])),
+    ];
+    let path = write_bytes(dir.path(), "a.flac", flac_with_blocks(&blocks));
+
+    write(
+        &path,
+        &FileTags {
+            cover: Some(jpeg(3000, 0x99)),
+            ..every_field()
+        },
+        &MUSIC,
+    );
+
+    let bytes = fs::read(&path).unwrap();
+    let body_of = |kind: u8| {
+        flac_block_bodies(&bytes)
+            .into_iter()
+            .find(|(k, _)| *k == kind)
+            .map(|(_, b)| b)
+    };
+    assert_eq!(body_of(FLAC_SEEKTABLE), Some(seek_point.to_vec()));
+    assert_eq!(body_of(FLAC_APPLICATION), Some(application));
+    assert_eq!(body_of(FLAC_CUESHEET), Some(cuesheet));
+    assert_eq!(after_flac_metadata(&bytes), flac_frames().as_slice());
+}
+
+/// Every metadata block of a FLAC's bytes, as (type, body).
+fn flac_block_bodies(bytes: &[u8]) -> Vec<(u8, Vec<u8>)> {
+    let mut blocks = Vec::new();
+    let mut pos = 4;
+    loop {
+        let header = &bytes[pos..pos + 4];
+        let len = usize::from(header[1]) << 16 | usize::from(header[2]) << 8 | usize::from(header[3]);
+        blocks.push((header[0] & 0x7F, bytes[pos + 4..pos + 4 + len].to_vec()));
+        pos += 4 + len;
+        if header[0] & 0x80 != 0 {
+            return blocks;
+        }
+    }
+}
+
 fn ogg_family_round_trip(path: &Path) {
     let tags = FileTags {
         cover: Some(jpeg(80, 0x77)),
         ..every_field()
     };
-    let mut expected = tags.clone();
-    expected.extras = read(path).extras;
 
     write(path, &tags, &MUSIC);
 
-    assert_eq!(
-        read(path),
-        FileTags {
-            extras: BTreeMap::new(),
-            ..expected.clone()
-        }
-    );
+    assert_eq!(read(path), tags);
 }
 
 #[test]
@@ -740,98 +1010,6 @@ fn opus_round_trip() {
         ["audiokniha", "thriller"]
     );
     assert_eq!(file.vorbis_comments().pictures().len(), 1);
-}
-
-// ── Safe overwrite ────────────────────────────────────────────────────────────
-
-#[cfg(unix)]
-#[test]
-fn failed_write_leaves_original_and_no_temp() {
-    use std::os::unix::fs::PermissionsExt;
-    let dir = tempfile::tempdir().unwrap();
-    let path = write_untagged_mp3(dir.path(), "a.mp3");
-    let before = fs::read(&path).unwrap();
-    let names = listing(dir.path());
-    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o555)).unwrap();
-
-    let result = write_tags(&path, &every_field(), &MUSIC);
-
-    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755)).unwrap();
-    assert!(
-        matches!(result, Err(TagError::Write(_) | TagError::Io(..))),
-        "{result:?}"
-    );
-    assert_eq!(fs::read(&path).unwrap(), before);
-    assert_eq!(listing(dir.path()), names);
-}
-
-#[cfg(unix)]
-#[test]
-fn write_keeps_permissions_and_leaves_no_temp() {
-    use std::os::unix::fs::PermissionsExt;
-    let dir = tempfile::tempdir().unwrap();
-    let path = write_untagged_mp3(dir.path(), "a.mp3");
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).unwrap();
-
-    write(&path, &every_field(), &MUSIC);
-
-    assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o640);
-    assert_eq!(listing(dir.path()), strings(&["a.mp3"]));
-}
-
-#[cfg(unix)]
-#[test]
-fn read_only_file_is_refused() {
-    use std::os::unix::fs::PermissionsExt;
-    let dir = tempfile::tempdir().unwrap();
-    let path = write_untagged_mp3(dir.path(), "a.mp3");
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o444)).unwrap();
-    let before = fs::read(&path).unwrap();
-
-    let result = write_tags(&path, &every_field(), &MUSIC);
-
-    assert!(
-        matches!(result, Err(TagError::Io(std::io::ErrorKind::PermissionDenied, _))),
-        "{result:?}"
-    );
-    assert_eq!(fs::read(&path).unwrap(), before);
-}
-
-#[cfg(unix)]
-#[test]
-fn write_through_a_symlink_keeps_the_link() {
-    let dir = tempfile::tempdir().unwrap();
-    let target = write_untagged_mp3(dir.path(), "a.mp3");
-    let link: PathBuf = dir.path().join("link.mp3");
-    std::os::unix::fs::symlink(&target, &link).unwrap();
-
-    write(&link, &every_field(), &MUSIC);
-
-    assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
-    assert_eq!(read(&target), every_field());
-}
-
-#[cfg(target_os = "macos")]
-#[test]
-fn write_keeps_extended_attributes() {
-    use std::process::Command;
-    let dir = tempfile::tempdir().unwrap();
-    let path = write_untagged_mp3(dir.path(), "a.mp3");
-    let status = Command::new("xattr")
-        .args(["-w", "com.cmdr.test", "hodnota"])
-        .arg(&path)
-        .status()
-        .unwrap();
-    assert!(status.success());
-
-    write(&path, &every_field(), &MUSIC);
-
-    let out = Command::new("xattr")
-        .args(["-p", "com.cmdr.test"])
-        .arg(&path)
-        .output()
-        .unwrap();
-    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "hodnota");
 }
 
 #[test]
