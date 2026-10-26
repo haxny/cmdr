@@ -130,7 +130,9 @@ pub enum TagError {
     Parse(String),
     /// The tags couldn't be written.
     Write(String),
-    /// Saving an MP3 as ID3v2.3 would drop these frames (IDs, sorted), which ID3v2.3 has no
+    /// The write would lose these items (sorted IDs such as `TSOP`, `TXXX:Comment`, `COMM:ces`,
+    /// `TITLE#2`): values the reader doesn't show that differ from what it shows (a second value
+    /// of a single-value field, a legacy or duplicate frame), or on MP3 frames ID3v2.3 has no
     /// place for. Nothing was written; `WriteOptions::allow_frame_loss` writes anyway.
     WouldDrop(Vec<String>),
     /// `FileTags::extras` asks for an extra (this key) that the file lacks and the write
@@ -146,7 +148,7 @@ impl fmt::Display for TagError {
             TagError::Io(kind, msg) => write!(f, "I/O error ({kind}): {msg}"),
             TagError::Parse(msg) => write!(f, "couldn't parse tags: {msg}"),
             TagError::Write(msg) => write!(f, "couldn't write tags: {msg}"),
-            TagError::WouldDrop(ids) => write!(f, "saving as ID3v2.3 would drop {}", ids.join(", ")),
+            TagError::WouldDrop(ids) => write!(f, "the write would drop {}", ids.join(", ")),
             TagError::UnwritableExtra(key) => write!(f, "can't add the extra {key:?}"),
         }
     }

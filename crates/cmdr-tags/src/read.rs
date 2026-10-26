@@ -216,22 +216,91 @@ fn number_part(values: Vec<String>) -> Vec<String> {
     clean(values.iter().map(|v| v.split('/').next().unwrap_or_default()))
 }
 
-/// Puts `values` under `field` unless they're empty. Multi-value fields keep every value;
-/// every other field keeps only the first value found. Number fields keep only the number.
-fn put(tags: &mut FileTags, field: TagField, values: Vec<String>) {
-    let mut values = match field {
+/// `values` as `field` holds them: a number field keeps only the number, a multi-value field
+/// splits values joined with [`JOIN`], every value is trimmed, and empties go.
+fn field_values(field: TagField, values: Vec<String>) -> Vec<String> {
+    match field {
         TagField::Track | TagField::Disc => number_part(values),
+        _ if field.is_multi() => split_joined(values),
         _ => clean(values),
-    };
-    if !field.is_multi() {
-        if tags.fields.contains_key(&field) {
-            return;
+    }
+}
+
+/// One item of a tag that the reader maps to a managed field, and that a write therefore
+/// removes: a frame, an atom, or one Vorbis comment.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Mapped {
+    /// How [`TagError::WouldDrop`] names the item: `TIT2`, `COMM:ces`, `TXXX:Comment`, `©nam`,
+    /// a freeform name, or a Vorbis key.
+    pub(crate) id: String,
+    pub(crate) field: TagField,
+    /// Its values as the field holds them ([`field_values`]).
+    pub(crate) values: Vec<String>,
+    /// Only fills the field when no other item does: the legacy `TXXX:Comment` and
+    /// `TXXX:DiscNumber`, and MP4's `©gen` beside the freeform `GENRE`.
+    pub(crate) fallback: bool,
+}
+
+impl Mapped {
+    fn new(id: impl Into<String>, field: TagField, values: Vec<String>) -> Self {
+        Self {
+            id: id.into(),
+            field,
+            values: field_values(field, values),
+            fallback: false,
         }
-        values.truncate(1);
     }
-    if !values.is_empty() {
-        tags.fields.entry(field).or_default().extend(values);
+
+    fn fallback(self) -> Self {
+        Self { fallback: true, ..self }
     }
+}
+
+/// The managed fields `items` show, in order: a multi-value field gathers every item's values;
+/// any other field shows only the first value found. A fallback item fills a field only when
+/// no other item did.
+fn shown_fields(items: &[Mapped]) -> BTreeMap<TagField, Vec<String>> {
+    let mut fields: BTreeMap<TagField, Vec<String>> = BTreeMap::new();
+    for pass_fallback in [false, true] {
+        let filled: Vec<TagField> = fields.keys().copied().collect();
+        for item in items
+            .iter()
+            .filter(|i| i.fallback == pass_fallback && !i.values.is_empty())
+        {
+            if pass_fallback && filled.contains(&item.field) {
+                continue;
+            }
+            match fields.get_mut(&item.field) {
+                Some(values) if item.field.is_multi() => values.extend(item.values.iter().cloned()),
+                Some(_) => {}
+                None => {
+                    let take = if item.field.is_multi() { usize::MAX } else { 1 };
+                    fields.insert(item.field, item.values.iter().take(take).cloned().collect());
+                }
+            }
+        }
+    }
+    fields
+}
+
+/// The items among `items` holding a value that `shown` (what the reader made of them) doesn't
+/// show, by [`Mapped::id`]; a repeated id gets `#2`, `#3`, ... from its second occurrence on. A
+/// write removes every mapped item and writes only the shown values, so these would be lost.
+pub(crate) fn hidden_items(items: &[Mapped], shown: &FileTags) -> Vec<String> {
+    let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut hidden = Vec::new();
+    for item in items {
+        let n = seen.entry(&item.id).and_modify(|n| *n += 1).or_insert(1);
+        let field = shown.fields.get(&item.field);
+        if !item.values.iter().all(|v| field.is_some_and(|shown| shown.contains(v))) {
+            hidden.push(if *n == 1 {
+                item.id.clone()
+            } else {
+                format!("{}#{n}", item.id)
+            });
+        }
+    }
+    hidden
 }
 
 /// Adds an unmanaged item, merging repeated keys.
@@ -300,46 +369,46 @@ pub(crate) fn frame_field(id: &str) -> Option<TagField> {
     })
 }
 
-/// Puts an ID3 value under `field`: null-separated values, plus `"; "` for the multi fields.
-fn put_id3(tags: &mut FileTags, field: TagField, raw: &str) {
-    let values = split_nulls(raw);
-    put(
-        tags,
-        field,
-        if field.is_multi() { split_joined(values) } else { values },
-    );
+/// Every frame of `id3` the reader maps to a managed field. ID3 values are null-separated.
+pub(crate) fn id3_items(id3: &Id3v2Tag) -> Vec<Mapped> {
+    id3.into_iter()
+        .filter_map(|frame| match frame {
+            Frame::Text(f) => {
+                frame_field(f.id().as_str()).map(|field| Mapped::new(f.id().as_str(), field, split_nulls(&f.value)))
+            }
+            Frame::Timestamp(f) => frame_field(f.id().as_str())
+                .map(|field| Mapped::new(f.id().as_str(), field, split_nulls(&f.timestamp.to_string()))),
+            Frame::Comment(f) if f.description.is_empty() => {
+                let id = format!("COMM:{}", String::from_utf8_lossy(&f.language));
+                Some(Mapped::new(id, TagField::Comment, split_nulls(&f.content)))
+            }
+            Frame::UserText(f) => txxx_field(&f.description).map(|field| {
+                let item = Mapped::new(format!("TXXX:{}", f.description), field, split_nulls(&f.content));
+                // The legacy Comment and DiscNumber frames only fill a field COMM / TPOS left empty.
+                if TXXX_LEGACY_FIELDS
+                    .iter()
+                    .any(|(name, _)| name.eq_ignore_ascii_case(&f.description))
+                {
+                    item.fallback()
+                } else {
+                    item
+                }
+            }),
+            _ => None,
+        })
+        .collect()
 }
 
 pub(crate) fn read_id3(id3: &Id3v2Tag) -> FileTags {
-    let mut tags = FileTags::default();
-    let mut legacy: BTreeMap<TagField, String> = BTreeMap::new();
+    let mut tags = FileTags {
+        fields: shown_fields(&id3_items(id3)),
+        ..FileTags::default()
+    };
     for frame in id3 {
-        match frame {
-            Frame::Text(f) => {
-                if let Some(field) = frame_field(f.id().as_str()) {
-                    put_id3(&mut tags, field, &f.value);
-                }
-            }
-            Frame::Timestamp(f) => {
-                if let Some(field) = frame_field(f.id().as_str()) {
-                    put_id3(&mut tags, field, &f.timestamp.to_string());
-                }
-            }
-            Frame::Comment(f) if f.description.is_empty() => put_id3(&mut tags, TagField::Comment, &f.content),
-            Frame::UserText(f) => match txxx_field(&f.description) {
-                // The legacy Comment and DiscNumber frames only fill a field COMM / TPOS left empty.
-                Some(field @ (TagField::Comment | TagField::Disc)) => {
-                    legacy.insert(field, f.content.to_string());
-                }
-                Some(field) => put_id3(&mut tags, field, &f.content),
-                None => put_extra(&mut tags, f.description.to_string(), split_nulls(&f.content)),
-            },
-            _ => {}
-        }
-    }
-    for (field, raw) in legacy {
-        if !tags.fields.contains_key(&field) {
-            put_id3(&mut tags, field, &raw);
+        if let Frame::UserText(f) = frame
+            && txxx_field(&f.description).is_none()
+        {
+            put_extra(&mut tags, f.description.to_string(), split_nulls(&f.content));
         }
     }
     tags.cover = pick_cover(id3_pictures(id3));
@@ -414,35 +483,45 @@ pub(crate) fn freeform_field(name: &str) -> Option<TagField> {
         .map(|(_, field)| *field)
 }
 
-pub(crate) fn read_ilst(ilst: &Ilst) -> FileTags {
-    let mut tags = FileTags::default();
-    let mut gen_values = Vec::new();
-    for atom in ilst {
-        match atom.ident() {
-            AtomIdent::Fourcc([0xA9, b'g', b'e', b'n']) => gen_values = split_joined(atom_texts(atom.data())),
-            AtomIdent::Fourcc(fourcc) => {
-                let Some(field) = fourcc_field(fourcc) else { continue };
+/// A four-character code as text, each byte one Latin-1 character (`©nam`).
+fn fourcc_name(fourcc: &[u8; 4]) -> String {
+    fourcc.iter().map(|b| char::from(*b)).collect()
+}
+
+/// Every atom of `ilst` the reader maps to a managed field. `©gen` only fills the genre when
+/// no freeform `GENRE` does, so values never double.
+pub(crate) fn ilst_items(ilst: &Ilst) -> Vec<Mapped> {
+    ilst.into_iter()
+        .filter_map(|atom| match atom.ident() {
+            AtomIdent::Fourcc(fourcc @ [0xA9, b'g', b'e', b'n']) => {
+                Some(Mapped::new(fourcc_name(fourcc), TagField::Genre, atom_texts(atom.data())).fallback())
+            }
+            AtomIdent::Fourcc(fourcc) => fourcc_field(fourcc).map(|field| {
                 let values = match field {
                     TagField::Track | TagField::Disc => atom_number(atom.data()),
-                    _ if field.is_multi() => split_joined(atom_texts(atom.data())),
                     _ => atom_texts(atom.data()),
                 };
-                put(&mut tags, field, values);
-            }
-            AtomIdent::Freeform { mean, name } => {
-                let field = (mean == ITUNES_MEAN).then(|| freeform_field(name)).flatten();
-                let texts = atom_texts(atom.data());
-                match field {
-                    Some(field) if field.is_multi() => put(&mut tags, field, split_joined(texts)),
-                    Some(field) => put(&mut tags, field, texts),
-                    None => put_extra(&mut tags, name.to_string(), texts),
-                }
-            }
+                Mapped::new(fourcc_name(fourcc), field, values)
+            }),
+            AtomIdent::Freeform { mean, name } => (mean == ITUNES_MEAN)
+                .then(|| freeform_field(name))
+                .flatten()
+                .map(|field| Mapped::new(name.as_ref(), field, atom_texts(atom.data()))),
+        })
+        .collect()
+}
+
+pub(crate) fn read_ilst(ilst: &Ilst) -> FileTags {
+    let mut tags = FileTags {
+        fields: shown_fields(&ilst_items(ilst)),
+        ..FileTags::default()
+    };
+    for atom in ilst {
+        if let AtomIdent::Freeform { mean, name } = atom.ident()
+            && !(mean == ITUNES_MEAN && freeform_field(name).is_some())
+        {
+            put_extra(&mut tags, name.to_string(), atom_texts(atom.data()));
         }
-    }
-    // The freeform GENRE wins; `©gen` only fills in when it is absent, so values never double.
-    if !tags.fields.contains_key(&TagField::Genre) {
-        put(&mut tags, TagField::Genre, gen_values);
     }
     tags.cover = ilst
         .pictures()
@@ -471,29 +550,46 @@ pub(crate) const VORBIS_FIELDS: [(&str, TagField); 15] = [
     ("COMPOSER", TagField::Composer),
 ];
 
+/// Keys only read (as their field) and removed on write: `ALBUM ARTIST`, which some taggers
+/// write instead of `ALBUMARTIST`.
+const VORBIS_ALIASES: [(&str, TagField); 1] = [("ALBUM ARTIST", TagField::AlbumArtist)];
+
 /// Track and disc totals, which the writer manages too: it writes `TRACKTOTAL` when the
 /// caller passes a total and removes every other one. Never an extra.
 pub(crate) const VORBIS_TOTALS: [&str; 4] = ["TRACKTOTAL", "TOTALTRACKS", "DISCTOTAL", "TOTALDISCS"];
 
-/// The field a Vorbis key (uppercase) maps to.
+/// The field a Vorbis key (uppercase) maps to, aliases included.
 pub(crate) fn vorbis_field(key: &str) -> Option<TagField> {
     VORBIS_FIELDS
         .iter()
+        .chain(&VORBIS_ALIASES)
         .find(|(name, _)| *name == key)
         .map(|(_, field)| *field)
+}
+
+/// Every comment the reader maps to a managed field, by its uppercase key.
+pub(crate) fn vorbis_items(comments: &VorbisComments) -> Vec<Mapped> {
+    comments
+        .items()
+        .filter_map(|(key, value)| {
+            let key = key.to_ascii_uppercase();
+            vorbis_field(&key).map(|field| Mapped::new(key, field, vec![value.to_owned()]))
+        })
+        .collect()
 }
 
 pub(crate) fn read_vorbis<'a>(
     comments: &VorbisComments,
     pictures: impl Iterator<Item = &'a Picture> + Clone,
 ) -> FileTags {
-    let mut tags = FileTags::default();
+    let mut tags = FileTags {
+        fields: shown_fields(&vorbis_items(comments)),
+        ..FileTags::default()
+    };
     for (key, value) in comments.items() {
         let key = key.to_ascii_uppercase();
-        match vorbis_field(&key) {
-            Some(field) => put(&mut tags, field, vec![value.to_owned()]),
-            None if VORBIS_TOTALS.contains(&key.as_str()) => {}
-            None => put_extra(&mut tags, key, vec![value.to_owned()]),
+        if vorbis_field(&key).is_none() && !VORBIS_TOTALS.contains(&key.as_str()) {
+            put_extra(&mut tags, key, vec![value.to_owned()]);
         }
     }
     tags.cover = pick_cover(pictures);

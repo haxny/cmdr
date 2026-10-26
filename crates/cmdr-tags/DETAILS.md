@@ -5,23 +5,23 @@
 One `TagField` maps to a native key per format. Reading also accepts the aliases in the last column; a write removes
 those aliases so the file never carries two copies.
 
-| Field       | MP3 (ID3v2.3)                      | M4A/M4B (`ilst`)                                | FLAC / Ogg / Opus | MP3 read aliases  |
-| ----------- | ---------------------------------- | ----------------------------------------------- | ----------------- | ----------------- |
-| Title       | `TIT2`                             | `©nam`                                          | `TITLE`           |                   |
-| Artist      | `TPE1`                             | `©ART`                                          | `ARTIST`          |                   |
-| AlbumArtist | `TPE2`                             | `aART`                                          | `ALBUMARTIST`     |                   |
-| Album       | `TALB`                             | `©alb`                                          | `ALBUM`           |                   |
-| Performer   | `TXXX:Performer`                   | freeform `PERFORMER`                            | `PERFORMER`       |                   |
-| Composer    | `TCOM` (removed for audiobooks)    | `©wrt` (removed for audiobooks)                 | `COMPOSER`        |                   |
-| Date        | `TYER` / `TDRC` (lofty downgrades) | `©day`                                          | `DATE`            |                   |
-| Genre       | `TCON`                             | freeform `GENRE` (one entry per value) + `©gen` | `GENRE`, repeated |                   |
-| Publisher   | `TPUB`                             | freeform `publisher`                            | `PUBLISHER`       |                   |
-| Translator  | `TXXX:Translator`                  | freeform `translator`                           | `TRANSLATOR`      |                   |
-| Track       | `TRCK`                             | `trkn`                                          | `TRACKNUMBER`     |                   |
-| Disc        | `TPOS`                             | `disk`                                          | `DISCNUMBER`      | `TXXX:DiscNumber` |
-| Comment     | `COMM` (lang `eng`, empty desc.)   | `©cmt`                                          | `COMMENT`         | `TXXX:Comment`    |
-| Description | `TXXX:Description`                 | freeform `description`                          | `DESCRIPTION`     |                   |
-| Www         | `TXXX:www`                         | freeform `www`                                  | `WWW`             |                   |
+| Field       | MP3 (ID3v2.3)                      | M4A/M4B (`ilst`)                                | FLAC / Ogg / Opus | Read aliases            |
+| ----------- | ---------------------------------- | ----------------------------------------------- | ----------------- | ----------------------- |
+| Title       | `TIT2`                             | `©nam`                                          | `TITLE`           |                         |
+| Artist      | `TPE1`                             | `©ART`                                          | `ARTIST`          |                         |
+| AlbumArtist | `TPE2`                             | `aART`                                          | `ALBUMARTIST`     | `ALBUM ARTIST` (Vorbis) |
+| Album       | `TALB`                             | `©alb`                                          | `ALBUM`           |                         |
+| Performer   | `TXXX:Performer`                   | freeform `PERFORMER`                            | `PERFORMER`       |                         |
+| Composer    | `TCOM` (removed for audiobooks)    | `©wrt` (removed for audiobooks)                 | `COMPOSER`        |                         |
+| Date        | `TYER` / `TDRC` (lofty downgrades) | `©day`                                          | `DATE`            |                         |
+| Genre       | `TCON`                             | freeform `GENRE` (one entry per value) + `©gen` | `GENRE`, repeated |                         |
+| Publisher   | `TPUB`                             | freeform `publisher`                            | `PUBLISHER`       |                         |
+| Translator  | `TXXX:Translator`                  | freeform `translator`                           | `TRANSLATOR`      |                         |
+| Track       | `TRCK`                             | `trkn`                                          | `TRACKNUMBER`     |                         |
+| Disc        | `TPOS`                             | `disk`                                          | `DISCNUMBER`      | `TXXX:DiscNumber` (MP3) |
+| Comment     | `COMM` (lang `eng`, empty desc.)   | `©cmt`                                          | `COMMENT`         | `TXXX:Comment` (MP3)    |
+| Description | `TXXX:Description`                 | freeform `description`                          | `DESCRIPTION`     |                         |
+| Www         | `TXXX:www`                         | freeform `www`                                  | `WWW`             |                         |
 
 Cover: `APIC` type 3 (MP3), `covr` (M4A), `METADATA_BLOCK_PICTURE` or a FLAC picture block. "The cover" is the first
 front-cover picture, else the first untyped (`Other`) picture (`read::cover_position`, shared by reader and writer);
@@ -42,6 +42,9 @@ store.
 
 M4A freeform atoms live under mean `com.apple.iTunes`. Reading prefers the freeform `GENRE` and never doubles values
 with `©gen` (which holds them joined with `"; "`).
+
+Every reader splits a multi-value field's value on `"; "`, Vorbis included (a tagger may write `GENRE=a; b` instead of
+repeating the key); the writer writes Vorbis values as repeated keys. Single-value fields are never split.
 
 ## Why concrete tag types
 
@@ -65,7 +68,18 @@ reader reports them; keys differing only in case merge). An extra the file lacks
 values, or a key the reader would take for a managed field or a Vorbis total, like a `PERFORMER` that was under a
 foreign MP4 mean) fails the write as `TagError::UnwritableExtra(key)`: never a silent skip. An ID3 extra in another
 letter case than the file's `TXXX` renames the frame (the old one is dropped, the new one added). Single-value fields
-write their first value only (the reader shows only that one), so a second `COMM` or a `TYER` beside `TDRC` goes away.
+write their first value only (the reader shows only that one).
+
+**Hidden values never go silently.** Each reader lists every item it maps to a managed field (`read::Mapped`:
+`id3_items`, `ilst_items`, `vorbis_items`) and builds the fields from that list; the writer removes all of them. So
+before writing it checks the same list against what the reader showed (`read::hidden_items`): an item holding a value
+the reader doesn't show is one the write would lose. That covers a second value of a single-value field (`TALB`
+`"A\0B"`, a second `TITLE`), a legacy `TXXX:Comment` / `TXXX:DiscNumber` beside `COMM` / `TPOS`, a `COMM` in another
+language, a `TYER` beside `TDRC`, and MP4's `©gen` beside the freeform `GENRE`. An item whose values all show (an
+identical duplicate, a legacy frame equal to the `COMM`) goes silently; any other fails the write as
+`TagError::WouldDrop` naming it (`TXXX:Comment`, `COMM:ces`, `©gen`, `TITLE#2` for a key's second occurrence), together
+with any ID3v2.3 losses below, unless `WriteOptions::allow_frame_loss` is set. A file with only the legacy frames reads
+them as the fields and is written with `COMM` / `TPOS`.
 
 - **MP3**: text is UTF-8 in memory; lofty writes UTF-16 for v2.3. The date is a `TDRC` timestamp that lofty splits into
   `TYER` (+ `TDAT`, `TIME`); a date it can't parse fails the write, because lofty would drop it silently. lofty's v2.3

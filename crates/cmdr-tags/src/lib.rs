@@ -39,6 +39,8 @@ mod write_cover_test;
 #[cfg(test)]
 mod write_extras_test;
 #[cfg(test)]
+mod write_hidden_test;
+#[cfg(test)]
 mod write_test;
 #[cfg(test)]
 mod write_totals_test;

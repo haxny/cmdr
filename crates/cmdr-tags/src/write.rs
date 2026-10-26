@@ -32,8 +32,9 @@ use crate::format::AudioFormat;
 use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::{
     FREEFORM_FIELDS, ITUNES_MEAN, JOIN, RawTags, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS,
-    cover_position, format_of_path, fourcc_field, frame_field, freeform_field, id3_pictures, parse_error,
-    parse_options, raw_id3, read_both_from, read_id3, read_ilst, read_vorbis, txxx_field,
+    cover_position, format_of_path, fourcc_field, frame_field, freeform_field, hidden_items, id3_items, id3_pictures,
+    ilst_items, parse_error, parse_options, raw_id3, read_both_from, read_id3, read_ilst, read_vorbis, txxx_field,
+    vorbis_field, vorbis_items,
 };
 use crate::save::save_safely;
 use crate::write_extras::{added_extras, dropped_extras, upper_extra_keys};
@@ -117,12 +118,14 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
             }
             let mut id3 = file.id3v2().cloned().unwrap_or_default();
             let current = read_id3(&id3);
+            let hidden = hidden_items(&id3_items(&id3), &current);
             let conductor = match (conductor, opts.kind) {
                 (Some(conductor), _) => Some(conductor.to_owned()),
                 (None, ContentKind::Audiobook) => None,
                 (None, ContentKind::Music) => raw_id3(&id3).conductor,
             };
             write_id3(&mut id3, &current, tags, &values, opts, conductor.as_deref())?;
+            refuse_loss(hidden.into_iter().chain(v23_losses(&id3)), opts.allow_frame_loss)?;
             let expected = expected_tags(&current, tags, &values, format, &read_id3(&id3))?;
             let raw = expected_raw(&values, opts, conductor);
             let v23 = LoftyWriteOptions::new().use_id3v23(true);
@@ -132,6 +135,7 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
             let file = Mp4File::read_from(&mut source, parse).map_err(parse_error)?;
             let mut ilst = file.ilst().cloned().unwrap_or_default();
             let current = read_ilst(&ilst);
+            refuse_loss(hidden_items(&ilst_items(&ilst), &current), opts.allow_frame_loss)?;
             write_ilst(&mut ilst, &current, tags, &values, opts)?;
             let expected = expected_tags(&current, tags, &values, format, &read_ilst(&ilst))?;
             let raw = expected_raw(&values, opts, None);
@@ -229,13 +233,13 @@ fn expected_tags(
     format: AudioFormat,
     edited: &FileTags,
 ) -> Result<FileTags, TagError> {
-    let one_string = matches!(format, AudioFormat::Mp3 | AudioFormat::Mp4);
     let mut fields = BTreeMap::new();
     for (field, values) in values {
         let read_back: Vec<String> = match field {
             TagField::Track | TagField::Disc => values.iter().map(|v| number_text(v, None)).collect(),
             TagField::Date if format == AudioFormat::Mp3 => vec![timestamp(&values[0])?.to_string()],
-            _ if field.is_multi() && one_string => values
+            // The readers split joined values of a multi-value field in every format.
+            _ if field.is_multi() => values
                 .iter()
                 .flat_map(|v| v.split(JOIN))
                 .map(str::trim)
@@ -420,22 +424,29 @@ fn write_id3(
     for frame in frames.into_iter().chain(extras).chain(conductor).chain(new_cover) {
         id3.insert(frame);
     }
-    refuse_frame_loss(id3, opts.allow_frame_loss)
+    Ok(())
 }
 
-/// [`TagError::WouldDrop`] with the frames lofty's ID3v2.3 writer would lose from `id3`,
-/// unless there are none or the caller allows it: v2.4-only and outdated v2.2 IDs (dropped),
-/// a `TDOR` finer than a year (cut to the year as `TORY`), and `TMCL` (merged with `TIPL`
-/// into one `IPLS`, which reads back as `TIPL`; a lone `TIPL` round-trips).
-fn refuse_frame_loss(id3: &Id3v2Tag, allowed: bool) -> Result<(), TagError> {
-    let lost: BTreeSet<String> = id3
-        .into_iter()
+/// The frames lofty's ID3v2.3 writer would lose from `id3`: v2.4-only and outdated v2.2 IDs
+/// (dropped), a `TDOR` finer than a year (cut to the year as `TORY`), and `TMCL` (merged with
+/// `TIPL` into one `IPLS`, which reads back as `TIPL`; a lone `TIPL` round-trips).
+fn v23_losses(id3: &Id3v2Tag) -> Vec<String> {
+    id3.into_iter()
         .filter(|f| match f {
             Frame::Timestamp(t) if f.id_str() == "TDOR" => t.timestamp.month.is_some(),
             _ => !f.id().is_valid() || DROPPED_BY_V23.contains(&f.id_str()) || f.id_str() == "TMCL",
         })
         .map(|f| f.id_str().to_owned())
-        .collect();
+        .collect()
+}
+
+/// [`TagError::WouldDrop`] naming what the write would lose (sorted, each once), unless
+/// nothing or the caller allows it. Two kinds of loss: items the reader hides
+/// ([`hidden_items`]: a second value of a single-value field, a differing legacy `TXXX`, a
+/// `COMM` in another language, ...; one equal to what the reader shows goes silently), and on
+/// MP3 the frames ID3v2.3 has no place for ([`v23_losses`]).
+fn refuse_loss(lost: impl IntoIterator<Item = String>, allowed: bool) -> Result<(), TagError> {
+    let lost: BTreeSet<String> = lost.into_iter().collect();
     if lost.is_empty() || allowed {
         Ok(())
     } else {
@@ -665,6 +676,7 @@ fn write_vorbis_family(
 ) -> Result<(VorbisComments, FileTags), TagError> {
     let mut comments = comments.clone();
     let current = read_vorbis(&comments, comments.pictures().iter().map(|(p, _)| p));
+    refuse_loss(hidden_items(&vorbis_items(&comments), &current), opts.allow_frame_loss)?;
     write_vorbis(&mut comments, &current, tags, values, opts, format)?;
     if tags.cover != current.cover {
         set_ogg_cover(&mut comments, tags.cover.as_ref())?;
@@ -692,7 +704,7 @@ fn write_vorbis(
         .take_items()
         .filter(|(key, _)| {
             let key = key.to_ascii_uppercase();
-            let managed = VORBIS_FIELDS.iter().any(|(name, _)| *name == key) || VORBIS_TOTALS.contains(&key.as_str());
+            let managed = vorbis_field(&key).is_some() || VORBIS_TOTALS.contains(&key.as_str());
             !managed && !dropped.contains(&key)
         })
         .collect();

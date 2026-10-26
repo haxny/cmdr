@@ -237,12 +237,13 @@ fn mp3_managed_txxx_is_matched_case_insensitively() {
 
 #[test]
 fn mp3_duplicate_single_value_frames_collapse_to_one() {
+    // Identical duplicates only: one that differs refuses the write (`write_hidden_test`).
     let dir = tempfile::tempdir().unwrap();
     let mut tag = Id3v2Tag::new();
     comm(&mut tag, "Prvni");
-    comm_in(&mut tag, *b"ces", "Druhy");
+    comm_in(&mut tag, *b"ces", "Prvni");
     text_frame(&mut tag, "TDRC", "2001");
-    text_frame(&mut tag, "TYER", "1999");
+    text_frame(&mut tag, "TYER", "2001");
     let path = write_mp3_v24(dir.path(), "a.mp3", &tag);
 
     write(&path, &read(&path), &MUSIC);
