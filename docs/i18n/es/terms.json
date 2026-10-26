@@ -64,6 +64,13 @@
     "sources": "macOS Finder (Añadir, Añadir a favoritos, Añadir al Dock, Añadir etiquetas…)",
     "decision": "Añadir a un informe ya enviado"
   },
+  "administrator": {
+    "chosen": "administrador",
+    "accept": ["administr"],
+    "forms": "an administrator password → una contraseña de administrador; administrator rights → permisos de administrador; the person who runs a Mac → quien administre este Mac (no gendered role noun)",
+    "confidence": "high",
+    "sources": "Microsoft terminology (contraseña de administrador); catalog (permisos de administrador ×4, quien administre este Mac)"
+  },
   "advanced": {
     "chosen": "Avanzado",
     "confidence": "high",
@@ -307,6 +314,13 @@
     "forms": "Cmdr blocked X from reaching Y → Cmdr ha bloqueado el acceso de X a Y; macOS blocked Cmdr from accessing → macOS ha impedido a Cmdr acceder; a blocked rename → está bloqueado",
     "confidence": "high",
     "sources": "Microsoft (Blocked → Bloqueado); macOS Finder (bloqueado); catalog askCmdr.renameReview.overwriteTooltip, errors.listing.notPermitted.explanation"
+  },
+  "blocked-by": {
+    "chosen": "bloquear",
+    "accept": ["bloque", "impedi", "impid"],
+    "forms": "Cmdr blocked X from reaching Y → Cmdr ha bloqueado el acceso de X a Y (es-419: bloqueó)",
+    "confidence": "high",
+    "sources": "macOS (bloquear, 59 hits); Total Commander, Double Commander, Nautilus; catalog (ha bloqueado ×2)"
   },
   "brief-view": {
     "chosen": "vista breve",
@@ -2248,6 +2262,13 @@
     "confidence": "high",
     "sources": "macOS Finder Toolbar (Path → Ruta); MS (ruta de acceso)"
   },
+  "pattern": {
+    "chosen": "patrón",
+    "accept": ["patrones"],
+    "forms": "rename pattern → patrón de renombrado",
+    "confidence": "high",
+    "sources": "Nautilus (patrón ×11), Total Commander, Microsoft terminology; catalog onboarding.stepAi.table.renameWith"
+  },
   "pause": {
     "chosen": "Pausar",
     "accept": ["paus"],
@@ -3153,6 +3174,13 @@
     "confidence": "tentative",
     "sources": "composed (no macOS equivalent)"
   },
+  "tamper": {
+    "chosen": "manipular",
+    "accept": ["manipul"],
+    "forms": "someone tampering with traffic → alguien esté manipulando el tráfico; tampering with the connection → manipulando la conexión",
+    "confidence": "high",
+    "sources": "Microsoft terminology (manipular, 163 hits); catalog (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid)"
+  },
   "tap": {
     "chosen": "tocar",
     "accept": ["toca", "toques"],
@@ -3336,11 +3364,31 @@
     "sources": "macOS AppKit (se cerró inesperadamente)",
     "decision": "Coherencia del termbase"
   },
+  "uninstall": {
+    "chosen": "desinstalar",
+    "accept": ["desinstal"],
+    "forms": "Uninstalled X → Se ha desinstalado X (es-419: Se desinstaló); Installing or uninstalling → instalar o desinstalar",
+    "avoid": [
+      {
+        "form": "quitar",
+        "why": "the remove-from-a-list verb; the menu item menu.app.cliCommandUninstall says Desinstalar"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Microsoft terminology (desinstalar), Total Commander; catalog menu.app.cliCommandUninstall"
+  },
   "unlock": {
     "chosen": "Desbloquear",
     "accept": ["desbloqu"],
     "confidence": "high",
     "sources": "macOS AppKit (Desbloquear)"
+  },
+  "unlock-device": {
+    "chosen": "desbloquear",
+    "accept": ["desbloque", "desbloqué"],
+    "forms": "unlock it (a phone) → desbloquéalo",
+    "confidence": "high",
+    "sources": "macOS (Desbloquear, 17 hits), Nautilus, Microsoft terminology; catalog fileOperations.archivePassword.unlock"
   },
   "unplug": {
     "chosen": "desconectar",

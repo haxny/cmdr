@@ -658,9 +658,9 @@
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"
   },
-  "menu.volume.editFavoriteShortcut": "Asignar atajo…",
+  "menu.volume.editFavoriteShortcut": "Asignar tecla de atajo…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Quitar",
   "@menu.volume.removeFavorite": {

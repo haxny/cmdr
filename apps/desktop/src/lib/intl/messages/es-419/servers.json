@@ -91,13 +91,13 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "488f40b"
   },
-  "servers.hostKey.changedDisclosure": "Ya lo comprobé",
+  "servers.hostKey.changedDisclosure": "Ya comprobé la clave",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "62c5c7c"
+    "sourceHash": "323e040"
   },
-  "servers.certificate.changedDisclosure": "Ya lo comprobé",
+  "servers.certificate.changedDisclosure": "Ya comprobé el certificado",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "62c5c7c"
+    "sourceHash": "f3cbbab"
   },
   "servers.paneState.hostKeyChangedHint": "Su clave cambió. Esto puede significar que el servidor se reinstaló, o que hay algo entre tú y él. Comprueba la nueva clave antes de volver a conectarte.",
   "@servers.paneState.hostKeyChangedHint": {
@@ -151,9 +151,9 @@
   "@servers.sheet.accountLocked": {
     "sourceHash": "5ea0760"
   },
-  "servers.sheet.s3EndpointMoveHelp": "¿Se mudó el servidor? Escribe su nuevo punto de conexión. Todos los buckets de esta clave pasan al nuevo punto de conexión, con sus favoritos, sus pestañas abiertas y la clave de acceso secreta guardada.",
+  "servers.sheet.s3EndpointMoveHelp": "¿Se mudó el servidor? Escribe su nuevo punto de conexión. Todos los buckets de esta clave pasan al nuevo punto de conexión con sus favoritos y sus pestañas abiertas, y la clave de acceso secreta guardada también.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "e19c5f6"
+    "sourceHash": "8fb25f2"
   },
   "servers.sheet.addressMoveHelp": "¿Se mudó el servidor? Escribe su nueva dirección. Sus favoritos, sus pestañas abiertas y su contraseña guardada pasan a la nueva dirección.",
   "@servers.sheet.addressMoveHelp": {
@@ -163,9 +163,9 @@
   "@servers.refusal.operationRunning": {
     "sourceHash": "e3fa116"
   },
-  "servers.sheet.smbAddressMoveHelp": "¿Se mudó el servidor? Escribe su nueva dirección. Sus recursos compartidos y su contraseña guardada pasan a la nueva dirección, y los favoritos y las pestañas abiertas de cada recurso compartido lo siguen la primera vez que se abra allí.",
+  "servers.sheet.smbAddressMoveHelp": "¿Se mudó el servidor? Escribe su nueva dirección. Sus recursos compartidos y su contraseña guardada pasan a la nueva dirección, y los favoritos y las pestañas abiertas de cada recurso compartido lo siguen en cuanto ese recurso compartido se abre en la nueva dirección.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "26f974b"
+    "sourceHash": "d0abd09"
   },
   "servers.refusal.shareEjectRefused": "Cmdr no pudo expulsar el recurso compartido {name}, así que no se guardó nada. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -175,9 +175,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "8603ce5"
   },
-  "servers.paneState.guestSessionRefusedHint": "Pediste iniciar sesión con tu cuenta, pero el servidor te ofreció una sesión como invitado. Normalmente eso significa que la contraseña no era correcta. Rara vez se debe a que algo esté manipulando la conexión.",
+  "servers.paneState.guestSessionRefusedHint": "Pediste iniciar sesión con tu cuenta, pero el servidor te ofreció una sesión como invitado. Normalmente eso significa que la contraseña no era correcta. Rara vez se debe a que alguien esté manipulando la conexión.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "620682a"
+    "sourceHash": "66cfe16"
   },
   "servers.hub.nfsHintLink": "Agrega uno con su dirección",
   "@servers.hub.nfsHintLink": {

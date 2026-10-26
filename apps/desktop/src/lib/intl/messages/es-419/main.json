@@ -55,21 +55,21 @@
   "@main.escapeFullScreenHint.settingsLine": {
     "sourceHash": "e30e537"
   },
-  "main.cliCommand.uninstalled": "Se quitó el comando “cmdr”.",
+  "main.cliCommand.uninstalled": "Se desinstaló el comando “cmdr”.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "1675fbb"
+    "sourceHash": "ee8a42e"
   },
-  "main.cliCommand.canceled": "No cambió nada. Para agregar o quitar el comando “cmdr” hace falta una contraseña de administrador.",
+  "main.cliCommand.canceled": "No cambió nada. Para instalar o desinstalar el comando “cmdr” hace falta una contraseña de administrador.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "7deac65"
+    "sourceHash": "e3d50f7"
   },
   "main.cliCommand.installFailed": "No se pudo instalar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
   "@main.cliCommand.installFailed": {
     "sourceHash": "d9ae4ef"
   },
-  "main.cliCommand.uninstallFailed": "No se pudo quitar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
+  "main.cliCommand.uninstallFailed": "No se pudo desinstalar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "9474514"
+    "sourceHash": "3884412"
   },
   "main.cliCommand.homebrew": "Homebrew instaló el comando “cmdr” junto con Cmdr, así que ya está en tu terminal. Desaparece cuando desinstalas Cmdr con Homebrew.",
   "@main.cliCommand.homebrew": {
@@ -79,9 +79,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "3c74b9c"
   },
-  "main.cliCommand.notInApplications": "Mueve primero Cmdr a tu carpeta Aplicaciones. Desde cualquier otro lugar, el comando “cmdr” dejaría de funcionar en cuanto Cmdr se moviera.",
+  "main.cliCommand.notInApplications": "Mueve primero Cmdr a tu carpeta Aplicaciones. Si instalas el comando “cmdr” desde cualquier otro lugar, dejará de funcionar en cuanto Cmdr se mueva.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "0f2ed69"
+    "sourceHash": "6d28a5e"
   },
   "main.cliCommand.unavailable": "No se pudo comprobar el comando “cmdr” ahora mismo. Inténtalo de nuevo en un momento.",
   "@main.cliCommand.unavailable": {

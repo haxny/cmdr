@@ -260,9 +260,9 @@
   "@askCmdr.error.provider": {
     "sourceHash": "d536cce"
   },
-  "askCmdr.event.chatMemoryChanged": "La memoria del chat ahora guarda {tokens, number} tokens",
+  "askCmdr.event.chatMemoryChanged": "La memoria del chat ahora guarda {tokens, plural, one {# token} many {# tokens} other {# tokens}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "Se {count, plural, one {ha quitado # consulta anterior} many {han quitado # consultas anteriores} other {han quitado # consultas anteriores}} para que todo entre en el contexto del modelo.",
   "@askCmdr.event.contextTrimmed": {
@@ -639,9 +639,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "No se ha podido encontrar {countText} {count, plural, one {archivo} many {archivos} other {archivos}}: {count, plural, one {se ha movido o eliminado} many {se han movido o eliminado} other {se han movido o eliminado}} después del cambio de nombre.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "No se ha podido encontrar {countText} {count, plural, one {elemento} many {elementos} other {elementos}}: {count, plural, one {se ha movido o eliminado} many {se han movido o eliminado} other {se han movido o eliminado}} después del cambio de nombre.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} se ha quedado como está: su nombre anterior vuelve a estar ocupado.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

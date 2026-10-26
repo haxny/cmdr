@@ -103,8 +103,12 @@
   "@errorReporter.pageCrash.title": {
     "sourceHash": "9c76cee"
   },
-  "errorReporter.pageCrash.body": "Cmdr tuvo un problema inesperado. Recargar suele ayudar. Si sigue pasando, enviar un reporte ayuda a solucionarlo.",
+  "errorReporter.pageCrash.body": "Cmdr tuvo un problema inesperado. Recargar suele ayudar. Si sigue pasando, envía un reporte para que se solucione.",
   "@errorReporter.pageCrash.body": {
-    "sourceHash": "ff27df2"
+    "sourceHash": "85ea909"
+  },
+  "errorReporter.preview.unavailableToast": "No se pudo abrir la vista previa. Inténtalo de nuevo en un momento.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "ccd4d54"
   }
 }

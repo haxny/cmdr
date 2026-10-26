@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr no ha podido leer el historial de lo que puedes deshacer, así que empieza de cero",
+  "stateRecovery.operationLog.title": "Cmdr no ha podido leer tu registro de operaciones, así que empieza de cero",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr no ha podido leer tus chats de Ask Cmdr, así que empiezan de cero",
+  "stateRecovery.chatHistory.title": "Cmdr no ha podido leer tus chats de Ask Cmdr, así que la lista de chats empieza vacía",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr no ha podido leer tus favoritos, así que la lista empieza vacía",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr no ha podido leer tus entradas recientes de “Ir a la carpeta”, así que la lista empieza de cero",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr no ha podido leer tus búsquedas recientes, así que la lista empieza de cero",
   "@stateRecovery.searchHistory.title": {

@@ -1,7 +1,7 @@
 {
-  "securityNotices.mcpForeignOrigin.title": "Cmdr bloqueó el acceso de una página web a su servidor MCP",
+  "securityNotices.mcpForeignOrigin.title": "Cmdr bloqueó el acceso de una página web al servidor MCP",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5d79795"
+    "sourceHash": "6d58dbd"
   },
   "securityNotices.mcpForeignOrigin.body": "Una página web abierta en tu navegador intentó comunicarse con Cmdr. No entró nada. Si sigue pasando, cierra las pestañas en las que no confíes.",
   "@securityNotices.mcpForeignOrigin.body": {
@@ -15,9 +15,9 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "03309f5"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr rechazó una respuesta de un recurso compartido de red",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr rechazó una respuesta de un servidor",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "f867a15"
+    "sourceHash": "7199ac2"
   },
   "securityNotices.smbSignatureRefused.body": "La respuesta no llevaba la firma del servidor, así que Cmdr no confió en ella. Puede deberse a un dispositivo de red inestable o a que alguien esté manipulando el tráfico entre tú y el servidor. Vuelve a conectarte y, si se repite, comprueba tu red.",
   "@securityNotices.smbSignatureRefused.body": {

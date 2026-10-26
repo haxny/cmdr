@@ -315,9 +315,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Usa aquí solo letras minúsculas, cifras y guiones.",
+  "servers.refusal.s3FieldMalformed": "Usa aquí solo a–z, 0–9 y guiones.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Introduce el punto de conexión como http:// o https:// seguido de un nombre de host, por ejemplo https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -345,7 +345,7 @@
   },
   "servers.refusal.shareMounted": "El recurso compartido {name} sigue montado desde la dirección anterior. Expúlsalo y vuelve a guardar.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr no ha podido expulsar el recurso compartido {name}, así que no se ha guardado nada. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -539,17 +539,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "¿Se ha mudado el servidor? Escribe su nuevo punto de conexión. Todos los buckets de esta clave pasan al nuevo punto de conexión, con sus favoritos, sus pestañas abiertas y la clave de acceso secreta guardada.",
+  "servers.sheet.s3EndpointMoveHelp": "¿Se ha mudado el servidor? Escribe su nuevo punto de conexión. Todos los buckets de esta clave pasan al nuevo punto de conexión con sus favoritos y sus pestañas abiertas, y la clave de acceso secreta guardada también.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "¿Se ha mudado el servidor? Escribe su nueva dirección. Sus favoritos, sus pestañas abiertas y su contraseña guardada pasan a la nueva dirección.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "¿Se ha mudado el servidor? Escribe su nueva dirección. Sus recursos compartidos y su contraseña guardada pasan a la nueva dirección, y los favoritos y las pestañas abiertas de cada recurso compartido lo siguen la primera vez que se abra allí.",
+  "servers.sheet.smbAddressMoveHelp": "¿Se ha mudado el servidor? Escribe su nueva dirección. Sus recursos compartidos y su contraseña guardada pasan a la nueva dirección, y los favoritos y las pestañas abiertas de cada recurso compartido lo siguen en cuanto ese recurso compartido se abre en la nueva dirección.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Nombre de usuario",
   "@servers.sheet.username": {
@@ -789,9 +789,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Ya lo he comprobado",
+  "servers.hostKey.changedDisclosure": "Ya he comprobado la clave",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Huella digital de la clave",
   "@servers.hostKey.fingerprintLabel": {
@@ -821,9 +821,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Ya lo he comprobado",
+  "servers.certificate.changedDisclosure": "Ya he comprobado el certificado",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Huella digital del certificado (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -873,9 +873,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Has pedido iniciar sesión con tu cuenta, pero el servidor te ha ofrecido una sesión como invitado. Normalmente eso significa que la contraseña no era correcta. Rara vez se debe a que algo esté manipulando la conexión.",
+  "servers.paneState.guestSessionRefusedHint": "Has pedido iniciar sesión con tu cuenta, pero el servidor te ha ofrecido una sesión como invitado. Normalmente eso significa que la contraseña no era correcta. Rara vez se debe a que alguien esté manipulando la conexión.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Probar otra contraseña…",
   "@servers.paneState.tryAnotherPassword": {

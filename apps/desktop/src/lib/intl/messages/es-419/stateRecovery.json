@@ -31,9 +31,9 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "53260b0"
   },
-  "stateRecovery.operationLog.title": "Cmdr no pudo leer el historial de lo que puedes deshacer, así que empieza de cero",
+  "stateRecovery.operationLog.title": "Cmdr no pudo leer tu registro de operaciones, así que empieza de cero",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "2dc4b55"
+    "sourceHash": "09adf45"
   },
   "stateRecovery.credentials.title": "Cmdr no pudo leer tus contraseñas y claves guardadas, así que empieza de cero",
   "@stateRecovery.credentials.title": {
@@ -43,9 +43,9 @@
   "@stateRecovery.credentials.body": {
     "sourceHash": "cf16e70"
   },
-  "stateRecovery.chatHistory.title": "Cmdr no pudo leer tus chats de Ask Cmdr, así que empiezan de cero",
+  "stateRecovery.chatHistory.title": "Cmdr no pudo leer tus chats de Ask Cmdr, así que la lista de chats empieza vacía",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "9c4f949"
+    "sourceHash": "42b987a"
   },
   "stateRecovery.favorites.title": "Cmdr no pudo leer tus favoritos, así que la lista empieza vacía",
   "@stateRecovery.favorites.title": {

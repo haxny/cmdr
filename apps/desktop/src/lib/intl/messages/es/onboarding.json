@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Renombrado múltiple",
+  "onboarding.stepAi.table.rowRename": "Renombrar muchos archivos",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Usas la herramienta de renombrado múltiple para definir el patrón a mano, revisas y aplicas.",
+  "onboarding.stepAi.table.renameWithout": "Defines a mano un patrón de renombrado en Renombrado múltiple y luego lo revisas y lo aplicas.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Dices “añade un prefijo de fecha ISO”, el agente define tu patrón de renombrado y tú revisas y aplicas a tu gusto.",
   "@onboarding.stepAi.table.renameWith": {

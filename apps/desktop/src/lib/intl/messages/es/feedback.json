@@ -28,6 +28,10 @@
   "@feedback.dialog.includeLogs": {
     "sourceHash": "983e536"
   },
+  "feedback.dialog.viewLogs": "Ver los registros que se enviarán",
+  "@feedback.dialog.viewLogs": {
+    "sourceHash": "7461c4e"
+  },
   "feedback.dialog.moreWays": "También puedes <github>explorar y votar en GitHub</github> o <call>reservar una llamada</call> con David.",
   "@feedback.dialog.moreWays": {
     "sourceHash": "5a26a7c"

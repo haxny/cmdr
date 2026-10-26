@@ -67,9 +67,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "No hay nada que devolver: {count, plural, one {ya no está} many {ya no están} other {ya no están}} en la papelera.",
+  "fileOperations.trash.undoGone": "No hay nada que devolver: {count, plural, one {el elemento ya no estaba} many {los elementos ya no estaban} other {los elementos ya no estaban}} en la papelera.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {elemento ya no estaba} many {elementos ya no estaban} other {elementos ya no estaban}} en la papelera.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -268,9 +268,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Este lugar ya empieza en {rootFolder}, así que esta ruta lleva a {resolvedPath}. ¿Querías decir {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Aquí las rutas ya empiezan dentro de {rootFolder}, así que esta lleva a {resolvedPath}. ¿Querías decir {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Usar la ruta más corta",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -534,7 +534,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Has cancelado esta copia. Los archivos copiados hasta ahora se quedan donde están.} move {Has cancelado este movimiento. Los archivos movidos hasta ahora se quedan donde han llegado.} compress {Has cancelado esta compresión.} delete {Has cancelado esta eliminación. Los archivos eliminados hasta ahora ya no están y el resto sigue ahí.} trash {Has cancelado este movimiento a la papelera. Los archivos movidos hasta ahora se quedan en la papelera y el resto sigue donde estaba.} other {Has cancelado esta operación.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Cancelando… (limpiando)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -786,7 +786,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {y {countText} elemento más} many {y {countText} elementos más} other {y {countText} elementos más}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Copiar el resto} move {Mover el resto} delete {Eliminar el resto} trash {Mover el resto a la papelera} other {Continuar con el resto}}",
   "@fileOperations.sourcesGone.continue": {

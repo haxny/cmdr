@@ -2443,9 +2443,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Hace falta para deshacer. Mientras está desactivado, Cmdr no registra las nuevas copias, movimientos, cambios de nombre ni eliminaciones, así que no puedes deshacerlos. Tu historial actual se conserva y aún puedes deshacer lo que contiene.",
+  "settings.operationLog.enabled.description": "Mientras está desactivado, Cmdr no registra las nuevas copias, movimientos, cambios de nombre ni eliminaciones, así que no puedes deshacerlos. Tu historial actual se conserva y aún puedes deshacer lo que contiene.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "operación, operaciones, registro, historial, grabar, deshacer, diario, privacidad, desactivar",
   "@settings.operationLog.enabled.keywords": {
@@ -2677,7 +2677,7 @@
   },
   "settings.managed.summary.upTo": "Hasta la versión {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Solo se buscan a mano",
   "@settings.managed.summary.manualChecksOnly": {
@@ -2685,7 +2685,7 @@
   },
   "settings.managed.summary.upToManualChecksOnly": "Hasta la versión {ceiling} y solo se buscan a mano",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Solo en el dispositivo",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3293,9 +3293,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr eliminará todo lo que guarda en este Mac, {sizeText} en total, y después se cerrará. Esto no se puede deshacer.",
+  "settings.dataWipe.introWithSize": "Cmdr eliminará todo lo que guarda en este Mac ({sizeText}) y después se cerrará. Esto no se puede deshacer.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Lo que se elimina",
   "@settings.dataWipe.goesHeading": {

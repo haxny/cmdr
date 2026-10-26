@@ -283,13 +283,13 @@
   "@fileExplorer.navigation.favoriteShortcutSaveFailed": {
     "sourceHash": "2883f1c"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Los teléfonos y cámaras por MTP están desactivados en Configuración.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "El acceso a teléfonos y cámaras por MTP está desactivado en Configuración.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "a989486"
+    "sourceHash": "fe6f725"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Los teléfonos Android están desactivados en Configuración.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "El acceso a teléfonos Android está desactivado en Configuración.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "73acee5"
+    "sourceHash": "24fe719"
   },
   "fileExplorer.navigation.favoriteUnreachable.openSettings": "Abrir la configuración",
   "@fileExplorer.navigation.favoriteUnreachable.openSettings": {
@@ -374,6 +374,10 @@
   "fileExplorer.navigation.driveIndex.refusedUpgradeFailed": "Cmdr no pudo conectarse directamente a {name}, algo necesario para indexar este recurso compartido. Comprueba que el recurso compartido esté accesible e inténtalo de nuevo.",
   "@fileExplorer.navigation.driveIndex.refusedUpgradeFailed": {
     "sourceHash": "bca8e3a"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Se activó la indexación de {name}.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "4f02898"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr está indexando {name} ahora mismo. El análisis que pediste empezará en cuanto termine.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

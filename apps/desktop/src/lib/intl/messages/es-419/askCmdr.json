@@ -191,9 +191,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "1c8a0a2"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "No se pudo encontrar {countText} {count, plural, one {archivo} many {archivos} other {archivos}}: {count, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} después del cambio de nombre.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "No se pudo encontrar {countText} {count, plural, one {elemento} many {elementos} other {elementos}}: {count, plural, one {se movió o se eliminó} many {se movieron o se eliminaron} other {se movieron o se eliminaron}} después del cambio de nombre.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "e4cc852"
+    "sourceHash": "371c66a"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} se quedó como está: su nombre anterior vuelve a estar ocupado.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

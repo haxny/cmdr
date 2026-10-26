@@ -173,7 +173,7 @@
   },
   "commands.handler.getInfo.openAutomationSettings": "Abrir la configuración de {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "257d756"
+    "sourceHash": "0748075"
   },
   "commands.handler.getInfo.notReached": "Cmdr no pudo acceder al Finder para abrir Obtener información. Inténtalo de nuevo.",
   "@commands.handler.getInfo.notReached": {
