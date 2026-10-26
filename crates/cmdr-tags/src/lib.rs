@@ -51,6 +51,6 @@ mod write_totals_test;
 
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, TagError, TagField};
-pub use read::read_tags;
+pub use read::{read_duration, read_tags};
 pub use undo::{ApplyId, RestoreReport, UndoLimits, UndoStore};
 pub use write::{WriteOptions, write_tags};

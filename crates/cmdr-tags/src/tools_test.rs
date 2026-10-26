@@ -312,3 +312,76 @@ fn later_narrators_need_two_words() {
         Some(vec!["Jan Novak".into(), "J. Dvorak".into()])
     );
 }
+
+#[test]
+fn apply_tool_dispatches_each_variant() {
+    let mut tags = file(&[
+        (TagField::Title, "01 JEFFREY"),
+        (TagField::Track, "1"),
+        (TagField::Artist, "ARCHER Čte"),
+        (TagField::Album, "01 jeffrey"),
+        (TagField::Comment, "Čte: Jan Novák."),
+    ]);
+    tags.extras.insert("ITUNESMEDIATYPE".into(), vec!["2".into()]);
+    let input = vec![tags, file(&[(TagField::Track, "9")])];
+    let fields = vec![TagField::Artist];
+    let keys = vec!["ITUNESMEDIATYPE".to_string()];
+    let cases = [
+        (
+            TagTool::Case {
+                fields: fields.clone(),
+                case: CaseTool::Lower,
+            },
+            change_case(&input, &fields, CaseTool::Lower),
+        ),
+        (
+            TagTool::StripDiacritics { fields: fields.clone() },
+            strip_diacritics(&input, &fields),
+        ),
+        (TagTool::StripTrackPrefix, strip_track_prefix(&input)),
+        (TagTool::Renumber { start: 5 }, renumber(&input, 5)),
+        (TagTool::AlbumArtistFromArtist, album_artist_from_artist(&input)),
+        (TagTool::NarratorFromText, narrator_from_text(&input)),
+        (TagTool::ClearRedundantTitles, clear_redundant_titles(&input)),
+        (
+            TagTool::RemoveExtras { keys: keys.clone() },
+            remove_extras(&input, &keys),
+        ),
+    ];
+    for (tool, expected) in &cases {
+        assert_eq!(&apply_tool(&input, tool), expected, "{tool:?}");
+    }
+}
+
+#[test]
+fn renumber_single_file_clears_track() {
+    let out = renumber(&[file(&[(TagField::Track, "3"), (TagField::Disc, "2")])], 1);
+    assert_eq!(get(&out[0], TagField::Track), None);
+    assert_eq!(one(&out[0], TagField::Disc).as_deref(), Some("2"));
+}
+
+#[test]
+fn fields_with_diacritics_skips_comment_and_description() {
+    let tags = file(&[
+        (TagField::Album, "Labutí"),
+        (TagField::Artist, "Archer"),
+        (TagField::Comment, "Čte"),
+        (TagField::Description, "Příběh"),
+    ]);
+    assert_eq!(fields_with_diacritics(&tags), vec![TagField::Album]);
+}
+
+#[test]
+fn tag_tool_json_shape() {
+    let json = serde_json::to_string(&TagTool::Renumber { start: 1 }).unwrap();
+    assert_eq!(json, r#"{"kind":"renumber","start":1}"#);
+    let back: TagTool = serde_json::from_str(r#"{"kind":"stripDiacritics","fields":["album"]}"#).unwrap();
+    assert_eq!(
+        back,
+        TagTool::StripDiacritics {
+            fields: vec![TagField::Album]
+        }
+    );
+    let unit: TagTool = serde_json::from_str(r#"{"kind":"clearRedundantTitles"}"#).unwrap();
+    assert_eq!(unit, TagTool::ClearRedundantTitles);
+}

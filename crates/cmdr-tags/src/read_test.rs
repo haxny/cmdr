@@ -337,3 +337,28 @@ fn reads_opus_artists_extras_and_cover() {
     let dir = tempfile::tempdir().unwrap();
     assert_ogg_family(&write_opus(dir.path(), "a.opus", ogg_comments(), 250));
 }
+
+#[test]
+fn read_duration_of_a_real_file() {
+    use std::time::Duration;
+    let dir = tempfile::tempdir().unwrap();
+    // 13 x 3 frames of 1152 samples at 44.1 kHz.
+    let frames = 39.0_f64;
+    let path = write_bytes(dir.path(), "a.mp3", mp3_frames().repeat(13));
+    let expected = Duration::from_secs_f64(frames * 1152.0 / 44100.0);
+    let got = crate::read::read_duration(&path).expect("a duration");
+    assert!(
+        got.abs_diff(expected) <= Duration::from_millis(50),
+        "{got:?} vs {expected:?}"
+    );
+}
+
+#[test]
+fn read_duration_none_for_garbage() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_bytes(dir.path(), "g.mp3", vec![0x42; 64]);
+    assert_eq!(crate::read::read_duration(&path), None);
+    assert_eq!(crate::read::read_duration(&dir.path().join("missing.mp3")), None);
+    let unknown = write_bytes(dir.path(), "g.txt", vec![1, 2, 3]);
+    assert_eq!(crate::read::read_duration(&unknown), None);
+}

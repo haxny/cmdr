@@ -189,4 +189,9 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   a `Mutex` and never open two on one root.
 - **Show `TagError::WouldDrop` to the user with the option to proceed.** It names what the write would lose (values the
   editor doesn't show, frames ID3v2.3 can't hold); proceeding is the same write with `WriteOptions::allow_frame_loss`.
+- **One dispatcher, one check, file length.** `tools::TagTool` (`{"kind":"renumber","start":1}`, camelCase kinds) with
+  `apply_tool` runs any tool, so the app and MCP share the set. `tools::fields_with_diacritics` lists the fields that
+  must not carry diacritics and do (for the warning before a write). `renumber` on a single file removes its Track (a
+  one-file book has no track number). `read_duration(path)` reads lofty's audio properties (which `read_tags` skips) and
+  is `None` for anything unreadable.
 - **Record before the apply writes**: `UndoStore::record(id, paths)` reads the files itself.

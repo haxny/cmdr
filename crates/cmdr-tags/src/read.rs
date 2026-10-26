@@ -38,6 +38,32 @@ pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
     read_from(&mut File::open(path)?, format, parse_options())
 }
 
+/// The playing time of the audio file at `path` from lofty's audio properties, or `None` when
+/// the file can't be opened or parsed (or isn't a supported format). Never panics on bad input
+/// from lofty's errors; the app also wraps the call in `contain_panics`.
+pub fn read_duration(path: &Path) -> Option<std::time::Duration> {
+    let format = format_of_path(path).ok()?;
+    let mut file = File::open(path).ok()?;
+    let options = ParseOptions::new().read_properties(true).read_tags(false);
+    match format {
+        AudioFormat::Mp3 => MpegFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::Mp4 => Mp4File::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::Flac => FlacFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::OggVorbis => VorbisFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::Opus => OpusFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+    }
+}
+
 /// Reads the tags of `format` from `source` with `options`.
 pub(crate) fn read_from<R: Read + Seek>(
     source: &mut R,
