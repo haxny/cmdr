@@ -361,9 +361,6 @@
     "accept": ["回到", "回頭", "回來", "上一步"],
     "chosen": "返回",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoTooltip": "English-sense: \"back to their old names\" restores names, nothing navigates; the accepted rename form 改回 carries it."
-    },
     "forms": "a standalone back button → 返回; back to a view → 回到…; the wizard's back step → 上一步 (pairs with 下一步)",
     "sources": "AP-TW = AP-HK SystemSettings accessibility labels; MS is useless here (BACK 鍵)"
   },
@@ -2444,9 +2441,6 @@
     "chosen": "共享資料夾",
     "confidence": "tentative",
     "decision": "Mount and share-list sentences",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the saved report on), not an SMB share: 分享出去."
-    },
     "forms": "mounted share → 已裝載的共享資料夾; a share named X → 名為「X」的共享資料夾",
     "sources": "derived from Apple Shared → 已共享 + folder; NetAuthAgent EINFO_NO_SHARE says bare 共享"
   },

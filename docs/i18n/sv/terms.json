@@ -2006,9 +2006,6 @@
     "chosen": "delad mapp",
     "confidence": "high",
     "decision": "Same concept, different English",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "English share is the verb (pass the saved report on), not an SMB share: skicka den vidare själv."
-    },
     "forms": "delad mapp / delade mappar; -resurs only inside a compound (SMB-/nätverksresurser); the share counter keeps delning / delningar; network shares → delade mappar på nätverket",
     "note": "Apple's NetAuthAgent says Delningspunkten; the catalog keeps delad mapp.",
     "sources": "macOS Finder (1069.title Delad mapp, Hantera delad mapp)"

@@ -1798,10 +1798,6 @@
     ],
     "chosen": "Objekt",
     "confidence": "high",
-    "exceptions": {
-      "settings.dataWipe.leftover.secretItems": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes Eintrag, like ai.secretError.removeKeychainBody (den Eintrag „Cmdr“)",
-      "settings.dataWipe.leftover.secretsUnreadable": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes Eintrag, like ai.secretError.removeKeychainBody (den Eintrag „Cmdr“)"
-    },
     "forms": "neuter: weiteres Objekt / weitere Objekte; a sentence that refers back to {name} repeats das Objekt, never a pronoun",
     "sources": "macOS Finder (Ausgewählte Objekte, Objekte komprimieren; PE82)"
   },
@@ -2049,8 +2045,7 @@
     "decision": "A move that could not be confirmed",
     "exceptions": {
       "errors.eject.busy": "the message also covers copying and deleting, so it names the Vorgang, not Cmdr’s Move command",
-      "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren",
-      "multiRename.movedRow": "reordering a row in the preview list, not relocating a file; the announcement names only the new place (Jetzt an Position …), like the rücken family of the move-up/down keys"
+      "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren"
     },
     "forms": "button Bewegen; progress Wird bewegt; the one move as a noun → die Bewegung, the act → das Bewegen; moves as an enumerated noun has no German noun, so enumerate verbs (umzubenennen, zu bewegen und aufzuräumen)",
     "note": "Don't use bewegen for a message that also covers copying and deleting: say Vorgang there.",
@@ -2124,9 +2119,6 @@
     "accept": ["Freigaben", "freigegeben"],
     "chosen": "Freigabe",
     "confidence": "high",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "„share it yourself“ is the verb (pass the saved report on), not an SMB share → selbst weitergeben"
-    },
     "forms": "network share → Netzwerkfreigabe; SMB share → SMB-Freigabe; Connect directly → Direkt verbinden",
     "sources": "macOS (Freigabe, Bildschirmfreigabe); NetAuthAgent EINFO_NO_SHARE"
   },
@@ -2739,10 +2731,6 @@
     "accept": ["umbenannt", "Umbenennung", "umbenenn", "benenne", "benenn"],
     "chosen": "umbenennen",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoStarted": "renaming files back → die Namen werden zurückgesetzt: old names back → zurücksetzen (style § Top traps), as askCmdr.renameUndo.*",
-      "multiRename.undoTooltip": "renames files back to their old names → setzt auf die alten Namen zurück: old names back → zurücksetzen (style § Top traps), as askCmdr.renameUndo.*"
-    },
     "forms": "Rename all → Alle umbenennen; progress Wird umbenannt; noun Umbenennung/Umbenennungen; rename cycle → Umbenennungszyklus",
     "sources": "macOS Finder (Umbenennen …), Double Commander, Nautilus (wird … umbenannt)"
   },
@@ -2880,7 +2868,6 @@
     "chosen": "Läuft",
     "confidence": "high",
     "exceptions": {
-      "fileOperations.transferTree.followTooltip": "the files in progress → die Dateien, die gerade in Arbeit sind; a file isn't a process that läuft",
       "queryUi.results.scanProgress": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
       "queryUi.results.scanProgressWithCount": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
       "queryUi.results.scanning": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
@@ -3906,10 +3893,7 @@
     "confidence": "high",
     "forms": "the Servers list in prose → die Liste „Server“ (like a menu, never Server-Liste)",
     "decision": "Server fixieren und lösen, die vertrauten Hostschlüssel und die ADB-Seite",
-    "sources": "macOS AppKit (Liste „Farbauswahl“); catalog (servers.pinHint.body, settings.servers.trustedHostKeys.description)",
-    "exceptions": {
-      "errors.write.originalsKeptAside.message.many": "verb sense (the details list every one) → führt … auf, not the noun Liste"
-    }
+    "sources": "macOS AppKit (Liste „Farbauswahl“); catalog (servers.pinHint.body, settings.servers.trustedHostKeys.description)"
   },
   "byte": {
     "accept": ["Bytes"],

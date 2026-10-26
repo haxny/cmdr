@@ -1455,9 +1455,6 @@
     "accept": ["Ga vooruit", "terug", "vooruit"],
     "chosen": "Ga terug",
     "confidence": "high",
-    "exceptions": {
-      "menu.go.forward": "The Go menu's paired previous/next: Vorige / Volgende."
-    },
     "sources": "standard NL navigation (macOS Terug / Vooruit)"
   },
   "go-to-path": {
@@ -2053,9 +2050,6 @@
     "chosen": "gedeelde map",
     "confidence": "high",
     "decision": "Gedeelde mappen die niet aankoppelen",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the file on), not a network share: zelf delen."
-    },
     "forms": "in the pane, share lists, and mount messages → gedeelde map; \"not a network share\" and the error family → netwerkshare; compounds keep share (SMB-share, SMB-/netwerkshares)",
     "sources": "macOS Finder (Shared folder → Gedeelde map), MS (network share → netwerkshare)"
   },

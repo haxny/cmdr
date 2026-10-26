@@ -286,9 +286,6 @@
     "accept": ["Précédent", "revenir", "revenez"],
     "chosen": "Retour",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoTooltip": "Rename back is not the Back button: renommer sous son ancien nom, as multiRename.undoStarted"
-    },
     "forms": "app buttons Retour, Back to X → Retour à X; the Go menu’s Back is Finder’s Précédent",
     "sources": "macOS fr (Précédent, six hits, no bare Retour); catalog"
   },
@@ -2644,9 +2641,7 @@
     "confidence": "high",
     "decision": "Index d'images",
     "exceptions": {
-      "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it.",
-      "settings.dataWipe.doneMessage": "English-sense: removing the app means trashing it, a deletion, so supprimer.",
-      "settings.dataWipe.partialMessage": "English-sense: the user deletes the leftover files and keychain items, so supprimez-les."
+      "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it."
     },
     "forms": "take off a list without deleting anything (a favorite, a folder from indexing, a tag, an attachment)",
     "sources": "catalog (Retirer la pièce jointe)"
@@ -2655,10 +2650,6 @@
     "accept": ["renomme", "renommé", "renommage"],
     "chosen": "Renommer",
     "confidence": "high",
-    "exceptions": {
-      "errors.write.originalsKeptAside.suggestion.many": "Rename back is redonner leurs noms, the French idiom for restoring a name.",
-      "errors.write.originalsKeptAside.suggestion.one": "Rename back is redonner son nom, the French idiom for restoring a name."
-    },
     "forms": "noun renommage (queue row Renommage); batch rename → renommage par lot; mass-rename → renommage en masse (tentative); rename cycle → cycle de renommage; rotate through a cycle → permuter",
     "sources": "macOS Finder; Nautilus"
   },

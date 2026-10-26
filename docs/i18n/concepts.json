@@ -339,7 +339,10 @@
       "take you back",
       "switch back",
       "back to the defaults",
-      "go back to"
+      "go back to",
+      "back to its old name",
+      "back to their old names",
+      "scroll back"
     ],
     "sense": "Returning to the previous step, screen, or location."
   },
@@ -1525,8 +1528,8 @@
   "go-back": {
     "distinct": ["back", "previous-next"],
     "en": "Go back",
-    "match": ["go back", "go forward", "forward"],
-    "notMatch": ["go back far", "window forward", "left to go back to", "go back to the original"],
+    "match": ["go back", "go forward"],
+    "notMatch": ["go back far", "left to go back to", "go back to the original"],
     "sense": "Navigating backward or forward in a pane's history."
   },
   "go-to-path": {
@@ -1800,7 +1803,7 @@
     "en": "item",
     "match": ["item", "items"],
     "note": "A menu item or a list entry that isn't a file keeps the ordinary word.",
-    "notMatch": ["menu item", "login items"],
+    "notMatch": ["menu item", "login items", "item in keychain access", "items in keychain access"],
     "sense": "A file or folder when the string covers both, or an entry in a scan."
   },
   "just-now": {
@@ -1956,7 +1959,10 @@
       "file list",
       "remove from list",
       "list price",
-      "list prices"
+      "list prices",
+      "cmdr lists",
+      "lists no",
+      "below list every"
     ],
     "sense": "A generic UI list (a server list, the list of apps, a list of results)."
   },
@@ -1990,7 +1996,7 @@
   "location": {
     "en": "location",
     "match": ["location", "locations", "places"],
-    "notMatch": ["some places"],
+    "notMatch": ["some places", "location bar"],
     "sense": "Where a file or command lives on disk, the places listed under a server, or where a photo was taken."
   },
   "lock": {
@@ -2178,7 +2184,10 @@
       "operations can move",
       "move up",
       "move the file up",
-      "move the file down"
+      "move the file down",
+      "=moved to of",
+      "move focus",
+      "keys move between"
     ],
     "sense": "Relocating files to another folder (F6)."
   },
@@ -2244,7 +2253,7 @@
     "distinct": ["share-menu", "network-drive", "server"],
     "en": "share",
     "match": ["share", "shares", "network share", "network shares", "smb share", "shared folder"],
-    "notMatch": ["=share", "share options", "share one name", "share link", "share links"],
+    "notMatch": ["=share", "share options", "share one name", "share link", "share links", "share it yourself"],
     "sense": "An SMB shared folder offered by a server or NAS."
   },
   "new-file": {
@@ -2839,7 +2848,12 @@
       "remove the rest",
       "removing the oldest",
       "removes the oldest",
-      "attribute was removed"
+      "attribute was removed",
+      "remove your saved",
+      "=remove key",
+      "remove saved password",
+      "remove the app",
+      "remove these yourself"
     ],
     "sense": "Taking something out of a list or setting (a favorite, a host, a folder from indexing) without deleting files."
   },
@@ -2847,6 +2861,7 @@
     "distinct": ["name", "edit"],
     "en": "rename",
     "match": ["rename", "renames", "renaming", "renamed"],
+    "notMatch": ["file back", "files back", "them back"],
     "sense": "Changing a file's name (the command, the act, and a single name change as a noun)."
   },
   "rename-cycle": {
@@ -3025,7 +3040,7 @@
     "en": "Running",
     "match": ["=running", "still running", "in progress", "is running", "are running"],
     "note": "An operation in progress and a local AI server that is up can legitimately take different words.",
-    "notMatch": ["running low", "is running cmdr from"],
+    "notMatch": ["running low", "is running cmdr from", "files in progress"],
     "sense": "A task or operation currently in progress; also a server process that is up."
   },
   "runtime": {
@@ -3079,6 +3094,7 @@
     "en": "search",
     "match": ["search", "searches", "searching", "searched"],
     "note": "The button that starts a search and the feature's name can take different forms.",
+    "notMatch": ["=search for"],
     "sense": "Finding files by name or content (the Search dialog, the button that runs it, the Settings section)."
   },
   "search-match": {
@@ -3086,6 +3102,7 @@
     "en": "match",
     "match": ["no matches", "next match", "previous match", "search results", "search result", "results"],
     "note": "\"Matches the pattern\" (a verb) is not this concept.",
+    "notMatch": ["=results", "in results", "open results"],
     "sense": "A search result, or a hit inside the viewer's text search."
   },
   "search-walk": {
@@ -3259,6 +3276,7 @@
     "distinct": ["too-large"],
     "en": "Size",
     "match": ["size", "sizes", "folder size", "folder sizes"],
+    "notMatch": ["actual size"],
     "sense": "A file's or folder's size (the column header, folder-size calculation)."
   },
   "size-unit-gibibyte": {
@@ -3414,6 +3432,7 @@
     "distinct": ["restart", "startup-disk"],
     "en": "start up",
     "match": ["start up", "starts up", "startup"],
+    "notMatch": ["startup disk"],
     "sense": "The app starting."
   },
   "startup-disk": {
@@ -3822,7 +3841,7 @@
   "up-to-date": {
     "distinct": ["update", "outdated"],
     "en": "up to date",
-    "match": ["up to date", "up-to-date", "latest version"],
+    "match": ["up to date", "up-to-date"],
     "sense": "At the newest version, or an index that is current."
   },
   "update": {

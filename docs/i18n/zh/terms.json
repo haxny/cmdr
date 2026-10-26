@@ -313,9 +313,6 @@
     "chosen": "返回",
     "confidence": "confirmed",
     "decision": "Deliberate splits",
-    "exceptions": {
-      "multiRename.undoTooltip": "English-sense: \"back to their old names\" restores names, nothing navigates; the accepted rename form 改回 carries it."
-    },
     "forms": "navigation back 返回 (menu, network browser, error pane); the onboarding wizard's previous step 上一步, paired with 下一步",
     "sources": "macOS (Back → 返回)"
   },
@@ -2103,9 +2100,6 @@
     "chosen": "共享",
     "confidence": "confirmed",
     "decision": "Share not on server",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the saved report on), not an SMB share: 自己发给别人."
-    },
     "forms": "共享; network shares 网络共享; mounted shares 已装载的共享; SMB/Network shares section SMB/网络共享",
     "sources": "macOS Finder"
   },
@@ -2679,10 +2673,6 @@
   "remove": {
     "chosen": "移除",
     "confidence": "high",
-    "exceptions": {
-      "settings.dataWipe.doneMessage": "English sense: removing the app means deleting it from disk (via the Trash), so it takes the spoken delete 删掉, not the list verb 移除.",
-      "settings.dataWipe.partialMessage": "English sense: the user deletes leftover files and keychain items by hand, so it takes the spoken delete 删掉, not the list verb 移除."
-    },
     "forms": "从列表中移除; tags 移除“{color}”",
     "note": "Deleting what a rollback wrote, a leftover, or a model is 删除; 移除 only takes something out of a list or an archive.",
     "sources": "macOS"
@@ -2925,7 +2915,6 @@
     "forms": "Press Enter to search 按 Enter 键搜索; searching again 再搜一次",
     "sources": "macOS",
     "exceptions": {
-      "multiRename.search": "find-and-replace inside file names is 查找 / 替换为 in every Chinese source (macOS Finder BulkRenameWindow 查找： / 替换成：, Total Commander 6613 查找, Double Commander 查找(&F)...), and the catalog's in-text find is already 查找 (viewer.search.placeholder); 搜索 is the file-search feature",
       "multiRename.searchOptions": "the options of the tool's find-and-replace, so it takes the multiRename.search label 查找 (查找选项), not the file-search 搜索",
       "commands.fileMultiRename.description": "the tool's search & replace is the fixed phrase 查找替换 (Total Commander 6612 查找并替换, Double Commander 查找与替换), matching the multiRename.search label 查找"
     }

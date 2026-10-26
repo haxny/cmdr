@@ -2526,9 +2526,7 @@
     "accept": ["объект"],
     "exceptions": {
       "errors.listing.attributeNotFound.explanation": "The item is carried by «атрибут файла» earlier in the same sentence.",
-      "settings.control.unitItems": "A unit after a number the user types: объект can't agree with every number (1 объектов), so the counting unit шт. stands in, like сек. for seconds.",
-      "settings.dataWipe.leftover.secretItems": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes запись, like the catalog's existing запись «Cmdr»",
-      "settings.dataWipe.leftover.secretsUnreadable": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes запись, like the catalog's existing запись «Cmdr»"
+      "settings.control.unitItems": "A unit after a number the user types: объект can't agree with every number (1 объектов), so the counting unit шт. stands in, like сек. for seconds."
     },
     "forms": "plural: {countText} объект / объекта / объектов; Copied N items → Скопировано: {countText} …",
     "avoid": [
@@ -3140,10 +3138,7 @@
     "sources": "macOS live Sharing.appex SHAREPOINT_TABLE_TITLE → «Общие папки», Dock SpecialFolderShared → «Общая папка»; MS share (noun) and file share → «общая папка»; KDE Dolphin «совместно используемых сетевых ресурсов» (outvoted)",
     "note": "macOS's Connect to Server sheet calls the shares on a server «тома» once mounted; keep «общая папка» for the share on the server and «том» for what appears in the volume list.",
     "proseAccept": ["сетев"],
-    "decision": "Network share",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the saved report on), not an SMB share; rendered «передать самостоятельно»."
-    }
+    "decision": "Network share"
   },
   "new-file": {
     "chosen": "Новый файл",
@@ -4364,10 +4359,7 @@
     ],
     "confidence": "high",
     "sources": "Finder LocalizableMerged TL23: Search → Поиск; Finder: Searching… → Поиск…; AppKit TextFinder: Searching… → Идет поиск…; MS: search → поиск; Nautilus, Dolphin, Thunar, DC: Search → Поиск; Finder BulkRenameWindow 6Q3-e2-U7r «Найти:» / erz-Yf-3kR «Заменить на:»; TC 6613 «Найти:», 6614 «Заменить на:»",
-    "note": "«запрос» is accepted because a recent search is a stored query («Недавние запросы»); the query concept itself is `query`.",
-    "exceptions": {
-      "multiRename.search": "the find half of the rename tool's search-and-replace pair: Finder's own bulk-rename window and TC both label it «Найти» next to «Заменить на»"
-    }
+    "note": "«запрос» is accepted because a recent search is a stored query («Недавние запросы»); the query concept itself is `query`."
   },
   "search-match": {
     "chosen": "совпадение",
@@ -4755,8 +4747,7 @@
     "confidence": "high",
     "sources": "Finder LocalizableMerged.json N169.33: Size → Размер (and «по размеру» as the sort item); DC, Nautilus, Dolphin, Thunar: Size → Размер",
     "exceptions": {
-      "settings.ai.tooltipLocal": "Context size is expressed by «контекст»; the surrounding memory quantities supply the size meaning.",
-      "commands.viewerToggleImageZoom.label": "\"Actual size\" is image zoom, not file size: «в масштабе 100 %», matching `viewer.statusBar.hint.image` («100 % / вписать»)."
+      "settings.ai.tooltipLocal": "Context size is expressed by «контекст»; the surrounding memory quantities supply the size meaning."
     }
   },
   "size-unit-gibibyte": {

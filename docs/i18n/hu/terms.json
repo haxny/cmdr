@@ -2439,10 +2439,7 @@
     "accept": ["megoszt"],
     "forms": "network share → hálózati megosztás; SMB/Network shares → SMB-/hálózati megosztások; a runtime share name → ezt a megosztást: „{share}”, or Nincs „{share}” nevű megosztás",
     "confidence": "high",
-    "sources": "ms (network share → hálózati megosztás); macOS NetAuthAgent (EINFO_NO_SHARE)",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "share it yourself is the verb, not an SMB share: magad oszthatod meg (the preverb splits off, so megoszt doesn't match)."
-    }
+    "sources": "ms (network share → hálózati megosztás); macOS NetAuthAgent (EINFO_NO_SHARE)"
   },
   "new-file": {
     "chosen": "Új fájl",
@@ -3089,11 +3086,7 @@
       }
     ],
     "confidence": "high",
-    "sources": "macOS Finder (Átnevezés, RN33/RN37 nem nevezhető át)",
-    "exceptions": {
-      "multiRename.undoStarted": "Renaming back = the old name restored: visszaállítás for an old name (style § Top traps), as askCmdr.renameUndo.*",
-      "multiRename.undoTooltip": "Renames back = the old name restored: visszaállítja (style § Top traps), as askCmdr.renameUndo.*"
-    }
+    "sources": "macOS Finder (Átnevezés, RN33/RN37 nem nevezhető át)"
   },
   "rename-cycle": {
     "chosen": "átnevezési ciklus",
@@ -3526,14 +3519,7 @@
     "accept": ["indul", "indítás"],
     "forms": "at startup → indításkor; wait for it to start up → várd meg, amíg elindul",
     "confidence": "high",
-    "sources": "catalog",
-    "exceptions": {
-      "multiRename.error.couldntWriteNames": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "lowDiskSpace.notification.body": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "lowDiskSpace.toast.message": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.description": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "settings.behavior.fileSystemWatching.lowDiskSpaceThresholdPercent.description": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting."
-    }
+    "sources": "catalog"
   },
   "startup-disk": {
     "chosen": "indítólemez",
