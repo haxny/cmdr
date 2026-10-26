@@ -260,9 +260,9 @@
   "@askCmdr.error.provider": {
     "sourceHash": "d536cce"
   },
-  "askCmdr.event.chatMemoryChanged": "聊天記憶現在可容納 {tokens, number} 個 token",
+  "askCmdr.event.chatMemoryChanged": "聊天記憶現在可容納 {tokens, plural, other {# 個 token}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "已移除{count, plural, other {早前的 # 次查詢}}，好讓這次對話裝得進模型的上下文。",
   "@askCmdr.event.contextTrimmed": {
@@ -636,9 +636,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "找不到 {countText} 個{count, plural, other {檔案}}：它們在重新命名之後被移動或刪除了。",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "找不到 {countText} 個{count, plural, other {項目}}：它們在重新命名之後被移動或刪除了。",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} 維持原樣：它原本的名稱又被佔走了。",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

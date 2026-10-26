@@ -9,11 +9,11 @@
   },
   "securityNotices.mcpForeignOrigin.title": "Cmdr 擋下了一個想連到 MCP 伺服器的網頁",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
-  "securityNotices.mcpForeignOrigin.body": "你瀏覽器裡開著的一個網站想和 Cmdr 溝通。沒有任何東西進來。如果一直發生，請關掉你不信任的分頁。",
+  "securityNotices.mcpForeignOrigin.body": "你瀏覽器裡開著的一個網頁想和 Cmdr 溝通。沒有任何東西進來。如果一直發生，請關掉你不信任的分頁。",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP 設定",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr 拒絕了來自網路共享資料夾的回覆",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr 拒絕了來自某個伺服器的回覆",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
   "securityNotices.smbSignatureRefused.body": "這個回覆沒有伺服器的簽章，所以 Cmdr 不信任它。網路裝置不穩定可能造成這種情況，有人竄改你和伺服器之間傳輸的資料也可能。請重新連線，如果再次發生，請檢查你的網路。",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "重新連線",
   "@securityNotices.smbSignatureRefused.reconnect": {

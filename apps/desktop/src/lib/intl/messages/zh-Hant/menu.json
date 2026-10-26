@@ -658,7 +658,7 @@
   },
   "menu.volume.editFavoriteShortcut": "設定快速鍵⋯",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "移除",
   "@menu.volume.removeFavorite": {

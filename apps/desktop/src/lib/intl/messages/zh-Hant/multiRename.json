@@ -133,7 +133,7 @@
   },
   "multiRename.presets.saveAs": "儲存為預設組⋯",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "重新命名⋯",
   "@multiRename.presets.rename": {
@@ -141,7 +141,7 @@
   },
   "multiRename.presets.update": "以目前設定更新",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "往前移",
   "@multiRename.presets.moveUp": {
@@ -636,9 +636,9 @@
   "@multiRename.selectionChanged": {
     "sourceHash": "357470f"
   },
-  "multiRename.swapsSkipped": "已略過 {count, plural, other {# 項會互換名稱的重新命名}}。請將這些檔案一次重新命名一個。",
+  "multiRename.swapsSkipped": "已略過 {count, plural, other {# 項會互換名稱的重新命名}}。請一次重新命名一個。",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "「多檔重新命名」無法在封存檔裡使用",
   "@multiRename.archiveTitle": {
@@ -748,9 +748,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "再上一層資料夾的名稱",
+  "multiRename.placeholderHelp.grandparent": "檔案所在資料夾的上一層資料夾名稱",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "從 {start} 開始",
   "@multiRename.placeholderHelp.counterStart": {

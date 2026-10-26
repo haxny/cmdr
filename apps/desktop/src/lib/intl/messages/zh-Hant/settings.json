@@ -2440,9 +2440,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "還原需要這項設定。關閉時，Cmdr 不會記錄新的複製、移動、重新命名或刪除，所以你無法還原它們。現有的歷史記錄會保留，裡面的操作仍然可以還原。",
+  "settings.operationLog.enabled.description": "這項設定關閉時，Cmdr 不會記錄新的複製、移動、重新命名或刪除，所以你無法還原這些操作。現有的歷史記錄會保留，裡面的操作仍然可以還原。",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "操作, 記錄, 紀錄, 日誌, 歷史記錄, 還原, 隱私, 關閉",
   "@settings.operationLog.enabled.keywords": {
@@ -2673,17 +2673,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "最高到 {ceiling}",
+  "settings.managed.summary.upTo": "最高到版本 {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "只能手動檢查",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "最高到 {ceiling}，只能手動檢查",
+  "settings.managed.summary.upToManualChecksOnly": "最高到版本 {ceiling}，只能手動檢查",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "只限裝置端",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3292,9 +3292,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr 會刪除它存在這部 Mac 上的 {sizeText} 資料，然後結束。這無法還原。",
+  "settings.dataWipe.introWithSize": "Cmdr 會刪除它存在這部 Mac 上的所有東西（{sizeText}），然後結束。這無法還原。",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "會刪除的內容",
   "@settings.dataWipe.goesHeading": {

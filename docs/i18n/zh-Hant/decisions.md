@@ -118,8 +118,8 @@ one thing was the bug.
 - Status cells: `style.md` § Notes and decisions. Signed out is a state: no `無法`.
 - Volume switcher `卷宗切換器` everywhere. Local network `區域網路`: the macOS permission dialog says it.
 - A server's classifier `部` (tentative, from `這部 Mac`).
-- Signed in as `以 {username} 身分登入` / `以訪客身分登入`: a bare `以 X 身分` dangles. Buttons reuse it:
-  `以其他身分登入⋯`, `改用訪客身分`.
+- Signed in as `以 {username} 身分登入` / `以訪客身分登入`: a bare `以 X 身分` dangles. Buttons too: `以其他身分登入⋯`,
+  `以訪客身分瀏覽`.
 - Forget `忘記` everywhere, hosts too (`已忘記` / `無法忘記`). Confirm bodies name the object (`這部主機`,
   `這個共享資料夾`), never a pronoun on the insert.
 

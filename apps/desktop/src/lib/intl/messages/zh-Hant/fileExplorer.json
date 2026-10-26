@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {未選取項目} other {已選取 {countText} 個項目}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {沒有名稱包含「{pattern}」} other {有 {countText} 個名稱包含「{pattern}」}}",
   "@fileExplorer.pane.filterMatches": {
@@ -519,9 +519,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "改用訪客身分",
+  "fileExplorer.network.share.useGuest": "以訪客身分瀏覽",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "以其他身分登入⋯",
   "@fileExplorer.network.share.signInAs": {
@@ -631,9 +631,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "已複製 {countText} {count, plural, other {個項目}}",
+  "fileExplorer.clipboard.copied": "已複製 {countText} {count, plural, other {個項目}}。",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "已選取不同的檔案：左側 {leftCountText} {leftCount, plural, other {個檔案}}，右側 {rightCountText} {rightCount, plural, other {個檔案}}。",
   "@fileExplorer.compareDirectories.marked": {
@@ -1281,21 +1281,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "位於分支 {branch}。",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "位於分支「{branch}」。",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "位於未誕生的分支 {branch}（尚無提交）。",
+  "fileExplorer.git.repoChip.tooltip.unborn": "位於未誕生的分支「{branch}」（尚無提交）。",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "分離狀態，位於 {id}。",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "比 {upstream} 領先 {ahead, plural, other {{aheadText} 次提交}}，落後 {behind, plural, other {{behindText} 次提交}}。",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "比「{upstream}」領先 {ahead, plural, other {{aheadText} 次提交}}，落後 {behind, plural, other {{behindText} 次提交}}。",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "工作目錄樹裡有尚未提交的改動。",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1677,25 +1677,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} 沒有連接。用 USB 連接線把手機接上並解鎖，然後再試一次。",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "「{device}」沒有連接。請用 USB 連接線把手機接上並解鎖，然後再試一次。",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "{device} 上的那個儲存空間目前無法使用。",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "這個資料夾所在的儲存空間目前在 {device} 上無法使用。",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "「{drive}」沒有連接。連接好之後再試一次。",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "手機和相機的 MTP 支援已在「設定」裡關閉。",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "透過 MTP 存取手機和相機的功能已在「設定」裡關閉。",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android 手機支援已在「設定」裡關閉。",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "存取 Android 手機的功能已在「設定」裡關閉。",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr 已經不知道怎麼連到「{place}」了。從「伺服器」重新連線，這個喜好項目就能再用了。",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2016,6 +2016,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr 正在搜尋 {name}。索引會在搜尋結束後立刻開始。",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "已為 {name} 開啟索引。",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr 正在為 {name} 建立索引。你要求的掃描會在那結束後立刻開始。",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

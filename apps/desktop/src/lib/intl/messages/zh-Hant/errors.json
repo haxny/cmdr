@@ -1177,9 +1177,9 @@
   "@errors.write.destinationNotAFolder.title": {
     "sourceHash": "d371870"
   },
-  "errors.write.destinationNotAFolder.message": "Cmdr 無法建立目標資料夾，因為 {path} 是個檔案，但那裡需要一個資料夾。什麼都沒有寫入，原本的檔案完全沒有被動過。",
+  "errors.write.destinationNotAFolder.message": "Cmdr 無法建立目標資料夾，因為「{path}」是個檔案，但那裡需要一個資料夾。什麼都沒有寫入，原本的檔案完全沒有被動過。",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "dfebb59"
+    "sourceHash": "98178cb"
   },
   "errors.write.destinationNotAFolder.suggestion": "換一個目標位置，或者把那個檔案改名或移走，然後再試一次。",
   "@errors.write.destinationNotAFolder.suggestion": {
@@ -1457,9 +1457,9 @@
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
   },
-  "errors.write.replySignatureRefused.message": "伺服器的回覆沒有簽章，所以 Cmdr 停下來了。",
+  "errors.write.replySignatureRefused.message": "伺服器的回覆沒有有效的簽章，所以 Cmdr 停下來了。",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.write.replySignatureRefused.suggestion": "網路裝置不穩定可能造成這種情況，有人竄改你和伺服器之間傳輸的資料也可能。請重新連線，如果再次發生，請檢查你的網路。",
   "@errors.write.replySignatureRefused.suggestion": {
@@ -2175,7 +2175,7 @@
   },
   "errors.volume.noContent": "「{path}」是符號連結或特殊檔案，沒有內容可以讓 Cmdr 複製。",
   "@errors.volume.noContent": {
-    "sourceHash": "cebab92"
+    "sourceHash": "8b56bde"
   },
   "errors.volume.ambiguousName": "伺服器上有不只一個項目符合「{path}」，所以 Cmdr 沒有替你選。請到它所在的資料夾裡選擇。",
   "@errors.volume.ambiguousName": {
@@ -2189,9 +2189,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
-  "errors.volume.signatureInvalid": "伺服器的回覆沒有簽章，所以 Cmdr 停下來了。",
+  "errors.volume.signatureInvalid": "伺服器的回覆沒有有效的簽章，所以 Cmdr 停下來了。",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.volume.ioError": "這個卷宗沒能完成那件事。",
   "@errors.volume.ioError": {
@@ -2235,11 +2235,11 @@
   },
   "errors.serverRequest.blockedByPolicy": "你的組織已關閉 Cmdr 的這項功能。",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   },
-  "errors.eject.busy": "Cmdr 還在那裡移動檔案。等它做完再試一次。",
+  "errors.eject.busy": "Cmdr 還在處理那裡的檔案。等它完成後再試一次。",
   "@errors.eject.busy": {
-    "sourceHash": "560c0db"
+    "sourceHash": "4054483"
   },
   "errors.eject.volumeNotFound": "那個磁碟機已經不在了，沒有東西需要退出。",
   "@errors.eject.volumeNotFound": {

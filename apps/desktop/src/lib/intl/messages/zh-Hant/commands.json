@@ -67,9 +67,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "在終端機中輸入 cmdr 加上路徑，就能在 Cmdr 中開啟它",
+  "commands.appToggleCliCommand.description": "在終端機中輸入 cmdr 加上路徑，就能在 Cmdr 中開啟那個檔案或資料夾",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "鍵盤快速鍵",
   "@commands.helpOpenShortcuts.label": {
@@ -1218,11 +1218,11 @@
   },
   "commands.handler.getInfo.automationOff": "「取得資訊」需要 Cmdr 能控制 Finder，但這項權限已關閉。到「{systemSettings} > {privacyAndSecurity} > {automation}」裡開啟 Cmdr 底下的 Finder。",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
   "commands.handler.getInfo.openAutomationSettings": "開啟「{automation}」設定",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr 連不上 Finder，無法開啟「取得資訊」。再試一次。",
   "@commands.handler.getInfo.notReached": {

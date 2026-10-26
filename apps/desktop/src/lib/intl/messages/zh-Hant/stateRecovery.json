@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr 無法讀取你的還原記錄，所以記錄重新開始",
+  "stateRecovery.operationLog.title": "Cmdr 無法讀取你的操作記錄，所以從頭開始記錄",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr 無法讀取你的 Ask Cmdr 對話，所以對話記錄重新開始",
+  "stateRecovery.chatHistory.title": "Cmdr 無法讀取你的 Ask Cmdr 對話，所以對話列表現在是空的",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr 無法讀取你的喜好項目，所以列表現在是空的",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr 無法讀取「前往資料夾」中最近的路徑，所以列表重新開始",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr 無法讀取你最近的搜尋，所以列表重新開始",
   "@stateRecovery.searchHistory.title": {

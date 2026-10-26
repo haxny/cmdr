@@ -315,9 +315,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "這裡只能使用小寫字母、數字和連字號。",
+  "servers.refusal.s3FieldMalformed": "這裡只能使用 a–z、0–9 和連字號。",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "請以 http:// 或 https:// 加上主機名稱輸入端點，例如 https://s3.example.com。",
   "@servers.refusal.endpointMalformed": {
@@ -345,7 +345,7 @@
   },
   "servers.refusal.shareMounted": "共享資料夾 {name} 仍是透過舊位址裝載的。先退出這個共享資料夾，再儲存一次。",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr 無法退出共享資料夾 {name}，所以什麼都沒儲存。{reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -539,9 +539,9 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "伺服器搬家了嗎？輸入它的新端點。這組金鑰底下的每個儲存貯體都會跟著過去，連同它們的喜好項目、開著的分頁和已儲存的私密存取金鑰。",
+  "servers.sheet.s3EndpointMoveHelp": "伺服器搬家了嗎？輸入它的新端點。這組金鑰底下的每個儲存貯體，都會連同它的喜好項目和開著的分頁一起跟過去，已儲存的私密存取金鑰也會跟著過去。",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "伺服器搬家了嗎？輸入它的新位址。它的喜好項目、開著的分頁和已儲存的密碼都會跟著過去。",
   "@servers.sheet.addressMoveHelp": {
@@ -549,7 +549,7 @@
   },
   "servers.sheet.smbAddressMoveHelp": "伺服器搬家了嗎？輸入它的新位址。它的共享資料夾和已儲存的密碼都會跟著過去，每個共享資料夾的喜好項目和開著的分頁，則會在這個共享資料夾第一次在新位址開啟時跟著過去。",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "使用者名稱",
   "@servers.sheet.username": {
@@ -788,9 +788,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "我核對過了",
+  "servers.hostKey.changedDisclosure": "我核對過主機金鑰了",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "金鑰指紋",
   "@servers.hostKey.fingerprintLabel": {
@@ -820,9 +820,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "我核對過了",
+  "servers.certificate.changedDisclosure": "我核對過憑證了",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "憑證指紋（SHA-256）",
   "@servers.certificate.fingerprintLabel": {
@@ -872,9 +872,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "你要求用自己的帳號登入，但伺服器卻改用訪客身分連線。這通常表示密碼不對。少數情況下，則表示連線正遭到竄改。",
+  "servers.paneState.guestSessionRefusedHint": "你要求用自己的帳號登入，但伺服器卻改用訪客身分連線。這通常表示密碼不對。少數情況下，則表示有人正在竄改連線。",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "試試其他密碼⋯",
   "@servers.paneState.tryAnotherPassword": {

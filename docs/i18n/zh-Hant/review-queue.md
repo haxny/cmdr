@@ -55,8 +55,8 @@ worth keeping).
 - **`來來去去`** (`settings.revealHandler.notProductionBuild`), **`停住不動了`** (the viewer's fetch stall), **`跟上`**
   (`indexing.staleDialog.bodyPhone`), **`編輯檔案時使用`** (`settings.behavior.textEditorApp.label`): judgment calls.
 - **`以 {username} 身分登入` / `以訪客身分登入`** (`servers.hub.shareAccount` / `.guestAccount`) and the buttons
-  `以其他身分登入⋯` / `改用訪客身分` (`fileExplorer.network.share.*`): composed; check the quiet suffix reads well after
-  a name and fits the share-list header.
+  `以其他身分登入⋯` / `以訪客身分瀏覽` (`fileExplorer.network.share.*`): composed; check the quiet suffix reads well
+  after a name and fits the share-list header.
 - **`復原的對象：{time} 的「…」` / `最近一次復原：{time} 的「…」`** (`operationLog.dialog.rollbackOf`,
   `.latestRollback`, `.rollbackOfUnlisted`): composed colon frames for "Rollback of … from {time}"; check they read well
   as quiet sub-lines.
