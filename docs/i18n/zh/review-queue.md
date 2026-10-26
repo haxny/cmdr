@@ -90,3 +90,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
 - **Mixed-source refusal** (`errors.write.sourcesSpanVolumes.title` / `.suggestion`): English "a view" is rendered
   `只读视图` (bare `视图` reads as a display mode). Confirm a user connects `只读视图` to a backup's snapshots or an
   archive's inside.
+- **Root-echo warning** (`fileOperations.transferDialog.rootEchoWarning`): "Paths here already start inside
+  {rootFolder}" is `这里的路径本来就从 {rootFolder} 里面算起`. Confirm a user gets "paths are relative to that folder"
+  from it.

@@ -1176,9 +1176,9 @@
   "@errors.write.destinationNotAFolder.title": {
     "sourceHash": "d371870"
   },
-  "errors.write.destinationNotAFolder.message": "Cmdr 无法创建目标文件夹，因为 {path} 是个文件，但那里需要一个文件夹。什么都没有写入，原文件没有被动过。",
+  "errors.write.destinationNotAFolder.message": "Cmdr 无法创建目标文件夹，因为“{path}”是个文件，但那里需要一个文件夹。什么都没有写入，原文件没有被动过。",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "dfebb59"
+    "sourceHash": "98178cb"
   },
   "errors.write.destinationNotAFolder.suggestion": "换一个目标位置，或者把那个文件改名或移到别处，然后再试一次。",
   "@errors.write.destinationNotAFolder.suggestion": {
@@ -1456,9 +1456,9 @@
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
   },
-  "errors.write.replySignatureRefused.message": "服务器的回复没有签名，所以 Cmdr 停止了这项操作。",
+  "errors.write.replySignatureRefused.message": "服务器的回复没有有效签名，所以 Cmdr 停止了这项操作。",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.write.replySignatureRefused.suggestion": "网络设备不稳定可能导致这种情况，有人篡改你和服务器之间的通信也可能导致。请重新连接，如果再次出现，请检查你的网络。",
   "@errors.write.replySignatureRefused.suggestion": {
@@ -2172,9 +2172,9 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
-  "errors.volume.noContent": "“{path}”是链接或特殊文件，没有可供 Cmdr 拷贝的内容。",
+  "errors.volume.noContent": "“{path}”是符号链接或特殊文件，没有可供 Cmdr 拷贝的内容。",
   "@errors.volume.noContent": {
-    "sourceHash": "cebab92"
+    "sourceHash": "8b56bde"
   },
   "errors.volume.ambiguousName": "服务器上有不止一个项目匹配“{path}”，所以 Cmdr 没有替你选。请到它所在的文件夹里选择。",
   "@errors.volume.ambiguousName": {
@@ -2188,9 +2188,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
-  "errors.volume.signatureInvalid": "服务器的回复没有签名，所以 Cmdr 停止了这项操作。",
+  "errors.volume.signatureInvalid": "服务器的回复没有有效签名，所以 Cmdr 停止了这项操作。",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.volume.ioError": "这个宗卷没能完成这项操作。",
   "@errors.volume.ioError": {
@@ -2234,11 +2234,11 @@
   },
   "errors.serverRequest.blockedByPolicy": "你的组织在 Cmdr 中关闭了这项功能。",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   },
-  "errors.eject.busy": "Cmdr 还在那里读写文件。完成后再试一次。",
+  "errors.eject.busy": "Cmdr 还在处理那里的文件。完成后再试一次。",
   "@errors.eject.busy": {
-    "sourceHash": "560c0db"
+    "sourceHash": "4054483"
   },
   "errors.eject.volumeNotFound": "这个驱动器已经断开了，所以不用再推出。",
   "@errors.eject.volumeNotFound": {

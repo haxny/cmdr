@@ -7,9 +7,9 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
-  "whatsNew.securityNotice.title": "这个版本修复了 {count, plural, other {# 个安全问题}}。",
+  "whatsNew.securityNotice.title": "最近的更新修复了 {count, plural, other {# 个安全问题}}。",
   "@whatsNew.securityNotice.title": {
-    "sourceHash": "26e4d7e"
+    "sourceHash": "7926316"
   },
   "whatsNew.securityNotice.readAdvisory": "查看安全公告",
   "@whatsNew.securityNotice.readAdvisory": {

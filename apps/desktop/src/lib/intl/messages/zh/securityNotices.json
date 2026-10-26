@@ -9,11 +9,11 @@
   },
   "securityNotices.mcpForeignOrigin.title": "Cmdr 阻止了一个网页访问 MCP 服务器",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
-  "securityNotices.mcpForeignOrigin.body": "你浏览器里开着的一个网站想和 Cmdr 通信。什么也没进来。如果一直这样，请关掉你不信任的标签页。",
+  "securityNotices.mcpForeignOrigin.body": "你浏览器里开着的一个网页想和 Cmdr 通信。什么也没进来。如果一直这样，请关掉你不信任的标签页。",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP 设置",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr 拒绝了来自一个网络共享的回复",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr 拒绝了来自一台服务器的回复",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
   "securityNotices.smbSignatureRefused.body": "这个回复没有服务器的签名，所以 Cmdr 不信任它。网络设备不稳定可能导致这种情况，有人篡改你和服务器之间的通信也可能导致。请重新连接，如果再次出现，请检查你的网络。",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "重新连接",
   "@securityNotices.smbSignatureRefused.reconnect": {

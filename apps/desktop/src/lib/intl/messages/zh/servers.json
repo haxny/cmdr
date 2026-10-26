@@ -315,9 +315,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "这里只能用小写字母、数字和短横线。",
+  "servers.refusal.s3FieldMalformed": "这里只能用 a–z、0–9 和短横线。",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "请按 http:// 或 https:// 加主机名的格式输入端点，比如 https://s3.example.com。",
   "@servers.refusal.endpointMalformed": {
@@ -345,7 +345,7 @@
   },
   "servers.refusal.shareMounted": "共享 {name} 仍然是通过旧地址装载的。先推出这个共享，然后再保存一次。",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr 没能推出共享 {name}，所以什么都没保存。{reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -539,17 +539,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "服务器搬家了？输入它的新端点。这个密钥下的所有存储桶都会跟过去，连同它们的个人收藏、打开的标签页和保存的秘密访问密钥。",
+  "servers.sheet.s3EndpointMoveHelp": "服务器搬家了？输入它的新端点。这个密钥下的所有存储桶都会跟过去，连同它们的个人收藏和打开的标签页；保存的秘密访问密钥也会一起过去。",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "服务器搬家了？输入它的新地址。它的个人收藏、打开的标签页和保存的密码都会跟过去。",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "服务器搬家了？输入它的新地址。它的共享和保存的密码都会跟过去，每个共享的个人收藏和打开的标签页会在这个共享第一次在新地址打开时跟过去。",
+  "servers.sheet.smbAddressMoveHelp": "服务器搬家了？输入它的新地址。它的共享和保存的密码都会跟过去；每个共享的个人收藏和打开的标签页，会在这个共享在新地址打开后跟过去。",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "用户名",
   "@servers.sheet.username": {
@@ -788,9 +788,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "我核对过了",
+  "servers.hostKey.changedDisclosure": "我核对过密钥了",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "密钥指纹",
   "@servers.hostKey.fingerprintLabel": {
@@ -820,9 +820,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "我核对过了",
+  "servers.certificate.changedDisclosure": "我核对过证书了",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "证书指纹（SHA-256）",
   "@servers.certificate.fingerprintLabel": {
@@ -872,9 +872,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "你要求用自己的账户登录，但服务器给的是客人会话。这通常说明密码不对。在极少数情况下，这说明有东西在篡改连接。",
+  "servers.paneState.guestSessionRefusedHint": "你要求用自己的账户登录，但服务器给的是客人会话。这通常说明密码不对。在极少数情况下，这说明有人在篡改连接。",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "换个密码试试…",
   "@servers.paneState.tryAnotherPassword": {

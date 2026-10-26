@@ -216,9 +216,9 @@
   "@errorReporter.pageCrash.title": {
     "sourceHash": "c77d29c"
   },
-  "errorReporter.pageCrash.body": "Cmdr 遇到了意外问题。重新加载通常会有帮助。如果问题反复出现，发送一份报告有助于修复。",
+  "errorReporter.pageCrash.body": "Cmdr 遇到了意外问题。重新加载通常会有帮助。如果问题反复出现，请发送一份报告，好让它得到修复。",
   "@errorReporter.pageCrash.body": {
-    "sourceHash": "09f93b8"
+    "sourceHash": "5cfe782"
   },
   "errorReporter.pageCrash.detailsLabel": "技术详情",
   "@errorReporter.pageCrash.detailsLabel": {

@@ -1566,7 +1566,7 @@
     "chosen": "客人",
     "confidence": "high",
     "decision": "Add-server sheet + host key",
-    "forms": "Connect as guest → 以客人身份连接; status 客人; Use guest (switch back) → 改用客人身份; the account suffix pair 身份：客人 / 身份：{username}; \"doesn't show shares to guests\" → 不向客人显示共享",
+    "forms": "Connect as guest → 以客人身份连接; status 客人; Browse as guest (switch back from an account) → 以客人身份浏览; the account suffix pair 身份：客人 / 身份：{username}; \"doesn't show shares to guests\" → 不向客人显示共享",
     "sources": "macOS zh-CN (NetAuthAgent GUEST, LoginUIKit, AppKit NSUserGuest)"
   },
   "hard-link": {
@@ -3732,7 +3732,7 @@
   "batch-rename": {
     "chosen": "批量重命名",
     "confidence": "high",
-    "forms": "command, File menu item and sheet title → 批量重命名 (menu: 批量重命名…); the onboarding rows already say 批量重命名 / 批量重命名界面",
+    "forms": "command, File menu item and sheet title → 批量重命名 (menu: 批量重命名…); prose naming the tool quotes it: 在“批量重命名”里",
     "avoid": [
       {
         "form": "批量重命名工具",
@@ -3814,5 +3814,59 @@
     "confidence": "high",
     "forms": "Load a preset → 加载预置; Load more → 加载更多; Loading… → 正在加载…",
     "sources": "catalog (askCmdr.sessions.loadMore 加载更多, operationLog.dialog.loadMore 再加载 50 条, every 正在加载…); Double Commander zh-CN (Load Preset 1 → 加载预设 1)"
+  },
+  "administrator": {
+    "chosen": "管理员",
+    "confidence": "high",
+    "forms": "an administrator password → 管理员密码; administrator rights → 管理员权限",
+    "sources": "MS terminology (系统管理员密码); the catalog's 8 uses (管理员权限, 管理员密码)"
+  },
+  "reply": {
+    "chosen": "回复",
+    "confidence": "high",
+    "forms": "a server's reply → 服务器的回复 (这个回复); an Ask Cmdr answer → 回复",
+    "sources": "MS terminology (reply → 回复, \"to answer a message\"); the catalog's 16 uses"
+  },
+  "ai-reply": {
+    "chosen": "回复",
+    "confidence": "high",
+    "sources": "MS terminology (reply → 回复); same word as reply"
+  },
+  "blocked-by": {
+    "avoid": [
+      {
+        "form": "拦截",
+        "why": "no source uses it for this sense, and the catalog has none"
+      }
+    ],
+    "chosen": "阻止",
+    "confidence": "high",
+    "forms": "Cmdr blocked X from Y → Cmdr 阻止了 X 访问 Y; macOS blocked Cmdr → macOS 阻止了 Cmdr…",
+    "sources": "MS terminology (Block → 阻止); the catalog's 5 uses"
+  },
+  "tamper": {
+    "chosen": "篡改",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → 有人篡改…通信 / 有人在篡改连接",
+    "sources": "MS terminology (tamper → 篡改, \"to maliciously modify data\"); the catalog's 5 uses"
+  },
+  "uninstall": {
+    "avoid": [
+      {
+        "form": "移除",
+        "why": "removing an item from a list; the menu item this toast family echoes says 卸载"
+      }
+    ],
+    "chosen": "卸载",
+    "confidence": "high",
+    "forms": "menu item 卸载“cmdr”命令; result 已卸载“cmdr”命令; Couldn't uninstall → 无法卸载",
+    "note": "macOS zh-CN also writes 卸载 for unmounting a server (推出磁盘并卸载服务器); the mount concept keeps 装载 for share copy, so 卸载 for software reads clearly.",
+    "sources": "MS terminology (uninstall software → 卸载); the catalog's `menu.app.cliCommandUninstall`"
+  },
+  "unlock-device": {
+    "chosen": "解锁",
+    "confidence": "high",
+    "forms": "unlock the phone → 解锁 (把它连上并解锁; 如果是手机，解锁它)",
+    "sources": "MS terminology (unlock → 解锁, \"to enable an object to be modified\"); the catalog's 24 uses"
   }
 }

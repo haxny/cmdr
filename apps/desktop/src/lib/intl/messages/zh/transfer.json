@@ -59,9 +59,9 @@
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr 无法确认拷贝的文件是否已完整写入磁盘。如果驱动器被拔下过或者正在出故障，请先检查这些文件，再放心使用。",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr 无法确认拷贝的文件是否已完整写入驱动器。如果驱动器被拔下过或者正在出故障，请先检查这些文件，再放心使用。",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "这台服务器无法存储 {classes}，所以这些信息没有一起带过去。",
   "@transfer.metadataLeftBehind": {

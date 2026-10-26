@@ -262,7 +262,7 @@
   },
   "askCmdr.event.chatMemoryChanged": "聊天记忆现在可容纳 {tokens, number} 个 token",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "已移除 {count, plural, other {# 次早前的查询}}，以适应模型的上下文长度。",
   "@askCmdr.event.contextTrimmed": {
@@ -636,9 +636,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "找不到 {countText} {count, plural, other {个文件}}：重命名后它们被移动或删除了。",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "找不到 {countText} {count, plural, other {个项目}}：重命名后它们被移动或删除了。",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "保留了 {name}：它原来的名称已被占用。",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

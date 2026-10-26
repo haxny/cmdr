@@ -133,7 +133,7 @@
   },
   "multiRename.presets.saveAs": "保存为预置…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "重命名…",
   "@multiRename.presets.rename": {
@@ -141,7 +141,7 @@
   },
   "multiRename.presets.update": "用当前设置更新",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "上移",
   "@multiRename.presets.moveUp": {
@@ -638,7 +638,7 @@
   },
   "multiRename.swapsSkipped": "已跳过 {count, plural, other {# 项互换名称的重命名}}。请一个一个地重命名这些文件。",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "“批量重命名”无法在压缩文件里使用",
   "@multiRename.archiveTitle": {
@@ -748,9 +748,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "再上一层文件夹的名称",
+  "multiRename.placeholderHelp.grandparent": "文件所在文件夹的上层文件夹的名称",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "从 {start} 开始",
   "@multiRename.placeholderHelp.counterStart": {

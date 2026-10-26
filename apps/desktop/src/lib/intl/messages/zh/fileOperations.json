@@ -67,9 +67,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "没有可放回的内容：{count, plural, other {已经不在废纸篓中了}}。",
+  "fileOperations.trash.undoGone": "没有可放回的内容：{count, plural, =1 {这一项已经不在废纸篓中了} other {这些项目已经不在废纸篓中了}}。",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, other {个项目}}已经不在废纸篓中了。",
   "@fileOperations.trash.undoPartlyGone": {
@@ -267,9 +267,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "这个位置本来就从 {rootFolder} 开始，所以这个路径会指向 {resolvedPath}。你是想用 {strippedPath} 吗？",
+  "fileOperations.transferDialog.rootEchoWarning": "这里的路径本来就从 {rootFolder} 里面算起，所以这个路径会指向 {resolvedPath}。你是想用 {strippedPath} 吗？",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "使用更短的路径",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -533,7 +533,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {你已取消这次拷贝。目前已拷贝的文件会留在原处。} move {你已取消这次移动。目前已移动的文件会留在新位置。} compress {你已取消这次压缩。} delete {你已取消这次删除。目前已删除的文件已经没有了，其余文件仍在原处。} trash {你已取消这次移到废纸篓的操作。目前已移走的文件会留在废纸篓中，其余文件仍在原处。} other {你已取消这项操作。}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "正在取消…（正在清理）",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -785,7 +785,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, other {另有 {countText} 个项目}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {拷贝其余项目} move {移动其余项目} delete {删除其余项目} trash {将其余项目移到废纸篓} other {继续处理其余项目}}",
   "@fileOperations.sourcesGone.continue": {

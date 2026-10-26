@@ -341,8 +341,8 @@ them.
 - `等你核对主机密钥` over log-like `等待用户确认`; never `从未`, not `永不` (a setting's "never again").
 - `显示服务器` (Show → `显示`, `前往` only for Go to); `断开服务器连接`, never `推出`. Pin toasts don't say `固定`, like
   the English; the unpin toast answers "was it deleted?".
-- Account suffix is a noun label, `身份：{username}` / `身份：客人` (`servers.hub.shareAccount`/`.guestAccount`):
-  `以客人身份连接` is the sheet's button. Use guest `改用客人身份`.
+- Account suffix is a noun label, `身份：{username}` / `身份：客人` (`servers.hub.shareAccount`/`.guestAccount`): button
+  `以客人身份连接`. Browse as guest `以客人身份浏览`.
 
 ## Add-server sheet + host key (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.signedOut`/`.signIn`/`.hostKeyChanged*`, `goToPath.dialog.opensServer`/`.addsServer`, `commands.serversConnect.label`)
 
@@ -350,9 +350,9 @@ them.
   the account's).
 - Guest `客人` (macOS; `来宾` is Microsoft's): `servers.sheet.connectAsGuest`,
   `fileExplorer.network.browser.status.guest`, `errors.shareList.signingRequired` change together.
-- `连接方式` over NetAuthAgent's `连接身份` (the options ask whether to use an account). `有东西夹在你和它之间`, never
-  added `中间人攻击`.
-- Owner `所有者`, not `管理员`; `我核对过了`; `仍然添加` (like `仍然使用`); Sign in as… `用其他账户登录…`
+- `连接方式` over NetAuthAgent's `连接身份` (asks whether to use an account). `有东西夹在你和它之间`, never
+  `中间人攻击`.
+- Owner `所有者`, not `管理员`; `我核对过密钥了` / `证书了`; `仍然添加` (like `仍然使用`); Sign in as… `用其他账户登录…`
   (`fileExplorer.network.share.signInAs`); a cancelled connect `{name} 还没有连接` (a state).
 
 ## Reconnect + nothing-to-ask (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
