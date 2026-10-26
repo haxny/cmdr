@@ -2044,7 +2044,6 @@
     "confidence": "high",
     "decision": "A move that could not be confirmed",
     "exceptions": {
-      "errors.eject.busy": "the message also covers copying and deleting, so it names the Vorgang, not Cmdr’s Move command",
       "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren"
     },
     "forms": "button Bewegen; progress Wird bewegt; the one move as a noun → die Bewegung, the act → das Bewegen; moves as an enumerated noun has no German noun, so enumerate verbs (umzubenennen, zu bewegen und aufzuräumen)",
@@ -3953,7 +3952,6 @@
     "forms": "command, menu item, and sheet title → Mehrfach umbenennen (menu with … after a no-break space); the act in prose → das Umbenennen; one run as a noun → Mehrfach-Umbenennung (Letzte Mehrfach-Umbenennung widerrufen)",
     "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)",
     "exceptions": {
-      "onboarding.stepAi.table.rowRename": "pre-existing onboarding comparison row naming bulk renaming in general as a noun (Massenumbenennung); not this batch's key, left for a follow-up alignment with Mehrfach umbenennen",
       "onboarding.stepAi.table.renameWithout": "pre-existing onboarding prose (Stapel-Umbenennung); not this batch's key, left for a follow-up alignment with Mehrfach umbenennen"
     }
   },

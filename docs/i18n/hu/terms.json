@@ -4085,9 +4085,6 @@
         "why": "a second name for the same tool; onboarding.stepAi.table.renameWithout should be realigned to csoportos átnevezés"
       }
     ],
-    "exceptions": {
-      "onboarding.stepAi.table.rowRename": "Mass-rename → Tömeges átnevezés: an AI-capability row in the onboarding comparison table, different English from the tool's name (Multi-rename)."
-    },
     "confidence": "high",
     "sources": "Total Commander hu (LNG 6601 Csoportos átnevezés, MNU/INC 2400 Csoportos átnevezés…, INC -9 Tárolt csoportos átnevezés megnyitása); Double Commander hu (tfrmmultirename.caption Többszörös átnevezés eszköz, rejected)"
   },

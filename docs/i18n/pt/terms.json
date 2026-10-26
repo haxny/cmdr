@@ -3489,9 +3489,6 @@
         "why": "TC's menu calque; TC's own dialog title already says Renomeação em Lote"
       }
     ],
-    "exceptions": {
-      "onboarding.stepAi.table.rowRename": "A compact onboarding table row comparing with and without AI; the shipped Renomear em massa is the same idea in a three-word cell and isn't the tool's name."
-    },
     "confidence": "high",
     "sources": "TC pt-BR WCMD.LNG 6601 Renomeação em Lote; shipped pt onboarding.stepAi.table.renameWithout (renomeação em lote); Finder pt-BR Renomear ^0 Itens…",
     "note": "Same English Multi-rename in commands.fileMultiRename.label, menu.file.multiRename and multiRename.title: one form, infinitive."

@@ -1931,15 +1931,7 @@
     "distinct": ["symlink"],
     "en": "link",
     "match": ["link", "links"],
-    "notMatch": [
-      "symbolic link",
-      "symbolic links",
-      "symlink",
-      "symlinks",
-      "linked worktree",
-      "link loop",
-      "a link or a special file"
-    ],
+    "notMatch": ["symbolic link", "symbolic links", "symlink", "symlinks", "linked worktree", "link loop"],
     "sense": "A hyperlink: a clickable reference in a document, or a shareable web address (a share link, a Google Drive link)."
   },
   "linux-distribution": {
