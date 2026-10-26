@@ -26,12 +26,12 @@ pub async fn ask_cmdr_get_conversation(
 ) -> Result<Option<ConversationDetailView>, String> {
     let memory_root = crate::agent::memory::store_for(&app).map(|memory| memory.root().to_path_buf());
     with_read_connection(app, None, move |conn| {
-        let Some(detail) = store::get_conversation(conn, id, msg_limit, msg_offset)? else {
-            return Ok(None);
-        };
         // Read before the rows, so a turn that ends in between reads as running for one load
         // rather than as settled with its last results missing.
         let turn_in_flight_since_seq = turn_in_flight_since_seq(id);
+        let Some(detail) = store::get_conversation(conn, id, msg_limit, msg_offset)? else {
+            return Ok(None);
+        };
         let context = match (detail.messages.first(), detail.messages.last()) {
             (Some(first), Some(last)) => store::turn_context(conn, id, first.seq, last.seq)?,
             _ => TurnContext::default(),
