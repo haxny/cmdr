@@ -10,7 +10,7 @@
   },
   "servers.pinHint.body": "Right-click a server and choose Unpin from switcher, or use “{command}” from the command palette. It stays in the Servers list.",
   "@servers.pinHint.body": {
-    "description": "Body of that notification: how to take a server out of the volume switcher, and the reassurance that unpinning loses nothing. \"Unpin\" must match the context-menu item menu.network.unpin word for word. \"Servers\" is the hub row in the switcher that lists every saved server. The command name arrives translated in {command}; keep the quotation marks your language uses around a UI label.",
+    "description": "Body of that notification: how to take a server out of the volume switcher, and the reassurance that unpinning loses nothing. “Unpin from switcher” must match the context-menu item menu.network.unpin word for word. \"Servers\" is the hub row in the switcher that lists every saved server. The command name arrives translated in {command}; keep the quotation marks your language uses around a UI label.",
     "placeholders": {
       "command": "the name of the command palette entry that pins or unpins a server, already translated"
     }
@@ -77,18 +77,18 @@
   },
   "servers.hub.shareAccount": "as {username}",
   "@servers.hub.shareAccount": {
-    "description": "Shown after an SMB server's or saved share's name in the Servers list, and after the server's name in its share list, in a quieter color, saying which account it's signed in as: \"Container as sven\". {username} is the account name, never translated.",
+    "description": "Shown after an SMB server's or saved share's name in the Servers list, and after the server's name in its share list, in a quieter color, saying which account it's signed in as: \"Container as sven\". {username} is the account name, never translated. If a bare “as sven” doesn’t work in your language, a label form (“Account: sven”) or an added verb (“signed in as sven”) is fine; keep it short.",
     "placeholders": {
       "username": "the account name, like sven"
     }
   },
   "servers.hub.guestAccount": "as guest",
   "@servers.hub.guestAccount": {
-    "description": "Shown after an SMB server's or share's name in the Servers list, and after the server's name in its share list, in a quieter color: the server is signed in to as a guest, with no account. Pairs with servers.hub.shareAccount (\"as sven\"); keep the two built the same way."
+    "description": "Shown after an SMB server's or share's name in the Servers list, and after the server's name in its share list, in a quieter color: the server is signed in to as a guest, with no account. Pairs with servers.hub.shareAccount (\"as sven\"); keep the two built the same way, so a label form (“Account: guest”) or an added verb is fine here too."
   },
   "servers.hub.editPickHint": "Select a server to edit it.",
   "@servers.hub.editPickHint": {
-    "description": "Toast when the user presses Edit or Rename (F4, F2) in the Servers list while the cursor is on the \"Add server…\" row rather than on a server."
+    "description": "Toast when the user presses Edit or Rename (F4, F2) in the Servers list while the cursor is on the \"Add server…\" row rather than on a server. “Select” here means moving the cursor onto a server row (arrow keys or a click), not marking it the way files get selected; use your language’s verb for picking or pointing at a row."
   },
   "servers.hub.editShareHint": "A share has nothing to edit. To edit its server, select the server’s row.",
   "@servers.hub.editShareHint": {
@@ -140,7 +140,7 @@
   },
   "servers.hub.nearbyGroup": "{count, plural, one {{countText} server found nearby} other {{countText} servers found nearby}}",
   "@servers.hub.nearbyGroup": {
-    "description": "Header row in the servers hub, below the servers the user saved. It groups the servers Cmdr found on the local network that the user never saved, and it opens and collapses that group; collapsed, this line is all that shows of them. The rows under it carry the status \"Found nearby\", so use the same wording for \"found nearby\" here.",
+    "description": "Header row in the servers hub, below the servers the user saved. It groups the servers Cmdr found on the local network that the user never saved, and it opens and collapses that group; collapsed, this line is all that shows of them. The rows under it carry the status \"Found nearby\", so use the same wording for \"found nearby\" here. The word order is free: put the count first or last, whichever reads naturally.",
     "placeholders": {
       "count": "the number of servers in the group, for choosing the plural form",
       "countText": "the number as the user’s locale writes it, like \"12\""
@@ -267,7 +267,7 @@
   },
   "servers.refusal.signInHelperStuck": "{host} is answering, but macOS’s network sign-in helper looks stuck. To restart it, open Terminal, run killall NetAuthSysAgent, then try again. macOS starts the helper again on its own.",
   "@servers.refusal.signInHelperStuck": {
-    "description": "Shown in the pane when a saved network share (SMB) waited a long time without connecting while the server itself is reachable: a macOS background helper called NetAuthSysAgent is stuck, and only restarting it helps. Keep \"killall NetAuthSysAgent\" exactly as written, untranslated: it’s a command the person types into Terminal. \"Terminal\" is the macOS app’s name; use the name macOS shows for it in your language.",
+    "description": "Shown in the pane when a saved network share (SMB) waited a long time without connecting while the server itself is reachable: a macOS background helper called NetAuthSysAgent is stuck, and only restarting it helps. “Network sign-in helper” isn’t a name macOS shows anywhere: it describes a nameless background process, so describe it in your language’s words (a service or a process). Keep \"killall NetAuthSysAgent\" exactly as written, untranslated: it’s a command the person types into Terminal. \"Terminal\" is the macOS app’s name; use the name macOS shows for it in your language.",
     "placeholders": {
       "host": "the server’s hostname or address, like \"nas.local\""
     }
@@ -1066,7 +1066,7 @@
   },
   "servers.paneState.notConnected": "{name} isn’t connected",
   "@servers.paneState.notConnected": {
-    "description": "Heading of the pane view shown when the user cancelled connecting to a saved server or share (for example, closed its sign-in form). A plain statement, NOT an error: nothing failed, the person chose not to connect yet.",
+    "description": "Heading of the pane view shown when the user cancelled connecting to a saved server or share (for example, closed its sign-in form). A plain statement, NOT an error: nothing failed, the person chose not to connect. {name} is the server’s or share’s name; if your language would have to agree a verb or adjective with it, a label frame such as “Not connected: {name}” is fine.",
     "placeholders": {
       "name": "the place’s display name, like “private on localhost:11481”"
     },
@@ -1075,7 +1075,7 @@
   },
   "servers.paneState.unreachable": "Cmdr couldn’t reach {name}.",
   "@servers.paneState.unreachable": {
-    "description": "Heading of the pane view shown when the user opened a saved server and there was no route to it at all: it’s off, its address doesn’t resolve, or the network is down. Names the server by the name the user gave it. A Try again button sits below. \"Cmdr\" is the product name.",
+    "description": "Heading of the pane view shown when the user opened a saved server and there was no route to it at all: it’s off, its address doesn’t resolve, or the network is down. Names the server by the name the user gave it. A Try again button sits below. \"Cmdr\" is the product name. Word it like servers.refusal.unreachable, which says the same thing in the Add server form.",
     "placeholders": {
       "name": "the name the user gave the saved server, like “Naspolya”, or its hostname, like “nas.local”, when it has no name"
     },
@@ -1183,7 +1183,7 @@
   },
   "servers.paneState.retryKeepsTrying": "Will keep trying for a total of {duration}.",
   "@servers.paneState.retryKeepsTrying": {
-    "description": "Reassurance line telling the user how long the auto-reconnect will keep trying. {duration} is a phrase like \"60 seconds\" or \"2 minutes\".",
+    "description": "Reassurance line telling the user how long the auto-reconnect keeps trying. {duration} is the WHOLE time it tries, counted from the start, not the time remaining, so don’t word it as “another …”. It’s a phrase like \"60 seconds\" or \"2 minutes\".",
     "placeholders": {
       "duration": "the total duration phrase, e.g. 60 seconds or 2 minutes"
     },

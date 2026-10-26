@@ -664,7 +664,7 @@
   },
   "fileExplorer.network.browser.removeHostConfirm": "Forget {hostName}? Cmdr stops listing it and the shares saved under it. Nothing gets unmounted.",
   "@fileExplorer.network.browser.removeHostConfirm": {
-    "description": "Confirmation dialog message before removing a manually-added host from the saved server list.",
+    "description": "Confirmation dialog message before forgetting a saved server the user added by hand, so the Servers list no longer shows it. Forgetting drops only Cmdr’s saved entry: nothing is deleted or unmounted. {hostName} is the server’s name.",
     "placeholders": {
       "hostName": "the display name of the host being removed"
     },
@@ -673,7 +673,7 @@
   },
   "fileExplorer.network.browser.hostRemoved": "Forgot {hostName}",
   "@fileExplorer.network.browser.hostRemoved": {
-    "description": "Success toast after removing a host from the saved server list.",
+    "description": "Success toast after the user forgot a saved server, so the Servers list no longer shows it. {hostName} is the server’s name.",
     "placeholders": {
       "hostName": "the display name of the host that was removed"
     },
@@ -682,7 +682,7 @@
   },
   "fileExplorer.network.browser.hostRemoveFailed": "Couldn’t forget {hostName}",
   "@fileExplorer.network.browser.hostRemoveFailed": {
-    "description": "Error toast when removing a host from the saved server list did not work.",
+    "description": "Toast when forgetting a saved server didn’t work, so it stays in the Servers list. {hostName} is the server’s name.",
     "placeholders": {
       "hostName": "the display name of the host that could not be removed"
     },
@@ -1322,39 +1322,39 @@
   },
   "fileExplorer.git.status.modified": "Modified",
   "@fileExplorer.git.status.modified": {
-    "description": "A file’s git status, shown as the tooltip on the one-letter Git column cell (“M”) in the file list’s Full view, and spoken by screen readers at the end of the row as “Modified in git” (fileExplorer.list.rowGitStatus). Means the file changed since the last commit. An adjective describing the file’s state, sentence case, one or two words. Use your language’s usual git terminology (the word git’s own translated output or popular git tools use)."
+    "description": "A row’s git status, shown as the tooltip on the one-letter Git column cell (“M”) in the file list’s Full view, and spoken by screen readers at the end of the row as “Modified in git” (fileExplorer.list.rowGitStatus). Means the item changed since the last commit. The row is usually a file but can be a folder (a git submodule shows Modified, Added, or Type changed, and a nested repository can show Untracked), so use a form that fits both a file and a folder. An adjective describing the item’s state, sentence case, one or two words. Use your language’s usual git terminology (the word git’s own translated output or popular git tools use)."
   },
   "fileExplorer.git.status.added": "Added",
   "@fileExplorer.git.status.added": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file staged to be committed (git add). An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file staged to be committed (git add). An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.status.deleted": "Deleted",
   "@fileExplorer.git.status.deleted": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file removed since the last commit. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file removed since the last commit. An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.status.renamed": "Renamed",
   "@fileExplorer.git.status.renamed": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file git sees as moved or renamed since the last commit. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file git sees as moved or renamed since the last commit. An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.status.copied": "Copied",
   "@fileExplorer.git.status.copied": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file git sees as a copy of another tracked file. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file git sees as a copy of another tracked file. An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.status.typechange": "Type changed",
   "@fileExplorer.git.status.typechange": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file whose kind changed since the last commit (for example a regular file became a symbolic link). A short state phrase, sentence case, two or three words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file whose kind changed since the last commit (for example a regular file became a symbolic link). A short state phrase, sentence case, two or three words; use your language’s usual git terminology. The row can be a folder too (see fileExplorer.git.status.modified)."
   },
   "fileExplorer.git.status.untracked": "Untracked",
   "@fileExplorer.git.status.untracked": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file git doesn’t track yet (never added). An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file git doesn’t track yet (never added). An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.status.ignored": "Ignored",
   "@fileExplorer.git.status.ignored": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file that git ignores because of a .gitignore rule. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file that git ignores because of a .gitignore rule. An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.status.conflicted": "Conflicted",
   "@fileExplorer.git.status.conflicted": {
-    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file with an unresolved merge conflict. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file with an unresolved merge conflict. An adjective describing the item’s state, one or two words; use your language’s usual git terminology."
   },
   "fileExplorer.git.useTransferToCopyOut": "To copy files out of a git snapshot, use F5 to copy or F6 to move.",
   "@fileExplorer.git.useTransferToCopyOut": {

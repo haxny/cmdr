@@ -339,7 +339,7 @@
 
   "queue.chip.ariaLabel": "{label}, {percentText} percent. Open the operation queue.",
   "@queue.chip.ariaLabel": {
-    "description": "Screen-reader label for the small progress chip in the main window’s top-right corner, which previews the operation currently running in the background. The chip is a button: pressing it opens the operation queue window, which the second sentence promises. Spell \"percent\" as a word rather than the % sign, so screen readers say it naturally.",
+    "description": "Screen-reader label for the small progress chip in the main window’s top-right corner, which previews the operation currently running in the background. The chip is a button: pressing it opens the operation queue window, which the second sentence promises. Spell \"percent\" as a word rather than the % sign, so screen readers say it naturally; where the word can’t agree with the preformatted number in your language, the % sign is fine.",
     "placeholders": {
       "label": "what the chip shows: the action word from queue.row.label (\"Copying\"), or the status word \"Paused\" when the operation is paused",
       "percentText": "how far along the operation is, a whole number already formatted (for example 42)"

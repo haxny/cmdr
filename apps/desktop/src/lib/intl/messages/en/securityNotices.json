@@ -21,7 +21,7 @@
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP settings",
   "@securityNotices.mcpForeignOrigin.openSettings": {
-    "description": "Button on that notice that opens Cmdr's Settings on the MCP server section, where the person can turn the server off. Short control label. \"MCP\" stays as-is. Pop-up notice (toast) in the corner of Cmdr's main window."
+    "description": "Button on that notice that opens Cmdr's Settings on the “MCP server” section (settings.section.mcpServer), where the person can turn the server off. Short control label; it may name that section. \"MCP\" stays as-is. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
   "securityNotices.smbSignatureRefused.title": "Cmdr refused a reply from {name}",
   "@securityNotices.smbSignatureRefused.title": {
@@ -52,7 +52,7 @@
   },
   "securityNotices.updateNotGenuine.body": "Every update has to carry Cmdr’s signature, and this one doesn’t. Nothing was installed, and your current Cmdr is untouched. Get the latest version from getcmdr.com, and please tell David: it may mean someone is tampering with updates.",
   "@securityNotices.updateNotGenuine.body": {
-    "description": "Body of that notice: why Cmdr refused, that nothing changed, and what to do. \"David\" is Cmdr's maker, addressed by first name on purpose; keep the name. \"getcmdr.com\" is the website address: keep it exactly. A \"Send error report…\" button sits below it, which is how the person tells David. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
+    "description": "Body of that notice: why Cmdr refused, that nothing changed, and what to do. \"David\" is Cmdr's maker, addressed by first name on purpose; keep the name, though in running prose it may take your language’s case endings or transliteration, like any personal name. \"getcmdr.com\" is the website address: keep it exactly. A \"Send error report…\" button sits below it, which is how the person tells David. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
   "securityNotices.updateNotGenuine.openWebsite": "Open getcmdr.com",
   "@securityNotices.updateNotGenuine.openWebsite": {

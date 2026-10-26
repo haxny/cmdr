@@ -9,7 +9,7 @@
   },
   "menu.bar.select": "Select",
   "@menu.bar.select": {
-    "description": "VERB (imperative), title of the menu-bar menu holding the FILE-selection commands (Select all, Deselect all, Select files…). It selects files in the two panes, never text: Cmdr keeps text-selection commands in Edit on purpose. Finder has no counterpart menu, so pick the imperative verb your language would use on a button that selects items in a list. One short word; a menu-bar title has almost no room."
+    "description": "Title of the menu-bar menu holding the FILE-selection commands (Select all, Deselect all, Select files…). It selects files in the two panes, never text: Cmdr keeps text-selection commands in Edit on purpose. Finder has no counterpart menu, so use either the imperative VERB your language would put on a button that selects items in a list, or the NOUN two-pane file managers title this menu with (Total Commander’s “Mark”); a noun matches menu.context.selection. One short word; a menu-bar title has almost no room."
   },
   "menu.bar.view": "View",
   "@menu.bar.view": {
@@ -708,7 +708,7 @@
   },
   "menu.network.unpin": "Unpin from switcher",
   "@menu.network.unpin": {
-    "description": "VERB (imperative). Right-click item on a server row in the volume dropdown: takes the server back out of the volume switcher. The server stays saved and stays in the Servers list, so avoid a word that sounds like deleting. Very short label in a narrow dropdown."
+    "description": "VERB (imperative). Right-click item on a server row in the volume dropdown: takes the server back out of the volume switcher. “Switcher” is that volume switcher, the dropdown this item sits in. The server stays saved and stays in the Servers list, so avoid a word that sounds like deleting. Keep it short: the dropdown is narrow."
   },
   "menu.network.forgetServer": "Forget server",
   "@menu.network.forgetServer": {
