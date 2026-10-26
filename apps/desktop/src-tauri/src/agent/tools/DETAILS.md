@@ -40,8 +40,9 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   once (§ The location contract), then reads THAT volume's index: its immediate children (`Index::list_children`) plus
   its own recursive size stats (`Index::dir_stats`) and a `Coverage` block naming `source: index`. The result echoes
   `location`. A folder no index lists (an unindexed share, or ground the index hasn't reached) is read live once
-  instead, `source: live` (§ The live source); a resolved volume that isn't connected answers `volumeNotConnected`,
-  and an unplaceable one the resolver's miss. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
+  instead, `source: live` (§ The live source); a resolved volume that isn't connected answers from the index its last
+  walk left on disk, `source: offlineIndex` (§ The honesty contract), or `volumeNotConnected` when that index doesn't
+  list the folder, and an unplaceable one the resolver's miss. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
   `type` narrows to files or folders. **`sortBy: "size"` is the disk-usage answer for ONE folder's children**;
   `search` with the same sort ranks a whole drive — see § One tool, both questions.
   Every number also arrives spoken (`sizeHuman`, `modifiedHuman`, `recursiveSizeHuman`, `totalHuman` /
@@ -197,7 +198,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,811 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,828 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -509,7 +510,7 @@ Its misses ride the same shape as the resolver's (`LocationMissResult::on`, `loc
 
 ## The honesty (coverage) contract
 
-`read/listing.rs::coverage` is the single builder for index freshness honesty: it reuses `status_token` +
+`read/listing/source.rs::coverage` is the single builder for index freshness honesty: it reuses `status_token` +
 `Freshness::is_authoritative` (never re-derives the tokens) and attaches a plain-language note when a read isn't
 authoritative or the path isn't indexed. `authoritative` needs both a `fresh` index AND a row for the folder: a fresh
 volume vouches for nothing it doesn't list (a model once read `authoritative: true` beside "isn't in the drive index"
@@ -524,9 +525,22 @@ folder's own draining writes. So `execute_list_dir` resolves the volume's walked
 deep inside one child leaves its siblings settled. ❌ Reading the pending flag alone calls a folder settled through the
 whole walk that's rewriting it, which is when its number is furthest from the truth.
 
-That ground travels as one field of `VolumeView`, beside `enabled`, `freshness`, and the `VolumeBlock` the model sees.
-All four are read from the same volume at the same instant, so bundling them is what stops a `walked_roots` resolved
-for one volume from sitting beside an `enabled` read from another and quietly mis-reporting every size on the page.
+That ground travels as one field of `VolumeView`, beside `enabled`, `freshness`, the `VolumeBlock` the model sees, and
+`reach` (which copy of the index answers, below). All are read from the same volume at the same instant, so bundling
+them is what stops a `walked_roots` resolved for one volume from sitting beside an `enabled` read from another and
+quietly mis-reporting every size on the page.
+
+**An offline answer is dated, stale, and never authoritative.** A resolved volume that isn't connected
+(`ResolvedLocation::live == false`) answers through `answer_offline`: the same `Index::list_children` / `dir_stats` /
+`dir_stats_batch` cores, which read a volume the host doesn't serve from its database on disk, read-only, with nothing
+stood up (`crates/cmdr-index/src/indexing/read/DETAILS.md` § A stopped volume's database answers reads). Its coverage
+(`offline_coverage`) is `source: offlineIndex`, `indexStatus: stale`, `authoritative: false`, and `asOf` (the last
+completed walk, spoken; absent when it never finished), the one offline vocabulary `list_volumes` speaks too, plus a
+note to connect for a live answer. Sizes keep their own flags. Nothing walks a volume with no instance, so nothing is
+`sizeIsUpdating`; space is the poller's cache, as for any volume. A folder that index doesn't list (or a volume with no
+index on disk) is `volumeNotConnected` with its `nearby`, ❌ never an empty listing. The index maps the app path by the
+root its last walk recorded (`volume_path`), which is what the one root rule answers for a volume that isn't live; a
+database that predates that meta can't place a path and so answers nothing.
 
 Aggregation (the 12–19 s after a first index's walk, when the drive's folder totals are computed) is deliberately NOT
 in that answer: the walker has released its ground by then, and nothing queryable per volume reports it. The `coverage`

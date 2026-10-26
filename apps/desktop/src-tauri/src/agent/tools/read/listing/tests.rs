@@ -1,6 +1,7 @@
 //! `list_dir` unit tests: the coverage flags, the size contract, and the ordering
 //! and paging rules. All pure over resolved inputs — no index, no filesystem.
 
+use super::source::coverage;
 use super::*;
 use crate::file_system::volume::SpaceInfo;
 use crate::search::format_size;
@@ -71,6 +72,7 @@ fn fresh_volume() -> VolumeView {
         freshness: Some(Freshness::Fresh),
         block: VolumeBlock::new("root".to_string(), None),
         walked_roots: Vec::new(),
+        reach: IndexReach::Connected,
     }
 }
 
@@ -884,4 +886,57 @@ fn every_index_answer_names_its_source_and_location() {
     assert_eq!(wire["coverage"]["source"], "index");
     assert_eq!(wire["location"], json!({ "volumeId": "root", "path": "/Users/x" }));
     assert!(wire.get("path").is_none(), "the location replaces the bare path");
+}
+
+/// A share that isn't connected answers from its index on disk, and says so: the
+/// one offline vocabulary (`stale` + `asOf`), never authoritative, and a note to
+/// connect for a live answer. Its sizes still come with their own caveats.
+#[test]
+fn an_offline_answer_is_dated_stale_and_never_authoritative() {
+    let offline = VolumeView {
+        enabled: false,
+        freshness: None,
+        reach: IndexReach::Offline {
+            name: "naspi on 100.127.48.122".to_string(),
+            as_of: Some(1_761_000_000),
+        },
+        ..fresh_volume()
+    };
+    let page = page_of(vec![row("hetzner.pdf", RowKind::File, Some(10))]);
+    let stats = dir_stats(10, true, false, false);
+    let result = build_list_dir(
+        &at("/Volumes/naspi/p"),
+        Some(page),
+        Some(&stats),
+        &offline,
+        &ListOptions::default(),
+    );
+    let wire = serde_json::to_value(&result).expect("serializes");
+
+    assert_eq!(wire["coverage"]["source"], "offlineIndex");
+    assert_eq!(wire["coverage"]["indexStatus"], "stale");
+    assert_eq!(wire["coverage"]["authoritative"], false);
+    assert_eq!(wire["coverage"]["asOf"], crate::search::format_timestamp(1_761_000_000));
+    let note = wire["coverage"]["note"].as_str().expect("a note");
+    assert!(
+        note.contains("naspi on 100.127.48.122") && note.contains("Connect it"),
+        "{note}"
+    );
+    assert_eq!(wire["size"]["recursiveSize"], 10, "the stored totals still answer");
+    assert_eq!(wire["children"][0]["name"], "hetzner.pdf");
+}
+
+/// A connected answer never carries an `asOf`: its index's own status says how
+/// fresh it is.
+#[test]
+fn a_connected_answer_carries_no_as_of() {
+    let result = build_list_dir(
+        &at("/p"),
+        Some(page_of(vec![])),
+        None,
+        &fresh_volume(),
+        &ListOptions::default(),
+    );
+    let wire = serde_json::to_value(&result).expect("serializes");
+    assert!(wire["coverage"].get("asOf").is_none());
 }

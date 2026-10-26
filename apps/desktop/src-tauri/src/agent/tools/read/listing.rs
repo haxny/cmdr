@@ -1,5 +1,5 @@
-//! The `list_dir` tool, over the drive index, or one live read where no index
-//! lists the folder.
+//! The `list_dir` tool, over the drive index, one live read where no index lists
+//! the folder, or the index a not-connected volume left on disk.
 //!
 //! The location is placed ONCE by `crate::location`'s resolver, and that volume's
 //! index answers: a dead mount point is a typed miss, ❌ never a second routing of
@@ -8,7 +8,9 @@
 //! It REUSES the shipped index query cores (`Index::list_children`, `dir_stats`,
 //! `dir_stats_batch`) and never re-derives listing logic. A connected volume whose
 //! index doesn't list the folder answers from one bounded readdir instead
-//! (`listing/live.rs`, § The live source); nothing else here touches the disk. The one thing no index query does is rank a folder's children by size,
+//! (`listing/live.rs`, § The live source); nothing else here touches the disk. A
+//! volume that isn't connected answers from the same cores, which read its
+//! database read-only ([`answer_offline`], `source: offlineIndex`). The one thing no index query does is rank a folder's children by size,
 //! so `sortBy: "size"` batches `get_dir_stats` over the subdirectories and sorts
 //! here.
 //!
@@ -47,8 +49,7 @@ use crate::file_system::volume::manager::get_volume_manager;
 use crate::index_host::index;
 use crate::location::Location;
 use crate::location::miss::{LocationMissResult, volume_not_connected};
-use crate::location::resolve::{LocationInput, VolumeFacts, resolve};
-use crate::mcp::resources::indexing::status_token;
+use crate::location::resolve::{LocationInput, ResolvedLocation, VolumeFacts, resolve};
 use crate::mcp::{ToolError, ToolResult};
 use crate::search::format_size;
 use cmdr_index::store::DirStats;
@@ -56,10 +57,13 @@ use cmdr_index::{Freshness, IndexStatusResponse};
 
 mod live;
 mod rows;
+mod source;
 
 pub(crate) use live::{GatePolicy, LIVE_READ, LiveAsk, answer_live};
 use rows::qualified_size;
 pub(crate) use rows::{ChildEntry, RowKind, SizeClaim, human_size};
+use source::index_coverage;
+pub(crate) use source::{Coverage, IndexReach, ListSource};
 
 /// Rows per page when the caller doesn't say. Comfortably under the result budget
 /// for a normal folder, so the common call is one round trip.
@@ -67,63 +71,6 @@ const DEFAULT_LIMIT: usize = 50;
 /// The ceiling on `limit`. `fit_to_result_budget` is the real cut; this only stops
 /// a caller from asking for a page nothing could carry.
 const MAX_LIMIT: usize = 1_000;
-
-/// Where a listing's rows came from. Every answer names it, so a read from
-/// anywhere but the volume's live index can't pass for one.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ListSource {
-    /// The volume's live drive index.
-    Index,
-    /// One readdir of the connected volume, just now: its index has no row here
-    /// (or it has no index at all). `live.rs`.
-    Live,
-}
-
-/// The index's honesty for a read: where the rows came from, its freshness token,
-/// whether reads are authoritative (`fresh` only), and a plain-language caveat
-/// when they aren't (or when the path isn't in the index).
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Coverage {
-    pub source: ListSource,
-    /// `fresh` / `scanning` / `stale` / `off`. The shared token every surface uses.
-    pub index_status: String,
-    /// Reads are authoritative only when the index is `fresh` AND lists the folder.
-    pub authoritative: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub note: Option<String>,
-}
-
-/// Build the coverage block. `indexed` is whether the path actually resolved in a
-/// live index (so `false` distinguishes "not in the index" from an empty folder).
-/// Reuses `status_token` + `Freshness::is_authoritative` so it can't drift from the
-/// rest of the app.
-pub(crate) fn coverage(enabled: bool, freshness: Option<Freshness>, indexed: bool) -> Coverage {
-    // A fresh index vouches only for the folders it lists: unlisted ground was read
-    // by nobody, however fresh the volume.
-    let authoritative = indexed && freshness.is_some_and(|f| f.is_authoritative());
-    let note = if !indexed {
-        Some(if enabled {
-            "This folder isn't in the drive index — it may be new, hidden, or outside the indexed area.".to_string()
-        } else {
-            "This volume isn't indexed, so I can't read it from the index.".to_string()
-        })
-    } else if !authoritative {
-        Some(match freshness {
-            Some(Freshness::Scanning) => "The index is still scanning, so this may be incomplete.".to_string(),
-            _ => "The index may have drifted since the last full scan, so treat this as best-effort.".to_string(),
-        })
-    } else {
-        None
-    };
-    Coverage {
-        source: ListSource::Index,
-        index_status: status_token(enabled, freshness).to_string(),
-        authoritative,
-        note,
-    }
-}
 
 /// What a listing is ordered by. `Size` is the disk-usage question; the other two
 /// are browsing orders.
@@ -346,6 +293,8 @@ pub(crate) struct VolumeView {
     /// Empty means nothing is moving, which is also the answer for a volume whose
     /// status can't be read: a missing status must not invent motion.
     pub walked_roots: Vec<String>,
+    /// Which copy of the index answers for it.
+    pub reach: IndexReach,
 }
 
 /// What the rows this page did NOT return add up to, so a paged answer can account
@@ -540,7 +489,7 @@ pub(crate) fn build_list_dir(
     let path = location.path.as_str();
     ListDirResult {
         location: location.clone(),
-        coverage: coverage(volume.enabled, volume.freshness, indexed),
+        coverage: index_coverage(volume, indexed),
         volume: volume.block.clone(),
         size: stats
             .map(|s| SizeStats::from_dir_stats(s, IndexStatusResponse::walk_affects(&volume.walked_roots, path))),
@@ -598,9 +547,8 @@ pub(crate) async fn execute_list_dir_cancellable<R: Runtime>(
         Ok(resolved) => resolved,
         Err(miss) => return to_value(&LocationMissResult::from(miss)),
     };
-    // Both sources need the volume connected: the live index and a live read.
     if !resolved.live {
-        return to_value(&volume_not_connected(&facts, &resolved));
+        return answer_offline(&facts, &resolved, &opts);
     }
     let location = &resolved.location;
     // The index that holds this volume's rows, which for a cloud drive is `root`'s.
@@ -617,6 +565,7 @@ pub(crate) async fn execute_list_dir_cancellable<R: Runtime>(
             freshness: status.freshness,
             block: VolumeBlock::new(location.volume_id.clone(), space),
             walked_roots: Vec::new(),
+            reach: IndexReach::Connected,
         };
         return answer_live(LiveAsk {
             resolved: &resolved,
@@ -630,9 +579,6 @@ pub(crate) async fn execute_list_dir_cancellable<R: Runtime>(
         })
         .await;
     };
-    let stats = index()
-        .dir_stats(index_id, &location.path)
-        .map_err(|e| ToolError::internal(e.to_string()))?;
     // Resolved ONCE, then asked per row. Every size below is only as honest as the
     // walked ground in here: without it a folder mid-walk reads as a settled floor,
     // which is exactly when its number is furthest from the truth.
@@ -641,14 +587,66 @@ pub(crate) async fn execute_list_dir_cancellable<R: Runtime>(
         freshness: status.freshness,
         block: VolumeBlock::new(location.volume_id.clone(), space),
         walked_roots: index().status(index_id).map(|s| s.walked_roots).unwrap_or_default(),
+        reach: IndexReach::Connected,
     };
+    answer_from_index(location, index_id, &rows, &volume, &opts)
+}
+
+/// A volume that isn't connected answers from the index its last walk left on
+/// disk (`Index::list_children` reads it read-only, standing nothing up), or, when
+/// that index has no listing of the folder, with the typed `volumeNotConnected`.
+/// ❌ Never a live read: there's no volume to read.
+///
+/// No walk runs on a volume with no instance, so nothing on the page is moving;
+/// its space is whatever the poller last cached, as for any volume.
+pub(crate) fn answer_offline(facts: &VolumeFacts, resolved: &ResolvedLocation, opts: &ListOptions) -> ToolResult {
+    let location = &resolved.location;
+    let index_id = resolved.index.volume_id.as_str();
+    let rows = if resolved.index.stored {
+        index()
+            .list_children(index_id, &location.path)
+            .map_err(|e| ToolError::internal(e.to_string()))?
+    } else {
+        None
+    };
+    let Some(rows) = rows else {
+        return to_value(&volume_not_connected(facts, resolved));
+    };
+    let volume = VolumeView {
+        enabled: false,
+        freshness: None,
+        block: VolumeBlock::new(
+            location.volume_id.clone(),
+            crate::mcp::resources::volumes::space_summary(&location.volume_id),
+        ),
+        walked_roots: Vec::new(),
+        reach: IndexReach::Offline {
+            name: resolved.name.clone(),
+            as_of: resolved.index.stored_as_of,
+        },
+    };
+    answer_from_index(location, index_id, &rows, &volume, opts)
+}
+
+/// Shape a folder the index lists: its rows, its own totals, and each child
+/// folder's recursive size, all from `index_id`.
+fn answer_from_index(
+    location: &Location,
+    index_id: &str,
+    rows: &[cmdr_index::store::EntryRow],
+    volume: &VolumeView,
+    opts: &ListOptions,
+) -> ToolResult {
+    let stats = index()
+        .dir_stats(index_id, &location.path)
+        .map_err(|e| ToolError::internal(e.to_string()))?;
     let children: Vec<ChildEntry> = rows.iter().map(child_from_row).collect();
     let folder = IndexedFolder {
         index_id,
         path: &location.path,
     };
-    let page = page_with_folder_sizes(&folder, children, &opts, &volume.walked_roots)?;
-    to_value(&build_list_dir(location, Some(page), stats.as_ref(), &volume, &opts))
+    let page = page_with_folder_sizes(&folder, children, opts, &volume.walked_roots)?;
+    to_value(&build_list_dir(location, Some(page), stats.as_ref(), volume, opts))
 }
 
 /// The listed folder as the index knows it: which index holds its rows, and its

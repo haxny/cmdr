@@ -590,6 +590,7 @@ pub(crate) fn live_coverage(enabled: bool, freshness: Option<Freshness>, capped:
         source: ListSource::Live,
         index_status: status_token(enabled, freshness).to_string(),
         authoritative: !capped,
+        as_of: None,
         note: Some(note),
     }
 }

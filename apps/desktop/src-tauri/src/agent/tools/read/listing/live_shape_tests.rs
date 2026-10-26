@@ -29,6 +29,7 @@ fn unindexed() -> VolumeView {
         freshness: None,
         block: VolumeBlock::new("lan".to_string(), None),
         walked_roots: Vec::new(),
+        reach: IndexReach::Connected,
     }
 }
 

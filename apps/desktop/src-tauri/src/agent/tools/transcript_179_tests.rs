@@ -15,7 +15,7 @@ use serde_json::Value;
 use tokio_util::sync::CancellationToken;
 
 use crate::agent::tools::read::listing::{
-    GatePolicy, LIVE_READ, ListOptions, LiveAsk, VolumeBlock, VolumeView, answer_live,
+    GatePolicy, IndexReach, LIVE_READ, ListOptions, LiveAsk, VolumeBlock, VolumeView, answer_live, answer_offline,
 };
 use crate::location::miss::LocationMissResult;
 use crate::location::resolve::{IndexSources, LocationInput, VolumeFact, VolumeFacts, resolve};
@@ -33,6 +33,13 @@ fn conversation_179() -> VolumeFacts {
 /// The same facts with the LAN share mounted at `lan_root`: a temp dir standing in
 /// for `/Volumes/naspi-1`, so a live read has a real folder to list.
 fn conversation_179_with_lan_at(lan_root: &str) -> VolumeFacts {
+    conversation_179_with(lan_root, ConnectionState::Direct)
+}
+
+/// When the Tailscale share's on-disk index last finished a walk.
+const TAILSCALE_AS_OF: u64 = 1_761_000_000;
+
+fn conversation_179_with(lan_root: &str, lan_state: ConnectionState) -> VolumeFacts {
     // The Tailscale share's index is on disk; the LAN share has none at all.
     let share = |id: &str, server: &str, root: &str, state: ConnectionState, stored: bool| VolumeFact {
         id: id.to_string(),
@@ -44,6 +51,7 @@ fn conversation_179_with_lan_at(lan_root: &str) -> VolumeFacts {
         earlier_roots: Vec::new(),
         index: IndexSources {
             stored,
+            stored_as_of: stored.then_some(TAILSCALE_AS_OF),
             ..IndexSources::none(id)
         },
     };
@@ -70,7 +78,7 @@ fn conversation_179_with_lan_at(lan_root: &str) -> VolumeFacts {
                 ConnectionState::Saved,
                 true,
             ),
-            share(LAN, "naspolya", lan_root, ConnectionState::Direct, false),
+            share(LAN, "naspolya", lan_root, lan_state, false),
         ],
         mount_areas: vec!["/Volumes".to_string()],
     }
@@ -132,6 +140,7 @@ async fn the_unindexed_lan_share_lists_invoices_paid_live() {
         freshness: None,
         block: VolumeBlock::new(LAN.to_string(), None),
         walked_roots: Vec::new(),
+        reach: IndexReach::Connected,
     };
     let wire = answer_live(LiveAsk {
         resolved: &resolved,
@@ -152,6 +161,79 @@ async fn the_unindexed_lan_share_lists_invoices_paid_live() {
 
     assert_eq!(wire["coverage"]["source"], "live");
     assert_eq!(wire["location"]["volumeId"], LAN);
+    assert_eq!(wire["location"]["path"], path);
+    let names: Vec<&str> = wire["children"]
+        .as_array()
+        .expect("children")
+        .iter()
+        .filter_map(|c| c["name"].as_str())
+        .collect();
+    assert_eq!(names, ["2025", "hetzner-2026-09.pdf"]);
+}
+
+/// The Tailscale share's drive index as prod holds it: rooted at `/Volumes/naspi`,
+/// its last walk having listed `invoices paid` and its two children.
+fn tailscale_index_on_disk(data: &std::path::Path) {
+    use cmdr_index::store::{IndexStore, ROOT_ID};
+
+    let db_path = data.join(format!("index-{TAILSCALE}.db"));
+    let _store = IndexStore::open(&db_path).expect("open store");
+    let conn = IndexStore::open_write_connection(&db_path).expect("write conn");
+    IndexStore::update_meta(&conn, "volume_path", "/Volumes/naspi").expect("meta");
+    let dir = |parent, name| {
+        IndexStore::insert_entry_v2(&conn, parent, name, true, false, None, None, None, None).expect("insert dir")
+    };
+    let papers = dir(ROOT_ID, "papers");
+    let company = dir(papers, "Rymdskottkärra AB");
+    let invoices = dir(company, "invoices paid");
+    dir(invoices, "2025");
+    IndexStore::insert_entry_v2(
+        &conn,
+        invoices,
+        "hetzner-2026-09.pdf",
+        false,
+        false,
+        Some(4),
+        Some(4),
+        Some(1_759_000_000),
+        None,
+    )
+    .expect("insert file");
+    IndexStore::mark_dirs_listed(&conn, &[ROOT_ID, papers, company, invoices], 1).expect("mark listed");
+}
+
+/// With the LAN share disconnected too, the NAS is still answerable: `list_dir`
+/// on the Tailscale share's `volumeId` reads `invoices paid` from the index its
+/// last walk left, honestly dated, before anyone decides whether a connect is
+/// even needed.
+#[test]
+fn with_the_lan_share_gone_the_tailscale_index_lists_invoices_paid_offline() {
+    let _serialized = cmdr_index::testing::host::test_lock();
+    let data = TestDir::new("conversation-179-drive-index");
+    let (_index, _installed) = cmdr_index::Index::builder().data_dir(&*data).install_for_test();
+    tailscale_index_on_disk(&data);
+    let facts = conversation_179_with("/Volumes/naspi-1", ConnectionState::Saved);
+    let path = "/Volumes/naspi/papers/Rymdskottkärra AB/invoices paid";
+    let resolved = resolve(
+        &facts,
+        &LocationInput {
+            volume_id: Some(TAILSCALE.to_string()),
+            path: path.to_string(),
+        },
+    )
+    .expect("a named volume resolves, connected or not");
+    assert!(!resolved.live, "nothing is connected");
+
+    let wire = answer_offline(&facts, &resolved, &ListOptions::default()).expect("answers");
+
+    assert_eq!(wire["coverage"]["source"], "offlineIndex");
+    assert_eq!(wire["coverage"]["indexStatus"], "stale");
+    assert_eq!(wire["coverage"]["authoritative"], false);
+    assert_eq!(
+        wire["coverage"]["asOf"],
+        crate::search::format_timestamp(TAILSCALE_AS_OF)
+    );
+    assert_eq!(wire["location"]["volumeId"], TAILSCALE);
     assert_eq!(wire["location"]["path"], path);
     let names: Vec<&str> = wire["children"]
         .as_array()

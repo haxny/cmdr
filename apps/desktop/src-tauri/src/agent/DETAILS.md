@@ -200,7 +200,9 @@ Vocabulary: "the agent" is this feature; external MCP consumers are "AI clients"
 - **D6**: Only the local volume is active at first; SMB, MTP, and S3 knowledge deferred. Why: staleness and reconnect
   semantics differ per volume type; don't block the spine on them.
 - **D7**: Staleness is per volume and first-class; the agent caveats answers ("as of May 28"). Why: it makes answering
-  about unmounted volumes possible (an offline index of the NAS). Unbuilt.
+  about unmounted volumes possible (an offline index of the NAS). Built for reads: `list_volumes` dates a
+  not-connected volume's index (`stale` + `asOf`), and `list_dir` and `search` answer from it (`source:
+  offlineIndex`, `tools/DETAILS.md` § The honesty contract).
 - **D8**: A deterministic importance scorer gates summaries and event interest, and informs the model. Why: fast, free,
   testable. Built, superseded in placement: a neutral subsystem (`crates/cmdr-index/src/importance/`) with its own
   per-volume `importance.db`, not a column in the drive index.
