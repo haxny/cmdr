@@ -209,9 +209,9 @@ describe('onboarding step 2 (AI) parity (en)', () => {
     expect(tString('onboarding.stepAi.table.searchWith')).toBe(
       'You say “my recent fish-related presentations”, agent sets your filters.',
     )
-    expect(tString('onboarding.stepAi.table.rowRename')).toBe('Mass-rename')
+    expect(tString('onboarding.stepAi.table.rowRename')).toBe('Rename many files')
     expect(tString('onboarding.stepAi.table.renameWithout')).toBe(
-      'You use the batch rename UI to manually set the rename pattern, review and apply.',
+      'You set a rename pattern by hand in Multi-rename, then review and apply it.',
     )
     expect(tString('onboarding.stepAi.table.renameWith')).toBe(
       'You say “add ISO date prefix”, agent sets your rename pattern, you review and apply at will.',

@@ -248,7 +248,7 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'file.multiRename':
     'Renames the selected files (or the whole folder) with a name mask, counter, and search & replace',
   'app.checkForUpdates': 'Check whether a newer version of Cmdr is available, and download it if so',
-  'app.toggleCliCommand': 'Type cmdr and a path in a terminal to open it in Cmdr',
+  'app.toggleCliCommand': 'Type cmdr and a path in a terminal to open that file or folder in Cmdr',
   'cmdr.openOnboarding': 'Reopen the onboarding wizard to review or change first-launch setup options',
   'help.openShortcuts': 'Open a read-only window listing every keyboard shortcut, live-synced with your customizations',
   'help.accessibility': 'Open the guide to Cmdr’s accessibility features on getcmdr.com',

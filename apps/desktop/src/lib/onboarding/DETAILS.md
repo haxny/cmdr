@@ -244,11 +244,11 @@ Three pieces stacked top to bottom:
    - `denied` ("You chose not to enable full disk access.")
    - `stuck` ("Cmdr doesn't seem to have full disk access yet"; surfaces a deep link to System Settings) Linux
      short-circuits with `linux` (no banner; the step opens with the Welcome line instead).
-2. **Comparison table**: "without AI vs with AI" for Search, Mass-rename, Select. Each row label carries its own glyph
-   (`search` / `pencil` / `list-checks`), `aria-hidden` because the label beside it already names the row. The "With AI"
-   column is the rightmost and carries the accent flair (tint + sparkle) to draw the eye. The feature column's header is
-   `sr-only`: the row labels say what each row is, so a visible "Feature" over them was noise, but the header still has
-   to EXIST or a screen reader hears a blank with every cell in that column.
+2. **Comparison table**: "without AI vs with AI" for Search, Rename many files, Select. Each row label carries its own
+   glyph (`search` / `pencil` / `list-checks`), `aria-hidden` because the label beside it already names the row. The
+   "With AI" column is the rightmost and carries the accent flair (tint + sparkle) to draw the eye. The feature column's
+   header is `sr-only`: the row labels say what each row is, so a visible "Feature" over them was noise, but the header
+   still has to EXIST or a screen reader hears a blank with every cell in that column.
 3. **Three plain radio rows, in the order no AI → local → cloud.** Cheapest commitment first, so all three fit above the
    fold and only the last one opens a provider panel underneath it; before, cloud sat first and its panel pushed the
    other two options off screen. The pre-selection comes from the persisted `ai.provider` (default `off`), so a

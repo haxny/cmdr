@@ -81,7 +81,7 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "description": "Command-palette name (macOS only), shown when the cmdr terminal command came with Cmdr's Homebrew package; running it explains that Homebrew manages it. Keep cmdr and Homebrew exactly as they are. Must match the app-menu item menu.app.cliCommandHomebrew."
   },
-  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open it in Cmdr",
+  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open that file or folder in Cmdr",
   "@commands.appToggleCliCommand.description": {
     "description": "Longer help text under the \"Install “cmdr” command\" row in the command palette, saying what the command is for. Keep cmdr exactly as is: it's the literal word the user types."
   },

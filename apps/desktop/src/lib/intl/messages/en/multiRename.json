@@ -142,17 +142,17 @@
   "@multiRename.presets.reset": {
     "description": "Presets menu item that sets every field back to its starting value, so all names stay as they are (Total Commander's <Default>)."
   },
-  "multiRename.presets.saveAs": "Save current as…",
+  "multiRename.presets.saveAs": "Save as preset…",
   "@multiRename.presets.saveAs": {
-    "description": "Presets menu item that asks for a name and saves the tool's current fields as a new preset. The ellipsis means it asks for more before acting."
+    "description": "Presets menu item that asks for a name and saves the tool's current settings as a new preset. The ellipsis means it asks for more before acting."
   },
   "multiRename.presets.rename": "Rename…",
   "@multiRename.presets.rename": {
     "description": "Item in a saved preset's submenu that asks for a new name for that preset."
   },
-  "multiRename.presets.update": "Update with current fields",
+  "multiRename.presets.update": "Update with current settings",
   "@multiRename.presets.update": {
-    "description": "Item in a saved preset's submenu that overwrites that preset with the tool's current fields. Greyed out when the preset already matches them."
+    "description": "Item in a saved preset's submenu that overwrites that preset with the tool's current settings (every field). \"settings\" is the same noun as in commands.multiRenameSavePreset.label. Greyed out when the preset already matches them."
   },
   "multiRename.presets.moveUp": "Move up",
   "@multiRename.presets.moveUp": {
@@ -168,7 +168,7 @@
   },
   "multiRename.presets.saveTitle": "Save preset",
   "@multiRename.presets.saveTitle": {
-    "description": "Accessible name of the small popup that asks for a name to save the current fields as a preset (opened with Cmd+S or Save current as…)."
+    "description": "Accessible name of the small popup that asks for a name to save the current fields as a preset (opened with Cmd+S or Save as preset…)."
   },
   "multiRename.presets.renameTitle": "Rename preset",
   "@multiRename.presets.renameTitle": {
@@ -695,7 +695,7 @@
   "@multiRename.selectionChanged": {
     "description": "Warning toast when ⌃M (Multi-rename) didn't open because files appeared or disappeared in the folder at that moment, so the selected rows may no longer be the files the user picked. Nothing was renamed."
   },
-  "multiRename.swapsSkipped": "{count, plural, one {Skipped # rename that swaps names} other {Skipped # renames that swap names}}. Rename those files one at a time.",
+  "multiRename.swapsSkipped": "{count, plural, one {Skipped # rename that swaps names} other {Skipped # renames that swap names}}. Rename them one at a time.",
   "@multiRename.swapsSkipped": {
     "description": "Warning toast after Rename starts on cloud storage (S3), when some renames swap names with each other (for example a → b and b → a). On S3, renaming a folder copies everything inside it, and copying one folder onto another that is still there would mix their contents, so those renames were skipped and the files kept their names. {count} is how many (always 2 or more). Match the wording of askCmdr.renameUndo.swapsSkipped."
   },
@@ -832,7 +832,7 @@
       "count": "how many characters from the start (e.g. 3)"
     }
   },
-  "multiRename.placeholderHelp.grandparent": "The name of the folder above that one",
+  "multiRename.placeholderHelp.grandparent": "The name of the folder above the file’s folder",
   "@multiRename.placeholderHelp.grandparent": {
     "description": "In the Multi-rename sheet, a tooltip on a placeholder button (such as [N], [E], or [C]) explains what that placeholder puts in the new name, lists a few of its other forms, and shows each with an example on a made-up file (Beach day.jpg, in the folder Trips/Lisbon 2026, last changed 2026-07-14 09:05:30). Meaning of [G]: the folder that holds the file’s folder (the grandparent folder). A noun phrase."
   },

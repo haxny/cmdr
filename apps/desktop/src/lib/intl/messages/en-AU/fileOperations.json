@@ -19,9 +19,9 @@
   "@fileOperations.transferProgress.canceledAlertTitle": {
     "sourceHash": "3cba939"
   },
-  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {You’ve cancelled this copy. The files it copied so far stay where they are.} move {You’ve cancelled this move. The files it moved so far stay where they landed.} compress {You’ve cancelled this compress.} delete {You’ve cancelled this delete. The files it deleted so far are gone, and the rest are still there.} trash {You’ve cancelled this move to the Bin. The files it moved so far stay in the Bin, and the rest are where they were.} other {You’ve cancelled this operation.}}",
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {You’ve cancelled this copy. The files it copied so far stay where they are.} move {You’ve cancelled this move. The files it moved so far stay where they landed.} compress {You’ve cancelled this compression.} delete {You’ve cancelled this delete. The files it deleted so far are gone, and the rest are still there.} trash {You’ve cancelled this move to the Bin. The files it moved so far stay in the Bin, and the rest are where they were.} other {You’ve cancelled this operation.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.trash.goToTrashAction": "Go to the Bin",
   "@fileOperations.trash.goToTrashAction": {
@@ -91,9 +91,9 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
-  "fileOperations.trash.undoGone": "Nothing to put back: {count, plural, one {it’s} other {they’re}} no longer in the Bin.",
+  "fileOperations.trash.undoGone": "Nothing to put back: {count, plural, one {the item was} other {the items were}} no longer in the Bin.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {item was} other {items were}} no longer in the Bin.",
   "@fileOperations.trash.undoPartlyGone": {

@@ -372,7 +372,7 @@ describe('UpdatesSection under an organization’s policy', () => {
     const lines = Array.from(card?.querySelectorAll('dt') ?? []).map(
       (dt) => `${dt.textContent.trim()}: ${dt.nextElementSibling?.textContent.trim() ?? ''}`,
     )
-    expect(lines).toEqual(['Usage stats: Off', 'Updates: Up to 0.52, checked by hand only'])
+    expect(lines).toEqual(['Usage stats: Off', 'Updates: Up to version 0.52, checked by hand only'])
     await expectNoA11yViolations(target)
   })
 

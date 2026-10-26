@@ -1,7 +1,7 @@
 <script lang="ts">
     /**
      * The Multi-rename sheet's presets: one button (F2) that opens the Presets menu
-     * (the presets numbered 1–9 by position, Reset all fields, Save current as…, and a
+     * (the presets numbered 1–9 by position, Reset all fields, Save as preset…, and a
      * Rename / Update / Move up / Move down / Delete submenu per preset), plus the name popover that
      * ⌘S and Rename… open. The sheet owns the keys and calls `pressOpenKey` / `openSave`;
      * everything else lives here.

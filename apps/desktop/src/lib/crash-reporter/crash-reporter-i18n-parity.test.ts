@@ -89,7 +89,7 @@ describe('crash-reporter dialog body copy parity (en), one true sentence per app
 describe('crash-reporter sent-toast copy parity (en)', () => {
   it('resolves the toast strings', () => {
     expect(tString('crashReporter.sentToast.message.crash')).toBe('Crash report sent. Thanks for helping improve Cmdr.')
-    expect(tString('crashReporter.sentToast.changeSettings')).toBe('Change in Settings > Updates')
+    expect(tString('crashReporter.sentToast.changeSettings')).toBe('Change in Settings')
   })
 
   it('drops the crash word when nothing crashed', () => {

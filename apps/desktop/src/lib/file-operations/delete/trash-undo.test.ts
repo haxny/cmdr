@@ -138,8 +138,12 @@ describe('trashUndoMessage (en)', () => {
   })
 
   it('says plainly when the trash no longer holds what was trashed', () => {
-    expect(trashUndoMessage({ status: 'gone', gone: 1 })).toBe('Nothing to put back: it’s no longer in the trash.')
-    expect(trashUndoMessage({ status: 'gone', gone: 4 })).toBe('Nothing to put back: they’re no longer in the trash.')
+    expect(trashUndoMessage({ status: 'gone', gone: 1 })).toBe(
+      'Nothing to put back: the item was no longer in the trash.',
+    )
+    expect(trashUndoMessage({ status: 'gone', gone: 4 })).toBe(
+      'Nothing to put back: the items were no longer in the trash.',
+    )
   })
 
   it('adds what was gone to a partial result', () => {

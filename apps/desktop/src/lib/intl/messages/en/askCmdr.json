@@ -267,9 +267,9 @@
   "@askCmdr.error.provider": {
     "description": "Shown for any other provider-side problem. Friendly; avoids the words error and failed. The apostrophe is U+2019."
   },
-  "askCmdr.event.chatMemoryChanged": "Chat memory now holds {tokens, number} tokens",
+  "askCmdr.event.chatMemoryChanged": "Chat memory now holds {tokens, plural, one {# token} other {# tokens}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "description": "A small centered timeline line in the chat thread marking that the chat memory size changed between turns, so every reply after it carries a different amount of the conversation. It sits beside the \"Switched to {model}\" line, so keep the two reading as a pair. {tokens} is a token count, always in the thousands. \"tokens\" are the units a language model processes: keep the AI term, matching the local context-window setting. Sentence case, no period."
+    "description": "A small centered timeline line in the chat thread marking that the chat memory size changed between turns, so every reply after it carries a different amount of the conversation. It sits beside the \"Switched to {model}\" line, so keep the two reading as a pair. {tokens} is a token count, always in the thousands; the plural lets the word for \"tokens\" agree with the number (ru “16 384 токенов”). \"tokens\" are the units a language model processes: keep the AI term, matching the local context-window setting. Sentence case, no period."
   },
   "askCmdr.event.contextTrimmed": "Trimmed {count, plural, one {# earlier lookup} other {# earlier lookups}} to fit the model’s context.",
   "@askCmdr.event.contextTrimmed": {
@@ -770,17 +770,17 @@
   },
   "askCmdr.renameUndo.skipReason.vanished.named": "Couldn’t find {name}: it was moved or deleted since the rename.",
   "@askCmdr.renameUndo.skipReason.vanished.named": {
-    "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed files didn't get their old names back and why. This version is used when the reason applies to exactly ONE file, so the line names it. This reason: the file is no longer where Cmdr renamed it, and isn't back under its old name either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
+    "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed items didn't get their old names back and why. A rename run can include folders, so the named item is a file or a folder: don't add a file-only noun. This version is used when the reason applies to exactly ONE item, so the line names it. This reason: the item is no longer where Cmdr renamed it, and isn't back under its old name either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
     "placeholders": {
-      "name": "The file's name as Cmdr last renamed it (e.g. \"invoice-2026.pdf\")."
+      "name": "The file's or folder's name as Cmdr last renamed it (e.g. \"invoice-2026.pdf\")."
     }
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "Couldn’t find {countText} {count, plural, one {file} other {files}}: they were moved or deleted since the rename.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Couldn’t find {countText} {count, plural, one {item} other {items}}: they were moved or deleted since the rename.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed files didn't get their old names back and why. This version is used when the reason applies to two or more files, so the line counts them instead of naming them. This reason: the files are no longer where Cmdr renamed them, and aren't back under their old names either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
+    "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed items didn't get their old names back and why. A rename run can include folders, so each one is a file or a folder: use a word for \"item\" that covers both. This version is used when the reason applies to two or more items, so the line counts them instead of naming them. This reason: the items are no longer where Cmdr renamed them, and aren't back under their old names either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
     "placeholders": {
-      "countText": "How many files this reason applies to, ready to drop into the sentence (e.g. 1,234). Two or more in English, but keep the one branch: languages like Russian use their “one” form for 21, 101, and so on.",
-      "count": "The same number of files (decides whether the noun is singular or plural)."
+      "countText": "How many items this reason applies to, ready to drop into the sentence (e.g. 1,234). Two or more in English, but keep the one branch: languages like Russian use their “one” form for 21, 101, and so on.",
+      "count": "The same number of items (decides whether the noun is singular or plural)."
     }
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "Left {name} alone: its old name is taken again.",

@@ -2907,7 +2907,7 @@
     "description": "Label of the switch that turns the operation log on or off, in the Operation log card of Settings › Behavior › Navigation & file ops. When on, Cmdr records every copy, move, rename, and delete so they can be reviewed and undone. Sentence case.",
     "screenshot": "settings-behavior-navigation-and-file-ops.png"
   },
-  "settings.operationLog.enabled.description": "Undo needs this. While it’s off, Cmdr doesn’t record new copies, moves, renames, or deletes, so you can’t undo them. Your existing history stays, and you can still undo what’s in it.",
+  "settings.operationLog.enabled.description": "While this is off, Cmdr doesn’t record new copies, moves, renames, or deletes, so you can’t undo them. Your existing history stays, and you can still undo what’s in it.",
   "@settings.operationLog.enabled.description": {
     "description": "Help text under the switch that turns the operation log on or off (settings.operationLog.enabled.label). It must say plainly that undo stops working for new operations while the switch is off, and that the history already recorded is kept. The apostrophes are curly typographic apostrophes (U+2019).",
     "screenshot": "settings-behavior-navigation-and-file-ops.png"
@@ -3166,7 +3166,7 @@
   },
   "settings.managed.summary.updates": "Updates",
   "@settings.managed.summary.updates": {
-    "description": "Row label in the 'Managed by your organization' card: Cmdr's own app updates. The value beside it says what the organization set (for example 'Off' or 'Up to 0.52'). Short, sentence case."
+    "description": "Row label in the 'Managed by your organization' card: Cmdr's own app updates. The value beside it says what the organization set (for example 'Off' or 'Up to version 0.52'). Short, sentence case."
   },
   "settings.managed.summary.updatesOff": "Off",
   "@settings.managed.summary.updatesOff": {
@@ -3182,9 +3182,9 @@
     "description": "Value beside the row label 'AI' (Cmdr's AI features, switched off entirely) in the 'Managed by your organization' card (Settings > Updates & privacy). The organization turned this off. Each row has its own 'Off' key so the word can agree in gender and number with that row's label: use the form your language's macOS Settings shows for a switched-off feature, agreeing with the label where your grammar asks for it. One or two words.",
     "agreesWith": "settings.managed.summary.ai"
   },
-  "settings.managed.summary.upTo": "Up to {ceiling}",
+  "settings.managed.summary.upTo": "Up to version {ceiling}",
   "@settings.managed.summary.upTo": {
-    "description": "Value beside 'Updates' in the 'Managed by your organization' card: the organization lets Cmdr update only up to this version, never past it. Short.",
+    "description": "Value beside 'Updates' in the 'Managed by your organization' card: the organization lets Cmdr update only up to this version, never past it. “Up to” includes that version itself. Short.",
     "placeholders": {
       "ceiling": "the highest Cmdr version the organization allows, as its IT team wrote it (for example 0.52 or 0.52.3); not translated"
     }
@@ -3193,9 +3193,9 @@
   "@settings.managed.summary.manualChecksOnly": {
     "description": "Value beside 'Updates' in the 'Managed by your organization' card: the organization turned off Cmdr's automatic update checks, so updates arrive only when the person picks 'Check for updates' themselves. Short."
   },
-  "settings.managed.summary.upToManualChecksOnly": "Up to {ceiling}, checked by hand only",
+  "settings.managed.summary.upToManualChecksOnly": "Up to version {ceiling}, checked by hand only",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "description": "Value beside 'Updates' in the 'Managed by your organization' card, combining two rules: Cmdr may update only up to this version, and only when the person picks 'Check for updates' themselves (no automatic checks). Short.",
+    "description": "Value beside 'Updates' in the 'Managed by your organization' card, combining two rules: Cmdr may update only up to this version (that version included), and only when the person picks 'Check for updates' themselves (no automatic checks). Short.",
     "placeholders": {
       "ceiling": "the highest Cmdr version the organization allows, as its IT team wrote it (for example 0.52 or 0.52.3); not translated"
     }
@@ -3940,9 +3940,9 @@
   "@settings.dataWipe.intro": {
     "description": "First line of that dialog when the total size isn't known: what happens, and that it's permanent."
   },
-  "settings.dataWipe.introWithSize": "Cmdr deletes the {sizeText} it keeps on this Mac, then quits. This can’t be undone.",
+  "settings.dataWipe.introWithSize": "Cmdr deletes everything it keeps on this Mac ({sizeText}), then quits. This can’t be undone.",
   "@settings.dataWipe.introWithSize": {
-    "description": "First line of that dialog: what happens, how much disk space it frees, and that it's permanent.",
+    "description": "First line of that dialog: what happens, how much disk space it frees, and that it's permanent. The amount stands on its own in parentheses: don't put an article before it.",
     "placeholders": {
       "sizeText": "the total size of everything that gets deleted, with its unit, already formatted (for example “1.2 GB”)"
     }

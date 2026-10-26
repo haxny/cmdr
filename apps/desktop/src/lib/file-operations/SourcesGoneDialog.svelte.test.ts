@@ -99,7 +99,7 @@ describe('SourcesGoneDialog', () => {
     render()
     const names = [...document.body.querySelectorAll('.gone-name')].map((li) => li.textContent)
     expect(names).toEqual(['01.mp3', '02.mp3', '03.mp3', '04.mp3', '05.mp3'])
-    expect(document.body.querySelector('.gone-more')?.textContent.trim()).toBe('and 2 more')
+    expect(document.body.querySelector('.gone-more')?.textContent.trim()).toBe('and 2 more items')
   })
 
   it('offers the operation’s own verb, and each button reaches its answer', () => {

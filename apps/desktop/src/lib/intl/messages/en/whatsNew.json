@@ -9,9 +9,9 @@
     "description": "Empty-state message in the What's new dialog when there are no changelog entries to show (reachable only via manual reopen).",
     "screenshot": "whats-new-empty.png"
   },
-  "whatsNew.securityNotice.title": "This version fixed {count, plural, one {a security issue} other {# security issues}}.",
+  "whatsNew.securityNotice.title": "Recent updates fixed {count, plural, one {a security issue} other {# security issues}}.",
   "@whatsNew.securityNotice.title": {
-    "description": "Short notice at the top of the post-update What's new dialog when the versions installed since the user last saw the dialog fixed one or more security vulnerabilities. Past tense: the fix is already running. Calm and factual, not alarming. {count} is how many; the singular form says \"a security issue\" rather than a numeral. Sentence case.",
+    "description": "Short notice at the top of the post-update What's new dialog when the versions installed since the user last saw the dialog fixed one or more security vulnerabilities. “Recent updates” covers every version installed since the dialog was last seen, which can be one or several. Past tense: the fix is already running. Calm and factual, not alarming. {count} is how many; the singular form says \"a security issue\" rather than a numeral. Sentence case.",
     "placeholders": {
       "count": "how many security issues the new versions fixed, 1 or more"
     },
