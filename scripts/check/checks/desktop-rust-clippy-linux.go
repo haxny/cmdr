@@ -51,9 +51,13 @@ func RunClippyLinux(ctx *CheckContext) (CheckResult, error) {
 	if err != nil {
 		return CheckResult{}, err
 	}
+	vendored, err := vendoredPatchDirs(ctx.RootDir)
+	if err != nil {
+		return CheckResult{}, err
+	}
 	docArgs, documented := rustdocArgs(members, "linux")
 	docOutput, docErr := dockerExec(container, linuxRustdocScript(docArgs))
-	docs, err := rustdocVerdict(docOutput, docErr, documented, " on Linux")
+	docs, err := rustdocVerdict(rustdocOwnOutput(docOutput, vendored), docErr, documented, " on Linux")
 	if err != nil {
 		return CheckResult{}, fmt.Errorf("%w%s", err, env.buildNote())
 	}
