@@ -14,7 +14,8 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
   files are built in `test_files.rs` with lofty's concrete tag types.
 - `shared.rs`: the foobar2000-style view. `shared_view` (per field `Empty`/`Same`/`Multiple`), `apply_edits` (`Edit`,
   `CoverEdit`), `changes` (the "what will change" list). Pure, never mutates input.
-- Later modules (undo) land with their tasks; the undo store layout will be in `DETAILS.md`.
+- `undo.rs`: `UndoStore` (`record`, `repath`, `restore`, `forget`), the old tags of an apply, written back after
+  renames. Layout in `DETAILS.md`.
 
 ## Must-knows
 

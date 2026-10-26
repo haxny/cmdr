@@ -14,11 +14,8 @@ mod save;
 pub mod shared;
 pub mod text;
 pub mod tools;
+mod undo;
 mod write;
-
-// Dependencies the later tasks (read, write, tools, undo) use; declared now so the
-// crate's manifest is final. Each `as _` goes when its first user lands.
-use serde_json as _;
 
 #[cfg(test)]
 mod format_test;
@@ -35,6 +32,8 @@ mod text_test;
 #[cfg(test)]
 mod tools_test;
 #[cfg(test)]
+mod undo_test;
+#[cfg(test)]
 mod write_extras_test;
 #[cfg(test)]
 mod write_test;
@@ -42,4 +41,5 @@ mod write_test;
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, TagError, TagField};
 pub use read::read_tags;
+pub use undo::{ApplyId, RestoreReport, UndoLimits, UndoStore};
 pub use write::{WriteOptions, write_tags};

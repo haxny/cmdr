@@ -99,4 +99,29 @@ out cut mid-STREAMINFO (verified in `write_test::corrupting_save_is_refused`, 20
 
 ## Undo store layout
 
-Defined with the undo task; this section is filled in when it lands.
+`UndoStore` (`undo.rs`) keeps one directory per apply under a root the app owns, named by the caller's `ApplyId` (one
+safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anything else is
+`TagError::Io(InvalidInput, _)`):
+
+```
+<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<n>.cover","mime"}|null}]}
+<root>/<id>/<n>.cover       entry n's cover bytes
+```
+
+- **Manifest last.** `record` writes each cover, then the manifest, each to a `*.tmp` beside it, fsynced and renamed
+  (then the directory is fsynced). An apply without a readable `manifest.json` doesn't exist: restoring it is
+  `TagError::Io(NotFound, _)`, a damaged one `TagError::Parse`. `open` creates the root and removes leftover `*.tmp`
+  files inside apply directories, nothing else. A record that fails partway removes its directory.
+- **`seq`** orders applies across the store (one more than the highest present). After each `record` the lowest go until
+  both `UndoLimits` hold (default 50 applies and 512 MiB, manifests plus covers); the apply just recorded is never
+  pruned, and a prune that fails is logged, not returned, since the record is complete. Recording an existing `id`
+  replaces it.
+- **`repath`** rewrites the manifest's paths after the apply renamed files: moves apply all at once (a swap works), and
+  a move whose source isn't recorded is ignored.
+- **`restore`** writes each entry back with `write_tags` and the caller's `WriteOptions`: a file not at its path is
+  `missing`, a write error is `failed` and the rest continue. `None` in `cover` removes the cover again, and an extra
+  the apply removed comes back because the writer adds extras the file lacks. It never deletes the record; the caller
+  `forget`s it.
+- **What a snapshot can't restore**: what `read_tags` doesn't report. A track total (`3/12`) comes back only if the
+  caller passes `track_total`, a disc total never (the reader shows plain numbers), and a composer only with
+  `ContentKind::Music`. An MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes`.
