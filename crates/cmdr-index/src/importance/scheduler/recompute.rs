@@ -61,7 +61,7 @@ pub(super) fn score_folders(
             f.children,
             path,
             home,
-            f.has_marker_below,
+            f.nearest_marker_below,
             f.under_floored_ancestor,
             optional,
         );
@@ -299,7 +299,7 @@ pub(super) enum RescoreScope {
     /// Only the folders inside the changed subtrees — what a scoped walk holds.
     ChangedSubtreesOnly,
     /// Those PLUS each origin's capped ancestor chain, which only a whole-volume
-    /// walk can score correctly (an ancestor's `has_marker_below` depends on
+    /// walk can score correctly (an ancestor's `nearest_marker_below` depends on
     /// everything below it, not only on the changed subtree).
     WithAncestors,
 }
@@ -342,14 +342,14 @@ pub(super) fn dedupe_nested_origins(origins: &[String], demoted: &std::collectio
     out
 }
 
-/// Read each origin's stored `has_project_marker` out of this volume's
+/// Read each origin's stored `marker_depth` out of this volume's
 /// `importance.db`: the "before" side of the scoped walk's guard. An origin missing
 /// from the result has no stored row.
 pub(super) fn load_previous_markers(
     data_dir: &std::path::Path,
     volume_id: &str,
     origins: &[String],
-) -> HashMap<String, bool> {
+) -> HashMap<String, Option<u8>> {
     let db_path = importance_db_path(data_dir, volume_id);
     let mut out = HashMap::new();
     let Ok(conn) = crate::importance::store::open_read_connection(&db_path) else {
@@ -362,7 +362,7 @@ pub(super) fn load_previous_markers(
         let Ok(signals) = serde_json::from_str::<crate::importance::scorer::FolderSignals>(&stored.signals_json) else {
             continue;
         };
-        out.insert(origin.clone(), signals.has_project_marker);
+        out.insert(origin.clone(), signals.marker_depth);
     }
     out
 }
@@ -538,7 +538,7 @@ pub(super) fn rescore_subset(
     let touched = match scope {
         RescoreScope::WithAncestors => touched_folder_set(changed_paths),
         // A scoped walk never read the ancestors, and doesn't need to: the only
-        // signal that can move for them is `has_project_marker`, and the scoped
+        // signal that can move for them is `marker_depth`, and the scoped
         // walk falls back to the full one whenever that could have happened. What it
         // DOES add here is each demoted origin, whose subtree it deliberately skipped
         // — the origin's own row still has to move with its own listing.
@@ -578,7 +578,7 @@ pub(super) fn rescore_rows(
             f.children,
             path,
             inputs.home,
-            f.has_marker_below,
+            f.nearest_marker_below,
             f.under_floored_ancestor,
             optional,
         );
@@ -661,15 +661,11 @@ pub(super) fn touched_folder_set(changed_paths: &[String]) -> std::collections::
 /// can't disagree about what scores. It's pure path math — no index, no syscall — and
 /// typed set-membership, never a message or substring branch.
 ///
-/// **Decision/Why the accepted lossiness.** Filtering a floored path also drops the
-/// UNFLOORED ancestors `touched_folder_set` would have pulled in from it. The only
-/// signal that can move for such an ancestor is `has_marker_below` (a project marker
-/// appearing or vanishing inside a floored subtree — a `.git` under a `node_modules`,
-/// say), because a deep write changes neither an ancestor's mtime nor its direct-child
-/// aggregate. We accept that: a marker buried in machine output is the weakest possible
-/// reason to raise a folder, importance is advisory derived data, and the next full
-/// pass heals it. ❌ Don't "fix" it by dropping the filter — that reinstates the
-/// treadmill.
+/// Filtering a floored path also drops the UNFLOORED ancestors `touched_folder_set`
+/// would have pulled in from it, and nothing moves for them: a deep write changes
+/// neither an ancestor's mtime nor its direct-child aggregate, and a project marker
+/// inside a floored folder raises nothing (`walk::propagate_marker_to_ancestors` skips
+/// a seed that floors). ❌ Don't drop the filter — that reinstates the treadmill.
 ///
 /// **Why the bare root matters (the "everything changed" trap):** every live
 /// FSEvent's affected-paths set carries the full ancestor chain up to `/`

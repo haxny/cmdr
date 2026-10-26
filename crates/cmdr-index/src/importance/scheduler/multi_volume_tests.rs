@@ -212,7 +212,7 @@ fn floored_by_path_matches_the_scorer_floor_for_every_walked_folder() {
             f.children,
             path,
             &home.home,
-            f.has_marker_below,
+            f.nearest_marker_below,
             f.under_floored_ancestor,
             OptionalSignals::default(),
         );

@@ -14,7 +14,7 @@
 
 #![cfg(test)]
 
-use super::classify::{is_denylisted, is_hidden_or_system, leaf_name, path_class, under_floored_paths};
+use super::classify::{is_denylisted, is_hidden_or_system, leaf_name, marker_depth, path_class, under_floored_paths};
 use super::scorer::{FolderSignals, extension_count};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::InMemoryVolume;
@@ -203,17 +203,28 @@ impl SyntheticHome {
             distinct_extension_count,
             file_count: files.len() as u32,
             mtime_secs,
-            has_project_marker: self.has_marker_at_or_under(path),
+            marker_depth: self.marker_depth_of(path),
             path_class: path_class(path, &self.home),
             visit_count: None,
             last_used_secs: None,
         }
     }
 
-    /// Whether a project marker sits in `path` or any descendant of it.
-    fn has_marker_at_or_under(&self, path: &str) -> bool {
-        self.project_roots
+    /// The folder's marker depth: `Some(0)` at or inside a project root (the fixture
+    /// treats a project's own folders as the project), else the distance to the
+    /// nearest project root below, kept only within reach by the shared
+    /// `classify::marker_depth`.
+    fn marker_depth_of(&self, path: &str) -> Option<u8> {
+        let inside = self
+            .project_roots
             .iter()
-            .any(|root| root == path || path.starts_with(&format!("{root}/")) || root.starts_with(&format!("{path}/")))
+            .any(|root| root == path || path.starts_with(&format!("{root}/")));
+        let nearest_below = self
+            .project_roots
+            .iter()
+            .filter_map(|root| root.strip_prefix(&format!("{path}/")))
+            .map(|rest| u8::try_from(rest.split('/').count()).unwrap_or(u8::MAX))
+            .min();
+        marker_depth(inside, nearest_below)
     }
 }

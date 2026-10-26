@@ -11,7 +11,7 @@
 //! Pure: values in (an mtime, a child aggregate, a path), a [`FolderSignals`] out.
 //! No I/O — the caller reads the index; this only classifies.
 
-use super::classify::{is_denylisted, is_hidden_or_system, leaf_name, path_class_with_marker};
+use super::classify::{is_denylisted, is_hidden_or_system, leaf_name, marker_depth, path_class_with_marker};
 use super::scorer::FolderSignals;
 
 /// The optional, backend-dependent signals for a folder, resolved by the caller
@@ -50,10 +50,11 @@ pub struct ChildAggregate {
 /// `children` is the pre-aggregated summary of its direct children (extension
 /// diversity + count + direct-marker flag — the walk folds each child into this so
 /// no child rows are held); `path` is the directory's reconstructed absolute path;
-/// `home` is the user's home dir for path classification. `has_marker_below` lets the caller
-/// raise a folder whose project marker sits in a DESCENDANT (a `.git` deeper in
-/// the subtree still marks the root) — `children.has_direct_marker`
-/// handles the marker-in-this-folder case. `under_floored_ancestor` is the mirror
+/// `home` is the user's home dir for path classification. `nearest_marker_below` is
+/// the distance to the nearest descendant holding a project marker (`1` for a
+/// direct child), or `None`; `classify::marker_depth` keeps it only within
+/// `MARKER_REACH`. `children.has_direct_marker` handles the marker-in-this-folder
+/// case. `under_floored_ancestor` is the mirror
 /// image on the floor side: the caller sets it when a self-flooring ancestor (a
 /// denylisted / hidden / system folder) sits above this one, so the whole subtree
 /// under a `node_modules` floors, not just the named folder.
@@ -62,7 +63,7 @@ pub fn signals_for_dir(
     children: ChildAggregate,
     path: &str,
     home: &str,
-    has_marker_below: bool,
+    nearest_marker_below: Option<u8>,
     under_floored_ancestor: bool,
     optional: OptionalSignals,
 ) -> FolderSignals {
@@ -70,13 +71,14 @@ pub fn signals_for_dir(
     let name_denylisted = is_denylisted(&name);
     let hidden_or_system = is_hidden_or_system(path, &name, home);
 
-    let has_project_marker = children.has_direct_marker || has_marker_below;
+    let marker_depth = marker_depth(children.has_direct_marker, nearest_marker_below);
 
-    // A folder with a project marker (here or below) reads as a project root; its
+    // A folder with a project marker within reach reads as a project root; its
     // path-class prior is raised to `ProjectRoot`, the strongest prior. Otherwise
-    // the path alone classifies it. `$HOME`, volume roots, and system/cache paths
-    // are exempt from the promotion; see `classify::path_class_with_marker`.
-    let path_class = path_class_with_marker(path, home, has_project_marker);
+    // the path alone classifies it. `$HOME` and its ancestors, volume roots, and
+    // system/cache paths are exempt from the promotion; see
+    // `classify::path_class_with_marker`.
+    let path_class = path_class_with_marker(path, home, marker_depth);
 
     FolderSignals {
         name_denylisted,
@@ -85,7 +87,7 @@ pub fn signals_for_dir(
         distinct_extension_count: children.distinct_extension_count,
         file_count: children.file_count,
         mtime_secs,
-        has_project_marker,
+        marker_depth,
         path_class,
         visit_count: optional.visit_count,
         last_used_secs: optional.last_used_secs,
@@ -109,7 +111,7 @@ mod tests {
             },
             "/Users/me/proj/node_modules",
             "/Users/me",
-            false,
+            None,
             false,
             Default::default(),
         );
@@ -130,11 +132,11 @@ mod tests {
             children,
             "/Users/me/proj",
             "/Users/me",
-            false,
+            None,
             false,
             Default::default(),
         );
-        assert!(s.has_project_marker, "a direct marker child marks a project root");
+        assert!(s.has_project_marker(), "a direct marker child marks a project root");
         assert_eq!(
             s.path_class,
             PathClass::ProjectRoot,
@@ -155,11 +157,31 @@ mod tests {
             },
             "/Users/me/proj",
             "/Users/me",
-            true,
+            Some(1),
             false,
             Default::default(),
         );
-        assert!(s.has_project_marker, "a marker in a descendant still raises the folder");
+        assert!(
+            s.has_project_marker(),
+            "a marker in a direct child still raises the folder"
+        );
+    }
+
+    #[test]
+    fn a_marker_out_of_reach_doesnt_raise_the_folder() {
+        // `~/go/pkg/mod`-style: a `go.mod` three levels down said nothing about this
+        // folder, yet promoted it to `ProjectRoot` at 0.84 before the reach cap.
+        let s = signals_for_dir(
+            Some(100),
+            ChildAggregate::default(),
+            "/Users/me/stash",
+            "/Users/me",
+            Some(3),
+            false,
+            Default::default(),
+        );
+        assert!(!s.has_project_marker());
+        assert_eq!(s.path_class, PathClass::Neutral);
     }
 
     /// A busy folder that looks like a working directory: recent, mixed contents,
@@ -183,7 +205,7 @@ mod tests {
             busy_children(),
             "/Users/me",
             "/Users/me",
-            false,
+            None,
             false,
             Default::default(),
         );
@@ -206,7 +228,7 @@ mod tests {
                 busy_children(),
                 root,
                 "/Users/me",
-                false,
+                None,
                 false,
                 Default::default(),
             );
@@ -241,7 +263,7 @@ mod tests {
             busy_children(),
             "/Users/me/projects-git/vdavid/cmdr",
             "/Users/me",
-            false,
+            None,
             false,
             Default::default(),
         );
@@ -265,7 +287,7 @@ mod tests {
             busy_children(),
             "/private/tmp",
             "/Users/me",
-            false,
+            None,
             false,
             Default::default(),
         );
@@ -286,7 +308,7 @@ mod tests {
             children,
             "/Users/me/mixed",
             "/Users/me",
-            false,
+            None,
             false,
             Default::default(),
         );
@@ -306,7 +328,7 @@ mod tests {
             ChildAggregate::default(),
             "/Users/me/Documents/docs",
             "/Users/me",
-            false,
+            None,
             false,
             opt,
         );

@@ -33,7 +33,7 @@ fn node_modules_scores_near_floor() {
     signals.name_denylisted = true;
     signals.mtime_secs = Some(NOW); // maximally recent — must not rescue it
     signals.path_class = PathClass::ProjectRoot;
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
 
     assert_eq!(score_of(&signals), 0.0, "denylisted folder must floor to 0.0");
 }
@@ -60,7 +60,7 @@ fn under_floored_ancestor_floors_a_healthy_looking_folder() {
     signals.distinct_extension_count = 5;
     signals.file_count = 8;
     signals.path_class = PathClass::ProjectRoot;
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
 
     assert_eq!(
         score_of(&signals),
@@ -78,7 +78,7 @@ fn a_vendored_repo_under_a_floored_ancestor_stays_floored() {
     // node_modules) stays floored when it sits under a floored ancestor. Floor
     // beats marker — the whole floored subtree is out, project markers and all.
     let mut signals = FolderSignals::neutral();
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
     signals.path_class = PathClass::ProjectRoot;
     signals.under_floored_ancestor = true;
 
@@ -96,7 +96,7 @@ fn git_project_root_scores_high() {
     // An active project root: marker present, project-root path class, recent,
     // mixed source. Should land clearly in the upper half.
     let mut signals = FolderSignals::neutral();
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
     signals.path_class = PathClass::ProjectRoot;
     signals.mtime_secs = Some(NOW - DAY);
     signals.distinct_extension_count = 4;
@@ -180,7 +180,7 @@ fn path_class_orders_project_over_user_over_neutral_over_system() {
 #[test]
 fn explain_contributions_sum_to_score_unfloored() {
     let mut signals = FolderSignals::neutral();
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
     signals.path_class = PathClass::UserContent;
     signals.mtime_secs = Some(NOW - 5 * DAY);
     signals.distinct_extension_count = 3;
@@ -273,7 +273,7 @@ fn redistribution_preserves_total_weight() {
     // contributions then equals the sum of effective weights.
     let mut signals = FolderSignals::neutral();
     signals.path_class = PathClass::ProjectRoot;
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
     signals.mtime_secs = Some(NOW);
     signals.distinct_extension_count = 10;
     signals.file_count = 10;
@@ -374,7 +374,7 @@ fn folder_signals_serde_roundtrips() {
     signals.distinct_extension_count = 7;
     signals.file_count = 42;
     signals.mtime_secs = Some(1_700_000_000);
-    signals.has_project_marker = true;
+    signals.marker_depth = Some(0);
     signals.path_class = PathClass::ProjectRoot;
     signals.visit_count = Some(3);
     signals.last_used_secs = Some(1_699_000_000);
@@ -502,7 +502,10 @@ fn folder_signals_deserializes_without_under_floored_ancestor() {
         "a missing under_floored_ancestor defaults to false"
     );
     assert_eq!(parsed.distinct_extension_count, 3, "the other fields parse normally");
-    assert!(parsed.has_project_marker);
+    assert_eq!(
+        parsed.marker_depth, None,
+        "the retired `hasProjectMarker` bool is ignored; the scoring-policy stamp re-arms such a store"
+    );
 }
 
 // ── Property: score is always a valid, finite [0,1] ──────────────────────────
@@ -532,7 +535,7 @@ proptest::proptest! {
             distinct_extension_count: distinct,
             file_count: files,
             mtime_secs: mtime,
-            has_project_marker: has_marker,
+            marker_depth: has_marker.then_some(0),
             path_class,
             visit_count: visit,
             last_used_secs: last_used,

@@ -328,11 +328,16 @@ fn is_under(path: &str, ancestor: &str) -> bool {
     path.strip_prefix(ancestor).is_some_and(|rest| rest.starts_with('/'))
 }
 
-/// Whether the stored row for `path` carries a project marker (at or below it).
+/// Whether the stored row for `path` carries a project marker within reach.
 /// Panics when there is no row — a floored folder has none by design.
 fn has_marker(weights: &StoredWeights, path: &str) -> bool {
+    marker_depth_of(weights, path).is_some()
+}
+
+/// The stored row's `marker_depth`. Panics when there is no row.
+fn marker_depth_of(weights: &StoredWeights, path: &str) -> Option<u8> {
     let (_, signals) = weights.get(path).unwrap_or_else(|| panic!("no stored row for {path}"));
-    parse(signals).has_project_marker
+    parse(signals).marker_depth
 }
 
 fn parse(signals: &str) -> crate::importance::FolderSignals {
@@ -365,12 +370,13 @@ fn two_projects(v: &mut TestVolume) {
 
 // ── The transitions an incremental pass has to get right ──────────────────
 
-/// A marker created deep inside a subtree raises every ancestor above it.
+/// A marker created inside a subtree raises the ancestors within reach above it.
 ///
 /// This is the ONE signal that genuinely crosses a subtree boundary: `Cargo.toml`
-/// lands in `alpha/src/api`, and `alpha/src`, `alpha`, `projects`, and the home all
-/// have to read as project-adjacent afterwards. A scoped walk can't see those
-/// ancestors, so it has to notice the flip and take the full walk instead.
+/// lands in `alpha/src/api`, and `alpha/src` (one level up, `MARKER_REACH`) has to
+/// read as project-adjacent afterwards. A scoped walk can't see that ancestor, so it
+/// has to notice the flip and take the full walk instead. Further up stays put: a
+/// marker two levels below says nothing about `alpha`, `projects`, or the home.
 #[test]
 fn a_marker_created_inside_a_subtree_raises_its_ancestors() {
     let weights = differential(|v| {
@@ -380,22 +386,53 @@ fn a_marker_created_inside_a_subtree_raises_its_ancestors() {
         v.incremental(&["/Users/test/projects/alpha/src/api"]);
     });
 
-    for raised in [
-        "/Users/test/projects/alpha/src/api",
-        "/Users/test/projects/alpha/src",
-        "/Users/test/projects/alpha",
-        "/Users/test/projects",
-        "/Users/test",
-    ] {
+    assert_eq!(marker_depth_of(&weights, "/Users/test/projects/alpha/src/api"), Some(0));
+    assert_eq!(marker_depth_of(&weights, "/Users/test/projects/alpha/src"), Some(1));
+    for out_of_reach in ["/Users/test/projects/alpha", "/Users/test/projects", "/Users/test"] {
         assert!(
-            has_marker(&weights, raised),
-            "{raised} should read as project-adjacent now"
+            !has_marker(&weights, out_of_reach),
+            "{out_of_reach} is past the marker's reach"
         );
     }
     assert!(
         !has_marker(&weights, "/Users/test/projects/beta"),
         "an unrelated sibling project is untouched"
     );
+}
+
+/// A marker inside a floored folder raises nothing: `node_modules/package.json`
+/// doesn't make the project above it read as a folder of projects. (Homebrew's own
+/// checkout in `/opt/homebrew` made `/opt` score 0.62 before this.)
+#[test]
+fn a_marker_inside_a_floored_folder_raises_nothing() {
+    let weights = differential(|v| {
+        two_projects(v);
+        v.touch("/Users/test/projects/beta/node_modules/package.json");
+        v.full_pass();
+        // A sibling change makes `beta` an origin, so the scoped walk rescores it too.
+        v.touch("/Users/test/projects/beta/notes.md");
+        v.incremental(&["/Users/test/projects/beta"]);
+    });
+
+    assert!(!has_marker(&weights, "/Users/test/projects/beta"));
+}
+
+/// A marker moving CLOSER to an origin changes no presence there (`alpha/src` reads
+/// project-adjacent before and after) but brings the ancestor above it into reach.
+/// The guard compares depths, so it still takes the full walk; a presence-only guard
+/// would leave `alpha` stale.
+#[test]
+fn a_marker_moving_closer_raises_the_ancestor_now_in_reach() {
+    let weights = differential(|v| {
+        two_projects(v);
+        v.touch("/Users/test/projects/alpha/src/api/Cargo.toml");
+        v.full_pass();
+        v.touch("/Users/test/projects/alpha/src/Cargo.toml");
+        v.incremental(&["/Users/test/projects/alpha/src"]);
+    });
+
+    assert_eq!(marker_depth_of(&weights, "/Users/test/projects/alpha/src"), Some(0));
+    assert_eq!(marker_depth_of(&weights, "/Users/test/projects/alpha"), Some(1));
 }
 
 /// And the mirror image: deleting the last marker in a subtree lowers the ancestors
@@ -408,7 +445,7 @@ fn a_marker_deleted_inside_a_subtree_lowers_its_ancestors() {
         v.touch("/Users/test/projects/alpha/src/api/Cargo.toml");
         v.full_pass();
         assert!(
-            has_marker(&v.weights(), "/Users/test/projects/alpha"),
+            has_marker(&v.weights(), "/Users/test/projects/alpha/src"),
             "the marker is there to start"
         );
         v.remove("/Users/test/projects/alpha/src/api/Cargo.toml");

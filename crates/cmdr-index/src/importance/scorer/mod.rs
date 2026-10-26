@@ -169,7 +169,7 @@ fn raw_signal_value(signal: SignalKind, inputs: &FolderSignals, weights: &Weight
         SignalKind::ExtensionDiversity => extension_diversity(inputs),
         SignalKind::MtimeRecency => recency(inputs.mtime_secs, now_secs, weights.mtime_half_life_secs),
         SignalKind::ProjectMarker => {
-            if inputs.has_project_marker {
+            if inputs.has_project_marker() {
                 1.0
             } else {
                 0.0

@@ -11,7 +11,7 @@ use std::ops::ControlFlow;
 
 use tokio_util::sync::CancellationToken;
 
-use crate::importance::classify::{is_project_marker, self_floors};
+use crate::importance::classify::{MARKER_REACH, floors_by_path, is_project_marker, self_floors};
 use crate::importance::signals::ChildAggregate;
 use crate::importance::stop::{PassError, StopPoll};
 use crate::indexing::store::{ARENA_FULL, DirTree, IndexStore, ROOT_ID};
@@ -34,12 +34,12 @@ pub(crate) struct IndexFolder {
     /// rows plus the sibling directory rows; the child rows themselves are never
     /// resident.
     pub(crate) children: ChildAggregate,
-    /// `true` when a project marker sits in a DESCENDANT of this folder (a `.git`
-    /// deep in a tree marks the whole path above it).
-    pub(crate) has_marker_below: bool,
+    /// The distance to the nearest DESCENDANT holding a direct project marker (`1`
+    /// for a child), recorded only within `classify::MARKER_REACH`; `None` past it.
+    pub(crate) nearest_marker_below: Option<u8>,
     /// `true` when a self-flooring ancestor (a denylisted, hidden, or system folder)
     /// sits above this one — so the whole subtree under a `node_modules` or a cache
-    /// floors, not just the named folder. The downward twin of `has_marker_below`'s
+    /// floors, not just the named folder. The downward twin of `nearest_marker_below`'s
     /// upward marker propagation.
     pub(crate) under_floored_ancestor: bool,
 }
@@ -192,8 +192,8 @@ impl WalkedFolders {
 ///
 /// Directory children still come from the directory set itself (a `.git`/`.hg`
 /// marker is a directory), so the direct-marker flag folds both the streamed file
-/// children and the sibling directory children. `has_marker_below` is a single upward
-/// propagation after the walk, so a `.git` deep in a tree raises its ancestors;
+/// children and the sibling directory children. `nearest_marker_below` is a single upward
+/// propagation after the walk, so a `.git` raises the ancestors within reach;
 /// `under_floored_ancestor` is its downward twin.
 ///
 /// **Every loop here polls `stop`**, the two row streams included: this walk is where
@@ -229,7 +229,7 @@ pub(crate) fn walk_index_folders(
                 dir_index: (walked.tree.len() - 1) as u32,
                 modified_at,
                 children: ChildAggregate::default(),
-                has_marker_below: false,
+                nearest_marker_below: None,
                 under_floored_ancestor: false,
             });
         }
@@ -257,7 +257,7 @@ pub(crate) fn walk_index_folders(
 
     fold_file_children(conn, &mut walked, &mut folded, stop)?;
     propagate_floor_to_descendants(&mut walked, home, stop)?;
-    propagate_marker_to_ancestors(&mut walked, stop)?;
+    propagate_marker_to_ancestors(&mut walked, home, stop)?;
 
     Ok(walked)
 }
@@ -378,11 +378,18 @@ fn propagate_floor_to_descendants(
     Ok(())
 }
 
-/// Propagate a direct project marker up to every ancestor: a `.git` deep in a subtree
-/// marks the whole path above it as project-adjacent. Seeds from each
-/// folder's own direct-marker flag, then walks parent pointers.
+/// Propagate each direct project marker up to the ancestors within
+/// `classify::MARKER_REACH`, recording the nearest one's distance. Seeds from each
+/// folder's own direct-marker flag, then walks parent pointers for at most the
+/// reach, so a `go.mod` deep in a module cache doesn't raise `~/go` or `/Users`.
+///
+/// A seed that FLOORS by its path (`classify::floors_by_path`: a `node_modules`
+/// package, Homebrew's own checkout in `/opt/homebrew`) raises nothing: machine
+/// output doesn't vouch for its parent. Without this, `/opt` read as a folder of
+/// projects at 0.62 (2026-10-26). Path-derived, so the full and the scoped walk agree.
 pub(super) fn propagate_marker_to_ancestors(
     walked: &mut WalkedFolders,
+    home: &str,
     stop: &CancellationToken,
 ) -> Result<(), PassError> {
     let mut poll = StopPoll::new(stop);
@@ -392,15 +399,24 @@ pub(super) fn propagate_marker_to_ancestors(
         .filter(|f| f.children.has_direct_marker)
         .map(|f| f.dir_index)
         .collect();
+    let mut path = String::new();
     for seed in seeds {
         poll.tick()?;
+        walked.tree.path_at_into(seed as usize, &mut path);
+        if floors_by_path(&path, home) {
+            continue;
+        }
         let mut cursor = walked.tree.parent_at(seed as usize);
-        while cursor != ROOT_ID {
+        for distance in 1..=MARKER_REACH {
+            if cursor == ROOT_ID {
+                break;
+            }
             let Some(dir_index) = walked.tree.index_of(cursor) else {
                 break;
             };
             if let Some(folder) = walked.folder_of_dir_index(dir_index) {
-                walked.folders[folder].has_marker_below = true;
+                let nearest = &mut walked.folders[folder].nearest_marker_below;
+                *nearest = Some(nearest.map_or(distance, |d| d.min(distance)));
             }
             cursor = walked.tree.parent_at(dir_index);
         }
@@ -455,7 +471,7 @@ impl WalkedFolders {
                         file_count: 4,
                         has_direct_marker: false,
                     },
-                    has_marker_below: false,
+                    nearest_marker_below: None,
                     under_floored_ancestor: false,
                 });
             }
@@ -464,7 +480,7 @@ impl WalkedFolders {
         // No volume stands behind a synthetic walk, so nothing can stop it.
         let never = CancellationToken::new();
         propagate_floor_to_descendants(&mut walked, home, &never).expect("never stopped");
-        propagate_marker_to_ancestors(&mut walked, &never).expect("never stopped");
+        propagate_marker_to_ancestors(&mut walked, home, &never).expect("never stopped");
         walked
     }
 }

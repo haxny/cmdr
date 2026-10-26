@@ -70,7 +70,7 @@ fn a_change_under_a_demoted_origin_still_rescores_its_own_subtree() {
 /// A project marker appearing DIRECTLY inside a demoted origin still reaches the
 /// ancestors above it: the marker guard sees the flip and takes the full walk.
 ///
-/// The demotion's one genuine correctness hinge. A demoted origin's `has_marker_below`
+/// The demotion's one genuine correctness hinge. A demoted origin's `nearest_marker_below`
 /// can't be recomputed (nothing below it was read), so it comes from the stored row —
 /// but its own direct children ARE read, so a `.git` landing in `~` flips the origin's
 /// marker presence and escalates exactly as an unbounded origin would.

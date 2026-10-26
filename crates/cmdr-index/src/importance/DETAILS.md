@@ -32,14 +32,14 @@ itself denylisted, and a `.git/refs/heads` floors under the `.git`. Without this
 project-root prior from an ancestor `.git` and scored ~0.85, dwarfing real content.
 
 - **Derivation is shared.** `classify::self_floors` decides the seed, and both the production walk (a downward
-  propagation over the same `id → parent_id` map path reconstruction uses, the twin of the upward `has_marker_below` —
-  `scheduler/DETAILS.md` § The walk) and the fixtures / evals scenario builder (`classify::under_floored_paths`, pure
+  propagation over the same `id → parent_id` map path reconstruction uses, the twin of the upward `nearest_marker_below`
+  — `scheduler/DETAILS.md` § The walk) and the fixtures / evals scenario builder (`classify::under_floored_paths`, pure
   path math) derive `under_floored_ancestor` from it, so synthetic scenarios exercise the exact rule production applies.
   `classify::floors_by_path` is the read side's live derivation for a folder with no row.
 - **Floor beats marker (the vendored-repo nuance).** A folder that IS itself a project root — a repo vendored inside a
   `node_modules`, carrying its own `.git` — stays floored when it sits under a floored ancestor. The floor is a hard cap
-  outside the additive sum, so `has_project_marker` / `ProjectRoot` can't rescue it. That's the intended behavior: a
-  vendored dependency is machine output, project markers and all.
+  outside the additive sum, so `marker_depth` / `ProjectRoot` can't rescue it. That's the intended behavior: a vendored
+  dependency is machine output, project markers and all.
 - **Persistence.** `under_floored_ancestor` is a `#[serde(default)]` field on `FolderSignals`, so a vector persisted
   before it existed still deserializes (its absence reads as `false`); such a row is a stale generation and gets
   overwritten on the next full pass. The eval scenarios' hard constraints (a `ScoreAtMost 0.0` on every folder under a
@@ -48,10 +48,10 @@ project-root prior from an ancestor `.git` and scored ~0.85, dwarfing real conte
 ## The shared classifiers (`classify.rs`)
 
 Pure path/name classifiers — `leaf_name`, `is_denylisted`, `is_hidden_or_system`, `self_floors`, `floors_by_path`,
-`under_floored_paths`, `is_project_marker`, `path_class`, `path_class_with_marker`, `is_volume_root` — shared by
-production signal assembly (`signals.rs`), the test fixtures, and the evals scenario builder. Keeping them in ONE place
-is load-bearing: the test stand-in and the real assembler must agree on what each signal means, and the only way to
-guarantee that is shared code, not re-derivation.
+`under_floored_paths`, `is_project_marker`, `marker_depth`, `path_class`, `path_class_with_marker`, `is_volume_root` —
+shared by production signal assembly (`signals.rs`), the test fixtures, and the evals scenario builder. Keeping them in
+ONE place is load-bearing: the test stand-in and the real assembler must agree on what each signal means, and the only
+way to guarantee that is shared code, not re-derivation.
 
 They run once per folder in the recompute walk and again per folder in scoring, so they hold no allocation on the ASCII
 path: the folded denylist is a process-wide `LazyLock`, and `path_class` strips prefixes rather than formatting a
@@ -74,13 +74,54 @@ root holds floors with it.
 wake pipeline (`interest = importance_weight * intent_share`, hot above `0.7`) fired on ordinary dev work at the shipped
 five-second cadence: about 120 model calls an hour, 374,127 Qwen tokens in seven minutes.
 
-### A project marker doesn't promote `$HOME` or a volume root
+### OS roots, package stores, and app bundles are `SystemOrCache`
 
-`path_class_with_marker(path, home, has_marker)` is the ONE place the marker promotion happens, and it declines in three
-cases: at `$HOME` itself (a `.git` or `Makefile` there means dotfiles; `$HOME` was stored at
-`score=0.954, pathClass=projectRoot` on the same date), at a volume root (`is_volume_root`: `/`, or one component under
-a `MOUNT_PREFIXES` entry), and on a `SystemOrCache` path (machine scratch stays machine scratch, and it floors anyway,
-so the promotion only wrote a misleading `projectRoot` into the stored signals).
+Three more lists floor machine-owned trees the same way the temp roots do:
+
+- **`SYSTEM_ROOTS`** (absolute, at or under): `/System`, `/Library`, `/usr`, `/bin`, `/sbin`, `/cores`, `/etc`,
+  `/private/etc`, `/var`, `/private/var`, `/opt/homebrew`, `/opt/local`, `/nix`. `/usr` covers Intel Homebrew's
+  `/usr/local/Cellar`.
+- **`HOME_CACHE_FOLDERS`** (home-relative): `Library` and `go/pkg` (the Go module cache). Dot-prefixed stores (`.cargo`,
+  `.npm`, `.rustup`) already floor as hidden.
+- **`BUNDLE_SUFFIXES`** (`.app`): a `<name>.app/Contents` folder and everything below it. The bundle folder itself keeps
+  its class, and a project merely named like one (`getcmdr.app/src`) has no `Contents` and stays untouched.
+- **`LIBRARY_PACKAGE_SUFFIXES`** (`.photoslibrary`, `.musiclibrary`, `.tvlibrary`): everything strictly inside one. The
+  package is the user's (one item in Finder); its insides are the owning app's database.
+
+❌ **The absolute roots never claim the home branch** (`is_on_home_branch`: `$HOME`, under it, or an ancestor of it). A
+home under one of them (Fedora Silverblue's `/var/home/x`) would otherwise floor, which switches the feature off. Pinned
+by `a_system_root_never_captures_home_or_its_ancestors`.
+
+Known gap, shared with the temp roots: an external or network volume's index stores volume-relative paths, so a share
+with a top-level `Library` folder classifies like the boot disk's. None seen on a real NAS (2026-10-26).
+
+**Why (live `importance-root.db`, 2026-10-26):** of 193,861 scored rows, `~/go` held 59,199, `/Applications` (bundle
+insides) 56,655, `/Library` 40,450, and `/opt` 21,975. Half the global top 40 was Go module cache and Homebrew
+(`~/go/pkg/mod` 0.84, `/opt/homebrew/lib` 0.85). A full pass over the same index with these rules (and the marker reach
+below) wrote 13,141 rows, and the top 40 is all real projects.
+
+### Marker reach, and where a marker doesn't promote
+
+`classify::MARKER_REACH` (`1`) caps how far below a folder a project marker still counts: the signal is
+`FolderSignals::marker_depth`, `Some(0)` for a marker in the folder, `Some(1)` for one in a direct child (a folder of
+projects, like `~/projects`), `None` past that. `classify::marker_depth` is the ONE place the cap applies. Two levels up
+is already a generic container (`~/Desktop`, `/Users`, `~/go/pkg/mod/github.com`); with no cap, one buried `go.mod`
+promoted every ancestor to `ProjectRoot` (`/Users` 0.87). A monorepo member with its own `package.json` is a direct
+marker, so `apps/desktop` still promotes.
+
+The walk climbs at most the reach from each folder holding a direct marker, and a folder that FLOORS by its path
+(`floors_by_path`: a `node_modules` package, Homebrew's own checkout in `/opt/homebrew`) climbs nowhere: machine output
+doesn't vouch for its parent (`/opt` scored 0.62 as a "folder of projects" before). `scheduler/DETAILS.md` § The walk.
+
+`path_class_with_marker(path, home, marker_depth)` is the ONE place the promotion happens. A direct marker promotes; a
+marker one level down promotes only a `Neutral` folder, so a repo dropped on the Desktop doesn't relabel `~/Desktop`. It
+declines everywhere a marker says nothing about the folder being a place the user works:
+
+- **`$HOME` and every ancestor of it** (`/Users`). A `.git` or `Makefile` in `$HOME` means dotfiles; `$HOME` was stored
+  at `score=0.954, pathClass=projectRoot` on 2026-09-03.
+- **A volume root** (`is_volume_root`: `/`, or one component under a `MOUNT_PREFIXES` entry).
+- **A `SystemOrCache` path.** It floors anyway, so the promotion only wrote a misleading `projectRoot` into the stored
+  signals.
 
 ❌ **`$HOME` must NOT floor.** Flooring it propagates through `under_floored_ancestor` to every folder in the home
 directory and switches the whole feature off. The exemption only drops the promotion; `$HOME` still scores on its

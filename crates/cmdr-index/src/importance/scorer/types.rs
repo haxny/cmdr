@@ -116,11 +116,14 @@ pub struct FolderSignals {
     /// known. Recency raises the score. `None` when the source has no mtime.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mtime_secs: Option<u64>,
-    /// `true` when a project marker (`.git`, `Cargo.toml`, `package.json`, …) sits
-    /// in this folder or a descendant, marking this as (at or above) a project
-    /// root. Raises the whole subtree.
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub has_project_marker: bool,
+    /// How far below this folder the nearest project marker (`.git`, `Cargo.toml`,
+    /// `package.json`, …) sits: `Some(0)` in the folder itself, `Some(1)` in a
+    /// direct child, `None` when there's none within `classify::MARKER_REACH`. Its
+    /// presence is the project-marker signal ([`Self::has_project_marker`]); the
+    /// depth itself is what lets the incremental rescore tell exactly whether an
+    /// ancestor above a changed subtree could have moved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marker_depth: Option<u8>,
     /// The typed path-class prior for this folder (see [`PathClass`]).
     #[serde(default, skip_serializing_if = "PathClass::is_neutral")]
     pub path_class: PathClass,
@@ -160,11 +163,17 @@ impl FolderSignals {
             distinct_extension_count: 0,
             file_count: 0,
             mtime_secs: None,
-            has_project_marker: false,
+            marker_depth: None,
             path_class: PathClass::Neutral,
             visit_count: None,
             last_used_secs: None,
         }
+    }
+
+    /// Whether a project marker sits within reach (in this folder or a direct
+    /// child): the project-marker signal the scorer weighs.
+    pub fn has_project_marker(&self) -> bool {
+        self.marker_depth.is_some()
     }
 }
 

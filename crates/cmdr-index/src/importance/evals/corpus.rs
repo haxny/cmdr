@@ -219,7 +219,7 @@ pub fn snapshot_index_to_scenario(
             f.children,
             path,
             home,
-            f.has_marker_below,
+            f.nearest_marker_below,
             f.under_floored_ancestor,
             OptionalSignals::default(),
         );

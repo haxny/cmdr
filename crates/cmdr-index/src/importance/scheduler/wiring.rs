@@ -297,7 +297,7 @@ pub(super) fn wire_volume(
 /// - A row whose SIGNALS didn't move isn't rewritten, so its score keeps the
 ///   `now_secs` it was last written at and its recency decay pauses
 ///   (`../writer.rs`, `fate_of_stored_row`).
-/// - A demoted origin seeds `has_marker_below` from its stored row, which can only
+/// - A demoted origin seeds `nearest_marker_below` from its stored row, which can only
 ///   ADD marker presence, so the last marker LEAVING a big subtree reads stale
 ///   (`scoped_walk.rs`, § "The accepted lossiness").
 ///

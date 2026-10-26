@@ -46,7 +46,7 @@ pub struct FolderSpec {
     /// How many days ago the folder was last modified (recency input). `None` means
     /// no mtime known (neutral recency).
     pub age_days: Option<u64>,
-    /// Whether a project marker (`.git`, `Cargo.toml`, …) sits here or below —
+    /// Whether a project marker (`.git`, `Cargo.toml`, …) sits directly here —
     /// raises the folder to a project root.
     pub has_marker: bool,
     /// Navigation-visit count, if the visit signal applies (local scenarios). `None`
@@ -173,7 +173,9 @@ impl ScenarioBuilder {
 fn derive_signals(spec: &FolderSpec, home: &str, now: u64, under_floored_ancestor: bool) -> FolderSignals {
     let name = leaf_name(&spec.path);
     let file_refs: Vec<&str> = spec.files.iter().map(|s| s.as_str()).collect();
-    let path_class = path_class_with_marker(&spec.path, home, spec.has_marker);
+    // A spec's marker reads as a DIRECT one (depth 0).
+    let marker_depth = spec.has_marker.then_some(0);
+    let path_class = path_class_with_marker(&spec.path, home, marker_depth);
     FolderSignals {
         name_denylisted: is_denylisted(&name),
         hidden_or_system: is_hidden_or_system(&spec.path, &name, home),
@@ -181,7 +183,7 @@ fn derive_signals(spec: &FolderSpec, home: &str, now: u64, under_floored_ancesto
         distinct_extension_count: extension_count(file_refs.iter().copied()),
         file_count: spec.files.len() as u32,
         mtime_secs: spec.age_days.map(|d| now.saturating_sub(d * DAY)),
-        has_project_marker: spec.has_marker,
+        marker_depth,
         path_class,
         visit_count: spec.visits,
         last_used_secs: spec.last_used_days.map(|d| now.saturating_sub(d * DAY)),
@@ -310,7 +312,32 @@ fn dev_home() -> Scenario {
         &["cache_0.bin", "cache_1.bin"],
         40,
     ))
+    // A Go module cache entry and an app bundle's insides: recent, mixed, and (the
+    // module) a project root by its own `go.mod`, yet package-store and app
+    // machinery, never somewhere the user works. Both ranked near the top of a real
+    // home before they floored (2026-10-26).
+    .folder(
+        FolderSpec::new(
+            &p("go/pkg/mod/github.com/klauspost/compress@v1.20.0"),
+            &["go.mod", "README.md", "compress.go", "LICENSE"],
+            3,
+        )
+        .with_marker(),
+    )
+    .folder(FolderSpec::new(
+        &p("Applications/Thing.app/Contents/Resources"),
+        &["app.icns", "main.js", "strings.json"],
+        3,
+    ))
     // ── Hard constraints: must always hold ──
+    .hard(Constraint::ScoreAtMost {
+        path: p("go/pkg/mod/github.com/klauspost/compress@v1.20.0"),
+        max: 0.0,
+    })
+    .hard(Constraint::ScoreAtMost {
+        path: p("Applications/Thing.app/Contents/Resources"),
+        max: 0.0,
+    })
     .hard(Constraint::Above {
         above: p("projects/webapp"),
         below: p("projects/webapp/logs"),

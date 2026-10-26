@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 use super::recompute::{RescoreScope, ScoringInputs, rescore_rows, rescore_subset, sanitize_incremental_batch};
 use super::scoped_walk::plan_incremental_batch;
 use super::walk::{WalkedFolders, walk_index_folders};
+use crate::importance::classify::marker_depth;
 use crate::importance::scorer::{SignalSet, Weights};
 use crate::importance::stop::PassError;
 use crate::importance::writer::WeightRow;
@@ -77,14 +78,14 @@ pub fn compare_walks_for_incremental(
     let unstopped = |e: PassError| e.to_string();
     let mut full = walk_index_folders(&conn, home, &never).map_err(unstopped)?;
 
-    // Each origin's marker presence AS THE FULL WALK SEES IT, so the guard never
+    // Each origin's marker depth AS THE FULL WALK SEES IT, so the guard never
     // fires on a difference the comparison is meant to expose.
-    let mut markers: HashMap<String, bool> = HashMap::new();
+    let mut markers: HashMap<String, Option<u8>> = HashMap::new();
     full.for_each(|folder, path| {
         if origins.iter().any(|o| o == path) {
             markers.insert(
                 path.to_string(),
-                folder.children.has_direct_marker || folder.has_marker_below,
+                marker_depth(folder.children.has_direct_marker, folder.nearest_marker_below),
             );
         }
     });
