@@ -20,46 +20,18 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `servers.pinHint.body`), a locale may quote it; or quote it in English too.
 - `fileExplorer.archivedFile.label`, `askCmdr.sessions.archivedBadge`: both are "Archived" in English, so every locale
   needs a term-consistency allowlist entry. Consider "In cold storage" for the file glyph.
-- `fileExplorer.network.share.signIn{Title,Message}`, `fileExplorer.networkMount.signIn{Title,Message}`: the screenshot
-  is the servers list, not the calm sign-in screen these strings sit on. Capture that pane (with and without the sheet).
-- `fileOperations.transferProgress.stage*` (compress and archive-upload phases, and their `*Step` variants): coupled to
-  `transfer-dialog.png`, whose note lists only scanning/paused/queued/finishing. Capture a compress-to-remote run
-  showing the "Step 1 of 2" line, and name the compress phases in the note.
-- `servers.hub.nearbyGroup`: no screenshot, and the description doesn't say whether a count-last shape is fine (hu, zh,
-  and zh-Hant lead with "found nearby"). Recapture the hub with the group header showing, and say the order is free.
-- `{localNetwork}` keys (`fileExplorer.pane.directConnectionBlockedByThisMacToast`, `.openLocalNetworkSettings`,
-  `servers.refusal.localNetworkHint`): no screenshot of the toast or the Add server hint. Capture both so translators
-  can judge the button's width and whether the pane name reads better quoted (zh and zh-Hant quote it, the rest don't).
 - `errors.eject.unmountRefusedByProcesses`: zh-Hant's list join can run Latin into Han with no space
   (`cfprefsd和其他程序`). (zh-Hant)
-- `fileExplorer.listingStalled.*`, `indexing.overall.*`: no `screenshot`. Capture the stalled-listing pane and the
-  checklist with the whole-run line, so locales can judge length and the spinner context. (all)
-- `errors.write.insufficientSpace.*`, `fileOperations.errorDialog.copyAnyway`: no screenshot of the dialog with "Copy
-  anyway". (all)
 - `queryUi.date.preset.thisMonth`, `.lastMonth`: `{month}` arrives nominative, so Slavic locales can't say "from the 1st
   of October" (`с 1 октября`). Pass a preformatted day-and-month. (ru)
 - `fileOperations.cancelRollback.reason.unverifiable.named`, `askCmdr.renameUndo.skipReason.unverifiable.named`:
   byte-identical English, but one is about items and the other about files; split the wording or say so. (ru)
 - `servers.paneState.cancelCycleTooltip`: "Switch back to retry" doesn't say switch back to what. (ru)
-- S3 keys (`servers.sheet.s3*`, `servers.refusal.*` S3 arms, `*shareLink*`, `*coldStorage*`, `fileOperations.s3Cost.*`):
-  none has a `screenshot`. Capture the S3 form, a refusal, the share-link submenu, and the cost line. (all)
-- `settings.managed.*`, `ai.managed.*`, `askCmdr.error.managedByOrganization`, `onboarding.stepBeta.analyticsManaged`:
-  no screenshot of the managed card or the locked rows, so value widths are guesses. Capture them under a policy. (ru)
-- `fileExplorer.compareDirectories.*`: no screenshot of the compare toasts, so their widths are unverified. (all)
-- `settings.listing.spaceCalculatesFolderSize.*`, `fileExplorer.folderSizes.notConnected`: no screenshot of the switch
-  or the Calculate-folder-sizes toast. (de…zh-Hant)
-- `fileExplorer.quickFilter.*`, `settings.fileExplorer.typeToJump.mode.*`: no screenshot of the toast, the "Filter: …"
-  badge with its ×, or the Jump/Filter toggle, so widths are guesses. Capture all three. (11)
-- `commands.handler.getInfo.*`: no screenshot of either toast or the button, so widths are guesses. (11)
-- `fileExplorer.navigation.favoriteUnreachable.*`, `favoriteStatus.*`: no screenshot of the toasts or the dimmed-row
-  tooltip, so widths are unverified. (pt)
 - `fileExplorer.navigation.favoriteStatus.connects`, `favoriteUnreachable.forgotten`: `{place}` is a share, a server, or
   a phone, and nothing says which, so case languages can't put a type noun before it (`к серверу «…»`) and fall back to
   a parenthesis or colon. Pass a `{kind}` select (share / server / phone) alongside it. (ru)
 - "Extension" is both `menu.sort.extension` and `multiRename.extensionMask`, so term-consistency forces one word; a
   field label might want the fuller form. Consider "Extension mask" or an allowlist entry. (sv)
-- No screenshot of the Multi-Rename sheet, so label lengths (counter row, title-case option) are unverified. (all)
-- `multiRename.presets.*`: no screenshot of the Presets menu, submenu, or name popover, so lengths are unverified. (all)
 - `multiRename.searchOptionHelp.on` / `.off` share "On"/"Off" with the settings switch options, so `term-consistency`
   forces the settings form, while in gendered languages the tooltip row agrees with "option" (pt wanted `Desativada`,
   shipped `Desativado` to pass). Add an `agreesWith`-style hook or an allowlisted reason so a locale can agree with the
@@ -67,8 +39,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - Tooling: the brief's reference-pile path (`<main clone>/_ignored/i18n/<tag>/`) doesn't exist on the M1 agent box, so
   "no ruling" terms there can't be mined as the brief requires. Sync the pile to the box, or have the brief say so and
   fall back to `terms.json` sources; vi mined the live Finder bundle instead (§ No pile on this machine). (ru, vi, sv)
-- `servers.sheet.addressMoveHelp`, `s3EndpointMoveHelp`, `servers.refusal.addressTaken`: no screenshot of the edit sheet
-  in its move state; one would confirm the line sits under the Address / Endpoint field.
 - `fileOperations.sourcesGone.*`: "this delete" / "A queued delete" use delete as a noun, and "since you queued it" has
   no `queued` concept. Locales rendered it as "while it waited its turn", matching the queue's Waiting status.
 - `transfer.metadataLeftBehind`: says "This server" though the description lists phones and cloud buckets too; "those"
