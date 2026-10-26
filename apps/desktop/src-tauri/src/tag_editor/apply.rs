@@ -47,6 +47,8 @@ pub struct TagApplyReport {
     pub failed: Vec<FailedRow>,
     /// Not written: something else changed the file since the session read it.
     pub changed_on_disk: Vec<String>,
+    /// Files were written, but the undo store couldn't keep their old tags: no undo.
+    pub undo_unavailable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -79,6 +81,17 @@ pub(super) fn apply_with(
     session_id: &str,
     req: ApplyRequest,
 ) -> Result<TagApplyReport, TagEditorError> {
+    apply_with_before_write(store, session_id, req, &|_| {})
+}
+
+/// [`apply_with`], calling `before_write` with each file's path just before its last check
+/// and write: the seam a test changes a file through.
+pub(super) fn apply_with_before_write(
+    store: &UndoStore,
+    session_id: &str,
+    req: ApplyRequest,
+    before_write: &dyn Fn(&Path),
+) -> Result<TagApplyReport, TagEditorError> {
     // Compared as the view shows paths, so a file whose name isn't UTF-8 can still be skipped.
     let skip = |path: &Path| req.skip.iter().any(|skipped| *skipped == shown(path));
     let (target, candidates) = pending(session_id, &skip)?;
@@ -104,12 +117,13 @@ pub(super) fn apply_with(
         disc_total: None,
         allow_frame_loss: req.allow_frame_loss,
     };
-    let written = write_each(ready, &opts, &mut report);
+    let written = write_each(ready, &opts, before_write, &mut report);
     report.written = written.iter().map(|(path, ..)| shown(path)).collect();
     let written_paths: Vec<PathBuf> = written.iter().map(|(path, ..)| path.clone()).collect();
-    narrow_record(store, &id, &written_paths);
-    if !written_paths.is_empty() {
+    if narrow_record(store, &id, &written_paths) {
         report.apply_id = Some(id.0);
+    } else {
+        report.undo_unavailable = !written_paths.is_empty();
     }
     mark_written(session_id, written);
     reread_media(&target.volume_id, &written_paths);
@@ -117,24 +131,23 @@ pub(super) fn apply_with(
 }
 
 /// Writes each file, re-checking its fingerprint right before. Files not written land in
-/// `report`; the written ones come back with their tags and post-write fingerprint.
+/// `report`; the written ones come back with the tags asked for.
 fn write_each(
     ready: Vec<Pending>,
     opts: &WriteOptions,
+    before_write: &dyn Fn(&Path),
     report: &mut TagApplyReport,
-) -> Vec<(PathBuf, FileTags, Option<Fingerprint>)> {
+) -> Vec<(PathBuf, FileTags)> {
     let mut written = Vec::new();
     for file in ready {
+        before_write(&file.path);
         if !Fingerprint::holds(file.fingerprint.as_ref(), &file.path) {
             report.changed_on_disk.push(shown(&file.path));
             continue;
         }
         let outcome = contain_panics(|| write_tags(&file.path, &file.tags, opts)).unwrap_or_else(|| Err(panicked()));
         match outcome {
-            Ok(()) => {
-                let fingerprint = Fingerprint::of(&file.path);
-                written.push((file.path, file.tags, fingerprint));
-            }
+            Ok(()) => written.push((file.path, file.tags)),
             Err(TagError::WouldDrop(items)) => report.would_drop.push(WouldDropRow {
                 path: shown(&file.path),
                 items,
@@ -148,18 +161,29 @@ fn write_each(
     written
 }
 
-/// Keeps in the record only the files written, so an undo touches exactly those; forgets it
-/// when none was. The files are written by now, so a store that refuses is logged, not
-/// returned: the record then still names the unwritten files too, whose old tags are their
-/// current ones.
-fn narrow_record(store: &UndoStore, id: &ApplyId, written: &[PathBuf]) {
-    let outcome = if written.is_empty() {
-        store.forget(id)
-    } else {
-        store.retain(id, written)
-    };
-    if let Err(error) = outcome {
-        log::warn!(target: LOG_TARGET, "Couldn't narrow the undo record to the files written: {error:?}");
+/// Keeps in the record only the files written, so an undo touches exactly those, and answers
+/// whether it can be undone; forgets the record when nothing was written. A store that can't
+/// narrow it drops it instead (the full record would also rewrite files this apply never wrote,
+/// changed since by someone else perhaps): the write stands, without an undo.
+pub(super) fn narrow_record(store: &UndoStore, id: &ApplyId, written: &[PathBuf]) -> bool {
+    if written.is_empty() {
+        forget_record(store, id);
+        return false;
+    }
+    match store.retain(id, written) {
+        Ok(()) => true,
+        Err(error) => {
+            log::warn!(target: LOG_TARGET, "Couldn't narrow the undo record to the files written, so this write has no undo: {error:?}");
+            forget_record(store, id);
+            false
+        }
+    }
+}
+
+/// Removes a record; one that stays is only pruned later, so a failure is logged.
+fn forget_record(store: &UndoStore, id: &ApplyId) {
+    if let Err(error) = store.forget(id) {
+        log::warn!(target: LOG_TARGET, "Couldn't remove an undo record: {error:?}");
     }
 }
 
@@ -180,7 +204,7 @@ pub(super) fn reread_media(volume_id: &str, paths: &[PathBuf]) {
 }
 
 /// A lofty panic, as the file's error.
-fn panicked() -> TagError {
+pub(super) fn panicked() -> TagError {
     TagError::Write("the tag library panicked".to_owned())
 }
 

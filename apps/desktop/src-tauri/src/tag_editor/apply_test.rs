@@ -10,7 +10,7 @@ use cmdr_local::LocalPosixVolume;
 use cmdr_media_meta::test_fixtures::mp3_frames;
 use cmdr_tags::{ContentKind, TagError, TagField, UndoLimits, UndoStore};
 
-use super::apply::{ApplyRequest, TagApplyReport, apply_with};
+use super::apply::{ApplyRequest, TagApplyReport, apply_with, apply_with_before_write, narrow_record};
 use super::session::{TagEdit, TagEditorError, close, edit, open, unchanged_on_disk};
 use super::session_test::{album, folder, on_disk, path_of, set_title, tag_file};
 use super::undo::undo_with;
@@ -471,5 +471,80 @@ async fn media_cache_dropped_for_written_rows() {
 
     assert_eq!(new_name(&id, "a.mp3"), "Kniha a.mp3");
     assert_eq!(new_name(&id, "b.mp3"), "Book b.mp3");
+    done(&id);
+}
+
+/// Undoing a "Write anyway" apply: the dropped ID3v2.4-only frame can't come back into an
+/// ID3v2.3 file, but every other old tag does.
+#[test]
+fn undo_after_write_anyway_restores_the_other_tags() {
+    let (dir, listing) = folder("tag-apply-undo-anyway", "root", &[("a.mp3", mp3_with_v24_only_frame())]);
+    let (store_dir, store) = store("tag-apply-undo-anyway-store");
+    let id = open_rename(listing.id(), true, None, 0).expect("opens").session_id;
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_title(&dir, "a.mp3", "Alpha edited"), set_album("Kniha")]).expect("edits");
+    let report = apply_with(
+        &store,
+        &id,
+        ApplyRequest {
+            allow_frame_loss: true,
+            ..request()
+        },
+    )
+    .expect("applies");
+    assert_eq!(names(&report.written), vec!["a.mp3"]);
+    assert!(
+        !open(&id, false).expect("still open").dirty,
+        "the session holds what the write left on disk, the dropped frame gone"
+    );
+
+    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+
+    assert!(restored.failed.is_empty(), "{restored:?}");
+    assert_eq!(restored.restored.len(), 1);
+    assert_eq!(title_of(&dir, "a.mp3"), one("Alpha"));
+    assert_eq!(album_of(&dir, "a.mp3"), None);
+    assert_eq!(records(&store_dir), 0);
+    done(&id);
+}
+
+/// A store that can't narrow the record after the writes: no undo is offered, since the
+/// record would also rewrite files the apply never wrote.
+#[test]
+fn a_record_that_cannot_be_narrowed_is_dropped_and_undo_is_unavailable() {
+    let (dir, _listing, _id) = album("tag-apply-narrow-fails");
+    let (store_dir, store) = store("tag-apply-narrow-fails-store");
+    let never_recorded = cmdr_tags::ApplyId("tags-1-never-recorded".to_string());
+    assert!(!narrow_record(&store, &never_recorded, &[dir.join("a.mp3")]));
+    assert_eq!(records(&store_dir), 0);
+}
+
+/// A file that changes between the record and its own write is not written, is reported,
+/// and is not in the undo record.
+#[test]
+fn a_file_changed_right_before_its_write_is_skipped_and_left_out_of_undo() {
+    let (dir, _listing, id) = album("tag-apply-toctou");
+    let (_store_dir, store) = store("tag-apply-toctou-store");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_album("Kniha")]).expect("edits");
+    let b = dir.join("b.mp3");
+    let meddle = |path: &Path| {
+        if path == b {
+            tag_file(&dir, "b.mp3", &[(TagField::Title, "Rewritten elsewhere")]);
+        }
+    };
+
+    let report = apply_with_before_write(&store, &id, request(), &meddle).expect("applies");
+
+    assert_eq!(names(&report.written), vec!["a.mp3", "c.mp3"]);
+    assert_eq!(names(&report.changed_on_disk), vec!["b.mp3"]);
+    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    let restored_names: Vec<String> = restored
+        .restored
+        .iter()
+        .map(|path| path.file_name().expect("a file").to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(restored_names, vec!["a.mp3", "c.mp3"]);
+    assert_eq!(title_of(&dir, "b.mp3"), one("Rewritten elsewhere"));
     done(&id);
 }

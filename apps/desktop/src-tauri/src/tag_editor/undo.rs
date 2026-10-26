@@ -6,9 +6,9 @@
 
 use std::sync::Mutex;
 
-use cmdr_tags::{ApplyId, RestoreReport, TagError, UndoLimits, UndoStore, WriteOptions};
+use cmdr_tags::{ApplyId, RestoreReport, UndoLimits, UndoStore, WriteOptions};
 
-use super::apply::reread_media;
+use super::apply::{panicked, reread_media};
 use super::session::{LOCAL_VOLUME_ID, TagEditorError, reload};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
@@ -24,19 +24,21 @@ pub(super) fn with_store<R: tauri::Runtime, T>(
     f: impl FnOnce(&UndoStore) -> Result<T, TagEditorError>,
 ) -> Result<T, TagEditorError> {
     let mut slot = STORE.lock_ignore_poison();
-    if slot.is_none() {
-        let root = crate::config::resolved_app_data_dir(app)
-            .map_err(|detail| TagEditorError::Undo {
-                error: TagError::Io(std::io::ErrorKind::Other, detail),
-            })?
-            .join("tag-undo");
-        let store = UndoStore::open(root, UndoLimits::default()).map_err(|error| TagEditorError::Undo { error })?;
-        *slot = Some(store);
-    }
-    let store = slot.as_ref().ok_or(TagEditorError::Undo {
-        error: TagError::Write("the undo store didn't open".to_owned()),
-    })?;
+    let store = match &mut *slot {
+        Some(store) => store,
+        empty => empty.insert(open_store(app)?),
+    };
     f(store)
+}
+
+/// The store at `<app data>/tag-undo`.
+fn open_store<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<UndoStore, TagEditorError> {
+    let data_dir = crate::config::resolved_app_data_dir(app).map_err(|_| {
+        // The reason names the folder, so it isn't logged.
+        log::warn!(target: LOG_TARGET, "The app data folder for tag undo isn't available");
+        TagEditorError::NoAppDataDir
+    })?;
+    UndoStore::open(data_dir.join("tag-undo"), UndoLimits::default()).map_err(|error| TagEditorError::Undo { error })
 }
 
 /// Writes the old tags of apply `apply_id` back. The files it restored are read again into
@@ -51,7 +53,7 @@ pub(super) fn undo_with(store: &UndoStore, apply_id: &str) -> Result<RestoreRepo
     let id = ApplyId(apply_id.to_owned());
     // Restoring parses and writes each file with lofty.
     let report = contain_panics(|| store.restore(&id, &WriteOptions::default()))
-        .unwrap_or_else(|| Err(TagError::Write("the tag library panicked".to_owned())))
+        .unwrap_or_else(|| Err(panicked()))
         .map_err(|error| TagEditorError::Undo { error })?;
     if report.failed.is_empty()
         && let Err(error) = store.forget(&id)

@@ -47,6 +47,8 @@ pub enum TagEditorError {
     Read { path: String, detail: String },
     /// The undo store refused: recording before a write (nothing was written), or an undo.
     Undo { error: TagError },
+    /// The app's data folder, which holds the undo store, isn't available. Nothing was written.
+    NoAppDataDir,
 }
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
@@ -459,19 +461,38 @@ pub(super) fn pending(
     })
 }
 
-/// After the app's own write: each file's disk copy becomes `written` and its fingerprint the
-/// one taken after the write, so the next apply doesn't take the write for someone else's.
-/// The edited copy stays (an edit made during the write is kept, and still shows as a change).
-/// A no-op for a session or file that's gone.
-pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags, Option<Fingerprint>)>) {
+/// After the app's own write: each file is read again (before the lock), and the session's
+/// disk copy and fingerprint become what is really on disk now, so the next apply doesn't take
+/// the write for someone else's. The edited copy follows when it is still what was written (a
+/// "Write anyway" may have dropped items); an edit made during the write is kept and still
+/// shows as a change. A file that no longer reads becomes an unreadable row. A no-op for a
+/// session or file that's gone.
+pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) {
+    let fresh: Vec<(PathBuf, FileTags, Entry)> = written
+        .into_iter()
+        .map(|(path, requested)| {
+            let entry = read_entry(&path);
+            (path, requested, entry)
+        })
+        .collect();
     let mut sessions = SESSIONS.lock_ignore_poison();
     let Some(session) = sessions.get_mut(session_id) else {
         return;
     };
-    for (path, tags, fingerprint) in written {
-        if let Some(Entry::Loaded(loaded)) = session.by_path.get_mut(&path) {
-            loaded.disk = tags;
-            loaded.fingerprint = fingerprint;
+    for (path, requested, entry) in fresh {
+        let Some(slot) = session.by_path.get_mut(&path) else {
+            continue;
+        };
+        match (slot, entry) {
+            (Entry::Loaded(loaded), Entry::Loaded(now)) => {
+                if loaded.edited == requested {
+                    loaded.edited = now.disk.clone();
+                }
+                loaded.disk = now.disk;
+                loaded.fingerprint = now.fingerprint;
+                loaded.duration_ms = now.duration_ms;
+            }
+            (slot, entry) => *slot = entry,
         }
     }
 }

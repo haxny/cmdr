@@ -33,8 +33,8 @@ file that something else renamed.
 
 `apply(app, session_id, ApplyRequest { kind, allowFrameLoss, skip })` (`apply.rs`):
 
-1. `pending` copies out the readable files whose edited tags differ from the disk's, in current order, minus `skip`;
-   a read-only session refuses (`ReadOnly`).
+1. `pending` copies out the readable files whose edited tags differ from the disk's, in current order, minus `skip`; a
+   read-only session refuses (`ReadOnly`).
 2. Each file's fingerprint is checked (stat outside every lock); a moved one is `changedOnDisk`, never written.
 3. `UndoStore::record(tags-<unix millis>-<session>, paths)` BEFORE any write; a refusal is `TagEditorError::Undo` and
    nothing is written. Millis never repeat within the process, so two applies can't share (and replace) a record.
@@ -42,16 +42,24 @@ file that something else renamed.
    `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }`. `WouldDrop` → `wouldDrop`, any other
    error → `failed`, a lofty panic (`contain_panics`) → `failed` with `TagError::Write`.
 5. `UndoStore::retain` narrows the record to the files written (`forget` when none), so an undo never rewrites a file
-   the apply skipped, failed on, or found changed. A refusal here is logged: the files are already written.
-6. `mark_written`, then `multi_rename::media::SessionMedia::reread` for the written names in every session over the
-   folder (`media_over`), so `[=tag.*]` previews show the new values.
+   the apply skipped, failed on, or found changed. If `retain` refuses, the record is forgotten instead and the report
+   has no `applyId` and `undoUnavailable: true`: the full record could revert someone else's later change.
+6. `mark_written` reads each written file again (outside the lock) and makes that the disk copy and fingerprint, and the
+   edited copy too when it still equals what was written (a "Write anyway" may have dropped items). Then
+   `multi_rename::media::SessionMedia::reread` for the written names in every session over the folder (`media_over`), so
+   `[=tag.*]` previews show the new values.
 
 `undo(app, apply_id)` (`undo.rs`) restores (`allow_frame_loss: false`), forgets the record when nothing failed (kept
 for a retry otherwise), re-reads the restored files into the tag session named in the id if it's still open, and
 re-reads them in the media cache. It works after the session closed: the record holds paths.
 
-The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer).
-Tests call `apply_with` / `undo_with` with their own store.
+The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer);
+no app data folder is `TagEditorError::NoAppDataDir`. Tests call `apply_with` / `undo_with` with their own store, and
+`apply_with_before_write` to change a file between the record and its write.
+
+Undo after "Write anyway" (verified on lofty via `undo_after_write_anyway_restores_the_other_tags`, 2026-10-27): the
+snapshot doesn't carry the dropped ID3v2.4-only frame (ID3 extras are `TXXX` items only, `read::id3_items`), so the
+restore (`allow_frame_loss: false`) writes every other old tag back cleanly; the dropped frame stays gone.
 
 **Non-UTF-8 paths.** Paths cross IPC as lossy strings (`TrackRow::path`). Such a file is listed and written like any
 other, but `TagEdit::SetOne` can't name it (`UnknownTrack`, its `SetAll` edits still apply), and `skip` compares the
