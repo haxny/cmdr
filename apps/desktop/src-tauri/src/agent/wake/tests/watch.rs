@@ -6,6 +6,7 @@
 //! count taken off the streamed events would have missed entirely.
 
 use futures_util::future::BoxFuture;
+use tokio_util::sync::CancellationToken;
 
 use super::super::WakeToolWatch;
 use crate::agent::chat::runtime::{ToolDispatchOutcome, ToolDispatcher};
@@ -15,7 +16,11 @@ use crate::agent::llm::types::{AgentToolCall, AgentToolResult, ToolId};
 struct Answers(serde_json::Value);
 
 impl ToolDispatcher for Answers {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         Box::pin(async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -50,7 +55,9 @@ async fn a_suggestion_group_counts_even_though_it_streams_nothing() {
     let inner = Answers(serde_json::json!({ "staged": 3 }));
     let watch = WakeToolWatch::new(&inner);
 
-    watch.dispatch(&call(ToolId::ProposeSuggestions)).await;
+    watch
+        .dispatch(&call(ToolId::ProposeSuggestions), &CancellationToken::new())
+        .await;
 
     assert_eq!(watch.proposals(), 1);
     assert!(!watch.stayed_quiet());
@@ -63,12 +70,18 @@ async fn only_the_tools_that_stage_something_count() {
     let inner = Answers(serde_json::json!({ "ok": true }));
     let watch = WakeToolWatch::new(&inner);
 
-    watch.dispatch(&call(ToolId::ListDir)).await;
-    watch.dispatch(&call(ToolId::FolderImportance)).await;
+    watch.dispatch(&call(ToolId::ListDir), &CancellationToken::new()).await;
+    watch
+        .dispatch(&call(ToolId::FolderImportance), &CancellationToken::new())
+        .await;
     assert_eq!(watch.proposals(), 0);
 
-    watch.dispatch(&call(ToolId::ProposeRenamePlan)).await;
-    watch.dispatch(&call(ToolId::ProposeSuggestions)).await;
+    watch
+        .dispatch(&call(ToolId::ProposeRenamePlan), &CancellationToken::new())
+        .await;
+    watch
+        .dispatch(&call(ToolId::ProposeSuggestions), &CancellationToken::new())
+        .await;
     assert_eq!(watch.proposals(), 2);
 }
 
@@ -79,12 +92,16 @@ async fn only_the_tools_that_stage_something_count() {
 async fn a_refused_proposal_is_not_something_to_interrupt_over() {
     let refused = Answers(serde_json::json!({ "available": false }));
     let watch = WakeToolWatch::new(&refused);
-    watch.dispatch(&call(ToolId::ProposeSuggestions)).await;
+    watch
+        .dispatch(&call(ToolId::ProposeSuggestions), &CancellationToken::new())
+        .await;
     assert_eq!(watch.proposals(), 0);
 
     let broken = Answers(serde_json::json!({ "problem": "the volume went away" }));
     let watch = WakeToolWatch::new(&broken);
-    watch.dispatch(&call(ToolId::ProposeSuggestions)).await;
+    watch
+        .dispatch(&call(ToolId::ProposeSuggestions), &CancellationToken::new())
+        .await;
     assert_eq!(watch.proposals(), 0);
 }
 
@@ -96,7 +113,7 @@ async fn the_quiet_signal_is_recorded_with_its_reason() {
     let mut quiet = call(ToolId::NothingToSuggest);
     quiet.arguments = serde_json::json!({ "reason": "all of it was build output" });
 
-    watch.dispatch(&quiet).await;
+    watch.dispatch(&quiet, &CancellationToken::new()).await;
 
     assert!(watch.stayed_quiet());
     assert_eq!(watch.reason().as_deref(), Some("all of it was build output"));

@@ -10,6 +10,9 @@
 //! its watcher key, and every child path are the volume's own bytes, and the
 //! pane adopts the spelling from `listing-complete`.
 //!
+//! Ask Cmdr's live `list_dir` read opens a folder by a model-typed path, which
+//! is the same seam, so it lists through [`entries_as_stored`].
+//!
 //! Paths from outside Cmdr that name FILES (a Finder drag-in, a paste of files
 //! copied in Finder) are respelled once where they enter, by
 //! [`stored_spellings`], before any operation sees them.
@@ -76,6 +79,24 @@ pub(crate) async fn list_as_stored(
     );
     let entries = volume.list_directory_with_cancel(&stored, on_progress, cancel).await?;
     Ok(Listed { path: stored, entries })
+}
+
+/// The entries of the folder at `path`, opened the way a pane opens a typed
+/// path ([`list_as_stored`]), for a reader outside the engine that doesn't keep
+/// a listing (Ask Cmdr's live `list_dir`).
+///
+/// # Errors
+///
+/// The volume's own error for `path` as given when no other spelling exists, or
+/// the error of the resolve or of the second listing.
+pub async fn entries_as_stored(
+    volume: &dyn Volume,
+    path: &Path,
+    cancel: Option<&CancellationToken>,
+) -> Result<Vec<FileEntry>, VolumeError> {
+    list_as_stored(volume, path, None, cancel)
+        .await
+        .map(|listed| listed.entries)
 }
 
 /// Each of `paths` in the spelling `volume` stores it under, for paths that

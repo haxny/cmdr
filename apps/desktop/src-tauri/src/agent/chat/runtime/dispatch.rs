@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use futures_util::future::{BoxFuture, FutureExt};
 use tauri::{AppHandle, Runtime};
+use tokio_util::sync::CancellationToken;
 
 use super::LOG_TARGET;
 use crate::agent::llm::types::{AgentToolCall, AgentToolResult};
@@ -18,7 +19,14 @@ use crate::agent::tools::propose::rename::RenameProposalSnapshot;
 /// read-only dispatch view ([`AppHandleDispatcher`]); tests inject a scripted double,
 /// so [`run_turn`](super::run_turn) needs no Tauri app.
 pub trait ToolDispatcher: Send + Sync {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome>;
+    /// Run `call`. `cancel` is the turn's own token: a handler that can wait on a
+    /// slow volume (`list_dir`'s live read) stops on it and answers `cancelled`, so
+    /// Stop never waits out a wedged mount and the call still gets its result row.
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome>;
 
     /// Withdraw the named tool results' standing as evidence: assembly dropped them, so the
     /// model never read them, and nothing downstream may cite their contents.
@@ -64,9 +72,13 @@ impl<R: Runtime> AppHandleDispatcher<R> {
 }
 
 impl<R: Runtime> ToolDispatcher for AppHandleDispatcher<R> {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
-            let outcome = crate::agent::tools::view::dispatch(&self.app, self.scope, call).await;
+            let outcome = crate::agent::tools::view::dispatch(&self.app, self.scope, call, cancel).await;
             ToolDispatchOutcome {
                 result: outcome.result,
                 proposal: outcome.proposal,

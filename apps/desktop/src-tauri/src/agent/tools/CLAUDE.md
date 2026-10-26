@@ -41,11 +41,12 @@ and typed result shapes colocated here.
 - **A proposal claiming file CONTENTS must prove it.** `dispatch` feeds every non-elided `image_facts` result into the
   thread's `ImageFactsLedger`; a plan citing undelivered content is refused whole, and whatever elides a result owes
   the ledger a `revoke_call`. `propose/DETAILS.md`.
-- **Handlers never touch a live filesystem, except `inspect_file`**: up to 200 files per call on blocking threads;
-  past a deadline the row is `unreachable`, the thread is ABANDONED, and the unanswered paths are named. It rides `file_viewer`'s seams and the pane's archive routing, never its own (`DETAILS.md` § Reading
-  a file the way the viewer does), and alone egresses contents: text windows, `find` snippets, PDF pages plus title
-  and author, archive entry names, EXIF incl. GPS; never bytes. The cloud AI disclosure names each (its Ask Cmdr
-  contents item and rule); a new KIND of content is a copy change plus a `CLOUD_AI_CONSENT_VERSION` bump.
+- **Handlers never touch a live filesystem, except `inspect_file` and `list_dir`'s live read**: bounded, the thread
+  ABANDONED past a deadline (`unreachable`). `list_dir` reads live only where no index lists the folder, stops on the
+  turn's cancel token, and is FDA-gated and tier-excluded on the link-resolved target before any stat (`DETAILS.md` § The
+  live source). `inspect_file` alone egresses contents (text windows, `find` snippets, PDF pages, archive entry names,
+  EXIF incl. GPS; never bytes), each named in the cloud AI disclosure; a new KIND is a copy change plus a
+  `CLOUD_AI_CONSENT_VERSION` bump. § Reading a file the way the viewer does.
 - **New agent tool** = registry entry + handler/schema/result here + a `ToolId` variant + `EXPECTED_AGENT_TOOL_NAMES`
   + `ToolId::KNOWN` + a `line/` subject, outcome, and preview arm + a rail label in `ask-cmdr-labels.ts` (a missing
   label shows "Working"; a test pins it).

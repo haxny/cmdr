@@ -13,7 +13,11 @@ use super::*;
 struct HugeDispatcher;
 
 impl ToolDispatcher for HugeDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -42,7 +46,11 @@ impl RevokeRecordingDispatcher {
 }
 
 impl ToolDispatcher for RevokeRecordingDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {

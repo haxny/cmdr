@@ -20,6 +20,7 @@
 use std::sync::Mutex;
 
 use futures_util::future::BoxFuture;
+use tokio_util::sync::CancellationToken;
 
 use crate::agent::chat::runtime::{ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
 use crate::agent::llm::types::{AgentToolCall, ToolId};
@@ -80,13 +81,17 @@ fn is_proposal(tool: &ToolId) -> bool {
 }
 
 impl ToolDispatcher for WakeToolWatch<'_> {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         if call.tool == ToolId::NothingToSuggest {
             self.seen.lock_ignore_poison().quiet = Some(reason_of(&call.arguments));
         }
         let proposal = is_proposal(&call.tool);
         Box::pin(async move {
-            let outcome = self.inner.dispatch(call).await;
+            let outcome = self.inner.dispatch(call, cancel).await;
             // ⚠️ Only a call that LANDED counts. A refused or failed proposal leaves nothing
             // for the user to review, and a toast about it would send them to an empty list.
             if proposal && dispatch_ok(&outcome.result) {

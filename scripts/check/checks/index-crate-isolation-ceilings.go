@@ -350,10 +350,15 @@ var surfaceGuardedCrates = []struct {
 		// 36th root promise, 2026-10-23: `EffectiveSort`, the only thing
 		// `entry_comparator` and `sort_entries` take, built only by `resolve`, so a
 		// sort outside a listing (search results) can't skip the date fallback.
+		//
+		// 37th root promise, 2026-10-26: `entries_as_stored`, the pane's open of a
+		// typed path (stored-spelling fallback included) for Ask Cmdr's live
+		// `list_dir`, which keeps no listing. Copying the fallback into the app
+		// would fork the one foreign-path seam.
 		Name:       "cmdr-listing",
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
-			RootPromises:   36,
+			RootPromises:   37,
 			HandleMethods:  47,
 			PublicModules:  1,
 			SubsystemItems: 20,

@@ -164,6 +164,37 @@ async fn cancellation_mid_loop_stops_cleanly_at_a_tool_boundary() {
     );
 }
 
+#[tokio::test]
+async fn stop_reaches_a_tool_call_that_is_waiting_on_a_slow_volume() {
+    // The turn hands its own token to every dispatch, so a call blocked on a wedged mount
+    // answers when the user presses Stop instead of holding the turn until the mount does.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let llm = ProgrammableLlm::new(vec![Program::Tools {
+        calls: vec![(ToolId::ListDir, json!({ "path": "/Volumes/naspi-1" }))],
+        usage: AgentUsage::default(),
+    }]);
+    let cancel = CancellationToken::new();
+    let dispatcher = Arc::new(StopAwareDispatcher::default());
+    let (tx, _rx) = unbounded_channel();
+    let stopper = {
+        let (dispatcher, cancel) = (dispatcher.clone(), cancel.clone());
+        tokio::spawn(async move {
+            dispatcher.reached.notified().await;
+            cancel.cancel();
+        })
+    };
+
+    let turn_params = params(id, Some("list the nas"));
+    let turn = run_turn(&llm, dispatcher.as_ref(), &conn, &[], &turn_params, &tx, &cancel);
+    let result = tokio::time::timeout(Duration::from_secs(5), turn)
+        .await
+        .expect("Stop must reach the in-flight call");
+    stopper.await.expect("the stopper ran");
+
+    assert_eq!(result, TurnResult::Cancelled);
+}
+
 // ── Crash / persistence semantics ─────────────────────────────────────────────
 
 #[tokio::test]

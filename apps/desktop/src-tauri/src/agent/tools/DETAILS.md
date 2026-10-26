@@ -38,8 +38,9 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
 - **`list_dir`** (`read/listing.rs`, shared `[AiClient, Agent]`) — takes `path` + optional `volumeId`, resolved
   once (§ The location contract), then reads THAT volume's index: its immediate children (`Index::list_children`) plus
   its own recursive size stats (`Index::dir_stats`) and a `Coverage` block naming `source: index`. The result echoes
-  `location`. `Ok(None)` children ⇒ typed "not in index" / "no index", distinguished by whether the volume is indexed;
-  a resolved volume that isn't connected answers `volumeNotConnected`, and an unplaceable one the resolver's miss. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
+  `location`. A folder no index lists (an unindexed share, or ground the index hasn't reached) is read live once
+  instead, `source: live` (§ The live source); a resolved volume that isn't connected answers `volumeNotConnected`,
+  and an unplaceable one the resolver's miss. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
   `type` narrows to files or folders. **`sortBy: "size"` is the disk-usage answer for ONE folder's children**;
   `search` with the same sort ranks a whole drive — see § One tool, both questions.
   Every number also arrives spoken (`sizeHuman`, `modifiedHuman`, `recursiveSizeHuman`, `totalHuman` /
@@ -110,7 +111,7 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   only. Per-path statuses: `ok` / `folder` / `missing` /
   `unreadable { permission | io | encrypted | corrupt | unsupported | tooLargeToExtract }` / `unreachable` /
   `unsupportedVolume`. The call reports `total` / `returned` / `truncated` and names every path with no row in
-  `unanswered`. The sole disk reader among the handlers; how it reads and how it times out: § Reading a
+  `unanswered`. One of two disk readers among the handlers (the other is `list_dir`'s live source); how it reads and how it times out: § Reading a
   file the way the viewer does.
 - **`list_volumes`** (`read/volumes.rs`) — every volume with `indexStatus` (`fresh`/`scanning`/`stale`/`off`) and, for
   a remote one, `connectionState` (`direct`/`os_mount`/`disconnected`/`needs_sign_in`/`needs_host_key_approval`/`saved`),
@@ -175,7 +176,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,710 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,717 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -407,7 +408,7 @@ valid next input. `path` is always the APP path: the string the panes, `search` 
 write): `{ miss, location, detail, root?, nearby?, sameShareAs? }`. `location` echoes what was asked (tilde-expanded),
 `detail` names a next move. Tokens: `unknownVolume`, `pathOutsideVolume` (carries `root`), `noVolumeAtPath`, and
 `volumeNotConnected`, which a tool answers when the volume resolved but none of its sources can (`volume_not_connected`,
-shared). ❌ Never an empty listing, ❌ never `authoritative: true` for ground nothing read.
+shared), plus the live source's own (§ The live source). ❌ Never an empty listing, ❌ never `authoritative: true` for ground nothing read.
 
 **`nearby` and `candidate`.** Every not-connected miss carries `nearby` (possibly empty) and `sameShareAs` (empty until
 same-share members are proven). Each `nearby` entry is `{ volumeId, name, kind, connectionState?, root, candidate }`,
@@ -415,6 +416,48 @@ where `candidate` is the requested place re-rooted onto that volume (`/Volumes/n
 `{ smb-192-…, /Volumes/naspi-1/papers }`), so the next call is a copy, not arithmetic. Picked in order: volumes whose
 mount name shares the requested `/Volumes/<name>` stem (macOS appends `-N` to a second mount), else volumes whose root
 holds the path, else every remote volume; live first, at most 8, never the volume the miss is about.
+
+### The live source
+
+`list_dir` on a CONNECTED volume whose index doesn't list the folder (no index at all, like the LAN share in
+transcript 179, or ground the index hasn't reached) answers from one readdir through the volume's provider
+(`read/listing/live.rs`), so the share the user has connected is always listable. `coverage.source: live`, the
+volume's own `indexStatus` beside it, `authoritative: true` unless the cap cut it, and a note that folder sizes need an
+index: folder rows and the folder's own `size` are ABSENT, never the inode's 4 KB or a `0 B`.
+
+- **Gate first, on the target links resolve to.** For a volume whose paths are `std::fs` paths, `gate_local` resolves
+  the target one component at a time and checks each place against the Full Disk Access gate BEFORE `lstat` touches it
+  (`fda_gate::is_fda_pending_runtime` + `tcc_paths::is_potentially_tcc_restricted`). ❌ Never `std::fs::canonicalize`
+  first: it stats a link's target to resolve it, which for a link into `~/Documents` (or the first touch of a network
+  mount) is the very TCC prompt the gate exists to prevent. Then the resolved target must sit under the volume's
+  resolved root with no deeper live root holding it (a link off the volume is refused, naming where it lands, ❌ never
+  followed), and no component of it, the leaf included, may be in the system/build/cache tier
+  (`ExcludeRules::system_tier`, what a default search leaves out). The folder listed is the PHYSICAL one, spelled
+  under the volume's own root. A provider-addressed volume (direct SMB, MTP) reaches no local folder, so only the tier
+  applies: links are the server's.
+- **One bounded read** (`run_bounded`): its own task on the app's shared runtime (a turn's runtime is single-threaded
+  and ends with the turn, and an abandoned read must still finish), `LIVE_READ` = 10 s with a 1 s grace: at 9 s its
+  token flips (SMB and MTP stop between round trips), at 10 s it's ABANDONED as `unreachable`. One in flight per
+  volume: the slot frees only when the task really returns, so a second call behind a hung mount answers `unreachable`
+  at once instead of parking another thread.
+- **Stop reaches it.** `ToolDispatcher::dispatch` takes the turn's `CancellationToken`, and `view::dispatch` routes
+  `list_dir` to `execute_list_dir_cancellable` with it: Stop answers `cancelled` at once (the call keeps its result
+  row) and the abandoned task frees its slot when it returns. An AI client's call gets a fresh token, and dropping it
+  (the client hanging up) flips the read's token too. Every other handler ignores the token today.
+- **The cap**: `LIVE_ENTRY_CAP` = 10,000 entries kept, the first ones in the provider's order (folders first, then
+  names), so a capped folder pages over a stable set; the requested sort applies within it, with `truncated: true`,
+  `totalIsLowerBound: true`, and `authoritative: false`. An `offset` at or past the cap is refused before reading,
+  pointing at a subfolder or `search`. ⚠️ The cap bounds what's KEPT, not what the provider reads: no `Volume` lists
+  in pages, so a 200,000-entry folder still materializes once inside the provider, as it does for a pane.
+- **The listing is the pane's open** (`cmdr_listing::entries_as_stored`), so a typed path in another Unicode form (an NFD
+  `Rymdskottkärra AB` against an NFC share) finds the stored spelling.
+
+Its misses ride the same shape as the resolver's (`LocationMissResult::on`, `location` naming the volume):
+`needsDiskAccess` (the FDA question is open, or macOS privacy refused the read; the `detail` says which),
+`unreachable` (past the deadline, another read on the volume still stuck, or the volume dropping mid-read), `notFound`
+(nothing there, a link loop, or a link off the volume, whose `detail` names the volume and path to ask instead),
+`excluded` (names the component, and that `search` with `excludeSystemDirs: false` sees inside), `permissionDenied`
+(the folder's own permissions: Full Disk Access won't help), and `cancelled`.
 
 ## The honesty (coverage) contract
 

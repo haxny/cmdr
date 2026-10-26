@@ -19,6 +19,7 @@
 
 use serde_json::{Value, json};
 use tauri::{AppHandle, Runtime};
+use tokio_util::sync::CancellationToken;
 
 use crate::agent::llm::types::{AgentToolCall, AgentToolResult, ToolId};
 use crate::agent::tools::propose::evidence::EvidenceScope;
@@ -98,15 +99,25 @@ pub struct DispatchOutcome {
     pub proposal: Option<RenameProposalSnapshot>,
 }
 
-pub async fn dispatch<R: Runtime>(app: &AppHandle<R>, scope: EvidenceScope, call: &AgentToolCall) -> DispatchOutcome {
-    let mut outcome = route_call(app, scope, call).await;
+pub async fn dispatch<R: Runtime>(
+    app: &AppHandle<R>,
+    scope: EvidenceScope,
+    call: &AgentToolCall,
+    cancel: &CancellationToken,
+) -> DispatchOutcome {
+    let mut outcome = route_call(app, scope, call, cancel).await;
     // The single exit every path funnels through, so no branch above can answer a propose call
     // without saying whether anything was staged.
     ensure_review_verdict(&call.tool, &mut outcome.result);
     outcome
 }
 
-async fn route_call<R: Runtime>(app: &AppHandle<R>, scope: EvidenceScope, call: &AgentToolCall) -> DispatchOutcome {
+async fn route_call<R: Runtime>(
+    app: &AppHandle<R>,
+    scope: EvidenceScope,
+    call: &AgentToolCall,
+    cancel: &CancellationToken,
+) -> DispatchOutcome {
     if let Some(refusal) = refuse_unavailable(&call.call_id, &call.tool) {
         return DispatchOutcome {
             result: refusal,
@@ -147,9 +158,13 @@ async fn route_call<R: Runtime>(app: &AppHandle<R>, scope: EvidenceScope, call: 
     }
     // `propose_suggestions` is the one registry tool that needs to know WHICH thread asked:
     // a sweep records the conversation it came out of, and the registry path (an external
-    // MCP client) has none. Everything else goes through the plain dispatch.
+    // MCP client) has none. `list_dir` is the one that needs the TURN: its live read can
+    // wait on a slow volume, and Stop has to end that wait. Everything else goes through
+    // the plain dispatch.
     let outcome = if call.tool == ToolId::ProposeSuggestions {
         crate::agent::tools::suggestions::propose_in_thread(app, scope.conversation_id(), &call.arguments).await
+    } else if call.tool == ToolId::ListDir {
+        crate::agent::tools::read::listing::execute_list_dir_cancellable(app, &call.arguments, cancel).await
     } else {
         execute_tool(app, Consumer::Agent, call.tool.as_wire_name(), &call.arguments).await
     };

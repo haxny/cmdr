@@ -275,7 +275,11 @@ fn program_to_deltas(program: Program) -> Vec<Result<AgentDelta, AgentLlmError>>
 pub(super) struct OkDispatcher;
 
 impl ToolDispatcher for OkDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -305,7 +309,11 @@ impl FailingDispatcher {
 }
 
 impl ToolDispatcher for FailingDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.dispatched
                 .lock()
@@ -339,7 +347,11 @@ impl CountingOkDispatcher {
 }
 
 impl ToolDispatcher for CountingOkDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.dispatched
                 .lock()
@@ -365,7 +377,11 @@ pub(super) struct SleepingDispatcher {
 }
 
 impl ToolDispatcher for SleepingDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             // allowed-test-sleep: this stub's whole job is to burn wall-time budget, and under
             // `start_paused` the runtime advances the clock rather than waiting
@@ -389,13 +405,46 @@ pub(super) struct CancellingDispatcher {
 }
 
 impl ToolDispatcher for CancellingDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             self.token.cancel();
             ToolDispatchOutcome {
                 result: AgentToolResult {
                     call_id: call.call_id.clone(),
                     content: json!({ "ok": true }),
+                    elided: false,
+                },
+                proposal: None,
+            }
+        }
+        .boxed()
+    }
+}
+
+/// Waits for the token the TURN hands it, the way a live `list_dir` read waits on a slow
+/// volume: it answers only once Stop fires. `reached` says the call is in flight.
+#[derive(Default)]
+pub(super) struct StopAwareDispatcher {
+    pub(super) reached: tokio::sync::Notify,
+}
+
+impl ToolDispatcher for StopAwareDispatcher {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
+        async move {
+            self.reached.notify_one();
+            cancel.cancelled().await;
+            ToolDispatchOutcome {
+                result: AgentToolResult {
+                    call_id: call.call_id.clone(),
+                    content: json!({ "miss": "cancelled" }),
                     elided: false,
                 },
                 proposal: None,

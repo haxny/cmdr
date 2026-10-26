@@ -349,7 +349,7 @@ async fn drive(
         for call in calls {
             let (result, proposal) = match failed_calls.judge(call) {
                 Repeat::Fresh => {
-                    let dispatch = dispatcher.dispatch(call).await;
+                    let dispatch = dispatcher.dispatch(call, cancel).await;
                     if !dispatch_ok(&dispatch.result) {
                         failed_calls.record_failure(call, &dispatch.result.content);
                     }

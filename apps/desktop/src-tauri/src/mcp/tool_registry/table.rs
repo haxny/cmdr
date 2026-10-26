@@ -485,7 +485,7 @@ mcp_tools! {
         run: app_params crate::agent::tools::propose::rename::execute_propose_rename_plan
     },
     "list_dir" => {
-        desc: "List a folder's children from the drive index (never the disk), plus its recursive size total. Sort by name, size, or modified; page with limit/offset. sortBy size ranks files and folders together by space used, to find where space goes inside ONE folder; search ranks a whole drive.",
+        desc: "List a folder's children and recursive size from the drive index; an unindexed folder is read live, without folder sizes. Sort by name, size, or modified; page with limit/offset. sortBy size ranks files and folders together by space used, to find where space goes inside ONE folder; search ranks a whole drive.",
         schema: crate::agent::tools::read::listing::list_dir_schema(),
         consumers: &[Consumer::AiClient, Consumer::Agent],
         access: Access::Read,

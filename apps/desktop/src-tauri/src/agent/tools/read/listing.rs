@@ -1,13 +1,14 @@
-//! The `list_dir` tool, over the drive index.
+//! The `list_dir` tool, over the drive index, or one live read where no index
+//! lists the folder.
 //!
 //! The location is placed ONCE by `crate::location`'s resolver, and that volume's
 //! index answers: a dead mount point is a typed miss, ❌ never a second routing of
 //! the path onto `root`'s index (`agent/tools/DETAILS.md` § The location contract).
 //!
 //! It REUSES the shipped index query cores (`Index::list_children`, `dir_stats`,
-//! `dir_stats_batch`) — it reads the index and SQLite only,
-//! never the disk, so it's safe on a dead mount. It never re-derives listing
-//! logic. The one thing no index query does is rank a folder's children by size,
+//! `dir_stats_batch`) and never re-derives listing logic. A connected volume whose
+//! index doesn't list the folder answers from one bounded readdir instead
+//! (`listing/live.rs`, § The live source); nothing else here touches the disk. The one thing no index query does is rank a folder's children by size,
 //! so `sortBy: "size"` batches `get_dir_stats` over the subdirectories and sorts
 //! here.
 //!
@@ -38,9 +39,11 @@
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime};
+use tokio_util::sync::CancellationToken;
 
 use super::join_child_path;
 use crate::file_system::volume::SpaceInfo;
+use crate::file_system::volume::manager::get_volume_manager;
 use crate::index_host::index;
 use crate::location::Location;
 use crate::location::miss::{LocationMissResult, volume_not_connected};
@@ -51,8 +54,10 @@ use crate::search::format_size;
 use cmdr_index::store::DirStats;
 use cmdr_index::{Freshness, IndexStatusResponse};
 
+mod live;
 mod rows;
 
+pub(crate) use live::{GatePolicy, LIVE_READ, LiveAsk, answer_live};
 use rows::qualified_size;
 pub(crate) use rows::{ChildEntry, RowKind, SizeClaim, human_size};
 
@@ -70,6 +75,9 @@ const MAX_LIMIT: usize = 1_000;
 pub enum ListSource {
     /// The volume's live drive index.
     Index,
+    /// One readdir of the connected volume, just now: its index has no row here
+    /// (or it has no index at all). `live.rs`.
+    Live,
 }
 
 /// The index's honesty for a read: where the rows came from, its freshness token,
@@ -423,6 +431,10 @@ pub struct ListDirResult {
     /// in the index (`children: None`) — never a wrong zero.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total: Option<usize>,
+    /// `true` when `total` counts only what a capped live read kept, so the folder
+    /// holds at least that many.
+    #[serde(skip_serializing_if = "crate::agent::tools::read::is_false")]
+    pub total_is_lower_bound: bool,
     /// How many children `children` actually carries.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub returned: Option<usize>,
@@ -533,6 +545,7 @@ pub(crate) fn build_list_dir(
         size: stats
             .map(|s| SizeStats::from_dir_stats(s, IndexStatusResponse::walk_affects(&volume.walked_roots, path))),
         total,
+        total_is_lower_bound: false,
         returned,
         offset: opts.offset,
         truncated,
@@ -563,7 +576,20 @@ pub fn list_dir_schema() -> Value {
     })
 }
 
-pub async fn execute_list_dir<R: Runtime>(_app: &AppHandle<R>, params: &Value) -> ToolResult {
+/// The registry's handler. An AI client's call has no turn to stop it, but
+/// dropping the request still stops a live read (`live::run_bounded`).
+pub async fn execute_list_dir<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
+    execute_list_dir_cancellable(app, params, &CancellationToken::new()).await
+}
+
+/// `list_dir` with the turn's cancel, so Stop ends a live read that's waiting
+/// on a slow volume (`agent::tools::view::dispatch` routes the agent's calls
+/// here).
+pub(crate) async fn execute_list_dir_cancellable<R: Runtime>(
+    _app: &AppHandle<R>,
+    params: &Value,
+    cancel: &CancellationToken,
+) -> ToolResult {
     let input =
         LocationInput::from_params(params).ok_or_else(|| ToolError::invalid_params("Missing 'path' parameter"))?;
     let opts = ListOptions::from_params(params)?;
@@ -572,8 +598,7 @@ pub async fn execute_list_dir<R: Runtime>(_app: &AppHandle<R>, params: &Value) -
         Ok(resolved) => resolved,
         Err(miss) => return to_value(&LocationMissResult::from(miss)),
     };
-    // The drive index is this tool's only source, and a volume that isn't
-    // registered has no live index to read.
+    // Both sources need the volume connected: the live index and a live read.
     if !resolved.live {
         return to_value(&volume_not_connected(&facts, &resolved));
     }
@@ -583,11 +608,31 @@ pub async fn execute_list_dir<R: Runtime>(_app: &AppHandle<R>, params: &Value) -
     let rows = index()
         .list_children(index_id, &location.path)
         .map_err(|e| ToolError::internal(e.to_string()))?;
+    let status = index().volume_status(index_id);
+    let space = crate::mcp::resources::volumes::space_summary(&location.volume_id);
+    let Some(rows) = rows else {
+        // No index lists this folder, so the volume itself answers, once.
+        let view = VolumeView {
+            enabled: status.enabled,
+            freshness: status.freshness,
+            block: VolumeBlock::new(location.volume_id.clone(), space),
+            walked_roots: Vec::new(),
+        };
+        return answer_live(LiveAsk {
+            resolved: &resolved,
+            facts: &facts,
+            opts: &opts,
+            view: &view,
+            volume: get_volume_manager().get(&location.volume_id),
+            cancel,
+            cfg: LIVE_READ,
+            policy: GatePolicy::now(),
+        })
+        .await;
+    };
     let stats = index()
         .dir_stats(index_id, &location.path)
         .map_err(|e| ToolError::internal(e.to_string()))?;
-    let status = index().volume_status(index_id);
-    let space = crate::mcp::resources::volumes::space_summary(&location.volume_id);
     // Resolved ONCE, then asked per row. Every size below is only as honest as the
     // walked ground in here: without it a folder mid-walk reads as a settled floor,
     // which is exactly when its number is furthest from the truth.
@@ -597,19 +642,13 @@ pub async fn execute_list_dir<R: Runtime>(_app: &AppHandle<R>, params: &Value) -
         block: VolumeBlock::new(location.volume_id.clone(), space),
         walked_roots: index().status(index_id).map(|s| s.walked_roots).unwrap_or_default(),
     };
-
-    let page = match rows {
-        None => None,
-        Some(rows) => {
-            let children: Vec<ChildEntry> = rows.iter().map(child_from_row).collect();
-            let folder = IndexedFolder {
-                index_id,
-                path: &location.path,
-            };
-            Some(page_with_folder_sizes(&folder, children, &opts, &volume.walked_roots)?)
-        }
+    let children: Vec<ChildEntry> = rows.iter().map(child_from_row).collect();
+    let folder = IndexedFolder {
+        index_id,
+        path: &location.path,
     };
-    to_value(&build_list_dir(location, page, stats.as_ref(), &volume, &opts))
+    let page = page_with_folder_sizes(&folder, children, &opts, &volume.walked_roots)?;
+    to_value(&build_list_dir(location, Some(page), stats.as_ref(), &volume, &opts))
 }
 
 /// The listed folder as the index knows it: which index holds its rows, and its
@@ -713,3 +752,6 @@ fn child_from_row(row: &cmdr_index::store::EntryRow) -> ChildEntry {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod live_shape_tests;

@@ -20,6 +20,36 @@ pub(crate) enum MissToken {
     /// The volume resolved, but it isn't connected and no source the tool has can
     /// answer for it.
     VolumeNotConnected,
+    /// Reading the place would raise a macOS privacy prompt (the Full Disk Access
+    /// question is still open), or macOS privacy refused the read.
+    NeedsDiskAccess,
+    /// The volume didn't answer in time, or an earlier read on it is still stuck.
+    Unreachable,
+    /// Nothing is at this path on the volume, or it leads off the volume.
+    NotFound,
+    /// The place is a system, build, or cache folder a default search leaves out.
+    Excluded,
+    /// The folder's own permissions refuse the read (not macOS privacy).
+    PermissionDenied,
+    /// The user stopped the turn while the place was being read.
+    Cancelled,
+}
+
+impl LocationMissResult {
+    /// A miss on a place that resolved: `location` names the volume.
+    pub(crate) fn on(location: &super::Location, miss: MissToken, detail: String) -> Self {
+        Self {
+            miss,
+            location: LocationInput {
+                volume_id: Some(location.volume_id.clone()),
+                path: location.path.clone(),
+            },
+            detail,
+            root: None,
+            nearby: None,
+            same_share_as: None,
+        }
+    }
 }
 
 /// The wire shape of every location miss.

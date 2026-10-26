@@ -33,7 +33,8 @@ Tauri-free; Cmdr hosts it from `apps/desktop/src-tauri/src/listing_host/`.
   doesn't record sorts by Modified (`EffectiveSort::resolve`), ❌ never written back as the request. `DETAILS.md` §
   "Requested and effective sort".
 - **A listing's path is a `ListingPath`** from `ListingPath::on_volume`; ❌ never compare a raw path to it (MTP).
-- **Only a pane open or a Finder drop/paste resolves a foreign spelling**, ❌ never a walker, scan, or refresh.
+- **Only a pane open, a Finder drop/paste, or Ask Cmdr's live `list_dir` resolves a foreign spelling**, ❌ never a
+  walker, scan, or refresh.
 - **The orphan reaper keys on `last_accessed_ms`**, which index-size writes never bump.
 - **Finder tags are deferred**: every modify path calls `carry_forward_tags` BEFORE storing.
 

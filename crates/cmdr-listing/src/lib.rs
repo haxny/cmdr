@@ -73,7 +73,7 @@ pub use cmdr_collation::NameCollator;
 pub use compare::{CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult};
 pub use diff::{DiffChange, DiffChangeType, DirectoryDiffBatch};
 pub use engine::{Listings, ListingsBuilder};
-pub use foreign_path::stored_spellings;
+pub use foreign_path::{entries_as_stored, stored_spellings};
 pub use fuzzy_jump::FuzzyJumpError;
 pub use index_sizes::IndexSizes;
 pub use listing_id::ListingId;

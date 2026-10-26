@@ -24,7 +24,11 @@ fn migrated_conn() -> Connection {
 struct NoTools;
 
 impl ToolDispatcher for NoTools {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(
+        &'a self,
+        call: &'a AgentToolCall,
+        _cancel: &'a CancellationToken,
+    ) -> BoxFuture<'a, ToolDispatchOutcome> {
         Box::pin(async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {

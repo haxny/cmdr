@@ -592,7 +592,8 @@ argued for. Everything counted exists for a named caller:
   `EffectiveSort` is the one input both sort functions take, and `resolve` its only constructor, so a caller outside a
   listing can't sort by a date without stating which dates its rows carry.
 - **Housekeeping**: `start_orphan_reaper`, `flush_pending_diffs` (the `playwright-e2e` feature only), and
-  `stored_spellings` (a Finder drop's foreign spelling, resolved once).
+  `stored_spellings` (a Finder drop's foreign spelling, resolved once), and `entries_as_stored` (a typed folder path
+  opened the way a pane opens it, for Ask Cmdr's live `list_dir`, which keeps no listing).
 - **The seams** (`host`, the 20 items): the eight traits, the six `No*` defaults (the two list seams need none), and the
   values they exchange (`ListingEnd`, `OpenedListing`, `ForegroundHold`, `MountFacts`, `Unregistered`), plus
   `ScratchVisibility`. The seam files themselves are `pub(crate)`; a host names a seam only as `cmdr_listing::host::X`.
