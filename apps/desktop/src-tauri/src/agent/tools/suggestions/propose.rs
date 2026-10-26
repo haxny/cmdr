@@ -144,10 +144,15 @@ pub(crate) async fn propose_in_thread<R: Runtime>(
     params: &Value,
 ) -> ToolResult {
     let now = now_secs();
-    let planned = match plan_sweep(params, now) {
+    let mut planned = match plan_sweep(params, now) {
         Ok(planned) => planned,
         Err(refusal) => return Ok(plan_refusal_content(&refusal)),
     };
+    // Off the database thread: it's volume I/O, bounded by its own deadline.
+    super::snapshot::freeze_named_sources(&mut planned, |volume_id| {
+        crate::file_system::volume::manager::get_volume_manager().get(volume_id)
+    })
+    .await;
     let db_path = app
         .try_state::<AgentDb>()
         .ok_or_else(|| ToolError::internal("Cmdr's suggestion store isn't open yet."))?
@@ -516,16 +521,7 @@ fn resolve_group(
             naming,
         } => new_group(GroupIntent::Rename { parent, renames }, naming, planned.rationale),
         PlannedOps::Sources { shape, sources } => match sources {
-            PlannedSources::Paths { paths, naming } => {
-                let ops = paths
-                    .into_iter()
-                    .map(|source_path| NewOp {
-                        source_path,
-                        snapshot: None,
-                    })
-                    .collect();
-                new_group(shape.into_intent(ops), naming, planned.rationale)
-            }
+            PlannedSources::Paths { ops, naming } => new_group(shape.into_intent(ops), naming, planned.rationale),
             PlannedSources::Selector(selector) => {
                 let ops = resolve_selector(index, group_index, &selector)?;
                 // `selector_group` is the one place that decides how a pattern names its

@@ -27,6 +27,7 @@ mod group;
 mod input;
 mod list;
 mod propose;
+mod snapshot;
 
 #[cfg(test)]
 mod tests;

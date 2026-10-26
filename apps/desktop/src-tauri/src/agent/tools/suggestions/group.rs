@@ -5,8 +5,8 @@
 //! Both numbers cross the wire (`total` / `returned` / `truncated`) so the model can say
 //! what it actually looked at and page for the rest with `offset`.
 //!
-//! Every per-op number is the CREATION SNAPSHOT: what the index knew when the group was
-//! frozen, not what the file is now. The fields say `snapshot` for exactly that reason — a
+//! Every per-op number is the CREATION SNAPSHOT: what the index (or, for a hand-listed path, one
+//! stat of it) knew when the group was frozen, not what the file is now. The fields say `snapshot` for exactly that reason — a
 //! size relayed as current would be a claim nothing here can back.
 
 use serde::Serialize;

@@ -99,8 +99,9 @@ run leaves no `approved` rows.
   no sort) and the binding's ordered stream. A `(group_id, status)` index would force a sort on the ordered read and buy
   little: nearly every op in a live group is `pending`.
 - **The creation snapshot (`snapshot_size` / `snapshot_mtime` / `snapshot_inode`) is nullable.** A selector fills it
-  from the index row; an explicit path list from the agent has nothing behind it to fill it with. M2's per-source
-  fingerprint check reads it where it exists.
+  from the index row; an explicit path list gets one bounded stat per path through the source volume before the write
+  (`../../tools/suggestions/snapshot.rs`), and a path that was missing, refused, or too slow stays `NULL`. Display
+  only: execution binds a LIVE stat at preflight (`../../suggested_ops/CLAUDE.md`).
 - **`selector` holds the selector's JSON**, for display and provenance. It is never re-run, and that half needs no
   rule: `../../suggested_ops/tests.rs::a_selector_freezes_at_creation_and_is_never_resolved_again` counts the
   resolver's calls across propose → preflight → approve and fails at two. Why freezing is what makes "what the user

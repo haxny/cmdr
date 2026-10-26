@@ -28,7 +28,7 @@ pub struct NewSweep {
 pub struct NewOp {
     pub source_path: String,
     /// What the source looked like when the proposal was created, when the producer knew.
-    /// `None` is normal (an explicit path list carries no index row behind it).
+    /// `None` is normal: a path that was missing, refused, or too slow to stat at creation.
     pub snapshot: Option<OpSnapshot>,
 }
 
