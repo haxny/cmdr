@@ -358,6 +358,10 @@ fn read_duration_none_for_garbage() {
     let dir = tempfile::tempdir().unwrap();
     let path = write_bytes(dir.path(), "g.mp3", vec![0x42; 64]);
     assert_eq!(crate::read::read_duration(&path), None);
+    for name in ["g.m4a", "g.m4b", "g.flac", "g.ogg", "g.opus"] {
+        let junk = write_bytes(dir.path(), name, vec![0x42; 64]);
+        assert_eq!(crate::read::read_duration(&junk), None, "{name}");
+    }
     assert_eq!(crate::read::read_duration(&dir.path().join("missing.mp3")), None);
     let unknown = write_bytes(dir.path(), "g.txt", vec![1, 2, 3]);
     assert_eq!(crate::read::read_duration(&unknown), None);

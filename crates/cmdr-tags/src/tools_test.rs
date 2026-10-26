@@ -385,3 +385,23 @@ fn tag_tool_json_shape() {
     let unit: TagTool = serde_json::from_str(r#"{"kind":"clearRedundantTitles"}"#).unwrap();
     assert_eq!(unit, TagTool::ClearRedundantTitles);
 }
+
+#[test]
+fn tag_tool_case_json_shape() {
+    let tool = TagTool::Case {
+        fields: vec![TagField::Title, TagField::Album],
+        case: CaseTool::Sentence,
+    };
+    let json = serde_json::to_string(&tool).unwrap();
+    assert_eq!(json, r#"{"kind":"case","fields":["title","album"],"case":"sentence"}"#);
+    assert_eq!(serde_json::from_str::<TagTool>(&json).unwrap(), tool);
+}
+
+#[test]
+fn apply_tool_renumber_on_a_single_file_removes_its_track() {
+    let input = [file(&[(TagField::Track, "7"), (TagField::Album, "Book")])];
+    let out = apply_tool(&input, &TagTool::Renumber { start: 1 });
+    assert_eq!(out.len(), 1);
+    assert_eq!(get(&out[0], TagField::Track), None);
+    assert_eq!(one(&out[0], TagField::Album), Some("Book".to_string()));
+}

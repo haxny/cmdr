@@ -39,8 +39,8 @@ pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
 }
 
 /// The playing time of the audio file at `path` from lofty's audio properties, or `None` when
-/// the file can't be opened or parsed (or isn't a supported format). Never panics on bad input
-/// from lofty's errors; the app also wraps the call in `contain_panics`.
+/// the file can't be opened or parsed (or isn't a supported format). Lofty errors become `None`;
+/// lofty panics are not caught here, so the app wraps the call in `contain_panics`.
 pub fn read_duration(path: &Path) -> Option<std::time::Duration> {
     let format = format_of_path(path).ok()?;
     let mut file = File::open(path).ok()?;
