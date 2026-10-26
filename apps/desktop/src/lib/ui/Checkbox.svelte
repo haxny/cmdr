@@ -158,8 +158,12 @@
        indicator has no baseline to give and the browser synthesizes one from the
        border box instead, which sat ~6px off: the whole control (and any prose
        around it) hopped every time the user ticked the box. A fixed indicator with
-       both glyphs absolutely centred inside makes all three states one layout. */
+       both glyphs absolutely centred inside makes all three states one layout.
+       `display: block` is load-bearing: Ark puts `hidden` on the indicator while
+       unchecked, and the UA's `[hidden] { display: none }` would drop it from layout
+       and bring the ~2px hop back. Pinned by `Checkbox.svelte.test.ts`. */
     :global(.checkbox-indicator) {
+        display: block;
         position: relative;
         width: 12px;
         height: 12px;
