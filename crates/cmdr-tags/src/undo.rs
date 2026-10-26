@@ -1,5 +1,5 @@
-//! The undo store: before an apply writes tags, the caller records each file's old tags
-//! here; undo writes them back, at the files' new paths after renames.
+//! The undo store: before an apply writes tags, the caller has the store record each file's
+//! old tags (the store reads them); undo writes them back, at the files' new paths after renames.
 //!
 //! One directory per apply under the root: `<id>/manifest.json` (the snapshot without cover
 //! bytes) and `<id>/<k>.cover` (one file per distinct cover). A record is built in
@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::model::{Cover, FileTags, TagError, TagField};
-use crate::read::{RawTags, read_raw};
+use crate::read::{RawTags, read_snapshot};
 use crate::write::{WriteOptions, restore_tags};
 
 const MANIFEST: &str = "manifest.json";
@@ -129,17 +129,18 @@ impl UndoStore {
         Ok(Self { root, limits })
     }
 
-    /// Records the old tags of an apply's files, replacing any record with the same `id`,
-    /// then prunes the oldest applies past the limits. Each file is also read for what
-    /// `FileTags` doesn't hold (track and disc totals, an MP3's `TPE3`), so call it before the
-    /// apply writes. Returns once the record is on disk.
-    pub fn record(&self, id: &ApplyId, before: &[(PathBuf, FileTags)]) -> Result<(), TagError> {
+    /// Records the current tags of an apply's files, replacing any record with the same `id`,
+    /// then prunes the oldest applies past the limits. The store reads each file itself, once:
+    /// its tags and what `FileTags` doesn't hold (track and disc totals, an MP3's `TPE3`), one
+    /// consistent snapshot. Call it before the apply writes. A file that can't be read fails
+    /// the record and nothing is stored. Returns once the record is on disk.
+    pub fn record(&self, id: &ApplyId, paths: &[PathBuf]) -> Result<(), TagError> {
         let dir = self.apply_dir(id)?;
         let staging = self.root.join(format!(".{}{STAGING_SUFFIX}", id.0));
         let seq = self.stored()?.iter().map(|s| s.seq + 1).max().unwrap_or(0);
         remove_dir_if_there(&staging)?;
         fs::create_dir(&staging)?;
-        if let Err(err) = write_apply(&staging, seq, before) {
+        if let Err(err) = write_apply(&staging, seq, paths) {
             if let Err(cleanup) = fs::remove_dir_all(&staging) {
                 log::warn!(target: "cmdr_tags::undo", "Couldn't remove an unfinished undo record: {cleanup}");
             }
@@ -303,12 +304,16 @@ fn apply_dirs(root: &Path) -> Result<Vec<PathBuf>, TagError> {
     Ok(dirs)
 }
 
-/// Writes the covers, each distinct one once (a 100-chapter book shares one), then the
-/// manifest that makes the apply exist.
-fn write_apply(dir: &Path, seq: u64, before: &[(PathBuf, FileTags)]) -> Result<(), TagError> {
+/// Reads each file, writes the covers, each distinct one once (a 100-chapter book shares
+/// one), then the manifest that makes the apply exist.
+fn write_apply(dir: &Path, seq: u64, paths: &[PathBuf]) -> Result<(), TagError> {
+    let snapshots = paths
+        .iter()
+        .map(|path| read_snapshot(path).map(|(tags, raw)| (path, tags, raw)))
+        .collect::<Result<Vec<_>, _>>()?;
     let mut files: HashMap<&[u8], String> = HashMap::new();
-    let mut entries = Vec::with_capacity(before.len());
-    for (path, tags) in before {
+    let mut entries = Vec::with_capacity(snapshots.len());
+    for (path, tags, raw) in &snapshots {
         let cover = match &tags.cover {
             Some(cover) => {
                 let file = match files.get(cover.data.as_slice()) {
@@ -328,11 +333,11 @@ fn write_apply(dir: &Path, seq: u64, before: &[(PathBuf, FileTags)]) -> Result<(
             None => None,
         };
         entries.push(Entry {
-            path: path.clone(),
+            path: (*path).clone(),
             fields: tags.fields.clone(),
             extras: tags.extras.clone(),
             cover,
-            raw: read_raw(path)?,
+            raw: raw.clone(),
         });
     }
     let manifest = Manifest {

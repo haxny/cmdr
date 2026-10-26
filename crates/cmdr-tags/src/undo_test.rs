@@ -67,7 +67,7 @@ fn restore_puts_the_snapshot_back_cover_and_removed_extra_included() {
     let before = snapshot(&paths);
     assert!(before.iter().all(|(_, t)| t.cover.is_some() && !t.extras.is_empty()));
     let store = UndoStore::open(root.path().join("undo"), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     for path in &paths {
         change(path);
         assert_ne!(read(path), before.iter().find(|(p, _)| p == path).unwrap().1);
@@ -101,7 +101,7 @@ fn record_keeps_covers_beside_the_manifest_not_in_it() {
     assert_eq!(cover.len(), 10_000);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
 
-    store.record(&id("op-1"), &snapshot(&[path])).unwrap();
+    store.record(&id("op-1"), &[path]).unwrap();
 
     let apply = root.path().join("op-1");
     assert_eq!(listing(&apply), strings(&["0.cover", "manifest.json"]));
@@ -125,7 +125,7 @@ fn entries_with_the_same_cover_share_one_file() {
     let before = snapshot(&paths);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
 
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     for path in &paths {
         change(path);
     }
@@ -148,7 +148,7 @@ fn a_file_without_a_cover_gets_its_cover_removed_again() {
     let path = write_flac(files.path(), "a.flac", VorbisComments::new(), 0);
     let before = snapshot(std::slice::from_ref(&path));
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), std::slice::from_ref(&path)).unwrap();
     write(
         &path,
         &FileTags {
@@ -171,7 +171,7 @@ fn restore_follows_renames_recorded_with_repath() {
     let paths = tagged_files(files.path());
     let before = snapshot(&paths);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     let renamed = files.path().join("renamed.mp3");
     change(&paths[0]);
     fs::rename(&paths[0], &renamed).unwrap();
@@ -217,9 +217,8 @@ fn repath_swaps_two_names() {
         },
         &MUSIC,
     );
-    let before = snapshot(&[a.clone(), b.clone()]);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &[a.clone(), b.clone()]).unwrap();
     // The apply swapped the two files' names.
     let tmp = files.path().join("swap.flac");
     fs::rename(&a, &tmp).unwrap();
@@ -242,7 +241,7 @@ fn a_deleted_file_is_missing_and_a_failing_one_does_not_stop_the_rest() {
     let paths = tagged_files(files.path());
     let before = snapshot(&paths);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     fs::remove_file(&paths[0]).unwrap();
     fs::write(&paths[1], b"no longer an M4B").unwrap();
     change(&paths[2]);
@@ -267,7 +266,7 @@ fn restore_leaves_the_record_until_forget() {
     let root = tempfile::tempdir().unwrap();
     let paths = tagged_files(files.path());
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &snapshot(&paths)).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
 
     store.restore(&id("op-1"), &MUSIC).unwrap();
     store.restore(&id("op-1"), &MUSIC).unwrap();
@@ -285,11 +284,11 @@ fn recording_an_existing_id_replaces_it() {
     let root = tempfile::tempdir().unwrap();
     let paths = tagged_files(files.path());
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &snapshot(&paths)).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     change(&paths[2]);
     let second = snapshot(&paths[2..]);
 
-    store.record(&id("op-1"), &second).unwrap();
+    store.record(&id("op-1"), &paths[2..]).unwrap();
     let report = store.restore(&id("op-1"), &MUSIC).unwrap();
 
     assert_eq!(report.restored, vec![paths[2].clone()]);
@@ -309,12 +308,12 @@ fn pruning_keeps_the_newest_applies() {
     let store = UndoStore::open(root.path().to_path_buf(), limits).unwrap();
 
     for name in ["op-a", "op-b", "op-c"] {
-        store.record(&id(name), &snapshot(&paths[2..])).unwrap();
+        store.record(&id(name), &paths[2..]).unwrap();
     }
 
     assert_eq!(listing(root.path()), strings(&["op-b", "op-c"]));
     // Order is by recording, not by name.
-    store.record(&id("op-0"), &snapshot(&paths[2..])).unwrap();
+    store.record(&id("op-0"), &paths[2..]).unwrap();
     assert_eq!(listing(root.path()), strings(&["op-0", "op-c"]));
 }
 
@@ -329,8 +328,8 @@ fn pruning_by_size_never_drops_the_apply_just_recorded() {
     };
     let store = UndoStore::open(root.path().to_path_buf(), limits).unwrap();
 
-    store.record(&id("op-a"), &snapshot(&paths)).unwrap();
-    store.record(&id("op-b"), &snapshot(&paths)).unwrap();
+    store.record(&id("op-a"), &paths).unwrap();
+    store.record(&id("op-b"), &paths).unwrap();
 
     assert_eq!(listing(root.path()), strings(&["op-b"]));
     store.restore(&id("op-b"), &MUSIC).unwrap();
@@ -441,7 +440,7 @@ fn restore_brings_back_track_and_disc_totals() {
     };
     let before = snapshot(&paths);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     for path in &paths {
         assert_eq!(read_raw(path).unwrap(), totals, "{path:?}");
         write(path, &read(path), &MUSIC);
@@ -478,7 +477,7 @@ fn restore_after_an_audiobook_apply_brings_back_composer_and_conductor() {
     let paths = vec![mp3.clone(), m4b, flac];
     let before = snapshot(&paths);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store.record(&id("op-1"), &before).unwrap();
+    store.record(&id("op-1"), &paths).unwrap();
     for path in &paths {
         write(path, &read(path), &BOOK);
         assert!(!read(path).fields.contains_key(&TagField::Composer), "{path:?}");
@@ -503,9 +502,7 @@ fn an_extra_that_cannot_come_back_fails_the_file() {
     freeform(&mut ilst, "org.example", "PERFORMER", &["Cizi"]);
     let path = write_m4a(files.path(), "a.m4a", &ilst);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
-    store
-        .record(&id("op-1"), &snapshot(std::slice::from_ref(&path)))
-        .unwrap();
+    store.record(&id("op-1"), std::slice::from_ref(&path)).unwrap();
     change(&path);
 
     let report = store.restore(&id("op-1"), &MUSIC).unwrap();
@@ -558,13 +555,27 @@ fn a_staging_record_is_neither_an_apply_nor_counted() {
         max_bytes: u64::MAX,
     };
     let store = UndoStore::open(root.path().to_path_buf(), limits).unwrap();
-    store.record(&id("op-a"), &snapshot(&paths[2..])).unwrap();
+    store.record(&id("op-a"), &paths[2..]).unwrap();
     // A record another call is still building.
     let staging = root.path().join(".op-z.staging");
     fs::create_dir(&staging).unwrap();
     fs::copy(root.path().join("op-a/manifest.json"), staging.join("manifest.json")).unwrap();
 
-    store.record(&id("op-b"), &snapshot(&paths[2..])).unwrap();
+    store.record(&id("op-b"), &paths[2..]).unwrap();
 
     assert_eq!(listing(root.path()), strings(&[".op-z.staging", "op-b"]));
+}
+
+#[test]
+fn record_reads_the_files_itself_and_stores_nothing_when_one_cannot_be_read() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let paths = tagged_files(files.path());
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    let gone = files.path().join("gone.mp3");
+
+    let err = store.record(&id("op-1"), &[paths[0].clone(), gone]).unwrap_err();
+
+    assert!(matches!(err, TagError::Io(ErrorKind::NotFound, _)), "{err:?}");
+    assert!(listing(root.path()).is_empty());
 }

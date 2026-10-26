@@ -38,39 +38,13 @@ pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
     read_from(&mut File::open(path)?, format, parse_options())
 }
 
-/// Reads the tags of `format` from `source` with `options`. The writer reads the file it
-/// just saved through here too, with its own strict options.
+/// Reads the tags of `format` from `source` with `options`.
 pub(crate) fn read_from<R: Read + Seek>(
     source: &mut R,
     format: AudioFormat,
     options: ParseOptions,
 ) -> Result<FileTags, TagError> {
-    match format {
-        AudioFormat::Mp3 => {
-            let file = MpegFile::read_from(source, options).map_err(parse_error)?;
-            Ok(file.id3v2().map(read_id3).unwrap_or_default())
-        }
-        AudioFormat::Mp4 => {
-            let file = Mp4File::read_from(source, options).map_err(parse_error)?;
-            Ok(file.ilst().map(read_ilst).unwrap_or_default())
-        }
-        AudioFormat::Flac => {
-            let file = FlacFile::read_from(source, options).map_err(parse_error)?;
-            let empty = VorbisComments::new();
-            let comments = file.vorbis_comments().unwrap_or(&empty);
-            Ok(read_vorbis(comments, flac_pictures(&file)))
-        }
-        AudioFormat::OggVorbis => {
-            let file = VorbisFile::read_from(source, options).map_err(parse_error)?;
-            let comments = file.vorbis_comments();
-            Ok(read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)))
-        }
-        AudioFormat::Opus => {
-            let file = OpusFile::read_from(source, options).map_err(parse_error)?;
-            let comments = file.vorbis_comments();
-            Ok(read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)))
-        }
-    }
+    read_both_from(source, format, options).map(|(tags, _)| tags)
 }
 
 /// What a file holds beyond [`FileTags`] that a write can change and an undo must put back:
@@ -85,40 +59,56 @@ pub(crate) struct RawTags {
 }
 
 /// Reads the [`RawTags`] of the audio file at `path`, parsing as [`read_tags`] does.
+#[cfg(test)]
 pub(crate) fn read_raw(path: &Path) -> Result<RawTags, TagError> {
-    let format = format_of_path(path)?;
-    read_raw_from(&mut File::open(path)?, format, parse_options())
+    read_snapshot(path).map(|(_, raw)| raw)
 }
 
-/// Reads the [`RawTags`] of `format` from `source` with `options`.
-pub(crate) fn read_raw_from<R: Read + Seek>(
+/// The [`FileTags`] and [`RawTags`] of the audio file at `path` from one parse, so both
+/// describe the same state of the file (the undo store's snapshot).
+pub(crate) fn read_snapshot(path: &Path) -> Result<(FileTags, RawTags), TagError> {
+    let format = format_of_path(path)?;
+    read_both_from(&mut File::open(path)?, format, parse_options())
+}
+
+/// The [`FileTags`] and [`RawTags`] of `format` from `source` with `options`, from one parse.
+/// The writer reads the file it just saved through here too, with its own strict options.
+pub(crate) fn read_both_from<R: Read + Seek>(
     source: &mut R,
     format: AudioFormat,
     options: ParseOptions,
-) -> Result<RawTags, TagError> {
+) -> Result<(FileTags, RawTags), TagError> {
+    let empty = VorbisComments::new();
     Ok(match format {
         AudioFormat::Mp3 => {
             let file = MpegFile::read_from(source, options).map_err(parse_error)?;
-            file.id3v2().map(raw_id3).unwrap_or_default()
+            file.id3v2().map(|t| (read_id3(t), raw_id3(t))).unwrap_or_default()
         }
         AudioFormat::Mp4 => {
             let file = Mp4File::read_from(source, options).map_err(parse_error)?;
-            file.ilst().map(raw_ilst).unwrap_or_default()
+            file.ilst().map(|t| (read_ilst(t), raw_ilst(t))).unwrap_or_default()
         }
         AudioFormat::Flac => {
             let file = FlacFile::read_from(source, options).map_err(parse_error)?;
-            file.vorbis_comments().map(raw_vorbis).unwrap_or_default()
+            let comments = file.vorbis_comments().unwrap_or(&empty);
+            (read_vorbis(comments, flac_pictures(&file)), raw_vorbis(comments))
         }
-        AudioFormat::OggVorbis => raw_vorbis(
-            VorbisFile::read_from(source, options)
-                .map_err(parse_error)?
-                .vorbis_comments(),
-        ),
-        AudioFormat::Opus => raw_vorbis(
-            OpusFile::read_from(source, options)
-                .map_err(parse_error)?
-                .vorbis_comments(),
-        ),
+        AudioFormat::OggVorbis => {
+            let file = VorbisFile::read_from(source, options).map_err(parse_error)?;
+            let comments = file.vorbis_comments();
+            (
+                read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)),
+                raw_vorbis(comments),
+            )
+        }
+        AudioFormat::Opus => {
+            let file = OpusFile::read_from(source, options).map_err(parse_error)?;
+            let comments = file.vorbis_comments();
+            (
+                read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)),
+                raw_vorbis(comments),
+            )
+        }
     })
 }
 

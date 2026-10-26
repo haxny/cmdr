@@ -33,7 +33,7 @@ use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::{
     FREEFORM_FIELDS, ITUNES_MEAN, JOIN, RawTags, TXXX_FIELDS, UNKNOWN_MIME, VORBIS_FIELDS, VORBIS_TOTALS,
     cover_position, format_of_path, fourcc_field, frame_field, freeform_field, id3_pictures, parse_error,
-    parse_options, raw_id3, read_from, read_id3, read_ilst, read_raw_from, read_vorbis, txxx_field,
+    parse_options, raw_id3, read_both_from, read_id3, read_ilst, read_vorbis, txxx_field,
 };
 use crate::save::save_safely;
 use crate::write_extras::{added_extras, dropped_extras, upper_extra_keys};
@@ -326,9 +326,7 @@ fn save<T: TagExt>(
     tag.save_to(out, options).map_err(write_error)?;
     let unparseable = |e: TagError| TagError::Write(format!("the written file doesn't parse: {e}"));
     out.rewind()?;
-    let written = read_from(out, format, write_parse_options(format)).map_err(unparseable)?;
-    out.rewind()?;
-    let written_raw = read_raw_from(out, format, write_parse_options(format)).map_err(unparseable)?;
+    let (written, written_raw) = read_both_from(out, format, write_parse_options(format)).map_err(unparseable)?;
     let differs: Vec<&str> = [
         ("fields", written.fields != expected.fields),
         ("cover", written.cover != expected.cover),

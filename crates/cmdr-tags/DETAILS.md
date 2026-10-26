@@ -128,8 +128,9 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   both `UndoLimits` hold (default 50 applies and 512 MiB, manifests plus covers, each file counted once); the apply just
   recorded is never pruned, and a prune that fails is logged, not returned, since the record is complete. Recording an
   existing `id` replaces it. Staging directories are neither applies nor counted.
-- **`raw`**: `record` also reads each file's `RawTags` (track and disc totals, MP3 `TPE3`), which `FileTags` doesn't
-  hold, so call it before the apply writes.
+- **`record(id, paths)` reads the files itself**, each with one parse (`read::read_snapshot`): the `FileTags` and the
+  `RawTags` (track and disc totals, MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states
+  of the file. Call it before the apply writes. A file that can't be read fails the whole record; nothing is stored.
 - **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
   works), and a move whose source isn't recorded is ignored.
 - **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
