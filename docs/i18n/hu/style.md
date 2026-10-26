@@ -218,7 +218,7 @@ CLDR categories: `one`, `other` (verified with `new Intl.PluralRules('hu')`; mat
   mondat alanya `a Cmdr` (`A Cmdr figyeli azokat a mappákat…`), egy felületnév viszont marad `az Ask Cmdr beállításai`.
   ❌ Ne írd vissza az `Az Ask Cmdr…` alakot a mondatokba: ott már nem a panelről van szó, hanem arról, amit az app
   csinál.
-- **Ahol az angol `the AI`-t mond, a magyar `az AI`, nem `a Cmdr`.** A `suggestedOps.*` család (`Az AI indoka`,
+- **Ahol az angol `the AI`-t mond, a magyar `az AI`, nem `a Cmdr`.** A `suggestedOps.*` család (`Miért, az AI szerint:`,
   `Ezeket az AI javasolta`) szándékosan a modellt nevezi meg, nem az appot: a mellette álló, Cmdr-alanyú kulcsok
   (például `suggestedOps.reversible.moveBack`) épp az ellentétét állítják (amit az app ELLENŐRZÖTT), és a kettőnek
   különböző alanyt kell kapnia, különben elveszik a párosítás egész értelme.

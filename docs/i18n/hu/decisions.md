@@ -177,9 +177,11 @@ colon, since `{reason}` covers only it). `one` → `Egy másik fájl`.
 
 `A fájlnév nem használható` / `A mappa neve nem használható` (macOS), no period: it's embedded.
 
-## Javasolt műveletek (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
+## AI-javaslatok (`suggestedOps.*`, `commands.suggestedOpsShow.*`, `menu.view.suggestedOps`)
 
-reject → `Elutasítás`.
+Title `AI-javaslatok` (same English as `fileOperations.mkdir.aiSuggestions*`) over `Javasolt műveletek`; `Why:` →
+`Miért:` like `Miért?`, spoken `Miért, az AI szerint:`. Pills `Ezt vissza tudod vonni:` / `Ezt nem lehet visszavonni:`;
+facts `Forrás` / `Cél` (transfer dialog); tick box `belefoglalás` (Finder); reject → `Elutasítás`.
 
 ## Megkettőzés (`commands.fileDuplicate.*`)
 

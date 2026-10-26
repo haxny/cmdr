@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Javasolt műveletek",
+  "commands.suggestedOpsShow.label": "AI-javaslatok",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Tekintsd át az AI által javasolt fájlműveleteket, és döntsd el, mi fusson",
   "@commands.suggestedOpsShow.description": {

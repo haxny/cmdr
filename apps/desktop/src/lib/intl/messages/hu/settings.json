@@ -1685,15 +1685,15 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
-  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "settings.suggestedOps.suppressApprovalNotice.label": "Jóváhagyási tájékoztató elnyomása az AI-javaslatokban",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
     "sourceHash": "33f9993"
   },
-  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "settings.suggestedOps.suppressApprovalNotice.description": "Az AI-javaslatok párbeszédablak egy tájékoztatóval nyílik meg, amely szerint a benne lévőket az AI javasolta, és semmi nem indul el, amíg jóvá nem hagyod. Kapcsold ezt be (vagy zárd be a tájékoztatót a × gombjával), hogy többé ne jelenjen meg.",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
     "sourceHash": "8d7605d"
   },
-  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "javaslat, jóváhagyás, engedélyezés, értesítés, figyelmeztetés, üzenet, sáv, szalag, mesterséges intelligencia, elrejtés",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },

@@ -154,6 +154,10 @@
     ],
     "hu": [
       {
+        "source": "Archive",
+        "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`Archiválás`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip file a compress suggestion creates (`Archívum`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
+      },
+      {
         "source": "Bytes",
         "reason": "`Bájtok` is the progress bar's row label, paired with `Fájlok`; `Bájt` is the size-unit picker's button, next to `kB`, `MB`, `GB`."
       },
