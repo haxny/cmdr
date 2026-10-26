@@ -2045,9 +2045,7 @@
     "confidence": "high",
     "decision": "A move that could not be confirmed",
     "exceptions": {
-      "errors.eject.busy": "the message also covers copying and deleting, so it names the Vorgang, not Cmdr’s Move command",
       "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren",
-      "multiRename.movedRow": "reordering a row in the preview list, not relocating a file; the announcement names only the new place (Jetzt an Position …), like the rücken family of the move-up/down keys",
       "suggestedOps.reversible.moveBack": "putting files back where they were is zurücklegen (style digest), like the trash undo's Zurücklegen"
     },
     "forms": "button Bewegen; progress Wird bewegt; the one move as a noun → die Bewegung, the act → das Bewegen; moves as an enumerated noun has no German noun, so enumerate verbs (umzubenennen, zu bewegen und aufzuräumen)",
