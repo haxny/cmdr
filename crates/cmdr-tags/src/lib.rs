@@ -11,6 +11,7 @@ mod format;
 mod model;
 mod read;
 pub mod text;
+mod write;
 
 // Dependencies the later tasks (read, write, tools, undo) use; declared now so the
 // crate's manifest is final. Each `as _` goes when its first user lands.
@@ -25,7 +26,10 @@ mod read_test;
 mod test_files;
 #[cfg(test)]
 mod text_test;
+#[cfg(test)]
+mod write_test;
 
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, TagError, TagField};
 pub use read::read_tags;
+pub use write::{WriteOptions, write_tags};

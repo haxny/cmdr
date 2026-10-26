@@ -21,8 +21,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Diacritics stripping for every written text field except Comment and Description.
 unicode-normalization = "0.1"
+# The safe overwrite's temp file, created next to the file it replaces.
+tempfile = "3"
 
 [dev-dependencies]
 # Real tagged audio files for the read/write tests.
 cmdr-media-meta = { path = "../cmdr-media-meta", features = ["testing"] }
-tempfile = "3"

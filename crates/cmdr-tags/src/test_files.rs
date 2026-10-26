@@ -109,23 +109,31 @@ pub fn write_m4a(dir: &Path, name: &str, ilst: &Ilst) -> PathBuf {
 }
 
 /// Writes `comments` into a fresh FLAC named `name` under `dir`, with a front cover of
-/// `cover_len` bytes when it is non-zero.
+/// `cover_len` bytes when it is non-zero. Stand-in audio frames follow the metadata, as in
+/// every real FLAC.
 pub fn write_flac(dir: &Path, name: &str, comments: VorbisComments, cover_len: usize) -> PathBuf {
-    write_vorbis_comments(dir, name, flac_stream(), comments, cover_len)
+    let stream = [flac_stream(), flac_frames()].concat();
+    write_vorbis_stream(dir, name, stream, comments, cover_len)
+}
+
+/// Bytes standing in for FLAC audio frames (lofty reads tags without parsing them).
+pub fn flac_frames() -> Vec<u8> {
+    (0..2000u32).map(|i| (i % 251) as u8).collect()
 }
 
 /// Writes `comments` into a fresh Ogg Vorbis file.
 pub fn write_ogg_vorbis(dir: &Path, name: &str, comments: VorbisComments, cover_len: usize) -> PathBuf {
-    write_vorbis_comments(dir, name, ogg_vorbis_stream(), comments, cover_len)
+    write_vorbis_stream(dir, name, ogg_vorbis_stream(), comments, cover_len)
 }
 
 /// Writes `comments` into a fresh Opus file.
 pub fn write_opus(dir: &Path, name: &str, comments: VorbisComments, cover_len: usize) -> PathBuf {
-    write_vorbis_comments(dir, name, opus_stream(), comments, cover_len)
+    write_vorbis_stream(dir, name, opus_stream(), comments, cover_len)
 }
 
-/// Saves `comments` (and a front cover of `cover_len` bytes when non-zero) into `stream`.
-fn write_vorbis_comments(
+/// Saves `comments` (and a front cover of `cover_len` bytes when non-zero) into `stream`
+/// (FLAC, Ogg Vorbis, or Opus) and writes it as `name` under `dir`.
+pub fn write_vorbis_stream(
     dir: &Path,
     name: &str,
     stream: Vec<u8>,

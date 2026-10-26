@@ -9,26 +9,28 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - `model.rs`: the vocabulary. `TagField` (15 managed fields, `ALL`, `keeps_diacritics`, `is_multi`), `FileTags`
   (`fields`, `cover`, `extras`), `Cover`, `ContentKind`, `TagError`.
 - `format.rs`: `AudioFormat` and `format_of`, by extension only.
-- `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments). Test files are built in
-  `test_files.rs` with lofty's concrete tag types.
-- Later modules (write, tools, undo) land with their tasks; the field map and the undo store layout are in `DETAILS.md`.
+- `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments), and the key tables.
+- `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader, and `save_safely`. Test files
+  are built in `test_files.rs` with lofty's concrete tag types.
+- Later modules (tools, undo) land with their tasks; the undo store layout will be in `DETAILS.md`.
 
 ## Must-knows
 
 - **An empty field is an absent key.** `FileTags::fields` never holds an empty `Vec` or an empty string, and a write
   removes the frame, atom, or key instead of writing `""`, `None`, `n/a`, or "Unknown ...".
 - **No diacritics in any written text field except `Comment`, `Description`, and `Www`** (`TagField::keeps_diacritics`).
-  Stripping happens on write, so a value that reads back with diacritics came from a file we didn't write.
+  The clean-up tools strip them; `write_tags` writes values as given.
 - **Artist = album artist = author; Performer = narrator; Composer is removed for audiobooks** (`ContentKind`).
 - **Genre is multi-value**: repeated Vorbis keys, one freeform data entry per value; where a format stores one string,
   values join with `"; "`.
 - **Track is plain** (`3`); `3/12` only when the caller passes a known total.
 - **MP3 is written as ID3v2.3**, and frames, atoms, and keys we don't manage are left untouched on write. Unmanaged text
-  items surface read-only in `FileTags::extras`.
+  items surface read-only in `FileTags::extras`; dropping a key there removes it on write.
 - **Concrete lofty tag types, not the generic `Tag`**: the generic one loses format-native keys we depend on (why, in
   `DETAILS.md`).
-- **A write is safe-overwrite**: temp copy in the same directory, fsync, rename over the original. ❌ Never write in
-  place.
+- **A write is safe-overwrite** (`save_safely`): temp copy in the same directory, save, parse it back, fsync, rename
+  over the original. ❌ Never write in place. lofty has corrupted files on save; the parse-back is the guard
+  (`DETAILS.md`).
 - **`format_of` goes by extension, case-insensitively.** An unknown extension is `None`, reported as
   `TagError::NotSupported`.
 - **Errors are typed** (`TagError`); ❌ never classify one by its message text.

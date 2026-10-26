@@ -19,27 +19,22 @@ use crate::format::{AudioFormat, format_of};
 use crate::model::{Cover, FileTags, TagError, TagField};
 
 /// The separator the editor joins multiple values with where a format stores one string.
-const JOIN: &str = "; ";
+pub(crate) const JOIN: &str = "; ";
 /// The `mean` of every freeform MP4 atom the editor manages.
-const ITUNES_MEAN: &str = "com.apple.iTunes";
+pub(crate) const ITUNES_MEAN: &str = "com.apple.iTunes";
 /// What a picture without a MIME type is reported as.
-const UNKNOWN_MIME: &str = "application/octet-stream";
+pub(crate) const UNKNOWN_MIME: &str = "application/octet-stream";
 
-fn parse_error(e: impl std::fmt::Display) -> TagError {
+pub(crate) fn parse_error(e: impl std::fmt::Display) -> TagError {
     TagError::Parse(e.to_string())
 }
 
 /// Reads the tags of the audio file at `path`. A file with no tag reads as empty tags.
 /// Formats the editor doesn't handle (WAV, ...) are [`TagError::NotSupported`].
 pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
-    let format = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .and_then(format_of)
-        .ok_or(TagError::NotSupported)?;
+    let format = format_of_path(path)?;
     let mut file = File::open(path)?;
-    // Only tags are wanted; skipping the audio properties also spares a read of the stream.
-    let options = ParseOptions::new().read_properties(false);
+    let options = parse_options();
     match format {
         AudioFormat::Mp3 => {
             let file = MpegFile::read_from(&mut file, options).map_err(parse_error)?;
@@ -65,6 +60,20 @@ pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
             Ok(read_vorbis(comments, comments.pictures()))
         }
     }
+}
+
+/// Only tags are wanted; skipping the audio properties also spares a read of the stream.
+/// Saving a tag never needs them: lofty's tag writers re-read the container themselves.
+pub(crate) fn parse_options() -> ParseOptions {
+    ParseOptions::new().read_properties(false)
+}
+
+/// The format of `path`, by its file name.
+pub(crate) fn format_of_path(path: &Path) -> Result<AudioFormat, TagError> {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .and_then(format_of)
+        .ok_or(TagError::NotSupported)
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -123,11 +132,17 @@ fn put_extra(tags: &mut FileTags, key: String, values: Vec<String>) {
     }
 }
 
-/// The front cover among `pictures`: type `CoverFront`, else the first.
-fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture>) -> Option<Cover> {
-    let pictures: Vec<&Picture> = pictures.collect();
-    let front = pictures.iter().find(|p| p.pic_type() == PictureType::CoverFront);
-    let chosen = front.or_else(|| pictures.first())?;
+/// Which of `pictures` is the cover: the first of type `CoverFront`, else the first.
+/// The writer replaces or removes exactly this one.
+pub(crate) fn cover_position<'a>(pictures: impl Iterator<Item = &'a Picture>) -> Option<usize> {
+    let types: Vec<PictureType> = pictures.map(Picture::pic_type).collect();
+    let front = types.iter().position(|t| *t == PictureType::CoverFront);
+    front.or_else(|| (!types.is_empty()).then_some(0))
+}
+
+/// The cover among `pictures` (see [`cover_position`]).
+fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture> + Clone) -> Option<Cover> {
+    let chosen = pictures.clone().nth(cover_position(pictures)?)?;
     Some(Cover {
         mime: chosen.mime_type().map_or(UNKNOWN_MIME, |m| m.as_str()).to_owned(),
         data: chosen.data().to_vec(),
@@ -137,22 +152,27 @@ fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture>) -> Option<Cover> 
 // ── ID3v2 ─────────────────────────────────────────────────────────────────────
 
 /// What a managed TXXX description maps to; `None` for descriptions that are extras.
-fn txxx_field(description: &str) -> Option<TagField> {
-    const MAP: [(&str, TagField); 6] = [
-        ("Performer", TagField::Performer),
-        ("Translator", TagField::Translator),
-        ("Description", TagField::Description),
-        ("www", TagField::Www),
-        ("Comment", TagField::Comment),
-        ("DiscNumber", TagField::Disc),
-    ];
-    MAP.iter()
+pub(crate) fn txxx_field(description: &str) -> Option<TagField> {
+    TXXX_FIELDS
+        .iter()
+        .chain(&TXXX_LEGACY_FIELDS)
         .find(|(name, _)| name.eq_ignore_ascii_case(description))
         .map(|(_, field)| *field)
 }
 
+/// The TXXX descriptions the writer writes.
+pub(crate) const TXXX_FIELDS: [(&str, TagField); 4] = [
+    ("Performer", TagField::Performer),
+    ("Translator", TagField::Translator),
+    ("Description", TagField::Description),
+    ("www", TagField::Www),
+];
+
+/// TXXX descriptions only read (COMM and TPOS are written instead) and removed on write.
+const TXXX_LEGACY_FIELDS: [(&str, TagField); 2] = [("Comment", TagField::Comment), ("DiscNumber", TagField::Disc)];
+
 /// The field a text frame ID maps to.
-fn frame_field(id: &str) -> Option<TagField> {
+pub(crate) fn frame_field(id: &str) -> Option<TagField> {
     Some(match id {
         "TIT2" => TagField::Title,
         "TPE1" => TagField::Artist,
@@ -178,7 +198,7 @@ fn put_id3(tags: &mut FileTags, field: TagField, raw: &str) {
     );
 }
 
-fn read_id3(id3: &Id3v2Tag) -> FileTags {
+pub(crate) fn read_id3(id3: &Id3v2Tag) -> FileTags {
     let mut tags = FileTags::default();
     let mut legacy: BTreeMap<TagField, String> = BTreeMap::new();
     for frame in id3 {
@@ -215,7 +235,7 @@ fn read_id3(id3: &Id3v2Tag) -> FileTags {
 }
 
 /// Every attached picture of `id3`.
-fn id3_pictures(id3: &Id3v2Tag) -> impl Iterator<Item = &Picture> {
+pub(crate) fn id3_pictures(id3: &Id3v2Tag) -> impl Iterator<Item = &Picture> + Clone {
     id3.into_iter().filter_map(|frame| match frame {
         Frame::Picture(f) => Some(f.picture.as_ref()),
         _ => None,
@@ -249,7 +269,7 @@ fn atom_number<'a>(mut data: impl Iterator<Item = &'a AtomData>) -> Vec<String> 
 }
 
 /// The field a four-character atom maps to.
-fn fourcc_field(fourcc: &[u8; 4]) -> Option<TagField> {
+pub(crate) fn fourcc_field(fourcc: &[u8; 4]) -> Option<TagField> {
     Some(match fourcc {
         b"\xA9alb" => TagField::Album,
         b"\xA9ART" => TagField::Artist,
@@ -264,22 +284,25 @@ fn fourcc_field(fourcc: &[u8; 4]) -> Option<TagField> {
     })
 }
 
+/// The managed freeform atom names (under the iTunes mean), as the writer writes them.
+pub(crate) const FREEFORM_FIELDS: [(&str, TagField); 6] = [
+    ("PERFORMER", TagField::Performer),
+    ("publisher", TagField::Publisher),
+    ("www", TagField::Www),
+    ("translator", TagField::Translator),
+    ("description", TagField::Description),
+    ("GENRE", TagField::Genre),
+];
+
 /// The field a freeform atom name (under the iTunes mean) maps to.
-fn freeform_field(name: &str) -> Option<TagField> {
-    const MAP: [(&str, TagField); 6] = [
-        ("PERFORMER", TagField::Performer),
-        ("publisher", TagField::Publisher),
-        ("www", TagField::Www),
-        ("translator", TagField::Translator),
-        ("description", TagField::Description),
-        ("GENRE", TagField::Genre),
-    ];
-    MAP.iter()
+pub(crate) fn freeform_field(name: &str) -> Option<TagField> {
+    FREEFORM_FIELDS
+        .iter()
         .find(|(managed, _)| managed.eq_ignore_ascii_case(name))
         .map(|(_, field)| *field)
 }
 
-fn read_ilst(ilst: &Ilst) -> FileTags {
+pub(crate) fn read_ilst(ilst: &Ilst) -> FileTags {
     let mut tags = FileTags::default();
     let mut gen_values = Vec::new();
     for atom in ilst {
@@ -309,35 +332,42 @@ fn read_ilst(ilst: &Ilst) -> FileTags {
     if !tags.fields.contains_key(&TagField::Genre) {
         put(&mut tags, TagField::Genre, gen_values);
     }
-    tags.cover = ilst.pictures().and_then(pick_cover);
+    tags.cover = ilst
+        .pictures()
+        .and_then(|p| pick_cover(p.collect::<Vec<_>>().into_iter()));
     tags
 }
 
 // ── Vorbis comments (FLAC, Ogg Vorbis, Opus) ──────────────────────────────────
 
+/// Every managed Vorbis key, as the writer writes it.
+pub(crate) const VORBIS_FIELDS: [(&str, TagField); 15] = [
+    ("ALBUM", TagField::Album),
+    ("ALBUMARTIST", TagField::AlbumArtist),
+    ("ARTIST", TagField::Artist),
+    ("TITLE", TagField::Title),
+    ("TRACKNUMBER", TagField::Track),
+    ("DATE", TagField::Date),
+    ("GENRE", TagField::Genre),
+    ("PUBLISHER", TagField::Publisher),
+    ("PERFORMER", TagField::Performer),
+    ("TRANSLATOR", TagField::Translator),
+    ("DISCNUMBER", TagField::Disc),
+    ("COMMENT", TagField::Comment),
+    ("DESCRIPTION", TagField::Description),
+    ("WWW", TagField::Www),
+    ("COMPOSER", TagField::Composer),
+];
+
 /// The field a Vorbis key (uppercase) maps to.
-fn vorbis_field(key: &str) -> Option<TagField> {
-    Some(match key {
-        "ALBUM" => TagField::Album,
-        "ALBUMARTIST" => TagField::AlbumArtist,
-        "ARTIST" => TagField::Artist,
-        "TITLE" => TagField::Title,
-        "TRACKNUMBER" => TagField::Track,
-        "DATE" => TagField::Date,
-        "GENRE" => TagField::Genre,
-        "PUBLISHER" => TagField::Publisher,
-        "PERFORMER" => TagField::Performer,
-        "TRANSLATOR" => TagField::Translator,
-        "DISCNUMBER" => TagField::Disc,
-        "COMMENT" => TagField::Comment,
-        "DESCRIPTION" => TagField::Description,
-        "WWW" => TagField::Www,
-        "COMPOSER" => TagField::Composer,
-        _ => return None,
-    })
+pub(crate) fn vorbis_field(key: &str) -> Option<TagField> {
+    VORBIS_FIELDS
+        .iter()
+        .find(|(name, _)| *name == key)
+        .map(|(_, field)| *field)
 }
 
-fn read_vorbis(comments: &VorbisComments, pictures: &[(Picture, PictureInformation)]) -> FileTags {
+pub(crate) fn read_vorbis(comments: &VorbisComments, pictures: &[(Picture, PictureInformation)]) -> FileTags {
     let mut tags = FileTags::default();
     for (key, value) in comments.items() {
         let key = key.to_ascii_uppercase();
