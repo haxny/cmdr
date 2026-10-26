@@ -14,6 +14,10 @@ Read this before adding, wiping, or reorganizing a spec.
 
 ## The specs
 
+- `ask-cmdr-volume-aware-tools-plan.md`: **Ask Cmdr couldn't read the NAS, read a stale twin of it, and was told an
+  empty guess was authoritative.** One `{volumeId, path}` location shape across the read tools, typed misses, offline
+  index reads, `sameShareAs` from the SMB server GUID, and `connect_volume` under a new `Access::Session` tier. Issue:
+  [#749](https://github.com/vdavid/cmdr/issues/749).
 - `saved-smb-shares.md`: **A saved SMB server holds only a host, not the user and share the person wants.** A share row
   under its server, recorded at mount time, pinnable and openable like an SFTP place. Issue:
   [cmdr-reports#7](https://github.com/vdavid/cmdr-reports/issues/7).
