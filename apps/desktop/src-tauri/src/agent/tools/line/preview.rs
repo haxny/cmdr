@@ -3,8 +3,8 @@
 use serde_json::Value;
 
 use super::{
-    ToolOutcome, ToolPreview, ToolPreviewRow, ToolPreviewRowKind, ToolPreviewRowStatus, bounded, bounded_to, count_u32,
-    outcome_of,
+    LinePath, ToolOutcome, ToolPreview, ToolPreviewRow, ToolPreviewRowKind, ToolPreviewRowStatus, bounded, bounded_to,
+    count_u32, outcome_of,
 };
 use crate::agent::llm::types::{AgentToolResult, ToolId};
 use crate::agent::tools::read::join_child_path;
@@ -74,7 +74,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
                 .filter_map(|entry| {
                     let name = entry.get("name")?.as_str()?;
                     Some(ToolPreviewRow {
-                        path: parent.map(|parent| bounded(&join_child_path(parent, name))),
+                        path: parent.and_then(|parent| LinePath::linkable_text(&join_child_path(parent, name))),
                         kind: file_or_folder(entry, "isDirectory"),
                         size_bytes: entry.get("size").and_then(Value::as_u64),
                         ..row(name)
@@ -89,7 +89,10 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
             .filter_map(|volume| {
                 let name = volume.get("name")?.as_str()?;
                 Some(ToolPreviewRow {
-                    path: volume.get("mountPath").and_then(Value::as_str).map(bounded),
+                    path: volume
+                        .get("mountPath")
+                        .and_then(Value::as_str)
+                        .and_then(LinePath::linkable_text),
                     kind: ToolPreviewRowKind::Folder,
                     ..row(name)
                 })
@@ -100,7 +103,10 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
             .filter_map(|entry| {
                 let name = entry.get("name")?.as_str()?;
                 Some(ToolPreviewRow {
-                    path: entry.get("path").and_then(Value::as_str).map(bounded),
+                    path: entry
+                        .get("path")
+                        .and_then(Value::as_str)
+                        .and_then(LinePath::linkable_text),
                     kind: file_or_folder(entry, "isDirectory"),
                     size_bytes: entry.get("sizeBytes").and_then(Value::as_u64),
                     ..row(name)
@@ -179,7 +185,7 @@ fn inspect_rows(content: &Value) -> Vec<ToolPreviewRow> {
             ToolPreviewRowKind::File
         };
         let base = ToolPreviewRow {
-            path: Some(bounded(path)),
+            path: LinePath::linkable_text(path),
             kind,
             size_bytes: file.get("sizeBytes").and_then(Value::as_u64),
             status,
@@ -238,7 +244,7 @@ fn row(name: &str) -> ToolPreviewRow {
 fn path_row(object: &Value, kind: ToolPreviewRowKind) -> Option<ToolPreviewRow> {
     let path = object.get("path")?.as_str()?;
     Some(ToolPreviewRow {
-        path: Some(bounded(path)),
+        path: LinePath::linkable_text(path),
         kind,
         ..row(base_name(path))
     })

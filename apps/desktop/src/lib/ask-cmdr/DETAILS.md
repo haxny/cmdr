@@ -156,6 +156,21 @@ terminal will come: the refusal withdraws its own stop. A thread load forgets th
 still runs, the fold shows it running and the load adopts it, and its terminal ends it like any other. The progress
 watchdog's timeout is a Stop too (`stopStreaming`, then a `timeout` item).
 
+**The thread waits for exactly the terminals still coming** (`matchStopsToTerminals`). `cancelAskCmdr` answers what the
+Stop reached (`CancelOutcomeView`: `tripped`, the turns it newly stopped; `live`, the turns still registered).
+
+- `live: 0`: no terminal is coming (the turn had ended, or a load adopted one that already finished), so every stop the
+  thread holds settles now, as a reload reads it. ⚠️ Waiting anyway took the thread's NEXT turn for the stopped one: its
+  events were dropped, its answer landed on the old bubble, and the watchdog fired a bogus timeout.
+- `tripped` above one: the Stop also reached a turn nobody here waits for (a send queued behind a wake), so a
+  placeholder stop (no bubble) takes each extra terminal, which would otherwise end a turn sent since.
+- A turn thread that panics still emits a terminal (`Failed`, `unfinishedReply`) before it unregisters.
+- Residual race: a terminal emitted just before the Stop can reach the rail AFTER the `live: 0` answer; it then goes to
+  the reducer as a turn stopped from elsewhere.
+
+A "load earlier" that joins a stopped bubble with its older half builds a new object, so the stop follows it
+(`followJoinedBubble`).
+
 **Terminal events carry the turn's stats.** `done`, `failed`, and `stopped` carry `turn: TurnStats | null` (tool calls,
 wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. Each puts it on the
 bubble's `stats`, a stopped turn's included, and the bubble renders it as its stats line (§ The tool line).
@@ -190,10 +205,12 @@ a quieter note saying what came back. Every word is ours: the backend sends type
 - **Paths are links.** A message names its paths with tags (`<place>` one, `<places>` a list), rendered through
   `<Trans>` snippets as `LinkButton`s; `<places>` joins its links with `conjunctionListParts` (`#lib/intl/list-format`),
   the language's own "and". A link shows the path's last segment (`placeName`), its full path in a tooltip and in its
-  accessible name ("Show {path} in a pane"). A note path is linked only when the backend resolved it inside the notes
-  folder (`absolute`); otherwise it's plain text. Click → `revealPath({ path, kind })`, a prop handed down from
-  `routes/(main)/+page.svelte` (`revealPathInBestPane`, over the `navigate-and-select` primitives), then
-  `returnFocusToPane()`. Only subject paths reach it, ❌ never a raw search scope string.
+  accessible name ("Show {path} in a pane"). The backend decides what's a place: a subject path is a `LinePath`
+  (`{ text, linkable }`), linkable only when absolute and whole (a relative or cut path stays plain text), a preview
+  row's `path` is set only then, and a note path is linked only when the backend resolved it inside the notes folder
+  (`absolute`). Click → `revealPath({ path, kind })`, a prop handed down from `routes/(main)/+page.svelte`
+  (`revealPathInBestPane`, over the `navigate-and-select` primitives), then `returnFocusToPane()`. Only subject paths
+  reach it, ❌ never a raw search scope string.
 - **Gotcha: a path link can't be ellipsized from outside.** A `LinkButton` is a `<button>`, an atomic inline box, so the
   label's `text-overflow` replaced the whole link and every word after it: a long PDF name rendered as "Looked inside …"
   (seen live, 2026-10-26). A label holding a path (`with-places`) is a flex row instead, where only the path shrinks and
@@ -235,9 +252,11 @@ alone, with no group chrome.
 - **Lifecycle.** Live, an undecided group is open, and a toggle the person makes sticks. The turn's terminal (any kind,
   a pending stop's included) applies `askCmdr.toolGroupsOnAnswer` (Settings > Advanced > Ask Cmdr): `'collapse'` closes
   the turn's groups, `'keep'` freezes each as it stands (an untouched one stays open). A local Stop holds each untouched
-  group open until that terminal (`holdTurnGroupsOpen`), since the bubble stops streaming at the click. Reloaded groups
-  start closed under both values (decision: "as you left it" has nothing to remember across a reload), except one with a
-  running line after a reload mid-turn. Before a collapse drops a focused line, `$effect.pre` moves focus to the group's
+  group open until that terminal (`holdTurnGroupsOpen`, again for a round the stopped turn resolves after the click,
+  whose group gets a new key), since the bubble stops streaming at the click. Reloaded groups start closed under both
+  values (decision: "as you left it" has nothing to remember across a reload), except one with a running line after a
+  reload mid-turn. A thread switch forgets every group's state (`forgetToolDetails`), so reopening a thread in the same
+  session matches a cold reload. Before a collapse drops a focused line, `$effect.pre` moves focus to the group's
   toggle.
 - **The seam.** When "load earlier" folds a turn back together, the newer half's first group may now continue an older
   group under that group's key; `carryGroupStateAcrossSeam` moves its entry there.

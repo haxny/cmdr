@@ -18,7 +18,7 @@ const undoOperationsMock = vi.fn<(operationIds: string[]) => Promise<unknown>>()
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: vi.fn(() => Promise.resolve(null)),
   recordAskCmdrSlotChange: vi.fn(() => Promise.resolve([])),

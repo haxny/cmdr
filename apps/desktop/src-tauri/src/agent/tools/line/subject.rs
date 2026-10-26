@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::{ToolSubject, bounded, len_u32};
+use super::{LinePath, ToolSubject, bounded, len_u32};
 use crate::agent::llm::types::{AgentToolCall, ToolId};
 use crate::agent::tools::read::expand_tilde;
 
@@ -45,7 +45,7 @@ fn focused_pane(result: Option<&Value>) -> ToolSubject {
         folder: answer
             .and_then(|content| content.get("path"))
             .and_then(Value::as_str)
-            .map(bounded),
+            .map(LinePath::of),
         selection_only: answer
             .and_then(|content| content.get("scope"))
             .and_then(Value::as_str)
@@ -64,7 +64,7 @@ fn files(args: &Value) -> Option<ToolSubject> {
         .find_map(Value::as_str)
         .filter(|path| !path.trim().is_empty())?;
     Some(ToolSubject::Files {
-        first_path: bounded(&expand_tilde(first_path)),
+        first_path: LinePath::of(&expand_tilde(first_path)),
         count: len_u32(paths.len()),
     })
 }
@@ -77,7 +77,7 @@ fn search(args: &Value) -> ToolSubject {
             crate::search::parse_scope(scope)
                 .include_paths
                 .iter()
-                .map(|path| bounded(path))
+                .map(|path| LinePath::of(path))
                 .collect()
         })
         .unwrap_or_default();
@@ -92,7 +92,7 @@ fn memory_file(path: &str, memory_root: Option<&Path>) -> ToolSubject {
         path: bounded(path),
         absolute: memory_root
             .and_then(|root| crate::agent::memory::shown_location(root, path))
-            .map(|absolute| bounded(&absolute.to_string_lossy())),
+            .and_then(|absolute| LinePath::linkable_text(&absolute.to_string_lossy())),
     }
 }
 
@@ -104,8 +104,8 @@ fn str_arg<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 /// A non-blank path argument, `~` expanded.
-fn path_arg(args: &Value, key: &str) -> Option<String> {
-    str_arg(args, key).map(|path| bounded(&expand_tilde(path)))
+fn path_arg(args: &Value, key: &str) -> Option<LinePath> {
+    str_arg(args, key).map(|path| LinePath::of(&expand_tilde(path)))
 }
 
 fn array_len(args: &Value, key: &str) -> Option<u32> {

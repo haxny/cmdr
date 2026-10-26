@@ -13,7 +13,7 @@ const getConversationMock =
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: (id: number, limit: number, offset: number) =>
     getConversationMock({ id, msgLimit: limit, msgOffset: offset }),

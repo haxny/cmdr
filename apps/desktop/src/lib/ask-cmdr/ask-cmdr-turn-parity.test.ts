@@ -19,7 +19,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: vi.fn((c: number | null): Promise<AskCmdrSendOutcome> =>
     Promise.resolve({ accepted: true, conversationId: c ?? 1 }),
   ),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: vi.fn(() => Promise.resolve(null)),
   recordAskCmdrSlotChange: vi.fn(() => Promise.resolve([])),
@@ -132,7 +132,12 @@ describe('the live reducer, round by round', () => {
       type: 'toolCallsResolved',
       messageId: 2,
       calls: [
-        { callId: 'c1', tool: 'list_dir', subject: { kind: 'folder', path: '/a' }, repeatOf: null },
+        {
+          callId: 'c1',
+          tool: 'list_dir',
+          subject: { kind: 'folder', path: { text: '/a', linkable: true } },
+          repeatOf: null,
+        },
         { callId: 'c3', tool: 'list_volumes', subject: DRIVES, repeatOf: null },
       ],
     })
@@ -146,7 +151,7 @@ describe('the live reducer, round by round', () => {
             callId: 'c1',
             tool: 'list_dir',
             running: true,
-            subject: { kind: 'folder', path: '/a' },
+            subject: { kind: 'folder', path: { text: '/a', linkable: true } },
             outcome: null,
             repeatOf: null,
           },

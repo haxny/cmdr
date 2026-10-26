@@ -586,7 +586,12 @@ turn still is. One slot per thread let the queued send overwrite the running tur
 made the running turn unstoppable and let its exit unregister the queued one. Each
 `CancelRegistration` is its own entry (tagged by a generation), `cancel_turn` trips every entry
 of the thread (a Stop during `Queued` stops both), and dropping a registration removes only its
-own. ❌ Don't fix it by registering under the lock: the Stop-before-the-thread-runs race comes
+own. `cancel_turn` answers a `CancelOutcome` (`tripped`: entries no earlier Stop had tripped;
+`live`: entries still registered), which `ask_cmdr_cancel` hands the rail so it waits for
+exactly the terminals still coming (`apps/desktop/src/lib/ask-cmdr/DETAILS.md` § Stop is local
+first). The rail turn's registration lives on its worker thread under a `TerminalOnPanic` guard
+(`commands/agent/chat.rs`), which emits `Failed { unfinishedReply }` if the turn unwinds, BEFORE
+the registration drops, so a Stop that reached a panicking turn still hears its terminal. ❌ Don't fix it by registering under the lock: the Stop-before-the-thread-runs race comes
 back. ⚠️ **It sits here rather
 than in `commands/agent/chat.rs` because a WAKE registers in it too**: `agent/wake/runner.rs`
 is below `commands/` and may not import upward, and a wake is a multi-second background turn

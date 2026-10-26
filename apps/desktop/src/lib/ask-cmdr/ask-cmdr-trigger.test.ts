@@ -6,10 +6,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageView } from '#lib/tauri-commands/index.js'
-import type { ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
+import type { CancelOutcomeView, ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
-const cancelMock = vi.fn<(id: number) => Promise<void>>()
+const cancelMock = vi.fn<(id: number) => Promise<CancelOutcomeView>>()
 const listMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 const getMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 const recordMock = vi.fn<(id: number) => Promise<unknown>>()
@@ -71,6 +71,7 @@ import {
   removeAttachment,
   sendMessage,
   setRailWidth,
+  stopStreaming,
   switchToThread,
   THREAD_SOFT_CAP_MESSAGES,
   type RailMessage,
@@ -104,6 +105,7 @@ function fire(event: AskCmdrStreamEvent, conversationId: number = askCmdrState.c
 beforeEach(() => {
   sendMock.mockReset()
   cancelMock.mockReset()
+  cancelMock.mockResolvedValue({ tripped: 1, live: 1 })
   saveMock.mockReset()
   listMock.mockReset()
   getMock.mockReset()
@@ -478,7 +480,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
               type: 'toolCall',
               callId: 'c1',
               tool: 'list_dir',
-              subject: { kind: 'folder', path: '/x' },
+              subject: { kind: 'folder', path: { text: '/x', linkable: true } },
               outcome: { kind: 'items', returned: 1, total: 1, lowerBound: false },
               repeatOf: null,
             },
@@ -515,7 +517,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     expect(linesOf(assistant)[0]).toMatchObject({
       callId: 'c1',
       tool: 'list_dir',
-      subject: { kind: 'folder', path: '/x' },
+      subject: { kind: 'folder', path: { text: '/x', linkable: true } },
       outcome: { kind: 'items', returned: 1, total: 1, lowerBound: false },
     })
   })
@@ -792,6 +794,34 @@ describe('message paging (tail-first, load older)', () => {
     expect(askCmdrState.messages.slice(0, 3).map((m) => m.kind)).toEqual(['user', 'assistant', 'user'])
     expect(assistantAt(1)).toMatchObject({ id: 3, turnId: 1 })
     expect(assistantAt(1).rounds.map((round) => round.text)).toEqual(['first half', 'second half'])
+  })
+
+  /** ⚠️ The fold builds the joined bubble anew, so a stop still waiting on the newer half held a
+   *  bubble no longer on screen, and its terminal settled that one instead. */
+  it("settles a stopped turn's bubble on its terminal after load-older joined it", async () => {
+    const total = MESSAGE_PAGE + 2
+    // One running turn the whole thread long: its opener, then a round per row.
+    const rows: MessageView[] = Array.from({ length: total }, (_, seq) => ({
+      ...assistantRow(seq + 1, seq, `round ${String(seq)}`),
+      turnId: 1,
+    }))
+    rows[0] = { ...userMessage(1, 0), turnId: 1 }
+    getMock.mockImplementation((...args: unknown[]) => {
+      const [, limit, offset] = args as [number, number, number]
+      return Promise.resolve({
+        conversation: conversationRow(9),
+        totalMessages: total,
+        turnInFlightSinceSeq: 0,
+        messages: rows.slice(offset, offset + limit),
+      })
+    })
+    await switchToThread(9)
+    stopStreaming()
+
+    await loadOlderMessages()
+    fire({ type: 'stopped', turn: STATS })
+
+    expect(assistantAt(1)).toMatchObject({ turnId: 1, streaming: false, stats: STATS })
   })
 
   it('a short thread loads in one page with nothing older', async () => {

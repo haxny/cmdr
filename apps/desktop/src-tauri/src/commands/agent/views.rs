@@ -89,6 +89,26 @@ pub struct ModelWindowView {
     pub known_window_tokens: Option<u32>,
 }
 
+/// What a Stop reached, so the rail waits for exactly the terminals still coming
+/// (`agent::chat::cancel::CancelOutcome`).
+#[derive(Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelOutcomeView {
+    /// Turns this Stop tripped that no earlier Stop had, each owing a terminal of its own.
+    pub tripped: u32,
+    /// Turns still registered in the thread, tripped now or earlier. Zero: no terminal is coming.
+    pub live: u32,
+}
+
+impl From<crate::agent::chat::cancel::CancelOutcome> for CancelOutcomeView {
+    fn from(outcome: crate::agent::chat::cancel::CancelOutcome) -> Self {
+        Self {
+            tripped: outcome.tripped as u32,
+            live: outcome.live as u32,
+        }
+    }
+}
+
 /// A conversation header plus a page of its display messages, and the total count so a
 /// paged UI knows whether more exist.
 #[derive(Clone, Serialize, specta::Type)]

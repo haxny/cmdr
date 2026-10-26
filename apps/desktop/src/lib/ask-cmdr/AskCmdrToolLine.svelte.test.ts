@@ -50,13 +50,13 @@ describe('AskCmdrToolLine', () => {
   })
 
   it('names the folder and what came back, on one row', () => {
-    const { target } = render(call({ kind: 'folder', path: '/Users/me/Downloads' }))
+    const { target } = render(call({ kind: 'folder', path: { text: '/Users/me/Downloads', linkable: true } }))
     expect(target.querySelector('.label')?.textContent.trim()).toBe('Listed Downloads')
     expect(target.querySelector('.outcome')?.textContent).toBe('3 items')
   })
 
   it('sets what came back apart: a dot on screen, a comma for a screen reader', () => {
-    const { target } = render(call({ kind: 'folder', path: '/Users/me/Desktop' }))
+    const { target } = render(call({ kind: 'folder', path: { text: '/Users/me/Desktop', linkable: true } }))
     const dot = target.querySelector('.dot')
     expect(dot?.textContent).toBe('·')
     expect(dot?.getAttribute('aria-hidden')).toBe('true')
@@ -66,13 +66,17 @@ describe('AskCmdrToolLine', () => {
   })
 
   it('draws no separator when nothing came back worth saying', () => {
-    const { target } = render(call({ kind: 'folder', path: '/a' }, { outcome: { kind: 'answered' } }))
+    const { target } = render(
+      call({ kind: 'folder', path: { text: '/a', linkable: true } }, { outcome: { kind: 'answered' } }),
+    )
     expect(target.querySelector('.dot')).toBeNull()
     expect(target.querySelector('.sr-only')).toBeNull()
   })
 
   it('shows a folder in a pane, then hands focus back to the panes', async () => {
-    const { target, revealPath } = render(call({ kind: 'folder', path: '/Users/me/Downloads' }))
+    const { target, revealPath } = render(
+      call({ kind: 'folder', path: { text: '/Users/me/Downloads', linkable: true } }),
+    )
     const [link] = links(target)
     expect(link.getAttribute('aria-label')).toBe('Show /Users/me/Downloads in a pane')
     link.click()
@@ -82,9 +86,19 @@ describe('AskCmdrToolLine', () => {
     expect(revealPath.mock.invocationCallOrder[0]).toBeLessThan(returnFocusToPane.mock.invocationCallOrder[0])
   })
 
+  /** A relative or cut path names no place the panes can go, so it stays text. */
+  it('keeps a path the backend calls unlinkable as plain text', () => {
+    const { target } = render(call({ kind: 'folder', path: { text: 'Downloads', linkable: false } }))
+    expect(links(target)).toHaveLength(0)
+    expect(target.querySelector('.label')?.textContent.trim()).toBe('Listed Downloads')
+  })
+
   it('shows a file as a file', async () => {
     const { target, revealPath } = render(
-      call({ kind: 'files', firstPath: '/Users/me/notes.txt', count: 2 }, { tool: 'inspect_file' }),
+      call(
+        { kind: 'files', firstPath: { text: '/Users/me/notes.txt', linkable: true }, count: 2 },
+        { tool: 'inspect_file' },
+      ),
     )
     expect(target.querySelector('.label')?.textContent.trim()).toBe('Looked inside notes.txt and 1 more')
     links(target)[0].click()
@@ -95,7 +109,14 @@ describe('AskCmdrToolLine', () => {
   it('links each folder a search looked in, in order', async () => {
     const { target, revealPath } = render(
       call(
-        { kind: 'search', query: '*.pdf', scopePaths: ['/Users/me/Documents', '/Users/me/Desktop'] },
+        {
+          kind: 'search',
+          query: '*.pdf',
+          scopePaths: [
+            { text: '/Users/me/Documents', linkable: true },
+            { text: '/Users/me/Desktop', linkable: true },
+          ],
+        },
         {
           tool: 'search',
           outcome: { kind: 'matches', returned: 2, matchCount: 2, lowerBound: false },
@@ -130,7 +151,10 @@ describe('AskCmdrToolLine', () => {
 
   it('tags a repeat and points the link at the tag', () => {
     const { target } = render(
-      call({ kind: 'folder', path: '/a' }, { repeatOf: { messageId: 1, callId: 'fake-call-0' } }),
+      call(
+        { kind: 'folder', path: { text: '/a', linkable: true } },
+        { repeatOf: { messageId: 1, callId: 'fake-call-0' } },
+      ),
     )
     const tag = target.querySelector('.repeat')
     expect(tag?.textContent).toBe('Same as above')
@@ -138,12 +162,14 @@ describe('AskCmdrToolLine', () => {
   })
 
   it('says no answer was recorded for a settled call without one', () => {
-    const { target } = render(call({ kind: 'folder', path: '/a' }, { outcome: null }))
+    const { target } = render(call({ kind: 'folder', path: { text: '/a', linkable: true } }, { outcome: null }))
     expect(target.querySelector('.outcome')?.textContent).toBe('no answer recorded')
   })
 
   it('is not a live region, so a long turn doesn’t chatter', () => {
-    const { target } = render(call({ kind: 'folder', path: '/a' }, { running: true, outcome: null }))
+    const { target } = render(
+      call({ kind: 'folder', path: { text: '/a', linkable: true } }, { running: true, outcome: null }),
+    )
     expect(target.querySelector('[role="status"]')).toBeNull()
     expect(target.querySelector('[aria-busy]')).toBeNull()
     expect(target.querySelector('[aria-live]')).toBeNull()

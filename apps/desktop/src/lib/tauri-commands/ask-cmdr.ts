@@ -15,6 +15,7 @@ import {
   type WakeReadinessView,
   type AskCmdrStreamEvent,
   type AskCmdrTurn,
+  type CancelOutcomeView,
   type ConversationRow,
   type ConversationDetailView,
   type ConversationSearchHit,
@@ -143,9 +144,10 @@ export function onAskCmdrTurn(callback: (payload: AskCmdrTurn) => void): Promise
   })
 }
 
-/** Stop the in-flight turn for a thread. Idempotent; safe after natural completion. */
-export async function cancelAskCmdr(conversationId: number): Promise<void> {
-  await commands.askCmdrCancel(conversationId)
+/** Stop the in-flight turn for a thread. Idempotent; safe after natural completion. Answers what
+ * the Stop reached: how many turns it newly tripped, and how many still owe a terminal. */
+export async function cancelAskCmdr(conversationId: number): Promise<CancelOutcomeView> {
+  return commands.askCmdrCancel(conversationId)
 }
 
 /** Rechecks the user-selected rows of a server-owned rename proposal. Only opaque ids

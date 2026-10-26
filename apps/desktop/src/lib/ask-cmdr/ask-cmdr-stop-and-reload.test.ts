@@ -6,10 +6,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageBlock, MessageView } from '#lib/tauri-commands/index.js'
-import type { ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
+import type { CancelOutcomeView, ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
-const cancelMock = vi.fn<(id: number) => Promise<void>>()
+const cancelMock = vi.fn<(id: number) => Promise<CancelOutcomeView>>()
 const getMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
@@ -75,12 +75,19 @@ beforeEach(() => {
   cancelMock.mockReset()
   getMock.mockReset()
   sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID }))
+  // The usual Stop: it reaches the one turn running, whose terminal is still to come.
+  cancelMock.mockResolvedValue({ tripped: 1, live: 1 })
   newChat()
   resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
   askCmdrState.renameReview = null
 })
+
+/** Let a resolved cancel's answer land. */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 3; i++) await Promise.resolve()
+}
 
 function conversationRow(id: number) {
   return { id, title: 't', createdAt: 0, updatedAt: 0, archived: false, origin: null }
@@ -233,6 +240,50 @@ describe('stopStreaming', () => {
 
     fire({ type: 'textDelta', text: 'a later turn' })
     expect(askCmdrState.streaming).toBe(true)
+  })
+
+  /** ⚠️ A Stop that reached no live turn (it had ended, or died without a terminal) has no
+   *  terminal coming. Waiting for one anyway took the thread's NEXT turn for it: its events were
+   *  dropped, and its answer landed on the stopped bubble. */
+  it('settles a stop that reached no live turn at once, so the next turn is its own', async () => {
+    cancelMock.mockResolvedValue({ tripped: 0, live: 0 })
+    streamPastOneRound()
+    stopStreaming()
+    await flushMicrotasks()
+
+    expect(textOf(assistantAt(1))).toBe('partial')
+    expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: false, outcome: null }])
+
+    sendMessage('next')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'the new turn' })
+    expect(askCmdrState.streaming).toBe(true)
+    fire(answer(9))
+
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant', 'user', 'assistant'])
+    expect(assistantAt(3)).toMatchObject({ id: 9, streaming: false, stats: STATS })
+    expect(textOf(assistantAt(3))).toBe('the new turn')
+    expect(askCmdrState.streaming).toBe(false)
+  })
+
+  /** A Stop of a send queued behind a turn the rail wasn't tracking (a wake) trips both, so two
+   *  terminals come. The second must not end a turn the user sent since. */
+  it('waits for every terminal its Stop owes, so a later send keeps streaming', async () => {
+    cancelMock.mockResolvedValue({ tripped: 2, live: 2 })
+    askCmdrState.conversationId = 3
+    sendMessage('queued behind a wake')
+    fire({ type: 'queued' })
+    stopStreaming()
+    await flushMicrotasks()
+
+    fire({ type: 'stopped', turn: STATS })
+    sendMessage('third')
+    fire({ type: 'stopped', turn: null })
+
+    expect(askCmdrState.streaming).toBe(true)
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'the third turn' })
+    expect(textOf(assistantAt(askCmdrState.messages.length - 1))).toBe('the third turn')
   })
 
   /** A send the backend refused never ran a turn, so no terminal will come for its stop. */

@@ -50,7 +50,7 @@
         type="button"
         class="group-toggle"
         aria-expanded={open}
-        aria-controls={bodyId}
+        aria-controls={open ? bodyId : undefined}
         disabled={key === null}
         onclick={toggle}
     >

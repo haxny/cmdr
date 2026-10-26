@@ -15,6 +15,8 @@ mod subject;
 #[cfg(test)]
 mod tests;
 
+use std::path::Path;
+
 use serde::Serialize;
 
 pub use outcome::outcome_of;
@@ -34,7 +36,33 @@ pub struct LineRef {
     pub call_id: String,
 }
 
-/// What one call looked at. Every path is absolute (`~` expanded); every string is bounded.
+/// A path a line names: its text, and whether it's a place the panes can go.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LinePath {
+    /// `~` expanded, bounded.
+    pub text: String,
+    /// Only an absolute path the bound left whole: a relative one (the model's own words) resolves
+    /// against nothing the panes know, and a cut one names no real place.
+    pub linkable: bool,
+}
+
+impl LinePath {
+    /// The model's (or a result's) `path`, `~` already expanded.
+    pub fn of(path: &str) -> Self {
+        let text = bounded(path);
+        let linkable = text == path && Path::new(path).is_absolute();
+        Self { text, linkable }
+    }
+
+    /// The path only when it's a place to go: a preview row has its name for the text.
+    pub fn linkable_text(path: &str) -> Option<String> {
+        let line_path = Self::of(path);
+        line_path.linkable.then_some(line_path.text)
+    }
+}
+
+/// What one call looked at. Every string is bounded; every path is a [`LinePath`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ToolSubject {
@@ -43,22 +71,22 @@ pub enum ToolSubject {
     /// `list_pane_files`, from its RESULT: the folder and whether only the selection was
     /// listed. Both `None` until the call returns (or when it was refused).
     FocusedPane {
-        folder: Option<String>,
+        folder: Option<LinePath>,
         selection_only: Option<bool>,
     },
     /// `list_dir`, `folder_importance`.
     Folder {
-        path: String,
+        path: LinePath,
     },
     /// `inspect_file`, `image_facts`: the first path asked about and how many were.
     Files {
-        first_path: String,
+        first_path: LinePath,
         count: u32,
     },
     /// `search`: the name pattern, plus the scope's INCLUDE paths (excludes dropped).
     Search {
         query: Option<String>,
-        scope_paths: Vec<String>,
+        scope_paths: Vec<LinePath>,
     },
     /// `search_photos`.
     PhotoSearch {
@@ -87,7 +115,8 @@ pub enum ToolSubject {
     },
     NothingToSuggest,
     /// `memory_write`, `memory_edit`: `path` is the model's own, RELATIVE to the memory folder.
-    /// `absolute` is set only when it lands inside the folder, and only then is it a place to go.
+    /// `absolute` is set only when it lands inside the folder (and the bound leaves it whole), and
+    /// only then is it a place to go.
     MemoryFile {
         path: String,
         absolute: Option<String>,
@@ -199,6 +228,8 @@ pub struct ToolPreview {
 #[serde(rename_all = "camelCase")]
 pub struct ToolPreviewRow {
     pub name: String,
+    /// Where the row is, only when it's a place to go ([`LinePath::linkable_text`]); `name` is
+    /// the row's text either way.
     pub path: Option<String>,
     pub kind: ToolPreviewRowKind,
     pub size_bytes: Option<u64>,

@@ -8,7 +8,7 @@ use super::*;
 use crate::agent::chat::message_view::MessageBlock;
 use crate::agent::llm::types::{AgentPart, AgentRole, AgentToolCall, AgentToolResult, ToolId};
 use crate::agent::store::{ConversationEvent, StoredContent, StoredMessage, TurnContext, TurnStats};
-use crate::agent::tools::line::{LineRef, RefusalReason, ToolOutcome, ToolSubject};
+use crate::agent::tools::line::{LinePath, LineRef, RefusalReason, ToolOutcome, ToolSubject};
 
 /// Builds a thread row by row, minting ids and seqs in order (ids start at 100 so they never
 /// read like seqs).
@@ -174,7 +174,12 @@ fn a_call_with_no_result_row_has_no_outcome() {
     let views = thread.project();
 
     let (_, subject, outcome, _) = &lines(view(&views, id))[0];
-    assert_eq!(subject, &ToolSubject::Folder { path: "/a".into() });
+    assert_eq!(
+        subject,
+        &ToolSubject::Folder {
+            path: LinePath::of("/a")
+        }
+    );
     assert_eq!(outcome, &None);
 }
 

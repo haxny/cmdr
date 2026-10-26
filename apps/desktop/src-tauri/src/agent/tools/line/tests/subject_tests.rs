@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use super::call;
 use super::fixtures;
 use crate::agent::llm::types::ToolId;
-use crate::agent::tools::line::{MAX_TEXT_CHARS, ToolSubject, subject_of};
+use crate::agent::tools::line::{LinePath, MAX_TEXT_CHARS, ToolSubject, subject_of};
 use crate::agent::tools::read::pane_listing::PaneListingScope;
 
 fn subject(tool: ToolId, args: Value) -> ToolSubject {
@@ -26,21 +26,21 @@ fn argument_only_subjects_per_tool() {
             ToolId::ListDir,
             json!({ "path": "/Users/u/Downloads", "sortBy": "size" }),
             ToolSubject::Folder {
-                path: "/Users/u/Downloads".into(),
+                path: LinePath::of("/Users/u/Downloads"),
             },
         ),
         (
             ToolId::FolderImportance,
             json!({ "path": "/Volumes/NAS" }),
             ToolSubject::Folder {
-                path: "/Volumes/NAS".into(),
+                path: LinePath::of("/Volumes/NAS"),
             },
         ),
         (
             ToolId::InspectFile,
             json!({ "paths": ["/a.txt", "/b.txt", "/c.txt"], "find": { "query": "x" } }),
             ToolSubject::Files {
-                first_path: "/a.txt".into(),
+                first_path: LinePath::of("/a.txt"),
                 count: 3,
             },
         ),
@@ -48,7 +48,7 @@ fn argument_only_subjects_per_tool() {
             ToolId::ImageFacts,
             json!({ "paths": ["/p/1.jpg"] }),
             ToolSubject::Files {
-                first_path: "/p/1.jpg".into(),
+                first_path: LinePath::of("/p/1.jpg"),
                 count: 1,
             },
         ),
@@ -113,16 +113,47 @@ fn a_tilde_path_reaches_the_frontend_absolute() {
     assert_eq!(
         subject(ToolId::ListDir, json!({ "path": "~/Downloads" })),
         ToolSubject::Folder {
-            path: format!("{}/Downloads", home()),
+            path: LinePath::of(&format!("{}/Downloads", home())),
         }
     );
     assert_eq!(
         subject(ToolId::InspectFile, json!({ "paths": ["~/a.txt"] })),
         ToolSubject::Files {
-            first_path: format!("{}/a.txt", home()),
+            first_path: LinePath::of(&format!("{}/a.txt", home())),
             count: 1,
         }
     );
+}
+
+/// ⚠️ A link hands its path to the panes, so it must be a real place. A relative path (the
+/// model's own words) resolves against nothing the panes know, and a cut one names no real place:
+/// both keep their text and lose the link.
+#[test]
+fn only_an_absolute_whole_path_is_a_place_to_go() {
+    let long = format!("/{}", "x".repeat(MAX_TEXT_CHARS * 2));
+    let folder = |path: &str| match subject(ToolId::ListDir, json!({ "path": path })) {
+        ToolSubject::Folder { path } => path,
+        other => panic!("a folder subject, got {other:?}"),
+    };
+
+    assert!(folder("/Users/u/Downloads").linkable);
+    let relative = folder("Downloads");
+    assert_eq!(relative.text, "Downloads");
+    assert!(!relative.linkable, "relative");
+    assert!(!folder(&long).linkable, "cut");
+
+    let ToolSubject::Search { scope_paths, .. } = subject(ToolId::Search, json!({ "scope": "Docs, /Volumes/NAS" }))
+    else {
+        panic!("a search subject");
+    };
+    assert_eq!(
+        scope_paths.iter().map(|path| path.linkable).collect::<Vec<_>>(),
+        [false, true]
+    );
+
+    assert_eq!(LinePath::linkable_text("/a/b.txt").as_deref(), Some("/a/b.txt"));
+    assert_eq!(LinePath::linkable_text("b.txt"), None);
+    assert_eq!(LinePath::linkable_text(&long), None);
 }
 
 #[test]
@@ -134,7 +165,10 @@ fn search_names_its_pattern_and_only_the_scopes_include_paths() {
         ),
         ToolSubject::Search {
             query: Some("*.pdf".into()),
-            scope_paths: vec![format!("{}/Docs", home()), "/Volumes/My, Drive".into()],
+            scope_paths: vec![
+                LinePath::of(&format!("{}/Docs", home())),
+                LinePath::of("/Volumes/My, Drive")
+            ],
         },
         "the executor's own grammar: quotes keep a comma, `!` excludes drop"
     );
@@ -168,7 +202,7 @@ fn list_pane_files_takes_its_folder_and_scope_from_the_result() {
             None
         ),
         ToolSubject::FocusedPane {
-            folder: Some("/Users/u/Photos".into()),
+            folder: Some(LinePath::of("/Users/u/Photos")),
             selection_only: Some(true),
         }
     );
@@ -179,7 +213,7 @@ fn list_pane_files_takes_its_folder_and_scope_from_the_result() {
             None
         ),
         ToolSubject::FocusedPane {
-            folder: Some("/Users/u/Photos".into()),
+            folder: Some(LinePath::of("/Users/u/Photos")),
             selection_only: Some(false),
         }
     );
@@ -254,8 +288,12 @@ fn every_untrusted_string_is_bounded() {
     let ToolSubject::Folder { path } = subject(ToolId::ListDir, json!({ "path": format!("/{long}") })) else {
         panic!("a folder subject");
     };
-    assert_eq!(path.chars().count(), MAX_TEXT_CHARS + 1, "cut, plus the `…` marking it");
-    assert!(path.ends_with('…'));
+    assert_eq!(
+        path.text.chars().count(),
+        MAX_TEXT_CHARS + 1,
+        "cut, plus the `…` marking it"
+    );
+    assert!(path.text.ends_with('…'));
     let ToolSubject::UnknownTool { name } = subject(ToolId::Unrecognized(long.clone()), json!({})) else {
         panic!("an unknown-tool subject");
     };

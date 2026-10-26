@@ -23,7 +23,12 @@ import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
 import { mergeAtSeam } from './ask-cmdr-rounds'
 import { carryGroupStateAcrossSeam, forgetToolDetails } from './ask-cmdr-tool-groups.svelte'
 import { askCmdrState, hasOlderMessages, MESSAGE_PAGE, RAIL_MAX_WIDTH, RAIL_MIN_WIDTH } from './ask-cmdr-state.svelte'
-import { resumeThread, settleDecisionsHeardWhileLoading, stopStreaming } from './ask-cmdr-stream.svelte'
+import {
+  followJoinedBubble,
+  resumeThread,
+  settleDecisionsHeardWhileLoading,
+  stopStreaming,
+} from './ask-cmdr-stream.svelte'
 import { growMainWindowForRail, shrinkMainWindowForRail } from './rail-window'
 import {
   getAskCmdrConversation,
@@ -258,10 +263,12 @@ export async function loadOlderMessages(): Promise<void> {
     const detail = await getAskCmdrConversation(id, limit, offset)
     if (!detail || shownBy !== latestThreadLoad) return
     // A turn longer than the page boundary arrives in two halves; they fold back into one bubble,
-    // and a group the seam joined keeps the open state it had.
+    // and a group the seam joined keeps the open state it had, a stop waiting there its bubble.
     const head = askCmdrState.messages.find((item) => item.kind === 'assistant')
     askCmdrState.messages = mergeAtSeam(buildRailMessages(detail), askCmdrState.messages)
     carryGroupStateAcrossSeam(head, askCmdrState.messages)
+    const joined = askCmdrState.messages.find((item) => item.kind === 'assistant' && item.turnId === head?.turnId)
+    if (head?.turnId != null && joined?.kind === 'assistant') followJoinedBubble(head, joined)
     askCmdrState.historyCount += detail.messages.length
   } catch (e) {
     log.warn('loading earlier messages failed: {error}', { error: e })

@@ -24,7 +24,15 @@ import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { openerItem } from './ask-cmdr-history'
 import type { AssistantItem, RailMessage, RailToolCall, Round } from './ask-cmdr-messages'
-import type { LineRef, ManagedAiRefusal, ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
+import type {
+  CancelOutcomeView,
+  LineRef,
+  ManagedAiRefusal,
+  ResolvedCall,
+  ToolOutcome,
+  ToolSubject,
+  TurnStats,
+} from '#lib/ipc/bindings.js'
 import {
   discardStagedRenameProposals,
   openStagedRenameReview,
@@ -108,6 +116,15 @@ export function resumeThread(conversationId: number, turnRunning: boolean): void
   if (turnRunning) adoptLiveTurn()
 }
 
+/**
+ * A "load earlier" page joined the bubble `from` with its turn's older half into `to`, a new
+ * object. A stop still waiting there follows it, or its terminal would settle a bubble no longer
+ * on screen.
+ */
+export function followJoinedBubble(from: AssistantItem, to: AssistantItem): void {
+  for (const stop of pendingStops) if (stop.bubble === from) stop.bubble = to
+}
+
 // ── Sending + streaming ──────────────────────────────────────────────────────────
 
 /** Send the user's message and stream the answer. No-ops on empty text or while streaming
@@ -162,7 +179,14 @@ export function stopStreaming(): void {
   const conversationId = askCmdrState.conversationId
   if (conversationId !== null) {
     pendingStops.push({ conversationId, bubble, opener: typedOpener, send: activeSend })
-    void cancelAskCmdr(conversationId)
+    void cancelAskCmdr(conversationId).then(
+      (reach) => {
+        matchStopsToTerminals(conversationId, reach)
+      },
+      (e: unknown) => {
+        log.warn('Stopping the turn in thread {conversationId} broke: {error}', { conversationId, error: e })
+      },
+    )
   }
   typedOpener = null
   if (bubble) {
@@ -207,6 +231,30 @@ export function handleTurnEvent(turn: AskCmdrTurn): void {
   else applyStreamEvent(event)
 }
 
+/**
+ * The backend said what a Stop reached, so the thread waits for exactly the terminals still
+ * coming. With no turn live there, none is: every stop it holds settles now, the way a reload
+ * would read it, or it would take the thread's NEXT turn's terminal for its own (a watchdog
+ * timeout over a turn that had already ended, or one that died). A Stop that also tripped a turn
+ * nobody here waits for (a send queued behind a wake) owes one more terminal per such turn; a
+ * placeholder takes each, or it would end a turn sent since.
+ */
+function matchStopsToTerminals(conversationId: number, reach: CancelOutcomeView): void {
+  if (reach.live === 0) {
+    const settled = pendingStops.filter((stop) => stop.conversationId === conversationId)
+    pendingStops = pendingStops.filter((stop) => stop.conversationId !== conversationId)
+    for (const { bubble } of settled) {
+      if (!bubble) continue
+      settleAssistant(bubble)
+      settleTurnGroups(bubble)
+    }
+    return
+  }
+  for (let extra = 1; extra < reach.tripped; extra++) {
+    pendingStops.push({ conversationId, bubble: null, opener: null, send: null })
+  }
+}
+
 /** A send the backend refused ran no turn, so no terminal will come for a stop the user gave it. */
 function withdrawStop(send: symbol): void {
   pendingStops = pendingStops.filter((stop) => stop.send !== send)
@@ -247,7 +295,10 @@ function settlePendingStop(conversationId: number, event: TurnEvent): boolean {
 function applyToStoppedTurn(stop: PendingStop, event: TurnEvent): void {
   switch (event.type) {
     case 'toolCallsResolved':
-      if (stop.bubble) resolveRound(stop.bubble, event.messageId, event.calls)
+      if (!stop.bubble) return
+      resolveRound(stop.bubble, event.messageId, event.calls)
+      // The resolved round's group has a new key; it holds open like the rest until the terminal.
+      holdTurnGroupsOpen(stop.bubble)
       return
     case 'toolCallFinished':
       applyToolFinished({ messageId: event.messageId, callId: event.callId }, event.outcome, event.subject)

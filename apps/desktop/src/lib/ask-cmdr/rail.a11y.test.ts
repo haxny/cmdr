@@ -124,7 +124,7 @@ function folderLine(path: string): RailToolCall {
     callId: 'c1',
     tool: 'list_dir',
     running: false,
-    subject: { kind: 'folder', path },
+    subject: { kind: 'folder', path: { text: path, linkable: true } },
     outcome: { kind: 'items', returned: 3, total: 3, lowerBound: false },
     repeatOf: null,
   }
@@ -539,7 +539,9 @@ describe('AskCmdrToolLine a11y', () => {
   })
 
   it('a finished line with a path has no a11y violations', async () => {
-    const target = mountLine(tool({ subject: { kind: 'folder', path: '/Users/me/Documents' } }))
+    const target = mountLine(
+      tool({ subject: { kind: 'folder', path: { text: '/Users/me/Documents', linkable: true } } }),
+    )
     await tick()
     await expectNoA11yViolations(target)
   })
@@ -548,7 +550,14 @@ describe('AskCmdrToolLine a11y', () => {
     const target = mountLine(
       tool({
         tool: 'search',
-        subject: { kind: 'search', query: '*.pdf', scopePaths: ['/Users/me/Documents', '/Users/me/Desktop'] },
+        subject: {
+          kind: 'search',
+          query: '*.pdf',
+          scopePaths: [
+            { text: '/Users/me/Documents', linkable: true },
+            { text: '/Users/me/Desktop', linkable: true },
+          ],
+        },
         outcome: { kind: 'matches', returned: 3, matchCount: 3, lowerBound: false },
       }),
     )
@@ -559,7 +568,10 @@ describe('AskCmdrToolLine a11y', () => {
 
   it('a repeat with its tag has no a11y violations', async () => {
     const target = mountLine(
-      tool({ subject: { kind: 'folder', path: '/Users/me/Documents' }, repeatOf: { messageId: 1, callId: 'c0' } }),
+      tool({
+        subject: { kind: 'folder', path: { text: '/Users/me/Documents', linkable: true } },
+        repeatOf: { messageId: 1, callId: 'c0' },
+      }),
     )
     await tick()
     expect(target.querySelector('.repeat')).not.toBeNull()
@@ -578,7 +590,7 @@ describe('AskCmdrToolLine a11y', () => {
       key: `1:${callId}`,
       messageId: 1,
       occurrence: 0,
-      call: tool({ callId, subject: { kind: 'folder', path: `/Users/me/${callId}` } }),
+      call: tool({ callId, subject: { kind: 'folder', path: { text: `/Users/me/${callId}`, linkable: true } } }),
     }))
     mount(AskCmdrToolGroup, { target, props: { lines, live: true, revealPath: () => Promise.resolve() } })
     await tick()

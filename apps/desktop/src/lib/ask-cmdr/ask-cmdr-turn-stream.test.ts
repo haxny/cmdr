@@ -28,7 +28,7 @@ const listenMock = vi.fn<(cb: (payload: AskCmdrTurn) => void) => Promise<() => v
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
   onAskCmdrTurn: (cb: (payload: AskCmdrTurn) => void) => listenMock(cb),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: (l: number, o: number, a: boolean) => listMock({ limit: l, offset: o, includeArchived: a }),
   getAskCmdrConversation: (id: number) => getMock(id),
   searchAskCmdrConversations: vi.fn(() => Promise.resolve([])),

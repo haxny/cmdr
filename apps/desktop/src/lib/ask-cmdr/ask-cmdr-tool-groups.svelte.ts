@@ -156,10 +156,12 @@ function detailOf(result: AskCmdrToolResult): ToolDetailState {
 }
 
 /** Another thread took the screen: what this one's lines fetched goes, so a private result
- * doesn't outlive the thread it belongs to. Which groups were open stays. */
+ * doesn't outlive the thread it belongs to. Which groups were open goes too, so reopening the
+ * thread shows what a cold reload would. */
 export function forgetToolDetails(): void {
   details.clear()
   expandedLines.clear()
+  groupOpen.clear()
 }
 
 /** Test isolation only. */

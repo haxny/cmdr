@@ -12,6 +12,7 @@ import type { AskCmdrErrorKind, RenameEvidenceSource, SkipBreakdown, SkipReason 
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type {
   IndexUnavailableReason,
+  LinePath,
   ManagedAiRefusal,
   MemoryRefusalKind,
   RefusalReason,
@@ -112,7 +113,8 @@ const MEMORY_FILE_KEYS: Partial<Record<string, PhaseKeys>> = {
 export interface LinePlace extends PathTarget {
   /** What the line shows: the path's last segment, or a note's own path inside its folder. */
   shown: string
-  /** Whether it's a place to go. A note path that leads outside the notes folder isn't. */
+  /** Whether it's a place to go: the backend says so (`LinePath.linkable`). A relative or cut
+   * path isn't, nor a note path that leads outside the notes folder. */
   linked: boolean
 }
 
@@ -135,8 +137,12 @@ interface SubjectWords {
   places?: LinePlace[]
 }
 
-function folderPlace(path: string): LinePlace {
-  return { path, kind: 'folder', shown: placeName(path), linked: true }
+function linePlace({ text, linkable }: LinePath, kind: LinePlace['kind']): LinePlace {
+  return { path: text, kind, shown: placeName(text), linked: linkable }
+}
+
+function folderPlace(path: LinePath): LinePlace {
+  return linePlace(path, 'folder')
 }
 
 function counts(count: number): { countText: string; count: number } {
@@ -193,12 +199,7 @@ const SUBJECT_WORDS: { [K in ToolSubject['kind']]: (subject: SubjectOf<K>, tool:
   },
   folder: (subject, tool) => placeWords(FOLDER_KEYS[tool], folderPlace(subject.path)),
   files: (subject, tool) => {
-    const words = placeWords(FILES_KEYS[tool], {
-      path: subject.firstPath,
-      kind: 'file',
-      shown: placeName(subject.firstPath),
-      linked: true,
-    })
+    const words = placeWords(FILES_KEYS[tool], linePlace(subject.firstPath, 'file'))
     const others = Math.max(subject.count - 1, 0)
     return words && { ...words, params: { ...words.params, others, othersText: formatInteger(others) } }
   },

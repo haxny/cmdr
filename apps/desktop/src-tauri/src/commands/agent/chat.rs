@@ -32,10 +32,11 @@ use std::path::Path;
 
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::unbounded_channel;
+use tokio_util::sync::CancellationToken;
 
 use super::{
-    AskCmdrSendRefusal, AttachmentRef, LOG_TARGET, MessageBlock, MessageRoleView, MessageView, ModelWindowView,
-    now_secs,
+    AskCmdrSendRefusal, AttachmentRef, CancelOutcomeView, LOG_TARGET, MessageBlock, MessageRoleView, MessageView,
+    ModelWindowView, now_secs,
 };
 use crate::agent::AgentDb;
 use crate::agent::chat::budget;
@@ -235,6 +236,10 @@ pub async fn ask_cmdr_send_message(
     let cancel = cancel::register_cancel(conversation_id);
 
     std::thread::spawn(move || {
+        // Locals drop in reverse: a panic emits the turn's terminal BEFORE it unregisters, so a
+        // Stop that reached it still gets the terminal it waits for.
+        let registration = cancel;
+        let _terminal_on_panic = TerminalOnPanic { conversation_id };
         let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
             Ok(rt) => rt,
             Err(e) => {
@@ -261,16 +266,40 @@ pub async fn ask_cmdr_send_message(
             text,
             attachments,
             denied_names,
-            cancel,
+            registration.token(),
         ));
     });
 
     Ok(conversation_id)
 }
 
+/// Every turn ends with exactly one terminal event, a panicking one included: `run_turn` emits
+/// it on every return, and this emits it when the turn thread unwinds instead. Without it the
+/// rail would wait forever on a Stop it sent, and take the thread's NEXT turn for its terminal.
+struct TerminalOnPanic {
+    conversation_id: i64,
+}
+
+impl Drop for TerminalOnPanic {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            emit_turn_event(
+                self.conversation_id,
+                AskCmdrStreamEvent::Failed {
+                    kind: AgentErrorKindView::UnfinishedReply,
+                    detail: None,
+                    managed: None,
+                    turn: None,
+                },
+            );
+        }
+    }
+}
+
 /// Run one turn to completion on the current-thread runtime: capture the envelope, forward
 /// the runtime's events onto the conversation's stream, and drive the chat runtime. The cancel
-/// registration drops (unregistering) when this returns, even on an early return or a panic.
+/// registration stays on the turn's thread, which drops it (unregistering) once this returns or
+/// unwinds.
 #[allow(
     clippy::too_many_arguments,
     reason = "the turn's full input set, moved onto a worker thread"
@@ -287,7 +316,7 @@ async fn drive_turn(
     text: String,
     attachments: Vec<AttachmentRef>,
     denied_names: Vec<String>,
-    cancel: cancel::CancelRegistration,
+    cancel: CancellationToken,
 ) {
     let envelope = capture_envelope(
         &app,
@@ -328,7 +357,7 @@ async fn drive_turn(
         envelope,
         offset,
         tx,
-        cancel.token(),
+        cancel,
     );
     let (_, result) = tokio::join!(forward, drive);
     if let Err(e) = result {
@@ -357,13 +386,17 @@ fn create_conversation_now(db_path: &Path, text: &str) -> Result<i64, store::Age
     )
 }
 
-/// Stop the in-flight turn for a thread. Idempotent: an unknown id (already finished) is a
-/// no-op. A clean stop at the next tool boundary or stream chunk, not a hard abort.
+/// Stop the in-flight turn for a thread. Idempotent: an unknown id (already finished) trips
+/// nothing. A clean stop at the next tool boundary or stream chunk, not a hard abort.
+///
+/// Answers what the Stop reached, so the rail waits for exactly the terminals still coming: a
+/// Stop that reached no live turn (it ended, or died) gets none, and a turn queued behind
+/// another owes one more.
 ///
 /// One command for both kinds of turn: a wake registers in the same registry, so the status
 /// corner's stop button and the rail's are the same call with a different id.
 #[tauri::command]
 #[specta::specta]
-pub fn ask_cmdr_cancel(conversation_id: i64) {
-    cancel::cancel_turn(conversation_id);
+pub fn ask_cmdr_cancel(conversation_id: i64) -> CancelOutcomeView {
+    cancel::cancel_turn(conversation_id).into()
 }

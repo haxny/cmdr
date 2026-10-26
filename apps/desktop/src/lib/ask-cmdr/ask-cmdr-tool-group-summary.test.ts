@@ -21,7 +21,7 @@ function call(subject: ToolSubject | null, overrides: Partial<RailToolCall> = {}
   }
 }
 
-const folder = (path: string): ToolSubject => ({ kind: 'folder', path })
+const folder = (path: string): ToolSubject => ({ kind: 'folder', path: { text: path, linkable: true } })
 
 describe('groupSummaryText', () => {
   it('counts each kind of thing the calls looked at, in a fixed order', () => {
@@ -35,7 +35,7 @@ describe('groupSummaryText', () => {
   })
 
   it('counts every file a call asked about, not the call', () => {
-    const calls = [call({ kind: 'files', firstPath: '/a.txt', count: 3 }), call(folder('/a'))]
+    const calls = [call({ kind: 'files', firstPath: { text: '/a.txt', linkable: true }, count: 3 }), call(folder('/a'))]
     expect(groupSummaryText(calls)).toBe('Looked around: 1 folder, 3 files')
   })
 

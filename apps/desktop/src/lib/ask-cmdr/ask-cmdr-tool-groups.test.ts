@@ -24,7 +24,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
   askCmdrToolResult: (conversationId: number, messageId: number, callId: string, occurrence: number) =>
     resultMock({ conversationId, messageId, callId, occurrence }),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: vi.fn(() => Promise.resolve(null)),
   recordAskCmdrSlotChange: vi.fn(() => Promise.resolve([])),
@@ -64,6 +64,7 @@ import {
   _resetToolGroupsForTests,
   carryGroupStateAcrossSeam,
   claimGroupAnnouncement,
+  forgetToolDetails,
   isGroupOpen,
   isLineExpanded,
   setGroupOpen,
@@ -75,7 +76,12 @@ const THREAD_ID = 3
 const STATS: TurnStats = { toolCalls: 2, wallMs: 900, promptTokens: 10, completionTokens: 2 }
 
 function resolved(callId: string): ResolvedCall {
-  return { callId, tool: 'list_dir', subject: { kind: 'folder', path: `/${callId}` }, repeatOf: null }
+  return {
+    callId,
+    tool: 'list_dir',
+    subject: { kind: 'folder', path: { text: `/${callId}`, linkable: true } },
+    repeatOf: null,
+  }
 }
 
 function fire(event: AskCmdrStreamEvent): void {
@@ -104,7 +110,7 @@ function streamOneGroup(): void {
       messageId: 5,
       callId,
       outcome: { kind: 'answered' },
-      subject: { kind: 'folder', path: `/${callId}` },
+      subject: { kind: 'folder', path: { text: `/${callId}`, linkable: true } },
     })
   }
 }
@@ -180,6 +186,28 @@ describe('group open state through a turn', () => {
     expect(firstGroup().open).toBe(false)
   })
 
+  /** A round still streaming at the click resolves after it, which gives its group a new key. That
+   *  group is held open too: the stopped turn's end, and the setting, only come with its terminal. */
+  it('holds open a group the stopped turn resolved after the click', () => {
+    streamOneGroup()
+    fire({ type: 'textDelta', text: 'Now the second batch.' })
+    fire({ type: 'toolCallStarted', callId: 'c3', tool: 'list_dir' })
+    stopStreaming()
+
+    fire({ type: 'toolCallsResolved', messageId: 6, calls: [resolved('c3')] })
+    fire({
+      type: 'toolCallFinished',
+      messageId: 6,
+      callId: 'c3',
+      outcome: { kind: 'answered' },
+      subject: { kind: 'folder', path: { text: '/c3', linkable: true } },
+    })
+
+    expect(isGroupOpen('6:c3', { live: false, running: false })).toBe(true)
+    fire({ type: 'stopped', turn: STATS })
+    expect(isGroupOpen('6:c3', { live: false, running: false })).toBe(false)
+  })
+
   it('keeps its key as calls append mid-turn', () => {
     streamOneGroup()
     // A round with no narration joins the same group.
@@ -209,6 +237,19 @@ describe('a reloaded group', () => {
       settings.toolGroupsOnAnswer = mode
       expect(firstGroup(settledBubble(false)).open).toBe(false)
     }
+  })
+
+  /** Reopening a thread in the same session shows what a cold reload would: a group left open
+   *  before the switch starts closed again. */
+  it('starts closed after a thread switch, like a cold reload', () => {
+    settings.toolGroupsOnAnswer = 'keep'
+    streamOneGroup()
+    fire(done(7))
+    expect(firstGroup().open).toBe(true)
+
+    forgetToolDetails()
+
+    expect(isGroupOpen('5:c1', { live: false, running: false })).toBe(false)
   })
 
   it('starts open when a line in it still runs (a reload mid-turn)', () => {

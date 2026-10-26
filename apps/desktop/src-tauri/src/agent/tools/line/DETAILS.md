@@ -28,6 +28,10 @@ model read in its own turn.
   plain text.
 - `Unrecognized(name)` → `UnknownTool { name }`; a legacy nameless call is `Unrecognized("")`.
 - Arguments missing what a tool needs → `Unparsed`. Paths are `~`-expanded with `read::expand_tilde`.
+- **Every subject path is a `LinePath { text, linkable }`** (`LinePath::of`): `linkable` only for an absolute path
+  `bounded` left whole. A relative path (the model's own words) resolves against nothing the panes know, and a cut one
+  ends in `…`, so both keep their text and lose the link. A preview row's `path` (its link) and `MemoryFile.absolute`
+  go through `LinePath::linkable_text`: set only for such a path, the row's `name` carrying the text either way.
 
 **Decision/Why `memory_root` is a parameter**: the root is `<data-dir>/ai/memory/`, which only an `AppHandle` knows.
 Taking it as a value keeps the function pure; a caller with no root passes `None` and gets a plain-text path.

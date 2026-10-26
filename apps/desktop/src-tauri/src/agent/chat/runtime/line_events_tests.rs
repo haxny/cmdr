@@ -10,7 +10,7 @@ use super::test_support::*;
 use super::*;
 use crate::agent::llm::fake::{FakeAgentLlm, ScriptedTurn};
 use crate::agent::store::TurnStats;
-use crate::agent::tools::line::{LineRef, ToolOutcome, ToolSubject};
+use crate::agent::tools::line::{LinePath, LineRef, ToolOutcome, ToolSubject};
 
 fn usage(prompt_tokens: u32, completion_tokens: u32) -> AgentUsage {
     AgentUsage {
@@ -107,12 +107,16 @@ async fn colliding_call_ids_across_rounds_land_on_their_own_rows() {
             (
                 rows[0],
                 "fake-call-0".to_string(),
-                ToolSubject::Folder { path: "/a".into() }
+                ToolSubject::Folder {
+                    path: LinePath::of("/a")
+                }
             ),
             (
                 rows[1],
                 "fake-call-0".to_string(),
-                ToolSubject::Folder { path: "/b".into() }
+                ToolSubject::Folder {
+                    path: LinePath::of("/b")
+                }
             ),
         ]
     );

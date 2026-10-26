@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 use super::*;
 use crate::agent::llm::types::{AgentToolCall, AgentToolResult, ProviderTag, ReasoningState, ToolId};
 use crate::agent::store::ConversationEvent;
+use crate::agent::tools::line::LinePath;
 
 fn stored(content: store::StoredContent) -> StoredMessage {
     StoredMessage {
@@ -86,7 +87,9 @@ fn a_lone_tool_call_carries_its_wire_name_and_argument_subject_but_no_outcome() 
         MessageBlock::ToolCall {
             call_id: "call-2".into(),
             tool: ToolId::ListDir.as_wire_name().to_string(),
-            subject: ToolSubject::Folder { path: "/photos".into() },
+            subject: ToolSubject::Folder {
+                path: LinePath::of("/photos")
+            },
             outcome: None,
             repeat_of: None,
         }

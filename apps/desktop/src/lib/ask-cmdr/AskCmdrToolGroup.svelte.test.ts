@@ -30,7 +30,7 @@ function call(callId: string, overrides: Partial<RailToolCall> = {}): RailToolCa
     callId,
     tool: 'list_dir',
     running: false,
-    subject: { kind: 'folder', path: `/Users/me/${callId}` },
+    subject: { kind: 'folder', path: { text: `/Users/me/${callId}`, linkable: true } },
     outcome: { kind: 'items', returned: 2, total: 2, lowerBound: false },
     repeatOf: null,
     ...overrides,

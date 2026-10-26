@@ -3601,13 +3601,17 @@ export const commands = {
       __TAURI_INVOKE('ask_cmdr_send_message', { conversationId, text, attachments, deniedNames }),
     ),
   /**
-   *  Stop the in-flight turn for a thread. Idempotent: an unknown id (already finished) is a
-   *  no-op. A clean stop at the next tool boundary or stream chunk, not a hard abort.
+   *  Stop the in-flight turn for a thread. Idempotent: an unknown id (already finished) trips
+   *  nothing. A clean stop at the next tool boundary or stream chunk, not a hard abort.
+   *
+   *  Answers what the Stop reached, so the rail waits for exactly the terminals still coming: a
+   *  Stop that reached no live turn (it ended, or died) gets none, and a turn queued behind
+   *  another owes one more.
    *
    *  One command for both kinds of turn: a wake registers in the same registry, so the status
    *  corner's stop button and the rail's are the same call with a different id.
    */
-  askCmdrCancel: (conversationId: number) => __TAURI_INVOKE<void>('ask_cmdr_cancel', { conversationId }),
+  askCmdrCancel: (conversationId: number) => __TAURI_INVOKE<CancelOutcomeView>('ask_cmdr_cancel', { conversationId }),
   /**
    *  Revalidates the user-selected subset of a server-owned rename proposal. The
    *  frontend supplies opaque ids only, never source paths or destination names.
@@ -6704,6 +6708,17 @@ export type BundleWriteBlocker =
    *  whoever manages this Mac can update it.
    */
   | 'notWritableStandardUser'
+
+/**
+ *  What a Stop reached, so the rail waits for exactly the terminals still coming
+ *  (`agent::chat::cancel::CancelOutcome`).
+ */
+export type CancelOutcomeView = {
+  // Turns this Stop tripped that no earlier Stop had, each owing a terminal of its own.
+  tripped: number
+  // Turns still registered in the thread, tripped now or earlier. Zero: no terminal is coming.
+  live: number
+}
 
 /**
  *  What the reversal after a cancel managed to undo, and what it left alone.
@@ -10712,6 +10727,17 @@ export type LineChunk = {
   end: ChunkEnd
   totalRows: TotalRows
   totalBytes: number
+}
+
+// A path a line names: its text, and whether it's a place the panes can go.
+export type LinePath = {
+  // `~` expanded, bounded.
+  text: string
+  /**
+   *  Only an absolute path the bound left whole: a relative one (the model's own words) resolves
+   *  against nothing the panes know, and a cut one names no real place.
+   */
+  linkable: boolean
 }
 
 /**
@@ -18346,6 +18372,10 @@ export type ToolPreview = {
 // One row of a preview. Names, paths, and snippets are file data, so they render as plain text.
 export type ToolPreviewRow = {
   name: string
+  /**
+   *  Where the row is, only when it's a place to go ([`LinePath::linkable_text`]); `name` is
+   *  the row's text either way.
+   */
   path: string | null
   kind: ToolPreviewRowKind
   sizeBytes: number | null
@@ -18372,7 +18402,7 @@ export type ToolResultDetailView = {
   rawJson: string
 }
 
-// What one call looked at. Every path is absolute (`~` expanded); every string is bounded.
+// What one call looked at. Every string is bounded; every path is a [`LinePath`].
 export type ToolSubject =
   // `app_state`: both panes.
   | { kind: 'panes' }
@@ -18380,13 +18410,13 @@ export type ToolSubject =
    *  `list_pane_files`, from its RESULT: the folder and whether only the selection was
    *  listed. Both `None` until the call returns (or when it was refused).
    */
-  | { kind: 'focusedPane'; folder: string | null; selectionOnly: boolean | null }
+  | { kind: 'focusedPane'; folder: LinePath | null; selectionOnly: boolean | null }
   // `list_dir`, `folder_importance`.
-  | { kind: 'folder'; path: string }
+  | { kind: 'folder'; path: LinePath }
   // `inspect_file`, `image_facts`: the first path asked about and how many were.
-  | { kind: 'files'; firstPath: string; count: number }
+  | { kind: 'files'; firstPath: LinePath; count: number }
   // `search`: the name pattern, plus the scope's INCLUDE paths (excludes dropped).
-  | { kind: 'search'; query: string | null; scopePaths: string[] }
+  | { kind: 'search'; query: string | null; scopePaths: LinePath[] }
   // `search_photos`.
   | { kind: 'photoSearch'; query: string }
   | { kind: 'importantFolders' }
@@ -18407,7 +18437,8 @@ export type ToolSubject =
   | { kind: 'nothingToSuggest' }
   /**
    *  `memory_write`, `memory_edit`: `path` is the model's own, RELATIVE to the memory folder.
-   *  `absolute` is set only when it lands inside the folder, and only then is it a place to go.
+   *  `absolute` is set only when it lands inside the folder (and the bound leaves it whole), and
+   *  only then is it a place to go.
    */
   | { kind: 'memoryFile'; path: string; absolute: string | null }
   /**

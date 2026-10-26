@@ -81,14 +81,35 @@ pub fn register_cancel(conversation_id: i64) -> CancelRegistration {
     }
 }
 
+/// What one Stop found in a thread's registry: how many terminals the rail should wait for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CancelOutcome {
+    /// Registrations this Stop tripped that no earlier Stop had: each owes a terminal nobody
+    /// was waiting for before.
+    pub tripped: usize,
+    /// Every registration still alive, tripped now or earlier: each still owes its terminal.
+    /// Zero means no turn runs or waits in the thread, so no terminal is coming at all.
+    pub live: usize,
+}
+
 /// Trip every registered turn for a thread: the running one and any queued behind it.
-/// Idempotent: an unknown id (already finished, or never started) is a no-op. A clean stop at
+/// Idempotent: an unknown id (already finished, or never started) trips nothing. A clean stop at
 /// the next tool boundary or stream chunk, ❌ never a hard abort.
-pub fn cancel_turn(conversation_id: i64) {
-    if let Some(entries) = CANCELS.lock_ignore_poison().get(&conversation_id) {
-        for (_, token) in entries {
+pub fn cancel_turn(conversation_id: i64) -> CancelOutcome {
+    let cancels = CANCELS.lock_ignore_poison();
+    let Some(entries) = cancels.get(&conversation_id) else {
+        return CancelOutcome { tripped: 0, live: 0 };
+    };
+    let mut tripped = 0;
+    for (_, token) in entries {
+        if !token.is_cancelled() {
             token.cancel();
+            tripped += 1;
         }
+    }
+    CancelOutcome {
+        tripped,
+        live: entries.len(),
     }
 }
 
@@ -145,8 +166,23 @@ mod tests {
             "a stop for another thread must not touch this one"
         );
 
-        cancel_turn(-9_001);
+        assert_eq!(cancel_turn(-9_001), CancelOutcome { tripped: 1, live: 1 });
         assert!(token.is_cancelled());
+    }
+
+    /// ⚠️ The rail waits for one terminal per turn a Stop reaches. A second Stop of a turn still
+    /// winding down owes no new terminal, but the turn is live: its first one is still coming. And
+    /// a Stop that reaches nothing must say so, or the rail waits for a terminal that never comes
+    /// and takes the thread's NEXT turn for it.
+    #[test]
+    fn a_second_stop_trips_nothing_new_but_still_sees_the_live_turn() {
+        let running = register_cancel(-9_011);
+
+        assert_eq!(cancel_turn(-9_011), CancelOutcome { tripped: 1, live: 1 });
+        assert_eq!(cancel_turn(-9_011), CancelOutcome { tripped: 0, live: 1 });
+
+        drop(running);
+        assert_eq!(cancel_turn(-9_011), CancelOutcome { tripped: 0, live: 0 });
     }
 
     /// Turning cloud AI off stops every running turn at once, rail and wake alike, whatever
@@ -181,7 +217,7 @@ mod tests {
         let running = register_cancel(-9_301);
         let queued = register_cancel(-9_301);
 
-        cancel_turn(-9_301);
+        assert_eq!(cancel_turn(-9_301), CancelOutcome { tripped: 2, live: 2 });
 
         assert!(running.token().is_cancelled());
         assert!(queued.token().is_cancelled());

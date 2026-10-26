@@ -26,7 +26,7 @@ function said(tool: string, subject: ToolSubject | null, overrides: Partial<Rail
 
 describe('toolLineLabel', () => {
   it('names the folder a listing looked at, running and done, as a place to go', () => {
-    const folder: ToolSubject = { kind: 'folder', path: '/Users/me/Downloads' }
+    const folder: ToolSubject = { kind: 'folder', path: { text: '/Users/me/Downloads', linkable: true } }
     expect(said('list_dir', folder, { running: true, outcome: null })).toBe('Listing Downloads')
     expect(said('list_dir', folder)).toBe('Listed Downloads')
     expect(toolLineLabel(call('list_dir', folder)).place).toEqual({
@@ -39,7 +39,7 @@ describe('toolLineLabel', () => {
   })
 
   it('shows the root as itself, since it has no last segment', () => {
-    expect(said('list_dir', { kind: 'folder', path: '/' })).toBe('Listed /')
+    expect(said('list_dir', { kind: 'folder', path: { text: '/', linkable: true } })).toBe('Listed /')
   })
 
   it('falls back to today’s words when the subject is unknown or unreadable', () => {
@@ -55,28 +55,42 @@ describe('toolLineLabel', () => {
 
   it('names the pane’s folder once the call says which, and whether it read the selection', () => {
     expect(said('list_pane_files', { kind: 'focusedPane', folder: null, selectionOnly: null })).toBe('Listed a folder')
-    expect(said('list_pane_files', { kind: 'focusedPane', folder: '/Users/me/Desktop', selectionOnly: false })).toBe(
-      'Listed Desktop',
-    )
-    expect(said('list_pane_files', { kind: 'focusedPane', folder: '/Users/me/Desktop', selectionOnly: true })).toBe(
-      'Listed your selection in Desktop',
-    )
+    expect(
+      said('list_pane_files', {
+        kind: 'focusedPane',
+        folder: { text: '/Users/me/Desktop', linkable: true },
+        selectionOnly: false,
+      }),
+    ).toBe('Listed Desktop')
+    expect(
+      said('list_pane_files', {
+        kind: 'focusedPane',
+        folder: { text: '/Users/me/Desktop', linkable: true },
+        selectionOnly: true,
+      }),
+    ).toBe('Listed your selection in Desktop')
   })
 
   it('names the first file, and how many more the call asked about', () => {
-    expect(said('inspect_file', { kind: 'files', firstPath: '/a/notes.txt', count: 1 })).toBe('Looked inside notes.txt')
-    expect(said('inspect_file', { kind: 'files', firstPath: '/a/notes.txt', count: 3 })).toBe(
+    expect(said('inspect_file', { kind: 'files', firstPath: { text: '/a/notes.txt', linkable: true }, count: 1 })).toBe(
+      'Looked inside notes.txt',
+    )
+    expect(said('inspect_file', { kind: 'files', firstPath: { text: '/a/notes.txt', linkable: true }, count: 3 })).toBe(
       'Looked inside notes.txt and 2 more',
     )
-    expect(said('image_facts', { kind: 'files', firstPath: '/a/IMG_1.jpg', count: 1 })).toBe('Read what’s in IMG_1.jpg')
+    expect(said('image_facts', { kind: 'files', firstPath: { text: '/a/IMG_1.jpg', linkable: true }, count: 1 })).toBe(
+      'Read what’s in IMG_1.jpg',
+    )
     expect(
-      toolLineLabel(call('inspect_file', { kind: 'files', firstPath: '/a/notes.txt', count: 1 })).place?.kind,
+      toolLineLabel(
+        call('inspect_file', { kind: 'files', firstPath: { text: '/a/notes.txt', linkable: true }, count: 1 }),
+      ).place?.kind,
     ).toBe('file')
   })
 
   it('words a search by what it has: a pattern, folders to look in, both, or neither', () => {
     const search = (query: string | null, scopePaths: string[]): string =>
-      said('search', { kind: 'search', query, scopePaths })
+      said('search', { kind: 'search', query, scopePaths: scopePaths.map((text) => ({ text, linkable: true })) })
     expect(search('*.pdf', ['/Users/me/Documents'])).toBe('Searched for “*.pdf” in Documents')
     expect(search('*.pdf', ['/Users/me/Documents', '/Users/me/Desktop'])).toBe(
       'Searched for “*.pdf” in Documents and Desktop',
@@ -84,14 +98,25 @@ describe('toolLineLabel', () => {
     expect(search('*.pdf', [])).toBe('Searched for “*.pdf”')
     expect(search(null, ['/Users/me/Documents'])).toBe('Searched in Documents')
     expect(search(null, [])).toBe('Searched your files')
-    const label = toolLineLabel(call('search', { kind: 'search', query: 'x', scopePaths: ['/a', '/b'] }))
+    const label = toolLineLabel(
+      call('search', {
+        kind: 'search',
+        query: 'x',
+        scopePaths: [
+          { text: '/a', linkable: true },
+          { text: '/b', linkable: true },
+        ],
+      }),
+    )
     expect(label.places.map((place) => place.path)).toEqual(['/a', '/b'])
     expect(label.places.every((place) => place.kind === 'folder' && place.linked)).toBe(true)
   })
 
   it('passes a search’s folder count, so a case language can tell one folder from several', () => {
     const label = (query: string | null, scopePaths: string[]) =>
-      toolLineLabel(call('search', { kind: 'search', query, scopePaths }))
+      toolLineLabel(
+        call('search', { kind: 'search', query, scopePaths: scopePaths.map((text) => ({ text, linkable: true })) }),
+      )
     expect(label('x', ['/a', '/b'])).toMatchObject({
       key: 'askCmdr.tool.search.queryInFolders.done',
       params: { folders: 2 },
@@ -140,9 +165,12 @@ describe('toolLineLabel', () => {
   it('says something for every subject kind, running and done', () => {
     const samples: Record<ToolSubject['kind'], [string, ToolSubject]> = {
       panes: ['app_state', { kind: 'panes' }],
-      focusedPane: ['list_pane_files', { kind: 'focusedPane', folder: '/a', selectionOnly: false }],
-      folder: ['list_dir', { kind: 'folder', path: '/a' }],
-      files: ['inspect_file', { kind: 'files', firstPath: '/a/b', count: 1 }],
+      focusedPane: [
+        'list_pane_files',
+        { kind: 'focusedPane', folder: { text: '/a', linkable: true }, selectionOnly: false },
+      ],
+      folder: ['list_dir', { kind: 'folder', path: { text: '/a', linkable: true } }],
+      files: ['inspect_file', { kind: 'files', firstPath: { text: '/a/b', linkable: true }, count: 1 }],
       search: ['search', { kind: 'search', query: 'x', scopePaths: [] }],
       photoSearch: ['search_photos', { kind: 'photoSearch', query: 'x' }],
       importantFolders: ['important_folders', { kind: 'importantFolders' }],
@@ -191,7 +219,7 @@ describe('toolOutcomeText', () => {
   })
 
   it('says nothing more when the count only repeats the paths the label names, and keeps a partial answer', () => {
-    const files: ToolSubject = { kind: 'files', firstPath: '/a/notes.txt', count: 2 }
+    const files: ToolSubject = { kind: 'files', firstPath: { text: '/a/notes.txt', linkable: true }, count: 2 }
     const outcomeOf = (tool: string, outcome: ToolOutcome): string | null =>
       toolOutcomeText(call(tool, files, { outcome }))
     const all: ToolOutcome = { kind: 'items', returned: 2, total: 2, lowerBound: false }
@@ -199,7 +227,9 @@ describe('toolOutcomeText', () => {
     expect(outcomeOf('image_facts', all)).toBeNull()
     expect(outcomeOf('inspect_file', { kind: 'items', returned: 1, total: 2, lowerBound: false })).toBe('showed 1 of 2')
     // A folder's count is news: the label names the folder, not how much it holds.
-    expect(toolOutcomeText(call('list_dir', { kind: 'folder', path: '/a' }, { outcome: all }))).toBe('2 items')
+    expect(
+      toolOutcomeText(call('list_dir', { kind: 'folder', path: { text: '/a', linkable: true } }, { outcome: all })),
+    ).toBe('2 items')
   })
 
   it('says nothing while the call runs, and that no answer was recorded for a settled one without', () => {
