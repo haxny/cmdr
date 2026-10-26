@@ -110,13 +110,11 @@ describe('OperationLogDialog', () => {
   })
 
   // Read off the stylesheet: the unit environment carries no CSS, so
-  // `getComputedStyle` can't answer. `ModalDialog`'s body sets `overflow-wrap:
-  // anywhere`, which every row inherits and which gives each flex item a
-  // one-character minimum, so a squeezed head broke "You" into "Yo / u" at 125 %
-  // zoom (#700). `break-word` keeps words whole unless one alone outgrows the line,
-  // and the meta line wraps between its parts rather than inside them.
-  it('keeps the head’s words whole however narrow the row gets', () => {
-    expect(operationLogDialogSource).toMatch(/\.op-head\s*\{[^}]*overflow-wrap:\s*break-word/)
+  // `getComputedStyle` can't answer. A squeezed head broke "You" into "Yo / u" at
+  // 125 % zoom (#700); `ModalDialog`'s body now keeps words whole for every row
+  // (its own test pins that), and the meta line wraps between its parts (who, the
+  // dot, when) rather than squeezing them.
+  it('wraps the meta line between its parts however narrow the row gets', () => {
     expect(operationLogDialogSource).toMatch(/\.op-meta\s*\{[^}]*flex-wrap:\s*wrap/)
   })
 

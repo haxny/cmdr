@@ -123,12 +123,11 @@
         user-select: text;
     }
 
-    /* A path is the whole point of its line, so it wraps anywhere rather than truncating:
+    /* A path is the whole point of its line, so it wraps rather than truncating:
        the person needs all of it to find the folder. */
     .leftovers .path {
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
-        overflow-wrap: anywhere;
     }
 
     .refusal {

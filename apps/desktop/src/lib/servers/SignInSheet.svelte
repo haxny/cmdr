@@ -1101,7 +1101,6 @@
     .endpoint-header {
         margin: 0 0 var(--spacing-lg);
         color: var(--color-text-secondary);
-        overflow-wrap: anywhere;
     }
 
     /* `ServerFormFields`' `.field-warning` look, between the address and the fields. */

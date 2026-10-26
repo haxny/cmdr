@@ -7,6 +7,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, unmount, tick, createRawSnippet } from 'svelte'
 import ModalDialog from './ModalDialog.svelte'
+import modalDialogSource from './ModalDialog.svelte?raw'
 import { closeDialogById } from './dialog-close-registry'
 import { installLayoutMock } from '#lib/test-layout.js'
 
@@ -195,6 +196,15 @@ describe('ModalDialog body padding and resizing', () => {
     const target = mountDialog({ footer: footerSnippet })
     expect(target.querySelector('.modal-body')?.classList.contains('no-footer')).toBe(false)
     target.remove()
+  })
+
+  // Off the stylesheet: the unit environment carries no CSS. `anywhere` gave every
+  // flex item in every body a one-character minimum, so a squeezed row broke "You"
+  // into "Yo / u" (#700). `break-word` breaks only a word that alone outgrows the
+  // line, so words stay whole in every language and at every zoom.
+  it('breaks a word only when it alone outgrows the line', () => {
+    expect(modalDialogSource).toMatch(/\.modal-body\s*\{[^}]*overflow-wrap:\s*break-word/)
+    expect(modalDialogSource).not.toMatch(/overflow-wrap:\s*anywhere/)
   })
 
   // There is no full-bleed opt-out: the body inset is always ModalDialog's, so a

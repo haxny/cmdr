@@ -792,7 +792,6 @@
         display: -webkit-box;
         margin-top: var(--spacing-xxs);
         overflow: hidden;
-        overflow-wrap: anywhere;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 4;
         line-clamp: 4;

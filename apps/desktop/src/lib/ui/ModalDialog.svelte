@@ -898,9 +898,12 @@
         padding: 0 var(--spacing-dialog);
         /* A path, a URL, or a long filename has no break opportunity inside its last
            segment, so without this it overflows the inset and runs to the panel edge.
-           `anywhere` (not `break-word`) also lets the token shrink the min-content
-           width, so a flex/grid child can't be widened by it either. */
-        overflow-wrap: anywhere;
+           ❌ Not `anywhere`: that also drops every flex/grid item's minimum to one
+           character, so a squeezed row broke "You" into "Yo / u" (#700). `break-word`
+           breaks only a word that alone outgrows the line, but it leaves the
+           min-content width alone, so a flex/grid item holding a path must shrink on
+           its own terms (`min-width: 0`, plus an ellipsis or the middle truncation). */
+        overflow-wrap: break-word;
     }
 
     /* Footerless dialogs: the body owns the bottom padding the footer would give. */

@@ -373,11 +373,10 @@
 
     /* A hanging indent, ❌ never a two-column grid. An entry is rendered markdown, and a
        grid makes every inline element (<code>, <strong>, a link) its own ITEM: the text
-       splits across cells and the markup auto-places into the marker column, where the
-       `overflow-wrap: anywhere` inherited from the dialog body breaks it one character per
-       line. Padding plus a negative margin on the marker keeps the whole entry in one
-       inline flow, wrapped lines still hanging under the first. `whats-new-markup.spec.ts`
-       measures it. */
+       splits across cells and the markup auto-places into the marker column, too narrow
+       for a word, which then breaks one character per line. Padding plus a negative
+       margin on the marker keeps the whole entry in one inline flow, wrapped lines still
+       hanging under the first. `whats-new-markup.spec.ts` measures it. */
     .lead :global(li),
     .entries li {
         padding-left: var(--spacing-whats-new-marker);
