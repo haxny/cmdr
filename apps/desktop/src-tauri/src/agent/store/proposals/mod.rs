@@ -36,8 +36,8 @@ mod write;
 mod tests;
 
 pub use claim::{
-    AcceptanceOutcome, ClaimOutcome, ClaimRefusal, ClaimedGroup, OpBinding, RejectOutcome, claim_group_for_execution,
-    live_binding, record_acceptance, reject_group, release_claim,
+    AcceptanceOutcome, ClaimOutcome, ClaimRefusal, ClaimedGroup, OpBinding, OpSelection, RejectOutcome,
+    claim_group_for_execution, live_binding, record_acceptance, reject_group, release_claim,
 };
 pub use complete::{CompleteOutcome, mark_group_completed, record_op_outcome};
 pub use read::{

@@ -50,6 +50,10 @@ fn each_refusal_keeps_the_recovery_it_implies() {
 #[test]
 fn a_refusal_to_start_carries_a_reason_the_dialog_can_word() {
     assert!(matches!(
+        refusal_view(ApprovalRefusal::NotAccepted(AcceptanceOutcome::NothingSelected)),
+        ApprovalResultView::NothingSelected
+    ));
+    assert!(matches!(
         refusal_view(ApprovalRefusal::SourceUnavailable(
             WriteOperationError::SourceNotConnected {
                 path: "/DCIM/one.jpg".into()
@@ -207,6 +211,9 @@ fn the_destination_volume_is_named_even_before_anyone_connects_it() {
     assert_eq!(name(&onto_saved).as_deref(), Some("archive on 192.168.1.5"));
     assert_eq!(name(&renaming).as_deref(), Some("Macintosh HD"));
     assert_eq!(name(&trashing), None);
+    assert_eq!(destination_volume_id_of(&moving), Some("smb-naspi"));
+    assert_eq!(destination_volume_id_of(&renaming), Some("root"));
+    assert_eq!(destination_volume_id_of(&trashing), None);
 }
 
 fn sweep(id: i64) -> ProposalSweep {
@@ -243,6 +250,11 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
     assert_eq!(view.source_volume_id, "root");
     assert_eq!(view.destination.as_deref(), Some("/Users/someone/Documents/Invoices"));
     assert_eq!(view.destination_volume_name.as_deref(), Some("Macintosh HD"));
+    assert_eq!(
+        view.destination_volume_id.as_deref(),
+        Some("root"),
+        "a move with no destination volume id is on its source volume"
+    );
     assert_eq!(view.source_folder.as_deref(), Some("/Users/someone/Downloads"));
     assert_eq!(
         view.reversible,

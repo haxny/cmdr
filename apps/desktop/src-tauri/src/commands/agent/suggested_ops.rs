@@ -27,7 +27,7 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 use super::{now_secs, with_read_connection};
-use crate::agent::store::proposals::{AcceptanceOutcome, ClaimRefusal};
+use crate::agent::store::proposals::{AcceptanceOutcome, ClaimRefusal, OpSelection};
 use crate::agent::store::proposals::{
     GroupSummary, ProposalGroup, ProposalOp, ProposalSweep, count_ops, get_group, get_sweep, list_groups, page_ops,
     shared_source_parent,
@@ -115,6 +115,10 @@ pub struct SuggestedGroupView {
     /// registered volume's own name, or a saved place's while nobody has connected it. `None`
     /// when there's no destination, or nothing knows that id.
     pub destination_volume_name: Option<String>,
+    /// The id of the volume `destination` is on (the source volume's for a rename), so the dialog
+    /// can look the volume up the way the switcher does (its icon). `None` exactly when
+    /// `destination` is: trash and delete bind no target.
+    pub destination_volume_id: Option<String>,
     /// The folder every op sits directly in, so the dialog can name it once instead of on every
     /// row. `None` when the ops span folders.
     pub source_folder: Option<String>,
@@ -252,21 +256,27 @@ struct VolumeFacts<'a> {
 
 /// Fold what the volumes say into a group's facts. No I/O: a registry lookup and a predicate
 /// per group, so the list never runs a volume discovery to describe a suggestion.
+/// The volume `destination` is on: its own id, or the source volume's for a rename (whose parent
+/// lives there). `None` when the verb binds no destination.
+fn destination_volume_id_of(group: &ProposalGroup) -> Option<&str> {
+    group.destination.as_ref()?;
+    Some(
+        group
+            .destination_volume_id
+            .as_deref()
+            .unwrap_or(group.source_volume_id.as_str()),
+    )
+}
+
 fn read_facts(
     group: &ProposalGroup,
     volumes: VolumeFacts<'_>,
     destination_state: DestinationState,
     source_folder: Option<String>,
 ) -> GroupReadFacts {
-    let destination_volume_name = group.destination.as_ref().and_then(|_| {
-        let id = group
-            .destination_volume_id
-            .as_deref()
-            .unwrap_or(group.source_volume_id.as_str());
-        match (volumes.registered)(id) {
-            Some(volume) => Some(volume.name().to_string()),
-            None => (volumes.saved_name)(id),
-        }
+    let destination_volume_name = destination_volume_id_of(group).and_then(|id| match (volumes.registered)(id) {
+        Some(volume) => Some(volume.name().to_string()),
+        None => (volumes.saved_name)(id),
     });
     let source = (volumes.registered)(&group.source_volume_id);
     GroupReadFacts {
@@ -498,6 +508,7 @@ fn destination_check_applies(verb: ProposalVerb) -> bool {
 
 fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroupView {
     let group = summary.group;
+    let destination_volume_id = destination_volume_id_of(&group).map(str::to_string);
     SuggestedGroupView {
         group_id: group.id,
         sweep_id: group.set_id,
@@ -508,6 +519,7 @@ fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroup
         source_volume_id: group.source_volume_id,
         destination: group.destination,
         destination_volume_name: facts.destination_volume_name,
+        destination_volume_id,
         source_folder: facts.source_folder,
         reversible: group.reversible,
         run_blocker: facts.run_blocker,
@@ -664,6 +676,9 @@ pub enum ApprovalResultView {
     /// Every file was gone or unreadable by the time the user approved, so there was nothing
     /// to run.
     NothingToRun,
+    /// The selection left nothing to run (an "only these" with no files ticked). Nothing was
+    /// recorded or claimed; the group stays `pending` with the last review's selection.
+    NothingSelected,
     /// The stored group can't become an operation (a target its verb needs is missing). Not
     /// reachable through `GroupIntent`; the detail goes to the log, never to the dialog.
     CouldNotStart,
@@ -671,8 +686,10 @@ pub enum ApprovalResultView {
 
 /// Approve a group: claim it and hand its ops to the queue.
 ///
-/// The client sends the ids it turned OFF, never the ones it kept, so a 60,000-op group
-/// approved whole carries an empty list.
+/// The client sends whichever op ids are FEWER: the ones it turned off (`allExcept`) or the
+/// ones it kept (`only`), so a 60,000-op group approved whole carries an empty list and one
+/// with three files ticked carries three. Ids only; the acceptance record is computed
+/// server-side either way.
 ///
 /// **On its own thread with its own runtime.** `approve_and_execute` holds a `Connection`
 /// across awaits, which a Tauri command's future can't (it must be `Send`). The result comes
@@ -683,7 +700,7 @@ pub enum ApprovalResultView {
 pub async fn suggested_ops_approve(
     app: AppHandle,
     group_id: i64,
-    deselected_op_ids: Vec<i64>,
+    selection: OpSelection,
 ) -> Result<ApprovalResultView, SuggestedOpsError> {
     let db_path = super::db_path(&app).ok_or(SuggestedOpsError::StoreNotOpen)?;
     let now = now_secs();
@@ -707,13 +724,7 @@ pub async fn suggested_ops_approve(
             let reporting = crate::agent::store::open_write_connection(&db_path).map_err(|e| e.to_string())?;
             let sink = std::sync::Arc::new(crate::operations_host::TauriEventSink::new(app));
             crate::agent::suggested_ops::bridge::approve_and_execute(
-                &conn,
-                reporting,
-                sink,
-                group_id,
-                &deselected_op_ids,
-                now,
-                memory,
+                &conn, reporting, sink, group_id, &selection, now, memory,
             )
             .await
             .map_err(|e| e.to_string())
@@ -746,6 +757,7 @@ fn refusal_view(refusal: ApprovalRefusal) -> ApprovalResultView {
         ApprovalRefusal::NotAccepted(AcceptanceOutcome::Unknown) | ApprovalRefusal::Claim(ClaimRefusal::Unknown) => {
             ApprovalResultView::Unknown
         }
+        ApprovalRefusal::NotAccepted(AcceptanceOutcome::NothingSelected) => ApprovalResultView::NothingSelected,
         ApprovalRefusal::NotAccepted(_) | ApprovalRefusal::Claim(ClaimRefusal::StaleStatus { .. }) => {
             ApprovalResultView::AlreadyAnswered
         }

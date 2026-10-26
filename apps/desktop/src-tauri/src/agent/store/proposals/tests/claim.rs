@@ -19,7 +19,7 @@ fn a_preflighted_group_claims_once_and_becomes_approved() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
 
-    let accepted = record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    let accepted = record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     let AcceptanceOutcome::Accepted { binding } = accepted else {
         panic!("preflight refused a pending group: {accepted:?}");
     };
@@ -41,7 +41,7 @@ fn a_preflighted_group_claims_once_and_becomes_approved() {
 fn claiming_an_approved_group_again_is_refused_as_stale_status() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("first claim");
 
     let outcome = claim_group_for_execution(&conn, group_id, 400).expect("second claim");
@@ -65,7 +65,7 @@ fn a_claim_whose_op_values_changed_refuses_as_binding_mismatch() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
     let AcceptanceOutcome::Accepted { binding: accepted } =
-        record_acceptance(&conn, group_id, &[], 200).expect("preflight")
+        record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight")
     else {
         panic!("preflight refused");
     };
@@ -105,7 +105,7 @@ fn a_claim_whose_op_values_changed_refuses_as_binding_mismatch() {
 fn a_claim_whose_op_set_grew_refuses_as_binding_mismatch() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
 
     conn.execute(
         "INSERT INTO proposal_ops (group_id, seq, source_path, status, created_at)
@@ -150,7 +150,7 @@ fn partial_approval_by_deselection_binds_only_the_selected_ops() {
     let deselected = vec![all[1].id, all[3].id];
 
     let AcceptanceOutcome::Accepted { binding } =
-        record_acceptance(&conn, group_id, &deselected, 200).expect("preflight")
+        record_acceptance(&conn, group_id, &OpSelection::all_except(&deselected), 200).expect("preflight")
     else {
         panic!("preflight refused");
     };
@@ -175,9 +175,10 @@ fn a_second_preflight_reselects_what_the_first_deselected() {
     let group_id = group_with_ops(&conn, 4);
     let all = page_ops(&conn, group_id, 100, 0).expect("ops");
 
-    record_acceptance(&conn, group_id, &[all[0].id, all[1].id], 200).expect("first preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[all[0].id, all[1].id]), 200)
+        .expect("first preflight");
     let AcceptanceOutcome::Accepted { binding } =
-        record_acceptance(&conn, group_id, &[all[0].id], 210).expect("second preflight")
+        record_acceptance(&conn, group_id, &OpSelection::all_except(&[all[0].id]), 210).expect("second preflight")
     else {
         panic!("preflight refused");
     };
@@ -195,7 +196,7 @@ fn two_concurrent_claims_leave_exactly_one_winner_and_a_typed_refusal() {
     let db_path = crate::agent::store::main_db_path(dir.path());
     let setup = open_write_connection(&db_path).expect("open");
     let group_id = group_with_ops(&setup, 200);
-    record_acceptance(&setup, group_id, &[], 200).expect("preflight");
+    record_acceptance(&setup, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     drop(setup);
 
     let barrier = Barrier::new(2);
@@ -259,7 +260,7 @@ fn rejecting_is_conditional_on_pending_too() {
 fn a_rejected_group_cannot_be_claimed() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 2);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     reject_group(&conn, group_id, 300).expect("reject");
 
     let outcome = claim_group_for_execution(&conn, group_id, 400).expect("claim");
@@ -280,7 +281,7 @@ fn a_rejected_group_cannot_be_claimed() {
 fn a_released_claim_is_pending_again_and_claims_again() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 2);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("claim");
 
     assert!(
@@ -294,7 +295,7 @@ fn a_released_claim_is_pending_again_and_claims_again() {
         "a group given back is undecided"
     );
 
-    record_acceptance(&conn, group_id, &[], 400).expect("second preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 400).expect("second preflight");
     let again = claim_group_for_execution(&conn, group_id, 500).expect("second claim");
     assert!(matches!(again, ClaimOutcome::Claimed(_)), "{again:?}");
 }
@@ -305,7 +306,7 @@ fn a_released_claim_is_pending_again_and_claims_again() {
 fn a_claim_whose_ops_already_ran_is_never_released() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 2);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("claim");
     let first_op = page_ops(&conn, group_id, 1, 0).expect("ops")[0].id;
     record_op_outcome(&conn, first_op, OpStatus::Done).expect("outcome");
@@ -326,4 +327,123 @@ fn only_an_approved_group_can_be_released() {
     reject_group(&conn, rejected, 200).expect("reject");
     assert!(!release_claim(&conn, rejected).expect("release"));
     assert_eq!(status_of(&conn, rejected), ProposalStatus::Rejected);
+}
+
+// ── Selecting by "only these" ────────────────────────────────────────────────
+
+/// "Only these" and "all except the rest" are two spellings of one selection, so they bind the
+/// SAME acceptance: same count, same digest, and the claim goes through the same way. The
+/// form is only about keeping the payload small.
+#[test]
+fn only_these_binds_exactly_what_all_except_the_rest_binds() {
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, 5);
+    let all = page_ops(&conn, group_id, 100, 0).expect("ops");
+
+    let AcceptanceOutcome::Accepted { binding: by_exclusion } = record_acceptance(
+        &conn,
+        group_id,
+        &OpSelection::all_except(&[all[0].id, all[2].id, all[4].id]),
+        200,
+    )
+    .expect("preflight") else {
+        panic!("preflight refused");
+    };
+    let AcceptanceOutcome::Accepted { binding: by_inclusion } = record_acceptance(
+        &conn,
+        group_id,
+        &OpSelection::Only {
+            op_ids: vec![all[1].id, all[3].id],
+        },
+        210,
+    )
+    .expect("preflight") else {
+        panic!("preflight refused");
+    };
+
+    assert_eq!(by_inclusion, by_exclusion);
+    assert_eq!(by_inclusion.op_count, 2);
+    assert_eq!(count_ops(&conn, group_id, Some(OpStatus::Excluded)).expect("count"), 3);
+    let outcome = claim_group_for_execution(&conn, group_id, 300).expect("claim");
+    assert!(matches!(outcome, ClaimOutcome::Claimed(_)), "{outcome:?}");
+}
+
+/// "Only these" re-includes an op an earlier review excluded, and drops one it kept: the
+/// selection describes what the user ticked NOW.
+#[test]
+fn only_these_replaces_the_last_reviews_selection() {
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, 3);
+    let all = page_ops(&conn, group_id, 100, 0).expect("ops");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[all[0].id]), 200).expect("first preflight");
+
+    let AcceptanceOutcome::Accepted { binding } = record_acceptance(
+        &conn,
+        group_id,
+        &OpSelection::Only {
+            op_ids: vec![all[0].id],
+        },
+        210,
+    )
+    .expect("second preflight") else {
+        panic!("preflight refused");
+    };
+
+    assert_eq!(binding.op_count, 1);
+    let live = page_ops(&conn, group_id, 100, 0).expect("ops");
+    assert_eq!(live[0].status, OpStatus::Pending, "the once-excluded op is back");
+    assert_eq!(live[1].status, OpStatus::Excluded);
+    assert_eq!(live[2].status, OpStatus::Excluded);
+}
+
+/// "Only these" with nothing ticked is a typed refusal, never an empty run: nothing is
+/// recorded, the rows keep the last review's statuses, and a claim still finds no acceptance.
+/// Ids the group doesn't have select nothing too.
+#[test]
+fn a_selection_that_leaves_nothing_is_refused_and_changes_nothing() {
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, 3);
+    let all = page_ops(&conn, group_id, 100, 0).expect("ops");
+    let before: Vec<OpStatus> = all.iter().map(|op| op.status).collect();
+
+    for selection in [
+        OpSelection::Only { op_ids: Vec::new() },
+        OpSelection::Only { op_ids: vec![999_999] },
+        OpSelection::all_except(&all.iter().map(|op| op.id).collect::<Vec<_>>()),
+    ] {
+        assert_eq!(
+            record_acceptance(&conn, group_id, &selection, 200).expect("preflight"),
+            AcceptanceOutcome::NothingSelected,
+            "{selection:?}"
+        );
+    }
+
+    let after: Vec<OpStatus> = page_ops(&conn, group_id, 100, 0)
+        .expect("ops")
+        .iter()
+        .map(|op| op.status)
+        .collect();
+    assert_eq!(after, before, "a refused selection rolls back");
+    let outcome = claim_group_for_execution(&conn, group_id, 300).expect("claim");
+    assert!(
+        matches!(
+            outcome,
+            ClaimOutcome::Refused(ClaimRefusal::BindingMismatch { accepted: None, .. })
+        ),
+        "nothing was ever accepted: {outcome:?}"
+    );
+}
+
+/// The wire shape the dialog sends: a tagged union, so "only" and "all except" can't be
+/// confused by a field that happens to be empty.
+#[test]
+fn a_selection_crosses_the_wire_tagged_by_its_mode() {
+    assert_eq!(
+        serde_json::from_value::<OpSelection>(serde_json::json!({ "mode": "only", "opIds": [4, 7] })).unwrap(),
+        OpSelection::Only { op_ids: vec![4, 7] }
+    );
+    assert_eq!(
+        serde_json::from_value::<OpSelection>(serde_json::json!({ "mode": "allExcept", "opIds": [] })).unwrap(),
+        OpSelection::all_except(&[])
+    );
 }

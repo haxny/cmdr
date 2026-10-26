@@ -52,7 +52,7 @@ fn re_proposing_a_pending_group_replaces_its_ops() {
 fn re_proposing_tears_up_the_acceptance_record() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
 
     repropose_group(&conn, group_id, &amended_group("/Users/someone/Downloads/inv.pdf"), 210).expect("re-propose");
 
@@ -72,7 +72,7 @@ fn re_proposing_tears_up_the_acceptance_record() {
 fn re_proposing_an_approved_group_is_refused() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("claim");
 
     let outcome = repropose_group(&conn, group_id, &amended_group("/tmp/other"), 400).expect("re-propose");
@@ -95,7 +95,7 @@ fn re_proposing_an_approved_group_is_refused() {
 fn re_proposing_an_interrupted_group_is_refused() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("claim");
     recover_interrupted_groups(&conn).expect("sweep");
 
@@ -114,7 +114,7 @@ fn re_proposing_an_interrupted_group_is_refused() {
 fn reopening_an_approved_group_yields_interrupted() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("claim");
 
     assert_eq!(recover_interrupted_groups(&conn).expect("sweep"), 1);
@@ -130,7 +130,7 @@ fn the_recovery_sweep_is_idempotent_and_leaves_other_statuses_alone() {
     let pending = group_with_ops(&conn, 1);
     let rejected = group_with_ops(&conn, 1);
     let completed = group_with_ops(&conn, 1);
-    record_acceptance(&conn, approved, &[], 200).expect("preflight");
+    record_acceptance(&conn, approved, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, approved, 300).expect("claim");
     reject_group(&conn, rejected, 300).expect("reject");
     conn.execute(
@@ -158,7 +158,7 @@ fn the_recovery_sweep_is_idempotent_and_leaves_other_statuses_alone() {
 fn an_interrupted_group_cannot_be_claimed() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 2);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     claim_group_for_execution(&conn, group_id, 300).expect("claim");
     recover_interrupted_groups(&conn).expect("sweep");
 
@@ -183,7 +183,7 @@ fn preflighting_a_frozen_group_is_refused() {
     reject_group(&conn, group_id, 300).expect("reject");
 
     assert_eq!(
-        record_acceptance(&conn, group_id, &[], 400).expect("preflight"),
+        record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 400).expect("preflight"),
         AcceptanceOutcome::NotPending {
             found: ProposalStatus::Rejected
         }
@@ -197,7 +197,7 @@ fn group_summaries_count_live_and_total_ops() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 4);
     let all = page_ops(&conn, group_id, 100, 0).expect("ops");
-    record_acceptance(&conn, group_id, &[all[0].id], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[all[0].id]), 200).expect("preflight");
 
     let summaries = list_groups(&conn, Some(ProposalStatus::Pending)).expect("list");
     let summary = summaries

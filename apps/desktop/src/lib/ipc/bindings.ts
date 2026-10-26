@@ -3675,18 +3675,18 @@ export const commands = {
   /**
    *  Approve a group: claim it and hand its ops to the queue.
    *
-   *  The client sends the ids it turned OFF, never the ones it kept, so a 60,000-op group
-   *  approved whole carries an empty list.
+   *  The client sends whichever op ids are FEWER: the ones it turned off (`allExcept`) or the
+   *  ones it kept (`only`), so a 60,000-op group approved whole carries an empty list and one
+   *  with three files ticked carries three. Ids only; the acceptance record is computed
+   *  server-side either way.
    *
    *  **On its own thread with its own runtime.** `approve_and_execute` holds a `Connection`
    *  across awaits, which a Tauri command's future can't (it must be `Send`). The result comes
    *  back over a oneshot, so the command still answers the caller directly rather than making the
    *  dialog wait on an event.
    */
-  suggestedOpsApprove: (groupId: number, deselectedOpIds: number[]) =>
-    typedError<ApprovalResultView, SuggestedOpsError>(
-      __TAURI_INVOKE('suggested_ops_approve', { groupId, deselectedOpIds }),
-    ),
+  suggestedOpsApprove: (groupId: number, selection: OpSelection) =>
+    typedError<ApprovalResultView, SuggestedOpsError>(__TAURI_INVOKE('suggested_ops_approve', { groupId, selection })),
   /**
    *  A settings change may have moved an open thread's slot — the model it sends to, the chat
    *  memory each message carries, or both: record what actually moved as conversation events
@@ -6128,6 +6128,11 @@ export type ApprovalResultView =
    *  to run.
    */
   | { kind: 'nothingToRun' }
+  /**
+   *  The selection left nothing to run (an "only these" with no files ticked). Nothing was
+   *  recorded or claimed; the group stays `pending` with the last review's selection.
+   */
+  | { kind: 'nothingSelected' }
   /**
    *  The stored group can't become an operation (a target its verb needs is missing). Not
    *  reachable through `GroupIntent`; the detail goes to the log, never to the dialog.
@@ -13114,6 +13119,17 @@ export type OcrHit = {
 export type OpKind = 'copy' | 'move' | 'delete' | 'trash' | 'rename' | 'createFolder' | 'createFile' | 'archiveEdit'
 
 /**
+ *  Which of a group's ops the user kept, in whichever form is SMALL: a review that turned a few
+ *  off sends those, one that turned a few on sends those. Ids only, never values: the
+ *  acceptance record the claim trusts is computed here, server-side, from the rows.
+ */
+export type OpSelection =
+  // Every op the group offers, except these.
+  | { mode: 'allExcept'; opIds: number[] }
+  // Only these ops. Empty is refused as [`AcceptanceOutcome::NothingSelected`], never run.
+  | { mode: 'only'; opIds: number[] }
+
+/**
  *  Where one op sits, stored in `proposal_ops.status`. Per-op statuses are what make a
  *  partial apply ("run 11, skip 3") possible.
  */
@@ -17704,6 +17720,12 @@ export type SuggestedGroupView = {
    *  when there's no destination, or nothing knows that id.
    */
   destinationVolumeName: string | null
+  /**
+   *  The id of the volume `destination` is on (the source volume's for a rename), so the dialog
+   *  can look the volume up the way the switcher does (its icon). `None` exactly when
+   *  `destination` is: trash and delete bind no target.
+   */
+  destinationVolumeId: string | null
   /**
    *  The folder every op sits directly in, so the dialog can name it once instead of on every
    *  row. `None` when the ops span folders.

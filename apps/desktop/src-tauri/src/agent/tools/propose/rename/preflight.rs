@@ -146,7 +146,12 @@ fn record_user_acceptance(
         .filter_map(|row| super::store::numeric_id(&row.row_id))
         .collect();
     Ok(matches!(
-        crate::agent::store::proposals::record_acceptance(conn, group_id, &deselected, now_secs())?,
+        crate::agent::store::proposals::record_acceptance(
+            conn,
+            group_id,
+            &crate::agent::store::proposals::OpSelection::AllExcept { op_ids: deselected },
+            now_secs(),
+        )?,
         AcceptanceOutcome::Accepted { .. }
     ))
 }

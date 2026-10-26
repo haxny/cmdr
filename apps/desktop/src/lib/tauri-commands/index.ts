@@ -547,6 +547,7 @@ export type {
   ApprovalResultView,
   DestinationState,
   LiveFileState,
+  OpSelection,
   RejectResultView,
   RunBlocker,
   SuggestionChange,

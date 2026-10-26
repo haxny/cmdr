@@ -123,7 +123,13 @@ fn an_accepted_preflight_does_not_survive_a_store_reopen() {
             vec![draft_row("/shots/a.png", "b.png", EvidenceSource::Filename, "old name")],
         );
         let allowed: Vec<String> = proposal.rows.iter().map(|row| row.row_id.clone()).collect();
-        record_acceptance(&conn, last_group_id(&conn), &[], 200).expect("preflight");
+        record_acceptance(
+            &conn,
+            last_group_id(&conn),
+            &crate::agent::store::proposals::OpSelection::all_except(&[]),
+            200,
+        )
+        .expect("preflight");
         accepted.record(
             &proposal.proposal_id,
             AcceptedPreflight {
@@ -168,7 +174,13 @@ fn no_batch_of_an_accumulated_review_keeps_its_approval_across_a_store_reopen() 
                 vec![draft_row(source, destination, EvidenceSource::Filename, "old name")],
             );
             let allowed: Vec<String> = proposal.rows.iter().map(|row| row.row_id.clone()).collect();
-            record_acceptance(&conn, last_group_id(&conn), &[], 200).expect("preflight");
+            record_acceptance(
+                &conn,
+                last_group_id(&conn),
+                &crate::agent::store::proposals::OpSelection::all_except(&[]),
+                200,
+            )
+            .expect("preflight");
             accepted.record(
                 &proposal.proposal_id,
                 AcceptedPreflight {
@@ -337,7 +349,13 @@ fn staged_with_accepted_preflight(
 ) -> RenameProposal {
     let proposal = staged(conn, rows);
     let allowed_row_ids: Vec<String> = proposal.rows.iter().map(|row| row.row_id.clone()).collect();
-    record_acceptance(conn, last_group_id(conn), &[], 200).expect("preflight");
+    record_acceptance(
+        conn,
+        last_group_id(conn),
+        &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        200,
+    )
+    .expect("preflight");
     accepted.record(
         &proposal.proposal_id,
         AcceptedPreflight {

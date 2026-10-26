@@ -22,9 +22,9 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
   mismatch the winner caused. That one needs no rule, because a test holds it:
   `tests/claim.rs::two_concurrent_claims_leave_exactly_one_winner_and_a_typed_refusal` goes red if the claim starts
   writing them.
-- **The acceptance record is SERVER-OWNED.** The client presents a group id and DESELECTED op ids, never values.
-  Comparing `proposal_ops` against itself is a tautology once the agent can amend a pending group, so the record held
-  apart from the rows is the whole mechanism.
+- **The acceptance record is SERVER-OWNED.** The client presents an `OpSelection` of op IDS, never values
+  (`DETAILS.md` § What preflight accepts). Comparing `proposal_ops` against itself is a tautology once the agent can
+  amend a pending group, so the record held apart from the rows is the whole mechanism.
 - **`live_binding` STREAMS.** One row in memory at a time, so a 60 000-op group claims as cheaply as a three-op one.
   `page_ops` is the only op-row-materializing read here, and a test asserts the claim path never calls it — so a
   comparison rewritten to load the ops fails that test rather than quietly costing 60 000 rows twice.

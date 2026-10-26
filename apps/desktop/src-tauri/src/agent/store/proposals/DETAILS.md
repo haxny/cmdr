@@ -22,6 +22,10 @@ shape it takes (`NewOp` for the shared-target verbs, `NewRename` for rename), so
 is no runtime check to keep in sync with the executors. Adding a verb means adding a variant, which makes every `match`
 here a compile error until it's handled.
 
+## What preflight accepts
+
+`claim.rs::record_acceptance` takes an `OpSelection`, ids only, in whichever form is smaller: `allExcept { opIds }` (the ops the review turned off) or `only { opIds }` (the ones it kept), so neither "all but three" nor "only three" of 60 000 carries 60 000 ids. Both forms run in one `BEGIN IMMEDIATE`: reset the live set to all-or-nothing, toggle the named ids, then hash the result. They're two spellings of one selection, so they bind the SAME count and digest (`tests/claim.rs::only_these_binds_exactly_what_all_except_the_rest_binds`); the claim never knows which form arrived. Only `pending` and `excluded` rows move, so an op that already ran keeps its outcome. A selection that leaves the live set empty (`only` with no ids, ids the group doesn't have, `allExcept` every op) is `AcceptanceOutcome::NothingSelected`: rolled back, no acceptance recorded, never an empty run.
+
 ## The claim transaction, in order
 
 `claim.rs::claim_group_for_execution`, one `BEGIN IMMEDIATE`:

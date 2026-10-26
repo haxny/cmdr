@@ -16,12 +16,41 @@ pub struct OpBinding {
     pub digest: String,
 }
 
+/// Which of a group's ops the user kept, in whichever form is SMALL: a review that turned a few
+/// off sends those, one that turned a few on sends those. Ids only, never values: the
+/// acceptance record the claim trusts is computed here, server-side, from the rows.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum OpSelection {
+    /// Every op the group offers, except these.
+    AllExcept { op_ids: Vec<i64> },
+    /// Only these ops. Empty is refused as [`AcceptanceOutcome::NothingSelected`], never run.
+    Only { op_ids: Vec<i64> },
+}
+
+impl OpSelection {
+    /// Every op except `op_ids`; `&[]` keeps them all.
+    pub fn all_except(op_ids: &[i64]) -> Self {
+        Self::AllExcept {
+            op_ids: op_ids.to_vec(),
+        }
+    }
+}
+
 /// What preflight did, or why it didn't.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AcceptanceOutcome {
-    Accepted { binding: OpBinding },
-    NotPending { found: ProposalStatus },
+    Accepted {
+        binding: OpBinding,
+    },
+    NotPending {
+        found: ProposalStatus,
+    },
     Unknown,
+    /// The selection leaves nothing to run (`Only` with no ids, or ids the group doesn't
+    /// have, or `AllExcept` every op). Refused and rolled back, so the rows keep the last
+    /// review's statuses and nothing records an acceptance of an empty set.
+    NothingSelected,
 }
 
 /// A group the claim transaction moved into `approved`, with the binding it ran against.
@@ -62,15 +91,16 @@ pub enum RejectOutcome {
 
 /// Record what the user approved, as a server-owned acceptance record.
 ///
-/// The client presents a group id and the op ids it DESELECTED — never values, and never the
-/// 60 000 ids it kept. Preflight turns that into the live op set (deselected ops become
-/// `excluded` rows, previously excluded ops come back) and stores a hash plus count of what
-/// that set carries. From here on, that record is the only thing the claim trusts about what
-/// the user saw.
+/// The client presents a group id and a [`OpSelection`] of op IDS — never values, and in
+/// whichever form is small, so neither "all but three" nor "only three" of 60 000 carries
+/// 60 000 ids. Preflight turns that into the live op set (unselected ops become `excluded`
+/// rows, selected ones that an earlier review excluded come back) and stores a hash plus
+/// count of what that set carries. From here on, that record is the only thing the claim
+/// trusts about what the user saw, whichever form the selection came in.
 pub fn record_acceptance(
     conn: &Connection,
     group_id: i64,
-    deselected_op_ids: &[i64],
+    selection: &OpSelection,
     now: i64,
 ) -> Result<AcceptanceOutcome, AgentStoreError> {
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
@@ -80,28 +110,31 @@ pub fn record_acceptance(
         Some(found) => return Ok(AcceptanceOutcome::NotPending { found }),
     }
 
-    // Start from what the group offers: an op excluded by an earlier review comes back unless
-    // this review deselects it again. Only `excluded` rows are touched, so an op that already
-    // ran keeps its outcome.
-    tx.prepare_cached("UPDATE proposal_ops SET status = ?2 WHERE group_id = ?1 AND status = ?3")?
-        .execute(params![
-            group_id,
-            OpStatus::Pending.as_token(),
-            OpStatus::Excluded.as_token()
-        ])?;
-    let mut exclude =
+    // Only `pending` and `excluded` rows are ever moved, so an op that already ran keeps its
+    // outcome whichever way the selection reads.
+    let set_all = |from: OpStatus, to: OpStatus| {
+        tx.prepare_cached("UPDATE proposal_ops SET status = ?2 WHERE group_id = ?1 AND status = ?3")?
+            .execute(params![group_id, to.as_token(), from.as_token()])
+    };
+    let (start_from, toggled, ids) = match selection {
+        // Start from everything the group offers, then turn these off.
+        OpSelection::AllExcept { op_ids } => (OpStatus::Pending, OpStatus::Excluded, op_ids),
+        // Start from nothing, then turn these on.
+        OpSelection::Only { op_ids } => (OpStatus::Excluded, OpStatus::Pending, op_ids),
+    };
+    set_all(toggled, start_from)?;
+    let mut toggle =
         tx.prepare_cached("UPDATE proposal_ops SET status = ?3 WHERE group_id = ?1 AND id = ?2 AND status = ?4")?;
-    for op_id in deselected_op_ids {
-        exclude.execute(params![
-            group_id,
-            op_id,
-            OpStatus::Excluded.as_token(),
-            OpStatus::Pending.as_token()
-        ])?;
+    for op_id in ids {
+        toggle.execute(params![group_id, op_id, toggled.as_token(), start_from.as_token()])?;
     }
-    drop(exclude);
+    drop(toggle);
 
     let binding = live_binding(&tx, group_id)?;
+    if binding.op_count == 0 {
+        // Dropping `tx` rolls back: the rows keep the last review's statuses.
+        return Ok(AcceptanceOutcome::NothingSelected);
+    }
     tx.prepare_cached(
         "INSERT INTO proposal_acceptances (group_id, op_count, op_digest, created_at)
          VALUES (?1, ?2, ?3, ?4)

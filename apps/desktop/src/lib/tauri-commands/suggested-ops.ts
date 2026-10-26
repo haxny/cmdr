@@ -11,6 +11,7 @@ import {
   commands,
   events,
   type ApprovalResultView,
+  type OpSelection,
   type RejectResultView,
   type SuggestedOpLiveFact,
   type SuggestedOpPage,
@@ -60,10 +61,12 @@ export async function rejectSuggestedGroup(groupId: number): Promise<RejectResul
   return res.data
 }
 
-/** Approve a group: claim it and hand its ops to the queue. Sends the ids the user turned OFF,
- *  never the ones they kept, so approving a 60,000-op group whole carries an empty list. */
-export async function approveSuggestedGroup(groupId: number, deselectedOpIds: number[]): Promise<ApprovalResultView> {
-  const res = await commands.suggestedOpsApprove(groupId, deselectedOpIds)
+/** Approve a group: claim it and hand its ops to the queue. Send whichever ids are fewer: the ones
+ *  the user turned off (`allExcept`) or the ones they kept (`only`), so neither approving a
+ *  60,000-op group whole nor ticking three of them carries 60,000 ids. An `only` that keeps
+ *  nothing answers `nothingSelected` and runs nothing. */
+export async function approveSuggestedGroup(groupId: number, selection: OpSelection): Promise<ApprovalResultView> {
+  const res = await commands.suggestedOpsApprove(groupId, selection)
   if (res.status === 'error') throwSuggestedOpsError(res.error)
   return res.data
 }
@@ -81,6 +84,7 @@ export type {
   ApprovalResultView,
   DestinationState,
   LiveFileState,
+  OpSelection,
   SuggestionChange,
   SuggestionsChanged,
   RejectResultView,

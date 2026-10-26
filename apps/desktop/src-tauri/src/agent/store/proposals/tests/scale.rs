@@ -24,7 +24,7 @@ fn a_60000_op_group_claims_without_materializing_its_rows() {
     assert_eq!(count_ops(&conn, group_id, None).expect("count"), HUGE as u64);
 
     let before = read::tests_support::page_ops_calls();
-    let accepted = record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    let accepted = record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
     let AcceptanceOutcome::Accepted { binding } = accepted else {
         panic!("preflight refused: {accepted:?}");
     };
@@ -45,7 +45,7 @@ fn a_60000_op_group_claims_without_materializing_its_rows() {
 fn one_changed_op_out_of_60000_still_refuses_the_claim() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, HUGE);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
 
     conn.execute(
         "UPDATE proposal_ops SET source_path = '/Users/someone/Documents/taxes.pdf'
