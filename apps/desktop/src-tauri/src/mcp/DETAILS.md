@@ -391,6 +391,14 @@ enable-first-scan path (a not-yet-active volume, especially async SMB via `start
 and that's exactly where the wait earns its keep. This replaces a generation counter for the new `await` condition (the
 tool contract sequences it instead), which is cheaper and honest.
 
+### Favorites aren't volumes, in `cmdr://state` too
+
+Decision (#749): `cmdr://state`'s `volumes:` lists volumes only; favorites ride their own `favorites:` section, which
+already listed every one of them. As `volumes:` rows they read as `kind: local` (the Pixel's MTP storage, saved as a
+favorite, included), so an AI client met each favorite twice and one phone as a local disk. The change is an ai-client
+contract change, deliberately: every other `volumes:` row renders byte for byte as before (`mountPath` included). The
+mechanism and its test: the `cmdr://state` entry in `resources/DETAILS.md` § "The module".
+
 ### Why the TS parse layer stays separate from the registry
 
 The `mcp_tools!` registry single-sources the three **Rust** consumers (list, dispatch, auth gate). The frontend's

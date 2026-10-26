@@ -1,10 +1,11 @@
 //! The volume facts the resolver reads, gathered from in-memory sources only.
 //!
 //! The volume registry's live set, the saved-server and saved-share stores, the
-//! cached device list, and the index's own state: ❌ never a `statfs`, a mount
-//! table read, or the full volume listing (up to 2 s on a wedged mount). A tool
-//! call resolves a location before it does anything else, so this has to answer
-//! in microseconds whatever the network is doing.
+//! cached device list, and the index's own state, plus, for a volume that isn't
+//! live, the meta its index database records (one read-only open of a file in the
+//! local cache dir): ❌ never a `statfs`, a mount table read, or the full volume
+//! listing (up to 2 s on a wedged mount). A tool call resolves a location before
+//! it does anything else, so this has to answer fast whatever the network is doing.
 //!
 //! It also owns the earlier-roots record ([`RootHistory`]): every root a volume
 //! held this session, seeded with each saved share's last mount path, so a
@@ -116,7 +117,7 @@ impl VolumeFacts {
                 .unwrap_or_else(|| volume.name().to_string());
             #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             let name = volume.name().to_string();
-            volumes.push(fact(id, name, kind, root, true, volume.connection_state()));
+            volumes.push(fact(id, name, kind, root, true, volume.connection_state(), None));
         }
 
         #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -128,13 +129,23 @@ impl VolumeFacts {
                 let Some(kind) = kind_of_fs_type(place.fs_type) else {
                     continue;
                 };
+                let stored = StoredScan::read(&place.id);
                 let Some(root) = volume_root(RootSources {
+                    index_meta: stored.root.as_deref(),
                     saved: Some(&place.app_root),
                     ..RootSources::default()
                 }) else {
                     continue;
                 };
-                volumes.push(fact(place.id, place.name, kind, root, false, Some(place.state)));
+                volumes.push(fact(
+                    place.id,
+                    place.name,
+                    kind,
+                    root,
+                    false,
+                    Some(place.state),
+                    Some(stored),
+                ));
             }
             for share in saved_shares {
                 let (Some(id), Some(mount_path)) = (share.volume_id, share.mount_path) else {
@@ -143,9 +154,9 @@ impl VolumeFacts {
                 if known(&volumes, &id) {
                     continue;
                 }
-                // The index's recorded root has no reader for a stopped volume yet,
-                // so a saved share's root is its last mount path.
+                let stored = StoredScan::read(&id);
                 let Some(root) = volume_root(RootSources {
+                    index_meta: stored.root.as_deref(),
                     saved: Some(&mount_path),
                     ..RootSources::default()
                 }) else {
@@ -159,6 +170,7 @@ impl VolumeFacts {
                     root,
                     false,
                     Some(ConnectionState::Saved),
+                    Some(stored),
                 ));
             }
         }
@@ -174,13 +186,23 @@ impl VolumeFacts {
             let Some(kind) = device.fs_type.as_deref().and_then(kind_of_fs_type) else {
                 continue;
             };
+            let stored = StoredScan::read(&device.id);
             let Some(root) = volume_root(RootSources {
+                index_meta: stored.root.as_deref(),
                 saved: Some(&device.path),
                 ..RootSources::default()
             }) else {
                 continue;
             };
-            volumes.push(fact(device.id, device.name, kind, root, false, device.connection_state));
+            volumes.push(fact(
+                device.id,
+                device.name,
+                kind,
+                root,
+                false,
+                device.connection_state,
+                Some(stored),
+            ));
         }
 
         Self {
@@ -203,6 +225,30 @@ fn known(volumes: &[VolumeFact], id: &str) -> bool {
     volumes.iter().any(|v| v.id == id)
 }
 
+/// What a not-live volume's index database records about its last walk, read off
+/// disk through the index's read-only opener (`Index::status`): the root it was
+/// mounted at, and when the walk finished. Empty when there's no database, or one
+/// this build can't read.
+#[derive(Default)]
+struct StoredScan {
+    root: Option<String>,
+    completed_at: Option<u64>,
+}
+
+impl StoredScan {
+    fn read(volume_id: &str) -> Self {
+        let Some(last) = index().status(volume_id).ok().and_then(|status| status.index_status) else {
+            return Self::default();
+        };
+        Self {
+            root: last.volume_path.filter(|root| !root.is_empty()),
+            completed_at: last.scan_completed_at.and_then(|at| at.parse().ok()),
+        }
+    }
+}
+
+/// One volume's facts. `stored` is what its database on disk records, read for a
+/// volume that isn't live (`None` for a live one).
 fn fact(
     id: String,
     name: String,
@@ -210,6 +256,7 @@ fn fact(
     root: String,
     live: bool,
     connection_state: Option<ConnectionState>,
+    stored: Option<StoredScan>,
 ) -> VolumeFact {
     // A live volume's index is whichever one the index routes its root to (a cloud
     // drive's is `root`'s). A volume that isn't live has only its own: routing a
@@ -223,6 +270,7 @@ fn fact(
     let index_sources = IndexSources {
         live: index().volume_status(&index_id).enabled,
         stored: crate::search::volumes::has_searchable_index(&index_id),
+        stored_as_of: stored.and_then(|stored| stored.completed_at),
         volume_id: index_id,
     };
     VolumeFact {

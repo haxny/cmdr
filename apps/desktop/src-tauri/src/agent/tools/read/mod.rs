@@ -3,7 +3,8 @@
 //! - [`state`]: `app_state` — the live pane + volume snapshot.
 //! - [`listing`]: `list_dir` — drive-index listing, sortable by size (the disk-usage question).
 //! - [`importance`]: `important_folders` + `folder_importance` — the offline importance signal.
-//! - [`volumes`]: `list_volumes` — every volume with freshness + connectivity.
+//! - [`volumes`]: `list_volumes` — every volume with its root, freshness, and
+//!   connectivity, plus the favorites.
 //! - [`inspect`]: `inspect_file` — up to 200 files' metadata, the kind their bytes really are, and a bounded
 //!   content window per kind, read through the viewer's own core.
 //!

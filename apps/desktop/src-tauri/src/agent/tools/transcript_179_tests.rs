@@ -58,9 +58,9 @@ fn conversation_179_with_lan_at(lan_root: &str) -> VolumeFacts {
                 connection_state: None,
                 earlier_roots: Vec::new(),
                 index: IndexSources {
-                    volume_id: "root".to_string(),
                     live: true,
                     stored: true,
+                    ..IndexSources::none("root")
                 },
             },
             share(

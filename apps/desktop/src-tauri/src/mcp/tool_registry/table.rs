@@ -555,7 +555,7 @@ mcp_tools! {
         run: app_params crate::agent::tools::memory::execute_memory_edit
     },
     "list_volumes" => {
-        desc: "List every volume Cmdr can see (local disks, SMB shares, MTP devices, the Network root) with kind, index freshness (fresh / scanning / stale / off), and for SMB its connection state (direct / os_mount / disconnected). mountPath is the path to put in search's scope to cover that drive; no mountPath means nothing can search it.",
+        desc: "List every volume (disks, shares, servers, phones) with kind, root (the path its locations start with), index freshness (fresh / scanning / stale / off; stale with asOf for a not-connected one answering from its index), and connection state; plus favorites, each with a location when a connected volume holds it.",
         schema: crate::agent::tools::read::volumes::list_volumes_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Read,

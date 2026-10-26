@@ -67,6 +67,11 @@ pub(crate) struct IndexSources {
     pub live: bool,
     /// An index database is on disk, live instance or not.
     pub stored: bool,
+    /// When the on-disk index's last walk finished (unix seconds), for a volume
+    /// that isn't live: what an offline answer is dated by. `None` for a live
+    /// volume (its index's own status says how fresh it is) and for an index
+    /// whose first walk never finished.
+    pub stored_as_of: Option<u64>,
 }
 
 impl IndexSources {
@@ -77,6 +82,7 @@ impl IndexSources {
             volume_id: volume_id.to_string(),
             live: false,
             stored: false,
+            stored_as_of: None,
         }
     }
 }

@@ -448,14 +448,9 @@ async fn build_state_yaml<R: Runtime>(app: &tauri::AppHandle<R>, opts: &StateOpt
     }
 
     if let Some((rows, timed_out)) = listing.as_ref().filter(|_| opts.includes("favorites")) {
-        // Each favorite with its volume and reach, off the same listing the app shows,
-        // or the store's own list when that listing's discovery came up short.
-        let favorites = if *timed_out {
-            favorites::from_store()
-        } else {
-            favorites::from_listing(rows)
-        };
-        yaml.push_str(&favorites::build_favorites_yaml(&favorites));
+        yaml.push_str(&favorites::build_favorites_yaml(&favorites::of_listing(
+            rows, *timed_out,
+        )));
     }
 
     if opts.includes("operations") {

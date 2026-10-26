@@ -57,7 +57,7 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
     already on the consent screen, so `search` widened no egress and needed no `CONSENT_COPY_VERSION` bump.
   - **One drive per call, and the model loops.** `resolve_target` refuses a scope spanning volumes
     (`ScopeError::SpansMultipleVolumes`), because a fan-out is the only way a search can silently omit a drive. The
-    default is the boot volume; another drive is named by the `mountPath` `list_volumes` hands over. The description
+    default is the boot volume; another drive is named by the `root` `list_volumes` hands over. The description
     obliges the model to say WHICH drive it covered before offering the others.
   - **What the coverage block obliges the model to say**, field by field: `stillWalking` and `abandonedGround` make the
     list a lower bound (❗ never "no matches"), `permissionDenied` names refused folders and offers Full Disk Access
@@ -113,19 +113,34 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   `unsupportedVolume`. The call reports `total` / `returned` / `truncated` and names every path with no row in
   `unanswered`. One of two disk readers among the handlers (the other is `list_dir`'s live source); how it reads and how it times out: § Reading a
   file the way the viewer does.
-- **`list_volumes`** (`read/volumes.rs`) — every volume with `indexStatus` (`fresh`/`scanning`/`stale`/`off`) and, for
-  a remote one, `connectionState` (`direct`/`os_mount`/`disconnected`/`needs_sign_in`/`needs_host_key_approval`/`saved`),
-  straight from `snapshot_volumes` so tokens can't drift. A DEVICE row carries `deviceReadiness`
+- **`list_volumes`** (`read/volumes.rs`) — the map a model plans from: `{ volumes, favorites }`. Every volume with
+  `root`, `indexStatus` (`fresh`/`scanning`/`stale`/`off`) and, for a remote one, `connectionState`
+  (`direct`/`os_mount`/`disconnected`/`needs_sign_in`/`needs_host_key_approval`/`saved`), the tokens straight from
+  `snapshot_volumes_from` so they can't drift. A DEVICE row carries `deviceReadiness`
   (`ready`/`waiting_for_authorization`/`unavailable_offline`/`unavailable_no_permissions`) instead: ❗ a phone waiting
   for its "Allow USB debugging?" tap is listed, so without it the row reads as browsable and every call against it is a
   refusal you can't explain. Presence is not a session, which is why it isn't on `connectionState`.
   Space rides along as `totalBytes` / `availableBytes` plus `totalHuman` / `availableHuman`, each pair present exactly
   when the poller has a reading (the same pair `cmdr://state`'s `volumes:` renders; see `mcp/DETAILS.md`).
-  `mountPath` is what makes a `search` of anything but the boot volume expressible: `search` covers ONE volume per call
-  and addresses it by a path in `scope`, and every other field here is a name, an id, or a token. It's absent for a
-  volume with no filesystem path (MTP storages, the `Network` root), which is also exactly where a search can't reach.
-  ⚠️ It rides `VolumeSummary` but ❌ NOT the `cmdr://state` YAML: that view redacts home paths, so a favorite folder's
-  mount path would render redacted and an AI client copying it into a scope would match nothing.
+  - **`root`** is the resolver's own (`VolumeFact::root`, the one root rule below), so a row and a `list_dir` on that
+    volume can't disagree about where its paths start: a mount point, a scheme root (`sftp://…`, `mtp://…`), or for a
+    volume that isn't connected the root it last had (its `connectionState` says so). Absent only on a row no location
+    lives on (the `Network` hub). It's also the scope a `search` of that drive names. ❌ No `mountPath` here: a saved
+    share's LAST mount point read as "where it is" is what sent the model to a dead `/Volumes/naspi`. `cmdr://state`'s
+    YAML keeps `mountPath` (an ai-client contract).
+  - **The offline vocabulary.** A volume that isn't live, whose index database is on disk with a completed scan,
+    reads `indexStatus: stale` plus `asOf` (that scan's date, spoken), the same pair `list_dir`'s offline coverage
+    voices; with no database it stays `off`. The date comes off the index's read-only opener through the facts shell
+    (`IndexSources::stored_as_of`), never by registering the volume. A live volume's status is its index's own.
+  - **Rows of one share sit together**, most recently connected first (`known-shares.json`'s `lastConnectedAt`, rows
+    matched by share name ignoring case), so the address that worked last is the one a model meets first. Ordering
+    only: it claims nothing about the rows being one share.
+  - **`favorites`** are folders, not volumes, so they left `volumes` (where they read as `kind: local`, the phone one
+    included). Each is `{ name, path, location?, reachable? }`: the saved `path` always, a `location` when it resolves
+    as a bare path to a connected volume, and `reachable: false` when nothing connected holds it.
+  - **Two sources, one per kind of fact.** `VolumeSummary` is shared with `cmdr://state` and the envelope; `root`,
+    `asOf`, and the favorites' locations come from `VolumeFacts` in the pure `to_volume_map`, so a field added for this
+    tool can't reach the YAML by accident. `app_state` embeds the same map's `volumes`.
 - **`operations_list` / `operations_get`** — the shipped executors (`mcp/executor/operation_log.rs`), shared into the
   agent view unchanged (their schemas + coverage flags already fit an agent reader).
 - **`search_photos`** (`mcp/executor/photos.rs`, shared `[AiClient, Agent]`) — photo search by description (CLIP),
@@ -176,7 +191,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,717 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,713 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -392,8 +407,9 @@ valid next input. `path` is always the APP path: the string the panes, `search` 
   shares can share one last root, and a reused mount point would resolve to the wrong one. Only an explicit `volumeId`
   reaches a not-connected volume.
 - **One root rule** (`volume_root`): the live mount (or scheme) root when registered, else the index's `volume_path`
-  meta, else the saved row's last mount path. The facts shell fills the meta tier only once something reads a stopped
-  volume's DB; today a saved share's root is its last mount path.
+  meta, else the saved row's last mount path. For a volume that isn't live, the facts shell reads the meta (and the
+  last scan's date) off its index database through `Index::status`, the read-only opener: nothing is registered or
+  rebuilt to answer. `search`'s loader (`search/volumes.rs::read_mount_root`) takes its root from the same function.
 - **Facts are in-memory** (`facts.rs`): the registry's live set, the saved-server and saved-share stores, the cached
   device list, and the index's own state. ❌ No `statfs`, mount-table read, or full volume listing, so a resolve can't
   wait on a wedged mount. That's also why the resolver doesn't reuse `resolve_location`'s filesystem arm: its `statfs`
