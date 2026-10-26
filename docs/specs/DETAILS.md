@@ -18,6 +18,10 @@ Read this before adding, wiping, or reorganizing a spec.
   empty guess was authoritative.** One `{volumeId, path}` location shape across the read tools, typed misses, offline
   index reads, `sameShareAs` from the SMB server GUID, and `connect_volume` under a new `Access::Session` tier. Issue:
   [#749](https://github.com/vdavid/cmdr/issues/749).
+- `ask-cmdr-filing-proposals-plan.md`: **Ask Cmdr couldn't file a document under the destination's naming in one step,
+  could propose onto a sleeping NAS, and couldn't suggest a server.** Per-source leaves in the write engine so a move or
+  copy renames on the way in, every proposed place through the location resolver, and `propose_server` as a zero-op
+  group the user approves. Issue: [#749](https://github.com/vdavid/cmdr/issues/749).
 - `saved-smb-shares.md`: **A saved SMB server holds only a host, not the user and share the person wants.** A share row
   under its server, recorded at mount time, pinnable and openable like an SFTP place. Issue:
   [cmdr-reports#7](https://github.com/vdavid/cmdr-reports/issues/7).
