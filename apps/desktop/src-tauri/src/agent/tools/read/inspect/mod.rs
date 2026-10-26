@@ -23,10 +23,10 @@
 //!   damaged file says why its text is missing.
 //! - **empty** / **binary**: metadata only.
 //!
-//! Every path gets a typed status (`ok` / `folder` / `missing` / `unreadable` /
-//! `unreachable` / `unsupportedVolume`), the whole answer is cut to the tool-result
-//! budget, and `unanswered` names each path that got no row, so the model can ask again
-//! for the rest. Reuse map and the seams this rides: `../../DETAILS.md` § Reading a file
+//! Every path gets a typed status (`ok` / `folder` / `missing` / `noVolumeAtPath` /
+//! `unreadable` / `unreachable` / `unsupportedVolume`) and the `volumeId` it's on
+//! (`place.rs`), the whole answer is cut to the tool-result budget, and `unanswered`
+//! names each path that got no row, so the model can ask again for the rest. Reuse map and the seams this rides: `../../DETAILS.md` § Reading a file
 //! the way the viewer does.
 //!
 //! ## Privacy
@@ -55,6 +55,7 @@ mod git_snapshot_tests;
 mod pdf;
 #[cfg(test)]
 mod pdf_tests;
+mod place;
 #[cfg(test)]
 mod restic_snapshot_tests;
 mod runner;
@@ -90,6 +91,8 @@ pub use exif::{Degrees, ExifFacts, GpsCoordinates, Orientation};
 pub use find::{FindHits, FindLine};
 use pdf::{DEFAULT_MAX_PAGES, MAX_MAX_PAGES};
 pub use pdf::{PdfContent, PdfPage, PdfTextUnavailable, PdfWindow};
+pub use place::InspectRow;
+use place::{PlacedRows, needs_facts, place_rows, registry_owner};
 use runner::{InspectFn, RunnerConfig};
 pub use text::TextWindow;
 
@@ -242,6 +245,9 @@ pub enum FileRow {
     Folder { path: String },
     /// Nothing at that path.
     Missing { path: String },
+    /// The path is under a mount point with nothing mounted there: the volume isn't
+    /// connected, so there's no file to find. The call's `nearby` says where to look.
+    NoVolumeAtPath { path: String },
     /// The file exists but Cmdr can't read it.
     Unreadable { path: String, reason: UnreadableReason },
     /// [`PATH_TIMEOUT`] passed: a disconnected drive or a hung mount.
@@ -258,6 +264,7 @@ impl FileRow {
             Self::Ok(file) => &file.path,
             Self::Folder { path }
             | Self::Missing { path }
+            | Self::NoVolumeAtPath { path }
             | Self::Unreadable { path, .. }
             | Self::Unreachable { path }
             | Self::UnsupportedVolume { path } => path,
@@ -271,7 +278,7 @@ impl FileRow {
 pub enum InspectResult {
     Ok {
         /// One row per answered path, in request order, possibly with gaps (see `unanswered`).
-        files: Vec<FileRow>,
+        files: Vec<InspectRow>,
         /// Paths asked about.
         total: usize,
         /// Rows carried.
@@ -282,6 +289,10 @@ pub enum InspectResult {
         /// Every requested path with no row in this answer.
         #[serde(skip_serializing_if = "Vec::is_empty")]
         unanswered: Vec<String>,
+        /// Where to look instead, for the first `noVolumeAtPath` row: each entry's
+        /// `candidate` is that path on another volume. Once per call, never per row.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nearby: Option<Vec<crate::location::resolve::NearbyVolume>>,
     },
 }
 
@@ -710,12 +721,12 @@ const RUNNER: RunnerConfig = RunnerConfig {
     concurrency: PATH_CONCURRENCY,
 };
 
-/// Build the answer from the runner's slots: the rows that exist, cut to what one tool
-/// result may carry, plus `unanswered` for every requested path that has no row in the
-/// kept prefix (never launched, abandoned without a row, or cut by the ceiling). Pure.
-pub(crate) fn shape_ok(paths: &[String], rows: Vec<Option<FileRow>>) -> InspectResult {
-    let fitted = fit_to_result_budget(rows.into_iter().flatten().collect());
-    let kept: HashSet<&str> = fitted.items.iter().map(FileRow::path).collect();
+/// Build the answer from the runner's placed slots: the rows that exist, cut to what one
+/// tool result may carry, plus `unanswered` for every requested path that has no row in
+/// the kept prefix (never launched, abandoned without a row, or cut by the ceiling). Pure.
+pub(crate) fn shape_ok(paths: &[String], placed: PlacedRows) -> InspectResult {
+    let fitted = fit_to_result_budget(placed.rows.into_iter().flatten().collect());
+    let kept: HashSet<&str> = fitted.items.iter().map(InspectRow::path).collect();
     let unanswered: Vec<String> = paths.iter().filter(|p| !kept.contains(p.as_str())).cloned().collect();
     InspectResult::Ok {
         total: paths.len(),
@@ -723,6 +734,7 @@ pub(crate) fn shape_ok(paths: &[String], rows: Vec<Option<FileRow>>) -> InspectR
         truncated: fitted.items.len() < paths.len(),
         unanswered,
         files: fitted.items,
+        nearby: placed.nearby,
     }
 }
 
@@ -732,7 +744,13 @@ pub(crate) async fn run(params: &Value) -> Result<InspectResult, ToolError> {
     let Params { paths, ask } = parse_params(params)?;
     let inspect: InspectFn = Arc::new(move |path, cancel| inspect_path(path, &ask, cancel));
     let rows = runner::run_paths(&paths, &RUNNER, inspect).await;
-    Ok(shape_ok(&paths, rows))
+    // Facts only for a `missing` row to classify, so a call that found every file
+    // pays nothing for placement.
+    let facts = match needs_facts(&rows) {
+        true => Some(crate::location::resolve::VolumeFacts::now().await),
+        false => None,
+    };
+    Ok(shape_ok(&paths, place_rows(rows, facts.as_ref(), &registry_owner)))
 }
 
 /// Handler.

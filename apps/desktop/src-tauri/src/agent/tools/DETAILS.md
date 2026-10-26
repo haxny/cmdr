@@ -33,8 +33,9 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   `selectedEntriesOmitted` (`outsideWindow` / `tooMany`), never a half list that would read as the whole selection.
   `selectedCount` is always honest, and `list_pane_files` pages the names.
 - **`list_pane_files`** (`read/pane_listing.rs`) — up to 200 compact rows from the focused pane's existing Rust
-  listing cache. It uses the current selection when present, otherwise the whole folder, and returns the exact volume
-  ID plus one shared parent path for `propose_rename_plan`. It never queries the index or starts a filesystem listing.
+  listing cache. It uses the current selection when present, otherwise the whole folder, and returns the folder as a
+  `location` (the exact volume ID plus the one shared parent path `propose_rename_plan` needs). It never queries the
+  index or starts a filesystem listing.
 - **`list_dir`** (`read/listing.rs`, shared `[AiClient, Agent]`) — takes `path` + optional `volumeId`, resolved
   once (§ The location contract), then reads THAT volume's index: its immediate children (`Index::list_children`) plus
   its own recursive size stats (`Index::dir_stats`) and a `Coverage` block naming `source: index`. The result echoes
@@ -57,8 +58,9 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
     already on the consent screen, so `search` widened no egress and needed no `CONSENT_COPY_VERSION` bump.
   - **One drive per call, and the model loops.** `resolve_target` refuses a scope spanning volumes
     (`ScopeError::SpansMultipleVolumes`), because a fan-out is the only way a search can silently omit a drive. The
-    default is the boot volume; another drive is named by the `root` `list_volumes` hands over. The description
-    obliges the model to say WHICH drive it covered before offering the others.
+    default is the boot volume; another drive is named by its `volumeId` (no scope covers its whole `root`), which
+    also reaches a volume that isn't connected, from its index (§ The location contract). The description obliges
+    the model to say WHICH drive it covered before offering the others.
   - **What the coverage block obliges the model to say**, field by field: `stillWalking` and `abandonedGround` make the
     list a lower bound (❗ never "no matches"), `permissionDenied` names refused folders and offers Full Disk Access
     only where it would help, `declined` explains rather than offers (snapshot trees are nothing to fix),
@@ -112,10 +114,10 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   one, lists its immediate children (`format`, `inner`, up to 200 `entries` with `isDir`, `size` + `sizeHuman`,
   `modified` + `modifiedHuman`, `encrypted`, plus `total` / `returned` / `truncated` and `hasEncryptedEntries`), and a
   FILE inside an archive is read as its own kind through the viewer's bounded temp; empty and binary carry metadata
-  only. Per-path statuses: `ok` / `folder` / `missing` /
+  only. Per-path statuses: `ok` / `folder` / `missing` / `noVolumeAtPath` /
   `unreadable { permission | io | encrypted | corrupt | unsupported | tooLargeToExtract }` / `unreachable` /
-  `unsupportedVolume`. The call reports `total` / `returned` / `truncated` and names every path with no row in
-  `unanswered`. One of two disk readers among the handlers (the other is `list_dir`'s live source); how it reads and how it times out: § Reading a
+  `unsupportedVolume`, and every row echoes the `volumeId` it's on (§ The location contract). The call reports
+  `total` / `returned` / `truncated` and names every path with no row in `unanswered`. One of two disk readers among the handlers (the other is `list_dir`'s live source); how it reads and how it times out: § Reading a
   file the way the viewer does.
 - **`list_volumes`** (`read/volumes.rs`) — the map a model plans from: `{ volumes, favorites }`. Every volume with
   `root`, `indexStatus` (`fresh`/`scanning`/`stale`/`off`) and, for a remote one, `connectionState`
@@ -195,7 +197,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,765 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,811 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -389,7 +391,8 @@ double-counting its bytes.
 
 Every tool that takes a place speaks one shape, placed by one resolver (`apps/desktop/src-tauri/src/location/resolve.rs`, pure over
 `VolumeFacts`; table tests in `resolve_tests.rs`, the prod story in `transcript_179_tests.rs`). `list_dir`,
-`important_folders`, and `folder_importance` speak it today.
+`important_folders`, `folder_importance`, `search`, and `inspect_file` speak it, and `list_pane_files` echoes its folder
+as a `location`.
 
 **Shapes.** An INPUT is the flat pair `path` + optional `volumeId` (`LocationInput`): flat so an AI client's schema stays
 two strings, `volumeId` optional so `~/Downloads` or `/Volumes/naspi-1/papers` simply works. An OUTPUT carries
@@ -440,6 +443,23 @@ where `candidate` is the requested place re-rooted onto that volume (`/Volumes/n
 `{ smb-192-…, /Volumes/naspi-1/papers }`), so the next call is a copy, not arithmetic. Picked in order: volumes whose
 mount name shares the requested `/Volumes/<name>` stem (macOS appends `-N` to a second mount), else volumes whose root
 holds the path, else every remote volume; live first, at most 8, never the volume the miss is about.
+
+**The two tools that can't take the pair as is.**
+
+- **`search`** (`apps/desktop/src-tauri/src/mcp/executor/search/placement.rs`) takes `volumeId` beside its `scope` string, shared with AI clients,
+  so it adds rather than reinterprets: with no `volumeId` the scope routes the run as it always did, and the resolver
+  only catches an include path under a mount area with nothing mounted there (`noVolumeAtPath`, which would otherwise
+  route to the boot disk and walk a folder that isn't the user's drive). ❌ No miss for any other bare scope: a phone's
+  or server's scheme path routes by its own spelling, connected or not. With `volumeId`, every include path resolves
+  onto that volume (a miss answers the call whole), no scope means the volume's root, and the run reads the RESOLVED
+  index (`run_live_collected`'s `on_volume`), because a not-connected share's last root routes to the boot disk. A
+  not-connected volume with an index on disk answers from it, leading its `notes` with "isn't connected … as of";
+  one with none is `volumeNotConnected`.
+- **`inspect_file`** keeps `paths: string[]` (200 location objects would be a large call for no gain), and every row
+  echoes `volumeId` from the volume registry (`read/inspect/place.rs`). A `missing` row under a mount area with nothing
+  mounted there is `noVolumeAtPath` instead, and the call carries the resolver's `nearby` ONCE, for the first such row
+  (each `candidate` is that path on another volume; the others swap the same prefix). Only `missing` rows read volume
+  facts, so a call that found every file pays nothing for placement.
 
 ### The live source
 

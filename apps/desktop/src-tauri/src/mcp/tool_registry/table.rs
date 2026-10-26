@@ -492,7 +492,7 @@ mcp_tools! {
         run: app_params crate::agent::tools::read::listing::execute_list_dir
     },
     "list_pane_files" => {
-        desc: "List up to 200 entries of the focused pane (the selection when one exists, else the folder) from its listing cache, never the index or disk. Returns the volume ID and shared parent path a rename proposal needs.",
+        desc: "List up to 200 entries of the focused pane (the selection when one exists, else the folder) from its listing cache, never the index or disk. Its location is the volume ID and parent path a rename proposal needs.",
         schema: crate::agent::tools::read::pane_listing::list_pane_files_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Read,
