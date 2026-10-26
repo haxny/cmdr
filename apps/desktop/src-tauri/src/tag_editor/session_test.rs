@@ -7,11 +7,11 @@ use std::path::Path;
 use cmdr_listing::testing::{TestListing, TestListingGuard};
 use cmdr_local::reading::list_directory_core;
 use cmdr_media_meta::test_fixtures::{m4a_file, mp3_frames};
-use cmdr_tags::shared::{CoverEdit, Edit, SharedValue};
+use cmdr_tags::shared::{CoverEdit, SharedValue};
 use cmdr_tags::tools::TagTool;
 use cmdr_tags::{Cover, FileTags, TagField, WriteOptions, read_tags, write_tags};
 
-use super::session::{TagEditorError, changes, close, edit, open, tool};
+use super::session::{TagEdit, TagEditorError, changes, close, edit, is_open, open, tool, unchanged_on_disk};
 use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
 use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};
 use crate::test_support::TestDir;
@@ -70,9 +70,13 @@ fn titles(view: &TagEditorView) -> Vec<(String, Option<String>)> {
         .collect()
 }
 
-fn set_title(row: usize, title: &str) -> Edit {
-    Edit::SetOne {
-        row,
+fn path_of(dir: &Path, name: &str) -> String {
+    dir.join(name).to_string_lossy().into_owned()
+}
+
+fn set_title(dir: &Path, name: &str, title: &str) -> TagEdit {
+    TagEdit::SetOne {
+        path: path_of(dir, name),
         field: TagField::Title,
         values: vec![title.to_string()],
     }
@@ -104,7 +108,7 @@ fn open_lists_only_supported_audio() {
         ],
     );
     let session = open_rename(listing.id(), true, None, 0).expect("opens");
-    let view = open(&session.session_id).expect("the tag session opens");
+    let view = open(&session.session_id, false).expect("the tag session opens");
     let names: Vec<&str> = view.tracks.iter().map(|row| row.file_name.as_str()).collect();
     assert_eq!(names, vec!["a.mp3", "b.m4a"]);
     assert!(view.editable);
@@ -118,7 +122,7 @@ fn open_lists_only_supported_audio() {
 #[test]
 fn shared_view_shows_multiple_values() {
     let (_dir, _listing, id) = album("tag-editor-shared");
-    let view = open(&id).expect("opens");
+    let view = open(&id, false).expect("opens");
     assert_eq!(shared(&view, TagField::Album), &SharedValue::Multiple);
     assert_eq!(shared(&view, TagField::Artist), &SharedValue::Empty);
     assert!(
@@ -134,10 +138,10 @@ fn shared_view_shows_multiple_values() {
 #[test]
 fn set_all_writes_every_file_in_memory_only() {
     let (dir, _listing, id) = album("tag-editor-set-all");
-    open(&id).expect("opens");
+    open(&id, false).expect("opens");
     let view = edit(
         &id,
-        vec![Edit::SetAll {
+        vec![TagEdit::SetAll {
             field: TagField::Album,
             values: vec!["One book".to_string()],
         }],
@@ -164,11 +168,11 @@ fn set_all_writes_every_file_in_memory_only() {
 /// Review focus 1: reorder after editing, every edit stays with its file.
 #[test]
 fn edits_follow_files_after_reorder() {
-    let (_dir, _listing, id) = album("tag-editor-reorder");
-    let first = open(&id).expect("opens");
+    let (dir, _listing, id) = album("tag-editor-reorder");
+    let first = open(&id, false).expect("opens");
     assert_eq!(first.tracks[0].file_name, "a.mp3");
 
-    edit(&id, vec![set_title(0, "Alpha edited")]).expect("edits row 0");
+    edit(&id, vec![set_title(&dir, "a.mp3", "Alpha edited")]).expect("edits a");
     move_row(&id, 0, RowMove::Down).expect("a goes below b");
     move_row(&id, 1, RowMove::Down).expect("a goes below c");
 
@@ -181,8 +185,8 @@ fn edits_follow_files_after_reorder() {
             ("a.mp3".to_string(), Some("Alpha edited".to_string())),
         ]
     );
-    // A row index names the row as shown NOW: row 0 is b.
-    let view = edit(&id, vec![set_title(0, "Beta edited")]).expect("edits row 0");
+    // A track is named by path, wherever its row is now.
+    let view = edit(&id, vec![set_title(&dir, "b.mp3", "Beta edited")]).expect("edits b");
     assert_eq!(view.tracks[0].title.as_deref(), Some("Beta edited"));
     assert_eq!(view.tracks[2].title.as_deref(), Some("Alpha edited"));
     close(&id);
@@ -192,7 +196,7 @@ fn edits_follow_files_after_reorder() {
 #[test]
 fn tool_renumber_uses_current_order() {
     let (_dir, _listing, id) = album("tag-editor-renumber");
-    open(&id).expect("opens");
+    open(&id, false).expect("opens");
     move_row(&id, 2, RowMove::Up).expect("c goes above b");
     let view = tool(&id, TagTool::Renumber { start: 1 }).expect("renumbers");
     let numbered: Vec<(&str, Option<&str>)> = view
@@ -213,7 +217,7 @@ fn a_single_file_session_renumbers_to_no_track() {
     let (dir, listing) = folder("tag-editor-single", "root", &[("only.mp3", mp3_frames())]);
     tag_file(&dir, "only.mp3", &[(TagField::Track, "4")]);
     let session = open_rename(listing.id(), true, None, 0).expect("opens");
-    let view = open(&session.session_id).expect("opens");
+    let view = open(&session.session_id, false).expect("opens");
     assert_eq!(view.tracks[0].track.as_deref(), Some("4"));
     let view = tool(&session.session_id, TagTool::Renumber { start: 1 }).expect("renumbers");
     assert_eq!(view.tracks[0].track, None);
@@ -225,7 +229,7 @@ fn a_single_file_session_renumbers_to_no_track() {
 fn non_local_session_is_read_only() {
     let (_dir, listing) = folder("tag-editor-remote", "smb-share", &[("a.mp3", mp3_frames())]);
     let session = open_rename(listing.id(), true, None, 0).expect("opens");
-    let view = open(&session.session_id).expect("opens read-only");
+    let view = open(&session.session_id, false).expect("opens read-only");
     assert!(!view.editable);
     assert_eq!(view.read_only_reason, Some(ReadOnlyReason::RemoteVolume));
     assert!(view.tracks.is_empty(), "an unreachable volume lists no tracks");
@@ -253,7 +257,7 @@ fn unreadable_file_is_listed_not_written() {
     tag_file(&dir, "c.mp3", &[(TagField::Title, "Gamma")]);
     let session = open_rename(listing.id(), true, None, 0).expect("opens");
     let id = session.session_id;
-    let view = open(&id).expect("opens");
+    let view = open(&id, false).expect("opens");
     assert_eq!(view.tracks.len(), 3);
     assert_eq!(view.tracks[1].file_name, "bad.flac");
     assert!(matches!(
@@ -262,8 +266,19 @@ fn unreadable_file_is_listed_not_written() {
     ));
     assert_eq!(view.tracks[0].read_error, None);
 
-    // The shown row 2 is c, though it is the second READABLE file; row 1 (bad) is dropped.
-    let view = edit(&id, vec![set_title(2, "Gamma edited"), set_title(1, "Never")]).expect("edits");
+    // An edit on the unreadable file refuses the whole batch.
+    assert_eq!(
+        edit(
+            &id,
+            vec![
+                set_title(&dir, "c.mp3", "Gamma edited"),
+                set_title(&dir, "bad.flac", "Never")
+            ]
+        ),
+        Err(TagEditorError::UnknownTrack)
+    );
+    assert!(!open(&id, false).expect("still open").dirty, "nothing was applied");
+    let view = edit(&id, vec![set_title(&dir, "c.mp3", "Gamma edited")]).expect("edits");
     assert_eq!(view.tracks[2].title.as_deref(), Some("Gamma edited"));
     assert_eq!(view.tracks[1].title, None);
     assert!(!view.tracks[1].changed);
@@ -276,20 +291,20 @@ fn unreadable_file_is_listed_not_written() {
 
 #[test]
 fn diacritics_union_reported() {
-    let (_dir, _listing, id) = album("tag-editor-diacritics");
-    let view = open(&id).expect("opens");
+    let (dir, _listing, id) = album("tag-editor-diacritics");
+    let view = open(&id, false).expect("opens");
     assert!(view.diacritics.is_empty());
     let view = edit(
         &id,
         vec![
-            set_title(0, "Příběh"),
-            Edit::SetOne {
-                row: 1,
+            set_title(&dir, "a.mp3", "Příběh"),
+            TagEdit::SetOne {
+                path: path_of(&dir, "b.mp3"),
                 field: TagField::Comment,
                 values: vec!["Čte: Jan".to_string()],
             },
-            Edit::SetOne {
-                row: 2,
+            TagEdit::SetOne {
+                path: path_of(&dir, "c.mp3"),
                 field: TagField::Album,
                 values: vec!["Labutí".to_string()],
             },
@@ -305,14 +320,14 @@ fn diacritics_union_reported() {
 #[test]
 fn cover_edit_is_summarized_and_extras_are_listed() {
     let (_dir, _listing, id) = album("tag-editor-cover");
-    open(&id).expect("opens");
+    open(&id, false).expect("opens");
     let cover = Cover {
         mime: "image/png".to_string(),
-        data: vec![0; 12],
+        data: vec![0; 12].into(),
     };
     let view = edit(
         &id,
-        vec![Edit::Cover {
+        vec![TagEdit::Cover {
             edit: CoverEdit::Set(cover),
         }],
     )
@@ -335,9 +350,96 @@ fn cover_edit_is_summarized_and_extras_are_listed() {
 fn a_closed_or_unopened_session_is_typed() {
     let (_dir, _listing, id) = album("tag-editor-closed");
     assert_eq!(edit(&id, vec![]), Err(TagEditorError::NotOpen));
-    open(&id).expect("opens");
+    open(&id, false).expect("opens");
     close(&id);
     assert_eq!(tool(&id, TagTool::StripTrackPrefix), Err(TagEditorError::NotOpen));
     close_rename(&id);
-    assert_eq!(open(&id), Err(TagEditorError::NoSession));
+    assert_eq!(open(&id, false), Err(TagEditorError::NoSession));
+}
+
+#[test]
+fn open_keeps_edits_unless_restarted() {
+    let (dir, _listing, id) = album("tag-editor-restart");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_title(&dir, "a.mp3", "Alpha edited")]).expect("edits");
+    let kept = open(&id, false).expect("reopens");
+    assert!(kept.dirty);
+    assert_eq!(kept.tracks[0].title.as_deref(), Some("Alpha edited"));
+    let fresh = open(&id, true).expect("restarts");
+    assert!(!fresh.dirty);
+    assert_eq!(fresh.tracks[0].title.as_deref(), Some("Alpha"));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn an_unknown_path_refuses_the_batch() {
+    let (dir, _listing, id) = album("tag-editor-unknown-path");
+    open(&id, false).expect("opens");
+    let outcome = edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Alpha edited"),
+            set_title(&dir, "notes.txt", "Never"),
+        ],
+    );
+    assert_eq!(outcome, Err(TagEditorError::UnknownTrack));
+    assert!(!open(&id, false).expect("open").dirty);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_file_rewritten_after_open_reports_changed() {
+    let (dir, _listing, id) = album("tag-editor-fingerprint");
+    open(&id, false).expect("opens");
+    let a = dir.join("a.mp3");
+    assert_eq!(unchanged_on_disk(&id, &a), Ok(true));
+    tag_file(&dir, "a.mp3", &[(TagField::Title, "Rewritten elsewhere")]);
+    assert_eq!(unchanged_on_disk(&id, &a), Ok(false));
+    assert_eq!(unchanged_on_disk(&id, &dir.join("b.mp3")), Ok(true));
+    assert_eq!(unchanged_on_disk(&id, &dir.join("notes.txt")), Ok(false), "not a track");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn closing_the_rename_session_drops_the_tag_session() {
+    let (_dir, _listing, id) = album("tag-editor-closes-with-rename");
+    open(&id, false).expect("opens");
+    assert!(is_open(&id));
+    close_rename(&id);
+    assert!(!is_open(&id));
+}
+
+#[test]
+fn a_tag_session_whose_rename_session_vanished_is_removed_on_next_use() {
+    let (_dir, _listing, id) = album("tag-editor-stale");
+    open(&id, false).expect("opens");
+    // Gone from the rename side without its hook: the stale tag session cleans itself up.
+    crate::multi_rename::session::close(&id);
+    super::session::reinsert_for_test(&id);
+    assert!(is_open(&id));
+    assert_eq!(edit(&id, vec![]), Err(TagEditorError::NoSession));
+    assert!(!is_open(&id));
+}
+
+#[test]
+fn a_reachable_non_root_volume_is_listed_but_read_only() {
+    use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
+    get_volume_manager().register_if_absent(
+        "tag-editor-share",
+        std::sync::Arc::new(LocalPosixVolume::local_folder("Share", "/", crate::volume_host::host())),
+    );
+    let (dir, listing) = folder("tag-editor-share-dir", "tag-editor-share", &[("a.mp3", mp3_frames())]);
+    tag_file(&dir, "a.mp3", &[(TagField::Title, "Alpha")]);
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let view = open(&session.session_id, false).expect("opens read-only");
+    assert!(!view.editable);
+    assert_eq!(view.read_only_reason, Some(ReadOnlyReason::RemoteVolume));
+    assert_eq!(view.tracks.len(), 1);
+    assert_eq!(view.tracks[0].title.as_deref(), Some("Alpha"));
+    assert_eq!(edit(&session.session_id, vec![]), Err(TagEditorError::ReadOnly));
+    close_rename(&session.session_id);
 }

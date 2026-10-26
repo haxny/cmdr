@@ -15,16 +15,17 @@ fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> 
     }
     tags.cover = cover.map(|data| Cover {
         mime: "image/jpeg".to_string(),
-        data: data.to_vec(),
+        data: data.into(),
     });
     for key in extras {
         tags.extras.insert((*key).to_string(), vec!["x".to_string()]);
     }
-    Entry::Loaded(Loaded {
+    Entry::Loaded(Box::new(Loaded {
         disk: tags.clone(),
         edited: tags,
         duration_ms: Some(1500),
-    })
+        fingerprint: None,
+    }))
 }
 
 const OPEN: Access = Access {

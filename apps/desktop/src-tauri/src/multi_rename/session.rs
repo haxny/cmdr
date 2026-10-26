@@ -279,7 +279,13 @@ pub(crate) fn media_over(volume_id: &str, dir: &Path) -> Vec<Arc<SessionMedia>> 
 
 /// Drops idle sessions, then the least recently used until one more fits under `cap`.
 fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
-    sessions.retain(|_, s| now.duration_since(s.last_used) < IDLE_LIMIT);
+    sessions.retain(|id, s| {
+        let keep = now.duration_since(s.last_used) < IDLE_LIMIT;
+        if !keep {
+            crate::tag_editor::session::close(id);
+        }
+        keep
+    });
     while sessions.len() >= cap {
         let Some(oldest) = sessions
             .iter()
@@ -289,12 +295,14 @@ fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
             break;
         };
         sessions.remove(&oldest);
+        crate::tag_editor::session::close(&oldest);
     }
 }
 
 /// Ends a session, and with it its Results file. No-op when it's already gone.
 pub(crate) fn close(session_id: &str) {
     SESSIONS.lock_ignore_poison().remove(session_id);
+    crate::tag_editor::session::close(session_id);
 }
 
 /// What a computation needs from a session, copied out so no lock is held while
@@ -677,6 +685,27 @@ mod tests {
 
         assert!(evicted_media.is_cancelled());
         assert!(!kept_media.is_cancelled());
+    }
+
+    #[test]
+    fn an_evicted_session_takes_its_tag_session_with_it() {
+        use crate::tag_editor::session::{is_open, reinsert_for_test};
+        let now = Instant::now();
+        let mut sessions = HashMap::from([
+            (
+                "tag-evicted".to_string(),
+                session(now - IDLE_LIMIT - Duration::from_secs(1)),
+            ),
+            ("tag-kept".to_string(), session(now)),
+        ]);
+        reinsert_for_test("tag-evicted");
+        reinsert_for_test("tag-kept");
+
+        evict_to(&mut sessions, now, 5);
+
+        assert!(!is_open("tag-evicted"));
+        assert!(is_open("tag-kept"));
+        crate::tag_editor::session::close("tag-kept");
     }
 
     #[test]

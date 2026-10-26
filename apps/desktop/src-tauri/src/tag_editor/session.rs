@@ -1,20 +1,25 @@
 //! A tag session per Multi-Rename session: every supported audio file's tags as read from
 //! disk and as edited so far, in memory, keyed by PATH.
 //!
-//! The view walks the Multi-Rename session's CURRENT names and looks each file up by path, so
-//! a reorder never moves an edit to another file. A path the session doesn't know yet (a file
-//! a Multi-Rename apply renamed while the tab was open) is read from disk then; edits made
-//! under its old name stay with that name and are never applied to another file.
+//! What this guarantees:
+//! - The files are the Multi-Rename session's supported audio files at `open`. The session's
+//!   names are fixed, so a reorder only changes the ORDER: the view walks the CURRENT names and
+//!   looks each file up by path, and an edit never moves to another file.
+//! - Each file carries a [`Fingerprint`] taken just before it was read. A write must call
+//!   [`unchanged_on_disk`] first and refuse a file whose fingerprint moved (something else
+//!   rewrote or renamed it since). Nothing re-reads a file behind the user's edits.
+//! - Closing or evicting the Multi-Rename session closes its tag session.
 //!
 //! ❌ No file read under `SESSIONS`' lock: reads happen first, the lock only swaps results in.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
+use std::time::SystemTime;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use cmdr_tags::shared::{Edit, apply_edits, changes as engine_changes};
+use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, apply_tool};
 use cmdr_tags::{FileTags, TagError, TagField, format_of, read_duration, read_tags};
 
@@ -35,8 +40,28 @@ pub enum TagEditorError {
     NotOpen,
     /// The session's volume is read-only for the tag editor.
     ReadOnly,
+    /// An edit names a path that isn't a readable track of the session. Nothing was applied.
+    UnknownTrack,
     /// A file couldn't be read.
     Read { path: String, detail: String },
+}
+
+/// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+/// PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
+/// the edit to another file.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum TagEdit {
+    /// Set the field on every file. Empty values remove it.
+    SetAll { field: TagField, values: Vec<String> },
+    /// Set the field on the track at `path`.
+    SetOne {
+        path: String,
+        field: TagField,
+        values: Vec<String>,
+    },
+    /// Change the cover of every file.
+    Cover { edit: CoverEdit },
 }
 
 /// What a file's change looks like when the user reviews it before writing.
@@ -50,24 +75,63 @@ pub struct FileChangeView {
     pub extras: bool,
 }
 
+/// What identifies a file's state on disk: size, modification time, and (on unix) inode.
+/// A rewrite, a replace, and a rename-over each move at least one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Fingerprint {
+    size: u64,
+    modified: Option<SystemTime>,
+    inode: Option<u64>,
+}
+
+impl Fingerprint {
+    fn of(path: &Path) -> Option<Self> {
+        let meta = std::fs::metadata(path).ok()?;
+        Some(Self {
+            size: meta.len(),
+            modified: meta.modified().ok(),
+            inode: inode_of(&meta),
+        })
+    }
+}
+
+#[cfg(unix)]
+fn inode_of(meta: &std::fs::Metadata) -> Option<u64> {
+    use std::os::unix::fs::MetadataExt;
+    Some(meta.ino())
+}
+
+#[cfg(not(unix))]
+fn inode_of(_meta: &std::fs::Metadata) -> Option<u64> {
+    None
+}
+
 /// A file read from disk.
 #[derive(Debug, Clone)]
 pub(super) struct Loaded {
     pub disk: FileTags,
     pub edited: FileTags,
     pub duration_ms: Option<u64>,
+    /// Taken just BEFORE the read, so a change during the read shows as a change. `None` when
+    /// the file couldn't be stat'ed, which counts as changed.
+    pub fingerprint: Option<Fingerprint>,
 }
 
 impl Loaded {
     pub(super) fn changed(&self) -> bool {
         self.disk != self.edited
     }
+
+    /// Whether the file at `path` is still the one that was read.
+    pub(super) fn unchanged_on_disk(&self, path: &Path) -> bool {
+        self.fingerprint.is_some() && self.fingerprint == Fingerprint::of(path)
+    }
 }
 
 /// One audio file: readable, or listed and never written.
 #[derive(Debug, Clone)]
 pub(super) enum Entry {
-    Loaded(Loaded),
+    Loaded(Box<Loaded>),
     Unreadable(ReadErrorCode),
 }
 
@@ -122,9 +186,15 @@ fn volume_gives_local_paths(volume_id: &str) -> bool {
         .is_some_and(|volume| volume.supports_local_fs_access())
 }
 
+/// The layout, or `NoSession`, which also drops the tag session left behind.
 fn layout(session_id: &str) -> Result<Layout, TagEditorError> {
-    let files = files_of(session_id).map_err(|_| TagEditorError::NoSession)?;
-    Ok(layout_of(&files))
+    match files_of(session_id) {
+        Ok(files) => Ok(layout_of(&files)),
+        Err(_) => {
+            close(session_id);
+            Err(TagEditorError::NoSession)
+        }
+    }
 }
 
 fn code_of(error: &TagError) -> ReadErrorCode {
@@ -139,6 +209,7 @@ fn code_of(error: &TagError) -> ReadErrorCode {
 /// Reads one file. Lofty may panic on a hostile file: that is a row with a code, not a crash.
 fn read_entry(path: &Path) -> Entry {
     use crate::crash_reporter::contain_panics;
+    let fingerprint = Fingerprint::of(path);
     match contain_panics(|| read_tags(path)) {
         None => Entry::Unreadable(ReadErrorCode::Unreadable),
         Some(Err(error)) => Entry::Unreadable(code_of(&error)),
@@ -146,29 +217,46 @@ fn read_entry(path: &Path) -> Entry {
             let duration_ms = contain_panics(|| read_duration(path))
                 .flatten()
                 .map(|duration| u64::try_from(duration.as_millis()).unwrap_or(u64::MAX));
-            Entry::Loaded(Loaded {
+            Entry::Loaded(Box::new(Loaded {
                 disk: tags.clone(),
                 edited: tags,
                 duration_ms,
-            })
+                fingerprint,
+            }))
         }
     }
 }
 
-fn read_all(paths: &[PathBuf]) -> Vec<(PathBuf, Entry)> {
-    paths.iter().map(|path| (path.clone(), read_entry(path))).collect()
-}
-
-/// Starts (or restarts) the tag session of Multi-Rename session `session_id`: reads every
-/// supported file. A file that can't be read becomes a row with a `readError` and is never
-/// written. Blocking file work: call it off the IPC thread.
-pub fn open(session_id: &str) -> Result<TagEditorView, TagEditorError> {
+/// Starts the tag session of Multi-Rename session `session_id`, reading every supported file.
+/// A file that can't be read becomes a row with a `readError` and is never written.
+///
+/// With `restart: false` an existing tag session is returned as it is, edits kept; with
+/// `restart: true` (or none yet) every file is read again and the edits are dropped.
+/// Blocking file work: call it off the IPC thread.
+pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorError> {
     let layout = layout(session_id)?;
-    let by_path: HashMap<PathBuf, Entry> = read_all(&layout.tracks).into_iter().collect();
+    if !restart {
+        let mut sessions = SESSIONS.lock_ignore_poison();
+        if let Some(session) = sessions.get_mut(session_id) {
+            prune(session, &layout);
+            return Ok(view_of(&layout, session));
+        }
+    }
+    let by_path: HashMap<PathBuf, Entry> = layout
+        .tracks
+        .iter()
+        .map(|path| (path.clone(), read_entry(path)))
+        .collect();
     let mut sessions = SESSIONS.lock_ignore_poison();
     let session = sessions.entry(session_id.to_string()).or_default();
     session.by_path = by_path;
     Ok(view_of(&layout, session))
+}
+
+/// Drops entries whose path isn't in the layout any more.
+fn prune(session: &mut TagSession, layout: &Layout) {
+    let current: HashSet<&PathBuf> = layout.tracks.iter().collect();
+    session.by_path.retain(|path, _| current.contains(path));
 }
 
 fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
@@ -180,29 +268,15 @@ fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
     build(layout.access, &tracks)
 }
 
-/// Runs `f` on the session with every current track loaded: tracks the session doesn't know
-/// yet are read first, outside the lock.
+/// Runs `f` on the open session, after dropping entries that left the layout.
 fn with_session<R>(
     session_id: &str,
     f: impl FnOnce(&Layout, &mut TagSession) -> Result<R, TagEditorError>,
 ) -> Result<R, TagEditorError> {
     let layout = layout(session_id)?;
-    let missing: Vec<PathBuf> = {
-        let sessions = SESSIONS.lock_ignore_poison();
-        let session = sessions.get(session_id).ok_or(TagEditorError::NotOpen)?;
-        layout
-            .tracks
-            .iter()
-            .filter(|path| !session.by_path.contains_key(*path))
-            .cloned()
-            .collect()
-    };
-    let fresh = read_all(&missing);
     let mut sessions = SESSIONS.lock_ignore_poison();
     let session = sessions.get_mut(session_id).ok_or(TagEditorError::NotOpen)?;
-    for (path, entry) in fresh {
-        session.by_path.entry(path).or_insert(entry);
-    }
+    prune(session, &layout);
     f(&layout, session)
 }
 
@@ -235,40 +309,31 @@ fn require_editable(layout: &Layout) -> Result<(), TagEditorError> {
     }
 }
 
-/// `SetOne` names a row of the track list as shown, unreadable rows included; the engine
-/// wants the index among the readable files. An edit on an unreadable row is dropped.
-fn translate(layout: &Layout, session: &TagSession, edits: Vec<Edit>) -> Vec<Edit> {
-    let mut next = 0;
-    let readable_index: Vec<Option<usize>> = layout
-        .tracks
-        .iter()
-        .map(|path| {
-            session.by_path.get(path)?.loaded()?;
-            next += 1;
-            Some(next - 1)
-        })
-        .collect();
+/// The engine's edits for `edits`: a path becomes the track's index among the READABLE files
+/// (the list the engine edits). A path that isn't a readable track of the session refuses the
+/// whole batch, so a stale or mistyped path never half-applies.
+fn translate(paths: &[PathBuf], edits: Vec<TagEdit>) -> Result<Vec<Edit>, TagEditorError> {
     edits
         .into_iter()
-        .filter_map(|edit| match edit {
-            Edit::SetOne { row, field, values } => {
-                readable_index
-                    .get(row)
-                    .copied()
-                    .flatten()
-                    .map(|row| Edit::SetOne { row, field, values })
-            }
-            other => Some(other),
+        .map(|edit| match edit {
+            TagEdit::SetAll { field, values } => Ok(Edit::SetAll { field, values }),
+            TagEdit::Cover { edit } => Ok(Edit::Cover { edit }),
+            TagEdit::SetOne { path, field, values } => paths
+                .iter()
+                .position(|candidate| candidate.as_os_str() == Path::new(&path).as_os_str())
+                .map(|row| Edit::SetOne { row, field, values })
+                .ok_or(TagEditorError::UnknownTrack),
         })
         .collect()
 }
 
-/// Applies `edits` in memory. `SetOne` rows are rows of `tracks` as the last view showed them.
-pub fn edit(session_id: &str, edits: Vec<Edit>) -> Result<TagEditorView, TagEditorError> {
+/// Applies `edits` in memory.
+pub fn edit(session_id: &str, edits: Vec<TagEdit>) -> Result<TagEditorView, TagEditorError> {
     with_session(session_id, |layout, session| {
         require_editable(layout)?;
         let (paths, before) = readable(layout, session);
-        let after = apply_edits(&before, &translate(layout, session, edits));
+        let engine_edits = translate(&paths, edits)?;
+        let after = apply_edits(&before, &engine_edits);
         store(session, paths, after);
         Ok(view_of(layout, session))
     })
@@ -289,17 +354,14 @@ pub fn tool(session_id: &str, tool: TagTool) -> Result<TagEditorView, TagEditorE
 /// What a write would change, per file, in current order.
 pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> {
     with_session(session_id, |layout, session| {
-        let (paths, _) = readable(layout, session);
-        let (disk, edited): (Vec<FileTags>, Vec<FileTags>) = layout
+        Ok(layout
             .tracks
             .iter()
-            .filter_map(|path| session.by_path.get(path)?.loaded())
-            .map(|loaded| (loaded.disk.clone(), loaded.edited.clone()))
-            .unzip();
-        Ok(engine_changes(&disk, &edited)
-            .into_iter()
-            .filter_map(|change| {
-                let path = paths.get(change.row)?;
+            .filter_map(|path| {
+                let loaded = session.by_path.get(path)?.loaded()?;
+                let change = engine_changes(std::slice::from_ref(&loaded.disk), std::slice::from_ref(&loaded.edited))
+                    .into_iter()
+                    .next()?;
                 Some(FileChangeView {
                     path: path.to_string_lossy().into_owned(),
                     file_name: path
@@ -315,7 +377,34 @@ pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> 
     })
 }
 
+/// Whether the file at `path` is still the one the session read, so a write may go ahead. A
+/// path that isn't a readable track of the session is not: refuse it.
+pub(crate) fn unchanged_on_disk(session_id: &str, path: &Path) -> Result<bool, TagEditorError> {
+    with_session(session_id, |_, session| {
+        Ok(session
+            .by_path
+            .get(path)
+            .and_then(Entry::loaded)
+            .is_some_and(|loaded| loaded.unchanged_on_disk(path)))
+    })
+}
+
 /// Ends the tag session, dropping its edits. A no-op when it's already gone.
 pub fn close(session_id: &str) {
     SESSIONS.lock_ignore_poison().remove(session_id);
+}
+
+/// Whether a tag session exists for `session_id`.
+#[cfg(test)]
+pub(crate) fn is_open(session_id: &str) -> bool {
+    SESSIONS.lock_ignore_poison().contains_key(session_id)
+}
+
+/// Puts back an empty tag session for `session_id`, as one left behind by a rename session that
+/// went without telling us.
+#[cfg(test)]
+pub(crate) fn reinsert_for_test(session_id: &str) {
+    SESSIONS
+        .lock_ignore_poison()
+        .insert(session_id.to_string(), TagSession::default());
 }

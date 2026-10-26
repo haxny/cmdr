@@ -4,6 +4,7 @@
 
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::Arc;
 
 use serde::Serialize;
 
@@ -178,7 +179,7 @@ fn cover_summary(files: &[FileTags]) -> CoverSummary {
     let Some((first, rest)) = files.split_first() else {
         return CoverSummary::Empty;
     };
-    if rest.iter().any(|file| file.cover != first.cover) {
+    if rest.iter().any(|file| !same_cover(&file.cover, &first.cover)) {
         return CoverSummary::Multiple;
     }
     match &first.cover {
@@ -195,11 +196,21 @@ fn cover_summary(files: &[FileTags]) -> CoverSummary {
     }
 }
 
+/// Equal covers: both absent, or the same MIME and the same bytes (a shared pointer settles it
+/// without comparing them).
+fn same_cover(a: &Option<Cover>, b: &Option<Cover>) -> bool {
+    match (a, b) {
+        (None, None) => true,
+        (Some(a), Some(b)) => a.mime == b.mime && (Arc::ptr_eq(&a.data, &b.data) || a.data == b.data),
+        _ => false,
+    }
+}
+
 /// The image's size from its header. A decoder that panics on a hostile image costs the
 /// size, not the app.
 fn pixel_size(cover: &Cover) -> Option<(u32, u32)> {
     crate::crash_reporter::contain_panics(|| {
-        image::ImageReader::new(std::io::Cursor::new(&cover.data))
+        image::ImageReader::new(std::io::Cursor::new(&cover.data[..]))
             .with_guessed_format()
             .ok()?
             .into_dimensions()
