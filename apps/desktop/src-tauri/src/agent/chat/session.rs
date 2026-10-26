@@ -219,13 +219,50 @@ fn scripted_fake_llm(slot: AgentSlot) -> FakeAgentLlm {
             WakeFakeScript::Reply => {}
         }
     }
-    let chunks = match slot {
-        AgentSlot::Rail => ["Hi! ", "I'm the ", "test assistant."],
-        AgentSlot::Wake => ["I had ", "a look at ", "what changed."],
-    };
-    FakeAgentLlm::script(vec![ScriptedTurn::Say(
-        chunks.iter().map(|chunk| (*chunk).to_string()).collect(),
-    )])
+    match slot {
+        AgentSlot::Rail => FakeAgentLlm::by_prompt(rail_fake_turn),
+        AgentSlot::Wake => FakeAgentLlm::script(vec![say(&["I had ", "a look at ", "what changed."])]),
+    }
+}
+
+/// What a rail message starting with this plays: [`rail_fake_turn`]'s tool-running turn.
+const RAIL_FAKE_TOOLS_MARKER: &str = "[tools]";
+
+/// The rail fake's turn for the prompt it's handed. A message starting with
+/// [`RAIL_FAKE_TOOLS_MARKER`] runs three rounds, so `ask-cmdr.spec.ts` can pin a tool-running
+/// turn's view live and after a reload: narration plus `app_state`, `list_volumes`, and a
+/// hallucinated `delete` (refused); narration plus `list_volumes` twice (both repeats of round
+/// one's, and reusing its call ids); then the answer. Anything else gets the one-line reply.
+///
+/// The round comes from the prompt (`latest_user_turn`), never a counter, so a retry or a second
+/// thread can't desync it. `app_state` and `list_volumes` read the machine's real state: a spec
+/// asserts their shape, never their values.
+fn rail_fake_turn(messages: &[crate::agent::llm::types::AgentMessage]) -> crate::agent::llm::fake::ScriptedTurn {
+    use crate::agent::llm::fake::{ScriptedTurn, latest_user_turn};
+    use crate::agent::llm::types::ToolId;
+    let no_args = || serde_json::json!({});
+    match latest_user_turn(messages) {
+        Some((text, round)) if text.starts_with(RAIL_FAKE_TOOLS_MARKER) => match round {
+            0 => ScriptedTurn::SayThenCall {
+                say: vec!["Let me look at ".into(), "your panes and drives.".into()],
+                calls: vec![
+                    (ToolId::AppState, no_args()),
+                    (ToolId::ListVolumes, no_args()),
+                    (ToolId::Unrecognized("delete".into()), no_args()),
+                ],
+            },
+            1 => ScriptedTurn::SayThenCall {
+                say: vec!["Checking the drives ".into(), "once more.".into()],
+                calls: vec![(ToolId::ListVolumes, no_args()), (ToolId::ListVolumes, no_args())],
+            },
+            _ => say(&["That's all, ", "from the test assistant."]),
+        },
+        _ => say(&["Hi! ", "I'm the ", "test assistant."]),
+    }
+}
+
+fn say(chunks: &[&str]) -> crate::agent::llm::fake::ScriptedTurn {
+    crate::agent::llm::fake::ScriptedTurn::Say(chunks.iter().map(|chunk| (*chunk).to_string()).collect())
 }
 
 /// A wake that stages one group and signs off, so a spec can drive the path where the user is
@@ -402,6 +439,46 @@ pub fn local_offset() -> FixedOffset {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The rail fake's tool turn plays its rounds by what the prompt holds, and every other
+    /// message keeps the one-line reply `ask-cmdr.spec.ts` counts.
+    #[test]
+    fn the_rail_fake_picks_its_round_from_the_prompt() {
+        use crate::agent::llm::fake::ScriptedTurn;
+        use crate::agent::llm::types::{AgentMessage, AgentPart, AgentRole, ToolId};
+        let message = |role, text: &str| AgentMessage {
+            role,
+            parts: vec![AgentPart::Text("<envelope>".into()), AgentPart::Text(text.into())],
+            at: 0,
+        };
+        let tools = message(AgentRole::User, "[tools] look around");
+        let answer = message(AgentRole::Assistant, "…");
+        let tools_of = |turn: ScriptedTurn| match turn {
+            ScriptedTurn::SayThenCall { calls, .. } => calls.into_iter().map(|(tool, _)| tool).collect(),
+            _ => Vec::new(),
+        };
+
+        assert_eq!(
+            tools_of(rail_fake_turn(std::slice::from_ref(&tools))),
+            [
+                ToolId::AppState,
+                ToolId::ListVolumes,
+                ToolId::Unrecognized("delete".into())
+            ]
+        );
+        assert_eq!(
+            tools_of(rail_fake_turn(&[tools.clone(), answer.clone()])),
+            [ToolId::ListVolumes, ToolId::ListVolumes]
+        );
+        assert!(matches!(
+            rail_fake_turn(&[tools, answer.clone(), answer.clone()]),
+            ScriptedTurn::Say(_)
+        ));
+        let ScriptedTurn::Say(chunks) = rail_fake_turn(&[message(AgentRole::User, "hello")]) else {
+            panic!("a plain message gets the one-line reply");
+        };
+        assert_eq!(chunks.concat(), "Hi! I'm the test assistant.");
+    }
 
     /// A slot refusal reaches the rail as its OWN wire kind: a missing cloud consent must not
     /// read as "set up a provider" to somebody whose provider is set up.

@@ -18,9 +18,11 @@ Two implementations:
   resolved in the command layer). It reuses the backend's adapter routing (`remote_model_iden` — the load-bearing Ollama-fallback
   fix) and its stream-cancel model, via two `pub(crate)` seam methods added to `AiBackend`: `resolve_adapter` and
   `exec_chat_stream_request` (the prompt-only helpers can't express a multipart tool loop).
-- `FakeAgentLlm` (`fake.rs`) is scripted with `ScriptedTurn`s (one consumed per `respond`) and records every `messages`
-  slice via `calls_seen()`, so a test asserts the exact assembled prompts. `CallRawTool(name, args)` emits a raw tool
-  name to exercise the read-only parse gate. Each turn's `End` reports zero usage, or what `script_with_usage` gives it. Call ids are
+- `FakeAgentLlm` (`fake.rs`) is scripted with `ScriptedTurn`s (one consumed per `respond`, or picked per call from the
+  prompt with `by_prompt`, which `latest_user_turn` serves) and records every `messages` slice via `calls_seen()`, so a
+  test asserts the exact assembled prompts. `CallRawTool(name, args)` emits a raw tool name to exercise the read-only
+  parse gate. `SayThenCall` narrates, then calls: its text and call starts interleave on the wire while its `End`
+  message holds one text, then every call (genai's `StreamEnd` order). Each turn's `End` reports zero usage, or what `script_with_usage` gives it. Call ids are
   `fake-call-{index}` PER ROUND, so they collide across rounds on purpose: the tool-line tests rely on it (❌ don't
   make them unique).
 
@@ -152,7 +154,8 @@ whose handler changes nothing, so that a wake's outcome is observable typed rath
   the blob untouched — the test that goes red the moment the mapping flattens); `AiError` → typed `AgentLlmError`; stop
   reason and usage mapping; tools are never strict.
 - `fake.rs`: scripted-turn sequencing + `calls_seen` recording; `CallRawTool` yields an `Unrecognized` `ToolId`; a
-  `Fail` turn returns its typed error.
+  `Fail` turn returns its typed error; `SayThenCall` interleaves on the wire and ends text first; `by_prompt` picks from
+  the latest user text and the rounds since.
 - `live_smoke_test.rs`: `#[ignore]`-gated, one real `respond` call per Tier-1 cloud provider + the local slot, plus a
   real two-round `list_dir` tool loop per current Claude model (`smoke_anthropic_tool_loop_*`), run manually with the
   matching env key (never in CI's critical path). Verify current model ids from each provider's models endpoint at run
