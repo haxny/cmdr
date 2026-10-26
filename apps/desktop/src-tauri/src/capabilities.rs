@@ -99,4 +99,40 @@ mod tests {
             "viewer.json must grant exactly listen and unlisten from core:event"
         );
     }
+
+    /// The plugin and `core:` APIs the Settings window's own code calls, each with its caller.
+    /// A missing one rejects silently, so the control just looks dead: the AI provider's
+    /// "Sign up" / "Create an API key" links, License's "Buy", and Advanced's log-folder and
+    /// diagnostics buttons all did nothing until these were granted.
+    #[test]
+    fn the_settings_window_can_call_every_api_its_sections_use() {
+        let needed = [
+            // `openExternalUrl`: AI provider setup steps, License › Buy a license.
+            "opener:allow-open-url",
+            // `revealItemInDir`: Advanced › Open log folder.
+            "opener:allow-reveal-item-in-dir",
+            // `appLogDir`: Advanced › Open log folder.
+            "core:path:allow-resolve-directory",
+            // `getVersion`: Advanced › Copy diagnostic info.
+            "core:app:allow-version",
+        ];
+        let (_, settings) = manifests()
+            .into_iter()
+            .find(|(name, _)| name == "settings.json")
+            .expect("settings.json exists");
+        // `opener:default` bundles both opener grants (plus the http/https/mailto/tel URL scope).
+        let grants = |perm: &str| {
+            settings.iter().any(|p| {
+                p == perm
+                    || (p == "opener:default"
+                        && matches!(perm, "opener:allow-open-url" | "opener:allow-reveal-item-in-dir"))
+            })
+        };
+        let missing: Vec<&str> = needed.into_iter().filter(|p| !grants(p)).collect();
+
+        assert!(
+            missing.is_empty(),
+            "settings.json lacks {missing:?}, so those Settings controls reject silently"
+        );
+    }
 }

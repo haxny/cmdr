@@ -19,7 +19,10 @@
         "core:window:allow-scale-factor",
         "core:event:default",
         "core:app:allow-set-app-theme",
+        "core:app:allow-version",
+        "core:path:allow-resolve-directory",
         "core:webview:allow-internal-toggle-devtools",
+        "opener:default",
         "store:default",
         "dialog:allow-ask",
         "dialog:allow-open"
