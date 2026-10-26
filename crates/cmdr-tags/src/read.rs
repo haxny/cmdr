@@ -242,12 +242,14 @@ fn put_extra(tags: &mut FileTags, key: String, values: Vec<String>) {
     }
 }
 
-/// Which of `pictures` is the cover: the first of type `CoverFront`, else the first.
-/// The writer replaces or removes exactly this one.
+/// Which of `pictures` is the cover: the first of type `CoverFront`, else the first untyped
+/// one (`Other`, which is also every MP4 `covr` picture). A typed picture such as a back
+/// cover or a booklet page is never the cover, so removing the cover leaves it alone and
+/// setting one beside it adds a front cover. The writer replaces or removes exactly this one.
 pub(crate) fn cover_position<'a>(pictures: impl Iterator<Item = &'a Picture>) -> Option<usize> {
     let types: Vec<PictureType> = pictures.map(Picture::pic_type).collect();
-    let front = types.iter().position(|t| *t == PictureType::CoverFront);
-    front.or_else(|| (!types.is_empty()).then_some(0))
+    let first = |kind: PictureType| types.iter().position(|t| *t == kind);
+    first(PictureType::CoverFront).or_else(|| first(PictureType::Other))
 }
 
 /// The cover among `pictures` (see [`cover_position`]).

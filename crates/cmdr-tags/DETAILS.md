@@ -24,11 +24,13 @@ those aliases so the file never carries two copies.
 | Www         | `TXXX:www`                         | freeform `www`                                  | `WWW`             |                   |
 
 Cover: `APIC` type 3 (MP3), `covr` (M4A), `METADATA_BLOCK_PICTURE` or a FLAC picture block. "The cover" is the first
-front-cover picture, else the first picture (`read::cover_position`, shared by reader and writer); a write replaces or
-removes exactly that one and keeps every other picture, so an MP3 whose only picture is "Other" never ends up with two.
-A FLAC's pictures are one list for this: the picture blocks, then the comments' `METADATA_BLOCK_PICTURE`s. A cover equal
-to the current one (MIME and bytes) is left as it is, type and description included. With the cover removed, the reader
-shows the next picture as the cover.
+front-cover picture, else the first untyped (`Other`) picture (`read::cover_position`, shared by reader and writer);
+every MP4 `covr` picture is untyped. A typed picture (back cover, booklet, artist, ...) is never the cover: a file with
+only those has no cover, setting one adds a type 3 picture beside them, and removing the cover never touches them, so an
+undo puts back exactly the front cover it removed. A write replaces or removes exactly the cover and keeps every other
+picture, so an MP3 whose only picture is "Other" never ends up with two. A FLAC's pictures are one list for this: the
+picture blocks, then the comments' `METADATA_BLOCK_PICTURE`s. A cover equal to the current one (MIME and bytes) is left
+as it is, type and description included. With the cover removed, the reader shows the next untyped picture, if any.
 
 Audiobooks also lose `TPE3` (conductor) on MP3. A known total (`WriteOptions::track_total` / `disc_total`) goes in
 `TRCK` / `TPOS` as `N/Total`, in `trkn` / `disk`'s total slot, or as a `TRACKTOTAL` / `DISCTOTAL` key (foobar2000's

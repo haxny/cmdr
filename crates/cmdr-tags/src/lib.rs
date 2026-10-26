@@ -35,6 +35,8 @@ mod tools_test;
 #[cfg(test)]
 mod undo_test;
 #[cfg(test)]
+mod write_cover_test;
+#[cfg(test)]
 mod write_extras_test;
 #[cfg(test)]
 mod write_test;
