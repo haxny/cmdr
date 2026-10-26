@@ -42,7 +42,7 @@ use super::walk::{
     ExtensionGroup, IndexFolder, WalkedFolders, folded_is_project_marker, lowercased_extension_into,
     propagate_marker_to_ancestors, walk_index_folders,
 };
-use crate::importance::classify::{marker_depth, under_floored_ancestor};
+use crate::importance::classify::{PathSpace, marker_depth, under_floored_ancestor};
 use crate::importance::signals::ChildAggregate;
 use crate::importance::stop::{PassError, check};
 use crate::indexing::store::{ARENA_FULL, DirTree, IndexStore, ROOT_ID};
@@ -231,19 +231,24 @@ fn subtree_is_over_budget(conn: &rusqlite::Connection, id: i64) -> Result<bool, 
 ///
 /// `stop` reaches both walks: the fallback is the same seconds-long walk a full pass
 /// takes, and the scoped one looks between origins.
-pub(super) fn walk_for_incremental(
+pub(super) fn walk_for_incremental<'a>(
     conn: &rusqlite::Connection,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     origins: &[String],
     previous_markers: &HashMap<String, Option<u8>>,
     stop: &CancellationToken,
 ) -> Result<(WalkedFolders, RescoreScope, BatchPlan), PassError> {
     let plan = plan_incremental_batch(conn, origins)?;
-    match try_scoped_walk(conn, home, &plan, previous_markers, stop)? {
+    let space = space.into();
+    match try_scoped_walk(conn, space, &plan, previous_markers, stop)? {
         ScopedWalkOutcome::Scoped(folders) => Ok((folders, RescoreScope::ChangedSubtreesOnly, plan)),
         ScopedWalkOutcome::FullWalkNeeded(reason) => {
             log::debug!(target: "importance", "incremental rescore takes the full walk: {reason}");
-            Ok((walk_index_folders(conn, home, stop)?, RescoreScope::WithAncestors, plan))
+            Ok((
+                walk_index_folders(conn, space, stop)?,
+                RescoreScope::WithAncestors,
+                plan,
+            ))
         }
     }
 }
@@ -255,13 +260,14 @@ pub(super) fn walk_for_incremental(
 /// ([`super::recompute::sanitize_incremental_batch`]), so no origin floors and none is
 /// under a DESCENDED one. `previous_markers` maps an origin's path to the
 /// `marker_depth` its stored row carries; a missing entry means it has no row.
-pub(super) fn try_scoped_walk(
+pub(super) fn try_scoped_walk<'a>(
     conn: &rusqlite::Connection,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     plan: &BatchPlan,
     previous_markers: &HashMap<String, Option<u8>>,
     stop: &CancellationToken,
 ) -> Result<ScopedWalkOutcome, PassError> {
+    let space = space.into();
     if plan.origins.len() > SCOPED_WALK_MAX_ORIGINS {
         return Ok(ScopedWalkOutcome::FullWalkNeeded(FullWalkReason::TooManyOrigins));
     }
@@ -289,9 +295,9 @@ pub(super) fn try_scoped_walk(
     // an ancestor-chain row isn't a folder here, so the climb simply stops being
     // recorded once it leaves the subtree.
     folders.for_each_mut(|folder, path| {
-        folder.under_floored_ancestor = under_floored_ancestor(path, home);
+        folder.under_floored_ancestor = under_floored_ancestor(path, space);
     });
-    propagate_marker_to_ancestors(&mut folders, home, stop)?;
+    propagate_marker_to_ancestors(&mut folders, space, stop)?;
     carry_marker_below_for_demoted(&mut folders, plan, previous_markers);
 
     // The guard: an ancestor outside every subtree can only have moved if some

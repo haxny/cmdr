@@ -320,6 +320,29 @@ fn a_system_root_never_captures_home_or_its_ancestors() {
     assert!(floors_by_path("/var/log", home), "the rest of /var still floors");
 }
 
+/// The OS roots are the boot disk's. On any other volume an index path is relative
+/// to the volume's root, so a NAS share's top-level `Library` is the user's own
+/// folder and must score, not floor.
+#[test]
+fn system_roots_apply_only_on_the_boot_disk() {
+    let home = "/Users/test";
+    let share = PathSpace::new(home, Disk::of(IndexVolumeKind::Smb));
+    let boot = PathSpace::new(home, Disk::of(IndexVolumeKind::Local));
+    for path in ["/Library/x", "/usr/share", "/opt/homebrew/lib", "/tmp/notes"] {
+        assert!(!floors_by_path(path, share), "{path} is the user's folder on a share");
+        assert_eq!(path_class(path, share), PathClass::Neutral, "{path}");
+        assert!(floors_by_path(path, boot), "{path} is the OS's on the boot disk");
+    }
+    let external = PathSpace::new(home, Disk::of(IndexVolumeKind::LocalExternal));
+    assert!(
+        !floors_by_path("/Library/x", external),
+        "an external drive is volume-relative too"
+    );
+    // The rules that aren't about the boot disk's own layout still apply anywhere.
+    assert!(floors_by_path("/Apps/Thing.app/Contents/Resources", share));
+    assert!(floors_by_path("/photos/node_modules", share));
+}
+
 #[test]
 fn a_marker_never_promotes_an_ancestor_of_home() {
     let home = "/Users/test";

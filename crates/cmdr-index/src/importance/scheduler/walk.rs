@@ -11,7 +11,7 @@ use std::ops::ControlFlow;
 
 use tokio_util::sync::CancellationToken;
 
-use crate::importance::classify::{MARKER_REACH, floors_by_path, is_project_marker, self_floors};
+use crate::importance::classify::{MARKER_REACH, PathSpace, floors_by_path, is_project_marker, self_floors};
 use crate::importance::signals::ChildAggregate;
 use crate::importance::stop::{PassError, StopPoll};
 use crate::indexing::store::{ARENA_FULL, DirTree, IndexStore, ROOT_ID};
@@ -200,11 +200,12 @@ impl WalkedFolders {
 /// a full pass spends its seconds, so it's where a stopped volume's pass has to be
 /// able to leave. A stopped walk returns [`PassError::Cancelled`] and no folders, so
 /// nothing downstream can score half a volume.
-pub(crate) fn walk_index_folders(
+pub(crate) fn walk_index_folders<'a>(
     conn: &rusqlite::Connection,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     stop: &CancellationToken,
 ) -> Result<WalkedFolders, PassError> {
+    let space = space.into();
     let mut walked = WalkedFolders {
         tree: DirTree::new(),
         folders: Vec::new(),
@@ -256,8 +257,8 @@ pub(crate) fn walk_index_folders(
     }
 
     fold_file_children(conn, &mut walked, &mut folded, stop)?;
-    propagate_floor_to_descendants(&mut walked, home, stop)?;
-    propagate_marker_to_ancestors(&mut walked, home, stop)?;
+    propagate_floor_to_descendants(&mut walked, space, stop)?;
+    propagate_marker_to_ancestors(&mut walked, space, stop)?;
 
     Ok(walked)
 }
@@ -341,7 +342,7 @@ fn close_group(
 /// TREE row, so an ancestor check is a binary search plus a byte, never a hash lookup.
 fn propagate_floor_to_descendants(
     walked: &mut WalkedFolders,
-    home: &str,
+    space: PathSpace<'_>,
     stop: &CancellationToken,
 ) -> Result<(), PassError> {
     let mut poll = StopPoll::new(stop);
@@ -352,7 +353,7 @@ fn propagate_floor_to_descendants(
         poll.tick()?;
         let dir_index = walked.folders[index].dir_index as usize;
         walked.tree.path_at_into(dir_index, &mut path);
-        if self_floors(&path, walked.tree.name_at(dir_index), home) {
+        if self_floors(&path, walked.tree.name_at(dir_index), space) {
             self_floored[dir_index] = true;
             any_floored = true;
         }
@@ -389,7 +390,7 @@ fn propagate_floor_to_descendants(
 /// projects at 0.62 (2026-10-26). Path-derived, so the full and the scoped walk agree.
 pub(super) fn propagate_marker_to_ancestors(
     walked: &mut WalkedFolders,
-    home: &str,
+    space: PathSpace<'_>,
     stop: &CancellationToken,
 ) -> Result<(), PassError> {
     let mut poll = StopPoll::new(stop);
@@ -403,7 +404,7 @@ pub(super) fn propagate_marker_to_ancestors(
     for seed in seeds {
         poll.tick()?;
         walked.tree.path_at_into(seed as usize, &mut path);
-        if floors_by_path(&path, home) {
+        if floors_by_path(&path, space) {
             continue;
         }
         let mut cursor = walked.tree.parent_at(seed as usize);
@@ -479,8 +480,8 @@ impl WalkedFolders {
 
         // No volume stands behind a synthetic walk, so nothing can stop it.
         let never = CancellationToken::new();
-        propagate_floor_to_descendants(&mut walked, home, &never).expect("never stopped");
-        propagate_marker_to_ancestors(&mut walked, home, &never).expect("never stopped");
+        propagate_floor_to_descendants(&mut walked, home.into(), &never).expect("never stopped");
+        propagate_marker_to_ancestors(&mut walked, home.into(), &never).expect("never stopped");
         walked
     }
 }

@@ -591,6 +591,9 @@ The scheduler scores **any** background-scored volume, not just the local `root`
   background-scored. The scheduler skips it at every entry point (sweep, registration, bus subscription), and
   `record_visit` skips it too.
 
+The policy also carries the volume's `Disk` (`Scoring { available, disk }`): only `Local` is the boot disk, whose OS
+roots floor; every other kind's paths are volume-relative (`../DETAILS.md` § OS roots, package stores, and app bundles).
+
 `signal_availability(kind)` single-sources the kind→availability mask so a read consumer's `explain` redistributes
 exactly as the recompute that wrote the weights did; it returns `None` for a kind that isn't background-scored, and
 `is_background_scored(kind)` is the same policy as a bool for `record_visit`.

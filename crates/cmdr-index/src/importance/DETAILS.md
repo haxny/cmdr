@@ -92,8 +92,12 @@ Three more lists floor machine-owned trees the same way the temp roots do:
 home under one of them (Fedora Silverblue's `/var/home/x`) would otherwise floor, which switches the feature off. Pinned
 by `a_system_root_never_captures_home_or_its_ancestors`.
 
-Known gap, shared with the temp roots: an external or network volume's index stores volume-relative paths, so a share
-with a top-level `Library` folder classifies like the boot disk's. None seen on a real NAS (2026-10-26).
+**The absolute roots (`SYSTEM_ROOTS` and `TEMP_ROOTS`) are the boot disk's own layout, so they apply only there.** Every
+other volume's index stores volume-relative paths, where a NAS share's top-level `Library` or `usr` is the user's data.
+The classifiers take a `PathSpace { home, disk }`, and `Disk::of(kind)` types it from the volume kind (only
+`IndexVolumeKind::Local` is `Disk::Boot`), ❌ never from the id string. `ScoringPolicy::Scored` carries it as
+`Scoring { available, disk }` from wiring to the pass. The home-relative lists and the package rules apply on every
+disk. Pinned by `system_roots_apply_only_on_the_boot_disk` and `read::tests::a_share_derives_no_os_root_floor`.
 
 **Why (live `importance-root.db`, 2026-10-26):** of 193,861 scored rows, `~/go` held 59,199, `/Applications` (bundle
 insides) 56,655, `/Library` 40,450, and `/opt` 21,975. Half the global top 40 was Go module cache and Homebrew

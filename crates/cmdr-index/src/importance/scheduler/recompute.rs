@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 #[cfg(any(test, feature = "tooling"))]
 use super::walk::walk_index_folders;
 use super::walk::{IndexFolder, WalkedFolders};
+use crate::importance::classify::PathSpace;
 use crate::importance::scorer::{SignalSet, Weights, explain};
 use crate::importance::signals::{OptionalSignals, signals_for_dir};
 use crate::importance::stop::{PassError, StopPoll, check};
@@ -42,15 +43,16 @@ use crate::indexing::store::IndexStore;
 ///
 /// Polls `stop` as it goes, and a stopped scoring returns no rows at all: a partial
 /// row set handed to a full-pass write would replace the table with half a volume.
-pub(super) fn score_folders(
+pub(super) fn score_folders<'a>(
     folders: &mut WalkedFolders,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     weights: &Weights,
     available: &SignalSet,
     now_secs: u64,
     stop: &CancellationToken,
     mut optional_for: impl FnMut(&str) -> OptionalSignals,
 ) -> Result<Vec<WeightRow>, PassError> {
+    let space = space.into();
     let mut rows = Vec::new();
     let mut poll = StopPoll::new(stop);
     folders.try_for_each(|f, path| {
@@ -60,7 +62,7 @@ pub(super) fn score_folders(
             f.modified_at,
             f.children,
             path,
-            home,
+            space,
             f.nearest_marker_below,
             f.under_floored_ancestor,
             optional,
@@ -94,7 +96,7 @@ pub(super) struct RecomputeInputs<'a> {
     /// mid-walk leaves the pass stamped with the older scan, still owing one.
     pub(super) scored_scan: Option<&'a str>,
     pub(super) weights: &'a Weights,
-    pub(super) home: &'a str,
+    pub(super) space: PathSpace<'a>,
     pub(super) now_secs: u64,
     /// The signal-availability mask for the volume kind: `SignalSet::all()` for a
     /// local macOS volume (both optional signals producible), `listing_only()`
@@ -135,7 +137,7 @@ pub(super) fn recompute_folders(
 
     let rows = score_folders(
         folders,
-        inputs.home,
+        inputs.space,
         inputs.weights,
         &inputs.available,
         inputs.now_secs,
@@ -214,7 +216,9 @@ pub fn recompute_index_to_db(
     let conn = IndexStore::open_read_connection(index_db).map_err(|e| e.to_string())?;
     // A dev tool measuring a database file has no volume behind it, so no stop signal.
     let never = CancellationToken::new();
-    let mut folders = walk_index_folders(&conn, home, &never).map_err(|e| e.to_string())?;
+    // A measurement points at a boot-disk index (the tool's whole use so far).
+    let space = PathSpace::new(home, crate::importance::classify::Disk::Boot);
+    let mut folders = walk_index_folders(&conn, space, &never).map_err(|e| e.to_string())?;
     // Read the footprint while the walk's output is still the only thing resident,
     // so the number is the walk's cost rather than the whole pass's.
     let walk_footprint_bytes = footprint_growth(footprint_before);
@@ -231,7 +235,7 @@ pub fn recompute_index_to_db(
     let folders_walked = folders.len();
     let rows = score_folders(
         &mut folders,
-        home,
+        space,
         &Weights::default(),
         &available,
         now_secs,
@@ -371,7 +375,7 @@ pub(super) fn load_previous_markers(
 /// differential harness can build rows off two walks without a store behind it.
 pub(super) struct ScoringInputs<'a> {
     pub(super) weights: &'a Weights,
-    pub(super) home: &'a str,
+    pub(super) space: PathSpace<'a>,
     pub(super) now_secs: u64,
     pub(super) available: SignalSet,
     pub(super) visits: &'a HashMap<String, u32>,
@@ -383,7 +387,7 @@ pub(super) struct IncrementalInputs<'a> {
     pub(super) volume_id: &'a str,
     pub(super) writer: &'a ImportanceWriter,
     pub(super) weights: &'a Weights,
-    pub(super) home: &'a str,
+    pub(super) space: PathSpace<'a>,
     pub(super) now_secs: u64,
     pub(super) available: SignalSet,
     pub(super) visits: &'a HashMap<String, u32>,
@@ -396,7 +400,7 @@ impl<'a> IncrementalInputs<'a> {
     fn scoring(&self) -> ScoringInputs<'a> {
         ScoringInputs {
             weights: self.weights,
-            home: self.home,
+            space: self.space,
             now_secs: self.now_secs,
             available: self.available,
             visits: self.visits,
@@ -577,7 +581,7 @@ pub(super) fn rescore_rows(
             f.modified_at,
             f.children,
             path,
-            inputs.home,
+            inputs.space,
             f.nearest_marker_below,
             f.under_floored_ancestor,
             optional,
@@ -676,11 +680,12 @@ pub(super) fn touched_folder_set(changed_paths: &[String]) -> std::collections::
 /// incremental to a whole-volume rewrite, and (b) reach `write_weights_incremental`'s
 /// subtree-clear. Full recomputes are driven by `ScanCompleted`, never by a live
 /// batch, so the incremental path drops `/` and scores only real folders.
-pub(super) fn sanitize_incremental_batch(changed_paths: &[String], home: &str) -> Vec<String> {
+pub(super) fn sanitize_incremental_batch<'a>(changed_paths: &[String], space: impl Into<PathSpace<'a>>) -> Vec<String> {
+    let space = space.into();
     changed_paths
         .iter()
         .filter(|p| !p.is_empty() && p.as_str() != "/")
-        .filter(|p| !crate::importance::classify::floors_by_path(p, home))
+        .filter(|p| !crate::importance::classify::floors_by_path(p, space))
         .cloned()
         .collect()
 }

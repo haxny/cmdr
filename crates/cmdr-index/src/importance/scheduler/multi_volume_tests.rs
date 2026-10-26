@@ -52,7 +52,7 @@ fn incremental_deletes_rows_that_become_floored() {
             volume_id: ROOT_VOLUME_ID,
             writer: &writer,
             weights: &Weights::default(),
-            home,
+            space: home.into(),
             now_secs: 1_000_000_000,
             available: SignalSet::listing_only(),
             visits: &HashMap::new(),
@@ -152,7 +152,7 @@ fn incremental_scores_rows_that_stop_being_floored() {
             volume_id: ROOT_VOLUME_ID,
             writer: &writer,
             weights: &Weights::default(),
-            home,
+            space: home.into(),
             now_secs: 1_000_000_000,
             available: SignalSet::listing_only(),
             visits: &HashMap::new(),
@@ -237,7 +237,7 @@ fn scoring_policy_scores_local_and_smb_but_excludes_mtp() {
     // Local: scored, both optional signals available (Spotlight where the OS has
     // it; the visit signal always). We assert the SHAPE, not the platform value.
     match ScoringPolicy::for_kind(IndexVolumeKind::Local) {
-        ScoringPolicy::Scored { available } => {
+        ScoringPolicy::Scored(Scoring { available, .. }) => {
             assert!(available.visit_available, "local visits are available");
             assert_eq!(
                 available.last_used_available,
@@ -251,7 +251,7 @@ fn scoring_policy_scores_local_and_smb_but_excludes_mtp() {
     // SMB: scored, but Spotlight is UNAVAILABLE regardless of platform (no
     // Spotlight over a share), so `last_used` redistributes.
     match ScoringPolicy::for_kind(IndexVolumeKind::Smb) {
-        ScoringPolicy::Scored { available } => {
+        ScoringPolicy::Scored(Scoring { available, .. }) => {
             assert!(available.visit_available, "SMB visits (from Cmdr nav) still apply");
             assert!(
                 !available.last_used_available,
@@ -342,7 +342,7 @@ fn smb_recompute_degrades_spotlight_and_redistributes() {
 
     // The SMB availability mask (from the typed policy) has Spotlight unavailable.
     let smb_available = match ScoringPolicy::for_kind(IndexVolumeKind::Smb) {
-        ScoringPolicy::Scored { available } => available,
+        ScoringPolicy::Scored(Scoring { available, .. }) => available,
         ScoringPolicy::Excluded => unreachable!("SMB is scored"),
     };
     assert!(!smb_available.last_used_available);
@@ -470,7 +470,7 @@ fn offline_unmounted_read_returns_stored_weights_after_index_gone() {
             writer: &writer,
             scored_scan: None,
             weights: &weights,
-            home: &home.home,
+            space: (&home.home).into(),
             now_secs: now,
             available: smb_available,
             visits: &HashMap::new(),
@@ -558,7 +558,7 @@ fn multi_volume_recompute_scores_each_volume_into_its_own_store() {
                 writer: &writer,
                 scored_scan: None,
                 weights: &weights,
-                home: &home.home,
+                space: (&home.home).into(),
                 now_secs: now,
                 available,
                 visits: &HashMap::new(),

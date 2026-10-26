@@ -20,7 +20,7 @@
 use super::constraints::Constraint;
 use super::scenario::{Availability, Scenario, ScenarioFolder};
 use crate::importance::classify::{
-    is_denylisted, is_hidden_or_system, leaf_name, path_class_with_marker, under_floored_paths,
+    Disk, PathSpace, is_denylisted, is_hidden_or_system, leaf_name, path_class_with_marker, under_floored_paths,
 };
 use crate::importance::scorer::{FolderSignals, extension_count};
 
@@ -142,12 +142,18 @@ impl ScenarioBuilder {
         // same shared derivation production uses (a folder under a self-flooring
         // ancestor floors too). Computed here rather than per-spec so a scenario
         // exercises the exact cross-folder logic the scheduler walk does.
-        let under_floored = under_floored_paths(self.folders.iter().map(|s| s.path.as_str()), &self.home);
+        // A network scenario's paths are share-relative, so the boot disk's own roots don't apply.
+        let disk = match self.availability {
+            Availability::Local => Disk::Boot,
+            Availability::ListingOnly => Disk::Other,
+        };
+        let space = PathSpace::new(&self.home, disk);
+        let under_floored = under_floored_paths(self.folders.iter().map(|s| s.path.as_str()), space);
         let folders = self
             .folders
             .iter()
             .map(|spec| {
-                let signals = derive_signals(spec, &self.home, now, under_floored.contains(&spec.path));
+                let signals = derive_signals(spec, space, now, under_floored.contains(&spec.path));
                 ScenarioFolder {
                     path: spec.path.clone(),
                     signals,
@@ -170,15 +176,15 @@ impl ScenarioBuilder {
 /// synthetic folder classifies exactly as the live scheduler would, marker
 /// promotion and its exemptions included
 /// ([`path_class_with_marker`](crate::importance::classify::path_class_with_marker)).
-fn derive_signals(spec: &FolderSpec, home: &str, now: u64, under_floored_ancestor: bool) -> FolderSignals {
+fn derive_signals(spec: &FolderSpec, space: PathSpace<'_>, now: u64, under_floored_ancestor: bool) -> FolderSignals {
     let name = leaf_name(&spec.path);
     let file_refs: Vec<&str> = spec.files.iter().map(|s| s.as_str()).collect();
     // A spec's marker reads as a DIRECT one (depth 0).
     let marker_depth = spec.has_marker.then_some(0);
-    let path_class = path_class_with_marker(&spec.path, home, marker_depth);
+    let path_class = path_class_with_marker(&spec.path, space, marker_depth);
     FolderSignals {
         name_denylisted: is_denylisted(&name),
-        hidden_or_system: is_hidden_or_system(&spec.path, &name, home),
+        hidden_or_system: is_hidden_or_system(&spec.path, &name, space),
         under_floored_ancestor,
         distinct_extension_count: extension_count(file_refs.iter().copied()),
         file_count: spec.files.len() as u32,

@@ -31,7 +31,7 @@ pub(super) fn full_pass_walk(dir: &std::path::Path, home: &str, folders: &mut Wa
             writer: &writer,
             scored_scan: None,
             weights: &Weights::default(),
-            home,
+            space: home.into(),
             now_secs: 1_000_000_000,
             available: SignalSet::listing_only(),
             visits: &HashMap::new(),

@@ -17,8 +17,9 @@ memory is one process-wide slab".
 
 `open(data_dir, volume_id, available)` doesn't touch the DB until the first read, so it's cheap and never fails on a
 missing file. `open_at(db_path, available)` serves a caller that already has a path (the dev tuning surface).
-`with_home` overrides the home dir the floored-vs-unscored derivation needs (path-class and hidden/system priors are
-home-relative; defaults to `$HOME`); `with_weights` overrides the weights `explain` re-scores with.
+`with_path_space(home, kind)` overrides the home dir and the volume kind the floored-vs-unscored derivation needs
+(path-class and hidden/system priors are home-relative; defaults to `$HOME`); `with_weights` overrides the weights
+`explain` re-scores with.
 
 ## The calls
 

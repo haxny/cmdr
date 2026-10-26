@@ -69,7 +69,7 @@ fn full_pass(
             writer,
             scored_scan: None,
             weights: &Weights::default(),
-            home,
+            space: home.into(),
             now_secs: 1_000_000_000,
             available: SignalSet::listing_only(),
             visits: &HashMap::new(),
@@ -326,7 +326,11 @@ fn a_stopped_pass_announces_nothing_and_the_next_one_does() {
     scheduler.adopt_stop(VOLUME, volume_root.child_token());
     volume_root.cancel();
 
-    let stopped = scheduler.run_pass_under_current_stop(VOLUME, SignalSet::listing_only(), 1_000_000_000);
+    let stopped = scheduler.run_pass_under_current_stop(
+        VOLUME,
+        Scoring::new(SignalSet::listing_only(), Disk::Boot),
+        1_000_000_000,
+    );
     assert_eq!(stopped, Err(PassError::Cancelled));
     assert!(notices.try_recv().is_err(), "a stopped pass announces nothing");
     assert!(
@@ -337,7 +341,11 @@ fn a_stopped_pass_announces_nothing_and_the_next_one_does() {
     // The volume starts again: it is wired again, with a child of its NEW root.
     scheduler.adopt_stop(VOLUME, CancellationToken::new().child_token());
     let scored = scheduler
-        .run_pass_under_current_stop(VOLUME, SignalSet::listing_only(), 1_000_000_000)
+        .run_pass_under_current_stop(
+            VOLUME,
+            Scoring::new(SignalSet::listing_only(), Disk::Boot),
+            1_000_000_000,
+        )
         .expect("the pass finishes once the volume is back");
     assert!(scored > 0);
     assert!(
@@ -364,8 +372,12 @@ fn a_stopped_rescore_keeps_its_batch_for_the_next_one() {
     let mut notices = crate::importance::read::subscribe(VOLUME);
 
     scheduler.adopt_stop(VOLUME, already_stopped());
-    let stopped =
-        scheduler.run_incremental_under_current_stop(VOLUME, SignalSet::listing_only(), batch.clone(), 1_000_000_000);
+    let stopped = scheduler.run_incremental_under_current_stop(
+        VOLUME,
+        Scoring::new(SignalSet::listing_only(), Disk::Boot),
+        batch.clone(),
+        1_000_000_000,
+    );
 
     assert_eq!(stopped, Err(PassError::Cancelled));
     assert!(notices.try_recv().is_err(), "a stopped rescore announces nothing");
@@ -414,7 +426,11 @@ fn a_volume_nothing_wired_reads_as_stopped() {
     let scheduler = ImportanceScheduler::new(dir.path().to_path_buf());
     assert!(scheduler.stop_for("never-wired").is_cancelled());
     assert_eq!(
-        scheduler.run_pass_under_current_stop("never-wired", SignalSet::listing_only(), 1_000_000_000),
+        scheduler.run_pass_under_current_stop(
+            "never-wired",
+            Scoring::new(SignalSet::listing_only(), Disk::Boot),
+            1_000_000_000
+        ),
         Err(PassError::Cancelled)
     );
 }
@@ -442,7 +458,11 @@ fn a_scan_whose_pass_was_stopped_is_still_owed_after_a_relaunch() {
     let scheduler = ImportanceScheduler::new(dir.path().to_path_buf());
     scheduler.adopt_stop(VOLUME, CancellationToken::new());
     scheduler
-        .run_pass_under_current_stop(VOLUME, SignalSet::listing_only(), 1_000_000_000)
+        .run_pass_under_current_stop(
+            VOLUME,
+            Scoring::new(SignalSet::listing_only(), Disk::Boot),
+            1_000_000_000,
+        )
         .expect("the first pass finishes");
     assert!(
         !wiring::should_enqueue_full_pass(IndexVolumeKind::Local, dir.path(), VOLUME).expect("probe"),
@@ -455,7 +475,11 @@ fn a_scan_whose_pass_was_stopped_is_still_owed_after_a_relaunch() {
     scheduler.adopt_stop(VOLUME, volume_root.child_token());
     volume_root.cancel();
     assert_eq!(
-        scheduler.run_pass_under_current_stop(VOLUME, SignalSet::listing_only(), 1_000_000_000),
+        scheduler.run_pass_under_current_stop(
+            VOLUME,
+            Scoring::new(SignalSet::listing_only(), Disk::Boot),
+            1_000_000_000
+        ),
         Err(PassError::Cancelled)
     );
     assert_eq!(

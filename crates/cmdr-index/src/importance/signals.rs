@@ -11,7 +11,7 @@
 //! Pure: values in (an mtime, a child aggregate, a path), a [`FolderSignals`] out.
 //! No I/O — the caller reads the index; this only classifies.
 
-use super::classify::{is_denylisted, is_hidden_or_system, leaf_name, marker_depth, path_class_with_marker};
+use super::classify::{PathSpace, is_denylisted, is_hidden_or_system, leaf_name, marker_depth, path_class_with_marker};
 use super::scorer::FolderSignals;
 
 /// The optional, backend-dependent signals for a folder, resolved by the caller
@@ -50,7 +50,7 @@ pub struct ChildAggregate {
 /// `children` is the pre-aggregated summary of its direct children (extension
 /// diversity + count + direct-marker flag — the walk folds each child into this so
 /// no child rows are held); `path` is the directory's reconstructed absolute path;
-/// `home` is the user's home dir for path classification. `nearest_marker_below` is
+/// `space` is the user's home plus the disk the path is on, for path classification. `nearest_marker_below` is
 /// the distance to the nearest descendant holding a project marker (`1` for a
 /// direct child), or `None`; `classify::marker_depth` keeps it only within
 /// `MARKER_REACH`. `children.has_direct_marker` handles the marker-in-this-folder
@@ -58,18 +58,19 @@ pub struct ChildAggregate {
 /// image on the floor side: the caller sets it when a self-flooring ancestor (a
 /// denylisted / hidden / system folder) sits above this one, so the whole subtree
 /// under a `node_modules` floors, not just the named folder.
-pub fn signals_for_dir(
+pub fn signals_for_dir<'a>(
     mtime_secs: Option<u64>,
     children: ChildAggregate,
     path: &str,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     nearest_marker_below: Option<u8>,
     under_floored_ancestor: bool,
     optional: OptionalSignals,
 ) -> FolderSignals {
+    let space = space.into();
     let name = leaf_name(path);
     let name_denylisted = is_denylisted(&name);
-    let hidden_or_system = is_hidden_or_system(path, &name, home);
+    let hidden_or_system = is_hidden_or_system(path, &name, space);
 
     let marker_depth = marker_depth(children.has_direct_marker, nearest_marker_below);
 
@@ -78,7 +79,7 @@ pub fn signals_for_dir(
     // the path alone classifies it. `$HOME` and its ancestors, volume roots, and
     // system/cache paths are exempt from the promotion; see
     // `classify::path_class_with_marker`.
-    let path_class = path_class_with_marker(path, home, marker_depth);
+    let path_class = path_class_with_marker(path, space, marker_depth);
 
     FolderSignals {
         name_denylisted,

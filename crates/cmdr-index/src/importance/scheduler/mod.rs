@@ -59,6 +59,7 @@ use std::time::Instant;
 
 use tokio_util::sync::CancellationToken;
 
+use super::classify::{Disk, PathSpace};
 use super::scorer::{SignalSet, Weights};
 use super::stop::{PassError, check};
 use super::writer::ImportanceWriter;
@@ -104,17 +105,37 @@ pub use differential::{OriginComparison, compare_walks_for_incremental, sample_o
 ///   skips it at every entry point (sweep, registration, bus subscription).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ScoringPolicy {
-    /// Background-scored, with the given signal-availability mask for the kind.
-    Scored { available: SignalSet },
+    /// Background-scored, with the given signal-availability mask and path space
+    /// for the kind.
+    Scored(Scoring),
     /// Never background-scored (MTP: on-demand only).
     Excluded,
+}
+
+/// How a background-scored volume is scored: which optional signals its backend
+/// produces, and which [`Disk`] its index paths live on (only the boot disk's paths
+/// meet the OS-root rules; a share's `/Library` is the user's). Both come from the
+/// volume's kind, threaded from wiring to the pass as one value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Scoring {
+    /// The signal-availability mask.
+    pub(crate) available: SignalSet,
+    /// Whose paths the index stores.
+    pub(crate) disk: Disk,
+}
+
+impl Scoring {
+    /// A scoring for `available` signals on `disk`.
+    pub(crate) fn new(available: SignalSet, disk: Disk) -> Self {
+        Self { available, disk }
+    }
 }
 
 /// Whether a volume of this kind is background-scored (Local/SMB), as opposed to
 /// on-demand only (MTP). The `record_visit` command uses it to skip persisting a
 /// visit for a volume that's never scored — typed, never a volume-id string check.
 pub fn is_background_scored(kind: IndexVolumeKind) -> bool {
-    matches!(ScoringPolicy::for_kind(kind), ScoringPolicy::Scored { .. })
+    matches!(ScoringPolicy::for_kind(kind), ScoringPolicy::Scored(_))
 }
 
 /// The scorer's signal-availability mask for a volume kind, or `None` when the kind
@@ -125,7 +146,7 @@ pub fn is_background_scored(kind: IndexVolumeKind) -> bool {
 /// score. Single-sources the kind→availability policy that lives in `ScoringPolicy`.
 pub fn signal_availability(kind: IndexVolumeKind) -> Option<SignalSet> {
     match ScoringPolicy::for_kind(kind) {
-        ScoringPolicy::Scored { available } => Some(available),
+        ScoringPolicy::Scored(scoring) => Some(scoring.available),
         ScoringPolicy::Excluded => None,
     }
 }
@@ -140,21 +161,23 @@ impl ScoringPolicy {
             // the OS supports it; off macOS Spotlight is simply absent). A local
             // external drive shares the local scan path and reads its own local DB,
             // so it scores identically; a per-folder missing signal redistributes.
-            IndexVolumeKind::Local | IndexVolumeKind::LocalExternal => ScoringPolicy::Scored {
-                available: SignalSet {
+            IndexVolumeKind::Local | IndexVolumeKind::LocalExternal => ScoringPolicy::Scored(Scoring::new(
+                SignalSet {
                     visit_available: true,
                     last_used_available: super::last_used::is_available(),
                 },
-            },
+                Disk::of(kind),
+            )),
             // SMB has NO Spotlight metadata: `last_used` is unavailable and its
             // weight redistributes onto the listing signals. Visits still apply
             // (they come from Cmdr navigation, not the mount).
-            IndexVolumeKind::Smb => ScoringPolicy::Scored {
-                available: SignalSet {
+            IndexVolumeKind::Smb => ScoringPolicy::Scored(Scoring::new(
+                SignalSet {
                     visit_available: true,
                     last_used_available: false,
                 },
-            },
+                Disk::Other,
+            )),
             // A phone (MTP or ADB): on-demand only, never background-scored.
             IndexVolumeKind::Mtp | IndexVolumeKind::Adb => ScoringPolicy::Excluded,
         }
@@ -416,11 +439,11 @@ impl ImportanceScheduler {
     pub(crate) fn run_pass_under_current_stop(
         &self,
         volume_id: &str,
-        available: SignalSet,
+        scoring: Scoring,
         now_secs: u64,
     ) -> Result<usize, PassError> {
         let stop = self.stop_for(volume_id);
-        self.run_pass_blocking(volume_id, available, now_secs, &stop)
+        self.run_pass_blocking(volume_id, scoring, now_secs, &stop)
     }
 
     /// [`run_incremental_blocking`](Self::run_incremental_blocking) under the
@@ -432,12 +455,12 @@ impl ImportanceScheduler {
     pub(crate) fn run_incremental_under_current_stop(
         &self,
         volume_id: &str,
-        available: SignalSet,
+        scoring: Scoring,
         batch: Vec<String>,
         now_secs: u64,
     ) -> Result<IncrementalReport, PassError> {
         let stop = self.stop_for(volume_id);
-        let result = self.run_incremental_blocking(volume_id, available, &batch, now_secs, &stop);
+        let result = self.run_incremental_blocking(volume_id, scoring, &batch, now_secs, &stop);
         if result == Err(PassError::Cancelled) {
             self.pending_incremental_paths(volume_id, batch);
         }
@@ -461,16 +484,18 @@ impl ImportanceScheduler {
     pub(crate) fn run_pass_blocking(
         &self,
         volume_id: &str,
-        available: SignalSet,
+        scoring: Scoring,
         now_secs: u64,
         stop: &CancellationToken,
     ) -> Result<usize, PassError> {
+        let Scoring { available, disk } = scoring;
         // The pass may have waited for a blocking thread while its volume stopped.
         check(stop)?;
         let Some(pool) = crate::indexing::get_read_pool_for(volume_id) else {
             return Ok(0);
         };
         let home = Self::home_dir();
+        let space = PathSpace::new(&home, disk);
 
         // Time the two phases so real numbers surface any drift (a full pass on a
         // NAS-sized volume is the cost to watch): the READ phase (walk + visit load
@@ -483,7 +508,7 @@ impl ImportanceScheduler {
         let (scored_scan, mut folders) = pool
             .with_conn(|conn| {
                 let scan = index_scan_stamp(conn).map_err(|e| format!("index scan stamp read failed: {e}"))?;
-                Ok::<_, PassError>((scan, walk_index_folders(conn, &home, stop)?))
+                Ok::<_, PassError>((scan, walk_index_folders(conn, space, stop)?))
             })
             .map_err(|e| format!("read pool error: {e}"))??;
         if folders.is_empty() {
@@ -525,7 +550,7 @@ impl ImportanceScheduler {
                 writer: &writer,
                 scored_scan: scored_scan.as_deref(),
                 weights: &self.weights,
-                home: &home,
+                space,
                 now_secs,
                 available,
                 visits: &visits,
@@ -570,11 +595,12 @@ impl ImportanceScheduler {
     pub(crate) fn run_incremental_blocking(
         &self,
         volume_id: &str,
-        available: SignalSet,
+        scoring: Scoring,
         changed_paths: &[String],
         now_secs: u64,
         stop: &CancellationToken,
     ) -> Result<IncrementalReport, PassError> {
+        let Scoring { available, disk } = scoring;
         check(stop)?;
         // The batch gate, BEFORE anything expensive: drop the bare root, empties, and
         // every path that floors (build output, caches, dot-directories — none of
@@ -583,7 +609,8 @@ impl ImportanceScheduler {
         // opening the read pool or walking, which is what stops constant background
         // churn from driving a pass a minute forever. See `sanitize_incremental_batch`.
         let home = Self::home_dir();
-        let changed_paths = sanitize_incremental_batch(changed_paths, &home);
+        let space = PathSpace::new(&home, disk);
+        let changed_paths = sanitize_incremental_batch(changed_paths, space);
         if changed_paths.is_empty() {
             return Ok(IncrementalReport::default());
         }
@@ -598,7 +625,7 @@ impl ImportanceScheduler {
         // it turns on which origins are too big to descend.
         let previous_markers = load_previous_markers(&self.data_dir, volume_id, &changed_paths);
         let (mut folders, scope, plan) = pool
-            .with_conn(|conn| walk_for_incremental(conn, &home, &changed_paths, &previous_markers, stop))
+            .with_conn(|conn| walk_for_incremental(conn, space, &changed_paths, &previous_markers, stop))
             .map_err(|e| format!("read pool error: {e}"))??;
         // One origin per changed subtree, and the two lists kept apart: `cleared` is
         // what the writer clears and re-inserts, `demoted` is the over-budget origins
@@ -622,7 +649,7 @@ impl ImportanceScheduler {
                 volume_id,
                 writer: &writer,
                 weights: &self.weights,
-                home: &home,
+                space,
                 now_secs,
                 available,
                 visits: &visits,

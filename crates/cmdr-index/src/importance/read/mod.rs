@@ -42,8 +42,10 @@ use std::sync::Mutex;
 
 use tokio::sync::broadcast;
 
+use super::classify::{Disk, PathSpace};
 use super::scorer::{Explanation, FolderSignals, Score, SignalSet, Weights, explain};
 use super::store::{ImportanceStoreError, importance_db_path, open_read_connection};
+use crate::IndexVolumeKind;
 use crate::indexing::store::normalize_for_comparison;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::sqlite_util::{THREAD_CONN_SLOTS, ThreadConnCache};
@@ -125,15 +127,15 @@ pub enum FloorReason {
 /// Derive why a path floors, or `None` when it doesn't. The single derivation the
 /// read side uses for both [`ImportanceIndex::lookup`]'s [`WeightLookup::Floored`]
 /// reason and the floored-signals reconstruction, so the two agree by construction.
-fn floor_reason_for(path: &str, home: &str) -> Option<FloorReason> {
+fn floor_reason_for(path: &str, space: PathSpace<'_>) -> Option<FloorReason> {
     use crate::importance::classify::{is_denylisted, is_hidden_or_system, leaf_name};
-    if !crate::importance::classify::floors_by_path(path, home) {
+    if !crate::importance::classify::floors_by_path(path, space) {
         return None;
     }
     let name = leaf_name(path);
     if is_denylisted(&name) {
         Some(FloorReason::NameDenylisted)
-    } else if is_hidden_or_system(path, &name, home) {
+    } else if is_hidden_or_system(path, &name, space) {
         Some(FloorReason::HiddenOrSystem)
     } else {
         Some(FloorReason::UnderFlooredAncestor)
@@ -157,6 +159,12 @@ pub struct ImportanceIndex {
     /// hidden/system priors are home-relative, so the derivation needs it. Defaults
     /// to `$HOME`; a caller measuring an arbitrary volume can override it.
     home: String,
+    /// Whose paths this volume's index stores, for the same derivation: the boot
+    /// disk's OS roots floor only there. Defaults to the boot disk, the one volume
+    /// the app derives a floor for (`cmdr://importance`'s `?path=` falls back to the
+    /// root index); a consumer deriving floors on another volume sets its kind with
+    /// [`with_path_space`](ImportanceIndex::with_path_space).
+    disk: Disk,
 }
 
 impl ImportanceIndex {
@@ -176,13 +184,16 @@ impl ImportanceIndex {
             available,
             weights: Weights::default(),
             home: std::env::var("HOME").unwrap_or_default(),
+            disk: Disk::Boot,
         }
     }
 
-    /// Override the home dir used to derive a floored-vs-unscored classification
-    /// (see [`lookup`](ImportanceIndex::lookup)). Defaults to `$HOME`.
-    pub fn with_home(mut self, home: impl Into<String>) -> Self {
+    /// Override the home dir and the volume kind used to derive a floored-vs-unscored
+    /// classification (see [`lookup`](ImportanceIndex::lookup)). Defaults to `$HOME`
+    /// on the boot disk.
+    pub fn with_path_space(mut self, home: impl Into<String>, kind: IndexVolumeKind) -> Self {
         self.home = home.into();
+        self.disk = Disk::of(kind);
         self
     }
 
@@ -256,7 +267,7 @@ impl ImportanceIndex {
     pub fn lookup(&self, path: &str) -> Result<WeightLookup, ImportanceStoreError> {
         match self.weight_for(path)? {
             Some(w) => Ok(WeightLookup::Scored(w)),
-            None => Ok(match floor_reason_for(path, &self.home) {
+            None => Ok(match floor_reason_for(path, PathSpace::new(&self.home, self.disk)) {
                 Some(reason) => WeightLookup::Floored(reason),
                 None => WeightLookup::Unscored,
             }),
@@ -374,7 +385,7 @@ impl ImportanceIndex {
         // One flag, the precedence winner — `explain`'s `floored` is the OR of the
         // three, so setting only the reported reason is enough to floor the score,
         // and it keeps this in lockstep with `lookup`'s reported reason.
-        match floor_reason_for(path, &self.home)? {
+        match floor_reason_for(path, PathSpace::new(&self.home, self.disk))? {
             FloorReason::NameDenylisted => signals.name_denylisted = true,
             FloorReason::HiddenOrSystem => signals.hidden_or_system = true,
             FloorReason::UnderFlooredAncestor => signals.under_floored_ancestor = true,

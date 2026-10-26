@@ -252,12 +252,29 @@ fn for_each_nonzero_weight_missing_db_visits_nothing() {
 /// `Unscored`. This is the distinction the compacted store leans on — a floored
 /// folder has no row, so the read side re-derives its floored-ness from the path.
 #[test]
+fn a_share_derives_no_os_root_floor() {
+    use super::{FloorReason, WeightLookup};
+    let (index, _dir) = populated_index(&[("/Users/me/proj", 0.8, PathClass::ProjectRoot)]);
+    let boot = index.with_path_space("/Users/me", IndexVolumeKind::Local);
+    assert_eq!(
+        boot.lookup("/Library/x").expect("lookup"),
+        WeightLookup::Floored(FloorReason::HiddenOrSystem)
+    );
+    let share = boot.with_path_space("/Users/me", IndexVolumeKind::Smb);
+    assert_eq!(
+        share.lookup("/Library/x").expect("lookup"),
+        WeightLookup::Unscored,
+        "a share's top-level Library is the user's folder"
+    );
+}
+
+#[test]
 fn lookup_distinguishes_scored_floored_and_unscored() {
     use super::{FloorReason, WeightLookup};
     // A scored folder under the home. Give the index a real home so the classifiers
     // agree with production.
     let (index, dir) = populated_index(&[("/Users/me/proj", 0.8, PathClass::ProjectRoot)]);
-    let index = index.with_home("/Users/me");
+    let index = index.with_path_space("/Users/me", IndexVolumeKind::Local);
     let _ = dir; // keep the temp dir alive
 
     // Scored: a stored row.
@@ -298,7 +315,7 @@ fn lookup_distinguishes_scored_floored_and_unscored() {
 #[test]
 fn explain_derives_a_floored_breakdown_for_a_rowless_floored_path() {
     let (index, dir) = populated_index(&[("/Users/me/proj", 0.8, PathClass::ProjectRoot)]);
-    let index = index.with_home("/Users/me");
+    let index = index.with_path_space("/Users/me", IndexVolumeKind::Local);
     let _ = dir;
 
     let node_modules = index

@@ -12,6 +12,67 @@
 //! [`FolderSignals`]: super::scorer::FolderSignals
 
 use super::scorer::PathClass;
+use crate::IndexVolumeKind;
+
+/// Whose absolute paths a volume's index stores, which decides whether the boot
+/// disk's own layout rules ([`SYSTEM_ROOTS`], [`TEMP_ROOTS`]) apply. Typed from the
+/// volume's kind ([`Disk::of`]), ❌ never from its id string.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Disk {
+    /// The boot disk: index paths ARE the machine's paths, so `/Library` is the OS's.
+    Boot,
+    /// Any other volume (an external drive, a share): index paths are relative to
+    /// the volume's root, so a top-level `Library` is the user's own folder.
+    Other,
+}
+
+impl Disk {
+    /// The disk a volume of this kind is. Only [`IndexVolumeKind::Local`] is the
+    /// boot disk.
+    pub fn of(kind: IndexVolumeKind) -> Self {
+        match kind {
+            IndexVolumeKind::Local => Disk::Boot,
+            IndexVolumeKind::LocalExternal | IndexVolumeKind::Smb | IndexVolumeKind::Mtp | IndexVolumeKind::Adb => {
+                Disk::Other
+            }
+        }
+    }
+}
+
+/// What a path is classified against: the user's home (for the home-relative
+/// rules) and the [`Disk`] the path lives on (for the boot disk's own roots).
+#[derive(Debug, Clone, Copy)]
+pub struct PathSpace<'a> {
+    /// The user's home directory; empty when unresolved (no home-relative rule fires).
+    pub home: &'a str,
+    /// Whether the volume's paths are the boot disk's.
+    pub disk: Disk,
+}
+
+impl<'a> PathSpace<'a> {
+    /// A path space for `home` on `disk`.
+    pub fn new(home: &'a str, disk: Disk) -> Self {
+        Self { home, disk }
+    }
+}
+
+/// Tests classify boot-disk paths almost everywhere, so a bare home reads as the
+/// boot disk there. Test-only on purpose: production code has to say which disk a
+/// path is on, or a share's `Library` would floor.
+#[cfg(test)]
+impl<'a> From<&'a str> for PathSpace<'a> {
+    fn from(home: &'a str) -> Self {
+        Self::new(home, Disk::Boot)
+    }
+}
+
+/// See the `&str` conversion.
+#[cfg(test)]
+impl<'a> From<&'a String> for PathSpace<'a> {
+    fn from(home: &'a String) -> Self {
+        Self::new(home, Disk::Boot)
+    }
+}
 
 /// The last path component (folder name). A path with no final component (the
 /// root `/`) folds back to the whole string.
@@ -50,8 +111,8 @@ static DENYLIST_FOLDED: std::sync::LazyLock<Vec<String>> =
 
 /// Whether a folder is hidden or system-owned: a dotfile name, or a path that
 /// classifies as [`PathClass::SystemOrCache`]. A FLOOR override in the scorer.
-pub fn is_hidden_or_system(path: &str, name: &str, home: &str) -> bool {
-    name.starts_with('.') || matches!(path_class(path, home), PathClass::SystemOrCache)
+pub fn is_hidden_or_system<'a>(path: &str, name: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    name.starts_with('.') || matches!(path_class(path, space), PathClass::SystemOrCache)
 }
 
 /// Whether a folder floors ON ITS OWN — a denylisted name OR hidden/system. This
@@ -59,8 +120,8 @@ pub fn is_hidden_or_system(path: &str, name: &str, home: &str) -> bool {
 /// floors every folder below it too (`under_floored_ancestor`). Kept here, shared
 /// by the production walk and the fixtures/evals derivation, so the two agree on
 /// exactly which folders anchor a floored subtree.
-pub fn self_floors(path: &str, name: &str, home: &str) -> bool {
-    is_denylisted(name) || is_hidden_or_system(path, name, home)
+pub fn self_floors<'a>(path: &str, name: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    is_denylisted(name) || is_hidden_or_system(path, name, space)
 }
 
 /// Given every folder path (in any order) and the home root, return the subset
@@ -79,13 +140,14 @@ pub fn self_floors(path: &str, name: &str, home: &str) -> bool {
 /// Only the corpus scenarios and the test fixtures need this: the app applies the
 /// floor per folder as it scores, rather than pre-computing the set.
 #[cfg(any(test, feature = "tooling"))]
-pub fn under_floored_paths<'a>(
+pub fn under_floored_paths<'a, 'h>(
     paths: impl IntoIterator<Item = &'a str>,
-    home: &str,
+    space: impl Into<PathSpace<'h>>,
 ) -> std::collections::HashSet<String> {
+    let space = space.into();
     let mut under = std::collections::HashSet::new();
     for path in paths {
-        if under_floored_ancestor(path, home) {
+        if under_floored_ancestor(path, space) {
             under.insert(path.to_string());
         }
     }
@@ -100,8 +162,8 @@ pub fn under_floored_paths<'a>(
 /// needs neither the folder set nor the index. That is what lets an incremental
 /// rescore compute the signal for a subtree it reads in isolation: the flooring
 /// ancestor can sit far above the subtree root and still be seen.
-pub fn under_floored_ancestor(path: &str, home: &str) -> bool {
-    any_ancestor_self_floors(path, home)
+pub fn under_floored_ancestor<'a>(path: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    any_ancestor_self_floors(path, space.into())
 }
 
 /// Whether a folder floors purely by its PATH — it self-floors (denylisted /
@@ -111,15 +173,16 @@ pub fn under_floored_ancestor(path: &str, home: &str) -> bool {
 /// this, rather than storing a `0.0` blob. Pure string + name classification, no
 /// index or listing data — the exact rule the recompute walk applies when deciding
 /// to skip a row, so read and write agree by construction.
-pub fn floors_by_path(path: &str, home: &str) -> bool {
+pub fn floors_by_path<'a>(path: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    let space = space.into();
     let name = leaf_name(path);
-    self_floors(path, &name, home) || any_ancestor_self_floors(path, home)
+    self_floors(path, &name, space) || any_ancestor_self_floors(path, space)
 }
 
 /// Whether any PROPER ancestor directory of `path` self-floors. Walks the path's
 /// own components from the second-to-last up, classifying each ancestor by its own
 /// name + full ancestor path. The folder itself is excluded (start above it).
-fn any_ancestor_self_floors(path: &str, home: &str) -> bool {
+fn any_ancestor_self_floors(path: &str, space: PathSpace<'_>) -> bool {
     let mut current = path;
     while let Some(pos) = current.rfind('/') {
         if pos == 0 {
@@ -127,7 +190,7 @@ fn any_ancestor_self_floors(path: &str, home: &str) -> bool {
         }
         let ancestor = &current[..pos];
         let name = leaf_name(ancestor);
-        if self_floors(ancestor, &name, home) {
+        if self_floors(ancestor, &name, space) {
             return true;
         }
         current = ancestor;
@@ -167,11 +230,15 @@ pub fn is_project_marker(folded_child_name: &str) -> bool {
 /// it's the marker promotion [`path_class_with_marker`] layers on at assembly time,
 /// since it depends on directory contents, not the path alone.
 ///
-/// ❌ The absolute roots never classify `$HOME`, anything under it, or an ancestor of
-/// it: a home living under one (Fedora Silverblue's `/var/home/x`) would otherwise
-/// floor, and the floor would switch the whole feature off.
-pub fn path_class(path: &str, home: &str) -> PathClass {
-    if !is_on_home_branch(path, home)
+/// The absolute roots are the boot disk's own layout, so they apply only on
+/// [`Disk::Boot`]: on a share, `/Library` is a top-level folder of the user's.
+/// ❌ They also never classify `$HOME`, anything under it, or an ancestor of it: a
+/// home living under one (Fedora Silverblue's `/var/home/x`) would otherwise floor,
+/// and the floor would switch the whole feature off.
+pub fn path_class<'a>(path: &str, space: impl Into<PathSpace<'a>>) -> PathClass {
+    let PathSpace { home, disk } = space.into();
+    if disk == Disk::Boot
+        && !is_on_home_branch(path, home)
         && (is_at_or_under_any(path, TEMP_ROOTS) || is_at_or_under_any(path, SYSTEM_ROOTS))
     {
         return PathClass::SystemOrCache;
@@ -208,9 +275,8 @@ const HOME_CACHE_FOLDERS: &[&str] = &["Library", "go/pkg"];
 /// 0.85, `/Library/User Template/Non_localized/Downloads` at 0.42, and `/usr/share`
 /// at 0.77, crowding real folders out of the agent's top list.
 ///
-/// Known gap, shared with [`TEMP_ROOTS`]: an external or network volume's index
-/// stores volume-relative paths, so a share with a top-level `Library` folder
-/// classifies like the boot disk's. Not seen on a real NAS yet (2026-10-26).
+/// Boot disk only ([`Disk::Boot`]): an external or network volume's index stores
+/// volume-relative paths, where a top-level `Library` is the user's.
 const SYSTEM_ROOTS: &[&str] = &[
     "/System",
     "/Library",
@@ -379,14 +445,15 @@ pub fn marker_depth(has_direct_marker: bool, nearest_below: Option<u8>) -> Optio
 ///
 /// An ordinary project directory is untouched: `~/projects/thing` with a `.git`
 /// still promotes, and so does a project sitting UNDER a volume root.
-pub fn path_class_with_marker(path: &str, home: &str, marker_depth: Option<u8>) -> PathClass {
-    let class = path_class(path, home);
+pub fn path_class_with_marker<'a>(path: &str, space: impl Into<PathSpace<'a>>, marker_depth: Option<u8>) -> PathClass {
+    let space = space.into();
+    let class = path_class(path, space);
     let promotes = match marker_depth {
         Some(0) => true,
         Some(depth) if depth <= MARKER_REACH => matches!(class, PathClass::Neutral),
         _ => false,
     };
-    if !promotes || !marker_can_promote(path, home, class) {
+    if !promotes || !marker_can_promote(path, space.home, class) {
         return class;
     }
     PathClass::ProjectRoot
@@ -427,7 +494,10 @@ fn is_at_or_above_home(path: &str, home: &str) -> bool {
 /// `marker_depth`), a marker below promotes only a `Neutral` folder, the promotion
 /// skips every ancestor of `$HOME`, an app bundle's `Contents` and a library package's insides are `SystemOrCache`,
 /// and the absolute roots never claim the home branch.
-const SCORING_RULES_VERSION: &str = "3";
+///
+/// `4`: the absolute roots (system and temp) apply only on the boot disk ([`Disk::Boot`]); a
+/// share or external drive stores volume-relative paths.
+const SCORING_RULES_VERSION: &str = "4";
 
 /// A stable fingerprint of the classification policy a store's weights were
 /// computed under, persisted per volume under `store::SCORING_POLICY_KEY`.
