@@ -513,6 +513,15 @@ describe('the parts on their own', () => {
     expect(host.textContent).toContain('Move 3 files')
   })
 
+  it('VolumePill names a volume the list doesn’t know, by the name it was given', async () => {
+    const VolumePill = (await import('./VolumePill.svelte')).default
+    const host = freshHost()
+    mount(VolumePill, { target: host, props: { volumeId: 'not-listed', name: 'Naspolya' } })
+    flushSync()
+    await expectNoA11yViolations(host)
+    expect(host.textContent).toContain('Naspolya')
+  })
+
   it('SuggestedOpFiles renders a file list with no violations', async () => {
     const SuggestedOpFiles = (await import('./SuggestedOpFiles.svelte')).default
     const { createRawSnippet } = await import('svelte')
