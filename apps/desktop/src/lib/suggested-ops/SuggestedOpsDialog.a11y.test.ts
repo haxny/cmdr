@@ -75,6 +75,9 @@ vi.mock('./suggested-ops-trigger.svelte', () => ({
   suggestedOpsState: store.state,
   approvableCount: (id: number) => store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0,
   approveGroup: actions.approve,
+  canApprove: (id: number) =>
+    !store.review.changedUnderReview &&
+    (store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0) > 0,
   closeSuggestedOps: actions.close,
   ensureOpWindow: (groupId: number, startIndex: number) => actions.ensure({ groupId, startIndex }),
   isOpSelected: (_groupId: number, opId: number) => !store.review.deselected.has(opId),
@@ -429,6 +432,9 @@ describe('honest absence', () => {
     const reload = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Show the new version')
     reload?.click()
     expect(actions.reload).toHaveBeenCalledWith(7)
+    // The version on screen isn't the one that would run, so Approve waits for the reload.
+    const approve = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Move 3 files')
+    expect(approve?.disabled).toBe(true)
   })
 
   it('says nothing is waiting when nothing is', () => {

@@ -199,14 +199,24 @@ export function showAllRows(groupId: number): void {
 }
 
 /** How many ops of a group would actually run. Derived from the COUNT and the hand-flipped
- *  ids, so it's right even for rows never fetched. */
+ *  ids, so it's right even for rows never fetched.
+ *
+ *  `allExcept` counts down from EVERY op row (`totalOpCount`), not from `liveOpCount`: the
+ *  backend starts that mode from everything the group offers, so an op an earlier,
+ *  refused-to-start approval excluded runs again unless this review turns it off. */
 export function approvableCount(groupId: number): number {
   const group = groupById(groupId)
   const selection = reviewOf(groupId)?.selection
   if (!group) return 0
-  if (!selection) return group.liveOpCount
+  if (!selection) return group.totalOpCount
   if (selection.mode === 'only') return selection.ids.size
-  return Math.max(0, group.liveOpCount - selection.ids.size)
+  return Math.max(0, group.totalOpCount - selection.ids.size)
+}
+
+/** Whether Approve may run: not while the group changed under the review, since the version
+ *  on screen isn't the one that would run until the user reads the new one. */
+export function canApprove(groupId: number): boolean {
+  return reviewOf(groupId)?.changedUnderReview !== true && approvableCount(groupId) > 0
 }
 
 /** Whether one op is ticked. */
@@ -221,7 +231,7 @@ export function selectionState(groupId: number): 'all' | 'none' | 'some' {
   const group = groupById(groupId)
   const count = approvableCount(groupId)
   if (count === 0) return 'none'
-  if (group && count >= group.liveOpCount) return 'all'
+  if (group && count >= group.totalOpCount) return 'all'
   return 'some'
 }
 
@@ -301,7 +311,7 @@ export async function refreshSuggestions(): Promise<void> {
   const fresh: number[] = []
   try {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
-    const before = new Map(pendingGroups().map((group) => [group.groupId, group.liveOpCount]))
+    const before = new Map(pendingGroups().map((group) => [group.groupId, group.totalOpCount]))
     suggestedOpsState.sweeps = await listSuggestedOps()
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
     const live = new Set<number>()
@@ -311,7 +321,7 @@ export async function refreshSuggestions(): Promise<void> {
       if (!review) {
         suggestedOpsState.reviews.set(group.groupId, newGroupReview())
         fresh.push(group.groupId)
-      } else if (before.has(group.groupId) && before.get(group.groupId) !== group.liveOpCount) {
+      } else if (before.has(group.groupId) && before.get(group.groupId) !== group.totalOpCount) {
         review.changedUnderReview = true
       }
     }
@@ -373,19 +383,28 @@ export async function showRange(groupId: number, start: number, end: number): Pr
 export async function ensureOpWindow(groupId: number, startIndex: number): Promise<void> {
   const review = reviewOf(groupId)
   if (!review) return
-  const held = review.window
-  if (held && startIndex >= held.offset && startIndex < held.offset + held.ops.length) return
+  if (windowHolds(review.window, startIndex)) return
   if (review.windowLoading) return
 
   // Centre the window on what was asked for, so scrolling either way stays inside it.
   const offset = Math.max(0, startIndex - OP_WINDOW_SIZE / 4)
   review.windowLoading = true
   review.windowError = false
+  const rangeAtAsk = review.range.start
   try {
     const page = await pageSuggestedOps(groupId, offset, OP_WINDOW_SIZE)
     // The group may have been answered, or the dialog closed, while this was in flight.
     if (reviewOf(groupId) !== review) return
     review.window = { offset: page.offset, ops: page.ops, total: page.total }
+    // A jump made while this page was in flight was turned away above, and the list won't ask
+    // for that range again, so follow it. Only a range that MOVED meanwhile: one past the
+    // group's end is never held, and must not loop.
+    const now = review.range.start
+    if (now !== rangeAtAsk && !windowHolds(review.window, now)) {
+      review.windowLoading = false
+      await ensureOpWindow(groupId, now)
+      return
+    }
   } catch (e) {
     // The list only asks again when its range moves, so without this the rows would sit on
     // their loading placeholder for good while Approve stays live.
@@ -397,6 +416,10 @@ export async function ensureOpWindow(groupId: number, startIndex: number): Promi
   }
   // A page that lands after the list already drew its rows still owes them their live facts.
   await ensureLiveFacts(groupId)
+}
+
+function windowHolds(held: OpWindow | null, index: number): boolean {
+  return held !== null && index >= held.offset && index < held.offset + held.ops.length
 }
 
 /**
@@ -497,7 +520,8 @@ export function toggleOp(groupId: number, opId: number): void {
 /**
  * Approve a group: claim it and hand its ops to the queue.
  *
- * Sends the ids the user turned OFF, never the ones they kept. On success the dialog gets out
+ * Sends the selection in its own mode: the ids the user flipped by hand, never the whole list,
+ * and nothing at all while the group changed under the review. On success the dialog gets out
  * of the way once nothing is left, and the queue surface takes over, which is the hand-off the
  * whole feature is built around: an approved op is an ordinary queued op from here on.
  *
@@ -507,7 +531,7 @@ export function toggleOp(groupId: number, opId: number): void {
  * where they were and knows why.
  */
 export async function approveGroup(groupId: number): Promise<void> {
-  if (suggestedOpsState.busyGroupId !== null) return
+  if (suggestedOpsState.busyGroupId !== null || !canApprove(groupId)) return
   suggestedOpsState.busyGroupId = groupId
   suggestedOpsState.decisionNotice = null
   suggestedOpsState.refusals.delete(groupId)

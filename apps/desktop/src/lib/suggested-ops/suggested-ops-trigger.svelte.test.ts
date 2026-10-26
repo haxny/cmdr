@@ -39,6 +39,7 @@ import {
   INITIAL_ROWS,
   SHOW_MORE_STEP,
   approvableCount,
+  canApprove,
   approveGroup,
   isOpSelected,
   selectionState,
@@ -178,6 +179,28 @@ describe('the op window', () => {
 
     expect(pageMock).toHaveBeenCalledTimes(1)
     expect(opAt(BIG, 5_000)).not.toBeNull()
+  })
+
+  it('follows a jump made while a window was still loading, instead of leaving its rows blank', async () => {
+    await openSuggestedOps()
+    pageMock.mockClear()
+    let land: () => void = () => {}
+    pageMock.mockImplementationOnce(
+      ({ offset }) =>
+        new Promise((resolve) => {
+          land = () => {
+            resolve({ ops: ops(offset, 200), offset, total: 60_000 } as unknown as SuggestedOpPage)
+          }
+        }),
+    )
+
+    const first = showRange(BIG, 5_000, 5_010)
+    // The user drags on before that page lands; the list won't ask again for a range it already sent.
+    const second = showRange(BIG, 40_000, 40_010)
+    land()
+    await Promise.all([first, second])
+
+    expect(opAt(BIG, 40_000)).not.toBeNull()
   })
 
   it('answers null for a row whose window is not loaded, rather than a wrong row', async () => {
@@ -354,6 +377,30 @@ describe('approving', () => {
 
     expect(reviewOf(BIG)?.changedUnderReview).toBe(true)
     expect(suggestedOpsState.open).toBe(true)
+  })
+
+  it('runs nothing for a group the agent changed until the user reads the new version', async () => {
+    await openSuggestedOps()
+    emit?.({ reason: 'amended', groupId: BIG } as SuggestionsChanged)
+
+    expect(canApprove(BIG)).toBe(false)
+    await approveGroup(BIG)
+    expect(approveMock).not.toHaveBeenCalled()
+
+    await reloadGroup(BIG)
+    expect(canApprove(BIG)).toBe(true)
+  })
+
+  it('counts a re-offered op, since approving every op brings back one an earlier review turned off', async () => {
+    // An earlier approval excluded 3 ops, then the engine refused to start: the group is
+    // pending again with 3 `excluded` rows, and a fresh review ticks all 10.
+    listMock.mockResolvedValue([sweep([group(BIG, 7, { totalOpCount: 10 })])])
+    await openSuggestedOps()
+
+    expect(approvableCount(BIG)).toBe(10)
+    expect(selectionState(BIG)).toBe('all')
+    toggleOp(BIG, 0)
+    expect(approvableCount(BIG)).toBe(9)
   })
 
   it('leaves the dialog usable when approving throws', async () => {

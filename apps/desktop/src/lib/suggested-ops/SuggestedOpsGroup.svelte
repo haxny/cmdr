@@ -11,6 +11,7 @@
     import {
         approvableCount,
         approveGroup,
+        canApprove,
         rejectGroup,
         reloadGroup,
         reviewOf,
@@ -30,6 +31,8 @@
 
     const review = $derived(reviewOf(group.groupId))
     const count = $derived(approvableCount(group.groupId))
+    /** False while the group changed under the review: the user reads the new version first. */
+    const approvable = $derived(canApprove(group.groupId))
     const busy = $derived(suggestedOpsState.busyGroupId !== null)
     /** The reason under a group whose last approval didn't start, or `null`. */
     const refusal = $derived.by(() => {
@@ -46,14 +49,14 @@
     <header class="group-head">
         <h3 class="group-title" id={titleId}>{group.displayName}</h3>
         <span class="count">
-            {tString('suggestedOps.fileCount', { countText: formatInteger(group.liveOpCount), count: group.liveOpCount })}
+            {tString('suggestedOps.fileCount', { countText: formatInteger(group.totalOpCount), count: group.totalOpCount })}
         </span>
         <ul class="pills">
             {#if blocker}
                 <li class="pill danger" use:tooltip={tString(blocker.tooltip)}>{tString(blocker.pill)}</li>
             {:else}
                 <li class="pill" class:danger={irreversible}>
-                    {tString(reversibilityKey(group.verb, group.reversible), { count: group.liveOpCount })}
+                    {tString(reversibilityKey(group.verb, group.reversible), { count: group.totalOpCount })}
                 </li>
             {/if}
             {#if group.destinationState === 'willBeCreated'}
@@ -118,7 +121,7 @@
         </Button>
         <Button
             variant={irreversible ? 'danger' : 'primary'}
-            disabled={busy || count === 0}
+            disabled={busy || !approvable}
             ariaDisabled={blocker !== null}
             tooltipContent={blocker ? tString(blocker.tooltip) : undefined}
             onclick={() => {

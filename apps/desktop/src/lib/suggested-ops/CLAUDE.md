@@ -32,8 +32,8 @@ and per-op selection. Backend: `apps/desktop/src-tauri/src/commands/agent/sugges
 - **Selection is a per-group TWO-MODE set: "all except these ids" or "only these ids".** Select all / none resets to an
   empty set in the matching mode, so the wire stays small both ways. ❌ Never a one-mode set: "none" of 60,000 would
   enumerate them all.
-- **A group that changed under the review is ANNOUNCED, never swapped**, and its reload keeps the selection: dropping it
-  would quietly turn a "no" back into a "yes".
+- **A group that changed under the review is ANNOUNCED, never swapped**, Approve waits for its reload (`canApprove`),
+  and the reload keeps the selection: dropping it would quietly turn a "no" back into a "yes".
 - **A change notice keys on `reason`, not on the group id alone.** An approval and an amendment carry the same id.
 - **The badge is its own module, seeded once AND subscribed, never polled.** ❌ Don't drop the seed: suggestions never
   expire.

@@ -89,10 +89,11 @@ A group of 60,000 ops is legitimate, so nothing may grow with it.
 
 **The windows.** Each group has its own `GroupReview` in `suggestedOpsState.reviews`. `COUNT(*)` gives the total and
 only the rows the list draws are fetched (`OP_WINDOW_SIZE`, centred on the request so scrolling either way stays
-inside). `ColumnList` reports the drawn range through `onRangeChange` → `showRange`, which pages, then checks. A row
-whose window isn't loaded renders `ColumnList`'s placeholder and `opAt` answers `null` rather than a neighbouring row.
-Opening the dialog reads every group's first page side by side (`Promise.all`), so seven groups cost one round trip of
-latency, not seven.
+inside). `ColumnList` reports the drawn range through `onRangeChange` → `showRange`, which pages, then checks. One page
+is in flight per group; a jump made meanwhile is turned away, so a page that lands follows the range if it moved (the
+list won't report the same range twice). A row whose window isn't loaded renders `ColumnList`'s placeholder and `opAt`
+answers `null` rather than a neighbouring row. Opening the dialog reads every group's first page side by side
+(`Promise.all`), so seven groups cost one round trip of latency, not seven.
 
 **Live facts** are read for the drawn rows only, once per op (`ensureLiveFacts` →
 `liveSuggestedOpFacts(groupId, offset, limit)`, one call per contiguous span of rows not yet asked about): one bounded
@@ -112,6 +113,11 @@ flipped by hand. Approving sends the mode and those ids, so the wire stays small
 "all but three" and "only these three" of 60,000 are both three ids. The header reads mixed whenever the count sits
 between none and all.
 
+**The count starts from every row, not the live set.** `allExcept` on the backend first re-offers every op, including
+ones an earlier approval excluded before the engine refused to start it (the group came back `pending` with `excluded`
+rows). A fresh review ticks them all, so `approvableCount` counts down from `totalOpCount` and the header says
+`totalOpCount` files: the button names exactly what would run.
+
 **Decision: select all / none exists, in the two-mode form** (David, 2026-10-26). It replaced a deliberate "no deselect
 all", whose reason was the wire: a one-mode "ids turned OFF" set would have had to enumerate 60,000 ids to say "none".
 The `only` mode removes that cost, so the affordance is cheap.
@@ -122,10 +128,13 @@ The agent may re-propose a pending group while the user reads it. Two signals ra
 and the rows stay exactly where they are; the notice offers "Show the new version" (`reloadGroup`).
 
 - **The event**: `suggestions-changed` with `reason: 'amended'` and that group's id.
-- **The count**: a re-read that finds the group's `liveOpCount` moved. It misses an amendment that swapped a path but
-  kept the count, which is why the event matters; it catches a change while the subscription is down. Both stay.
+- **The count**: a re-read that finds the group's `totalOpCount` moved (the ROW count: `liveOpCount` also moves on the
+  user's own refused-to-start approval, which isn't a change). It misses an amendment that swapped a path but kept the
+  count, which is why the event matters; it catches a change while the subscription is down. Both stay.
 
-❌ Never swap the rows silently: the user is midway through a decision keyed to row positions.
+❌ Never swap the rows silently: the user is midway through a decision keyed to row positions. Approve waits for the
+reload (`canApprove`): the backend binds whatever the group holds at the click, so approving the version on screen would
+run the new one.
 
 **Decision: the notice keys on `reason`, never on `groupId` alone.** An amendment and the user's own approval carry the
 SAME id. Keying on the id would raise "The AI changed this" the instant the user approved something. A test pins it.
