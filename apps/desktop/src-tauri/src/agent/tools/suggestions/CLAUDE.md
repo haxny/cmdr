@@ -9,7 +9,8 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
 - `input.rs`: what `propose_suggestions` accepts, validated into planned shapes that pair each verb with the target its
   executor binds. All the refusal variants.
 - `propose.rs`: the schema, the handler, and the write path (resolve → check → write). `snapshot.rs`: one bounded
-  stat per hand-listed source, frozen as its creation snapshot before the write.
+  stat per hand-listed source, frozen as its creation snapshot before the write (also
+  `propose_rename_plan`'s).
 - `list.rs` / `group.rs`: the two reads and their pure shapers.
 - `tests/`: one file per concern (input contract, write path, read shapers), fixtures in `mod.rs`.
 

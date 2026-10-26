@@ -601,3 +601,41 @@ fn revising_a_row_does_not_re_run_the_whole_plan_evidence_rule() {
     assert_eq!(stored.rows[1].destination_name, "Order summary.png");
     assert!(stored.rows[1].coverage.is_some(), "and its coverage");
 }
+
+/// A rename plan freezes each row's creation snapshot through the same one-bounded-stat path as
+/// `propose_suggestions`, so the review shows what the file was when it was suggested (#747).
+/// A row whose file is gone stays `NULL`, never a zero.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_staged_rename_plan_freezes_each_rows_creation_snapshot() {
+    use std::path::Path;
+
+    use crate::file_system::volume::{InMemoryVolume, Volume};
+
+    let volume = InMemoryVolume::new("Macintosh HD");
+    volume
+        .create_file(Path::new("/shots/a.png"), b"five!")
+        .await
+        .expect("seed file");
+    volume.set_modified_at(Path::new("/shots/a.png"), Some(1_700_000_000));
+    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(volume);
+    let mut draft = RenameDraft {
+        volume_id: "root".into(),
+        parent: "/shots".into(),
+        rows: vec![
+            draft_row("/shots/a.png", "b.png", EvidenceSource::Filename, "the old name"),
+            draft_row("/shots/gone.png", "c.png", EvidenceSource::Filename, "the old name"),
+        ],
+    };
+
+    super::super::plan::freeze_draft_on(&mut draft, Some(volume)).await;
+    let conn = migrated_conn();
+    super::super::store::stage(&conn, None, &draft, 100)
+        .expect("stage")
+        .expect("a group was created");
+
+    let ops = crate::agent::store::proposals::page_ops(&conn, last_group_id(&conn), 10, 0).expect("ops");
+    assert_eq!(ops[0].snapshot_size, Some(5));
+    assert_eq!(ops[0].snapshot_mtime, Some(1_700_000_000));
+    assert_eq!(ops[1].snapshot_size, None);
+    assert_eq!(ops[1].snapshot_mtime, None);
+}

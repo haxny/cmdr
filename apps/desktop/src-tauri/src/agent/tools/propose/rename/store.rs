@@ -37,7 +37,9 @@ use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 use serde::Serialize;
 
 use crate::agent::store::AgentStoreError;
-use crate::agent::store::proposals::{GroupIntent, NewGroup, NewRename, NewSweep, ProposalOp, get_group, page_ops};
+use crate::agent::store::proposals::{
+    GroupIntent, NewGroup, NewRename, NewSweep, OpSnapshot, ProposalOp, get_group, page_ops,
+};
 use crate::agent::tools::propose::evidence::{EvidenceCoverage, EvidenceSource, RenameEvidence};
 use crate::agent::types::ProposalStatus;
 use crate::ignore_poison::IgnorePoison;
@@ -69,6 +71,10 @@ pub struct RenameDraftRow {
     /// Filled in by the evidence check AFTER it accepted the row, so it describes a delivery
     /// the ledger recorded; `None` for every source that makes no content claim.
     pub coverage: Option<EvidenceCoverage>,
+    /// What the source looked like when the plan was staged: one bounded stat through the
+    /// group's volume (`agent/tools/suggestions/snapshot.rs`), `None` until then or when it
+    /// couldn't be stat'ed. Display only, like every creation snapshot.
+    pub snapshot: Option<OpSnapshot>,
 }
 
 // ── What a staged proposal is, once loaded back ───────────────────────────────
@@ -259,7 +265,7 @@ pub fn stage(
                 .map(|row| NewRename {
                     source_path: row.source_path.clone(),
                     new_name: row.destination_name.clone(),
-                    snapshot: None,
+                    snapshot: row.snapshot,
                 })
                 .collect(),
         },

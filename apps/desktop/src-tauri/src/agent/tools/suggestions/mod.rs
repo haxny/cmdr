@@ -27,7 +27,7 @@ mod group;
 mod input;
 mod list;
 mod propose;
-mod snapshot;
+pub(crate) mod snapshot;
 
 #[cfg(test)]
 mod tests;

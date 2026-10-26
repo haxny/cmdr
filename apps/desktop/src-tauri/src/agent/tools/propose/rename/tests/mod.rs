@@ -26,5 +26,6 @@ fn draft_row(source_path: &str, destination_name: &str, source: EvidenceSource, 
             detail: detail.into(),
         },
         coverage: None,
+        snapshot: None,
     }
 }
