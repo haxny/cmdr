@@ -225,6 +225,7 @@ pub fn update_known_share(
         volume_id: None,
         mount_path: None,
         pinned: false,
+        server_guid: None,
     };
 
     known_shares::update_known_share(share);

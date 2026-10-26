@@ -67,7 +67,11 @@ pub(crate) struct LocationMissResult {
     /// Where to look instead, on every not-connected miss (possibly empty).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nearby: Option<Vec<NearbyVolume>>,
-    /// Volume ids proven to be the same share, on every not-connected miss.
+    /// Volume ids proven to be the same share as the volume asked (one server GUID,
+    /// one share name: `same_share.rs`), on every not-connected miss. Empty for a
+    /// bare path, which names no volume. A same-account sibling that could answer
+    /// already did, so one listed here is a hint: another account, or one that
+    /// isn't connected either.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub same_share_as: Option<Vec<String>>,
 }
@@ -136,6 +140,6 @@ pub(crate) fn volume_not_connected(facts: &VolumeFacts, resolved: &ResolvedLocat
         detail,
         root: None,
         nearby: Some(nearby),
-        same_share_as: Some(Vec::new()),
+        same_share_as: Some(facts.same_share_as(&resolved.location.volume_id)),
     }
 }

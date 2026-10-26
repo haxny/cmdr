@@ -85,9 +85,13 @@ pub async fn remember_mount(mounted: MountedShare<'_>) -> Option<String> {
         volume_id: volume_id.clone(),
         mount_path: volume_id.as_ref().map(|_| mounted.mount_path.to_string()),
         pinned: false,
+        server_guid: None,
     });
     if let Some(completed) = completed {
         crate::server_move::smb::complete(completed).await;
+    }
+    if let Some(id) = &volume_id {
+        crate::network::smb_server_guid::adopt_live_guid(id);
     }
     volume_id
 }
@@ -132,7 +136,9 @@ pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>
         volume_id: None,
         mount_path: None,
         pinned: false,
+        server_guid: None,
     });
+    crate::network::smb_server_guid::schedule_probe(Duration::ZERO);
     crate::volume_broadcast::emit_volumes_changed();
 }
 
@@ -173,6 +179,7 @@ pub fn remember_favorited_share(mount_path: &str, volume_id: &str) {
         volume_id,
     );
     if known_shares::remember_share_unless_saved(row) {
+        crate::network::smb_server_guid::adopt_live_guid(volume_id);
         log::info!(
             "Saved the share {:?} on {:?} for a favorite",
             LogPrivate::volume(&info.share),
@@ -207,6 +214,7 @@ fn favorited_share_row(
         volume_id: Some(volume_id.to_string()),
         mount_path: Some(mount_path.to_string()),
         pinned: false,
+        server_guid: None,
     }
 }
 

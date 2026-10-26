@@ -3035,7 +3035,7 @@ export const commands = {
    *  Record that the user navigated into `location`. Fire-and-forget and
    *  failure-silent: never blocks or breaks navigation.
    *
-   *  Recorded for any background-scored volume — Local and SMB (plan M4). A volume
+   *  Recorded for any background-scored volume — Local and SMB. A volume
    *  that isn't registered, or is MTP (on-demand only, never scored), is silently
    *  ignored: recording a visit no recompute ever reads is dead weight, so the gate
    *  is the volume's TYPED kind, never its id string. The
@@ -4258,6 +4258,13 @@ export const commands = {
        *  its first mount through Cmdr, moved by `set_share_pinned`.
        */
       pinned?: boolean
+      /**
+       *  Share rows: the GUID the share's server answered NEGOTIATE with, in
+       *  `cmdr_smb::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+       *  and its Tailscale address) are one server. Written only through
+       *  [`record_server_guid`], never by a row an add or a mount files.
+       */
+      serverGuid?: string | null
     } | null>('get_known_share_by_name', { serverName, shareName }),
   // Updates or adds a known network share after successful connection.
   updateKnownShare: (
@@ -10476,6 +10483,13 @@ export type KnownNetworkShare = {
    *  its first mount through Cmdr, moved by `set_share_pinned`.
    */
   pinned?: boolean
+  /**
+   *  Share rows: the GUID the share's server answered NEGOTIATE with, in
+   *  `cmdr_smb::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+   *  and its Tailscale address) are one server. Written only through
+   *  [`record_server_guid`], never by a row an add or a mount files.
+   */
+  serverGuid?: string | null
 }
 
 // One SFTP server the user has connected to, and how to reach it again.

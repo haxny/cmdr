@@ -577,6 +577,10 @@ pub fn run() {
             // with each saved share's last mount path, so a path a model got before a
             // remount still resolves after it. After the share store above (its seed).
             location::facts::start_root_history();
+            // Saved shares recorded before Cmdr kept server GUIDs get one from a
+            // credential-free probe, in the background once startup settles.
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            network::smb_server_guid::schedule_startup_probe();
 
             // Load persisted recent search history into the in-memory cache.
             search::history::RECENT_SEARCHES.load(app.handle());

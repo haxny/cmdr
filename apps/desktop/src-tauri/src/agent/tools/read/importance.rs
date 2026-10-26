@@ -19,6 +19,7 @@ use tauri::{AppHandle, Runtime};
 use crate::location::Location;
 use crate::location::miss::LocationMissResult;
 use crate::location::resolve::{LocationInput, LocationMiss, VolumeFacts, resolve};
+use crate::location::same_share::Via;
 use crate::location::store_path::{from_store_path, to_store_path};
 use crate::mcp::resources::importance::{
     PathImportance, RankedFolder, RankedScope, VolumeOverview, snapshot_overview, snapshot_path_on, snapshot_threshold,
@@ -57,6 +58,10 @@ pub struct RankedFolderOut {
     /// `under` + `volumeId` to list them.
     #[serde(skip_serializing_if = "is_zero")]
     pub folded: usize,
+    /// The volume whose store scored this row, when `location` re-addresses it
+    /// onto the member of the same share a read prefers (a live one).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub via: Option<Via>,
 }
 
 fn is_zero(n: &usize) -> bool {
@@ -76,6 +81,10 @@ pub struct VolumeOverviewOut {
     /// another address), so its rows have no root to stand on and are left out.
     #[serde(skip_serializing_if = "crate::agent::tools::read::is_false")]
     pub unplaced: bool,
+    /// Volume ids proven to be the same share as this one; its rows are answered
+    /// on whichever member a read prefers.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub same_share_as: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -92,9 +101,14 @@ pub struct ImportantFoldersResult {
     pub volumes: Vec<VolumeOverviewOut>,
 }
 
-/// Shape a ranked list plus the volume overview, placing each row on its volume's
+/// Shape a ranked list plus the volume overview, placing each row on a volume's
 /// root. A row whose volume `facts` can't place is left out (the read already
 /// skips those volumes; this keeps an invented root unrepresentable). Pure.
+///
+/// A row scored on one member of a proven same-share, same-account group lands on
+/// the member a read prefers (`VolumeFacts::preferred_member`: a live one before
+/// an offline index), with `via` naming the store it came from. Two members'
+/// stores scoring one folder make one row, the higher score kept.
 pub(crate) fn build_important_folders(
     folders: Vec<RankedFolder>,
     truncated: bool,
@@ -102,25 +116,38 @@ pub(crate) fn build_important_folders(
     facts: &VolumeFacts,
     under: Option<Location>,
 ) -> ImportantFoldersResult {
+    let mut placed: Vec<RankedFolderOut> = Vec::new();
+    for f in folders {
+        let Some(target) = facts.preferred_member(&f.volume_id) else {
+            continue;
+        };
+        let Some(location) = app_location(&target.id, &f.path, &target.root) else {
+            continue;
+        };
+        let row = RankedFolderOut {
+            location,
+            score: (f.score * 1000.0).round() / 1000.0,
+            why: f.why,
+            folded: f.folded,
+            via: (target.id != f.volume_id).then(|| Via {
+                volume_id: f.volume_id.clone(),
+            }),
+        };
+        match placed.iter_mut().find(|kept| kept.location == row.location) {
+            Some(kept) if kept.score < row.score => *kept = row,
+            Some(_) => {}
+            None => placed.push(row),
+        }
+    }
     ImportantFoldersResult {
         under,
-        folders: folders
-            .into_iter()
-            .filter_map(|f| {
-                let root = &facts.get(&f.volume_id)?.root;
-                Some(RankedFolderOut {
-                    location: app_location(&f.volume_id, &f.path, root)?,
-                    score: (f.score * 1000.0).round() / 1000.0,
-                    why: f.why,
-                    folded: f.folded,
-                })
-            })
-            .collect(),
+        folders: placed,
         truncated,
         volumes: overview
             .into_iter()
             .map(|v| VolumeOverviewOut {
                 unplaced: facts.get(&v.volume_id).is_none(),
+                same_share_as: facts.same_share_as(&v.volume_id),
                 volume_id: v.volume_id,
                 kind: v.kind.map(|k| k.to_string()),
                 generation: v.generation,
@@ -167,12 +194,7 @@ fn place_scope(facts: &VolumeFacts, volume_id: Option<&str>, under: Option<&str>
                 },
             });
         }
-        return Ok(PlacedScope {
-            volume_id: volume_id.map(str::to_string),
-            under: None,
-            under_in_store: None,
-            placed,
-        });
+        return Ok(scope_on(facts, volume_id, None, None, placed));
     };
     let resolved = resolve(
         facts,
@@ -181,12 +203,42 @@ fn place_scope(facts: &VolumeFacts, volume_id: Option<&str>, under: Option<&str>
             path: under.to_string(),
         },
     )?;
-    Ok(PlacedScope {
-        under_in_store: to_store_path(&resolved.location.path, &resolved.root),
-        volume_id: Some(resolved.location.volume_id.clone()),
-        under: Some(resolved.location),
+    let under_in_store = to_store_path(&resolved.location.path, &resolved.root);
+    let volume_id = resolved.location.volume_id.clone();
+    Ok(scope_on(
+        facts,
+        Some(&volume_id),
+        Some(resolved.location),
+        under_in_store,
         placed,
-    })
+    ))
+}
+
+/// A scope on `volume_id` spans every member of its share that may answer for it:
+/// one NAS scored under two ids is one ranking. A share's store paths are
+/// share-relative, so `under` reads the same in each member's store.
+fn scope_on(
+    facts: &VolumeFacts,
+    volume_id: Option<&str>,
+    under: Option<Location>,
+    under_in_store: Option<String>,
+    placed: Vec<String>,
+) -> PlacedScope {
+    let group = volume_id.map(|id| facts.redirect_group_ids(id)).unwrap_or_default();
+    match (volume_id, group.len() > 1) {
+        (Some(_), true) => PlacedScope {
+            volume_id: None,
+            under,
+            under_in_store,
+            placed: group,
+        },
+        _ => PlacedScope {
+            volume_id: volume_id.map(str::to_string),
+            under,
+            under_in_store,
+            placed,
+        },
+    }
 }
 
 pub fn important_folders_schema() -> Value {

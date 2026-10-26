@@ -41,6 +41,28 @@ async fn smb_integration_open_share_lets_the_allowed_account_in() {
         .unwrap_or_else(|e| panic!("`testuser` must be able to open `private`: {e}"));
 }
 
+/// The probe reads a real server's GUID with no credentials, from the `auth`
+/// fixture too, which refuses a session without them. Two containers answering
+/// the SAME GUID would make any same-share test over them prove nothing, so this
+/// pins that they differ (each image's Samba mints its own on first start).
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_probe_reads_the_server_guid_without_credentials() {
+    let probe = |port| probe_server_guid("127.0.0.1", port, STEP_TIMEOUT);
+    let guest = probe(smb2::testing::guest_port())
+        .await
+        .expect("the guest fixture answers");
+    let auth = probe(smb2::testing::auth_port())
+        .await
+        .expect("the auth fixture answers");
+
+    assert_ne!(guest, smb2::pack::Guid::ZERO, "Samba answers a real GUID");
+    assert_ne!(auth, smb2::pack::Guid::ZERO, "Samba answers a real GUID");
+    assert_ne!(guest, auth, "two fixture containers must be two servers");
+    let again = probe(smb2::testing::guest_port()).await.expect("answers again");
+    assert_eq!(guest, again, "a server's GUID is stable across connections");
+}
+
 #[tokio::test]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_open_share_names_a_missing_share() {

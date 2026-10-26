@@ -512,6 +512,7 @@ fn saved_share(share: &str, volume_id: Option<&str>, pinned: bool) -> crate::net
         volume_id: volume_id.map(str::to_string),
         mount_path: volume_id.map(|_| format!("/Volumes/{share}")),
         pinned,
+        server_guid: None,
     }
 }
 

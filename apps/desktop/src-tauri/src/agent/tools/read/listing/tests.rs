@@ -822,6 +822,7 @@ fn limit_is_clamped_to_something_a_result_can_carry() {
 /// from, `list_dir` says so with somewhere else to look: ❌ never an empty listing.
 #[test]
 fn a_not_connected_volume_answers_volume_not_connected_with_nearby_and_same_share_as() {
+    use crate::location::miss::volume_not_connected;
     use crate::location::resolve::{IndexSources, VolumeFact, VolumeFacts};
     use crate::mcp::resources::volumes::VolumeKind;
     use cmdr_fs::volume::ConnectionState;
@@ -840,6 +841,7 @@ fn a_not_connected_volume_answers_volume_not_connected_with_nearby_and_same_shar
         }),
         earlier_roots: Vec::new(),
         index: IndexSources::none(id),
+        share: None,
     };
     let facts = VolumeFacts {
         volumes: vec![

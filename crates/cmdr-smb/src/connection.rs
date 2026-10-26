@@ -1,5 +1,5 @@
-//! Reaching an SMB server: the address string, the two share-listing calls, and
-//! asking whether an identity may open one share.
+//! Reaching an SMB server: the address string, the two share-listing calls,
+//! asking whether an identity may open one share, and asking which server it is.
 
 use crate::volume::SmbConnectionParams;
 use cmdr_fs::log_private::LogPrivate;
@@ -183,6 +183,28 @@ pub async fn try_open_share(params: &SmbConnectionParams, timeout: Duration) -> 
         );
     }
     Ok(())
+}
+
+/// Asks the server at `hostname:port` for its GUID with a NEGOTIATE alone: no
+/// session setup, no credentials, nothing kept.
+///
+/// For a saved share recorded before the app kept server GUIDs, which pairs one
+/// with the share name to prove two addresses reach one share. ❗ What answers on a
+/// saved address isn't proven to be the server the share was saved from (a hotel
+/// network can hand the same LAN IP to anything), so the app only FILLS a missing
+/// GUID with this, ❌ never overwrites one. The GUID comes back as the server sent
+/// it, all zeros included: what an all-zero one means is the caller's rule.
+///
+/// `timeout` bounds the TCP connect and the NEGOTIATE reply each, through smb2's
+/// own deadlines.
+pub async fn probe_server_guid(hostname: &str, port: u16, timeout: Duration) -> Result<smb2::pack::Guid, smb2::Error> {
+    let mut connection = smb2::client::Connection::connect(&build_smb_addr(hostname, port), timeout).await?;
+    connection.set_response_timeout(Some(timeout));
+    connection.negotiate().await?;
+    // `negotiate` stores the params before it returns `Ok`.
+    Ok(connection
+        .params()
+        .map_or(smb2::pack::Guid::ZERO, |params| params.server_guid))
 }
 
 #[cfg(test)]

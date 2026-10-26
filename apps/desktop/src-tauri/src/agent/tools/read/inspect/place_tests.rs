@@ -25,6 +25,7 @@ fn share(id: &str, root: &str, live: bool) -> VolumeFact {
         }),
         earlier_roots: Vec::new(),
         index: IndexSources::none(id),
+        share: None,
     }
 }
 
@@ -41,6 +42,7 @@ fn facts() -> VolumeFacts {
                 connection_state: None,
                 earlier_roots: Vec::new(),
                 index: IndexSources::none("root"),
+                share: None,
             },
             share(TAILSCALE, "/Volumes/naspi", false),
             share(LAN, "/Volumes/naspi-1", true),

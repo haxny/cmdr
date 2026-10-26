@@ -28,6 +28,7 @@ fn mounted_row(address: &str, port: u16, share: &str, volume_id: &str) -> KnownN
         volume_id: Some(volume_id.to_string()),
         mount_path: Some(format!("/Volumes/{share}")),
         pinned: true,
+        server_guid: None,
     }
 }
 

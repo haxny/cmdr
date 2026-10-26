@@ -113,6 +113,7 @@ fn facts_for(root: &str) -> VolumeFacts {
             connection_state: None,
             earlier_roots: Vec::new(),
             index: IndexSources::none("lan"),
+            share: None,
         }],
         mount_areas: Vec::new(),
     }

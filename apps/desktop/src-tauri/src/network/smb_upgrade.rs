@@ -490,6 +490,7 @@ pub(crate) async fn register_smb_volume(
     .await
     {
         Ok(volume) => {
+            crate::network::smb_server_guid::record_session_guid(&volume, &volume_id, share, username).await;
             // Overwrite-with-retire so SmbVolume always wins over any
             // LocalPosixVolume the watcher may have registered in the race
             // window, and any prior SmbVolume is retired (not torn down) before
@@ -666,6 +667,7 @@ pub(crate) async fn try_smb_upgrade(
     .await
     {
         Ok(volume) => {
+            crate::network::smb_server_guid::record_session_guid(&volume, volume_id, share, username).await;
             register_replacing_predecessor(volume_id, Arc::new(volume)).await;
             log::info!(
                 "Registered SmbVolume for {} (id={})",

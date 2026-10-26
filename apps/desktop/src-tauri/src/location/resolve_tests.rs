@@ -20,6 +20,7 @@ fn volume(id: &str, name: &str, kind: VolumeKind, root: &str, live: bool) -> Vol
         },
         earlier_roots: Vec::new(),
         index: IndexSources::none(id),
+        share: None,
     }
 }
 

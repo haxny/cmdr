@@ -5,6 +5,7 @@
 
 use crate::ignore_poison::IgnorePoison;
 use crate::network::NetworkHost;
+use crate::network::server_guid::GuidProof;
 use crate::network::server_identity::SmbServer;
 use crate::state_recovery::StateFile;
 use serde::{Deserialize, Serialize};
@@ -70,6 +71,12 @@ pub struct KnownNetworkShare {
     /// its first mount through Cmdr, moved by `set_share_pinned`.
     #[serde(default)]
     pub pinned: bool,
+    /// Share rows: the GUID the share's server answered NEGOTIATE with, in
+    /// `crate::network::server_guid::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+    /// and its Tailscale address) are one server. Written only through
+    /// [`record_server_guid`], never by a row an add or a mount files.
+    #[serde(default)]
+    pub server_guid: Option<String>,
 }
 
 impl KnownNetworkShare {
@@ -231,7 +238,9 @@ pub fn update_known_share(share: KnownNetworkShare) {
             .iter_mut()
             .find(|s| share_key(&s.server_name, &s.share_name) == key)
         {
-            *existing = share;
+            // The server's identity outlives a reconnect that doesn't bring one.
+            let server_guid = share.server_guid.or(existing.server_guid.take());
+            *existing = KnownNetworkShare { server_guid, ..share };
         } else {
             cache.known_network_shares.push(share);
         }
@@ -329,6 +338,7 @@ fn upsert_share_row(
             row.pinned = existing.pinned || first_mount;
             row.volume_id = row.volume_id.or(existing.volume_id.take());
             row.mount_path = row.mount_path.or(existing.mount_path.take());
+            row.server_guid = row.server_guid.or(existing.server_guid.take());
             row.port = row.port.or(existing.port);
             let is_add = row.address.is_none();
             if is_add && row.username.is_none() && existing.username.is_some() {
@@ -516,6 +526,40 @@ pub fn share_by_volume_id(volume_id: &str) -> Option<KnownNetworkShare> {
     saved_shares().into_iter().find(|row| place_id(row) == volume_id)
 }
 
+/// Records `guid` on the share row whose place is `volume_id`, by `proof`'s rule.
+/// Touches no other field. Answers `None` when no share row has that place, else
+/// whether the row's GUID changed.
+fn record_guid_in(rows: &mut [KnownNetworkShare], volume_id: &str, guid: &str, proof: GuidProof) -> Option<bool> {
+    let row = rows
+        .iter_mut()
+        .find(|row| row.is_share() && place_id(row) == volume_id)?;
+    let holds_one = row
+        .server_guid
+        .as_deref()
+        .and_then(crate::network::server_guid::ServerGuid::parse)
+        .is_some();
+    if (holds_one && proof == GuidProof::Unauthenticated) || row.server_guid.as_deref() == Some(guid) {
+        return Some(false);
+    }
+    row.server_guid = Some(guid.to_string());
+    Some(true)
+}
+
+/// Records the server GUID of the saved share whose place is `volume_id`
+/// ([`record_guid_in`]), persisting only on a change. Answers `false` when no share
+/// row has that place: a live share Cmdr never saved keeps its GUID in memory
+/// (`smb_server_guid`).
+pub fn record_server_guid(volume_id: &str, guid: &crate::network::server_guid::ServerGuid, proof: GuidProof) -> bool {
+    let recorded = {
+        let mut store = get_known_shares_mutex().lock_ignore_poison();
+        record_guid_in(&mut store.known_network_shares, volume_id, guid.as_str(), proof)
+    };
+    if recorded == Some(true) {
+        save_known_shares();
+    }
+    recorded.is_some()
+}
+
 /// Moves a saved share's pin, in place under the lock, answering whether a share
 /// row holds that volume id.
 pub fn set_share_pinned(volume_id: &str, pinned: bool) -> bool {
@@ -581,7 +625,7 @@ pub fn forget_rows(gone: &[KnownNetworkShare]) -> usize {
 }
 
 /// Case- and NFC-folds one half of a share's name, the fold [`share_key`] applies.
-fn fold_name(name: &str) -> String {
+pub(crate) fn fold_name(name: &str) -> String {
     use unicode_normalization::UnicodeNormalization;
 
     name.nfc().flat_map(char::to_lowercase).collect()

@@ -100,7 +100,8 @@ of its methods are counted here. Everything that IS counted exists because somet
 after one, and a new item should name which of three audiences it serves:
 
 - **The protocol layer**, for `network/`'s discovery, share-listing, and mount passes: `build_smb_addr`, the two
-  `try_list_shares_*` calls, `try_open_share`, the three `classify_*` / `is_auth_error` readers, `convert_shares`, and
+  `try_list_shares_*` calls, `try_open_share`, `probe_server_guid` (the server GUID a NEGOTIATE answers; a live
+  session's comes off `SmbVolume::diagnostics`), the three `classify_*` / `is_auth_error` readers, `convert_shares`, and
   the four vocabulary types that cross IPC.
 - **Constructing and asking after a share**, for `network/smb_upgrade.rs` and the debug window's diagnostics dashboard:
   `connect_smb_volume`, `SmbVolume` with `volume_id` / `session_state` / `diagnostics`, `SmbConnectionParams` with its
@@ -125,6 +126,17 @@ dispositions each lose: a facade would be the app building an `smb2::SmbClient` 
 is what this crate exists to stop; folding it into a listing call would TreeConnect `IPC$` rather than the share; gating
 is no answer for production code; and the probe is the fix, so it can't be deleted. It takes `SmbConnectionParams`, so
 the NFC fold and the `Guest` default come with it rather than being rebuilt by the caller.
+
+**`connection::probe_server_guid` is one more item (22 → 23), for the protocol-layer audience, with no root re-export.**
+The app proves two saved shares one share by the server GUID their NEGOTIATE answers (`serverGuid`,
+`apps/desktop/src-tauri/src/network/DETAILS.md` § "Which server a share is on"). A live direct session already hands it
+over through `SmbVolume::diagnostics` (no new item), but a share saved before Cmdr kept GUIDs has no session to read,
+and the fix is a credential-free NEGOTIATE of its saved address. The four dispositions: a facade would be the app
+dialing an `smb2` connection itself, which this crate exists to stop; no existing call can fold it in, since both
+listings and `try_open_share` run a session setup, which is exactly what this probe must not do; it can't be deleted
+without leaving those shares unprovable forever; and it's production code, so there's nothing to gate. It answers the
+raw `smb2::pack::Guid`, all zeros included: the "an all-zero GUID is no GUID" rule lives in the app's `ServerGuid`,
+beside the store that keeps it.
 
 Four public modules is the whole tree a host can name a path into: `connection`, `errors`, `types`, `volume`. Everything
 under `volume` except the four items above is private, `SmbVolumeInner` included. `volume::testing` and

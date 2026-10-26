@@ -227,6 +227,10 @@ investigated and rejected, not overlooked:
 If it's ever worth doing: reconcile AFTER the fact (on a direct SMB session, record the server GUID in the index's
 `meta` and alias the address-keyed ids to it), rather than changing the primary derivation.
 
+The read-time half of that reconciliation exists: the server GUID is recorded on each saved share row (`serverGuid`,
+`../network/smb_server_guid.rs`), and Ask Cmdr's tools treat address-keyed ids proven one share as one
+(`../location/same_share.rs`, `../agent/tools/DETAILS.md` § The location contract). The indexes stay keyed per address.
+
 ### Per-volume load (`volumes.rs`)
 
 `ensure_volume(id)` is cache-aware. Root's pool is the live `get_read_pool()`; a NON-root volume opens a read-only

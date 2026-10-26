@@ -49,7 +49,7 @@ of the app build.
 - **Auth** (platform-agnostic):
   - `keychain.rs`: SMB credential management. Delegates storage to `crate::secrets::store()` (see `secrets/CLAUDE.md` for backend details)
 - **Events**: `events.rs`: every `tauri_specta::Event` payload the module emits (discovery, the host context menu, `volume-connection-changed`, the OS-mount fallback notice) plus the wire enums only they carry, re-exported from `mod.rs`. Always compiled, because `ipc.rs`'s `collect_events!` can't cfg-gate inline and names each one on every platform.
-- **State**: `known_shares.rs`: Connection history in `known-shares.json` (usernames, last auth mode, timestamps), the saved SMB share places (rows with a share name, § "Saved SMB shares"), plus the shares switched off Cmdr's direct connection (`direct_connection_opt_outs`). `smb_saved_shares.rs` is the wiring around the share rows.
+- **State**: `known_shares.rs`: Connection history in `known-shares.json` (usernames, last auth mode, timestamps), the saved SMB share places (rows with a share name, § "Saved SMB shares"), plus the shares switched off Cmdr's direct connection (`direct_connection_opt_outs`). `smb_saved_shares.rs` is the wiring around the share rows. `server_guid.rs` + `smb_server_guid.rs` record which server each share row is on (§ "Which server a share is on").
 
 ## Platform strategy
 
@@ -750,6 +750,29 @@ the migration, and what Forget does). What the code has to defend:
 - **A restored tab on an unmounted saved share keeps its folder**: launch leaves the path unprobed and keeps the
   share's id (`pane/initialization.ts::restoreShareTab`), the `saved` row dials, and the pane enters that folder or the
   nearest one still there (`pane/DETAILS.md` § "A pane on a saved place").
+
+## Which server a share is on
+
+One NAS reached by its LAN IP and by Tailscale mounts as two volumes with two ids. The only proof they're one share is
+the GUID the server answers NEGOTIATE with, paired with the share name (the GUID names the BOX, so it never groups
+alone). `server_guid.rs` holds it as `ServerGuid`, which can't be all zeros (smb2 fills `Guid::ZERO` before a negotiate
+lands); `smb_server_guid.rs` records it, as a saved row's `serverGuid` (`docs/specs/saved-smb-shares.md` § The store).
+Ask Cmdr's tools read it to treat the two ids as one (`../location/same_share.rs`).
+
+- **A direct session coming up records its GUID** (`record_session_guid`, from both `smb_upgrade` install paths, read
+  off `SmbVolume::diagnostics` with no I/O). Signed in as an account it OVERWRITES the row's (a NAS restored or
+  replaced mints a new one, and the latest authenticated answer is the truth); as a guest it only fills. A live share
+  with no saved row keeps it in memory (`live_share`), and the row a mount saves later adopts it (`adopt_live_guid`): the
+  upgrade can land before `remember_mount`'s row does.
+- **The probe fills the rest**: a NEGOTIATE-only dial of the saved address (`cmdr_smb::connection::probe_server_guid`,
+  no session, no credentials, 3 s per step), only for rows with no GUID whose share name another row shares, one pass
+  at a time, 20 s after startup and whenever a share row is saved. ❗ It only ever FILLS: whatever answers on a saved
+  LAN IP from a hotel network isn't proven to be the share's server, so it can't replace a recorded GUID.
+- ❌ **Never from a tool handler**: a model's read must not dial a host. Nothing under `agent/`, `mcp/`, or `location/`
+  names the recorder or the probe (`smb_server_guid_test.rs::no_tool_handler_reaches_the_probe`).
+- The Docker SMB fixtures answer distinct GUIDs per container (verified on smb2 0.35.0 with the `guest` and `auth`
+  fixtures, `smb_integration_probe_reads_the_server_guid_without_credentials`, 2026-10-26): each image's Samba mints its
+  own on first start, so a two-server test over them is sound.
 
 ## Telling the user about a kernel-mount fallback
 

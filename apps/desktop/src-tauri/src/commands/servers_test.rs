@@ -189,6 +189,7 @@ fn a_named_smb_host_keeps_its_name_once_its_shares_were_listed() {
         volume_id: None,
         mount_path: None,
         pinned: false,
+        server_guid: None,
     };
 
     let servers = saved_servers(vec![named_manual_entry(smb_host, "Office NAS")], vec![history], &[]);
@@ -832,6 +833,7 @@ fn share_row(
         volume_id: volume_id.map(str::to_string),
         mount_path: volume_id.map(|_| format!("/Volumes/{share}")),
         pinned: volume_id.is_some(),
+        server_guid: None,
     }
 }
 

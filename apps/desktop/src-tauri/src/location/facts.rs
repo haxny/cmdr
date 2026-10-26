@@ -17,6 +17,7 @@ use std::sync::{LazyLock, Mutex};
 use cmdr_fs::volume::{BackendKind, ConnectionState, MountClass};
 
 use super::resolve::{IndexSources, RootSources, VolumeFact, VolumeFacts, volume_root};
+use super::same_share::ShareIdentity;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;
@@ -117,7 +118,8 @@ impl VolumeFacts {
                 .unwrap_or_else(|| volume.name().to_string());
             #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             let name = volume.name().to_string();
-            volumes.push(fact(id, name, kind, root, true, volume.connection_state(), None));
+            let share = (kind == VolumeKind::Smb).then(|| share_identity(&id)).flatten();
+            volumes.push(fact(id, name, kind, root, true, volume.connection_state(), None, share));
         }
 
         #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -145,6 +147,7 @@ impl VolumeFacts {
                     false,
                     Some(place.state),
                     Some(stored),
+                    None,
                 ));
             }
             for share in saved_shares {
@@ -163,6 +166,7 @@ impl VolumeFacts {
                     continue;
                 };
                 let name = format!("{} on {}", share.share_name, share.server_name);
+                let identity = share_identity(&id);
                 volumes.push(fact(
                     id,
                     name,
@@ -171,6 +175,7 @@ impl VolumeFacts {
                     false,
                     Some(ConnectionState::Saved),
                     Some(stored),
+                    identity,
                 ));
             }
         }
@@ -202,6 +207,7 @@ impl VolumeFacts {
                 false,
                 device.connection_state,
                 Some(stored),
+                None,
             ));
         }
 
@@ -247,8 +253,46 @@ impl StoredScan {
     }
 }
 
+/// Which server, share, and account an SMB volume is: its saved row's, else what
+/// its live direct session answered (`network::smb_server_guid`). A saved row with
+/// no GUID yet borrows the live session's, since both name the one volume id.
+fn share_identity(volume_id: &str) -> Option<ShareIdentity> {
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        let live = crate::network::smb_server_guid::live_share(volume_id);
+        if let Some(row) = crate::network::known_shares::share_by_volume_id(volume_id) {
+            let row_guid = row
+                .server_guid
+                .as_deref()
+                .and_then(crate::network::server_guid::ServerGuid::parse);
+            let guid = row_guid.or_else(|| live.map(|live| live.server_guid));
+            return Some(ShareIdentity::new(
+                guid.as_ref().map(crate::network::server_guid::ServerGuid::as_str),
+                &row.share_name,
+                row.username.as_deref(),
+            ));
+        }
+        live.map(|live| {
+            ShareIdentity::new(
+                Some(live.server_guid.as_str()),
+                &live.share_name,
+                live.username.as_deref(),
+            )
+        })
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        let _ = volume_id;
+        None
+    }
+}
+
 /// One volume's facts. `stored` is what its database on disk records, read for a
 /// volume that isn't live (`None` for a live one).
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one fact per argument, each named at the call site"
+)]
 fn fact(
     id: String,
     name: String,
@@ -257,6 +301,7 @@ fn fact(
     live: bool,
     connection_state: Option<ConnectionState>,
     stored: Option<StoredScan>,
+    share: Option<ShareIdentity>,
 ) -> VolumeFact {
     // A live volume's index is whichever one the index routes its root to (a cloud
     // drive's is `root`'s). A volume that isn't live has only its own: routing a
@@ -282,6 +327,7 @@ fn fact(
         live,
         connection_state,
         index: index_sources,
+        share,
     }
 }
 

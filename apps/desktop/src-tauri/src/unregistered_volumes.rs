@@ -64,6 +64,7 @@ mod tests {
             volume_id: Some(volume_id.to_string()),
             mount_path: Some("/Volumes/public-unregistered-test".to_string()),
             pinned: true,
+            server_guid: None,
         });
 
         assert_eq!(why_unregistered(volume_id).await, Unregistered::NotConnected);

@@ -68,6 +68,11 @@ pub struct VolumeSnapshot {
     /// backend, so it is not an "is this SMB" test; `kind` is.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connection_state: Option<String>,
+    /// Volume ids proven to be the same share (one server GUID, one share name):
+    /// one NAS by two addresses. A read on any of them is answered by whichever
+    /// member can, when it opens as the same account. Absent when there are none.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub same_share_as: Vec<String>,
     /// Whether the DEVICE behind the row can be opened right now: `ready` /
     /// `waiting_for_authorization` / `unavailable_offline` /
     /// `unavailable_no_permissions`. Absent for anything that isn't a device.
@@ -170,6 +175,7 @@ fn to_volume_snapshot(v: &VolumeSummary, facts: &VolumeFacts) -> VolumeSnapshot 
         },
         as_of: offline_as_of.map(format_timestamp),
         connection_state: v.connection_state.map(str::to_string),
+        same_share_as: facts.same_share_as(&v.id),
         device_readiness: v.device_readiness.map(str::to_string),
         total_bytes: v.space.and_then(|s| s.total_bytes()),
         total_human: v.space.and_then(|s| s.total_bytes()).map(format_size),

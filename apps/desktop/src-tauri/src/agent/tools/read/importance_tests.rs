@@ -33,6 +33,7 @@ fn volume(id: &str, kind: VolumeKind, root: &str, live: bool) -> VolumeFact {
         },
         earlier_roots: Vec::new(),
         index: IndexSources::none(id),
+        share: None,
     }
 }
 
@@ -311,6 +312,87 @@ fn scored_result_flags_stale_when_score_predates_recompute() {
         panic!("expected Scored");
     };
     assert!(!stale, "as_of == recompute ⇒ current");
+}
+
+/// The two NAS ids as one proven share: one server GUID, one share name, and the
+/// account named `username` on the LAN member.
+fn one_share(lan_username: &str) -> VolumeFacts {
+    use crate::location::same_share::ShareIdentity;
+    const BOX: &str = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    let mut facts = facts();
+    for v in &mut facts.volumes {
+        let username = match v.id.as_str() {
+            LAN => lan_username,
+            TAILSCALE => "david",
+            _ => continue,
+        };
+        v.share = Some(ShareIdentity::new(Some(BOX), "naspi", Some(username)));
+    }
+    facts
+}
+
+/// A row the offline Tailscale store scored lands on the live LAN share a read
+/// prefers, with `via` naming the store; a folder both stores scored is ONE row,
+/// the higher score kept.
+#[test]
+fn a_share_members_rows_land_on_the_preferred_member_once() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    write_db(
+        dir.path(),
+        TAILSCALE,
+        &[
+            ("/papers", scored_signals(PathClass::ProjectRoot, NOW)),
+            ("/photos", scored_signals(PathClass::UserContent, NOW)),
+        ],
+        NOW,
+    );
+    write_db(dir.path(), LAN, &[("/papers", low_score_signals())], NOW);
+
+    let result =
+        important_folders_on(dir.path(), &one_share("david"), &json!({ "threshold": 0.0 }), NOW).expect("answers");
+
+    let folders = result["folders"].as_array().expect("folders");
+    let mut got = locations(&result);
+    got.sort();
+    assert_eq!(
+        got,
+        [loc(LAN, "/Volumes/naspi-1/papers"), loc(LAN, "/Volumes/naspi-1/photos")]
+    );
+    let papers = folders
+        .iter()
+        .find(|f| f["location"]["path"] == "/Volumes/naspi-1/papers")
+        .expect("papers");
+    assert_eq!(
+        papers["via"],
+        json!({ "volumeId": TAILSCALE }),
+        "the higher score was the Tailscale store's"
+    );
+    let overview = result["volumes"].as_array().expect("volumes");
+    let lan = overview.iter().find(|v| v["volumeId"] == LAN).expect("LAN overview");
+    assert_eq!(lan["sameShareAs"], json!([TAILSCALE]));
+
+    // Naming either member ranks the one share.
+    let named =
+        important_folders_on(dir.path(), &one_share("david"), &json!({ "volumeId": LAN }), NOW).expect("answers");
+    assert_eq!(locations(&named).len(), 2);
+}
+
+/// Another account can see different files, so its rows stay where they were
+/// scored.
+#[test]
+fn a_share_opened_as_another_account_keeps_its_own_rows() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    write_db(
+        dir.path(),
+        TAILSCALE,
+        &[("/photos", scored_signals(PathClass::UserContent, NOW))],
+        NOW,
+    );
+
+    let result = important_folders_on(dir.path(), &one_share("dori"), &json!({}), NOW).expect("answers");
+
+    assert_eq!(locations(&result), [loc(TAILSCALE, "/Volumes/naspi/photos")]);
+    assert!(result["folders"][0].get("via").is_none());
 }
 
 #[test]

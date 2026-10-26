@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::Location;
+use super::same_share::ShareIdentity;
 use crate::mcp::resources::volumes::{VolumeKind, connection_state_token};
 
 /// How many volumes a miss's `nearby` names at most.
@@ -103,6 +104,9 @@ pub(crate) struct VolumeFact {
     /// mount path and every root it held this session. Never the current root.
     pub earlier_roots: Vec<String>,
     pub index: IndexSources,
+    /// For an SMB share: which server, share, and account it is, so two ids of
+    /// one share can be proven one (`same_share.rs`). `None` for anything else.
+    pub share: Option<ShareIdentity>,
 }
 
 /// Everything the resolver knows about volumes, taken at one instant.
@@ -186,8 +190,9 @@ pub(crate) struct ResolvedLocation {
     pub index: IndexSources,
     /// The path as asked, when it sat under a root the volume has since left.
     pub rebased_from: Option<String>,
-    /// The volume that answers in place of the one named, when one does. Always
-    /// `None` until same-share members are proven.
+    /// The volume the read was ASKED about, when this location is a proven
+    /// same-share, same-account sibling answering in its place
+    /// ([`VolumeFacts::readers`]). `None` for the volume asked.
     pub via: Option<String>,
 }
 

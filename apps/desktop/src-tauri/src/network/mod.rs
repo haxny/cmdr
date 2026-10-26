@@ -27,6 +27,7 @@ pub mod one_shot_credentials;
 pub mod s3_known_places;
 pub mod s3_volume_wiring;
 pub mod saved_server_fields;
+pub mod server_guid;
 
 // The durable trusted-SSH-host-key store, which answers the `HostKeys` seam.
 // Not SMB's business, but it lives here for the same reason `credential_store`
@@ -115,6 +116,8 @@ pub(crate) mod smb_direct_switch;
 pub(crate) mod smb_pane_upgrade;
 // Saved SMB share places: recorded when Cmdr mounts a share, brought back by `connect_saved_place`.
 pub(crate) mod smb_saved_shares;
+// Which server each share is on (its NEGOTIATE GUID), so two addresses of one NAS prove one share.
+pub(crate) mod smb_server_guid;
 
 // The "we're stuck on the kernel mount" notice's once-per-server ledger. Lives
 // beside `smb_upgrade` (its only caller) rather than inside it, so the ledger is

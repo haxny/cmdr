@@ -438,12 +438,31 @@ write): `{ miss, location, detail, root?, nearby?, sameShareAs? }`. `location` e
 `volumeNotConnected`, which a tool answers when the volume resolved but none of its sources can (`volume_not_connected`,
 shared), plus the live source's own (§ The live source). ❌ Never an empty listing, ❌ never `authoritative: true` for ground nothing read.
 
-**`nearby` and `candidate`.** Every not-connected miss carries `nearby` (possibly empty) and `sameShareAs` (empty until
-same-share members are proven). Each `nearby` entry is `{ volumeId, name, kind, connectionState?, root, candidate }`,
+**`nearby` and `candidate`.** Every not-connected miss carries `nearby` (possibly empty) and `sameShareAs` (the volume's
+proven siblings, § One share, many ids; empty for a bare path, which names no volume). Each `nearby` entry is `{ volumeId, name, kind, connectionState?, root, candidate }`,
 where `candidate` is the requested place re-rooted onto that volume (`/Volumes/naspi/papers` →
 `{ smb-192-…, /Volumes/naspi-1/papers }`), so the next call is a copy, not arithmetic. Picked in order: volumes whose
 mount name shares the requested `/Volumes/<name>` stem (macOS appends `-N` to a second mount), else volumes whose root
 holds the path, else every remote volume; live first, at most 8, never the volume the miss is about.
+
+**One share, many ids** (`apps/desktop/src-tauri/src/location/same_share.rs`). One NAS reached by its LAN IP and by
+Tailscale is two volumes, two indexes, and two importance stores (transcript 179: a 220-folder offline index beside an
+unindexed live share). Two rules, both proof-based:
+
+- **Same share**: both record the same server GUID AND the same share name, ignoring case. The GUID names the BOX, so it
+  never groups alone, and an all-zero GUID is no GUID (`apps/desktop/src-tauri/src/network/server_guid.rs`). Where the GUIDs come from, and why a
+  probe's only fills: `apps/desktop/src-tauri/src/network/DETAILS.md` § "Which server a share is on". ❌ No fuzzy "possibly the same". It shows as
+  `sameShareAs: [volumeId]` on `list_volumes` rows, `important_folders`' overview, and not-connected misses.
+- **Redirectable**: the same share AND the same account (a guest is no account). Another account can see different files
+  on the same share, so a different-username sibling stays a `sameShareAs` hint and never answers in its place.
+- **Preference is per read** (`list_dir`, `read/listing/readers.rs`): across the volume asked and its redirectable
+  siblings, the first member and source in order live index → live readdir → freshest index on disk answers, the
+  volume asked first within each tier. A sibling's answer carries its own `location` plus `via: { volumeId }` naming the
+  volume ASKED, misses included.
+- **`important_folders` re-addresses** a member's rows onto the member a read prefers (`preferred_member`: live with an
+  index, then live, then the freshest index on disk, the scoring volume on a tie), with `via` naming the store that
+  scored it, and dedupes by `location`, keeping the higher score. A `volumeId` scope spans the volume's redirectable
+  group, since one share's stores hold share-relative paths.
 
 **The two tools that can't take the pair as is.**
 
@@ -465,7 +484,8 @@ holds the path, else every remote volume; live first, at most 8, never the volum
 ### The live source
 
 `list_dir` on a CONNECTED volume whose index doesn't list the folder (no index at all, like the LAN share in
-transcript 179, or ground the index hasn't reached) answers from one readdir through the volume's provider
+transcript 179, or ground the index hasn't reached), and whose share has no live sibling index listing it either
+(§ One share, many ids), answers from one readdir through the volume's provider
 (`read/listing/live.rs`), so the share the user has connected is always listable. `coverage.source: live`, the
 volume's own `indexStatus` beside it, `authoritative: true` unless the cap cut it, and a note that folder sizes need an
 index: folder rows and the folder's own `size` are ABSENT, never the inode's 4 KB or a `0 B`.

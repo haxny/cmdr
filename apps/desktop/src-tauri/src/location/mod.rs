@@ -15,13 +15,15 @@
 //! the one root function), `facts.rs` (the in-memory volume facts it reads, and
 //! the earlier-roots record), and `miss.rs` (a miss as a tool result). Its
 //! contract: `agent/tools/DETAILS.md` § The location contract. `store_path.rs`
-//! translates app paths to and from an importance store's path space.
+//! translates app paths to and from an importance store's path space, and
+//! `same_share.rs` proves two volumes one share and picks which may answer.
 
 use serde::{Deserialize, Serialize};
 
 pub(crate) mod facts;
 pub(crate) mod miss;
 pub(crate) mod resolve;
+pub(crate) mod same_share;
 pub(crate) mod store_path;
 
 /// A navigable destination: a path together with the volume it lives on.

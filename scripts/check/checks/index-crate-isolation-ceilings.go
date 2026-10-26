@@ -150,11 +150,13 @@ var surfaceGuardedCrates = []struct {
 		// argument item by item: the crate DETAILS section above.
 		// Root 15 -> 16 and items 21 -> 22 for `try_open_share` (ERR-SHUSC): why, in
 		// that same DETAILS section.
+		// Items 22 -> 23 for `connection::probe_server_guid` (one NAS by two
+		// addresses proven one share): why, in that same DETAILS section.
 		Name: "cmdr-smb",
 		Ceilings: surfaceCeilings{
 			RootPromises:   16,
 			PublicModules:  4,
-			SubsystemItems: 22,
+			SubsystemItems: 23,
 		},
 	},
 	{

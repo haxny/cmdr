@@ -27,6 +27,7 @@ fn volume(id: &str, root: &str, live: bool, index: IndexSources) -> VolumeFact {
         connection_state: (!live).then_some(ConnectionState::Saved),
         earlier_roots: Vec::new(),
         index,
+        share: None,
     }
 }
 

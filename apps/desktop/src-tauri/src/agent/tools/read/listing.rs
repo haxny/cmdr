@@ -10,7 +10,9 @@
 //! index doesn't list the folder answers from one bounded readdir instead
 //! (`listing/live.rs`, § The live source); nothing else here touches the disk. A
 //! volume that isn't connected answers from the same cores, which read its
-//! database read-only ([`answer_offline`], `source: offlineIndex`). The one thing no index query does is rank a folder's children by size,
+//! database read-only (`source: offlineIndex`). Which of those answers, across
+//! every proven member of the folder's share, is `listing/readers.rs`'s call
+//! ([`answer_read`]). The one thing no index query does is rank a folder's children by size,
 //! so `sortBy: "size"` batches `get_dir_stats` over the subdirectories and sorts
 //! here.
 //!
@@ -48,18 +50,20 @@ use crate::file_system::volume::SpaceInfo;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::index_host::index;
 use crate::location::Location;
-use crate::location::miss::{LocationMissResult, volume_not_connected};
-use crate::location::resolve::{LocationInput, ResolvedLocation, VolumeFacts, resolve};
+use crate::location::miss::LocationMissResult;
+use crate::location::resolve::{LocationInput, VolumeFacts, resolve};
 use crate::mcp::{ToolError, ToolResult};
 use crate::search::format_size;
 use cmdr_index::store::DirStats;
 use cmdr_index::{Freshness, IndexStatusResponse};
 
 mod live;
+mod readers;
 mod rows;
 mod source;
 
 pub(crate) use live::{GatePolicy, LIVE_READ, LiveAsk, answer_live};
+pub(crate) use readers::{LiveDeps, answer_read};
 use rows::qualified_size;
 pub(crate) use rows::{ChildEntry, RowKind, SizeClaim, human_size};
 use source::index_coverage;
@@ -547,85 +551,19 @@ pub(crate) async fn execute_list_dir_cancellable<R: Runtime>(
         Ok(resolved) => resolved,
         Err(miss) => return to_value(&LocationMissResult::from(miss)),
     };
-    if !resolved.live {
-        return answer_offline(&facts, &resolved, &opts);
-    }
-    let location = &resolved.location;
-    // The index that holds this volume's rows, which for a cloud drive is `root`'s.
-    let index_id = resolved.index.volume_id.as_str();
-    let rows = index()
-        .list_children(index_id, &location.path)
-        .map_err(|e| ToolError::internal(e.to_string()))?;
-    let status = index().volume_status(index_id);
-    let space = crate::mcp::resources::volumes::space_summary(&location.volume_id);
-    let Some(rows) = rows else {
-        // No index lists this folder, so the volume itself answers, once.
-        let view = VolumeView {
-            enabled: status.enabled,
-            freshness: status.freshness,
-            block: VolumeBlock::new(location.volume_id.clone(), space),
-            walked_roots: Vec::new(),
-            reach: IndexReach::Connected,
-        };
-        return answer_live(LiveAsk {
-            resolved: &resolved,
-            facts: &facts,
-            opts: &opts,
-            view: &view,
-            volume: get_volume_manager().get(&location.volume_id),
+    let volume_for = |id: &str| get_volume_manager().get(id);
+    answer_read(
+        &facts,
+        &resolved,
+        &opts,
+        LiveDeps {
             cancel,
             cfg: LIVE_READ,
             policy: GatePolicy::now(),
-        })
-        .await;
-    };
-    // Resolved ONCE, then asked per row. Every size below is only as honest as the
-    // walked ground in here: without it a folder mid-walk reads as a settled floor,
-    // which is exactly when its number is furthest from the truth.
-    let volume = VolumeView {
-        enabled: status.enabled,
-        freshness: status.freshness,
-        block: VolumeBlock::new(location.volume_id.clone(), space),
-        walked_roots: index().status(index_id).map(|s| s.walked_roots).unwrap_or_default(),
-        reach: IndexReach::Connected,
-    };
-    answer_from_index(location, index_id, &rows, &volume, &opts)
-}
-
-/// A volume that isn't connected answers from the index its last walk left on
-/// disk (`Index::list_children` reads it read-only, standing nothing up), or, when
-/// that index has no listing of the folder, with the typed `volumeNotConnected`.
-/// ❌ Never a live read: there's no volume to read.
-///
-/// No walk runs on a volume with no instance, so nothing on the page is moving;
-/// its space is whatever the poller last cached, as for any volume.
-pub(crate) fn answer_offline(facts: &VolumeFacts, resolved: &ResolvedLocation, opts: &ListOptions) -> ToolResult {
-    let location = &resolved.location;
-    let index_id = resolved.index.volume_id.as_str();
-    let rows = if resolved.index.stored {
-        index()
-            .list_children(index_id, &location.path)
-            .map_err(|e| ToolError::internal(e.to_string()))?
-    } else {
-        None
-    };
-    let Some(rows) = rows else {
-        return to_value(&volume_not_connected(facts, resolved));
-    };
-    let volume = VolumeView {
-        enabled: false,
-        freshness: None,
-        block: VolumeBlock::new(
-            location.volume_id.clone(),
-            crate::mcp::resources::volumes::space_summary(&location.volume_id),
-        ),
-        walked_roots: Vec::new(),
-        reach: IndexReach::Offline {
-            name: resolved.name.clone(),
-            as_of: resolved.index.stored_as_of,
+            volume_for: &volume_for,
         },
-    };
-    answer_from_index(location, index_id, &rows, &volume, opts)
+    )
+    .await
 }
 
 /// Shape a folder the index lists: its rows, its own totals, and each child

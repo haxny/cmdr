@@ -38,6 +38,7 @@ fn fact(id: &str, kind: VolumeKind, root: &str, live: bool) -> VolumeFact {
         connection_state: (!live).then_some(ConnectionState::Saved),
         earlier_roots: Vec::new(),
         index: IndexSources::none(id),
+        share: None,
     }
 }
 
@@ -273,4 +274,34 @@ fn serializes_camel_case_and_omits_absent_fields() {
     assert!(json.get("connectionState").is_none());
     assert!(json.get("filesystem").is_none());
     assert!(json.get("asOf").is_none());
+}
+
+/// One NAS by two addresses, proven by its server GUID and share name, says so on
+/// both rows; a row nothing proves a sibling for carries no `sameShareAs`.
+#[test]
+fn rows_of_one_proven_share_name_each_other() {
+    use crate::location::same_share::ShareIdentity;
+    let identity = || {
+        Some(ShareIdentity::new(
+            Some("6ba7b810-9dad-11d1-80b4-00c04fd430c8"),
+            "naspi",
+            None,
+        ))
+    };
+    let mut ts = fact(TAILSCALE, VolumeKind::Smb, "/Volumes/naspi", false);
+    ts.share = identity();
+    let mut lan = fact(LAN, VolumeKind::Smb, "/Volumes/naspi-1", true);
+    lan.share = identity();
+    let out = wire(&map(
+        &[
+            summary(LAN, VolumeKind::Smb, Some("off"), Some("direct")),
+            summary(TAILSCALE, VolumeKind::Smb, Some("off"), Some("saved")),
+            summary("root", VolumeKind::Local, Some("fresh"), None),
+        ],
+        &facts(vec![lan, ts, fact("root", VolumeKind::Local, "/", true)]),
+    ));
+
+    assert_eq!(out["volumes"][0]["sameShareAs"], serde_json::json!([TAILSCALE]));
+    assert_eq!(out["volumes"][1]["sameShareAs"], serde_json::json!([LAN]));
+    assert!(out["volumes"][2].get("sameShareAs").is_none());
 }

@@ -105,6 +105,8 @@ export interface KnownNetworkShare {
   volumeId?: string | null
   mountPath?: string | null
   pinned?: boolean
+  /** Share rows only: the GUID the share's server answered NEGOTIATE with, which proves two rows one share. */
+  serverGuid?: string | null
 }
 
 // ============================================================================
