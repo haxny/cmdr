@@ -424,7 +424,7 @@ valid next input. `path` is always the APP path: the string the panes, `search` 
   the index routes its ROOT; a volume that isn't live has only its own (routing a dead mount point answers `root`).
   `location` keeps the volume's id; index reads use the index's.
 - **An importance store keeps its index's paths** (volume-relative, absolute only on the boot disk), so the importance
-  tools translate at one seam (`read/importance.rs::store_path` / `app_location`): strip the resolved volume's root on
+  tools translate at one seam (`apps/desktop/src-tauri/src/location/store_path.rs`, shared with the visit recorder): strip the resolved volume's root on
   the way in, join it back on the way out. A cloud drive's store is relative to the drive's OWN root although `root`'s
   index walks it, so the seam always takes the importance volume's root, ❌ never the index's routing.
 

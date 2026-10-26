@@ -185,6 +185,15 @@ the command returns `Ok(())` even on a write hiccup (it logs at debug). If the s
 background-scored volume, Local and SMB**; an unregistered or MTP volume is skipped (recording a visit no recompute
 reads is dead weight), gated on the registered volume's TYPED kind (`indexing::volume_kind`), never its id string.
 
+**A visit is stored in the store's path space, not as the app path the pane hands over.** The recompute looks visits up
+by each folder's index-relative path (`scheduler/recompute.rs::load_visits`), which is absolute only on the boot disk,
+so the command strips the registered volume's root first (`apps/desktop/src-tauri/src/location/store_path.rs`, shared
+with the agent's importance tools): `/Volumes/naspi-1/papers` → `/papers`, and a cloud drive's folder relative to the
+DRIVE's root (its store is the drive's own, though `root`'s index walks it). A path off its volume's root, or a volume
+with no live root, records nothing. Rows written before this as app paths (`/Volumes/…`,
+`/Users/…/Library/CloudStorage/…` on non-root stores; seen in a prod data dir, 2026-10-26) are inert: they match no
+folder, and rewriting them is ambiguous once the mount moved. Pinned by `commands::importance::tests`.
+
 The agent spec's planned `user_action_log` is this signal's future superset — when it lands, `record_visit` folds into
 it, never two parallel recorders.
 

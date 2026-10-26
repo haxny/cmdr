@@ -14,13 +14,15 @@
 //! The tools' location resolver lives here too: `resolve.rs` (the pure core and
 //! the one root function), `facts.rs` (the in-memory volume facts it reads, and
 //! the earlier-roots record), and `miss.rs` (a miss as a tool result). Its
-//! contract: `agent/tools/DETAILS.md` § The location contract.
+//! contract: `agent/tools/DETAILS.md` § The location contract. `store_path.rs`
+//! translates app paths to and from an importance store's path space.
 
 use serde::{Deserialize, Serialize};
 
 pub(crate) mod facts;
 pub(crate) mod miss;
 pub(crate) mod resolve;
+pub(crate) mod store_path;
 
 /// A navigable destination: a path together with the volume it lives on.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]

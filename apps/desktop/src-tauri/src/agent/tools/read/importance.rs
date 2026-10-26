@@ -5,14 +5,13 @@
 //! behaviors: answering OFFLINE for an unmounted-but-scored drive (the importance
 //! stores outlive the mount) and the floored-vs-unscored derivation. This file
 //! places each call on volumes through `crate::location`'s resolver, translates
-//! between app paths and each store's own path space at one seam
-//! ([`store_path`] / [`app_location`]), shapes the typed snapshots into the
+//! between app paths and each store's own path space through
+//! `crate::location::store_path` (shared with the visit recorder), shapes the typed snapshots into the
 //! agent's JSON, and adds the staleness comparison (`asOfGeneration` vs the
 //! volume's current `recomputeGeneration`, spec §2.4).
 
 use std::path::Path;
 
-use cmdr_fs::volume::app_paths::rebase;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime};
@@ -20,6 +19,7 @@ use tauri::{AppHandle, Runtime};
 use crate::location::Location;
 use crate::location::miss::LocationMissResult;
 use crate::location::resolve::{LocationInput, LocationMiss, VolumeFacts, resolve};
+use crate::location::store_path::{from_store_path, to_store_path};
 use crate::mcp::resources::importance::{
     PathImportance, RankedFolder, RankedScope, VolumeOverview, snapshot_overview, snapshot_path_on, snapshot_threshold,
     snapshot_top,
@@ -29,21 +29,10 @@ use cmdr_index::importance::{Explanation, FloorReason, ImportanceIndex, SignalSe
 
 const DEFAULT_TOP_N: usize = 20;
 
-// ── The path-space seam ───────────────────────────────────────────────────────
-
-/// `app_path` in its volume's importance store's path space: the store keeps its
-/// index's paths, volume-relative (`/papers` for `/Volumes/naspi-1/papers`) and
-/// absolute only on the boot disk, whose root is `/`. A cloud drive's store is
-/// relative to the DRIVE's root, though `root`'s index walks it, so this always
-/// takes the importance volume's own root, ❌ never the index's routing.
-fn store_path(app_path: &str, root: &str) -> Option<String> {
-    rebase(app_path, root, "/")
-}
-
 /// A store row's place on the wire: its path joined onto the volume's root (from
 /// the one root rule, so an offline share answers under its last root).
 fn app_location(volume_id: &str, store_path: &str, root: &str) -> Option<Location> {
-    rebase(store_path, "/", root).map(|path| Location {
+    from_store_path(store_path, root).map(|path| Location {
         volume_id: volume_id.to_string(),
         path,
     })
@@ -193,7 +182,7 @@ fn place_scope(facts: &VolumeFacts, volume_id: Option<&str>, under: Option<&str>
         },
     )?;
     Ok(PlacedScope {
-        under_in_store: store_path(&resolved.location.path, &resolved.root),
+        under_in_store: to_store_path(&resolved.location.path, &resolved.root),
         volume_id: Some(resolved.location.volume_id.clone()),
         under: Some(resolved.location),
         placed,
@@ -355,7 +344,7 @@ pub(crate) fn folder_importance_on(
         Err(miss) => return to_value(&LocationMissResult::from(miss)),
     };
     let volume_id = resolved.location.volume_id.as_str();
-    let in_store = store_path(&resolved.location.path, &resolved.root)
+    let in_store = to_store_path(&resolved.location.path, &resolved.root)
         .ok_or_else(|| ToolError::internal("the resolver placed a path outside its volume's root"))?;
 
     let result = match snapshot_path_on(data_dir, volume_id, &in_store, now) {
