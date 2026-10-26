@@ -118,6 +118,23 @@ mutate registry state.
   the policy module (owned by `../reconcile/DETAILS.md`), not duplicated in the frontend. It also carries
   `unreadable_locations` + `unreadable_retried`, so a finished index can admit it has holes (below).
 
+### A stopped volume's database answers reads
+
+The three per-path reads (`get_dir_stats_on_volume`, `get_dir_stats_batch_on_volume`, `list_dir_children_on_volume`)
+open their index through one `IndexReader`: the volume's live `ReadPool` when it has an instance, else, for a volume the
+HOST DOESN'T SERVE (a saved share that isn't connected, an unplugged phone), its database on disk through
+`../store/stored.rs`'s `StoredIndex` (read-only, never rebuilt, one connection per call, nothing registered). Paths map
+into its index space against the root its last walk recorded (`volume_path`), through the same
+`routing::index_read_path_pure` the live form uses; a database with no such meta can't place an SMB path and answers
+`None`. The "unlisted directory isn't its contents" rule holds offline too.
+
+- **Decision: a MOUNTED volume with no instance reads nothing.** Its indexing is off, and a leftover database describes
+  a walk the user turned off; reading it would hand a pane those sizes as current
+  (`a_mounted_volume_with_no_index_running_never_reads_its_leftover_database`). `root` never falls back either.
+- **Why not `get_read_pool_for` for a stopped volume:** a `ReadPool` caches connections per thread, and a stop retires
+  cached connections so the file can go; a per-call connection can't pin a database the retention sweep removed.
+- A volume that comes live mid-read is safe: both are read-only WAL readers beside the lifecycle's writer.
+
 **What a COMPLETED index couldn't read** (`unreadable_ground`). A finished walk can hold no rows for directories it was
 refused (`Denied`), ones Cmdr declines to read at all (`Declined`), and ones that stopped answering (`Abandoned`), so
 "done" can mean "done, with holes" and the badge has to be able to say so. The status carries a COUNT of places

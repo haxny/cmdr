@@ -14,7 +14,9 @@ volume-keyed handle tables.
   `lifecycle::state`: a registry lookup would put the hot read path behind the mutex a shutdown drain holds. The table
   lock is a LEAF — ❌ never call out under it.
 - **`get_read_pool_for(vid)` returning `None` IS the skip signal.** The gate is pool-presence, not registry-key
-  presence, so it can't disagree with the routing call that asks the same question.
+  presence, so it can't disagree with the routing call that asks the same question. The one exception: the per-path
+  reads of a volume the HOST doesn't serve fall back to its database on disk (`IndexReader`), ❌ never for a mounted
+  one.
 - **`root` ALSO keeps the `scanner::should_exclude(parent_path)` check.** A `root` listing can navigate to a path root
   never indexes; without it, enrichment misses and logs on every ~2/s refresh.
 - **Map the read path into index-relative space via `routing::index_read_path` before `resolve_path`** — a

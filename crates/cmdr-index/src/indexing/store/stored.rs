@@ -1,8 +1,8 @@
 //! A volume's index read straight off its database file, with no live instance.
 //!
 //! For answering about a volume that isn't indexing right now: a saved share that
-//! isn't connected, an ejected drive. Its last-scan facts today; its rows are the
-//! same file's to give.
+//! isn't connected, an ejected drive. Its last-scan facts (`Index::status`), and
+//! the per-path reads (`read/queries.rs`'s `IndexReader`), over the same file.
 //!
 //! - **Read-only, and never repaired.** `SQLITE_OPEN_READ_ONLY`, no `create_tables`,
 //!   no schema stamp. A database this build can't read (another schema, not a
@@ -81,6 +81,12 @@ impl StoredIndex {
             total_physical_bytes: read("total_physical_bytes")?,
             last_event_id: read("last_event_id")?,
         })
+    }
+
+    /// The read-only connection, for the per-path queries a live read pool also
+    /// serves. Lives exactly as long as this value.
+    pub(crate) fn conn(&self) -> &Connection {
+        &self.conn
     }
 }
 

@@ -193,10 +193,15 @@ touching it, and holds one connection that closes with it, ❌ never a cached pe
 Disposition: **fold**. `status(volume_id)` already promised "last-scan facts" and answered a stopped volume with none,
 though they were on disk; now an uninstanced volume's `index_status` comes off its database, with `initialized` staying
 `false`. ❌ Not folded into `volume_status`: that one runs per badge and per `cmdr://state` row, and its `enabled` and
-`freshness` must keep saying "not indexed" for a volume with no instance (the "registered is not indexed" trap). The
-opener's row reads (an offline `list_dir`) fold into `list_children` / `dir_stats` the same way when they land, so the
-concept costs no method. Callers of `status` at the fold: the root status IPC (root is always instanced) and
-`list_dir`'s `walked_roots` (empty either way), so neither changed behavior.
+`freshness` must keep saying "not indexed" for a volume with no instance (the "registered is not indexed" trap). Callers
+of `status` at the fold: the root status IPC (root is always instanced) and `list_dir`'s `walked_roots` (empty either
+way), so neither changed behavior.
+
+The opener's row reads (an offline `list_dir`) folded into `list_children` / `dir_stats` / `dir_stats_batch` the same
+way, so the concept cost no method: each already promised "what this volume's index knows", and a stopped volume's index
+is its database. Only a volume the host doesn't serve falls back, so every pane and operation caller (always a mounted
+volume, or a path routed to one) keeps today's answer. Mechanism: `../read/DETAILS.md` § A stopped volume's database
+answers reads.
 
 ## The mapping
 

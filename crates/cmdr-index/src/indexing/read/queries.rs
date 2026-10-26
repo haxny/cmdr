@@ -13,13 +13,14 @@ use super::coverage::{self, CoverageDimension};
 use super::enrichment::get_read_pool_for;
 use super::pending_sizes::{PendingView, get_pending_sizes_for};
 use crate::indexing::events::{DEBUG_STATS, IndexDebugStatusResponse, IndexStatusResponse, VolumeIndexStatus};
+use crate::indexing::host;
 use crate::indexing::lifecycle::manager::IndexManager;
 use crate::indexing::lifecycle::state::{
     INDEX_REGISTRY, IndexPhase, get_freshness, index_failure, is_active, volume_kind,
 };
-use crate::indexing::paths::routing::{index_read_path, volume_id_for_local_path};
+use crate::indexing::paths::routing::{index_read_path, index_read_path_pure, volume_id_for_local_path};
 use crate::indexing::reconcile::reconciler;
-use crate::indexing::store::{self, DirStats, IndexStore};
+use crate::indexing::store::{self, DirStats, IndexStore, StoredIndex};
 use crate::indexing::volume::{IndexVolumeKind, ROOT_VOLUME_ID};
 use cmdr_fs::firmlinks;
 
@@ -322,21 +323,79 @@ pub fn get_debug_status(volume_id: &str) -> Result<IndexDebugStatusResponse, Str
     }
 }
 
-/// Look up recursive stats for a single directory in a volume's index.
+/// Where a per-path read of one volume's index runs.
+///
+/// A volume with a live instance reads through its pool. One the host doesn't
+/// serve at all (a saved share that isn't connected, an unplugged phone) reads
+/// the database its last walk left, read-only ([`StoredIndex`]), mapping paths
+/// against the root that walk recorded: for a volume with no live root, that's
+/// the root every other reader of it uses too. A MOUNTED volume with no instance
+/// (its indexing is off) reads nothing: its leftover database describes a walk
+/// the user turned off, and a pane would show its sizes as current.
+enum IndexReader {
+    Live(std::sync::Arc<super::enrichment::ReadPool>),
+    Stored {
+        /// Boxed: a `rusqlite::Connection` dwarfs the `Arc` beside it.
+        index: Box<StoredIndex>,
+        /// The `volume_path` meta, `None` when the database predates it.
+        root: Option<String>,
+    },
+}
+
+impl IndexReader {
+    /// `None` when the volume has nothing to read: no instance, and either it's
+    /// mounted or no readable database is on disk.
+    fn for_volume(volume_id: &str) -> Option<Self> {
+        if let Some(pool) = get_read_pool_for(volume_id) {
+            return Some(Self::Live(pool));
+        }
+        if volume_id == ROOT_VOLUME_ID || host::volumes::current().get(volume_id).is_some() {
+            return None;
+        }
+        let index = StoredIndex::open_for_volume(volume_id).ok()?;
+        let root = index
+            .last_scan()
+            .ok()
+            .and_then(|scan| scan.volume_path)
+            .filter(|root| !root.is_empty());
+        Some(Self::Stored {
+            index: Box::new(index),
+            root,
+        })
+    }
+
+    /// `normalized` in this volume's index path space, `None` when it isn't on
+    /// the volume.
+    fn index_path(&self, volume_id: &str, normalized: &str) -> Option<String> {
+        match self {
+            Self::Live(_) => index_read_path(volume_id, normalized),
+            Self::Stored { root, .. } => index_read_path_pure(volume_id, normalized, root.as_deref()),
+        }
+    }
+
+    fn with_conn<T>(&self, read: impl FnOnce(&rusqlite::Connection) -> T) -> Result<T, String> {
+        match self {
+            Self::Live(pool) => pool.with_conn(read),
+            Self::Stored { index, .. } => Ok(read(index.conn())),
+        }
+    }
+}
+
+/// Look up recursive stats for a single directory in a volume's index (its
+/// stored one when it isn't mounted, [`IndexReader`]).
 pub fn get_dir_stats_on_volume(volume_id: &str, path: &str) -> Result<Option<DirStats>, String> {
-    let pool = match get_read_pool_for(volume_id) {
-        Some(p) => p,
-        None => return Ok(None),
+    let Some(reader) = IndexReader::for_volume(volume_id) else {
+        return Ok(None);
     };
     let normalized = firmlinks::normalize_path(path);
     // Map the mount-absolute path into the volume's index path space (no-op for
     // `root`, mount-relative for SMB). `None` ⇒ outside the mount ⇒ no stats.
-    let index_path = match index_read_path(volume_id, &normalized) {
+    let index_path = match reader.index_path(volume_id, &normalized) {
         Some(p) => p,
         None => return Ok(None),
     };
 
-    pool.with_conn(|conn| {
+    reader.with_conn(|conn| {
         let entry_id =
             match store::resolve_path(conn, &index_path).map_err(|e| format!("Couldn't resolve path: {e}"))? {
                 Some(id) => id,
@@ -354,14 +413,14 @@ pub fn get_dir_stats_on_volume(volume_id: &str, path: &str) -> Result<Option<Dir
     })?
 }
 
-/// Batch lookup of dir_stats for multiple paths on a volume.
+/// Batch lookup of dir_stats for multiple paths on a volume (its stored index
+/// when it isn't mounted, [`IndexReader`]).
 pub fn get_dir_stats_batch_on_volume(volume_id: &str, paths: &[String]) -> Result<Vec<Option<DirStats>>, String> {
-    let pool = match get_read_pool_for(volume_id) {
-        Some(p) => p,
-        None => return Ok(paths.iter().map(|_| None).collect()),
+    let Some(reader) = IndexReader::for_volume(volume_id) else {
+        return Ok(paths.iter().map(|_| None).collect());
     };
 
-    pool.with_conn(|conn| {
+    reader.with_conn(|conn| {
         let mut results = Vec::with_capacity(paths.len());
         let mut id_to_idx: Vec<(i64, usize, String)> = Vec::new();
 
@@ -371,7 +430,7 @@ pub fn get_dir_stats_batch_on_volume(volume_id: &str, paths: &[String]) -> Resul
             // but keep `normalized` (the mount-absolute path) as the returned
             // `path` and the pending-tracker key, since both are FE/write-side
             // keyed on the absolute path.
-            let index_path = match index_read_path(volume_id, &normalized) {
+            let index_path = match reader.index_path(volume_id, &normalized) {
                 Some(p) => p,
                 None => {
                     results.push(None);
@@ -429,23 +488,23 @@ fn dir_stats_from(path: String, s: &store::DirStatsById, current_epoch: u64, pen
 /// List the immediate children of a directory from `volume_id`'s index (names,
 /// folder/file, per-child size + mtime). The caller names the volume, so a path
 /// the router would place elsewhere (a dead mount point routes to `root`) can't
-/// pick a second index. `Ok(None)` means the volume has no live index (no read
-/// pool) or the path isn't in the index (unresolved) — the caller surfaces a typed
-/// "no index" / "not found" rather than a misleading empty listing. Reads the
-/// index only; it never touches the disk (so it's safe on a dead mount). Mirrors
-/// [`get_dir_stats_on_volume`]'s pool/resolve wiring, firmlink normalization
+/// pick a second index. A volume the host doesn't serve answers from its stored
+/// index ([`IndexReader`]). `Ok(None)` means the volume has no index to read or
+/// the path isn't in it (unresolved) — the caller surfaces a typed "no index" /
+/// "not found" rather than a misleading empty listing. Reads the index only; it
+/// never touches the disk (so it's safe on a dead mount). Mirrors
+/// [`get_dir_stats_on_volume`]'s reader/resolve wiring, firmlink normalization
 /// included.
 pub fn list_dir_children_on_volume(volume_id: &str, path: &str) -> Result<Option<Vec<store::EntryRow>>, String> {
-    let pool = match get_read_pool_for(volume_id) {
-        Some(p) => p,
-        None => return Ok(None),
+    let Some(reader) = IndexReader::for_volume(volume_id) else {
+        return Ok(None);
     };
     let normalized = firmlinks::normalize_path(path);
-    let index_path = match index_read_path(volume_id, &normalized) {
+    let index_path = match reader.index_path(volume_id, &normalized) {
         Some(p) => p,
         None => return Ok(None),
     };
-    pool.with_conn(|conn| {
+    reader.with_conn(|conn| {
         let entry_id =
             match store::resolve_path(conn, &index_path).map_err(|e| format!("Couldn't resolve path: {e}"))? {
                 Some(id) => id,

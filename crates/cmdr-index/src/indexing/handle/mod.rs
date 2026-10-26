@@ -554,6 +554,12 @@ impl Index {
     /// `volume_id`, or `None` when that volume's index doesn't cover it. The caller
     /// names the volume (a dead mount point's path routes to `root`); one holding
     /// only a path asks [`volume_id_for_path`](Self::volume_id_for_path) first.
+    ///
+    /// A volume the host doesn't serve (a saved share that isn't connected, an
+    /// unplugged phone) answers from the database its last walk left, read-only,
+    /// the way [`status`](Self::status) does; one that's mounted with its
+    /// indexing off answers `None`. Same for [`dir_stats_batch`](Self::dir_stats_batch)
+    /// and [`list_children`](Self::list_children).
     pub fn dir_stats(&self, volume_id: &str, path: &str) -> Result<Option<DirStats>, IndexError> {
         crate::indexing::read::queries::get_dir_stats_on_volume(volume_id, path).map_err(Into::into)
     }
@@ -569,7 +575,8 @@ impl Index {
     /// row but that nothing has listed: rows under it are a lower bound (FSEvents
     /// verification and the cover walk's chain materialization both create that
     /// shape), and there is nothing in a `Vec<EntryRow>` for a caller to read that
-    /// caveat off.
+    /// caveat off. A volume the host doesn't serve reads its stored database, as
+    /// [`dir_stats`](Self::dir_stats) says.
     pub fn list_children(&self, volume_id: &str, path: &str) -> Result<Option<Vec<EntryRow>>, IndexError> {
         crate::indexing::read::queries::list_dir_children_on_volume(volume_id, path).map_err(Into::into)
     }
