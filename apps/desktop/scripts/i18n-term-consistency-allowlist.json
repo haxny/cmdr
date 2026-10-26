@@ -614,6 +614,18 @@
       {
         "source": "{countText} {count, plural, one {folder} other {folders}}",
         "reason": "Two grammatical slots. `fileOperations.delete.foldersPart` and `fileOperations.transferDialog.foldersPart` are objects of a verb in their host sentence (`Удалить …`, `Скопировать …`), so the singular is accusative `папку`. `queue.row.folderCount` stands as its own chunk after the queue row action noun (`Удаление`, `Копирование`) and in the row tooltip, where an accusative `1 папку` reads wrong; it takes the nominative `папка`, like the chip tooltip's `{countText} объект`."
+      },
+      {
+        "source": "Archive",
+        "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`Архивировать`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip file a compress suggestion creates (`Архив`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
+      },
+      {
+        "source": "Last modified",
+        "reason": "`Дата изменения` is Finder's Date Modified column header (`suggestedOps.columnModified`, beside `fileExplorer.columns.modified`); the date tooltip lists events (`fileExplorer.dateTooltip.lastModified` → `Последнее изменение`). The `modified` ruling in `docs/i18n/ru/terms.json`."
+      },
+      {
+        "source": "Why",
+        "reason": "Two questions. `onboarding.stepFda.why` asks what Cmdr needs Full Disk Access FOR, a purpose (`Зачем?`); `suggestedOps.agentReason` leads the AI's reason for a suggestion, a cause (`Почему:`, which its spoken form `Почему, по словам ИИ:` starts with)."
       }
     ]
   },

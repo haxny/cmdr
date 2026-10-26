@@ -266,8 +266,13 @@ macOS ru names it so (`⇧Пробел`).
 
 ## Don't assign a chore (`updates.toast.readyDetail`, `suggestedOps.reversible.removeCopies`)
 
-`…или просто откройте Cmdr в следующий раз: обновление установится само.`; `Отмена удалит созданные файлы`, ❌
+`…или просто откройте Cmdr в следующий раз: обновление установится само.`; `Это можно отменить: Cmdr удалит копии`, ❌
 `Для отмены удалите…` (deleting by hand).
+
+## AI suggestions (`suggestedOps.title`, `menu.view.suggestedOps`, `suggestedOps.agentReason*`)
+
+`Предложения ИИ` over `Предложенные операции`, matching the mkdir hints. `Почему:` (a cause) over `Зачем` (a purpose,
+`onboarding.stepFda.why`); the aria `Почему, по словам ИИ:` holds it.
 
 ## Two transfer-time plurals (`transfer.fileOnly.allDone`, `transfer.*DuringMove`)
 

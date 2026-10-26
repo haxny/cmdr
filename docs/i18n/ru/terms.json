@@ -1315,7 +1315,8 @@
   "dialog": {
     "chosen": "диалоговое окно",
     "accept": ["диалог"],
-    "forms": "short form диалог in tight labels; Dialog actions → Действия диалога",
+    "proseAccept": ["окн"],
+    "forms": "short form диалог in tight labels; Dialog actions → Действия диалога; prose and settings may say окно «<title>» (окно «Предложения ИИ»), as `suggestedOps.loadFailed` says «Закройте окно»",
     "confidence": "high",
     "sources": "macOS live VoiceOver SCRGeneral (dialog → диалоговое окно); MS (dialog box → диалоговое окно)"
   },
@@ -5115,11 +5116,15 @@
   "suggestion": {
     "chosen": "предложение",
     "accept": ["предлож", "рекоменд", "предлаг"],
-    "forms": "pl. предложения; «Предложения ИИ», «Предложенные операции», «Показать предложения»",
+    "forms": "pl. предложения; the AI suggestions dialog, its View menu item, and palette entry → «Предложения ИИ», as the mkdir hints already say; «Показать предложения»; a batch heading → «Предложено только что», «Предложено вчера в {time}»",
     "avoid": [
       {
         "form": "подсказка",
         "why": "that is a hint or tooltip"
+      },
+      {
+        "form": "Предложенные операции",
+        "why": "the dialog's old name; one dialog keeps one name, «Предложения ИИ»"
       }
     ],
     "confidence": "high",
@@ -6068,10 +6073,7 @@
       }
     ],
     "confidence": "high",
-    "sources": "MS: write (transfer information to a storage device) → записывать / запись; Thunar: Writing data to device → Запись данных на устройство; DC: Write → Запись; Finder: Writing track ^0 → Запись дорожки ^0",
-    "exceptions": {
-      "suggestedOps.reversibleDeleteWritten": "What it writes → «созданные файлы»."
-    }
+    "sources": "MS: write (transfer information to a storage device) → записывать / запись; Thunar: Writing data to device → Запись данных на устройство; DC: Write → Запись; Finder: Writing track ^0 → Запись дорожки ^0"
   },
   "zoom": {
     "chosen": "Масштаб",
