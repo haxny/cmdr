@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::path::Path;
+use std::sync::Arc;
 
 use lofty::config::ParseOptions;
 use lofty::file::AudioFile;
@@ -369,7 +370,7 @@ fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture> + Clone) -> Option
     let chosen = pictures.clone().nth(cover_position(pictures)?)?;
     Some(Cover {
         mime: chosen.mime_type().map_or(UNKNOWN_MIME, |m| m.as_str()).to_owned(),
-        data: chosen.data().to_vec(),
+        data: Arc::from(chosen.data()),
     })
 }
 

@@ -326,7 +326,7 @@ fn write_error(e: impl std::fmt::Display) -> TagError {
 /// `cover` as a lofty picture of type `kind`. The reader reports a picture without a MIME
 /// type as [`UNKNOWN_MIME`]; that goes back to no MIME type.
 fn picture(cover: &Cover, kind: PictureType) -> Picture {
-    let builder = Picture::unchecked(cover.data.clone()).pic_type(kind);
+    let builder = Picture::unchecked(cover.data.to_vec()).pic_type(kind);
     if cover.mime == UNKNOWN_MIME {
         builder.build()
     } else {

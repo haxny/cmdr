@@ -88,7 +88,7 @@ pub(crate) fn every_field() -> FileTags {
 pub(crate) fn jpeg(len: usize, byte: u8) -> Cover {
     Cover {
         mime: "image/jpeg".to_owned(),
-        data: vec![byte; len],
+        data: vec![byte; len].into(),
     }
 }
 
@@ -781,7 +781,7 @@ fn unsupported_m4a_cover_type_is_refused() {
     let names = listing(dir.path());
     let webp = Cover {
         mime: "image/webp".to_owned(),
-        data: vec![1; 10],
+        data: vec![1; 10].into(),
     };
 
     let result = write_tags(

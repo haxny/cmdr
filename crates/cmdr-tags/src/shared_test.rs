@@ -19,7 +19,7 @@ fn strings(values: &[&str]) -> Vec<String> {
 fn cover(bytes: &[u8]) -> Cover {
     Cover {
         mime: "image/jpeg".to_string(),
-        data: bytes.to_vec(),
+        data: bytes.into(),
     }
 }
 

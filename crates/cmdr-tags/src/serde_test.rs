@@ -99,3 +99,12 @@ fn restore_report_apply_id_and_case_tool_round_trip() {
     assert_eq!(round_trip(&CaseTool::Sentence), json!("sentence"));
     assert_eq!(round_trip(&CaseTool::Upper), json!("upper"));
 }
+
+#[test]
+fn a_cover_is_a_byte_array_on_the_wire() {
+    let cover = crate::model::Cover {
+        mime: "image/png".to_owned(),
+        data: vec![1, 2, 255].into(),
+    };
+    assert_eq!(round_trip(&cover), json!({"mime": "image/png", "data": [1, 2, 255]}));
+}

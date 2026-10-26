@@ -105,7 +105,7 @@ fn record_keeps_covers_beside_the_manifest_not_in_it() {
 
     let apply = root.path().join("op-1");
     assert_eq!(listing(&apply), strings(&["0.cover", "manifest.json"]));
-    assert_eq!(fs::read(apply.join("0.cover")).unwrap(), cover);
+    assert_eq!(fs::read(apply.join("0.cover")).unwrap(), &cover[..]);
     let manifest = fs::read(apply.join("manifest.json")).unwrap();
     assert!(manifest.len() < 1000, "{} bytes", manifest.len());
     let json: serde_json::Value = serde_json::from_slice(&manifest).unwrap();

@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -93,8 +94,26 @@ impl TagField {
 pub struct Cover {
     /// MIME type, like `image/jpeg`.
     pub mime: String,
-    /// The encoded image.
-    pub data: Vec<u8>,
+    /// The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
+    /// every file given the same cover) is a pointer copy. Serialized as a byte array.
+    #[serde(with = "cover_bytes")]
+    #[cfg_attr(feature = "specta", specta(type = Vec<u8>))]
+    pub data: Arc<[u8]>,
+}
+
+/// `Arc<[u8]>` as a plain byte array, the wire shape the cover always had.
+mod cover_bytes {
+    use std::sync::Arc;
+
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S: Serializer>(data: &Arc<[u8]>, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(data.iter())
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Arc<[u8]>, D::Error> {
+        Vec::<u8>::deserialize(deserializer).map(Arc::from)
+    }
 }
 
 /// One file's tags as the editor sees them.

@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
@@ -341,7 +342,7 @@ fn write_apply(dir: &Path, seq: u64, paths: &[PathBuf]) -> Result<(), TagError> 
     for (path, tags, raw) in &snapshots {
         let cover = match &tags.cover {
             Some(cover) => {
-                let file = match files.get(cover.data.as_slice()) {
+                let file = match files.get(&cover.data[..]) {
                     Some(file) => file.clone(),
                     None => {
                         let file = format!("{}{COVER_SUFFIX}", files.len());
@@ -412,7 +413,7 @@ fn restore_entry(dir: &Path, entry: &Entry, opts: &WriteOptions) -> Result<bool,
     let cover = match &entry.cover {
         Some(cover) => Some(Cover {
             mime: cover.mime.clone(),
-            data: fs::read(dir.join(&cover.file))?,
+            data: Arc::from(fs::read(dir.join(&cover.file))?),
         }),
         None => None,
     };
