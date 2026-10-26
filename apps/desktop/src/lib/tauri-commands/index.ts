@@ -538,6 +538,7 @@ export type {
 export {
   approveSuggestedGroup,
   listSuggestedOps,
+  liveSuggestedOpFacts,
   onSuggestionsChanged,
   pageSuggestedOps,
   rejectSuggestedGroup,
@@ -545,11 +546,15 @@ export {
 export type {
   ApprovalResultView,
   DestinationState,
+  LiveFileState,
   RejectResultView,
   SuggestionChange,
   SuggestionsChanged,
   SuggestedGroupView,
+  SuggestedOpLiveFact,
+  SuggestedOpLiveFactsAnswer,
   SuggestedOpPage,
+  SuggestedOpsLiveFactsError,
   SuggestedOpView,
   SuggestedSweepView,
 } from './suggested-ops'
