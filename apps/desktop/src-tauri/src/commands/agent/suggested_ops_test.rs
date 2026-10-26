@@ -540,3 +540,12 @@ fn a_live_facts_refusal_names_why_the_source_cant_be_asked() {
         serde_json::json!({ "type": "unknownGroup" })
     );
 }
+
+/// A window is capped server-side, so a caller asking for a 60,000-row "page" can't load or
+/// stat the whole group in one call; it pages for the rest.
+#[test]
+fn an_op_window_is_capped_at_the_servers_ceiling() {
+    assert_eq!(op_window(200), 200);
+    assert_eq!(op_window(MAX_OP_WINDOW), MAX_OP_WINDOW);
+    assert_eq!(op_window(60_000), MAX_OP_WINDOW);
+}

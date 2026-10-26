@@ -278,6 +278,19 @@ fn read_facts(group: &ProposalGroup, volumes: VolumeFacts<'_>, destination_state
     }
 }
 
+/// The most op rows one window reads (`suggested_ops_page`) or stats (`suggested_ops_live_facts`).
+///
+/// The dialog asks for `OP_WINDOW_SIZE` (`suggested-ops-trigger.svelte.ts`, 200) at a time, the
+/// rows a list around the viewport needs. This is the server's ceiling on that intent, with
+/// headroom: a caller asking for more (a bug, or a 60 000-row "page") gets this many and pages
+/// for the rest, since `offset` and `total` say where it is.
+pub const MAX_OP_WINDOW: u32 = 500;
+
+/// `limit`, capped at [`MAX_OP_WINDOW`].
+fn op_window(limit: u32) -> u32 {
+    limit.min(MAX_OP_WINDOW)
+}
+
 /// One page of a group's ops, in `seq` order.
 #[tauri::command]
 #[specta::specta]
@@ -287,6 +300,7 @@ pub async fn suggested_ops_page(
     offset: u32,
     limit: u32,
 ) -> Result<SuggestedOpPage, SuggestedOpsError> {
+    let limit = op_window(limit);
     let empty = SuggestedOpPage {
         ops: Vec::new(),
         offset,
@@ -373,6 +387,9 @@ pub async fn suggested_ops_live_facts(
     offset: u32,
     limit: u32,
 ) -> Result<Vec<SuggestedOpLiveFact>, SuggestedOpsLiveFactsError> {
+    // The same cap as the page: a window is stat'ed whole, so an unbounded one would be an
+    // unbounded wait on a slow share.
+    let limit = op_window(limit);
     let db_path = super::db_path(&app).ok_or(SuggestedOpsLiveFactsError::StoreNotOpen)?;
     let (group, ops) = tauri::async_runtime::spawn_blocking(move || {
         let read = || -> Result<_, crate::agent::store::AgentStoreError> {
