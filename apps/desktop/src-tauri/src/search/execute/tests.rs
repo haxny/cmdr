@@ -15,6 +15,7 @@ use cmdr_index::ROOT_VOLUME_ID;
 mod adb_phone;
 mod live_drive;
 mod live_e2e;
+mod offline_volume;
 mod server_scope;
 mod stalled_walk;
 

@@ -218,7 +218,7 @@ In `budget.rs` (how many tokens a prompt and a tool result may spend):
 - `MIN_LOCAL_CONTEXT_TOKENS = 32_768` — the smallest local window one turn can run in, mirrored by
   `ai.localContextSize`'s default and its smallest option. It tracks the prefix, so it moves when the tool view grows.
   See § A local window too small to use.
-- `FIXED_PROMPT_OVERHEAD_TOKENS = 6_765` / `RENAME_TOKENS_PER_FILE = 349` / `BATCH_HINT_HEADROOM_PERCENT = 10` — what
+- `FIXED_PROMPT_OVERHEAD_TOKENS = 6_811` / `RENAME_TOKENS_PER_FILE = 349` / `BATCH_HINT_HEADROOM_PERCENT = 10` — what
   `files_per_batch` divides. See § Sizing a batch from the budget.
 - `MAX_TOOL_RESULT_TOKENS = DEFAULT_PROMPT_TOKEN_BUDGET / 2` — the most ONE tool result may spend. Derived from the
   conservative default, not the resolved budget, because a tool handler doesn't know the model (and may be answering an
@@ -359,7 +359,7 @@ all. A persist problem is logged and dropped — a gauge is worth no turn.
 `files_per_batch(prompt_tokens)` answers how many files one content-based rename batch fits, as the **smaller of two
 limits**:
 
-- what the PROMPT holds: `(budget − 10% headroom − 6,765 of prefix) / 349 per file`. The headroom exists because the
+- what the PROMPT holds: `(budget − 10% headroom − 6,811 of prefix) / 349 per file`. The headroom exists because the
   measured 100-file turn came in ~4% above what the per-file costs account for (the paths the calls name, the envelope,
   the user's sentence, JSON scaffolding).
 - what one REPLY can emit: `AGENT_MAX_OUTPUT_TOKENS` (12,000), less a half-slot reasoning reserve, divided by the plan
@@ -396,7 +396,7 @@ Estimated tokens from the shipped assets and `estimate_prompt_tokens`. Every fig
 `context/cost_tests.rs`, whose constants block is the single copy; a failure there names both numbers and says to update
 the test and this section together.
 
-- **Fixed overhead: 6,765 tokens** on every single call — 2,347 for the system prompt and 4,418 for the 19 tool
+- **Fixed overhead: 6,811 tokens** on every single call — 2,347 for the system prompt and 4,464 for the 19 tool
   declarations. The old flat 8k budget, against a prefix half this size, still left only ~4.9k for the actual work, so
   an 11-file `image_facts` batch fit and a 12-file one did not. **It grows with the tool view**: the suggested-ops trio
   is ~1,000 tokens of schema, which every call pays whether or not it suggests anything, and which costs a 16k budget
@@ -404,7 +404,7 @@ the test and this section together.
   `nothing_to_suggest`, one string argument and a two-sentence description, is 97 of them, paid by every rail turn that
   will never call it. `memory_write` + `memory_edit` cost 252 between them, and the prompt's memory section another 265.
   A new tool's schema is prefix, so keep its descriptions terse and say the rest once, in the registry line or the
-  prompt. `search` is the most expensive single declaration at 560 (439 of schema, 119 of description), and the
+  prompt. `search` is the most expensive single declaration at 609 (490 of schema, 119 of description), and the
   § Coverage paragraph that teaches a model to read its answer costs 182 more.
 - **Per file: 269 for an `image_facts` row** (at 900 chars of OCR, the corpus average, against the 2,000-char cap — a
   text-dense corpus costs up to ~2.2× more), **59 for a plan row**, **21 for a pane-listing entry**. The facts dominate

@@ -131,6 +131,12 @@ impl VolumeFacts {
         })
     }
 
+    /// Whether `path` sits inside a mount area, where only a mounted volume can
+    /// hold it. The case a path-routing tool can't tell from a boot-disk folder.
+    pub(crate) fn under_mount_area(&self, path: &str) -> bool {
+        self.mount_point_of(path).is_some()
+    }
+
     /// Whether `volume` really holds `path`: it's under the volume's root, and the
     /// volume isn't a disk a mount area merely sits on.
     fn holds(&self, volume: &VolumeFact, path: &str) -> bool {
@@ -205,7 +211,7 @@ pub(crate) enum LocationMiss {
 /// A volume a miss suggests instead, with the next call already spelled out.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct NearbyVolume {
+pub struct NearbyVolume {
     pub volume_id: String,
     pub name: String,
     pub kind: &'static str,

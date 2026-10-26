@@ -203,8 +203,10 @@ fn envelope_names_the_batch_size_the_prompt_points_at() {
 
     let rendered = render_envelope(&env, offset());
 
+    // The number moves with the fixed overhead (`budget.rs` pins it), so the envelope is
+    // checked against the hint it was handed rather than a copy of today's value.
     assert!(
-        rendered.contains("rename batch: up to 22 files"),
+        rendered.contains(&format!("rename batch: up to {} files", env.rename_batch_files)),
         "the envelope must carry the turn's batch size, got: {rendered}"
     );
 }

@@ -1,7 +1,7 @@
 # Search module
 
 In-memory filename search + AI query translation. **One volume per search, enforced at the API** (`resolve_target`):
-❌ no fan-out, the only way a search can silently omit a drive. Scope routes the volume; unscoped means boot volume.
+❌ no fan-out, the only way a search can silently omit a drive. Scope routes the volume (or the caller placed it: `run_live_collected`'s `on_volume`); unscoped means boot volume.
 
 `execute.rs` routes index/live search over `execute/coverage.rs`; `live.rs` owns runs and `ResultStream`
 (`live/CLAUDE.md`). `engine.rs` scans `index.rs`'s per-volume arena; matcher/excludes/ranking judge rows; types/query

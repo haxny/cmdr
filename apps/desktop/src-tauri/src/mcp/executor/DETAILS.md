@@ -35,6 +35,8 @@ Depth for the MCP tool-execution layer. `CLAUDE.md` holds the must-knows.
   ai-client-only, because Ask Cmdr is already an LLM holding the user's prose and nesting a second model call to write
   a query it can write itself buys two providers and a translation it can't see (`../../agent/tools/DETAILS.md` § The
   tool catalog). The result shape and every rule about it live in `search/result.rs` (§ The search result, below).
+  Where `search` covers (`volumeId`, a scope under a dead mount) is `search/placement.rs`'s, through the one location
+  resolver (`../../agent/tools/DETAILS.md` § The location contract); `ai_search` routes by its scope only.
 - **`queue.rs`**: the `queue` tool (pause / resume / cancel one id, pause_all / resume_all, `continue_without_gone`,
   the answer to a `pendingSourcesGone` question, and `move_locked` / `skip_locked`, the answers to a
   `pendingLockedSources` one). Thin adapter over the manager: no FE action, so no ack. Only a `Continued` or
@@ -128,6 +130,13 @@ every rule below is unit-tested against fabricated answers with no harness and n
 
 `ai_search` returns the same object with `interpretedQuery` flattened on top, and the translator's caveat as the first
 note.
+
+A `search` whose place doesn't resolve answers the location contract's miss INSTEAD of this object
+(`{ miss, location, detail, nearby?, … }`, `noVolumeAtPath` / `unknownVolume` / `pathOutsideVolume` /
+`volumeNotConnected`), because no search ran: a caller branches on `miss` being present. `unresolvedScopes` keeps its
+meaning (a scope on a volume that resolved, but with no row for that path). `targetVolumeId` is the INDEX that answered,
+which for a cloud drive named by its own `volumeId` is `root`. An answer for a volume that isn't connected leads
+`notes` with when its index was last walked.
 
 - **`matchCount` is ❌ NOT the `total` the paged tools report.** There, `total` is what the page was cut from, so
   `returned == total` means "you saw everything". Here the engine stops emitting rows at the row cap while the count

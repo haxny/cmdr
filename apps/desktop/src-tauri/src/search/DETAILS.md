@@ -106,6 +106,11 @@ pure.
   toasts and MCP returns. The target is `from_scope`.
 - **Unscoped**: the boot volume, whole-volume, not `from_scope`. It's the MCP default (the dialog always sends a scope);
   an agent that wants a different volume names it.
+- **Placed by the caller** (`run_live_collected`'s `on_volume`, through `target_on`): the MCP `search` tool resolved
+  its `volumeId` through `crate::location` and hands over the index to read, so the paths aren't routed again. It's
+  the one way to reach a share that isn't connected: its last root routes to `root` once nothing is mounted there.
+  Nothing walks it (`cover` answers `NotIndexed` for an unmounted volume), so the answer is the on-disk arena's rows
+  and an `Interrupted` walk, a lower bound. Caller side: `mcp/executor/DETAILS.md` § The search result.
 
 **The engine's two diagnostic lines carry the query's SHAPE plus its SCOPE, never the pattern text.**
 `query.rs::summarize_query_for_diagnostics` reports pattern mode and length (character count, plus byte count when they
