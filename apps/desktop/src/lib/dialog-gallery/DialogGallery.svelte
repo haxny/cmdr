@@ -238,6 +238,7 @@
         'error-report': (id) => withStoreSeed('error-report', id),
         feedback: (id) => withStoreSeed('feedback', id),
         'operation-log': (id) => withStoreSeed('operation-log', id),
+        'suggested-ops': (id) => withStoreSeed('suggested-ops', id),
         'whats-new': (id) => withStoreSeed('whats-new', id),
 
         'delete-confirmation': (id, { disk }) =>

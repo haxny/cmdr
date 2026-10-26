@@ -396,7 +396,7 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.view.rightPane", "Right pane"),
             ("menu.view.showHiddenFiles", "Show hidden files"),
             ("menu.view.sortBy", "Sort by"),
-            ("menu.view.suggestedOps", "Suggested ops"),
+            ("menu.view.suggestedOps", "AI suggestions"),
             ("menu.view.swapPanes", "Swap panes"),
             ("menu.view.switchPane", "Switch pane"),
             ("menu.view.zoom", "Zoom"),

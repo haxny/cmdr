@@ -320,9 +320,9 @@
   "@menu.view.operationLog": {
     "description": "NOUN phrase. Opens the history of file operations that already finished, with what each one did (⌥⌘L). The past-tense counterpart of menu.view.operationQueue; keep the same word for \"operation\" in both so they read as a pair."
   },
-  "menu.view.suggestedOps": "Suggested ops",
+  "menu.view.suggestedOps": "AI suggestions",
   "@menu.view.suggestedOps": {
-    "description": "NOUN phrase. Opens the panel where Cmdr's assistant parks file operations it suggests, waiting for the user to approve or discard them. \"ops\" is a casual short form of \"operations\", matching the panel's own name; if your language has no natural short form, the full word is better than an invented abbreviation."
+    "description": "NOUN phrase. Opens the dialog where Cmdr's assistant parks the file actions it suggests (move, trash, rename, and so on), waiting for the user to approve or reject them. Matches the dialog's own title (suggestedOps.title)."
   },
   "menu.view.askCmdr": "Ask Cmdr",
   "@menu.view.askCmdr": {

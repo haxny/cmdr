@@ -1,0 +1,18 @@
+{
+  "suggestedOps.approve.trash": "Move {countText} {count, plural, one {file} other {files}} to Bin",
+  "@suggestedOps.approve.trash": {
+    "sourceHash": "3c82946"
+  },
+  "suggestedOps.facts.trash": "The Bin",
+  "@suggestedOps.facts.trash": {
+    "sourceHash": "4e42c6e"
+  },
+  "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Bin",
+  "@suggestedOps.reversible.trash": {
+    "sourceHash": "55bf957"
+  },
+  "suggestedOps.irreversible.noTrash": "This can’t be undone: this drive has no Bin",
+  "@suggestedOps.irreversible.noTrash": {
+    "sourceHash": "2eaca9f"
+  }
+}

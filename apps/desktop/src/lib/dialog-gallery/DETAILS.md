@@ -153,11 +153,11 @@ harness's mount sweep reads (those rows render nothing of their own, so the swee
 
 ## Store-seeded dialogs
 
-`bulk-rename-review`, `feedback`, `whats-new`, `error-report`, and `operation-log` are opened by patching a real app
-store: `fixtures/store-seeded.ts` holds a **patch per state** (not a prop bag), plus `buildStoreSeed`, the one place
-that knows, per dialog, which store the patch lands on and how the app itself decides the dialog is showing. Everything
-else — the `+page.svelte` / `+layout.svelte` mount site, the component, the close path — is production code running
-normally.
+`bulk-rename-review`, `feedback`, `whats-new`, `error-report`, `operation-log`, and `suggested-ops` are opened by
+patching a real app store: `fixtures/store-seeded.ts` holds a **patch per state** (not a prop bag), plus
+`buildStoreSeed`, the one place that knows, per dialog, which store the patch lands on and how the app itself decides
+the dialog is showing. Everything else — the `+page.svelte` / `+layout.svelte` mount site, the component, the close path
+— is production code running normally.
 
 **Restoring is structural, not per-fixture.** `store-seeding.ts`'s `seedStore(store, patch)` snapshots exactly the keys
 the patch names and returns the undo; `DialogGallery.svelte` runs that closure as an **`$effect` cleanup**. So closing

@@ -1521,14 +1521,14 @@
       "hint": "a pre-built sentence telling the user how to reset zoom to 100% (already translated separately)"
     }
   },
-  "commands.suggestedOpsShow.label": "Suggested ops",
+  "commands.suggestedOpsShow.label": "AI suggestions",
   "@commands.suggestedOpsShow.label": {
-    "description": "Command name that opens the Suggested ops dialog, where the user reviews file operations Ask Cmdr has suggested. Appears in the command palette and the View menu.",
+    "description": "Command name that opens the AI suggestions dialog, where the user reviews file actions Ask Cmdr has suggested. Matches the dialog title (suggestedOps.title). Appears in the command palette and the View menu.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.suggestedOpsShow.description": "Review the file operations the AI suggested, and decide what runs",
   "@commands.suggestedOpsShow.description": {
-    "description": "Longer help text for the Suggested ops command, shown as a secondary line in the command palette."
+    "description": "Longer help text for the AI suggestions command, shown as a secondary line in the command palette."
   },
   "commands.helpViewDebugLog.label": "View debug log",
   "@commands.helpViewDebugLog.label": {

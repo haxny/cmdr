@@ -13,7 +13,7 @@ translators.
   data per dialog, keyed dialog id → record in `fixtures/index.ts`.
 - `disk-fixture.ts`: the real fixture directory (debug-only Rust `dev_fixtures`) plus the focused pane's live listing,
   for the five that do real work on mount.
-- `store-seeding.ts` + `fixtures/store-seeded.ts`: patch a real app store and undo it, for the five the app mounts
+- `store-seeding.ts` + `fixtures/store-seeded.ts`: patch a real app store and undo it, for the six the app mounts
   itself. `onboarding-preview.ts` / `stale-drive-preview.ts` / `operation-conflict-preview.ts` /
   `transfer-progress-preview.ts`: the four an app command, a real event, or a real operation opens.
 

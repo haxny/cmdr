@@ -2,10 +2,11 @@
  * Fixtures for the store-seeded dialogs, plus the binding from each dialog to
  * the store its patch lands on.
  *
- * These five take no content props: they read a module-level `$state` store and
- * the APP mounts them (`+page.svelte` for the rename review, "What's new", and
- * the operation log; `+layout.svelte` for feedback and error reports). So a
- * fixture here is a PATCH, not a prop bag, and applying it runs the app's real
+ * These six take no content props: they read a module-level `$state` store and
+ * the APP mounts them (`+page.svelte` for the rename review, "What's new", the
+ * operation log, and AI suggestions, whose patches live in `./suggested-ops`;
+ * `+layout.svelte` for feedback and error reports). So a fixture here is a
+ * PATCH, not a prop bag, and applying it runs the app's real
  * render path. `store-seeding.ts` derives the undo from the patch's own keys, so
  * nothing below has to describe how to clean up after itself.
  *
@@ -18,12 +19,20 @@ import { errorReportFlow } from '#lib/error-reporter/error-report-flow.svelte.js
 import { feedbackFlow } from '#lib/feedback/feedback-flow.svelte.js'
 import { operationLogState } from '#lib/operation-log/operation-log-trigger.svelte.js'
 import { whatsNewState } from '#lib/whats-new/whats-new-trigger.svelte.js'
+import { suggestedOpsState } from '#lib/suggested-ops/suggested-ops-trigger.svelte.js'
 import type { OperationRow, RenameEvidence, RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 import { storeSeed, type StoreSeed } from '../store-seeding'
 import { daysAgo, hoursAgo } from './relative-time'
+import { suggestedOpsFixtures } from './suggested-ops'
 
 /** The dialogs the gallery opens by seeding a store instead of passing props. */
-export type StoreSeededDialogId = 'bulk-rename-review' | 'error-report' | 'feedback' | 'operation-log' | 'whats-new'
+export type StoreSeededDialogId =
+  | 'bulk-rename-review'
+  | 'error-report'
+  | 'feedback'
+  | 'operation-log'
+  | 'suggested-ops'
+  | 'whats-new'
 
 type Patch<T> = Partial<T> | undefined
 
@@ -581,6 +590,13 @@ export function buildStoreSeed(dialogId: StoreSeededDialogId, stateId: string): 
       return seedFrom(feedbackFlow, feedbackFixtures[stateId], () => feedbackFlow.open)
     case 'operation-log':
       return seedFrom(operationLogState, operationLogFixtures[stateId], () => operationLogState.open)
+    case 'suggested-ops':
+      // A builder per state: the reviews it seeds are live maps the dialog mutates.
+      return seedFrom(
+        suggestedOpsState,
+        stateId in suggestedOpsFixtures ? suggestedOpsFixtures[stateId]() : undefined,
+        () => suggestedOpsState.open,
+      )
     case 'whats-new':
       return seedFrom(whatsNewState, whatsNewFixtures[stateId], () => whatsNewState.open)
   }

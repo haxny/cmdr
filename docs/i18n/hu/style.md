@@ -219,9 +219,9 @@ CLDR categories: `one`, `other` (verified with `new Intl.PluralRules('hu')`; mat
   ❌ Ne írd vissza az `Az Ask Cmdr…` alakot a mondatokba: ott már nem a panelről van szó, hanem arról, amit az app
   csinál.
 - **Ahol az angol `the AI`-t mond, a magyar `az AI`, nem `a Cmdr`.** A `suggestedOps.*` család (`Az AI indoka`,
-  `Ezeket az AI javasolta`) szándékosan a modellt nevezi meg, nem az appot: a szomszédos `suggestedOps.cmdrFacts`
-  (`Amit a Cmdr tud`) épp az ellentétét állítja (amit az app ELLENŐRZÖTT), és a kettőnek különböző alanyt kell kapnia,
-  különben elveszik a kulcs egész értelme.
+  `Ezeket az AI javasolta`) szándékosan a modellt nevezi meg, nem az appot: a mellette álló, Cmdr-alanyú kulcsok
+  (például `suggestedOps.reversible.moveBack`) épp az ellentétét állítják (amit az app ELLENŐRZÖTT), és a kettőnek
+  különböző alanyt kell kapnia, különben elveszik a párosítás egész értelme.
 - **A `könyvtár` a katalógusban a `directory` szava, ezért egy „library” sosem lehet puszta `könyvtár`.** Az Ollama
   modellgyűjteményére ezért `modellkönyvtár` áll (`onboarding.cloudSetup.step.ollamaModel`): a `modell-` előtag oldja
   fel az ütközést, és egy fájlkezelőben a puszta „böngészd a könyvtárat” tényleg mappaböngészésnek olvasódik. Ugyanez a

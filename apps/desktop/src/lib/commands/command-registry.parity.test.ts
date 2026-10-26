@@ -69,7 +69,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'help.whatsNew': 'What’s new',
   'feedback.send': 'Send feedback',
   'log.operationLog': 'Operation log',
-  'suggestedOps.show': 'Suggested ops',
+  'suggestedOps.show': 'AI suggestions',
   'askCmdr.toggle': 'Ask Cmdr',
   'search.open': 'Search files',
   'nav.goToPath': 'Go to folder…',

@@ -1,0 +1,403 @@
+<script lang="ts">
+    // One group's file list: a `ColumnList` over a windowed source, drawn right away.
+    //
+    // The list starts at `INITIAL_ROWS` and grows on "Show more" / "Show all"; past
+    // `MAX_VISIBLE_ROWS` it stops growing and scrolls, still fetching only the rows it draws,
+    // because a group of 60,000 ops is legitimate. Size and Last modified are what the disk says
+    // NOW; a value that moved since the suggestion shows both, a file that's gone says so, and
+    // one Cmdr couldn't check falls back to the creation snapshot, labelled as that.
+    import ColumnList from '#lib/ui/ColumnList.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
+    import Size from '#lib/ui/Size.svelte'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import {
+        columnListProps,
+        type ColumnListCellContext,
+        type ColumnListColumn,
+        type ColumnListWindowedSource,
+    } from '#lib/ui/column-list-types.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatByteSize } from '#lib/units/index.js'
+    import { formatDateTime, getUseAppIconsForDocuments } from '#lib/settings/reactive-settings.svelte.js'
+    import { getCachedIcon, iconCacheVersion, prefetchIcons } from '#lib/icon-cache.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import type { SuggestedGroupView, SuggestedOpView } from '#lib/tauri-commands/index.js'
+    import {
+        SHOW_MORE_STEP,
+        ensureOpWindow,
+        opAt,
+        reviewOf,
+        showAllRows,
+        showMoreRows,
+        showRange,
+        shownRows,
+        toggleOp,
+        totalRows,
+    } from './suggested-ops-trigger.svelte'
+    import { fileIconId, fileName, parentFolder, rowFacts } from './suggested-ops-copy'
+
+    /** The list grows with "Show more" up to this many rows, then scrolls. */
+    const MAX_VISIBLE_ROWS = 20
+
+    interface Props {
+        group: SuggestedGroupView
+    }
+
+    const { group }: Props = $props()
+
+    const review = $derived(reviewOf(group.groupId))
+    const shown = $derived(shownRows(group))
+    const total = $derived(totalRows(group))
+    const remaining = $derived(Math.max(0, total - shown))
+
+    /** The ColumnList row and header heights, in its own terms: one line of the dialog type plus
+     *  the row's (or the header's) vertical padding. The header adds its 1px rule, the frame 2px. */
+    const ROW_HEIGHT = '(var(--font-size-md) * var(--font-line-height-normal) + 2 * var(--spacing-xxs))'
+    const HEADER_HEIGHT = '(var(--font-size-md) * var(--font-line-height-normal) + 2 * var(--spacing-xs) + 1px)'
+    /** Exactly as tall as the rows shown, up to `MAX_VISIBLE_ROWS`; past that the list scrolls. */
+    const frameHeight = $derived(
+        `calc(${HEADER_HEIGHT} + ${String(Math.max(1, Math.min(shown, MAX_VISIBLE_ROWS)))} * ${ROW_HEIGHT} + 2px)`,
+    )
+    /** Every op shares one folder, named once in the group's facts, so rows show the name alone. */
+    const sharedFolder = $derived(group.sourceFolder !== null)
+
+    const source: ColumnListWindowedSource<SuggestedOpView> = {
+        get count() {
+            return shownRows(group)
+        },
+        getRow: (index) => opAt(group.groupId, index) ?? undefined,
+        onRangeChange: ({ start, end }) => {
+            void showRange(group.groupId, start, end)
+        },
+    }
+
+    // The icons the held page needs, fetched once per page through the shared cache.
+    $effect(() => {
+        const ops = review?.window?.ops
+        if (!ops || ops.length === 0) return
+        void prefetchIcons(
+            ops.map((op) => fileIconId(op.sourcePath)),
+            getUseAppIconsForDocuments(),
+        )
+    })
+
+    function iconUrl(path: string): string | undefined {
+        dependOn($iconCacheVersion)
+        return getCachedIcon(fileIconId(path))
+    }
+
+    const columns = $derived<ColumnListColumn<SuggestedOpView>[]>([
+        {
+            id: 'include',
+            label: tString('suggestedOps.columnInclude'),
+            labelHidden: true,
+            width: { kind: 'fixed', px: 16 },
+            clip: false,
+            cell: includeCell,
+        },
+        { id: 'icon', label: '', width: { kind: 'fixed', px: 16 }, clip: false, cell: iconCell },
+        {
+            id: 'name',
+            label: tString('suggestedOps.columnName'),
+            width: { kind: 'share', minPx: 160 },
+            emphasis: true,
+            cell: nameCell,
+        },
+        ...(sharedFolder
+            ? []
+            : [
+                  {
+                      id: 'folder',
+                      label: tString('suggestedOps.columnFolder'),
+                      width: { kind: 'share', minPx: 120 },
+                      tone: 'tertiary',
+                      cell: folderCell,
+                  } satisfies ColumnListColumn<SuggestedOpView>,
+              ]),
+        ...(group.verb === 'rename'
+            ? [
+                  {
+                      id: 'new-name',
+                      label: tString('suggestedOps.columnNewName'),
+                      width: { kind: 'share', minPx: 120 },
+                      cell: newNameCell,
+                  } satisfies ColumnListColumn<SuggestedOpView>,
+              ]
+            : []),
+        {
+            id: 'size',
+            label: tString('suggestedOps.columnSize'),
+            width: { kind: 'fixed', ch: 12 },
+            align: 'end',
+            tone: 'secondary',
+            clip: false,
+            cell: sizeCell,
+        },
+        {
+            id: 'modified',
+            label: tString('suggestedOps.columnModified'),
+            width: { kind: 'fixed', ch: 19 },
+            align: 'end',
+            tone: 'tertiary',
+            clip: false,
+            cell: modifiedCell,
+        },
+    ])
+
+    function factsOf(op: SuggestedOpView) {
+        return rowFacts(op, review?.liveFacts.get(op.opId))
+    }
+
+    function sizeText(bytes: number | null): string {
+        return bytes === null ? tString('suggestedOps.factUnknown') : formatByteSize(bytes)
+    }
+
+    function dateText(seconds: number | null): string {
+        return seconds === null ? tString('suggestedOps.factUnknown') : formatDateTime(seconds)
+    }
+</script>
+
+{#snippet includeCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    <span class="include">
+        <Checkbox
+            checked={!review?.deselected.has(row.opId)}
+            onCheckedChange={() => {
+                toggleOp(group.groupId, row.opId)
+            }}
+            ariaLabel={tString('suggestedOps.includeFile', { name: fileName(row.sourcePath) })}
+        />
+    </span>
+{/snippet}
+
+{#snippet iconCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    <span class="icon-box">
+        {#if iconUrl(row.sourcePath)}
+            <img class="icon-img" src={iconUrl(row.sourcePath)} alt="" width="16" height="16" />
+        {:else}
+            <span class="icon-fallback"><Icon name="file" size={16} aria-hidden="true" /></span>
+        {/if}
+    </span>
+{/snippet}
+
+<!-- Mid-truncating, so the extension stays visible; the full name rides the tooltip. -->
+{#snippet nameCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    <span
+        class="shortened"
+        use:useShortenMiddle={{
+            text: fileName(row.sourcePath),
+            preferBreakAt: '.',
+            startRatio: 0.7,
+            tooltipWhenTruncated: true,
+        }}
+    ></span>
+{/snippet}
+
+{#snippet folderCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    <span
+        class="shortened"
+        use:useShortenMiddle={{
+            text: parentFolder(row.sourcePath),
+            preferBreakAt: '/',
+            startRatio: 0.3,
+            tooltipWhenTruncated: true,
+        }}
+    ></span>
+{/snippet}
+
+{#snippet newNameCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    <span
+        class="shortened"
+        use:useShortenMiddle={{ text: row.newName ?? '', preferBreakAt: '.', startRatio: 0.7, tooltipWhenTruncated: true }}
+    ></span>
+{/snippet}
+
+{#snippet sizeCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    {@const facts = factsOf(row)}
+    <span class="fact">
+        {#if facts.kind === 'live'}
+            {#if facts.sizeChanged}
+                <span class="changed-glyph">
+                    <StatusGlyph
+                        name="triangle-alert"
+                        label={tString('suggestedOps.factChanged')}
+                        tooltip={tString('suggestedOps.factChangedTooltip', {
+                            then: sizeText(facts.snapshotSize),
+                            now: sizeText(facts.size),
+                        })}
+                    />
+                </span>
+            {/if}
+            {#if facts.size !== null}<Size bytes={facts.size} />{/if}
+        {:else if facts.kind === 'missing'}
+            <span class="missing">{tString('suggestedOps.fileMissing')}</span>
+        {:else}
+            <StatusGlyph
+                name="history"
+                label={tString('suggestedOps.snapshotOnly')}
+                tooltip={tString('suggestedOps.snapshotOnlyTooltip')}
+            />
+            <span class="snapshot">{sizeText(facts.size)}</span>
+        {/if}
+    </span>
+{/snippet}
+
+{#snippet modifiedCell({ row }: ColumnListCellContext<SuggestedOpView>)}
+    {@const facts = factsOf(row)}
+    <span class="fact">
+        {#if facts.kind === 'live'}
+            {#if facts.modifiedChanged}
+                <span class="changed-glyph">
+                    <StatusGlyph
+                        name="triangle-alert"
+                        label={tString('suggestedOps.factChanged')}
+                        tooltip={tString('suggestedOps.factChangedTooltip', {
+                            then: dateText(facts.snapshotModified),
+                            now: dateText(facts.modified),
+                        })}
+                    />
+                </span>
+            {/if}
+            <DateLabel modifiedAt={facts.modified} />
+        {:else if facts.kind === 'snapshot'}
+            <StatusGlyph
+                name="history"
+                label={tString('suggestedOps.snapshotOnly')}
+                tooltip={tString('suggestedOps.snapshotOnlyTooltip')}
+            />
+            <span class="snapshot">{dateText(facts.modified)}</span>
+        {/if}
+    </span>
+{/snippet}
+
+{#if review?.windowError}
+    <!-- The list only asks for rows again when its range moves, so a read that didn't come
+         back needs its own way to ask. -->
+    <div class="files-problem" role="alert">
+        <span>{tString('suggestedOps.filesLoadFailed')}</span>
+        <Button size="mini" onclick={() => void ensureOpWindow(group.groupId, review.range.start)}>
+            {tString('suggestedOps.retryFiles')}
+        </Button>
+    </div>
+{/if}
+
+{#if review?.sourceUnreachable}
+    <p class="source-note" role="status">
+        {tString(
+            review.sourceUnreachable === 'notConnected' ? 'suggestedOps.sourceNotConnected' : 'suggestedOps.sourceGone',
+        )}
+    </p>
+{/if}
+
+<div class="files" style:height={frameHeight}>
+    <ColumnList
+        {...columnListProps({
+            columns,
+            rows: source,
+            semantics: 'table',
+            ariaLabel: tString('suggestedOps.filesLabel', { name: group.displayName }),
+            rowClass: 'op-row',
+        })}
+    />
+</div>
+
+{#if remaining > 0}
+    <div class="more">
+        <LinkButton onclick={() => { showMoreRows(group.groupId) }}>
+            {tString('suggestedOps.showMore', {
+                countText: formatInteger(Math.min(SHOW_MORE_STEP, remaining)),
+                count: Math.min(SHOW_MORE_STEP, remaining),
+            })}
+        </LinkButton>
+        {#if remaining > SHOW_MORE_STEP}
+            <LinkButton onclick={() => { showAllRows(group.groupId) }}>
+                {tString('suggestedOps.showAll', { countText: formatInteger(total), count: total })}
+            </LinkButton>
+        {/if}
+    </div>
+{/if}
+
+<style>
+    /* Its height is `frameHeight`, inline: it depends on how many rows show. */
+    .files {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-md);
+    }
+
+    .source-note {
+        margin-bottom: var(--spacing-xs);
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    .more {
+        display: flex;
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-xs);
+        font-size: var(--font-size-sm);
+    }
+
+    .files-problem {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
+        color: var(--color-error-text);
+        font-size: var(--font-size-sm);
+    }
+
+    .include,
+    .icon-box {
+        display: flex;
+        align-items: center;
+    }
+
+    .icon-img {
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+    }
+
+    .icon-fallback {
+        display: inline-flex;
+        color: var(--color-text-secondary);
+    }
+
+    /* A block, so `useShortenMiddle` reads the track's width rather than its own text's. */
+    .shortened {
+        display: block;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .fact {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--spacing-xxs);
+        width: 100%;
+        white-space: nowrap;
+    }
+
+    /* The glyph takes the warning color: a value that moved is the thing to look at. */
+    .changed-glyph {
+        display: inline-flex;
+        color: var(--color-warning-text);
+    }
+
+    .missing {
+        color: var(--color-warning-text);
+    }
+
+    .snapshot {
+        color: var(--color-text-tertiary);
+    }
+</style>

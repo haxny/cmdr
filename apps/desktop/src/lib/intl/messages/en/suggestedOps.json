@@ -1,11 +1,15 @@
 {
-  "suggestedOps.title": "Suggested ops",
+  "suggestedOps.title": "AI suggestions",
   "@suggestedOps.title": {
-    "description": "Title of the dialog listing the file operations Ask Cmdr has suggested, and the matching View-menu item."
+    "description": "Title of the dialog listing the file actions (move, trash, rename, and so on) Ask Cmdr has suggested for the user to approve or reject."
   },
   "suggestedOps.description": "The AI suggested these. Nothing runs until you approve it.",
   "@suggestedOps.description": {
     "description": "Line under the dialog title. Makes clear that opening the dialog changes nothing by itself."
+  },
+  "suggestedOps.sweepMeta": "Suggested {date}",
+  "@suggestedOps.sweepMeta": {
+    "description": "Line above a batch of suggestions saying when the AI made them. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-26 12:22\"."
   },
   "suggestedOps.empty": "Nothing is waiting for you right now.",
   "@suggestedOps.empty": {
@@ -17,138 +21,254 @@
   },
   "suggestedOps.agentReason": "The AI’s reason",
   "@suggestedOps.agentReason": {
-    "description": "Label above the agent own words for a group. Load-bearing: it marks the text as the agent claim rather than as something Cmdr verified, so it must stay clearly distinct from its neighbour suggestedOps.cmdrFacts (\"What Cmdr knows\"). Keep the two subjects different: the AI says this, Cmdr checked that. The apostrophe is U+2019."
+    "description": "Label above the AI's own words explaining a suggestion. Load-bearing: it marks the text below it as the AI's claim rather than as something Cmdr checked. The facts Cmdr checked itself (folders, sizes, dates) sit beside it without a label. The apostrophe is U+2019."
   },
-  "suggestedOps.cmdrFacts": "What Cmdr knows",
-  "@suggestedOps.cmdrFacts": {
-    "description": "Label above the deterministic file facts shown beside the agent reason, so a claim can be checked against something the agent could not invent."
-  },
-  "suggestedOps.fileCount": "{count, plural, one {# file} other {# files}}",
+  "suggestedOps.fileCount": "{countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.fileCount": {
-    "description": "How many files a suggestion group covers."
+    "description": "How many files a suggestion group covers, beside the group's title."
   },
-  "suggestedOps.approve": "Approve",
-  "@suggestedOps.approve": {
-    "description": "Button that queues one group operations."
+  "suggestedOps.approve.move": "Move {countText} {count, plural, one {file} other {files}}",
+  "@suggestedOps.approve.move": {
+    "description": "Primary button on a suggestion that moves files to another folder. Pressing it starts the move. {countText} is how many files would run (the ones the user left ticked), already formatted."
+  },
+  "suggestedOps.approve.copy": "Copy {countText} {count, plural, one {file} other {files}}",
+  "@suggestedOps.approve.copy": {
+    "description": "Primary button on a suggestion that copies files to another folder. Pressing it starts the copy. {countText} is how many files would run, already formatted."
+  },
+  "suggestedOps.approve.trash": "Move {countText} {count, plural, one {file} other {files}} to Trash",
+  "@suggestedOps.approve.trash": {
+    "description": "Primary button on a suggestion that moves files to the Trash. Use the same name for the Trash as the macOS Finder does in your language. {countText} is how many files would run, already formatted."
+  },
+  "suggestedOps.approve.delete": "Delete {countText} {count, plural, one {file} other {files}}",
+  "@suggestedOps.approve.delete": {
+    "description": "Primary button on a suggestion that deletes files permanently (not to the Trash). {countText} is how many files would run, already formatted."
+  },
+  "suggestedOps.approve.rename": "Rename {countText} {count, plural, one {file} other {files}}",
+  "@suggestedOps.approve.rename": {
+    "description": "Primary button on a suggestion that renames files in place. {countText} is how many files would run, already formatted."
+  },
+  "suggestedOps.approve.compress": "Compress {countText} {count, plural, one {file} other {files}}",
+  "@suggestedOps.approve.compress": {
+    "description": "Primary button on a suggestion that packs files into one archive (a zip). {countText} is how many files would go in, already formatted."
+  },
+  "suggestedOps.approve.extract": "Extract {countText} {count, plural, one {archive} other {archives}}",
+  "@suggestedOps.approve.extract": {
+    "description": "Primary button on a suggestion that unpacks archives (zip files and the like) into a folder. {countText} is how many archives would be unpacked, already formatted."
   },
   "suggestedOps.reject": "Reject",
   "@suggestedOps.reject": {
-    "description": "Button that turns one group down."
+    "description": "Button that turns one suggestion down. Nothing happens to the files."
   },
-  "suggestedOps.approveCount": "Approve {count, plural, one {# file} other {# files}}",
-  "@suggestedOps.approveCount": {
-    "description": "Approve button when the user turned some rows off, so the count says what would actually run."
+  "suggestedOps.facts.from": "From",
+  "@suggestedOps.facts.from": {
+    "description": "Short label before the folder the suggested files are in now, in the fact lines under a suggestion's title. Followed by a folder path."
   },
-  "suggestedOps.review": "Review the files",
-  "@suggestedOps.review": {
-    "description": "Button that expands a group to show the files it would touch."
+  "suggestedOps.facts.to": "To",
+  "@suggestedOps.facts.to": {
+    "description": "Short label before where the files would go (a drive name and a folder path, or the Trash), in the fact lines under a suggestion's title."
   },
-  "suggestedOps.collapse": "Hide the files",
-  "@suggestedOps.collapse": {
-    "description": "Button that collapses an expanded group file list."
+  "suggestedOps.facts.folder": "Folder",
+  "@suggestedOps.facts.folder": {
+    "description": "Short label before the folder whose files a rename suggestion would rename in place. Followed by a folder path."
   },
-  "suggestedOps.reversibleRestoreMove": "You can undo this",
-  "@suggestedOps.reversibleRestoreMove": {
-    "description": "Marker on a group whose files can be put back where they were (move, trash, rename)."
+  "suggestedOps.facts.archive": "Archive",
+  "@suggestedOps.facts.archive": {
+    "description": "Short label before the archive file (for example a .zip) a compress suggestion would create. Followed by a drive name and a file path."
   },
-  "suggestedOps.reversibleDeleteWritten": "Undo by deleting what it writes",
-  "@suggestedOps.reversibleDeleteWritten": {
-    "description": "Marker on a group that only adds files (copy, extract, a new archive), so undoing means removing what it created."
+  "suggestedOps.facts.trash": "The Trash",
+  "@suggestedOps.facts.trash": {
+    "description": "Shown after the \"To\" label (suggestedOps.facts.to) when the suggestion moves files to the Trash. Use the same name for the Trash as the macOS Finder does in your language."
   },
-  "suggestedOps.irreversible": "This can’t be undone",
-  "@suggestedOps.irreversible": {
-    "description": "Marker on a permanent delete, or a compress that overwrites an existing archive. Disclosure only: Cmdr never refuses the group over it."
+  "suggestedOps.facts.severalFolders": "Several folders",
+  "@suggestedOps.facts.severalFolders": {
+    "description": "Shown after the \"From\" label (suggestedOps.facts.from) when the suggested files sit in different folders, so there's no one folder to name. Each file's folder then shows in the list."
+  },
+  "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Trash",
+  "@suggestedOps.reversible.trash": {
+    "description": "Pill on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does."
+  },
+  "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
+  "@suggestedOps.reversible.moveBack": {
+    "description": "Pill on a suggestion that moves files, saying the user can take it back because Cmdr can move the files back where they were. {count} only picks \"it\" or \"them\"."
+  },
+  "suggestedOps.reversible.renameBack": "You can undo this: Cmdr can change the {count, plural, one {name} other {names}} back",
+  "@suggestedOps.reversible.renameBack": {
+    "description": "Pill on a rename suggestion, saying the user can take it back because Cmdr can restore the old names. {count} only picks \"name\" or \"names\"."
+  },
+  "suggestedOps.reversible.removeCopies": "You can undo this: Cmdr deletes the copies",
+  "@suggestedOps.reversible.removeCopies": {
+    "description": "Pill on a copy suggestion, saying the user can take it back: undoing deletes the copies it made, and the originals were never touched."
+  },
+  "suggestedOps.reversible.removeArchive": "You can undo this: Cmdr deletes the new archive",
+  "@suggestedOps.reversible.removeArchive": {
+    "description": "Pill on a compress suggestion that creates a new archive file, saying the user can take it back: undoing deletes the archive, and the original files were never touched."
+  },
+  "suggestedOps.reversible.removeExtracted": "You can undo this: Cmdr deletes what it extracted",
+  "@suggestedOps.reversible.removeExtracted": {
+    "description": "Pill on an extract suggestion, saying the user can take it back: undoing deletes the unpacked files, and the archives themselves were never touched."
+  },
+  "suggestedOps.irreversible.delete": "This can’t be undone: the files are deleted for good",
+  "@suggestedOps.irreversible.delete": {
+    "description": "Warning pill on a suggestion that deletes files permanently, skipping the Trash. Disclosure only: the user can still approve it."
+  },
+  "suggestedOps.irreversible.noTrash": "This can’t be undone: this drive has no Trash",
+  "@suggestedOps.irreversible.noTrash": {
+    "description": "Warning pill on a suggestion to move files to the Trash when the files are on a drive or server that has no Trash, so they'd be gone for good. Use the same name for the Trash as the macOS Finder does."
+  },
+  "suggestedOps.irreversible.overwrite": "This can’t be undone: it replaces an existing archive",
+  "@suggestedOps.irreversible.overwrite": {
+    "description": "Warning pill on a compress suggestion whose archive file already exists, so approving overwrites it and the old archive is gone."
+  },
+  "suggestedOps.irreversible.other": "This can’t be undone",
+  "@suggestedOps.irreversible.other": {
+    "description": "Warning pill on a suggestion nothing can take back, when there's no more specific reason to give. Disclosure only: the user can still approve it."
   },
   "suggestedOps.folderWillBeCreated": "Cmdr will create this folder",
   "@suggestedOps.folderWillBeCreated": {
-    "description": "Marker on a group whose target folder does not exist yet."
+    "description": "Pill on a suggestion whose target folder doesn't exist yet."
   },
   "suggestedOps.folderWillBeCreatedTooltip": "The target folder is not there yet. Approving creates it, exactly as it would if you started the move yourself.",
   "@suggestedOps.folderWillBeCreatedTooltip": {
-    "description": "Tooltip explaining the folder-creation marker."
+    "description": "Tooltip explaining the folder-creation pill."
   },
   "suggestedOps.destinationUnknown": "Cmdr couldn’t check the target folder",
   "@suggestedOps.destinationUnknown": {
-    "description": "Shown when the destination volume did not answer in time, so whether the folder exists is genuinely unknown rather than assumed."
+    "description": "Pill shown when the destination drive or server didn't answer in time, so whether the folder exists is genuinely unknown rather than assumed."
+  },
+  "suggestedOps.destinationNotConnected": "The target isn’t connected",
+  "@suggestedOps.destinationNotConnected": {
+    "description": "Pill on a suggestion whose target is on a saved server, share, or phone that Cmdr hasn’t connected to yet, so it couldn’t look at the folder. The tooltip is suggestedOps.destinationNotConnectedTooltip."
+  },
+  "suggestedOps.destinationNotConnectedTooltip": "Cmdr hasn’t connected to this drive or server yet. Approving won’t start until it’s connected, the same as when you move files there yourself.",
+  "@suggestedOps.destinationNotConnectedTooltip": {
+    "description": "Tooltip on the pill saying a suggestion’s target drive or server isn’t connected (suggestedOps.destinationNotConnected)."
   },
   "suggestedOps.fromPattern": "Matched by a pattern",
   "@suggestedOps.fromPattern": {
-    "description": "Marker on a group a selector produced, so the user knows the list was matched rather than named one by one."
+    "description": "Pill on a suggestion whose file list a pattern produced, so the user knows the list was matched rather than named one by one."
   },
   "suggestedOps.changedUnderReview": "The AI changed this suggestion while you were reading it.",
   "@suggestedOps.changedUnderReview": {
-    "description": "Notice shown when the agent amended the open group. The rows on screen stay put until the user asks for the new version."
+    "description": "Notice shown when the agent amended a suggestion the user is looking at. The rows on screen stay put until the user asks for the new version."
   },
   "suggestedOps.showNewVersion": "Show the new version",
   "@suggestedOps.showNewVersion": {
-    "description": "Button that reloads a group the agent changed while the user was reading it."
+    "description": "Button that reloads a suggestion the agent changed while the user was reading it."
   },
-  "suggestedOps.columnFile": "File",
-  "@suggestedOps.columnFile": {
-    "description": "Column heading for the file each proposed operation would touch."
+  "suggestedOps.filesLabel": "Files in “{name}”",
+  "@suggestedOps.filesLabel": {
+    "description": "Accessible name of one suggestion's file list, read by screen readers. {name} is the suggestion's title. Use your language's quotation marks."
+  },
+  "suggestedOps.columnInclude": "Include",
+  "@suggestedOps.columnInclude": {
+    "description": "Screen-reader-only heading of the tick-box column in a suggestion's file list. A ticked file is part of the approval."
+  },
+  "suggestedOps.columnName": "Name",
+  "@suggestedOps.columnName": {
+    "description": "Column heading for the name of each file a suggestion would touch."
+  },
+  "suggestedOps.columnFolder": "Folder",
+  "@suggestedOps.columnFolder": {
+    "description": "Column heading for the folder each file is in. Only shown when a suggestion's files sit in different folders."
   },
   "suggestedOps.columnNewName": "New name",
   "@suggestedOps.columnNewName": {
     "description": "Column heading for the name a rename would give the file."
   },
-  "suggestedOps.columnSize": "Size when suggested",
+  "suggestedOps.columnSize": "Size",
   "@suggestedOps.columnSize": {
-    "description": "Column heading for the size Cmdr index held when the suggestion was made. Says when suggested because relaying it as current would be a claim nothing can back."
+    "description": "Column heading for each file's size as Cmdr finds it on disk now."
   },
-  "suggestedOps.columnChanged": "Last changed",
-  "@suggestedOps.columnChanged": {
-    "description": "Column heading for the modification date Cmdr index held when the suggestion was made."
+  "suggestedOps.columnModified": "Last modified",
+  "@suggestedOps.columnModified": {
+    "description": "Column heading for when each file was last changed, as Cmdr finds it on disk now."
   },
-  "suggestedOps.noIndexData": "Not in the index",
-  "@suggestedOps.noIndexData": {
-    "description": "Shown instead of a size or date when Cmdr index held nothing for a file. Never a zero, which would read as an empty file."
+  "suggestedOps.factChanged": "Changed since the suggestion",
+  "@suggestedOps.factChanged": {
+    "description": "Screen-reader name of a small warning glyph beside a file's size or date when the value on disk now differs from what it was when the AI made the suggestion. The tooltip (suggestedOps.factChangedTooltip) shows both values."
   },
-  "suggestedOps.includeFile": "Include this file",
+  "suggestedOps.factChangedTooltip": "When suggested: {then} / Now: {now}",
+  "@suggestedOps.factChangedTooltip": {
+    "description": "Tooltip on the warning glyph beside a file's size or date that changed since the AI made the suggestion. {then} and {now} are both sizes (like \"1.2 MB\") or both dates, already formatted."
+  },
+  "suggestedOps.fileMissing": "Moved or deleted",
+  "@suggestedOps.fileMissing": {
+    "description": "Shown in a file's Size column when the file isn't where the suggestion says any more: something moved or deleted it since. Approving skips it."
+  },
+  "suggestedOps.snapshotOnly": "From when the AI suggested this",
+  "@suggestedOps.snapshotOnly": {
+    "description": "Screen-reader name of a small clock glyph beside a file's size or date when Cmdr couldn't look at the file just now, so the value is what it was when the AI made the suggestion. The tooltip is suggestedOps.snapshotOnlyTooltip."
+  },
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr couldn’t check this file just now, so this is what it was when the AI suggested it.",
+  "@suggestedOps.snapshotOnlyTooltip": {
+    "description": "Tooltip on the clock glyph beside a file's size or date that Cmdr couldn't check live, explaining the value is from suggestion time."
+  },
+  "suggestedOps.sourceNotConnected": "Cmdr isn’t connected to the drive these files are on, so their sizes and dates are from when the AI suggested this.",
+  "@suggestedOps.sourceNotConnected": {
+    "description": "Note above a suggestion's file list when the files sit on a saved server, share, or phone Cmdr hasn't connected to, so it couldn't look at them now. The sizes and dates shown are the ones recorded when the AI made the suggestion."
+  },
+  "suggestedOps.sourceGone": "The drive these files were on isn’t here any more, so their sizes and dates are from when the AI suggested this.",
+  "@suggestedOps.sourceGone": {
+    "description": "Note above a suggestion's file list when the drive or server holding the files was disconnected or removed, so Cmdr couldn't look at them now. The sizes and dates shown are the ones recorded when the AI made the suggestion."
+  },
+  "suggestedOps.factUnknown": "Unknown",
+  "@suggestedOps.factUnknown": {
+    "description": "Shown in a file's Size or Last modified column when Cmdr has no value at all: it couldn't check the file now and recorded nothing when the AI made the suggestion. Never a zero, which would read as an empty file."
+  },
+  "suggestedOps.includeFile": "Include {name}",
   "@suggestedOps.includeFile": {
-    "description": "Accessible label for the per-file checkbox in a suggestion group."
+    "description": "Screen-reader name of the tick box on each file row. Ticked means the file is part of the approval. {name} is the file's name."
+  },
+  "suggestedOps.showMore": "Show {countText} more",
+  "@suggestedOps.showMore": {
+    "description": "Button under a suggestion's file list that shows the next few files. {countText} is how many it adds, already formatted."
+  },
+  "suggestedOps.showAll": "Show all {countText}",
+  "@suggestedOps.showAll": {
+    "description": "Button under a suggestion's file list that shows every file. {countText} is the total number of files, already formatted (it can be tens of thousands)."
   },
   "suggestedOps.loadingFiles": "Loading the files…",
   "@suggestedOps.loadingFiles": {
-    "description": "Placeholder while a window of the file list is being read."
+    "description": "Shown while the suggestions or a page of a file list are being read."
   },
   "suggestedOps.filesLoadFailed": "Cmdr couldn’t load these files.",
   "@suggestedOps.filesLoadFailed": {
-    "description": "Shown above the file list of an expanded suggestion group when reading its files didn't work. It takes the place of the per-row loading placeholder, which would otherwise wait forever. The button beside it is suggestedOps.retryFiles."
+    "description": "Shown above a suggestion's file list when reading its files didn't work. It takes the place of the per-row loading placeholder, which would otherwise wait forever. The button beside it is suggestedOps.retryFiles."
   },
   "suggestedOps.retryFiles": "Try again",
   "@suggestedOps.retryFiles": {
-    "description": "Button beside suggestedOps.filesLoadFailed that reads the group's files again. A short control label."
+    "description": "Button beside suggestedOps.filesLoadFailed that reads the suggestion's files again. A short control label."
   },
   "suggestedOps.decisionNotRecorded": "Cmdr couldn’t save your answer. Try again.",
   "@suggestedOps.decisionNotRecorded": {
-    "description": "Notice at the top of the Suggested ops dialog when pressing Approve or Reject didn't reach the suggestion store, so nothing changed. The list has just been reloaded, so every group shows as it really stands, and the person presses the same button again."
+    "description": "Notice at the top of the AI suggestions dialog when pressing the approve button or Reject didn't reach the suggestion store, so nothing changed. The list has just been reloaded, so every suggestion shows as it really stands, and the person presses the same button again."
   },
   "suggestedOps.approvalUnsure": "Cmdr isn’t sure the approval went through. Check the operation queue before you approve it again.",
   "@suggestedOps.approvalUnsure": {
-    "description": "Notice at the top of the Suggested ops dialog when an approval stopped answering partway, so whether its files started moving is unknown. \"Operation queue\" names the queue window by its title (queue.windowTitle); keep the two matching. The point is to stop the person running the same files twice."
+    "description": "Notice at the top of the AI suggestions dialog when an approval stopped answering partway, so whether its files started moving is unknown. \"Operation queue\" names the queue window by its title (queue.windowTitle); keep the two matching. The point is to stop the person running the same files twice."
   },
   "suggestedOps.refusal.label": "Why this didn’t start",
   "@suggestedOps.refusal.label": {
-    "description": "Small label above the reason shown under a suggestion group whose approval didn't start. The group is back on the list as waiting, nothing ran, and the person can approve or reject it again. The reason itself sits below this label."
+    "description": "Small label above the reason shown under a suggestion whose approval didn't start. The suggestion is back on the list as waiting, nothing ran, and the person can approve or reject it again. The reason itself sits below this label."
   },
   "suggestedOps.refusal.nothingToRun.message": "Cmdr couldn’t read any of these files when you approved, so nothing ran.",
   "@suggestedOps.refusal.nothingToRun.message": {
-    "description": "Reason shown under a suggestion group whose approval didn't start because every file it names was gone or unreadable at that moment. The group is back on the list, waiting for an answer. Followed by suggestedOps.refusal.nothingToRun.suggestion."
+    "description": "Reason shown under a suggestion whose approval didn't start because every file it names was gone or unreadable at that moment. The suggestion is back on the list, waiting for an answer. Followed by suggestedOps.refusal.nothingToRun.suggestion."
   },
   "suggestedOps.refusal.nothingToRun.suggestion": "Check that they’re still there, then approve it again, or reject it.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.nothingToRun.message. \"It\" is the suggestion group; Approve and Reject are the buttons on it."
+    "description": "What to do next, under suggestedOps.refusal.nothingToRun.message. \"It\" is the suggestion; the approve button and Reject are on it."
   },
   "suggestedOps.refusal.couldNotStart.message": "Cmdr couldn’t turn this suggestion into an operation, so nothing ran.",
   "@suggestedOps.refusal.couldNotStart.message": {
-    "description": "Reason shown under a suggestion group whose approval didn't start because the stored suggestion itself was incomplete (rare, an internal inconsistency). The group is back on the list, waiting for an answer. Followed by suggestedOps.refusal.couldNotStart.suggestion."
+    "description": "Reason shown under a suggestion whose approval didn't start because the stored suggestion itself was incomplete (rare, an internal inconsistency). The suggestion is back on the list, waiting for an answer. Followed by suggestedOps.refusal.couldNotStart.suggestion."
   },
   "suggestedOps.refusal.couldNotStart.suggestion": "Reject it, and ask the AI to suggest it again.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.couldNotStart.message. \"It\" is the suggestion group; Reject is the button on it, and \"the AI\" is Ask Cmdr, as elsewhere in this dialog."
+    "description": "What to do next, under suggestedOps.refusal.couldNotStart.message. \"It\" is the suggestion; Reject is the button on it, and \"the AI\" is Ask Cmdr, as elsewhere in this dialog."
   },
   "suggestedOps.indicatorTooltip": "AI suggestions are waiting. Click to review them.",
   "@suggestedOps.indicatorTooltip": {
-    "description": "Tooltip and screen-reader text for the status-corner indicator that opens the Suggested ops dialog. The number itself is in the badge beside it, so the sentence doesn't repeat it. A screen reader reads this sentence, then the number (\"AI suggestions are waiting. Click to review them. 3\")."
+    "description": "Tooltip and screen-reader text for the status-corner indicator that opens the AI suggestions dialog. The number itself is in the badge beside it, so the sentence doesn't repeat it. A screen reader reads this sentence, then the number (\"AI suggestions are waiting. Click to review them. 3\")."
   }
 }

@@ -19,45 +19,9 @@
   "@suggestedOps.agentReason": {
     "sourceHash": "e3acab8"
   },
-  "suggestedOps.cmdrFacts": "O que o Cmdr sabe",
-  "@suggestedOps.cmdrFacts": {
-    "sourceHash": "9851c12"
-  },
-  "suggestedOps.fileCount": "{count, plural, one {# arquivo} many {# arquivos} other {# arquivos}}",
-  "@suggestedOps.fileCount": {
-    "sourceHash": "e60f4a2"
-  },
-  "suggestedOps.approve": "Aprovar",
-  "@suggestedOps.approve": {
-    "sourceHash": "6007acb"
-  },
   "suggestedOps.reject": "Recusar",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
-  },
-  "suggestedOps.approveCount": "Aprovar {count, plural, one {# arquivo} many {# arquivos} other {# arquivos}}",
-  "@suggestedOps.approveCount": {
-    "sourceHash": "649d66f"
-  },
-  "suggestedOps.review": "Revisar os arquivos",
-  "@suggestedOps.review": {
-    "sourceHash": "b8d04b3"
-  },
-  "suggestedOps.collapse": "Ocultar os arquivos",
-  "@suggestedOps.collapse": {
-    "sourceHash": "ced24ea"
-  },
-  "suggestedOps.reversibleRestoreMove": "Você pode desfazer isto",
-  "@suggestedOps.reversibleRestoreMove": {
-    "sourceHash": "de7f6ff"
-  },
-  "suggestedOps.reversibleDeleteWritten": "Desfaça apagando o que for gravado",
-  "@suggestedOps.reversibleDeleteWritten": {
-    "sourceHash": "997843a"
-  },
-  "suggestedOps.irreversible": "Esta ação não pode ser desfeita",
-  "@suggestedOps.irreversible": {
-    "sourceHash": "b583829"
   },
   "suggestedOps.folderWillBeCreated": "O Cmdr vai criar esta pasta",
   "@suggestedOps.folderWillBeCreated": {
@@ -83,29 +47,9 @@
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.columnFile": "Arquivo",
-  "@suggestedOps.columnFile": {
-    "sourceHash": "50009ce"
-  },
   "suggestedOps.columnNewName": "Novo nome",
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
-  },
-  "suggestedOps.columnSize": "Tamanho na sugestão",
-  "@suggestedOps.columnSize": {
-    "sourceHash": "20d36bd"
-  },
-  "suggestedOps.columnChanged": "Última alteração",
-  "@suggestedOps.columnChanged": {
-    "sourceHash": "d8c5670"
-  },
-  "suggestedOps.noIndexData": "Não está no índice",
-  "@suggestedOps.noIndexData": {
-    "sourceHash": "104d8cb"
-  },
-  "suggestedOps.includeFile": "Incluir este arquivo",
-  "@suggestedOps.includeFile": {
-    "sourceHash": "71075a7"
   },
   "suggestedOps.loadingFiles": "Carregando os arquivos…",
   "@suggestedOps.loadingFiles": {

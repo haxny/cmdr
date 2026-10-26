@@ -264,7 +264,7 @@ macOS ru names it so (`⇧Пробел`).
 `(глобальное)` everywhere, card `Глобальные сочетания`, so hint and list quote each other. Modified →
 `Отличается от значения по умолчанию` (`Изменено значение…` says the default changed).
 
-## Don't assign a chore (`updates.toast.readyDetail`, `suggestedOps.reversibleDeleteWritten`)
+## Don't assign a chore (`updates.toast.readyDetail`, `suggestedOps.reversible.removeCopies`)
 
 `…или просто откройте Cmdr в следующий раз: обновление установится само.`; `Отмена удалит созданные файлы`, ❌
 `Для отмены удалите…` (deleting by hand).

@@ -1,4 +1,4 @@
-# Suggested ops details
+# AI suggestions details
 
 Pull-tier docs for `lib/suggested-ops/`. Must-knows live in `CLAUDE.md`. The backend service:
 `apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md`.
@@ -9,62 +9,107 @@ We do not trust the agent. A suggestion can be formally valid and factually hall
 tell which, so the dialog's job is not to vet the suggestion; it is to lay it out for the user to decide. Everything
 here follows from that.
 
-**The agent's words and Cmdr's facts sit side by side, each labelled.** "Ask Cmdr's reason" heads the rationale; "What
-Cmdr knows" heads the size and date columns. The juxtaposition is the mechanism: a user can check a claim against
-something the agent could not invent. An unlabelled rationale would read as a finding, which is exactly the failure this
-surface exists to prevent.
+**The AI's words and Cmdr's facts sit side by side, and only the AI's are labelled.** `AgentReason` heads the rationale
+with "The AI's reason" at the text's own size and weight 600, so the label reads as a heading rather than a footnote,
+and the quote is plain (not italic) secondary text behind a left rule. Cmdr's facts go unlabelled: the source folder and
+the full destination (volume name, then path) in a `From` / `To` list right under the header, and the live Size and Last
+modified columns. The juxtaposition is the mechanism: a user checks a claim against something the agent could not
+invent. An unlabelled rationale would read as a finding, which is exactly the failure this surface exists to prevent.
 
-**The per-op numbers are the frozen creation snapshot.** `agent/tools/suggestions/group.rs` made the same call for the
-agent's own read, and the reasoning carries: what the index held when the group froze is checkable, while a size relayed
-as current would be a claim nothing in this dialog can back. The column heading says "Size when suggested" for that
-reason, and a row the index knew nothing about says "Not in the index" rather than rendering a zero, which would read as
-an empty file and a 1970 date.
+**Top to bottom is the order a decision is made in** (`SuggestedOpsGroup.svelte`): title, file count, and the pills that
+change the answer on one header row; the facts; the AI's reason; the file list; then Reject and the action button. A
+sweep opens with a meta line ("Suggested 2026-10-26 12:22", in the user's date format) and the sweep's own reason.
+Groups are separated by a hairline, not boxed: seven stacked bordered cards read as busy, and the file list is already
+the one framed well in each group.
 
-**Reversibility is disclosed, never enforced.** `Reversibility` is a group column, and the marker renders whatever it
-says, including "This can't be undone" on a permanent delete. Refusing the group there would be an agent-specific safety
-behaviour on the execution path, which the guiding principle rules out: an approved op is a user-started op.
+**The button names the action** (`approveKey`): "Move 4 files", "Move 5 files to Trash", "Delete 3 files", "Extract 2
+archives", and the count is what would actually run (`liveOpCount` minus the deselection). It never changes wording with
+the list's state. An irreversible group's button is the `danger` variant, so the one press that can't be taken back
+looks like it.
 
-## Scale: the window, and what the wire carries
+**The undo pill says why** (`reversibilityKey`): "You can undo this: they go to the Trash", "…: Cmdr can move them
+back", "…: Cmdr deletes the copies". The backend decides reversibility per volume, so a trash group on a drive with no
+Trash arrives `irreversible` and reads "This can't be undone: this drive has no Trash". The pills sit beside the count
+as real capsules (`--radius-full`, a hairline, `--font-size-sm`), so they line up with the header text.
 
-A group of 60,000 ops is legitimate, so two things must not grow with it.
+**Reversibility is disclosed, never enforced.** The pill renders whatever `Reversibility` says, including a permanent
+delete. Refusing the group there would be an agent-specific safety behaviour on the execution path, which the guiding
+principle rules out: an approved op is a user-started op.
 
-**The list.** `COUNT(*)` gives the total, the scrollbar sizes itself from that, and only the rows the viewport reaches
-are fetched (`OP_WINDOW_SIZE`, centred on the request so scrolling either way stays inside the window). The scroll math
-is the shared `calculateVirtualWindow` from `file-explorer/views/virtual-scroll.ts`: it is tested, and this dialog has
-no business having its own opinion about scrolling. A row whose window isn't loaded renders a placeholder and `opAt`
-answers `null` rather than a neighbouring row.
+## The file list
 
-**The wire.** Approving sends the group id plus the ids the user turned OFF. So the common case (approve everything)
-carries an empty list at any group size.
+Every group shows its files right away (`SuggestedOpFiles.svelte`): the first `INITIAL_ROWS` (10), then "Show 20 more"
+and "Show all N" under the list. The list is a `ColumnList` with `table` semantics (its rows hold checkboxes) over a
+windowed source whose `count` is the rows shown. The frame is sized to exactly the shown rows up to `MAX_VISIBLE_ROWS`
+(20) and scrolls past that, so "Show all" on 60,000 rows is a 20-row viewport drawing a window, never 60,000 DOM rows.
+
+**Rows read like file rows**: the icon from the shared icon cache (keyed `ext:<ext>` like the backend's
+`derive_icon_id`), the name mid-truncated to keep the extension, then the facts. When every op shares one folder
+(`sourceFolder` on the group), the folder is said once in the facts and the rows show names only; when they don't, the
+facts say "Several folders" and a Folder column appears. A rename adds a New name column.
+
+**Size and Last modified are what the disk says now** (`rowFacts` in `suggested-ops-copy.ts`):
+
+- **Live, unchanged**: the value, plain.
+- **Live, moved since the suggestion**: a warning `StatusGlyph` beside the value, its tooltip "When suggested: X / Now:
+  Y". A suggestion that recorded nothing has nothing to have changed FROM, so it never flags.
+- **Gone**: "Moved or deleted" in the warning color. Approving skips it; the engine re-checks every source.
+- **Couldn't check (or not checked yet)**: the creation snapshot in tertiary text behind a clock `StatusGlyph` labelled
+  "From when the AI suggested this". No value at all says "Unknown". ❌ Never a zero: it reads as an empty file.
+
+**Decision: the snapshot is the fallback, not the column.** The columns used to show only the creation snapshot, headed
+"Size when suggested", which was honest but answered the wrong question: the user is deciding about the file as it is
+NOW. The snapshot stays as the comparison point and the fallback, always labelled when it's what's on screen.
+
+## Scale: windows, live facts, and the wire
+
+A group of 60,000 ops is legitimate, so nothing may grow with it.
+
+**The windows.** Each group has its own `GroupReview` in `suggestedOpsState.reviews`. `COUNT(*)` gives the total and
+only the rows the list draws are fetched (`OP_WINDOW_SIZE`, centred on the request so scrolling either way stays
+inside). `ColumnList` reports the drawn range through `onRangeChange` → `showRange`, which pages, then checks. A row
+whose window isn't loaded renders `ColumnList`'s placeholder and `opAt` answers `null` rather than a neighbouring row.
+Opening the dialog reads every group's first page side by side (`Promise.all`), so seven groups cost one round trip of
+latency, not seven.
+
+**Live facts** are read for the drawn rows only, once per op (`ensureLiveFacts`): one bounded stat per row the user
+actually sees, through the backend's shared stat budget. A page that lands after the list drew its rows still gets them
+(the review remembers its last `range`). A read that throws un-marks its ops, so the next scroll asks again, and is
+logged rather than surfaced: the labelled snapshot is an honest answer while it's missing.
+
+**The wire.** Approving sends the group id plus the ids the user turned OFF, so the common case carries an empty list at
+any size.
 
 **Decision: there is no "deselect all", and that is not an omission.** Turning every row off IS rejecting the group,
-which the Reject button already does in one call. A deselect-all button would have to enumerate 60,000 op ids across IPC
-to express the same decision, which is the thing the deselected-ids format exists to avoid. The affordance exists under
-the honest name.
+which Reject already does in one call. A deselect-all would have to enumerate 60,000 op ids across IPC to express the
+same decision. The affordance exists under the honest name.
 
 ## A group that changes under an open review
 
-The agent may re-propose a pending group while the user is reading it. `refreshSuggestions` compares the open group's
-live op count against what it held and, on a difference, sets `changedUnderReview` and leaves the rows exactly as they
-are. The notice offers the reload; the user takes it when ready.
+The agent may re-propose a pending group while the user reads it. Two signals raise the group's `changedUnderReview`,
+and the rows stay exactly where they are; the notice offers "Show the new version" (`reloadGroup`).
 
-❌ Never swap the rows silently. The user is midway through a decision keyed to row positions, and a list that re-orders
-under the cursor is how a row nobody chose gets approved.
+- **The event**: `suggestions-changed` with `reason: 'amended'` and that group's id.
+- **The count**: a re-read that finds the group's `liveOpCount` moved. It misses an amendment that swapped a path but
+  kept the count, which is why the event matters; it catches a change while the subscription is down. Both stay.
 
-**Two signals, and the weaker one is not redundant.** A refresh compares the open group's `liveOpCount` before and
-after; the `suggestions-changed` event carries a typed `reason`. The count comparison misses an amendment that swapped a
-path but kept the op count, so the event is what actually catches an amendment. Both stay.
+❌ Never swap the rows silently: the user is midway through a decision keyed to row positions.
 
 **Decision: the notice keys on `reason`, never on `groupId` alone.** An amendment and the user's own approval carry the
-SAME group id, and only one of them means "the list under you moved". Keying on the id would raise "Ask Cmdr changed
-this" the instant the user approved something, which presents as a glitch rather than a bug and gets found late. A
-mutation test pins it: drop the `reason` check and the approval case goes red.
+SAME id. Keying on the id would raise "The AI changed this" the instant the user approved something. A test pins it.
+
+**Decision: a reload keeps the deselection.** An op the user turned off stays off if the new version still has it.
+Clearing the set would quietly turn their "no" into a "yes" on the next approve, which is the unsafe direction. A stale
+id (an op the new version dropped) costs nothing: the backend ignores ids outside the group's live set.
+
+**A re-read never blanks the dialog.** Only the first read (no sweeps yet) shows the loading line; a refresh after an
+event or a decision updates the groups in place, so no list loses its scroll position.
 
 ## The badge, and why it is a separate module
 
 `suggested-ops-badge.svelte.ts` is mounted for the whole session; the dialog's state only exists while a review is open.
 Folding them would leave the corner reading a store nothing populates until the dialog opens, so the indicator would sit
-at zero forever, which is the failure mode of an indicator that silently never updates.
+at zero forever.
 
 It does two things that look redundant and are not:
 
@@ -73,53 +118,46 @@ It does two things that look redundant and are not:
 - **Subscribes**, because after that first read only being told moves it. ❌ Never poll.
 
 A count it cannot read is logged and dropped rather than propagated: an approval that already succeeded must not fail
-because a badge could not refresh.
-
-Neither half throws. Window services start the badge with `void`, where a rejection escapes as an unhandled one and
-auto-sends an error report, so a refused subscription logs a warn and the seed still runs; a later start tries the
-subscription again.
+because a badge could not refresh. Neither half throws: window services start the badge with `void`, where a rejection
+escapes as an unhandled one and auto-sends an error report.
 
 ## When a read or an answer doesn't happen
 
 Every command wrapper throws a `SuggestedOpsFailure` (`suggested-ops-failure.ts`, a `TypedFailure`), ❌ never
 `throwIpcError`. `SuggestedOpsError` is tagged by `type` and carries its cause in `detail`, with no `message`, so the
-generic path kept only the variant name and every log line read "store" with nothing about what SQLite said. The
-failure's message carries both.
+generic path kept only the variant name; the failure's message carries both.
 
-- **A page read that throws sets `windowError`.** The list says the files couldn't load and offers Try again, which
-  calls `ensureOpWindow` for the same rows. The virtual list only asks for rows when the viewport moves, so without it
-  the rows would sit on their loading placeholder for good.
+- **A page read that throws sets that group's `windowError`.** The list says the files couldn't load and offers Try
+  again, which calls `ensureOpWindow` for the same rows. The list only asks for rows when its range moves, so without it
+  the rows would sit on their placeholder for good.
 - **An Approve or Reject that throws re-reads FIRST, then sets `decisionNotice`.** The store is the only thing that
-  knows whether the decision landed, and the group could otherwise read as pending while its ops already run. The notice
-  sits above the list, not in the group, because after the re-read the group may be gone.
+  knows whether the decision landed. The notice sits above the list, not in the group, because after the re-read the
+  group may be gone.
 - **The notice keys on the typed variant.** `approvalDidntFinish` means the approval worker died, so whether the claim
   committed is unknown: "check the operation queue before you approve it again". Every other variant is a refusal that
-  lands before the claim transaction commits, so nothing ran and "try again" is safe
+  lands before the claim transaction commits, so "try again" is safe
   (`agent/suggested_ops/bridge/mod.rs::approve_and_execute`).
 - **An Approve the engine refused to START gives the group back.** `refused`, `nothingToRun`, and `couldNotStart` all
-  mean nothing ran and the group is `pending` again (refused before the claim, or released after it:
-  `apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § "The approval bridge"). The dialog keeps it on the list
-  and shows the reason under it, right below the button the user pressed, because a refused approval should leave the
-  user where they were and say why. The reason sits in `refusals` by group id and clears when that group is answered
-  again or the dialog closes. `refused` carries the `WriteOperationError` itself, so `suggested-ops-refusal.ts` words it
-  through `getUserFriendlyMessage` with the verb mapped to the transfer wording (a rename reads as the move it runs as):
-  a phone nobody connected reads exactly as a clicked copy off it would. Only the two suggestion-only refusals carry
-  `suggestedOps.refusal.*` copy.
-- **Decision: Approve stays enabled while an expanded group's rows are loading or couldn't load** (David, 2026-09-25,
-  #155). Its count comes from `COUNT(*)`, so the button says exactly how many ops it approves even before any row shows,
-  and approval works per group. Waiting for the first window would leave a group whose rows can't load with no way to
-  approve it at all. ❌ Don't gate Approve on the op window.
+  mean nothing ran and the group is `pending` again (`apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § "The
+  approval bridge"). The reason shows under the group's buttons and sits in `refusals` by group id until that group is
+  answered again or the dialog closes. `refused` carries the `WriteOperationError` itself, so `suggested-ops-refusal.ts`
+  words it through `getUserFriendlyMessage` with the verb mapped to the transfer wording. Only the two suggestion-only
+  refusals carry `suggestedOps.refusal.*` copy.
+- **Decision: Approve stays enabled while a group's rows are loading or couldn't load** (David, 2026-09-25, #155). Its
+  count comes from `COUNT(*)`, so the button says exactly how many ops it approves even before any row shows. ❌ Don't
+  gate Approve on the op window.
+
+## The gallery preview
+
+Debug > Soft dialogs opens the dialog store-seeded (`dialog-gallery/fixtures/store-seeded.ts`, `suggestedOpsFixtures`):
+the patch sets `open`, `sweeps`, and pre-filled `reviews` (windows and live facts), so every row state shows without a
+backend. Seeded live facts are never re-read (`ensureLiveFacts` skips ops it already holds). Approve and Reject reach
+the real store, which has no such group, so the dialog re-reads and shows what's really waiting; the row says so.
 
 ## What isn't here yet
 
 - **`interrupted` groups**: re-approving one mints a NEW group with a fresh preflight, which is spine machinery rather
-  than dialog work, so surfacing them would mean designing the re-approval flow inside a dialog milestone. Deliberate,
-  not missing.
+  than dialog work. Deliberate, not missing.
 - **The degraded-state actions**: `WakeReadiness` types Ask Cmdr off / AI off / cloud AI not allowed / Full Disk Access
-  / no-API-key as distinct states, each with its own answer (the rail's turn-on gate, say nothing, the Allow cloud AI
-  switch, the FDA screen, AI settings). The indicator renders a count today and should render the closable ones with
-  their specific action rather than a generic "unavailable".
-- **The dialog-gallery preview**: the row is `not-triggerable` until fixtures exist for the interesting shapes (an
-  irreversible group, a folder that will be created, a pattern-matched group, a 60,000-op group).
-- **Nine of the ten locales**: English and German ship; the rest wait on David's copy review, since translating copy
-  that is about to be revised is wasted work.
+  / no-API-key as distinct states, each with its own answer. The indicator renders a count today and should render the
+  closable ones with their specific action.

@@ -277,9 +277,9 @@ Vietnamese has no grammatical number, so one form covers all counts.
   sentence subject is `Cmdr` (`Cmdr theo dõi các thư mục…`) while a surface name stays `cài đặt Ask Cmdr`. ❌ Don't put
   `Ask Cmdr` back into the sentences.
 - **Where English says "the AI", Vietnamese says `AI`, not `Cmdr`.** The `suggestedOps.*` family (`Lý do của AI`,
-  `AI đã đề xuất những thao tác này`) deliberately names the model, because its neighbour `suggestedOps.cmdrFacts`
-  (`Những gì Cmdr biết`) claims the opposite thing (what the app VERIFIED). Collapsing the two subjects destroys the
-  whole point of the pair.
+  `AI đã đề xuất những thao tác này`) deliberately names the model, because its neighbours with Cmdr as the subject
+  (`suggestedOps.reversible.moveBack`) claim the opposite thing (what the app VERIFIED). Collapsing the two subjects
+  destroys the whole point of the pair.
 - **`tải về` caught a real regression, so re-check it on every new download string.**
   `onboarding.cloudSetup.step.install` shipped as `Tải xuống và cài đặt` against the documented rule above (macOS vi: 35
   `tải về`, zero `tải xuống`); it now reads `Tải về và cài đặt`. The separable form is normal: `tải một mô hình về`.
