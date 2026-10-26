@@ -240,13 +240,13 @@
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "b3df6a5"
   },
-  "askCmdr.tool.search.queryIn.doing": "Söker efter ”{query}” i <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.doing": {
-    "sourceHash": "b1570b4"
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, one {Söker efter ”{query}” i mappen <places>{placesText}</places>} other {Söker efter ”{query}” i mapparna <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
   },
-  "askCmdr.tool.search.queryIn.done": "Sökte efter ”{query}” i <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.done": {
-    "sourceHash": "b284755"
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {Sökte efter ”{query}” i mappen <places>{placesText}</places>} other {Sökte efter ”{query}” i mapparna <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
   },
   "askCmdr.tool.search.query.doing": "Söker efter ”{query}”",
   "@askCmdr.tool.search.query.doing": {
@@ -256,13 +256,13 @@
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "04e348f"
   },
-  "askCmdr.tool.search.in.doing": "Söker i <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.doing": {
-    "sourceHash": "6588be5"
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, one {Söker i mappen <places>{placesText}</places>} other {Söker i mapparna <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
   },
-  "askCmdr.tool.search.in.done": "Sökte i <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.done": {
-    "sourceHash": "d3b7095"
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {Sökte i mappen <places>{placesText}</places>} other {Sökte i mapparna <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
   },
   "askCmdr.tool.searchPhotos.query.doing": "Söker i dina bilder efter ”{query}”",
   "@askCmdr.tool.searchPhotos.query.doing": {
@@ -371,11 +371,11 @@
   },
   "askCmdr.tool.outcome.imageIndexingOff": "bildindexeringen är avstängd",
   "@askCmdr.tool.outcome.imageIndexingOff": {
-    "sourceHash": "f9e5c29"
+    "sourceHash": "5e9e5f6"
   },
-  "askCmdr.tool.outcome.semanticModelNotInstalled": "modellen för bildsökning är inte installerad",
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "modellen för semantisk sökning är inte installerad",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
-    "sourceHash": "00c39e7"
+    "sourceHash": "54dc9af"
   },
   "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} redo att granska} other {{countText} redo att granska}}",
   "@askCmdr.tool.outcome.staged": {

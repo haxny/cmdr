@@ -2941,9 +2941,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Mientras Ask Cmdr trabaja, muestra lo que está mirando. Elige si esas líneas se pliegan cuando responde.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr muestra lo que mira la IA mientras trabaja. Elige si esas líneas se pliegan cuando llega la respuesta.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Plegarlas",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

@@ -99,17 +99,17 @@
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "46ffa10"
   },
-  "askCmdr.tool.search.queryIn.done": "Se buscó “{query}” en <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.done": {
-    "sourceHash": "02a9207"
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {Se buscó “{query}” en <places>{placesText}</places>} many {Se buscó “{query}” en <places>{placesText}</places>} other {Se buscó “{query}” en <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "c4e5b65"
   },
   "askCmdr.tool.search.query.done": "Se buscó “{query}”",
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "78906ec"
   },
-  "askCmdr.tool.search.in.done": "Se buscó en <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.done": {
-    "sourceHash": "8bfba62"
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {Se buscó en <places>{placesText}</places>} many {Se buscó en <places>{placesText}</places>} other {Se buscó en <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "6ebb1c6"
   },
   "askCmdr.tool.searchPhotos.query.done": "Se buscó “{query}” en tus fotos",
   "@askCmdr.tool.searchPhotos.query.done": {

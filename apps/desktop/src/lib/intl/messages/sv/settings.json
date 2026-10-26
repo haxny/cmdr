@@ -2950,7 +2950,7 @@
   },
   "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr visar vad AI:n tittar på medan den arbetar. Välj om de raderna ska fällas ihop när svaret kommer.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fäll ihop dem",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

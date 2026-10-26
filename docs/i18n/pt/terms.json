@@ -2218,10 +2218,7 @@
     "chosen": "foto",
     "forms": "feminine: foto indexada; photo archive → acervo de fotos",
     "confidence": "confirmed",
-    "sources": "macOS pile (Fotos, 90+ hits)",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "Names the image-indexing setting, which the catalog calls indexação de imagens (settings.mediaIndex.*); the English \"photo indexing\" is queued in source-queue.md."
-    }
+    "sources": "macOS pile (Fotos, 90+ hits)"
   },
   "pin": {
     "chosen": "Fixar",

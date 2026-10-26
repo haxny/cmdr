@@ -2403,9 +2403,6 @@
   "photo": {
     "chosen": "photo",
     "confidence": "high",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "names the setting: the switch is « Indexation des images » in the catalog (settings.section and mediaIndex keys), so the outcome quotes that name"
-    },
     "forms": "feminine (photo indexée, photos indexées); photo archive → archive de photos",
     "sources": "macOS"
   },

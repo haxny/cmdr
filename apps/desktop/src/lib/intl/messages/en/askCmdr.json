@@ -209,37 +209,37 @@
   },
   "askCmdr.tool.listDir.folder.doing": "Listing <place>{name}</place>",
   "@askCmdr.tool.listDir.folder.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant lists one folder’s contents. {name} is the folder’s own name (the last part of its path, like “Downloads”); the <place> tag makes it a link that opens the folder in a file pane, so keep the tag around the name. Pairs with askCmdr.tool.listDir.folder.done. Keep it short: it sits on one line.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant lists one folder’s contents. {name} is the folder’s own name (the last part of its path, like “Downloads”); the <place> tag makes it a link that opens the folder in a file pane, so keep the tag around the name. Pairs with askCmdr.tool.listDir.folder.done. Keep it short: it sits on one line. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The folder’s name, for example Downloads." }
   },
   "askCmdr.tool.listDir.folder.done": "Listed <place>{name}</place>",
   "@askCmdr.tool.listDir.folder.done": {
-    "description": "Past-tense label on the same tool line once the folder was listed. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.listDir.folder.doing.",
+    "description": "Past-tense label on the same tool line once the folder was listed. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.listDir.folder.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The folder’s name, for example Downloads." }
   },
   "askCmdr.tool.listPaneFiles.selection.doing": "Listing your selection in <place>{name}</place>",
   "@askCmdr.tool.listPaneFiles.selection.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the files the person selected in the folder their file pane shows. {name} is that folder’s name, linked by the <place> tag to open it in a pane. Pairs with askCmdr.tool.listPaneFiles.selection.done.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the files the person selected in the folder their file pane shows. {name} is that folder’s name, linked by the <place> tag to open it in a pane. Pairs with askCmdr.tool.listPaneFiles.selection.done. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The folder’s name, for example Desktop." }
   },
   "askCmdr.tool.listPaneFiles.selection.done": "Listed your selection in <place>{name}</place>",
   "@askCmdr.tool.listPaneFiles.selection.done": {
-    "description": "Past-tense label on the same tool line once the assistant read the selected files. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.listPaneFiles.selection.doing.",
+    "description": "Past-tense label on the same tool line once the assistant read the selected files. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.listPaneFiles.selection.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The folder’s name, for example Desktop." }
   },
   "askCmdr.tool.folderImportance.folder.doing": "Checking how important <place>{name}</place> is",
   "@askCmdr.tool.folderImportance.folder.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant scores how important one folder is to the person (how often it’s used, what it holds). {name} is the folder’s name, linked by the <place> tag to open it in a pane. Pairs with askCmdr.tool.folderImportance.folder.done.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant scores how important one folder is to the person (how often it’s used, what it holds). {name} is the folder’s name, linked by the <place> tag to open it in a pane. Pairs with askCmdr.tool.folderImportance.folder.done. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The folder’s name, for example Projects." }
   },
   "askCmdr.tool.folderImportance.folder.done": "Checked how important <place>{name}</place> is",
   "@askCmdr.tool.folderImportance.folder.done": {
-    "description": "Past-tense label on the same tool line once the folder was scored. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.folderImportance.folder.doing.",
+    "description": "Past-tense label on the same tool line once the folder was scored. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.folderImportance.folder.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The folder’s name, for example Projects." }
   },
   "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Looking inside <place>{name}</place>} one {Looking inside <place>{name}</place> and {othersText} more} other {Looking inside <place>{name}</place> and {othersText} more}}",
   "@askCmdr.tool.inspectFile.files.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the details and a bounded part of the contents of one or more files. {name} is the first file’s name, linked by the <place> tag to show it in a file pane; {othersText} is how many other files the same call reads. Pairs with askCmdr.tool.inspectFile.files.done.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the details and a bounded part of the contents of one or more files. {name} is the first file’s name, linked by the <place> tag to show it in a file pane; {othersText} is how many other files the same call reads. Pairs with askCmdr.tool.inspectFile.files.done. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": {
       "name": "The first file’s name, for example notes.txt.",
       "othersText": "How many more files, as a formatted number.",
@@ -248,7 +248,7 @@
   },
   "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {Looked inside <place>{name}</place>} one {Looked inside <place>{name}</place> and {othersText} more} other {Looked inside <place>{name}</place> and {othersText} more}}",
   "@askCmdr.tool.inspectFile.files.done": {
-    "description": "Past-tense label on the same tool line once the assistant finished reading the files. {name} is the first file’s name, linked by the <place> tag; {othersText} is how many other files it read. Pairs with askCmdr.tool.inspectFile.files.doing.",
+    "description": "Past-tense label on the same tool line once the assistant finished reading the files. {name} is the first file’s name, linked by the <place> tag; {othersText} is how many other files it read. Pairs with askCmdr.tool.inspectFile.files.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": {
       "name": "The first file’s name, for example notes.txt.",
       "othersText": "How many more files, as a formatted number.",
@@ -257,7 +257,7 @@
   },
   "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Reading what’s in <place>{name}</place>} one {Reading what’s in <place>{name}</place> and {othersText} more} other {Reading what’s in <place>{name}</place> and {othersText} more}}",
   "@askCmdr.tool.imageFacts.files.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the text and tags Cmdr recognized inside specific photos. This line is a transparency surface, so the wording should make clear that image content is being read. {name} is the first photo’s name, linked by the <place> tag; {othersText} is how many other photos the same call reads. The apostrophe is U+2019. Pairs with askCmdr.tool.imageFacts.files.done.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the text and tags Cmdr recognized inside specific photos. This line is a transparency surface, so the wording should make clear that image content is being read. {name} is the first photo’s name, linked by the <place> tag; {othersText} is how many other photos the same call reads. The apostrophe is U+2019. Pairs with askCmdr.tool.imageFacts.files.done. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": {
       "name": "The first photo’s name, for example IMG_1024.jpg.",
       "othersText": "How many more photos, as a formatted number.",
@@ -266,27 +266,29 @@
   },
   "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Read what’s in <place>{name}</place>} one {Read what’s in <place>{name}</place> and {othersText} more} other {Read what’s in <place>{name}</place> and {othersText} more}}",
   "@askCmdr.tool.imageFacts.files.done": {
-    "description": "Past-tense label on the same tool line once the assistant finished reading what Cmdr recognized inside those photos. {name} is the first photo’s name, linked by the <place> tag; {othersText} is how many other photos it read. The apostrophe is U+2019. Pairs with askCmdr.tool.imageFacts.files.doing.",
+    "description": "Past-tense label on the same tool line once the assistant finished reading what Cmdr recognized inside those photos. {name} is the first photo’s name, linked by the <place> tag; {othersText} is how many other photos it read. The apostrophe is U+2019. Pairs with askCmdr.tool.imageFacts.files.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": {
       "name": "The first photo’s name, for example IMG_1024.jpg.",
       "othersText": "How many more photos, as a formatted number.",
       "others": "The same count as a number, to pick the plural form."
     }
   },
-  "askCmdr.tool.search.queryIn.doing": "Searching for “{query}” in <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files by name in some folders. It searches names and details, never what is inside a file. {query} is the name pattern exactly as the assistant typed it (keep the quotes around it, in your language’s quote marks); {placesText} is the list of folder names, already joined with your language’s “and”, and the <places> tag turns each folder into a link. Pairs with askCmdr.tool.search.queryIn.done.",
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, one {Searching for “{query}” in <places>{placesText}</places>} other {Searching for “{query}” in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files by name in some folders. It searches names and details, never what is inside a file. {query} is the name pattern exactly as the assistant typed it (keep the quotes around it, in your language’s quote marks); {placesText} is the list of folder names, already joined with your language’s “and”, and the <places> tag turns each folder into a link. Pairs with askCmdr.tool.search.queryInFolders.done. {folders} is how many folders there are: English says the same either way, but a case language can say “in the folder X” for one and “in the folders X and Y” for several.",
     "placeholders": {
       "query": "The name pattern searched for, for example *.pdf. Never translate it.",
-      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop.",
+      "folders": "How many folders {placesText} lists, to pick the plural form."
     }
   },
-  "askCmdr.tool.search.queryIn.done": "Searched for “{query}” in <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.done": {
-    "description": "Past-tense label on the same tool line once the search finished. {query} is the name pattern (keep the quotes); {placesText} is the joined list of folder names, each a link via the <places> tag. Pairs with askCmdr.tool.search.queryIn.doing.",
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {Searched for “{query}” in <places>{placesText}</places>} other {Searched for “{query}” in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "description": "Past-tense label on the same tool line once the search finished. {query} is the name pattern (keep the quotes); {placesText} is the joined list of folder names, each a link via the <places> tag. Pairs with askCmdr.tool.search.queryInFolders.doing. {folders} is how many folders there are: English says the same either way, but a case language can say “in the folder X” for one and “in the folders X and Y” for several.",
     "placeholders": {
       "query": "The name pattern searched for, for example *.pdf. Never translate it.",
-      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop.",
+      "folders": "How many folders {placesText} lists, to pick the plural form."
     }
   },
   "askCmdr.tool.search.query.doing": "Searching for “{query}”",
@@ -299,18 +301,20 @@
     "description": "Past-tense label on the same tool line once the search finished. {query} is the name pattern; keep the quotes. Pairs with askCmdr.tool.search.query.doing.",
     "placeholders": { "query": "The name pattern searched for, for example *.pdf. Never translate it." }
   },
-  "askCmdr.tool.search.in.doing": "Searching in <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files in some folders by size, date, or type rather than by name. {placesText} is the list of folder names, already joined with your language’s “and”, and the <places> tag turns each folder into a link. Pairs with askCmdr.tool.search.in.done.",
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, one {Searching in <places>{placesText}</places>} other {Searching in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files in some folders by size, date, or type rather than by name. {placesText} is the list of folder names, already joined with your language’s “and”, and the <places> tag turns each folder into a link. Pairs with askCmdr.tool.search.inFolders.done. {folders} is how many folders there are: English says the same either way, but a case language can say “in the folder X” for one and “in the folders X and Y” for several.",
     "placeholders": {
-      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop.",
+      "folders": "How many folders {placesText} lists, to pick the plural form."
     }
   },
-  "askCmdr.tool.search.in.done": "Searched in <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.done": {
-    "description": "Past-tense label on the same tool line once the search finished. {placesText} is the joined list of folder names, each a link via the <places> tag. Pairs with askCmdr.tool.search.in.doing.",
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {Searched in <places>{placesText}</places>} other {Searched in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "description": "Past-tense label on the same tool line once the search finished. {placesText} is the joined list of folder names, each a link via the <places> tag. Pairs with askCmdr.tool.search.inFolders.doing. {folders} is how many folders there are: English says the same either way, but a case language can say “in the folder X” for one and “in the folders X and Y” for several.",
     "placeholders": {
-      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop.",
+      "folders": "How many folders {placesText} lists, to pick the plural form."
     }
   },
   "askCmdr.tool.searchPhotos.query.doing": "Searching your photos for “{query}”",
@@ -357,17 +361,17 @@
   },
   "askCmdr.tool.memoryWrite.file.doing": "Saving a note to <place>{name}</place>",
   "@askCmdr.tool.memoryWrite.file.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant saves something it learned about this person into one file of its own small notes folder. {name} is that note file’s name inside the folder; the <place> tag links it when it can be shown in a pane. Pairs with askCmdr.tool.memoryWrite.file.done.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant saves something it learned about this person into one file of its own small notes folder. {name} is that note file’s name inside the folder; the <place> tag links it when it can be shown in a pane. Pairs with askCmdr.tool.memoryWrite.file.done. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
   },
   "askCmdr.tool.memoryWrite.file.done": "Saved a note to <place>{name}</place>",
   "@askCmdr.tool.memoryWrite.file.done": {
-    "description": "Past-tense label on the same tool line once the note is saved. Calm and ordinary, not an alert. {name} is the note file’s name, linked by the <place> tag. Pairs with askCmdr.tool.memoryWrite.file.doing.",
+    "description": "Past-tense label on the same tool line once the note is saved. Calm and ordinary, not an alert. {name} is the note file’s name, linked by the <place> tag. Pairs with askCmdr.tool.memoryWrite.file.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
   },
   "askCmdr.tool.memoryWrite.file.tried": "Tried to save a note to <place>{name}</place>",
   "@askCmdr.tool.memoryWrite.file.tried": {
-    "description": "Label on the same tool line when the note was NOT saved (a short reason follows it on the line). It must not claim the note landed. {name} is the note file’s name, linked by the <place> tag when it can be shown.",
+    "description": "Label on the same tool line when the note was NOT saved (a short reason follows it on the line). It must not claim the note landed. {name} is the note file’s name, linked by the <place> tag when it can be shown. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
   },
   "askCmdr.tool.memoryWrite.tried": "Tried to save a note",
@@ -376,22 +380,22 @@
   },
   "askCmdr.tool.memoryEdit.file.doing": "Updating <place>{name}</place>",
   "@askCmdr.tool.memoryEdit.file.doing": {
-    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant changes one part of a note file it keeps about this person. {name} is that note file’s name inside its notes folder, linked by the <place> tag when it can be shown in a pane. Pairs with askCmdr.tool.memoryEdit.file.done.",
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant changes one part of a note file it keeps about this person. {name} is that note file’s name inside its notes folder, linked by the <place> tag when it can be shown in a pane. Pairs with askCmdr.tool.memoryEdit.file.done. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
   },
   "askCmdr.tool.memoryEdit.file.done": "Updated <place>{name}</place>",
   "@askCmdr.tool.memoryEdit.file.done": {
-    "description": "Past-tense label on the same tool line once the note file is updated. {name} is the note file’s name, linked by the <place> tag. Pairs with askCmdr.tool.memoryEdit.file.doing.",
+    "description": "Past-tense label on the same tool line once the note file is updated. {name} is the note file’s name, linked by the <place> tag. Pairs with askCmdr.tool.memoryEdit.file.doing. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
   },
   "askCmdr.tool.memoryEdit.file.tried": "Tried to update <place>{name}</place>",
   "@askCmdr.tool.memoryEdit.file.tried": {
-    "description": "Label on the same tool line when the note file was NOT changed (a short reason follows it on the line). It must not claim the change landed. {name} is the note file’s name, linked by the <place> tag when it can be shown.",
+    "description": "Label on the same tool line when the note file was NOT changed (a short reason follows it on the line). It must not claim the change landed. {name} is the note file’s name, linked by the <place> tag when it can be shown. The tag may wrap the name alone: put a type noun (“folder”, “file”, “photo”, “note”) outside it where your language needs one for case, gender, or elision.",
     "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
   },
   "askCmdr.tool.memoryEdit.tried": "Tried to update its notes",
   "@askCmdr.tool.memoryEdit.tried": {
-    "description": "Label on a tool line in the Ask Cmdr chat rail when the assistant tried to change its notes about the person and nothing changed (a short reason follows it on the line), and it isn’t known which file it meant. “Its” refers to the assistant. It must not claim the change landed."
+    "description": "Label on a tool line in the Ask Cmdr chat rail when the assistant tried to change its notes about the person and nothing changed (a short reason follows it on the line), and it isn’t known which file it meant. “Its” refers to the assistant. It must not claim the change landed. A translation may name the assistant outright where a bare “it” would be unclear."
   },
   "askCmdr.tool.unknown.named.doing": "Asking for “{name}”",
   "@askCmdr.tool.unknown.named.doing": {
@@ -464,13 +468,13 @@
   "@askCmdr.tool.outcome.nothingFoundYet": {
     "description": "What came back, after a search tool line’s label: nothing matched in what the search could cover, but some places weren’t covered yet (a drive still being indexed), so this must not read as “there’s none”. Lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.imageIndexingOff": "photo indexing is off",
+  "askCmdr.tool.outcome.imageIndexingOff": "image indexing is off",
   "@askCmdr.tool.outcome.imageIndexingOff": {
-    "description": "What came back, after a photo tool line’s label: it couldn’t answer because Cmdr’s photo indexing is turned off in settings. Lowercase where your language allows."
+    "description": "What came back, after a photo tool line’s label: it couldn’t answer because Cmdr’s image indexing is turned off in settings. Name the setting the way your settings.section.imageIndexing says it (Settings > Indexing > Image indexing), lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.semanticModelNotInstalled": "the photo search model isn’t installed",
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "the semantic search model isn’t installed",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
-    "description": "What came back, after a photo search tool line’s label: it couldn’t search by description because the on-device model that understands photos isn’t downloaded yet. Lowercase where your language allows."
+    "description": "What came back, after a photo search tool line’s label: it couldn’t search by description because the on-device semantic search model isn’t downloaded yet. Name the model the way your settings.mediaIndex.clip.deleteConfirmTitle says it (“the semantic search model”). Lowercase where your language allows."
   },
   "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} ready to review} other {{countText} ready to review}}",
   "@askCmdr.tool.outcome.staged": {
@@ -486,11 +490,11 @@
   },
   "askCmdr.tool.outcome.toolUnavailable": "not a tool it has",
   "@askCmdr.tool.outcome.toolUnavailable": {
-    "description": "What came back, after a tool line’s label: the assistant asked for something Ask Cmdr can’t do (it’s read-only, or the name was made up), so nothing ran. “It” is the assistant. Lowercase where your language allows."
+    "description": "What came back, after a tool line’s label: the assistant asked for something Ask Cmdr can’t do (it’s read-only, or the name was made up), so nothing ran. “It” is the assistant. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
   },
   "askCmdr.tool.outcome.repeatedCall": "skipped: it tried this already",
   "@askCmdr.tool.outcome.repeatedCall": {
-    "description": "What came back, after a tool line’s label: the assistant repeated a request that hadn’t worked earlier in the same answer, so Cmdr didn’t run it again. “It” is the assistant. Lowercase where your language allows."
+    "description": "What came back, after a tool line’s label: the assistant repeated a request that hadn’t worked earlier in the same answer, so Cmdr didn’t run it again. “It” is the assistant. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
   },
   "askCmdr.tool.outcome.problem": "that didn’t go through",
   "@askCmdr.tool.outcome.problem": {
@@ -498,7 +502,7 @@
   },
   "askCmdr.tool.outcome.memory.outsideMemory": "that’s outside its notes folder",
   "@askCmdr.tool.outcome.memory.outsideMemory": {
-    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant named a file outside the small folder its notes live in, and it may only write there. “Its” is the assistant’s. Lowercase where your language allows."
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant named a file outside the small folder its notes live in, and it may only write there. “Its” is the assistant’s. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
   },
   "askCmdr.tool.outcome.memory.notMarkdown": "notes have to be Markdown files",
   "@askCmdr.tool.outcome.memory.notMarkdown": {
@@ -530,7 +534,7 @@
   },
   "askCmdr.tool.outcome.memory.unavailable": "its notes folder isn’t available",
   "@askCmdr.tool.outcome.memory.unavailable": {
-    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant’s notes folder couldn’t be reached this session. “Its” is the assistant’s. Lowercase where your language allows."
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant’s notes folder couldn’t be reached this session. “Its” is the assistant’s. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
   },
   "askCmdr.tool.outcome.memory.other": "the note wasn’t changed",
   "@askCmdr.tool.outcome.memory.other": {
@@ -603,7 +607,7 @@
   },
   "askCmdr.tool.preview.status.unreadable": "couldn’t be read",
   "@askCmdr.tool.preview.status.unreadable": {
-    "description": "Beside a file in an opened Ask Cmdr tool line: the file exists but Cmdr couldn’t open it (permissions, a damaged file). Lowercase where your language allows."
+    "description": "Beside a file in an opened Ask Cmdr tool line: the file exists but Cmdr couldn’t open it (permissions, a damaged file). Lowercase where your language allows. It describes the file."
   },
   "askCmdr.tool.preview.status.unreachable": "out of reach",
   "@askCmdr.tool.preview.status.unreachable": {
@@ -611,11 +615,11 @@
   },
   "askCmdr.tool.preview.status.unsupportedVolume": "on a drive it can’t look inside",
   "@askCmdr.tool.preview.status.unsupportedVolume": {
-    "description": "Beside a file in an opened Ask Cmdr tool line: the file is on a kind of drive (a phone, a cloud share) whose files the assistant can’t open. “It” is the assistant. Lowercase where your language allows."
+    "description": "Beside a file in an opened Ask Cmdr tool line: the file is on a kind of drive (a phone, a cloud share) whose files the assistant can’t open. “It” is the assistant. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
   },
   "askCmdr.tool.preview.status.notIndexed": "not indexed yet",
   "@askCmdr.tool.preview.status.notIndexed": {
-    "description": "Beside a photo in an opened Ask Cmdr tool line: Cmdr hasn’t analyzed this photo yet, so there were no facts about it to give. Lowercase where your language allows."
+    "description": "Beside a photo in an opened Ask Cmdr tool line: Cmdr hasn’t analyzed this photo yet, so there were no facts about it to give. Lowercase where your language allows. It describes the photo."
   },
   "askCmdr.tool.preview.copy": "Copy",
   "@askCmdr.tool.preview.copy": {
@@ -627,7 +631,7 @@
   },
   "askCmdr.tool.preview.copied": "Copied",
   "@askCmdr.tool.preview.copied": {
-    "description": "Shown on the Copy button of an opened Ask Cmdr tool line for a moment after the result was copied."
+    "description": "Shown on the Copy button of an opened Ask Cmdr tool line for a moment after the result was copied. “Copied” describes the result (what came back), now on the clipboard; agree with your word for it where your language needs to."
   },
   "askCmdr.tool.preview.copyRefused": "The clipboard didn’t take it. Try again?",
   "@askCmdr.tool.preview.copyRefused": {
@@ -722,7 +726,7 @@
   },
   "askCmdr.turnStats.stopped": "Stopped · {summary}",
   "@askCmdr.turnStats.stopped": {
-    "description": "The quiet cost line under an Ask Cmdr answer that the person stopped before it finished (with the Stop button, or because it stopped making progress). “Stopped” marks that the answer is incomplete on purpose, not broken. Sentence case. Keep the middle dot as the separator, matching the rest of the line.",
+    "description": "The quiet cost line under an Ask Cmdr answer that the person stopped before it finished (with the Stop button, or because it stopped making progress). “Stopped” describes the answer (this turn’s reply), so where your language marks gender or number, agree with your word for “answer”. It marks that the answer is incomplete on purpose, not broken. Sentence case. Keep the middle dot as the separator, matching the rest of the line.",
     "placeholders": {
       "summary": "The rest of the line, already worded, for example “3 tool calls · 4.2s · 1,800 tokens”."
     }

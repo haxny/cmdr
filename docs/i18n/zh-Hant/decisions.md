@@ -86,9 +86,8 @@ work.
 ## Tool lines name their target (`askCmdr.tool.*.doing`/`.done`/`.tried`, `askCmdr.tool.outcome.*`, `askCmdr.toolGroup.*`)
 
 - A place goes before the verb (`正在 <places>…</places> 裡搜尋「{query}」` / `已在 … 裡搜尋`); `.tried` is `沒能…`
-  (calm, never `失敗`), so it can't read as landed. Outcomes after the `，` separator are bare phrases; "photo indexing"
-  and "the photo search model" quote the settings names `影像索引` / `語意搜尋模型`. Tool call `工具呼叫`, counted with
-  `次`.
+  (calm, never `失敗`), so it can't read as landed. Outcomes after the `，` separator are bare phrases that quote the
+  settings names (`影像索引`, `語意搜尋模型`). Tool call `工具呼叫`, counted with `次`.
 
 ## System Settings pane names (`errors.git.*`, `errors.provider.*`, `*.emailPlaceholder`, `common.attachEmailPlaceholder`)
 

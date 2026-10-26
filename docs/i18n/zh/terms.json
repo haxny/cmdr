@@ -2431,10 +2431,6 @@
     "chosen": "照片",
     "confidence": "high",
     "decision": "Network-drive image indexing catalog",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "Names the setting, so it uses the feature name 图像索引 (settings.mediaIndex.*), not the warm 照片.",
-      "askCmdr.tool.outcome.semanticModelNotInstalled": "Names the model by the catalog’s own name 语义搜索模型 (the delete-model dialog), not a coined 照片搜索模型."
-    },
     "forms": "warm copy about the user's pictures 照片 (classifier 张); the feature is 图像",
     "sources": "macOS Photos"
   },

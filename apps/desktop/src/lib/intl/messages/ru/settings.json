@@ -2936,9 +2936,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Пока Ask Cmdr работает, он показывает, что просматривает. Выберите, сворачивать ли эти строки после ответа.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Панель Ask Cmdr показывает, что ИИ просматривает во время работы. Выберите, сворачивать ли эти строки после ответа.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Сворачивать",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

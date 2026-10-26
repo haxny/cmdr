@@ -2406,10 +2406,6 @@
     "accept": ["foto''s", "foto's"],
     "chosen": "foto",
     "confidence": "high",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "Quotes the feature by its settled name (het indexeren van afbeeldingen, the index ruling), not the warm word; English's “photo indexing” is logged in source-queue.md.",
-      "askCmdr.tool.outcome.semanticModelNotInstalled": "Names the model as Settings does (het model voor semantisch zoeken, settings.mediaIndex.clip.deleteConfirmTitle), so the user can find it."
-    },
     "forms": "pl. foto''s (ICU-doubled apostrophe); photo archive → fotoarchief",
     "sources": "macOS (Foto's app, ^0 foto's ontvangen)"
   },

@@ -2952,9 +2952,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Pendant qu’Ask Cmdr travaille, des lignes montrent ce qu’il consulte. Choisissez si ces lignes se replient une fois la réponse arrivée.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr montre ce que l’IA consulte pendant qu’elle travaille. Choisissez si ces lignes se replient une fois la réponse arrivée.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Les replier",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

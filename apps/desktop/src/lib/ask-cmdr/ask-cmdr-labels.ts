@@ -152,22 +152,29 @@ function placeWords(keys: PhaseKeys | undefined, place: LinePlace): SubjectWords
   return keys === undefined ? null : { keys, params: { name: place.shown }, place }
 }
 
-/** A search's words follow what it has: a pattern, folders to look in, both, or neither. */
+/**
+ * A search's words follow what it has: a pattern, folders to look in, both, or neither. `folders`
+ * rides beside `placesText` so a case language can tell "in the folder X" from "in the folders X and Y".
+ */
 function searchWords(subject: SubjectOf<'search'>): SubjectWords | null {
   const { query } = subject
   const places = subject.scopePaths.map(folderPlace)
   const placesText = formatConjunctionList(places.map((place) => place.shown))
-  if (query !== null && places.length > 0) {
-    const keys: PhaseKeys = { doing: 'askCmdr.tool.search.queryIn.doing', done: 'askCmdr.tool.search.queryIn.done' }
-    return { keys, params: { query, placesText }, places }
+  const folders = places.length
+  if (query !== null && folders > 0) {
+    const keys: PhaseKeys = {
+      doing: 'askCmdr.tool.search.queryInFolders.doing',
+      done: 'askCmdr.tool.search.queryInFolders.done',
+    }
+    return { keys, params: { query, placesText, folders }, places }
   }
   if (query !== null) {
     const keys: PhaseKeys = { doing: 'askCmdr.tool.search.query.doing', done: 'askCmdr.tool.search.query.done' }
     return { keys, params: { query } }
   }
-  if (places.length === 0) return null
-  const keys: PhaseKeys = { doing: 'askCmdr.tool.search.in.doing', done: 'askCmdr.tool.search.in.done' }
-  return { keys, params: { placesText }, places }
+  if (folders === 0) return null
+  const keys: PhaseKeys = { doing: 'askCmdr.tool.search.inFolders.doing', done: 'askCmdr.tool.search.inFolders.done' }
+  return { keys, params: { placesText, folders }, places }
 }
 
 /**

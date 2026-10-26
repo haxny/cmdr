@@ -2826,10 +2826,6 @@
     ],
     "chosen": "照片",
     "confidence": "high",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "English says photo indexing, but it names the setting the catalog calls 影像索引 (search.imageResults.networkOff, settings.mediaIndex.*), so the reader can find it.",
-      "askCmdr.tool.outcome.semanticModelNotInstalled": "Names the model the catalog calls 語意搜尋模型 (settings.mediaIndex.clip.deleteConfirmTitle); one model keeps one name."
-    },
     "forms": "classifier 張",
     "sources": "AP-TW"
   },

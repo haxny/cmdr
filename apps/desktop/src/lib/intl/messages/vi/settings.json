@@ -2939,9 +2939,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Trong lúc làm việc, Ask Cmdr hiển thị những gì đang xem. Chọn có thu gọn các dòng đó khi có câu trả lời hay không.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr hiển thị những gì AI đang xem trong lúc làm việc. Chọn có thu gọn các dòng đó khi có câu trả lời hay không.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Thu gọn lại",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

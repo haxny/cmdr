@@ -89,6 +89,16 @@ describe('toolLineLabel', () => {
     expect(label.places.every((place) => place.kind === 'folder' && place.linked)).toBe(true)
   })
 
+  it('passes a search’s folder count, so a case language can tell one folder from several', () => {
+    const label = (query: string | null, scopePaths: string[]) =>
+      toolLineLabel(call('search', { kind: 'search', query, scopePaths }))
+    expect(label('x', ['/a', '/b'])).toMatchObject({
+      key: 'askCmdr.tool.search.queryInFolders.done',
+      params: { folders: 2 },
+    })
+    expect(label(null, ['/a'])).toMatchObject({ key: 'askCmdr.tool.search.inFolders.done', params: { folders: 1 } })
+  })
+
   it('names a photo search’s words, and counts what a plan carries', () => {
     expect(said('search_photos', { kind: 'photoSearch', query: 'beach' })).toBe('Searched your photos for “beach”')
     expect(said('propose_rename_plan', { kind: 'renamePlan', count: 1 })).toBe('Prepared a plan to rename 1 file')

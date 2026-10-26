@@ -2950,9 +2950,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Während Ask Cmdr arbeitet, siehst du, was es sich gerade ansieht. Wähle, ob diese Zeilen eingeklappt werden, sobald die Antwort da ist.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr zeigt, was sich die KI bei der Arbeit ansieht. Wähle, ob diese Zeilen eingeklappt werden, sobald die Antwort da ist.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Einklappen",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

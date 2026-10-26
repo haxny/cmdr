@@ -3583,10 +3583,7 @@
     "accept": ["фото"],
     "forms": "фото is the indeclinable short form, fine in labels and tight UI; photo archive → фотоархив / архив фотографий",
     "confidence": "high",
-    "sources": "MS photo → «фотография», «фото»; macOS live Photo → «Фото», photo → «фото»",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "Names the setting the user turns back on, so it quotes its label «Индексация изображений» (indexing.enrich.label) rather than the English's «photo indexing»."
-    }
+    "sources": "MS photo → «фотография», «фото»; macOS live Photo → «Фото», photo → «фото»"
   },
   "pin": {
     "chosen": "закрепить",

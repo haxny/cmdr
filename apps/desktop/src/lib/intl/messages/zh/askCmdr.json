@@ -240,13 +240,13 @@
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "b3df6a5"
   },
-  "askCmdr.tool.search.queryIn.doing": "正在 <places>{placesText}</places> 中搜索“{query}”",
-  "@askCmdr.tool.search.queryIn.doing": {
-    "sourceHash": "b1570b4"
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, other {正在 <places>{placesText}</places> 中搜索“{query}”}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
   },
-  "askCmdr.tool.search.queryIn.done": "已在 <places>{placesText}</places> 中搜索“{query}”",
-  "@askCmdr.tool.search.queryIn.done": {
-    "sourceHash": "b284755"
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, other {已在 <places>{placesText}</places> 中搜索“{query}”}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
   },
   "askCmdr.tool.search.query.doing": "正在搜索“{query}”",
   "@askCmdr.tool.search.query.doing": {
@@ -256,13 +256,13 @@
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "04e348f"
   },
-  "askCmdr.tool.search.in.doing": "正在 <places>{placesText}</places> 中搜索",
-  "@askCmdr.tool.search.in.doing": {
-    "sourceHash": "6588be5"
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, other {正在 <places>{placesText}</places> 中搜索}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
   },
-  "askCmdr.tool.search.in.done": "已在 <places>{placesText}</places> 中搜索",
-  "@askCmdr.tool.search.in.done": {
-    "sourceHash": "d3b7095"
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, other {已在 <places>{placesText}</places> 中搜索}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
   },
   "askCmdr.tool.searchPhotos.query.doing": "正在你的照片中搜索“{query}”",
   "@askCmdr.tool.searchPhotos.query.doing": {
@@ -370,11 +370,11 @@
   },
   "askCmdr.tool.outcome.imageIndexingOff": "图像索引已关闭",
   "@askCmdr.tool.outcome.imageIndexingOff": {
-    "sourceHash": "f9e5c29"
+    "sourceHash": "5e9e5f6"
   },
   "askCmdr.tool.outcome.semanticModelNotInstalled": "语义搜索模型还没安装",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
-    "sourceHash": "00c39e7"
+    "sourceHash": "54dc9af"
   },
   "askCmdr.tool.outcome.staged": "{count, plural, other {{countText} 项待复查}}",
   "@askCmdr.tool.outcome.staged": {

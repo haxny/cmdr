@@ -240,13 +240,13 @@
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "b3df6a5"
   },
-  "askCmdr.tool.search.queryIn.doing": "Buscando “{query}” en <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.doing": {
-    "sourceHash": "b1570b4"
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, one {Buscando “{query}” en <places>{placesText}</places>} many {Buscando “{query}” en <places>{placesText}</places>} other {Buscando “{query}” en <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
   },
-  "askCmdr.tool.search.queryIn.done": "Se ha buscado “{query}” en <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.done": {
-    "sourceHash": "b284755"
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {Se ha buscado “{query}” en <places>{placesText}</places>} many {Se ha buscado “{query}” en <places>{placesText}</places>} other {Se ha buscado “{query}” en <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
   },
   "askCmdr.tool.search.query.doing": "Buscando “{query}”",
   "@askCmdr.tool.search.query.doing": {
@@ -256,13 +256,13 @@
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "04e348f"
   },
-  "askCmdr.tool.search.in.doing": "Buscando en <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.doing": {
-    "sourceHash": "6588be5"
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, one {Buscando en <places>{placesText}</places>} many {Buscando en <places>{placesText}</places>} other {Buscando en <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
   },
-  "askCmdr.tool.search.in.done": "Se ha buscado en <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.done": {
-    "sourceHash": "d3b7095"
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {Se ha buscado en <places>{placesText}</places>} many {Se ha buscado en <places>{placesText}</places>} other {Se ha buscado en <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
   },
   "askCmdr.tool.searchPhotos.query.doing": "Buscando “{query}” en tus fotos",
   "@askCmdr.tool.searchPhotos.query.doing": {
@@ -371,11 +371,11 @@
   },
   "askCmdr.tool.outcome.imageIndexingOff": "la indexación de imágenes está desactivada",
   "@askCmdr.tool.outcome.imageIndexingOff": {
-    "sourceHash": "f9e5c29"
+    "sourceHash": "5e9e5f6"
   },
-  "askCmdr.tool.outcome.semanticModelNotInstalled": "el modelo de búsqueda de fotos no está instalado",
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "el modelo de búsqueda semántica no está instalado",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
-    "sourceHash": "00c39e7"
+    "sourceHash": "54dc9af"
   },
   "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} pendiente de revisar} many {{countText} pendientes de revisar} other {{countText} pendientes de revisar}}",
   "@askCmdr.tool.outcome.staged": {

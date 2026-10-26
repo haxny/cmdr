@@ -2939,9 +2939,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr 工作时会显示它正在查看的内容。选择收到回答后要不要把这些行收起来。",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr 会显示 AI 工作时正在查看的内容。选择收到回答后要不要把这些行收起来。",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "全部收起",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

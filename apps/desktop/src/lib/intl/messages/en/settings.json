@@ -3504,9 +3504,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "description": "Label for a choice in Settings > Advanced > Ask Cmdr. In the Ask Cmdr chat, the assistant’s requests to look at files show as a group of short lines that opens while it works; this picks what that group does once the answer is in."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr shows what the AI looks at while it works. Pick whether those lines fold away once the answer arrives.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "description": "Help text under the tool-groups choice in Settings > Advanced > Ask Cmdr. “Those lines” are the short lines in the chat naming each folder, file, or search the assistant checked. “Ask Cmdr” is the product name; keep it untranslated."
+    "description": "Help text under the tool-groups choice in Settings > Advanced > Ask Cmdr. “Ask Cmdr” is the product name of the chat panel; keep it untranslated. It names only the panel: the AI is the one that looks at files and answers. “Those lines” are the short lines in the chat naming each folder, file, or search the AI checked."
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

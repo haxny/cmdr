@@ -2952,9 +2952,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Terwijl Ask Cmdr werkt, toont het waar het naar kijkt. Kies of die regels inklappen zodra het antwoord er is.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr toont waar de AI naar kijkt terwijl die werkt. Kies of die regels inklappen zodra het antwoord er is.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Klap ze in",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

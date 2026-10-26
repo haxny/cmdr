@@ -2462,9 +2462,6 @@
     "chosen": "Foto",
     "confidence": "high",
     "decision": "Image-content indexing on network drives",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "names the feature the user turns back on, which the catalog calls Bildindizierung everywhere (settings.section.imageIndexing, indexing.enrich.label); a name beats the prose split"
-    },
     "sources": "macOS AirDrop (1 Foto empfangen); Photos (In „Fotos“ öffnen)"
   },
   "pin": {

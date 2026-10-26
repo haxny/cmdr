@@ -240,13 +240,13 @@
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "b3df6a5"
   },
-  "askCmdr.tool.search.queryIn.doing": "Đang tìm kiếm “{query}” trong <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.doing": {
-    "sourceHash": "b1570b4"
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, other {Đang tìm kiếm “{query}” trong <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
   },
-  "askCmdr.tool.search.queryIn.done": "Đã tìm kiếm “{query}” trong <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.done": {
-    "sourceHash": "b284755"
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, other {Đã tìm kiếm “{query}” trong <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
   },
   "askCmdr.tool.search.query.doing": "Đang tìm kiếm “{query}”",
   "@askCmdr.tool.search.query.doing": {
@@ -256,13 +256,13 @@
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "04e348f"
   },
-  "askCmdr.tool.search.in.doing": "Đang tìm kiếm trong <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.doing": {
-    "sourceHash": "6588be5"
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, other {Đang tìm kiếm trong <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
   },
-  "askCmdr.tool.search.in.done": "Đã tìm kiếm trong <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.done": {
-    "sourceHash": "d3b7095"
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, other {Đã tìm kiếm trong <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
   },
   "askCmdr.tool.searchPhotos.query.doing": "Đang tìm kiếm “{query}” trong ảnh của bạn",
   "@askCmdr.tool.searchPhotos.query.doing": {
@@ -371,11 +371,11 @@
   },
   "askCmdr.tool.outcome.imageIndexingOff": "lập chỉ mục hình ảnh đang tắt",
   "@askCmdr.tool.outcome.imageIndexingOff": {
-    "sourceHash": "f9e5c29"
+    "sourceHash": "5e9e5f6"
   },
-  "askCmdr.tool.outcome.semanticModelNotInstalled": "mô hình tìm kiếm ảnh chưa được cài đặt",
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "mô hình tìm kiếm ngữ nghĩa chưa được cài đặt",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
-    "sourceHash": "00c39e7"
+    "sourceHash": "54dc9af"
   },
   "askCmdr.tool.outcome.staged": "{count, plural, other {{countText} mục chờ bạn xem lại}}",
   "@askCmdr.tool.outcome.staged": {

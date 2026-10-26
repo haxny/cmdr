@@ -2942,9 +2942,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Enquanto trabalha, o Ask Cmdr mostra o que está olhando. Escolha se essas linhas se recolhem quando a resposta chegar.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "O Ask Cmdr mostra o que a IA está olhando enquanto trabalha. Escolha se essas linhas se recolhem quando a resposta chegar.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Recolher",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

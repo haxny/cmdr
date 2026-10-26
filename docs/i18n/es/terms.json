@@ -2342,9 +2342,6 @@
     "chosen": "foto",
     "accept": ["fotos"],
     "forms": "photos indexed → fotos indexadas; photo archive → colección de fotos",
-    "exceptions": {
-      "askCmdr.tool.outcome.imageIndexingOff": "Names the setting that is off, whose feature name is la indexación de imágenes (decision Fotos en unidades de red: feature names keep imagen)."
-    },
     "confidence": "high",
     "sources": "macOS Finder/AirDrop (Recibiendo ^0 fotos)",
     "decision": "Fotos en unidades de red"

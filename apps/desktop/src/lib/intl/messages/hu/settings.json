@@ -2941,9 +2941,9 @@
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Munka közben az Ask Cmdr megmutatja, mit néz éppen. Válaszd ki, hogy ezek a sorok összecsukódjanak-e, amikor megérkezik a válasz.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Az Ask Cmdr megmutatja, mit néz az AI munka közben. Válaszd ki, hogy ezek a sorok összecsukódjanak-e, amikor megérkezik a válasz.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
-    "sourceHash": "0be1969"
+    "sourceHash": "785da0a"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Csukódjanak össze",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {

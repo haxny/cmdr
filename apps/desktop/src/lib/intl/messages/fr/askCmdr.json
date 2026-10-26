@@ -240,13 +240,13 @@
   "@askCmdr.tool.imageFacts.files.done": {
     "sourceHash": "b3df6a5"
   },
-  "askCmdr.tool.search.queryIn.doing": "Recherche de « {query} » dans <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.doing": {
-    "sourceHash": "b1570b4"
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, one {Recherche de « {query} » dans le dossier <places>{placesText}</places>} many {Recherche de « {query} » dans les dossiers <places>{placesText}</places>} other {Recherche de « {query} » dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
   },
-  "askCmdr.tool.search.queryIn.done": "A cherché « {query} » dans <places>{placesText}</places>",
-  "@askCmdr.tool.search.queryIn.done": {
-    "sourceHash": "b284755"
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {A cherché « {query} » dans le dossier <places>{placesText}</places>} many {A cherché « {query} » dans les dossiers <places>{placesText}</places>} other {A cherché « {query} » dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
   },
   "askCmdr.tool.search.query.doing": "Recherche de « {query} »",
   "@askCmdr.tool.search.query.doing": {
@@ -256,13 +256,13 @@
   "@askCmdr.tool.search.query.done": {
     "sourceHash": "04e348f"
   },
-  "askCmdr.tool.search.in.doing": "Recherche dans <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.doing": {
-    "sourceHash": "6588be5"
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, one {Recherche dans le dossier <places>{placesText}</places>} many {Recherche dans les dossiers <places>{placesText}</places>} other {Recherche dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
   },
-  "askCmdr.tool.search.in.done": "A cherché dans <places>{placesText}</places>",
-  "@askCmdr.tool.search.in.done": {
-    "sourceHash": "d3b7095"
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {A cherché dans le dossier <places>{placesText}</places>} many {A cherché dans les dossiers <places>{placesText}</places>} other {A cherché dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
   },
   "askCmdr.tool.searchPhotos.query.doing": "Recherche de « {query} » dans vos photos",
   "@askCmdr.tool.searchPhotos.query.doing": {
@@ -371,11 +371,11 @@
   },
   "askCmdr.tool.outcome.imageIndexingOff": "l’indexation des images est désactivée",
   "@askCmdr.tool.outcome.imageIndexingOff": {
-    "sourceHash": "f9e5c29"
+    "sourceHash": "5e9e5f6"
   },
-  "askCmdr.tool.outcome.semanticModelNotInstalled": "le modèle de recherche de photos n’est pas installé",
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "le modèle de recherche sémantique n’est pas installé",
   "@askCmdr.tool.outcome.semanticModelNotInstalled": {
-    "sourceHash": "00c39e7"
+    "sourceHash": "54dc9af"
   },
   "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} à vérifier} many {{countText} à vérifier} other {{countText} à vérifier}}",
   "@askCmdr.tool.outcome.staged": {
