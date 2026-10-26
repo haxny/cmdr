@@ -14,7 +14,7 @@
 //! table would let a stray cancel from one sign-in dialog reach into another
 //! backend's dial.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -79,6 +79,9 @@ impl AttemptTable {
         set_out: DialTicket,
     ) -> (CancellationToken, AttemptGuard) {
         let cancel = CancellationToken::new();
+        if CALLED_OFF_EARLY.lock_ignore_poison().contains(attempt_id) {
+            cancel.cancel();
+        }
         let serial = self.next_serial.fetch_add(1, Ordering::Relaxed);
         let set_out_at = set_out.0;
         self.entries.lock_ignore_poison().insert(
@@ -151,6 +154,22 @@ impl AttemptTable {
     pub fn is_filed(&self, attempt_id: &str) -> bool {
         self.entries.lock_ignore_poison().contains_key(attempt_id)
     }
+}
+
+/// Attempt ids called off before their dial filed them, across every table: a
+/// shared saved-place dial (`network::dial_flights`) is called off by an id its
+/// backend may not have filed yet, since SFTP and S3 read the Keychain first.
+static CALLED_OFF_EARLY: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+/// Calls off `attempt_id` ahead of its filing: the attempt registers already
+/// cancelled. ❗ Pair with [`forget_call_off`] once the dial ends, or the id stays.
+pub fn call_off_early(attempt_id: &str) {
+    CALLED_OFF_EARLY.lock_ignore_poison().insert(attempt_id.to_string());
+}
+
+/// Drops a call-off [`call_off_early`] made, once its dial is over.
+pub fn forget_call_off(attempt_id: &str) {
+    CALLED_OFF_EARLY.lock_ignore_poison().remove(attempt_id);
 }
 
 /// Takes one attempt's entry out of the table when its connect ends, however it

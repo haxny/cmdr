@@ -13,6 +13,7 @@ and typed result shapes colocated here.
 - `suggestions/`: the suggested-ops trio over the proposal spine. `suggestions/CLAUDE.md`.
 - `memory.rs`: `memory_write` + `memory_edit`, the only tools that write; every rule lives in `../memory/`.
 - `quiet.rs`: `nothing_to_suggest`, a pure SIGNAL: the wake path acts on the call, a rail turn calling it is inert.
+- `connect.rs`: `connect_volume`, the one `Session` tool.
 - `view.rs`: `dispatch` + `refuse_unavailable`, the no-write choke point. `mod.rs`: `agent_tool_declarations()`.
 - `line/`: what the rail's tool line says about a call (subject, outcome, preview, repeat mark). `line/CLAUDE.md`.
 

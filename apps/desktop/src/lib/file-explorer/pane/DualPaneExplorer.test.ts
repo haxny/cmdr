@@ -143,6 +143,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   onVolumesBusyChanged: vi.fn().mockResolvedValue(() => {}),
   onVolumesEjectingChanged: vi.fn().mockResolvedValue(() => {}),
   onVolumeConnectionChanged: vi.fn().mockResolvedValue(() => {}),
+  onVolumeReconnectRequested: vi.fn().mockResolvedValue(() => {}),
   onNetworkHostFound: vi.fn().mockResolvedValue(() => {}),
   onNetworkHostLost: vi.fn().mockResolvedValue(() => {}),
   onNetworkHostResolved: vi.fn().mockResolvedValue(() => {}),

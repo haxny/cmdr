@@ -336,3 +336,93 @@ fn the_preferred_member_is_live_then_indexed_then_freshest_on_disk() {
     assert_eq!(with_lan.preferred_member("ts").map(|v| v.id.as_str()), Some("lan"));
     assert_eq!(with_lan.preferred_member("lan").map(|v| v.id.as_str()), Some("lan"));
 }
+
+/// When each test member was last connected, in seconds: `lan` an hour after `ts`.
+fn recency(id: &str) -> Option<i64> {
+    match id {
+        "ts" => Some(1_000),
+        "lan" => Some(4_600),
+        _ => None,
+    }
+}
+
+fn target<'a>(facts: &'a VolumeFacts, id: &str) -> Option<&'a str> {
+    facts.connect_target(id, recency).map(|v| v.id.as_str())
+}
+
+/// A connect asked of a member whose same-account sibling is serving answers
+/// with that sibling: nothing needs dialing.
+#[test]
+fn a_connect_on_a_member_with_a_serving_sibling_lands_on_the_sibling() {
+    let facts = facts(vec![
+        share("ts", "/Volumes/naspi", false, david(Some(BOX), "naspi")),
+        share("lan", "/Volumes/naspi-1", true, david(Some(BOX), "naspi")),
+    ]);
+
+    assert_eq!(target(&facts, "ts"), Some("lan"));
+    assert_eq!(target(&facts, "lan"), Some("lan"));
+}
+
+/// With no member serving, the dial goes to whichever was connected last,
+/// whichever the model named.
+#[test]
+fn with_no_member_serving_the_most_recently_connected_one_is_dialed() {
+    let facts = facts(vec![
+        share("ts", "/Volumes/naspi", false, david(Some(BOX), "naspi")),
+        share("lan", "/Volumes/naspi-1", false, david(Some(BOX), "naspi")),
+    ]);
+
+    assert_eq!(target(&facts, "ts"), Some("lan"));
+    assert_eq!(target(&facts, "lan"), Some("lan"));
+    assert_eq!(
+        facts.connect_target("ts", |_| None).map(|v| v.id.as_str()),
+        Some("ts"),
+        "with no recency to go by, the volume named"
+    );
+}
+
+/// A registered member whose session dropped isn't serving: the pick falls to
+/// recency, and the standing of whichever wins decides the move.
+#[test]
+fn a_registered_member_that_dropped_is_not_serving() {
+    let mut lan = share("lan", "/Volumes/naspi-1", true, david(Some(BOX), "naspi"));
+    lan.connection_state = Some(ConnectionState::Disconnected);
+    let facts = facts(vec![
+        share("ts", "/Volumes/naspi", false, david(Some(BOX), "naspi")),
+        lan,
+    ]);
+
+    assert_eq!(
+        facts
+            .connect_target("ts", |id| (id == "ts").then_some(9_999))
+            .map(|v| v.id.as_str()),
+        Some("ts")
+    );
+}
+
+/// Another account's member, or one only a probe vouches for, is never the one a
+/// connect lands on or dials, however live or recent.
+#[test]
+fn a_connect_never_lands_on_another_account_or_an_unproven_member() {
+    let other_account = facts(vec![
+        share("ts", "/Volumes/naspi", false, david(Some(BOX), "naspi")),
+        share(
+            "lan",
+            "/Volumes/naspi-1",
+            true,
+            ShareIdentity::new(Some((BOX, GuidProof::Authenticated)), "naspi", Some("dori")),
+        ),
+    ]);
+    assert_eq!(target(&other_account, "ts"), Some("ts"));
+
+    let probe_only = facts(vec![
+        share("ts", "/Volumes/naspi", false, david(Some(BOX), "naspi")),
+        share("lan", "/Volumes/naspi-1", false, probed(BOX, "naspi")),
+    ]);
+    assert_eq!(target(&probe_only, "ts"), Some("ts"));
+}
+
+#[test]
+fn a_connect_on_an_unknown_volume_has_no_target() {
+    assert_eq!(target(&facts(Vec::new()), "nope"), None);
+}

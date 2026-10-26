@@ -318,9 +318,9 @@ Ask Cmdr is the widest of these, so the rest of this section is its detail. Ask 
   setting, so it can't add a host, type a password, or approve a key (what an injected file name would want). The
   dispatch gate admits it only on a turn the user started; a wake or a follow-up is refused, typed, because a background
   connect can wake a sleeping NAS nobody asked about. A Keychain prompt on a user-started turn is acceptable; a missing
-  credential raises nothing. No `Session` tool ships yet; any that does is hand-allowlisted in
-  `EXPECTED_SESSION_TOOL_NAMES`. No egress moves, so consent doesn't either. Canonical: agent invariant 7 in
-  `apps/desktop/src-tauri/src/agent/DETAILS.md`.
+  credential raises nothing. One `Session` tool ships, `connect_volume`, hand-allowlisted in
+  `EXPECTED_SESSION_TOOL_NAMES`; its schema takes a volume id and nothing else. No egress moves, so consent doesn't
+  either. Canonical: agent invariant 7 in `apps/desktop/src-tauri/src/agent/DETAILS.md`.
 - **The agent writes one folder, and what it writes egresses forever after.** `Access::Memory` covers `memory_write` and
   `memory_edit`, jailed to `<data-dir>/ai/memory/` (relative `.md` paths only, no `..`, no symlink along the chain,
   containment re-checked against a canonicalized parent) and capped at 64 KB. Two consequences worth stating plainly:

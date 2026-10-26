@@ -16,6 +16,7 @@ import {
   type SpaceInfo,
   type VolumeConnectionChanged,
   type VolumeContextAction,
+  type VolumeReconnectRequested,
   type VolumeRootChanged,
   type VolumesBusyChanged,
   type VolumesEjectingChanged,
@@ -239,6 +240,17 @@ export function onServerPlaceMoved(handler: (payload: ServerPlaceMoved) => void)
  */
 export function onVolumeConnectionChanged(handler: (payload: VolumeConnectionChanged) => void): Promise<UnlistenFn> {
   return events.volumeConnectionChanged.listen((event) => {
+    handler(event.payload)
+  })
+}
+
+/**
+ * Subscribes to the backend asking the reconnect manager to take a registered volume whose
+ * session dropped (Ask Cmdr's `connect_volume`). The same move a pane landing on that volume
+ * makes, so recovery keeps its one owner. Call the returned `UnlistenFn` on destroy.
+ */
+export function onVolumeReconnectRequested(handler: (payload: VolumeReconnectRequested) => void): Promise<UnlistenFn> {
+  return events.volumeReconnectRequested.listen((event) => {
     handler(event.payload)
   })
 }

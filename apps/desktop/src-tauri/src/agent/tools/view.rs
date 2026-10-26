@@ -106,7 +106,7 @@ fn unavailable(call_id: &str, tool: &ToolId) -> AgentToolResult {
         content: json!({
             "available": false,
             "requested": tool.as_wire_name(),
-            "reason": "That tool isn't available. Ask Cmdr can prepare a rename plan, suggest file operations for you to review, and save notes in its own memory folder. It can't touch your files or approve a proposal, and it reads a file's contents only through inspect_file.",
+            "reason": "That tool isn't available. Ask Cmdr can prepare a rename plan, suggest file operations for you to review, save notes in its own memory folder, and connect a server or share you saved. It can't touch your files or approve a proposal, and it reads a file's contents only through inspect_file.",
         }),
         elided: false,
     }
@@ -211,13 +211,16 @@ async fn route_call<R: Runtime>(
     }
     // `propose_suggestions` is the one registry tool that needs to know WHICH thread asked:
     // a sweep records the conversation it came out of, and the registry path (an external
-    // MCP client) has none. `list_dir` holds the turn's token itself: the turn abandons any
-    // call on Stop, but a live read stopped from inside answers with the folder it was
-    // reading. Everything else goes through the plain dispatch.
+    // MCP client) has none. `list_dir` and `connect_volume` hold the turn's token themselves:
+    // the turn abandons any call on Stop, but each answers a stop in its own vocabulary (the
+    // folder a live read was reading, `outcome: cancelled`). Everything else goes through the
+    // plain dispatch.
     let outcome = if call.tool == ToolId::ProposeSuggestions {
         crate::agent::tools::suggestions::propose_in_thread(app, scope.conversation_id(), &call.arguments).await
     } else if call.tool == ToolId::ListDir {
         crate::agent::tools::read::listing::execute_list_dir_cancellable(app, &call.arguments, turn.cancel).await
+    } else if call.tool == ToolId::ConnectVolume {
+        crate::agent::tools::connect::execute_connect_volume_cancellable(app, &call.arguments, turn.cancel).await
     } else {
         execute_tool(app, Consumer::Agent, call.tool.as_wire_name(), &call.arguments).await
     };
@@ -411,18 +414,31 @@ mod tests {
     }
 
     #[test]
-    fn passes_every_shipped_tool_through_to_dispatch_on_every_turn() {
-        // No shipped tool is refused on any origin — dispatch proceeds to execute_tool. That
-        // also pins "the shipped view holds no `Session` tool" from the gate's side: one
-        // would be refused on a wake.
+    fn passes_every_shipped_tool_through_to_dispatch_on_the_turns_it_may_run() {
+        // No shipped tool is refused on a turn the user started, and only `Session` tools are
+        // refused on one Cmdr started.
         for tool in ToolId::KNOWN {
+            let session = tool_access(tool.as_wire_name()) == Some(Access::Session);
             for origin in ALL_ORIGINS {
-                assert!(
-                    refuse_unavailable("call-1", &tool, origin).is_none(),
-                    "{} must reach dispatch on {origin:?}",
+                let refused = refuse_unavailable("call-1", &tool, origin);
+                assert_eq!(
+                    refused.is_some(),
+                    session && !origin.user_started(),
+                    "{} on {origin:?}",
                     tool.as_wire_name()
                 );
             }
+        }
+    }
+
+    #[test]
+    fn connect_volume_waits_for_a_turn_the_user_started() {
+        for origin in [TurnOrigin::Wake, TurnOrigin::Outcomes] {
+            let refusal = refuse_unavailable("call-1", &ToolId::ConnectVolume, origin).expect("refused");
+            assert_eq!(refusal.content["refusal"], "refusedInBackground");
+        }
+        for origin in [TurnOrigin::Text, TurnOrigin::Resume] {
+            assert!(refuse_unavailable("call-1", &ToolId::ConnectVolume, origin).is_none());
         }
     }
 

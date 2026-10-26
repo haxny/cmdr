@@ -941,6 +941,11 @@ The backends report transitions, not states, and a retired instance stays silent
 so a flapping link announces once per reconnect and a superseded volume never speaks for its successor's id. Pinned by
 `manager/arrival_tests.rs::a_registered_volume_that_reconnects_in_place_announces_itself`.
 
+**Every transition is also news in process** (`manager::connection_news()`, a broadcast `ArrivalOnReconnect` feeds),
+for work waiting on ONE volume's next transition, including the ones that aren't arrivals (`NeedsCredentials`, a host
+key to approve): Ask Cmdr's `connect_volume` waits out a reconnect on it. Subscribe BEFORE asking for the change, or it
+can land unheard; a send with nobody listening is dropped.
+
 ### A volume ID owns a set of mount roots
 
 **Decision**: a registry entry (`manager/roots.rs::Registration`) is the volume plus the SET of mount roots known to

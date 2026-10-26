@@ -9,13 +9,19 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { SignInShape, VolumeConnection, VolumeConnectionChanged } from '#lib/ipc/bindings.js'
+import type {
+  SignInShape,
+  VolumeConnection,
+  VolumeConnectionChanged,
+  VolumeReconnectRequested,
+} from '#lib/ipc/bindings.js'
 
 // Hoisted mocks: must run before importing the module under test.
 const mockReconnect = vi.fn<(volumeId: string) => Promise<void>>()
 const mockSignInState = vi.fn<(volumeId: string) => Promise<SignInShape>>()
 const mockListen = vi.fn<(handler: (payload: VolumeConnectionChanged) => void) => Promise<() => void>>()
 let lastEventHandler: ((payload: VolumeConnectionChanged) => void) | null = null
+let lastReconnectRequest: ((payload: VolumeReconnectRequested) => void) | null = null
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   reconnectVolume: (id: string) => mockReconnect(id),
@@ -25,6 +31,11 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   onVolumeConnectionChanged: (handler: (payload: VolumeConnectionChanged) => void) => {
     lastEventHandler = handler
     return mockListen(handler)
+  },
+  // Ask Cmdr's `connect_volume` asking the manager to take a dropped volume.
+  onVolumeReconnectRequested: (handler: (payload: VolumeReconnectRequested) => void) => {
+    lastReconnectRequest = handler
+    return Promise.resolve(() => {})
   },
 }))
 
@@ -73,6 +84,17 @@ describe('smbReconnectManager', () => {
     await vi.advanceTimersByTimeAsync(RECONNECT_DELAYS_MS.reduce((a, b) => a + b, 0) + 100)
     expect(mockReconnect).not.toHaveBeenCalled()
     expect(smbReconnectManager.getState('vol-no-subs')).toBeNull()
+  })
+
+  it('takes a dropped volume when the backend asks, the way a pane landing on it does', async () => {
+    await smbReconnectManager.init()
+    if (!lastReconnectRequest) throw new Error("init() didn't listen for reconnect requests")
+    lastReconnectRequest({ volumeId: 'vol-asked' })
+
+    expect(smbReconnectManager.getState('vol-asked')?.status).toBe('waiting')
+    mockReconnect.mockResolvedValueOnce(undefined)
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAYS_MS[0])
+    expect(mockReconnect).toHaveBeenCalledWith('vol-asked')
   })
 
   it('starts a cycle on disconnected event when subscribed', async () => {

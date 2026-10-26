@@ -16,7 +16,8 @@
 //! the earlier-roots record), and `miss.rs` (a miss as a tool result). Its
 //! contract: `agent/tools/DETAILS.md` § The location contract. `store_path.rs`
 //! translates app paths to and from an importance store's path space, and
-//! `same_share.rs` proves two volumes one share and picks which may answer.
+//! `same_share.rs` proves two volumes one share and picks which may answer (and
+//! which member a connect acts on).
 
 use serde::{Deserialize, Serialize};
 

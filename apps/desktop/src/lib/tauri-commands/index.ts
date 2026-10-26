@@ -239,6 +239,7 @@ export {
   onVolumesBusyChanged,
   onVolumesEjectingChanged,
   onVolumeConnectionChanged,
+  onVolumeReconnectRequested,
   onVolumeContextAction,
   watchVolumeSpace,
   unwatchVolumeSpace,

@@ -106,13 +106,6 @@ pub enum Access {
     /// dials only a saved place. The agent's gate also admits it only on a turn the user started
     /// (`crate::agent::tools::view`), since a background connect can wake a sleeping NAS for a
     /// digest nobody asked for. Agent invariant 7 (`agent/DETAILS.md`) is the promise.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the gate and its allowlist are in place before the first tool carries this class"
-        )
-    )]
     Session,
     /// Mutates the filesystem OR app state (nav, cursor, selection, tabs, dialogs, settings,
     /// connect/eject, file ops, rollback-cancel); when in doubt a tool is `Write`. Never reachable

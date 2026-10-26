@@ -42,6 +42,7 @@ const EXPECTED_AGENT_TOOL_NAMES: &[&str] = &[
     "nothing_to_suggest",
     "memory_write",
     "memory_edit",
+    "connect_volume",
 ];
 
 /// Set-equality: the agent view equals exactly its authored `consumers:[agent]` entries. This is
@@ -84,8 +85,12 @@ const EXPECTED_MEMORY_TOOL_NAMES: &[&str] = &["memory_write", "memory_edit"];
 /// ⚠️ **The third widening.** "Ask Cmdr changes nothing outside its memory folder" gains "and may
 /// connect a place you saved". No structural check can prove a handler dials only a saved place
 /// and edits no server, credential, pin, or setting, so a human puts each name here on purpose,
-/// having read the handler. Empty until a tool earns it.
-const EXPECTED_SESSION_TOOL_NAMES: &[&str] = &[];
+/// having read the handler.
+///
+/// `connect_volume` (`agent/tools/connect.rs`): dials only a saved, unregistered place through
+/// `connect_saved_place_shared` with no secret and no account, hands a dropped one to the
+/// frontend's reconnect manager, and takes no address, secret, or account parameter.
+const EXPECTED_SESSION_TOOL_NAMES: &[&str] = &["connect_volume"];
 
 /// Every registry entry in either view, with its access class.
 fn shipped_tools() -> Vec<(String, Option<Access>)> {
@@ -131,8 +136,7 @@ fn test_agent_tool_view_never_writes() {
 }
 
 /// A `Session` tool only exists if a human authored it into `EXPECTED_SESSION_TOOL_NAMES`, in
-/// either view. Today that pins the shipped registry to NO `Session` tool: one in the view that
-/// can't do what it says would be a lie the model acts on.
+/// either view.
 #[test]
 fn test_session_tools_are_an_explicit_allowlist() {
     assert!(
@@ -142,7 +146,7 @@ fn test_session_tools_are_an_explicit_allowlist() {
 }
 
 /// The allowlist check has teeth: a `Session` entry nobody listed fails it. A test-only entry,
-/// never in the shipped registry, because the shipped one has nothing to catch yet.
+/// never in the shipped registry.
 #[test]
 fn test_an_unlisted_session_tool_fails_the_allowlist() {
     let mut tools = shipped_tools();

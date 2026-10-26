@@ -199,6 +199,14 @@
   "@askCmdr.tool.memoryEdit.done": {
     "description": "Past-tense label on the same tool line once the notes are updated. Pairs with askCmdr.tool.memoryEdit.doing."
   },
+  "askCmdr.tool.connectVolume.doing": "Connecting to your server",
+  "@askCmdr.tool.connectVolume.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant connects a server or network share the person saved earlier (a NAS, for example), using the password already stored for it. Pairs with askCmdr.tool.connectVolume.done."
+  },
+  "askCmdr.tool.connectVolume.done": "Tried connecting to your server",
+  "@askCmdr.tool.connectVolume.done": {
+    "description": "Past-tense label on the same tool line once the connect attempt ended. Says “tried” because the attempt may not have gone through (no saved password, the server didn't answer); the assistant's reply says how it went. Pairs with askCmdr.tool.connectVolume.doing."
+  },
   "askCmdr.tool.unknown.doing": "Working",
   "@askCmdr.tool.unknown.doing": {
     "description": "Present-tense fallback status for a tool the rail doesn't have a specific label for."

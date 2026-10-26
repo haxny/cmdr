@@ -175,6 +175,49 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
 - **`nothing_to_suggest`** (`quiet.rs`) — one argument, a short `reason`, and no effect at all. See § A tool that is
   only a signal.
 - **`memory_write` / `memory_edit`** (`memory.rs`) — the two `Access::Memory` tools. See § The two tools that write.
+- **`connect_volume`** (`connect.rs`, agent-only) — the one `Access::Session` tool: brings a place the user saved to
+  life by `volumeId`. See § Connecting a saved place.
+
+## Connecting a saved place (`connect_volume`)
+
+Turns "the NAS isn't connected" from a dead end into one call, without any power an injected file name would want: the
+schema is `{ volumeId }` and nothing else, so it can't add a host, take a password, or approve a key. The gate admits
+it only on a turn the user started (§ The dispatch gate); the promise is agent invariant 7 in `../DETAILS.md`.
+
+**One move per standing, the frontend's own** (`apps/desktop/src/lib/servers/DETAILS.md` § The three arms), because
+the wrong move is silent: re-dialing a registered volume registers a SECOND one, and dialing one the backoff loop owns
+races it.
+
+- Serving (or a local disk) → `alreadyConnected`, no dial.
+- Registered and `disconnected` → no dial. It emits `VolumeReconnectRequested`, which the frontend's
+  `smbReconnectManager` answers with the same `startCycle` a pane landing there makes, and waits up to `RECONNECT_WAIT`
+  (10 s) on `file_system::volume::manager::connection_news()` (subscribed BEFORE the emit) for the outcome:
+  `connected`, `needsCredentials`, `needsApproval`, `rejected` (a refused guest session), or `stillReconnecting`, whose
+  detail tells the model not to poll. With no window listening, the wait ends `stillReconnecting`, which is true.
+- Registered and `needs_sign_in` / a host key to approve → `needsCredentials` / `needsApproval`, no dial.
+- Not registered (a `saved` row) → the only dial: `commands::servers::connect_saved_place_shared` with no secret and no
+  account, so a missing Keychain password answers `needsCredentials` before anything mounts, and every NetFS mount is
+  `NoUI` anyway (`network/CLAUDE.md`). A Keychain access prompt on a user-started turn is acceptable (invariant 7).
+  `connected` echoes the root it landed on, which may have moved (`naspi-2`).
+
+**One share, one connect** (`location/same_share.rs::connect_target`, on the same `redirectable` proof every read
+uses): a member whose same-account sibling is serving answers `alreadyConnected` with the sibling's `location` and
+`via` naming the volume asked; with none serving, the dial goes to the member connected most recently
+(`known-shares.json`'s `lastConnectedAt`), with `via` when that isn't the one named. Recency is the one signal for "the
+address that works from here"; nothing sniffs networks.
+
+**Shared with the pane's dial.** Every saved-place dial is one flight per place (`network/dial_flights.rs`): a rail
+call during a pane's Enter shares that dial's outcome instead of registering a second volume. Stop drops the call,
+which leaves the flight; the dial is called off once nobody waits on it, so Stop never ends a dial the pane still
+wants. The handler races the turn's token itself, so a stop reads `outcome: cancelled`.
+
+**The result is always an answer**, `{ outcome, location?, via?, reason?, detail }`: `reason` is the dial's own outcome
+name for `rejected` / `unreachable` / `needsApproval`, mapped exhaustively in `connect.rs::classify` (no `_ =>`, so a
+new `ServerConnectOutcome` is a compile error there). `refusedInBackground` is the gate's, never the handler's.
+
+**Not shared with AI clients.** `select_volume` on a saved place already brings it to life for them: the pane lands on
+it and `place-connect.svelte.ts` dials, with the sign-in sheet for anything missing. `mcp/DETAILS.md` § The `Session`
+tier.
 
 ## A tool that is only a signal (`nothing_to_suggest`)
 
@@ -197,8 +240,8 @@ delete lives on the wake path, after the turn (`agent/wake/`), and a rail turn c
 auto-dispatched ones the user never previews, and `redact::RedactionContext::redact_line` is path-shaped, so it does
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
-**What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,828 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+**What it costs everyone else.** The schema is prefix, so all 20 declarations are paid on every rail turn: this one is
+97 tokens of the 6,895 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -681,7 +724,7 @@ and the system prompt requires the model to disclose "returned of total" wheneve
 The access half lives in the pure `admit(Option<Access>, TurnOrigin) -> Admission`: `Read`, `Propose`, and `Memory`
 dispatch on every turn, `Session` only when `TurnOrigin::user_started` (`text`, `resume`), `Write` and an unclassified
 name never. It's separate so the rule is unit-testable against EVERY `Access` variant and origin without authoring a
-tool per variant: no `Session` tool ships yet, so a name-driven test would cover that arm vacuously.
+tool per variant, so a variant no tool carries is never covered vacuously.
 
 **The origin is the turn's, stated by its caller.** `TurnParams::origin` (`agent::types::TurnOrigin`) is set by
 `send_message` (`text`) and by the wake runner (`wake` / `outcomes`), and reaches every call in `CallContext` beside the
@@ -691,12 +734,12 @@ if that wrapping ever changes.
 The negative test (`view.rs`) drives the fake `AgentLlm`'s `CallRawTool("delete", …)` and asserts the refusal end to
 end; it was proven red (gate disabled ⇒ "delete" not refused) before green.
 
-The refusal copy says Ask Cmdr can prepare a rename plan, suggest file operations for the user to review, and save
-notes in its own memory folder, but can't touch the user's files or approve a proposal, and reads a file's contents only
-through `inspect_file`. ⚠️ Keep it accurate as the tiers grow: it promised "couldn't change anything at all" until
-`Access::Memory`, and "can't read file contents" until `inspect_file`; a model told a false limit either refuses the
-question or invents the answer. It names no `Session` power while no `Session` tool ships: a claim the view can't back
-is the same lie pointed the other way.
+The refusal copy says Ask Cmdr can prepare a rename plan, suggest file operations for the user to review, save notes in
+its own memory folder, and connect a server or share the user saved, but can't touch the user's files or approve a
+proposal, and reads a file's contents only through `inspect_file`. ⚠️ Keep it accurate as the tiers grow: it promised
+"couldn't change anything at all" until `Access::Memory`, and "can't read file contents" until `inspect_file`; a model
+told a false limit either refuses the question or invents the answer, and a claim the view can't back is the same lie
+pointed the other way.
 
 ### A propose result always answers `readyForReview`
 
@@ -727,9 +770,10 @@ The refusal SENTENCE matters as much as the shape, and its rules live with the g
 at the top level is a `Misplaced` violation naming the row that takes it, because "propose_rename_plan has no volumeId
 parameter. It takes renames." is a true sentence a model cannot act on — it reads as "your rows were fine".
 
-`dispatch` routes two tools specially rather than through the generic `execute_tool` call: `propose_rename_plan`,
-which needs the evidence scope, and `propose_suggestions`, which needs the conversation id so a sweep records the
-thread it came out of (`suggestions/DETAILS.md` § The conversation link). Both are gated first, like every other call.
+`dispatch` routes four tools specially rather than through the generic `execute_tool` call: `propose_rename_plan`,
+which needs the evidence scope, `propose_suggestions`, which needs the conversation id so a sweep records the thread it
+came out of (`suggestions/DETAILS.md` § The conversation link), and `list_dir` and `connect_volume`, which take the
+turn's Stop to answer it in their own words. All are gated first, like every other call.
 
 `dispatch` also feeds `propose::evidence::ImageFactsLedger` from every non-elided `image_facts` result. That's what makes
 a rename plan's content claim checkable; the guardrail, its refusal shape, and the revocation seam are in

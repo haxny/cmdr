@@ -12,6 +12,7 @@ pub mod credential_store;
 pub mod keychain;
 
 pub mod connect_wiring;
+pub mod dial_flights;
 pub mod discovery_cache;
 pub mod discovery_gate;
 // Every typed event the module emits. Always compiled: `collect_events!` in
@@ -139,7 +140,7 @@ pub(crate) use discovery_cache::{on_host_found, on_host_lost};
 pub use events::{
     NetworkDiscoveryStateChanged, NetworkHostContextAction, NetworkHostContextActionKind, NetworkHostFound,
     NetworkHostLost, NetworkHostResolved, SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn, VolumeConnection,
-    VolumeConnectionChanged,
+    VolumeConnectionChanged, VolumeReconnectRequested,
 };
 pub use smb_client::{ShareListError, ShareListResult};
 

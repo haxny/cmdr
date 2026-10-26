@@ -36,12 +36,14 @@ use cmdr_webdav::WebdavConnectionParams;
 mod nfs_places;
 mod outcomes;
 mod s3_accounts;
+mod saved_place_dial;
 mod saves;
 mod smb_hosts;
 mod target_ids;
 mod wire;
 use outcomes::{SavedEntry, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, saved_by_id};
 use s3_accounts::s3_accounts;
+pub(crate) use saved_place_dial::{SavedPlaceDial, connect_saved_place_shared};
 use saves::{save_edit, save_target};
 use smb_hosts::smb_hosts;
 pub use wire::{
@@ -173,6 +175,10 @@ fn saved_servers(
 /// share has (its `SignInShape` is `UsernamePassword`): the share is the place and
 /// the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
 /// the account.
+///
+/// ❗ **One dial per place** (`network::dial_flights`): a second caller while a dial
+/// is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
+/// instead of dialing again, which would register a second volume.
 #[tauri::command]
 #[specta::specta]
 pub async fn connect_saved_place(
@@ -181,71 +187,7 @@ pub async fn connect_saved_place(
     secret: Option<SecretOffer>,
     username: Option<String>,
 ) -> Result<ServerConnectOutcome, SavedPlaceRefusal> {
-    if crate::file_system::volume::manager::get_volume_manager()
-        .get(&volume_id)
-        .is_some()
-    {
-        return Err(SavedPlaceRefusal::AlreadyConnected { volume_id });
-    }
-    // ❗ Before the store read: a move landing between the read and the dial's
-    // landing must still refuse it, or a dial to the old address (a host-key
-    // approval answered after the move) saves it again (`connect_wiring::DialTicket`).
-    let set_out = crate::network::connect_wiring::DialTicket::now();
-    let Some(saved) = saved_by_id(&volume_id) else {
-        return Err(SavedPlaceRefusal::NoSuchServer { volume_id });
-    };
-    Ok(match saved {
-        SavedEntry::Sftp(entry) => {
-            let mut params = SftpConnectionParams::new(&entry.host, entry.port, &entry.username, entry.remote_root);
-            params.key_file = entry.key_file.map(std::path::PathBuf::from);
-            params.use_agent = entry.use_agent;
-            params.auto_reconnect = entry.auto_reconnect;
-            outcome_from_sftp(
-                sftp_volume_wiring::connect_and_register_since(
-                    set_out,
-                    &entry.display_name,
-                    entry.start_folder,
-                    params,
-                    &attempt_id,
-                    secret,
-                )
-                .await,
-            )
-        }
-        SavedEntry::Webdav(entry) => {
-            let Some(mut params) = webdav_params(&entry.url, &entry.username, &entry.remote_root) else {
-                return Ok(ServerConnectOutcome::InvalidUrl);
-            };
-            params.auto_reconnect = entry.auto_reconnect;
-            outcome_from_webdav(
-                webdav_volume_wiring::connect_and_register_since(
-                    set_out,
-                    &entry.display_name,
-                    entry.start_folder,
-                    params,
-                    &attempt_id,
-                    secret,
-                )
-                .await,
-            )
-        }
-        SavedEntry::S3(entry) => outcome_from_s3(
-            s3_volume_wiring::connect_and_register_since(
-                set_out,
-                // Nothing typed: the account keeps the name it has.
-                "",
-                entry,
-                &attempt_id,
-                secret,
-            )
-            .await,
-        ),
-        SavedEntry::Nfs(entry) => nfs_places::connect_saved(set_out, entry, &attempt_id).await,
-        // A saved SMB share: mounted as its account, then connected the usual way.
-        SavedEntry::Smb(row) => {
-            smb_saved_shares::connect_saved_share(row, set_out, &attempt_id, secret, username).await
-        }
-    })
+    connect_saved_place_shared(&volume_id, &attempt_id, secret, username).await
 }
 
 /// Dials a server the user just typed, in add mode.
@@ -335,6 +277,16 @@ pub async fn connect_server(
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_server_connect(attempt_id: String) -> bool {
+    // A saved place's caller waits on a shared dial under its own id; the backends
+    // only ever see the flight's.
+    let saved_place = saved_place_dial::cancel(&attempt_id);
+    saved_place || cancel_backend_attempts(&attempt_id)
+}
+
+/// Asks every backend's attempt table (and the two SMB dials no table files) to
+/// call off `attempt_id`.
+fn cancel_backend_attempts(attempt_id: &str) -> bool {
+    let attempt_id = attempt_id.to_string();
     let sftp = sftp_volume_wiring::cancel_connect(&attempt_id);
     let webdav = webdav_volume_wiring::cancel_connect(&attempt_id);
     let s3 = s3_volume_wiring::cancel_connect(&attempt_id);

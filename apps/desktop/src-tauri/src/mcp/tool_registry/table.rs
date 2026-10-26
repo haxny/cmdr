@@ -561,4 +561,11 @@ mcp_tools! {
         access: Access::Read,
         run: app_params crate::agent::tools::read::volumes::execute_list_volumes
     },
+    "connect_volume" => {
+        desc: "Connect a saved server or share by volumeId with its stored credentials. Asks for nothing: a missing password answers needsCredentials.",
+        schema: crate::agent::tools::connect::connect_volume_schema(),
+        consumers: &[Consumer::Agent],
+        access: Access::Session,
+        run: app_params crate::agent::tools::connect::execute_connect_volume
+    },
 }

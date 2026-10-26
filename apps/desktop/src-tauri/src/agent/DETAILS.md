@@ -97,8 +97,8 @@ only on a turn the user started (`text` or `resume`); a wake or a follow-up gets
 (`tools/view.rs`), reading the turn's own origin, never the opener's shape. Second, a hand-authored allowlist
 (`EXPECTED_SESSION_TOOL_NAMES`), for the reason the other two have one. Third, what a `Session` tool may dial: a SAVED
 place, by volume id, with STORED credentials only. It can't add a host, type a password, or approve a key, which is
-exactly what an injected file name would want. The allowlist is empty until `connect_volume` (#749) lands; the gate
-and its tests stand ahead of it. No egress moves, so consent doesn't either (invariant 8).
+exactly what an injected file name would want. `connect_volume` is the one tool on the allowlist
+(`tools/DETAILS.md` § Connecting a saved place). No egress moves, so consent doesn't either (invariant 8).
 
 **Where a proposal LIVES.** `store/proposals/`, the durable spine in `main.db`, for every verb including rename. Its
 claim transaction binds an approval to a server-owned acceptance record rather than to the client's word. Proposals have

@@ -104,7 +104,7 @@ agent-only table**). Two per-entry dimensions express the split:
   described below; `Memory` is the fourth, and the only one that writes anything at all. `Session` is the fifth: it
   opens a session to a place the user saved, with stored credentials, and the agent's gate admits it only on a turn the
   user started (agent invariant 7, `../agent/tools/DETAILS.md` § The dispatch gate). It's hand-allowlisted in
-  `EXPECTED_SESSION_TOOL_NAMES`, empty until a tool carries it.
+  `EXPECTED_SESSION_TOOL_NAMES` (§ The `Session` tier).
 
 ⚠️ **`Access::Memory` was a deliberate widening of the app's central agent-safety invariant.** "The agent never changes
 anything" became "the agent writes only into `<data-dir>/ai/memory/`". Three things hold the narrowed promise: the jail
@@ -113,6 +113,15 @@ canonicalized parent); the hand-authored `EXPECTED_MEMORY_TOOL_NAMES` allowlist,
 `Propose` one does (no structural check can prove a handler stays in a jail, so a human puts each name there having
 read it); and `consumers: [Agent]` on both entries, pinned by a test — a `Memory` tool must never reach the HTTP
 transport, whose security story is "no filesystem access". Depth: `../agent/memory/DETAILS.md`.
+
+### The `Session` tier
+
+`connect_volume` is its one tool, and it's `consumers: [Agent]`. **Decision: AI clients don't get it, because they
+already have the power.** `select_volume` on a saved place (a pinned server or share in `cmdr://state`) switches a pane
+to it, and the pane brings it to life itself (`place-connect.svelte.ts`, through `servers/connect-flow.ts`), with the
+sign-in sheet for anything missing. Parity holds, and the HTTP transport takes on no new access class. The agent needs
+its own tool because it has no pane to steer and must not take one over to connect. Handler and rules:
+`../agent/tools/DETAILS.md` § Connecting a saved place.
 
 **Consumer-gated dispatch.** `execute_tool` takes a `Consumer` and refuses a name outside that consumer's view before
 dispatch (via `tool_available_to`, a typed `Consumer`-set check — not a string). So the HTTP server (constructed as

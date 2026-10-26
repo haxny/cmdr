@@ -318,6 +318,8 @@ export type MessageKey =
   | 'askCmdr.title'
   | 'askCmdr.tool.appState.doing'
   | 'askCmdr.tool.appState.done'
+  | 'askCmdr.tool.connectVolume.doing'
+  | 'askCmdr.tool.connectVolume.done'
   | 'askCmdr.tool.details'
   | 'askCmdr.tool.folderImportance.doing'
   | 'askCmdr.tool.folderImportance.done'

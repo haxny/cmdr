@@ -4870,6 +4870,10 @@ export const commands = {
    *  share has (its `SignInShape` is `UsernamePassword`): the share is the place and
    *  the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
    *  the account.
+   *
+   *  ❗ **One dial per place** (`network::dial_flights`): a second caller while a dial
+   *  is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
+   *  instead of dialing again, which would register a second volume.
    */
   connectSavedPlace: (
     volumeId: string,
@@ -5640,6 +5644,7 @@ export const events = {
   volumeConnectionChanged: makeEvent<VolumeConnectionChanged>('volume-connection-changed'),
   volumeContextAction: makeEvent<VolumeContextAction>('volume-context-action'),
   volumeMounted: makeEvent<VolumeMounted>('volume-mounted'),
+  volumeReconnectRequested: makeEvent<VolumeReconnectRequested>('volume-reconnect-requested'),
   volumeRootChanged: makeEvent<VolumeRootChanged>('volume-root-changed'),
   volumeSpaceChanged: makeEvent<VolumeSpaceChanged>('volume-space-changed'),
   volumeUnmounted: makeEvent<VolumeUnmounted>('volume-unmounted'),
@@ -20288,6 +20293,17 @@ export type VolumeIndexStatus = {
 export type VolumeMounted = {
   // The volume path (like "/Volumes/MyDrive").
   volumePath: string
+}
+
+/**
+ *  Typed `volume-reconnect-requested` Tauri event: the backend asks the frontend's
+ *  reconnect manager to take a registered volume whose session dropped, the move
+ *  `servers/connect-flow.ts`'s arm 1 makes for a pane. Ask Cmdr's `connect_volume`
+ *  emits it, so recovery keeps its one owner and the banner, the switcher dot,
+ *  and the backoff agree. ❌ Never a second reconnect loop in the backend.
+ */
+export type VolumeReconnectRequested = {
+  volumeId: string
 }
 
 /**

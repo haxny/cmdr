@@ -246,6 +246,9 @@ pub enum ToolId {
     MemoryWrite,
     /// Changes or drops one exact, unique passage inside one memory file.
     MemoryEdit,
+    /// Brings a place the user saved to life with stored credentials, on a turn the user
+    /// started. The one `Session` tool: it dials only a saved place and asks for nothing.
+    ConnectVolume,
     /// A tool name the agent does not recognize (hallucinated, a typo, or a
     /// write/non-view tool). Carries the raw name for the transparent UI and the
     /// typed "tool not available" result; always refused by dispatch.
@@ -256,7 +259,7 @@ impl ToolId {
     /// Every known read-only variant, in wire order. Excludes [`ToolId::Unrecognized`]
     /// by design (it's the refusal case, never a view entry). The 1:1 structural test
     /// asserts these map exactly onto `agent_tool_view()`.
-    pub const KNOWN: [ToolId; 19] = [
+    pub const KNOWN: [ToolId; 20] = [
         ToolId::AppState,
         ToolId::ListDir,
         ToolId::ListPaneFiles,
@@ -276,6 +279,7 @@ impl ToolId {
         ToolId::NothingToSuggest,
         ToolId::MemoryWrite,
         ToolId::MemoryEdit,
+        ToolId::ConnectVolume,
     ];
 
     /// The wire name for this tool: the genai `fn_name`, the DB token, and the IPC
@@ -301,6 +305,7 @@ impl ToolId {
             ToolId::NothingToSuggest => "nothing_to_suggest",
             ToolId::MemoryWrite => "memory_write",
             ToolId::MemoryEdit => "memory_edit",
+            ToolId::ConnectVolume => "connect_volume",
             ToolId::Unrecognized(name) => name.as_str(),
         }
     }
@@ -330,6 +335,7 @@ impl ToolId {
             "nothing_to_suggest" => ToolId::NothingToSuggest,
             "memory_write" => ToolId::MemoryWrite,
             "memory_edit" => ToolId::MemoryEdit,
+            "connect_volume" => ToolId::ConnectVolume,
             other => ToolId::Unrecognized(other.to_string()),
         }
     }

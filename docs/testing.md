@@ -763,7 +763,7 @@ and genuinely not optimizable** — then a generous, loudly-commented timeout is
 entry needs a real "we can't make this faster" justification, not convenience.
 
 - **`smb_integration_mount_non_ascii_share`** (`src-tauri/src/network/mount_test.rs`): uses a **16s** NetFS connect
-  timeout (double the usual 8s). It's one of only two SMB tests that do a real macOS NetFS _kernel_ mount
+  timeout (double the usual 8s). It's one of only three SMB tests that do a real macOS NetFS _kernel_ mount
   (`NetFSMountURLSync`); the other ~36 use the userspace `smb2` lib with no OS mount. The kernel mount RTT depends on
   factors we don't control (the OS mount queue, host CPU/lease contention when the full slow suite + both e2e lanes run
   at once), so the default 8s spuriously timed out under load. The mount is pure setup there, so the larger budget only
@@ -776,8 +776,9 @@ entry needs a real "we can't make this faster" justification, not convenience.
   its assertion.
 - ❌ **Two real-mount tests must never share a share.** Each pre-cleans with `diskutil unmount force` and unmounts on
   drop, so two of them on one share tear down each other's mount, and the symptom lands somewhere else entirely: a wait
-  expiring against a path that has stopped being a mount. The two kernel-mount tests hold `public` on the guest fixture
-  and `café` on the `unicode` one.
+  expiring against a path that has stopped being a mount. The three kernel-mount tests hold `public` on the guest
+  fixture, `café` on the `unicode` one, and `private` on the `auth` one, dialed as `127.0.0.1` so the `testuser` session
+  it signs in never meets the guest tests on `localhost`.
 - ❌ **A test that calls NetFS takes `NetfsFixtureLock` first** (`network/mount_test.rs`), even one that only expects a
   refusal. macOS hands a mount any live session to the same hostname whatever the port, and every fixture is
   `localhost`, so two NetFS calls at once land on each other's servers: `café` came back `ShareNotFound` from the guest

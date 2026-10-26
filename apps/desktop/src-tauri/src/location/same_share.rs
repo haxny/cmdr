@@ -21,6 +21,7 @@
 //! (`network::smb_server_guid`).
 
 use crate::network::server_guid::{GuidProof, ServerGuid};
+use cmdr_fs::volume::ConnectionState;
 use cmdr_fs::volume::app_paths::rebase;
 use serde::Serialize;
 
@@ -164,6 +165,30 @@ impl VolumeFacts {
     pub(crate) fn redirect_group_ids(&self, id: &str) -> Vec<String> {
         self.redirect_group(id).into_iter().map(|v| v.id.clone()).collect()
     }
+
+    /// The member of `id`'s share a connect should act on: `id` itself when it's
+    /// serving, else a redirectable sibling that is (answered as already connected,
+    /// no dial), else the member connected most recently per `last_connected`
+    /// (seconds since the epoch), `id` on a tie or when none says. Recency is the
+    /// one signal for "the address that works from here"; nothing sniffs networks.
+    /// `None` for an id the facts don't hold.
+    pub(crate) fn connect_target(&self, id: &str, last_connected: impl Fn(&str) -> Option<i64>) -> Option<&VolumeFact> {
+        let group = self.redirect_group(id);
+        if let Some(serving) = group.iter().find(|member| serving(member)) {
+            return Some(serving);
+        }
+        group
+            .into_iter()
+            .enumerate()
+            .max_by_key(|(order, member)| (last_connected(&member.id), std::cmp::Reverse(*order)))
+            .map(|(_, member)| member)
+    }
+}
+
+/// Registered and answering: no session to dial and no reconnect to wait for.
+/// A registered volume with no connection state is a local disk, always serving.
+fn serving(volume: &VolumeFact) -> bool {
+    volume.live && volume.connection_state.is_none_or(ConnectionState::is_live)
 }
 
 #[cfg(test)]

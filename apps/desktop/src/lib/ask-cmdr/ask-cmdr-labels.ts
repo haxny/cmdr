@@ -61,6 +61,7 @@ const TOOL_LABEL_KEYS: Partial<Record<string, PhaseKeys>> = {
     doing: 'askCmdr.tool.nothingToSuggest.doing',
     done: 'askCmdr.tool.nothingToSuggest.done',
   },
+<<<<<<< HEAD
   memory_write: {
     doing: 'askCmdr.tool.memoryWrite.doing',
     done: 'askCmdr.tool.memoryWrite.done',
@@ -71,6 +72,7 @@ const TOOL_LABEL_KEYS: Partial<Record<string, PhaseKeys>> = {
     done: 'askCmdr.tool.memoryEdit.done',
     tried: 'askCmdr.tool.memoryEdit.tried',
   },
+  connect_volume: { doing: 'askCmdr.tool.connectVolume.doing', done: 'askCmdr.tool.connectVolume.done' },
 }
 
 const UNKNOWN_TOOL_KEYS: PhaseKeys = { doing: 'askCmdr.tool.unknown.doing', done: 'askCmdr.tool.unknown.done' }

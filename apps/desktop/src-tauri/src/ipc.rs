@@ -73,7 +73,7 @@ use crate::mtp::{
 };
 use crate::network::{
     NetworkDiscoveryStateChanged, NetworkHostContextAction, NetworkHostFound, NetworkHostLost, NetworkHostResolved,
-    SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn, VolumeConnectionChanged,
+    SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn, VolumeConnectionChanged, VolumeReconnectRequested,
 };
 use crate::operations_host::{VolumesBusyChanged, wire};
 use crate::reveal::RevealDelivered;
@@ -1171,6 +1171,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // reuses it. The type lives in `network/mod.rs` so it resolves on every
             // platform (see its doc comment).
             VolumeConnectionChanged,
+            // Ask Cmdr asking the reconnect manager to take a dropped volume.
+            VolumeReconnectRequested,
             // A share Cmdr couldn't take over stays on the macOS kernel mount. Same
             // reason this type lives in `network/mod.rs`: it has to resolve here on
             // every platform.
