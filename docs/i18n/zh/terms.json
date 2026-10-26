@@ -89,7 +89,7 @@
     "chosen": "AI 功能",
     "confidence": "high",
     "decision": "AI subject",
-    "forms": "AI features → AI 功能 (AI 功能已关闭); the AI as a sentence subject → AI (AI 给出的理由)",
+    "forms": "AI features → AI 功能 (AI 功能已关闭); the AI as a sentence subject → AI (AI 提出建议时)",
     "note": "Where the English subject is Cmdr, write Cmdr; `suggestedOps.*` keeps AI deliberately to separate the model's claims from Cmdr's facts.",
     "sources": "catalog (settings.ai.tooltipOff)"
   },
@@ -259,7 +259,8 @@
     "chosen": "存档",
     "confidence": "high",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "A zip-style archive file (the archive concept), not a chat: 压缩文件, matching fileExplorer.archiveEnterMenu.ariaLabel."
+      "fileExplorer.list.rowKind.archive": "A zip-style archive file (the archive concept), not a chat: 压缩文件, matching fileExplorer.archiveEnterMenu.ariaLabel.",
+      "suggestedOps.facts.archive": "The noun label before the zip a compress suggestion creates (the archive concept), not a chat: 压缩文件, like fileExplorer.list.rowKind.archive."
     },
     "forms": "unarchive 取消存档; the badge 已存档",
     "sources": "MS terminology (archive → 存档)"
@@ -1356,6 +1357,13 @@
     "forms": "low disk space 磁盘空间不足; free (remaining) 剩余; free up space 腾出空间",
     "sources": "macOS/MS"
   },
+  "from-to": {
+    "accept": ["目标", "来自"],
+    "chosen": "来源",
+    "confidence": "high",
+    "forms": "From → 来源, To → 目标 (the copy/move dialog's group titles, reused by the AI suggestions fact lines); a from-path line → 来自：{path}",
+    "sources": "Nautilus (来源 / 目标); catalog (fileOperations.transferDialog.sourceGroupTitle / targetGroupTitle)"
+  },
   "full-disk-access": {
     "chosen": "完全磁盘访问权限",
     "confidence": "high",
@@ -2004,7 +2012,7 @@
     "sources": "MS terminology; macOS Finder"
   },
   "move": {
-    "accept": ["移到", "移出", "移入", "移过"],
+    "accept": ["移到", "移出", "移入", "移过", "移回", "移走"],
     "avoid": [
       {
         "form": "挪",
@@ -2014,7 +2022,7 @@
     "chosen": "移动",
     "confidence": "high",
     "decision": "Standalone conflict prompt",
-    "forms": "F6 移动; in a sentence with a destination 移动到“{destination}”; out of / into an archive 移出 / 移入",
+    "forms": "F6 移动; in a sentence with a destination 移动到“{destination}”; out of / into an archive 移出 / 移入; moving back 移回原处; a file something moved away 已被移走",
     "note": "A progress line or conflict prompt naming the operation writes 移动到 so it matches the queue row's 正在移动; everyday prose may use Finder's contraction 移到 (移到废纸篓, 把 Cmdr 移到“应用程序”文件夹).",
     "sources": "macOS"
   },
@@ -3218,9 +3226,17 @@
     "sources": "standard"
   },
   "suggestion": {
+    "avoid": [
+      {
+        "form": "建议的操作",
+        "why": "the dialog's old name; the dialog, its View menu item, and palette entry are one name, AI 建议"
+      }
+    ],
     "chosen": "建议",
     "confidence": "high",
-    "sources": "standard"
+    "decision": "Suggested ops dialog",
+    "forms": "the AI suggestions dialog, View menu item, and palette entry → AI 建议 (the mkdir hints' fileOperations.mkdir.aiSuggestionsAria); quoted in prose “AI 建议”对话框; a batch heading → time + 建议 (刚刚建议, 今天 {time} 建议)",
+    "sources": "catalog (fileOperations.mkdir.aiSuggestionsHeader)"
   },
   "supported": {
     "chosen": "支持",
@@ -3336,6 +3352,13 @@
     "confidence": "high",
     "sources": "macOS Finder"
   },
+  "time-ago": {
+    "accept": ["刚刚"],
+    "chosen": "前",
+    "confidence": "high",
+    "forms": "a counted unit hugs it: {count} 分钟前, a formatted {durationText}前; a heading adds the verb after it ({countText} 分钟前建议); a moment ago → 刚刚",
+    "sources": "macOS (%d 天前); catalog (queryUi.age.minutes, ui.toast.age)"
+  },
   "time-left": {
     "chosen": "剩余",
     "confidence": "high",
@@ -3429,6 +3452,12 @@
     "chosen": "udev",
     "confidence": "high",
     "sources": "kept Latin"
+  },
+  "unknown": {
+    "chosen": "未知",
+    "confidence": "high",
+    "forms": "a bare cell value 未知; in parentheses （未知）",
+    "sources": "macOS Finder/AppKit (未知, 文件类型未知); catalog (ai.local.modelUnknown)"
   },
   "undo": {
     "chosen": "撤销",
@@ -3644,9 +3673,6 @@
     "accept": ["写"],
     "chosen": "写入",
     "confidence": "high",
-    "exceptions": {
-      "suggestedOps.reversibleDeleteWritten": "\"deleting what it writes\" names the new items (新建的内容), the rollback family's phrase."
-    },
     "forms": "partly written 可能已经写入了一部分内容; half-written 写了一半的; read and write 读写",
     "sources": "standard"
   },

@@ -246,11 +246,11 @@ inflection.
   undo down). Some of these keys carry byte-identical English across families, so `desktop-i18n-term-consistency`
   requires identical values; per-key evidence and the pairs that are locked together: `decisions.md` § Rollback-done
   notice.
-- **`Ask Cmdr` names the chat PANEL; everywhere else the subject is `Cmdr`, and in the Suggested ops dialog it's `AI`.**
+- **`Ask Cmdr` names the chat PANEL; everywhere else the subject is `Cmdr`, and in the AI suggestions dialog it's `AI`.**
   Follow the English exactly: keep `Ask Cmdr` where it's the panel's own name (its title, the View-menu item, the
   palette command, the settings section, the on/off copy) and where a sentence points at that settings section
   (`Ask Cmdr 设置`, `Ask Cmdr 部分`); write bare `Cmdr` when the sentence describes what the AI does; write `AI` in the
-  four `suggestedOps.*` strings, which have to stay distinguishable from the neighbouring `Cmdr 掌握的信息`. ❗ Don't
+  `suggestedOps.*` strings that name the model, so its claims stay apart from what Cmdr checked. ❗ Don't
   "restore" `Ask Cmdr` as a sentence subject: that's the exact regression a copy sweep once had to undo. Per-key
   evidence: `decisions.md` § AI subject.
 - **Quotation marks:** this catalog quotes filenames with `“…”`, following macOS zh-CN. Traditional uses corner brackets

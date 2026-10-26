@@ -1684,15 +1684,15 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
-  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "settings.suggestedOps.suppressApprovalNotice.label": "隐藏“AI 建议”里的批准提示",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
     "sourceHash": "33f9993"
   },
-  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "settings.suggestedOps.suppressApprovalNotice.description": "“AI 建议”对话框打开时会显示一条提示，说明里面的内容是 AI 建议的，在你批准之前什么都不会执行。打开这一项（或用提示上的 × 关掉它），就不再显示这条提示。",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
     "sourceHash": "8d7605d"
   },
-  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "建议、批准、同意、提示、警告、横幅、隐藏、不再显示、通知",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },

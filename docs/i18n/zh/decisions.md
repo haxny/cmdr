@@ -194,9 +194,10 @@ finished files).
   file).
 - `这个文件名不能使用` / `这个文件夹名不能使用` (Finder), no `。`: composed into `{reason}。`
 
-## Suggested ops dialog (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
+## Suggested ops dialog (`suggestedOps.*`, `commands.suggestedOpsShow.*`, `menu.view.suggestedOps`)
 
-Approve `批准` over macOS's `接受` (AirDrop receiving); reject `拒绝`; `这项操作无法撤销` (Finder).
+Title, menu, palette `AI 建议` (the mkdir hints) over `建议的操作`. Approve `批准` over macOS's `接受` (AirDrop); reject
+`拒绝`; pills `这项操作可以撤销：` / `这项操作无法撤销：` (Finder). Why `原因：` (aria `原因，按 AI 的说法：`) over `为什么：`.
 
 ## Duplicate (`commands.fileDuplicate.*`)
 
@@ -386,8 +387,8 @@ The retry totals keep the `plural` shell, no preposition or `。` (parts of `ret
 
 ## AI subject (`suggestedOps.agentReason`, `suggestedOps.reversible.moveBack`, `askCmdr.error.notConfigured`, `settings.askCmdr.provider.off`)
 
-The rule is in `style.md`. Why `AI` in `suggestedOps.*`: `AI 给出的理由` sits beside the facts Cmdr checked itself, and
-the dialog separates what the model said from what Cmdr checked; ❗ don't unify. Subjectless `聊天` / `开始聊天`;
+The rule is in `style.md`. `AI` in `suggestedOps.*` keeps what the model said apart from what Cmdr checked; ❗ don't
+unify. Subjectless `聊天` / `开始聊天`;
 `Cmdr 发送的内容` pairs `Cmdr 记住的内容`.
 
 ## Review verb (`askCmdr.wake.*`, `askCmdr.wakeToast.*`)
