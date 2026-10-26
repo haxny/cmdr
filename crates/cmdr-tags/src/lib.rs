@@ -11,6 +11,7 @@ mod format;
 mod model;
 mod read;
 mod save;
+pub mod shared;
 pub mod text;
 pub mod tools;
 mod write;
@@ -25,6 +26,8 @@ mod format_test;
 mod read_test;
 #[cfg(test)]
 mod save_test;
+#[cfg(test)]
+mod shared_test;
 #[cfg(test)]
 mod test_files;
 #[cfg(test)]

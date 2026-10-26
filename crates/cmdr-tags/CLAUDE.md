@@ -12,7 +12,9 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments), and the key tables.
 - `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader. `save.rs`: `save_safely`. Test
   files are built in `test_files.rs` with lofty's concrete tag types.
-- Later modules (tools, undo) land with their tasks; the undo store layout will be in `DETAILS.md`.
+- `shared.rs`: the foobar2000-style view. `shared_view` (per field `Empty`/`Same`/`Multiple`), `apply_edits` (`Edit`,
+  `CoverEdit`), `changes` (the "what will change" list). Pure, never mutates input.
+- Later modules (undo) land with their tasks; the undo store layout will be in `DETAILS.md`.
 
 ## Must-knows
 
