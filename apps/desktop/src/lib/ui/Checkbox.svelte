@@ -170,6 +170,14 @@
         color: var(--color-accent-fg);
     }
 
+    /* Ark marks the indicator `hidden` whenever the box isn't CHECKED, indeterminate
+       included (it only shows for indeterminate on an `indeterminate` indicator), so the
+       UA's `display: none` swallowed the dash and a mixed box rendered as a blank accent
+       square. The glyphs' own visibility rules above decide what shows, in every state. */
+    :global(.checkbox-indicator[hidden]) {
+        display: block;
+    }
+
     .checkbox-check,
     .checkbox-dash {
         position: absolute;
