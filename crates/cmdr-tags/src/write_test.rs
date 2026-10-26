@@ -10,12 +10,16 @@ use lofty::TextEncoding;
 use lofty::config::ParseOptions;
 use lofty::file::AudioFile;
 use lofty::flac::FlacFile;
-use lofty::id3::v2::{AttachedPictureFrame, Frame, FrameId, Id3v2Tag, PrivateFrame, RelativeVolumeAdjustmentFrame};
+use lofty::id3::v2::{
+    AttachedPictureFrame, Frame, FrameId, Id3v2Tag, KeyValueFrame, PrivateFrame, RelativeVolumeAdjustmentFrame,
+    TimestampFrame,
+};
 use lofty::mp4::{Atom, AtomData, AtomIdent, DataType, Ilst, Mp4File};
 use lofty::mpeg::MpegFile;
 use lofty::ogg::tag::VorbisComments;
 use lofty::ogg::{OggPictureStorage, OpusFile, VorbisFile};
 use lofty::picture::{MimeType, Picture, PictureType};
+use lofty::tag::items::Timestamp;
 
 use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
 use crate::read::read_tags;
@@ -533,6 +537,113 @@ fn value_that_reads_back_differently_is_refused() {
     assert_eq!(listing(dir.path()), names);
 }
 
+fn tdor(year: u16, month: Option<u8>, day: Option<u8>) -> Frame<'static> {
+    let timestamp = Timestamp {
+        year,
+        month,
+        day,
+        ..Timestamp::default()
+    };
+    Frame::Timestamp(TimestampFrame::new(
+        FrameId::Valid(Cow::Borrowed("TDOR")),
+        TextEncoding::UTF8,
+        timestamp,
+    ))
+}
+
+#[test]
+fn mp3_full_original_date_would_be_cut_to_its_year() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    tag.insert(tdor(2001, Some(5), Some(3)));
+    let path = write_mp3_v24(dir.path(), "a.mp3", &tag);
+    let before = fs::read(&path).unwrap();
+
+    let result = write_tags(&path, &read(&path), &MUSIC);
+
+    assert_eq!(result, Err(TagError::WouldDrop(strings(&["TDOR"]))));
+    assert_eq!(fs::read(&path).unwrap(), before);
+}
+
+#[test]
+fn mp3_original_year_alone_is_written() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    tag.insert(tdor(2001, None, None));
+    let path = write_mp3_v24(dir.path(), "a.mp3", &tag);
+
+    write(&path, &read(&path), &MUSIC);
+
+    let bytes = fs::read(&path).unwrap();
+    assert!(bytes.windows(4).any(|w| w == b"TORY"), "ID3v2.3 keeps the year as TORY");
+}
+
+fn key_value(id: &'static str, pairs: &[(&'static str, &'static str)]) -> Frame<'static> {
+    let pairs: Vec<(Cow<'static, str>, Cow<'static, str>)> = pairs
+        .iter()
+        .map(|(k, v)| (Cow::Borrowed(*k), Cow::Borrowed(*v)))
+        .collect();
+    Frame::KeyValue(KeyValueFrame::new(
+        FrameId::Valid(Cow::Borrowed(id)),
+        TextEncoding::UTF8,
+        pairs,
+    ))
+}
+
+#[test]
+fn mp3_musician_credits_would_merge_into_involved_people() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    tag.insert(key_value("TIPL", &[("producer", "Jan")]));
+    tag.insert(key_value("TMCL", &[("piano", "Eva")]));
+    let path = write_mp3_v24(dir.path(), "a.mp3", &tag);
+
+    let result = write_tags(&path, &read(&path), &MUSIC);
+
+    assert_eq!(result, Err(TagError::WouldDrop(strings(&["TMCL"]))));
+}
+
+#[test]
+fn mp3_involved_people_alone_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    tag.insert(key_value("TIPL", &[("producer", "Jan"), ("mix", "Eva")]));
+    let path = write_mp3_v24(dir.path(), "a.mp3", &tag);
+
+    write(&path, &read(&path), &MUSIC);
+
+    let raw = raw_id3(&path);
+    let pairs: Option<Vec<(String, String)>> = (&raw).into_iter().find_map(|f| match f {
+        Frame::KeyValue(kv) if f.id_str() == "TIPL" => Some(
+            kv.key_value_pairs
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        ),
+        _ => None,
+    });
+    let expected = [("producer", "Jan"), ("mix", "Eva")].map(|(k, v)| (k.to_owned(), v.to_owned()));
+    assert_eq!(pairs, Some(expected.to_vec()), "TIPL comes back as TIPL");
+}
+
+/// lofty's strict parse doesn't look for an ID3v2 tag behind junk bytes; writing from it
+/// would put a second tag in front of the first.
+#[test]
+fn mp3_tag_behind_junk_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TIT2", "Nazev");
+    let tagged = fs::read(write_mp3(dir.path(), "tagged.mp3", &tag)).unwrap();
+    let path = write_bytes(dir.path(), "a.mp3", [b"junk".as_slice(), &tagged].concat());
+    assert_eq!(read(&path).fields[&TagField::Title], strings(&["Nazev"]));
+    let before = fs::read(&path).unwrap();
+
+    let result = write_tags(&path, &with(read(&path), TagField::Title, &["Novy"]), &MUSIC);
+
+    assert!(matches!(result, Err(TagError::Parse(_))), "{result:?}");
+    assert_eq!(fs::read(&path).unwrap(), before);
+}
+
 // ── M4A ───────────────────────────────────────────────────────────────────────
 
 #[test]
@@ -976,6 +1087,26 @@ fn flac_block_bodies(bytes: &[u8]) -> Vec<(u8, Vec<u8>)> {
             return blocks;
         }
     }
+}
+
+/// A FLAC holds one icon of each icon type; lofty's `insert_picture` drops a second one
+/// when the writer gathers the pictures.
+#[test]
+fn flac_second_icon_would_be_dropped() {
+    let dir = tempfile::tempdir().unwrap();
+    let icon = |len: usize| {
+        let mut picture = cover(len);
+        picture.set_pic_type(PictureType::Icon);
+        picture_block(&picture)
+    };
+    let bytes = flac_with_blocks(&[(FLAC_PICTURE, icon(20)), (FLAC_PICTURE, icon(30))]);
+    let path = write_bytes(dir.path(), "a.flac", bytes);
+    let before = fs::read(&path).unwrap();
+
+    let result = write_tags(&path, &with(read(&path), TagField::Title, &["Novy"]), &MUSIC);
+
+    assert_eq!(result, Err(TagError::WouldDrop(strings(&["PICTURE:Icon"]))));
+    assert_eq!(fs::read(&path).unwrap(), before);
 }
 
 fn ogg_family_round_trip(path: &Path) {

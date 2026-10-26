@@ -58,15 +58,19 @@ shows only that one), so a second `COMM` or a `TYER` beside `TDRC` goes away.
 - **MP3**: text is UTF-8 in memory; lofty writes UTF-16 for v2.3. The date is a `TDRC` timestamp that lofty splits into
   `TYER` (+ `TDAT`, `TIME`); a date it can't parse fails the write, because lofty would drop it silently. lofty's v2.3
   writer discards v2.4-only frames (`TSOP`, `TSOA`, `TSOT`, `TMOO`, `TDRL`, `RVA2`, ...; `write::DROPPED_BY_V23`, from
-  lofty 0.25.4's `FRAMES_TO_DISCARD`) and outdated v2.2 IDs, so a write that would lose any fails with
-  `TagError::WouldDrop` (the IDs) unless `WriteOptions::allow_frame_loss` is set; the app asks the user. The cover is
-  replaced where it stands: `FrameList::insert` replaces any frame it considers equal, so it is used only for frames
-  just removed.
+  lofty 0.25.4's `FRAMES_TO_DISCARD`) and outdated v2.2 IDs, cuts a `TDOR` to its year (`TORY`), and merges `TMCL` into
+  `TIPL` (one `IPLS`; a lone `TIPL` round-trips). A write that would lose any of these fails with `TagError::WouldDrop`
+  (the IDs) unless `WriteOptions::allow_frame_loss` is set; the app asks the user. The cover is replaced where it
+  stands: `FrameList::insert` replaces any frame it considers equal, so it is used only for frames just removed.
 - **FLAC**: saving the comments rewrites every picture block from the comments' own pictures, so the file's picture
   blocks move into the comments first (block pictures ahead of in-tag ones, keeping the reader's cover).
 - **M4A**: lofty panics on an ilst it can't encode, so a cover type outside JPEG/PNG/BMP/GIF is refused up front. lofty
   moves the `stco` / `co64` chunk offsets when the tag grows and shifts `mdat` (verified in
   `write_test::m4a_chunk_offsets_follow_a_growing_tag`, lofty 0.25.4, 2026-10-26).
+- **MP3 behind junk**: a strict parse doesn't search for an ID3v2 tag after junk bytes, so when only the lenient parse
+  finds one the write is refused (`TagError::Parse`) instead of adding a second tag in front.
+- **FLAC icons**: lofty keeps one picture per icon type when the pictures are gathered; a file with two fails the write
+  as `TagError::WouldDrop(["PICTURE:Icon"])`.
 - **FLAC**: SEEKTABLE, APPLICATION, and CUESHEET blocks survive a write byte for byte
   (`write_test::flac_unmanaged_blocks_survive`).
 

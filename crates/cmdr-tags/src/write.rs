@@ -70,6 +70,9 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
     match format {
         AudioFormat::Mp3 => {
             let file = MpegFile::read_from(&mut source, parse).map_err(parse_error)?;
+            if file.id3v2().is_none() {
+                refuse_tag_behind_junk(&mut source)?;
+            }
             let mut id3 = file.id3v2().cloned().unwrap_or_default();
             let current = read_id3(&id3);
             write_id3(&mut id3, &current, tags, &values, opts)?;
@@ -93,7 +96,10 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
             // the comments' own): the cover is then picked from the same list.
             let in_comments = comments.remove_pictures();
             for (picture, info) in file.remove_pictures().into_iter().chain(in_comments) {
-                comments.insert_picture(picture, Some(info)).map_err(write_error)?;
+                // lofty keeps one icon per icon type and hands back the one it replaced.
+                if let Some((dropped, _)) = comments.insert_picture(picture, Some(info)).map_err(write_error)? {
+                    return Err(TagError::WouldDrop(vec![format!("PICTURE:{:?}", dropped.pic_type())]));
+                }
             }
             let (comments, expected) = write_vorbis_family(&comments, tags, &values, opts, format)?;
             save_safely(path, |out| save(&comments, out, defaults, format, &expected))
@@ -121,6 +127,18 @@ fn write_parse_options(format: AudioFormat) -> ParseOptions {
         AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => strict.implicit_conversions(false),
         AudioFormat::Mp3 | AudioFormat::Mp4 => strict,
     }
+}
+
+/// A strict parse doesn't search for an ID3v2 tag behind junk bytes before the audio; the
+/// lenient one does. Writing after only the strict one finds nothing would put a second tag
+/// in front of the one the reader shows, so such a file is refused.
+fn refuse_tag_behind_junk(source: &mut File) -> Result<(), TagError> {
+    source.rewind()?;
+    let lenient = MpegFile::read_from(source, parse_options()).map_err(parse_error)?;
+    if lenient.id3v2().is_some() {
+        return Err(TagError::Parse("the ID3v2 tag doesn't start the file".to_owned()));
+    }
+    Ok(())
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -344,12 +362,17 @@ fn write_id3(
     refuse_frame_loss(id3, opts.allow_frame_loss)
 }
 
-/// [`TagError::WouldDrop`] with the frames lofty's ID3v2.3 writer would discard from `id3`
-/// (v2.4-only and outdated v2.2 IDs), unless there are none or the caller allows it.
+/// [`TagError::WouldDrop`] with the frames lofty's ID3v2.3 writer would lose from `id3`,
+/// unless there are none or the caller allows it: v2.4-only and outdated v2.2 IDs (dropped),
+/// a `TDOR` finer than a year (cut to the year as `TORY`), and `TMCL` (merged with `TIPL`
+/// into one `IPLS`, which reads back as `TIPL`; a lone `TIPL` round-trips).
 fn refuse_frame_loss(id3: &Id3v2Tag, allowed: bool) -> Result<(), TagError> {
     let lost: BTreeSet<String> = id3
         .into_iter()
-        .filter(|f| !f.id().is_valid() || DROPPED_BY_V23.contains(&f.id_str()))
+        .filter(|f| match f {
+            Frame::Timestamp(t) if f.id_str() == "TDOR" => t.timestamp.month.is_some(),
+            _ => !f.id().is_valid() || DROPPED_BY_V23.contains(&f.id_str()) || f.id_str() == "TMCL",
+        })
         .map(|f| f.id_str().to_owned())
         .collect();
     if lost.is_empty() || allowed {
