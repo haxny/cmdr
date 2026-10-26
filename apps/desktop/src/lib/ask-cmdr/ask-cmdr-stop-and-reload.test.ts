@@ -306,7 +306,7 @@ describe('stopStreaming', () => {
     streamPastOneRound()
     stopStreaming()
 
-    fire({ type: 'proposalReady', proposal: { proposalId: 'p1', rows: [] } })
+    fire({ type: 'proposalReady', proposal: { proposalId: 'p1', revision: 1, rows: [] } })
 
     expect(askCmdrState.renameReview?.proposals.map((p) => p.proposalId)).toEqual(['p1'])
   })
@@ -351,7 +351,7 @@ describe('stopStreaming', () => {
       fire({ type: 'assistantStarted' })
       fire({ type: 'textDelta', text: 'I noticed' })
       fire({ type: 'toolCallsResolved', messageId: 5, calls: [resolved('c1', 'list_dir')] })
-      fire({ type: 'proposalReady', proposal: { proposalId: 'p1', rows: [] } })
+      fire({ type: 'proposalReady', proposal: { proposalId: 'p1', revision: 1, rows: [] } })
       expect(askCmdrState.renameReview).toBeNull()
 
       fire({ type: 'stopped', turn: STATS })
