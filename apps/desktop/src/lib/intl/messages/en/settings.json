@@ -4056,7 +4056,7 @@
   },
   "settings.dataWipe.leftover.secretItems": "{count, plural, one {One item in Keychain Access named “{itemName}”} other {{countText} items in Keychain Access named “{itemName}”}}",
   "@settings.dataWipe.leftover.secretItems": {
-    "description": "Item in the list of what's left: saved passwords or keys in the macOS Keychain Access app that couldn't be deleted. \"Keychain Access\" is the name of a macOS app; use its name in your language's macOS.",
+    "description": "Item in the list of what's left: saved passwords or keys in the macOS Keychain Access app that couldn't be deleted. \"Keychain Access\" is the name of a macOS app; use its name in your language's macOS. \"Item\" here is one keychain entry, not a file: use the word your language's Keychain Access uses for one entry (its \"keychain item\").",
     "placeholders": {
       "count": "how many items are left, a number used only to choose the plural form",
       "countText": "the same number, already formatted for the locale",
@@ -4065,7 +4065,7 @@
   },
   "settings.dataWipe.leftover.secretsUnreadable": "Any items in Keychain Access named “{itemName}”",
   "@settings.dataWipe.leftover.secretsUnreadable": {
-    "description": "Item in the list of what's left when Cmdr couldn't check its keychain items: the user should look for them in the macOS Keychain Access app.",
+    "description": "Item in the list of what's left when Cmdr couldn't check its keychain items: the user should look for them in the macOS Keychain Access app. \"Items\" are keychain entries, not files: use the word your language's Keychain Access uses for one entry (its \"keychain item\").",
     "placeholders": {
       "itemName": "the name the items appear under in Keychain Access (for example “Cmdr”); never translated"
     }

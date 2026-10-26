@@ -2318,7 +2318,7 @@
     "distinct": ["cloud-ai", "device", "model"],
     "en": "on-device",
     "match": ["on-device", "on device"],
-    "sense": "An AI model that runs on this Mac itself, as opposed to a cloud provider's servers."
+    "sense": "An AI model that runs on this Mac itself, as opposed to a cloud provider's servers. It's the model the AI provider option “Local LLM” (settings.ai.provider.opt.local) runs, so “on-device AI” and that option name one thing."
   },
   "on-disk": {
     "distinct": ["on-disk-size", "drive"],
