@@ -56,8 +56,8 @@ fn a_selector_resolves_once_at_creation_and_freezes_what_it_found() {
     assert!(group.selector.is_some(), "the pattern rides along for display");
     assert_eq!(group.source_volume_id, "root", "the selector's root names the volume");
 
-    // The resolved rows carry the index's snapshot, which is what M2 checks against at
-    // apply time.
+    // The resolved rows carry the index's snapshot: display only, since execution binds a live
+    // stat at preflight.
     let ops = page_ops(&conn, group_id, 10, 0).expect("ops");
     assert_eq!(ops.len(), 2);
     assert_eq!(ops[0].snapshot_size, Some(4_096));
@@ -231,4 +231,46 @@ fn an_unknown_sweep_is_refused_before_anything_is_written() {
 fn sweep_count(conn: &Connection) -> i64 {
     conn.query_row("SELECT COUNT(*) FROM proposal_sets", [], |row| row.get(0))
         .expect("count sweeps")
+}
+
+// ── The creation snapshot of named sources ───────────────────────────────────
+
+/// A hand-listed path freezes what its volume says about it right now, so the review shows
+/// real facts instead of "not in the index" (#747). A path that's gone stays `NULL`, never a
+/// zero, and a volume nobody registered leaves its group's snapshots empty.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_named_source_freezes_what_its_volume_says_about_it() {
+    use std::path::Path;
+    use std::sync::Arc;
+
+    use crate::file_system::volume::{InMemoryVolume, Volume};
+
+    let volume = InMemoryVolume::new("Share");
+    volume
+        .create_file(Path::new("/Users/someone/Downloads/a.dmg"), b"seven b")
+        .await
+        .expect("seed file");
+    volume.set_modified_at(Path::new("/Users/someone/Downloads/a.dmg"), Some(1_700_000_000));
+    let volume: Arc<dyn Volume> = Arc::new(volume);
+
+    let mut planned = super::plan_sweep(&trash_call(), super::NOW).expect("the call is valid");
+    super::super::snapshot::freeze_named_sources(&mut planned, |id| (id == "root").then(|| volume.clone())).await;
+    let mut unregistered = super::plan_sweep(&trash_call(), super::NOW).expect("the call is valid");
+    super::super::snapshot::freeze_named_sources(&mut unregistered, |_| None).await;
+
+    let conn = migrated_conn();
+    let index = FakeIndex::with(Vec::new());
+    let report = super::apply_planned_sweep(&conn, &index, planned, None, super::NOW).expect("staged");
+    let ops = page_ops(&conn, report.groups[0].group_id, 10, 0).expect("ops");
+    assert_eq!(ops[0].snapshot_size, Some(7));
+    assert_eq!(ops[0].snapshot_mtime, Some(1_700_000_000));
+    assert_eq!(ops[1].snapshot_size, None, "b.dmg isn't there, so nothing is frozen");
+    assert_eq!(ops[1].snapshot_mtime, None);
+
+    let report = super::apply_planned_sweep(&conn, &index, unregistered, None, super::NOW).expect("staged");
+    let ops = page_ops(&conn, report.groups[0].group_id, 10, 0).expect("ops");
+    assert!(
+        ops.iter()
+            .all(|op| op.snapshot_size.is_none() && op.snapshot_mtime.is_none())
+    );
 }

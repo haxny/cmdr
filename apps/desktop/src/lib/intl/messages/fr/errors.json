@@ -151,7 +151,7 @@
   "@errors.listing.cancelledErrno.explanation": {
     "sourceHash": "da19c15"
   },
-  "errors.listing.cancelledErrno.suggestion": "Revenez ici dès que vous êtes prêt à réessayer.",
+  "errors.listing.cancelledErrno.suggestion": "Revenez ici quand vous le souhaitez pour réessayer.",
   "@errors.listing.cancelledErrno.suggestion": {
     "sourceHash": "d9107b5"
   },
@@ -507,7 +507,7 @@
   "@errors.listing.remotePermissionDenied.title": {
     "sourceHash": "f9cb7bd"
   },
-  "errors.listing.remotePermissionDenied.explanation": "`{path}` se trouve sur un partage réseau, et le compte avec lequel vous vous êtes connecté n’a pas l’autorisation de l’ouvrir. Le serveur refuse la demande avant même que macOS n’intervienne, ce n’est donc pas un réglage de confidentialité sur votre Mac.",
+  "errors.listing.remotePermissionDenied.explanation": "`{path}` se trouve sur un partage réseau, et le compte utilisé pour vous connecter n’a pas l’autorisation de l’ouvrir. Le serveur refuse la demande avant même que macOS n’intervienne, ce n’est donc pas un réglage de confidentialité sur votre Mac.",
   "@errors.listing.remotePermissionDenied.explanation": {
     "sourceHash": "d8463b0"
   },
@@ -535,7 +535,7 @@
   "@errors.listing.cancelled.explanation": {
     "sourceHash": "da19c15"
   },
-  "errors.listing.cancelled.suggestion": "Revenez ici dès que vous êtes prêt à réessayer.",
+  "errors.listing.cancelled.suggestion": "Revenez ici quand vous le souhaitez pour réessayer.",
   "@errors.listing.cancelled.suggestion": {
     "sourceHash": "d9107b5"
   },
@@ -1177,9 +1177,9 @@
   "@errors.write.destinationNotAFolder.title": {
     "sourceHash": "d371870"
   },
-  "errors.write.destinationNotAFolder.message": "Cmdr n’a pas pu créer le dossier de destination, car un fichier se trouve à {path}, là où il faut un dossier. Rien n’a été écrit et les originaux sont intacts.",
+  "errors.write.destinationNotAFolder.message": "Cmdr n’a pas pu créer le dossier de destination, car un fichier occupe l’emplacement « {path} », là où il faut un dossier. Rien n’a été écrit et les originaux sont intacts.",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "dfebb59"
+    "sourceHash": "98178cb"
   },
   "errors.write.destinationNotAFolder.suggestion": "Choisissez une autre destination, ou renommez ou déplacez ce fichier, puis réessayez.",
   "@errors.write.destinationNotAFolder.suggestion": {
@@ -1293,7 +1293,7 @@
   "@errors.write.cancelled.message.trash": {
     "sourceHash": "9585f1b"
   },
-  "errors.write.cancelled.suggestion": "Vous pouvez réessayer quand vous êtes prêt.",
+  "errors.write.cancelled.suggestion": "Vous pouvez réessayer quand vous le souhaitez.",
   "@errors.write.cancelled.suggestion": {
     "sourceHash": "21cafca"
   },
@@ -1457,9 +1457,9 @@
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
   },
-  "errors.write.replySignatureRefused.message": "La réponse du serveur n’était pas signée, donc Cmdr s’est arrêté.",
+  "errors.write.replySignatureRefused.message": "La réponse du serveur ne portait pas de signature valide, donc Cmdr s’est arrêté.",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.write.replySignatureRefused.suggestion": "Un appareil réseau capricieux peut en être la cause, tout comme quelqu’un qui trafique les échanges entre vous et le serveur. Reconnectez-vous, et si cela se reproduit, vérifiez votre réseau.",
   "@errors.write.replySignatureRefused.suggestion": {
@@ -2173,9 +2173,9 @@
   "@errors.volume.sourceChanged": {
     "sourceHash": "18062cb"
   },
-  "errors.volume.noContent": "« {path} » est un lien ou un fichier spécial, sans contenu que Cmdr puisse copier.",
+  "errors.volume.noContent": "« {path} » est un lien symbolique ou un fichier spécial, sans contenu que Cmdr puisse copier.",
   "@errors.volume.noContent": {
-    "sourceHash": "cebab92"
+    "sourceHash": "8b56bde"
   },
   "errors.volume.ambiguousName": "Plusieurs éléments du serveur correspondent à « {path} » : Cmdr n’en a donc choisi aucun. Choisissez plutôt l’élément voulu dans son dossier.",
   "@errors.volume.ambiguousName": {
@@ -2189,9 +2189,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
-  "errors.volume.signatureInvalid": "La réponse du serveur n’était pas signée, donc Cmdr s’est arrêté.",
+  "errors.volume.signatureInvalid": "La réponse du serveur ne portait pas de signature valide, donc Cmdr s’est arrêté.",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.volume.ioError": "Le volume n’a pas pu terminer cette opération.",
   "@errors.volume.ioError": {
@@ -2235,11 +2235,11 @@
   },
   "errors.serverRequest.blockedByPolicy": "Votre organisation a désactivé cette fonction pour Cmdr.",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   },
-  "errors.eject.busy": "Cmdr y déplace encore des fichiers. Réessayez une fois l’opération terminée.",
+  "errors.eject.busy": "Cmdr y travaille encore sur des fichiers. Réessayez une fois l’opération terminée.",
   "@errors.eject.busy": {
-    "sourceHash": "560c0db"
+    "sourceHash": "4054483"
   },
   "errors.eject.volumeNotFound": "Ce disque n’est plus connecté, il n’y a donc rien à éjecter.",
   "@errors.eject.volumeNotFound": {

@@ -260,3 +260,23 @@ function systemLocaleSegments(date: Date, tiers: ComponentTiers): DateSegment[] 
   }
   return segments
 }
+
+let timeOfDayFormatter: Intl.DateTimeFormat | null = null
+let timeOfDayFormatterLocale: string | null = null
+
+/**
+ * The time of day alone ("14:04", "2:04 PM"), in the OS's formatting locale, which owns the
+ * 12-/24-hour choice. For relative phrasings that name the day in words ("Yesterday at
+ * 14:04"); a full date goes through {@link formatDateForDisplay}. Cached per locale, like the
+ * date formatter above.
+ *
+ * @param timestamp Unix timestamp in seconds
+ */
+export function formatTimeOfDay(timestamp: number): string {
+  const locale = getFormatLocale()
+  if (timeOfDayFormatter === null || timeOfDayFormatterLocale !== locale) {
+    timeOfDayFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' })
+    timeOfDayFormatterLocale = locale
+  }
+  return timeOfDayFormatter.format(new Date(timestamp * 1000))
+}

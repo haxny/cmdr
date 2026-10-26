@@ -56,6 +56,12 @@ export interface BulkRenameReviewProposal {
   rows: BulkRenameReviewRow[]
   preflighting: boolean
   expired: boolean
+  /** The plan revision whose rows are on screen. Preflight and apply send it, so a plan the agent
+   *  amended since answers `listChanged` instead of binding rows the user never read. */
+  revision: number
+  /** The agent amended this batch since the review showed it: its rows stay put, announced, and
+   *  Apply leaves it out. */
+  changed: boolean
   requestVersion: number
 }
 

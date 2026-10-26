@@ -59,9 +59,9 @@
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "A Cmdr nem tudta ellenőrizni, hogy a másolatok teljesen kiíródtak-e a lemezre. Ha a meghajtó leválasztódott vagy meghibásodóban van, ellenőrizd a másolatokat, mielőtt számítanál rájuk.",
+  "transfer.durabilityUnconfirmedUnnamed": "A Cmdr nem tudta ellenőrizni, hogy a másolatok teljesen kiíródtak-e a meghajtóra. Ha a meghajtó leválasztódott vagy meghibásodóban van, ellenőrizd a másolatokat, mielőtt számítanál rájuk.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Ez a szerver nem tud tárolni ilyen adatokat: {classes}. Ezért ezek nem kerültek át.",
   "@transfer.metadataLeftBehind": {

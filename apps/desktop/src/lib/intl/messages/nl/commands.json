@@ -68,9 +68,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "Typ cmdr en een pad in een terminal om het in Cmdr te openen",
+  "commands.appToggleCliCommand.description": "Typ cmdr en een pad in een terminal om dat bestand of die map in Cmdr te openen",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "Sneltoetsen",
   "@commands.helpOpenShortcuts.label": {
@@ -1219,13 +1219,13 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Voor ‘Toon info’ moet Cmdr Finder kunnen besturen, en dat staat uit. Zet Finder onder Cmdr aan in Systeeminstellingen > Privacy en beveiliging > Automatisering.",
+  "commands.handler.getInfo.automationOff": "Voor ‘Toon info’ moet Cmdr Finder kunnen besturen, en dat staat uit. Zet Finder onder Cmdr aan in {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Open instellingen voor Automatisering",
+  "commands.handler.getInfo.openAutomationSettings": "Open instellingen voor {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr kon Finder niet bereiken om ‘Toon info’ te openen. Probeer het opnieuw.",
   "@commands.handler.getInfo.notReached": {
@@ -1251,9 +1251,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Voorgestelde bewerkingen",
+  "commands.suggestedOpsShow.label": "AI-suggesties",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Beoordeel de bestandsbewerkingen die de AI heeft voorgesteld en bepaal wat er gebeurt",
   "@commands.suggestedOpsShow.description": {

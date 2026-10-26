@@ -14,6 +14,9 @@ What differs, compose → amend:
   from every `ReportOffer`) → `openErrorReportDialogForAutoSentReport()`.
 - Preview source: `prepareErrorReportPreview()`, which builds a bundle → `getAutoSentReportPreview()`, which reads the
   backend stash, so the manifest and sample lines are the ones that actually shipped.
+- "What's about to be sent": a link that opens the WHOLE bundle in the File viewer (`openReportPreview` in
+  `report-preview.ts`, over `writeErrorReportPreviewFile(note, email, preview.id)`) → an in-place toggle over the
+  stash's manifest and sample lines, since no bundle survives an auto-send to open.
 - Submit: `sendErrorReport(note, email, preview.id)` → `amendErrorReport(note, email)` (no id: there's only ever one
   stashed report).
 - Submit enabled when: the note is under the cap and the email is valid → that, PLUS a note or an email to carry, since

@@ -254,7 +254,7 @@ export function createFavoritesMenu(deps: FavoritesMenuDeps): FavoritesMenuContr
       // The PATH leads, so a renamed favorite still reveals where it points. A dimmed row
       // says why right under it; it stays pickable, since a pick is what dials a saved place.
       tooltip: buildFavoriteTooltip(volume.path, isMacOS(), favoriteReachStatus(volume)),
-      // Rename, Set shortcut, and Remove, behind → or a right-click (`row-menu.ts`).
+      // Rename, Set shortcut key, and Remove, behind → or a right-click (`row-menu.ts`).
       submenu: rowMenuItems(volume.id, favoriteRowMenu(), (entry) => ({ kind: 'row-entry', volume, entry })),
       data: { kind: 'favorite', volume },
     }

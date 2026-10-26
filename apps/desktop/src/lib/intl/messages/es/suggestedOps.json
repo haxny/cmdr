@@ -1,11 +1,35 @@
 {
-  "suggestedOps.title": "Operaciones sugeridas",
+  "suggestedOps.title": "Sugerencias de IA",
   "@suggestedOps.title": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "suggestedOps.description": "La IA ha sugerido esto. No se ejecuta nada hasta que lo apruebes.",
   "@suggestedOps.description": {
     "sourceHash": "73255a0"
+  },
+  "suggestedOps.approvalNoticeDismiss": "No volver a mostrar esto",
+  "@suggestedOps.approvalNoticeDismiss": {
+    "sourceHash": "2c23c21"
+  },
+  "suggestedOps.sweepWhen.justNow": "Sugerido ahora mismo",
+  "@suggestedOps.sweepWhen.justNow": {
+    "sourceHash": "4606788"
+  },
+  "suggestedOps.sweepWhen.minutesAgo": "Sugerido hace {countText} {count, plural, one {minuto} many {minutos} other {minutos}}",
+  "@suggestedOps.sweepWhen.minutesAgo": {
+    "sourceHash": "96782e0"
+  },
+  "suggestedOps.sweepWhen.today": "Sugerido hoy, {time}",
+  "@suggestedOps.sweepWhen.today": {
+    "sourceHash": "105ec27"
+  },
+  "suggestedOps.sweepWhen.yesterday": "Sugerido ayer, {time}",
+  "@suggestedOps.sweepWhen.yesterday": {
+    "sourceHash": "a0d2061"
+  },
+  "suggestedOps.sweepWhen.earlier": "Sugerido: {date}",
+  "@suggestedOps.sweepWhen.earlier": {
+    "sourceHash": "cbe0d5f"
   },
   "suggestedOps.empty": "Ahora mismo no hay nada esperándote.",
   "@suggestedOps.empty": {
@@ -15,48 +39,120 @@
   "@suggestedOps.loadFailed": {
     "sourceHash": "ef0da3e"
   },
-  "suggestedOps.agentReason": "Motivo de la IA",
+  "suggestedOps.agentReason": "Por qué:",
   "@suggestedOps.agentReason": {
-    "sourceHash": "e3acab8"
+    "sourceHash": "ad389aa"
   },
-  "suggestedOps.cmdrFacts": "Lo que Cmdr sabe",
-  "@suggestedOps.cmdrFacts": {
-    "sourceHash": "9851c12"
+  "suggestedOps.agentReasonTooltip": "Son palabras de la IA. Cmdr no las ha comprobado.",
+  "@suggestedOps.agentReasonTooltip": {
+    "sourceHash": "aadab2c"
   },
-  "suggestedOps.fileCount": "{count, plural, one {# archivo} many {# archivos} other {# archivos}}",
+  "suggestedOps.agentReasonSpoken": "Por qué, según la IA:",
+  "@suggestedOps.agentReasonSpoken": {
+    "sourceHash": "0c0a448"
+  },
+  "suggestedOps.fileCount": "{countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
   "@suggestedOps.fileCount": {
-    "sourceHash": "e60f4a2"
+    "sourceHash": "76ef0a6"
   },
-  "suggestedOps.approve": "Aprobar",
-  "@suggestedOps.approve": {
-    "sourceHash": "6007acb"
+  "suggestedOps.approve.move": "Mover {countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
+  "@suggestedOps.approve.move": {
+    "sourceHash": "4c89041"
+  },
+  "suggestedOps.approve.copy": "Copiar {countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
+  "@suggestedOps.approve.copy": {
+    "sourceHash": "e10c490"
+  },
+  "suggestedOps.approve.trash": "Mover {countText} {count, plural, one {archivo} many {archivos} other {archivos}} a la papelera",
+  "@suggestedOps.approve.trash": {
+    "sourceHash": "3c82946"
+  },
+  "suggestedOps.approve.delete": "Eliminar {countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
+  "@suggestedOps.approve.delete": {
+    "sourceHash": "218cf04"
+  },
+  "suggestedOps.approve.rename": "Renombrar {countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
+  "@suggestedOps.approve.rename": {
+    "sourceHash": "412518d"
+  },
+  "suggestedOps.approve.compress": "Comprimir {countText} {count, plural, one {archivo} many {archivos} other {archivos}}",
+  "@suggestedOps.approve.compress": {
+    "sourceHash": "7df0dfc"
+  },
+  "suggestedOps.approve.extract": "Extraer {countText} {count, plural, one {archivo comprimido} many {archivos comprimidos} other {archivos comprimidos}}",
+  "@suggestedOps.approve.extract": {
+    "sourceHash": "0bf7541"
   },
   "suggestedOps.reject": "Rechazar",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
   },
-  "suggestedOps.approveCount": "Aprobar {count, plural, one {# archivo} many {# archivos} other {# archivos}}",
-  "@suggestedOps.approveCount": {
-    "sourceHash": "649d66f"
+  "suggestedOps.facts.from": "Desde",
+  "@suggestedOps.facts.from": {
+    "sourceHash": "2181976"
   },
-  "suggestedOps.review": "Revisar los archivos",
-  "@suggestedOps.review": {
-    "sourceHash": "b8d04b3"
+  "suggestedOps.facts.to": "Hacia",
+  "@suggestedOps.facts.to": {
+    "sourceHash": "f4b06ef"
   },
-  "suggestedOps.collapse": "Ocultar los archivos",
-  "@suggestedOps.collapse": {
-    "sourceHash": "ced24ea"
+  "suggestedOps.facts.folder": "Carpeta",
+  "@suggestedOps.facts.folder": {
+    "sourceHash": "74ccd43"
   },
-  "suggestedOps.reversibleRestoreMove": "Puedes deshacer esto",
-  "@suggestedOps.reversibleRestoreMove": {
-    "sourceHash": "de7f6ff"
+  "suggestedOps.facts.archive": "Archivo comprimido",
+  "@suggestedOps.facts.archive": {
+    "sourceHash": "66f4804"
   },
-  "suggestedOps.reversibleDeleteWritten": "Deshacer eliminando lo creado",
-  "@suggestedOps.reversibleDeleteWritten": {
-    "sourceHash": "997843a"
+  "suggestedOps.facts.trash": "Papelera",
+  "@suggestedOps.facts.trash": {
+    "sourceHash": "4e42c6e"
   },
-  "suggestedOps.irreversible": "Esto no se puede deshacer",
-  "@suggestedOps.irreversible": {
+  "suggestedOps.facts.severalFolders": "Varias carpetas",
+  "@suggestedOps.facts.severalFolders": {
+    "sourceHash": "7c32950"
+  },
+  "suggestedOps.reversible.trash": "Puedes deshacerlo: {count, plural, one {va} many {van} other {van}} a la papelera",
+  "@suggestedOps.reversible.trash": {
+    "sourceHash": "55bf957"
+  },
+  "suggestedOps.reversible.moveBack": "Puedes deshacerlo: Cmdr puede {count, plural, one {devolverlo} many {devolverlos} other {devolverlos}} a su sitio",
+  "@suggestedOps.reversible.moveBack": {
+    "sourceHash": "14c0a31"
+  },
+  "suggestedOps.reversible.renameBack": "Puedes deshacerlo: Cmdr puede devolver {count, plural, one {el nombre anterior} many {los nombres anteriores} other {los nombres anteriores}}",
+  "@suggestedOps.reversible.renameBack": {
+    "sourceHash": "4c7e3c3"
+  },
+  "suggestedOps.reversible.removeCopies": "Puedes deshacerlo: Cmdr elimina las copias",
+  "@suggestedOps.reversible.removeCopies": {
+    "sourceHash": "0ec3b08"
+  },
+  "suggestedOps.reversible.removeArchive": "Puedes deshacerlo: Cmdr elimina el nuevo archivo comprimido",
+  "@suggestedOps.reversible.removeArchive": {
+    "sourceHash": "2c8278f"
+  },
+  "suggestedOps.reversible.removeExtracted": "Puedes deshacerlo: Cmdr elimina lo extraído",
+  "@suggestedOps.reversible.removeExtracted": {
+    "sourceHash": "977a513"
+  },
+  "suggestedOps.irreversible.delete": "Esto no se puede deshacer: los archivos se eliminan para siempre",
+  "@suggestedOps.irreversible.delete": {
+    "sourceHash": "e32da9a"
+  },
+  "suggestedOps.blocked.noTrash": "No se puede ejecutar: esta unidad no tiene papelera",
+  "@suggestedOps.blocked.noTrash": {
+    "sourceHash": "f08e038"
+  },
+  "suggestedOps.blocked.noTrashTooltip": "La unidad donde están estos archivos no tiene papelera, así que moverlos ahí no funcionaría y no pasaría nada. Recházala, o elimina tú los archivos si es lo que quieres.",
+  "@suggestedOps.blocked.noTrashTooltip": {
+    "sourceHash": "f2a5d5f"
+  },
+  "suggestedOps.irreversible.overwrite": "Esto no se puede deshacer: reemplaza un archivo comprimido existente",
+  "@suggestedOps.irreversible.overwrite": {
+    "sourceHash": "0d5c5bb"
+  },
+  "suggestedOps.irreversible.other": "Esto no se puede deshacer",
+  "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr creará esta carpeta",
@@ -71,6 +167,14 @@
   "@suggestedOps.destinationUnknown": {
     "sourceHash": "dc78d1d"
   },
+  "suggestedOps.destinationNotConnected": "Sin conexión con el destino",
+  "@suggestedOps.destinationNotConnected": {
+    "sourceHash": "51dcf8e"
+  },
+  "suggestedOps.destinationNotConnectedTooltip": "Cmdr todavía no se ha conectado a esta unidad o servidor. Si lo apruebas, no empezará hasta que haya conexión, igual que cuando mueves tú archivos ahí.",
+  "@suggestedOps.destinationNotConnectedTooltip": {
+    "sourceHash": "af06219"
+  },
   "suggestedOps.fromPattern": "Coincide con un patrón",
   "@suggestedOps.fromPattern": {
     "sourceHash": "20e88a9"
@@ -83,29 +187,81 @@
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.columnFile": "Archivo",
-  "@suggestedOps.columnFile": {
-    "sourceHash": "50009ce"
+  "suggestedOps.filesLabel": "Archivos de “{name}”",
+  "@suggestedOps.filesLabel": {
+    "sourceHash": "adf93b7"
+  },
+  "suggestedOps.columnInclude": "Incluir",
+  "@suggestedOps.columnInclude": {
+    "sourceHash": "7285576"
+  },
+  "suggestedOps.includeAll": "Incluir todos los archivos",
+  "@suggestedOps.includeAll": {
+    "sourceHash": "ac6c70c"
+  },
+  "suggestedOps.columnName": "Nombre",
+  "@suggestedOps.columnName": {
+    "sourceHash": "dcd1d52"
+  },
+  "suggestedOps.columnFolder": "Carpeta",
+  "@suggestedOps.columnFolder": {
+    "sourceHash": "74ccd43"
   },
   "suggestedOps.columnNewName": "Nombre nuevo",
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
   },
-  "suggestedOps.columnSize": "Tamaño al sugerirlo",
+  "suggestedOps.columnSize": "Tamaño",
   "@suggestedOps.columnSize": {
-    "sourceHash": "20d36bd"
+    "sourceHash": "1af8519"
   },
-  "suggestedOps.columnChanged": "Última modificación",
-  "@suggestedOps.columnChanged": {
-    "sourceHash": "d8c5670"
+  "suggestedOps.columnModified": "Última modificación",
+  "@suggestedOps.columnModified": {
+    "sourceHash": "0fe1058"
   },
-  "suggestedOps.noIndexData": "No está en el índice",
-  "@suggestedOps.noIndexData": {
-    "sourceHash": "104d8cb"
+  "suggestedOps.factChanged": "Ha cambiado desde la sugerencia",
+  "@suggestedOps.factChanged": {
+    "sourceHash": "958780a"
   },
-  "suggestedOps.includeFile": "Incluir este archivo",
+  "suggestedOps.factChangedTooltip": "Cuando se sugirió: {then} / Ahora: {now}",
+  "@suggestedOps.factChangedTooltip": {
+    "sourceHash": "8bf4166"
+  },
+  "suggestedOps.fileMissing": "Movido o eliminado",
+  "@suggestedOps.fileMissing": {
+    "sourceHash": "2073c5b"
+  },
+  "suggestedOps.snapshotOnly": "De cuando la IA sugirió esto",
+  "@suggestedOps.snapshotOnly": {
+    "sourceHash": "f6b2d27"
+  },
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr no ha podido comprobar este archivo ahora mismo, así que esto es lo que había cuando la IA lo sugirió.",
+  "@suggestedOps.snapshotOnlyTooltip": {
+    "sourceHash": "d6a081c"
+  },
+  "suggestedOps.sourceNotConnected": "Cmdr no tiene conexión con la unidad donde están estos archivos, así que sus tamaños y fechas son de cuando la IA sugirió esto.",
+  "@suggestedOps.sourceNotConnected": {
+    "sourceHash": "07d5134"
+  },
+  "suggestedOps.sourceGone": "La unidad donde estaban estos archivos ya no está, así que sus tamaños y fechas son de cuando la IA sugirió esto.",
+  "@suggestedOps.sourceGone": {
+    "sourceHash": "1b30de5"
+  },
+  "suggestedOps.factUnknown": "Desconocido",
+  "@suggestedOps.factUnknown": {
+    "sourceHash": "b764cdc"
+  },
+  "suggestedOps.includeFile": "Incluir {name}",
   "@suggestedOps.includeFile": {
-    "sourceHash": "71075a7"
+    "sourceHash": "a44fb71"
+  },
+  "suggestedOps.showMore": "Mostrar {countText} más",
+  "@suggestedOps.showMore": {
+    "sourceHash": "4061571"
+  },
+  "suggestedOps.showAll": "Mostrar todos ({countText})",
+  "@suggestedOps.showAll": {
+    "sourceHash": "912b5d0"
   },
   "suggestedOps.loadingFiles": "Cargando los archivos…",
   "@suggestedOps.loadingFiles": {
@@ -138,6 +294,14 @@
   "suggestedOps.refusal.nothingToRun.suggestion": "Comprueba que siguen ahí y vuelve a aprobarlo, o recházalo.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "sourceHash": "f4cfc9e"
+  },
+  "suggestedOps.refusal.nothingSelected.message": "Ninguno de los archivos que has marcado sigue en esta sugerencia, así que no se ha ejecutado nada.",
+  "@suggestedOps.refusal.nothingSelected.message": {
+    "sourceHash": "7de9324"
+  },
+  "suggestedOps.refusal.nothingSelected.suggestion": "Marca los archivos que quieras y vuelve a aprobarla.",
+  "@suggestedOps.refusal.nothingSelected.suggestion": {
+    "sourceHash": "db90f78"
   },
   "suggestedOps.refusal.couldNotStart.message": "Cmdr no ha podido convertir esta sugerencia en una operación, así que no se ha ejecutado nada.",
   "@suggestedOps.refusal.couldNotStart.message": {

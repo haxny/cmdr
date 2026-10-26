@@ -28,7 +28,7 @@ describe('UpdateUnwritableToastContent', () => {
   it('tells an administrator to download the app again and drag it in, naming the real path', async () => {
     const target = await render('notWritableAdminUser')
     expect(target.textContent.replace(/\s+/g, ' ').trim()).toBe(
-      'Cmdr 0.54.0 is ready, but Cmdr can’t install it itself ' +
+      'Cmdr 0.54.0 is out, but Cmdr can’t install it itself ' +
         '/Applications/Cmdr.app belongs to another account. To update, download Cmdr from getcmdr.com and drag it into Applications. macOS will ask for your password.',
     )
   })

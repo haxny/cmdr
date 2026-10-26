@@ -167,9 +167,9 @@
   "@main.cliCommand.installed": {
     "sourceHash": "5b72efe"
   },
-  "main.cliCommand.uninstalled": "O Cmdr removeu o comando “cmdr”.",
+  "main.cliCommand.uninstalled": "O Cmdr desinstalou o comando “cmdr”.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "43e8d91"
+    "sourceHash": "edac691"
   },
   "main.cliCommand.alreadyInstalled": "O comando “cmdr” já está instalado.",
   "@main.cliCommand.alreadyInstalled": {
@@ -179,17 +179,17 @@
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Nada mudou. Adicionar ou remover o comando “cmdr” exige uma senha de administrador.",
+  "main.cliCommand.canceled": "Nada mudou. Para instalar ou desinstalar o comando “cmdr”, é preciso uma senha de administrador.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "d51acb1"
+    "sourceHash": "31fd0a0"
   },
   "main.cliCommand.installFailed": "O Cmdr não conseguiu instalar o comando “cmdr”. Confira se /usr/local/bin é gravável e tente de novo.",
   "@main.cliCommand.installFailed": {
     "sourceHash": "de500b0"
   },
-  "main.cliCommand.uninstallFailed": "O Cmdr não conseguiu remover o comando “cmdr”. Confira se /usr/local/bin é gravável e tente de novo.",
+  "main.cliCommand.uninstallFailed": "O Cmdr não conseguiu desinstalar o comando “cmdr”. Confira se /usr/local/bin é gravável e tente de novo.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "c066530"
+    "sourceHash": "fe4f2fe"
   },
   "main.cliCommand.homebrew": "O Homebrew instalou o comando “cmdr” junto com o Cmdr, então o comando já está no seu terminal e sai quando você desinstalar o Cmdr pelo Homebrew.",
   "@main.cliCommand.homebrew": {
@@ -199,9 +199,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Mova o Cmdr para a sua pasta Aplicativos primeiro. Em qualquer outro lugar, o comando “cmdr” pararia de funcionar assim que o Cmdr mudasse de lugar.",
+  "main.cliCommand.notInApplications": "Mova o Cmdr para a sua pasta Aplicativos primeiro. Se você instalar o comando “cmdr” de qualquer outro lugar, ele para de funcionar assim que o Cmdr mudar de lugar.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "c9e3fc3"
+    "sourceHash": "e011785"
   },
   "main.cliCommand.notProductionBuild": "Esta é uma versão de desenvolvimento do Cmdr, então ela não mexe no comando “cmdr”. Use o Cmdr da sua pasta Aplicativos para isso.",
   "@main.cliCommand.notProductionBuild": {

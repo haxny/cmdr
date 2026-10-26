@@ -123,7 +123,14 @@ fn an_accepted_preflight_does_not_survive_a_store_reopen() {
             vec![draft_row("/shots/a.png", "b.png", EvidenceSource::Filename, "old name")],
         );
         let allowed: Vec<String> = proposal.rows.iter().map(|row| row.row_id.clone()).collect();
-        record_acceptance(&conn, last_group_id(&conn), &[], 200).expect("preflight");
+        record_acceptance(
+            &conn,
+            last_group_id(&conn),
+            0,
+            &crate::agent::store::proposals::OpSelection::all_except(&[]),
+            200,
+        )
+        .expect("preflight");
         accepted.record(
             &proposal.proposal_id,
             AcceptedPreflight {
@@ -168,7 +175,14 @@ fn no_batch_of_an_accumulated_review_keeps_its_approval_across_a_store_reopen() 
                 vec![draft_row(source, destination, EvidenceSource::Filename, "old name")],
             );
             let allowed: Vec<String> = proposal.rows.iter().map(|row| row.row_id.clone()).collect();
-            record_acceptance(&conn, last_group_id(&conn), &[], 200).expect("preflight");
+            record_acceptance(
+                &conn,
+                last_group_id(&conn),
+                0,
+                &crate::agent::store::proposals::OpSelection::all_except(&[]),
+                200,
+            )
+            .expect("preflight");
             accepted.record(
                 &proposal.proposal_id,
                 AcceptedPreflight {
@@ -337,7 +351,14 @@ fn staged_with_accepted_preflight(
 ) -> RenameProposal {
     let proposal = staged(conn, rows);
     let allowed_row_ids: Vec<String> = proposal.rows.iter().map(|row| row.row_id.clone()).collect();
-    record_acceptance(conn, last_group_id(conn), &[], 200).expect("preflight");
+    record_acceptance(
+        conn,
+        last_group_id(conn),
+        0,
+        &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        200,
+    )
+    .expect("preflight");
     accepted.record(
         &proposal.proposal_id,
         AcceptedPreflight {
@@ -600,4 +621,97 @@ fn revising_a_row_does_not_re_run_the_whole_plan_evidence_rule() {
     );
     assert_eq!(stored.rows[1].destination_name, "Order summary.png");
     assert!(stored.rows[1].coverage.is_some(), "and its coverage");
+}
+
+/// A rename plan freezes each row's creation snapshot through the same one-bounded-stat path as
+/// `propose_suggestions`, so the review shows what the file was when it was suggested (#747).
+/// A row whose file is gone stays `NULL`, never a zero.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_staged_rename_plan_freezes_each_rows_creation_snapshot() {
+    use std::path::Path;
+
+    use crate::file_system::volume::{InMemoryVolume, Volume};
+
+    let volume = InMemoryVolume::new("Macintosh HD");
+    volume
+        .create_file(Path::new("/shots/a.png"), b"five!")
+        .await
+        .expect("seed file");
+    volume.set_modified_at(Path::new("/shots/a.png"), Some(1_700_000_000));
+    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(volume);
+    let mut draft = RenameDraft {
+        volume_id: "root".into(),
+        parent: "/shots".into(),
+        rows: vec![
+            draft_row("/shots/a.png", "b.png", EvidenceSource::Filename, "the old name"),
+            draft_row("/shots/gone.png", "c.png", EvidenceSource::Filename, "the old name"),
+        ],
+    };
+
+    super::super::plan::freeze_draft_on(&mut draft, Some(volume)).await;
+    let conn = migrated_conn();
+    super::super::store::stage(&conn, None, &draft, 100)
+        .expect("stage")
+        .expect("a group was created");
+
+    let ops = crate::agent::store::proposals::page_ops(&conn, last_group_id(&conn), 10, 0).expect("ops");
+    assert_eq!(ops[0].snapshot_size, Some(5));
+    assert_eq!(ops[0].snapshot_mtime, Some(1_700_000_000));
+    assert_eq!(ops[1].snapshot_size, None);
+    assert_eq!(ops[1].snapshot_mtime, None);
+}
+
+/// A rename review carries the revision it showed, and an agent amend since refuses its
+/// acceptance as `RevisionChanged` instead of recording the amended plan (#747 review). The
+/// staged snapshot starts at revision 0 and a re-loaded proposal reads the bumped one.
+#[test]
+fn a_rename_review_of_an_amended_plan_records_nothing() {
+    let conn = migrated_conn();
+    let shown = staged(
+        &conn,
+        vec![draft_row(
+            "/shots/a.png",
+            "b.png",
+            EvidenceSource::Filename,
+            "the old name",
+        )],
+    );
+    assert_eq!(shown.revision, 0);
+    assert_eq!(
+        shown.snapshot().revision,
+        0,
+        "the review receives the revision it shows"
+    );
+    let group_id = last_group_id(&conn);
+    crate::agent::store::proposals::repropose_group(
+        &conn,
+        group_id,
+        &crate::agent::store::proposals::NewGroup {
+            intent: crate::agent::store::proposals::GroupIntent::Rename {
+                parent: "/shots".into(),
+                renames: vec![crate::agent::store::proposals::NewRename {
+                    source_path: "/shots/a.png".into(),
+                    new_name: "something else.png".into(),
+                    snapshot: None,
+                }],
+            },
+            source_volume_id: "root".into(),
+            display_name: "amended".into(),
+            rationale: None,
+            selector: None,
+        },
+        210,
+    )
+    .expect("amend");
+
+    let outcome = super::super::preflight::record_user_acceptance(&conn, &shown, &[shown.rows[0].row_id.clone()])
+        .expect("record");
+
+    assert!(
+        matches!(
+            outcome,
+            Some(crate::agent::store::proposals::AcceptanceOutcome::RevisionChanged { shown: 0, found: 1 })
+        ),
+        "{outcome:?}"
+    );
 }

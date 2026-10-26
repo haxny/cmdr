@@ -8,8 +8,8 @@
 //! `#[ignore]`-gated: needs a valid `ANTHROPIC_API_KEY`. The `anthropic-smoke` check resolves
 //! the key (env var, else the sops `secret` helper) and skips cleanly without one.
 //!
-//! Endpoint and model id live in `smoke_providers.rs`, not here — including why the pin stays
-//! on Haiku 4.5 rather than a newer Claude.
+//! Endpoint and model id live in `smoke_providers.rs`, not here — including why the pin must
+//! stay on a current Claude.
 //!
 //! Costs ~$0.001 per full run.
 //!
@@ -23,6 +23,7 @@ use futures_util::StreamExt;
 use genai::chat::ChatOptions;
 
 use super::client::{AiBackend, chat_completion, chat_completion_stream};
+use super::connection_check::{ModelListProtocol, probe_ai_endpoint};
 use super::smoke_providers::{ANTHROPIC, api_key, expect_ok};
 
 fn backend() -> AiBackend {
@@ -57,6 +58,28 @@ async fn smoke_anthropic_chat() {
 
     assert!(!res.trim().is_empty(), "response should be non-empty");
     log::info!(target: "ai_smoke", "{} → {res}", ANTHROPIC.model);
+}
+
+/// The settings page's key check and model list, against the real API: Anthropic's `/v1/models`
+/// wants its own headers, and a probe that only knew OpenAI's showed every Anthropic user an
+/// error. Free: listing models isn't billed.
+#[tokio::test]
+#[ignore = "real API call; set ANTHROPIC_API_KEY to run"]
+async fn smoke_anthropic_model_list() {
+    let result = probe_ai_endpoint(
+        ANTHROPIC.base_url.to_string(),
+        api_key(&ANTHROPIC),
+        ModelListProtocol::Anthropic,
+    )
+    .await;
+
+    assert_eq!(result.problem, None, "the key check failed");
+    assert!(
+        result.models.iter().any(|id| id == ANTHROPIC.model),
+        "the list should include the smoke's own model `{}`, got {:?}",
+        ANTHROPIC.model,
+        result.models
+    );
 }
 
 #[tokio::test]

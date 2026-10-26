@@ -167,8 +167,8 @@
   "@errors.eject.remoteNotConnected": {
     "sourceHash": "3f38dd0"
   },
-  "errors.serverRequest.blockedByPolicy": "Your organisation turned this off for Cmdr.",
+  "errors.serverRequest.blockedByPolicy": "Your organisation turned this feature off for Cmdr.",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   }
 }

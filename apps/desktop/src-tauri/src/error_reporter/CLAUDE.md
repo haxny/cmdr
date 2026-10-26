@@ -1,14 +1,15 @@
 # Error reporter
 
-Builds a privacy-redacted zip of recent logs plus a manifest and ships it to `POST /error-report`. Flow A is the
-"Send error report" dialog; Flow B is opt-in auto-send on user-visible errors.
+Builds a redacted zip of recent logs plus a manifest for `POST /error-report`. Flow A: the
+"Send error report" dialog. Flow B: opt-in auto-send on user-visible errors.
 
 ## Module map
 
-- `mod.rs`: public types, `upload`, the endpoint URLs, the `log_error!` macro.
+- `mod.rs`: public types, `upload`, endpoint URLs, `log_error!`.
 - `bundle_builder.rs` / `bundle_capper.rs` / `tail_walker.rs`: ZIP pipelines, cap pass, and read-from-end walker.
+- `preview_file.rs`: the bundle as one text file for the File viewer.
 - `auto_dispatcher.rs`: Flow B. `auto_sent.rs`: what the last auto-send shipped, plus the amend call.
-  `breadcrumbs.rs`: ring buffer of triage events. `state_history/`: process-local typed state ring (panes, operations, volumes, listing failures) and report transform.
+  `breadcrumbs.rs`: ring buffer of triage events. `state_history/`: the typed state ring and its report transform.
 
 ## Must-knows
 

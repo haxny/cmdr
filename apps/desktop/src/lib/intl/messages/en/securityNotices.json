@@ -11,17 +11,17 @@
   "@securityNotices.dismiss": {
     "description": "Button on a security notice that closes it. After this, Cmdr doesn't show this notice again until the app restarts (it still records every case in its security log). VERB, imperative, short control label. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
-  "securityNotices.mcpForeignOrigin.title": "Cmdr blocked a web page from reaching its MCP server",
+  "securityNotices.mcpForeignOrigin.title": "Cmdr blocked a web page from reaching the MCP server",
   "@securityNotices.mcpForeignOrigin.title": {
     "description": "Headline of a warning notice: a web page open in the person's browser tried to talk to Cmdr's MCP server (the local connection AI tools use to control Cmdr), and Cmdr refused it. There is no innocent setup reason for a web page to do this. \"Cmdr\" is the product name; \"MCP\" (Model Context Protocol) stays as-is. Sentence case, no full stop. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
-  "securityNotices.mcpForeignOrigin.body": "A site open in your browser tried to talk to Cmdr. Nothing got in. If it keeps happening, close tabs you don’t trust.",
+  "securityNotices.mcpForeignOrigin.body": "A web page open in your browser tried to talk to Cmdr. Nothing got in. If it keeps happening, close tabs you don’t trust.",
   "@securityNotices.mcpForeignOrigin.body": {
     "description": "Body of that notice: what happened, that nothing got through, and what to do. Calm, not alarming. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP settings",
   "@securityNotices.mcpForeignOrigin.openSettings": {
-    "description": "Button on that notice that opens Cmdr's Settings on the MCP server section, where the person can turn the server off. Short control label. \"MCP\" stays as-is. Pop-up notice (toast) in the corner of Cmdr's main window."
+    "description": "Button on that notice that opens Cmdr's Settings on the “MCP server” section (settings.section.mcpServer), where the person can turn the server off. Short control label; it may name that section. \"MCP\" stays as-is. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
   "securityNotices.smbSignatureRefused.title": "Cmdr refused a reply from {name}",
   "@securityNotices.smbSignatureRefused.title": {
@@ -30,11 +30,11 @@
       "name": "the share's name as Cmdr's volume list shows it, like “photos”"
     }
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr refused a reply from a network share",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr refused a reply from a server",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "description": "The same headline as securityNotices.smbSignatureRefused.title, for when the share's name isn't known any more (it was disconnected meanwhile). Sentence case, no full stop. Pop-up notice (toast) in the corner of Cmdr's main window."
+    "description": "The same headline as securityNotices.smbSignatureRefused.title, for when the share's name isn't known any more (it was disconnected meanwhile), so it names the server that sent the reply in general terms. Sentence case, no full stop. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
-  "securityNotices.smbSignatureRefused.body": "It didn’t carry the server’s signature, so Cmdr didn’t trust it. A flaky network device can cause this, and so can someone tampering with traffic between you and the server. Reconnect, and if it happens again, check your network.",
+  "securityNotices.smbSignatureRefused.body": "The reply didn’t carry the server’s signature, so Cmdr didn’t trust it. A flaky network device can cause this, and so can someone tampering with traffic between you and the server. Reconnect, and if it happens again, check your network.",
   "@securityNotices.smbSignatureRefused.body": {
     "description": "Body of that notice: what Cmdr refused, the innocent cause (a misbehaving router or network device) beside the serious one (someone tampering with traffic), and what to do. Calm, not alarming. “Signature” is the server's proof that a reply really comes from it. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
@@ -52,7 +52,7 @@
   },
   "securityNotices.updateNotGenuine.body": "Every update has to carry Cmdr’s signature, and this one doesn’t. Nothing was installed, and your current Cmdr is untouched. Get the latest version from getcmdr.com, and please tell David: it may mean someone is tampering with updates.",
   "@securityNotices.updateNotGenuine.body": {
-    "description": "Body of that notice: why Cmdr refused, that nothing changed, and what to do. \"David\" is Cmdr's maker, addressed by first name on purpose; keep the name. \"getcmdr.com\" is the website address: keep it exactly. A \"Send error report…\" button sits below it, which is how the person tells David. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
+    "description": "Body of that notice: why Cmdr refused, that nothing changed, and what to do. \"David\" is Cmdr's maker, addressed by first name on purpose; keep the name, though in running prose it may take your language’s case endings or transliteration, like any personal name. \"getcmdr.com\" is the website address: keep it exactly. A \"Send error report…\" button sits below it, which is how the person tells David. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
   },
   "securityNotices.updateNotGenuine.openWebsite": "Open getcmdr.com",
   "@securityNotices.updateNotGenuine.openWebsite": {

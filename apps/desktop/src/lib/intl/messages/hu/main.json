@@ -169,7 +169,7 @@
   },
   "main.cliCommand.uninstalled": "A „cmdr” parancs eltávolítva.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "43e8d91"
+    "sourceHash": "edac691"
   },
   "main.cliCommand.alreadyInstalled": "A „cmdr” parancs már telepítve van.",
   "@main.cliCommand.alreadyInstalled": {
@@ -179,9 +179,9 @@
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Semmi sem változott. A „cmdr” parancs hozzáadásához vagy eltávolításához rendszergazdai jelszó kell.",
+  "main.cliCommand.canceled": "Semmi sem változott. A „cmdr” parancs telepítéséhez vagy eltávolításához rendszergazdai jelszó kell.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "d51acb1"
+    "sourceHash": "31fd0a0"
   },
   "main.cliCommand.installFailed": "Nem sikerült telepíteni a „cmdr” parancsot. Ellenőrizd, hogy a /usr/local/bin mappa írható-e, aztán próbáld újra.",
   "@main.cliCommand.installFailed": {
@@ -189,7 +189,7 @@
   },
   "main.cliCommand.uninstallFailed": "Nem sikerült eltávolítani a „cmdr” parancsot. Ellenőrizd, hogy a /usr/local/bin mappa írható-e, aztán próbáld újra.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "c066530"
+    "sourceHash": "fe4f2fe"
   },
   "main.cliCommand.homebrew": "A „cmdr” parancsot a Homebrew telepítette a Cmdrrel együtt, így már elérhető a terminálodban. Akkor tűnik el, amikor a Homebrew-val eltávolítod a Cmdrt.",
   "@main.cliCommand.homebrew": {
@@ -199,9 +199,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Előbb helyezd át a Cmdrt az Alkalmazások mappádba. Ha máshonnan telepíted, a „cmdr” parancs abban a pillanatban leáll, amint a Cmdr máshová kerül.",
+  "main.cliCommand.notInApplications": "Előbb helyezd át a Cmdrt az Alkalmazások mappádba. Ha máshonnan telepíted a „cmdr” parancsot, az abban a pillanatban elromlik, amikor a Cmdr máshová kerül.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "c9e3fc3"
+    "sourceHash": "e011785"
   },
   "main.cliCommand.notProductionBuild": "Ez a Cmdr fejlesztői buildje, ezért nem nyúl a „cmdr” parancshoz. Ehhez az Alkalmazások mappádban lévő Cmdrt használd.",
   "@main.cliCommand.notProductionBuild": {

@@ -216,9 +216,9 @@
   "@errorReporter.pageCrash.title": {
     "sourceHash": "c77d29c"
   },
-  "errorReporter.pageCrash.body": "В Cmdr возникла неожиданная проблема. Обычно помогает перезагрузить окно. Если это повторяется, отправка отчета поможет это исправить.",
+  "errorReporter.pageCrash.body": "В Cmdr возникла неожиданная проблема. Обычно помогает перезагрузить окно. Если это повторяется, отправьте отчет, чтобы проблему исправили.",
   "@errorReporter.pageCrash.body": {
-    "sourceHash": "09f93b8"
+    "sourceHash": "5cfe782"
   },
   "errorReporter.pageCrash.detailsLabel": "Технические подробности",
   "@errorReporter.pageCrash.detailsLabel": {
@@ -227,6 +227,10 @@
   "errorReporter.pageCrash.reload": "Перезагрузить",
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
+  },
+  "errorReporter.preview.unavailableToast": "Не удалось открыть просмотр. Попробуйте еще раз чуть позже.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
   },
   "errorReporter.prefill.reference": "Код: {code}",
   "@errorReporter.prefill.reference": {

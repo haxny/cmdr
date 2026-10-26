@@ -425,6 +425,9 @@ export interface SettingsValues {
   // Quick Look
   'fileExplorer.suppressQuickLookHint': boolean
 
+  // AI suggestions
+  'suggestedOps.suppressApprovalNotice': boolean
+
   // Navigation
   'behavior.doubleClickPaneNavigatesToParent': boolean
   'behavior.doubleClickOnPaneNotificationSeen': boolean

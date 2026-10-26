@@ -7,13 +7,13 @@
   "@securityNotices.dismiss": {
     "sourceHash": "48845bf"
   },
-  "securityNotices.mcpForeignOrigin.title": "Cmdr hat eine Webseite blockiert, die auf seinen MCP-Server zugreifen wollte",
+  "securityNotices.mcpForeignOrigin.title": "Cmdr hat eine Webseite blockiert, die auf den MCP-Server zugreifen wollte",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
-  "securityNotices.mcpForeignOrigin.body": "Eine in deinem Browser geöffnete Website hat versucht, mit Cmdr zu reden. Es ist nichts durchgekommen. Wenn das immer wieder passiert, schließe Tabs, denen du nicht vertraust.",
+  "securityNotices.mcpForeignOrigin.body": "Eine in deinem Browser geöffnete Webseite hat versucht, mit Cmdr zu reden. Es ist nichts durchgekommen. Wenn das immer wieder passiert, schließe Tabs, denen du nicht vertraust.",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP-Einstellungen",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr hat eine Antwort von einer Netzwerkfreigabe abgelehnt",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr hat eine Antwort von einem Server abgelehnt",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
   "securityNotices.smbSignatureRefused.body": "Die Antwort war nicht vom Server signiert, deshalb hat Cmdr ihr nicht vertraut. Das kann an einem unzuverlässigen Netzwerkgerät liegen, aber auch daran, dass jemand den Datenverkehr zwischen dir und dem Server manipuliert. Stelle die Verbindung wieder her, und wenn das noch einmal passiert, prüfe dein Netzwerk.",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "Verbindung wiederherstellen",
   "@securityNotices.smbSignatureRefused.reconnect": {

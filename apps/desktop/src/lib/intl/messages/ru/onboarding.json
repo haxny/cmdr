@@ -237,11 +237,11 @@
   },
   "onboarding.stepAi.table.rowRename": "Групповое переименование",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Вы вручную задаете шаблон в окне группового переименования, проверяете и применяете.",
+  "onboarding.stepAi.table.renameWithout": "Вы вручную задаете шаблон в окне «Групповое переименование», а затем проверяете и применяете его.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Вы говорите «добавить дату в формате ISO в начало», агент задает шаблон, а вы проверяете и применяете по желанию.",
   "@onboarding.stepAi.table.renameWith": {
@@ -618,6 +618,22 @@
   "onboarding.cloudSetup.status.genericError": "Что-то пошло не так",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "Сервис слишком долго не отвечает. Попробуйте еще раз чуть позже.",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "Похоже, с адресом что-то не так. Он должен начинаться с https://.",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "Ключ передается только по защищенному соединению, поэтому укажите адрес, который начинается с https://.",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "Сервис отклонил запрос (код {status}).",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "Подключено!",
   "@onboarding.cloudSetup.status.connected": {

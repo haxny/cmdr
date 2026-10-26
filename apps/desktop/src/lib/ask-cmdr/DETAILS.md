@@ -380,12 +380,12 @@ reading. Two more were considered and rejected:
   `rejectGroup`), so 500 files never mean 500 clicks.
 
 **The grouping is presentational; the proposal stays the unit.** `BulkRenameReview` is a list of
-`BulkRenameReviewProposal`s, each with its own rows, `preflighting`, `expired`, and `requestVersion`, because preflight,
-revise, apply, and cancel are all keyed by proposal id on the backend (`propose/rename/store.rs`). So every guardrail
-stays per row: the evidence check, pane-scoped source validation, the fingerprinted preflight, and the fingerprint
-recheck at write time. Apply loops over the batches in STAGING order, one `apply_bulk_rename` each, and stops at the
-first refusal, leaving the rest revalidated and still answerable. A batch the user turned down whole is consumed with
-the rest when Apply finishes: they answered it.
+`BulkRenameReviewProposal`s, each with its own rows, `preflighting`, `expired`, `revision`, `changed`, and
+`requestVersion`, because preflight, revise, apply, and cancel are all keyed by proposal id on the backend
+(`propose/rename/store.rs`). So every guardrail stays per row: the evidence check, pane-scoped source validation, the
+fingerprinted preflight, and the fingerprint recheck at write time. Apply loops over the batches in STAGING order, one
+`apply_bulk_rename` each, and stops at the first refusal, leaving the rest revalidated and still answerable. A batch the
+user turned down whole is consumed with the rest when Apply finishes: they answered it.
 
 A rename group binds one parent folder (`start_bulk_rename` refuses a row that would change it), so a job across folders
 is several batches. The dialog puts a folder heading above each run of rows for exactly that case, and shows none at all
@@ -401,6 +401,15 @@ the currently allowed row ids to `apply_bulk_rename`; it cannot supply a path, d
 approval from the model. The backend requires that exact subset to have passed the latest preflight, rechecks it if the
 client is stale, claims the proposal in one conditional transaction (so it can't be started twice), then returns a
 queued operation id. The dialog closes only after that operation has started.
+
+**Preflight and apply send the revision the review SHOWED** (`BulkRenameReviewProposal.revision`, from the
+`proposalReady` snapshot), never one read at click time. An agent amend bumps the plan's revision, so a batch amended
+since it was shown answers `listChanged` (a preflight status, or the typed `BulkRenameError` on apply): the batch is
+marked `changed` and treated as stale. Nothing brings an amended rename plan back into this review (an amend comes
+through `propose_suggestions`, which emits no `proposalReady`), so the suggestions dialog's "The AI changed this
+suggestion while you were reading it." notice takes the batch's place, the way an expired batch's does, and Apply leaves
+it out. Reading the revision at click time would bind whatever the agent amended the plan into, which nobody read. A
+user's own revise doesn't bump it: the binding digest covers that.
 
 Backend preflight verifies every source still exists and blocks any missing source, including one removed after the
 dialog opened. The dialog deselects that row and shows a red, accessible warning; a matching watcher event rechecks it

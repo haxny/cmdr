@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr 无法读取你的撤销历史记录，所以历史记录从头开始",
+  "stateRecovery.operationLog.title": "Cmdr 无法读取你的操作日志，所以日志从头开始记录",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr 无法读取你的 Ask Cmdr 聊天记录，所以聊天记录从头开始",
+  "stateRecovery.chatHistory.title": "Cmdr 无法读取你的 Ask Cmdr 聊天记录，所以聊天列表现在是空的",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr 无法读取你的个人收藏，所以列表现在是空的",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr 无法读取“前往文件夹”里最近的条目，所以列表从头开始",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr 无法读取你最近的搜索，所以列表从头开始",
   "@stateRecovery.searchHistory.title": {

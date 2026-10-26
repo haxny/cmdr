@@ -29,6 +29,9 @@ pub enum BulkRenameError {
     /// Something moved under the review (a revised name, a different subset), so
     /// the plan has to be looked at again before it can run.
     NeedsAnotherLook,
+    /// The agent amended the plan since the revision the review showed, so nothing ran. The
+    /// review re-reads the plan.
+    ListChanged,
     /// The plan has no rows left to apply.
     NothingToApply,
     /// The row edit was turned down (the name, the row id, or the store).
@@ -57,6 +60,7 @@ impl std::fmt::Display for BulkRenameError {
         match self {
             Self::ReviewExpired => f.write_str("the review has expired"),
             Self::NeedsAnotherLook => f.write_str("the plan changed under the review"),
+            Self::ListChanged => f.write_str("the agent amended the plan since the review showed it"),
             Self::NothingToApply => f.write_str("no rows to apply"),
             Self::RowRefused { detail } => write!(f, "row refused: {detail}"),
             Self::CouldntStart { reason } => write!(f, "couldn't start: {reason}"),
@@ -91,11 +95,12 @@ const BULK_RENAME_APPLY_TIMEOUT: Duration = Duration::from_secs(5);
 pub async fn preflight_bulk_rename(
     app: AppHandle,
     proposal_id: String,
+    revision: i64,
     allowed_row_ids: Vec<String>,
 ) -> Result<BulkRenamePreflight, BulkRenameError> {
     tokio::time::timeout(
         BULK_RENAME_PREFLIGHT_TIMEOUT,
-        crate::agent::tools::propose::rename::preflight(&app, proposal_id, allowed_row_ids),
+        crate::agent::tools::propose::rename::preflight(&app, proposal_id, revision, allowed_row_ids),
     )
     .await
     .map_err(|_| BulkRenameError::TimedOut)
@@ -108,6 +113,7 @@ pub async fn preflight_bulk_rename(
 pub async fn apply_bulk_rename(
     app: AppHandle,
     proposal_id: String,
+    revision: i64,
     allowed_row_ids: Vec<String>,
 ) -> Result<BulkRenameStarted, BulkRenameError> {
     let (Some(db), Some(accepted_preflights)) =
@@ -122,12 +128,19 @@ pub async fn apply_bulk_rename(
     if accepted_preflights.matching(&proposal_id, &allowed_row_ids).is_none() {
         let preflight = tokio::time::timeout(
             BULK_RENAME_APPLY_TIMEOUT,
-            crate::agent::tools::propose::rename::preflight(&app, proposal_id.clone(), allowed_row_ids.clone()),
+            crate::agent::tools::propose::rename::preflight(
+                &app,
+                proposal_id.clone(),
+                revision,
+                allowed_row_ids.clone(),
+            ),
         )
         .await
         .map_err(|_| BulkRenameError::TimedOut)?;
-        if preflight.status != BulkRenamePreflightStatus::Ready {
-            return Err(review_again());
+        match preflight.status {
+            BulkRenamePreflightStatus::Ready => {}
+            BulkRenamePreflightStatus::ListChanged => return Err(BulkRenameError::ListChanged),
+            BulkRenamePreflightStatus::Blocked | BulkRenamePreflightStatus::Expired => return Err(review_again()),
         }
     }
 
@@ -141,6 +154,12 @@ pub async fn apply_bulk_rename(
     else {
         return Err(review_is_over());
     };
+    // The plan the user read, or nothing: an amend since the review (even one that landed after
+    // the preflight) is a different plan. The claim below refuses it too, since an amend tears up
+    // the acceptance; this says WHY.
+    if proposal.revision != revision {
+        return Err(BulkRenameError::ListChanged);
+    }
     if proposal.rows.is_empty() {
         return Err(BulkRenameError::NothingToApply);
     }

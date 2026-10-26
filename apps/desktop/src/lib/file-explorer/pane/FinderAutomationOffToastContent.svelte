@@ -10,13 +10,20 @@
     import ToastActions from '#lib/ui/toast/ToastActions.svelte'
     import { openAutomationSettings } from '#lib/tauri-commands/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { systemStrings } from '#lib/system-strings.svelte.js'
 </script>
 
 <div class="content">
-    <span class="message">{tString('commands.handler.getInfo.automationOff')}</span>
+    <span class="message"
+        >{tString('commands.handler.getInfo.automationOff', {
+            systemSettings: systemStrings.systemSettings,
+            privacyAndSecurity: systemStrings.privacyAndSecurity,
+            automation: systemStrings.automation,
+        })}</span
+    >
     <ToastActions>
         <Button variant="primary" size="mini" onclick={() => void openAutomationSettings()}>
-            {tString('commands.handler.getInfo.openAutomationSettings')}
+            {tString('commands.handler.getInfo.openAutomationSettings', { automation: systemStrings.automation })}
         </Button>
     </ToastActions>
 </div>

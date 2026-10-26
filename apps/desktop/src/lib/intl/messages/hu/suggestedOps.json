@@ -1,11 +1,35 @@
 {
-  "suggestedOps.title": "Javasolt műveletek",
+  "suggestedOps.title": "AI-javaslatok",
   "@suggestedOps.title": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "suggestedOps.description": "Ezeket az AI javasolta. Semmi nem indul el, amíg jóvá nem hagyod.",
   "@suggestedOps.description": {
     "sourceHash": "73255a0"
+  },
+  "suggestedOps.approvalNoticeDismiss": "Ne jelenjen meg többé",
+  "@suggestedOps.approvalNoticeDismiss": {
+    "sourceHash": "2c23c21"
+  },
+  "suggestedOps.sweepWhen.justNow": "Javasolva: épp most",
+  "@suggestedOps.sweepWhen.justNow": {
+    "sourceHash": "4606788"
+  },
+  "suggestedOps.sweepWhen.minutesAgo": "Javasolva: {countText} {count, plural, one {perccel} other {perccel}} ezelőtt",
+  "@suggestedOps.sweepWhen.minutesAgo": {
+    "sourceHash": "96782e0"
+  },
+  "suggestedOps.sweepWhen.today": "Javasolva: ma {time}",
+  "@suggestedOps.sweepWhen.today": {
+    "sourceHash": "105ec27"
+  },
+  "suggestedOps.sweepWhen.yesterday": "Javasolva: tegnap {time}",
+  "@suggestedOps.sweepWhen.yesterday": {
+    "sourceHash": "a0d2061"
+  },
+  "suggestedOps.sweepWhen.earlier": "Javasolva: {date}",
+  "@suggestedOps.sweepWhen.earlier": {
+    "sourceHash": "cbe0d5f"
   },
   "suggestedOps.empty": "Most nem vár rád semmi.",
   "@suggestedOps.empty": {
@@ -15,48 +39,120 @@
   "@suggestedOps.loadFailed": {
     "sourceHash": "ef0da3e"
   },
-  "suggestedOps.agentReason": "Az AI indoka",
+  "suggestedOps.agentReason": "Miért:",
   "@suggestedOps.agentReason": {
-    "sourceHash": "e3acab8"
+    "sourceHash": "ad389aa"
   },
-  "suggestedOps.cmdrFacts": "Amit a Cmdr tud",
-  "@suggestedOps.cmdrFacts": {
-    "sourceHash": "9851c12"
+  "suggestedOps.agentReasonTooltip": "Az AI saját szavai. A Cmdr nem ellenőrizte őket.",
+  "@suggestedOps.agentReasonTooltip": {
+    "sourceHash": "aadab2c"
   },
-  "suggestedOps.fileCount": "{count, plural, one {# fájl} other {# fájl}}",
+  "suggestedOps.agentReasonSpoken": "Miért, az AI szerint:",
+  "@suggestedOps.agentReasonSpoken": {
+    "sourceHash": "0c0a448"
+  },
+  "suggestedOps.fileCount": "{countText} {count, plural, one {fájl} other {fájl}}",
   "@suggestedOps.fileCount": {
-    "sourceHash": "e60f4a2"
+    "sourceHash": "76ef0a6"
   },
-  "suggestedOps.approve": "Jóváhagyás",
-  "@suggestedOps.approve": {
-    "sourceHash": "6007acb"
+  "suggestedOps.approve.move": "{countText} {count, plural, one {fájl} other {fájl}} áthelyezése",
+  "@suggestedOps.approve.move": {
+    "sourceHash": "4c89041"
+  },
+  "suggestedOps.approve.copy": "{countText} {count, plural, one {fájl} other {fájl}} másolása",
+  "@suggestedOps.approve.copy": {
+    "sourceHash": "e10c490"
+  },
+  "suggestedOps.approve.trash": "{countText} {count, plural, one {fájl} other {fájl}} áthelyezése a Kukába",
+  "@suggestedOps.approve.trash": {
+    "sourceHash": "3c82946"
+  },
+  "suggestedOps.approve.delete": "{countText} {count, plural, one {fájl} other {fájl}} törlése",
+  "@suggestedOps.approve.delete": {
+    "sourceHash": "218cf04"
+  },
+  "suggestedOps.approve.rename": "{countText} {count, plural, one {fájl} other {fájl}} átnevezése",
+  "@suggestedOps.approve.rename": {
+    "sourceHash": "412518d"
+  },
+  "suggestedOps.approve.compress": "{countText} {count, plural, one {fájl} other {fájl}} tömörítése",
+  "@suggestedOps.approve.compress": {
+    "sourceHash": "7df0dfc"
+  },
+  "suggestedOps.approve.extract": "{countText} {count, plural, one {archívum} other {archívum}} kicsomagolása",
+  "@suggestedOps.approve.extract": {
+    "sourceHash": "0bf7541"
   },
   "suggestedOps.reject": "Elutasítás",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
   },
-  "suggestedOps.approveCount": "{count, plural, one {# fájl} other {# fájl}} jóváhagyása",
-  "@suggestedOps.approveCount": {
-    "sourceHash": "649d66f"
+  "suggestedOps.facts.from": "Forrás",
+  "@suggestedOps.facts.from": {
+    "sourceHash": "2181976"
   },
-  "suggestedOps.review": "Fájlok áttekintése",
-  "@suggestedOps.review": {
-    "sourceHash": "b8d04b3"
+  "suggestedOps.facts.to": "Cél",
+  "@suggestedOps.facts.to": {
+    "sourceHash": "f4b06ef"
   },
-  "suggestedOps.collapse": "Fájlok elrejtése",
-  "@suggestedOps.collapse": {
-    "sourceHash": "ced24ea"
+  "suggestedOps.facts.folder": "Mappa",
+  "@suggestedOps.facts.folder": {
+    "sourceHash": "74ccd43"
   },
-  "suggestedOps.reversibleRestoreMove": "Ezt vissza tudod vonni",
-  "@suggestedOps.reversibleRestoreMove": {
-    "sourceHash": "de7f6ff"
+  "suggestedOps.facts.archive": "Archívum",
+  "@suggestedOps.facts.archive": {
+    "sourceHash": "66f4804"
   },
-  "suggestedOps.reversibleDeleteWritten": "A létrehozott fájlok törlésével vonható vissza",
-  "@suggestedOps.reversibleDeleteWritten": {
-    "sourceHash": "997843a"
+  "suggestedOps.facts.trash": "Kuka",
+  "@suggestedOps.facts.trash": {
+    "sourceHash": "4e42c6e"
   },
-  "suggestedOps.irreversible": "Ezt nem lehet visszavonni",
-  "@suggestedOps.irreversible": {
+  "suggestedOps.facts.severalFolders": "Több mappa",
+  "@suggestedOps.facts.severalFolders": {
+    "sourceHash": "7c32950"
+  },
+  "suggestedOps.reversible.trash": "Ezt vissza tudod vonni: {count, plural, one {a fájl a Kukába kerül} other {a fájlok a Kukába kerülnek}}",
+  "@suggestedOps.reversible.trash": {
+    "sourceHash": "55bf957"
+  },
+  "suggestedOps.reversible.moveBack": "Ezt vissza tudod vonni: a Cmdr vissza tudja helyezni {count, plural, one {a fájlt a helyére} other {a fájlokat a helyükre}}",
+  "@suggestedOps.reversible.moveBack": {
+    "sourceHash": "14c0a31"
+  },
+  "suggestedOps.reversible.renameBack": "Ezt vissza tudod vonni: a Cmdr vissza tudja állítani {count, plural, one {a régi nevet} other {a régi neveket}}",
+  "@suggestedOps.reversible.renameBack": {
+    "sourceHash": "4c7e3c3"
+  },
+  "suggestedOps.reversible.removeCopies": "Ezt vissza tudod vonni: a Cmdr törli a másolatokat",
+  "@suggestedOps.reversible.removeCopies": {
+    "sourceHash": "0ec3b08"
+  },
+  "suggestedOps.reversible.removeArchive": "Ezt vissza tudod vonni: a Cmdr törli az új archívumot",
+  "@suggestedOps.reversible.removeArchive": {
+    "sourceHash": "2c8278f"
+  },
+  "suggestedOps.reversible.removeExtracted": "Ezt vissza tudod vonni: a Cmdr törli, amit kicsomagolt",
+  "@suggestedOps.reversible.removeExtracted": {
+    "sourceHash": "977a513"
+  },
+  "suggestedOps.irreversible.delete": "Ezt nem lehet visszavonni: a fájlok véglegesen törlődnek",
+  "@suggestedOps.irreversible.delete": {
+    "sourceHash": "e32da9a"
+  },
+  "suggestedOps.blocked.noTrash": "Nem indítható: ezen a meghajtón nincs Kuka",
+  "@suggestedOps.blocked.noTrash": {
+    "sourceHash": "f08e038"
+  },
+  "suggestedOps.blocked.noTrashTooltip": "Azon a meghajtón, amelyen ezek a fájlok vannak, nincs Kuka, így nem lehet oda áthelyezni őket, és semmi sem történne. Utasítsd el, vagy töröld magad a fájlokat, ha ezt szeretnéd.",
+  "@suggestedOps.blocked.noTrashTooltip": {
+    "sourceHash": "f2a5d5f"
+  },
+  "suggestedOps.irreversible.overwrite": "Ezt nem lehet visszavonni: lecserél egy meglévő archívumot",
+  "@suggestedOps.irreversible.overwrite": {
+    "sourceHash": "0d5c5bb"
+  },
+  "suggestedOps.irreversible.other": "Ezt nem lehet visszavonni",
+  "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
   "suggestedOps.folderWillBeCreated": "A Cmdr létrehozza ezt a mappát",
@@ -71,6 +167,14 @@
   "@suggestedOps.destinationUnknown": {
     "sourceHash": "dc78d1d"
   },
+  "suggestedOps.destinationNotConnected": "Nincs kapcsolat a célhellyel",
+  "@suggestedOps.destinationNotConnected": {
+    "sourceHash": "51dcf8e"
+  },
+  "suggestedOps.destinationNotConnectedTooltip": "A Cmdr még nem csatlakozott ehhez a meghajtóhoz vagy szerverhez. A jóváhagyás csak akkor indul el, amikor létrejön a kapcsolat, ugyanúgy, mint amikor te magad helyezel át oda fájlokat.",
+  "@suggestedOps.destinationNotConnectedTooltip": {
+    "sourceHash": "af06219"
+  },
   "suggestedOps.fromPattern": "Minta alapján találva",
   "@suggestedOps.fromPattern": {
     "sourceHash": "20e88a9"
@@ -83,29 +187,81 @@
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.columnFile": "Fájl",
-  "@suggestedOps.columnFile": {
-    "sourceHash": "50009ce"
+  "suggestedOps.filesLabel": "A javaslat fájljai: „{name}”",
+  "@suggestedOps.filesLabel": {
+    "sourceHash": "adf93b7"
+  },
+  "suggestedOps.columnInclude": "Belefoglalás",
+  "@suggestedOps.columnInclude": {
+    "sourceHash": "7285576"
+  },
+  "suggestedOps.includeAll": "Az összes fájl belefoglalása",
+  "@suggestedOps.includeAll": {
+    "sourceHash": "ac6c70c"
+  },
+  "suggestedOps.columnName": "Név",
+  "@suggestedOps.columnName": {
+    "sourceHash": "dcd1d52"
+  },
+  "suggestedOps.columnFolder": "Mappa",
+  "@suggestedOps.columnFolder": {
+    "sourceHash": "74ccd43"
   },
   "suggestedOps.columnNewName": "Új név",
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
   },
-  "suggestedOps.columnSize": "Méret a javaslatkor",
+  "suggestedOps.columnSize": "Méret",
   "@suggestedOps.columnSize": {
-    "sourceHash": "20d36bd"
+    "sourceHash": "1af8519"
   },
-  "suggestedOps.columnChanged": "Utoljára módosítva",
-  "@suggestedOps.columnChanged": {
-    "sourceHash": "d8c5670"
+  "suggestedOps.columnModified": "Utoljára módosítva",
+  "@suggestedOps.columnModified": {
+    "sourceHash": "0fe1058"
   },
-  "suggestedOps.noIndexData": "Nincs az indexben",
-  "@suggestedOps.noIndexData": {
-    "sourceHash": "104d8cb"
+  "suggestedOps.factChanged": "Módosult a javaslat óta",
+  "@suggestedOps.factChanged": {
+    "sourceHash": "958780a"
   },
-  "suggestedOps.includeFile": "Fájl bevonása",
+  "suggestedOps.factChangedTooltip": "Javaslatkor: {then} / Most: {now}",
+  "@suggestedOps.factChangedTooltip": {
+    "sourceHash": "8bf4166"
+  },
+  "suggestedOps.fileMissing": "Áthelyezve vagy törölve",
+  "@suggestedOps.fileMissing": {
+    "sourceHash": "2073c5b"
+  },
+  "suggestedOps.snapshotOnly": "Az AI javaslatának idejéből",
+  "@suggestedOps.snapshotOnly": {
+    "sourceHash": "f6b2d27"
+  },
+  "suggestedOps.snapshotOnlyTooltip": "A Cmdr most nem tudta ellenőrizni ezt a fájlt, ezért ez az az érték, ami az AI javaslatakor volt.",
+  "@suggestedOps.snapshotOnlyTooltip": {
+    "sourceHash": "d6a081c"
+  },
+  "suggestedOps.sourceNotConnected": "A Cmdr nem kapcsolódik ahhoz a meghajtóhoz, amelyen ezek a fájlok vannak, ezért a méretük és a dátumuk abból az időből származik, amikor az AI ezt javasolta.",
+  "@suggestedOps.sourceNotConnected": {
+    "sourceHash": "07d5134"
+  },
+  "suggestedOps.sourceGone": "Az a meghajtó, amelyen ezek a fájlok voltak, már nincs itt, ezért a méretük és a dátumuk abból az időből származik, amikor az AI ezt javasolta.",
+  "@suggestedOps.sourceGone": {
+    "sourceHash": "1b30de5"
+  },
+  "suggestedOps.factUnknown": "Ismeretlen",
+  "@suggestedOps.factUnknown": {
+    "sourceHash": "b764cdc"
+  },
+  "suggestedOps.includeFile": "Belefoglalás: {name}",
   "@suggestedOps.includeFile": {
-    "sourceHash": "71075a7"
+    "sourceHash": "a44fb71"
+  },
+  "suggestedOps.showMore": "Még {countText} megjelenítése",
+  "@suggestedOps.showMore": {
+    "sourceHash": "4061571"
+  },
+  "suggestedOps.showAll": "Az összes megjelenítése ({countText})",
+  "@suggestedOps.showAll": {
+    "sourceHash": "912b5d0"
   },
   "suggestedOps.loadingFiles": "Fájlok betöltése…",
   "@suggestedOps.loadingFiles": {
@@ -138,6 +294,14 @@
   "suggestedOps.refusal.nothingToRun.suggestion": "Nézd meg, hogy megvannak-e még, aztán hagyd jóvá újra, vagy utasítsd el.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "sourceHash": "f4cfc9e"
+  },
+  "suggestedOps.refusal.nothingSelected.message": "A kipipált fájlok közül egyik sincs már ebben a javaslatban, így semmi nem indult el.",
+  "@suggestedOps.refusal.nothingSelected.message": {
+    "sourceHash": "7de9324"
+  },
+  "suggestedOps.refusal.nothingSelected.suggestion": "Pipáld ki a kívánt fájlokat, aztán hagyd jóvá újra.",
+  "@suggestedOps.refusal.nothingSelected.suggestion": {
+    "sourceHash": "db90f78"
   },
   "suggestedOps.refusal.couldNotStart.message": "A Cmdr nem tudta műveletté alakítani ezt a javaslatot, így semmi nem indult el.",
   "@suggestedOps.refusal.couldNotStart.message": {

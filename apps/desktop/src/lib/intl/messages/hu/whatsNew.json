@@ -7,9 +7,9 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
-  "whatsNew.securityNotice.title": "Ez a verzió {count, plural, one {egy biztonsági problémát} other {# biztonsági problémát}} javított ki.",
+  "whatsNew.securityNotice.title": "A legutóbbi frissítések {count, plural, one {egy biztonsági problémát} other {# biztonsági problémát}} javítottak ki.",
   "@whatsNew.securityNotice.title": {
-    "sourceHash": "26e4d7e"
+    "sourceHash": "7926316"
   },
   "whatsNew.securityNotice.readAdvisory": "Biztonsági közlemény elolvasása",
   "@whatsNew.securityNotice.readAdvisory": {

@@ -47,6 +47,13 @@
     "confidence": "high",
     "sources": "KDE Dolphin, Total Commander, Double Commander pt-BR (Adicionar ao/à …); macOS Finder pt_BR LocalizableMerged N169.38 / N230 (Data da Adição)"
   },
+  "administrator": {
+    "chosen": "administrador",
+    "accept": ["administradores"],
+    "confidence": "high",
+    "forms": "an administrator password → uma senha de administrador; administrator rights → permissões de administrador; the person who manages a Mac → quem gerencia este Mac",
+    "sources": "macOS pt-BR pile (senha de administrador); MS terminology pt-BR administrador; catalog (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac)"
+  },
   "advanced": {
     "chosen": "Avançado",
     "confidence": "high",
@@ -66,6 +73,12 @@
     "confidence": "high",
     "sources": "MS terminology pt-BR (provider → provedor)",
     "note": "The ai.cloudConsent `service` keys say serviço; provedor stays for provider."
+  },
+  "ai-reply": {
+    "chosen": "resposta",
+    "accept": ["respostas", "respond"],
+    "confidence": "high",
+    "sources": "MS terminology pt-BR resposta; catalog"
   },
   "ai-tool": {
     "chosen": "ferramenta",
@@ -176,7 +189,8 @@
     "confidence": "confirmed",
     "sources": "MS terminology pt-BR (archive → arquivar, Archived → Arquivado)",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "The zip/tar file kind (concept archive), not a chat: arquivo compactado."
+      "fileExplorer.list.rowKind.archive": "The zip/tar file kind (concept archive), not a chat: arquivo compactado.",
+      "suggestedOps.facts.archive": "The archive file a compress suggestion creates (concept archive), not a chat: Arquivo compactado."
     }
   },
   "ask": {
@@ -271,6 +285,13 @@
     "forms": "a blocked rename → renomeação bloqueada; Cmdr blocked a web page from reaching X → O Cmdr bloqueou o acesso de uma página da web a X",
     "confidence": "high",
     "sources": "MS pt-BR (Blocked Contacts → Contatos Bloqueados); catalog askCmdr.renameReview.status (bloqueada)"
+  },
+  "blocked-by": {
+    "chosen": "bloquear",
+    "accept": ["bloqueou", "bloquead", "impediu", "impedi"],
+    "confidence": "high",
+    "forms": "Cmdr blocked X from reaching Y → O Cmdr bloqueou o acesso de X a Y; macOS blocked Cmdr from accessing → O macOS impediu o Cmdr de acessar",
+    "sources": "MS terminology pt-BR bloquear; Thunar/Nautilus pt-BR bloqueado; catalog securityNotices.mcpForeignOrigin.title"
   },
   "brief-view": {
     "chosen": "visualização resumida",
@@ -622,6 +643,12 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR ConnectToWindow, NetAuthAgent (Conectar)"
   },
+  "learn-more": {
+    "chosen": "Mais sobre",
+    "confidence": "high",
+    "forms": "More about “X” → Mais sobre “X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
   "link": {
     "chosen": "link",
     "confidence": "high",
@@ -651,6 +678,13 @@
     "chosen": "divisor dos painéis",
     "confidence": "high",
     "sources": "Double Commander pt-BR (divisor), Microsoft pt-BR (divider, splitter → divisor)"
+  },
+  "pattern": {
+    "chosen": "padrão",
+    "accept": ["padrões"],
+    "confidence": "high",
+    "forms": "rename pattern → padrão de renomeação",
+    "sources": "MS terminology pt-BR padrão; Double Commander pt-BR; catalog onboarding.stepAi.table.renameWith"
   },
   "provider-console": {
     "chosen": "console",
@@ -1231,6 +1265,13 @@
     "confidence": "high",
     "sources": "macOS Disk Utility (Formato); standard pt-BR"
   },
+  "from-to": {
+    "chosen": "De / Para",
+    "accept": ["De", "Para"],
+    "forms": "group headings and fact labels → De / Para; with a colon → De:",
+    "confidence": "high",
+    "sources": "catalog (fileOperations.transferDialog.sourceGroupTitle De, targetGroupTitle Para, scanPhase.fromLabel De:); standard pt-BR"
+  },
   "free-space": {
     "chosen": "espaço livre",
     "accept": ["espaço"],
@@ -1794,9 +1835,6 @@
     "accept": ["mov"],
     "forms": "progress Movendo; noun movimentação (Finder MV2_V1 Desfazer Movimentação)",
     "confidence": "confirmed",
-    "exceptions": {
-      "multiRename.movedRow": "reordering a row in the preview list, not relocating a file; the announcement names only the new place (Agora na posição …), and a participle would have to agree with a file or a folder"
-    },
     "sources": "macOS Finder pt-BR"
   },
   "move-to-trash": {
@@ -1866,11 +1904,7 @@
       }
     ],
     "confidence": "confirmed",
-    "sources": "macOS Finder pt-BR; MS terminology pt-BR; NetAuthAgent",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the report on), not a network share: compartilhá-lo por conta própria.",
-      "servers.sheet.addressHelpNfs": "\"share\" is a literal path segment inside the example addresses (nfs://nas.local/share), kept as-is."
-    }
+    "sources": "macOS Finder pt-BR; MS terminology pt-BR; NetAuthAgent"
   },
   "new-file": {
     "chosen": "Novo arquivo",
@@ -2448,6 +2482,13 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR conflict sheet (Substituir)"
   },
+  "reply": {
+    "chosen": "resposta",
+    "accept": ["respostas", "respond"],
+    "confidence": "high",
+    "forms": "a server’s reply → a resposta do servidor",
+    "sources": "MS terminology pt-BR resposta; catalog (askCmdr, errors.write.replySignatureRefused.*)"
+  },
   "report": {
     "chosen": "relatório",
     "confidence": "confirmed",
@@ -2895,11 +2936,7 @@
     ],
     "confidence": "high",
     "sources": "shipped pt catalog (onboarding.wizard.stepProgress)",
-    "decision": "Onboarding",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The Multi-rename counter's increment, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling.",
-      "multiRename.placeholderHelp.counterAll": "The Multi-rename counter's increment, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling."
-    }
+    "decision": "Onboarding"
   },
   "stop": {
     "chosen": "Parar",
@@ -3026,6 +3063,13 @@
     "confidence": "tentative",
     "sources": "shipped pt catalog (viewer.toolbar.tail.label); Microsoft pt-BR terminology acompanhar"
   },
+  "tamper": {
+    "chosen": "adulterar",
+    "accept": ["adulterando", "adulterad"],
+    "confidence": "tentative",
+    "forms": "someone tampering with traffic → alguém adulterando o tráfego; with the connection → alguém está adulterando a conexão",
+    "sources": "Thunar pt-BR adulterado (the pile’s only hit); catalog (errors.shareList.signatureInvalid, errors.write.replySignatureRefused.suggestion, securityNotices.smbSignatureRefused.body)"
+  },
   "tap": {
     "chosen": "tocar",
     "accept": ["toque"],
@@ -3080,6 +3124,18 @@
     "chosen": "miniatura",
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (Tamanho da miniatura:); MS terminology pt-BR; Thunar"
+  },
+  "time-ago": {
+    "chosen": "há",
+    "forms": "há {count}min / há {durationText}; a heading → Sugerido há {countText} minutos",
+    "avoid": [
+      {
+        "form": "atrás",
+        "why": "Nautilus pt-BR writes 2 dias atrás, but the catalog settled há (ui.toast.age, queryUi.age.*); one app, one form"
+      }
+    ],
+    "confidence": "high",
+    "sources": "catalog (ui.toast.age há {durationText}, queryUi.age.* há {count}…); GNOME Nautilus pt-BR (Uma semana atrás) as the rejected alternative"
   },
   "time-left": {
     "chosen": "restante",
@@ -3173,11 +3229,41 @@
     "confidence": "confirmed",
     "sources": "shipped pt catalog"
   },
+  "uninstall": {
+    "chosen": "desinstalar",
+    "accept": ["desinstal"],
+    "confidence": "high",
+    "forms": "Uninstall “cmdr” command → Desinstalar o comando “cmdr”; toast → O Cmdr desinstalou o comando “cmdr”",
+    "avoid": [
+      {
+        "form": "remover (for the cmdr command)",
+        "why": "the menu item says Desinstalar; its toasts must use the same verb"
+      }
+    ],
+    "sources": "MS terminology pt-BR desinstalar; catalog menu.app.cliCommandUninstall"
+  },
+  "unknown": {
+    "chosen": "desconhecido",
+    "accept": ["desconhecid"],
+    "forms": "a bare value for a masculine noun → Desconhecido; (unknown) → (desconhecido)",
+    "confidence": "high",
+    "sources": "macOS pt-BR (Desconhecido, (desconhecido), <desconhecido>); catalog (ai.local.modelUnknown Desconhecido, fileOperations.transferProgress.sizeUnknown)",
+    "exceptions": {
+      "suggestedOps.factUnknown": "One string stands in for a size (o tamanho) and a date (a data), so a gendered desconhecido/desconhecida can't agree with both: the neutral Sem informação."
+    }
+  },
   "unlock": {
     "chosen": "Desbloquear",
     "accept": ["desbloque"],
     "confidence": "high",
     "sources": "macOS AppKit (Desbloquear)"
+  },
+  "unlock-device": {
+    "chosen": "desbloquear",
+    "accept": ["desbloqueie", "desbloque"],
+    "confidence": "high",
+    "forms": "unlock it (a phone) → desbloqueie-o",
+    "sources": "macOS pt-BR pile (Desbloqueie); Android pt-BR desbloquear; catalog fileExplorer.navigation.favoriteUnreachable.phoneUnplugged"
   },
   "unplug": {
     "chosen": "desconectado",
@@ -3494,9 +3580,6 @@
         "why": "TC's menu calque; TC's own dialog title already says Renomeação em Lote"
       }
     ],
-    "exceptions": {
-      "onboarding.stepAi.table.rowRename": "A compact onboarding table row comparing with and without AI; the shipped Renomear em massa is the same idea in a three-word cell and isn't the tool's name."
-    },
     "confidence": "high",
     "sources": "TC pt-BR WCMD.LNG 6601 Renomeação em Lote; shipped pt onboarding.stepAi.table.renameWithout (renomeação em lote); Finder pt-BR Renomear ^0 Itens…",
     "note": "Same English Multi-rename in commands.fileMultiRename.label, menu.file.multiRename and multiRename.title: one form, infinitive."

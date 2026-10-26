@@ -249,7 +249,6 @@
        underline comes back on hover. */
     .package-list li :global(.link-button) {
         min-width: 0;
-        overflow-wrap: anywhere;
         text-align: left;
         text-decoration: none;
     }
@@ -260,7 +259,6 @@
 
     .package-name {
         min-width: 0;
-        overflow-wrap: anywhere;
         color: var(--color-text-primary);
     }
 
@@ -270,7 +268,6 @@
     .package-version,
     .package-license {
         min-width: 0;
-        overflow-wrap: anywhere;
         color: var(--color-text-tertiary);
     }
 

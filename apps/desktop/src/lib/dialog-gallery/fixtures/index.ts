@@ -50,6 +50,7 @@ import {
   operationLogFixtures,
   whatsNewFixtures,
 } from './store-seeded'
+import { suggestedOpsFixtures } from './suggested-ops'
 import { transferErrorFixtures } from './transfer-error'
 import { transferProgressFixtures } from './transfer-progress'
 import { moveToApplicationsFixtures } from './updates'
@@ -84,6 +85,7 @@ export const fixtureRecords = {
   'selection-remove': selectionRemoveFixtures,
   'server-sign-in': serverSignInFixtures,
   'sources-gone': sourcesGoneFixtures,
+  'suggested-ops': suggestedOpsFixtures,
   'locked-sources': lockedSourcesFixtures,
   'transfer-confirmation': transferFixtures,
   'transfer-error': transferErrorFixtures,

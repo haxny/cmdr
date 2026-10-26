@@ -67,9 +67,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "Skriv cmdr och en sökväg i en terminal för att öppna sökvägen i Cmdr",
+  "commands.appToggleCliCommand.description": "Skriv cmdr och en sökväg i en terminal för att öppna filen eller mappen i Cmdr",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "Tangentbordsgenvägar",
   "@commands.helpOpenShortcuts.label": {
@@ -1216,13 +1216,13 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "För Visa info behöver Cmdr få styra Finder, och det är avstängt. Slå på Finder under Cmdr i Systeminställningar > Integritet och säkerhet > Automatisering.",
+  "commands.handler.getInfo.automationOff": "För Visa info behöver Cmdr få styra Finder, och det är avstängt. Slå på Finder under Cmdr i {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Öppna inställningar för Automatisering",
+  "commands.handler.getInfo.openAutomationSettings": "Öppna inställningar för {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr kunde inte nå Finder för att öppna Visa info. Försök igen.",
   "@commands.handler.getInfo.notReached": {
@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Föreslagna åtgärder",
+  "commands.suggestedOpsShow.label": "AI-förslag",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Granska filåtgärderna som AI:n föreslog och bestäm vad som körs",
   "@commands.suggestedOpsShow.description": {

@@ -67,9 +67,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "Введите в терминале cmdr и путь, чтобы открыть его в Cmdr",
+  "commands.appToggleCliCommand.description": "Введите в терминале cmdr и путь, чтобы открыть этот файл или папку в Cmdr",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "Сочетания клавиш",
   "@commands.helpOpenShortcuts.label": {
@@ -1216,13 +1216,13 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Чтобы открыть окно «Свойства», Cmdr нужно управлять Finder, а это выключено. Включите Finder под Cmdr в разделе «Системные настройки > Конфиденциальность и безопасность > Автоматизация».",
+  "commands.handler.getInfo.automationOff": "Чтобы открыть окно «Свойства», Cmdr нужно управлять Finder, а это выключено. Включите Finder под Cmdr в разделе «{systemSettings} > {privacyAndSecurity} > {automation}».",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Открыть настройки «Автоматизация»",
+  "commands.handler.getInfo.openAutomationSettings": "Открыть настройки «{automation}»",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr не удалось связаться с Finder, чтобы открыть окно «Свойства». Попробуйте еще раз.",
   "@commands.handler.getInfo.notReached": {
@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Предложенные операции",
+  "commands.suggestedOpsShow.label": "Предложения ИИ",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Просмотреть предложенные ИИ файловые операции и решить, какие выполнить",
   "@commands.suggestedOpsShow.description": {

@@ -1,6 +1,6 @@
 <script lang="ts">
     /**
-     * A favorite row's "Set shortcut" capture, at the right of the row, wherever the row is
+     * A favorite row's "Set shortcut key" capture, at the right of the row, wherever the row is
      * shown (the ⌃D menu, the switcher's favorites section). Renders nothing unless this
      * favorite's shortcut is being set.
      */

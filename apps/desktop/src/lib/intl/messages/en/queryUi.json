@@ -568,7 +568,7 @@
   "@queryUi.age.minutes": {
     "description": "Relative-time label in a recent-search chip tooltip, in minutes ago. The 'm' abbreviates minutes; keep it terse. If your language can't abbreviate this way, a short '{count} min ago' form is fine.",
     "placeholders": {
-      "count": "the number of minutes ago"
+      "count": "the number of minutes ago, a whole number. Where the abbreviation changes with the number (Russian “г.” / “л.” for years), give each plural form its own abbreviation."
     },
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
@@ -577,7 +577,7 @@
   "@queryUi.age.hours": {
     "description": "Relative-time label in a recent-search chip tooltip, in hours ago. The 'h' abbreviates hours; keep it terse.",
     "placeholders": {
-      "count": "the number of hours ago"
+      "count": "the number of hours ago, a whole number. Where the abbreviation changes with the number (Russian “г.” / “л.” for years), give each plural form its own abbreviation."
     },
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
@@ -586,7 +586,7 @@
   "@queryUi.age.days": {
     "description": "Relative-time label in a recent-search chip tooltip, in days ago. The 'd' abbreviates days; keep it terse.",
     "placeholders": {
-      "count": "the number of days ago"
+      "count": "the number of days ago, a whole number. Where the abbreviation changes with the number (Russian “г.” / “л.” for years), give each plural form its own abbreviation."
     },
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
@@ -595,7 +595,7 @@
   "@queryUi.age.weeks": {
     "description": "Relative-time label in a recent-search chip tooltip, in weeks ago. The 'w' abbreviates weeks; keep it terse.",
     "placeholders": {
-      "count": "the number of weeks ago"
+      "count": "the number of weeks ago, a whole number. Where the abbreviation changes with the number (Russian “г.” / “л.” for years), give each plural form its own abbreviation."
     },
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
@@ -604,7 +604,7 @@
   "@queryUi.age.months": {
     "description": "Relative-time label in a recent-search chip tooltip, in months ago. The 'mo' abbreviates months; keep it terse.",
     "placeholders": {
-      "count": "the number of months ago"
+      "count": "the number of months ago, a whole number. Where the abbreviation changes with the number (Russian “г.” / “л.” for years), give each plural form its own abbreviation."
     },
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
@@ -613,7 +613,7 @@
   "@queryUi.age.years": {
     "description": "Relative-time label in a recent-search chip tooltip, in years ago. The 'y' abbreviates years; keep it terse.",
     "placeholders": {
-      "count": "the number of years ago"
+      "count": "the number of years ago, a whole number. Where the abbreviation changes with the number (Russian “г.” / “л.” for years), give each plural form its own abbreviation."
     },
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."

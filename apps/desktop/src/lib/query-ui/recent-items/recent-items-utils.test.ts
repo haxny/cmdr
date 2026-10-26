@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect } from 'vitest'
+import { setLocale, _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import type { HistoryEntry } from '#lib/tauri-commands/index.js'
 import { chipTooltip, filterSummary, formatAge, modeBadge, modeName } from './recent-items-utils'
 
@@ -59,6 +60,24 @@ describe('formatAge', () => {
   it('clamps negative deltas to "just now"', () => {
     // Future timestamps shouldn't blow up the formatter.
     expect(formatAge(NOW + 60_000, NOW)).toBe('just now')
+  })
+
+  describe('in a language whose abbreviation follows the count', () => {
+    // Russian abbreviates "years" as `г.` for 1, 2–4, 21… and `л.` for 5–20, so its catalog
+    // puts a plural on `count`. The `queryUi.age.*` descriptions promise translators that works.
+    afterEach(() => {
+      void setLocale('en')
+      _setCatalogForTests('ru', null)
+    })
+
+    it('lets a translation pluralize on the count', () => {
+      _setCatalogForTests('ru', {
+        'queryUi.age.years': '{count, plural, one {# г. назад} few {# г. назад} other {# л. назад}}',
+      })
+      void setLocale('ru')
+      expect(formatAge(NOW - 2 * 365 * 24 * 60 * 60 * 1000, NOW)).toBe('2 г. назад')
+      expect(formatAge(NOW - 5 * 365 * 24 * 60 * 60 * 1000, NOW)).toBe('5 л. назад')
+    })
   })
 })
 

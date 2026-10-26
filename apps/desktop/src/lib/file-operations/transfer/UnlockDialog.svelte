@@ -192,7 +192,6 @@
     .container-name {
         color: var(--color-text-primary);
         font-weight: 500;
-        word-break: break-all;
     }
 
     .input-group {

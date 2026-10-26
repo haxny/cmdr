@@ -329,6 +329,12 @@ fn clamp_u32(count: i32) -> u32 {
 /// (`gpt-*` / `o1*` / `o3*` / `o4*` / `chatgpt-*`) are left alone so `genai` can auto-route the
 /// `gpt-5*` / `*-codex` / `*-pro` Responses-API models.
 fn remote_model_iden(model: &str) -> String {
+    // Google's OpenAI-compatible model list names its models `models/gemini-…`, which an earlier
+    // key check offered verbatim. The bare id is what the native adapter routes on.
+    let model = match model.strip_prefix("models/") {
+        Some(bare) if bare.starts_with("gemini-") => bare,
+        _ => model,
+    };
     let native_or_openai = model.starts_with("claude-")
         || model.starts_with("gemini-")
         || model.starts_with("gpt-")
@@ -561,13 +567,14 @@ fn adjust_for_model(options: &ChatOptions, target: &ServiceTarget) -> ChatOption
     let model_name = &*target.model.model_name;
     let adapter = target.model.adapter_kind;
 
-    // Anthropic refuses a request carrying both sampling knobs: HTTP 400, "`temperature` and
-    // `top_p` cannot both be specified for this model". Keep `temperature`, which callers
-    // actually tune, and drop `top_p`, which every call site leaves at a near-default 0.95.
-    // Verified live on 2026-09-04 against `claude-haiku-4-5-20251001` and
-    // `claude-sonnet-4-5-20250929`: both 400 with the pair, both 200 with temperature alone.
+    // Anthropic gets no sampling knobs at all. Every Claude from 4.7 on answers 400
+    // "`temperature` is deprecated for this model" to a non-default `temperature` or `top_p`
+    // (verified 2026-10-26, `curl` against `claude-{opus,sonnet,haiku}-5-5`), older ones 400 on
+    // the pair, and API version `2026-10-21` drops both for every model. Older Claude models
+    // lose a lower temperature, which is the trade Anthropic's own migration guide makes.
     if matches!(adapter, AdapterKind::Anthropic) {
         let mut opts = options.clone();
+        opts.temperature = None;
         opts.top_p = None;
         return opts;
     }
@@ -716,6 +723,12 @@ fn ai_error_for_status(status: u16, detail: String) -> AiError {
 /// an HTML error page (a proxy, Cloudflare) can't flood the UI or the logs. Display only,
 /// never control flow: classification stays on the numeric status (`ai_error_for_status`).
 fn provider_error_detail(status: impl Display, body: &str) -> String {
+    format!("HTTP {status}: {}", provider_error_message(body))
+}
+
+/// The human sentence in a failed provider response: the JSON body's `error.message`, else the
+/// raw body, capped at 400 chars. Shared with the key check, which shows it as a detail line.
+pub(super) fn provider_error_message(body: &str) -> String {
     const MAX_CHARS: usize = 400;
     let message = serde_json::from_str::<Value>(body)
         .ok()
@@ -724,9 +737,9 @@ fn provider_error_detail(status: impl Display, body: &str) -> String {
     let message = message.trim();
     if message.chars().count() > MAX_CHARS {
         let capped: String = message.chars().take(MAX_CHARS).collect();
-        format!("HTTP {status}: {capped}…")
+        format!("{capped}…")
     } else {
-        format!("HTTP {status}: {message}")
+        message.to_string()
     }
 }
 

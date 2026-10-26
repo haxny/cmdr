@@ -98,6 +98,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `operationLog.status.failed`); confirm the bare `3 gick inte` reads clearly after `· 2 överhoppade`.
 - **NFS port switch** (`servers.refusal.reservedPortRequired`): confirm Synology DSM sv labels the switch
   `Tillåt anslutningar från icke-privilegierade portar` (not verified against a live DSM).
+- **Favorite shortcut key** (`menu.volume.editFavoriteShortcut`): `Ange genvägstangent…` builds on the ruled `genväg`;
+  the pile has no "shortcut key" label. Confirm it reads better than `Ange snabbtangent…`.
+- **AI-förslag batch headings and cells** (`suggestedOps.sweepWhen.*`, `.factUnknown`, `.refusal.nothingSelected.*`):
+  the passive `Föreslogs nyss` has no subject to make active; `Okänt` (neuter) stands for a size or a date; ticking is
+  `bocka för`. Confirm all three read naturally in the dialog.
 
 ## Layout (overflow-check against the pseudolocale)
 

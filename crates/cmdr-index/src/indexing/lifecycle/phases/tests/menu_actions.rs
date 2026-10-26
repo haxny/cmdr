@@ -222,3 +222,64 @@ fn a_walk_that_lands_in_the_stops_drain_cant_bring_the_drive_back_either() {
         "and the stop's veto landed rather than being skipped for that start"
     );
 }
+
+/// A sink that notes, at the moment the drive's badge is told it's scanning,
+/// whether the start was still standing its manager up.
+struct NotesWhenTheBadgeTurnsBlue {
+    recorder: std::sync::Arc<crate::indexing::events::RecordingSink>,
+    volume_id: &'static str,
+    /// `Some(still initializing?)` once the first `Scanning` went out.
+    first_blue: std::sync::Mutex<Option<bool>>,
+}
+
+impl crate::indexing::events::EventSink for NotesWhenTheBadgeTurnsBlue {
+    fn emit(&self, event: crate::indexing::events::IndexEvent) {
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        if let crate::indexing::events::IndexEvent::FreshnessChanged { volume_id, freshness } = &event
+            && volume_id == self.volume_id
+            && *freshness == crate::indexing::lifecycle::freshness::Freshness::Scanning
+        {
+            let mut first = self.first_blue.lock_ignore_poison();
+            if first.is_none() {
+                *first = Some(state::is_initializing_for_test(self.volume_id));
+            }
+        }
+        self.recorder.emit(event);
+    }
+}
+
+/// "Turn on indexing for this drive" turns the badge blue as soon as the start is
+/// accepted, ❌ not once the launch work behind it is done. That work (opening the
+/// database, routing the launch, a rebuild's truncate) took 14 s on a real boot
+/// disk, and a gray dot for that long reads as a click that didn't land.
+#[test]
+fn turning_a_drive_on_announces_scanning_before_the_launch_work() {
+    use cmdr_fs::ignore_poison::IgnorePoison;
+    let recorder = std::sync::Arc::new(crate::indexing::events::RecordingSink::new());
+    let volume_id = "phased-menu-enable-blue-at-once";
+    let sink = std::sync::Arc::new(NotesWhenTheBadgeTurnsBlue {
+        recorder: std::sync::Arc::clone(&recorder),
+        volume_id,
+        first_blue: std::sync::Mutex::new(None),
+    });
+    let drive = Drive::assembled(
+        volume_id,
+        |root| {
+            std::fs::create_dir_all(root.join("branch/inner")).expect("dirs");
+        },
+        |_, _| {},
+        &[],
+        true,
+        std::sync::Arc::clone(&sink) as std::sync::Arc<dyn crate::indexing::events::EventSink>,
+        recorder,
+        crate::indexing::host::policy::FakeHostPolicy::shared(),
+    );
+    drive.start();
+    drive.wait_for_the_machine();
+
+    assert_eq!(
+        *sink.first_blue.lock_ignore_poison(),
+        Some(true),
+        "❌ the badge heard `Scanning` only after the start had finished its launch work (or never)"
+    );
+}

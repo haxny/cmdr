@@ -133,15 +133,15 @@
   },
   "multiRename.presets.saveAs": "Mentés előbeállításként…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Átnevezés…",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Frissítés az aktuális mezőkkel",
+  "multiRename.presets.update": "Frissítés az aktuális beállításokkal",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Előrébb helyezés",
   "@multiRename.presets.moveUp": {
@@ -639,7 +639,7 @@
   },
   "multiRename.swapsSkipped": "{count, plural, one {# átnevezés kihagyva, mert nevet cserélne egy másikkal. Ezt a fájlt egymagában nevezd át.} other {# átnevezés kihagyva, mert nevet cserélnének egymással. Ezeket a fájlokat egyenként nevezd át.}}",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "A Csoportos átnevezés nem működik archívumokban",
   "@multiRename.archiveTitle": {
@@ -751,7 +751,7 @@
   },
   "multiRename.placeholderHelp.grandparent": "A fájl mappáját tartalmazó mappa neve",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Ennyiről indul: {start}",
   "@multiRename.placeholderHelp.counterStart": {

@@ -155,16 +155,22 @@ exception is visible at the one place it applies instead of the rule being off f
 `dialog-inset.spec.ts` measures it: it walks the dialog gallery and compares the CONTENT edges (rect + border + padding,
 so a padded `<p>` can't pass on its box alone) of each title and its first body section.
 
-**The body wraps unbreakable tokens** (`overflow-wrap: anywhere`). A path, a URL, or a long filename has no break
-opportunity inside its last segment, so without it the string overflows the inset and runs to the panel edge.
-**Gotcha/Why: it also gives every flex or grid item in the body a one-character minimum width**, so a squeezed row
-breaks a short label mid-word ("Yo / u" in the operation log's head at 125 % zoom, "Resu / me" in its rollback
-controls). A row of labels in a body therefore resets it: `overflow-wrap: break-word` on the row keeps words whole (only
-a word that alone outgrows the line breaks), and a label that must stay on one line (a pill, a button, a status word)
-sets `white-space: nowrap`, as `Button`, `Chip`, and `StatusBadge` do. A dialog with a button layout the footer can't
-express (a grid of choices, equal-width buttons) keeps its buttons in `children` behind the rule's opt-out, right-aligns
-them itself, and keeps them from wrapping itself too (the clash prompt's grid sizes to `max-content`); genuinely
-centered content (spinners, progress bars, numeric readouts, hero panels like `AboutWindow`) stays centered.
+**The body wraps unbreakable tokens, and only those** (`overflow-wrap: break-word`). A path, a URL, or a long filename
+has no break opportunity inside its last segment, so without it the string overflows the inset and runs to the panel
+edge; `break-word` breaks a word only when it ALONE outgrows the line, so no word in any dialog splits mid-word in any
+language or at any zoom. **Gotcha/Why: ❌ never `anywhere`, here or per site.** It also gives every flex or grid item a
+one-character minimum width, so a squeezed row broke short labels mid-word ("Yo / u" in the operation log's head at 125
+% zoom, "Modi / fied" in the rename-conflict cards; #700). The price of `break-word` is that it leaves min-content
+alone: a long path or name in a flex or grid item widens its row past the panel edge unless the item shrinks on its own
+terms. The house pattern for such an item is `min-width: 0` (or a `minmax(0, …)` track) plus `text-overflow: ellipsis`,
+`useShortenMiddle`, or wrapping at the item's own width. The one per-site `anywhere` left is a string with no words in
+it (the host-key fingerprint). A label that must stay on one line (a pill, a button, a status word) sets
+`white-space: nowrap`, as `Button`, `Chip`, and `StatusBadge` do. `dialog-wrapping.spec.ts` pins both halves: it opens
+every gallery state at 125 % zoom and fails on a split word or on content past (or scrolling sideways inside) the panel.
+A dialog with a button layout the footer can't express (a grid of choices, equal-width buttons) keeps its buttons in
+`children` behind the rule's opt-out, right-aligns them itself, and keeps them from wrapping itself too (the clash
+prompt's grid sizes to `max-content`); genuinely centered content (spinners, progress bars, numeric readouts, hero
+panels like `AboutWindow`) stays centered.
 
 **The panel must never become a containing block for `position: fixed`.** The drag offset rides on `left` / `top`
 against the panel's own `position: relative`. ❌ Don't move it to a `transform`, and don't add `filter`,

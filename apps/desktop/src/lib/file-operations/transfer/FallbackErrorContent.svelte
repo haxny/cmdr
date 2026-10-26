@@ -86,7 +86,7 @@
 
     .oversized-files .file-name {
         color: var(--color-text-secondary);
-        word-break: break-all;
+        min-width: 0;
     }
 
     .oversized-files .file-size {

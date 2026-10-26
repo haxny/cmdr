@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Rien à remettre en place : {count, plural, one {cet élément n’est plus} many {ces éléments ne sont plus} other {ces éléments ne sont plus}} dans la corbeille.",
+  "fileOperations.trash.undoGone": "Rien à remettre en place : {count, plural, one {l’élément n’était plus} many {les éléments n’étaient plus} other {les éléments n’étaient plus}} dans la corbeille.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {élément n’était plus} many {éléments n’étaient plus} other {éléments n’étaient plus}} dans la corbeille.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -270,9 +270,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Cet emplacement commence déjà dans {rootFolder}, donc ce chemin mène à {resolvedPath}. Vouliez-vous dire {strippedPath} ?",
+  "fileOperations.transferDialog.rootEchoWarning": "Ici, les chemins commencent déjà dans {rootFolder}, donc celui-ci mène à {resolvedPath}. Vouliez-vous dire {strippedPath} ?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Utiliser le chemin plus court",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -536,7 +536,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Vous avez annulé cette copie. Les fichiers copiés jusqu’à présent restent là où ils sont.} move {Vous avez annulé ce déplacement. Les fichiers déplacés jusqu’à présent restent là où ils sont arrivés.} compress {Vous avez annulé cette compression.} delete {Vous avez annulé cette suppression. Les fichiers supprimés jusqu’à présent ont disparu et les autres sont toujours là.} trash {Vous avez annulé ce placement dans la corbeille. Les fichiers déjà placés dans la corbeille y restent et les autres n’ont pas bougé.} other {Vous avez annulé cette opération.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Annulation… (nettoyage en cours)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -788,7 +788,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {et {countText} élément de plus} many {et {countText} éléments de plus} other {et {countText} éléments de plus}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Copier le reste} move {Déplacer le reste} delete {Supprimer le reste} trash {Placer le reste dans la corbeille} other {Continuer avec le reste}}",
   "@fileOperations.sourcesGone.continue": {

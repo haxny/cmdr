@@ -92,6 +92,16 @@ pub const MIGRATIONS: &[Migration] = &[
         description: "proposals.thread_line_id: the one thread line a decided group rewrites in place",
         up: migrate_v10_proposal_thread_line,
     },
+    Migration {
+        version: 11,
+        description: "proposals.revision: bumped by every amend, so an approval binds the version the user read",
+        up: migrate_v11_proposal_revision,
+    },
+    Migration {
+        version: 12,
+        description: "proposals.source_folder: the folder a group's ops share, backfilled once",
+        up: migrate_v12_proposal_source_folder,
+    },
 ];
 
 /// The meta key holding the integer schema version (as text). Absent ⇒ 0 (a fresh DB
@@ -508,4 +518,51 @@ fn migrate_v10_proposal_thread_line(tx: &Transaction<'_>) -> rusqlite::Result<()
     tx.execute_batch(
         "ALTER TABLE proposals ADD COLUMN thread_line_id INTEGER REFERENCES messages(id) ON DELETE SET NULL;",
     )
+}
+
+/// Version 11: `proposals.revision`, which every amend (`repropose_group`) bumps. The review sends
+/// the revision it showed with an approval and preflight refuses a different one, so an agent
+/// amending a group while the user reads it can't get its new verb, target, or list approved by a
+/// click on the old one. Existing groups start at 0, the same as a fresh one.
+fn migrate_v11_proposal_revision(tx: &Transaction<'_>) -> rusqlite::Result<()> {
+    tx.execute_batch("ALTER TABLE proposals ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;")
+}
+
+/// Version 12: `proposals.source_folder`, the folder every op of a group sits directly in (NULL
+/// when they span folders), written with the op list from then on. The review names it once per
+/// group, and reading it from a column keeps a refresh from streaming every op path.
+///
+/// Backfilled here, once, by streaming each existing group's paths in `seq` order and stopping
+/// at the first one in another folder. The rule is copied rather than called
+/// (`proposals::shared_parent` today) because a shipped step must keep doing what it did when
+/// it shipped, whatever the live helper later becomes.
+fn migrate_v12_proposal_source_folder(tx: &Transaction<'_>) -> rusqlite::Result<()> {
+    tx.execute_batch("ALTER TABLE proposals ADD COLUMN source_folder TEXT;")?;
+    let group_ids: Vec<i64> = tx
+        .prepare("SELECT id FROM proposals")?
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut paths = tx.prepare("SELECT source_path FROM proposal_ops WHERE group_id = ?1 ORDER BY seq")?;
+    let mut write = tx.prepare("UPDATE proposals SET source_folder = ?2 WHERE id = ?1")?;
+    for group_id in group_ids {
+        let mut rows = paths.query([group_id])?;
+        let mut shared: Option<String> = None;
+        let mut spans = false;
+        while let Some(row) = rows.next()? {
+            let path: String = row.get(0)?;
+            let parent = std::path::Path::new(&path).parent().and_then(|p| p.to_str());
+            match (parent, &shared) {
+                (Some(parent), None) => shared = Some(parent.to_string()),
+                (Some(parent), Some(seen)) if seen == parent => {}
+                _ => {
+                    spans = true;
+                    break;
+                }
+            }
+        }
+        if !spans && let Some(folder) = shared {
+            write.execute(rusqlite::params![group_id, folder])?;
+        }
+    }
+    Ok(())
 }

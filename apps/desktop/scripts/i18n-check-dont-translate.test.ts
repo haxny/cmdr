@@ -25,6 +25,17 @@ describe('curated lists', () => {
     for (const w of ['Cmdr', 'macOS', 'GitHub', 'SMB', 'MTP']) expect(BRAND_WORDS).toContain(w)
     expect(SYSTEM_TOKENS).toContain('{system_settings}')
   })
+
+  it('guard the tool and device names the descriptions say to keep: git, ADB, Kindle', () => {
+    expect(droppedTokens('Snapshots of your git history', 'Instantanés de votre historique')).toEqual(['git'])
+    expect(droppedTokens('Settings › Git', 'Réglages › Dépôts')).toEqual(['Git'])
+    expect(droppedTokens('Tint Kindle and ADB phones', 'Teinter les liseuses et téléphones')).toEqual(['ADB', 'Kindle'])
+  })
+
+  it('accepts another listed casing of the same brand: German capitalizes "git" as a noun', () => {
+    expect(droppedTokens('Snapshots of your git history', 'Snapshots deines Git-Verlaufs')).toEqual([])
+    expect(droppedTokens('Built for macOS', 'Für MacOS')).toEqual(['macOS'])
+  })
 })
 
 describe('droppedTokens: pure detector', () => {

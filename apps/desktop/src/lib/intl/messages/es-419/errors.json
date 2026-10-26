@@ -319,9 +319,9 @@
   "@errors.write.destinationNotFound.title": {
     "sourceHash": "e7b89c1"
   },
-  "errors.write.destinationNotAFolder.message": "Cmdr no pudo crear la carpeta de destino porque hay un archivo en {path}, donde tiene que haber una carpeta. No se escribió nada y los originales están intactos.",
+  "errors.write.destinationNotAFolder.message": "Cmdr no pudo crear la carpeta de destino porque hay un archivo en “{path}”, donde tiene que haber una carpeta. No se escribió nada y los originales están intactos.",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "cf862c6"
+    "sourceHash": "33614a7"
   },
   "errors.write.symlinkLoop.title": "Se detectó un bucle de enlaces",
   "@errors.write.symlinkLoop.title": {
@@ -751,9 +751,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "9f59a43"
   },
-  "errors.volume.signatureInvalid": "La respuesta del servidor no estaba firmada, así que Cmdr se detuvo.",
+  "errors.volume.signatureInvalid": "La respuesta del servidor no tenía una firma válida, así que Cmdr se detuvo.",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "fda22af"
+    "sourceHash": "5415085"
   },
   "errors.volume.ioError": "El volumen no pudo completarlo.",
   "@errors.volume.ioError": {
@@ -863,12 +863,12 @@
   "@errors.write.duplicateSourceNames.message": {
     "sourceHash": "38e20fc"
   },
-  "errors.serverRequest.blockedByPolicy": "Tu organización desactivó esto para Cmdr.",
+  "errors.serverRequest.blockedByPolicy": "Tu organización desactivó esta función para Cmdr.",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "4ef1553"
+    "sourceHash": "40339f6"
   },
-  "errors.write.replySignatureRefused.message": "La respuesta del servidor no estaba firmada, así que Cmdr se detuvo.",
+  "errors.write.replySignatureRefused.message": "La respuesta del servidor no tenía una firma válida, así que Cmdr se detuvo.",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "fda22af"
+    "sourceHash": "5415085"
   }
 }

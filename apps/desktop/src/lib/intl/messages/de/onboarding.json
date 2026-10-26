@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Massenumbenennung",
+  "onboarding.stepAi.table.rowRename": "Viele Dateien umbenennen",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Du legst über die Stapel-Umbenennung das Umbenennungsmuster von Hand fest, prüfst und wendest es an.",
+  "onboarding.stepAi.table.renameWithout": "Du legst in „Mehrfach umbenennen“ von Hand ein Umbenennungsmuster fest, dann prüfst du es und wendest es an.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Du sagst „ISO-Datum voranstellen“, der Agent setzt dein Umbenennungsmuster, du prüfst und wendest es an, wie du magst.",
   "@onboarding.stepAi.table.renameWith": {
@@ -618,6 +618,22 @@
   "onboarding.cloudSetup.status.genericError": "Etwas ist schiefgelaufen",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "Der Dienst braucht zu lange für eine Antwort. Versuche es gleich noch einmal.",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "Diese Adresse sieht nicht richtig aus. Die Adresse sollte mit https:// beginnen.",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "Dein Schlüssel wird nur über eine sichere Verbindung gesendet, also verwende eine Adresse, die mit https:// beginnt.",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "Der Dienst hat die Anfrage abgelehnt (Code {status}).",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "Verbunden!",
   "@onboarding.cloudSetup.status.connected": {

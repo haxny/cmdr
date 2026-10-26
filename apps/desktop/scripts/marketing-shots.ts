@@ -10,9 +10,11 @@
  * The binary comes from `ensureE2eBinary`: the Playwright lane's E2E binary, rebuilt
  * first only when the tree changed, so a master can never be shot from a stale build.
  *
- * ❗ Leave the machine alone while it runs. macOS draws the wide window shadow only for
- * the KEY window, so every shot takes the front position first, and clicking into
- * another app mid-run costs retries. Unlike `pnpm i18n:shots`, this does NOT refuse to
+ * ❗ The machine must be left alone while it shoots. macOS draws the wide window shadow
+ * only for the KEY window, so every shot takes the front position first, and clicking
+ * into another app mid-run costs retries. The spec fronts Cmdr and covers its window
+ * with a three-second orange countdown before the shoot (`capture-countdown.ts`), so
+ * nobody has to step away in advance. Unlike `pnpm i18n:shots`, this does NOT refuse to
  * start behind another app: it claims the front through System Events, which works
  * across apps, and then proves it in the pixels.
  *
@@ -37,8 +39,10 @@ import { spawn, spawnSync } from 'node:child_process'
 import type { ChildProcess, SpawnSyncOptions } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { backup, DatabaseSync } from 'node:sqlite'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { startCaptureStopwatch } from './capture-countdown.ts'
 import { ensureE2eBinary, frontmostApp, reserveFreePort, waitForSocket, warnIfForeignCmdr } from './capture-runtime.ts'
 import { EN_US_LOCALE_ARGS, pinUiLanguage } from '../test/e2e-shared/pin-locale.ts'
 
@@ -175,12 +179,22 @@ const PROD_LEGACY_INDEX_DIR = join(homedir(), 'Library', 'Application Support', 
  */
 const ROOT_INDEX_DB = 'index-root.db'
 
-/** When an index database last finished a scan, as a unix timestamp; 0 when it can't say. */
-function lastScanAt(db: string): number {
-  const res = spawnSync('sqlite3', [`file:${db}?mode=ro`, "SELECT value FROM meta WHERE key='scan_completed_at';"], {
-    encoding: 'utf8',
-  })
-  return res.status === 0 ? Number(res.stdout.trim()) || 0 : 0
+/**
+ * The FSEvents id an index database has caught up to, 0 when it can't say: the number
+ * the app's startup gate compares against the system's to decide whether to rebuild.
+ */
+function storedEventId(path: string): number {
+  try {
+    const db = new DatabaseSync(path, { readOnly: true })
+    try {
+      const row = db.prepare("SELECT value FROM meta WHERE key='last_event_id'").get()
+      return Number(row?.value) || 0
+    } finally {
+      db.close()
+    }
+  } catch {
+    return 0
+  }
 }
 
 /**
@@ -194,31 +208,39 @@ function lastScanAt(db: string): number {
  * million events) or was written by a different schema version, the app throws it away
  * and does a full scan, which is the fallback either way.
  *
- * ❗ `.backup`, not `cp`. The index runs in WAL mode, so a plain copy of the `.db` while
- * production has it open is a torn read — the repo says so at `index-size-probe.rs` and
- * in `docs/tooling/index-query.md`. The online-backup API folds the WAL in and hands
- * back one consistent file; measured at ~2 s for 930 MB, which is close enough to
- * instant. The `-wal` and `-shm` sidecars are deliberately NOT carried across: the
- * destination recreates them, and a stale pair would contradict the snapshot.
+ * ❗ SQLite's backup API in ONE step, not `cp`. The index runs in WAL mode, so a plain
+ * copy of the `.db` while production has it open is a torn read — the repo says so at
+ * `index-size-probe.rs` and in `docs/tooling/index-query.md`. One step copies every page
+ * under a single read lock, so it is a consistent snapshot; measured at 1.9 s for 1.1 GB
+ * against a running production app (2026-10-26).
+ * ❌ Not the `sqlite3` CLI's `.backup`: it copies 100 pages per step, and the backup
+ * RESTARTS whenever another connection writes the source between steps. A running
+ * production Cmdr writes its index every few seconds, so that copy looped for 18 minutes
+ * at full CPU. ❌ Not `VACUUM INTO` either: it rebuilds the indexes, which need Cmdr's
+ * custom `platform_case` collation, so it fails outright.
+ * The `-wal` and `-shm` sidecars are deliberately NOT carried across: the destination
+ * recreates them, and a stale pair would contradict the snapshot.
  *
- * ❗ What the copy does NOT buy: skipping the wait. Startup compares the index's stored
- * FSEvents `last_event_id` against the system's current one and rebuilds when the gap
- * passes ten million (`JOURNAL_GAP_THRESHOLD`). On a machine that compiles all day that
- * gap is hours, not days — measured 28 million over one night — so an index copied from
- * a production app that last scanned yesterday still gets a reconcile, and production
- * would do the same on its own restart. What the copy buys is CONTENT: the reconcile
- * walks a populated index instead of building one from nothing, and installing it costs
- * two seconds. The wait itself is the spec's job (`waitForIndexedSizes`), which is what
- * actually guarantees no hourglass reaches a master.
+ * ❗ The copy skips the wait only when production is current. Startup compares the
+ * index's stored FSEvents `last_event_id` against the system's current one and rebuilds
+ * when the gap passes ten million (`JOURNAL_GAP_THRESHOLD`). On a machine that compiles
+ * all day that gap is about an hour (14 million in 90 minutes with two E2E builds,
+ * 2026-10-26), so the shots instance's own index is usually too old by the next run,
+ * while a RUNNING production app keeps its own seconds behind. Copy that one in and the
+ * launch replays the journal instead of rebuilding. A production app that was quit
+ * hours ago still leaves a reconcile, and then the copy buys CONTENT: the reconcile walks
+ * a populated index instead of building one from nothing. Either way the wait is the
+ * spec's job (`waitForIndexedSizes`), which is what guarantees no hourglass reaches a
+ * master.
  *
  * ❌ Don't "fix" this by writing the current event id into the copy. That claims the
  * index has seen changes it hasn't, and the app would then trust stale sizes forever
  * instead of for one reconcile.
  *
- * Best-effort by design. No production install, no readable index, or no `sqlite3` all
- * fall through to a normal scan with a line saying so.
+ * Best-effort by design. No production install or no readable index both fall through
+ * to a normal scan with a line saying so.
  */
-function cloneProdIndex(): void {
+async function cloneProdIndex(): Promise<void> {
   const source =
     [PROD_DRIVE_INDEX_DIR, PROD_LEGACY_INDEX_DIR]
       .map((dir) => join(dir, ROOT_INDEX_DB))
@@ -229,26 +251,30 @@ function cloneProdIndex(): void {
     console.log(`${LOG} no production index at ${source}; the instance will scan the drive itself (~1 min).`)
     return
   }
-  // Never trade a fresher index for an older one. After a shoot, the shots instance's
-  // own index is current; production's may be hours behind, and copying it in would buy
-  // a reconcile the instance didn't need.
-  const sourceScan = lastScanAt(source)
-  const targetScan = existsSync(target) ? lastScanAt(target) : 0
-  if (targetScan >= sourceScan) {
+  // Never trade a fresher index for an older one, judged by the same number the app's
+  // startup gate reads. ❌ Not `scan_completed_at`: a running production Cmdr keeps its
+  // `last_event_id` current through its live watcher without ever finishing a new scan,
+  // so comparing scan times kept a shots index 14 M events behind (a five-minute rebuild)
+  // over a production one that was seconds behind (2026-10-26).
+  const sourceEventId = storedEventId(source)
+  const targetEventId = existsSync(target) ? storedEventId(target) : 0
+  if (targetEventId >= sourceEventId) {
     console.log(`${LOG} the shots index is at least as fresh as production's; keeping it.`)
     return
   }
-  if (target.includes("'") || source.includes("'")) {
-    console.warn(`${LOG} skipping the index copy: a quote in the path would break the sqlite3 command.`)
-    return
-  }
-
   const incoming = `${target}.incoming`
   rmSync(incoming, { force: true })
-  const res = spawnSync('sqlite3', [`file:${source}?mode=ro`, `.backup '${incoming}'`], { encoding: 'utf8' })
-  if (res.status !== 0 || !existsSync(incoming)) {
+  try {
+    const db = new DatabaseSync(source, { readOnly: true })
+    try {
+      // A page budget above any real index makes it ONE step (the ❗ above says why).
+      await backup(db, incoming, { rate: 2 ** 31 - 1 })
+    } finally {
+      db.close()
+    }
+  } catch (err) {
     rmSync(incoming, { force: true })
-    console.warn(`${LOG} couldn't copy the production index (${res.stderr.trim() || 'sqlite3 is missing'}); scanning.`)
+    console.warn(`${LOG} couldn't copy the production index (${(err as Error).message}); scanning.`)
     return
   }
 
@@ -284,9 +310,9 @@ async function main(): Promise<void> {
   // needs). This pipeline claims the front position per shot through System Events,
   // which DOES work against another app, so refusing to start behind one would refuse
   // every run: the person starting it is by definition in a terminal that holds the
-  // front. Instead the front grab is attempted and then VERIFIED in the pixels — an
-  // unfocused window's shadow is 68/52 rather than 112/76, and `shootWithShadow`
-  // rejects it by name. A warning is still worth it, because clicking into another app
+  // front. Instead the front grab is attempted and then VERIFIED after each shutter:
+  // `shootWindow` asks System Events whether Cmdr was still frontmost and rejects the
+  // shot by name if not. A warning is still worth it, because clicking into another app
   // mid-run is a real way to spend three retries.
   const front = frontmostApp()
   if (front !== null && front !== 'Cmdr') {
@@ -308,7 +334,7 @@ async function main(): Promise<void> {
   pinRunSettings()
   // Before the launch: the app opens its index at startup, so a copy afterwards is a copy
   // the running instance never reads.
-  cloneProdIndex()
+  await cloneProdIndex()
 
   const socket = `/tmp/tauri-playwright-shots-${String(process.pid)}.sock`
   const mcpPort = await reserveFreePort()
@@ -355,6 +381,9 @@ async function main(): Promise<void> {
   await waitForSocket(socket, 60000)
   console.log(`${LOG} socket ready; staging and shooting…`)
 
+  // The spec waits for the drive index BEFORE its countdown, and the stopwatch times
+  // from the countdown's end, so a reconcile never lands in the estimate.
+  const stopwatch = startCaptureStopwatch('marketing', LOG)
   try {
     // No `--project`: Playwright treats a positional as a project filter when
     // `--project` is set, and the shard's own `testMatch` already restricts the run.
@@ -366,11 +395,13 @@ async function main(): Promise<void> {
         CMDR_SHOTS_PID: String(appProc.pid ?? ''),
         // The chat test seeds its thread into this instance's `main.db`.
         CMDR_SHOTS_DATA_DIR: dataDir,
+        ...stopwatch.env,
       },
     })
   } finally {
     killApp()
   }
+  stopwatch.recordSuccess()
 
   console.log(`${LOG} masters written to ${outDir}.`)
   console.log(`${LOG} next: apps/website/scripts/regenerate-hero.sh, then refresh the listings in brand/listings/.`)

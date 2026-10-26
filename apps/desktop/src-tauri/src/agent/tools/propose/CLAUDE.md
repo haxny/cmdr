@@ -2,7 +2,9 @@
 
 `rename/` stages Ask Cmdr's rename plans as ONE group on the durable proposal spine
 (`agent/store/proposals/CLAUDE.md`, the canonical home for how sweeps, groups, ops, and the claim transaction work). It
-validates only cached pane and index state: never probe a live mount, follow a symlink, or rename anything here. The
+validates only cached pane and index state: never probe a live mount, follow a symlink, or rename anything here.
+The one live touch is AFTER validation: one bounded stat per row for its display-only creation snapshot
+(`plan.rs::freeze_draft`, through `../suggestions/snapshot.rs`), which can't refuse a plan. The
 agent can propose; only the frontend can approve.
 
 Four files, one concern each: `plan.rs` is the tool boundary (schema, dispatch, scope, validation, the evidence check),

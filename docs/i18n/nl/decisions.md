@@ -163,10 +163,10 @@ Labels `afbeelding`, warm rows `foto's`, as EN. In prose `het doorzoeken van afb
 - `Wijzig # bestandsnaam` fits the button; `cyclus van naamwijzigingen`; `van naam wisselen` over mechanical `roteren`;
   recent-past status in the perfect.
 
-## Voorgestelde bewerkingen (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
+## AI-suggesties (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
 
-`Goedkeuren` over macOS `Accepteer` (granting, not receiving); `Weigeren` (Finder AirDrop);
-`Dit kun je niet ongedaan maken` (Finder).
+`AI-suggesties` over `Voorgestelde bewerkingen`; aria `Waarom, volgens de AI:` holds `Waarom:`. `goedkeuren` over macOS
+`Accepteer` (granting).
 
 ## Cloud-AI toestaan (`ai.cloudConsent.label`, `ai.cloudConsent.description`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`)
 

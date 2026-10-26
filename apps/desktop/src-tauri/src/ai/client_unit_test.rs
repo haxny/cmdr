@@ -50,6 +50,18 @@ fn remote_model_iden_forces_openai_for_compatible_providers() {
     );
 }
 
+/// A Gemini user who picked `models/gemini-…` from the old OpenAI-compatible list keeps a
+/// working model once the preset moves to Google's native API.
+#[test]
+fn a_models_prefixed_gemini_id_routes_natively_as_its_bare_id() {
+    assert_eq!(remote_model_iden("models/gemini-3.8-flash"), "gemini-3.8-flash");
+    assert_eq!(
+        remote_model_iden("models/text-bison"),
+        "openai::models/text-bison",
+        "only a Gemini id is unwrapped"
+    );
+}
+
 /// The models the real-API smoke lanes call must land on the adapter their test expects,
 /// or a lane goes green against the wrong protocol. Reads the ids from
 /// `ai::smoke_providers` so a decommission stays a one-line fix over there.
@@ -227,4 +239,36 @@ fn test_is_openai_chat_reasoning_model() {
     assert!(!is_openai_chat_reasoning_model("gpt-4o-mini"));
     assert!(!is_openai_chat_reasoning_model("gpt-4.1"));
     assert!(!is_openai_chat_reasoning_model("local-model"));
+}
+
+fn target_for(adapter: AdapterKind, model: &str) -> ServiceTarget {
+    ServiceTarget {
+        endpoint: Endpoint::from_static("https://example.invalid/v1/"),
+        auth: AuthData::from_single("k"),
+        model: ModelIden::new(adapter, model),
+    }
+}
+
+/// Every Claude from 4.7 on answers 400 to a non-default `temperature` or `top_p`, so the
+/// Anthropic adapter sends neither, whatever the caller tuned. Regression anchor: suggestions
+/// (0.6), search (0.3), and selection (0.2) all failed on `claude-*-5-5` while the smoke lane
+/// sat on Haiku 4.5, which still took them.
+#[test]
+fn the_anthropic_adapter_sends_no_sampling_knobs() {
+    let tuned = ChatOptions::default()
+        .with_temperature(0.3)
+        .with_top_p(0.9)
+        .with_max_tokens(200);
+    let sent = adjust_for_model(&tuned, &target_for(AdapterKind::Anthropic, "claude-opus-5-5"));
+    assert_eq!(sent.temperature, None);
+    assert_eq!(sent.top_p, None);
+    assert_eq!(sent.max_tokens, Some(200), "everything else passes through");
+}
+
+#[test]
+fn an_openai_compatible_model_keeps_its_sampling_knobs() {
+    let tuned = ChatOptions::default().with_temperature(0.3).with_top_p(0.9);
+    let sent = adjust_for_model(&tuned, &target_for(AdapterKind::OpenAI, "gpt-4.1-mini"));
+    assert_eq!(sent.temperature, Some(0.3));
+    assert_eq!(sent.top_p, Some(0.9));
 }

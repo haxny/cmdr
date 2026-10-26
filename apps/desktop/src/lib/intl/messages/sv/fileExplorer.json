@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Inget markerat} one {{countText} markerat} other {{countText} markerade}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Inga namn innehåller ”{pattern}”} one {{countText} namn innehåller ”{pattern}”} other {{countText} namn innehåller ”{pattern}”}}",
   "@fileExplorer.pane.filterMatches": {
@@ -521,9 +521,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Använd gäståtkomst",
+  "fileExplorer.network.share.useGuest": "Bläddra som gäst",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "Logga in som…",
   "@fileExplorer.network.share.signInAs": {
@@ -633,9 +633,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "Kopierade {countText} {count, plural, one {objekt} other {objekt}}",
+  "fileExplorer.clipboard.copied": "Kopierade {countText} {count, plural, one {objekt} other {objekt}}.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Markerade filer som skiljer sig åt: {leftCountText} {leftCount, plural, one {fil} other {filer}} till vänster och {rightCountText} {rightCount, plural, one {fil} other {filer}} till höger.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1284,21 +1284,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "På grenen {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "På grenen ”{branch}”.",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "På den ofödda grenen {branch} (inga incheckningar än).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "På den ofödda grenen ”{branch}” (inga incheckningar än).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Frikopplad vid {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} incheckning} other {{aheadText} incheckningar}} före, {behind, plural, one {{behindText} incheckning} other {{behindText} incheckningar}} efter {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} incheckning} other {{aheadText} incheckningar}} före, {behind, plural, one {{behindText} incheckning} other {{behindText} incheckningar}} efter ”{upstream}”.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "Arbetsträdet har ändringar som inte checkats in.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1680,25 +1680,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "Telefonen {device} är inte ansluten. Anslut den med en USB-kabel, lås upp telefonen och försök sedan igen.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "Telefonen ”{device}” är inte ansluten. Anslut den med en USB-kabel, lås upp telefonen och försök sedan igen.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Mappens lagring på {device} är inte tillgänglig just nu.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Lagringen som mappen låg på är inte tillgänglig på {device} just nu.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "Enheten ”{drive}” är inte ansluten. Anslut den och försök sedan igen.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Telefoner och kameror via MTP är avstängda i Inställningar.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Åtkomst till telefoner och kameror via MTP är avstängd i Inställningar.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android-telefoner är avstängda i Inställningar.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Åtkomst till Android-telefoner är avstängd i Inställningar.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr hittar inte längre någon väg till ”{place}”. Anslut på nytt i Servrar, så fungerar favoriten igen.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2022,6 +2022,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr söker igenom {name} just nu. Indexeringen startar så snart det är klart.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Slog på indexering för {name}.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr indexerar {name} just nu. Genomsökningen du bad om startar så snart det är klart.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

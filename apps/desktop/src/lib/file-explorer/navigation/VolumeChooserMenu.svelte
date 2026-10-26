@@ -382,7 +382,7 @@
             openVolume(row.volume)
             return
         }
-        // A favorite's own pick and its row actions (Rename, Set shortcut, Remove) belong to
+        // A favorite's own pick and its row actions (Rename, Set shortcut key, Remove) belong to
         // the favorites controller, which opens through `open-favorite.ts` like everywhere.
         if (row.kind === 'row-entry' && row.volume.category !== 'favorite') {
             await runRowEntry(row)

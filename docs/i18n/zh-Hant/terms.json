@@ -99,6 +99,13 @@
     "forms": "button 加入伺服器⋯; Add anyway → 仍要加入 (Apple's X anyway shape: 仍要儲存, 仍要共享); tags 加入「{color}」 (label) / 加上或移除 (prose); favorites 加入喜好項目; Dock 加入 Dock; attach onto something (a note, a badge, a tag, a modifier) → 加上; add to a report → 補充 / 加到報告裡",
     "sources": "AP-TW = AP-HK (ADD_DEVICE → 加入裝置⋯, Add Account… → 加入帳號⋯; Finder TG5 加入)"
   },
+  "administrator": {
+    "accept": ["系統管理員", "管理員"],
+    "chosen": "管理者",
+    "confidence": "high",
+    "forms": "administrator password → 管理者密碼; administrator rights → 管理者權限; a server's or network's admin (the person) → 管理者, or 系統管理員 where it reads as a job title",
+    "sources": "AP zh-TW 管理者 ×24 vs AP zh-HK 管理員 ×24 (a clean TW/HK split: Taiwan wins); catalog 管理者 ×7 (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac); MS 系統管理員 / 管理員"
+  },
   "advanced": {
     "chosen": "進階",
     "confidence": "confirmed",
@@ -306,6 +313,9 @@
   "archive-chat": {
     "chosen": "封存",
     "confidence": "high",
+    "exceptions": {
+      "suggestedOps.facts.archive": "English sense: the NOUN label before the zip file a compress suggestion creates (the archive concept, 封存檔), not archiving a chat."
+    },
     "forms": "same word as the archive-file noun, unambiguous in context",
     "sources": "AP-TW = AP-HK (Archive → 封存)"
   },
@@ -361,9 +371,6 @@
     "accept": ["回到", "回頭", "回來", "上一步"],
     "chosen": "返回",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoTooltip": "English-sense: \"back to their old names\" restores names, nothing navigates; the accepted rename form 改回 carries it."
-    },
     "forms": "a standalone back button → 返回; back to a view → 回到…; the wizard's back step → 上一步 (pairs with 下一步)",
     "sources": "AP-TW = AP-HK SystemSettings accessibility labels; MS is useless here (BACK 鍵)"
   },
@@ -402,6 +409,19 @@
     "confidence": "high",
     "forms": "Cmdr blocked X → Cmdr 擋下了 X; macOS blocked access → macOS 擋下了 Cmdr; a blocked rename → 被擋下來了; a blocked contact or site (a block list) → 封鎖",
     "sources": "catalog askCmdr (已擋下, 被擋下來了), errors (macOS 擋下了 Cmdr, 被防火牆擋著); MS Blocked → 封鎖 (block-list sense only)"
+  },
+  "blocked-by": {
+    "accept": ["擋下來", "被擋下"],
+    "chosen": "擋下",
+    "confidence": "high",
+    "forms": "Cmdr blocked a web page → Cmdr 擋下了一個…網頁 (securityNotices.mcpForeignOrigin.title); macOS blocked Cmdr → macOS 擋下了 Cmdr",
+    "avoid": [
+      {
+        "form": "封鎖",
+        "why": "MS's contact/block-list sense; an actor turning one request away is the catalog's 擋下"
+      }
+    ],
+    "sources": "catalog (擋下 ×4: askCmdr.renameReview.*, errors); MS TBX block/blocked → 封鎖 only in the privacy-list sense; macOS zh-TW/zh-HK carry no 阻擋/封鎖"
   },
   "binary-view": {
     "chosen": "二進位",
@@ -1523,6 +1543,13 @@
     "forms": "frame rate → 影格率",
     "sources": "AP QuickTime (TW = HK; HK frame rate 格率)"
   },
+  "from-to": {
+    "accept": ["目標"],
+    "chosen": "來源",
+    "confidence": "high",
+    "forms": "paired headings and fact labels 來源 / 目標 (transfer dialog, scan phase 來源：, suggestedOps.facts.from/.to)",
+    "sources": "catalog fileOperations.transferDialog.sourceGroupTitle/targetGroupTitle, fileOperations.scanPhase.fromLabel; DC zh-TW 從: / 到: passed over (catalog outranks pile)"
+  },
   "full-disk-access": {
     "avoid": [
       {
@@ -1568,7 +1595,7 @@
     "accept": ["落後"],
     "chosen": "領先",
     "confidence": "high",
-    "forms": "ahead → 領先, behind → 落後; compared with a named branch → 比 {upstream} 領先 N 次提交，落後 N 次提交; the pair as a feature name → 領先/落後",
+    "forms": "ahead → 領先, behind → 落後; compared with a named branch → 比「{upstream}」領先 N 次提交，落後 N 次提交; the pair as a feature name → 領先/落後",
     "sources": "git CLI zh_TW.po (ahead %d → 領先 %d, behind %d → 落後 %d, Your branch is ahead of → 您的分支領先); catalog fileExplorer.git.tooltip.aheadBehind; no Apple, MS, or file-manager entry"
   },
   "git-branch": {
@@ -1637,7 +1664,7 @@
     "accept": ["尚無提交"],
     "chosen": "未誕生的分支",
     "confidence": "tentative",
-    "forms": "no commits yet → 尚無提交; the tooltip pairs both: 位於未誕生的分支 {branch}（尚無提交）",
+    "forms": "no commits yet → 尚無提交; the tooltip pairs both: 位於未誕生的分支「{branch}」（尚無提交）",
     "sources": "git CLI zh_TW.po (unborn branch → 未誕生的分支 / 未誕生分支, No commits yet → 尚無提交); no Apple, MS, VS Code, or file-manager entry",
     "note": "Tentative: git's own coinage, literal and unfamiliar outside git; the 尚無提交 gloss carries the meaning."
   },
@@ -1748,7 +1775,7 @@
   "guest": {
     "chosen": "訪客",
     "confidence": "high",
-    "forms": "Connect as guest → 以訪客身分連線; signed-in-as suffix → 以訪客身分登入 / 以 {username} 身分登入; Use guest → 改用訪客身分; Sign in as… → 以其他身分登入⋯",
+    "forms": "Connect as guest → 以訪客身分連線; signed-in-as suffix → 以訪客身分登入 / 以 {username} 身分登入; Browse as guest (button) → 以訪客身分瀏覽; Sign in as… → 以其他身分登入⋯",
     "sources": "AP-TW = AP-HK AuthDialog GUEST; NetAuthAgent EINFO_NO_ACCESS_GUEST"
   },
   "hard-link": {
@@ -1936,6 +1963,18 @@
     "chosen": "安裝",
     "confidence": "high",
     "sources": "AP-TW SystemSettings (Install → 安裝), MS (3 entries)"
+  },
+  "uninstall": {
+    "chosen": "解除安裝",
+    "confidence": "high",
+    "forms": "the menu item → 解除安裝「cmdr」指令; done → 已解除安裝; couldn't → 無法解除安裝",
+    "avoid": [
+      {
+        "form": "移除",
+        "why": "the take-out-of-a-list verb (remove); the menu item that the cmdr toasts echo says 解除安裝"
+      }
+    ],
+    "sources": "MS TBX (uninstall → 解除安裝, 2 entries); catalog 7 (menu.app.cliCommandUninstall, settings.revealHandler.uninstallWarning); macOS zh-TW/zh-HK carry no uninstall string"
   },
   "internet": {
     "avoid": [
@@ -2358,7 +2397,7 @@
     "sources": "AP-TW = AP-HK (無法裝載卷宗…, 卸除伺服器)"
   },
   "move": {
-    "accept": ["移至", "移到", "移出", "移走"],
+    "accept": ["移至", "移到", "移出", "移走", "移回", "移過去"],
     "avoid": [
       {
         "form": "搬移",
@@ -2367,7 +2406,7 @@
     ],
     "chosen": "移動",
     "confidence": "high",
-    "forms": "F6 and prose → 移動; move to X → 移到 X / 移至垃圾桶; move out of a device → 移出; moved away → 移走",
+    "forms": "F6 and prose → 移動; move to X → 移到 X / 移至垃圾桶; move out of a device → 移出; moved away → 移走; move back → 移回原處; move them there → 移過去",
     "sources": "AP-HK, MS, TC, DC"
   },
   "move-to-trash": {
@@ -2380,7 +2419,7 @@
     "chosen": "多檔重新命名",
     "accept": ["大量重新命名"],
     "confidence": "high",
-    "forms": "the Multi-rename tool's name (command, File menu item, sheet title) → 多檔重新命名 (menu: 多檔重新命名⋯); renaming many files at once as a generic idea (onboarding.stepAi.table.rowRename, .renameWithout) → 大量重新命名",
+    "forms": "the Multi-rename tool's name (command, File menu item, sheet title) → 多檔重新命名 (menu: 多檔重新命名⋯); a sentence that names the tool (onboarding.stepAi.table.renameWithout) quotes it: 在「多檔重新命名」裡; renaming many files at once as a generic idea → 大量重新命名, or plain 重新命名多個檔案 where English says so (onboarding.stepAi.table.rowRename)",
     "sources": "Total Commander zh-TW (WCMD.INC 2400 多檔重新命名; WCMD.MNU 多檔重新命名(&R)...\\tCtrl+M; LNG 6601 dialog title 多檔重新命名); DC zh-TW says 多重命名工具 (Simplified-flavoured, not lifted)"
   },
   "name": {
@@ -2444,10 +2483,6 @@
     "chosen": "共享資料夾",
     "confidence": "tentative",
     "decision": "Mount and share-list sentences",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the saved report on), not an SMB share: 分享出去.",
-      "servers.sheet.addressHelpNfs": "\"share\" sits only inside the verbatim example addresses (nfs://nas.local/share), which stay Latin."
-    },
     "forms": "mounted share → 已裝載的共享資料夾; a share named X → 名為「X」的共享資料夾",
     "sources": "derived from Apple Shared → 已共享 + folder; NetAuthAgent EINFO_NO_SHARE says bare 共享"
   },
@@ -2709,6 +2744,21 @@
     "chosen": "貼上",
     "confidence": "confirmed",
     "sources": "AP-TW = AP-HK, MS"
+  },
+  "pattern": {
+    "chosen": "樣式",
+    "confidence": "high",
+    "forms": "rename pattern → 命名樣式; filename pattern → 檔名樣式; a regex pattern → 正規表示式 (the bare noun)",
+    "exceptions": {
+      "queryUi.bar.placeholder.regex": "Regular expression pattern → 正規表示式: a regex IS the pattern, so the placeholder names it alone."
+    },
+    "avoid": [
+      {
+        "form": "模式",
+        "why": "the catalog's mode (跟隨模式, 檔案傳輸模式); MS's pattern → 模式 would collide"
+      }
+    ],
+    "sources": "catalog 樣式 ×8 (queryUi.filters.chip.pattern, queryUi.bar.*, suggestedOps.fromPattern, onboarding.stepAi.table.rename*); MS TBX pattern → 模式 (rejected: collides with mode)"
   },
   "path": {
     "chosen": "路徑",
@@ -3155,6 +3205,19 @@
     "chosen": "繼續",
     "confidence": "high",
     "sources": "AP-TW = AP-HK (Resume → 繼續)"
+  },
+  "review": {
+    "accept": ["檢查", "查看", "回顧"],
+    "chosen": "檢視",
+    "confidence": "tentative",
+    "forms": "the approval gate (Review file renames, the Review button) → 檢視; the onboarding comparison table's review and apply → 檢查過後再套用 (one frame across onboarding.stepAi.table.*)",
+    "avoid": [
+      {
+        "form": "檢閱",
+        "why": "MS's code-review sense and Apple's Inspector (檢閱器); not a decide-on-each-change word"
+      }
+    ],
+    "sources": "catalog askCmdr.renameReview.title, askCmdr.wakeToast.action, commands.suggestedOpsShow.description (檢視); onboarding.stepAi.table.* (檢查過後); MS review → 檢閱"
   },
   "retry": {
     "accept": ["重試", "再試", "繼續試"],
@@ -3637,11 +3700,7 @@
     "accept": ["步驟"],
     "confidence": "high",
     "forms": "Step 1 of 2: X → 第 1 步（共 2 步）：X (the AI install steps); the onboarding counter reads 第 1 步，共 2 步; the standalone noun is 步驟 (MS terminology)",
-    "sources": "shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting); MS terminology (step → 步驟)",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The counter's step, not a stage: rename-counter's 增量 (as in multiRename.counterEditor.step).",
-      "multiRename.placeholderHelp.counterAll": "Same as multiRename.placeholderHelp.counter: the counter's 增量."
-    }
+    "sources": "shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting); MS terminology (step → 步驟)"
   },
   "stop": {
     "accept": ["停"],
@@ -3684,8 +3743,8 @@
   "suggestion": {
     "chosen": "建議",
     "confidence": "high",
-    "forms": "one AI-suggested group → 這項建議; suggest again → 再建議一次; Suggested operations → 建議的操作",
-    "sources": "AP-TW (12) = AP-HK (11) + MS zh-Hant (101); catalog suggestedOps.title, askCmdr.wakeToast.title"
+    "forms": "the AI suggestions dialog (title, View-menu item, palette command) → AI 建議, like fileOperations.mkdir.aiSuggestionsHeader and suggestedOps.indicatorTooltip; in prose 「AI 建議」對話方塊; one AI-suggested group → 這項建議; suggest again → 再建議一次; a batch heading → 剛剛建議的 / {countText} 分鐘前建議的 / 今天 {time} 建議的",
+    "sources": "AP-TW (12) = AP-HK (11) + MS zh-Hant (101); catalog fileOperations.mkdir.aiSuggestionsHeader, suggestedOps.indicatorTooltip, askCmdr.wakeToast.title"
   },
   "supported": {
     "chosen": "支援",
@@ -3721,6 +3780,18 @@
     "confidence": "confirmed",
     "forms": "General → 一般; Login Items & Extensions → 登入項目與延伸功能; Storage → 儲存空間; Accessibility → 輔助使用; Appearance → 外觀; Displays → 顯示器 (HK 螢幕); Notifications → 通知; Keyboard → 鍵盤; Sound → 聲音; Text size → 文字大小; Language & Region → 語言與地區; Desktop & Dock → 桌面與 Dock; Full Disk Access → 完全取用磁碟",
     "sources": "AP LoginItems.appex Localizable.loctable (TW = HK)"
+  },
+  "tamper": {
+    "chosen": "竄改",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → 有人竄改你和伺服器之間傳輸的資料; with the connection → 有人正在竄改連線",
+    "avoid": [
+      {
+        "form": "篡改",
+        "why": "the Simplified-preferred glyph; MS zh-Hant and the catalog write 竄改"
+      }
+    ],
+    "sources": "MS TBX tamper → 竄改 (To maliciously modify data); catalog ×5 (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid, securityNotices.smbSignatureRefused.body); macOS zh-TW/zh-HK carry neither glyph"
   },
   "tab": {
     "avoid": [
@@ -3825,6 +3896,13 @@
     "chosen": "縮圖",
     "confidence": "high",
     "sources": "AP-HK Preview, MS (HKG, TWN), DC, NAU"
+  },
+  "time-ago": {
+    "accept": ["剛剛"],
+    "chosen": "前",
+    "confidence": "high",
+    "forms": "{durationText}前; a count → {count} 分鐘前 (spaced against the numeral); a moment ago → 剛剛; a batch heading → {countText} 分鐘前建議的",
+    "sources": "NAU zh-TW (%d 天前), catalog ui.toast.age, queryUi.age.minutes"
   },
   "time-left": {
     "chosen": "剩餘",
@@ -3955,6 +4033,18 @@
     "chosen": "未知",
     "confidence": "high",
     "sources": "AP-TW 12/0, AP-HK 12/0, AP live TW 56/0"
+  },
+  "unlock-device": {
+    "chosen": "解鎖",
+    "confidence": "high",
+    "forms": "unlock the phone → 把手機接上並解鎖 / 確認手機已解鎖",
+    "avoid": [
+      {
+        "form": "解除鎖定",
+        "why": "MS's form; Apple TW = HK say 解鎖, and the catalog already writes the phone sense as 解鎖"
+      }
+    ],
+    "sources": "AP zh-TW 16 / zh-HK 16 (解鎖); catalog errors.listing.deviceDisconnected.suggestion, errors.provider.macDroid.transient (手機已解鎖); MS unlock → 解除鎖定"
   },
   "unlock": {
     "chosen": "解鎖",

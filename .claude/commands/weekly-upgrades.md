@@ -8,7 +8,8 @@ Run unattended, start to finish, without asking David anything. He's reading the
    for `.warming-worktree` to disappear before the first build.
 2. **Do the pass** per the guide: dashboard for the list, npm (`ncu -u`, `pnpm install`, `pnpm dedupe`), Cargo
    (`cargo outdated -w`, then per-crate `Cargo.toml` edit + `cargo update -p <crate> --precise <version>`, 3-day window
-   enforced by hand against crates.io), fix the breakage, `pnpm check third-party-notices`, `pnpm check --include-slow`.
+   enforced by hand against crates.io), fix the breakage, `pnpm check third-party-notices`, `pnpm check`, then
+   `pnpm check --only-slow`.
 3. **Commit in logical pieces**, not one blob: npm bumps, Cargo bumps, and each non-trivial API fix separately. Lead
    with impact. A crate you had to hold back gets a line in the body saying which and why.
 4. **Land and tear down.** `pnpm land` (`scripts/land/CLAUDE.md`), then

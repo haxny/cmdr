@@ -15,8 +15,10 @@ use super::{
     INDEX_REGISTRY, IndexPhase, VolumeSignals, is_initializing_phase, resolved_index_db_path, spawn_failure_supervisor,
     try_reserve_initializing_phase, with_running_manager,
 };
-use crate::indexing::lifecycle::freshness::Freshness;
+use crate::indexing::events::IndexEvent;
+use crate::indexing::lifecycle::freshness::{Freshness, FreshnessEvent};
 use crate::indexing::lifecycle::manager::IndexManager;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
 use crate::indexing::lifecycle::{freshness, lifecycle_bus, master};
 use crate::indexing::read::enrichment::ReadPool;
 use crate::indexing::read::pending_sizes::PendingSizes;
@@ -344,6 +346,22 @@ pub(in crate::indexing::lifecycle) fn start_indexing_for(
     // the volume ends with this life of it.
     lifecycle_bus::publish_volume_registered(volume_id, kind, reservation.child_token());
 
+    // A volume with no completed scan is about to be walked whole, so it's
+    // `Scanning` from here, not from the walk's own announcement. Everything
+    // between this line and that one (the launch route's reads, a rebuild's
+    // truncate) is seconds on a big disk, 14 s on one, and a gray badge for that
+    // long reads as an enable that didn't land. The walk's own `ScanStarted`
+    // then changes nothing, so it emits nothing.
+    let announced_scanning = activation == Activation::IndexTheVolume && initial_freshness.is_none();
+    if announced_scanning {
+        apply_freshness_event_on(
+            &signals.freshness,
+            events.as_ref(),
+            volume_id,
+            FreshnessEvent::ScanStarted,
+        );
+    }
+
     let mut manager = match IndexManager::new_for_kind(
         volume_id.to_string(),
         volume_root,
@@ -359,6 +377,11 @@ pub(in crate::indexing::lifecycle) fn start_indexing_for(
             // instance so a subsequent call can retry cleanly, and drop the
             // installed read-path handles.
             remove_instance_and_handles(volume_id);
+            if announced_scanning {
+                events.emit(IndexEvent::ScanAborted {
+                    volume_id: volume_id.to_string(),
+                });
+            }
             return Err(e);
         }
     };
@@ -455,6 +478,14 @@ pub(in crate::indexing::lifecycle) fn start_indexing_for(
         (true, Err(e)) => {
             drop(reg);
             remove_instance_and_handles(volume_id);
+            // The badge was told this volume is scanning; end that run so it
+            // refetches and goes gray, ❌ rather than pulsing blue for a start
+            // that's gone.
+            if announced_scanning {
+                events.emit(IndexEvent::ScanAborted {
+                    volume_id: volume_id.to_string(),
+                });
+            }
             return Err(e);
         }
         (false, Ok(())) => {

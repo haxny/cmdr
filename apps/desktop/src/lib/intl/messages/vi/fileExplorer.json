@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Chưa chọn gì} other {Đã chọn {countText} mục}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Không có tên nào chứa “{pattern}”} other {{countText} tên chứa “{pattern}”}}",
   "@fileExplorer.pane.filterMatches": {
@@ -521,9 +521,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Dùng tư cách khách",
+  "fileExplorer.network.share.useGuest": "Duyệt với tư cách khách",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "Đăng nhập với tư cách…",
   "@fileExplorer.network.share.signInAs": {
@@ -633,9 +633,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "Đã sao chép {countText} {count, plural, other {mục}}",
+  "fileExplorer.clipboard.copied": "Đã sao chép {countText} {count, plural, other {mục}}.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Đã chọn các tệp khác nhau: {leftCountText} {leftCount, plural, other {tệp}} bên trái và {rightCountText} {rightCount, plural, other {tệp}} bên phải.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1287,21 +1287,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "Đang ở nhánh {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Đang ở nhánh “{branch}”.",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "Đang ở nhánh {branch} (chưa có commit nào).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "Đang ở nhánh “{branch}” (chưa có commit nào).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Tách rời tại {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "Vượt trước {ahead, plural, other {{aheadText} commit}}, tụt sau {behind, plural, other {{behindText} commit}} so với {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "Vượt trước {ahead, plural, other {{aheadText} commit}}, tụt sau {behind, plural, other {{behindText} commit}} so với “{upstream}”.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "Working tree có thay đổi chưa commit.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1683,25 +1683,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} chưa kết nối. Hãy cắm điện thoại bằng cáp USB và mở khóa máy, rồi thử lại.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "“{device}” chưa kết nối. Hãy cắm điện thoại bằng cáp USB và mở khóa máy, rồi thử lại.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Bộ nhớ đó trên {device} hiện không khả dụng.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Bộ nhớ chứa thư mục này hiện không khả dụng trên {device}.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "“{drive}” chưa kết nối. Hãy kết nối ổ đĩa, rồi thử lại.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Tính năng điện thoại và máy ảnh qua MTP đang tắt trong Cài đặt.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Tính năng truy cập điện thoại và máy ảnh qua MTP đang tắt trong Cài đặt.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Tính năng điện thoại Android đang tắt trong Cài đặt.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Tính năng truy cập điện thoại Android đang tắt trong Cài đặt.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr không còn biết cách kết nối tới “{place}” nữa. Hãy kết nối lại từ Máy chủ, rồi mục ưa thích này sẽ hoạt động lại.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2022,6 +2022,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr đang tìm kiếm trong {name}. Việc lập chỉ mục sẽ bắt đầu ngay khi xong.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Đã bật lập chỉ mục cho {name}.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr đang lập chỉ mục {name}. Lượt quét bạn yêu cầu sẽ bắt đầu ngay khi xong.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

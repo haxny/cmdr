@@ -1,11 +1,35 @@
 {
-  "suggestedOps.title": "建議的操作",
+  "suggestedOps.title": "AI 建議",
   "@suggestedOps.title": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "suggestedOps.description": "這些是 AI 建議的。在你同意之前，什麼都不會執行。",
   "@suggestedOps.description": {
     "sourceHash": "73255a0"
+  },
+  "suggestedOps.approvalNoticeDismiss": "不要再顯示這則提醒",
+  "@suggestedOps.approvalNoticeDismiss": {
+    "sourceHash": "2c23c21"
+  },
+  "suggestedOps.sweepWhen.justNow": "剛剛建議的",
+  "@suggestedOps.sweepWhen.justNow": {
+    "sourceHash": "4606788"
+  },
+  "suggestedOps.sweepWhen.minutesAgo": "{countText} {count, plural, other {分鐘前建議的}}",
+  "@suggestedOps.sweepWhen.minutesAgo": {
+    "sourceHash": "96782e0"
+  },
+  "suggestedOps.sweepWhen.today": "今天 {time} 建議的",
+  "@suggestedOps.sweepWhen.today": {
+    "sourceHash": "105ec27"
+  },
+  "suggestedOps.sweepWhen.yesterday": "昨天 {time} 建議的",
+  "@suggestedOps.sweepWhen.yesterday": {
+    "sourceHash": "a0d2061"
+  },
+  "suggestedOps.sweepWhen.earlier": "{date} 建議的",
+  "@suggestedOps.sweepWhen.earlier": {
+    "sourceHash": "cbe0d5f"
   },
   "suggestedOps.empty": "目前沒有任何東西在等你。",
   "@suggestedOps.empty": {
@@ -15,48 +39,120 @@
   "@suggestedOps.loadFailed": {
     "sourceHash": "ef0da3e"
   },
-  "suggestedOps.agentReason": "AI 的理由",
+  "suggestedOps.agentReason": "理由：",
   "@suggestedOps.agentReason": {
-    "sourceHash": "e3acab8"
+    "sourceHash": "ad389aa"
   },
-  "suggestedOps.cmdrFacts": "Cmdr 知道的事實",
-  "@suggestedOps.cmdrFacts": {
-    "sourceHash": "9851c12"
+  "suggestedOps.agentReasonTooltip": "這是 AI 自己的說法，Cmdr 沒有檢查過。",
+  "@suggestedOps.agentReasonTooltip": {
+    "sourceHash": "aadab2c"
   },
-  "suggestedOps.fileCount": "{count, plural, other {# 個檔案}}",
+  "suggestedOps.agentReasonSpoken": "理由，根據 AI 的說法：",
+  "@suggestedOps.agentReasonSpoken": {
+    "sourceHash": "0c0a448"
+  },
+  "suggestedOps.fileCount": "{countText} 個{count, plural, other {檔案}}",
   "@suggestedOps.fileCount": {
-    "sourceHash": "e60f4a2"
+    "sourceHash": "76ef0a6"
   },
-  "suggestedOps.approve": "同意",
-  "@suggestedOps.approve": {
-    "sourceHash": "6007acb"
+  "suggestedOps.approve.move": "移動 {countText} 個{count, plural, other {檔案}}",
+  "@suggestedOps.approve.move": {
+    "sourceHash": "4c89041"
+  },
+  "suggestedOps.approve.copy": "複製 {countText} 個{count, plural, other {檔案}}",
+  "@suggestedOps.approve.copy": {
+    "sourceHash": "e10c490"
+  },
+  "suggestedOps.approve.trash": "把 {countText} 個{count, plural, other {檔案}}移至垃圾桶",
+  "@suggestedOps.approve.trash": {
+    "sourceHash": "3c82946"
+  },
+  "suggestedOps.approve.delete": "刪除 {countText} 個{count, plural, other {檔案}}",
+  "@suggestedOps.approve.delete": {
+    "sourceHash": "218cf04"
+  },
+  "suggestedOps.approve.rename": "重新命名 {countText} 個{count, plural, other {檔案}}",
+  "@suggestedOps.approve.rename": {
+    "sourceHash": "412518d"
+  },
+  "suggestedOps.approve.compress": "壓縮 {countText} 個{count, plural, other {檔案}}",
+  "@suggestedOps.approve.compress": {
+    "sourceHash": "7df0dfc"
+  },
+  "suggestedOps.approve.extract": "解壓縮 {countText} 個{count, plural, other {封存檔}}",
+  "@suggestedOps.approve.extract": {
+    "sourceHash": "0bf7541"
   },
   "suggestedOps.reject": "拒絕",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
   },
-  "suggestedOps.approveCount": "同意 {count, plural, other {# 個檔案}}",
-  "@suggestedOps.approveCount": {
-    "sourceHash": "649d66f"
+  "suggestedOps.facts.from": "來源",
+  "@suggestedOps.facts.from": {
+    "sourceHash": "2181976"
   },
-  "suggestedOps.review": "檢視這些檔案",
-  "@suggestedOps.review": {
-    "sourceHash": "b8d04b3"
+  "suggestedOps.facts.to": "目標",
+  "@suggestedOps.facts.to": {
+    "sourceHash": "f4b06ef"
   },
-  "suggestedOps.collapse": "隱藏這些檔案",
-  "@suggestedOps.collapse": {
-    "sourceHash": "ced24ea"
+  "suggestedOps.facts.folder": "資料夾",
+  "@suggestedOps.facts.folder": {
+    "sourceHash": "74ccd43"
   },
-  "suggestedOps.reversibleRestoreMove": "這項可以還原",
-  "@suggestedOps.reversibleRestoreMove": {
-    "sourceHash": "de7f6ff"
+  "suggestedOps.facts.archive": "封存檔",
+  "@suggestedOps.facts.archive": {
+    "sourceHash": "66f4804"
   },
-  "suggestedOps.reversibleDeleteWritten": "刪掉它寫入的東西就能還原",
-  "@suggestedOps.reversibleDeleteWritten": {
-    "sourceHash": "997843a"
+  "suggestedOps.facts.trash": "垃圾桶",
+  "@suggestedOps.facts.trash": {
+    "sourceHash": "4e42c6e"
   },
-  "suggestedOps.irreversible": "這項無法還原",
-  "@suggestedOps.irreversible": {
+  "suggestedOps.facts.severalFolders": "多個資料夾",
+  "@suggestedOps.facts.severalFolders": {
+    "sourceHash": "7c32950"
+  },
+  "suggestedOps.reversible.trash": "可以還原：{count, plural, other {檔案會移到垃圾桶}}",
+  "@suggestedOps.reversible.trash": {
+    "sourceHash": "55bf957"
+  },
+  "suggestedOps.reversible.moveBack": "可以還原：Cmdr 可以{count, plural, other {移回原處}}",
+  "@suggestedOps.reversible.moveBack": {
+    "sourceHash": "14c0a31"
+  },
+  "suggestedOps.reversible.renameBack": "可以還原：Cmdr 可以{count, plural, other {把名稱改回來}}",
+  "@suggestedOps.reversible.renameBack": {
+    "sourceHash": "4c7e3c3"
+  },
+  "suggestedOps.reversible.removeCopies": "可以還原：Cmdr 會刪除這些副本",
+  "@suggestedOps.reversible.removeCopies": {
+    "sourceHash": "0ec3b08"
+  },
+  "suggestedOps.reversible.removeArchive": "可以還原：Cmdr 會刪除新的封存檔",
+  "@suggestedOps.reversible.removeArchive": {
+    "sourceHash": "2c8278f"
+  },
+  "suggestedOps.reversible.removeExtracted": "可以還原：Cmdr 會刪除解壓縮出來的內容",
+  "@suggestedOps.reversible.removeExtracted": {
+    "sourceHash": "977a513"
+  },
+  "suggestedOps.irreversible.delete": "無法還原：檔案會被永久刪除",
+  "@suggestedOps.irreversible.delete": {
+    "sourceHash": "e32da9a"
+  },
+  "suggestedOps.blocked.noTrash": "無法執行：這個磁碟機沒有垃圾桶",
+  "@suggestedOps.blocked.noTrash": {
+    "sourceHash": "f08e038"
+  },
+  "suggestedOps.blocked.noTrashTooltip": "這些檔案所在的磁碟機沒有垃圾桶，所以無法把檔案移過去，什麼都不會發生。請拒絕這項建議，如果你真的想刪掉這些檔案，可以自己刪除。",
+  "@suggestedOps.blocked.noTrashTooltip": {
+    "sourceHash": "f2a5d5f"
+  },
+  "suggestedOps.irreversible.overwrite": "無法還原：會取代現有的封存檔",
+  "@suggestedOps.irreversible.overwrite": {
+    "sourceHash": "0d5c5bb"
+  },
+  "suggestedOps.irreversible.other": "無法還原",
+  "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr 會新增這個資料夾",
@@ -71,6 +167,14 @@
   "@suggestedOps.destinationUnknown": {
     "sourceHash": "dc78d1d"
   },
+  "suggestedOps.destinationNotConnected": "目標尚未連線",
+  "@suggestedOps.destinationNotConnected": {
+    "sourceHash": "51dcf8e"
+  },
+  "suggestedOps.destinationNotConnectedTooltip": "Cmdr 還沒有連線到這個磁碟機或伺服器。你同意之後，要等連線完成才會開始，就跟你自己把檔案移過去時一樣。",
+  "@suggestedOps.destinationNotConnectedTooltip": {
+    "sourceHash": "af06219"
+  },
   "suggestedOps.fromPattern": "以樣式比對出來的",
   "@suggestedOps.fromPattern": {
     "sourceHash": "20e88a9"
@@ -83,29 +187,81 @@
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.columnFile": "檔案",
-  "@suggestedOps.columnFile": {
-    "sourceHash": "50009ce"
+  "suggestedOps.filesLabel": "「{name}」裡的檔案",
+  "@suggestedOps.filesLabel": {
+    "sourceHash": "adf93b7"
+  },
+  "suggestedOps.columnInclude": "包含",
+  "@suggestedOps.columnInclude": {
+    "sourceHash": "7285576"
+  },
+  "suggestedOps.includeAll": "包含所有檔案",
+  "@suggestedOps.includeAll": {
+    "sourceHash": "ac6c70c"
+  },
+  "suggestedOps.columnName": "名稱",
+  "@suggestedOps.columnName": {
+    "sourceHash": "dcd1d52"
+  },
+  "suggestedOps.columnFolder": "資料夾",
+  "@suggestedOps.columnFolder": {
+    "sourceHash": "74ccd43"
   },
   "suggestedOps.columnNewName": "新名稱",
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
   },
-  "suggestedOps.columnSize": "建議當時的大小",
+  "suggestedOps.columnSize": "大小",
   "@suggestedOps.columnSize": {
-    "sourceHash": "20d36bd"
+    "sourceHash": "1af8519"
   },
-  "suggestedOps.columnChanged": "上次更改",
-  "@suggestedOps.columnChanged": {
-    "sourceHash": "d8c5670"
+  "suggestedOps.columnModified": "上次修改",
+  "@suggestedOps.columnModified": {
+    "sourceHash": "0fe1058"
   },
-  "suggestedOps.noIndexData": "不在索引裡",
-  "@suggestedOps.noIndexData": {
-    "sourceHash": "104d8cb"
+  "suggestedOps.factChanged": "建議提出後有改動",
+  "@suggestedOps.factChanged": {
+    "sourceHash": "958780a"
   },
-  "suggestedOps.includeFile": "包含這個檔案",
+  "suggestedOps.factChangedTooltip": "建議時：{then} / 現在：{now}",
+  "@suggestedOps.factChangedTooltip": {
+    "sourceHash": "8bf4166"
+  },
+  "suggestedOps.fileMissing": "已移走或刪除",
+  "@suggestedOps.fileMissing": {
+    "sourceHash": "2073c5b"
+  },
+  "suggestedOps.snapshotOnly": "AI 建議當時的資料",
+  "@suggestedOps.snapshotOnly": {
+    "sourceHash": "f6b2d27"
+  },
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr 剛剛無法檢查這個檔案，所以這是 AI 建議當時的樣子。",
+  "@suggestedOps.snapshotOnlyTooltip": {
+    "sourceHash": "d6a081c"
+  },
+  "suggestedOps.sourceNotConnected": "Cmdr 沒有連線到這些檔案所在的磁碟機，所以它們的大小和修改日期是 AI 建議當時的記錄。",
+  "@suggestedOps.sourceNotConnected": {
+    "sourceHash": "07d5134"
+  },
+  "suggestedOps.sourceGone": "這些檔案原本所在的磁碟機已經不在了，所以它們的大小和修改日期是 AI 建議當時的記錄。",
+  "@suggestedOps.sourceGone": {
+    "sourceHash": "1b30de5"
+  },
+  "suggestedOps.factUnknown": "未知",
+  "@suggestedOps.factUnknown": {
+    "sourceHash": "b764cdc"
+  },
+  "suggestedOps.includeFile": "包含「{name}」",
   "@suggestedOps.includeFile": {
-    "sourceHash": "71075a7"
+    "sourceHash": "a44fb71"
+  },
+  "suggestedOps.showMore": "再顯示 {countText} 個",
+  "@suggestedOps.showMore": {
+    "sourceHash": "4061571"
+  },
+  "suggestedOps.showAll": "顯示全部 {countText} 個",
+  "@suggestedOps.showAll": {
+    "sourceHash": "912b5d0"
   },
   "suggestedOps.loadingFiles": "正在載入檔案⋯",
   "@suggestedOps.loadingFiles": {
@@ -138,6 +294,14 @@
   "suggestedOps.refusal.nothingToRun.suggestion": "請確認這些檔案還在，然後再次同意，或是拒絕這項建議。",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "sourceHash": "f4cfc9e"
+  },
+  "suggestedOps.refusal.nothingSelected.message": "你勾選的檔案都已經不在這項建議裡了，所以什麼都沒有執行。",
+  "@suggestedOps.refusal.nothingSelected.message": {
+    "sourceHash": "7de9324"
+  },
+  "suggestedOps.refusal.nothingSelected.suggestion": "勾選你要的檔案，然後再次同意這項建議。",
+  "@suggestedOps.refusal.nothingSelected.suggestion": {
+    "sourceHash": "db90f78"
   },
   "suggestedOps.refusal.couldNotStart.message": "Cmdr 無法把這項建議轉成操作，所以什麼都沒有執行。",
   "@suggestedOps.refusal.couldNotStart.message": {

@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nincs kijelölés} one {{countText} kijelölve} other {{countText} kijelölve}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Egyetlen név sem tartalmazza ezt: „{pattern}”} one {{countText} név tartalmazza ezt: „{pattern}”} other {{countText} név tartalmazza ezt: „{pattern}”}}",
   "@fileExplorer.pane.filterMatches": {
@@ -520,9 +520,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Váltás vendégre",
+  "fileExplorer.network.share.useGuest": "Böngészés vendégként",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "Bejelentkezés másként…",
   "@fileExplorer.network.share.signInAs": {
@@ -632,9 +632,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {elem} other {elem}} másolva",
+  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {elem} other {elem}} másolva.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Eltérő fájlok kijelölve: {leftCountText} {leftCount, plural, one {fájl} other {fájl}} a bal oldalon és {rightCountText} {rightCount, plural, one {fájl} other {fájl}} a jobb oldalon.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1284,21 +1284,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "Aktuális ág: {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Aktuális ág: „{branch}”.",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "Aktuális ág: {branch} (még nincs commit).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "Aktuális ág: „{branch}” (még nincs commit).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Levált állapot itt: {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commit}} előrébb, {behind, plural, one {{behindText} commit} other {{behindText} commit}} lemaradva ehhez képest: {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commit}} előrébb, {behind, plural, one {{behindText} commit} other {{behindText} commit}} lemaradva ehhez képest: „{upstream}”.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "A munkafában még nem commitolt módosítások vannak.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1680,25 +1680,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} nincs csatlakoztatva. Csatlakoztasd USB-kábellel, oldd fel, majd próbáld újra.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "„{device}” nincs csatlakoztatva. Csatlakoztasd a telefont USB-kábellel, oldd fel a zárolását, majd próbáld újra.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Ez a tárhely most nem érhető el ezen az eszközön: {device}.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Az a tárhely, amelyen ez a mappa volt, most nem érhető el ezen a telefonon: {device}.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "„{drive}” nincs csatlakoztatva. Csatlakoztasd, majd próbáld újra.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Az MTP-n át csatlakozó telefonok és kamerák ki vannak kapcsolva a Beállításokban.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "A telefonok és kamerák elérése MTP-n keresztül ki van kapcsolva a Beállításokban.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Az Android-telefonok ki vannak kapcsolva a Beállításokban.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Az Android-telefonok elérése ki van kapcsolva a Beállításokban.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "A Cmdr már nem tudja, hogyan érje el ezt: „{place}”. Csatlakozz újra a Szerverek listájából, és ez a kedvenc ismét működik.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2019,6 +2019,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "A Cmdr épp keres itt: {name}. Az indexelés elindul, amint ez befejeződik.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Indexelés bekapcsolva ehhez a meghajtóhoz: {name}.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "A Cmdr épp indexeli ezt: {name}. A kért átvizsgálás elindul, amint ez befejeződik.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

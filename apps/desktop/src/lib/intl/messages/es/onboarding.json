@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Renombrado múltiple",
+  "onboarding.stepAi.table.rowRename": "Renombrar muchos archivos",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Usas la herramienta de renombrado múltiple para definir el patrón a mano, revisas y aplicas.",
+  "onboarding.stepAi.table.renameWithout": "Defines a mano un patrón de renombrado en Renombrado múltiple y luego lo revisas y lo aplicas.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Dices “añade un prefijo de fecha ISO”, el agente define tu patrón de renombrado y tú revisas y aplicas a tu gusto.",
   "@onboarding.stepAi.table.renameWith": {
@@ -618,6 +618,22 @@
   "onboarding.cloudSetup.status.genericError": "Algo ha ido mal",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "El servicio está tardando demasiado en responder. Inténtalo de nuevo en un momento.",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "Esa dirección no parece correcta. Debería empezar por https://.",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "Tu clave solo viaja por una conexión segura, así que usa una dirección que empiece por https://.",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "El servicio ha rechazado la solicitud (código {status}).",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "¡Conectado!",
   "@onboarding.cloudSetup.status.connected": {

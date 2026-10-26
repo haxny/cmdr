@@ -28,6 +28,10 @@
   "@feedback.dialog.includeLogs": {
     "sourceHash": "983e536"
   },
+  "feedback.dialog.viewLogs": "Xem nhật ký sẽ được gửi",
+  "@feedback.dialog.viewLogs": {
+    "sourceHash": "7461c4e"
+  },
   "feedback.dialog.moreWays": "Bạn cũng có thể <github>xem và bình chọn trên GitHub</github> hoặc <call>đặt một cuộc gọi</call> với David.",
   "@feedback.dialog.moreWays": {
     "sourceHash": "5a26a7c"

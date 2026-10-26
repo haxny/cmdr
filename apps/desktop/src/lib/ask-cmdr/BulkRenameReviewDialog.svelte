@@ -47,13 +47,14 @@
 
     const review = $derived(askCmdrState.renameReview)
     const proposals = $derived(review?.proposals ?? [])
-    /** The batches still answerable: an expired one has nothing left to decide. */
-    const liveProposals = $derived(proposals.filter((proposal) => !proposal.expired))
+    /** The batches still answerable: an expired one has nothing left to decide, and one the agent
+     *  changed since it was shown can't run until it's read again. */
+    const liveProposals = $derived(proposals.filter((proposal) => !proposal.expired && !proposal.changed))
     const allRows = $derived(liveProposals.flatMap((proposal) => proposal.rows))
     const allowedCount = $derived(allRows.filter((row) => row.allowed && !row.blockedReason).length)
     const blockedCount = $derived(allRows.filter((row) => row.blockedReason).length)
     const preflighting = $derived(proposals.some((proposal) => proposal.preflighting))
-    const allExpired = $derived(proposals.length > 0 && liveProposals.length === 0)
+    const allExpired = $derived(proposals.length > 0 && proposals.every((proposal) => proposal.expired))
     const renameLabel = $derived(tString('askCmdr.renameReview.rename', { count: allowedCount }))
 
     /** The folder a batch renames inside. A rename group binds one parent, so the first row
@@ -81,6 +82,7 @@
     type ListRow =
         | { kind: 'folder'; key: string; folder: string }
         | { kind: 'expired'; key: string }
+        | { kind: 'changed'; key: string }
         | { kind: 'file'; key: string; proposalId: string; row: BulkRenameReviewRow }
 
     const listRows = $derived.by<ListRow[]>(() => {
@@ -93,6 +95,13 @@
             }
             if (proposal.expired) {
                 flat.push({ kind: 'expired', key: `expired:${proposal.proposalId}` })
+                return
+            }
+            // The agent amended it since it was shown, and nothing brings the new version here, so
+            // its rows are no longer what would run: the notice takes their place, like an
+            // expired batch's, and Apply leaves it out.
+            if (proposal.changed) {
+                flat.push({ kind: 'changed', key: `changed:${proposal.proposalId}` })
                 return
             }
             for (const row of proposal.rows) {
@@ -356,6 +365,9 @@
         ></span>
     {:else if item.kind === 'expired'}
         <span class="batch-expired" role="status">{tString('askCmdr.renameReview.expired')}</span>
+    {:else if item.kind === 'changed'}
+        <!-- The suggestions dialog's wording for the same event, so the two reviews say it alike. -->
+        <span class="batch-expired" role="status">{tString('suggestedOps.changedUnderReview')}</span>
     {/if}
 {/snippet}
 
@@ -792,7 +804,6 @@
         display: -webkit-box;
         margin-top: var(--spacing-xxs);
         overflow: hidden;
-        overflow-wrap: anywhere;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 4;
         line-clamp: 4;

@@ -271,7 +271,7 @@ describe('ServersHubRowMenu a11y', () => {
 
 /**
  * Tier 3 a11y for `PlacesHeader.svelte` with every button showing: Back, Sign in as…,
- * Use guest, and Forget saved password, next to the account and the share count.
+ * Browse as guest, and Forget saved password, next to the account and the share count.
  */
 describe('PlacesHeader a11y', () => {
   it('the header with every action has no a11y violations', async () => {

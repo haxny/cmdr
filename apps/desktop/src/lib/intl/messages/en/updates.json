@@ -97,7 +97,7 @@
     "screenshot": "settings-updates.png",
     "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} is ready, but Cmdr can’t install it itself",
+  "updates.unwritable.adminHeadline": "Cmdr {version} is out, but Cmdr can’t install it itself",
   "@updates.unwritable.adminHeadline": {
     "description": "Bold first line of a warning toast that stays until dismissed. A newer Cmdr is out, but this Mac's copy of the app belongs to another account (typically installed by an administrator or a company's IT tools), so Cmdr can't update itself. Shown to people who ARE administrators of this Mac, so they can fix it themselves. Not an error: a calm statement. \"Cmdr\" is the product name, never translated.",
     "placeholders": {

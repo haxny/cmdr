@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Aucune sélection} one {{countText} sélectionné} many {{countText} sélectionnés} other {{countText} sélectionnés}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Aucun nom ne contient « {pattern} »} one {{countText} nom contient « {pattern} »} many {{countText} noms contiennent « {pattern} »} other {{countText} noms contiennent « {pattern} »}}",
   "@fileExplorer.pane.filterMatches": {
@@ -521,9 +521,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Utiliser l’accès invité",
+  "fileExplorer.network.share.useGuest": "Parcourir en tant qu’invité",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "S’identifier en tant que…",
   "@fileExplorer.network.share.signInAs": {
@@ -633,9 +633,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {élément copié} many {éléments copiés} other {éléments copiés}}",
+  "fileExplorer.clipboard.copied": "{countText} {count, plural, one {élément copié} many {éléments copiés} other {éléments copiés}}.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Fichiers différents sélectionnés : {leftCountText} {leftCount, plural, one {fichier} many {fichiers} other {fichiers}} à gauche et {rightCountText} {rightCount, plural, one {fichier} many {fichiers} other {fichiers}} à droite.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1288,21 +1288,21 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "Sur la branche {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Sur la branche « {branch} ».",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "Sur la branche non née {branch} (encore aucun commit).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "Sur la branche non née « {branch} » (encore aucun commit).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Détaché sur {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
     "sourceHash": "fa6e940"
   },
-  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} many {{aheadText} commits} other {{aheadText} commits}} d’avance, {behind, plural, one {{behindText} commit} many {{behindText} commits} other {{behindText} commits}} de retard sur {upstream}.",
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} many {{aheadText} commits} other {{aheadText} commits}} d’avance, {behind, plural, one {{behindText} commit} many {{behindText} commits} other {{behindText} commits}} de retard sur « {upstream} ».",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "L’arbre de travail contient des modifications non validées.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1688,25 +1688,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "Le téléphone {device} n’est pas connecté. Branchez-le avec un câble USB et déverrouillez-le, puis réessayez.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "Le téléphone « {device} » n’est pas connecté. Branchez-le avec un câble USB et déverrouillez-le, puis réessayez.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Cet espace de stockage sur {device} n’est pas disponible pour le moment.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "L’espace de stockage où se trouvait ce dossier n’est pas disponible sur {device} pour le moment.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "Le disque « {drive} » n’est pas connecté. Connectez-le, puis réessayez.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Les téléphones et appareils photo via MTP sont désactivés dans les Réglages.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "L’accès aux téléphones et appareils photo via MTP est désactivé dans les Réglages.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Les téléphones Android sont désactivés dans les Réglages.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "L’accès aux téléphones Android est désactivé dans les Réglages.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr ne sait plus comment joindre « {place} ». Reconnectez-vous depuis Serveurs, et ce favori fonctionnera de nouveau.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2029,6 +2029,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr cherche dans {name} en ce moment. L’indexation démarrera dès la fin de cette recherche.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Indexation activée pour {name}.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr est en train d’indexer {name}. L’analyse demandée démarrera dès que ce sera terminé.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

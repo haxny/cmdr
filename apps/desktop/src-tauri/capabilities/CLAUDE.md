@@ -9,10 +9,10 @@ guard". Don't claim a window "can't invoke" an app command.
 
 - `default.json`: main window (the most powerful capability: `updater`, `process:allow-restart` / `-exit`,
   `mcp-bridge`, `create-webview-window`, `global-shortcut`, scoped `fs` write/remove, …). Lists only `"main"`.
-- `settings.json`: settings window. `viewer.json`: file viewer windows (wildcard `"viewer-*"` covers `viewer-0`, …).
+- `settings.json`: settings window (`src/capabilities.rs` pins its APIs to callers). `viewer.json`: file viewer windows (wildcard `"viewer-*"` covers `viewer-0`, …).
 - `shortcuts.json`: read-only Keyboard shortcuts help window. `debug.json`: dev-only debug window, self-contained with
   `core:default`. E2E's capability sits in `../capabilities-e2e/playwright.json`.
-- `queue.json`: operation-queue window — settings perms minus `store:default` + `dialog:allow-ask`.
+- `queue.json`: operation-queue window: chrome and events only.
 
 [Tauri permissions reference](https://tauri.app/security/permissions/). **Adding a whole new window?** See
 `docs/guides/adding-a-window.md` for the route + opener + capability recipe, and the gotcha that
@@ -21,9 +21,8 @@ window-creation perms are checked against the *calling* window.
 ## Must-knows (invariants and guardrails)
 
 - **Missing permissions fail silently at runtime**: the call rejects with a generic `... not allowed ...` and the
-  feature just looks broken. Adding any Tauri API call from a window (`setFocus`, `setTitle`, `setMinSize`, plugin
-  commands) means adding the matching permission to that window's file, and `await`ing it in `try/catch` with a
-  `log.warn` (never `void` it) so it surfaces in development.
+  feature looks broken (Settings' provider links once did nothing). A new Tauri API call (`setTitle`, `openUrl`) from a
+  window needs its permission in that window's file, `await`ed in `try/catch` with a `log.warn`.
 - **The viewer window must never get store access (`store:default` OR granular `store:allow-*`).** The viewer is the
   highest-risk webview: it renders arbitrary, possibly-hostile file content. The `tauri-plugin-store` permissions gate
   *commands* (`load`, `get`, `set`, `save`), not *filenames*, so any of them lets the webview `load('license.json')` and

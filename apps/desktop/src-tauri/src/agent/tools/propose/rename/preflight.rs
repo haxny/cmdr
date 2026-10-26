@@ -39,6 +39,9 @@ pub enum BulkRenamePreflightStatus {
     Ready,
     Blocked,
     Expired,
+    /// The agent amended the plan since the revision the review showed. Nothing was recorded;
+    /// the review re-reads the plan before the user can apply it.
+    ListChanged,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -83,6 +86,7 @@ pub enum BulkRenameWarning {
 pub async fn preflight<R: Runtime>(
     app: &AppHandle<R>,
     proposal_id: String,
+    shown_revision: i64,
     allowed_row_ids: Vec<String>,
 ) -> BulkRenamePreflight {
     let (Some(db), Some(accepted_preflights)) =
@@ -96,6 +100,11 @@ pub async fn preflight<R: Runtime>(
     let Ok(Some(proposal)) = super::store::load(&conn, &proposal_id) else {
         return expired_preflight();
     };
+    // Before any stat: a plan the agent amended since the review showed it is a different plan,
+    // and checking its rows would only report on names nobody read.
+    if proposal.revision != shown_revision {
+        return list_changed_preflight();
+    }
     let outcome = if volume_uses_local_paths(&proposal.volume_id) {
         let blocking_proposal = proposal.clone();
         let blocking_allowed_row_ids = allowed_row_ids.clone();
@@ -111,8 +120,10 @@ pub async fn preflight<R: Runtime>(
         return outcome.response;
     }
     match record_user_acceptance(&conn, &proposal, &allowed_row_ids) {
-        Ok(true) => {}
-        Ok(false) | Err(_) => return expired_preflight(),
+        Ok(Some(AcceptanceOutcome::Accepted { .. })) => {}
+        // An amend that landed between the load above and this record.
+        Ok(Some(AcceptanceOutcome::RevisionChanged { .. })) => return list_changed_preflight(),
+        Ok(_) | Err(_) => return expired_preflight(),
     }
     accepted_preflights.record(
         &proposal_id,
@@ -131,13 +142,13 @@ pub async fn preflight<R: Runtime>(
 /// The client presented ids, never values — so the digest (each live op's id, source path, and
 /// destination NAME) is the half of the binding that says which names were checked. A revise
 /// changes it, and the claim then refuses rather than applying a name preflight never saw.
-fn record_user_acceptance(
+pub(super) fn record_user_acceptance(
     conn: &rusqlite::Connection,
     proposal: &RenameProposal,
     allowed_row_ids: &[String],
-) -> Result<bool, crate::agent::store::AgentStoreError> {
+) -> Result<Option<AcceptanceOutcome>, crate::agent::store::AgentStoreError> {
     let Some(group_id) = super::store::numeric_id(&proposal.proposal_id) else {
-        return Ok(false);
+        return Ok(None);
     };
     let deselected: Vec<i64> = proposal
         .rows
@@ -145,10 +156,15 @@ fn record_user_acceptance(
         .filter(|row| !allowed_row_ids.contains(&row.row_id))
         .filter_map(|row| super::store::numeric_id(&row.row_id))
         .collect();
-    Ok(matches!(
-        crate::agent::store::proposals::record_acceptance(conn, group_id, &deselected, now_secs())?,
-        AcceptanceOutcome::Accepted { .. }
-    ))
+    // The revision the review showed (`preflight` already refused any other), checked again in
+    // the record's own transaction so an amend can't slip between the load and here.
+    Ok(Some(crate::agent::store::proposals::record_acceptance(
+        conn,
+        group_id,
+        proposal.revision,
+        &crate::agent::store::proposals::OpSelection::AllExcept { op_ids: deselected },
+        now_secs(),
+    )?))
 }
 
 fn now_secs() -> i64 {
@@ -163,6 +179,13 @@ pub(super) struct PreflightOutcome {
     pub response: BulkRenamePreflight,
     pub fingerprints: Vec<RenameSourceFingerprint>,
     pub status: BulkRenamePreflightStatus,
+}
+
+fn list_changed_preflight() -> BulkRenamePreflight {
+    BulkRenamePreflight {
+        status: BulkRenamePreflightStatus::ListChanged,
+        rows: Vec::new(),
+    }
 }
 
 fn expired_preflight() -> BulkRenamePreflight {

@@ -120,8 +120,8 @@
 - **Gallery**: `not-triggerable`, since the preview is computed from a real listing.
 - **Presets** (TC's F2 "Load/save settings"): the footer's `[Presets ▾ <name>]` button opens a house `Menu`: the presets
   under a "Your presets" heading, in the user's order, numbered 1–9 by position (a digit picks one), then Reset all
-  fields (TC's `<Default>`) and Save current as… (⌘S chip). Each preset has a submenu (→, hover, or right-click):
-  Rename…, Update with current fields (greyed when nothing would change), Move up, Move down (greyed at the top and
+  fields (TC's `<Default>`) and Save as preset… (⌘S chip). Each preset has a submenu (→, hover, or right-click):
+  Rename…, Update with current settings (greyed when nothing would change), Move up, Move down (greyed at the top and
   bottom; the numbers follow the places), Delete. Picking a preset loads it; nothing runs. Every preset command answers
   the backend's list after the change, so the sheet takes it from there.
   - **Seeds**: `loadPresets` hands the backend `PRESET_SEEDS` (`spec.ts`) named in the UI language; a list that never
@@ -136,7 +136,7 @@
   - The button reads `<name> (edited)` once a field differs from the loaded preset (`specsEqual`), and just "Presets"
     with nothing loaded. Saving or updating makes that preset the loaded one; deleting it leaves nothing loaded and the
     fields as they are.
-  - ⌘S (and Save current as…, and Rename…) open a `Popover` anchored to the button, with one name field prefilled with
+  - ⌘S (and Save as preset…, and Rename…) open a `Popover` anchored to the button, with one name field prefilled with
     the loaded preset's name. Enter saves; a name another preset has (`presetNameClash`, the backend's trimmed-lowercase
     rule) asks inline first, and a second Enter or Replace confirms. Escape closes the popover only (it stops the key
     before the sheet sees it), and focus goes back to the button. The field's Enter is claimed, so it never reaches the

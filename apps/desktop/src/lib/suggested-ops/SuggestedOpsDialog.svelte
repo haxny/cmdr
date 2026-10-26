@@ -1,85 +1,65 @@
 <script lang="ts">
-    // The Suggested ops dialog: what Ask Cmdr proposed, laid out so the user can decide.
+    // The AI suggestions dialog: what Ask Cmdr proposed, laid out so the user can decide.
     //
-    // The layout is the argument. Each group shows the agent's reason under a label that says
+    // The layout is the argument. Each group shows the AI's reason under a label that says
     // whose words they are, next to facts Cmdr holds by itself, so a hallucinated claim is
     // visible AS a claim rather than reading like a finding. Reversibility and a folder that
     // doesn't exist yet are DISCLOSED here and never block: once the user approves, it is
     // exactly as if they started the action.
     //
-    // The file list is virtualized over a WINDOW the store fetches, because a group of 60,000
-    // ops is legitimate and neither the list nor the wire may grow with it.
+    // Every group's file list shows right away, each over its own WINDOW the store fetches,
+    // because a group of 60,000 ops is legitimate and neither a list nor the wire may grow
+    // with it (`SuggestedOpFiles.svelte`).
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
-    import Button from '#lib/ui/Button.svelte'
-    import Checkbox from '#lib/ui/Checkbox.svelte'
-    import Size from '#lib/ui/Size.svelte'
-    import DateLabel from '#lib/ui/DateLabel.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
-    import { calculateVirtualWindow } from '#lib/file-explorer/views/virtual-scroll.js'
-    import type { SuggestedGroupView } from '#lib/tauri-commands/index.js'
-    import {
-        approvableCount,
-        approveGroup,
-        closeSuggestedOps,
-        collapseGroup,
-        ensureOpWindow,
-        expandGroup,
-        opAt,
-        openGroup,
-        refreshSuggestions,
-        rejectGroup,
-        suggestedOpsState,
-        toggleOp,
-    } from './suggested-ops-trigger.svelte'
-    import { refusalReason, type RefusalReason } from './suggested-ops-refusal'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatDateTime } from '#lib/settings/reactive-settings.svelte.js'
+    import { formatTimeOfDay } from '#lib/settings/format-utils.js'
+    import { getSetting, setSetting } from '#lib/settings/index.js'
+    import type { SuggestedSweepView } from '#lib/tauri-commands/index.js'
+    import { closeSuggestedOps, suggestedOpsState } from './suggested-ops-trigger.svelte'
+    import { sweepHeadingHidden, sweepWhen } from './suggested-ops-copy'
+    import AgentReason from './AgentReason.svelte'
+    import SuggestedOpsGroup from './SuggestedOpsGroup.svelte'
 
-    /** Row height in pixels, fixed so the virtual window stays plain arithmetic. */
-    const ROW_HEIGHT = 30
-    /** Rows kept above and below the viewport, so a fast scroll doesn't flash empty rows. */
-    const ROW_BUFFER = 8
+    /** The "nothing runs until you approve it" note, until the user closes it for good. Its
+     *  reset is the `suggestedOps.suppressApprovalNotice` switch in Settings > Advanced. */
+    let showApprovalNotice = $state(!getSetting('suggestedOps.suppressApprovalNotice'))
 
-    let scrollTop = $state(0)
-    let viewportHeight = $state(360)
-
-    const group = $derived(openGroup())
-    /** Every op row the open group has, from `COUNT(*)`: the scrollbar is right long before the
-     *  rows themselves are read. */
-    const totalRows = $derived(suggestedOpsState.window?.total ?? group?.totalOpCount ?? 0)
-
-    const virtual = $derived(
-        calculateVirtualWindow({
-            direction: 'vertical',
-            itemSize: ROW_HEIGHT,
-            bufferSize: ROW_BUFFER,
-            containerSize: viewportHeight,
-            scrollOffset: scrollTop,
-            totalItems: totalRows,
-        }),
-    )
-
-    // Pull the window the viewport actually reaches. A request for rows already held is a
-    // no-op, so scrolling inside a window costs nothing.
-    $effect(() => {
-        const open = group
-        if (!open) return
-        void ensureOpWindow(open.groupId, virtual.startIndex)
-    })
-
-    const visibleIndexes = $derived(
-        Array.from({ length: Math.max(0, virtual.endIndex - virtual.startIndex) }, (_, i) => virtual.startIndex + i),
-    )
-
-    /** The reason under a group whose last approval didn't start, or `null`. */
-    function reasonFor(g: SuggestedGroupView): RefusalReason | null {
-        const refusal = suggestedOpsState.refusals.get(g.groupId)
-        return refusal ? refusalReason(refusal, g.verb) : null
+    function dismissApprovalNotice(): void {
+        showApprovalNotice = false
+        setSetting('suggestedOps.suppressApprovalNotice', true)
     }
 
-    function reversibilityLabel(reversible: string): string {
-        if (reversible === 'restoreMove') return tString('suggestedOps.reversibleRestoreMove')
-        if (reversible === 'deleteWhatWasWritten') return tString('suggestedOps.reversibleDeleteWritten')
-        return tString('suggestedOps.irreversible')
+    /** "Now", ticking once a minute so "15 minutes ago" stays true while the dialog is up. */
+    let now = $state(Date.now())
+    $effect(() => {
+        const timer = setInterval(() => (now = Date.now()), 60_000)
+        return () => {
+            clearInterval(timer)
+        }
+    })
+
+    /** A sweep heading in words: "Suggested 15 minutes ago", "Suggested yesterday at 14:04". */
+    function sweepHeading(sweep: SuggestedSweepView): string {
+        const when = sweepWhen(sweep.createdAt, now)
+        switch (when.kind) {
+            case 'justNow':
+                return tString('suggestedOps.sweepWhen.justNow')
+            case 'minutesAgo':
+                return tString('suggestedOps.sweepWhen.minutesAgo', {
+                    countText: formatInteger(when.minutes),
+                    count: when.minutes,
+                })
+            case 'today':
+                return tString('suggestedOps.sweepWhen.today', { time: formatTimeOfDay(sweep.createdAt) })
+            case 'yesterday':
+                return tString('suggestedOps.sweepWhen.yesterday', { time: formatTimeOfDay(sweep.createdAt) })
+            case 'earlier':
+                return tString('suggestedOps.sweepWhen.earlier', { date: formatDateTime(sweep.createdAt) })
+        }
     }
 </script>
 
@@ -88,199 +68,63 @@
     dialogId="suggested-ops"
     role="dialog"
     onclose={closeSuggestedOps}
-    containerStyle="width: 760px; max-width: calc(100vw - 2 * var(--spacing-xl))"
+    containerStyle="width: 860px; max-width: calc(100vw - 2 * var(--spacing-xl))"
     resizable
 >
     {#snippet title()}
         <span>{tString('suggestedOps.title')}</span>
     {/snippet}
 
-    <p class="lede">{tString('suggestedOps.description')}</p>
+    {#if showApprovalNotice}
+        <div class="approval-notice" role="note">
+            <span class="approval-notice-icon" aria-hidden="true"><Icon name="triangle-alert" size={16} /></span>
+            <p>{tString('suggestedOps.description')}</p>
+            <button
+                type="button"
+                class="approval-notice-close"
+                aria-label={tString('suggestedOps.approvalNoticeDismiss')}
+                use:tooltip={tString('suggestedOps.approvalNoticeDismiss')}
+                onclick={dismissApprovalNotice}
+            >
+                <Icon name="x" size={14} />
+            </button>
+        </div>
+    {/if}
 
     {#if suggestedOpsState.decisionNotice}
         <!-- Above the list rather than inside a group: after the re-read the group may be gone
              (its approval did land), and the notice still has to be read. -->
-        <p class="notice notice-problem" role="alert">{tString(suggestedOpsState.decisionNotice)}</p>
+        <p class="decision-notice" role="alert">{tString(suggestedOpsState.decisionNotice)}</p>
     {/if}
 
-    {#if suggestedOpsState.loading}
+    <!-- A re-read keeps the groups on screen: only the FIRST read has nothing to show yet.
+         Blanking the list on every refresh would throw away where each list was scrolled. -->
+    {#if suggestedOpsState.loading && suggestedOpsState.sweeps.length === 0}
         <p class="notice" role="status">{tString('suggestedOps.loadingFiles')}</p>
-    {:else if suggestedOpsState.loadError}
+    {:else if suggestedOpsState.loadError && suggestedOpsState.sweeps.length === 0}
         <p class="notice notice-problem" role="alert">{tString('suggestedOps.loadFailed')}</p>
     {:else if suggestedOpsState.sweeps.length === 0}
         <p class="notice" role="status">{tString('suggestedOps.empty')}</p>
     {:else}
         {#each suggestedOpsState.sweeps as sweep (sweep.sweepId)}
+            {@const headingHidden = sweepHeadingHidden(suggestedOpsState.sweeps.length, sweep.createdAt, now)}
             <section class="sweep">
-                <header class="sweep-header">
-                    <DateLabel modifiedAt={sweep.createdAt} />
-                    {#if sweep.rationale}
-                        <p class="agent-words">
-                            <span class="agent-label">{tString('suggestedOps.agentReason')}</span>
-                            <span class="agent-text">{sweep.rationale}</span>
-                        </p>
-                    {/if}
-                </header>
-
-                {#each sweep.groups as g (g.groupId)}
-                    {@const reason = reasonFor(g)}
-                    <article class="group" class:expanded={g.groupId === suggestedOpsState.openGroupId}>
-                        <div class="group-head">
-                            <h3 class="group-name">{g.displayName}</h3>
-                            <span class="count">{tString('suggestedOps.fileCount', { count: g.liveOpCount })}</span>
-                        </div>
-
-                        <ul class="markers">
-                            <li class="marker" class:danger={g.reversible === 'irreversible'}>
-                                {reversibilityLabel(g.reversible)}
-                            </li>
-                            {#if g.destinationState === 'willBeCreated'}
-                                <li class="marker" use:tooltip={tString('suggestedOps.folderWillBeCreatedTooltip')}>
-                                    {tString('suggestedOps.folderWillBeCreated')}
-                                </li>
-                            {:else if g.destinationState === 'unknown'}
-                                <li class="marker">{tString('suggestedOps.destinationUnknown')}</li>
-                            {/if}
-                            {#if g.fromSelector}
-                                <li class="marker">{tString('suggestedOps.fromPattern')}</li>
-                            {/if}
-                        </ul>
-
-                        {#if g.rationale}
-                            <p class="agent-words">
-                                <span class="agent-label">{tString('suggestedOps.agentReason')}</span>
-                                <span class="agent-text">{g.rationale}</span>
-                            </p>
+                {#if !headingHidden || sweep.rationale}
+                    <header class="sweep-head">
+                        {#if !headingHidden}
+                            <!-- The heading for the groups under it; the exact moment rides the tooltip. -->
+                            <h3 class="sweep-heading">
+                                <span use:tooltip={formatDateTime(sweep.createdAt)}>{sweepHeading(sweep)}</span>
+                            </h3>
                         {/if}
-
-                        <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each suggestion card's own Review / Approve / Reject, one row per group in the list; the dialog's actions are in its footer -->
-                        <div class="group-actions">
-                            {#if g.groupId === suggestedOpsState.openGroupId}
-                                <Button variant="secondary" onclick={collapseGroup}>
-                                    {tString('suggestedOps.collapse')}
-                                </Button>
-                            {:else}
-                                <Button variant="secondary" onclick={() => void expandGroup(g.groupId)}>
-                                    {tString('suggestedOps.review')}
-                                </Button>
-                            {/if}
-                            <Button
-                                variant="primary"
-                                disabled={suggestedOpsState.busyGroupId !== null}
-                                onclick={() => void approveGroup(g.groupId)}
-                            >
-                                {g.groupId === suggestedOpsState.openGroupId
-                                    ? tString('suggestedOps.approveCount', { count: approvableCount() })
-                                    : tString('suggestedOps.approve')}
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                disabled={suggestedOpsState.busyGroupId !== null}
-                                onclick={() => void rejectGroup(g.groupId)}
-                            >
-                                {tString('suggestedOps.reject')}
-                            </Button>
-                        </div>
-
-                        {#if reason}
-                            <!-- An approval that didn't start gave the group back: it's pending
-                                 again and nothing ran, so the reason sits right under the button
-                                 the user just pressed. -->
-                            <div class="refusal" role="alert">
-                                <span class="refusal-label">{tString('suggestedOps.refusal.label')}</span>
-                                <!-- eslint-disable-next-line svelte/no-at-html-tags -- markup from the typed error via `refusalReason`: the write-error pipeline escapes every name and path. Same boundary as the queue's failed row. -->
-                                <p class="refusal-message selectable">{@html reason.message}</p>
-                                <p class="refusal-suggestion selectable">{reason.suggestion}</p>
-                            </div>
+                        {#if sweep.rationale}
+                            <AgentReason text={sweep.rationale} />
                         {/if}
+                    </header>
+                {/if}
 
-                        {#if g.groupId === suggestedOpsState.openGroupId}
-                            {#if suggestedOpsState.changedUnderReview}
-                                <!-- The rows stay exactly where they are. Re-ordering a list
-                                     somebody is halfway through deciding on is how a wrong row
-                                     gets approved. -->
-                                <div class="changed" role="status">
-                                    <span>{tString('suggestedOps.changedUnderReview')}</span>
-                                    <Button variant="secondary" onclick={() => void refreshSuggestions()}>
-                                        {tString('suggestedOps.showNewVersion')}
-                                    </Button>
-                                </div>
-                            {/if}
-
-                            <!-- The other half of the juxtaposition: the agent's reason is
-                                 labelled as its words above, and these are the facts Cmdr holds
-                                 by itself, so a claim can be checked against something the agent
-                                 could not invent. -->
-                            <p class="facts-label">{tString('suggestedOps.cmdrFacts')}</p>
-
-                            <div class="col-heads" aria-hidden="true">
-                                <span>{tString('suggestedOps.columnFile')}</span>
-                                {#if g.verb === 'rename'}
-                                    <span>{tString('suggestedOps.columnNewName')}</span>
-                                {/if}
-                                <span>{tString('suggestedOps.columnSize')}</span>
-                                <span>{tString('suggestedOps.columnChanged')}</span>
-                            </div>
-
-                            {#if suggestedOpsState.windowError}
-                                <!-- The list only asks for rows again when the viewport moves, so a
-                                     read that didn't come back needs its own way to ask. -->
-                                <div class="changed files-problem" role="alert">
-                                    <span>{tString('suggestedOps.filesLoadFailed')}</span>
-                                    <Button
-                                        variant="secondary"
-                                        onclick={() => void ensureOpWindow(g.groupId, virtual.startIndex)}
-                                    >
-                                        {tString('suggestedOps.retryFiles')}
-                                    </Button>
-                                </div>
-                            {/if}
-
-                            <div
-                                class="op-list"
-                                onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)}
-                                bind:clientHeight={viewportHeight}
-                            >
-                                <div class="op-spacer" style:height="{virtual.totalSize}px">
-                                    <div class="op-window" style:transform="translateY({virtual.offset}px)">
-                                        {#each visibleIndexes as index (index)}
-                                            {@const op = opAt(index)}
-                                            <div class="op-row" style:height="{ROW_HEIGHT}px">
-                                                {#if op}
-                                                    <Checkbox
-                                                        checked={!suggestedOpsState.deselected.has(op.opId)}
-                                                        onCheckedChange={() => { toggleOp(op.opId); }}
-                                                        ariaLabel={tString('suggestedOps.includeFile')}
-                                                    />
-                                                    <span class="cell path" use:tooltip={op.sourcePath}>
-                                                        {op.sourcePath}
-                                                    </span>
-                                                    {#if g.verb === 'rename'}
-                                                        <span class="cell">{op.newName ?? ''}</span>
-                                                    {/if}
-                                                    <span class="cell">
-                                                        <Size
-                                                            bytes={op.snapshotSize}
-                                                            fallback={tString('suggestedOps.noIndexData')}
-                                                        />
-                                                    </span>
-                                                    <span class="cell">
-                                                        {#if op.snapshotModified === null}
-                                                            {tString('suggestedOps.noIndexData')}
-                                                        {:else}
-                                                            <DateLabel modifiedAt={op.snapshotModified} />
-                                                        {/if}
-                                                    </span>
-                                                {:else if !suggestedOpsState.windowError}
-                                                    <span class="op-pending">{tString('suggestedOps.loadingFiles')}</span>
-                                                {/if}
-                                            </div>
-                                        {/each}
-                                    </div>
-                                </div>
-                            </div>
-                        {/if}
-                    </article>
+                {#each sweep.groups as group (group.groupId)}
+                    <SuggestedOpsGroup {group} />
                 {/each}
             </section>
         {/each}
@@ -288,9 +132,49 @@
 </ModalDialog>
 
 <style>
-    .lede {
-        margin: 0 0 var(--spacing-md);
+    /* The same warning look as the delete dialog's no-Trash banner, plus a way to close it
+       for good. Every paragraph here sets its own margin: the global one is a prose rhythm. */
+    .approval-notice {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border: 1px solid var(--color-warning);
+        border-radius: var(--radius-md);
+        background: var(--color-warning-bg);
+    }
+
+    .approval-notice p {
+        flex: 1 1 auto;
+        margin: 0;
         color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    .approval-notice-icon {
+        display: inline-flex;
+        flex-shrink: 0;
+        color: var(--color-warning);
+    }
+
+    .approval-notice-close {
+        display: inline-flex;
+        flex-shrink: 0;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: none;
+        color: var(--color-text-secondary);
+    }
+
+    .approval-notice-close:hover {
+        color: var(--color-text-primary);
+    }
+
+    .approval-notice-close:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
     }
 
     .notice {
@@ -305,186 +189,32 @@
         color: var(--color-error-text);
     }
 
-    .sweep {
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .sweep-header {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xxs);
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .group {
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-sm);
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .group-head {
-        display: flex;
-        align-items: baseline;
-        gap: var(--spacing-sm);
-    }
-
-    .group-name {
-        margin: 0;
-        font-size: var(--font-size-md);
-        font-weight: 600;
-    }
-
-    .count {
-        color: var(--color-text-secondary);
-        font-size: var(--font-size-sm);
-    }
-
-    .markers {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-xxs);
-        margin: var(--spacing-xxs) 0;
-        padding: 0;
-        list-style: none;
-    }
-
-    .marker {
-        padding: 0 var(--spacing-xxs);
+    /* The one notice above the list, so it reads as a banner over what follows, in the tint
+       a group's own change notice uses for the same urgency. */
+    .decision-notice {
+        margin: 0 0 var(--spacing-lg);
+        padding: var(--spacing-xs) var(--spacing-sm);
         border-radius: var(--radius-sm);
-        background: var(--color-bg-tertiary);
-        color: var(--color-text-secondary);
-        font-size: var(--font-size-xs);
-    }
-
-    /* "Can't be undone" has to look different from the neutral markers beside it:
-       it's the one that decides whether the user approves the group. */
-    .marker.danger {
         background: var(--color-error-bg);
         color: var(--color-error-text);
-    }
-
-    /* The agent's words are visibly ITS words. The label isn't decoration: an unlabelled
-       reason reads as something Cmdr checked. */
-    .agent-words {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xxs);
-        margin: var(--spacing-xxs) 0;
-    }
-
-    .agent-label {
-        color: var(--color-text-tertiary);
-        font-size: var(--font-size-xs);
-    }
-
-    .agent-text {
-        font-style: italic;
-        color: var(--color-text-secondary);
-    }
-
-    .group-actions {
-        display: flex;
-        gap: var(--spacing-xxs);
-        margin-top: var(--spacing-xs);
-    }
-
-    /* A refusal is the one thing on the group the user has to act on, so it carries the error
-       color, like the queue's failed row that words the same errors. */
-    .refusal {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xxs);
-        margin-top: var(--spacing-xs);
-    }
-
-    .refusal-label {
-        color: var(--color-text-tertiary);
-        font-size: var(--font-size-xs);
-    }
-
-    .refusal-message,
-    .refusal-suggestion {
-        margin: 0;
         font-size: var(--font-size-sm);
     }
 
-    .refusal-message {
-        color: var(--color-error-text);
+    .sweep + .sweep {
+        margin-top: var(--spacing-xl);
     }
 
-    .refusal-suggestion {
-        color: var(--color-text-secondary);
-    }
-
-    .changed {
+    .sweep-head {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-xs);
-        padding: var(--spacing-xxs) var(--spacing-xs);
-        border-radius: var(--radius-sm);
-        background: var(--color-bg-tertiary);
-    }
-
-    /* Files that didn't load are a problem to act on, unlike the neutral change notice whose
-       box this borrows. */
-    .files-problem span {
-        color: var(--color-error-text);
-    }
-
-    .col-heads,
-    .op-row {
-        display: grid;
-        grid-template-columns: auto minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr);
-        align-items: center;
+        flex-direction: column;
         gap: var(--spacing-xs);
+        padding-bottom: var(--spacing-md);
     }
 
-    .facts-label {
-        margin: var(--spacing-sm) 0 0;
-        color: var(--color-text-tertiary);
-        font-size: var(--font-size-xs);
-    }
-
-    .col-heads {
-        grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr);
-        margin-top: var(--spacing-xs);
-        padding: 0 var(--spacing-xxs);
-        color: var(--color-text-tertiary);
-        font-size: var(--font-size-xs);
-    }
-
-    .op-list {
-        max-height: 360px;
-        overflow-y: auto;
-        border-top: 1px solid var(--color-border);
-    }
-
-    .op-spacer {
-        position: relative;
-    }
-
-    .op-window {
-        position: absolute;
-        inset-inline: 0;
-        top: 0;
-    }
-
-    .op-row {
-        padding: 0 var(--spacing-xxs);
-        font-size: var(--font-size-sm);
-    }
-
-    .cell {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .op-pending {
-        grid-column: 1 / -1;
-        color: var(--color-text-tertiary);
+    /* A heading for the groups under it, a step above their titles. */
+    .sweep-heading {
+        margin: 0;
+        font-size: var(--font-size-lg);
+        font-weight: 600;
     }
 </style>

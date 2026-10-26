@@ -207,7 +207,7 @@ interface ListingSignIn {
   credentialSource: CredentialSource
 }
 
-/** Guest, the way "Use guest" and the sheet's guest choice ask for it. */
+/** Guest, the way "Browse as guest" and the sheet's guest choice ask for it. */
 const AS_GUEST: ListingSignIn = { username: null, password: null, credentialSource: 'typed' }
 
 /**

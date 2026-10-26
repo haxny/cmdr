@@ -87,12 +87,13 @@ Writing them:
   deferred, load via `ToolSearch` first). Read a subsystem's `C.md` proactively when running its tooling/tests without
   touching it (like `test/e2e-playwright/CLAUDE.md` before the E2E suite).
 - **Before planning**, read `docs/architecture.md`: the subsystem map (what + where + a pointer per area).
+- **Filing or triaging an issue**: `docs/tooling/backlog-board.md` (labels and board fields).
 - **A procedure** (release, screenshots, deps, adding a window): `docs/guides/` and the skills. Building a dialog,
   settings screen, window, or form control: `docs/guides/building-ui.md` (house primitives, and where each deeper doc
   lives). Two "icon" docs: a UI glyph is `docs/guides/icons.md`; the app icon and every logo raster come from
   `brand/logos/cmdr.svg` via `docs/guides/updating-icon.md`.
 - **Debugging a running app / reading logs**: [This](docs/tooling/logging.md) is the first stop, before `Console.app` or
-  grepping code. All (FE & BE) log paths, format, and `RUST_LOG` recipes.
+  grepping code. All (FE & BE) log paths, format, and `RUST_LOG` recipes, plus how to read a past Ask Cmdr chat.
 - **CPU, RAM, or idle cost**: `docs/notes/performance/README.md` first.
 - **A report from a USER** (`ERR-XXXXX`, a crash, in-app feedback): `docs/tooling/feedback-and-error-digest.md`. The
   logging doc above covers the LOCAL app and won't find one.
@@ -140,12 +141,14 @@ Writing them:
 ## Checker script
 
 Always use **`pnpm check`** at the repo root (never raw `cargo` / `vitest` / etc.); it's cache-aware. **Before each
-commit: `pnpm check --fast && pnpm check svelte-tests-related`**, plus `pnpm check clippy` if you touched Rust (naming a
-check runs only that one). `--fast` (~6 s) is light scanners only, no compilers, typecheckers, test suites, or
-formatters; `svelte-tests-related` runs the vitest files that reach your branch's changes; clippy (~25 s warm) catches
-in seconds what would otherwise cost a 30-minute CI cycle. CI runs the rest (§ Workflow). Scope by name
-(`pnpm check clippy`), tech (`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. Don't even try to tail
-the checker script.
+commit: `pnpm check --fast && pnpm check svelte-tests-related`**, plus, if you touched Rust, `pnpm check clippy` (naming
+a check runs only that one) and the Rust tests you touched (`cargo nextest run <name>`, see `docs/tooling/testing.md`).
+`--fast` (~6 s) is light scanners only, no compilers, typecheckers, test suites, or formatters; `svelte-tests-related`
+runs the vitest files that reach your branch's changes; clippy (~25 s warm) catches in seconds what would otherwise cost
+a 30-minute CI cycle. CI runs the rest (§ Workflow). Scope by name (`pnpm check clippy`), tech (`rust`), or app
+(`desktop`). Full docs in `scripts/check/CLAUDE.md`. Before landing, run `pnpm check` in the background (it can pass 10
+min on a busy Mac). Add `pnpm check --only-slow`, also backgrounded, only after the last milestone of a large effort (5+
+non-translator subagents). ❌ Never `--include-slow`.
 
 ## Testing
 

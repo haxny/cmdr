@@ -59,9 +59,9 @@
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr no ha podido confirmar que las copias se escribieran por completo en el disco. Si la unidad se ha desconectado o está dando problemas, compruébalas antes de fiarte de ellas.",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr no ha podido confirmar que las copias se escribieran por completo en la unidad. Si se ha desconectado o está dando problemas, compruébalas antes de fiarte de ellas.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Este servidor no puede almacenar {classes}, así que esa información se ha quedado atrás.",
   "@transfer.metadataLeftBehind": {

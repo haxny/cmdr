@@ -141,7 +141,7 @@
 
   "indexing.step.findFilesPhased": "First time through, so this takes a while. Your folders become searchable as Cmdr reaches them.",
   "@indexing.step.findFilesPhased": {
-    "description": "Reassuring sub-line under the active “Find files” checklist step while Cmdr builds a drive’s first index folder by folder. Two short sentences: the first sets the expectation that it is slow, the second says the payoff that makes the wait different from a plain first scan — the drive comes back in pieces, so searching and folder sizes start working before the whole thing is done. Calm and friendly; sentence case; no trailing period on the second sentence. “Cmdr” is the product name and stays as-is.",
+    "description": "Reassuring sub-line under the active “Find files” checklist step while Cmdr builds a drive’s first index folder by folder. Two short sentences: the first sets the expectation that it is slow, the second says the payoff that makes the wait different from a plain first scan: the drive comes back in pieces, so searching and folder sizes start working before the whole thing is done. Calm and friendly; sentence case. “Cmdr” is the product name and stays as-is.",
     "screenshot": "indexing-checklist.png"
   },
 

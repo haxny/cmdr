@@ -2640,6 +2640,7 @@
     "search.recentSearches.maxCount": 1000,
     "securityLog.enabled": true,
     "selection.recentSelections.maxCount": 1000,
+    "suggestedOps.suppressApprovalNotice": false,
     "theme.mode": "system",
     "updates.attachEmailToReports": false,
     "updates.autoCheck": true,

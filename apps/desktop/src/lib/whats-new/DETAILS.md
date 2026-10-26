@@ -41,10 +41,10 @@ applied on next launch. The toast side: `#lib/updates/DETAILS.md` § The securit
 - **It never gets stamped away.** An empty changelog slice with a notice still opens. Changelogs turned off still show
   the notice on its own, because "Not interested in changelogs" isn't an opt-out from security advisories. Like any
   show, it waits out onboarding and startup modals (`wait` never stamps), so the next chance still has it.
-- **Shape.** One fix: "This version fixed a security issue." plus "Read the advisory". Several: the plural headline and
-  one "Read advisory {id}" link each, so identical link texts never point at different pages. An advisory whose link the
-  backend refused still counts, without a link. The notice sits above `.scroll-area`, so it stays in view and its links
-  aren't double-opened by the markdown click delegate.
+- **Shape.** One fix: "Recent updates fixed a security issue." plus "Read the advisory". Several: the plural headline
+  and one "Read advisory {id}" link each, so identical link texts never point at different pages. An advisory whose link
+  the backend refused still counts, without a link. The notice sits above `.scroll-area`, so it stays in view and its
+  links aren't double-opened by the markdown click delegate.
 - **Not on the manual reopen.** Help > What's new isn't tied to an update, so `openWhatsNew` passes no advisories. The
   dev override (`CMDR_SIMULATE_UPDATE_FROM`) does ask, from its simulated version.
 - Gallery states `security-notice` and `security-notice-only` show both shapes for design review.

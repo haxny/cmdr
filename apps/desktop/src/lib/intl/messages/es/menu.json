@@ -312,9 +312,9 @@
   "@menu.view.operationLog": {
     "sourceHash": "2c97965"
   },
-  "menu.view.suggestedOps": "Operaciones sugeridas",
+  "menu.view.suggestedOps": "Sugerencias de IA",
   "@menu.view.suggestedOps": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "menu.view.askCmdr": "Ask Cmdr",
   "@menu.view.askCmdr": {
@@ -658,9 +658,9 @@
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"
   },
-  "menu.volume.editFavoriteShortcut": "Asignar atajo…",
+  "menu.volume.editFavoriteShortcut": "Asignar tecla de atajo…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Quitar",
   "@menu.volume.removeFavorite": {

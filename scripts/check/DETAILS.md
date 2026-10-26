@@ -20,9 +20,6 @@ pnpm check rustfmt clippy
 pnpm check rust
 pnpm check website
 
-# Include slow checks
-pnpm check --include-slow
-
 # Run only slow checks
 pnpm check --only-slow
 
@@ -1068,9 +1065,6 @@ slow checks locally without the CI-only ones"). Negative-sense default (`false` 
 fields.
 
 ## Gotchas
-
-**`--only-slow` needs ~20 min timeout.** Slow checks (E2E tests, `rust-tests-linux`) take significantly longer than the
-default checks. When running `--only-slow` via an agent or CI, set the timeout to at least 20 minutes (1,200,000 ms).
 
 **Concurrent SMB-touching runs across worktrees now coexist.** Two `pnpm check` invocations in different worktrees (or a
 `check.sh` alongside a manual `start.sh` / `pnpm test:e2e:linux`) each take a machine-wide `stacklease` lease and share

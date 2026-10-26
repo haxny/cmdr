@@ -106,6 +106,7 @@ and the top traps live in `style.md`; don't repeat them here.
 - rotate (through a cycle) → `permuter`; `faire pivoter` is images. `askCmdr.stalled` ends `…ou arrêter` (Stop).
 - "This can't be undone" → `Cette opération est irréversible` (Finder). reason → `raison` (`motif` is a pattern).
 - Rename undo → `Anciens noms restaurés pour N fichiers.`: `restaurer` for names, `remettre en place` for the trash.
+- AI suggestions (`suggestedOps.title`) → `Suggestions de l’IA`, as `fileOperations.mkdir.aiSuggestions*`.
 
 ## IA dans le cloud et lecture des fichiers (`ai.cloudConsent.*`, `askCmdr.gate.cloudOff.body`, `settings.ai.cloudConsent.lockedHint`, `settings.askCmdr.enabled.label`, `askCmdr.tool.inspectFile.*`)
 
@@ -321,8 +322,7 @@ and the top traps live in `style.md`; don't repeat them here.
 
 ## Le hub des serveurs : la feuille (`servers.sheet.*`, `servers.hostKey.*`, `goToPath.dialog.opensServer`, `goToPath.dialog.addsServer`, `commands.serversConnect.label`)
 
-- `Protocole`; SMB / SFTP / WebDAV stay. passphrase → `phrase secrète`; both `*.changedDisclosure` say `J’ai vérifié`.
-  remote → `distant`, postposed; `Fichier de clé`.
+- `Protocole`; SMB / SFTP / WebDAV stay. passphrase → `phrase secrète`. remote → `distant`, postposed; `Fichier de clé`.
 - Sheet titles are infinitives (`Ajouter un serveur`, `S’identifier sur {name}`); `Comment se connecter`. Username and
   password spelled out over the ambiguous `identifiants`. `Cmdr ne se connectera pas à {name}` (permanent).
 - `Ajouter` / `Ajouter et ouvrir` / `Ajouter quand même` (Apple's `Enregistrer quand même`); `Facultatif`. `nas.local`

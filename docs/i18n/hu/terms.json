@@ -79,6 +79,19 @@
       "settings.appearance.tintGroupDescription": "adds a tint → háttérszínezést ad: the natural verb for giving a visual effect."
     }
   },
+  "administrator": {
+    "chosen": "rendszergazda",
+    "accept": ["rendszergazd"],
+    "forms": "administrator password → rendszergazdai jelszó; administrator rights → rendszergazdai jogosultság; a server's administrator → a rendszergazda",
+    "avoid": [
+      {
+        "form": "adminisztrátor",
+        "why": "macOS Finder's word, but the catalog ships rendszergazda 8× and Microsoft prefers it (72× vs 25×); one word covers both senses"
+      }
+    ],
+    "confidence": "high",
+    "sources": "catalog (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac, errors.listing.quotaExceeded.suggestion); ms (administrator → rendszergazda); macOS Finder (adminisztrátori név és jelszó, outvoted by the catalog)"
+  },
   "advanced": {
     "chosen": "Speciális",
     "confidence": "high",
@@ -102,7 +115,7 @@
     "forms": "the AI (the model as subject) → az AI (article az: the acronym is vowel-initial when spoken); AI features → AI-funkciók; suffixes attach with a hyphen: AI-t, AI-ról, AI-val",
     "confidence": "high",
     "sources": "catalog (settings.askCmdr.interactiveModel.description, AI-szolgáltató, az AI résznél)",
-    "note": "Where English says the AI, Hungarian says az AI, never a Cmdr: suggestedOps.* (Az AI indoka) names the model, and its neighbor suggestedOps.cmdrFacts (Amit a Cmdr tud) names the app on purpose."
+    "note": "Where English says the AI, Hungarian says az AI, never a Cmdr: suggestedOps.* (Miért, az AI szerint:) names the model, and its neighbor suggestedOps.reversible.moveBack (a Cmdr vissza tudja helyezni) names the app on purpose."
   },
   "ai-provider": {
     "chosen": "szolgáltató",
@@ -288,7 +301,8 @@
     "sources": "ms (archive verb → archivál, a separate entry from the zip-archive noun); Gmail hu",
     "note": "Distinct from the zip-archive noun archívum.",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "English sense: a zip-style archive file (the archive concept), not hiding a chat, so it takes the noun archívum."
+      "fileExplorer.list.rowKind.archive": "English sense: a zip-style archive file (the archive concept), not hiding a chat, so it takes the noun archívum.",
+      "suggestedOps.facts.archive": "English sense: the noun label before the zip file a compress suggestion creates (the archive concept), not hiding a chat, so it takes the noun Archívum."
     }
   },
   "ask": {
@@ -382,7 +396,7 @@
   "blocked": {
     "chosen": "blokkolva",
     "accept": ["megakadályoz", "foglalja", "blokkol"],
-    "forms": "a rename row preflight won't let through → blokkolva (overwriteTooltip, the status {blocked} blokkolva); macOS blocked access → a macOS megakadályozta; Cmdr blocked a web page from its MCP server → A Cmdr blokkolta egy weboldal hozzáférését az MCP-szerverhez",
+    "forms": "a rename row preflight won't let through → blokkolva (overwriteTooltip, the status {blocked} blokkolva); an actor blocking something is blocked-by (megakadályoz)",
     "avoid": [
       {
         "form": "letiltva",
@@ -391,6 +405,18 @@
     ],
     "confidence": "tentative",
     "sources": "descriptive; not an error word"
+  },
+  "blocked-by": {
+    "chosen": "megakadályoz",
+    "forms": "macOS blocked Cmdr from X → A macOS megakadályozta, hogy a Cmdr …; Cmdr blocked a web page from reaching X → A Cmdr megakadályozta, hogy egy weboldal elérje …",
+    "avoid": [
+      {
+        "form": "blokkolta",
+        "why": "blokkolva is the blocked status (a rename preflight won't let through); keep the actor sense apart"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "catalog (errors.listing.notPermitted.explanation, securityNotices.mcpForeignOrigin.title); ms (block → letilt, the settings sense)"
   },
   "brief-view": {
     "chosen": "Rövid",
@@ -604,7 +630,7 @@
       "nézd át",
       "átvizsgál"
     ],
-    "forms": "progress Ellenőrzés…; Checking for changes → Változások ellenőrzése; Checking for conflicts → Ütközések keresése; Re-check button → Újraellenőrzés; I've checked it → Ellenőriztem",
+    "forms": "progress Ellenőrzés…; Checking for changes → Változások ellenőrzése; Checking for conflicts → Ütközések keresése; Re-check button → Újraellenőrzés; I've checked the key / the certificate → Ellenőriztem a kulcsot / Ellenőriztem a tanúsítványt",
     "confidence": "high",
     "sources": "macOS Finder (BN9 „^0” tartalmának ellenőrzése); TextToSpeech VB_CHECK_AGAIN (Check Again = Újraellenőrzés)"
   },
@@ -817,6 +843,12 @@
     "sources": "macOS Finder (N84 Kapcsolódás szerverre…, MN1 Kapcsolódás ide: ^0…); AppKit SavePanel (Connected = Kapcsolódva); Home (Csatlakozás…)",
     "note": "The two stems are a deliberate split: the pane title keeps Apple's kapcsolód-, the sheet's button and its siblings keep csatlakoz- because Connect is shared with fileExplorer.network.connect.",
     "decision": "A szerverlap"
+  },
+  "learn-more": {
+    "chosen": "Bővebben",
+    "confidence": "high",
+    "forms": "More about “X” → Bővebben: X (a colon, no quotes)",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
   "link": {
     "chosen": "link",
@@ -1607,7 +1639,7 @@
   },
   "git-unborn": {
     "chosen": "még nincs commit",
-    "forms": "the pill → {branch} (még nincs commit); the tooltip → Aktuális ág: {branch} (még nincs commit). The concept is carried by the parenthesis, never a literal születetlen.",
+    "forms": "the pill → {branch} (még nincs commit); the tooltip → Aktuális ág: „{branch}” (még nincs commit). The concept is carried by the parenthesis, never a literal születetlen.",
     "confidence": "tentative",
     "sources": "descriptive (the English pill’s own gloss, no commits yet); no pile source has unborn branch"
   },
@@ -1840,7 +1872,7 @@
   },
   "guest": {
     "chosen": "vendég",
-    "forms": "Connect as guest → Csatlakozás vendégként; as guest → vendégként (pairs with {username} felhasználóként); Use guest → Váltás vendégre; guest access → vendéghozzáférés",
+    "forms": "Connect as guest → Csatlakozás vendégként; as guest → vendégként (pairs with {username} felhasználóként); Browse as guest → Böngészés vendégként; guest access → vendéghozzáférés",
     "confidence": "high",
     "sources": "macOS NetAuthAgent (GUEST Vendég, EINFO_NO_ACCESS_GUEST)"
   },
@@ -2433,11 +2465,7 @@
     "accept": ["megoszt"],
     "forms": "network share → hálózati megosztás; SMB/Network shares → SMB-/hálózati megosztások; a runtime share name → ezt a megosztást: „{share}”, or Nincs „{share}” nevű megosztás",
     "confidence": "high",
-    "sources": "ms (network share → hálózati megosztás); macOS NetAuthAgent (EINFO_NO_SHARE)",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "share it yourself is the verb, not an SMB share: magad oszthatod meg (the preverb splits off, so megoszt doesn't match).",
-      "servers.sheet.addressHelpNfs": "share is the literal path in the example addresses (nfs://nas.local/share), kept verbatim"
-    }
+    "sources": "ms (network share → hálózati megosztás); macOS NetAuthAgent (EINFO_NO_SHARE)"
   },
   "new-file": {
     "chosen": "Új fájl",
@@ -3084,11 +3112,7 @@
       }
     ],
     "confidence": "high",
-    "sources": "macOS Finder (Átnevezés, RN33/RN37 nem nevezhető át)",
-    "exceptions": {
-      "multiRename.undoStarted": "Renaming back = the old name restored: visszaállítás for an old name (style § Top traps), as askCmdr.renameUndo.*",
-      "multiRename.undoTooltip": "Renames back = the old name restored: visszaállítja (style § Top traps), as askCmdr.renameUndo.*"
-    }
+    "sources": "macOS Finder (Átnevezés, RN33/RN37 nem nevezhető át)"
   },
   "rename-cycle": {
     "chosen": "átnevezési ciklus",
@@ -3521,14 +3545,7 @@
     "accept": ["indul", "indítás"],
     "forms": "at startup → indításkor; wait for it to start up → várd meg, amíg elindul",
     "confidence": "high",
-    "sources": "catalog",
-    "exceptions": {
-      "multiRename.error.couldntWriteNames": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "lowDiskSpace.notification.body": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "lowDiskSpace.toast.message": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.description": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting.",
-      "settings.behavior.fileSystemWatching.lowDiskSpaceThresholdPercent.description": "English-sense: startup disk is the startup-disk concept (indítólemez), not the app starting."
-    }
+    "sources": "catalog"
   },
   "startup-disk": {
     "chosen": "indítólemez",
@@ -3578,8 +3595,15 @@
   "suggestion": {
     "chosen": "javaslat",
     "accept": ["javasol"],
-    "forms": "Suggested operations → Javasolt műveletek",
+    "forms": "the AI suggestions dialog, its View menu item, and palette entry → AI-javaslatok (same English as fileOperations.mkdir.aiSuggestions*); a batch heading → Javasolva: …",
+    "avoid": [
+      {
+        "form": "Javasolt műveletek",
+        "why": "the dialog is titled AI suggestions now, the same English the mkdir dialog already renders AI-javaslatok"
+      }
+    ],
     "confidence": "high",
+    "decision": "AI-javaslatok (`suggestedOps.*`, `commands.suggestedOpsShow.*`, `menu.view.suggestedOps`)",
     "sources": "catalog"
   },
   "supported": {
@@ -3640,6 +3664,19 @@
     "forms": "tooltip → automatikus követés",
     "confidence": "tentative",
     "sources": "descriptive (no pile term)"
+  },
+  "tamper": {
+    "chosen": "beavatkozik",
+    "accept": ["beavatkoz"],
+    "forms": "someone tampering with traffic → valaki beavatkozik a forgalomba; with the connection → beavatkozik a kapcsolatba; with updates → beavatkozik a frissítésekbe",
+    "avoid": [
+      {
+        "form": "illetéktelen módosítás",
+        "why": "Microsoft's noun reads like a legal notice, not Cmdr's calm voice"
+      }
+    ],
+    "confidence": "high",
+    "sources": "catalog (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid, securityNotices.updateNotGenuine.body, 5× in all); ms (tamper → illetéktelen módosítás, rejected)"
   },
   "tap": {
     "chosen": "koppint",
@@ -3803,11 +3840,25 @@
     "confidence": "high",
     "sources": "macOS Finder (NE105 A(z) „^0” hibába ütközött.); catalog reconciliation"
   },
+  "uninstall": {
+    "chosen": "eltávolítás",
+    "accept": ["eltávolít"],
+    "forms": "the menu item → „cmdr” parancs eltávolítása; the toast → A „cmdr” parancs eltávolítva.; Couldn't uninstall → Nem sikerült eltávolítani",
+    "confidence": "high",
+    "sources": "ms (uninstall → eltávolítás); catalog (menu.app.cliCommandUninstall, commands.appToggleCliCommand.uninstall.label)"
+  },
   "unlock": {
     "chosen": "Feloldás",
     "accept": ["felold", "oldd fel", "fel nem old", "fel van oldva", "fel kell old", "oldotta fel"],
     "confidence": "high",
     "sources": "macOS AppKit (Feloldás)"
+  },
+  "unlock-device": {
+    "chosen": "felold",
+    "accept": ["oldd fel", "feloldá", "fel van oldva", "fel kell old"],
+    "forms": "unlock the phone → oldd fel a telefon zárolását; after the phone was just named → oldd fel a zárolását",
+    "confidence": "high",
+    "sources": "ms (unlock → felold, feloldás); macOS DiskUtility (Oldja fel a lemez védettségét); catalog (errors.listing.deviceDisconnected.suggestion: oldd fel a zárolását)"
   },
   "unplug": {
     "chosen": "kihúz",
@@ -4091,12 +4142,9 @@
       },
       {
         "form": "kötegelt átnevezés",
-        "why": "a second name for the same tool; onboarding.stepAi.table.renameWithout should be realigned to csoportos átnevezés"
+        "why": "a second name for the same tool"
       }
     ],
-    "exceptions": {
-      "onboarding.stepAi.table.rowRename": "Mass-rename → Tömeges átnevezés: an AI-capability row in the onboarding comparison table, different English from the tool's name (Multi-rename)."
-    },
     "confidence": "high",
     "sources": "Total Commander hu (LNG 6601 Csoportos átnevezés, MNU/INC 2400 Csoportos átnevezés…, INC -9 Tárolt csoportos átnevezés megnyitása); Double Commander hu (tfrmmultirename.caption Többszörös átnevezés eszköz, rejected)"
   },
@@ -4113,5 +4161,31 @@
     "forms": "invalid → érvénytelen (Érvénytelen név, Érvénytelen fájlnév); isn't valid → nem érvényes",
     "confidence": "high",
     "sources": "MS terminology (valid → érvényes, invalid → érvénytelen); macOS CoreTypes (Érvénytelen argumentum); catalog (errors.write.invalidName.title Érvénytelen fájlnév)"
+  },
+  "from-to": {
+    "chosen": "Forrás / Cél",
+    "accept": ["Forrás", "Cél", "Innen"],
+    "forms": "group headings and fact labels → Forrás / Cél; the inline label before a scan-phase path → Innen:",
+    "confidence": "high",
+    "sources": "catalog (fileOperations.transferDialog.sourceGroupTitle Forrás, targetGroupTitle Cél, scanPhase.fromLabel Innen:); Total Commander and Double Commander hu"
+  },
+  "unknown": {
+    "chosen": "ismeretlen",
+    "accept": ["Ismeretlen"],
+    "forms": "a bare value or table cell → Ismeretlen; in brackets → (ismeretlen)",
+    "confidence": "high",
+    "sources": "macOS Finder hu (Ismeretlen, Ismeretlen típus); catalog (ai.local.modelUnknown Ismeretlen, fileOperations.transferProgress.sizeUnknown (ismeretlen))"
+  },
+  "time-ago": {
+    "chosen": "ezelőtt",
+    "accept": ["az imént"],
+    "forms": "{durationText} ezelőtt; a spelled-out count takes -val/-vel: {countText} perccel ezelőtt; a moment ago → az imént",
+    "confidence": "high",
+    "exceptions": {
+      "fileExplorer.errorPane.secondsAgo": "a terse age chip in the error pane: the bare abbreviation ({seconds} mp) already reads as elapsed time, and ezelőtt would crowd the chip",
+      "fileExplorer.errorPane.minutesAgo": "a terse age chip in the error pane: the bare abbreviation ({minutes} p) already reads as elapsed time, and ezelőtt would crowd the chip",
+      "fileExplorer.errorPane.hoursAgo": "a terse age chip in the error pane: the bare abbreviation ({hours} ó) already reads as elapsed time, and ezelőtt would crowd the chip"
+    },
+    "sources": "macOS Finder hu (Egy héttel ezelőtt); catalog (ui.toast.age, queryUi.age.*, fileExplorer.errorPane.aMomentAgo)"
   }
 }

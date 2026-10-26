@@ -71,9 +71,9 @@
   "@crashReporter.sentToast.message.report": {
     "sourceHash": "a676ed5"
   },
-  "crashReporter.sentToast.changeSettings": "Ändra under Inställningar > Uppdateringar",
+  "crashReporter.sentToast.changeSettings": "Ändra i Inställningar",
   "@crashReporter.sentToast.changeSettings": {
-    "sourceHash": "25d151d"
+    "sourceHash": "144d0bd"
   },
   "crashReporter.sentToast.sendLog": "Bifoga logg",
   "@crashReporter.sentToast.sendLog": {

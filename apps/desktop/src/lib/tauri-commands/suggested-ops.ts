@@ -11,8 +11,11 @@ import {
   commands,
   events,
   type ApprovalResultView,
+  type OpSelection,
   type RejectResultView,
+  type SuggestedOpLiveFact,
   type SuggestedOpPage,
+  type SuggestedOpsLiveFactsError,
   type SuggestedSweepView,
   type SuggestionsChanged,
 } from '#lib/ipc/bindings.js'
@@ -34,6 +37,22 @@ export async function pageSuggestedOps(groupId: number, offset: number, limit: n
   return res.data
 }
 
+/** What one window of a group's ops is like on disk NOW, beside the creation snapshot the page
+ *  carries. Per-file trouble is that file's `unknown`; a refusal means the source couldn't be asked
+ *  at all (not connected, gone, no such group), which the dialog words once per group. */
+export type SuggestedOpLiveFactsAnswer =
+  | { kind: 'facts'; facts: SuggestedOpLiveFact[] }
+  | { kind: 'refused'; reason: SuggestedOpsLiveFactsError }
+
+export async function liveSuggestedOpFacts(
+  groupId: number,
+  offset: number,
+  limit: number,
+): Promise<SuggestedOpLiveFactsAnswer> {
+  const res = await commands.suggestedOpsLiveFacts(groupId, offset, limit)
+  return res.status === 'error' ? { kind: 'refused', reason: res.error } : { kind: 'facts', facts: res.data }
+}
+
 /** The user said no to a group. Answers what actually happened: a group somebody already
  *  decided keeps its answer, and the dialog re-reads rather than insisting. */
 export async function rejectSuggestedGroup(groupId: number): Promise<RejectResultView> {
@@ -42,10 +61,18 @@ export async function rejectSuggestedGroup(groupId: number): Promise<RejectResul
   return res.data
 }
 
-/** Approve a group: claim it and hand its ops to the queue. Sends the ids the user turned OFF,
- *  never the ones they kept, so approving a 60,000-op group whole carries an empty list. */
-export async function approveSuggestedGroup(groupId: number, deselectedOpIds: number[]): Promise<ApprovalResultView> {
-  const res = await commands.suggestedOpsApprove(groupId, deselectedOpIds)
+/** Approve a group: claim it and hand its ops to the queue. Send whichever ids are fewer: the ones
+ *  the user turned off (`allExcept`) or the ones they kept (`only`), so neither approving a
+ *  60,000-op group whole nor ticking three of them carries 60,000 ids. An `only` that keeps
+ *  nothing answers `nothingSelected` and runs nothing. `revision` is the group's `revision` the
+ *  review showed: if the agent amended the group since, the approval answers `listChanged` and
+ *  nothing runs. */
+export async function approveSuggestedGroup(
+  groupId: number,
+  revision: number,
+  selection: OpSelection,
+): Promise<ApprovalResultView> {
+  const res = await commands.suggestedOpsApprove(groupId, revision, selection)
   if (res.status === 'error') throwSuggestedOpsError(res.error)
   return res.data
 }
@@ -62,11 +89,16 @@ export function onSuggestionsChanged(callback: (payload: SuggestionsChanged) => 
 export type {
   ApprovalResultView,
   DestinationState,
+  LiveFileState,
+  OpSelection,
   SuggestionChange,
   SuggestionsChanged,
   RejectResultView,
+  RunBlocker,
   SuggestedGroupView,
+  SuggestedOpLiveFact,
   SuggestedOpPage,
+  SuggestedOpsLiveFactsError,
   SuggestedOpView,
   SuggestedSweepView,
 } from '#lib/ipc/bindings.js'

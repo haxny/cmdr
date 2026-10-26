@@ -140,7 +140,7 @@
 
   "downloads.fda.message": "Cmdr needs Full Disk Access to watch your Downloads folder.",
   "@downloads.fda.message": {
-    "description": "Info toast shown when jumping to the latest download fails because Cmdr lacks Full Disk Access. 'Full Disk Access' is the exact macOS permission name; keep it as-is."
+    "description": "Info toast shown when jumping to the latest download fails because Cmdr lacks Full Disk Access. \"Full Disk Access\" is Apple's own macOS permission name: use the wording Apple ships in System Settings for this locale."
   },
 
   "downloads.fda.dismiss": "Dismiss",

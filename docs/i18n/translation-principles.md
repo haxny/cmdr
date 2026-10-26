@@ -30,7 +30,11 @@ through `source-queue.md`.
 - **Quote a label exactly**: text that names a button, setting, menu command, dialog, or pane copies that label byte for
   byte: from your own catalog for a Cmdr surface, from the localized OS for a macOS one, and from the device's own UI
   for a third-party one (Android's AOSP strings count as Tier 1, like Apple's). A synonym sends the reader hunting for a
-  control that doesn't exist.
+  control that doesn't exist. A quoted third-party label (a NAS's switch name) is exempt from your avoid-lists: quoting
+  it exactly wins.
+- **Show-the-result labels**: a label that displays its own effect (“lowercase”, “UPPERCASE”, “Every Word Capitalized”)
+  mirrors that casing and is exempt from sentence case. A script without letter case (Chinese, Japanese, Korean)
+  describes the transform in words instead.
 - **Same English, same translation**: identical English gets a byte-identical translation, and variants of one sentence
   share their frame character for character (edit the nearest sibling and change only what English changed). When one
   member of a visible family changes, realign the whole family, and re-check a label's `*Aria` sibling in the same edit.
@@ -47,7 +51,9 @@ through `source-queue.md`.
   placeholder placed where no article or agreement touches it, or the object's type named first ("the folder {name}").
   Never endorse a hedge in a style guide.
 - **No pronoun for an insert**: never point a pronoun or possessive back at an inserted name, path, or app; repeat the
-  noun or use a pronoun-free form. Never let a pronoun reach past a nearer noun of the same gender.
+  noun or use a pronoun-free form. Never let a pronoun reach past a nearer noun of the same gender. The rule bites where
+  the pronoun carries a gender or number the insert may not match (French « il »); a pronoun that carries neither
+  (Traditional Chinese 它) is fine.
 - **Counts**: no definite article before a formatted count ("the {countText} items" renders "the 1 item"); carry
   totality another way. A clause that must agree with the count goes inside the plural branches, and an `=0` / `=1` arm
   is only for different wording ("Skip" vs "Skip all").

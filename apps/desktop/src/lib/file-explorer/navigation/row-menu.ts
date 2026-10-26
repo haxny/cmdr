@@ -263,7 +263,7 @@ export function volumeRowMenu(volume: VolumeInfo, facts: VolumeRowFacts): RowMen
 }
 
 /**
- * A favorite's menu: Rename, Set shortcut, and Remove from favorites. All keep the menu up:
+ * A favorite's menu: Rename, Set shortcut key, and Remove from favorites. All keep the menu up:
  * the editors happen in the row itself, and a list being tidied is several removals in a row. Never
  * greyed: a favorite is a stored `{ path, name }` pair nothing can be using.
  */

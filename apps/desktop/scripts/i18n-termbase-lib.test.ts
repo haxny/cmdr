@@ -78,6 +78,17 @@ describe('englishMatchText', () => {
   it('unescapes the doubled ICU apostrophe', () => {
     expect(englishMatchText('a.b', "Couldn''t copy")).toBe("Couldn't copy")
   })
+  it('drops file-system paths and domains, whose words are names rather than copy', () => {
+    const text = englishMatchText(
+      'a.b',
+      'Install adb in /usr/local/bin or ~/Documents, then see getcmdr.com or nas.local.',
+    )
+    expect(text).not.toMatch(/local|usr|bin|Documents|getcmdr|com/)
+    expect(text).toMatch(/Install adb in .*or .*, then see .*or .*\./)
+  })
+  it('keeps slashed alternatives, rates, and abbreviations, which are copy', () => {
+    expect(englishMatchText('a.b', 'Copy/move at 5 GB/s, e.g. photos')).toBe('Copy/move at 5 GB/s, e.g. photos')
+  })
 })
 
 describe('conceptsInText', () => {

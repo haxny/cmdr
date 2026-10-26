@@ -68,9 +68,9 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
-  "fileOperations.trash.undoGone": "Nada a colocar de volta: {count, plural, one {o item não está mais no Lixo} many {os itens não estão mais no Lixo} other {os itens não estão mais no Lixo}}.",
+  "fileOperations.trash.undoGone": "Nada a colocar de volta: {count, plural, one {o item não estava mais no Lixo} many {os itens não estavam mais no Lixo} other {os itens não estavam mais no Lixo}}.",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "{count, plural, one {{countText} item não estava mais no Lixo} many {{countText} itens não estavam mais no Lixo} other {{countText} itens não estavam mais no Lixo}}.",
   "@fileOperations.trash.undoPartlyGone": {
@@ -269,9 +269,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "Este local já começa em {rootFolder}, então este caminho leva a {resolvedPath}. Você quis dizer {strippedPath}?",
+  "fileOperations.transferDialog.rootEchoWarning": "Os caminhos aqui já começam dentro de {rootFolder}, então o que você digitou leva a {resolvedPath}. Você quis dizer {strippedPath}?",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "Usar caminho mais curto",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -535,7 +535,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Você cancelou esta cópia. Os arquivos copiados até agora ficam onde estão.} move {Você cancelou esta movimentação. Os arquivos movidos até agora ficam onde foram parar.} compress {Você cancelou esta compressão.} delete {Você cancelou esta operação de apagar. Os arquivos apagados até agora não existem mais e o resto continua onde estava.} trash {Você cancelou esta operação de mover para o Lixo. Os arquivos movidos até agora ficam no Lixo e o resto continua onde estava.} other {Você cancelou esta operação.}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Cancelando… (limpando)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -787,7 +787,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {e mais {countText} item} many {e mais {countText} itens} other {e mais {countText} itens}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {Copiar o resto} move {Mover o resto} delete {Apagar o resto} trash {Mover o resto para o Lixo} other {Continuar com o resto}}",
   "@fileOperations.sourcesGone.continue": {

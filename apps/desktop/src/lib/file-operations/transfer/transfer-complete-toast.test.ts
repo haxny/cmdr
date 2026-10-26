@@ -609,7 +609,7 @@ describe('composeDurabilityUnconfirmedToast', () => {
   })
 
   it('says “the disk” when the drive’s name isn’t known', () => {
-    expect(composeDurabilityUnconfirmedToast({ volumeName: null })).toContain('fully written to the disk.')
+    expect(composeDurabilityUnconfirmedToast({ volumeName: null })).toContain('fully written to the drive.')
   })
 
   it('says nothing when the flush confirmed everything', () => {

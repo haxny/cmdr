@@ -70,6 +70,7 @@ vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
   onIndexScanStarted: () => Promise.resolve(() => {}),
   onIndexScanComplete: () => Promise.resolve(() => {}),
+  onIndexScanAborted: () => Promise.resolve(() => {}),
 }))
 
 vi.mock('../network/direct-connect', () => ({ connectDirectly: vi.fn(() => Promise.resolve({ kind: 'connected' })) }))
@@ -923,7 +924,7 @@ describe('renaming a favorite', () => {
 })
 
 /**
- * A favorite's actions (Rename, Set shortcut, Remove from favorites) sit in its → submenu, and a
+ * A favorite's actions (Rename, Set shortcut key, Remove from favorites) sit in its → submenu, and a
  * right-click opens that same submenu: two doors, one list.
  */
 describe('a favorite’s submenu', () => {

@@ -433,12 +433,30 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
   },
   {
     dialogId: 'suggested-ops',
-    label: 'Suggested ops',
+    label: 'AI suggestions',
     hostWindow: 'main',
-    status: 'not-triggerable',
-    reason:
-      'Half-built: the file list, the per-group disclosure, and Reject work, but Approve waits on the M4a bridge, so a preview would show a dialog nobody can finish a decision in. It gets store-seeded fixtures (an irreversible group, a folder that will be created, a pattern-matched group, and a 60,000-op group) once approving is real.',
-    states: [],
+    status: 'ready',
+    openedBy: 'store-seeded',
+    note: 'The groups are fixtures, so Approve and Reject reach the real suggestion store, find no such group, and the dialog re-reads to show what’s really waiting. Every file row’s live facts are seeded; scrolling the 60,000-row group past its first page asks the backend for rows that don’t exist, and says it couldn’t load them.',
+    states: [
+      {
+        id: 'downloads-cleanup',
+        label: 'A Downloads cleanup',
+        note: 'Seven groups: moves to a NAS (one into a folder Cmdr will create, one whose target it couldn’t check, one matched by a pattern), two trash groups (one on a drive with no Trash), a rename, and a copy from several folders. The first group shows a missing file, a changed size, and a file Cmdr couldn’t check.',
+      },
+      {
+        id: 'hard-cases',
+        label: 'Irreversible groups and 60,000 files',
+        note: 'A permanent delete, a compress that overwrites an archive, and a 60,000-op group.',
+      },
+      {
+        id: 'changed-and-refused',
+        label: 'Changed, refused, and unsure',
+        note: 'The AI changed one group under the review (its Approve waits for the reload), another’s approval didn’t start and reopens with the file it unticked still off, and the last approval’s outcome is unknown.',
+      },
+      { id: 'empty', label: 'Nothing waiting' },
+      { id: 'load-error', label: 'Couldn’t read the suggestions' },
+    ],
   },
   {
     dialogId: 'delete-ai-model',

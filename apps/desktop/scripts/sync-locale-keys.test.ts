@@ -16,7 +16,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseSyncArgs, syncLocale, syncableLocales } from './sync-locale-keys.ts'
+import { parseSyncArgs, restampOverlay, syncLocale, syncableLocales } from './sync-locale-keys.ts'
 import { sourceHash } from './i18n-catalog-lib.ts'
 
 const AREA = 'fixture.json'
@@ -231,13 +231,14 @@ describe('syncableLocales', () => {
   const available = ['de', 'en', 'en-GB', 'en-XA', 'pt', 'pt-PT']
   const runWith = (requested: string[]) => {
     const notes: string[] = []
-    const tags = syncableLocales({ requested, available, note: (line) => void notes.push(line) })
-    return { tags, notes }
+    const { tags, overlays } = syncableLocales({ requested, available, note: (line) => void notes.push(line) })
+    return { tags, overlays, notes }
   }
 
   it('sweeps every full translation and skips the overlays', () => {
-    const { tags, notes } = runWith([])
+    const { tags, overlays, notes } = runWith([])
     expect(tags).toEqual(['de', 'en-XA', 'pt'])
+    expect(overlays).toEqual(['en-GB', 'pt-PT'])
     expect(notes).toHaveLength(2)
     expect(notes.join('\n')).toMatch(/Skipped en-GB\/: it's an overlay/)
   })
@@ -245,8 +246,62 @@ describe('syncableLocales', () => {
   it('skips an overlay even when it was asked for by name', () => {
     // Syncing `pt-PT` would clone every `en` key into a catalog that must carry
     // only its forks, and coverage would then flag every one of them.
-    const { tags, notes } = runWith(['pt-PT', 'de'])
+    const { tags, overlays, notes } = runWith(['pt-PT', 'de'])
     expect(tags).toEqual(['de'])
+    expect(overlays).toEqual(['pt-PT'])
     expect(notes.join('\n')).toMatch(/Skipped pt-PT\//)
+  })
+
+  it('refuses a tag that is no locale, naming --restamp when it looks like keys', () => {
+    // A quoted `"a.b --restamp c.d"` arrives as one positional; it used to reach the
+    // file system as a locale dir and die on ENAMETOOLONG.
+    expect(() => runWith(['de', 'a.label --restamp b.label'])).toThrow(/Not a locale.*--restamp/s)
+    expect(() => runWith(['xx'])).toThrow(/Not a locale: xx/)
+  })
+})
+
+describe('restampOverlay', () => {
+  let root: string
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'cmdr-i18n-overlay-'))
+    for (const tag of ['en', 'es', 'es-419']) mkdirSync(join(root, tag), { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  const write = (tag: string, obj: Record<string, unknown>) => {
+    writeFileSync(join(root, tag, AREA), JSON.stringify(obj, null, 2) + '\n', 'utf8')
+  }
+  const read = (tag: string): Record<string, unknown> =>
+    JSON.parse(readFileSync(join(root, tag, AREA), 'utf8')) as Record<string, unknown>
+
+  it('stamps a fork with the hash of the PARENT value it overrides, never adding or dropping keys', () => {
+    write('en', { 'a.label': 'Add', 'a.other': 'Settings' })
+    write('es', { 'a.label': 'Añadir otra vez', 'a.other': 'Ajustes' })
+    write('es-419', {
+      'a.label': 'Agregar otra vez',
+      '@a.label': { sourceHash: sourceHash('Añadir'), reviewed: true },
+    })
+
+    const result = restampOverlay('es-419', { messagesRoot: root, restampKeys: ['a.label', 'a.other'] })
+
+    expect(read('es-419')).toEqual({
+      'a.label': 'Agregar otra vez',
+      '@a.label': { sourceHash: sourceHash('Añadir otra vez') },
+    })
+    expect(result.restampedKeys).toEqual(['a.label'])
+  })
+
+  it('falls back to English for a key the parent lacks, the way the runtime resolves it', () => {
+    write('en', { 'a.label': 'Add' })
+    write('es', {})
+    write('es-419', { 'a.label': 'Agregar', '@a.label': { sourceHash: 'deadbee' } })
+
+    restampOverlay('es-419', { messagesRoot: root, restampKeys: ['a.label'] })
+
+    expect(read('es-419')['@a.label']).toEqual({ sourceHash: sourceHash('Add') })
   })
 })

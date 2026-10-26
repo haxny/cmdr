@@ -98,9 +98,9 @@
     "screenshot": "error-report.png",
     "screenshotNote": "The crash-report dialog (shown on the next launch after Cmdr hit a problem) uses the same report-form layout as the error-report dialog pictured here: an intro, a privacy note, a copyable report ID, and Send/Cancel buttons."
   },
-  "crashReporter.sentToast.changeSettings": "Change in Settings > Updates",
+  "crashReporter.sentToast.changeSettings": "Change in Settings",
   "@crashReporter.sentToast.changeSettings": {
-    "description": "Button on the sent-confirmation toast that opens the app's Settings to the Updates section. \"Settings\" and \"Updates\" are names of in-app navigation locations; keep them consistent with how those sections are named elsewhere in the app.",
+    "description": "Button on the sent-confirmation toast that opens the app's Settings at the Updates & privacy section, where crash reports are turned on or off. \"Settings\" is the name of the app's settings window; use the same word as elsewhere in the app.",
     "screenshot": "error-report.png",
     "screenshotNote": "The crash-report dialog (shown on the next launch after Cmdr hit a problem) uses the same report-form layout as the error-report dialog pictured here: an intro, a privacy note, a copyable report ID, and Send/Cancel buttons."
   },

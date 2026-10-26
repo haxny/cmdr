@@ -10,7 +10,7 @@ and collects the user's choices.
 - `CrashReportDialog.svelte`: the decide-and-send dialog (report ID, expandable JSON, "Always send", attach-email,
   Dismiss / Send report).
 - `CrashReportToastContent.svelte`: the after-auto-send toast (one line, the "Attach logs" offer, and "Change in
-  Settings > Updates").
+  Settings", which opens Updates & privacy).
 - `crash-copy.ts`: maps the report's `appFate` to the body, title, and sent-toast keys that are true of it.
 - `pending-crash-report.ts`: the next-launch check `routes/(main)/+layout.svelte` runs after settings load. Auto-sends
   and toasts, or hands the report to the dialog.

@@ -179,9 +179,10 @@ Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in
 - `behåller sitt namn` (Total Commander); "and so did" → `, liksom …`, ❌ `och det gör …` / `och detsamma gäller`.
   `Det här mappnamnet / filnamnet kan inte användas` (Finder), no period.
 
-## Suggested operations (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
+## AI-förslag (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
 
-- `Godkänn` (❌ macOS's AirDrop `Ta emot`) / `Avböj`.
+- `AI-förslag` (as the indicator); aria `Varför, enligt AI:n:` holds `Varför:`.
+- `Godkänn` (❌ AirDrop `Ta emot`) / `Avböj`; tick boxes `Ta med`, ticking `bocka för` (`Markera` selects files).
 
 ## Duplicate (`commands.fileDuplicate.*`)
 

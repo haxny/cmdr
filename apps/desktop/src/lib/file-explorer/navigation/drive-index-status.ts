@@ -263,8 +263,8 @@ export function driveIndexUnreadableNote(status: VolumeIndexStatus): DriveIndexU
 export type DriveIndexActionFeedback =
   /** The badge itself shows what happened, so a toast would be noise. */
   | { kind: 'silent' }
-  /** Say this, at this level. */
-  | { kind: 'toast'; key: MessageKey; level: 'info' | 'error' }
+  /** Say this, at this level, for `timeoutMs` when it isn't the toast default. */
+  | { kind: 'toast'; key: MessageKey; level: 'info' | 'error'; timeoutMs?: number }
   /** A typed SMB refusal the caller routes: `credentials_needed` goes to the
    *  reconnect flow, everything else to `driveIndexRefusalMessageKey`. */
   | { kind: 'refusal'; reason: DriveIndexRefusal }
@@ -292,8 +292,12 @@ export function driveIndexActionFeedback(
     return { kind: 'toast', key: 'fileExplorer.navigation.driveIndex.refusedGeneric', level: 'error' }
   }
   switch (result.data.status) {
+    // A rescan shows itself in the dot. Turning a drive ON is a lasting choice
+    // made from a 10px dot, so it also gets a word that it took.
     case 'started':
-      return { kind: 'silent' }
+      return action === 'enable'
+        ? { kind: 'toast', key: 'fileExplorer.navigation.driveIndex.enabled', level: 'info', timeoutMs: 5000 }
+        : { kind: 'silent' }
     case 'deferred_until_search_ends':
       return {
         kind: 'toast',

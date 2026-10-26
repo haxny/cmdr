@@ -191,9 +191,9 @@
   "@main.cliCommand.installed": {
     "description": "Success toast (macOS) after the user picked \"Install “cmdr” command\" in the app menu and it worked. cmdr is a terminal command the user types; “cmdr .” (cmdr, a space, and a period) is the literal thing to type, meaning \"this folder\". Keep cmdr, the period, and the space exactly as they are."
   },
-  "main.cliCommand.uninstalled": "Removed the “cmdr” command.",
+  "main.cliCommand.uninstalled": "Uninstalled the “cmdr” command.",
   "@main.cliCommand.uninstalled": {
-    "description": "Success toast (macOS) after the user picked \"Uninstall “cmdr” command\" in the app menu and it worked. cmdr is the literal name of a terminal command; keep it exactly as is."
+    "description": "Success toast (macOS) after the user picked \"Uninstall “cmdr” command\" in the app menu and it worked. cmdr is the literal name of a terminal command; keep it exactly as is. Use the same verb as that menu item (menu.app.cliCommandUninstall), so the menu and its toasts read as one action."
   },
   "main.cliCommand.alreadyInstalled": "The “cmdr” command is already installed.",
   "@main.cliCommand.alreadyInstalled": {
@@ -201,19 +201,19 @@
   },
   "main.cliCommand.alreadyUninstalled": "The “cmdr” command was already gone.",
   "@main.cliCommand.alreadyUninstalled": {
-    "description": "Info toast (macOS) when the user asked to remove the cmdr terminal command, but it had already been removed (for example, from a terminal) by the time Cmdr looked. cmdr is a literal command name; keep it exactly as is."
+    "description": "Info toast (macOS) when the user asked to uninstall the cmdr terminal command, but it had already been removed (for example, from a terminal) by the time Cmdr looked. cmdr is a literal command name; keep it exactly as is."
   },
-  "main.cliCommand.canceled": "Nothing changed. Adding or removing the “cmdr” command takes an administrator password.",
+  "main.cliCommand.canceled": "Nothing changed. Installing or uninstalling the “cmdr” command takes an administrator password.",
   "@main.cliCommand.canceled": {
-    "description": "Info toast (macOS) after the user pressed Cancel in the macOS password dialog that installing or removing the cmdr terminal command asks for. Calm, not a scolding: it says nothing happened and why the password was asked. cmdr is a literal command name; keep it exactly as is."
+    "description": "Info toast (macOS) after the user pressed Cancel in the macOS password dialog that installing or uninstalling the cmdr terminal command asks for. Use the same Install / Uninstall verbs as the app menu items (menu.app.cliCommandInstall, menu.app.cliCommandUninstall). Calm, not a scolding: it says nothing happened and why the password was asked. cmdr is a literal command name; keep it exactly as is."
   },
   "main.cliCommand.installFailed": "Couldn’t install the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
   "@main.cliCommand.installFailed": {
     "description": "Warning toast (macOS) when installing the cmdr terminal command didn't work for a reason other than the user canceling. /usr/local/bin is a folder path on the Mac and must stay exactly as is; cmdr is a literal command name. Don't use words like \"error\" or \"failed\": say what didn't happen and what to try."
   },
-  "main.cliCommand.uninstallFailed": "Couldn’t remove the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "main.cliCommand.uninstallFailed": "Couldn’t uninstall the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
   "@main.cliCommand.uninstallFailed": {
-    "description": "Warning toast (macOS) when removing the cmdr terminal command didn't work for a reason other than the user canceling. /usr/local/bin is a folder path and must stay exactly as is; cmdr is a literal command name. Don't use words like \"error\" or \"failed\"."
+    "description": "Warning toast (macOS) when uninstalling the cmdr terminal command (the app menu’s “Uninstall “cmdr” command”, same verb) didn't work for a reason other than the user canceling. /usr/local/bin is a folder path and must stay exactly as is; cmdr is a literal command name. Don't use words like \"error\" or \"failed\"."
   },
   "main.cliCommand.homebrew": "Homebrew installed the “cmdr” command along with Cmdr, so it’s already in your terminal. It goes away when you uninstall Cmdr with Homebrew.",
   "@main.cliCommand.homebrew": {
@@ -221,9 +221,9 @@
   },
   "main.cliCommand.takenByOther": "There’s already a different “cmdr” in /usr/local/bin, so Cmdr left it alone. Remove or rename it, then try again.",
   "@main.cliCommand.takenByOther": {
-    "description": "Info toast (macOS) when the user asked to install the cmdr terminal command, but some other program already put something called cmdr in /usr/local/bin. Cmdr never overwrites it. /usr/local/bin is a folder path, cmdr a literal command name, Cmdr the app's name: keep all three as they are."
+    "description": "Info toast (macOS) when the user asked to install the cmdr terminal command, but some other program already put something called cmdr in /usr/local/bin. That “cmdr” is usually a file or a symbolic link another tool installed, not a folder. Cmdr never overwrites it. /usr/local/bin is a folder path, cmdr a literal command name, Cmdr the app's name: keep all three as they are."
   },
-  "main.cliCommand.notInApplications": "Move Cmdr to your Applications folder first. From anywhere else, the “cmdr” command would stop working the moment Cmdr moves.",
+  "main.cliCommand.notInApplications": "Move Cmdr to your Applications folder first. If you install the “cmdr” command from anywhere else, it stops working the moment Cmdr moves.",
   "@main.cliCommand.notInApplications": {
     "description": "Info toast (macOS) when the user asked to install the cmdr terminal command from a copy of Cmdr that isn't in the Applications folder (for example, still in Downloads or on the mounted disk image). Use the name Finder shows for the Applications folder in your language. cmdr is a literal command name; Cmdr is the app's name."
   },

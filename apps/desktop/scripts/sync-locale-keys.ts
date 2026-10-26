@@ -43,9 +43,13 @@
  * list, with a note. A new key needs no overlay work: the variant inherits the
  * base language's translation. See `docs/guides/i18n.md` § Overlay catalogs.
  *
+ * `--restamp` does reach an overlay (`restampOverlay`): a fork's hash is the hash
+ * of the value it overrides (`es` for `es-419`), which nobody should compute by hand.
+ *
  * Run: node scripts/sync-locale-keys.ts <tag> [<tag> …]   (omit tags = every non-en locale)
  * Pass `--messages-root <dir>` to point at a fixture, `--restamp <key>` to refresh
- * one key's stored hash across the synced locales.
+ * one key's stored hash across the synced locales and the overlays' forks. A tag
+ * that isn't a locale dir is refused.
  */
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
@@ -54,7 +58,9 @@ import { parseArgs } from 'node:util'
 import {
   BASE_LOCALE,
   isMetadataKey,
+  layerCatalogs,
   listLocales,
+  loadCatalog,
   readLocaleFiles,
   resolveLocaleSource,
   resolveMessagesRoot,
@@ -215,43 +221,107 @@ export function parseSyncArgs(argv: string[]): SyncArgs {
 }
 
 /**
+ * Restamps an OVERLAY's forks: for each named key the overlay carries, the stored
+ * hash becomes the hash of the value it overrides (the parent's, `es` for
+ * `es-419`, falling back to `en` where the parent lacks the key, as the runtime
+ * does), and the source-bound vouches go. That's the source the stale check holds
+ * an overlay to. Never adds, drops, or reorders a key: an overlay carries only its
+ * forks, so a key it doesn't fork is simply not there to stamp.
+ */
+export function restampOverlay(
+  tag: string,
+  opts: { messagesRoot?: string; restampKeys: Iterable<string> },
+): { restampedKeys: string[] } {
+  const root = resolveMessagesRoot(opts.messagesRoot)
+  const { overrides, isOverlay } = resolveLocaleSource(tag, listLocales(root))
+  if (!isOverlay) throw new Error(`${tag} isn't an overlay; sync it with syncLocale instead.`)
+  const source = layerCatalogs(loadCatalog(BASE_LOCALE, root), loadCatalog(overrides, root)).messages
+  const restampKeys = new Set(opts.restampKeys)
+  const restampedKeys: string[] = []
+  for (const [name, file] of Object.entries(readLocaleFiles(tag, root))) {
+    let changed = false
+    for (const key of Object.keys(file)) {
+      const metaKey = `@${key}`
+      if (isMetadataKey(key) || !restampKeys.has(key) || !(key in source)) continue
+      const meta = (typeof file[metaKey] === 'object' && file[metaKey] !== null ? file[metaKey] : {}) as Record<
+        string,
+        unknown
+      >
+      const currentHash = sourceHash(source[key])
+      if (meta['sourceHash'] === currentHash) continue
+      file[metaKey] = restampMeta(meta, currentHash)
+      restampedKeys.push(key)
+      changed = true
+    }
+    if (changed) writeFileSync(join(root, tag, name), JSON.stringify(file, null, 2) + '\n', 'utf8')
+  }
+  return { restampedKeys: restampedKeys.sort() }
+}
+
+/**
  * The tags a sync run should actually touch: every non-base locale (or the ones
- * asked for), minus the OVERLAY catalogs, which must never be key-synced (see the
- * file header). Reports each skip through `note` so a run is never silently
+ * asked for), with the OVERLAY catalogs split out, since they must never be
+ * key-synced (see the file header); `--restamp` still reaches them through
+ * `restampOverlay`. Reports each skip through `note` so a run is never silently
  * partial.
  * Takes one object, not three positionals: `requested` and `available` are both
  * lists of tags and would be trivially swappable.
  * @param opts.requested explicit tags, or an empty list to sweep every non-base locale
  * @param opts.available every locale dir present (`listLocales`)
  * @param opts.note sink for one skip message per overlay
+ * @throws when a requested tag is no locale dir: a quoted `"a.b --restamp c.d"`
+ *   arrives as one positional and would otherwise reach the file system as a path
  */
 export function syncableLocales(opts: {
   requested: readonly string[]
   available: readonly string[]
   note: (line: string) => void
-}): string[] {
+}): { tags: string[]; overlays: string[] } {
   const { requested, available, note } = opts
+  const unknown = requested.filter((tag) => !available.includes(tag))
+  if (unknown.length > 0) {
+    const looksLikeKeys = unknown.some((tag) => tag.includes('.') || /\s/.test(tag))
+    const hint = looksLikeKeys ? ' Keys go after --restamp, one flag per key: --restamp a.b --restamp c.d.' : ''
+    throw new Error(`Not a locale: ${unknown.join(', ')} (have: ${available.join(', ')}).${hint}`)
+  }
   const tags = requested.length > 0 ? requested : available.filter((tag) => tag !== BASE_LOCALE)
-  return tags.filter((tag) => {
-    if (!resolveLocaleSource(tag, available).isOverlay) return true
+  const overlays = tags.filter((tag) => resolveLocaleSource(tag, available).isOverlay)
+  for (const tag of overlays) {
     note(
       `Skipped ${tag}/: it's an overlay, so it carries only the keys it forks (docs/guides/i18n.md § Overlay catalogs).`,
     )
-    return false
-  })
+  }
+  return { tags: tags.filter((tag) => !overlays.includes(tag)), overlays }
+}
+
+/** The requested tags split into syncable ones and overlays, or exits with the reason. */
+function resolveTags(requested: string[], messagesRoot: string | undefined): { tags: string[]; overlays: string[] } {
+  try {
+    return syncableLocales({
+      requested,
+      available: listLocales(messagesRoot),
+      note: (line) => {
+        console.log(line)
+      },
+    })
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    process.exit(2)
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = parseSyncArgs(process.argv.slice(2))
   const { messagesRoot, restampKeys } = args
-  const tags = syncableLocales({
-    requested: args.tags,
-    available: listLocales(messagesRoot),
-    note: (line) => {
-      console.log(line)
-    },
-  })
+  const { tags, overlays } = resolveTags(args.tags, messagesRoot)
   const restampedAnywhere = new Set<string>()
+  if (restampKeys.length > 0) {
+    for (const tag of overlays) {
+      const { restampedKeys: done } = restampOverlay(tag, { messagesRoot, restampKeys })
+      for (const key of done) restampedAnywhere.add(key)
+      if (done.length > 0) console.log(`Restamped ${tag}/ against the value each fork overrides: ${done.join(', ')}.`)
+    }
+  }
   for (const tag of tags) {
     const {
       added,

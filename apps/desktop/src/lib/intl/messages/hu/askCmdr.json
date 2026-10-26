@@ -260,9 +260,9 @@
   "@askCmdr.error.provider": {
     "sourceHash": "d536cce"
   },
-  "askCmdr.event.chatMemoryChanged": "A csevegés memóriája mostantól {tokens, number} tokent tart meg",
+  "askCmdr.event.chatMemoryChanged": "A csevegés memóriája mostantól {tokens, plural, one {# tokent} other {# tokent}} tart meg",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "{count, plural, one {# korábbi keresés} other {# korábbi keresés}} kimaradt, hogy elférjen a modell kontextusában.",
   "@askCmdr.event.contextTrimmed": {
@@ -637,9 +637,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "{countText} {count, plural, one {fájl} other {fájl}} nem található: az átnevezés óta áthelyezték vagy törölték őket.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "{countText} {count, plural, one {elem nem található: az átnevezés óta áthelyezték vagy törölték.} other {elem nem található: az átnevezés óta áthelyezték vagy törölték őket.}}",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "„{name}” változatlan maradt: a régi nevét már más használja.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

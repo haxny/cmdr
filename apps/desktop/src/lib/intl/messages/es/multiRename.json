@@ -133,15 +133,15 @@
   },
   "multiRename.presets.saveAs": "Guardar como preajuste…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Renombrar…",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Actualizar con los campos actuales",
+  "multiRename.presets.update": "Actualizar con los ajustes actuales",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Subir",
   "@multiRename.presets.moveUp": {
@@ -638,7 +638,7 @@
   },
   "multiRename.swapsSkipped": "Se {count, plural, one {ha omitido # cambio de nombre que intercambia nombres} many {han omitido # cambios de nombre que intercambian nombres} other {han omitido # cambios de nombre que intercambian nombres}}. Renombra esos archivos de uno en uno.",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "“Renombrado múltiple” no funciona dentro de archivos comprimidos",
   "@multiRename.archiveTitle": {
@@ -748,9 +748,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "El nombre de la carpeta por encima de esa",
+  "multiRename.placeholderHelp.grandparent": "El nombre de la carpeta que está por encima de la carpeta del archivo",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Empieza en {start}",
   "@multiRename.placeholderHelp.counterStart": {

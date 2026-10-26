@@ -18,6 +18,7 @@ import {
   onIndexFreshnessChanged,
   onIndexScanStarted,
   onIndexScanComplete,
+  onIndexScanAborted,
 } from '#lib/tauri-commands/indexing.js'
 import type { VolumeInfo } from '../types'
 import { capabilitiesForInfo } from '../pane/volume-capabilities'
@@ -99,10 +100,13 @@ export function createDriveIndexManager(): DriveIndexManager {
   // Each event names its volume; refetch that one drive's status (cheap, and
   // keeps the last-scan facts in sync, which the event payload alone doesn't
   // carry). Scan start/complete flip the dot color and refresh the footer facts;
-  // a freshness change is the general signal (incl. stop/cancel/disconnect).
+  // a freshness change is the general signal (incl. stop/cancel/disconnect). An
+  // abort is how a start that announced Scanning and then failed says so, with no
+  // freshness left to change to.
   subscribe(onIndexFreshnessChanged((payload) => void fetchStatus(payload.volumeId)))
   subscribe(onIndexScanStarted((payload) => void fetchStatus(payload.volumeId)))
   subscribe(onIndexScanComplete((payload) => void fetchStatus(payload.volumeId)))
+  subscribe(onIndexScanAborted((payload) => void fetchStatus(payload.volumeId)))
 
   function destroy() {
     for (const u of unlistens) u()

@@ -216,9 +216,9 @@
   "@errorReporter.pageCrash.title": {
     "sourceHash": "c77d29c"
   },
-  "errorReporter.pageCrash.body": "A Cmdr váratlan problémába ütközött. Az újratöltés általában segít. Ha újra meg újra előfordul, egy jelentés elküldése segít kijavítani.",
+  "errorReporter.pageCrash.body": "A Cmdr váratlan problémába ütközött. Az újratöltés általában segít. Ha továbbra is előfordul, küldj jelentést, hogy ki lehessen javítani.",
   "@errorReporter.pageCrash.body": {
-    "sourceHash": "09f93b8"
+    "sourceHash": "5cfe782"
   },
   "errorReporter.pageCrash.detailsLabel": "Technikai részletek",
   "@errorReporter.pageCrash.detailsLabel": {
@@ -227,6 +227,10 @@
   "errorReporter.pageCrash.reload": "Újratöltés",
   "@errorReporter.pageCrash.reload": {
     "sourceHash": "bdc090e"
+  },
+  "errorReporter.preview.unavailableToast": "Nem sikerült megnyitni az előnézetet. Próbáld újra egy pillanat múlva.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
   },
   "errorReporter.prefill.reference": "Hivatkozás: {code}",
   "@errorReporter.prefill.reference": {

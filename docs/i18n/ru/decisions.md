@@ -264,10 +264,15 @@ macOS ru names it so (`⇧Пробел`).
 `(глобальное)` everywhere, card `Глобальные сочетания`, so hint and list quote each other. Modified →
 `Отличается от значения по умолчанию` (`Изменено значение…` says the default changed).
 
-## Don't assign a chore (`updates.toast.readyDetail`, `suggestedOps.reversibleDeleteWritten`)
+## Don't assign a chore (`updates.toast.readyDetail`, `suggestedOps.reversible.removeCopies`)
 
-`…или просто откройте Cmdr в следующий раз: обновление установится само.`; `Отмена удалит созданные файлы`, ❌
+`…или просто откройте Cmdr в следующий раз: обновление установится само.`; `Это можно отменить: Cmdr удалит копии`, ❌
 `Для отмены удалите…` (deleting by hand).
+
+## AI suggestions (`suggestedOps.title`, `menu.view.suggestedOps`, `suggestedOps.agentReason*`)
+
+`Предложения ИИ` over `Предложенные операции`, matching the mkdir hints. `Почему:` (a cause) over `Зачем` (a purpose,
+`onboarding.stepFda.why`); the aria `Почему, по словам ИИ:` holds it.
 
 ## Two transfer-time plurals (`transfer.fileOnly.allDone`, `transfer.*DuringMove`)
 
@@ -280,7 +285,7 @@ One tense per branch set; one folder is `в папке {folderName}`, ❌ `Ис�
 ## Eject toasts: the holders lead (`errors.eject.*`, `fileExplorer.navigation.eject*VolumeAriaLabel`)
 
 `{apps} еще держат там файлы открытыми.` (present, no gender, no doubled `приложения`); busy →
-`Cmdr еще работает с файлами на нем`. Labels quote the volume: `Извлечь «{name}»`.
+`Cmdr еще работает там с файлами`. Labels quote the volume: `Извлечь «{name}»`.
 
 ## Keychain apps (`ai.secretError.key*Body`, `servers.refusal.certificateUntrusted`)
 

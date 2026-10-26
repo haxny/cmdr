@@ -153,7 +153,7 @@ recognize. Those older records still ship as-is: early beta, and new logs are wh
 
 ## The command surface (rationale)
 
-`commands/error_reporter.rs` exposes four report commands (plus `record_breadcrumb` and
+`commands/error_reporter.rs` exposes five report commands (plus `record_breadcrumb` and
 `record_settings_defaults`):
 
 - `prepare_error_report_preview(userNote?, email?)` returns the manifest + first/last
@@ -164,6 +164,19 @@ recognize. Those older records still ship as-is: early beta, and new logs are wh
   already sent, plus `can_amend`, or `null` when nothing was auto-sent this run.
 - `amend_error_report(userNote?, email?)` adds a note to that report. No id argument:
   there's only ever one stashed report.
+- `write_error_report_preview_file(userNote?, email?, id?)` (and its feedback twin,
+  `commands/feedback.rs::write_feedback_logs_preview_file(id?)`) builds the bundle the send
+  would ship and writes it, every zip entry under a `==> name <==` header, to
+  `<app_data_dir>/report-preview/<ERR-id>.txt` for the File viewer (`preview_file.rs`).
+
+Decision: the full-bundle preview is a temp FILE, not in-memory content taught to the
+viewer. The text runs to megabytes, and the viewer's large-file backends, search, title, and
+reload all key off a path; an in-memory source would fork every one of them. The file is
+rendered from the capped zip, so it's the bytes the upload carries, and it's built under the
+dialog's id, so the id-keyed redaction hashes match the send. The log window still ends at
+"now" per build, so a send can carry a few lines newer than the file. Cleanup: one file per
+report id (a second look overwrites it, atomically), owner-only, and the whole dir is cleared
+at startup (`init_report_preview_dir`), like the viewer's other per-instance temps.
 
 `prepare_error_report_preview` and `get_auto_sent_report_preview` are absent from
 `bindings.ts` because `BundleManifest` has serde-elided optional fields, which specta

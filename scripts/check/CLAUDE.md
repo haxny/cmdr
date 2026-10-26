@@ -32,7 +32,6 @@ Authoring a check: `checks/CLAUDE.md`.
 - **The four CSV logs live in `~/.local/share/check-runner/cmdr/`.** ❌ Never add a column: it breaks every reader.
 - **Output is capped at 40 lines / 8 KB per check**, with every failure saved whole in `output/`; `-v` prints all. ❌
   Don't raise the cap for one noisy check; tighten its output.
-- **`--only-slow` needs a ~20 min command timeout.**
 
 Flow diagram, CLI options, exclusive resources, fixture-stack leases, the logs, and decisions: `DETAILS.md`. Read it
 before any non-trivial work here: editing, planning, reorganizing, or advising.

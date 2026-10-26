@@ -74,9 +74,9 @@ describe('managedPolicySummary', () => {
     const ceiling = managedPolicySummary(view({ updates: { kind: 'enabled', automaticChecks: true, ceiling: '0.52' } }))
     const manual = managedPolicySummary(view({ updates: { kind: 'enabled', automaticChecks: false, ceiling: null } }))
     const both = managedPolicySummary(view({ updates: { kind: 'enabled', automaticChecks: false, ceiling: '0.52.3' } }))
-    expect(ceiling).toEqual([{ label: 'Updates', value: 'Up to 0.52' }])
+    expect(ceiling).toEqual([{ label: 'Updates', value: 'Up to version 0.52' }])
     expect(manual).toEqual([{ label: 'Updates', value: 'Checked by hand only' }])
-    expect(both).toEqual([{ label: 'Updates', value: 'Up to 0.52.3, checked by hand only' }])
+    expect(both).toEqual([{ label: 'Updates', value: 'Up to version 0.52.3, checked by hand only' }])
   })
 
   it('words on-device-only AI and an allowed host list', () => {

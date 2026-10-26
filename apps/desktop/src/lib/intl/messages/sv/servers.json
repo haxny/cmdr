@@ -316,9 +316,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Använd bara små bokstäver, siffror och bindestreck här.",
+  "servers.refusal.s3FieldMalformed": "Använd bara a–z, 0–9 och bindestreck här.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Ange slutpunkten som http:// eller https:// följt av ett värdnamn, till exempel https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -346,7 +346,7 @@
   },
   "servers.refusal.shareMounted": "Den delade mappen {name} är fortfarande monterad från den gamla adressen. Mata ut den och spara sedan igen.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr kunde inte mata ut den delade mappen {name}, så ingenting sparades. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -541,17 +541,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Har servern flyttat? Skriv in den nya slutpunkten. Alla bucketar under den här nyckeln följer med, tillsammans med favoriterna, de öppna flikarna och den sparade hemliga åtkomstnyckeln.",
+  "servers.sheet.s3EndpointMoveHelp": "Har servern flyttat? Skriv in den nya slutpunkten. Alla bucketar under den här nyckeln följer med, med sina favoriter och öppna flikar, och den sparade hemliga åtkomstnyckeln följer också med.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Har servern flyttat? Skriv in den nya adressen. Favoriterna, de öppna flikarna och det sparade lösenordet följer med.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Har servern flyttat? Skriv in den nya adressen. De delade mapparna och det sparade lösenordet följer med, och favoriterna och de öppna flikarna i varje delad mapp följer med första gången mappen öppnas där.",
+  "servers.sheet.smbAddressMoveHelp": "Har servern flyttat? Skriv in den nya adressen. De delade mapparna och det sparade lösenordet följer med, och varje delad mapps favoriter och öppna flikar flyttas över när den delade mappen öppnas på den nya adressen.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Användarnamn",
   "@servers.sheet.username": {
@@ -792,9 +792,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Jag har kontrollerat det",
+  "servers.hostKey.changedDisclosure": "Jag har kontrollerat nyckeln",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Nyckelns fingeravtryck",
   "@servers.hostKey.fingerprintLabel": {
@@ -824,9 +824,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Jag har kontrollerat det",
+  "servers.certificate.changedDisclosure": "Jag har kontrollerat certifikatet",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Certifikatets fingeravtryck (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -876,9 +876,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Du ville logga in med ditt konto, men servern erbjöd en gästsession i stället. Oftast betyder det att lösenordet inte stämde. I sällsynta fall betyder det att något manipulerar anslutningen.",
+  "servers.paneState.guestSessionRefusedHint": "Du ville logga in med ditt konto, men servern erbjöd en gästsession i stället. Oftast betyder det att lösenordet inte stämde. I sällsynta fall betyder det att någon manipulerar anslutningen.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Prova ett annat lösenord…",
   "@servers.paneState.tryAnotherPassword": {

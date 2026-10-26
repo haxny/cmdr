@@ -59,9 +59,9 @@
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr kunde inte bekräfta att kopiorna är helt skrivna på disken. Om enheten kopplades ur eller håller på att gå sönder, kontrollera kopiorna innan du litar på dem.",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr kunde inte bekräfta att kopiorna är helt skrivna på enheten. Om den kopplades ur eller håller på att gå sönder, kontrollera kopiorna innan du litar på dem.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Den här servern kan inte lagra {classes}, så de uppgifterna kom inte med.",
   "@transfer.metadataLeftBehind": {

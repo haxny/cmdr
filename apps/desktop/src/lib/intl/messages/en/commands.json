@@ -81,7 +81,7 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "description": "Command-palette name (macOS only), shown when the cmdr terminal command came with Cmdr's Homebrew package; running it explains that Homebrew manages it. Keep cmdr and Homebrew exactly as they are. Must match the app-menu item menu.app.cliCommandHomebrew."
   },
-  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open it in Cmdr",
+  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open that file or folder in Cmdr",
   "@commands.appToggleCliCommand.description": {
     "description": "Longer help text under the \"Install “cmdr” command\" row in the command palette, saying what the command is for. Keep cmdr exactly as is: it's the literal word the user types."
   },
@@ -1467,13 +1467,21 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "description": "Toast shown when the launch outlived the few seconds Cmdr waits for it. Honest about not knowing: the app may well appear a moment later. Conversational; avoid the words \"error\" and \"failed\"."
   },
-  "commands.handler.getInfo.automationOff": "Get info needs Cmdr to control Finder, and that’s turned off. Switch on Finder under Cmdr in System Settings > Privacy & Security > Automation.",
+  "commands.handler.getInfo.automationOff": "Get info needs Cmdr to control Finder, and that’s turned off. Switch on Finder under Cmdr in {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
-    "description": "Toast shown when the user presses Get info (opens Finder's file-information window) but has earlier told macOS not to let Cmdr control Finder. Cmdr asks Finder to open that window, so it can't without this permission. \"System Settings\", \"Privacy & Security\", and \"Automation\" are Apple's names for the macOS settings pane and must match the localized macOS wording in the target language. \"Get info\" matches the File menu item (menu.file.getInfo). A button below opens that settings pane. Conversational; avoid the words \"error\" and \"failed\"."
+    "description": "Toast shown when the user presses Get info (opens Finder's file-information window) but has earlier told macOS not to let Cmdr control Finder. Cmdr asks Finder to open that window, so it can't without this permission. The three placeholders are macOS settings names the OS itself hands us already translated, so ❌ don't translate them and don't reorder the path, which the user is about to follow click by click. \"Get info\" matches the File menu item (menu.file.getInfo). A button below opens that settings pane. Conversational; avoid the words \"error\" and \"failed\".",
+    "placeholders": {
+      "systemSettings": "the localized OS name of the System Settings app, injected at runtime (it follows the Mac’s system language, which can differ from Cmdr’s, so it may arrive in English)",
+      "privacyAndSecurity": "the localized OS name of the Privacy & Security pane, injected at runtime the same way",
+      "automation": "the localized OS name of the Automation permission under Privacy & Security, injected at runtime the same way"
+    }
   },
-  "commands.handler.getInfo.openAutomationSettings": "Open Automation settings",
+  "commands.handler.getInfo.openAutomationSettings": "Open {automation} settings",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "description": "Button in the Get info toast (commands.handler.getInfo.automationOff) that opens System Settings at Privacy & Security > Automation. \"Automation\" is Apple's name for that macOS settings pane and must match the localized macOS wording."
+    "description": "Button in the Get info toast (commands.handler.getInfo.automationOff) that opens System Settings at Privacy & Security > Automation, where the user lets Cmdr control Finder.",
+    "placeholders": {
+      "automation": "the OS-localized macOS \"Automation\" permission name, as System Settings shows it, injected at runtime (it follows the Mac’s system language, which can differ from Cmdr’s, so it may arrive in English)"
+    }
   },
   "commands.handler.getInfo.notReached": "Cmdr couldn’t reach Finder to open Get info. Give it another try.",
   "@commands.handler.getInfo.notReached": {
@@ -1513,14 +1521,14 @@
       "hint": "a pre-built sentence telling the user how to reset zoom to 100% (already translated separately)"
     }
   },
-  "commands.suggestedOpsShow.label": "Suggested ops",
+  "commands.suggestedOpsShow.label": "AI suggestions",
   "@commands.suggestedOpsShow.label": {
-    "description": "Command name that opens the Suggested ops dialog, where the user reviews file operations Ask Cmdr has suggested. Appears in the command palette and the View menu.",
+    "description": "Command name that opens the AI suggestions dialog, where the user reviews file actions Ask Cmdr has suggested. Matches the dialog title (suggestedOps.title). Appears in the command palette and the View menu.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.suggestedOpsShow.description": "Review the file operations the AI suggested, and decide what runs",
   "@commands.suggestedOpsShow.description": {
-    "description": "Longer help text for the Suggested ops command, shown as a secondary line in the command palette."
+    "description": "Longer help text for the AI suggestions command, shown as a secondary line in the command palette."
   },
   "commands.helpViewDebugLog.label": "View debug log",
   "@commands.helpViewDebugLog.label": {

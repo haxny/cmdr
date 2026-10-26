@@ -61,7 +61,7 @@
   },
   "transfer.durabilityUnconfirmedUnnamed": "Cmdr не удалось подтвердить, что копии полностью записаны на диск. Если диск отсоединили или он выходит из строя, проверьте копии, прежде чем на них полагаться.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Этот сервер не может хранить {classes}, поэтому эти сведения не перенесены.",
   "@transfer.metadataLeftBehind": {

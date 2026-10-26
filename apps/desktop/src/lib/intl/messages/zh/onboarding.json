@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "批量重命名",
+  "onboarding.stepAi.table.rowRename": "重命名多个文件",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "你用批量重命名界面手动设置重命名规则，检查后应用。",
+  "onboarding.stepAi.table.renameWithout": "你在“批量重命名”里手动设置重命名规则，然后检查并应用。",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "你说“加上 ISO 日期前缀”，代理就帮你设好重命名规则，你检查后随时应用。",
   "@onboarding.stepAi.table.renameWith": {
@@ -619,6 +619,22 @@
   "onboarding.cloudSetup.status.genericError": "出了点问题",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "这个服务太久没有响应。请稍后再试。",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "这个地址看起来不对。地址应该以 https:// 开头。",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "你的密钥只通过安全连接发送，所以请使用以 https:// 开头的地址。",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "服务拒绝了这个请求（状态码 {status}）。",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "已连接！",
   "@onboarding.cloudSetup.status.connected": {

@@ -133,15 +133,15 @@
   },
   "multiRename.presets.saveAs": "Als Voreinstellung sichern …",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Umbenennen …",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Mit den aktuellen Feldern aktualisieren",
+  "multiRename.presets.update": "Mit den aktuellen Einstellungen aktualisieren",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Nach vorn rücken",
   "@multiRename.presets.moveUp": {
@@ -642,7 +642,7 @@
   },
   "multiRename.swapsSkipped": "{count, plural, one {# Umbenennung übersprungen, die Namen vertauscht} other {# Umbenennungen übersprungen, die Namen vertauschen}}. Benenne diese Dateien einzeln um.",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "„Mehrfach umbenennen“ funktioniert nicht in Archiven",
   "@multiRename.archiveTitle": {
@@ -752,9 +752,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "Der Name des Ordners eine Ebene darüber",
+  "multiRename.placeholderHelp.grandparent": "Der Name des Ordners, in dem der Ordner der Datei liegt",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Beginnt mit {start}",
   "@multiRename.placeholderHelp.counterStart": {

@@ -119,7 +119,7 @@ export function createDriveBadges(deps: DriveBadgesDeps): DriveBadges {
         if (feedback.kind === 'refusal') {
           handleRefusal(volumeId, name, feedback.reason)
         } else if (feedback.kind === 'toast') {
-          addToast(tString(feedback.key, { name }), { level: feedback.level })
+          addToast(tString(feedback.key, { name }), { level: feedback.level, timeoutMs: feedback.timeoutMs })
         }
       }
     } catch {

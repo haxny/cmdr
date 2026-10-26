@@ -56,9 +56,9 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} está listo, pero Cmdr no puede instalarlo por sí mismo",
+  "updates.unwritable.adminHeadline": "Ya está disponible Cmdr {version}, pero Cmdr no puede instalarlo por sí mismo",
   "@updates.unwritable.adminHeadline": {
-    "sourceHash": "a0c72ea"
+    "sourceHash": "8e6aecc"
   },
   "updates.unwritable.adminDetail": "{path} pertenece a otra cuenta. Para actualizar, descarga Cmdr de <website>getcmdr.com</website> y arrástralo a la carpeta Aplicaciones. macOS te pedirá la contraseña.",
   "@updates.unwritable.adminDetail": {

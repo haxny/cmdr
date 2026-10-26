@@ -21,9 +21,13 @@ in `(main)/+layout.svelte` next to `ErrorReportDialog` (same pattern), which kee
 
 The "Include the past five hours of logs (redacted)" box passes `includeLogs` to `send_feedback`. The backend
 (`src-tauri/src/feedback.rs`) mints an `ERR-XXXXX`, sends the feedback naming it, and only then uploads the error
-reporter's own Flow A bundle under that id, so a failed send uploads nothing and the dialog's retry is clean. There's no
-preview of these logs (the error report dialog has one): the box is the consent, as with the crash toast's "Attach
-logs". The server files the two as one card and one digest entry (`apps/api-server/DETAILS.md` § The reports repo).
+reporter's own Flow A bundle under that id, so a failed send uploads nothing and the dialog's retry is clean. The server
+files the two as one card and one digest entry (`apps/api-server/DETAILS.md` § The reports repo).
+
+While the box is ticked, "See the logs that'll be sent" opens that bundle in the File viewer (`openReportPreview` from
+`#lib/error-reporter`, over `writeFeedbackLogsPreviewFile`). The preview mints the report id, and the dialog passes it
+to `sendFeedback` as `logsReportId`, so the logs ship under the id (and the id-keyed redaction) the person looked at.
+Without a look, the backend mints one at send as before. Looking is optional: the box is the consent.
 
 ## Shared with the error reporter
 

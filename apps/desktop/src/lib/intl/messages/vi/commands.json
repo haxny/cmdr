@@ -67,9 +67,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "Gõ cmdr kèm một đường dẫn trong terminal để mở nơi đó trong Cmdr",
+  "commands.appToggleCliCommand.description": "Gõ cmdr kèm một đường dẫn trong terminal để mở tệp hoặc thư mục đó trong Cmdr",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "Phím tắt",
   "@commands.helpOpenShortcuts.label": {
@@ -1216,13 +1216,13 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Để mở Lấy thông tin, Cmdr cần được điều khiển Finder, nhưng quyền này đang tắt. Hãy bật Finder bên dưới Cmdr trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật > Tự động hóa.",
+  "commands.handler.getInfo.automationOff": "Để mở Lấy thông tin, Cmdr cần được điều khiển Finder, nhưng quyền này đang tắt. Hãy bật Finder bên dưới Cmdr trong {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Mở cài đặt Tự động hóa",
+  "commands.handler.getInfo.openAutomationSettings": "Mở cài đặt {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr không kết nối được tới Finder để mở cửa sổ Lấy thông tin. Hãy thử lại.",
   "@commands.handler.getInfo.notReached": {
@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Thao tác được đề xuất",
+  "commands.suggestedOpsShow.label": "Gợi ý AI",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Xem lại các thao tác tệp mà AI đề xuất và quyết định điều gì sẽ chạy",
   "@commands.suggestedOpsShow.description": {

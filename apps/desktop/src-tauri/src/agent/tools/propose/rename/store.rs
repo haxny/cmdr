@@ -37,7 +37,9 @@ use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 use serde::Serialize;
 
 use crate::agent::store::AgentStoreError;
-use crate::agent::store::proposals::{GroupIntent, NewGroup, NewRename, NewSweep, ProposalOp, get_group, page_ops};
+use crate::agent::store::proposals::{
+    GroupIntent, NewGroup, NewRename, NewSweep, OpSnapshot, ProposalOp, get_group, page_ops,
+};
 use crate::agent::tools::propose::evidence::{EvidenceCoverage, EvidenceSource, RenameEvidence};
 use crate::agent::types::ProposalStatus;
 use crate::ignore_poison::IgnorePoison;
@@ -69,6 +71,10 @@ pub struct RenameDraftRow {
     /// Filled in by the evidence check AFTER it accepted the row, so it describes a delivery
     /// the ledger recorded; `None` for every source that makes no content claim.
     pub coverage: Option<EvidenceCoverage>,
+    /// What the source looked like when the plan was staged: one bounded stat through the
+    /// group's volume (`agent/tools/suggestions/snapshot.rs`), `None` until then or when it
+    /// couldn't be stat'ed. Display only, like every creation snapshot.
+    pub snapshot: Option<OpSnapshot>,
 }
 
 // ── What a staged proposal is, once loaded back ───────────────────────────────
@@ -81,6 +87,9 @@ pub struct RenameProposal {
     /// that can't be asked here, let alone answered wrong.
     pub volume_id: String,
     pub rows: Vec<RenameProposalRow>,
+    /// The group's `revision` (every amend bumps it). The review sends back the one it showed,
+    /// and preflight and apply refuse a different one as `listChanged`.
+    pub revision: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,6 +107,9 @@ pub struct RenameProposalRow {
 #[serde(rename_all = "camelCase")]
 pub struct RenameProposalSnapshot {
     pub proposal_id: String,
+    /// The revision this snapshot shows. Send it with `preflight_bulk_rename` and
+    /// `apply_bulk_rename`: an agent amend since then answers `listChanged`.
+    pub revision: i64,
     pub rows: Vec<RenameProposalRowSnapshot>,
 }
 
@@ -127,6 +139,7 @@ impl RenameProposal {
     pub fn snapshot(&self) -> RenameProposalSnapshot {
         RenameProposalSnapshot {
             proposal_id: self.proposal_id.clone(),
+            revision: self.revision,
             rows: self.rows.iter().map(|row| row.snapshot(&self.volume_id)).collect(),
         }
     }
@@ -259,7 +272,7 @@ pub fn stage(
                 .map(|row| NewRename {
                     source_path: row.source_path.clone(),
                     new_name: row.destination_name.clone(),
-                    snapshot: None,
+                    snapshot: row.snapshot,
                 })
                 .collect(),
         },
@@ -347,6 +360,7 @@ pub fn load(conn: &Connection, proposal_id: &str) -> Result<Option<RenameProposa
         proposal_id: group_id.to_string(),
         volume_id: group.source_volume_id,
         rows,
+        revision: group.revision,
     }))
 }
 

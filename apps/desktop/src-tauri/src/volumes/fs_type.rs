@@ -4,20 +4,15 @@
 
 use cmdr_local::statfs::{get_mount_info, statfs_string};
 
-/// Determine whether a filesystem type supports trash.
-///
-/// Local filesystems (APFS, HFS+, ext4, btrfs, xfs, zfs) support trash.
-/// Network filesystems (SMB, NFS, AFP, WebDAV, CIFS, FUSE-based SSH) and
-/// non-Mac formats (FAT32/exFAT) don't reliably support it. Unknown types
-/// default to `true` (optimistic: trash failure is caught at operation time).
-pub fn supports_trash_for_fs_type(fs_type: Option<&str>) -> bool {
-    let Some(fs) = fs_type else { return true };
-    let fs_lower = fs.to_ascii_lowercase();
-    match fs_lower.as_str() {
-        "apfs" | "hfs" | "ext4" | "btrfs" | "xfs" | "zfs" => true,
-        "smbfs" | "nfs" | "afpfs" | "webdav" | "cifs" | "fuse.sshfs" | "msdos" | "exfat" => false,
-        _ => true,
-    }
+/// Whether the OS keeps a Trash on a mount with this source (`f_mntfromname`) and filesystem
+/// type: the one trash rule, `cmdr_fs::filesystem_kind::mount_has_trash`, fed the SAME two facts
+/// `Volume::has_trash` reads at registration, so the volume list and a suggestion's "can't run"
+/// can't disagree. A local disk, FAT32 and exFAT included, keeps one, and so does any block
+/// device (`/dev/…`) whatever its type; a network or FUSE mount, or an unrecognized type that
+/// isn't on a device, doesn't. Pass the source whenever the caller has the mount row: without
+/// it, an unrecognized type on a USB disk reads "no Trash" here and "Trash" in the registry.
+pub fn supports_trash_for_mount(source: Option<&str>, fs_type: Option<&str>) -> bool {
+    cmdr_fs::filesystem_kind::mount_has_trash(source, fs_type)
 }
 
 pub fn is_smb_fs_type(fs_type: Option<&str>) -> bool {
@@ -42,8 +37,10 @@ pub fn is_network_fs_type(fs_type: Option<&str>) -> bool {
 ///
 /// If `statfs` fails (ENOENT for a deleted directory), walks up parent
 /// directories until one succeeds. Returns `None` only if even `/` fails.
-pub(crate) fn get_mount_point(path: &str) -> Option<(String, String)> {
-    get_mount_info(path).map(|info| (info.mount_point, info.fs_type))
+///
+/// Answers `(mount_point, fs_type, source)`, the source being `f_mntfromname`.
+pub(crate) fn get_mount_point(path: &str) -> Option<(String, String, String)> {
+    get_mount_info(path).map(|info| (info.mount_point, info.fs_type, info.source))
 }
 
 /// Read the filesystem type for a path using `libc::statfs`.
@@ -101,51 +98,65 @@ mod tests {
 
     #[test]
     fn test_supports_trash_local_filesystems() {
-        assert!(supports_trash_for_fs_type(Some("apfs")));
-        assert!(supports_trash_for_fs_type(Some("hfs")));
-        assert!(supports_trash_for_fs_type(Some("ext4")));
-        assert!(supports_trash_for_fs_type(Some("btrfs")));
-        assert!(supports_trash_for_fs_type(Some("xfs")));
-        assert!(supports_trash_for_fs_type(Some("zfs")));
+        assert!(supports_trash_for_mount(None, Some("apfs")));
+        assert!(supports_trash_for_mount(None, Some("hfs")));
+        assert!(supports_trash_for_mount(None, Some("ext4")));
+        assert!(supports_trash_for_mount(None, Some("btrfs")));
+        assert!(supports_trash_for_mount(None, Some("xfs")));
+        assert!(supports_trash_for_mount(None, Some("zfs")));
     }
 
     #[test]
     fn test_supports_trash_network_filesystems() {
-        assert!(!supports_trash_for_fs_type(Some("smbfs")));
-        assert!(!supports_trash_for_fs_type(Some("nfs")));
-        assert!(!supports_trash_for_fs_type(Some("afpfs")));
-        assert!(!supports_trash_for_fs_type(Some("webdav")));
-        assert!(!supports_trash_for_fs_type(Some("cifs")));
-        assert!(!supports_trash_for_fs_type(Some("fuse.sshfs")));
+        assert!(!supports_trash_for_mount(None, Some("smbfs")));
+        assert!(!supports_trash_for_mount(None, Some("nfs")));
+        assert!(!supports_trash_for_mount(None, Some("afpfs")));
+        assert!(!supports_trash_for_mount(None, Some("webdav")));
+        assert!(!supports_trash_for_mount(None, Some("cifs")));
+        assert!(!supports_trash_for_mount(None, Some("fuse.sshfs")));
     }
 
+    /// FAT32 and exFAT keep a `.Trashes` like any local disk: `move_to_trash_sync` lands an item
+    /// in `/Volumes/<image>/.Trashes/<uid>/` (cmdr-fs `DETAILS.md` § "Which mounts keep a Trash").
     #[test]
     fn test_supports_trash_removable_formats() {
-        assert!(!supports_trash_for_fs_type(Some("msdos")));
-        assert!(!supports_trash_for_fs_type(Some("exfat")));
+        assert!(supports_trash_for_mount(None, Some("msdos")));
+        assert!(supports_trash_for_mount(None, Some("exfat")));
     }
 
     #[test]
     fn test_supports_trash_case_insensitive() {
-        assert!(supports_trash_for_fs_type(Some("APFS")));
-        assert!(supports_trash_for_fs_type(Some("HFS")));
-        assert!(supports_trash_for_fs_type(Some("EXT4")));
-        assert!(supports_trash_for_fs_type(Some("BTRFS")));
-        assert!(!supports_trash_for_fs_type(Some("SMBFS")));
-        assert!(!supports_trash_for_fs_type(Some("NFS")));
-        assert!(!supports_trash_for_fs_type(Some("CIFS")));
-        assert!(!supports_trash_for_fs_type(Some("ExFAT")));
-        assert!(!supports_trash_for_fs_type(Some("MSDOS")));
+        assert!(supports_trash_for_mount(None, Some("APFS")));
+        assert!(supports_trash_for_mount(None, Some("HFS")));
+        assert!(supports_trash_for_mount(None, Some("EXT4")));
+        assert!(supports_trash_for_mount(None, Some("BTRFS")));
+        assert!(!supports_trash_for_mount(None, Some("SMBFS")));
+        assert!(!supports_trash_for_mount(None, Some("NFS")));
+        assert!(!supports_trash_for_mount(None, Some("CIFS")));
+        assert!(supports_trash_for_mount(None, Some("ExFAT")));
+        assert!(supports_trash_for_mount(None, Some("MSDOS")));
     }
 
     #[test]
-    fn test_supports_trash_unknown_defaults_true() {
-        assert!(supports_trash_for_fs_type(Some("ntfs")));
+    fn test_supports_trash_on_a_known_local_disk_type() {
+        assert!(supports_trash_for_mount(None, Some("ntfs")));
     }
 
+    /// An unknown or unread type promises nothing: `Volume::has_trash` reads it as a network
+    /// mount too, and the two must agree.
     #[test]
-    fn test_supports_trash_none_defaults_true() {
-        assert!(supports_trash_for_fs_type(None));
+    fn test_supports_trash_unknown_or_none_promises_nothing() {
+        assert!(!supports_trash_for_mount(None, None));
+        assert!(!supports_trash_for_mount(None, Some("zalgofs")));
+    }
+
+    /// An unrecognized type on a USB disk: the registry's `MountClass` reads the device node and
+    /// says Trash, so the volume list has to read it too, or the delete dialog and a trash
+    /// suggestion disagree about the same drive.
+    #[test]
+    fn test_supports_trash_on_a_block_device_whatever_its_type() {
+        assert!(supports_trash_for_mount(Some("/dev/disk4s1"), Some("zalgofs")));
+        assert!(!supports_trash_for_mount(Some("//me@nas/share"), Some("zalgofs")));
     }
 
     // ========================================================================
@@ -156,7 +167,7 @@ mod tests {
     fn test_get_mount_point_root() {
         let result = get_mount_point("/");
         assert!(result.is_some(), "Root should resolve to a mount point");
-        let (mount_point, fs_type) = result.unwrap();
+        let (mount_point, fs_type, _source) = result.unwrap();
         assert_eq!(mount_point, "/", "Root mount point should be /");
         assert!(
             fs_type == "apfs" || fs_type == "hfs",
@@ -169,7 +180,7 @@ mod tests {
         let home = dirs::home_dir().expect("Should have home dir");
         let result = get_mount_point(home.to_str().unwrap());
         assert!(result.is_some(), "Home should resolve to a mount point");
-        let (mount_point, _fs_type) = result.unwrap();
+        let (mount_point, _fs_type, _source) = result.unwrap();
         // APFS firmlink normalization: must NOT return /System/Volumes/Data
         assert_eq!(
             mount_point, "/",
@@ -181,7 +192,7 @@ mod tests {
     fn test_get_mount_point_nonexistent() {
         let result = get_mount_point("/nonexistent/deeply/nested/path");
         assert!(result.is_some(), "Nonexistent path should walk up to root");
-        let (mount_point, _fs_type) = result.unwrap();
+        let (mount_point, _fs_type, _source) = result.unwrap();
         assert_eq!(mount_point, "/", "Nonexistent path should resolve to /");
     }
 

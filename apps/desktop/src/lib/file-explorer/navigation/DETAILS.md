@@ -488,7 +488,7 @@ list can't disagree on where the rule goes.
   (`#lib/servers/DETAILS.md`, the "Reconnect automatically" paragraph); an unsaved one-shot connection has nothing to
   persist, so no checkbox. "Saved" and the switch's value come from `listSavedPlaces()`, read when the switcher opens
   (the hub has its saved list already, and re-reads it on the `volumes-changed` a flip emits).
-- **A favorite**: `Rename`, `Set shortcut…`, `Remove from favorites` (§ "The favorites menu").
+- **A favorite**: `Rename`, `Set shortcut key…`, `Remove from favorites` (§ "The favorites menu").
 
 **Both doors, one list.** → (or a hover) opens the submenu, and a right-click on the row opens the same one: the
 primitive does it (`#lib/ui/DETAILS.md` § Menu), so none of these rows raises a native popup. Picks carry the typed
@@ -684,9 +684,9 @@ Both native items are gated on `can_favorite`, the caller's `paneFolderCanBeFavo
 `add_favorite` refuses an archive-inner or protocol path, and offering an item that silently does nothing is worse than
 offering none. The `..` menu holds nothing else, so where the parent can't be favorited no menu pops at all.
 
-**Remove / Rename / Set shortcut** are per-item, in each favorite's → submenu (right-click opens the same one; the list
-is `row-menu.ts`'s `favoriteRowMenu`). A pick reaches `favorites.handleContextAction` through `select`, in the menu that
-owns the row, so no global event has to be told apart per pane. All three keep the menu up: Remove so a list can be
+**Remove / Rename / Set shortcut key** are per-item, in each favorite's → submenu (right-click opens the same one; the
+list is `row-menu.ts`'s `favoriteRowMenu`). A pick reaches `favorites.handleContextAction` through `select`, in the menu
+that owns the row, so no global event has to be told apart per pane. All three keep the menu up: Remove so a list can be
 tidied in a row, and the other two because editing happens in the row. Rename swaps the label for an inline `<input>` in
 the `label` snippet (Enter commits, Escape/blur cancels). `handleRenameKeyDown` calls `e.stopPropagation()` on EVERY
 key: the focused input owns its keystrokes, and the pane's Space-selection / type-to-jump DOM listeners aren't covered
@@ -696,7 +696,7 @@ the box keeps every keystroke. The broader guard is one level up: while ANY head
 swallows the key from the pane behind it, and `+page.svelte`'s `isExplorerOverlayOpen()` reads
 `explorerRef.isHeaderMenuOpen()` to suppress centralized dispatch.
 
-Set shortcut focuses a read-only inline capture at the right of the row. An unmodified letter assigns it,
+Set shortcut key focuses a read-only inline capture at the right of the row. An unmodified letter assigns it,
 Delete/Backspace clears it, and Escape cancels; the editor stops DOM propagation so typing cannot activate the menu or
 the pane behind it. The menu shows the new letter optimistically until `volumes-changed` catches up and drops the
 override on a rejected save. Assigning an occupied letter transfers it from the former favorite; the override hides that
@@ -812,9 +812,10 @@ yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches,
   first-connect prompt waits (`isReadyForFirstConnectPrompt`). ❗ Offering the enable for an ADB phone still waiting for
   its USB debugging tap is what produced `ERR-JUCNB`.
 - **Status stays live by SUBSCRIPTION, not polling** (`drive-index-manager.svelte.ts`): it listens to
-  `index-freshness-changed`, `index-scan-started`, and `index-scan-complete`, refetching the named volume's status on
-  each (the events alone don't carry the last-scan facts). The active-drive badge also refetches when the active drive
-  changes; dropdown rows refetch on open.
+  `index-freshness-changed`, `index-scan-started`, `index-scan-complete`, and `index-scan-aborted`, refetching the named
+  volume's status on each (the events alone don't carry the last-scan facts). The abort is what turns a start that
+  announced Scanning and then failed back to gray. The active-drive badge also refetches when the active drive changes;
+  dropdown rows refetch on open.
 - **A scanning badge shows the SHARED live status body**, not a bespoke string — the same `IndexingDriveRow` body the
   corner indicator renders (heading off), so the two surfaces match exactly (count + elapsed for a first scan, or
   bar+percent+ETA for a calibrated rescan; see `#lib/indexing` DETAILS § Status indicator tooltip content). The badge
@@ -886,7 +887,10 @@ yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches,
 - **What an enable/rescan owes the user is the pure `driveIndexActionFeedback`**, off the TYPED outcome, never message
   text. `VolumeBreadcrumb` runs the answer (toast it, or route a `refusal`), so the whole contract is unit-testable
   without mounting anything. Its seven arms:
-  - `started` → **silent**: the badge going blue is the feedback.
+  - `started` → **silent** for a rescan (the badge going blue is the feedback); for an enable, a five-second `info`
+    toast (`enabled`) on top, because turning a drive on is a lasting choice made from a 10px dot. The dot itself turns
+    blue the moment the backend reserves the volume, before its launch work:
+    `crates/cmdr-index/src/indexing/lifecycle/DETAILS.md` § Freshness.
   - `deferred_until_search_ends` → the promise toast (`info`), worded per action (`deferredEnable` /`deferredRescan`). A
     search walking the same drive blocks a truncating scan, so the backend REMEMBERS the request and runs it when the
     walk ends (model: `crates/cmdr-index/src/indexing/lifecycle/DETAILS.md` § The two single-flight questions a scan has

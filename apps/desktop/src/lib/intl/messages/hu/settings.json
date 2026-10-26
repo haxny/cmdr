@@ -1685,6 +1685,18 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
+  "settings.suggestedOps.suppressApprovalNotice.label": "Jóváhagyási tájékoztató elnyomása az AI-javaslatokban",
+  "@settings.suggestedOps.suppressApprovalNotice.label": {
+    "sourceHash": "33f9993"
+  },
+  "settings.suggestedOps.suppressApprovalNotice.description": "Az AI-javaslatok párbeszédablak egy tájékoztatóval nyílik meg, amely szerint a benne lévőket az AI javasolta, és semmi nem indul el, amíg jóvá nem hagyod. Kapcsold ezt be (vagy zárd be a tájékoztatót a × gombjával), hogy többé ne jelenjen meg.",
+  "@settings.suggestedOps.suppressApprovalNotice.description": {
+    "sourceHash": "8d7605d"
+  },
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "javaslat, jóváhagyás, engedélyezés, értesítés, figyelmeztetés, üzenet, sáv, szalag, mesterséges intelligencia, elrejtés",
+  "@settings.suggestedOps.suppressApprovalNotice.keywords": {
+    "sourceHash": "ad9377a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Megjegyzendő bezárt lapok száma panelenként",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2442,9 +2454,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "A visszavonáshoz kell. Amíg ki van kapcsolva, a Cmdr nem rögzíti az új másolásokat, áthelyezéseket, átnevezéseket és törléseket, így ezeket nem tudod visszavonni. A meglévő előzményeid megmaradnak, és ami bennük van, azt továbbra is visszavonhatod.",
+  "settings.operationLog.enabled.description": "Amíg ez ki van kapcsolva, a Cmdr nem rögzíti az új másolásokat, áthelyezéseket, átnevezéseket és törléseket, így ezeket nem tudod visszavonni. A meglévő előzményeid megmaradnak, és ami bennük van, azt továbbra is visszavonhatod.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "művelet, napló, műveletnapló, előzmények, rögzítés, felvétel, visszavonás, adatvédelem, kikapcsolás",
   "@settings.operationLog.enabled.keywords": {
@@ -2675,17 +2687,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "Legfeljebb {ceiling}",
+  "settings.managed.summary.upTo": "Legfeljebb ez a verzió: {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Csak kézi ellenőrzéssel",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "Legfeljebb {ceiling}, csak kézi ellenőrzéssel",
+  "settings.managed.summary.upToManualChecksOnly": "Legfeljebb ez a verzió: {ceiling}, csak kézi ellenőrzéssel",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Csak helyi",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3295,7 +3307,7 @@
   },
   "settings.dataWipe.introWithSize": "A Cmdr töröl mindent, amit ezen a Macen tárol ({sizeText}), aztán kilép. Ezt nem lehet visszavonni.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "Ami törlődik",
   "@settings.dataWipe.goesHeading": {

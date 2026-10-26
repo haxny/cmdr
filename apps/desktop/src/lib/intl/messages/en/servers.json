@@ -10,7 +10,7 @@
   },
   "servers.pinHint.body": "Right-click a server and choose Unpin from switcher, or use “{command}” from the command palette. It stays in the Servers list.",
   "@servers.pinHint.body": {
-    "description": "Body of that notification: how to take a server out of the volume switcher, and the reassurance that unpinning loses nothing. \"Unpin\" must match the context-menu item menu.network.unpin word for word. \"Servers\" is the hub row in the switcher that lists every saved server. The command name arrives translated in {command}; keep the quotation marks your language uses around a UI label.",
+    "description": "Body of that notification: how to take a server out of the volume switcher, and the reassurance that unpinning loses nothing. “Unpin from switcher” must match the context-menu item menu.network.unpin word for word. \"Servers\" is the hub row in the switcher that lists every saved server. The command name arrives translated in {command}; keep the quotation marks your language uses around a UI label.",
     "placeholders": {
       "command": "the name of the command palette entry that pins or unpins a server, already translated"
     }
@@ -77,18 +77,18 @@
   },
   "servers.hub.shareAccount": "as {username}",
   "@servers.hub.shareAccount": {
-    "description": "Shown after an SMB server's or saved share's name in the Servers list, and after the server's name in its share list, in a quieter color, saying which account it's signed in as: \"Container as sven\". {username} is the account name, never translated.",
+    "description": "Shown after an SMB server's or saved share's name in the Servers list, and after the server's name in its share list, in a quieter color, saying which account it's signed in as: \"Container as sven\". {username} is the account name, never translated. If a bare “as sven” doesn’t work in your language, a label form (“Account: sven”) or an added verb (“signed in as sven”) is fine; keep it short.",
     "placeholders": {
       "username": "the account name, like sven"
     }
   },
   "servers.hub.guestAccount": "as guest",
   "@servers.hub.guestAccount": {
-    "description": "Shown after an SMB server's or share's name in the Servers list, and after the server's name in its share list, in a quieter color: the server is signed in to as a guest, with no account. Pairs with servers.hub.shareAccount (\"as sven\"); keep the two built the same way."
+    "description": "Shown after an SMB server's or share's name in the Servers list, and after the server's name in its share list, in a quieter color: the server is signed in to as a guest, with no account. Pairs with servers.hub.shareAccount (\"as sven\"); keep the two built the same way, so a label form (“Account: guest”) or an added verb is fine here too."
   },
   "servers.hub.editPickHint": "Select a server to edit it.",
   "@servers.hub.editPickHint": {
-    "description": "Toast when the user presses Edit or Rename (F4, F2) in the Servers list while the cursor is on the \"Add server…\" row rather than on a server."
+    "description": "Toast when the user presses Edit or Rename (F4, F2) in the Servers list while the cursor is on the \"Add server…\" row rather than on a server. “Select” here means moving the cursor onto a server row (arrow keys or a click), not marking it the way files get selected; use your language’s verb for picking or pointing at a row."
   },
   "servers.hub.editShareHint": "A share has nothing to edit. To edit its server, select the server’s row.",
   "@servers.hub.editShareHint": {
@@ -140,7 +140,7 @@
   },
   "servers.hub.nearbyGroup": "{count, plural, one {{countText} server found nearby} other {{countText} servers found nearby}}",
   "@servers.hub.nearbyGroup": {
-    "description": "Header row in the servers hub, below the servers the user saved. It groups the servers Cmdr found on the local network that the user never saved, and it opens and collapses that group; collapsed, this line is all that shows of them. The rows under it carry the status \"Found nearby\", so use the same wording for \"found nearby\" here.",
+    "description": "Header row in the servers hub, below the servers the user saved. It groups the servers Cmdr found on the local network that the user never saved, and it opens and collapses that group; collapsed, this line is all that shows of them. The rows under it carry the status \"Found nearby\", so use the same wording for \"found nearby\" here. The word order is free: put the count first or last, whichever reads naturally.",
     "placeholders": {
       "count": "the number of servers in the group, for choosing the plural form",
       "countText": "the number as the user’s locale writes it, like \"12\""
@@ -267,7 +267,7 @@
   },
   "servers.refusal.signInHelperStuck": "{host} is answering, but macOS’s network sign-in helper looks stuck. To restart it, open Terminal, run killall NetAuthSysAgent, then try again. macOS starts the helper again on its own.",
   "@servers.refusal.signInHelperStuck": {
-    "description": "Shown in the pane when a saved network share (SMB) waited a long time without connecting while the server itself is reachable: a macOS background helper called NetAuthSysAgent is stuck, and only restarting it helps. Keep \"killall NetAuthSysAgent\" exactly as written, untranslated: it’s a command the person types into Terminal. \"Terminal\" is the macOS app’s name; use the name macOS shows for it in your language.",
+    "description": "Shown in the pane when a saved network share (SMB) waited a long time without connecting while the server itself is reachable: a macOS background helper called NetAuthSysAgent is stuck, and only restarting it helps. “Network sign-in helper” isn’t a name macOS shows anywhere: it describes a nameless background process, so describe it in your language’s words (a service or a process). Keep \"killall NetAuthSysAgent\" exactly as written, untranslated: it’s a command the person types into Terminal. \"Terminal\" is the macOS app’s name; use the name macOS shows for it in your language.",
     "placeholders": {
       "host": "the server’s hostname or address, like \"nas.local\""
     }
@@ -429,9 +429,9 @@
       "host": "the NFS server’s hostname or address, like \"nas.local\""
     }
   },
-  "servers.refusal.s3FieldMalformed": "Use only lowercase letters, digits, and dashes here.",
+  "servers.refusal.s3FieldMalformed": "Use only a–z, 0–9, and dashes here.",
   "@servers.refusal.s3FieldMalformed": {
-    "description": "Under the Region, Location, or Account ID field of the S3 form, before anything was sent, when the typed value holds other characters. Short and instructive."
+    "description": "Under the Region, Location, or Account ID field of the S3 form, before anything was sent, when the typed value holds other characters. Only lowercase Latin letters a to z, the digits 0 to 9, and dashes pass, so keep the two ranges as written. Short and instructive."
   },
   "servers.refusal.endpointMalformed": "Enter the endpoint as http:// or https:// plus a host name, like https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -460,7 +460,7 @@
   "@servers.refusal.operationRunning": {
     "description": "Above the buttons of the edit server sheet, when the user changed a saved server's address while a copy, move, or delete on that server is still running, paused, or waiting its turn. Moving the server would cut that work off, so nothing was saved. The user can let it finish, or cancel it from its progress window, then press Save again. Keep the opening the same as fileExplorer.navigation.disconnectBusyTooltip (“Cmdr is still working with files on this server”), which says the same thing about Disconnect."
   },
-  "servers.refusal.shareMounted": "{name} is still mounted from the old address. Eject it, then save again.",
+  "servers.refusal.shareMounted": "The share {name} is still mounted from the old address. Eject it, then save again.",
   "@servers.refusal.shareMounted": {
     "description": "Under the Address field of the edit server sheet, when the user changed a saved SMB server's address while one of its shares (shared folders) is still mounted (connected as a disk) from the OLD address. Cmdr won't disconnect it on its own, since other apps may be using it, so nothing was saved. The user ejects the share (the same “Eject” as on the sidebar and in Finder), then presses Save again.",
     "placeholders": {
@@ -693,15 +693,15 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "description": "One line under the Start folder field for an NFS server: a folder inside the export to open, and leaving it empty opens the export’s top folder. “Export” is the NFS term for a folder a server shares."
   },
-  "servers.sheet.s3EndpointMoveHelp": "Did the server move? Type its new endpoint. Every bucket under this key comes along, with its favorites, open tabs, and saved secret access key.",
+  "servers.sheet.s3EndpointMoveHelp": "Did the server move? Type its new endpoint. Every bucket under this key comes along with its favorites and open tabs, and the saved secret access key comes too.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "description": "One line under the Endpoint field when the user is EDITING a saved S3 account on a self-hosted (“Other S3-compatible”) server, saying they can type the server's new endpoint (for example after it got a new IP address) and that every bucket saved under the same access key moves with it, losing nothing: favorites pointing into the buckets, tabs open on them, and the stored secret access key. “Secret access key” is the S3 term; use the same words as servers.sheet.secretAccessKey."
+    "description": "One line under the Endpoint field when the user is EDITING a saved S3 account on a self-hosted (“Other S3-compatible”) server, saying they can type the server's new endpoint (for example after it got a new IP address) and that every bucket saved under the same access key moves with it, losing nothing: favorites pointing into the buckets and tabs open on them come with each bucket, and the stored secret access key, which belongs to the account rather than to any one bucket, comes too. “Secret access key” is the S3 term; use the same words as servers.sheet.secretAccessKey."
   },
   "servers.sheet.addressMoveHelp": "Did the server move? Type its new address. Its favorites, open tabs, and saved password come along.",
   "@servers.sheet.addressMoveHelp": {
     "description": "One line under the Address field when the user is EDITING a saved SFTP or WebDAV server, saying they can type the server's new address (for example after a NAS got a new IP address) and that nothing tied to the server is lost: favorites pointing into it, tabs open on it, and the password stored for it all follow it to the new address."
   },
-  "servers.sheet.smbAddressMoveHelp": "Did the server move? Type its new address. Its shares and saved password come along, and each share’s favorites and open tabs follow it the first time it opens there.",
+  "servers.sheet.smbAddressMoveHelp": "Did the server move? Type its new address. Its shares and saved password come along, and each share’s favorites and open tabs follow once that share opens at the new address.",
   "@servers.sheet.smbAddressMoveHelp": {
     "description": "One line under the Address field when the user is EDITING a saved SMB server (a NAS or a Windows PC whose shared folders, called “shares”, the user opens), saying they can type the server's new address (for example after the NAS got a new IP address) and that nothing tied to it is lost: its saved shares and stored password move right away, while favorites and tabs pointing into a share move over the first time that share is opened at the new address. Keep the wording of the opening the same as servers.sheet.addressMoveHelp. “Shares” is the SMB term for a server's shared folders; use the same word your translation uses elsewhere in the Servers list.",
     "screenshot": "server-sign-in-edit.png"
@@ -989,7 +989,7 @@
     "description": "One line under the changed-key heading. Says both innocent and serious causes, and what to do first.",
     "screenshot": "server-sign-in-host-key-changed.png"
   },
-  "servers.hostKey.changedDisclosure": "I’ve checked it",
+  "servers.hostKey.changedDisclosure": "I’ve checked the key",
   "@servers.hostKey.changedDisclosure": {
     "description": "A collapsed section holding the button that trusts a CHANGED key. Deliberately behind a click, so trusting one is never a reflex. First person: the user speaking.",
     "screenshot": "server-sign-in-host-key-first-contact.png"
@@ -1035,7 +1035,7 @@
     "description": "One line under the changed-certificate heading. Says both innocent and serious causes, and what to do first.",
     "screenshot": "server-sign-in-certificate-changed.png"
   },
-  "servers.certificate.changedDisclosure": "I’ve checked it",
+  "servers.certificate.changedDisclosure": "I’ve checked the certificate",
   "@servers.certificate.changedDisclosure": {
     "description": "A collapsed section holding the button that trusts a CHANGED certificate. Deliberately behind a click, so trusting one is never a reflex. First person: the user speaking.",
     "screenshot": "server-sign-in-certificate-first-contact.png"
@@ -1066,7 +1066,7 @@
   },
   "servers.paneState.notConnected": "{name} isn’t connected",
   "@servers.paneState.notConnected": {
-    "description": "Heading of the pane view shown when the user cancelled connecting to a saved server or share (for example, closed its sign-in form). A plain statement, NOT an error: nothing failed, the person chose not to connect yet.",
+    "description": "Heading of the pane view shown when the user cancelled connecting to a saved server or share (for example, closed its sign-in form). A plain statement, NOT an error: nothing failed, the person chose not to connect. {name} is the server’s or share’s name; if your language would have to agree a verb or adjective with it, a label frame such as “Not connected: {name}” is fine.",
     "placeholders": {
       "name": "the place’s display name, like “private on localhost:11481”"
     },
@@ -1075,7 +1075,7 @@
   },
   "servers.paneState.unreachable": "Cmdr couldn’t reach {name}.",
   "@servers.paneState.unreachable": {
-    "description": "Heading of the pane view shown when the user opened a saved server and there was no route to it at all: it’s off, its address doesn’t resolve, or the network is down. Names the server by the name the user gave it. A Try again button sits below. \"Cmdr\" is the product name.",
+    "description": "Heading of the pane view shown when the user opened a saved server and there was no route to it at all: it’s off, its address doesn’t resolve, or the network is down. Names the server by the name the user gave it. A Try again button sits below. \"Cmdr\" is the product name. Word it like servers.refusal.unreachable, which says the same thing in the Add server form.",
     "placeholders": {
       "name": "the name the user gave the saved server, like “Naspolya”, or its hostname, like “nas.local”, when it has no name"
     },
@@ -1124,7 +1124,7 @@
     "screenshot": "servers-hub.png",
     "screenshotNote": "Shown inside a file pane while it connects to a server: \"Connecting…\", \"Signed out\", a changed host key, or a \"Reconnecting…\" state with a countdown and Retry/Cancel controls. This shows the servers list those connections start from; your string appears in the pane, in the same network context."
   },
-  "servers.paneState.guestSessionRefusedHint": "You asked to sign in with your account, but the server offered a guest session instead. Usually that means the password was wrong. Rarely, it means something is tampering with the connection.",
+  "servers.paneState.guestSessionRefusedHint": "You asked to sign in with your account, but the server offered a guest session instead. Usually that means the password was wrong. Rarely, it means someone is tampering with the connection.",
   "@servers.paneState.guestSessionRefusedHint": {
     "description": "The lines under that heading: what happened, the usual innocent cause (a wrong password), and the rare serious one (tampering). Calm, not alarming. A “Try another password…” button (servers.paneState.tryAnotherPassword) and a Disconnect button sit right below it. Plain text, no markdown.",
     "screenshot": "servers-hub.png",
@@ -1183,7 +1183,7 @@
   },
   "servers.paneState.retryKeepsTrying": "Will keep trying for a total of {duration}.",
   "@servers.paneState.retryKeepsTrying": {
-    "description": "Reassurance line telling the user how long the auto-reconnect will keep trying. {duration} is a phrase like \"60 seconds\" or \"2 minutes\".",
+    "description": "Reassurance line telling the user how long the auto-reconnect keeps trying. {duration} is the WHOLE time it tries, counted from the start, not the time remaining, so don’t word it as “another …”. It’s a phrase like \"60 seconds\" or \"2 minutes\".",
     "placeholders": {
       "duration": "the total duration phrase, e.g. 60 seconds or 2 minutes"
     },

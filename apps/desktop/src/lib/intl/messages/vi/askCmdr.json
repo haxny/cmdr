@@ -260,9 +260,9 @@
   "@askCmdr.error.provider": {
     "sourceHash": "d536cce"
   },
-  "askCmdr.event.chatMemoryChanged": "Bộ nhớ trò chuyện giờ chứa {tokens, number} token",
+  "askCmdr.event.chatMemoryChanged": "Bộ nhớ trò chuyện giờ chứa {tokens, plural, other {# token}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "Đã bỏ {count, plural, other {# lần tra cứu trước}} để vừa với ngữ cảnh của mô hình.",
   "@askCmdr.event.contextTrimmed": {
@@ -637,9 +637,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "Không tìm thấy {countText} {count, plural, other {tệp}}: chúng đã bị di chuyển hoặc xóa sau khi đổi tên.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Không tìm thấy {countText} {count, plural, other {mục}}: chúng đã bị di chuyển hoặc xóa sau khi đổi tên.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "Giữ nguyên {name}: tên cũ đã có thứ khác dùng.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

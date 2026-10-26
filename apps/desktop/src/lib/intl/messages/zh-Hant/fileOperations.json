@@ -69,7 +69,7 @@
   },
   "fileOperations.trash.undoGone": "沒有可以放回的東西：{count, plural, other {項目}}已經不在垃圾桶裡了。",
   "@fileOperations.trash.undoGone": {
-    "sourceHash": "8ab6d72"
+    "sourceHash": "69a90c2"
   },
   "fileOperations.trash.undoPartlyGone": "有 {countText} 個{count, plural, other {項目}}已經不在垃圾桶裡了。",
   "@fileOperations.trash.undoPartlyGone": {
@@ -267,9 +267,9 @@
   "@fileOperations.transferDialog.targetWillBeCreatedMove": {
     "sourceHash": "1246331"
   },
-  "fileOperations.transferDialog.rootEchoWarning": "這個位置本來就從 {rootFolder} 開始，所以這個路徑會通往 {resolvedPath}。你是想用 {strippedPath} 嗎？",
+  "fileOperations.transferDialog.rootEchoWarning": "這裡的路徑本來就從 {rootFolder} 裡開始算，所以你輸入的路徑會通往 {resolvedPath}。你是想用 {strippedPath} 嗎？",
   "@fileOperations.transferDialog.rootEchoWarning": {
-    "sourceHash": "b692d10"
+    "sourceHash": "43aace3"
   },
   "fileOperations.transferDialog.rootEchoUseStripped": "使用較短的路徑",
   "@fileOperations.transferDialog.rootEchoUseStripped": {
@@ -533,7 +533,7 @@
   },
   "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {你已取消這次複製。目前為止複製好的檔案會留在原處。} move {你已取消這次移動。目前為止移動過的檔案會留在新位置。} compress {你已取消這次壓縮。} delete {你已取消這次刪除。目前為止刪除的檔案已經不在了，其餘檔案仍在原處。} trash {你已取消這次移至垃圾桶的操作。目前為止移過去的檔案會留在垃圾桶中，其餘檔案仍在原處。} other {你已取消這項操作。}}",
   "@fileOperations.transferProgress.canceledAlertMessage": {
-    "sourceHash": "0c16ac3"
+    "sourceHash": "1d1de76"
   },
   "fileOperations.transferProgress.titleCancellingSlow": "正在取消⋯（正在清理）",
   "@fileOperations.transferProgress.titleCancellingSlow": {
@@ -785,7 +785,7 @@
   },
   "fileOperations.sourcesGone.moreItems": "{count, plural, other {另外還有 {countText} 個項目}}",
   "@fileOperations.sourcesGone.moreItems": {
-    "sourceHash": "ef18403"
+    "sourceHash": "c39507d"
   },
   "fileOperations.sourcesGone.continue": "{type, select, copy {複製其餘項目} move {移動其餘項目} delete {刪除其餘項目} trash {將其餘項目移到垃圾桶} other {繼續處理其餘項目}}",
   "@fileOperations.sourcesGone.continue": {

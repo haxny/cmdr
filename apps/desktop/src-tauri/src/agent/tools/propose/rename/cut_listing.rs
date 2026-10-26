@@ -149,6 +149,7 @@ mod tests {
     fn plan(folder: &str, rows: usize) -> RenameProposalSnapshot {
         RenameProposalSnapshot {
             proposal_id: "proposal-1".to_string(),
+            revision: 0,
             rows: (0..rows)
                 .map(|i| RenameProposalRowSnapshot {
                     row_id: format!("row-{i}"),

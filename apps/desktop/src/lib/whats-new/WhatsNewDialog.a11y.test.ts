@@ -239,7 +239,7 @@ describe('WhatsNewDialog', () => {
       setReleases(sampleReleases, false, [critical])
       const target = await mountDialog()
 
-      expect(target.textContent).toContain('This version fixed a security issue.')
+      expect(target.textContent).toContain('Recent updates fixed a security issue.')
       const links = advisoryLinks(target)
       expect(links.map((a) => a.textContent.trim())).toEqual(['Read the advisory'])
       links[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
@@ -251,7 +251,7 @@ describe('WhatsNewDialog', () => {
       setReleases(sampleReleases, false, [critical, medium])
       const target = await mountDialog()
 
-      expect(target.textContent).toContain('This version fixed 2 security issues.')
+      expect(target.textContent).toContain('Recent updates fixed 2 security issues.')
       expect(advisoryLinks(target).map((a) => a.getAttribute('href'))).toEqual([critical.url, medium.url])
       expect(advisoryLinks(target).map((a) => a.textContent.trim())).toEqual([
         'Read advisory GHSA-crit-0000-0000',
@@ -263,7 +263,7 @@ describe('WhatsNewDialog', () => {
       setReleases(sampleReleases, false, [critical, { ...medium, url: null }])
       const target = await mountDialog()
 
-      expect(target.textContent).toContain('This version fixed 2 security issues.')
+      expect(target.textContent).toContain('Recent updates fixed 2 security issues.')
       expect(advisoryLinks(target).map((a) => a.getAttribute('href'))).toEqual([critical.url])
     })
 
@@ -271,7 +271,7 @@ describe('WhatsNewDialog', () => {
       setReleases([], false, [critical])
       const target = await mountDialog()
 
-      expect(target.textContent).toContain('This version fixed a security issue.')
+      expect(target.textContent).toContain('Recent updates fixed a security issue.')
       expect(target.querySelector('.empty')).toBeNull()
     })
 

@@ -167,9 +167,9 @@
   "@main.cliCommand.installed": {
     "sourceHash": "5b72efe"
   },
-  "main.cliCommand.uninstalled": "Tog bort kommandot ”cmdr”.",
+  "main.cliCommand.uninstalled": "Avinstallerade kommandot ”cmdr”.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "43e8d91"
+    "sourceHash": "edac691"
   },
   "main.cliCommand.alreadyInstalled": "Kommandot ”cmdr” är redan installerat.",
   "@main.cliCommand.alreadyInstalled": {
@@ -179,17 +179,17 @@
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Inget ändrades. Det krävs ett administratörslösenord för att lägga till eller ta bort kommandot ”cmdr”.",
+  "main.cliCommand.canceled": "Inget ändrades. Det krävs ett administratörslösenord för att installera eller avinstallera kommandot ”cmdr”.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "d51acb1"
+    "sourceHash": "31fd0a0"
   },
   "main.cliCommand.installFailed": "Cmdr kunde inte installera kommandot ”cmdr”. Kontrollera att det går att skriva till /usr/local/bin och försök sedan igen.",
   "@main.cliCommand.installFailed": {
     "sourceHash": "de500b0"
   },
-  "main.cliCommand.uninstallFailed": "Cmdr kunde inte ta bort kommandot ”cmdr”. Kontrollera att det går att skriva till /usr/local/bin och försök sedan igen.",
+  "main.cliCommand.uninstallFailed": "Cmdr kunde inte avinstallera kommandot ”cmdr”. Kontrollera att det går att skriva till /usr/local/bin och försök sedan igen.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "c066530"
+    "sourceHash": "fe4f2fe"
   },
   "main.cliCommand.homebrew": "Homebrew installerade kommandot ”cmdr” tillsammans med Cmdr, så det finns redan i din terminal. Kommandot försvinner när du avinstallerar Cmdr med Homebrew.",
   "@main.cliCommand.homebrew": {
@@ -199,9 +199,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Flytta Cmdr till mappen Appar först. Från någon annan plats skulle kommandot ”cmdr” sluta fungera så fort Cmdr flyttas.",
+  "main.cliCommand.notInApplications": "Flytta Cmdr till mappen Appar först. Om du installerar kommandot ”cmdr” från någon annan plats slutar kommandot fungera så fort Cmdr flyttas.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "c9e3fc3"
+    "sourceHash": "e011785"
   },
   "main.cliCommand.notProductionBuild": "Det här är en utvecklingsversion av Cmdr, så den rör inte kommandot ”cmdr”. Använd Cmdr i mappen Appar för det här.",
   "@main.cliCommand.notProductionBuild": {

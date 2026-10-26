@@ -71,9 +71,9 @@
   "@crashReporter.sentToast.message.report": {
     "sourceHash": "a676ed5"
   },
-  "crashReporter.sentToast.changeSettings": "Wijzig in Instellingen > Updates",
+  "crashReporter.sentToast.changeSettings": "Wijzig in Instellingen",
   "@crashReporter.sentToast.changeSettings": {
-    "sourceHash": "25d151d"
+    "sourceHash": "144d0bd"
   },
   "crashReporter.sentToast.sendLog": "Logboek bijvoegen",
   "@crashReporter.sentToast.sendLog": {

@@ -51,6 +51,13 @@
     "forms": "bare `Ajouter à X` with no explicit object, like Apple (Ajouter au Dock, Ajouter aux favoris, Ajouter à votre rapport d’incident); progress `Ajout…`; participle agrees with its noun (Note ajoutée)",
     "sources": "macOS Finder/AppKit (\"Ajouter à la barre latérale\", \"Ajouter au Dock\", \"Ajouter aux favoris\")"
   },
+  "administrator": {
+    "accept": ["administrateur", "administrateurs"],
+    "chosen": "administrateur",
+    "confidence": "high",
+    "forms": "an administrator password → un mot de passe d’administrateur; administrator rights → des droits d’administrateur; the person running a server → l’administrateur du serveur; the person who manages a Mac → la personne qui gère ce Mac (style.md gender rule)",
+    "sources": "macOS (« saisir un nom et un mot de passe d’administrateur »); catalog (errors.write.permissionDenied.suggestion.needsAdminMac, main.cliCommand.canceled)"
+  },
   "advanced": {
     "chosen": "Avancé",
     "confidence": "high",
@@ -224,7 +231,8 @@
     "confidence": "high",
     "decision": "Ask Cmdr",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "a zip-file row kind, the archive concept (archive), not a chat being archived"
+      "fileExplorer.list.rowKind.archive": "a zip-file row kind, the archive concept (archive), not a chat being archived",
+      "suggestedOps.facts.archive": "a label naming the archive file a compress suggestion creates, the archive noun, not a chat being archived"
     },
     "forms": "badge Archivée (agrees with the implicit conversation); unarchive → Désarchiver (tentative, no pile hit)",
     "sources": "MS terminology FRA (archive verb → archiver)"
@@ -286,9 +294,6 @@
     "accept": ["Précédent", "revenir", "revenez"],
     "chosen": "Retour",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoTooltip": "Rename back is not the Back button: renommer sous son ancien nom, as multiRename.undoStarted"
-    },
     "forms": "app buttons Retour, Back to X → Retour à X; the Go menu’s Back is Finder’s Précédent",
     "sources": "macOS fr (Précédent, six hits, no bare Retour); catalog"
   },
@@ -353,6 +358,19 @@
     "confidence": "high",
     "forms": "Cmdr blocked X from reaching Y → Cmdr a empêché X de joindre Y; macOS blocked access → macOS a empêché Cmdr d’accéder à …",
     "sources": "catalog: errors.listing.notPermitted.explanation; MS terminology FRA has bloqué, overruled by docs/i18n/fr/style.md"
+  },
+  "blocked-by": {
+    "accept": ["empêché", "empêche"],
+    "avoid": [
+      {
+        "form": "bloquer",
+        "why": "style.md bans bloqué as a verdict word"
+      }
+    ],
+    "chosen": "empêcher",
+    "confidence": "high",
+    "forms": "Cmdr blocked X from Y → Cmdr a empêché X de Y; macOS blocked → macOS a empêché",
+    "sources": "catalog (securityNotices.mcpForeignOrigin.title, errors: macOS a empêché Cmdr d’accéder); MS terminology FRA gives bloquer, excluded by the voice rule"
   },
   "brief-view": {
     "accept": ["brève"],
@@ -619,6 +637,9 @@
     "accept": ["ferme", "fermé", "fermiez", "fermeture"],
     "chosen": "Fermer",
     "confidence": "high",
+    "exceptions": {
+      "settings.suggestedOps.suppressApprovalNotice.description": "English-sense: closing a notice with its ×, which French words as the click (cliquez sur le × de la note), since a notice is dismissed, not closed."
+    },
     "forms": "closes a window or tab (Fermer l’onglet); a notice or toast is dismissed with Ignorer instead",
     "sources": "macOS AppKit (Document.json, WindowTabs.json); MS terminology FRA"
   },
@@ -745,6 +766,12 @@
     "forms": "action (to a server) Se connecter, Connect to server… → Se connecter au serveur… on every surface; progress Connexion à {name}…; state Connecté (agrees with the server); network connection → connexion réseau; You are connected → Vous y avez bien accès (names the access, not the person)",
     "note": "`se connecter` is the network action; signing in is `s’identifier`.",
     "sources": "macOS Finder (\"Se connecter comme…\", MenuBar 266.title, MN1 « Connexion à « ^0 »… »)"
+  },
+  "learn-more": {
+    "chosen": "En savoir plus sur",
+    "confidence": "high",
+    "forms": "More about “X” → En savoir plus sur « X »",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
   "link": {
     "chosen": "lien",
@@ -1985,6 +2012,9 @@
       "errors.write.trashRefused.message.other": "English-sense: moving to the trash is placer dans la corbeille.",
       "fileOperations.transferProgress.rollbackAlreadyLandedTooltip": "French names what the button no longer does (le retour en arrière n'est plus possible) instead of undoing the move.",
       "operationLog.summary.trash": "English-sense: moving to the trash is placer dans la corbeille.",
+      "suggestedOps.approve.trash": "English-sense: moving to the trash is placer dans la corbeille.",
+      "suggestedOps.blocked.noTrashTooltip": "English-sense: moving to the trash is placer dans la corbeille (les y placer).",
+      "suggestedOps.reversible.moveBack": "Moving files back where they were is remettre à sa place, the put-back verb Finder uses (Remettre).",
       "queryUi.recent.popoverHint": "English-sense: the arrow keys move the highlight, so naviguer.",
       "transfer.trash": "English-sense: moving to the trash is placer dans la corbeille."
     },
@@ -2058,9 +2088,6 @@
     "chosen": "partage",
     "confidence": "high",
     "decision": "Réseau : connexion, identification et partages",
-    "exceptions": {
-      "servers.sheet.addressHelpNfs": "the English share is a literal path in the example addresses (nfs://nas.local/share), kept as-is"
-    },
     "forms": "network share → partage réseau (masculine); SMB share → partage SMB",
     "sources": "macOS (Partage et permissions); NetAuthAgent EINFO_NO_SHARE; MS terminology FRA"
   },
@@ -2641,9 +2668,7 @@
     "confidence": "high",
     "decision": "Index d'images",
     "exceptions": {
-      "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it.",
-      "settings.dataWipe.doneMessage": "English-sense: removing the app means trashing it, a deletion, so supprimer.",
-      "settings.dataWipe.partialMessage": "English-sense: the user deletes the leftover files and keychain items, so supprimez-les."
+      "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it."
     },
     "forms": "take off a list without deleting anything (a favorite, a folder from indexing, a tag, an attachment)",
     "sources": "catalog (Retirer la pièce jointe)"
@@ -2652,10 +2677,6 @@
     "accept": ["renomme", "renommé", "renommage"],
     "chosen": "Renommer",
     "confidence": "high",
-    "exceptions": {
-      "errors.write.originalsKeptAside.suggestion.many": "Rename back is redonner leurs noms, the French idiom for restoring a name.",
-      "errors.write.originalsKeptAside.suggestion.one": "Rename back is redonner son nom, the French idiom for restoring a name."
-    },
     "forms": "noun renommage (queue row Renommage); batch rename → renommage par lot; mass-rename → renommage en masse (tentative); rename cycle → cycle de renommage; rotate through a cycle → permuter",
     "sources": "macOS Finder; Nautilus"
   },
@@ -3175,11 +3196,7 @@
     "accept": ["Étape"],
     "confidence": "high",
     "forms": "Step 1 of 2: X → Étape 1 sur 2 : x (no-break space before the colon; the phase continues lowercase, as in ai.local.installStepExtracting)",
-    "sources": "MS terminology (step → étape); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The Multi-rename counter’s increment, not a stage: pas, as multiRename.counterEditor.step ships (Total Commander « Par pas de »).",
-      "multiRename.placeholderHelp.counterAll": "The Multi-rename counter’s increment, not a stage: pas, as multiRename.counterEditor.step ships (Total Commander « Par pas de »)."
-    }
+    "sources": "MS terminology (step → étape); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)"
   },
   "stop": {
     "accept": ["arrêt", "cesse"],
@@ -3236,7 +3253,7 @@
     "accept": ["suggéré", "suggère", "propose"],
     "chosen": "suggestion",
     "confidence": "high",
-    "forms": "Suggested operations → Opérations suggérées",
+    "forms": "AI suggestions (the dialog title, View menu item, palette command) → Suggestions de l’IA, the same as fileOperations.mkdir.aiSuggestionsAria; quoted in prose bare (la boîte de dialogue Suggestions de l’IA); a sweep heading → Suggéré … (Suggéré à l’instant, Suggéré hier à {time})",
     "sources": "catalog"
   },
   "supported": {
@@ -3313,6 +3330,13 @@
     "forms": "Mode suivi : suivre les changements",
     "sources": "descriptive FR; matches de Folgen"
   },
+  "tamper": {
+    "accept": ["trafique", "trafiquer", "trafiquée", "falsifi"],
+    "chosen": "trafiquer",
+    "confidence": "tentative",
+    "forms": "someone tampering with traffic → quelqu’un qui trafique les échanges; with the connection → quelqu’un trafique la connexion",
+    "sources": "catalog (four shipped strings use trafiquer); MS terminology FRA falsifier (kept as accept for a formal register)"
+  },
   "tap": {
     "accept": ["appuyez"],
     "chosen": "appuyer",
@@ -3379,6 +3403,12 @@
     "confidence": "high",
     "decision": "IA dans le cloud et lecture des fichiers",
     "sources": "macOS AppKit (Taille de vignette :); Total Commander; Double Commander"
+  },
+  "time-ago": {
+    "chosen": "il y a",
+    "confidence": "high",
+    "forms": "{duration} ago → il y a {duration}, before the amount (Suggéré il y a 5 minutes)",
+    "sources": "catalog (ui.toast.age, fileExplorer.errorPane.minutesAgo); GNOME Nautilus (Il y a une semaine)"
   },
   "time-left": {
     "chosen": "restant",
@@ -3504,12 +3534,33 @@
     "forms": "Something went wrong → Un problème est survenu; ran into a problem → a rencontré un problème; quit unexpectedly → a quitté inopinément",
     "sources": "macOS Finder NE105 (a rencontré une erreur, with problème per style); AppKitErrors.json"
   },
+  "uninstall": {
+    "accept": ["désinstall"],
+    "chosen": "désinstaller",
+    "confidence": "high",
+    "forms": "Uninstall “cmdr” command → Désinstaller la commande « cmdr »; noun → désinstallation (Désinstallation de la commande « cmdr » impossible)",
+    "sources": "MS terminology FRA (désinstaller); catalog (menu.app.cliCommandUninstall)"
+  },
+  "unknown": {
+    "accept": ["inconnue", "inconnus", "inconnues"],
+    "chosen": "inconnu",
+    "confidence": "high",
+    "forms": "agrees with the value it stands for: a bare model → Inconnu; a size or date cell (la taille, la date) → Inconnue, like (inconnue) for a size",
+    "sources": "macOS (Moniteur inconnu, erreur inconnue); Nautilus/Thunar (Inconnu); catalog (ai.local.modelUnknown, fileOperations.transferProgress.sizeUnknown)"
+  },
   "unlock": {
     "accept": ["déverrouillez", "déverrouillé"],
     "chosen": "Déverrouiller",
     "confidence": "high",
     "forms": "unlock an archive → la déverrouiller (the feminine archive, never {name})",
     "sources": "macOS AppKit (Déverrouiller)"
+  },
+  "unlock-device": {
+    "accept": ["déverrouill"],
+    "chosen": "déverrouiller",
+    "confidence": "high",
+    "forms": "unlock the phone → déverrouillez-le; Unlock the disk → Déverrouillez le disque",
+    "sources": "macOS (« Déverrouillez le disque et réessayez. »); catalog (adb and mtp hints)"
   },
   "unplug": {
     "accept": ["débranché", "branché", "déconnecté", "rebranch", "débranchez", "déconnexion"],
@@ -3635,6 +3686,7 @@
     "sources": "macOS (Volume, Volumes serveur)"
   },
   "volume-switcher": {
+    "accept": ["sélecteur"],
     "chosen": "sélecteur de volume",
     "confidence": "high",
     "forms": "singular volume; a tight menu item shortens to sélecteur, like English switcher (Épingler au sélecteur)",
@@ -3718,9 +3770,6 @@
     "accept": ["écrit", "écriture", "écriv"],
     "chosen": "écrire",
     "confidence": "high",
-    "exceptions": {
-      "suggestedOps.reversibleDeleteWritten": "What the operation writes is what it creates (ce qui est créé): new files."
-    },
     "forms": "partly written → partiellement écrit; written so far → écrits jusqu’à présent; half-written → à moitié écrit",
     "sources": "catalog; macOS (partiellement disponible)"
   },

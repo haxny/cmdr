@@ -196,7 +196,7 @@ pub(super) fn email_for_kind(kind: BundleKind, email: Option<AttachedEmail>) -> 
 /// user copied out of the dialog is the id the report lands under. Validation happens here
 /// rather than at the IPC boundary so no caller (this or the next one) can build a bundle
 /// around an id the app didn't mint; the id becomes part of the server-side object key.
-pub(super) fn resolve_bundle_id(requested: Option<String>) -> String {
+pub fn resolve_bundle_id(requested: Option<String>) -> String {
     match requested {
         Some(id) if crate::short_id::matches(super::SHORT_ID_PREFIX, &id) => id,
         Some(_) => {

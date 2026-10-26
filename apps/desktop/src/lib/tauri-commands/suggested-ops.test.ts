@@ -11,6 +11,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     suggestedOpsPage: vi.fn(),
     suggestedOpsReject: vi.fn(),
     suggestedOpsApprove: vi.fn(),
+    suggestedOpsLiveFacts: vi.fn(),
   },
   events: {
     suggestionsChanged: { listen: vi.fn() },
@@ -21,6 +22,7 @@ import { commands, events } from '#lib/ipc/bindings.js'
 import {
   approveSuggestedGroup,
   listSuggestedOps,
+  liveSuggestedOpFacts,
   onSuggestionsChanged,
   pageSuggestedOps,
   rejectSuggestedGroup,
@@ -82,14 +84,17 @@ describe('pageSuggestedOps', () => {
 })
 
 describe('approveSuggestedGroup', () => {
-  it('sends the deselected ids and answers what happened', async () => {
+  it('sends the selection as given and answers what happened', async () => {
     vi.mocked(commands.suggestedOpsApprove).mockResolvedValueOnce({
       status: 'ok',
       data: { kind: 'started', operationId: 'op-9' },
     } as never)
 
-    await expect(approveSuggestedGroup(7, [4, 9])).resolves.toEqual({ kind: 'started', operationId: 'op-9' })
-    expect(commands.suggestedOpsApprove).toHaveBeenCalledWith(7, [4, 9])
+    await expect(approveSuggestedGroup(7, 3, { mode: 'only', opIds: [4, 9] })).resolves.toEqual({
+      kind: 'started',
+      operationId: 'op-9',
+    })
+    expect(commands.suggestedOpsApprove).toHaveBeenCalledWith(7, 3, { mode: 'only', opIds: [4, 9] })
   })
 
   it('passes a refusal through rather than throwing, since each kind means something different', async () => {
@@ -98,7 +103,9 @@ describe('approveSuggestedGroup', () => {
       data: { kind: 'listChanged' },
     } as never)
 
-    await expect(approveSuggestedGroup(7, [])).resolves.toEqual({ kind: 'listChanged' })
+    await expect(approveSuggestedGroup(7, 3, { mode: 'allExcept', opIds: [] })).resolves.toEqual({
+      kind: 'listChanged',
+    })
   })
 
   it('throws when the call itself failed', async () => {
@@ -107,7 +114,7 @@ describe('approveSuggestedGroup', () => {
       error: { message: 'no store' },
     } as never)
 
-    await expect(approveSuggestedGroup(7, [])).rejects.toThrow()
+    await expect(approveSuggestedGroup(7, 3, { mode: 'allExcept', opIds: [] })).rejects.toThrow()
   })
 })
 
@@ -146,5 +153,27 @@ describe('rejectSuggestedGroup', () => {
     } as never)
 
     await expect(rejectSuggestedGroup(7)).rejects.toThrow()
+  })
+})
+
+describe('liveSuggestedOpFacts', () => {
+  it('answers the facts for the window it was asked for', async () => {
+    const facts = [{ opId: 4, state: { kind: 'missing' } }]
+    vi.mocked(commands.suggestedOpsLiveFacts).mockResolvedValueOnce({ status: 'ok', data: facts } as never)
+
+    await expect(liveSuggestedOpFacts(7, 50, 50)).resolves.toEqual({ kind: 'facts', facts })
+    expect(commands.suggestedOpsLiveFacts).toHaveBeenCalledWith(7, 50, 50)
+  })
+
+  it('passes a refusal through as a value, since the dialog words it once per group', async () => {
+    vi.mocked(commands.suggestedOpsLiveFacts).mockResolvedValueOnce({
+      status: 'error',
+      error: { type: 'sourceNotConnected' },
+    } as never)
+
+    await expect(liveSuggestedOpFacts(7, 0, 50)).resolves.toEqual({
+      kind: 'refused',
+      reason: { type: 'sourceNotConnected' },
+    })
   })
 })

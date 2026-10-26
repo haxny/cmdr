@@ -78,6 +78,12 @@
     "forms": "button Lägg till i … (Lägg till i favoriter, Lägg till i rapporten); progress Lägger till…; past Lade till",
     "sources": "macOS AppKit/Finder (Lägg till i Dock, Lägg till i sidofältet); the date label Tilläggsdatum is Finder's Date Added (LocalizableMerged N169.38 / N230)"
   },
+  "administrator": {
+    "chosen": "administratör",
+    "confidence": "high",
+    "forms": "compounds administratörslösenord, administratörsbehörighet; the person who runs a server → systemadministratör",
+    "sources": "MS terminology (administrator → administratör); catalog (administratörsbehörighet ×4)"
+  },
   "advanced": {
     "accept": ["avancerad"],
     "chosen": "Avancerat",
@@ -100,6 +106,12 @@
     "forms": "AI provider → AI-leverantör; cloud provider → molnleverantör",
     "note": "Where English says service (AI service), Swedish says tjänst; both stay as the English has them.",
     "sources": "MS terminology (provider → leverantör)"
+  },
+  "ai-reply": {
+    "chosen": "svar",
+    "confidence": "high",
+    "forms": "neuter ett svar, svaret; a server's reply takes the same word (Serverns svar)",
+    "sources": "MS terminology (reply → svar); catalog (Serverns svar, svaret)"
   },
   "ai-tool": {
     "accept": ["platform tools"],
@@ -233,7 +245,7 @@
     ],
     "chosen": "godkänn",
     "confidence": "high",
-    "decision": "Suggested operations",
+    "decision": "AI-förslag",
     "forms": "button Godkänn; förrän du godkänner det",
     "sources": "standard Swedish; macOS Finder (Ta emot/Avböj is the AirDrop pair)"
   },
@@ -249,7 +261,8 @@
     "chosen": "arkivera",
     "confidence": "high",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "English sense: a zip-like archive file (the archive concept, arkiv), not archiving a chat; source-queue asks to move it to archive-chat's notMatch."
+      "fileExplorer.list.rowKind.archive": "English sense: a zip-like archive file (the archive concept, arkiv), not archiving a chat; source-queue asks to move it to archive-chat's notMatch.",
+      "suggestedOps.facts.archive": "English sense: the NOUN label before the zip file a compress suggestion creates (the archive concept, arkiv), not archiving a chat."
     },
     "forms": "Arkivera; badge Arkiverad; Visa/Göm arkiverade; unarchive → avarkivera (tentative, av- reversal like avmontera)",
     "sources": "MS terminology (archive verb → arkivera)"
@@ -346,6 +359,13 @@
     "confidence": "high",
     "forms": "Cmdr blockerade en webbsida …; macOS blockerade Cmdr från att …; rename preflight blockerat / blockerade",
     "sources": "MS terminology (Blockerade kontakter, blockerade IP-adresser); catalog precedent errors.listing.notPermitted.explanation, askCmdr.renameReview.status"
+  },
+  "blocked-by": {
+    "accept": ["blockerade", "blockeras", "avvisade"],
+    "chosen": "blockera",
+    "confidence": "high",
+    "forms": "Cmdr blockerade en webbsida som försökte nå …; a refused server reply keeps avvisa (Cmdr avvisade ett svar)",
+    "sources": "MS terminology (block → blockera); catalog securityNotices.mcpForeignOrigin.title"
   },
   "brief-view": {
     "accept": ["Kortfattat"],
@@ -680,6 +700,12 @@
     "confidence": "high",
     "forms": "ansluta, Anslut, Ansluter till {name}…, anslutning, ansluten; Connect as guest → Anslut som gäst",
     "sources": "macOS Finder (Anslut till server, Ansluter till ^0…)"
+  },
+  "learn-more": {
+    "chosen": "Mer om",
+    "confidence": "high",
+    "forms": "More about “X” → Mer om ”X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
   "link": {
     "chosen": "länk",
@@ -1036,7 +1062,7 @@
     "sources": "MS terminology (email address → e-postadress)"
   },
   "enable": {
-    "accept": ["slå på", "slår på", "slås på", "påslagen", "påslaget", "slagit på", "slå sedan på"],
+    "accept": ["slå på", "slår på", "slås på", "påslagen", "påslaget", "slagit på", "slå sedan på", "slog på"],
     "chosen": "aktivera",
     "confidence": "high",
     "forms": "Settings switches aktivera / aktiverad; turning a feature on in a hint → Slå på (macOS Slå på Wi-Fi); a phone switch that is on → aktiverad",
@@ -1276,6 +1302,13 @@
     "confidence": "high",
     "forms": "ledigt utrymme; frigör utrymme",
     "sources": "macOS"
+  },
+  "from-to": {
+    "accept": ["Till"],
+    "chosen": "Från",
+    "confidence": "high",
+    "forms": "paired headings and fact labels Från / Till (transfer dialog, suggestedOps.facts.from/.to)",
+    "sources": "Total Commander sv (Från: / Till:)"
   },
   "full-disk-access": {
     "avoid": [
@@ -2000,10 +2033,6 @@
     "chosen": "delad mapp",
     "confidence": "high",
     "decision": "Same concept, different English",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "English share is the verb (pass the saved report on), not an SMB share: skicka den vidare själv.",
-      "servers.sheet.addressHelpNfs": "share is only the literal path segment of the example addresses (nfs://nas.local/share), which stay verbatim."
-    },
     "forms": "delad mapp / delade mappar; -resurs only inside a compound (SMB-/nätverksresurser); the share counter keeps delning / delningar; network shares → delade mappar på nätverket",
     "note": "Apple's NetAuthAgent says Delningspunkten; the catalog keeps delad mapp.",
     "sources": "macOS Finder (1069.title Delad mapp, Hantera delad mapp)"
@@ -2244,6 +2273,16 @@
     "chosen": "sökväg",
     "confidence": "high",
     "sources": "macOS Finder, MS"
+  },
+  "pattern": {
+    "accept": ["namnmönster", "sökmönster", "filnamnsmönster"],
+    "chosen": "mönster",
+    "confidence": "high",
+    "exceptions": {
+      "queryUi.bar.placeholder.regex": "A placeholder names what to type: Reguljärt uttryck says it whole, and Mönster för reguljärt uttryck only lengthens a narrow field."
+    },
+    "forms": "neuter ett mönster; rename pattern → namnmönster; search pattern → sökmönster",
+    "sources": "MS terminology (pattern → mönster); catalog (Sökmönster, Filnamnsmönster, namnmönster)"
   },
   "pause": {
     "chosen": "pausa",
@@ -2496,7 +2535,7 @@
     "accept": ["avvisa", "godtog"],
     "chosen": "avböj",
     "confidence": "high",
-    "decision": "Suggested operations",
+    "decision": "AI-förslag",
     "forms": "an AI suggestion → Avböj; a server refusing → avvisa",
     "sources": "macOS Finder (AirDrop Ta emot/Avböj)"
   },
@@ -2602,7 +2641,8 @@
     "exceptions": {
       "errors.write.mountedVolumeInside.message.replace": "Replacing means the Overwrite answer here, so skrivs över.",
       "fileOperations.rollbackConfirm.body": "Replaced means overwrote here, so skrivit över.",
-      "fileOperations.rollbackConfirm.bodyStopAndMoveBack": "Replaced means overwrote here, so skrivit över."
+      "fileOperations.rollbackConfirm.bodyStopAndMoveBack": "Replaced means overwrote here, so skrivit över.",
+      "suggestedOps.irreversible.overwrite": "Replaces means overwrites here, so Cmdr skriver över ett befintligt arkiv."
     },
     "note": "Where English replaced means overwrote, Swedish says skriver över.",
     "sources": "macOS Finder (Replace → Ersätt)"
@@ -3073,7 +3113,8 @@
     "accept": ["föreslå", "föreslog", "föreslagna"],
     "chosen": "förslag",
     "confidence": "high",
-    "sources": "macOS AppKit (Förslag)"
+    "forms": "the AI suggestions dialog (title, View-menu item, palette command) → AI-förslag, like the shipped indicator and mkdir header; in prose dialogen AI-förslag; a batch heading → Föreslogs nyss / Föreslogs för … sedan / Föreslogs i dag kl. {time}",
+    "sources": "macOS AppKit (Förslag); catalog fileOperations.mkdir.aiSuggestionsHeader, suggestedOps.indicatorTooltip"
   },
   "supported": {
     "accept": ["stöd"],
@@ -3131,6 +3172,13 @@
     "confidence": "high",
     "forms": "Finder-taggen Grå; colors Röd, Orange, Gul, Grön, Blå, Lila, Grå",
     "sources": "macOS Finder (TG5, TG_COLOR_*)"
+  },
+  "tamper": {
+    "accept": ["manipulerar", "manipulering"],
+    "chosen": "manipulera",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → någon manipulerar trafiken / anslutningen",
+    "sources": "MS terminology (tamper → manipulera, manipuleringsskydd)"
   },
   "tail": {
     "chosen": "Tail",
@@ -3199,6 +3247,13 @@
     "confidence": "high",
     "decision": "Ask Cmdr looks inside files",
     "sources": "MS terminology, macOS AppKit (Miniatyrstorlek), Total Commander"
+  },
+  "time-ago": {
+    "accept": ["nyss"],
+    "chosen": "sedan",
+    "confidence": "high",
+    "forms": "för {durationText} sedan; a moment ago → nyss; a batch heading → Föreslogs för {countText} minuter sedan",
+    "sources": "Dolphin (För två veckor sedan), Nautilus (För %d dag sedan); catalog ui.toast.age, queryUi.age.*"
   },
   "time-left": {
     "chosen": "kvar",
@@ -3305,14 +3360,38 @@
     "forms": "Something went wrong → Något gick fel",
     "sources": "catalog"
   },
+  "uninstall": {
+    "accept": ["avinstallerade", "avinstallerat"],
+    "avoid": [
+      {
+        "form": "ta bort",
+        "why": "takes something out of a list; the toasts echo the menu item Avinstallera kommandot ”cmdr”"
+      }
+    ],
+    "chosen": "avinstallera",
+    "confidence": "high",
+    "forms": "menu Avinstallera kommandot ”cmdr”; toast Avinstallerade kommandot ”cmdr”",
+    "sources": "MS terminology (uninstall → avinstallera); catalog menu.app.cliCommandUninstall"
+  },
+  "unknown": {
+    "accept": ["Okänt"],
+    "chosen": "okänd",
+    "confidence": "high",
+    "forms": "agrees with its noun: a model or a size Okänd, in brackets (okänd); a cell value standing for either a size (en storlek) or a date (ett datum) takes the neuter Okänt (suggestedOps.factUnknown)",
+    "sources": "macOS AppKit (Okänd), Nautilus and Thunar (Okänd / okänd); catalog ai.local.modelUnknown"
+  },
   "unlock": {
     "accept": ["låsa upp", "låser upp", "upplåst", "låste inte upp"],
     "chosen": "lås upp",
     "confidence": "high",
-    "sources": "macOS AppKit (Lås upp)",
-    "exceptions": {
-      "errors.write.trashRefused.suggestion.locked": "English sense: removing Finder’s Locked flag (the locked concept), not an archive password, so it takes the Finder checkbox Låst; lås upp is the shared verb"
-    }
+    "sources": "macOS AppKit (Lås upp)"
+  },
+  "unlock-device": {
+    "accept": ["låsa upp", "låser upp", "upplåst"],
+    "chosen": "lås upp",
+    "confidence": "high",
+    "forms": "lås upp telefonen",
+    "sources": "macOS AppKit (Lås upp); MS terminology (unlock → lås upp); Android Swedish (Lås upp)"
   },
   "unplug": {
     "accept": [

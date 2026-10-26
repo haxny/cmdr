@@ -140,6 +140,8 @@ function batch(overrides: Partial<BulkRenameReviewProposal> = {}): BulkRenameRev
     ],
     preflighting: false,
     expired: false,
+    revision: 1,
+    changed: false,
     requestVersion: 0,
     ...overrides,
   }
@@ -715,6 +717,24 @@ describe('BulkRenameReviewDialog', () => {
     expect(notices).toHaveLength(1)
     expect(target.querySelectorAll('input[data-row-id]')).toHaveLength(1)
     expect(nameInput(target, 'live-row').value).toBe('after-one.png')
+    await expectNoA11yViolations(target)
+  })
+
+  /** A batch the agent amended since it was shown is stale: a notice replaces its rows. */
+  it('replaces a batch the agent changed with a notice, and leaves it out of Rename', async () => {
+    reviewState.renameReview = {
+      proposals: [
+        batch({ proposalId: 'batch-changed', changed: true, rows: [row({ rowId: 'changed-row' })] }),
+        batch({ proposalId: 'batch-live', rows: [row({ rowId: 'live-row', sourcePath: '/Documents/live.png' })] }),
+      ],
+    }
+    const target = mountDialog()
+    await tick()
+
+    expect(target.textContent).toContain('The AI changed this suggestion while you were reading it.')
+    expect(target.querySelectorAll('input[data-row-id]')).toHaveLength(1)
+    const buttons = [...target.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Rename 1 file')
     await expectNoA11yViolations(target)
   })
 

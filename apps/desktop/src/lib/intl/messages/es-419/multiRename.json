@@ -43,6 +43,10 @@
   "@multiRename.presets.saveAs": {
     "sourceHash": "1d40d04"
   },
+  "multiRename.presets.update": "Actualizar con la configuración actual",
+  "@multiRename.presets.update": {
+    "sourceHash": "dbe34bb"
+  },
   "multiRename.presets.saveTitle": "Guardar preconfiguración",
   "@multiRename.presets.saveTitle": {
     "sourceHash": "735dd18"

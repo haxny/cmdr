@@ -134,7 +134,13 @@ pub async fn dispatch<R: Runtime>(
     call_id: &str,
     params: &Value,
 ) -> RenameDispatchOutcome {
-    let outcome = build_draft(app, scope, params).and_then(|draft| stage_draft(app, scope, &draft));
+    let outcome = match build_draft(app, scope, params) {
+        Ok(mut draft) => {
+            freeze_draft(&mut draft).await;
+            stage_draft(app, scope, &draft)
+        }
+        Err(refusal) => Err(refusal),
+    };
     match outcome {
         Ok(snapshot) => {
             super::cut_listing::count_plan_from_cut_listing(app, scope, &snapshot);
@@ -163,6 +169,27 @@ pub async fn dispatch<R: Runtime>(
                 proposal: None,
             }
         }
+    }
+}
+
+/// Freeze each row's creation snapshot through the plan's volume, the same one-bounded-stat
+/// path `propose_suggestions` uses (`agent/tools/suggestions/snapshot.rs`), so a rename row shows
+/// what the file was when it was suggested.
+pub(super) async fn freeze_draft(draft: &mut RenameDraft) {
+    let volume = crate::file_system::volume::manager::get_volume_manager().get(&draft.volume_id);
+    freeze_draft_on(draft, volume).await;
+}
+
+/// [`freeze_draft`] against a volume in hand, so a test needn't register one.
+pub(super) async fn freeze_draft_on(
+    draft: &mut RenameDraft,
+    volume: Option<std::sync::Arc<dyn crate::file_system::volume::Volume>>,
+) {
+    use crate::agent::tools::suggestions::snapshot::{freeze_paths, snapshot_deadline};
+    let paths = draft.rows.iter().map(|row| row.source_path.clone()).collect();
+    let snapshots = freeze_paths(volume, paths, &snapshot_deadline()).await;
+    for (row, snapshot) in draft.rows.iter_mut().zip(snapshots) {
+        row.snapshot = snapshot;
     }
 }
 
@@ -424,6 +451,7 @@ fn build_draft<R: Runtime>(
             destination_name: rename.destination_name,
             evidence: rename.evidence,
             coverage: None,
+            snapshot: None,
         });
     }
     // One unbacked claim refuses the WHOLE plan: staging the rest would show the user a

@@ -245,7 +245,6 @@
         color: var(--color-text-tertiary);
         font-size: var(--font-size-xs);
         font-family: var(--font-mono);
-        overflow-wrap: anywhere;
     }
 
     .actions {

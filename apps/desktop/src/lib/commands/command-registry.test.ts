@@ -478,6 +478,16 @@ describe('operation-log shortcut binding', () => {
   })
 })
 
+describe('go-to-path shortcut binding', () => {
+  // ⌘G is the menu accelerator; ⌘⇧G matches Finder's "Go to Folder…" for muscle memory.
+  it('binds nav.goToPath to ⌘G, then ⌘⇧G, and nothing else claims either', () => {
+    const cmd = commands.find((c) => c.id === 'nav.goToPath')
+    expect(cmd?.shortcuts).toEqual(['⌘G', '⌘⇧G'])
+    expect(claimants('⌘G')).toEqual(['nav.goToPath'])
+    expect(claimants('⌘⇧G')).toEqual(['nav.goToPath'])
+  })
+})
+
 describe('delete shortcut pairs', () => {
   // Total Commander users press Shift with the key that moves to the trash to delete
   // permanently instead; Finder's ⌥⌘⌫ is "Delete Immediately".

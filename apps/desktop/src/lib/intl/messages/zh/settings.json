@@ -1684,6 +1684,18 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
+  "settings.suggestedOps.suppressApprovalNotice.label": "隐藏“AI 建议”里的批准提示",
+  "@settings.suggestedOps.suppressApprovalNotice.label": {
+    "sourceHash": "33f9993"
+  },
+  "settings.suggestedOps.suppressApprovalNotice.description": "“AI 建议”对话框打开时会显示一条提示，说明里面的内容是 AI 建议的，在你批准之前什么都不会执行。打开这一项（或用提示上的 × 关掉它），就不再显示这条提示。",
+  "@settings.suggestedOps.suppressApprovalNotice.description": {
+    "sourceHash": "8d7605d"
+  },
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "建议、批准、同意、提示、警告、横幅、隐藏、不再显示、通知",
+  "@settings.suggestedOps.suppressApprovalNotice.keywords": {
+    "sourceHash": "ad9377a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "每个窗格记住的已关闭标签页数量",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2440,9 +2452,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "撤销功能需要它。关闭期间，Cmdr 不会记录新的拷贝、移动、重命名或删除，因此你无法撤销它们。已有的历史记录会保留，其中的操作仍然可以撤销。",
+  "settings.operationLog.enabled.description": "关闭期间，Cmdr 不会记录新的拷贝、移动、重命名或删除，因此你无法撤销它们。已有的历史记录会保留，其中的操作仍然可以撤销。",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "操作、日志、历史、历史记录、记录、撤销、隐私、关闭",
   "@settings.operationLog.enabled.keywords": {
@@ -2673,17 +2685,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "最高到 {ceiling}",
+  "settings.managed.summary.upTo": "最高到版本 {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "只能手动检查",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "最高到 {ceiling}，只能手动检查",
+  "settings.managed.summary.upToManualChecksOnly": "最高到版本 {ceiling}，只能手动检查",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "只限本地",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3292,9 +3304,9 @@
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr 会删除它在这台 Mac 上存放的 {sizeText} 数据，然后退出。这项操作无法撤销。",
+  "settings.dataWipe.introWithSize": "Cmdr 会删除它在这台 Mac 上存放的所有内容（{sizeText}），然后退出。这项操作无法撤销。",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "会删除的内容",
   "@settings.dataWipe.goesHeading": {

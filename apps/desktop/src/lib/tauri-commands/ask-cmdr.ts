@@ -147,9 +147,11 @@ export async function cancelAskCmdr(conversationId: number): Promise<void> {
 }
 
 /** Rechecks the user-selected rows of a server-owned rename proposal. Only opaque ids
- * cross the IPC boundary: source paths and destination names stay in the backend. */
-export async function preflightBulkRename(proposalId: string, allowedRowIds: string[]) {
-  const res = await commands.preflightBulkRename(proposalId, allowedRowIds)
+ * cross the IPC boundary: source paths and destination names stay in the backend. `revision` is the
+ * one the review showed (`RenameProposalSnapshot.revision`); an agent amend since answers status
+ * `listChanged` and records nothing. */
+export async function preflightBulkRename(proposalId: string, revision: number, allowedRowIds: string[]) {
+  const res = await commands.preflightBulkRename(proposalId, revision, allowedRowIds)
   if (res.status === 'error') throwIpcError(res.error)
   return res.data
 }
@@ -164,9 +166,10 @@ export async function reviseBulkRenameRow(proposalId: string, rowId: string, des
   return res.data
 }
 
-/** Starts the one queued operation for the exact rows the user allowed after preflight. */
-export async function applyBulkRename(proposalId: string, allowedRowIds: string[]) {
-  const res = await commands.applyBulkRename(proposalId, allowedRowIds)
+/** Starts the one queued operation for the exact rows the user allowed after preflight, for the
+ * revision the review showed. An agent amend since refuses as the typed `listChanged` error. */
+export async function applyBulkRename(proposalId: string, revision: number, allowedRowIds: string[]) {
+  const res = await commands.applyBulkRename(proposalId, revision, allowedRowIds)
   if (res.status === 'error') throwIpcError(res.error)
   return res.data
 }

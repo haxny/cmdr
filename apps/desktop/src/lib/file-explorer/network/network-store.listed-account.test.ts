@@ -57,7 +57,7 @@ describe('the account a share list signed in as', () => {
     ipc.listSharesOnHost.mockResolvedValue(listing('guest_allowed'))
     await fetchShares(host('e'))
     expect(getListedAccount('e')).toEqual({ kind: 'user', username: 'testuser' })
-    expect(guestListingWorked('e'), 'and it knows guest works there, for "Use guest"').toBe(true)
+    expect(guestListingWorked('e'), 'and it knows guest works there, for "Browse as guest"').toBe(true)
   })
 
   it('is unknown after a listing that failed, and after the machine’s lists are dropped', async () => {

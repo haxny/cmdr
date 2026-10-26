@@ -53,7 +53,7 @@ describe('a web page at the MCP server', () => {
   it('says so without naming the page, and opens MCP settings or dismisses', async () => {
     const notice: AccessNotice = { kind: 'mcpForeignOrigin' }
     const target = await mountNotice(notice)
-    expect(target.textContent).toContain('Cmdr blocked a web page from reaching its MCP server')
+    expect(target.textContent).toContain('Cmdr blocked a web page from reaching the MCP server')
     click(target, 'MCP settings')
     await vi.waitFor(() => {
       expect(openSettingsWindow).toHaveBeenCalledWith('security-notice-toast', ['AI', 'MCP server'])
@@ -82,7 +82,7 @@ describe('a refused server reply', () => {
 
   it('still reads once the share is gone from the volume list', async () => {
     const target = await mountNotice({ kind: 'smbSignatureRefused', volumeId: 'smb-gone' })
-    expect(target.textContent).toContain('Cmdr refused a reply from a network share')
+    expect(target.textContent).toContain('Cmdr refused a reply from a server')
   })
 })
 

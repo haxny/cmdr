@@ -262,7 +262,7 @@
   },
   "askCmdr.event.chatMemoryChanged": "Теперь в памяти чата {tokens, plural, one {# токен} few {# токена} many {# токенов} other {# токена}}",
   "@askCmdr.event.chatMemoryChanged": {
-    "sourceHash": "7dea8f2"
+    "sourceHash": "6ba7124"
   },
   "askCmdr.event.contextTrimmed": "{count, plural, one {Удален # предыдущий результат поиска} few {Удалены # предыдущих результата поиска} many {Удалено # предыдущих результатов поиска} other {Удалено # предыдущего результата поиска}}, чтобы уложиться в контекст модели.",
   "@askCmdr.event.contextTrimmed": {
@@ -636,9 +636,9 @@
   "@askCmdr.renameUndo.skipReason.vanished.named": {
     "sourceHash": "4daa75c"
   },
-  "askCmdr.renameUndo.skipReason.vanished.counted": "Не удалось найти {countText} {count, plural, one {файл} few {файла} many {файлов} other {файла}}: после переименования их переместили или удалили.",
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Не удалось найти {countText} {count, plural, one {объект} few {объекта} many {объектов} other {объекта}}: после переименования их переместили или удалили.",
   "@askCmdr.renameUndo.skipReason.vanished.counted": {
-    "sourceHash": "a761296"
+    "sourceHash": "c8d1788"
   },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "Оставлено как есть: {name}. Прежнее имя снова занято.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {

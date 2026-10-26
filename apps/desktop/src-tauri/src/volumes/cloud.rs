@@ -4,7 +4,7 @@
 
 use super::{
     ICLOUD_VOLUME_ID, LocationCategory, LocationInfo, VolumeInfo, get_fs_type, get_icon_for_path,
-    supports_trash_for_fs_type,
+    supports_trash_for_mount,
 };
 use cmdr_fs::cloud_provider::{CloudProvider, ICLOUD_DRIVE_SUBPATH};
 use std::path::{Path, PathBuf};
@@ -59,7 +59,8 @@ pub fn get_cloud_drives() -> Vec<LocationInfo> {
 fn cloud_volume_info(id: String, name: String, root: &Path) -> LocationInfo {
     let path = root.to_string_lossy().to_string();
     let fs_type = get_fs_type(&path);
-    let supports_trash = supports_trash_for_fs_type(fs_type.as_deref());
+    // A cloud folder sits on the boot disk, whose type the rule knows without its source.
+    let supports_trash = supports_trash_for_mount(None, fs_type.as_deref());
     LocationInfo {
         id,
         name,

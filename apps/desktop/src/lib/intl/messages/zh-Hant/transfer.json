@@ -59,9 +59,9 @@
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr 無法確認副本已完整寫入磁碟。如果磁碟機曾被拔掉，或可能快壞了，請先檢查這些副本，確認沒問題再使用。",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr 無法確認副本已完整寫入磁碟機。如果磁碟機曾被拔掉，或可能快壞了，請先檢查這些副本，確認沒問題再使用。",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "這部伺服器無法儲存 {classes}，所以這些資訊沒有一起帶過去。",
   "@transfer.metadataLeftBehind": {

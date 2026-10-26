@@ -169,6 +169,7 @@ GNOME / Thunar / Dolphin / Total Commander; catalog consistency over a pile-idea
 ## Thao tác được đề xuất (`suggestedOps.*`, `commands.suggestedOpsShow.*`, `askCmdr.decision.*`)
 
 - approve → `Phê duyệt` over macOS `Chấp nhận` (receiving AirDrop); reject → `Từ chối`.
+- Name `Gợi ý AI`, as `fileOperations.mkdir.aiSuggestions*`. `Why:` → `Lý do:` (labels an answer; `Tại sao?` asks).
 
 ## Nhân bản (`commands.fileDuplicate.*`)
 
@@ -272,8 +273,8 @@ the catalog's drift:
 
 ## Toast sau khi hoàn tác thao tác đang chạy (`fileOperations.cancelRollback.*`, `rollbackConfirm.body`)
 
-- Where English matches `askCmdr.renameUndo.skipReason.*` (`folderNotEmpty.*`), values match word for word; this set
-  counts `mục` ("item"), the rename set `tệp`.
+- Where English matches `askCmdr.renameUndo.skipReason.*` (`folderNotEmpty.*`), values match word for word. Count "item"
+  as `mục`, "file" as `tệp`.
 - Left X where it is → `Giữ nguyên`. after Cmdr put it there → `đưa nó tới đó` over `ghi nó vào đó` (copy only).
   `failed.*` leaves the frame (the drive refused): `Không hoàn tác được …`.
 - `leftBehind` and the four `rollbackConfirm.body*` share `Cmdr bỏ qua những gì nó không chắc chắn`. `stagedLeftover.*`

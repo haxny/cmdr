@@ -1686,6 +1686,18 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
+  "settings.suggestedOps.suppressApprovalNotice.label": "Ocultar a nota de aprovação em Sugestões da IA",
+  "@settings.suggestedOps.suppressApprovalNotice.label": {
+    "sourceHash": "33f9993"
+  },
+  "settings.suggestedOps.suppressApprovalNotice.description": "A caixa de diálogo Sugestões da IA abre com uma nota dizendo que a IA sugeriu o que está nela e que nada é executado até você aprovar. Ative isto (ou feche a nota pelo ×) para não mostrar mais a nota.",
+  "@settings.suggestedOps.suppressApprovalNotice.description": {
+    "sourceHash": "8d7605d"
+  },
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "sugestão, sugestões, aprovar, aprovação, aviso, alerta, faixa, banner, mensagem, esconder, IA, inteligência artificial",
+  "@settings.suggestedOps.suppressApprovalNotice.keywords": {
+    "sourceHash": "ad9377a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Número de abas fechadas a lembrar por painel",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2443,9 +2455,9 @@
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "Necessário para desfazer. Enquanto estiver desativado, o Cmdr não registra novas cópias, movimentações, renomeações nem apagamentos, então você não pode desfazê-los. Seu histórico atual é mantido, e você ainda pode desfazer o que já está nele.",
+  "settings.operationLog.enabled.description": "Enquanto esta opção estiver desativada, o Cmdr não registra novas cópias, movimentações, renomeações nem apagamentos, então você não pode desfazê-los. Seu histórico atual é mantido, e você ainda pode desfazer o que já está nele.",
   "@settings.operationLog.enabled.description": {
-    "sourceHash": "78571fc"
+    "sourceHash": "41f90d4"
   },
   "settings.operationLog.enabled.keywords": "operação, operações, registro de operações, histórico, gravar, gravação, desfazer, diário, privacidade, desativar",
   "@settings.operationLog.enabled.keywords": {
@@ -2675,17 +2687,17 @@
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "Até {ceiling}",
+  "settings.managed.summary.upTo": "Até a versão {ceiling}",
   "@settings.managed.summary.upTo": {
-    "sourceHash": "8989a97"
+    "sourceHash": "01b151a"
   },
   "settings.managed.summary.manualChecksOnly": "Só verificação manual",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "Até {ceiling}, só verificação manual",
+  "settings.managed.summary.upToManualChecksOnly": "Até a versão {ceiling}, só verificação manual",
   "@settings.managed.summary.upToManualChecksOnly": {
-    "sourceHash": "c769ffd"
+    "sourceHash": "21aaa8a"
   },
   "settings.managed.summary.onDeviceOnly": "Só no dispositivo",
   "@settings.managed.summary.onDeviceOnly": {
@@ -3297,7 +3309,7 @@
   },
   "settings.dataWipe.introWithSize": "O Cmdr apaga tudo o que mantém neste Mac ({sizeText}) e depois encerra. Esta ação não pode ser desfeita.",
   "@settings.dataWipe.introWithSize": {
-    "sourceHash": "fffab2a"
+    "sourceHash": "e5262e8"
   },
   "settings.dataWipe.goesHeading": "O que sai",
   "@settings.dataWipe.goesHeading": {

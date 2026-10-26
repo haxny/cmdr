@@ -317,9 +317,9 @@
   "@servers.refusal.noNfsV3": {
     "sourceHash": "94c4293"
   },
-  "servers.refusal.s3FieldMalformed": "Verwende hier nur Kleinbuchstaben, Ziffern und Bindestriche.",
+  "servers.refusal.s3FieldMalformed": "Verwende hier nur a–z, 0–9 und Bindestriche.",
   "@servers.refusal.s3FieldMalformed": {
-    "sourceHash": "ac8fbea"
+    "sourceHash": "558f8c7"
   },
   "servers.refusal.endpointMalformed": "Gib den Endpunkt mit http:// oder https:// und einem Hostnamen ein, etwa https://s3.example.com.",
   "@servers.refusal.endpointMalformed": {
@@ -345,9 +345,9 @@
   "@servers.refusal.operationRunning": {
     "sourceHash": "86e3a4d"
   },
-  "servers.refusal.shareMounted": "{name} ist noch über die alte Adresse eingebunden. Wirf die Freigabe aus und sichere dann noch einmal.",
+  "servers.refusal.shareMounted": "Die Freigabe {name} ist noch über die alte Adresse eingebunden. Wirf sie aus und sichere dann noch einmal.",
   "@servers.refusal.shareMounted": {
-    "sourceHash": "74b3fbb"
+    "sourceHash": "156a61b"
   },
   "servers.refusal.shareEjectRefused": "Cmdr konnte die Freigabe {name} nicht auswerfen und hat deshalb nichts gesichert. {reason}",
   "@servers.refusal.shareEjectRefused": {
@@ -541,17 +541,17 @@
   "@servers.sheet.nfsStartFolderHelp": {
     "sourceHash": "c15ef39"
   },
-  "servers.sheet.s3EndpointMoveHelp": "Ist der Server umgezogen? Gib seinen neuen Endpunkt ein. Alle Buckets unter diesem Schlüssel kommen mit, samt ihren Favoriten, offenen Tabs und dem gespeicherten geheimen Zugriffsschlüssel.",
+  "servers.sheet.s3EndpointMoveHelp": "Ist der Server umgezogen? Gib seinen neuen Endpunkt ein. Jeder Bucket unter diesem Schlüssel kommt samt seinen Favoriten und offenen Tabs mit, und der gespeicherte geheime Zugriffsschlüssel kommt ebenfalls mit.",
   "@servers.sheet.s3EndpointMoveHelp": {
-    "sourceHash": "79195cc"
+    "sourceHash": "3018d6d"
   },
   "servers.sheet.addressMoveHelp": "Ist der Server umgezogen? Gib seine neue Adresse ein. Seine Favoriten, offenen Tabs und das gespeicherte Passwort kommen mit.",
   "@servers.sheet.addressMoveHelp": {
     "sourceHash": "210ff1c"
   },
-  "servers.sheet.smbAddressMoveHelp": "Ist der Server umgezogen? Gib seine neue Adresse ein. Seine Freigaben und das gespeicherte Passwort kommen mit, und die Favoriten und offenen Tabs jeder Freigabe folgen ihr, sobald sie dort zum ersten Mal geöffnet wird.",
+  "servers.sheet.smbAddressMoveHelp": "Ist der Server umgezogen? Gib seine neue Adresse ein. Seine Freigaben und das gespeicherte Passwort kommen mit, und die Favoriten und offenen Tabs jeder Freigabe folgen, sobald diese Freigabe unter der neuen Adresse geöffnet wird.",
   "@servers.sheet.smbAddressMoveHelp": {
-    "sourceHash": "df20723"
+    "sourceHash": "14e2c4a"
   },
   "servers.sheet.username": "Benutzername",
   "@servers.sheet.username": {
@@ -794,9 +794,9 @@
   "@servers.hostKey.changedBody": {
     "sourceHash": "42491c4"
   },
-  "servers.hostKey.changedDisclosure": "Ich habe das geprüft",
+  "servers.hostKey.changedDisclosure": "Ich habe den Schlüssel geprüft",
   "@servers.hostKey.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "c5ae325"
   },
   "servers.hostKey.fingerprintLabel": "Schlüssel-Fingerabdruck",
   "@servers.hostKey.fingerprintLabel": {
@@ -826,9 +826,9 @@
   "@servers.certificate.changedBody": {
     "sourceHash": "07a58b8"
   },
-  "servers.certificate.changedDisclosure": "Ich habe das geprüft",
+  "servers.certificate.changedDisclosure": "Ich habe das Zertifikat geprüft",
   "@servers.certificate.changedDisclosure": {
-    "sourceHash": "4051d39"
+    "sourceHash": "591b086"
   },
   "servers.certificate.fingerprintLabel": "Zertifikats-Fingerabdruck (SHA-256)",
   "@servers.certificate.fingerprintLabel": {
@@ -878,9 +878,9 @@
   "@servers.paneState.guestSessionRefused": {
     "sourceHash": "36ad371"
   },
-  "servers.paneState.guestSessionRefusedHint": "Du wolltest dich mit deinem Konto anmelden, aber der Server hat stattdessen eine Gastsitzung angeboten. Meist heißt das, dass das Passwort falsch war. Selten heißt es, dass etwas die Verbindung manipuliert.",
+  "servers.paneState.guestSessionRefusedHint": "Du wolltest dich mit deinem Konto anmelden, aber der Server hat stattdessen eine Gastsitzung angeboten. Meist heißt das, dass das Passwort falsch war. Selten heißt es, dass jemand die Verbindung manipuliert.",
   "@servers.paneState.guestSessionRefusedHint": {
-    "sourceHash": "ca5c60f"
+    "sourceHash": "172375c"
   },
   "servers.paneState.tryAnotherPassword": "Anderes Passwort versuchen …",
   "@servers.paneState.tryAnotherPassword": {

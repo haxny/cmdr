@@ -163,7 +163,12 @@ pub(super) enum SourceShape {
 /// backend resolves against the drive index.
 #[derive(Debug, PartialEq, Eq)]
 pub(super) enum PlannedSources {
-    Paths { paths: Vec<String>, naming: ExplicitNaming },
+    /// Sources named one by one. Their creation snapshot starts empty and is filled by one
+    /// bounded stat each before the write (`snapshot.rs`).
+    Paths {
+        ops: Vec<NewOp>,
+        naming: ExplicitNaming,
+    },
     Selector(OpSelector),
 }
 
@@ -342,7 +347,7 @@ fn plan_group(group: GroupInput, now: i64) -> Result<PlannedGroup, GroupProblem>
         (None, Some(paths), _) => PlannedOps::Sources {
             shape: plan_shape(group.verb, group.destination, group.overwrites_existing)?,
             sources: PlannedSources::Paths {
-                paths: plan_paths(paths)?,
+                ops: plan_paths(paths)?,
                 naming: explicit_naming(group.source_volume_id, group.display_name)?,
             },
         },
@@ -438,14 +443,22 @@ fn expanded_location(location: Location) -> Location {
     }
 }
 
-fn plan_paths(paths: Vec<String>) -> Result<Vec<String>, GroupProblem> {
+fn plan_paths(paths: Vec<String>) -> Result<Vec<NewOp>, GroupProblem> {
     if paths.is_empty() {
         return Err(GroupProblem::EmptySources);
     }
     if paths.len() > MAX_PATHS {
         return Err(GroupProblem::TooManyPaths { sent: paths.len() });
     }
-    paths.into_iter().map(absolute_path).collect()
+    paths
+        .into_iter()
+        .map(|path| {
+            Ok(NewOp {
+                source_path: absolute_path(path)?,
+                snapshot: None,
+            })
+        })
+        .collect()
 }
 
 fn plan_renames(renames: Vec<RenameInput>) -> Result<Vec<NewRename>, GroupProblem> {

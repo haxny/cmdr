@@ -56,9 +56,9 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} 已就绪，但 Cmdr 无法自行安装",
+  "updates.unwritable.adminHeadline": "Cmdr {version} 已推出，但 Cmdr 无法自行安装",
   "@updates.unwritable.adminHeadline": {
-    "sourceHash": "a0c72ea"
+    "sourceHash": "8e6aecc"
   },
   "updates.unwritable.adminDetail": "{path} 属于另一个账户。要更新，请从 <website>getcmdr.com</website> 下载 Cmdr，再把它拖到“应用程序”文件夹。macOS 会问你要密码。",
   "@updates.unwritable.adminDetail": {

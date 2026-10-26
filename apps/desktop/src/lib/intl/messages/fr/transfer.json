@@ -61,7 +61,7 @@
   },
   "transfer.durabilityUnconfirmedUnnamed": "Cmdr n’a pas pu confirmer que les copies soient entièrement écrites sur le disque. Si le disque a été débranché ou est défaillant, vérifiez les copies avant de vous y fier.",
   "@transfer.durabilityUnconfirmedUnnamed": {
-    "sourceHash": "33cda48"
+    "sourceHash": "20e5d33"
   },
   "transfer.metadataLeftBehind": "Ce serveur ne peut pas stocker {classes}, ces informations n’ont donc pas suivi.",
   "@transfer.metadataLeftBehind": {

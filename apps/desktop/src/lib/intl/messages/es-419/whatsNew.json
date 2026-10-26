@@ -1,4 +1,8 @@
 {
+  "whatsNew.securityNotice.title": "Las actualizaciones recientes corrigieron {count, plural, one {un problema de seguridad} many {# problemas de seguridad} other {# problemas de seguridad}}.",
+  "@whatsNew.securityNotice.title": {
+    "sourceHash": "deff433"
+  },
   "whatsNew.optOutToast": "Entendido, no más notas de actualización. Vuelve a activarlas cuando quieras en Configuración > Actualizaciones y privacidad.",
   "@whatsNew.optOutToast": {
     "sourceHash": "5640cce"

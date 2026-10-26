@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Massbyt namn",
+  "onboarding.stepAi.table.rowRename": "Byt namn på många filer",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Du använder gränssnittet för massbyte av namn för att manuellt ställa in mönstret, granska och tillämpa.",
+  "onboarding.stepAi.table.renameWithout": "Du ställer in ett namnmönster för hand i Massbyt namn, sedan granskar och tillämpar du det.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Du säger ”lägg till ISO-datumprefix”, agenten ställer in ditt namnmönster, du granskar och tillämpar som du vill.",
   "@onboarding.stepAi.table.renameWith": {
@@ -618,6 +618,22 @@
   "onboarding.cloudSetup.status.genericError": "Något gick fel",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "Tjänsten tar för lång tid på sig att svara. Försök igen om en stund.",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "Den adressen ser inte rätt ut. Den ska börja med https://.",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "Din nyckel skickas bara över en säker anslutning, så använd en adress som börjar med https://.",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "Tjänsten avvisade förfrågan (kod {status}).",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "Ansluten!",
   "@onboarding.cloudSetup.status.connected": {

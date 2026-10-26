@@ -9,11 +9,11 @@
   },
   "securityNotices.mcpForeignOrigin.title": "Cmdr blockerade en webbsida som försökte nå MCP-servern",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
-  "securityNotices.mcpForeignOrigin.body": "En webbplats som är öppen i din webbläsare försökte prata med Cmdr. Inget kom in. Om det fortsätter, stäng flikar du inte litar på.",
+  "securityNotices.mcpForeignOrigin.body": "En webbsida som är öppen i din webbläsare försökte prata med Cmdr. Inget kom in. Om det fortsätter, stäng flikar du inte litar på.",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP-inställningar",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr avvisade ett svar från en delad mapp på nätverket",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr avvisade ett svar från en server",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
   "securityNotices.smbSignatureRefused.body": "Svaret saknade serverns signatur, så Cmdr litade inte på det. Det kan bero på en nätverksenhet som krånglar, men också på att någon manipulerar trafiken mellan dig och servern. Återanslut, och om det händer igen, kontrollera ditt nätverk.",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "Återanslut",
   "@securityNotices.smbSignatureRefused.reconnect": {

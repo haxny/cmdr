@@ -64,6 +64,13 @@
     "sources": "macOS Finder (Añadir, Añadir a favoritos, Añadir al Dock, Añadir etiquetas…)",
     "decision": "Añadir a un informe ya enviado"
   },
+  "administrator": {
+    "chosen": "administrador",
+    "accept": ["administr"],
+    "forms": "an administrator password → una contraseña de administrador; administrator rights → permisos de administrador; the person who runs a Mac → quien administre este Mac (no gendered role noun)",
+    "confidence": "high",
+    "sources": "Microsoft terminology (contraseña de administrador); catalog (permisos de administrador ×4, quien administre este Mac)"
+  },
   "advanced": {
     "chosen": "Avanzado",
     "confidence": "high",
@@ -73,7 +80,7 @@
   "ai-feature": {
     "chosen": "funciones de IA",
     "accept": ["la IA", "de IA", "a IA", "IA,", "IA.", "con IA"],
-    "forms": "AI features → funciones de IA; the AI as subject → la IA (La IA sugirió esto, Motivo de la IA)",
+    "forms": "AI features → funciones de IA; the AI as subject → la IA (La IA ha sugerido esto, Por qué, según la IA)",
     "confidence": "high",
     "sources": "catalog (settings.ai.tooltipOff, ai.translateError.timeout.title)"
   },
@@ -212,7 +219,8 @@
     "forms": "Archivar / Archivado / Desarchivar (tentative); distinct from archivo comprimido",
     "confidence": "high",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "a zip file's spoken kind, the archive concept (archivo comprimido), not hiding a chat"
+      "fileExplorer.list.rowKind.archive": "a zip file's spoken kind, the archive concept (archivo comprimido), not hiding a chat",
+      "suggestedOps.facts.archive": "labels the zip a compress suggestion creates, the archive concept (archivo comprimido), not hiding a chat"
     },
     "sources": "MS terminology (archive → archivar, Archived → Archivado)"
   },
@@ -254,9 +262,6 @@
     "accept": ["volver", "vuelve", "vuelto"],
     "forms": "the bare Back button is the adverb Atrás; Back to X needs the verb: Volver a X (Volver a los preajustes, Volver al chat)",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoTooltip": "rename a file back is not the Back button: restaurar el nombre anterior, as askCmdr.renameUndo.*"
-    },
     "sources": "macOS Finder (Back → Atrás); Double Commander"
   },
   "background": {
@@ -310,6 +315,13 @@
     "forms": "Cmdr blocked X from reaching Y → Cmdr ha bloqueado el acceso de X a Y; macOS blocked Cmdr from accessing → macOS ha impedido a Cmdr acceder; a blocked rename → está bloqueado",
     "confidence": "high",
     "sources": "Microsoft (Blocked → Bloqueado); macOS Finder (bloqueado); catalog askCmdr.renameReview.overwriteTooltip, errors.listing.notPermitted.explanation"
+  },
+  "blocked-by": {
+    "chosen": "bloquear",
+    "accept": ["bloque", "impedi", "impid"],
+    "forms": "Cmdr blocked X from reaching Y → Cmdr ha bloqueado el acceso de X a Y (es-419: bloqueó)",
+    "confidence": "high",
+    "sources": "macOS (bloquear, 59 hits); Total Commander, Double Commander, Nautilus; catalog (ha bloqueado ×2)"
   },
   "brief-view": {
     "chosen": "vista breve",
@@ -678,6 +690,12 @@
     "forms": "short form combinación in shortcut rows and conflict warnings (Elige otra combinación); full combinación de teclas where the context lacks keys",
     "confidence": "high",
     "sources": "macOS/Microsoft es (combinación de teclas, 7 hits in the pile); catalog combinación (shortcuts.conflict.*, downloads.shortcutRow.invalidCombo)"
+  },
+  "learn-more": {
+    "chosen": "Más información sobre",
+    "confidence": "high",
+    "forms": "More about “X” → Más información sobre “X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
   "link": {
     "chosen": "enlace",
@@ -1330,6 +1348,20 @@
     "sources": "macOS Finder (PE4.5 formato del volumen)",
     "decision": "FAT32"
   },
+  "from-to": {
+    "chosen": "Desde",
+    "accept": ["Desde", "Hacia"],
+    "forms": "From → Desde, To → Hacia, in the transfer dialog's headings, the scan phase's label, and a suggestion's fact lines alike",
+    "avoid": [
+      {
+        "form": "A (bare, for To)",
+        "why": "reads as a stray letter"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Double Commander (Desde / Hacia); catalog (fileOperations.transferDialog.*GroupTitle)",
+    "decision": "El interruptor de papelera y Desde / Hacia"
+  },
   "free-space": {
     "chosen": "espacio",
     "accept": ["libre"],
@@ -1807,12 +1839,7 @@
     "accept": ["listas"],
     "forms": "the hub row → la lista Servidores (unquoted); stop listing X → quitar X de la lista",
     "confidence": "high",
-    "sources": "macOS Finder (visualización como lista); catalog la lista Servidores / la lista de servidores",
-    "exceptions": {
-      "errors.write.originalsKeptAside.message.many": "The verb (the details list them all) → enumerar, not the noun.",
-      "settings.behavior.openTerminalHereApp.description": "The verb (Cmdr lists the apps) → muestra, as a picker shows its options.",
-      "settings.behavior.textEditorApp.description": "The verb (Cmdr lists the editors) → muestra, as a picker shows its options."
-    }
+    "sources": "macOS Finder (visualización como lista); catalog la lista Servidores / la lista de servidores"
   },
   "local": {
     "chosen": "local",
@@ -1931,7 +1958,7 @@
     ],
     "confidence": "high",
     "exceptions": {
-      "multiRename.movedRow": "a screen-reader line after reordering a preview row, not relocating a file; says where the row now is (Ahora en la posición…)"
+      "suggestedOps.reversible.moveBack": "move it back → devolverlo a su sitio, the catalog's undo-a-move phrasing (commands.editUndoTrash.description)"
     },
     "sources": "macOS Finder (label sense)"
   },
@@ -1992,9 +2019,7 @@
     "confidence": "high",
     "sources": "macOS (recurso compartido), NetAuthAgent (EINFO_NO_SHARES), MS",
     "exceptions": {
-      "settings.section.smbNetworkShares": "Settings sidebar title, shortened to SMB/Recursos de red.",
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the report on), not a network share: compartirlo tú.",
-      "servers.sheet.addressHelpNfs": "\"share\" sits only inside the example addresses (nfs://nas.local/share), which stay verbatim."
+      "settings.section.smbNetworkShares": "Settings sidebar title, shortened to SMB/Recursos de red."
     },
     "decision": "Por qué no se monta un recurso compartido"
   },
@@ -2254,6 +2279,13 @@
     "accept": ["rutas"],
     "confidence": "high",
     "sources": "macOS Finder Toolbar (Path → Ruta); MS (ruta de acceso)"
+  },
+  "pattern": {
+    "chosen": "patrón",
+    "accept": ["patrones"],
+    "forms": "rename pattern → patrón de renombrado",
+    "confidence": "high",
+    "sources": "Nautilus (patrón ×11), Total Commander, Microsoft terminology; catalog onboarding.stepAi.table.renameWith"
   },
   "pause": {
     "chosen": "Pausar",
@@ -2543,8 +2575,6 @@
     "accept": ["quit"],
     "forms": "Quitar atajo, Quitar adjunto, Quitar “{color}”, Quitar de la lista; removing FILES or data is eliminar",
     "exceptions": {
-      "settings.dataWipe.doneMessage": "remove the app = delete the app bundle from the Mac (eliminar), not a list edit",
-      "settings.dataWipe.partialMessage": "remove these = delete leftover files and Keychain items by hand (elimínalas tú), not a list edit",
       "main.cliCommand.takenByOther": "remove it = delete another program’s file from /usr/local/bin by hand (elimínalo), not a list edit"
     },
     "avoid": [
@@ -2573,12 +2603,6 @@
     ],
     "confidence": "high",
     "sources": "macOS Finder (Renombrar; RN1/RN2 Deshacer/Rehacer cambio de nombre)",
-    "exceptions": {
-      "errors.write.originalsKeptAside.suggestion.many": "Rename back = give the original name again: volver a ponerle su nombre.",
-      "errors.write.originalsKeptAside.suggestion.one": "Rename back = give the original name again: volver a ponerle su nombre.",
-      "multiRename.undoStarted": "Rename back = restore the old name: restaurando el nombre anterior, as askCmdr.renameUndo.*",
-      "multiRename.undoTooltip": "Rename back = restore the old name: restaura el nombre anterior, as askCmdr.renameUndo.*"
-    },
     "decision": "Palabras que se separaron"
   },
   "rename-counter": {
@@ -3031,11 +3055,7 @@
     ],
     "confidence": "high",
     "forms": "Step 1 of 2: X → Paso 1 de 2: X",
-    "sources": "shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting); MS terminology gives etapa (tiebreak only)",
-    "exceptions": {
-      "multiRename.placeholderHelp.counter": "The counter's step, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling.",
-      "multiRename.placeholderHelp.counterAll": "The counter's step, not a stage: it says incremento, the counter editor's field name (multiRename.counterEditor.step), per the rename-counter ruling."
-    }
+    "sources": "shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting); MS terminology gives etapa (tiebreak only)"
   },
   "stop": {
     "chosen": "Detener",
@@ -3094,9 +3114,16 @@
   "suggestion": {
     "chosen": "sugerencia",
     "accept": ["suger", "sugier", "sugir", "propon"],
-    "forms": "Operaciones sugeridas; La IA sugirió esto (preterite)",
+    "forms": "the AI suggestions dialog, its menu item and palette command → Sugerencias de IA (same words as fileOperations.mkdir.aiSuggestions*); a batch heading → Sugerido hace 5 minutos; La IA ha sugerido esto",
+    "avoid": [
+      {
+        "form": "Operaciones sugeridas",
+        "why": "translated the dialog's old English name (Suggested ops); the name is now AI suggestions"
+      }
+    ],
     "confidence": "high",
-    "sources": "catalog (ui.combobox, askCmdr)"
+    "sources": "catalog (ui.combobox, askCmdr, fileOperations.mkdir.aiSuggestionsAria)",
+    "decision": "Operaciones sugeridas"
   },
   "supported": {
     "chosen": "compatible",
@@ -3172,6 +3199,13 @@
     "confidence": "tentative",
     "sources": "composed (no macOS equivalent)"
   },
+  "tamper": {
+    "chosen": "manipular",
+    "accept": ["manipul"],
+    "forms": "someone tampering with traffic → alguien esté manipulando el tráfico; tampering with the connection → manipulando la conexión",
+    "confidence": "high",
+    "sources": "Microsoft terminology (manipular, 163 hits); catalog (errors.write.replySignatureRefused.suggestion, errors.shareList.signatureInvalid)"
+  },
   "tap": {
     "chosen": "tocar",
     "accept": ["toca", "toques"],
@@ -3240,6 +3274,12 @@
     "accept": ["miniaturas"],
     "confidence": "high",
     "sources": "macOS AppKit WindowTabs, MS id 1057247, Nautilus, Total Commander"
+  },
+  "time-ago": {
+    "chosen": "hace",
+    "forms": "{durationText} ago → hace {durationText}; Suggested 5 minutes ago → Sugerido hace 5 minutos",
+    "confidence": "high",
+    "sources": "catalog (ui.toast.age, queryUi.age.*)"
   },
   "time-left": {
     "chosen": "restantes",
@@ -3341,6 +3381,13 @@
     },
     "decision": "El aviso de la papelera"
   },
+  "unknown": {
+    "chosen": "Desconocido",
+    "accept": ["desconocid", "desconoce"],
+    "forms": "a bare column value or label → Desconocido; in parentheses → (desconocido)",
+    "confidence": "high",
+    "sources": "macOS Finder (Unknown, SP70 → Desconocido); Nautilus, Thunar (Desconocido); catalog (ai.local.modelUnknown)"
+  },
   "unexpected": {
     "chosen": "inesperado",
     "accept": ["inesperad", "ha ido mal"],
@@ -3355,11 +3402,31 @@
     "sources": "macOS AppKit (se cerró inesperadamente)",
     "decision": "Coherencia del termbase"
   },
+  "uninstall": {
+    "chosen": "desinstalar",
+    "accept": ["desinstal"],
+    "forms": "Uninstalled X → Se ha desinstalado X (es-419: Se desinstaló); Installing or uninstalling → instalar o desinstalar",
+    "avoid": [
+      {
+        "form": "quitar",
+        "why": "the remove-from-a-list verb; the menu item menu.app.cliCommandUninstall says Desinstalar"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Microsoft terminology (desinstalar), Total Commander; catalog menu.app.cliCommandUninstall"
+  },
   "unlock": {
     "chosen": "Desbloquear",
     "accept": ["desbloqu"],
     "confidence": "high",
     "sources": "macOS AppKit (Desbloquear)"
+  },
+  "unlock-device": {
+    "chosen": "desbloquear",
+    "accept": ["desbloque", "desbloqué"],
+    "forms": "unlock it (a phone) → desbloquéalo",
+    "confidence": "high",
+    "sources": "macOS (Desbloquear, 17 hits), Nautilus, Microsoft terminology; catalog fileOperations.archivePassword.unlock"
   },
   "unplug": {
     "chosen": "desconectar",
@@ -3559,8 +3626,7 @@
     "confidence": "high",
     "sources": "catalog; Nautilus (parcialmente copiado)",
     "exceptions": {
-      "fileOperations.cancelRollback.doneDeleting": "Items include folders, which aren't written: que Cmdr había creado.",
-      "suggestedOps.reversibleDeleteWritten": "Undo deletes what the op made, folders included: lo creado."
+      "fileOperations.cancelRollback.doneDeleting": "Items include folders, which aren't written: que Cmdr había creado."
     },
     "decision": "Transferencia atascada"
   },

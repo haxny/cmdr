@@ -118,8 +118,8 @@ one thing was the bug.
 - Status cells: `style.md` § Notes and decisions. Signed out is a state: no `無法`.
 - Volume switcher `卷宗切換器` everywhere. Local network `區域網路`: the macOS permission dialog says it.
 - A server's classifier `部` (tentative, from `這部 Mac`).
-- Signed in as `以 {username} 身分登入` / `以訪客身分登入`: a bare `以 X 身分` dangles. Buttons reuse it:
-  `以其他身分登入⋯`, `改用訪客身分`.
+- Signed in as `以 {username} 身分登入` / `以訪客身分登入`: a bare `以 X 身分` dangles. Buttons too: `以其他身分登入⋯`,
+  `以訪客身分瀏覽`.
 - Forget `忘記` everywhere, hosts too (`已忘記` / `無法忘記`). Confirm bodies name the object (`這部主機`,
   `這個共享資料夾`), never a pronoun on the insert.
 
@@ -170,8 +170,9 @@ Open `開啟` as `menu.file.open`; `編輯伺服器⋯` as `commands.serversEdit
 
 ## AI copy's subject: `Cmdr` / `AI`, `Ask Cmdr` for the panel only (`suggestedOps.*`, `settings.askCmdr.*`, `askCmdr.error.notConfigured`, `ai.cloud.askCmdrOverrideHint`)
 
-`AI 的理由` must stay apart from `Cmdr 知道的事實` (model's claim vs what Cmdr verified): ❌ don't unify. Chatting
-`聊天` (verb); the chat as subject `對話`.
+The dialog is `AI 建議` (as the mkdir header and indicator). Its "Why:" label `理由：` (aria `理由，根據 AI 的說法：`;
+❌ `為什麼：`, that's onboarding's question) stays apart from `Cmdr 知道的事實` (model's claim vs what Cmdr verified):
+❌ don't unify. Chatting `聊天` (verb); the chat as subject `對話`.
 
 ## Status-corner AI hints, `同意`, `上下文` (`askCmdr.wake.needsFullDiskAccess`, `settings.askCmdr.proactive.description`, `settings.ai.localContextSize.label`/`tooltipLocal`, `askCmdr.error.localWindowTooSmall`, `askCmdr.event.contextTrimmed`)
 

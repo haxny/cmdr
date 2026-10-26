@@ -96,11 +96,11 @@
   },
   "multiRename.case.lower": "lowercase",
   "@multiRename.case.lower": {
-    "description": "Letter-case menu option: all letters lowercase. Written in lowercase on purpose, to show the result."
+    "description": "Letter-case menu option: all letters lowercase. Written in lowercase on purpose, to show the result. Show-the-result labels like this one are exempt from sentence case: write them in the case they produce. In a script without letter case (Chinese, Japanese, Korean), describe the transform instead."
   },
   "multiRename.case.upper": "UPPERCASE",
   "@multiRename.case.upper": {
-    "description": "Letter-case menu option: all letters uppercase. Written in uppercase on purpose, to show the result."
+    "description": "Letter-case menu option: all letters uppercase. Written in uppercase on purpose, to show the result. Show-the-result labels like this one are exempt from sentence case: write them in the case they produce. In a script without letter case (Chinese, Japanese, Korean), describe the transform instead."
   },
   "multiRename.case.firstUpper": "First letter uppercase",
   "@multiRename.case.firstUpper": {
@@ -108,11 +108,11 @@
   },
   "multiRename.case.words": "Every Word Capitalized",
   "@multiRename.case.words": {
-    "description": "Letter-case menu option: the first letter of every word uppercase, the rest lowercase. Written that way on purpose, to show the result."
+    "description": "Letter-case menu option: the first letter of every word uppercase, the rest lowercase. Written that way on purpose, to show the result. Show-the-result labels like this one are exempt from sentence case: write them in the case they produce. In a script without letter case (Chinese, Japanese, Korean), describe the transform instead."
   },
   "multiRename.removeDiacritics": "Remove diacritics",
   "@multiRename.removeDiacritics": {
-    "description": "Option: turn letters with accents and other diacritics into plain letters (á becomes a, ž becomes z, ß becomes ss), in every language."
+    "description": "Option: turn letters with accents and other diacritics into plain letters (á becomes a, ž becomes z, ß becomes ss), in every language. An everyday word for \"accents\" is fine, even though ß becoming ss goes beyond diacritics. Keep this identical to multiRename.preset.removeDiacritics, the preset with the same effect."
   },
   "multiRename.greekToLatin": "Greek to Latin",
   "@multiRename.greekToLatin": {
@@ -142,17 +142,17 @@
   "@multiRename.presets.reset": {
     "description": "Presets menu item that sets every field back to its starting value, so all names stay as they are (Total Commander's <Default>)."
   },
-  "multiRename.presets.saveAs": "Save current as…",
+  "multiRename.presets.saveAs": "Save as preset…",
   "@multiRename.presets.saveAs": {
-    "description": "Presets menu item that asks for a name and saves the tool's current fields as a new preset. The ellipsis means it asks for more before acting."
+    "description": "Presets menu item that asks for a name and saves the tool's current settings as a new preset. The ellipsis means it asks for more before acting."
   },
   "multiRename.presets.rename": "Rename…",
   "@multiRename.presets.rename": {
     "description": "Item in a saved preset's submenu that asks for a new name for that preset."
   },
-  "multiRename.presets.update": "Update with current fields",
+  "multiRename.presets.update": "Update with current settings",
   "@multiRename.presets.update": {
-    "description": "Item in a saved preset's submenu that overwrites that preset with the tool's current fields. Greyed out when the preset already matches them."
+    "description": "Item in a saved preset's submenu that overwrites that preset with the tool's current settings (every field). \"settings\" is the same noun as in commands.multiRenameSavePreset.label. Greyed out when the preset already matches them."
   },
   "multiRename.presets.moveUp": "Move up",
   "@multiRename.presets.moveUp": {
@@ -168,7 +168,7 @@
   },
   "multiRename.presets.saveTitle": "Save preset",
   "@multiRename.presets.saveTitle": {
-    "description": "Accessible name of the small popup that asks for a name to save the current fields as a preset (opened with Cmd+S or Save current as…)."
+    "description": "Accessible name of the small popup that asks for a name to save the current fields as a preset (opened with Cmd+S or Save as preset…)."
   },
   "multiRename.presets.renameTitle": "Rename preset",
   "@multiRename.presets.renameTitle": {
@@ -200,7 +200,7 @@
   },
   "multiRename.preset.removeDiacritics": "Remove diacritics",
   "@multiRename.preset.removeDiacritics": {
-    "description": "Name of a preset Cmdr starts the Presets list with, saved in this language the first time the list loads; the user can rename or delete it like their own. It keeps names as they are but removes diacritics (á becomes a, ž becomes z)."
+    "description": "Name of a preset Cmdr starts the Presets list with, saved in this language the first time the list loads; the user can rename or delete it like their own. It keeps names as they are but removes diacritics (á becomes a, ž becomes z). An everyday word for \"accents\" is fine. Keep this identical to multiRename.removeDiacritics, the option with the same effect."
   },
   "multiRename.preset.greekToLatin": "Greek to Latin",
   "@multiRename.preset.greekToLatin": {
@@ -319,11 +319,11 @@
   },
   "multiRename.undoTooltip": "{count, plural, one {Renames # file back to its old name} other {Renames # files back to their old names}}",
   "@multiRename.undoTooltip": {
-    "description": "Tooltip of the Undo button. {count} is how many files the last multi-rename renamed."
+    "description": "Tooltip of the Undo button: what pressing it will do. Keep it worded differently from multiRename.undoStarted, the toast saying the undo is underway. {count} is how many files the last multi-rename renamed."
   },
   "multiRename.undoStarted": "{count, plural, one {Renaming # file back} other {Renaming # files back}}.",
   "@multiRename.undoStarted": {
-    "description": "Toast after Undo started reversing the last multi-rename. {count} is how many files."
+    "description": "Toast after Undo started reversing the last multi-rename: it says the undo is in progress. Keep it worded differently from multiRename.undoTooltip, which says what the button will do. {count} is how many files."
   },
   "multiRename.results": "Results…",
   "@multiRename.results": {
@@ -367,7 +367,7 @@
   },
   "multiRename.editedName": "You typed this name in Results",
   "@multiRename.editedName": {
-    "description": "Tooltip and screen-reader text of a small pencil mark beside a row of the preview whose new name the user typed by hand in the Results list (multiRename.results) rather than one the settings made."
+    "description": "Tooltip and screen-reader text of a small pencil mark beside a row of the preview whose new name the user typed by hand in the list the Results… button opens (multiRename.results). “Results” here names that button: write it the way your multiRename.results label reads (without the “…”), quoted if your language quotes UI labels in running text rather than one the settings made."
   },
   "multiRename.history": "History",
   "@multiRename.history": {
@@ -411,23 +411,23 @@
   },
   "multiRename.status.missing": "No longer in this folder",
   "@multiRename.status.missing": {
-    "description": "Preview note: a file the user picked for renaming was deleted or moved out of the folder while the tool was open, so it can't be renamed."
+    "description": "Preview note: an item (file or folder) the user picked for renaming was deleted or moved out of the folder while the tool was open, so it can't be renamed."
   },
   "multiRename.status.ready": "Ready to rename",
   "@multiRename.status.ready": {
-    "description": "Screen-reader text in the preview's status column for a file that will be renamed. Sighted users see no mark on these rows; only the problem rows get a symbol."
+    "description": "Screen-reader text in the preview's status column for an item (file or folder) that will be renamed. Restructure freely to avoid agreeing with a gendered noun (for example \"Will be renamed\"). Sighted users see no mark on these rows; only the problem rows get a symbol."
   },
   "multiRename.reason.duplicate": "Another file in this batch gets the same new name, so neither is renamed.",
   "@multiRename.reason.duplicate": {
-    "description": "Tooltip on the preview's duplicate symbol: the full reason behind multiRename.status.duplicate."
+    "description": "Tooltip on the preview's duplicate symbol: the full reason behind multiRename.status.duplicate. The row can be a file or a folder: where your language’s word for “file” excludes folders, use a neutral word for the item, or restructure."
   },
   "multiRename.reason.targetExists": "A file that stays in this folder already has this name, so this one keeps its name.",
   "@multiRename.reason.targetExists": {
-    "description": "Tooltip on the preview's \"name is taken\" symbol: the full reason behind multiRename.status.targetExists. The file that holds the name isn't part of the rename (or can't be renamed itself)."
+    "description": "Tooltip on the preview's \"name is taken\" symbol: the full reason behind multiRename.status.targetExists. The file that holds the name isn't part of the rename (or can't be renamed itself). The row can be a file or a folder: where your language’s word for “file” excludes folders, use a neutral word for the item, or restructure."
   },
   "multiRename.reason.missing": "This file was moved or deleted after Multi-rename opened, so it’s left out.",
   "@multiRename.reason.missing": {
-    "description": "Tooltip on the preview's \"gone\" symbol: the full reason behind multiRename.status.missing. \"Multi-rename\" is the tool's name; match multiRename.title."
+    "description": "Tooltip on the preview's \"gone\" symbol: the full reason behind multiRename.status.missing. \"Multi-rename\" is the tool's name; match multiRename.title. The row can be a file or a folder: where your language’s word for “file” excludes folders, use a neutral word for the item, or restructure."
   },
   "multiRename.status.reading": "Reading…",
   "@multiRename.status.reading": {
@@ -442,14 +442,14 @@
   },
   "multiRename.reason.noValue": "This file has no “{field}” value, so it keeps its name.",
   "@multiRename.reason.noValue": {
-    "description": "Tooltip on the preview's \"field missing\" symbol: the full reason behind multiRename.status.noValue. A field is a piece of the file's own information, like the date a photo was taken or a song's artist.",
+    "description": "Tooltip on the preview's \"field missing\" symbol: the full reason behind multiRename.status.noValue. A field is a piece of the file's own information, like the date a photo was taken or a song's artist. The row can be a file or a folder: where your language’s word for “file” excludes folders, use a neutral word for the item, or restructure.",
     "placeholders": {
       "field": "the field's name, like Artist or Camera"
     }
   },
   "multiRename.reason.noDate": "This file has no “{field}” value, so it keeps its name. The placeholder’s editor can use the date the file was last changed instead.",
   "@multiRename.reason.noDate": {
-    "description": "Tooltip on the preview's \"field missing\" symbol for a date field (like the date a photo was taken). The placeholder's editor opens from the placeholder in the name mask; it has a choice to fall back to the file's last-changed date.",
+    "description": "Tooltip on the preview's \"field missing\" symbol for a date field (like the date a photo was taken). The placeholder's editor opens from the placeholder in the name mask; it has a choice to fall back to the file's last-changed date. The row can be a file or a folder: where your language’s word for “file” excludes folders, use a neutral word for the item, or restructure.",
     "placeholders": {
       "field": "the date field's name, like Date taken"
     }
@@ -460,7 +460,7 @@
   },
   "multiRename.reason.unreadable": "Multi-rename couldn’t read this file’s tags or photo information, so it has no “{field}” value and keeps its name.",
   "@multiRename.reason.unreadable": {
-    "description": "Tooltip on the preview's \"can't read tags\" symbol: the full reason behind multiRename.status.unreadable. \"Multi-rename\" is the tool's name; match multiRename.title. Tags are a music or video file's artist, title, and so on; photo information is a photo's date taken, camera, and so on.",
+    "description": "Tooltip on the preview's \"can't read tags\" symbol: the full reason behind multiRename.status.unreadable. \"Multi-rename\" is the tool's name; match multiRename.title. Tags are a music or video file's artist, title, and so on; photo information is a photo's date taken, camera, and so on. The row can be a file or a folder: where your language’s word for “file” excludes folders, use a neutral word for the item, or restructure.",
     "placeholders": {
       "field": "the field's name, like Date taken or Artist"
     }
@@ -695,7 +695,7 @@
   "@multiRename.selectionChanged": {
     "description": "Warning toast when ⌃M (Multi-rename) didn't open because files appeared or disappeared in the folder at that moment, so the selected rows may no longer be the files the user picked. Nothing was renamed."
   },
-  "multiRename.swapsSkipped": "{count, plural, one {Skipped # rename that swaps names} other {Skipped # renames that swap names}}. Rename those files one at a time.",
+  "multiRename.swapsSkipped": "{count, plural, one {Skipped # rename that swaps names} other {Skipped # renames that swap names}}. Rename them one at a time.",
   "@multiRename.swapsSkipped": {
     "description": "Warning toast after Rename starts on cloud storage (S3), when some renames swap names with each other (for example a → b and b → a). On S3, renaming a folder copies everything inside it, and copying one folder onto another that is still there would mix their contents, so those renames were skipped and the files kept their names. {count} is how many (always 2 or more). Match the wording of askCmdr.renameUndo.swapsSkipped."
   },
@@ -832,7 +832,7 @@
       "count": "how many characters from the start (e.g. 3)"
     }
   },
-  "multiRename.placeholderHelp.grandparent": "The name of the folder above that one",
+  "multiRename.placeholderHelp.grandparent": "The name of the folder above the file’s folder",
   "@multiRename.placeholderHelp.grandparent": {
     "description": "In the Multi-rename sheet, a tooltip on a placeholder button (such as [N], [E], or [C]) explains what that placeholder puts in the new name, lists a few of its other forms, and shows each with an example on a made-up file (Beach day.jpg, in the folder Trips/Lisbon 2026, last changed 2026-07-14 09:05:30). Meaning of [G]: the folder that holds the file’s folder (the grandparent folder). A noun phrase."
   },

@@ -60,8 +60,8 @@ Work in a worktree. Take npm and Cargo in **separate commits**, so a bisect can 
    say so in the commit body and to David.
 5. **Regenerate the notices**: `pnpm check third-party-notices`. It rewrites both generated files from the resolved
    graph. Skipping it lands green locally and reds `Desktop (Rust)` on `main` (2026-08-26).
-6. **Check**: `pnpm check --include-slow`. A dependency pass is exactly the case the slow lane exists for; a Rust bump
-   also means clippy, and the E2E suite is what catches a Tauri-plugin regression.
+6. **Check**: `pnpm check`, then `pnpm check --only-slow`. A dependency pass is exactly the case the slow lane exists
+   for; a Rust bump also means clippy, and the E2E suite is what catches a Tauri-plugin regression.
 
 ## Majors
 

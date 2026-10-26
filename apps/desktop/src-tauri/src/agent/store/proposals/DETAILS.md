@@ -22,6 +22,12 @@ shape it takes (`NewOp` for the shared-target verbs, `NewRename` for rename), so
 is no runtime check to keep in sync with the executors. Adding a verb means adding a variant, which makes every `match`
 here a compile error until it's handled.
 
+## What preflight accepts
+
+**The revision comes first.** `record_acceptance` also takes the `revision` the review showed (`proposals.revision`, v11, bumped by every `repropose_group`) and refuses a different one as `AcceptanceOutcome::RevisionChanged` before touching a row, in the same transaction as the binding. Without it, an agent amending a group while the user reads it gets its NEW verb, target, or list approved by a click on the old one: the acceptance record is torn up on amend, but preflight would simply record a fresh one for whatever the group holds at the click. The dialog maps it to `listChanged`. The rename review sends it too: `RenameProposalSnapshot.revision` comes back with `preflight_bulk_rename` (a different one answers status `listChanged` before any stat) and `apply_bulk_rename` (the typed `BulkRenameError::ListChanged`).
+
+`claim.rs::record_acceptance` takes an `OpSelection`, ids only, in whichever form is smaller: `allExcept { opIds }` (the ops the review turned off) or `only { opIds }` (the ones it kept), so neither "all but three" nor "only three" of 60 000 carries 60 000 ids. Both forms run in one `BEGIN IMMEDIATE`: reset the live set to all-or-nothing, toggle the named ids, then hash the result. They're two spellings of one selection, so they bind the SAME count and digest (`tests/claim.rs::only_these_binds_exactly_what_all_except_the_rest_binds`); the claim never knows which form arrived. Only `pending` and `excluded` rows move, so an op that already ran keeps its outcome. A third form, `fromStored { excludeOpIds, includeOpIds }`, starts from what the last review left instead of all-or-nothing and applies only the flips: an earlier "no" (an approval the engine refused to start leaves its deselected ops `excluded`) survives into the next review without the client naming ops it never paged in, and `SuggestedOpView.status` is what the review seeds its ticks from. A selection that leaves the live set empty (`only` with no ids, ids the group doesn't have, `allExcept` every op) is `AcceptanceOutcome::NothingSelected`: rolled back, no acceptance recorded, never an empty run.
+
 ## The claim transaction, in order
 
 `claim.rs::claim_group_for_execution`, one `BEGIN IMMEDIATE`:
@@ -38,7 +44,7 @@ would make the dialog say the wrong thing in one of the two cases.
 
 **Why the claim leaves op statuses alone.** A claim that also flipped its ops to a `queued` status would break the
 concurrency story: the winner's change alters the live op set, so a concurrent loser computes a different binding and
-refuses with a MISMATCH instead of the honest stale status. Per-op execution statuses are the executor's to write (M2).
+refuses with a MISMATCH instead of the honest stale status. Per-op execution statuses are the executor's to write.
 
 **Why comparing the ops against themselves wouldn't work.** Once the agent can re-propose a pending group, "do the ops
 match the ops?" is a tautology. The record held APART from the rows it describes is the whole mechanism; the transaction
@@ -77,7 +83,7 @@ reviewable, and a half-written GROUP is what would matter — that one is atomic
 - `interrupted` — the app restarted while approved. Frozen: nothing here knows which ops ran, so the user re-approves
   (minting a NEW group with a fresh preflight, the old group's rows staying put so the decision record stays whole and
   analytics count one re-approval rather than two proposals) or discards.
-- `completed` — every op reached a terminal outcome. Written by the executor (M2).
+- `completed` — every op reached a terminal outcome. Written by the executor.
 - `rejected` — the user said no.
 
 `OpStatus`: `pending` (in the live set) / `excluded` (deselected at review, row kept) / `done` / `skipped` / `failed`.
@@ -99,8 +105,9 @@ run leaves no `approved` rows.
   no sort) and the binding's ordered stream. A `(group_id, status)` index would force a sort on the ordered read and buy
   little: nearly every op in a live group is `pending`.
 - **The creation snapshot (`snapshot_size` / `snapshot_mtime` / `snapshot_inode`) is nullable.** A selector fills it
-  from the index row; an explicit path list from the agent has nothing behind it to fill it with. M2's per-source
-  fingerprint check reads it where it exists.
+  from the index row; an explicit path list (and a rename plan) gets one bounded stat per path through the source volume before the write
+  (`../../tools/suggestions/snapshot.rs`), and a path that was missing, refused, or too slow stays `NULL`. Display
+  only: execution binds a LIVE stat at preflight (`../../suggested_ops/CLAUDE.md`).
 - **`selector` holds the selector's JSON**, for display and provenance. It is never re-run, and that half needs no
   rule: `../../suggested_ops/tests.rs::a_selector_freezes_at_creation_and_is_never_resolved_again` counts the
   resolver's calls across propose → preflight → approve and fails at two. Why freezing is what makes "what the user

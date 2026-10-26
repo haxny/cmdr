@@ -120,7 +120,7 @@ const cases: Case[] = [
     expected: {
       title: 'A file is in the way',
       message:
-        'Cmdr couldn’t create the destination folder, because there’s a file at /photos/2026, where a folder needs to be. Nothing was written, and the originals are untouched.',
+        'Cmdr couldn’t create the destination folder, because there’s a file at “/photos/2026”, where a folder needs to be. Nothing was written, and the originals are untouched.',
       suggestion: 'Pick another destination, or rename or move that file and try again.',
     },
   },
@@ -682,7 +682,7 @@ const cases: Case[] = [
     error: { type: 'reply_signature_refused', path: '/p', message: 'signature verification failed' },
     expected: {
       title: 'Server reply refused',
-      message: 'The server’s reply wasn’t signed, so Cmdr stopped.',
+      message: 'The server’s reply had no valid signature, so Cmdr stopped.',
       suggestion:
         'A flaky network device can cause this, and so can someone tampering with traffic between you and the server. Reconnect, and if it happens again, check your network.',
     },

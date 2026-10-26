@@ -172,7 +172,7 @@
     "screenshot": "toast-transfer-complete.png",
     "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr couldn’t confirm the copies are fully written to the disk. If the drive was unplugged or is failing, check them before you rely on them.",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr couldn’t confirm the copies are fully written to the drive. If it was unplugged or is failing, check them before you rely on them.",
   "@transfer.durabilityUnconfirmedUnnamed": {
     "description": "The same warning as transfer.durabilityUnconfirmed, for when Cmdr doesn't know the destination drive's name. Shown in its own pop-up notice (toast) right after a copy finishes. Calm and honest: it doesn't say anything was lost. \"Cmdr\" is the product name. Avoid the words \"error\" and \"failed\".",
     "screenshot": "toast-transfer-complete.png",

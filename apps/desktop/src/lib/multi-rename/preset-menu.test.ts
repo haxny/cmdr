@@ -6,7 +6,7 @@ import { DEFAULT_SPEC } from './spec'
 const labels = {
   saved: 'Your presets',
   reset: 'Reset all fields',
-  saveAs: 'Save current as…',
+  saveAs: 'Save as preset…',
   rename: 'Rename…',
   update: 'Update',
   moveUp: 'Move up',
@@ -33,11 +33,11 @@ function input(overrides: Partial<PresetMenuInput> = {}): PresetMenuInput {
 }
 
 describe('presetMenuSections', () => {
-  it('lists the presets top to bottom, then Reset all fields and Save current as…', () => {
+  it('lists the presets top to bottom, then Reset all fields and Save as preset…', () => {
     const sections = presetMenuSections(input())
     expect(sections.map((s) => s.items.map((i) => i.label))).toEqual([
       ['Preset 1', 'Preset 2'],
-      ['Reset all fields', 'Save current as…'],
+      ['Reset all fields', 'Save as preset…'],
     ])
   })
 

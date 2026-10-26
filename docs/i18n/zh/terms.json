@@ -89,7 +89,7 @@
     "chosen": "AI 功能",
     "confidence": "high",
     "decision": "AI subject",
-    "forms": "AI features → AI 功能 (AI 功能已关闭); the AI as a sentence subject → AI (AI 给出的理由)",
+    "forms": "AI features → AI 功能 (AI 功能已关闭); the AI as a sentence subject → AI (AI 提出建议时)",
     "note": "Where the English subject is Cmdr, write Cmdr; `suggestedOps.*` keeps AI deliberately to separate the model's claims from Cmdr's facts.",
     "sources": "catalog (settings.ai.tooltipOff)"
   },
@@ -259,7 +259,8 @@
     "chosen": "存档",
     "confidence": "high",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "A zip-style archive file (the archive concept), not a chat: 压缩文件, matching fileExplorer.archiveEnterMenu.ariaLabel."
+      "fileExplorer.list.rowKind.archive": "A zip-style archive file (the archive concept), not a chat: 压缩文件, matching fileExplorer.archiveEnterMenu.ariaLabel.",
+      "suggestedOps.facts.archive": "The noun label before the zip a compress suggestion creates (the archive concept), not a chat: 压缩文件, like fileExplorer.list.rowKind.archive."
     },
     "forms": "unarchive 取消存档; the badge 已存档",
     "sources": "MS terminology (archive → 存档)"
@@ -313,9 +314,6 @@
     "chosen": "返回",
     "confidence": "confirmed",
     "decision": "Deliberate splits",
-    "exceptions": {
-      "multiRename.undoTooltip": "English-sense: \"back to their old names\" restores names, nothing navigates; the accepted rename form 改回 carries it."
-    },
     "forms": "navigation back 返回 (menu, network browser, error pane); the onboarding wizard's previous step 上一步, paired with 下一步",
     "sources": "macOS (Back → 返回)"
   },
@@ -687,6 +685,12 @@
     },
     "forms": "Connecting to X… → 正在连接到 {name}…; Connect to server… → 连接服务器…; Connect as guest → 以来宾身份连接; internet connection → 联网 / 互联网连接",
     "sources": "macOS Finder, NetAuthAgent"
+  },
+  "learn-more": {
+    "chosen": "进一步了解",
+    "confidence": "high",
+    "forms": "More about “X” → 进一步了解“X”",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
   "link": {
     "chosen": "链接",
@@ -1353,6 +1357,13 @@
     "forms": "low disk space 磁盘空间不足; free (remaining) 剩余; free up space 腾出空间",
     "sources": "macOS/MS"
   },
+  "from-to": {
+    "accept": ["目标", "来自"],
+    "chosen": "来源",
+    "confidence": "high",
+    "forms": "From → 来源, To → 目标 (the copy/move dialog's group titles, reused by the AI suggestions fact lines); a from-path line → 来自：{path}",
+    "sources": "Nautilus (来源 / 目标); catalog (fileOperations.transferDialog.sourceGroupTitle / targetGroupTitle)"
+  },
   "full-disk-access": {
     "chosen": "完全磁盘访问权限",
     "confidence": "high",
@@ -1563,7 +1574,7 @@
     "chosen": "客人",
     "confidence": "high",
     "decision": "Add-server sheet + host key",
-    "forms": "Connect as guest → 以客人身份连接; status 客人; Use guest (switch back) → 改用客人身份; the account suffix pair 身份：客人 / 身份：{username}; \"doesn't show shares to guests\" → 不向客人显示共享",
+    "forms": "Connect as guest → 以客人身份连接; status 客人; Browse as guest (switch back from an account) → 以客人身份浏览; the account suffix pair 身份：客人 / 身份：{username}; \"doesn't show shares to guests\" → 不向客人显示共享",
     "sources": "macOS zh-CN (NetAuthAgent GUEST, LoginUIKit, AppKit NSUserGuest)"
   },
   "hard-link": {
@@ -2001,7 +2012,7 @@
     "sources": "MS terminology; macOS Finder"
   },
   "move": {
-    "accept": ["移到", "移出", "移入", "移过"],
+    "accept": ["移到", "移出", "移入", "移过", "移回", "移走"],
     "avoid": [
       {
         "form": "挪",
@@ -2011,10 +2022,7 @@
     "chosen": "移动",
     "confidence": "high",
     "decision": "Standalone conflict prompt",
-    "exceptions": {
-      "errors.eject.busy": "\"still moving files there\" is rendered 读写 (reading and writing), the busy-drive family's wording."
-    },
-    "forms": "F6 移动; in a sentence with a destination 移动到“{destination}”; out of / into an archive 移出 / 移入",
+    "forms": "F6 移动; in a sentence with a destination 移动到“{destination}”; out of / into an archive 移出 / 移入; moving back 移回原处; a file something moved away 已被移走",
     "note": "A progress line or conflict prompt naming the operation writes 移动到 so it matches the queue row's 正在移动; everyday prose may use Finder's contraction 移到 (移到废纸篓, 把 Cmdr 移到“应用程序”文件夹).",
     "sources": "macOS"
   },
@@ -2097,10 +2105,6 @@
     "chosen": "共享",
     "confidence": "confirmed",
     "decision": "Share not on server",
-    "exceptions": {
-      "servers.sheet.addressHelpNfs": "\"share\" here is a literal path segment inside the example addresses, kept verbatim.",
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the saved report on), not an SMB share: 自己发给别人."
-    },
     "forms": "共享; network shares 网络共享; mounted shares 已装载的共享; SMB/Network shares section SMB/网络共享",
     "sources": "macOS Finder"
   },
@@ -2307,8 +2311,7 @@
     "confidence": "high",
     "exceptions": {
       "licensing.acknowledgements.jumpToNpm": "npm packages are 包 (npm 包), the JavaScript community's own word.",
-      "licensing.acknowledgements.npmHeading": "npm packages are 包 (npm 包), the JavaScript community's own word.",
-      "fileExplorer.list.rowKind.package": "A macOS package (the app-bundle concept, Finder 显示包内容): 应用程序包, matching settings.archives.bundle.label and fileExplorer.archiveEnterMenu.ariaLabel."
+      "licensing.acknowledgements.npmHeading": "npm packages are 包 (npm 包), the JavaScript community's own word."
     },
     "forms": "a generic package 软件包; npm packages npm 包",
     "note": "Deliberately wider than the app-bundle word 应用程序包.",
@@ -2461,10 +2464,10 @@
     "sources": "macOS"
   },
   "previous-next": {
-    "accept": ["上一个", "上一步", "下一步"],
+    "accept": ["上一个", "上一步", "下一步", "上一项", "下一项"],
     "chosen": "下一个",
     "confidence": "high",
-    "forms": "previous / next result 上一个 / 下一个结果; wizard steps 上一步 / 下一步",
+    "forms": "previous / next result 上一个 / 下一个结果; wizard steps 上一步 / 下一步; an operation takes the classifier 项 (上一项操作 / 下一项操作)",
     "sources": "standard"
   },
   "privacy-and-security": {
@@ -2675,10 +2678,6 @@
   "remove": {
     "chosen": "移除",
     "confidence": "high",
-    "exceptions": {
-      "settings.dataWipe.doneMessage": "English sense: removing the app means deleting it from disk (via the Trash), so it takes the spoken delete 删掉, not the list verb 移除.",
-      "settings.dataWipe.partialMessage": "English sense: the user deletes leftover files and keychain items by hand, so it takes the spoken delete 删掉, not the list verb 移除."
-    },
     "forms": "从列表中移除; tags 移除“{color}”",
     "note": "Deleting what a rollback wrote, a leftover, or a model is 删除; 移除 only takes something out of a list or an archive.",
     "sources": "macOS"
@@ -2921,7 +2920,6 @@
     "forms": "Press Enter to search 按 Enter 键搜索; searching again 再搜一次",
     "sources": "macOS",
     "exceptions": {
-      "multiRename.search": "find-and-replace inside file names is 查找 / 替换为 in every Chinese source (macOS Finder BulkRenameWindow 查找： / 替换成：, Total Commander 6613 查找, Double Commander 查找(&F)...), and the catalog's in-text find is already 查找 (viewer.search.placeholder); 搜索 is the file-search feature",
       "multiRename.searchOptions": "the options of the tool's find-and-replace, so it takes the multiRename.search label 查找 (查找选项), not the file-search 搜索",
       "commands.fileMultiRename.description": "the tool's search & replace is the fixed phrase 查找替换 (Total Commander 6612 查找并替换, Double Commander 查找与替换), matching the multiRename.search label 查找"
     }
@@ -3228,9 +3226,17 @@
     "sources": "standard"
   },
   "suggestion": {
+    "avoid": [
+      {
+        "form": "建议的操作",
+        "why": "the dialog's old name; the dialog, its View menu item, and palette entry are one name, AI 建议"
+      }
+    ],
     "chosen": "建议",
     "confidence": "high",
-    "sources": "standard"
+    "decision": "Suggested ops dialog",
+    "forms": "the AI suggestions dialog, View menu item, and palette entry → AI 建议 (the mkdir hints' fileOperations.mkdir.aiSuggestionsAria); quoted in prose “AI 建议”对话框; a batch heading → time + 建议 (刚刚建议, 今天 {time} 建议)",
+    "sources": "catalog (fileOperations.mkdir.aiSuggestionsHeader)"
   },
   "supported": {
     "chosen": "支持",
@@ -3346,6 +3352,13 @@
     "confidence": "high",
     "sources": "macOS Finder"
   },
+  "time-ago": {
+    "accept": ["刚刚"],
+    "chosen": "前",
+    "confidence": "high",
+    "forms": "a counted unit hugs it: {count} 分钟前, a formatted {durationText}前; a heading adds the verb after it ({countText} 分钟前建议); a moment ago → 刚刚",
+    "sources": "macOS (%d 天前); catalog (queryUi.age.minutes, ui.toast.age)"
+  },
   "time-left": {
     "chosen": "剩余",
     "confidence": "high",
@@ -3439,6 +3452,12 @@
     "chosen": "udev",
     "confidence": "high",
     "sources": "kept Latin"
+  },
+  "unknown": {
+    "chosen": "未知",
+    "confidence": "high",
+    "forms": "a bare cell value 未知; in parentheses （未知）",
+    "sources": "macOS Finder/AppKit (未知, 文件类型未知); catalog (ai.local.modelUnknown)"
   },
   "undo": {
     "chosen": "撤销",
@@ -3654,9 +3673,6 @@
     "accept": ["写"],
     "chosen": "写入",
     "confidence": "high",
-    "exceptions": {
-      "suggestedOps.reversibleDeleteWritten": "\"deleting what it writes\" names the new items (新建的内容), the rollback family's phrase."
-    },
     "forms": "partly written 可能已经写入了一部分内容; half-written 写了一半的; read and write 读写",
     "sources": "standard"
   },
@@ -3742,7 +3758,7 @@
   "batch-rename": {
     "chosen": "批量重命名",
     "confidence": "high",
-    "forms": "command, File menu item and sheet title → 批量重命名 (menu: 批量重命名…); the onboarding rows already say 批量重命名 / 批量重命名界面",
+    "forms": "command, File menu item and sheet title → 批量重命名 (menu: 批量重命名…); prose naming the tool quotes it: 在“批量重命名”里",
     "avoid": [
       {
         "form": "批量重命名工具",
@@ -3824,5 +3840,59 @@
     "confidence": "high",
     "forms": "Load a preset → 加载预置; Load more → 加载更多; Loading… → 正在加载…",
     "sources": "catalog (askCmdr.sessions.loadMore 加载更多, operationLog.dialog.loadMore 再加载 50 条, every 正在加载…); Double Commander zh-CN (Load Preset 1 → 加载预设 1)"
+  },
+  "administrator": {
+    "chosen": "管理员",
+    "confidence": "high",
+    "forms": "an administrator password → 管理员密码; administrator rights → 管理员权限",
+    "sources": "MS terminology (系统管理员密码); the catalog's 8 uses (管理员权限, 管理员密码)"
+  },
+  "reply": {
+    "chosen": "回复",
+    "confidence": "high",
+    "forms": "a server's reply → 服务器的回复 (这个回复); an Ask Cmdr answer → 回复",
+    "sources": "MS terminology (reply → 回复, \"to answer a message\"); the catalog's 16 uses"
+  },
+  "ai-reply": {
+    "chosen": "回复",
+    "confidence": "high",
+    "sources": "MS terminology (reply → 回复); same word as reply"
+  },
+  "blocked-by": {
+    "avoid": [
+      {
+        "form": "拦截",
+        "why": "no source uses it for this sense, and the catalog has none"
+      }
+    ],
+    "chosen": "阻止",
+    "confidence": "high",
+    "forms": "Cmdr blocked X from Y → Cmdr 阻止了 X 访问 Y; macOS blocked Cmdr → macOS 阻止了 Cmdr…",
+    "sources": "MS terminology (Block → 阻止); the catalog's 5 uses"
+  },
+  "tamper": {
+    "chosen": "篡改",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → 有人篡改…通信 / 有人在篡改连接",
+    "sources": "MS terminology (tamper → 篡改, \"to maliciously modify data\"); the catalog's 5 uses"
+  },
+  "uninstall": {
+    "avoid": [
+      {
+        "form": "移除",
+        "why": "removing an item from a list; the menu item this toast family echoes says 卸载"
+      }
+    ],
+    "chosen": "卸载",
+    "confidence": "high",
+    "forms": "menu item 卸载“cmdr”命令; result 已卸载“cmdr”命令; Couldn't uninstall → 无法卸载",
+    "note": "macOS zh-CN also writes 卸载 for unmounting a server (推出磁盘并卸载服务器); the mount concept keeps 装载 for share copy, so 卸载 for software reads clearly.",
+    "sources": "MS terminology (uninstall software → 卸载); the catalog's `menu.app.cliCommandUninstall`"
+  },
+  "unlock-device": {
+    "chosen": "解锁",
+    "confidence": "high",
+    "forms": "unlock the phone → 解锁 (把它连上并解锁; 如果是手机，解锁它)",
+    "sources": "MS terminology (unlock → 解锁, \"to enable an object to be modified\"); the catalog's 24 uses"
   }
 }

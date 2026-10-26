@@ -59,8 +59,6 @@ mod walk_database;
 
 pub use auto_start::{should_auto_start, should_auto_start_indexing};
 pub(crate) use freshness_bridge::{apply_freshness_event, bump_current_epoch_for, get_freshness};
-#[cfg(test)]
-pub(crate) use queries::is_watching_for_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub(crate) use queries::registered_mtp_volume_ids_for_device;
 pub(crate) use queries::{
@@ -68,6 +66,8 @@ pub(crate) use queries::{
     ready_volumes_to_wire, ready_volumes_with_kind, volume_kind,
 };
 pub use queries::{is_active, is_failed};
+#[cfg(test)]
+pub(crate) use queries::{is_initializing_for_test, is_watching_for_test};
 pub(crate) use relocation::follow_the_move;
 #[cfg(any(test, feature = "testing"))]
 pub use reservation::reserve_initializing_index_for_test;

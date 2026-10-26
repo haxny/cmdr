@@ -58,7 +58,7 @@
 
   "errorReporter.dialog.detailsToggle": "What’s about to be sent",
   "@errorReporter.dialog.detailsToggle": {
-    "description": "Toggle that expands a panel previewing exactly what will be uploaded (manifest and sample log lines). Preceded by a disclosure triangle; followed by the bundle size in parentheses.",
+    "description": "Link that opens everything that will be uploaded (the manifest and the full redacted logs) as one text file in Cmdr's file viewer window. Followed by the bundle size in parentheses.",
     "screenshot": "error-report.png"
   },
 
@@ -316,7 +316,7 @@
     "description": "Heading of the screen a Cmdr window shows when its content stopped working and couldn't be drawn. It replaces the whole window. Calm and plain; avoid the words \"error\" and \"failed\"."
   },
 
-  "errorReporter.pageCrash.body": "Cmdr ran into a problem it didn’t expect. Reloading usually helps. If it keeps happening, sending a report helps get it fixed.",
+  "errorReporter.pageCrash.body": "Cmdr ran into a problem it didn’t expect. Reloading usually helps. If it keeps happening, send a report so it gets fixed.",
   "@errorReporter.pageCrash.body": {
     "description": "Explanation under the heading of the screen a Cmdr window shows when its content stopped working. Below it are two buttons: Reload (redraws the window) and Send error report. Reassuring and matter-of-fact. \"Cmdr\" is the product name (do not translate). Avoid the words \"error\" and \"failed\"."
   },
@@ -329,6 +329,11 @@
   "errorReporter.pageCrash.reload": "Reload",
   "@errorReporter.pageCrash.reload": {
     "description": "Button on the screen a Cmdr window shows when its content stopped working. It redraws the window from scratch. A button label, so keep it short."
+  },
+
+  "errorReporter.preview.unavailableToast": "Couldn’t open the preview. Try again in a moment.",
+  "@errorReporter.preview.unavailableToast": {
+    "description": "Toast shown when the person asked to see what an error report or a feedback message would send (it opens in the file viewer), but Cmdr couldn't put that file together. Avoid the words \"error\" and \"failed\"."
   },
 
   "errorReporter.prefill.reference": "Reference: {code}",

@@ -66,9 +66,6 @@ of and count a re-approved group once per attempt. A started group never returns
 once per group that ran. `bridge/tests.rs::an_approval_is_counted_once_when_it_starts_and_not_when_the_engine_refuses_it`
 holds it.
 
-The events land in M1, before the dialog exists, deliberately: David's own QA pass then produces real numbers before
-launch rather than after.
-
 **A zero here is only readable against a denominator.** `ask_cmdr_turn`
 (`../chat/runtime/analytics.rs`) counts turns and how many of them staged a proposal, which is
 what separates "the feature is unused" from "the feature is used and the model never
@@ -211,3 +208,19 @@ winner claims), never as an extra check on the execution path.
 ❌ No path, file name, rationale, or selector pattern rides on the event. It crosses to every window, and `main.db` is a map of the user's life that stays local.
 
 The emitter is wired once at startup (`init_suggestions_event_emitter`, beside the operation manager's). Before wiring — every unit test — emitting is a silent no-op, and a count that can't be read is logged and dropped rather than propagated: failing an approval that already succeeded because a badge couldn't refresh would be the tail wagging the dog.
+
+## What the review reads beside the agent's words
+
+The dialog's facts are Cmdr's, read through the group's own volumes (`commands/agent/suggested_ops.rs` for the wire, `facts.rs` for the stats and the rules).
+
+**The destination check** (`destination_state`) asks the destination volume for the entry, not `exists`: `exists` folds "the volume refused" into "not there", which would read as "will be created" on a share that only didn't answer. The list runs every group's check at once, each through `timeout_detached_typed` with `io_budget` (2 s, or at least 10 s on a live session). An unregistered volume is classified by `crate::unregistered_volumes`: a saved share or server nobody connected answers `NotConnected`, an id nothing knows answers `Unknown` with a warning. Every `Unknown` logs its reason under `agent::suggested_ops`.
+
+Gotcha: a `saved` SMB row in the switcher is published ONLY while that share's volume isn't registered (`server_volumes.rs::fold_saved_smb_shares`), so "the share shows `saved`" always means the registry lookup comes back empty. Before #747 that branch answered `Unknown` silently, and every move onto a saved NAS share read "Cmdr couldn't check the target folder" (QA 2026-10, a Downloads cleanup onto `naspi`).
+
+**Trash on a volume with no Trash can't run; it isn't "irreversible".** Trash goes through the OS on raw paths (`cmdr-operations`'s `delete/trash.rs::move_to_trash_sync`, `trashItemAtURL`), whatever backend serves the pane. On a volume without a Trash (a network mount) the OS refuses each item with `NSFeatureUnsupportedError`, the engine records `TrashRefusalKind::NoTrashForVolume` per item, the operation completes with every item refused, and nothing is deleted (verified by reading that code path, 2026-10-26). So `reversible` stays the verb's own answer (`GroupIntent::reversibility`, the one per-verb source) and a separate read-time fact says the group can't run: `facts.rs::run_blocker` answers `RunBlocker::NoTrash` for a trash group whose source volume says `!Volume::has_trash()`. It's read at read time because a volume's state changes while a suggestion waits two weeks. An unregistered source isn't a blocker here: approving it refuses with its own typed `SourceNotConnected`. The dialog (`runBlocker`) and the agent's `list_suggestions` both go through `source_run_blocker`, so they can't disagree. Disclosed, never enforced: approving still makes the ordinary engine call.
+
+**Read facts cost no I/O.** Names and trash support come from the volume registry (`Volume::name`, `Volume::has_trash`), with `server_volumes::saved_place_name` for a saved place nobody connected, ❌ never a volume discovery per list call.
+
+**Header facts.** `sourceVolumeName` and `destinationVolumeName` are each the registered volume's own name, or a saved place's while nobody connected it (`destinationVolumeName` names the source volume for a rename). `sourceFolder` is the `proposals.source_folder` column (v12), written with the op list at creation and on every amend from the paths already in memory (`store::proposals::shared_parent`), so a list refresh reads one column instead of streaming every op path of every group.
+
+**Live facts.** `suggested_ops_live_facts(groupId, offset, limit)` stats one window of a group's ops through the source volume, so the dialog draws a page from the frozen rows first and fills in what's true now. Each op answers `present` (size, modified), `missing`, or `unknown`; per-file trouble is that file's `unknown`, never a command error. The call refuses only when it can't ask at all: no store, no group, or a source volume that isn't connected (`sourceNotConnected`) or left (`sourceGone`). The dialog re-asks on scroll faster than a slow share answers, so stats share `facts.rs`'s `SOURCE_STATS` budget with the proposal-time snapshot, and a stat that outlives its deadline keeps its permit until it really ends: a dead mount's stragglers stay counted instead of piling up pool threads. A stat that only got its permit after its caller stopped waiting doesn't start.

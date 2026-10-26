@@ -49,6 +49,7 @@ pub mod auto_sent;
 pub mod breadcrumbs;
 pub(crate) mod bundle_builder;
 pub(crate) mod bundle_capper;
+pub mod preview_file;
 mod state_history;
 mod tail_walker;
 
@@ -57,7 +58,7 @@ mod auto_dispatcher_tests;
 #[cfg(test)]
 mod auto_sent_tests;
 
-pub use bundle_builder::{BundleRequest, build_bundle};
+pub use bundle_builder::{BundleRequest, build_bundle, resolve_bundle_id};
 pub use bundle_capper::cap_bundle_to_mb;
 pub use state_history::DiagnosticStateSnapshot;
 

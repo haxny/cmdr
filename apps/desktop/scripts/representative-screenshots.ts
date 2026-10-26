@@ -286,6 +286,14 @@ export const REPRESENTATIVE_SCREENSHOTS: RepresentativeMapping[] = [
       'rows, shown only when that operation is a rollback or has been rolled back, so this screenshot may not show it.',
   },
   {
+    // The recording-off notice sits above the list in every state, not in place of it.
+    prefix: 'operationLog.dialog.recordingOff',
+    screenshot: 'operation-log-more-pages.png',
+    note:
+      'The operation log dialog, pictured here with recording on. Your string is a notice at the top of this dialog, ' +
+      'above the list, shown in every state while recording is off.',
+  },
+  {
     // The operation log's other states (loading, empty, load error) are the same
     // dialog with a different body.
     prefix: 'operationLog.',

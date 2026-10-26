@@ -173,6 +173,38 @@ fn production_v1_db_migrates_forward_gaining_last_model() {
     assert_eq!(last_model, None, "pre-existing rows read as no recorded model");
 }
 
+/// A v11 database's groups gain `source_folder` once, from their stored paths: one folder for a
+/// group that has one, NULL for a group that spans folders, so the review names the right folder
+/// without streaming paths on every refresh.
+#[test]
+fn a_v11_db_backfills_each_groups_shared_source_folder() {
+    let conn = crate::sqlite_util::open_in_memory().expect("in-memory db");
+    run_migrations(&conn, &MIGRATIONS[..11]).expect("run up to v11");
+    conn.execute_batch(
+        "INSERT INTO proposal_sets (id, created_at) VALUES (1, 10);
+         INSERT INTO proposals (id, set_id, seq, verb, status, source_volume_id, reversible, display_name, created_at)
+             VALUES (1, 1, 0, 'trash', 'pending', 'root', 'restore_move', 'one folder', 10),
+                    (2, 1, 1, 'trash', 'pending', 'root', 'restore_move', 'two folders', 10);
+         INSERT INTO proposal_ops (group_id, seq, source_path, status, created_at) VALUES
+             (1, 0, '/Users/someone/Downloads/a.dmg', 'pending', 10),
+             (1, 1, '/Users/someone/Downloads/b.dmg', 'pending', 10),
+             (2, 0, '/Users/someone/Downloads/a.dmg', 'pending', 10),
+             (2, 1, '/Users/someone/Desktop/b.dmg', 'pending', 10);",
+    )
+    .expect("insert v11 rows");
+
+    run_migrations(&conn, MIGRATIONS).expect("migrate to current");
+
+    let folder = |id: i64| -> Option<String> {
+        conn.query_row("SELECT source_folder FROM proposals WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })
+        .expect("source_folder exists")
+    };
+    assert_eq!(folder(1).as_deref(), Some("/Users/someone/Downloads"));
+    assert_eq!(folder(2), None, "a group spanning folders names none");
+}
+
 /// A thread reopened after a restart must show its last known context usage rather than an
 /// empty gauge, so the figures live with the conversation. An older thread that never
 /// recorded one reads as "not measured yet", never as zero usage.

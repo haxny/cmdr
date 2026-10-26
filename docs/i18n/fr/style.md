@@ -276,7 +276,7 @@ covers large/compact-notation values (e.g. "2 millions"). Write the branches the
   l’interrupteur qui l’active (`settings.askCmdr.enabled.label`), et toute phrase qui renvoie à cette section (« dans
   les réglages d’Ask Cmdr », « dans la section Ask Cmdr »). Partout ailleurs, la phrase décrit ce que fait le produit et
   le sujet est **Cmdr** (« Cmdr surveille les dossiers… », « Ce que Cmdr envoie ») ou, quand elle parle du modèle plutôt
-  que de l’app, **l’IA** (« L’IA a suggéré ceci », « Raison donnée par l’IA »). L’anglais fait exactement ce partage clé
+  que de l’app, **l’IA** (« L’IA a suggéré ceci », « Pourquoi, selon l’IA »). L’anglais fait exactement ce partage clé
   par clé : suivez-le, ne réintroduisez pas la marque dans une phrase descriptive et ne la retirez pas d’un renvoi à la
   section.
 - **Un renvoi à un réglage macOS réutilise le libellé du bouton qui l’ouvre, mot pour mot.** « Click to set up full disk

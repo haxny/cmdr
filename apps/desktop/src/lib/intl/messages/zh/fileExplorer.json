@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {未选择} other {已选择 {countText} 项}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {没有名称包含“{pattern}”} other {{countText} 个名称包含“{pattern}”}}",
   "@fileExplorer.pane.filterMatches": {
@@ -519,9 +519,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "改用客人身份",
+  "fileExplorer.network.share.useGuest": "以客人身份浏览",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "用其他账户登录…",
   "@fileExplorer.network.share.signInAs": {
@@ -631,9 +631,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "已拷贝 {countText} {count, plural, other {个项目}}",
+  "fileExplorer.clipboard.copied": "已拷贝 {countText} {count, plural, other {个项目}}。",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "已选择不同的文件：左侧 {leftCountText} {leftCount, plural, other {个文件}}，右侧 {rightCountText} {rightCount, plural, other {个文件}}。",
   "@fileExplorer.compareDirectories.marked": {
@@ -1283,11 +1283,11 @@
   },
   "fileExplorer.git.repoChip.tooltip.onBranch": "位于分支“{branch}”。",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
   "fileExplorer.git.repoChip.tooltip.unborn": "位于新分支“{branch}”（还没有提交）。",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "分离状态，位于 {id}。",
   "@fileExplorer.git.repoChip.tooltip.detached": {
@@ -1295,7 +1295,7 @@
   },
   "fileExplorer.git.repoChip.tooltip.aheadBehind": "比“{upstream}”领先 {ahead, plural, other {{aheadText} 次提交}}，落后 {behind, plural, other {{behindText} 次提交}}。",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "工作树中有未提交的改动。",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1677,25 +1677,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "{device} 没有连接。请用 USB 数据线把它连上并解锁，然后再试一次。",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "“{device}”没有连接。请用 USB 数据线把它连上并解锁，然后再试一次。",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "{device} 上的那个存储空间现在不可用。",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "这个文件夹所在的存储空间目前在 {device} 上不可用。",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "“{drive}”没有连接。请连接它，然后再试一次。",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "通过 MTP 连接手机和相机的功能已在设置中关闭。",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "通过 MTP 访问手机和相机的功能已在设置中关闭。",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Android 手机功能已在设置中关闭。",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "访问 Android 手机的功能已在设置中关闭。",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr 已经不知道怎么连到“{place}”了。从“服务器”重新连接它，这个个人收藏就又能用了。",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2016,6 +2016,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr 正在搜索 {name}。索引会在搜索结束后立即开始。",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "已为 {name} 打开索引。",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr 正在为 {name} 建立索引。你请求的扫描会在结束后立即开始。",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

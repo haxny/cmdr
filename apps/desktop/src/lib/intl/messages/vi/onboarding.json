@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "Đổi tên hàng loạt",
+  "onboarding.stepAi.table.rowRename": "Đổi tên nhiều tệp",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "Bạn dùng giao diện đổi tên hàng loạt để tự đặt mẫu đổi tên, xem lại rồi áp dụng.",
+  "onboarding.stepAi.table.renameWithout": "Bạn tự đặt mẫu đổi tên trong công cụ Đổi tên hàng loạt, rồi xem lại và áp dụng.",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "Bạn nói “thêm tiền tố ngày kiểu ISO”, tác nhân đặt mẫu đổi tên cho bạn, bạn xem lại rồi áp dụng tùy ý.",
   "@onboarding.stepAi.table.renameWith": {
@@ -618,6 +618,22 @@
   "onboarding.cloudSetup.status.genericError": "Có gì đó không ổn",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "Dịch vụ đang mất quá nhiều thời gian để phản hồi. Hãy thử lại sau giây lát.",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "Địa chỉ đó có vẻ không đúng. Địa chỉ cần bắt đầu bằng https://.",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "Khóa của bạn chỉ được gửi qua kết nối bảo mật, nên hãy dùng địa chỉ bắt đầu bằng https://.",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "Dịch vụ đã từ chối yêu cầu (mã {status}).",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "Đã kết nối!",
   "@onboarding.cloudSetup.status.connected": {

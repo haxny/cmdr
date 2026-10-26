@@ -71,9 +71,9 @@
   "@crashReporter.sentToast.message.report": {
     "sourceHash": "a676ed5"
   },
-  "crashReporter.sentToast.changeSettings": "Módosítás itt: Beállítások > Frissítések és adatvédelem",
+  "crashReporter.sentToast.changeSettings": "Módosítás a Beállításokban",
   "@crashReporter.sentToast.changeSettings": {
-    "sourceHash": "25d151d"
+    "sourceHash": "144d0bd"
   },
   "crashReporter.sentToast.sendLog": "Napló csatolása",
   "@crashReporter.sentToast.sendLog": {

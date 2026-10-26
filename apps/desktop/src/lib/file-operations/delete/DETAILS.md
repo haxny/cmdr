@@ -130,9 +130,9 @@ reaches it then), which is why no "nothing to undo" toast exists.
 
 **A trash the trash no longer holds is said plainly.** The rollback engine reports an item gone from the trash AND from
 its old place as a `vanished` skip (`crates/cmdr-operation-log/DETAILS.md` § What counts as already gone), and
-`trashUndoOutcome` keeps those apart from items that stayed in the trash: all gone reads "Nothing to put back: they’re
-no longer in the trash.", some gone appends "N items were no longer in the trash." Cmdr itself never empties the trash,
-so this is the only way the app learns the items are gone.
+`trashUndoOutcome` keeps those apart from items that stayed in the trash: all gone reads "Nothing to put back: the items
+were no longer in the trash.", some gone appends "N items were no longer in the trash." Cmdr itself never empties the
+trash, so this is the only way the app learns the items are gone.
 
 **Decision: no "delete permanently" button.** The toast renders after every trash, including the ones the user is glad
 they can take back, and a one-click irreversible action on a transient surface that appears that often is a misclick

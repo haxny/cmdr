@@ -235,13 +235,13 @@
   "@onboarding.stepAi.table.searchWith": {
     "sourceHash": "457e19a"
   },
-  "onboarding.stepAi.table.rowRename": "大量重新命名",
+  "onboarding.stepAi.table.rowRename": "重新命名多個檔案",
   "@onboarding.stepAi.table.rowRename": {
-    "sourceHash": "9246b56"
+    "sourceHash": "5cc5e7f"
   },
-  "onboarding.stepAi.table.renameWithout": "你用大量重新命名的介面手動設好命名樣式，檢查過後再套用。",
+  "onboarding.stepAi.table.renameWithout": "你在「多檔重新命名」裡手動設好命名樣式，檢查過後再套用。",
   "@onboarding.stepAi.table.renameWithout": {
-    "sourceHash": "b12d997"
+    "sourceHash": "e7531dc"
   },
   "onboarding.stepAi.table.renameWith": "你說「加上 ISO 日期前綴」，代理程式就幫你設好命名樣式，你檢查過後隨時可以套用。",
   "@onboarding.stepAi.table.renameWith": {
@@ -619,6 +619,22 @@
   "onboarding.cloudSetup.status.genericError": "出了點狀況",
   "@onboarding.cloudSetup.status.genericError": {
     "sourceHash": "ab827e3"
+  },
+  "onboarding.cloudSetup.status.timedOut": "這個服務太久沒有回應。請稍後再試一次。",
+  "@onboarding.cloudSetup.status.timedOut": {
+    "sourceHash": "bbfc68f"
+  },
+  "onboarding.cloudSetup.status.invalidEndpoint": "這個網址看起來不對。網址應該以 https:// 開頭。",
+  "@onboarding.cloudSetup.status.invalidEndpoint": {
+    "sourceHash": "1e0798b"
+  },
+  "onboarding.cloudSetup.status.insecureEndpoint": "你的金鑰只會透過安全連線傳送，所以請使用以 https:// 開頭的網址。",
+  "@onboarding.cloudSetup.status.insecureEndpoint": {
+    "sourceHash": "b2713ea"
+  },
+  "onboarding.cloudSetup.status.providerRefused": "服務拒絕了這個請求（狀態碼 {status}）。",
+  "@onboarding.cloudSetup.status.providerRefused": {
+    "sourceHash": "e3496e5"
   },
   "onboarding.cloudSetup.status.connected": "已連線",
   "@onboarding.cloudSetup.status.connected": {

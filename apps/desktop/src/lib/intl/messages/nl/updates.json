@@ -57,9 +57,9 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} staat klaar, maar Cmdr kan de update niet zelf installeren",
+  "updates.unwritable.adminHeadline": "Cmdr {version} is verschenen, maar Cmdr kan de update niet zelf installeren",
   "@updates.unwritable.adminHeadline": {
-    "sourceHash": "a0c72ea"
+    "sourceHash": "8e6aecc"
   },
   "updates.unwritable.adminDetail": "{path} is van een ander account. Download Cmdr van <website>getcmdr.com</website> en sleep het naar de map ‘Apps’ om bij te werken. macOS vraagt dan om je wachtwoord.",
   "@updates.unwritable.adminDetail": {

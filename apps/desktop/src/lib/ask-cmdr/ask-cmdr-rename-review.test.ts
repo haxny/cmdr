@@ -97,9 +97,12 @@ function proposalRow(rowId: string, sourceName: string, destinationName: string,
 }
 
 /** Stage one batch the way the backend does: the plan is staged, the dialog waits. */
-function stageBatch(proposalId: string, rows: ReturnType<typeof proposalRow>[]): void {
-  fire({ type: 'proposalReady', proposal: { proposalId, rows } })
+function stageBatch(proposalId: string, rows: ReturnType<typeof proposalRow>[], revision = REVISION): void {
+  fire({ type: 'proposalReady', proposal: { proposalId, revision, rows } })
 }
+
+/** The plan revision a staged batch carries unless a test says otherwise. */
+const REVISION = 3
 
 /** End the streaming turn, which is what opens the review over everything staged. */
 function finishTurn(): void {
@@ -153,8 +156,8 @@ describe('one review for one job', () => {
     // The first batch is still staged on the spine: nothing cancelled it to make room.
     expect(cancelProposalMock).not.toHaveBeenCalled()
     // Each batch is preflighted as itself; the backend knows nothing about the grouping.
-    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', ['row-1'])
-    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-2', ['row-2'])
+    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', REVISION, ['row-1'])
+    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-2', REVISION, ['row-2'])
   })
 
   it('starts one operation per batch, in the order they were staged', async () => {
@@ -170,8 +173,8 @@ describe('one review for one job', () => {
     await applyRenameReview()
 
     expect(applyRenameMock.mock.calls).toEqual([
-      ['proposal-1', ['row-1']],
-      ['proposal-2', ['row-2']],
+      ['proposal-1', REVISION, ['row-1']],
+      ['proposal-2', REVISION, ['row-2']],
     ])
     // Every started operation reaches the thread, and the review is over.
     const applied = askCmdrState.messages.filter((message) => message.kind === 'renameApplied')
@@ -199,13 +202,60 @@ describe('one review for one job', () => {
     await applyRenameReview()
 
     expect(applyRenameMock.mock.calls).toEqual([
-      ['proposal-1', ['row-1']],
-      ['proposal-2', ['row-4']],
+      ['proposal-1', REVISION, ['row-1']],
+      ['proposal-2', REVISION, ['row-4']],
     ])
     // And both denied names ride the next send as feedback, not just the last batch's.
     finishTurn()
     sendMessage('try again')
     expect(sendMock).toHaveBeenLastCalledWith(expect.anything(), 'try again', [], ['invoice-b.png', 'invoice-c.png'])
+  })
+})
+
+/**
+ * The revision the review SHOWED is what preflight and apply bind. Reading it at approve time
+ * would approve whatever the agent amended the plan into since, which nobody read.
+ */
+describe('the revision the review showed', () => {
+  it('checks and applies the revision on screen', async () => {
+    sendMessage('rename it')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'invoice-a.png')], 7)
+    finishTurn()
+    await reviewSettles(1)
+
+    await applyRenameReview()
+
+    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', 7, ['row-1'])
+    expect(applyRenameMock).toHaveBeenCalledWith('proposal-1', 7, ['row-1'])
+  })
+
+  it('marks a batch the agent amended as changed, and leaves it out of Apply', async () => {
+    preflightRenameMock.mockResolvedValueOnce({ status: 'listChanged', rows: [] })
+    sendMessage('rename them')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'invoice-a.png')])
+    stageBatch('proposal-2', [proposalRow('row-2', 'b.png', 'invoice-b.png')])
+    finishTurn()
+    await reviewSettles(2)
+
+    expect(askCmdrState.renameReview?.proposals[0]).toMatchObject({ changed: true })
+    expect(reviewRowIds()).toEqual(['row-1', 'row-2'])
+    await applyRenameReview()
+
+    expect(applyRenameMock.mock.calls).toEqual([['proposal-2', REVISION, ['row-2']]])
+  })
+
+  it('marks a batch changed when apply refuses it for a moved revision, and runs nothing after it', async () => {
+    applyRenameMock.mockRejectedValueOnce(Object.assign(new Error('listChanged'), { type: 'listChanged' }))
+    sendMessage('rename them')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'invoice-a.png')])
+    stageBatch('proposal-2', [proposalRow('row-2', 'b.png', 'invoice-b.png')])
+    finishTurn()
+    await reviewSettles(2)
+
+    await applyRenameReview()
+
+    expect(applyRenameMock).toHaveBeenCalledTimes(1)
+    expect(askCmdrState.renameReview?.proposals[0]).toMatchObject({ proposalId: 'proposal-1', changed: true })
   })
 })
 
@@ -282,7 +332,7 @@ describe('rename review listing updates', () => {
     await renameReviewListingChanged([{ type: 'add', entry: { name: 'after.png' } }])
 
     await vi.waitFor(() => {
-      expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', ['row-1'])
+      expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', REVISION, ['row-1'])
     })
     expect(firstReviewRow()).toMatchObject({
       allowed: false,
@@ -342,7 +392,7 @@ describe('rename review listing updates', () => {
     await vi.waitFor(() => {
       expect(firstReviewRow()?.blockedReason).toBeNull()
     })
-    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', ['row-1'])
+    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', REVISION, ['row-1'])
     expect(firstReviewRow()?.allowed).toBe(false)
   })
 })
@@ -355,6 +405,7 @@ describe('revising a proposed name', () => {
       type: 'proposalReady',
       proposal: {
         proposalId: 'proposal-1',
+        revision: REVISION,
         rows: [
           {
             ...proposalRow('row-1', 'before.png', 'Klarna invoice.png'),
@@ -407,11 +458,11 @@ describe('revising a proposed name', () => {
       nameRejected: false,
     })
     // The edit cleared the backend's accepted preflight, so the review has to earn a new one.
-    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', ['row-1'])
+    expect(preflightRenameMock).toHaveBeenCalledWith('proposal-1', REVISION, ['row-1'])
 
     await applyRenameReview()
 
-    expect(applyRenameMock).toHaveBeenCalledWith('proposal-1', ['row-1'])
+    expect(applyRenameMock).toHaveBeenCalledWith('proposal-1', REVISION, ['row-1'])
     expect(askCmdrState.renameReview).toBeNull()
   })
 

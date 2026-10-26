@@ -24,7 +24,7 @@ fn a_60000_op_group_claims_without_materializing_its_rows() {
     assert_eq!(count_ops(&conn, group_id, None).expect("count"), HUGE as u64);
 
     let before = read::tests_support::page_ops_calls();
-    let accepted = record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    let accepted = record_acceptance(&conn, group_id, 0, &OpSelection::all_except(&[]), 200).expect("preflight");
     let AcceptanceOutcome::Accepted { binding } = accepted else {
         panic!("preflight refused: {accepted:?}");
     };
@@ -45,7 +45,7 @@ fn a_60000_op_group_claims_without_materializing_its_rows() {
 fn one_changed_op_out_of_60000_still_refuses_the_claim() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, HUGE);
-    record_acceptance(&conn, group_id, &[], 200).expect("preflight");
+    record_acceptance(&conn, group_id, 0, &OpSelection::all_except(&[]), 200).expect("preflight");
 
     conn.execute(
         "UPDATE proposal_ops SET source_path = '/Users/someone/Documents/taxes.pdf'
@@ -79,4 +79,76 @@ fn a_huge_group_pages_in_seq_order_without_gaps() {
     assert_eq!(second[0].seq, 100, "page two starts where page one ended");
     assert_eq!(last[49].seq, (HUGE - 1) as i64);
     assert!(first.iter().all(|op| op.status == OpStatus::Pending));
+}
+
+/// The review names a group's source folder once, so it's written with the op list and read
+/// from one column: 60 000 ops in one folder name it, and reading it back costs no op row.
+#[test]
+fn a_huge_groups_source_folder_is_one_column_read() {
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, HUGE);
+    let before = read::tests_support::page_ops_calls();
+
+    let group = get_group(&conn, group_id).expect("read").expect("exists");
+
+    assert_eq!(group.source_folder.as_deref(), Some("/Users/someone/Downloads"));
+    assert_eq!(read::tests_support::page_ops_calls(), before, "no op row was read");
+}
+
+/// The folder follows the op list: one op elsewhere un-names it, a subfolder counts as
+/// elsewhere, and an amend rewrites it.
+#[test]
+fn the_source_folder_is_shared_by_every_op_or_none() {
+    assert_eq!(
+        shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Downloads/b.zip"]).as_deref(),
+        Some("/Users/someone/Downloads")
+    );
+    assert_eq!(
+        shared_parent(["/Users/someone/Downloads/a.dmg", "/Users/someone/Downloads/sub/b.zip"]),
+        None,
+        "a file one level down sits in a different folder"
+    );
+    assert_eq!(shared_parent([]), None);
+
+    let conn = migrated_conn();
+    let group_id = group_with_ops(&conn, 3);
+    let mut amended = NewGroup {
+        intent: GroupIntent::Trash {
+            sources: vec![
+                NewOp {
+                    source_path: "/Users/someone/Desktop/a.png".into(),
+                    snapshot: None,
+                },
+                NewOp {
+                    source_path: "/Users/someone/Documents/b.pdf".into(),
+                    snapshot: None,
+                },
+            ],
+        },
+        source_volume_id: "root".into(),
+        display_name: "two folders".into(),
+        rationale: None,
+        selector: None,
+    };
+    repropose_group(&conn, group_id, &amended, 200).expect("re-propose");
+    assert_eq!(
+        get_group(&conn, group_id).expect("read").expect("exists").source_folder,
+        None
+    );
+
+    amended.intent = GroupIntent::Trash {
+        sources: vec![NewOp {
+            source_path: "/Users/someone/Desktop/a.png".into(),
+            snapshot: None,
+        }],
+    };
+    repropose_group(&conn, group_id, &amended, 210).expect("re-propose");
+    assert_eq!(
+        get_group(&conn, group_id)
+            .expect("read")
+            .expect("exists")
+            .source_folder
+            .as_deref(),
+        Some("/Users/someone/Desktop")
+    );
 }

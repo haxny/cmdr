@@ -103,8 +103,14 @@ fn a_selector_freezes_at_creation_and_is_never_resolved_again() {
         .push(file("/Users/someone/Downloads/three.dmg"));
     index.files.borrow_mut().push(file("/Users/someone/Downloads/four.dmg"));
 
-    let AcceptanceOutcome::Accepted { binding } = record_acceptance(&conn, group_id, &[], 200).expect("preflight")
-    else {
+    let AcceptanceOutcome::Accepted { binding } = record_acceptance(
+        &conn,
+        group_id,
+        0,
+        &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        200,
+    )
+    .expect("preflight") else {
         panic!("preflight refused");
     };
     assert_eq!(binding.op_count, 2, "the frozen list is what gets approved");
@@ -157,7 +163,7 @@ fn remembered(store: &MemoryStore) -> String {
     std::fs::read_to_string(store.root().join(crate::agent::memory::OUTCOMES_FILE)).unwrap_or_default()
 }
 
-/// A "no" in the review is a judgment about the proposal, and the whole point of M4 is that the
+/// A "no" in the review is a judgment about the proposal, and the whole point is that the
 /// agent hears it. The lesson goes into the memory ring with no model call, so an approval and
 /// a rejection teach it equally.
 #[test]
@@ -288,7 +294,14 @@ fn an_approval_is_announced_when_it_settles_and_not_when_it_is_claimed() {
     let conn = migrated_conn();
     let conversation_id = crate::agent::store::create_conversation(&conn, "Downloads", 50, None).expect("thread");
     let group_id = a_trashable_group_from(&conn, Some(conversation_id));
-    record_acceptance(&conn, group_id, &[], 150).expect("preflight");
+    record_acceptance(
+        &conn,
+        group_id,
+        0,
+        &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        150,
+    )
+    .expect("preflight");
     announced_decisions();
 
     let claim = approve(&conn, group_id, 200).expect("approve");
@@ -330,7 +343,14 @@ fn decision_rows(conn: &Connection, conversation_id: i64) -> Vec<(i64, crate::ag
 fn an_approved_group_in_a_thread(conn: &Connection) -> (i64, i64) {
     let conversation_id = crate::agent::store::create_conversation(conn, "Downloads", 50, None).expect("thread");
     let group_id = a_trashable_group_from(conn, Some(conversation_id));
-    record_acceptance(conn, group_id, &[], 150).expect("preflight");
+    record_acceptance(
+        conn,
+        group_id,
+        0,
+        &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        150,
+    )
+    .expect("preflight");
     let claim = approve(conn, group_id, 200).expect("approve");
     assert!(matches!(claim, ClaimOutcome::Claimed(_)), "{claim:?}");
     (conversation_id, group_id)

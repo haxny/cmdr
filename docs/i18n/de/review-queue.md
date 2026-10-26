@@ -13,6 +13,9 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   one-line swap.
 - **„AI suggestions are waiting.“ → „KI-Vorschläge warten auf dich.“** (`suggestedOps.indicatorTooltip`): coined; the
   alternative „Es liegen KI-Vorschläge bereit.“ is more matter-of-fact and less of a nudge.
+- **`angehakt` / `Hake … an`** (`suggestedOps.refusal.nothingSelected.*`): casual tick-box verb; `ausgewählt` is the
+  formal alternative. Also `Stand von dem Moment, als die KI das vorgeschlagen hat` (`suggestedOps.snapshotOnly*`,
+  `sourceNotConnected`, `sourceGone`): long for a screen-reader name; `Stand beim Vorschlag der KI` is the terse option.
 - **`Klicken, um in den Einstellungen einen einzurichten.`** (`askCmdr.wake.needsApiKey`): the bare pronoun `einen` for
   the provider is correct but bald at the end of a tooltip; the alternative repeats `einen Anbieter`.
 - **`Gib Cmdr auf AlternativeTo ein Like`** (`onboarding.stepBeta.checklist.alternativeTo`): Duden has `das Like`, and
@@ -50,8 +53,10 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   is the Windows forward-delete label; a Mac keyboard shows ⌫ and Apple's German docs say `Rückschritttaste`. Confirm,
   or switch to the Mac key name.
 - **`Distribution`** (Linux, `errors.mount.gvfsMissing`): no source in the Linux sense.
-- **`Gastzugriff verwenden`** (`fileExplorer.network.share.useGuest`): no Apple string for switching a listing back to
-  guest; `Als Gast verbinden` (the catalog's Connect as guest) is the alternative if the button reconnects.
+- **`Als Gast durchsehen`** (`fileExplorer.network.share.useGuest`): no Apple string for switching a listing back to
+  guest; `Als Gast verbinden` (the catalog's Connect as guest) is the alternative if it reads as reconnecting.
+- **`Taste für Kurzbefehl festlegen …`** (`menu.volume.editFavoriteShortcut`): a favorite's shortcut is one A–Z key; no
+  Apple string. Confirm it reads naturally in the context menu, or shorten to `Kurzbefehl festlegen …`.
 - **S3 terms** (`servers.sheet.s3*`, `servers.refusal.s3*`/`.bucket*`/`.region*`): `Zugriffsschlüssel-ID`,
   `Geheimer Zugriffsschlüssel`, `der Bucket`, `Region`, `Konto-ID`, `Standort` (Hetzner), `Adressierung im Pfadstil`
   follow the AWS/Cloudflare German consoles from memory plus MS terminology (access key → Zugriffsschlüssel, secret key

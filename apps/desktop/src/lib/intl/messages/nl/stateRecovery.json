@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr kon je geschiedenis voor ongedaan maken niet lezen, dus die begint opnieuw",
+  "stateRecovery.operationLog.title": "Cmdr kon je bewerkingenlogboek niet lezen, dus het logboek begint opnieuw",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr kon je Ask Cmdr-chats niet lezen, dus die beginnen opnieuw",
+  "stateRecovery.chatHistory.title": "Cmdr kon je Ask Cmdr-chats niet lezen, dus de chatlijst begint leeg",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr kon je favorieten niet lezen, dus de lijst begint leeg",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr kon je recente paden in ‘Ga naar map’ niet lezen, dus de lijst begint opnieuw",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr kon je recente zoekopdrachten niet lezen, dus de lijst begint opnieuw",
   "@stateRecovery.searchHistory.title": {

@@ -67,9 +67,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "Dans un terminal, saisissez cmdr suivi d’un chemin pour l’ouvrir dans Cmdr",
+  "commands.appToggleCliCommand.description": "Dans un terminal, saisissez cmdr suivi d’un chemin pour ouvrir ce fichier ou ce dossier dans Cmdr",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "Raccourcis clavier",
   "@commands.helpOpenShortcuts.label": {
@@ -1216,13 +1216,13 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Pour Lire les informations, Cmdr doit pouvoir contrôler le Finder, et c’est désactivé. Activez le Finder sous Cmdr dans Réglages Système > Confidentialité et sécurité > Automatisation.",
+  "commands.handler.getInfo.automationOff": "Pour ouvrir Lire les informations, Cmdr doit pouvoir contrôler le Finder, et c’est désactivé. Activez le Finder sous Cmdr dans {systemSettings} > {privacyAndSecurity} > {automation}.",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Ouvrir les réglages Automatisation",
+  "commands.handler.getInfo.openAutomationSettings": "Ouvrir les réglages {automation}",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr n’a pas pu joindre le Finder pour ouvrir Lire les informations. Réessayez.",
   "@commands.handler.getInfo.notReached": {
@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Opérations suggérées",
+  "commands.suggestedOpsShow.label": "Suggestions de l’IA",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Examinez les opérations sur les fichiers suggérées par l’IA et décidez de ce qui s’exécute",
   "@commands.suggestedOpsShow.description": {

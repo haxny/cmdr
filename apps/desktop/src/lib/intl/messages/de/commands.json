@@ -67,9 +67,9 @@
   "@commands.appToggleCliCommand.homebrew.label": {
     "sourceHash": "cc4c0fd"
   },
-  "commands.appToggleCliCommand.description": "Gib in einem Terminal cmdr und einen Pfad ein, um ihn in Cmdr zu öffnen",
+  "commands.appToggleCliCommand.description": "Gib in einem Terminal cmdr und einen Pfad ein, um die Datei oder den Ordner unter diesem Pfad in Cmdr zu öffnen",
   "@commands.appToggleCliCommand.description": {
-    "sourceHash": "c2198ad"
+    "sourceHash": "ce7efbd"
   },
   "commands.helpOpenShortcuts.label": "Tastaturkurzbefehle",
   "@commands.helpOpenShortcuts.label": {
@@ -1216,13 +1216,13 @@
   "@commands.handler.openTerminalHere.timedOut": {
     "sourceHash": "ed36313"
   },
-  "commands.handler.getInfo.automationOff": "Für „Informationen“ muss Cmdr den Finder steuern dürfen, und das ist ausgeschaltet. Schalte in Systemeinstellungen > Datenschutz & Sicherheit > Automation unter Cmdr den Finder ein.",
+  "commands.handler.getInfo.automationOff": "Für „Informationen“ muss Cmdr den Finder steuern dürfen, und das ist ausgeschaltet. Schalte in {systemSettings} > {privacyAndSecurity} > {automation} unter Cmdr den Finder ein.",
   "@commands.handler.getInfo.automationOff": {
-    "sourceHash": "7e831ef"
+    "sourceHash": "4973ae2"
   },
-  "commands.handler.getInfo.openAutomationSettings": "Einstellungen für Automation öffnen",
+  "commands.handler.getInfo.openAutomationSettings": "Einstellungen für {automation} öffnen",
   "@commands.handler.getInfo.openAutomationSettings": {
-    "sourceHash": "f04940d"
+    "sourceHash": "f2708a0"
   },
   "commands.handler.getInfo.notReached": "Cmdr konnte den Finder nicht erreichen, um „Informationen“ zu öffnen. Versuche es noch einmal.",
   "@commands.handler.getInfo.notReached": {
@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Vorgeschlagene Aktionen",
+  "commands.suggestedOpsShow.label": "KI-Vorschläge",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Sieh dir die von der KI vorgeschlagenen Dateivorgänge an und entscheide, was läuft",
   "@commands.suggestedOpsShow.description": {

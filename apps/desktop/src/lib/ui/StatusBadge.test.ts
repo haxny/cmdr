@@ -19,8 +19,7 @@ describe('StatusBadge', () => {
   })
 
   // Off the stylesheet: the unit environment carries no CSS. A badge sits in flex
-  // rows inside dialog bodies, whose inherited `overflow-wrap: anywhere` would let a
-  // squeezed pill break mid-word.
+  // rows inside dialog bodies, where a squeezed pill would otherwise wrap.
   it('never wraps', () => {
     expect(statusBadgeSource).toMatch(/\.feature-status-badge\s*\{[^}]*white-space:\s*nowrap/)
   })

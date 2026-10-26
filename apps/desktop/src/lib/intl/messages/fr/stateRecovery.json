@@ -31,13 +31,13 @@
   "@stateRecovery.appStatus.title": {
     "sourceHash": "521f5eb"
   },
-  "stateRecovery.operationLog.title": "Cmdr n’a pas pu lire votre historique d’annulation, cet historique repart donc à zéro",
+  "stateRecovery.operationLog.title": "Cmdr n’a pas pu lire votre historique des opérations, qui repart donc à zéro",
   "@stateRecovery.operationLog.title": {
-    "sourceHash": "bc354f1"
+    "sourceHash": "0bfa904"
   },
-  "stateRecovery.chatHistory.title": "Cmdr n’a pas pu lire vos conversations d’Ask Cmdr, vous repartez donc de zéro",
+  "stateRecovery.chatHistory.title": "Cmdr n’a pas pu lire vos conversations d’Ask Cmdr, la liste des conversations est donc vide",
   "@stateRecovery.chatHistory.title": {
-    "sourceHash": "65ee72b"
+    "sourceHash": "14d6612"
   },
   "stateRecovery.favorites.title": "Cmdr n’a pas pu lire vos favoris, la liste est donc vide",
   "@stateRecovery.favorites.title": {
@@ -45,7 +45,7 @@
   },
   "stateRecovery.goToPathHistory.title": "Cmdr n’a pas pu lire vos entrées récentes dans « Aller au dossier », la liste repart donc à zéro",
   "@stateRecovery.goToPathHistory.title": {
-    "sourceHash": "d2b499b"
+    "sourceHash": "c1c95a1"
   },
   "stateRecovery.searchHistory.title": "Cmdr n’a pas pu lire vos recherches récentes, la liste repart donc à zéro",
   "@stateRecovery.searchHistory.title": {

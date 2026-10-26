@@ -2418,6 +2418,18 @@ export const commands = {
    */
   saveErrorReportToDisk: (userNote: string | null, email: string | null, id: string | null) =>
     typedError<string, string>(__TAURI_INVOKE('save_error_report_to_disk', { userNote, email, id })),
+  /**
+   *  Build the bundle the send would ship, with the note and address as they stand, and write it
+   *  as one text file for the File viewer. Nothing leaves the Mac.
+   *
+   *  Pass the preview's `id`: the redaction context is keyed by it, so the hashed values in the
+   *  file are the ones the send carries. The log window still ends at "now" on each build, so
+   *  the send may carry a few lines newer than the file.
+   */
+  writeErrorReportPreviewFile: (userNote: string | null, email: string | null, id: string | null) =>
+    typedError<ReportPreviewFile, ReportPreviewError>(
+      __TAURI_INVOKE('write_error_report_preview_file', { userNote, email, id }),
+    ),
   // Records one closed, diagnostic-safe event for the error-report manifest.
   recordBreadcrumb: (event: BreadcrumbEvent) => __TAURI_INVOKE<void>('record_breadcrumb', { event }),
   /**
@@ -2441,8 +2453,15 @@ export const commands = {
    *  syscalls that hang on dead mounts); its `reqwest` client carries its own 10 s timeout. The
    *  logs reuse the error reporter's bundle builder, which reads only the app's own log dir.
    */
-  sendFeedback: (feedbackText: string, email: string | null, includeLogs: boolean) =>
-    __TAURI_INVOKE<SendFeedbackResult>('send_feedback', { feedbackText, email, includeLogs }),
+  sendFeedback: (feedbackText: string, email: string | null, includeLogs: boolean, logsReportId: string | null) =>
+    __TAURI_INVOKE<SendFeedbackResult>('send_feedback', { feedbackText, email, includeLogs, logsReportId }),
+  /**
+   *  Writes the logs the feedback would carry as one text file for the File viewer. Nothing leaves
+   *  the Mac. Pass the `id` an earlier look returned to rewrite the same report; `send_feedback`
+   *  takes it as `logs_report_id`, so the logs ship under the id (and redaction) that was viewed.
+   */
+  writeFeedbackLogsPreviewFile: (id: string | null) =>
+    typedError<ReportPreviewFile, ReportPreviewError>(__TAURI_INVOKE('write_feedback_logs_preview_file', { id })),
   // Get the current app status (personal, commercial, or expired).
   getLicenseStatus: () => __TAURI_INVOKE<AppStatus>('get_license_status'),
   /**
@@ -3593,16 +3612,18 @@ export const commands = {
    *  Revalidates the user-selected subset of a server-owned rename proposal. The
    *  frontend supplies opaque ids only, never source paths or destination names.
    */
-  preflightBulkRename: (proposalId: string, allowedRowIds: string[]) =>
+  preflightBulkRename: (proposalId: string, revision: number, allowedRowIds: string[]) =>
     typedError<BulkRenamePreflight, BulkRenameError>(
-      __TAURI_INVOKE('preflight_bulk_rename', { proposalId, allowedRowIds }),
+      __TAURI_INVOKE('preflight_bulk_rename', { proposalId, revision, allowedRowIds }),
     ),
   /**
    *  Starts the user-approved subset of a server-owned rename plan. Paths and
    *  names never cross this IPC boundary: the frontend submits only opaque ids.
    */
-  applyBulkRename: (proposalId: string, allowedRowIds: string[]) =>
-    typedError<BulkRenameStarted, BulkRenameError>(__TAURI_INVOKE('apply_bulk_rename', { proposalId, allowedRowIds })),
+  applyBulkRename: (proposalId: string, revision: number, allowedRowIds: string[]) =>
+    typedError<BulkRenameStarted, BulkRenameError>(
+      __TAURI_INVOKE('apply_bulk_rename', { proposalId, revision, allowedRowIds }),
+    ),
   /**
    *  Replaces one row's proposed name with the one the user typed in the review, and answers the
    *  row as the dialog should now show it. The name is validated server-side; the row keeps no
@@ -3632,6 +3653,19 @@ export const commands = {
   suggestedOpsPage: (groupId: number, offset: number, limit: number) =>
     typedError<SuggestedOpPage, SuggestedOpsError>(__TAURI_INVOKE('suggested_ops_page', { groupId, offset, limit })),
   /**
+   *  The current size and date of one window of a group's ops, so the dialog can draw a page
+   *  from the frozen rows first and fill in what's true now as it arrives.
+   *
+   *  Every stat goes through the group's SOURCE volume, under one shared deadline per call
+   *  (`io_budget`: 2 s, at least 10 s on a live session), with the stats capped across every
+   *  caller by `facts.rs`'s `BlockingBudget`: the dialog re-asks on scroll faster than a slow
+   *  share answers.
+   */
+  suggestedOpsLiveFacts: (groupId: number, offset: number, limit: number) =>
+    typedError<SuggestedOpLiveFact[], SuggestedOpsLiveFactsError>(
+      __TAURI_INVOKE('suggested_ops_live_facts', { groupId, offset, limit }),
+    ),
+  /**
    *  The user said no to a group.
    *
    *  Conditional on `pending`, like every other transition: a group that already left it keeps
@@ -3643,17 +3677,19 @@ export const commands = {
   /**
    *  Approve a group: claim it and hand its ops to the queue.
    *
-   *  The client sends the ids it turned OFF, never the ones it kept, so a 60,000-op group
-   *  approved whole carries an empty list.
+   *  The client sends whichever op ids are FEWER: the ones it turned off (`allExcept`) or the
+   *  ones it kept (`only`), so a 60,000-op group approved whole carries an empty list and one
+   *  with three files ticked carries three. Ids only; the acceptance record is computed
+   *  server-side either way.
    *
    *  **On its own thread with its own runtime.** `approve_and_execute` holds a `Connection`
    *  across awaits, which a Tauri command's future can't (it must be `Send`). The result comes
    *  back over a oneshot, so the command still answers the caller directly rather than making the
    *  dialog wait on an event.
    */
-  suggestedOpsApprove: (groupId: number, deselectedOpIds: number[]) =>
+  suggestedOpsApprove: (groupId: number, revision: number, selection: OpSelection) =>
     typedError<ApprovalResultView, SuggestedOpsError>(
-      __TAURI_INVOKE('suggested_ops_approve', { groupId, deselectedOpIds }),
+      __TAURI_INVOKE('suggested_ops_approve', { groupId, revision, selection }),
     ),
   /**
    *  A settings change may have moved an open thread's slot — the model it sends to, the chat
@@ -5825,12 +5861,14 @@ export type AiApiKeyStatus = {
   fingerprint: string
 }
 
-// Result of checking connectivity to an AI API endpoint.
+/**
+ *  Result of checking connectivity to an AI API endpoint. Success is `problem: None` with no
+ *  refusal; `models` may still be empty when the provider has no usable list.
+ */
 export type AiConnectionCheckResult = {
-  connected: boolean
-  authError: boolean
   models: string[]
-  error: string | null
+  // What went wrong, typed so the UI renders its own translated copy.
+  problem: AiConnectionProblem | null
   // The user hasn't allowed cloud AI, so nothing was sent. The other fields are empty.
   cloudConsentMissing: boolean
   /**
@@ -5839,6 +5877,24 @@ export type AiConnectionCheckResult = {
    */
   managed: ManagedAiRefusal | null
 }
+
+/**
+ *  Why a key check didn't succeed. The UI owns the wording; only `ProviderRefused` carries text,
+ *  the provider's own sentence, for a secondary detail line.
+ */
+export type AiConnectionProblem =
+  // The endpoint isn't an `http(s)` URL.
+  | { kind: 'invalidEndpoint' }
+  // Plain `http://` to a non-loopback host while a key is set: [`validate_ai_base_url`].
+  | { kind: 'insecureEndpoint' }
+  // No answer: DNS, a refused connection, TLS, or a redirect the policy stopped.
+  | { kind: 'unreachable' }
+  // No answer within [`PROBE_TIMEOUT`].
+  | { kind: 'timedOut' }
+  // The provider says the key is wrong: 401 or 403, or a provider's own typed signal.
+  | { kind: 'keyRejected' }
+  // Any other refusal. `detail` is the provider's `error.message` (or raw body), key scrubbed.
+  | { kind: 'providerRefused'; status: number; detail: string }
 
 export type AiExtracting = null
 
@@ -6060,7 +6116,10 @@ export type ApprovalResultView =
   | { kind: 'started'; operationId: string }
   // The group left `pending` before this arrived: approved, rejected, or gone.
   | { kind: 'alreadyAnswered' }
-  // The op set is not what preflight accepted, so nothing ran. The user re-reads it.
+  /**
+   *  The group isn't the version the user read (the agent amended it), or its op set isn't what
+   *  preflight accepted, so nothing ran. The user re-reads it.
+   */
   | { kind: 'listChanged' }
   // No group with that id.
   | { kind: 'unknown' }
@@ -6076,6 +6135,11 @@ export type ApprovalResultView =
    *  to run.
    */
   | { kind: 'nothingToRun' }
+  /**
+   *  The selection left nothing to run (an "only these" with no files ticked). Nothing was
+   *  recorded or claimed; the group stays `pending` with the last review's selection.
+   */
+  | { kind: 'nothingSelected' }
   /**
    *  The stored group can't become an operation (a target its verb needs is missing). Not
    *  reachable through `GroupIntent`; the detail goes to the log, never to the dialog.
@@ -6491,6 +6555,11 @@ export type BulkRenameError =
    *  the plan has to be looked at again before it can run.
    */
   | { type: 'needsAnotherLook' }
+  /**
+   *  The agent amended the plan since the revision the review showed, so nothing ran. The
+   *  review re-reads the plan.
+   */
+  | { type: 'listChanged' }
   // The plan has no rows left to apply.
   | { type: 'nothingToApply' }
   // The row edit was turned down (the name, the row id, or the store).
@@ -6533,7 +6602,15 @@ export type BulkRenamePreflightRow = {
   warnings: BulkRenameWarning[]
 }
 
-export type BulkRenamePreflightStatus = 'ready' | 'blocked' | 'expired'
+export type BulkRenamePreflightStatus =
+  | 'ready'
+  | 'blocked'
+  | 'expired'
+  /**
+   *  The agent amended the plan since the revision the review showed. Nothing was recorded;
+   *  the review re-reads the plan before the user can apply it.
+   */
+  | 'listChanged'
 
 export type BulkRenameRowStatus = 'ready' | 'blocked'
 
@@ -7723,7 +7800,13 @@ export type DestinationState =
   | 'exists'
   // Approving creates it, exactly as a user-started move into a missing folder would.
   | 'willBeCreated'
-  // The volume didn't answer in time, or isn't mounted.
+  /**
+   *  The destination's volume is one Cmdr knows (a saved share or server, a listed phone) but
+   *  nothing has connected it, so there's nothing to ask. Approving refuses until it's
+   *  connected, the same as a clicked move onto it would.
+   */
+  | 'notConnected'
+  // The volume didn't answer in time, refused the check, or left the registry.
   | 'unknown'
 
 // Which device backend an [`FavoriteReach::AccessOff`] favorite needs switched on.
@@ -11099,6 +11182,23 @@ export type ListingStatus =
   | { status: 'cancelled' }
   | { status: 'error'; message: string }
 
+/**
+ *  One source as its volume answers for it now. Three answers the dialog words differently,
+ *  so none collapses into another: a missing file is a fact, an unanswered stat is not.
+ */
+export type LiveFileState =
+  | {
+      kind: 'present'
+      // Bytes. `None` for a folder, whose own stat size means nothing to a user.
+      size: number | null
+      // Unix seconds.
+      modified: number | null
+    }
+  // The volume says nothing is at that path any more.
+  | { kind: 'missing' }
+  // The volume didn't answer within the deadline, or refused the stat.
+  | { kind: 'unknown' }
+
 // What starting a live search hands back before any of it has happened.
 export type LiveSearchStart = {
   // Echoed from the request. Every event this run emits carries it.
@@ -11163,6 +11263,7 @@ export type LocalizedSystemStrings = {
   filesAndFolders: string
   localNetwork: string
   appearance: string
+  automation: string
 }
 
 // A navigable destination: a path together with the volume it lives on.
@@ -13038,6 +13139,24 @@ export type OcrHit = {
 export type OpKind = 'copy' | 'move' | 'delete' | 'trash' | 'rename' | 'createFolder' | 'createFile' | 'archiveEdit'
 
 /**
+ *  Which of a group's ops the user kept, in whichever form is SMALL: a review that turned a few
+ *  off sends those, one that turned a few on sends those, and one that started from the last
+ *  review's ticks sends only its flips. Ids only, never values: the
+ *  acceptance record the claim trusts is computed here, server-side, from the rows.
+ */
+export type OpSelection =
+  // Every op the group offers, except these.
+  | { mode: 'allExcept'; opIds: number[] }
+  // Only these ops. Empty is refused as [`AcceptanceOutcome::NothingSelected`], never run.
+  | { mode: 'only'; opIds: number[] }
+  /**
+   *  What the last review left (an earlier "no" stays `excluded`, which `SuggestedOpView.status`
+   *  shows), with these flipped: the form for a review that seeded its ticks from the stored
+   *  statuses, so it never has to name an op it didn't load.
+   */
+  | { mode: 'fromStored'; excludeOpIds: number[]; includeOpIds: number[] }
+
+/**
  *  Where one op sits, stored in `proposal_ops.status`. Per-op statuses are what make a
  *  partial apply ("run 11, skip 3") possible.
  */
@@ -14511,6 +14630,11 @@ export type RenameProposalRowSnapshot = {
 
 export type RenameProposalSnapshot = {
   proposalId: string
+  /**
+   *  The revision this snapshot shows. Send it with `preflight_bulk_rename` and
+   *  `apply_bulk_rename`: an agent amend since then answers `listChanged`.
+   */
+  revision: number
   rows: RenameProposalRowSnapshot[]
 }
 
@@ -14584,6 +14708,23 @@ export type RepoInfo = {
    *  in `is_dirty`).
    */
   isDirty: boolean
+}
+
+// Why a preview file couldn't be made. `detail` is for the log, never the UI.
+export type ReportPreviewError =
+  // The bundle couldn't be built from the logs, or didn't read back as a zip.
+  | { type: 'bundleUnavailable'; detail: string }
+  // The app data dir is unknown, or the file couldn't be written there.
+  | { type: 'notWritten'; detail: string }
+
+// A preview written to disk: where it is, and the report id it was built under.
+export type ReportPreviewFile = {
+  path: string
+  /**
+   *  The bundle's id. Pass it back to the send, so the redaction context (keyed by id) and the
+   *  report's name match what the person looked at.
+   */
+  id: string
 }
 
 // The sort a pane asked for: what View > Sort by checks.
@@ -15017,6 +15158,21 @@ export type RowText =
   | 'raw'
   // Cmdr's own log: log markers hidden, each marked value shown as itself.
   | 'logDisplay'
+
+/**
+ *  Why an approved group would refuse to run, known before the user approves it.
+ *
+ *  A fact to DISCLOSE before the click, never an execution-path refusal of our own: the engine
+ *  already refuses these exactly as it would a user-started action, and the dialog's job is to
+ *  say so up front instead of offering a button that can only fail.
+ */
+export type RunBlocker =
+  /**
+   *  A trash group whose source volume keeps no Trash (`Volume::has_trash`). The OS refuses
+   *  every item there (`TrashRefusalKind::NoTrashForVolume`) and NOTHING is deleted, so the
+   *  group can't run at all; it isn't "irreversible".
+   */
+  'noTrash'
 
 /**
  *  The mimalloc heap split into live data and allocator slack.
@@ -17575,6 +17731,11 @@ export type StreamingListingStartResult = {
 export type SuggestedGroupView = {
   groupId: number
   sweepId: number
+  /**
+   *  Which version of the group this is: every amend bumps it. Send it back with the approval,
+   *  and an approval of a version the agent has since replaced answers `listChanged`.
+   */
+  revision: number
   verb: ProposalVerb
   status: ProposalStatus
   /**
@@ -17586,15 +17747,43 @@ export type SuggestedGroupView = {
   rationale: string | null
   sourceVolumeId: string
   /**
+   *  What the source volume is called: the registered volume's own name, or a saved place's
+   *  while nobody has connected it. `None` when nothing knows that id.
+   */
+  sourceVolumeName: string | null
+  /**
    *  The shared destination folder, the rename parent, or the archive path. `None` for trash
    *  and delete, which bind no target at all.
    */
   destination: string | null
   /**
-   *  How far an approved group could be taken back. A fact to DISCLOSE; per the guiding
-   *  principle it is never a reason to refuse a group.
+   *  What the destination's volume is called ("naspi on 192.168.1.5", "Macintosh HD"): the
+   *  registered volume's own name, or a saved place's while nobody has connected it. `None`
+   *  when there's no destination, or nothing knows that id.
+   */
+  destinationVolumeName: string | null
+  /**
+   *  The id of the volume `destination` is on (the source volume's for a rename), so the dialog
+   *  can look the volume up the way the switcher does (its icon). `None` exactly when
+   *  `destination` is: trash and delete bind no target.
+   */
+  destinationVolumeId: string | null
+  /**
+   *  The folder every op sits directly in, so the dialog can name it once instead of on every
+   *  row. `None` when the ops span folders.
+   */
+  sourceFolder: string | null
+  /**
+   *  How far an approved group could be taken back, once it runs. A fact to DISCLOSE; per the
+   *  guiding principle it is never a reason to refuse a group.
    */
   reversible: Reversibility
+  /**
+   *  What would stop this group from running at all, worked out NOW from its source volume
+   *  (a trash group on a volume with no Trash: the OS refuses every item and deletes
+   *  nothing). `None` when nothing known would. Agrees with the agent's own read.
+   */
+  runBlocker: RunBlocker | null
   // Whether that destination is already there, and so whether approving creates it.
   destinationState: DestinationState
   // Ops in the live set: what would run.
@@ -17606,6 +17795,12 @@ export type SuggestedGroupView = {
    *  provenance of a list the user didn't watch being built.
    */
   fromSelector: boolean
+}
+
+// What one op's source is like on disk right now, beside its creation snapshot.
+export type SuggestedOpLiveFact = {
+  opId: number
+  state: LiveFileState
 }
 
 // One page of a group's ops, plus the counts that place it in the whole.
@@ -17623,6 +17818,11 @@ export type SuggestedOpView = {
   sourcePath: string
   // The name this source becomes. `Some` only under a rename group.
   newName: string | null
+  /**
+   *  `excluded` when an earlier review turned this op off (an approval the engine then refused to
+   *  start leaves it so). Seed the tick from it and approve with `fromStored`, so that "no"
+   *  survives without the review naming ops it never loaded.
+   */
   status: OpStatus
   /**
    *  What the index held for this file when the group was frozen. `None` when the index had
@@ -17657,6 +17857,37 @@ export type SuggestedOpsError =
    *  is genuinely unknown; the dialog re-reads rather than guessing.
    */
   | { type: 'approvalDidntFinish' }
+  // Nothing above classifies it (a panicked task).
+  | {
+      type: 'unexpected'
+      // What the runtime reported, for the log.
+      detail: string
+    }
+
+/**
+ *  Why a live-facts read didn't happen at all. Per-file trouble is never an error: it's that
+ *  file's `Unknown`.
+ *
+ *  ❌ Not prose: the dialog words each variant itself; the log records the detail.
+ */
+export type SuggestedOpsLiveFactsError =
+  // The suggestion store isn't open: agent features are off, or the app is still starting.
+  | { type: 'storeNotOpen' }
+  // The store refused the read.
+  | {
+      type: 'store'
+      // What SQLite reported, for the log.
+      detail: string
+    }
+  // No group with that id, which usually means the list on screen is stale.
+  | { type: 'unknownGroup' }
+  /**
+   *  The group's source volume is one Cmdr knows (a saved share or server, a listed phone)
+   *  but nothing has connected it, so there's nothing to ask.
+   */
+  | { type: 'sourceNotConnected' }
+  // No volume is registered under the group's source volume id any more (a drive that left).
+  | { type: 'sourceGone' }
   // Nothing above classifies it (a panicked task).
   | {
       type: 'unexpected'

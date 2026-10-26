@@ -28,7 +28,7 @@ pub struct NewSweep {
 pub struct NewOp {
     pub source_path: String,
     /// What the source looked like when the proposal was created, when the producer knew.
-    /// `None` is normal (an explicit path list carries no index row behind it).
+    /// `None` is normal: a path that was missing, refused, or too slow to stat at creation.
     pub snapshot: Option<OpSnapshot>,
 }
 
@@ -101,8 +101,8 @@ pub fn create_group(conn: &Connection, set_id: i64, group: &NewGroup, now: i64) 
     tx.prepare_cached(
         "INSERT INTO proposals (
             set_id, seq, verb, status, source_volume_id, destination, destination_volume_id,
-            reversible, display_name, rationale, selector, created_at
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            reversible, display_name, rationale, selector, created_at, source_folder
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
     )?
     .execute(params![
         set_id,
@@ -117,6 +117,7 @@ pub fn create_group(conn: &Connection, set_id: i64, group: &NewGroup, now: i64) 
         group.rationale,
         group.selector,
         now,
+        source_folder_of(&group.intent),
     ])?;
     let group_id = tx.last_insert_rowid();
     insert_ops(&tx, group_id, &group.intent, now)?;
@@ -166,7 +167,9 @@ pub enum ReproposeOutcome {
 ///
 /// Guarded twice over, both inside one `BEGIN IMMEDIATE`: the conditional `UPDATE ... WHERE
 /// status = 'pending'` both checks and locks, and the acceptance record is DELETED, so a
-/// preflight taken against the old op list can never carry an approval onto the new one.
+/// preflight taken against the old op list can never carry an approval onto the new one. It also
+/// bumps `revision`, so an approval the user gave while reading the OLD version refuses even
+/// though it would preflight the new list afresh.
 pub fn repropose_group(
     conn: &Connection,
     group_id: i64,
@@ -179,7 +182,8 @@ pub fn repropose_group(
         .prepare_cached(
             "UPDATE proposals SET
                 verb = ?2, source_volume_id = ?3, destination = ?4, destination_volume_id = ?5,
-                reversible = ?6, display_name = ?7, rationale = ?8, selector = ?9, created_at = ?10
+                reversible = ?6, display_name = ?7, rationale = ?8, selector = ?9, created_at = ?10,
+                revision = revision + 1, source_folder = ?12
              WHERE id = ?1 AND status = ?11",
         )?
         .execute(params![
@@ -194,6 +198,7 @@ pub fn repropose_group(
             group.selector,
             now,
             ProposalStatus::Pending.as_token(),
+            source_folder_of(&group.intent),
         ])?;
 
     if updated == 0 {
@@ -219,4 +224,10 @@ pub fn repropose_group(
     insert_ops(&tx, group_id, &group.intent, now)?;
     tx.commit()?;
     Ok(ReproposeOutcome::Reproposed)
+}
+
+/// The folder this intent's ops share, for `proposals.source_folder`. From the in-memory list
+/// the write already holds, so it costs no read.
+fn source_folder_of(intent: &GroupIntent) -> Option<String> {
+    super::shared_parent(intent.rows().map(|(source_path, _, _)| source_path))
 }

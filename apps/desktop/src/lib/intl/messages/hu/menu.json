@@ -311,9 +311,9 @@
   "@menu.view.operationLog": {
     "sourceHash": "2c97965"
   },
-  "menu.view.suggestedOps": "Javasolt műveletek",
+  "menu.view.suggestedOps": "AI-javaslatok",
   "@menu.view.suggestedOps": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "menu.view.askCmdr": "Ask Cmdr",
   "@menu.view.askCmdr": {
@@ -658,7 +658,7 @@
   },
   "menu.volume.editFavoriteShortcut": "Billentyűparancs beállítása…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Eltávolítás",
   "@menu.volume.removeFavorite": {

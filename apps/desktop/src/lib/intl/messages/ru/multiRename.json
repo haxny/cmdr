@@ -133,15 +133,15 @@
   },
   "multiRename.presets.saveAs": "Сохранить как набор…",
   "@multiRename.presets.saveAs": {
-    "sourceHash": "8abf582"
+    "sourceHash": "da93e96"
   },
   "multiRename.presets.rename": "Переименовать…",
   "@multiRename.presets.rename": {
     "sourceHash": "6fa62b3"
   },
-  "multiRename.presets.update": "Обновить по текущим полям",
+  "multiRename.presets.update": "Обновить по текущим настройкам",
   "@multiRename.presets.update": {
-    "sourceHash": "1bae4e4"
+    "sourceHash": "7440a35"
   },
   "multiRename.presets.moveUp": "Переместить выше",
   "@multiRename.presets.moveUp": {
@@ -638,7 +638,7 @@
   },
   "multiRename.swapsSkipped": "{count, plural, one {Пропущено # переименование, которое меняет имена местами} few {Пропущены # переименования, которые меняют имена местами} many {Пропущено # переименований, которые меняют имена местами} other {Пропущено # переименования, которые меняют имена местами}}. Переименуйте эти файлы по одному.",
   "@multiRename.swapsSkipped": {
-    "sourceHash": "09cb80e"
+    "sourceHash": "49fb1cc"
   },
   "multiRename.archiveTitle": "«Групповое переименование» не работает внутри архивов",
   "@multiRename.archiveTitle": {
@@ -748,9 +748,9 @@
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "Имя папки уровнем выше",
+  "multiRename.placeholderHelp.grandparent": "Имя папки, в которой лежит папка с файлом",
   "@multiRename.placeholderHelp.grandparent": {
-    "sourceHash": "1f52d63"
+    "sourceHash": "450e079"
   },
   "multiRename.placeholderHelp.counterStart": "Начинается с {start}",
   "@multiRename.placeholderHelp.counterStart": {

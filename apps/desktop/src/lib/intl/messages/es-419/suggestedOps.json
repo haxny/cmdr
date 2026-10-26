@@ -30,5 +30,37 @@
   "suggestedOps.refusal.couldNotStart.message": "Cmdr no pudo convertir esta sugerencia en una operación, así que no se ejecutó nada.",
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "2630cd3"
+  },
+  "suggestedOps.approve.trash": "Mover {countText} {count, plural, one {archivo} many {archivos} other {archivos}} al basurero",
+  "@suggestedOps.approve.trash": {
+    "sourceHash": "9e59a65"
+  },
+  "suggestedOps.facts.trash": "Basurero",
+  "@suggestedOps.facts.trash": {
+    "sourceHash": "c5181f9"
+  },
+  "suggestedOps.reversible.trash": "Puedes deshacerlo: {count, plural, one {va} many {van} other {van}} al basurero",
+  "@suggestedOps.reversible.trash": {
+    "sourceHash": "1b00836"
+  },
+  "suggestedOps.reversible.moveBack": "Puedes deshacerlo: Cmdr puede {count, plural, one {devolverlo} many {devolverlos} other {devolverlos}} a su lugar",
+  "@suggestedOps.reversible.moveBack": {
+    "sourceHash": "569c69a"
+  },
+  "suggestedOps.blocked.noTrash": "No se puede ejecutar: esta unidad no tiene basurero",
+  "@suggestedOps.blocked.noTrash": {
+    "sourceHash": "3bc085d"
+  },
+  "suggestedOps.blocked.noTrashTooltip": "La unidad donde están estos archivos no tiene basurero, así que moverlos ahí no funcionaría y no pasaría nada. Recházala, o elimina tú los archivos si es lo que quieres.",
+  "@suggestedOps.blocked.noTrashTooltip": {
+    "sourceHash": "26280b9"
+  },
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr no pudo comprobar este archivo ahora mismo, así que esto es lo que había cuando la IA lo sugirió.",
+  "@suggestedOps.snapshotOnlyTooltip": {
+    "sourceHash": "7896f58"
+  },
+  "suggestedOps.refusal.nothingSelected.message": "Ninguno de los archivos que marcaste sigue en esta sugerencia, así que no se ejecutó nada.",
+  "@suggestedOps.refusal.nothingSelected.message": {
+    "sourceHash": "b157ef7"
   }
 }

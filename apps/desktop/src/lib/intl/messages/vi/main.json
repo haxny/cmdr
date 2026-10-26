@@ -167,9 +167,9 @@
   "@main.cliCommand.installed": {
     "sourceHash": "5b72efe"
   },
-  "main.cliCommand.uninstalled": "Đã gỡ bỏ lệnh “cmdr”.",
+  "main.cliCommand.uninstalled": "Đã gỡ cài đặt lệnh “cmdr”.",
   "@main.cliCommand.uninstalled": {
-    "sourceHash": "43e8d91"
+    "sourceHash": "edac691"
   },
   "main.cliCommand.alreadyInstalled": "Lệnh “cmdr” đã được cài đặt rồi.",
   "@main.cliCommand.alreadyInstalled": {
@@ -179,17 +179,17 @@
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Không có thay đổi. Việc thêm hoặc gỡ bỏ lệnh “cmdr” cần mật khẩu quản trị viên.",
+  "main.cliCommand.canceled": "Không có thay đổi. Việc cài đặt hoặc gỡ cài đặt lệnh “cmdr” cần mật khẩu quản trị viên.",
   "@main.cliCommand.canceled": {
-    "sourceHash": "d51acb1"
+    "sourceHash": "31fd0a0"
   },
   "main.cliCommand.installFailed": "Không thể cài đặt lệnh “cmdr”. Hãy kiểm tra xem có ghi được vào /usr/local/bin không, rồi thử lại.",
   "@main.cliCommand.installFailed": {
     "sourceHash": "de500b0"
   },
-  "main.cliCommand.uninstallFailed": "Không thể gỡ bỏ lệnh “cmdr”. Hãy kiểm tra xem có ghi được vào /usr/local/bin không, rồi thử lại.",
+  "main.cliCommand.uninstallFailed": "Không thể gỡ cài đặt lệnh “cmdr”. Hãy kiểm tra xem có ghi được vào /usr/local/bin không, rồi thử lại.",
   "@main.cliCommand.uninstallFailed": {
-    "sourceHash": "c066530"
+    "sourceHash": "fe4f2fe"
   },
   "main.cliCommand.homebrew": "Homebrew đã cài đặt lệnh “cmdr” cùng với Cmdr, nên lệnh này đã có sẵn trong terminal của bạn. Lệnh sẽ được gỡ bỏ khi bạn gỡ cài đặt Cmdr bằng Homebrew.",
   "@main.cliCommand.homebrew": {
@@ -199,9 +199,9 @@
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Hãy chuyển Cmdr vào thư mục Ứng dụng trước. Ở bất kỳ chỗ nào khác, lệnh “cmdr” sẽ ngừng hoạt động ngay khi Cmdr bị chuyển đi.",
+  "main.cliCommand.notInApplications": "Hãy chuyển Cmdr vào thư mục Ứng dụng trước. Nếu bạn cài đặt lệnh “cmdr” từ bất kỳ chỗ nào khác, lệnh này sẽ ngừng hoạt động ngay khi Cmdr bị chuyển đi.",
   "@main.cliCommand.notInApplications": {
-    "sourceHash": "c9e3fc3"
+    "sourceHash": "e011785"
   },
   "main.cliCommand.notProductionBuild": "Đây là bản dựng để phát triển của Cmdr, nên bản này không động tới lệnh “cmdr”. Hãy dùng Cmdr trong thư mục Ứng dụng cho việc này.",
   "@main.cliCommand.notProductionBuild": {

@@ -401,6 +401,29 @@ Callers that want detection are app-side anyway. `mount_is_local_disk` is classi
 probe's source and type strings, shared by the index's walker choice, a watch's coverage, and the listing engine's stall
 diagnosis.
 
+### Which mounts keep a Trash
+
+`filesystem_kind::mount_has_trash` is THE trash rule: a mount keeps a Trash exactly when `mount_is_local_disk` admits
+it. Everything else derives from it: `MountClass::has_trash` (so `Volume::has_trash` on a `LocalPosixVolume`, whose
+`MountClass` comes from the same allowlist at registration) and the volume list's `supports_trash` (`volumes/fs_type.rs`
+and its Linux twin). The suggested-ops review reads `Volume::has_trash` to say a trash group "can't run", and the delete
+dialog reads `supports_trash`, so the two can't disagree about a drive.
+
+- **FAT32 and exFAT keep one.** `cmdr-operations`' `move_to_trash_sync` (`trashItemAtURL`) moved a file into
+  `/Volumes/<label>/.Trashes/501/` on both, returning that in-trash path, and the file left its folder (verified on
+  macOS 27.0.1, hdiutil exFAT/FAT32 image through `testing::disk_images::DiskImage::attach_legacy_fat_fixture`, attached
+  once and detached once, 2026-10-26). The list said `false` for both before, a wrong answer that hid the Trash from the
+  delete dialog on every USB stick.
+- **A network or FUSE mount doesn't.** The OS refuses each item with `NSFeatureUnsupportedError`
+  (`TrashRefusalKind::NoTrashForVolume`) and deletes nothing.
+- **An unrecognized or unread type promises nothing**, the allowlist's own conservative side, unless the source is a
+  block device (`/dev/…`), which is a local disk whatever its type. So both readers pass the SAME two facts: the
+  registry's `MountClass` probes source and type, and the volume list's `supports_trash_for_mount(source, fs_type)`
+  takes the mount row's source wherever it has one. Only the boot volume and cloud folders pass `None`, since their type
+  (APFS, HFS+, ext4) answers alone.
+- **Linux follows the same rule unverified** for FAT, exFAT, and NTFS (the FreeDesktop trash via the `trash` crate). A
+  refusal there trashes nothing (`TrashRefused`), never deletes.
+
 ## Gotcha: `cfg(test)`-conditioned BEHAVIOR stops meaning anything in a dependency
 
 **Any `cfg(test)` that gates BEHAVIOR — not just a test module — silently changes meaning the moment its code moves into

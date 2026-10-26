@@ -24,7 +24,7 @@
   "@operationLog.dialog.recordingOff": {
     "description": "Shown at the top of the Operation log dialog while the user has turned recording off (the \"Record file operations\" switch in Settings). It explains why the list is empty or stops at some point, and that new operations can't be undone until recording is back on. The apostrophes are curly typographic apostrophes (U+2019).",
     "screenshot": "operation-log-more-pages.png",
-    "screenshotNote": "The operation log dialog, pictured here with entries in it. Your string belongs to one of its other states (loading, empty, or a load error), which render in this same dialog in place of the list."
+    "screenshotNote": "The operation log dialog, pictured here with recording on. Your string is a notice at the top of this dialog, above the list, shown in every state while recording is off."
   },
   "operationLog.dialog.itemsError": "Couldn’t load these items.",
   "@operationLog.dialog.itemsError": {

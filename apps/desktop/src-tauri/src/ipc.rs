@@ -333,12 +333,14 @@ macro_rules! ipc_command_manifest {
                     crate::commands::error_reporter::send_crash_log_report,
                     crate::commands::error_reporter::amend_error_report,
                     crate::commands::error_reporter::save_error_report_to_disk,
+                    crate::commands::error_reporter::write_error_report_preview_file,
                     crate::commands::error_reporter::record_breadcrumb,
                     // prepare_error_report_preview and get_auto_sent_report_preview stay excluded:
                     // BundleManifest has serde-elided optional fields, which specta splits into
                     // incompatible serialize/deserialize shapes.
                     crate::commands::error_reporter::record_settings_defaults,
                     crate::commands::feedback::send_feedback,
+                    crate::commands::feedback::write_feedback_logs_preview_file,
                     crate::commands::licensing::get_license_status,
                     crate::commands::licensing::verify_license,
                     crate::commands::licensing::commit_license,
@@ -484,6 +486,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::cancel_bulk_rename_proposal,
                     crate::commands::agent::suggested_ops_list,
                     crate::commands::agent::suggested_ops_page,
+                    crate::commands::agent::suggested_ops_live_facts,
                     crate::commands::agent::suggested_ops_reject,
                     crate::commands::agent::suggested_ops_approve,
                     crate::commands::agent::ask_cmdr_record_slot_change,

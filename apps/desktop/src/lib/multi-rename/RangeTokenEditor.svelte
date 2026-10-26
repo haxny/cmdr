@@ -635,7 +635,6 @@
     }
 
     .source {
-        overflow-wrap: anywhere;
         color: var(--color-text-secondary);
     }
 
@@ -647,10 +646,6 @@
 
     .arrow {
         color: var(--color-text-tertiary);
-    }
-
-    .result {
-        overflow-wrap: anywhere;
     }
 
     .result.nothing {

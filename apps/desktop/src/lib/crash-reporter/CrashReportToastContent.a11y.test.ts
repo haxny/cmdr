@@ -2,7 +2,7 @@
  * Tier 3 a11y tests for `CrashReportToastContent.svelte`.
  *
  * Compact toast body shown after a report is sent. Just a text +
- * "Change in Settings > Updates" button. The report it's handed only picks
+ * "Change in Settings" button. The report it's handed only picks
  * which sentence renders, so a single default-state test covers the markup.
  */
 

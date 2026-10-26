@@ -312,9 +312,9 @@
   "@menu.view.operationLog": {
     "sourceHash": "2c97965"
   },
-  "menu.view.suggestedOps": "Thao tác được đề xuất",
+  "menu.view.suggestedOps": "Gợi ý AI",
   "@menu.view.suggestedOps": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "menu.view.askCmdr": "Ask Cmdr",
   "@menu.view.askCmdr": {
@@ -659,7 +659,7 @@
   },
   "menu.volume.editFavoriteShortcut": "Đặt phím tắt…",
   "@menu.volume.editFavoriteShortcut": {
-    "sourceHash": "be52b50"
+    "sourceHash": "c61559e"
   },
   "menu.volume.removeFavorite": "Gỡ bỏ",
   "@menu.volume.removeFavorite": {

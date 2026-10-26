@@ -1,11 +1,35 @@
 {
-  "suggestedOps.title": "Föreslagna åtgärder",
+  "suggestedOps.title": "AI-förslag",
   "@suggestedOps.title": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "suggestedOps.description": "AI:n föreslog det här. Inget körs förrän du godkänner det.",
   "@suggestedOps.description": {
     "sourceHash": "73255a0"
+  },
+  "suggestedOps.approvalNoticeDismiss": "Visa inte det här igen",
+  "@suggestedOps.approvalNoticeDismiss": {
+    "sourceHash": "2c23c21"
+  },
+  "suggestedOps.sweepWhen.justNow": "Föreslogs nyss",
+  "@suggestedOps.sweepWhen.justNow": {
+    "sourceHash": "4606788"
+  },
+  "suggestedOps.sweepWhen.minutesAgo": "Föreslogs för {countText} {count, plural, one {minut} other {minuter}} sedan",
+  "@suggestedOps.sweepWhen.minutesAgo": {
+    "sourceHash": "96782e0"
+  },
+  "suggestedOps.sweepWhen.today": "Föreslogs i dag kl. {time}",
+  "@suggestedOps.sweepWhen.today": {
+    "sourceHash": "105ec27"
+  },
+  "suggestedOps.sweepWhen.yesterday": "Föreslogs i går kl. {time}",
+  "@suggestedOps.sweepWhen.yesterday": {
+    "sourceHash": "a0d2061"
+  },
+  "suggestedOps.sweepWhen.earlier": "Föreslogs {date}",
+  "@suggestedOps.sweepWhen.earlier": {
+    "sourceHash": "cbe0d5f"
   },
   "suggestedOps.empty": "Inget väntar på dig just nu.",
   "@suggestedOps.empty": {
@@ -15,48 +39,120 @@
   "@suggestedOps.loadFailed": {
     "sourceHash": "ef0da3e"
   },
-  "suggestedOps.agentReason": "AI:ns skäl",
+  "suggestedOps.agentReason": "Varför:",
   "@suggestedOps.agentReason": {
-    "sourceHash": "e3acab8"
+    "sourceHash": "ad389aa"
   },
-  "suggestedOps.cmdrFacts": "Det här vet Cmdr",
-  "@suggestedOps.cmdrFacts": {
-    "sourceHash": "9851c12"
+  "suggestedOps.agentReasonTooltip": "AI:ns egna ord. Cmdr har inte kontrollerat dem.",
+  "@suggestedOps.agentReasonTooltip": {
+    "sourceHash": "aadab2c"
   },
-  "suggestedOps.fileCount": "{count, plural, one {# fil} other {# filer}}",
+  "suggestedOps.agentReasonSpoken": "Varför, enligt AI:n:",
+  "@suggestedOps.agentReasonSpoken": {
+    "sourceHash": "0c0a448"
+  },
+  "suggestedOps.fileCount": "{countText} {count, plural, one {fil} other {filer}}",
   "@suggestedOps.fileCount": {
-    "sourceHash": "e60f4a2"
+    "sourceHash": "76ef0a6"
   },
-  "suggestedOps.approve": "Godkänn",
-  "@suggestedOps.approve": {
-    "sourceHash": "6007acb"
+  "suggestedOps.approve.move": "Flytta {countText} {count, plural, one {fil} other {filer}}",
+  "@suggestedOps.approve.move": {
+    "sourceHash": "4c89041"
+  },
+  "suggestedOps.approve.copy": "Kopiera {countText} {count, plural, one {fil} other {filer}}",
+  "@suggestedOps.approve.copy": {
+    "sourceHash": "e10c490"
+  },
+  "suggestedOps.approve.trash": "Flytta {countText} {count, plural, one {fil} other {filer}} till papperskorgen",
+  "@suggestedOps.approve.trash": {
+    "sourceHash": "3c82946"
+  },
+  "suggestedOps.approve.delete": "Radera {countText} {count, plural, one {fil} other {filer}}",
+  "@suggestedOps.approve.delete": {
+    "sourceHash": "218cf04"
+  },
+  "suggestedOps.approve.rename": "Byt namn på {countText} {count, plural, one {fil} other {filer}}",
+  "@suggestedOps.approve.rename": {
+    "sourceHash": "412518d"
+  },
+  "suggestedOps.approve.compress": "Komprimera {countText} {count, plural, one {fil} other {filer}}",
+  "@suggestedOps.approve.compress": {
+    "sourceHash": "7df0dfc"
+  },
+  "suggestedOps.approve.extract": "Extrahera {countText} {count, plural, one {arkiv} other {arkiv}}",
+  "@suggestedOps.approve.extract": {
+    "sourceHash": "0bf7541"
   },
   "suggestedOps.reject": "Avböj",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
   },
-  "suggestedOps.approveCount": "Godkänn {count, plural, one {# fil} other {# filer}}",
-  "@suggestedOps.approveCount": {
-    "sourceHash": "649d66f"
+  "suggestedOps.facts.from": "Från",
+  "@suggestedOps.facts.from": {
+    "sourceHash": "2181976"
   },
-  "suggestedOps.review": "Granska filerna",
-  "@suggestedOps.review": {
-    "sourceHash": "b8d04b3"
+  "suggestedOps.facts.to": "Till",
+  "@suggestedOps.facts.to": {
+    "sourceHash": "f4b06ef"
   },
-  "suggestedOps.collapse": "Göm filerna",
-  "@suggestedOps.collapse": {
-    "sourceHash": "ced24ea"
+  "suggestedOps.facts.folder": "Mapp",
+  "@suggestedOps.facts.folder": {
+    "sourceHash": "74ccd43"
   },
-  "suggestedOps.reversibleRestoreMove": "Det här går att ångra",
-  "@suggestedOps.reversibleRestoreMove": {
-    "sourceHash": "de7f6ff"
+  "suggestedOps.facts.archive": "Arkiv",
+  "@suggestedOps.facts.archive": {
+    "sourceHash": "66f4804"
   },
-  "suggestedOps.reversibleDeleteWritten": "Ångra genom att radera det som skrivs",
-  "@suggestedOps.reversibleDeleteWritten": {
-    "sourceHash": "997843a"
+  "suggestedOps.facts.trash": "Papperskorgen",
+  "@suggestedOps.facts.trash": {
+    "sourceHash": "4e42c6e"
   },
-  "suggestedOps.irreversible": "Det här går inte att ångra",
-  "@suggestedOps.irreversible": {
+  "suggestedOps.facts.severalFolders": "Flera mappar",
+  "@suggestedOps.facts.severalFolders": {
+    "sourceHash": "7c32950"
+  },
+  "suggestedOps.reversible.trash": "Du kan ångra det här: {count, plural, one {objektet hamnar} other {objekten hamnar}} i papperskorgen",
+  "@suggestedOps.reversible.trash": {
+    "sourceHash": "55bf957"
+  },
+  "suggestedOps.reversible.moveBack": "Du kan ångra det här: Cmdr kan flytta tillbaka {count, plural, one {objektet} other {objekten}}",
+  "@suggestedOps.reversible.moveBack": {
+    "sourceHash": "14c0a31"
+  },
+  "suggestedOps.reversible.renameBack": "Du kan ångra det här: Cmdr kan byta tillbaka {count, plural, one {namnet} other {namnen}}",
+  "@suggestedOps.reversible.renameBack": {
+    "sourceHash": "4c7e3c3"
+  },
+  "suggestedOps.reversible.removeCopies": "Du kan ångra det här: Cmdr raderar kopiorna",
+  "@suggestedOps.reversible.removeCopies": {
+    "sourceHash": "0ec3b08"
+  },
+  "suggestedOps.reversible.removeArchive": "Du kan ångra det här: Cmdr raderar det nya arkivet",
+  "@suggestedOps.reversible.removeArchive": {
+    "sourceHash": "2c8278f"
+  },
+  "suggestedOps.reversible.removeExtracted": "Du kan ångra det här: Cmdr raderar de extraherade filerna",
+  "@suggestedOps.reversible.removeExtracted": {
+    "sourceHash": "977a513"
+  },
+  "suggestedOps.irreversible.delete": "Det här går inte att ångra: filerna raderas permanent",
+  "@suggestedOps.irreversible.delete": {
+    "sourceHash": "e32da9a"
+  },
+  "suggestedOps.blocked.noTrash": "Går inte att köra: den här enheten har ingen papperskorg",
+  "@suggestedOps.blocked.noTrash": {
+    "sourceHash": "f08e038"
+  },
+  "suggestedOps.blocked.noTrashTooltip": "Enheten som filerna ligger på har ingen papperskorg, så det går inte att flytta dem dit och inget skulle hända. Avböj förslaget eller radera filerna själv om det är det du vill.",
+  "@suggestedOps.blocked.noTrashTooltip": {
+    "sourceHash": "f2a5d5f"
+  },
+  "suggestedOps.irreversible.overwrite": "Det här går inte att ångra: Cmdr skriver över ett befintligt arkiv",
+  "@suggestedOps.irreversible.overwrite": {
+    "sourceHash": "0d5c5bb"
+  },
+  "suggestedOps.irreversible.other": "Det här går inte att ångra",
+  "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr skapar den här mappen",
@@ -71,6 +167,14 @@
   "@suggestedOps.destinationUnknown": {
     "sourceHash": "dc78d1d"
   },
+  "suggestedOps.destinationNotConnected": "Målet är inte anslutet",
+  "@suggestedOps.destinationNotConnected": {
+    "sourceHash": "51dcf8e"
+  },
+  "suggestedOps.destinationNotConnectedTooltip": "Cmdr har inte anslutit till den här enheten eller servern än. Om du godkänner väntar åtgärden tills Cmdr har anslutit, precis som när du själv flyttar filer dit.",
+  "@suggestedOps.destinationNotConnectedTooltip": {
+    "sourceHash": "af06219"
+  },
   "suggestedOps.fromPattern": "Hittad med ett mönster",
   "@suggestedOps.fromPattern": {
     "sourceHash": "20e88a9"
@@ -83,29 +187,81 @@
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.columnFile": "Fil",
-  "@suggestedOps.columnFile": {
-    "sourceHash": "50009ce"
+  "suggestedOps.filesLabel": "Filer i ”{name}”",
+  "@suggestedOps.filesLabel": {
+    "sourceHash": "adf93b7"
+  },
+  "suggestedOps.columnInclude": "Ta med",
+  "@suggestedOps.columnInclude": {
+    "sourceHash": "7285576"
+  },
+  "suggestedOps.includeAll": "Ta med alla filer",
+  "@suggestedOps.includeAll": {
+    "sourceHash": "ac6c70c"
+  },
+  "suggestedOps.columnName": "Namn",
+  "@suggestedOps.columnName": {
+    "sourceHash": "dcd1d52"
+  },
+  "suggestedOps.columnFolder": "Mapp",
+  "@suggestedOps.columnFolder": {
+    "sourceHash": "74ccd43"
   },
   "suggestedOps.columnNewName": "Nytt namn",
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
   },
-  "suggestedOps.columnSize": "Storlek vid förslaget",
+  "suggestedOps.columnSize": "Storlek",
   "@suggestedOps.columnSize": {
-    "sourceHash": "20d36bd"
+    "sourceHash": "1af8519"
   },
-  "suggestedOps.columnChanged": "Senast ändrad",
-  "@suggestedOps.columnChanged": {
-    "sourceHash": "d8c5670"
+  "suggestedOps.columnModified": "Senast ändrad",
+  "@suggestedOps.columnModified": {
+    "sourceHash": "0fe1058"
   },
-  "suggestedOps.noIndexData": "Inte i indexet",
-  "@suggestedOps.noIndexData": {
-    "sourceHash": "104d8cb"
+  "suggestedOps.factChanged": "Ändrad sedan förslaget",
+  "@suggestedOps.factChanged": {
+    "sourceHash": "958780a"
   },
-  "suggestedOps.includeFile": "Ta med den här filen",
+  "suggestedOps.factChangedTooltip": "Vid förslaget: {then} / Nu: {now}",
+  "@suggestedOps.factChangedTooltip": {
+    "sourceHash": "8bf4166"
+  },
+  "suggestedOps.fileMissing": "Flyttad eller raderad",
+  "@suggestedOps.fileMissing": {
+    "sourceHash": "2073c5b"
+  },
+  "suggestedOps.snapshotOnly": "Från när AI:n föreslog det här",
+  "@suggestedOps.snapshotOnly": {
+    "sourceHash": "f6b2d27"
+  },
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr kunde inte kontrollera den här filen just nu, så värdet är från när AI:n föreslog det här.",
+  "@suggestedOps.snapshotOnlyTooltip": {
+    "sourceHash": "d6a081c"
+  },
+  "suggestedOps.sourceNotConnected": "Cmdr är inte ansluten till enheten som filerna ligger på, så deras storlekar och ändringsdatum är från när AI:n föreslog det här.",
+  "@suggestedOps.sourceNotConnected": {
+    "sourceHash": "07d5134"
+  },
+  "suggestedOps.sourceGone": "Enheten som filerna låg på finns inte här längre, så deras storlekar och ändringsdatum är från när AI:n föreslog det här.",
+  "@suggestedOps.sourceGone": {
+    "sourceHash": "1b30de5"
+  },
+  "suggestedOps.factUnknown": "Okänt",
+  "@suggestedOps.factUnknown": {
+    "sourceHash": "b764cdc"
+  },
+  "suggestedOps.includeFile": "Ta med {name}",
   "@suggestedOps.includeFile": {
-    "sourceHash": "71075a7"
+    "sourceHash": "a44fb71"
+  },
+  "suggestedOps.showMore": "Visa {countText} till",
+  "@suggestedOps.showMore": {
+    "sourceHash": "4061571"
+  },
+  "suggestedOps.showAll": "Visa alla {countText}",
+  "@suggestedOps.showAll": {
+    "sourceHash": "912b5d0"
   },
   "suggestedOps.loadingFiles": "Läser in filerna…",
   "@suggestedOps.loadingFiles": {
@@ -138,6 +294,14 @@
   "suggestedOps.refusal.nothingToRun.suggestion": "Kontrollera att filerna finns kvar och godkänn det sedan igen, eller avböj det.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "sourceHash": "f4cfc9e"
+  },
+  "suggestedOps.refusal.nothingSelected.message": "Ingen av filerna du bockade för finns kvar i förslaget, så inget kördes.",
+  "@suggestedOps.refusal.nothingSelected.message": {
+    "sourceHash": "7de9324"
+  },
+  "suggestedOps.refusal.nothingSelected.suggestion": "Bocka för filerna du vill ha med och godkänn det sedan igen.",
+  "@suggestedOps.refusal.nothingSelected.suggestion": {
+    "sourceHash": "db90f78"
   },
   "suggestedOps.refusal.couldNotStart.message": "Cmdr kunde inte göra om det här förslaget till en åtgärd, så inget kördes.",
   "@suggestedOps.refusal.couldNotStart.message": {

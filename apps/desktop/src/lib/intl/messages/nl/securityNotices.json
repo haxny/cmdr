@@ -7,13 +7,13 @@
   "@securityNotices.dismiss": {
     "sourceHash": "48845bf"
   },
-  "securityNotices.mcpForeignOrigin.title": "Cmdr blokkeerde een webpagina die zijn MCP-server wilde bereiken",
+  "securityNotices.mcpForeignOrigin.title": "Cmdr blokkeerde een webpagina die de MCP-server wilde bereiken",
   "@securityNotices.mcpForeignOrigin.title": {
-    "sourceHash": "5b54b21"
+    "sourceHash": "8ce6bad"
   },
-  "securityNotices.mcpForeignOrigin.body": "Een site die in je browser openstaat, probeerde met Cmdr te praten. Er is niets binnengekomen. Blijft het gebeuren, sluit dan tabbladen die je niet vertrouwt.",
+  "securityNotices.mcpForeignOrigin.body": "Een webpagina die in je browser openstaat, probeerde met Cmdr te praten. Er is niets binnengekomen. Blijft het gebeuren, sluit dan tabbladen die je niet vertrouwt.",
   "@securityNotices.mcpForeignOrigin.body": {
-    "sourceHash": "5515a9d"
+    "sourceHash": "6264738"
   },
   "securityNotices.mcpForeignOrigin.openSettings": "MCP-instellingen",
   "@securityNotices.mcpForeignOrigin.openSettings": {
@@ -23,13 +23,13 @@
   "@securityNotices.smbSignatureRefused.title": {
     "sourceHash": "aedb947"
   },
-  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr weigerde een antwoord van een netwerkshare",
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr weigerde een antwoord van een server",
   "@securityNotices.smbSignatureRefused.titleUnnamed": {
-    "sourceHash": "8cbb7cd"
+    "sourceHash": "17685e9"
   },
   "securityNotices.smbSignatureRefused.body": "Het antwoord had geen handtekening van de server, dus Cmdr vertrouwde het niet. Een haperend netwerkapparaat kan dit veroorzaken, maar ook iemand die met het verkeer tussen jou en de server knoeit. Maak opnieuw verbinding, en als het weer gebeurt, controleer dan je netwerk.",
   "@securityNotices.smbSignatureRefused.body": {
-    "sourceHash": "2c1abec"
+    "sourceHash": "d1b8716"
   },
   "securityNotices.smbSignatureRefused.reconnect": "Verbind opnieuw",
   "@securityNotices.smbSignatureRefused.reconnect": {

@@ -61,6 +61,7 @@ vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
   onIndexScanStarted: () => Promise.resolve(() => {}),
   onIndexScanComplete: () => Promise.resolve(() => {}),
+  onIndexScanAborted: () => Promise.resolve(() => {}),
 }))
 
 // The test DOM has no layout, so no scroll: a stub keeps `scrollHighlightedIntoView`

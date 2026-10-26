@@ -275,13 +275,23 @@ function wholeValueOf(text: string): string {
  * one that isn't valid ICU, drops its `{token}` spans instead. ICU's doubled
  * apostrophe reads as one. Markdown code spans go too: `` `ping <hostname>` `` in
  * an error suggestion is a command the reader types verbatim, so the locale keeps
- * it English and it says nothing about the concept "hostname".
+ * it English and it says nothing about the concept "hostname". File-system paths
+ * and domains go for the same reason (`PATH_OR_DOMAIN`): `local` in
+ * `/usr/local/bin` or `nas.local` names a folder or a host, never the concept "local".
  */
 export function englishMatchText(key: string, value: string): string {
   const literals = isRawKey(key) ? undefined : visibleLiterals(value)
-  const text = (literals ?? stripRawIdentifiers(value)).replace(/`[^`\n]*`/g, '')
+  const text = (literals ?? stripRawIdentifiers(value)).replace(/`[^`\n]*`/g, '').replace(PATH_OR_DOMAIN, '')
   return isRawKey(key) ? text : text.replace(/''/g, "'")
 }
+
+/**
+ * An absolute or home-relative path (`/usr/local/bin`, `~/Documents`; never `GB/s`
+ * or `copy/move`, where a letter sits before the slash), or a lowercase dotted name
+ * (`getcmdr.com`, `nas.local`, `photo.jpg`; never `e.g.`, whose labels are one letter).
+ */
+const PATH_OR_DOMAIN =
+  /(?<![\p{L}\p{N}])~?\/[^\s"“”‘’'`,;()]*|(?<![\p{L}\p{N}.])[a-z0-9][a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![\p{L}\p{N}])/gu
 
 /**
  * The identifier-shaped parts of a value the ICU engine didn't parse (a raw

@@ -22,21 +22,21 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
   mismatch the winner caused. That one needs no rule, because a test holds it:
   `tests/claim.rs::two_concurrent_claims_leave_exactly_one_winner_and_a_typed_refusal` goes red if the claim starts
   writing them.
-- **The acceptance record is SERVER-OWNED.** The client presents a group id and DESELECTED op ids, never values.
-  Comparing `proposal_ops` against itself is a tautology once the agent can amend a pending group, so the record held
-  apart from the rows is the whole mechanism.
+- **The acceptance record is SERVER-OWNED.** The client presents an `OpSelection` of op IDS, never values
+  (`DETAILS.md` § What preflight accepts). Comparing `proposal_ops` against itself is a tautology once the agent can
+  amend a pending group, so the record held apart from the rows is the whole mechanism.
 - **`live_binding` STREAMS.** One row in memory at a time, so a 60 000-op group claims as cheaply as a three-op one.
   `page_ops` is the only op-row-materializing read here, and a test asserts the claim path never calls it — so a
   comparison rewritten to load the ops fails that test rather than quietly costing 60 000 rows twice.
-- **`pending` is the only mutable status.** `repropose_group` guards on it and TEARS UP the acceptance record, so a
-  preflight against the old op list can't carry an approval onto a new one. `approved`, `interrupted`, `completed`, and
+- **`pending` is the only mutable status.** `repropose_group` guards on it, TEARS UP the acceptance record, and bumps
+  `revision`, which an approval must name, so a click on the old version can't approve the new one. `approved`, `interrupted`, `completed`, and
   `rejected` are the user's.
 - **Run `recover_interrupted_groups` exactly once per launch, from `agent::start`.** ❌ Not from
   `open_write_connection`, which runs the ladder on every connection open: a sweep there would reclassify a group that
   is genuinely executing.
 - **`GroupIntent` makes the wrong shapes unrepresentable.** Each variant carries the target its executor binds AND its
-  op shape, so a trash group with a destination, or a move group whose ops carry their own, can't be built. Reversibility
-  falls out of the same enum. Add a verb by adding a variant, never by adding a check.
+  op shape, so a trash group with a destination can't be built. Reversibility falls out of the same enum (what a VOLUME blocks:
+  `../../suggested_ops/facts.rs`). Add a verb by adding a variant, never a check.
 - **`completed` is written on SETTLE, whatever the operation did**, because the question it answers is "still in
   flight, or not?" Marking only on success leaves a cancelled group `approved`, so the next launch calls it
   `interrupted` — a claim the app died, about an operation the user stopped. Per-op statuses carry the rest.

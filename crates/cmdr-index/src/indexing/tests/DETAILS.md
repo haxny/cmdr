@@ -131,7 +131,7 @@ image (`scanner/walker/DETAILS.md` § "The test-only park point").
   test can build one (40,040 entries in 46 ms, against 2.7 s to create them, same run), so no tree that fits the 30 s
   cap outlasts the 500 ms progress tick plus the guarded detach.
 
-Both run in the opt-in disk-image lane: `pnpm check disk-images`, or any `pnpm check --include-slow` on a Mac
+Both run in the opt-in disk-image lane: `pnpm check disk-images`, or any `pnpm check --only-slow` on a Mac
 (`scripts/check/checks/DETAILS.md` § "The disk-image lane").
 
 For `platform_case_compare` in `store.rs`: proptests cover the comparator algebra (reflexive / antisymmetric /

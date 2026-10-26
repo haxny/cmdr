@@ -1,11 +1,11 @@
 /**
- * Tier 3 a11y and disclosure coverage for the Suggested ops dialog.
+ * Tier 3 a11y and disclosure coverage for the AI suggestions dialog.
  *
  * The store is mocked, so nothing here reads a database or queues an operation. What these
- * tests actually pin is the disclosure: the agent's reason reaches the screen LABELLED as the
- * agent's words, the facts Cmdr holds by itself are labelled as those, an irreversible group
- * says so, a folder that will be created says so, and a file the index knew nothing about
- * shows that in words rather than as a zero.
+ * tests actually pin is the disclosure: the button names the action, the AI's reason reaches
+ * the screen LABELLED as the AI's words beside the facts Cmdr holds by itself, the undo pill
+ * says why, an irreversible group says so, a folder that will be created says so, and a file's
+ * size and date say what the disk says now, or say plainly that they're from suggestion time.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -15,12 +15,15 @@ import { expectNoA11yViolations } from '#lib/test-a11y.js'
 const { actions, store } = vi.hoisted(() => ({
   actions: {
     close: vi.fn(),
-    collapse: vi.fn(),
-    expand: vi.fn<(id: number) => Promise<void>>(),
-    ensure: vi.fn<(payload: { groupId: number; startIndex: number }) => Promise<void>>(),
+    approve: vi.fn<(id: number) => Promise<void>>(),
     reject: vi.fn<(id: number) => Promise<void>>(),
-    refresh: vi.fn<() => Promise<void>>(),
-    toggle: vi.fn<(id: number) => void>(),
+    reload: vi.fn<(id: number) => Promise<void>>(),
+    ensure: vi.fn<(payload: { groupId: number; startIndex: number }) => Promise<void>>(),
+    range: vi.fn<(payload: { groupId: number; start: number; end: number }) => Promise<void>>(),
+    toggle: vi.fn<(payload: { groupId: number; opId: number }) => void>(),
+    showMore: vi.fn<(id: number) => void>(),
+    showAll: vi.fn<(id: number) => void>(),
+    toggleAll: vi.fn<(id: number) => void>(),
   },
   // A plain object rather than `$state`: each test mounts a fresh dialog, so the values only
   // have to be right at mount time.
@@ -29,18 +32,24 @@ const { actions, store } = vi.hoisted(() => ({
       open: true,
       loading: false,
       loadError: false,
-      sweeps: [] as unknown[],
-      openGroupId: null as number | null,
-      window: null as { groupId: number; offset: number; ops: unknown[]; total: number } | null,
-      windowLoading: false,
-      windowError: false,
-      deselected: new Set<number>(),
-      changedUnderReview: false,
+      sweeps: [] as Array<{ groups: Array<{ groupId: number; liveOpCount: number }> }>,
+      reviews: new Map<number, unknown>(),
       busyGroupId: null as number | null,
       decisionNotice: null as string | null,
       refusals: new Map<number, unknown>(),
     },
-    ops: [] as unknown[],
+    ops: [] as Array<{ opId: number }>,
+    review: {
+      window: null as { offset: number; ops: unknown[]; total: number } | null,
+      windowLoading: false,
+      windowError: false,
+      shown: 10,
+      deselected: new Set<number>(),
+      changedUnderReview: false,
+      liveFacts: new Map<number, unknown>(),
+      sourceUnreachable: null as string | null,
+      range: { start: 0, end: 10 },
+    },
   },
 }))
 
@@ -49,19 +58,43 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
+const settings = vi.hoisted(() => ({ suppressed: false, set: vi.fn() }))
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getSetting: () => settings.suppressed,
+  setSetting: settings.set,
+}))
+vi.mock('#lib/icon-cache.js', async () => {
+  const { writable } = await import('svelte/store')
+  return { getCachedIcon: () => undefined, iconCacheVersion: writable(0), prefetchIcons: () => Promise.resolve() }
+})
 
 vi.mock('./suggested-ops-trigger.svelte', () => ({
+  INITIAL_ROWS: 10,
+  SHOW_MORE_STEP: 20,
   suggestedOpsState: store.state,
-  approvableCount: () => 3,
+  approvableCount: (id: number) => store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0,
+  approveGroup: actions.approve,
+  canApprove: (id: number) =>
+    !store.review.changedUnderReview &&
+    (store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0) > 0,
   closeSuggestedOps: actions.close,
-  collapseGroup: actions.collapse,
   ensureOpWindow: (groupId: number, startIndex: number) => actions.ensure({ groupId, startIndex }),
-  expandGroup: actions.expand,
-  openGroup: () => (store.state as { sweeps: { groups: unknown[] }[] }).sweeps[0]?.groups[0] ?? null,
-  opAt: (i: number) => store.ops[i] ?? null,
-  refreshSuggestions: actions.refresh,
+  isOpSelected: (_groupId: number, opId: number) => !store.review.deselected.has(opId),
+  selectionState: () => (store.review.deselected.size === 0 ? 'all' : 'some'),
+  toggleAllOps: actions.toggleAll,
+  opAt: (_groupId: number, index: number) => store.ops[index] ?? null,
   rejectGroup: actions.reject,
-  toggleOp: actions.toggle,
+  reloadGroup: actions.reload,
+  reviewOf: () => store.review,
+  showAllRows: actions.showAll,
+  showMoreRows: actions.showMore,
+  showRange: (groupId: number, start: number, end: number) => actions.range({ groupId, start, end }),
+  shownRows: (group: { liveOpCount: number }) => Math.min(store.review.shown, group.liveOpCount),
+  toggleOp: (groupId: number, opId: number) => {
+    actions.toggle({ groupId, opId })
+  },
+  totalRows: (group: { liveOpCount: number }) => group.liveOpCount,
 }))
 
 const SuggestedOpsDialog = (await import('./SuggestedOpsDialog.svelte')).default
@@ -80,11 +113,14 @@ function group(overrides: Record<string, unknown> = {}) {
     sweepId: 1,
     verb: 'move',
     status: 'pending',
-    displayName: 'five invoices',
-    rationale: 'They all look like invoices to me.',
+    displayName: 'Installers to the NAS',
+    rationale: 'They all look like installers to me.',
     sourceVolumeId: 'root',
-    destination: '/Users/someone/Documents/Invoices',
+    sourceFolder: '/Users/someone/Downloads',
+    destination: '/backups/Installers',
+    destinationVolumeName: 'Naspolya',
     reversible: 'restoreMove',
+    runBlocker: null,
     destinationState: 'exists',
     liveOpCount: 3,
     totalOpCount: 3,
@@ -93,25 +129,26 @@ function group(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function seed(groupOverrides: Record<string, unknown> = {}, expanded = false) {
+function seed(groupOverrides: Record<string, unknown> = {}) {
   store.state.sweeps = [
-    { sweepId: 1, createdAt: 1_780_000_000, rationale: 'Ten new files in Downloads.', groups: [group(groupOverrides)] },
+    {
+      sweepId: 1,
+      createdAt: 1_780_000_000,
+      rationale: 'Ten new files in Downloads.',
+      groups: [group(groupOverrides)],
+    } as unknown as { groups: Array<{ groupId: number; liveOpCount: number }> },
   ]
-  store.state.openGroupId = expanded ? 7 : null
-  store.state.window = expanded ? { groupId: 7, offset: 0, ops: store.ops, total: store.ops.length } : null
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  settings.suppressed = false
   document.body.innerHTML = ''
   store.state.loading = false
   store.state.loadError = false
-  store.state.changedUnderReview = false
   store.state.busyGroupId = null
-  store.state.windowError = false
   store.state.decisionNotice = null
   store.state.refusals = new Map<number, unknown>()
-  store.state.deselected = new Set<number>()
   store.ops = [
     {
       opId: 1,
@@ -123,68 +160,120 @@ beforeEach(() => {
     },
     {
       opId: 2,
-      sourcePath: '/Users/someone/Downloads/unindexed.pdf',
+      sourcePath: '/Users/someone/Downloads/unrecorded.pdf',
       newName: null,
       status: 'pending',
       snapshotSize: null,
       snapshotModified: null,
     },
-  ]
+    {
+      opId: 3,
+      sourcePath: '/Users/someone/Downloads/gone.dmg',
+      newName: null,
+      status: 'pending',
+      snapshotSize: 1_000,
+      snapshotModified: 1_780_000_000,
+    },
+  ] as unknown as Array<{ opId: number }>
+  store.review = {
+    window: { offset: 0, ops: store.ops, total: store.ops.length },
+    windowLoading: false,
+    windowError: false,
+    shown: 10,
+    deselected: new Set<number>(),
+    changedUnderReview: false,
+    liveFacts: new Map<number, unknown>(),
+    sourceUnreachable: null,
+    range: { start: 0, end: 10 },
+  }
   seed()
 })
 
 describe('accessibility', () => {
-  it('has no violations with a group listed', async () => {
+  it('has no violations with a group and its file list', async () => {
     const host = mountDialog()
     await expectNoA11yViolations(host)
   })
 
-  it('has no violations with a group expanded over its file list', async () => {
-    seed({}, true)
+  it('has no violations with every row state at once', async () => {
+    store.review.liveFacts = new Map<number, unknown>([
+      [1, { kind: 'present', size: 99_999, modified: 1_790_000_000 }],
+      [3, { kind: 'missing' }],
+    ])
     const host = mountDialog()
     await expectNoA11yViolations(host)
   })
 
-  it('gives every per-file checkbox an accessible name', () => {
-    seed({}, true)
+  it('names every per-file checkbox after its file', () => {
     const host = mountDialog()
 
-    const boxes = host.querySelectorAll('input[type="checkbox"]')
-    expect(boxes.length).toBeGreaterThan(0)
-    for (const box of boxes) {
-      expect((box.getAttribute('aria-label') ?? '').length).toBeGreaterThan(0)
-    }
+    const names = [...host.querySelectorAll('input[type="checkbox"]')].map((box) => box.getAttribute('aria-label'))
+    expect(names).toContain('Include invoice-jan.pdf')
+  })
+})
+
+describe('the action', () => {
+  it('names the verb and the count on the button', () => {
+    const host = mountDialog()
+
+    const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Move 3 files')
+    expect(buttons).toContain('Reject')
+  })
+
+  it('names the Trash on a trash group', () => {
+    seed({ verb: 'trash', destination: null, destinationVolumeName: null, destinationState: 'notApplicable' })
+    const host = mountDialog()
+
+    const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Move 3 files to Trash')
+    expect(host.querySelector('.facts')?.textContent).toContain('The Trash')
+  })
+
+  it('shows where the files are and the full destination, volume included', () => {
+    const host = mountDialog()
+
+    const facts = host.querySelector('.facts')?.textContent ?? ''
+    expect(facts).toContain('/Users/someone/Downloads')
+    expect(facts).toContain('Naspolya')
+    expect(facts).toContain('/backups/Installers')
+  })
+
+  it('shows the files right away, with no button to reveal them', () => {
+    const host = mountDialog()
+
+    expect(host.textContent).toContain('invoice-jan.pdf')
+    const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).not.toContain('Review the files')
+  })
+
+  it('offers more rows, then all of them, under a long list', () => {
+    seed({ liveOpCount: 60_000, totalOpCount: 60_000 })
+    const host = mountDialog()
+
+    const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Show 20 more')
+    expect(buttons).toContain('Show all 60,000')
   })
 })
 
 /**
- * Both labels, or neither works.
- *
- * The disclosure is a JUXTAPOSITION: the agent's claim on one side, facts Cmdr holds by itself
- * on the other, so the user can check one against the other. Drop either label and it inverts.
- * Without "The AI's reason", a rationale reads as something Cmdr verified. Without "What Cmdr
- * knows", a column of sizes and dates reads as MORE of the agent's claims rather than as the
- * independent check on them, which is worse than showing no facts at all: it lends the agent
- * Cmdr's credibility.
- *
- * Both were nearly lost once already. "What Cmdr knows" was written into the message catalog
- * and never rendered; only `message-keys-unused` noticed, because the dialog looked complete
- * without it.
+ * The AI's reason is LABELLED as its words, beside facts Cmdr holds by itself. Without the label,
+ * a rationale reads as something Cmdr verified, and a hallucinated claim arrives looking like a
+ * finding.
  */
 describe('disclosure', () => {
-  it('labels the agent’s words as the agent’s, never as something Cmdr checked', () => {
+  it('labels the AI’s words as the AI’s, never as something Cmdr checked', () => {
     const host = mountDialog()
 
-    expect(host.textContent).toContain('They all look like invoices to me.')
-    expect(host.textContent).toContain('The AI’s reason')
+    expect(host.textContent).toContain('They all look like installers to me.')
+    expect(host.textContent).toContain('Why, according to the AI:')
   })
 
-  it('labels Cmdr’s own facts as Cmdr’s, so the two sit side by side', () => {
-    seed({}, true)
+  it('says why a move can be undone', () => {
     const host = mountDialog()
 
-    expect(host.textContent).toContain('What Cmdr knows')
-    expect(host.textContent).toContain('Size when suggested')
+    expect(host.textContent).toContain('You can undo this: Cmdr can move them back')
   })
 
   it('says a permanent delete cannot be undone, and still offers it', () => {
@@ -193,7 +282,19 @@ describe('disclosure', () => {
 
     expect(host.textContent).toContain('This can’t be undone')
     const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
-    expect(buttons).toContain('Reject')
+    expect(buttons).toContain('Delete 3 files')
+  })
+
+  it('says a trash on a drive with no Trash can’t run, and won’t run it', () => {
+    seed({ verb: 'trash', runBlocker: 'noTrash', destination: null, destinationState: 'notApplicable' })
+    const host = mountDialog()
+
+    expect(host.textContent).toContain('Can’t run: this drive has no Trash')
+    expect(host.textContent).not.toContain('You can undo this')
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Move 3 files to Trash')
+    expect(button?.getAttribute('aria-disabled')).toBe('true')
+    button?.click()
+    expect(actions.approve).not.toHaveBeenCalled()
   })
 
   it('says when approving would create the target folder', () => {
@@ -218,40 +319,137 @@ describe('disclosure', () => {
   })
 })
 
-describe('honest absence', () => {
-  it('says the index knew nothing about a file rather than showing a zero', () => {
-    seed({}, true)
+describe('the approval note and the sweep heading', () => {
+  it('closes the note for good from its ×', () => {
+    settings.suppressed = false
     const host = mountDialog()
+    expect(host.textContent).toContain('Nothing runs until you approve it.')
 
-    expect(host.textContent).toContain('Not in the index')
-    expect(host.textContent).not.toContain('0 B')
+    host.querySelector<HTMLButtonElement>('[aria-label="Don’t show this again"]')?.click()
+    flushSync()
+
+    expect(settings.set).toHaveBeenCalledWith('suggestedOps.suppressApprovalNotice', true)
+    expect(host.textContent).not.toContain('Nothing runs until you approve it.')
   })
 
+  it('keeps the note hidden once the user closed it', () => {
+    settings.suppressed = true
+    const host = mountDialog()
+    settings.suppressed = false
+
+    expect(host.textContent).not.toContain('Nothing runs until you approve it.')
+  })
+
+  it('heads an older sweep with when it was suggested', () => {
+    const host = mountDialog()
+
+    expect(host.querySelector('.sweep-heading')?.textContent).toMatch(/^Suggested /)
+  })
+
+  it('leaves out the heading for a lone sweep from the last ten minutes', () => {
+    seed()
+    ;(store.state.sweeps[0] as unknown as { createdAt: number }).createdAt = Math.floor(Date.now() / 1000) - 60
+    const host = mountDialog()
+
+    expect(host.querySelector('.sweep-heading')).toBeNull()
+    expect(host.textContent).toContain('Ten new files in Downloads.')
+  })
+})
+
+describe('selection from the header', () => {
+  it('ticks or unticks every file from the header box', () => {
+    const host = mountDialog()
+
+    const header = host.querySelector<HTMLElement>('[aria-label="Include all files"]')
+    expect(header).not.toBeNull()
+    header?.click()
+
+    expect(actions.toggleAll).toHaveBeenCalledWith(7)
+  })
+})
+
+describe('a new name', () => {
+  it('shows after an arrow for any verb, not only a rename', () => {
+    ;(store.ops[0] as unknown as { newName: string }).newName = 'Invoice 2026-01.pdf'
+    const host = mountDialog()
+
+    expect(host.textContent).toContain('Invoice 2026-01.pdf')
+    expect(host.textContent).toContain('New name')
+  })
+})
+
+describe('honest file facts', () => {
+  it('labels a value Cmdr couldn’t check now as the suggestion-time one, and never shows a zero', () => {
+    const host = mountDialog()
+
+    expect(host.querySelector('[aria-label="From when the AI suggested this"]')).not.toBeNull()
+    expect(host.textContent).toContain('Unknown')
+    expect(host.textContent).not.toContain('0 B')
+    expect(host.textContent).not.toContain('Not in the index')
+  })
+
+  it('flags a live value that moved since the suggestion, with both values', () => {
+    store.review.liveFacts = new Map<number, unknown>([[1, { kind: 'present', size: 99_999, modified: 1_780_000_000 }]])
+    const host = mountDialog()
+
+    const glyph = host.querySelector('[aria-label="Changed since the suggestion"]')
+    expect(glyph).not.toBeNull()
+  })
+
+  it('says a file is gone', () => {
+    store.review.liveFacts = new Map<number, unknown>([[3, { kind: 'missing' }]])
+    const host = mountDialog()
+
+    expect(host.textContent).toContain('Moved or deleted')
+  })
+
+  it('says once, above the list, when the files’ drive isn’t connected', () => {
+    store.review.sourceUnreachable = 'notConnected'
+    const host = mountDialog()
+
+    expect(host.textContent).toContain('Cmdr isn’t connected to the drive these files are on')
+  })
+
+  it('shows each file’s folder only when the files don’t share one', () => {
+    const shared = mountDialog()
+    expect(shared.querySelector('[data-column="folder"]')).toBeNull()
+
+    document.body.innerHTML = ''
+    seed({ sourceFolder: null })
+    const mixed = mountDialog()
+    expect(mixed.querySelector('[data-column="folder"]')).not.toBeNull()
+    expect(mixed.textContent).toContain('Several folders')
+  })
+})
+
+describe('honest absence', () => {
   it('announces a group the agent changed instead of swapping the rows', () => {
-    seed({}, true)
-    store.state.changedUnderReview = true
+    store.review.changedUnderReview = true
     const host = mountDialog()
 
     expect(host.textContent).toContain('The AI changed this suggestion while you were reading it.')
-    expect(host.textContent).toContain('/Users/someone/Downloads/invoice-jan.pdf')
+    expect(host.textContent).toContain('invoice-jan.pdf')
+    const reload = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Show the new version')
+    reload?.click()
+    expect(actions.reload).toHaveBeenCalledWith(7)
+    // The version on screen isn't the one that would run, so Approve waits for the reload.
+    const approve = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Move 3 files')
+    expect(approve?.disabled).toBe(true)
   })
 
   it('says nothing is waiting when nothing is', () => {
     store.state.sweeps = []
-    store.state.openGroupId = null
     const host = mountDialog()
 
     expect(host.textContent).toContain('Nothing is waiting for you right now.')
   })
 
-  it('says the files could not load, instead of promising they are loading, and offers to try again', async () => {
-    seed({}, true)
-    store.state.window = null
-    store.state.windowError = true
+  it('says the files could not load, and offers to try again', async () => {
+    store.review.window = null
+    store.review.windowError = true
     const host = mountDialog()
 
     expect(host.textContent).toContain('Cmdr couldn’t load these files.')
-    expect(host.textContent).not.toContain('Loading the files…')
     const retry = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Try again')
     expect(retry).toBeDefined()
     retry?.click()
@@ -268,7 +466,6 @@ describe('honest absence', () => {
 
   it('distinguishes a read that failed from an empty list', () => {
     store.state.sweeps = []
-    store.state.openGroupId = null
     store.state.loadError = true
     const host = mountDialog()
 
@@ -286,7 +483,6 @@ describe('honest absence', () => {
     expect(refusal?.getAttribute('role')).toBe('alert')
     expect(refusal?.textContent).toContain('Why this didn’t start')
     expect(refusal?.textContent).toContain('Cmdr hasn’t connected to the phone or server holding these files yet')
-    expect(host.textContent).toContain('five invoices')
     await expectNoA11yViolations(host)
   })
 
@@ -294,5 +490,52 @@ describe('honest absence', () => {
     const host = mountDialog()
 
     expect(host.querySelector('.refusal')).toBeNull()
+  })
+})
+
+/** The dialog's parts, each audited on its own as well, so a part reused elsewhere stays clean. */
+describe('the parts on their own', () => {
+  function freshHost(): HTMLElement {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    return host
+  }
+
+  it('AgentReason labels the AI’s words', async () => {
+    const AgentReason = (await import('./AgentReason.svelte')).default
+    const host = freshHost()
+    mount(AgentReason, { target: host, props: { text: 'They all look like invoices.' } })
+    flushSync()
+    await expectNoA11yViolations(host)
+    expect(host.textContent).toContain('Why, according to the AI:')
+  })
+
+  it('SuggestedOpsGroup renders a group with no violations', async () => {
+    const SuggestedOpsGroup = (await import('./SuggestedOpsGroup.svelte')).default
+    const host = freshHost()
+    mount(SuggestedOpsGroup, { target: host, props: { group: group() as never } })
+    flushSync()
+    await expectNoA11yViolations(host)
+    expect(host.textContent).toContain('Move 3 files')
+  })
+
+  it('VolumePill names a volume the list doesn’t know, by the name it was given', async () => {
+    const VolumePill = (await import('./VolumePill.svelte')).default
+    const host = freshHost()
+    mount(VolumePill, { target: host, props: { volumeId: 'not-listed', name: 'Naspolya' } })
+    flushSync()
+    await expectNoA11yViolations(host)
+    expect(host.textContent).toContain('Naspolya')
+  })
+
+  it('SuggestedOpFiles renders a file list with no violations', async () => {
+    const SuggestedOpFiles = (await import('./SuggestedOpFiles.svelte')).default
+    const { createRawSnippet } = await import('svelte')
+    const actions = createRawSnippet(() => ({ render: () => '<span></span>' }))
+    const host = freshHost()
+    mount(SuggestedOpFiles, { target: host, props: { group: group() as never, actions } })
+    flushSync()
+    await expectNoA11yViolations(host)
+    expect(host.textContent).toContain('invoice-jan.pdf')
   })
 })

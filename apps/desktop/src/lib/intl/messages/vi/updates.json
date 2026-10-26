@@ -56,9 +56,9 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} đã sẵn sàng, nhưng Cmdr không thể tự cài đặt",
+  "updates.unwritable.adminHeadline": "Đã có Cmdr {version}, nhưng Cmdr không thể tự cài đặt bản này",
   "@updates.unwritable.adminHeadline": {
-    "sourceHash": "a0c72ea"
+    "sourceHash": "8e6aecc"
   },
   "updates.unwritable.adminDetail": "{path} thuộc về một tài khoản khác. Để cập nhật, hãy tải về Cmdr từ <website>getcmdr.com</website> rồi kéo vào thư mục Ứng dụng. macOS sẽ hỏi mật khẩu của bạn.",
   "@updates.unwritable.adminDetail": {

@@ -1,8 +1,9 @@
 # Go to path (frontend)
 
-The ⌘G modal that jumps the focused pane to a typed, pasted, or recent path. A thin presenter: the backend's
-`resolve_go_to_path` (`apps/desktop/src-tauri/src/go_to_path/CLAUDE.md`) owns all path reasoning. The UI calls it "Go to
-folder…" (Finder's name); internals stay `goToPath`, and ❌ never rename `nav.goToPath`: custom shortcuts key on it.
+The ⌘G (or Finder's ⌘⇧G) modal that jumps the focused pane to a typed, pasted, or recent path. A thin presenter: the
+backend's `resolve_go_to_path` (`apps/desktop/src-tauri/src/go_to_path/CLAUDE.md`) owns all path reasoning. The UI calls
+it "Go to folder…" (Finder's name); internals stay `goToPath`, and ❌ never rename `nav.goToPath`: custom shortcuts key
+on it.
 
 ## Module map
 

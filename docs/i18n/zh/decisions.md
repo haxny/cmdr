@@ -194,9 +194,11 @@ finished files).
   file).
 - `这个文件名不能使用` / `这个文件夹名不能使用` (Finder), no `。`: composed into `{reason}。`
 
-## Suggested ops dialog (`suggestedOps.*`, `commands.suggestedOpsShow.*`)
+## Suggested ops dialog (`suggestedOps.*`, `commands.suggestedOpsShow.*`, `menu.view.suggestedOps`)
 
-Approve `批准` over macOS's `接受` (AirDrop receiving); reject `拒绝`; `这项操作无法撤销` (Finder).
+Title, menu, palette `AI 建议` (the mkdir hints) over `建议的操作`. Approve `批准` over macOS's `接受` (AirDrop); reject
+`拒绝`; pills `这项操作可以撤销：` / `这项操作无法撤销：` (Finder). Why `原因：` (aria `原因，按 AI 的说法：`) over
+`为什么：`.
 
 ## Duplicate (`commands.fileDuplicate.*`)
 
@@ -341,8 +343,8 @@ them.
 - `等你核对主机密钥` over log-like `等待用户确认`; never `从未`, not `永不` (a setting's "never again").
 - `显示服务器` (Show → `显示`, `前往` only for Go to); `断开服务器连接`, never `推出`. Pin toasts don't say `固定`, like
   the English; the unpin toast answers "was it deleted?".
-- Account suffix is a noun label, `身份：{username}` / `身份：客人` (`servers.hub.shareAccount`/`.guestAccount`):
-  `以客人身份连接` is the sheet's button. Use guest `改用客人身份`.
+- Account suffix is a noun label, `身份：{username}` / `身份：客人` (`servers.hub.shareAccount`/`.guestAccount`): button
+  `以客人身份连接`. Browse as guest `以客人身份浏览`.
 
 ## Add-server sheet + host key (`servers.sheet.*`, `servers.hostKey.*`, `servers.paneState.signedOut`/`.signIn`/`.hostKeyChanged*`, `goToPath.dialog.opensServer`/`.addsServer`, `commands.serversConnect.label`)
 
@@ -350,9 +352,9 @@ them.
   the account's).
 - Guest `客人` (macOS; `来宾` is Microsoft's): `servers.sheet.connectAsGuest`,
   `fileExplorer.network.browser.status.guest`, `errors.shareList.signingRequired` change together.
-- `连接方式` over NetAuthAgent's `连接身份` (the options ask whether to use an account). `有东西夹在你和它之间`, never
-  added `中间人攻击`.
-- Owner `所有者`, not `管理员`; `我核对过了`; `仍然添加` (like `仍然使用`); Sign in as… `用其他账户登录…`
+- `连接方式` over NetAuthAgent's `连接身份` (asks whether to use an account). `有东西夹在你和它之间`, never
+  `中间人攻击`.
+- Owner `所有者`, not `管理员`; `我核对过密钥了` / `证书了`; `仍然添加` (like `仍然使用`); Sign in as… `用其他账户登录…`
   (`fileExplorer.network.share.signInAs`); a cancelled connect `{name} 还没有连接` (a state).
 
 ## Reconnect + nothing-to-ask (`servers.paneState.reconnecting`, `.signedOutNothingToAsk`)
@@ -384,11 +386,10 @@ field). `{name} 没有保存的密码。`, no `过` ("never saved").
 The retry totals keep the `plural` shell, no preposition or `。` (parts of `retryKeepsTrying`). `Cmdr 不会连接到 {name}`
 (standing), never `已停止`. A server row's Open `打开`, as in Finder.
 
-## AI subject (`suggestedOps.agentReason`, `suggestedOps.cmdrFacts`, `askCmdr.error.notConfigured`, `settings.askCmdr.provider.off`)
+## AI subject (`suggestedOps.agentReason`, `suggestedOps.reversible.moveBack`, `askCmdr.error.notConfigured`, `settings.askCmdr.provider.off`)
 
-The rule is in `style.md`. Why `AI` in `suggestedOps.*`: `AI 给出的理由` sits beside `Cmdr 掌握的信息`, and the dialog
-separates what the model said from what Cmdr checked; ❗ don't unify. Subjectless `聊天` / `开始聊天`; `Cmdr 发送的内容`
-pairs `Cmdr 记住的内容`.
+The rule is in `style.md`. `AI` in `suggestedOps.*` keeps what the model said apart from what Cmdr checked; ❗ don't
+unify. Subjectless `聊天` / `开始聊天`; `Cmdr 发送的内容` pairs `Cmdr 记住的内容`.
 
 ## Review verb (`askCmdr.wake.*`, `askCmdr.wakeToast.*`)
 

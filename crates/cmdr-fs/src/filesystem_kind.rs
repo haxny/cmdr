@@ -189,6 +189,17 @@ impl FilesystemInfo {
     }
 }
 
+/// Whether the OS keeps a Trash for paths on a mount: THE trash rule, which both the volume
+/// list's `supports_trash` and `Volume::has_trash` (through [`MountClass::has_trash`]) derive
+/// from. Exactly the local disks [`mount_is_local_disk`] admits, FAT32 and exFAT included: a
+/// network or FUSE mount refuses every item and deletes nothing. Verification and the
+/// per-filesystem evidence: `DETAILS.md` § "Which mounts keep a Trash".
+///
+/// [`MountClass::has_trash`]: crate::volume::MountClass::has_trash
+pub fn mount_has_trash(source: Option<&str>, fs_type: Option<&str>) -> bool {
+    mount_is_local_disk(source, fs_type)
+}
+
 /// Whether a mount is a KNOWN local disk: its source is a block device (`/dev/…`:
 /// disks, partitions, attached disk images), or its type is a local disk type
 /// whose source isn't a device node (ZFS datasets, a container's overlay root,
@@ -244,6 +255,26 @@ mod tests {
         assert_eq!(FilesystemKind::from_raw_type("ntfs"), FilesystemKind::Ntfs);
         assert_eq!(FilesystemKind::from_raw_type("smbfs"), FilesystemKind::Smb);
         assert_eq!(FilesystemKind::from_raw_type("cifs"), FilesystemKind::Smb);
+    }
+
+    /// The one trash rule: FAT32 and exFAT keep a Trash like any local disk, a network or FUSE
+    /// mount and an unread type don't (`DETAILS.md` § "Which mounts keep a Trash").
+    #[test]
+    fn only_a_local_disk_keeps_a_trash() {
+        for fs_type in ["apfs", "hfs", "msdos", "exfat", "vfat", "ntfs", "ext4"] {
+            assert!(mount_has_trash(None, Some(fs_type)), "{fs_type}");
+        }
+        for fs_type in ["smbfs", "nfs", "afpfs", "webdav", "macfuse", "pcloudfs"] {
+            assert!(!mount_has_trash(None, Some(fs_type)), "{fs_type}");
+        }
+        assert!(!mount_has_trash(None, None));
+        assert!(
+            mount_has_trash(Some("/dev/disk4s1"), Some("zalgofs")),
+            "a block device is a local disk"
+        );
+        assert!(crate::volume::MountClass::LocalDisk.has_trash());
+        assert!(!crate::volume::MountClass::SmbShare.has_trash());
+        assert!(!crate::volume::MountClass::OtherNetwork.has_trash());
     }
 
     #[test]

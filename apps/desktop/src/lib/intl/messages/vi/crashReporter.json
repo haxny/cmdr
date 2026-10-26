@@ -71,9 +71,9 @@
   "@crashReporter.sentToast.message.report": {
     "sourceHash": "a676ed5"
   },
-  "crashReporter.sentToast.changeSettings": "Thay đổi trong Cài đặt > Cập nhật",
+  "crashReporter.sentToast.changeSettings": "Đổi trong Cài đặt",
   "@crashReporter.sentToast.changeSettings": {
-    "sourceHash": "25d151d"
+    "sourceHash": "144d0bd"
   },
   "crashReporter.sentToast.sendLog": "Đính kèm nhật ký",
   "@crashReporter.sentToast.sendLog": {

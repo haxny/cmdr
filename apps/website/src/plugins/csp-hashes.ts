@@ -19,7 +19,8 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SCRIPT_ELEMENT = /<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi
+/** An end tag may carry whitespace (`</script >`), which the browser still honors. */
+const SCRIPT_ELEMENT = /<script(\s[^>]*)?>([\s\S]*?)<\/script\b[^>]*>/gi
 
 /** Script types the browser executes, so CSP applies. An absent `type` is classic JS. */
 const EXECUTABLE_TYPE = /^(?:module|text\/javascript|application\/javascript)$/i

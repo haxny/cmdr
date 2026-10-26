@@ -246,7 +246,8 @@
     "confidence": "high",
     "decision": "Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `settings.advanced.logLlmCalls.*`, `commands.askCmdrToggle.*`)",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "English sense: the zip-file row kind (concept archive), not hiding a chat, so it's the noun Archiv"
+      "fileExplorer.list.rowKind.archive": "English sense: the zip-file row kind (concept archive), not hiding a chat, so it's the noun Archiv",
+      "suggestedOps.facts.archive": "English sense: the noun label before the zip file a compress suggestion creates (concept archive), not hiding a chat, so it's the noun Archiv"
     },
     "forms": "badge Archiviert; unarchive → Archivierung aufheben (mirrors Auswahl aufheben); Archivierte ausblenden",
     "note": "Archivierung aufheben is tentative: no direct unarchive source.",
@@ -754,6 +755,12 @@
     },
     "forms": "button Verbinden; Connect to server → Mit Server verbinden( …); Connecting … → Verbindung wird hergestellt …; Connecting to {name} … → Verbindung zu {name} wird hergestellt …; Connected → Verbunden; Connect as guest → Als Gast verbinden; reflexive with du: wenn du dich … verbindest",
     "sources": "macOS Finder (Mit Server verbinden, Verbinden, Serveradresse); NetAuthAgent (CONNECT)"
+  },
+  "learn-more": {
+    "chosen": "Mehr über",
+    "confidence": "high",
+    "forms": "More about “X” → Mehr über „X“",
+    "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
   "link": {
     "chosen": "Link",
@@ -1776,7 +1783,7 @@
     "sources": "macOS (Eingabequelle)"
   },
   "install": {
-    "accept": ["Installiere", "installiert", "Installieren", "Installation"],
+    "accept": ["Installiere", "installiert", "Installieren", "Installation", "installierst"],
     "chosen": "installieren",
     "confidence": "high",
     "forms": "button Installieren; an instruction → Installiere …; the noun → Installation (die Installation abschließen)",
@@ -1792,10 +1799,6 @@
     ],
     "chosen": "Objekt",
     "confidence": "high",
-    "exceptions": {
-      "settings.dataWipe.leftover.secretItems": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes Eintrag, like ai.secretError.removeKeychainBody (den Eintrag „Cmdr“)",
-      "settings.dataWipe.leftover.secretsUnreadable": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes Eintrag, like ai.secretError.removeKeychainBody (den Eintrag „Cmdr“)"
-    },
     "forms": "neuter: weiteres Objekt / weitere Objekte; a sentence that refers back to {name} repeats das Objekt, never a pronoun",
     "sources": "macOS Finder (Ausgewählte Objekte, Objekte komprimieren; PE82)"
   },
@@ -2042,9 +2045,8 @@
     "confidence": "high",
     "decision": "A move that could not be confirmed",
     "exceptions": {
-      "errors.eject.busy": "the message also covers copying and deleting, so it names the Vorgang, not Cmdr’s Move command",
       "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren",
-      "multiRename.movedRow": "reordering a row in the preview list, not relocating a file; the announcement names only the new place (Jetzt an Position …), like the rücken family of the move-up/down keys"
+      "suggestedOps.reversible.moveBack": "putting files back where they were is zurücklegen (style digest), like the trash undo's Zurücklegen"
     },
     "forms": "button Bewegen; progress Wird bewegt; the one move as a noun → die Bewegung, the act → das Bewegen; moves as an enumerated noun has no German noun, so enumerate verbs (umzubenennen, zu bewegen und aufzuräumen)",
     "note": "Don't use bewegen for a message that also covers copying and deleting: say Vorgang there.",
@@ -2118,10 +2120,6 @@
     "accept": ["Freigaben", "freigegeben"],
     "chosen": "Freigabe",
     "confidence": "high",
-    "exceptions": {
-      "errorReporter.dialog.managedOff": "„share it yourself“ is the verb (pass the saved report on), not an SMB share → selbst weitergeben",
-      "servers.sheet.addressHelpNfs": "„share“ is only a path segment inside the example addresses (nfs://nas.local/share), which stay verbatim"
-    },
     "forms": "network share → Netzwerkfreigabe; SMB share → SMB-Freigabe; Connect directly → Direkt verbinden",
     "sources": "macOS (Freigabe, Bildschirmfreigabe); NetAuthAgent EINFO_NO_SHARE"
   },
@@ -2734,10 +2732,6 @@
     "accept": ["umbenannt", "Umbenennung", "umbenenn", "benenne", "benenn"],
     "chosen": "umbenennen",
     "confidence": "high",
-    "exceptions": {
-      "multiRename.undoStarted": "renaming files back → die Namen werden zurückgesetzt: old names back → zurücksetzen (style § Top traps), as askCmdr.renameUndo.*",
-      "multiRename.undoTooltip": "renames files back to their old names → setzt auf die alten Namen zurück: old names back → zurücksetzen (style § Top traps), as askCmdr.renameUndo.*"
-    },
     "forms": "Rename all → Alle umbenennen; progress Wird umbenannt; noun Umbenennung/Umbenennungen; rename cycle → Umbenennungszyklus",
     "sources": "macOS Finder (Umbenennen …), Double Commander, Nautilus (wird … umbenannt)"
   },
@@ -2875,7 +2869,6 @@
     "chosen": "Läuft",
     "confidence": "high",
     "exceptions": {
-      "fileOperations.transferTree.followTooltip": "the files in progress → die Dateien, die gerade in Arbeit sind; a file isn't a process that läuft",
       "queryUi.results.scanProgress": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
       "queryUi.results.scanProgressWithCount": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
       "queryUi.results.scanning": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
@@ -3470,10 +3463,7 @@
     "accept": ["entsperr"],
     "chosen": "Entsperren",
     "confidence": "high",
-    "sources": "macOS AppKit (locked-item button Entsperren)",
-    "exceptions": {
-      "errors.write.trashRefused.suggestion.locked": "English sense: removing Finder’s Locked flag (the locked concept), not an archive password, so it takes the locked ruling’s den Schutz aufheben"
-    }
+    "sources": "macOS AppKit (locked-item button Entsperren)"
   },
   "unplug": {
     "accept": ["abgezogen", "Zieh", "getrennt", "angeschlossen", "herausgezogen", "verbunden"],
@@ -3762,7 +3752,7 @@
     "chosen": "ungeboren",
     "confidence": "high",
     "accept": ["ungeborenem", "ungeborener", "ungeborenen", "noch keine Commits"],
-    "forms": "Auf ungeborenem Branch {branch} (noch keine Commits).; the pill → {branch} (noch keine Commits)",
+    "forms": "Auf ungeborenem Branch „{branch}“ (noch keine Commits).; the pill → {branch} (noch keine Commits)",
     "sources": "git po/de.po („ungeborener Branch“, „Noch keine Commits“, „Auf Branch “); reference pile has no git sense"
   },
   "git-conflicted": {
@@ -3904,10 +3894,7 @@
     "confidence": "high",
     "forms": "the Servers list in prose → die Liste „Server“ (like a menu, never Server-Liste)",
     "decision": "Server fixieren und lösen, die vertrauten Hostschlüssel und die ADB-Seite",
-    "sources": "macOS AppKit (Liste „Farbauswahl“); catalog (servers.pinHint.body, settings.servers.trustedHostKeys.description)",
-    "exceptions": {
-      "errors.write.originalsKeptAside.message.many": "verb sense (the details list every one) → führt … auf, not the noun Liste"
-    }
+    "sources": "macOS AppKit (Liste „Farbauswahl“); catalog (servers.pinHint.body, settings.servers.trustedHostKeys.description)"
   },
   "byte": {
     "accept": ["Bytes"],
@@ -3965,11 +3952,7 @@
     "chosen": "Mehrfach umbenennen",
     "confidence": "high",
     "forms": "command, menu item, and sheet title → Mehrfach umbenennen (menu with … after a no-break space); the act in prose → das Umbenennen; one run as a noun → Mehrfach-Umbenennung (Letzte Mehrfach-Umbenennung widerrufen)",
-    "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)",
-    "exceptions": {
-      "onboarding.stepAi.table.rowRename": "pre-existing onboarding comparison row naming bulk renaming in general as a noun (Massenumbenennung); not this batch's key, left for a follow-up alignment with Mehrfach umbenennen",
-      "onboarding.stepAi.table.renameWithout": "pre-existing onboarding prose (Stapel-Umbenennung); not this batch's key, left for a follow-up alignment with Mehrfach umbenennen"
-    }
+    "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)"
   },
   "load": {
     "accept": ["geladen", "Laden", "lade", "lädt", "lädst"],
@@ -4007,5 +3990,63 @@
     "confidence": "high",
     "forms": "Not a valid name → Kein gültiger Name; isn't valid → ist ungültig",
     "sources": "macOS Finder de (Der eingegebene Name ist ungültig.; Ungültiger Schlüssel); MS terminology; catalog (licensing.dialog.validityValidUntil Gültig bis, ai.cloud.authError ungültig)"
+  },
+  "administrator": {
+    "accept": ["Administratorpasswort", "Administratorrechte", "Administrators", "Administration"],
+    "chosen": "Administrator",
+    "confidence": "high",
+    "forms": "administrator password → Administratorpasswort; administrator rights → Administratorrechte; the person, gender-neutral → die Administration / Systemadministration",
+    "sources": "macOS Finder N15/N17 (Administratorname und -passwort); catalog (main.cliCommand.canceled, errors.write.permissionDenied.suggestion.needsAdminMac)"
+  },
+  "blocked-by": {
+    "accept": ["blockiert", "blockier", "verwehrt"],
+    "chosen": "blockieren",
+    "confidence": "high",
+    "forms": "Cmdr blocked a web page → Cmdr hat eine Webseite blockiert; macOS blocked access → hat … den Zugriff verwehrt",
+    "sources": "MS terminology (block → Blockieren); catalog (securityNotices.mcpForeignOrigin.title)"
+  },
+  "tamper": {
+    "accept": ["manipuliert", "manipulier"],
+    "chosen": "manipulieren",
+    "confidence": "high",
+    "forms": "someone tampering with traffic → jemand den Datenverkehr manipuliert",
+    "sources": "MS terminology (tamper → manipulieren, “to maliciously modify data”); catalog (errors.shareList.signatureInvalid, securityNotices.smbSignatureRefused.body)"
+  },
+  "uninstall": {
+    "accept": ["deinstalliert", "deinstallier"],
+    "chosen": "deinstallieren",
+    "confidence": "high",
+    "forms": "menu item Befehl „cmdr“ deinstallieren; toast Befehl „cmdr“ deinstalliert",
+    "avoid": [
+      {
+        "form": "entfernen",
+        "why": "removing an item from a list; the menu item says deinstallieren, so its toasts follow it"
+      }
+    ],
+    "sources": "MS terminology (uninstall → deinstallieren); catalog (menu.app.cliCommandUninstall); macOS de pile has no uninstall string"
+  },
+  "unlock-device": {
+    "accept": ["entsperr", "entsperrt"],
+    "chosen": "entsperren",
+    "confidence": "high",
+    "forms": "unlock the phone → entsperre das Telefon",
+    "sources": "MS terminology (unlock a device/phone → entsperren); macOS Finder (Datei … entsperren); catalog (fileExplorer.navigation.favoriteUnreachable.phoneUnplugged)"
+  },
+  "from-to": {
+    "accept": ["Von", "Nach"],
+    "chosen": "Von / Nach",
+    "confidence": "high",
+    "exceptions": {
+      "fileOperations.delete.fromPath": "the delete dialog names where files are removed from, with no paired To; Aus: {path} reads as the source location"
+    },
+    "forms": "group headings and fact labels → Von / Nach; with a colon → Von:",
+    "sources": "catalog (fileOperations.transferDialog.sourceGroupTitle Von, targetGroupTitle Nach, scanPhase.fromLabel Von:); Total Commander de (NACH:)"
+  },
+  "unknown": {
+    "accept": ["Unbekannt", "unbekannte"],
+    "chosen": "unbekannt",
+    "confidence": "high",
+    "forms": "a bare value or table cell → Unbekannt; after a noun → Größe unbekannt, Kosten unbekannt",
+    "sources": "macOS (Unbekannt, Unbekannter Fehler); catalog (ai.local.modelUnknown Unbekannt, askCmdr.cost.unknown Kosten unbekannt)"
   }
 }

@@ -1177,9 +1177,9 @@
   "@errors.write.destinationNotAFolder.title": {
     "sourceHash": "d371870"
   },
-  "errors.write.destinationNotAFolder.message": "Cmdr konnte den Zielordner nicht erstellen, weil unter {path} eine Datei liegt, wo ein Ordner sein muss. Es wurde nichts geschrieben, und die Originale sind unberührt.",
+  "errors.write.destinationNotAFolder.message": "Cmdr konnte den Zielordner nicht erstellen, weil unter „{path}“ eine Datei liegt, wo ein Ordner sein muss. Cmdr hat nichts geschrieben, und die Originale sind unberührt.",
   "@errors.write.destinationNotAFolder.message": {
-    "sourceHash": "dfebb59"
+    "sourceHash": "98178cb"
   },
   "errors.write.destinationNotAFolder.suggestion": "Wähle ein anderes Ziel, oder benenne diese Datei um oder bewege sie woandershin und versuche es dann noch einmal.",
   "@errors.write.destinationNotAFolder.suggestion": {
@@ -1457,9 +1457,9 @@
   "@errors.write.replySignatureRefused.title": {
     "sourceHash": "829a591"
   },
-  "errors.write.replySignatureRefused.message": "Die Antwort des Servers war nicht signiert, deshalb hat Cmdr den Vorgang gestoppt.",
+  "errors.write.replySignatureRefused.message": "Die Antwort des Servers hatte keine gültige Signatur, deshalb hat Cmdr den Vorgang gestoppt.",
   "@errors.write.replySignatureRefused.message": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.write.replySignatureRefused.suggestion": "Das kann an einem unzuverlässigen Netzwerkgerät liegen, aber auch daran, dass jemand den Datenverkehr zwischen dir und dem Server manipuliert. Stelle die Verbindung wieder her, und wenn das noch einmal passiert, prüfe dein Netzwerk.",
   "@errors.write.replySignatureRefused.suggestion": {
@@ -2175,7 +2175,7 @@
   },
   "errors.volume.noContent": "„{path}“ ist eine symbolische Verknüpfung oder eine Spezialdatei und hat keinen eigenen Inhalt, den Cmdr kopieren könnte.",
   "@errors.volume.noContent": {
-    "sourceHash": "cebab92"
+    "sourceHash": "8b56bde"
   },
   "errors.volume.ambiguousName": "Mehr als ein Objekt auf dem Server passt zu „{path}“, deshalb hat Cmdr keines ausgewählt. Wähle es stattdessen in seinem Ordner aus.",
   "@errors.volume.ambiguousName": {
@@ -2189,9 +2189,9 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
-  "errors.volume.signatureInvalid": "Die Antwort des Servers war nicht signiert, deshalb hat Cmdr den Vorgang gestoppt.",
+  "errors.volume.signatureInvalid": "Die Antwort des Servers hatte keine gültige Signatur, deshalb hat Cmdr den Vorgang gestoppt.",
   "@errors.volume.signatureInvalid": {
-    "sourceHash": "ba50c7b"
+    "sourceHash": "299f4c3"
   },
   "errors.volume.ioError": "Das Volume konnte das nicht abschließen.",
   "@errors.volume.ioError": {
@@ -2233,13 +2233,13 @@
   "@errors.serverRequest.unexpected": {
     "sourceHash": "5be7ebd"
   },
-  "errors.serverRequest.blockedByPolicy": "Deine Organisation hat das für Cmdr ausgeschaltet.",
+  "errors.serverRequest.blockedByPolicy": "Deine Organisation hat diese Funktion für Cmdr ausgeschaltet.",
   "@errors.serverRequest.blockedByPolicy": {
-    "sourceHash": "9a27fb3"
+    "sourceHash": "acbeb5b"
   },
   "errors.eject.busy": "Dort läuft noch ein Vorgang von Cmdr. Versuche es erneut, sobald er fertig ist.",
   "@errors.eject.busy": {
-    "sourceHash": "560c0db"
+    "sourceHash": "4054483"
   },
   "errors.eject.volumeNotFound": "Dieses Laufwerk ist nicht mehr verbunden, es gibt also nichts auszuwerfen.",
   "@errors.eject.volumeNotFound": {

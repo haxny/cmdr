@@ -57,7 +57,7 @@
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Ничего не выделено} one {Выделено: {countText}} few {Выделено: {countText}} many {Выделено: {countText}} other {Выделено: {countText}}}",
   "@fileExplorer.pane.selectedCount": {
-    "sourceHash": "5f3960b"
+    "sourceHash": "f88241d"
   },
   "fileExplorer.pane.filterMatches": "{count, plural, =0 {Ни одно имя не содержит «{pattern}»} one {{countText} имя содержит «{pattern}»} few {{countText} имени содержат «{pattern}»} many {{countText} имен содержат «{pattern}»} other {{countText} имени содержат «{pattern}»}}",
   "@fileExplorer.pane.filterMatches": {
@@ -520,9 +520,9 @@
   "@fileExplorer.network.share.forgetPasswordTooltip": {
     "sourceHash": "f067186"
   },
-  "fileExplorer.network.share.useGuest": "Войти как гость",
+  "fileExplorer.network.share.useGuest": "Просмотреть как гость",
   "@fileExplorer.network.share.useGuest": {
-    "sourceHash": "53540e5"
+    "sourceHash": "58aa8c3"
   },
   "fileExplorer.network.share.signInAs": "Войти как…",
   "@fileExplorer.network.share.signInAs": {
@@ -632,9 +632,9 @@
   "@fileExplorer.listingStalled.goBack": {
     "sourceHash": "6aadac2"
   },
-  "fileExplorer.clipboard.copied": "Скопировано: {countText} {count, plural, one {объект} few {объекта} many {объектов} other {объекта}}",
+  "fileExplorer.clipboard.copied": "{count, plural, one {Скопирован {countText} объект} few {Скопированы {countText} объекта} many {Скопировано {countText} объектов} other {Скопировано {countText} объекта}}.",
   "@fileExplorer.clipboard.copied": {
-    "sourceHash": "1c25075"
+    "sourceHash": "7d932e1"
   },
   "fileExplorer.compareDirectories.marked": "Выделены отличающиеся файлы: {leftCountText} {leftCount, plural, one {файл} few {файла} many {файлов} other {файла}} слева и {rightCountText} {rightCount, plural, one {файл} few {файла} many {файлов} other {файла}} справа.",
   "@fileExplorer.compareDirectories.marked": {
@@ -1283,13 +1283,13 @@
   "@fileExplorer.git.repoChip.dirty": {
     "sourceHash": "d0c92c7"
   },
-  "fileExplorer.git.repoChip.tooltip.onBranch": "Текущая ветка: {branch}.",
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Текущая ветка: «{branch}».",
   "@fileExplorer.git.repoChip.tooltip.onBranch": {
-    "sourceHash": "ef69ca4"
+    "sourceHash": "1315a9e"
   },
-  "fileExplorer.git.repoChip.tooltip.unborn": "Текущая ветка: {branch} (еще нет коммитов).",
+  "fileExplorer.git.repoChip.tooltip.unborn": "Текущая ветка: «{branch}» (еще нет коммитов).",
   "@fileExplorer.git.repoChip.tooltip.unborn": {
-    "sourceHash": "b7b0611"
+    "sourceHash": "49537ff"
   },
   "fileExplorer.git.repoChip.tooltip.detached": "Отсоединенный HEAD: {id}.",
   "@fileExplorer.git.repoChip.tooltip.detached": {
@@ -1297,7 +1297,7 @@
   },
   "fileExplorer.git.repoChip.tooltip.aheadBehind": "Впереди «{upstream}» на {ahead, plural, one {{aheadText} коммит} few {{aheadText} коммита} many {{aheadText} коммитов} other {{aheadText} коммита}}, позади на {behind, plural, one {{behindText} коммит} few {{behindText} коммита} many {{behindText} коммитов} other {{behindText} коммита}}.",
   "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
-    "sourceHash": "02815c7"
+    "sourceHash": "0c36306"
   },
   "fileExplorer.git.repoChip.tooltip.dirty": "В рабочем дереве есть незафиксированные изменения.",
   "@fileExplorer.git.repoChip.tooltip.dirty": {
@@ -1679,25 +1679,25 @@
   "@fileExplorer.navigation.favoriteStatus.notFound": {
     "sourceHash": "48710a9"
   },
-  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "Телефон {device} не подключен. Подключите его USB-кабелем и разблокируйте, затем попробуйте еще раз.",
+  "fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": "Телефон «{device}» не подключен. Подключите его USB-кабелем, разблокируйте и попробуйте еще раз.",
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
-    "sourceHash": "e0232ec"
+    "sourceHash": "00f7bf0"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Хранилище с этой папкой на телефоне {device} сейчас недоступно.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Хранилище, на котором была эта папка, сейчас недоступно на телефоне «{device}».",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
-    "sourceHash": "c16cdc6"
+    "sourceHash": "a06d5ae"
   },
   "fileExplorer.navigation.favoriteUnreachable.driveUnplugged": "Диск «{drive}» не подключен. Подключите его и попробуйте еще раз.",
   "@fileExplorer.navigation.favoriteUnreachable.driveUnplugged": {
     "sourceHash": "4b44a30"
   },
-  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Поддержка телефонов и камер по MTP выключена в настройках.",
+  "fileExplorer.navigation.favoriteUnreachable.mtpOff": "Доступ к телефонам и камерам по MTP выключен в настройках.",
   "@fileExplorer.navigation.favoriteUnreachable.mtpOff": {
-    "sourceHash": "e441dc0"
+    "sourceHash": "53be5f6"
   },
-  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Поддержка телефонов Android выключена в настройках.",
+  "fileExplorer.navigation.favoriteUnreachable.adbOff": "Доступ к телефонам Android выключен в настройках.",
   "@fileExplorer.navigation.favoriteUnreachable.adbOff": {
-    "sourceHash": "c61bf95"
+    "sourceHash": "4fba610"
   },
   "fileExplorer.navigation.favoriteUnreachable.forgotten": "Cmdr больше не знает, как подключиться к этому месту ({place}). Подключитесь заново в разделе «Серверы», и этот пункт избранного снова заработает.",
   "@fileExplorer.navigation.favoriteUnreachable.forgotten": {
@@ -2018,6 +2018,10 @@
   "fileExplorer.navigation.driveIndex.deferredEnable": "Cmdr сейчас выполняет поиск на {name}. Индексация начнется после его завершения.",
   "@fileExplorer.navigation.driveIndex.deferredEnable": {
     "sourceHash": "b27d24c"
+  },
+  "fileExplorer.navigation.driveIndex.enabled": "Индексация диска «{name}» включена.",
+  "@fileExplorer.navigation.driveIndex.enabled": {
+    "sourceHash": "9136041"
   },
   "fileExplorer.navigation.driveIndex.queuedBehindScan": "Cmdr сейчас индексирует {name}. Запрошенное сканирование начнется после завершения индексации.",
   "@fileExplorer.navigation.driveIndex.queuedBehindScan": {

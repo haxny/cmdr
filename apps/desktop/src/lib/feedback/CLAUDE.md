@@ -7,8 +7,9 @@ server shows on the same card. Entry points, mount location, and behavior detail
 ## Module map
 
 - `feedback-flow.svelte.ts`: reactive `feedbackFlow` store + `openFeedbackDialog()` / `closeFeedbackDialog()`.
-- `FeedbackDialog.svelte`: the dialog (textarea, attach-email and include-logs checkboxes, GitHub / book-a-call links,
-  send / cancel).
+- `FeedbackDialog.svelte`: the dialog (textarea, attach-email and include-logs checkboxes, a link that opens the logs in
+  the File viewer while logs are ticked, GitHub / book-a-call links, send / cancel). The send reuses the id that view
+  minted (`logsReportId`); `DETAILS.md` § Including logs.
 
 ## Must-knows
 

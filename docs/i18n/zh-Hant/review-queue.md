@@ -55,8 +55,8 @@ worth keeping).
 - **`來來去去`** (`settings.revealHandler.notProductionBuild`), **`停住不動了`** (the viewer's fetch stall), **`跟上`**
   (`indexing.staleDialog.bodyPhone`), **`編輯檔案時使用`** (`settings.behavior.textEditorApp.label`): judgment calls.
 - **`以 {username} 身分登入` / `以訪客身分登入`** (`servers.hub.shareAccount` / `.guestAccount`) and the buttons
-  `以其他身分登入⋯` / `改用訪客身分` (`fileExplorer.network.share.*`): composed; check the quiet suffix reads well after
-  a name and fits the share-list header.
+  `以其他身分登入⋯` / `以訪客身分瀏覽` (`fileExplorer.network.share.*`): composed; check the quiet suffix reads well
+  after a name and fits the share-list header.
 - **`復原的對象：{time} 的「…」` / `最近一次復原：{time} 的「…」`** (`operationLog.dialog.rollbackOf`,
   `.latestRollback`, `.rollbackOfUnlisted`): composed colon frames for "Rollback of … from {time}"; check they read well
   as quiet sub-lines.
@@ -75,3 +75,6 @@ worth keeping).
   rendered, dodging the disk sense of `格式化`.
 - **`共享資料夾` for an NFS export** (`servers.sheet.nfsExport` and every `nfs*` / `refusal.export*` key): shares the
   SMB share's word, so the two protocols' folders read alike; Synology DSM zh-TW says `共用資料夾`, MS/Linux `匯出`.
+- **AI 建議 batch headings and pills** (`suggestedOps.sweepWhen.*`, `.reversible.*`, `.irreversible.*`): headings end in
+  `建議的` (`今天 {time} 建議的`), pills open `可以還原：` / `無法還原：`, and the reason label is `理由：`. Confirm
+  they read naturally in the dialog, and that `{date} 建議的` reads right after an ISO date.

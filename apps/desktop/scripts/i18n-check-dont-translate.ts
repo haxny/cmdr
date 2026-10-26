@@ -53,7 +53,11 @@ export { BRAND_WORDS, SYSTEM_TOKENS }
 export function droppedTokens(englishValue: string, localeValue: string): string[] {
   const dropped: string[] = []
   for (const word of BRAND_WORDS) {
-    if (hasWholeWord(englishValue, word) && !hasBrandPresent(localeValue, word)) dropped.push(word)
+    // Casings listed together (`git` / `Git`) are one brand: German capitalizes the noun, and that keeps it.
+    const casings = BRAND_WORDS.filter((other) => other.toLowerCase() === word.toLowerCase())
+    if (hasWholeWord(englishValue, word) && !casings.some((casing) => hasBrandPresent(localeValue, casing))) {
+      dropped.push(word)
+    }
   }
   for (const token of SYSTEM_TOKENS) {
     if (englishValue.includes(token) && !localeValue.includes(token)) dropped.push(token)

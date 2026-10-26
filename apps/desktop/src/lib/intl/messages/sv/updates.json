@@ -56,9 +56,9 @@
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} är klar, men Cmdr kan inte installera den själv",
+  "updates.unwritable.adminHeadline": "Cmdr {version} finns nu, men Cmdr kan inte installera den själv",
   "@updates.unwritable.adminHeadline": {
-    "sourceHash": "a0c72ea"
+    "sourceHash": "8e6aecc"
   },
   "updates.unwritable.adminDetail": "{path} tillhör ett annat konto. Uppdatera genom att hämta Cmdr från <website>getcmdr.com</website> och dra appen till mappen Appar. macOS frågar efter ditt lösenord.",
   "@updates.unwritable.adminDetail": {

@@ -39,7 +39,7 @@ pub use cloud::get_cloud_drives;
 pub(crate) use cloud::resolve_cloud_drive_for_path;
 pub use cmdr_local::space::get_volume_space;
 pub(crate) use fs_type::{get_fs_type, get_mount_point, read_only_from_statfs};
-pub use fs_type::{is_network_fs_type, is_smb_fs_type, supports_trash_for_fs_type};
+pub use fs_type::{is_network_fs_type, is_smb_fs_type, supports_trash_for_mount};
 pub(crate) use ids::{volume_id_for, volume_id_for_mount};
 pub use mounts::get_attached_volumes;
 pub(crate) use mounts::{
@@ -251,7 +251,7 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
         return Some(cloud);
     }
 
-    let (mount_point, fs_type) = get_mount_point(path)?;
+    let (mount_point, fs_type, source) = get_mount_point(path)?;
 
     // Drain autoreleased ObjC objects (NSURL, NSString).
     autoreleasepool(|_| {
@@ -262,7 +262,7 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
         // Local mounts only, as `get_attached_volumes` answers it: a network mount ends through
         // its session, and the lookup can hang on a dead one.
         let is_ejectable = !is_network_fs_type(Some(&fs_type)) && is_volume_ejectable(&url, &mount_point);
-        let supports_trash = supports_trash_for_fs_type(Some(&fs_type));
+        let supports_trash = supports_trash_for_mount(Some(&source), Some(&fs_type));
         // Same two answers `get_attached_volumes` gives this mount, from the same
         // predicate: a switcher whose checkmark lands on a CLOUD row while the pane
         // calls the volume an attached drive is the drift this pairing prevents.
@@ -371,11 +371,8 @@ fn favorite_location(
     use crate::favorites::target::{FavoriteTarget, OnDisk, Probe, on_disk};
 
     let path = Path::new(&favorite.path);
-    let fs_type = path
-        .is_absolute()
-        .then(|| mounts::fs_type_under(mounts, path))
-        .flatten()
-        .map(str::to_string);
+    let mount = path.is_absolute().then(|| mounts::mount_under(mounts, path)).flatten();
+    let fs_type = mount.map(|mount| mount.fs_type.clone());
     let probe = if is_network_fs_type(fs_type.as_deref()) {
         Probe::NetworkMount
     } else if fda_pending && crate::restricted_paths::tcc_paths::is_potentially_tcc_restricted(path) {
@@ -393,7 +390,8 @@ fn favorite_location(
         id: format!("fav-{}", favorite.id),
         name: favorite.name,
         // A scheme path has no mount, so no OS trash either.
-        supports_trash: fs_type.is_some() && supports_trash_for_fs_type(fs_type.as_deref()),
+        supports_trash: mount
+            .is_some_and(|mount| supports_trash_for_mount(Some(&mount.mount_from), Some(&mount.fs_type))),
         path: favorite.path,
         category: LocationCategory::Favorite,
         icon,
@@ -431,7 +429,8 @@ fn get_main_volume() -> Option<LocationInfo> {
         let url = NSURL::fileURLWithPath(&NSString::from_str("/"));
         let name = get_volume_name(&url, "/");
         let fs_type = get_fs_type("/");
-        let supports_trash = supports_trash_for_fs_type(fs_type.as_deref());
+        // The boot volume's type (APFS, HFS+) answers the rule without its source.
+        let supports_trash = supports_trash_for_mount(None, fs_type.as_deref());
         Some(LocationInfo {
             id: DEFAULT_VOLUME_ID.to_string(),
             name,
