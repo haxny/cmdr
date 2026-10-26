@@ -29,7 +29,7 @@
   },
   "suggestedOps.sweepWhen.earlier": "Suggested {date}",
   "@suggestedOps.sweepWhen.earlier": {
-    "description": "Heading above a batch of AI suggestions made before yesterday. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-20 12:22\"."
+    "description": "Heading above a batch of AI suggestions made before yesterday. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-20 12:22\". {date} always starts with the date (never a weekday or a word like \"on\")."
   },
   "suggestedOps.empty": "Nothing is waiting for you right now.",
   "@suggestedOps.empty": {
@@ -47,9 +47,9 @@
   "@suggestedOps.agentReasonTooltip": {
     "description": "Tooltip on the \"Why:\" label (suggestedOps.agentReason) before the AI's explanation of a suggestion. Load-bearing: it marks the text as the AI's claim rather than something Cmdr verified."
   },
-  "suggestedOps.agentReasonSpoken": "The AI’s reason:",
+  "suggestedOps.agentReasonSpoken": "Why, according to the AI:",
   "@suggestedOps.agentReasonSpoken": {
-    "description": "What a screen reader says in place of the visible \"Why:\" label (suggestedOps.agentReason), before the AI's explanation of a suggestion. Load-bearing: it names the AI as the source, which the short visible label leaves to its tooltip."
+    "description": "What a screen reader says in place of the visible \"Why:\" label (suggestedOps.agentReason), before the AI's explanation of a suggestion. It must start with the same words as the visible label (WCAG 2.5.3, label in name), then name the AI as the source, which the short visible label leaves to its tooltip."
   },
   "suggestedOps.fileCount": "{countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.fileCount": {
@@ -117,7 +117,7 @@
   },
   "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
   "@suggestedOps.reversible.moveBack": {
-    "description": "Pill on a suggestion that moves files, saying the user can take it back because Cmdr can move the files back where they were. {count} only picks \"it\" or \"them\"."
+    "description": "Pill on a suggestion that moves files, saying the user can take it back because Cmdr can move the files back where they were. {count} only picks \"it\" or \"them\". The items can be files or folders."
   },
   "suggestedOps.reversible.renameBack": "You can undo this: Cmdr can change the {count, plural, one {name} other {names}} back",
   "@suggestedOps.reversible.renameBack": {
