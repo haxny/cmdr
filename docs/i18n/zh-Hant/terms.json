@@ -2445,8 +2445,7 @@
     "confidence": "tentative",
     "decision": "Mount and share-list sentences",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the saved report on), not an SMB share: 分享出去.",
-      "servers.sheet.addressHelpNfs": "\"share\" sits only inside the verbatim example addresses (nfs://nas.local/share), which stay Latin."
+      "errorReporter.dialog.managedOff": "English \"share it yourself\" is the verb (pass the saved report on), not an SMB share: 分享出去."
     },
     "forms": "mounted share → 已裝載的共享資料夾; a share named X → 名為「X」的共享資料夾",
     "sources": "derived from Apple Shared → 已共享 + folder; NetAuthAgent EINFO_NO_SHARE says bare 共享"

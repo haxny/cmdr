@@ -1993,8 +1993,7 @@
     "sources": "macOS (recurso compartido), NetAuthAgent (EINFO_NO_SHARES), MS",
     "exceptions": {
       "settings.section.smbNetworkShares": "Settings sidebar title, shortened to SMB/Recursos de red.",
-      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the report on), not a network share: compartirlo tú.",
-      "servers.sheet.addressHelpNfs": "\"share\" sits only inside the example addresses (nfs://nas.local/share), which stay verbatim."
+      "errorReporter.dialog.managedOff": "\"share it yourself\" is the verb (pass the report on), not a network share: compartirlo tú."
     },
     "decision": "Por qué no se monta un recurso compartido"
   },

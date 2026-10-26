@@ -1023,7 +1023,6 @@
   "documents": {
     "en": "documents",
     "match": ["documents", "document"],
-    "notMatch": ["~/documents"],
     "sense": "Office and text documents as a file kind."
   },
   "done": {
@@ -1042,7 +1041,6 @@
     "distinct": ["fetch"],
     "en": "download",
     "match": ["download", "downloads", "downloading", "downloaded"],
-    "notMatch": ["~/downloads"],
     "sense": "Fetching an update, a model, or a file from the internet; also the Downloads folder jump."
   },
   "drag": {
@@ -1900,7 +1898,7 @@
     "distinct": ["remote", "local-network"],
     "en": "local",
     "match": ["local", "locally"],
-    "notMatch": ["local network", "local networks", "nas.local", "/usr/local"],
+    "notMatch": ["local network", "local networks"],
     "sense": "On this Mac, as opposed to a server or the cloud (a local model, stored locally)."
   },
   "local-network": {

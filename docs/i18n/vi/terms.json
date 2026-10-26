@@ -1976,7 +1976,6 @@
     "confidence": "high",
     "decision": "Tên tiện ích macOS, mục chia sẻ, liên kết mềm, beta công khai",
     "exceptions": {
-      "servers.sheet.addressHelpNfs": "The word `share` sits inside the example addresses nfs://nas.local/share and nas.local:/share, which the `@key` says to keep as-is.",
       "errorReporter.dialog.managedOff": "English-sense: \"share it yourself\" is the verb (pass a saved report on), so `tự chia sẻ`, not the SMB noun."
     },
     "forms": "a share → mục chia sẻ (also inside Settings); shared folder → thư mục chia sẻ; an S3 share link (a web address, another English sense) → liên kết chia sẻ",

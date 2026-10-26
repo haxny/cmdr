@@ -2435,8 +2435,7 @@
     "confidence": "high",
     "sources": "ms (network share → hálózati megosztás); macOS NetAuthAgent (EINFO_NO_SHARE)",
     "exceptions": {
-      "errorReporter.dialog.managedOff": "share it yourself is the verb, not an SMB share: magad oszthatod meg (the preverb splits off, so megoszt doesn't match).",
-      "servers.sheet.addressHelpNfs": "share is the literal path in the example addresses (nfs://nas.local/share), kept verbatim"
+      "errorReporter.dialog.managedOff": "share it yourself is the verb, not an SMB share: magad oszthatod meg (the preverb splits off, so megoszt doesn't match)."
     }
   },
   "new-file": {

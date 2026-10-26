@@ -2058,9 +2058,6 @@
     "chosen": "partage",
     "confidence": "high",
     "decision": "Réseau : connexion, identification et partages",
-    "exceptions": {
-      "servers.sheet.addressHelpNfs": "the English share is a literal path in the example addresses (nfs://nas.local/share), kept as-is"
-    },
     "forms": "network share → partage réseau (masculine); SMB share → partage SMB",
     "sources": "macOS (Partage et permissions); NetAuthAgent EINFO_NO_SHARE; MS terminology FRA"
   },
