@@ -28,13 +28,19 @@ the list's state. An irreversible group's button is the `danger` variant, so the
 looks like it.
 
 **The undo pill says why** (`reversibilityKey`): "You can undo this: they go to the Trash", "…: Cmdr can move them
-back", "…: Cmdr deletes the copies". The backend decides reversibility per volume, so a trash group on a drive with no
-Trash arrives `irreversible` and reads "This can't be undone: this drive has no Trash". The pills sit beside the count
-as real capsules (`--radius-full`, a hairline, `--font-size-sm`), so they line up with the header text.
+back", "…: Cmdr deletes the copies". The pills sit beside the count as real capsules (`--radius-full`, a hairline,
+`--font-size-sm`), so they line up with the header text.
 
 **Reversibility is disclosed, never enforced.** The pill renders whatever `Reversibility` says, including a permanent
 delete. Refusing the group there would be an agent-specific safety behaviour on the execution path, which the guiding
 principle rules out: an approved op is a user-started op.
+
+**A group the engine would refuse outright says so before the click** (`runBlocker`, `runBlockerKeys`). A trash group on
+a drive with no Trash can't run at all: the OS refuses every item and NOTHING is deleted, so it isn't "irreversible",
+it's a no-op. Its pill reads "Can't run: this drive has no Trash" in place of the undo pill, and its action button is
+`ariaDisabled` with the reason as its tooltip: still focusable so the reason reaches the keyboard, and pressing it runs
+nothing. This isn't an agent-specific refusal: the engine refuses the same move when a user starts it; the dialog only
+declines to offer a button that can only fail.
 
 ## The file list
 

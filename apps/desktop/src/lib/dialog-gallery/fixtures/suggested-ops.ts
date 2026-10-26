@@ -45,6 +45,7 @@ interface FixtureGroup {
   destination?: string | null
   destinationVolumeName?: string | null
   reversible?: SuggestedGroupView['reversible']
+  runBlocker?: SuggestedGroupView['runBlocker']
   destinationState?: SuggestedGroupView['destinationState']
   fromSelector?: boolean
   files: FixtureFile[]
@@ -66,6 +67,7 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     destination: group.destination ?? null,
     destinationVolumeName: group.destinationVolumeName ?? null,
     reversible: group.reversible ?? 'restoreMove',
+    runBlocker: group.runBlocker ?? null,
     destinationState: group.destinationState ?? (group.destination ? 'exists' : 'notApplicable'),
     liveOpCount: total,
     totalOpCount: total,
@@ -184,7 +186,7 @@ const DOWNLOADS_CLEANUP: FixtureGroup[] = [
     displayName: 'Old exports on the NAS',
     rationale: 'Nobody opened these in over a year.',
     sourceFolder: '/exports/2024',
-    reversible: 'irreversible',
+    runBlocker: 'noTrash',
     files: [
       { name: 'board-deck-2024-q1.key', size: 48 * MB, modified: daysAgo(560) },
       { name: 'board-deck-2024-q2.key', size: 51 * MB, modified: daysAgo(470) },

@@ -17,7 +17,7 @@
         suggestedOpsState,
     } from './suggested-ops-trigger.svelte'
     import { refusalReason } from './suggested-ops-refusal'
-    import { approveKey, reversibilityKey } from './suggested-ops-copy'
+    import { approveKey, reversibilityKey, runBlockerKeys } from './suggested-ops-copy'
     import AgentReason from './AgentReason.svelte'
     import SuggestedOpFiles from './SuggestedOpFiles.svelte'
 
@@ -36,6 +36,8 @@
         return answer ? refusalReason(answer, group.verb) : null
     })
     const irreversible = $derived(group.reversible === 'irreversible')
+    /** The engine would refuse this group outright, so the pill says so and the button can't run it. */
+    const blocker = $derived(group.runBlocker === null ? null : runBlockerKeys(group.runBlocker))
     const titleId = $derived(`suggested-group-${String(group.groupId)}-title`)
 </script>
 
@@ -46,9 +48,13 @@
             {tString('suggestedOps.fileCount', { countText: formatInteger(group.liveOpCount), count: group.liveOpCount })}
         </span>
         <ul class="pills">
-            <li class="pill" class:danger={irreversible}>
-                {tString(reversibilityKey(group.verb, group.reversible), { count: group.liveOpCount })}
-            </li>
+            {#if blocker}
+                <li class="pill danger" use:tooltip={tString(blocker.tooltip)}>{tString(blocker.pill)}</li>
+            {:else}
+                <li class="pill" class:danger={irreversible}>
+                    {tString(reversibilityKey(group.verb, group.reversible), { count: group.liveOpCount })}
+                </li>
+            {/if}
             {#if group.destinationState === 'willBeCreated'}
                 <li class="pill" use:tooltip={tString('suggestedOps.folderWillBeCreatedTooltip')}>
                     {tString('suggestedOps.folderWillBeCreated')}
@@ -109,7 +115,12 @@
         <Button
             variant={irreversible ? 'danger' : 'primary'}
             disabled={busy || count === 0}
-            onclick={() => void approveGroup(group.groupId)}
+            ariaDisabled={blocker !== null}
+            tooltipContent={blocker ? tString(blocker.tooltip) : undefined}
+            onclick={() => {
+                // A blocked group explains itself through the tooltip; pressing it runs nothing.
+                if (!blocker) void approveGroup(group.groupId)
+            }}
         >
             {tString(approveKey(group.verb), { countText: formatInteger(count), count })}
         </Button>

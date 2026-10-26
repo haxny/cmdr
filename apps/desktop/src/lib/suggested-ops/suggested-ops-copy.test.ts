@@ -6,7 +6,15 @@
 
 import { describe, expect, it } from 'vitest'
 import type { SuggestedOpView } from '#lib/tauri-commands/index.js'
-import { approveKey, fileIconId, fileName, parentFolder, reversibilityKey, rowFacts } from './suggested-ops-copy'
+import {
+  approveKey,
+  fileIconId,
+  fileName,
+  parentFolder,
+  reversibilityKey,
+  rowFacts,
+  runBlockerKeys,
+} from './suggested-ops-copy'
 
 function op(overrides: Partial<SuggestedOpView> = {}): SuggestedOpView {
   return {
@@ -42,8 +50,8 @@ describe('the reversibility pill', () => {
     expect(reversibilityKey('extract', 'deleteWhatWasWritten')).toBe('suggestedOps.reversible.removeExtracted')
   })
 
-  it('never promises a Trash on a drive that has none', () => {
-    expect(reversibilityKey('trash', 'irreversible')).toBe('suggestedOps.irreversible.noTrash')
+  it('says a trash on a drive with no Trash can’t run, rather than promising an undo', () => {
+    expect(runBlockerKeys('noTrash').pill).toBe('suggestedOps.blocked.noTrash')
   })
 
   it('says why a delete or an overwrite is for good', () => {

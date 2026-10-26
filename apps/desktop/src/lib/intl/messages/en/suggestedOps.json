@@ -111,9 +111,13 @@
   "@suggestedOps.irreversible.delete": {
     "description": "Warning pill on a suggestion that deletes files permanently, skipping the Trash. Disclosure only: the user can still approve it."
   },
-  "suggestedOps.irreversible.noTrash": "This can’t be undone: this drive has no Trash",
-  "@suggestedOps.irreversible.noTrash": {
-    "description": "Warning pill on a suggestion to move files to the Trash when the files are on a drive or server that has no Trash, so they'd be gone for good. Use the same name for the Trash as the macOS Finder does."
+  "suggestedOps.blocked.noTrash": "Can’t run: this drive has no Trash",
+  "@suggestedOps.blocked.noTrash": {
+    "description": "Warning pill on a suggestion to move files to the Trash when the files are on a drive or server that keeps no Trash. Approving would do nothing (the system refuses every file and nothing is deleted), so the approve button is unavailable. Use the same name for the Trash as the macOS Finder does. The tooltip is suggestedOps.blocked.noTrashTooltip."
+  },
+  "suggestedOps.blocked.noTrashTooltip": "The drive these files are on keeps no Trash, so moving them there can’t work and nothing would happen. Reject this, or delete the files yourself if that’s what you want.",
+  "@suggestedOps.blocked.noTrashTooltip": {
+    "description": "Tooltip on the suggestedOps.blocked.noTrash pill and on the unavailable approve button beside it. Use the same name for the Trash as the macOS Finder does."
   },
   "suggestedOps.irreversible.overwrite": "This can’t be undone: it replaces an existing archive",
   "@suggestedOps.irreversible.overwrite": {

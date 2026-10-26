@@ -24,7 +24,8 @@ and per-op deselection. Backend: `apps/desktop/src-tauri/src/commands/agent/sugg
   gone file says so; an unchecked one falls back to the snapshot WITH a label. ❌ Never a zero for an absent value, ❌
   never an unlabelled snapshot.
 - **Reversibility and "the folder will be created" are DISCLOSED, never blocking.** The pill says WHY, by verb
-  (`reversibilityKey`); a trash on a drive with no Trash is irreversible and says so.
+  (`reversibilityKey`). A group the engine would refuse outright (`runBlocker`, a trash on a drive with no Trash) says
+  so instead, and its button explains rather than runs.
 - **Each group loads a WINDOW at a time** (`OP_WINDOW_SIZE`), sized by `COUNT(*)`, through `ColumnList`'s windowed
   source. A group of 60,000 is legitimate: ❌ nothing loads a group to show it, "Show all" included.
 - **Deselection is a per-group set of op ids, with deliberately no "deselect all".** Approving sends the ids turned OFF,

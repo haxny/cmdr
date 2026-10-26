@@ -1,6 +1,6 @@
 /**
  * The words and facts a group row reads out: which action the button names, why an approval
- * can or can't be taken back, and what a file's size and date say now against what they said
+ * can or can't be taken back (or can't run at all), and what a file's size and date say now against what they said
  * when the AI suggested it.
  *
  * Pure, so the copy each verb gets and the comparison each row makes are pinned by tests rather
@@ -8,7 +8,7 @@
  */
 
 import type { MessageKey } from '#lib/intl/keys.gen.js'
-import type { ProposalVerb, Reversibility } from '#lib/ipc/bindings.js'
+import type { ProposalVerb, Reversibility, RunBlocker } from '#lib/ipc/bindings.js'
 import type { SuggestedOpView } from '#lib/tauri-commands/index.js'
 import type { LiveFact } from './suggested-ops-trigger.svelte'
 
@@ -37,8 +37,7 @@ export function approveKey(verb: ProposalVerb): MessageKey {
  * The reversibility pill, saying WHY, taking `{count}`.
  *
  * The verb picks the reason: the same `restoreMove` means "it goes to the Trash" for a trash
- * group and "Cmdr can move them back" for a move. A trash group the backend marks irreversible
- * is on a volume with no Trash, so it says that rather than claiming a Trash that isn't there.
+ * group and "Cmdr can move them back" for a move.
  */
 export function reversibilityKey(verb: ProposalVerb, reversible: Reversibility): MessageKey {
   switch (reversible) {
@@ -52,10 +51,19 @@ export function reversibilityKey(verb: ProposalVerb, reversible: Reversibility):
       return 'suggestedOps.reversible.removeCopies'
     case 'irreversible':
       if (verb === 'delete') return 'suggestedOps.irreversible.delete'
-      if (verb === 'trash') return 'suggestedOps.irreversible.noTrash'
       if (verb === 'compress') return 'suggestedOps.irreversible.overwrite'
       return 'suggestedOps.irreversible.other'
   }
+}
+
+/** The pill and the unavailable button's tooltip for a group the engine would refuse outright. */
+export function runBlockerKeys(blocker: RunBlocker): { pill: MessageKey; tooltip: MessageKey } {
+  return RUN_BLOCKER_KEYS[blocker]
+}
+
+/** Keyed by every `RunBlocker`, so a new variant is a compile error until it has its words. */
+const RUN_BLOCKER_KEYS: Record<RunBlocker, { pill: MessageKey; tooltip: MessageKey }> = {
+  noTrash: { pill: 'suggestedOps.blocked.noTrash', tooltip: 'suggestedOps.blocked.noTrashTooltip' },
 }
 
 /**

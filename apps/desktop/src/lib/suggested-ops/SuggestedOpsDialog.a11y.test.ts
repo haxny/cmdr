@@ -107,6 +107,7 @@ function group(overrides: Record<string, unknown> = {}) {
     destination: '/backups/Installers',
     destinationVolumeName: 'Naspolya',
     reversible: 'restoreMove',
+    runBlocker: null,
     destinationState: 'exists',
     liveOpCount: 3,
     totalOpCount: 3,
@@ -270,11 +271,16 @@ describe('disclosure', () => {
     expect(buttons).toContain('Delete 3 files')
   })
 
-  it('never promises a Trash on a drive that has none', () => {
-    seed({ verb: 'trash', reversible: 'irreversible', destination: null, destinationState: 'notApplicable' })
+  it('says a trash on a drive with no Trash can’t run, and won’t run it', () => {
+    seed({ verb: 'trash', runBlocker: 'noTrash', destination: null, destinationState: 'notApplicable' })
     const host = mountDialog()
 
-    expect(host.textContent).toContain('This can’t be undone: this drive has no Trash')
+    expect(host.textContent).toContain('Can’t run: this drive has no Trash')
+    expect(host.textContent).not.toContain('You can undo this')
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Move 3 files to Trash')
+    expect(button?.getAttribute('aria-disabled')).toBe('true')
+    button?.click()
+    expect(actions.approve).not.toHaveBeenCalled()
   })
 
   it('says when approving would create the target folder', () => {
@@ -413,24 +419,27 @@ describe('honest absence', () => {
 
 /** The dialog's parts, each audited on its own as well, so a part reused elsewhere stays clean. */
 describe('the parts on their own', () => {
-  async function audit(component: Parameters<typeof mount>[0], props: Record<string, unknown>): Promise<HTMLElement> {
+  function freshHost(): HTMLElement {
     const host = document.createElement('div')
     document.body.appendChild(host)
-    mount(component, { target: host, props })
-    flushSync()
-    await expectNoA11yViolations(host)
     return host
   }
 
   it('AgentReason labels the AI’s words', async () => {
     const AgentReason = (await import('./AgentReason.svelte')).default
-    const host = await audit(AgentReason, { text: 'They all look like invoices.' })
+    const host = freshHost()
+    mount(AgentReason, { target: host, props: { text: 'They all look like invoices.' } })
+    flushSync()
+    await expectNoA11yViolations(host)
     expect(host.textContent).toContain('The AI’s reason')
   })
 
   it('SuggestedOpsGroup renders a group with no violations', async () => {
     const SuggestedOpsGroup = (await import('./SuggestedOpsGroup.svelte')).default
-    const host = await audit(SuggestedOpsGroup, { group: group() })
+    const host = freshHost()
+    mount(SuggestedOpsGroup, { target: host, props: { group: group() as never } })
+    flushSync()
+    await expectNoA11yViolations(host)
     expect(host.textContent).toContain('Move 3 files')
   })
 
@@ -438,7 +447,10 @@ describe('the parts on their own', () => {
     const SuggestedOpFiles = (await import('./SuggestedOpFiles.svelte')).default
     const { createRawSnippet } = await import('svelte')
     const actions = createRawSnippet(() => ({ render: () => '<span></span>' }))
-    const host = await audit(SuggestedOpFiles, { group: group(), actions })
+    const host = freshHost()
+    mount(SuggestedOpFiles, { target: host, props: { group: group() as never, actions } })
+    flushSync()
+    await expectNoA11yViolations(host)
     expect(host.textContent).toContain('invoice-jan.pdf')
   })
 })
