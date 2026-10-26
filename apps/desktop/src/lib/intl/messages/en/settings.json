@@ -2714,7 +2714,7 @@
     "description": "Label for the text field where the user picks a dedicated model for Ask Cmdr. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
-  "settings.askCmdr.interactiveModel.description": "The model the chat uses. Leave blank to use the same model as Cmdr’s other AI features. Example: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "The model the chat uses. Leave blank to use the same model as Cmdr’s other AI features. Example: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
     "description": "Help text under the Ask Cmdr model field. Explains that blank falls back to the shared AI model, and gives an example model id. The example id and the apostrophe (U+2019) stay as written; do not translate the example id.",
     "screenshot": "settings-ai-ask-cmdr.png"

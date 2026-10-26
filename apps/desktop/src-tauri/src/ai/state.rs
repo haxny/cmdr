@@ -43,7 +43,7 @@ pub(super) struct ManagerState {
     pub(super) cloud_api_key: String,
     /// Cloud-AI provider base URL (e.g. `https://api.openai.com/v1`, `https://api.anthropic.com/v1/`)
     pub(super) cloud_base_url: String,
-    /// Cloud-AI provider model name (e.g. `gpt-4o-mini`, `claude-sonnet-4-5`, `gemini-2.5-flash`)
+    /// Cloud-AI provider model name (e.g. `gpt-4o-mini`, `claude-sonnet-5-5`, `gemini-2.5-flash`)
     pub(super) cloud_model: String,
     /// Whether the selected cloud provider needs an API key. The frontend owns this fact
     /// (`requiresApiKey` per provider preset); keyless endpoints (Ollama, LM Studio, a custom
