@@ -1586,9 +1586,6 @@
   "go-to-trash": {
     "chosen": "Aller à la corbeille",
     "confidence": "high",
-    "exceptions": {
-      "suggestedOps.reversible.trash": "English-sense: the files go to the Trash (le fichier est placé dans la corbeille), the move-to-trash sense, not the Go to trash command."
-    },
     "forms": "the toast button and the command read identically",
     "sources": "catalog siblings (Aller au dossier parent, Aller au dernier téléchargement)"
   },
