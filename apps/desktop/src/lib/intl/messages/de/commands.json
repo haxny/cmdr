@@ -1248,9 +1248,9 @@
   "@commands.handler.zoomDecreased": {
     "sourceHash": "71404cb"
   },
-  "commands.suggestedOpsShow.label": "Vorgeschlagene Aktionen",
+  "commands.suggestedOpsShow.label": "KI-Vorschläge",
   "@commands.suggestedOpsShow.label": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "commands.suggestedOpsShow.description": "Sieh dir die von der KI vorgeschlagenen Dateivorgänge an und entscheide, was läuft",
   "@commands.suggestedOpsShow.description": {

@@ -1688,15 +1688,15 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
-  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "settings.suggestedOps.suppressApprovalNotice.label": "Zustimmungshinweis im Dialog „KI-Vorschläge“ unterdrücken",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
     "sourceHash": "33f9993"
   },
-  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "settings.suggestedOps.suppressApprovalNotice.description": "Der Dialog „KI-Vorschläge“ zeigt beim Öffnen einen Hinweis, dass die KI das vorgeschlagen hat und nichts läuft, bevor du zustimmst. Schalte das ein (oder schließ den Hinweis mit dem ×), damit er nicht mehr erscheint.",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
     "sourceHash": "8d7605d"
   },
-  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "Vorschlag, KI, Hinweis, Banner, Meldung, Warnung, Zustimmung, bestätigen, ausblenden, verbergen",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },

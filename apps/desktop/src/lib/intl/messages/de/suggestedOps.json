@@ -1,33 +1,33 @@
 {
-  "suggestedOps.title": "Vorgeschlagene Aktionen",
+  "suggestedOps.title": "KI-Vorschläge",
   "@suggestedOps.title": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "suggestedOps.description": "Die KI hat das vorgeschlagen. Nichts läuft, bevor du zustimmst.",
   "@suggestedOps.description": {
     "sourceHash": "73255a0"
   },
-  "suggestedOps.approvalNoticeDismiss": "Don’t show this again",
+  "suggestedOps.approvalNoticeDismiss": "Nicht mehr anzeigen",
   "@suggestedOps.approvalNoticeDismiss": {
     "sourceHash": "2c23c21"
   },
-  "suggestedOps.sweepWhen.justNow": "Suggested just now",
+  "suggestedOps.sweepWhen.justNow": "Gerade eben vorgeschlagen",
   "@suggestedOps.sweepWhen.justNow": {
     "sourceHash": "4606788"
   },
-  "suggestedOps.sweepWhen.minutesAgo": "Suggested {countText} {count, plural, one {minute} other {minutes}} ago",
+  "suggestedOps.sweepWhen.minutesAgo": "Vor {countText} {count, plural, one {Minute} other {Minuten}} vorgeschlagen",
   "@suggestedOps.sweepWhen.minutesAgo": {
     "sourceHash": "96782e0"
   },
-  "suggestedOps.sweepWhen.today": "Suggested today at {time}",
+  "suggestedOps.sweepWhen.today": "Heute um {time} vorgeschlagen",
   "@suggestedOps.sweepWhen.today": {
     "sourceHash": "105ec27"
   },
-  "suggestedOps.sweepWhen.yesterday": "Suggested yesterday at {time}",
+  "suggestedOps.sweepWhen.yesterday": "Gestern um {time} vorgeschlagen",
   "@suggestedOps.sweepWhen.yesterday": {
     "sourceHash": "a0d2061"
   },
-  "suggestedOps.sweepWhen.earlier": "Suggested {date}",
+  "suggestedOps.sweepWhen.earlier": "Am {date} vorgeschlagen",
   "@suggestedOps.sweepWhen.earlier": {
     "sourceHash": "cbe0d5f"
   },
@@ -39,47 +39,47 @@
   "@suggestedOps.loadFailed": {
     "sourceHash": "ef0da3e"
   },
-  "suggestedOps.agentReason": "Begründung der KI",
+  "suggestedOps.agentReason": "Warum:",
   "@suggestedOps.agentReason": {
-    "sourceHash": "e3acab8"
+    "sourceHash": "ad389aa"
   },
-  "suggestedOps.agentReasonTooltip": "The AI’s own words. Cmdr didn’t check them.",
+  "suggestedOps.agentReasonTooltip": "Das sind die eigenen Worte der KI. Cmdr hat sie nicht geprüft.",
   "@suggestedOps.agentReasonTooltip": {
     "sourceHash": "aadab2c"
   },
-  "suggestedOps.agentReasonSpoken": "The AI’s reason:",
+  "suggestedOps.agentReasonSpoken": "Begründung der KI:",
   "@suggestedOps.agentReasonSpoken": {
     "sourceHash": "52f75a3"
   },
-  "suggestedOps.fileCount": "{countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.fileCount": "{countText} {count, plural, one {Datei} other {Dateien}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
   },
-  "suggestedOps.approve.move": "Move {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.move": "{countText} {count, plural, one {Datei} other {Dateien}} bewegen",
   "@suggestedOps.approve.move": {
     "sourceHash": "4c89041"
   },
-  "suggestedOps.approve.copy": "Copy {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.copy": "{countText} {count, plural, one {Datei} other {Dateien}} kopieren",
   "@suggestedOps.approve.copy": {
     "sourceHash": "e10c490"
   },
-  "suggestedOps.approve.trash": "Move {countText} {count, plural, one {file} other {files}} to Trash",
+  "suggestedOps.approve.trash": "{countText} {count, plural, one {Datei} other {Dateien}} in den Papierkorb bewegen",
   "@suggestedOps.approve.trash": {
     "sourceHash": "3c82946"
   },
-  "suggestedOps.approve.delete": "Delete {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.delete": "{countText} {count, plural, one {Datei} other {Dateien}} löschen",
   "@suggestedOps.approve.delete": {
     "sourceHash": "218cf04"
   },
-  "suggestedOps.approve.rename": "Rename {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.rename": "{countText} {count, plural, one {Datei} other {Dateien}} umbenennen",
   "@suggestedOps.approve.rename": {
     "sourceHash": "412518d"
   },
-  "suggestedOps.approve.compress": "Compress {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.compress": "{countText} {count, plural, one {Datei} other {Dateien}} komprimieren",
   "@suggestedOps.approve.compress": {
     "sourceHash": "7df0dfc"
   },
-  "suggestedOps.approve.extract": "Extract {countText} {count, plural, one {archive} other {archives}}",
+  "suggestedOps.approve.extract": "{countText} {count, plural, one {Archiv} other {Archive}} entpacken",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
@@ -87,71 +87,71 @@
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
   },
-  "suggestedOps.facts.from": "From",
+  "suggestedOps.facts.from": "Von",
   "@suggestedOps.facts.from": {
     "sourceHash": "2181976"
   },
-  "suggestedOps.facts.to": "To",
+  "suggestedOps.facts.to": "Nach",
   "@suggestedOps.facts.to": {
     "sourceHash": "f4b06ef"
   },
-  "suggestedOps.facts.folder": "Folder",
+  "suggestedOps.facts.folder": "Ordner",
   "@suggestedOps.facts.folder": {
     "sourceHash": "74ccd43"
   },
-  "suggestedOps.facts.archive": "Archive",
+  "suggestedOps.facts.archive": "Archiv",
   "@suggestedOps.facts.archive": {
     "sourceHash": "66f4804"
   },
-  "suggestedOps.facts.trash": "The Trash",
+  "suggestedOps.facts.trash": "Papierkorb",
   "@suggestedOps.facts.trash": {
     "sourceHash": "4e42c6e"
   },
-  "suggestedOps.facts.severalFolders": "Several folders",
+  "suggestedOps.facts.severalFolders": "Mehrere Ordner",
   "@suggestedOps.facts.severalFolders": {
     "sourceHash": "7c32950"
   },
-  "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Trash",
+  "suggestedOps.reversible.trash": "Du kannst das widerrufen: {count, plural, one {Die Datei kommt} other {Die Dateien kommen}} in den Papierkorb",
   "@suggestedOps.reversible.trash": {
     "sourceHash": "55bf957"
   },
-  "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
+  "suggestedOps.reversible.moveBack": "Du kannst das widerrufen: Cmdr kann {count, plural, one {die Datei} other {die Dateien}} zurücklegen",
   "@suggestedOps.reversible.moveBack": {
     "sourceHash": "14c0a31"
   },
-  "suggestedOps.reversible.renameBack": "You can undo this: Cmdr can change the {count, plural, one {name} other {names}} back",
+  "suggestedOps.reversible.renameBack": "Du kannst das widerrufen: Cmdr kann {count, plural, one {den alten Namen} other {die alten Namen}} zurücksetzen",
   "@suggestedOps.reversible.renameBack": {
     "sourceHash": "4c7e3c3"
   },
-  "suggestedOps.reversible.removeCopies": "You can undo this: Cmdr deletes the copies",
+  "suggestedOps.reversible.removeCopies": "Du kannst das widerrufen: Cmdr löscht die Kopien",
   "@suggestedOps.reversible.removeCopies": {
     "sourceHash": "0ec3b08"
   },
-  "suggestedOps.reversible.removeArchive": "You can undo this: Cmdr deletes the new archive",
+  "suggestedOps.reversible.removeArchive": "Du kannst das widerrufen: Cmdr löscht das neue Archiv",
   "@suggestedOps.reversible.removeArchive": {
     "sourceHash": "2c8278f"
   },
-  "suggestedOps.reversible.removeExtracted": "You can undo this: Cmdr deletes what it extracted",
+  "suggestedOps.reversible.removeExtracted": "Du kannst das widerrufen: Cmdr löscht, was es entpackt hat",
   "@suggestedOps.reversible.removeExtracted": {
     "sourceHash": "977a513"
   },
-  "suggestedOps.irreversible.delete": "This can’t be undone: the files are deleted for good",
+  "suggestedOps.irreversible.delete": "Das lässt sich nicht widerrufen: Die Dateien werden endgültig gelöscht",
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Can’t run: this drive has no Trash",
+  "suggestedOps.blocked.noTrash": "Ausführen nicht möglich: Dieses Laufwerk hat keinen Papierkorb",
   "@suggestedOps.blocked.noTrash": {
     "sourceHash": "f08e038"
   },
-  "suggestedOps.blocked.noTrashTooltip": "The drive these files are on keeps no Trash, so moving them there can’t work and nothing would happen. Reject this, or delete the files yourself if that’s what you want.",
+  "suggestedOps.blocked.noTrashTooltip": "Das Laufwerk, auf dem diese Dateien liegen, hat keinen Papierkorb. Das Bewegen dorthin kann also nicht klappen, und es würde nichts passieren. Lehne den Vorschlag ab, oder lösche die Dateien selbst, wenn du das möchtest.",
   "@suggestedOps.blocked.noTrashTooltip": {
     "sourceHash": "f2a5d5f"
   },
-  "suggestedOps.irreversible.overwrite": "This can’t be undone: it replaces an existing archive",
+  "suggestedOps.irreversible.overwrite": "Das lässt sich nicht widerrufen: Ein vorhandenes Archiv wird ersetzt",
   "@suggestedOps.irreversible.overwrite": {
     "sourceHash": "0d5c5bb"
   },
-  "suggestedOps.irreversible.other": "This can’t be undone",
+  "suggestedOps.irreversible.other": "Das lässt sich nicht widerrufen",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
@@ -167,11 +167,11 @@
   "@suggestedOps.destinationUnknown": {
     "sourceHash": "dc78d1d"
   },
-  "suggestedOps.destinationNotConnected": "The target isn’t connected",
+  "suggestedOps.destinationNotConnected": "Das Ziel ist nicht verbunden",
   "@suggestedOps.destinationNotConnected": {
     "sourceHash": "51dcf8e"
   },
-  "suggestedOps.destinationNotConnectedTooltip": "Cmdr hasn’t connected to this drive or server yet. Approving won’t start until it’s connected, the same as when you move files there yourself.",
+  "suggestedOps.destinationNotConnectedTooltip": "Cmdr hat sich noch nicht mit diesem Laufwerk oder Server verbunden. Nach deiner Zustimmung startet der Vorgang erst, wenn die Verbindung steht, genau wie wenn du selbst Dateien dorthin bewegst.",
   "@suggestedOps.destinationNotConnectedTooltip": {
     "sourceHash": "af06219"
   },
@@ -187,23 +187,24 @@
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.filesLabel": "Files in “{name}”",
+  "suggestedOps.filesLabel": "Dateien in „{name}“",
   "@suggestedOps.filesLabel": {
     "sourceHash": "adf93b7"
   },
-  "suggestedOps.columnInclude": "Include",
+  "suggestedOps.columnInclude": "Einbeziehen",
   "@suggestedOps.columnInclude": {
     "sourceHash": "7285576"
   },
-  "suggestedOps.includeAll": "Include all files",
+  "suggestedOps.includeAll": "Alle Dateien einbeziehen",
   "@suggestedOps.includeAll": {
     "sourceHash": "ac6c70c"
   },
   "suggestedOps.columnName": "Name",
   "@suggestedOps.columnName": {
-    "sourceHash": "dcd1d52"
+    "sourceHash": "dcd1d52",
+    "sameAsSourceJustification": "German Name is the same word; Finder de's column header and the catalog (servers.hub.colName) say Name"
   },
-  "suggestedOps.columnFolder": "Folder",
+  "suggestedOps.columnFolder": "Ordner",
   "@suggestedOps.columnFolder": {
     "sourceHash": "74ccd43"
   },
@@ -211,55 +212,55 @@
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
   },
-  "suggestedOps.columnSize": "Size",
+  "suggestedOps.columnSize": "Größe",
   "@suggestedOps.columnSize": {
     "sourceHash": "1af8519"
   },
-  "suggestedOps.columnModified": "Last modified",
+  "suggestedOps.columnModified": "Zuletzt geändert",
   "@suggestedOps.columnModified": {
     "sourceHash": "0fe1058"
   },
-  "suggestedOps.factChanged": "Changed since the suggestion",
+  "suggestedOps.factChanged": "Seit dem Vorschlag geändert",
   "@suggestedOps.factChanged": {
     "sourceHash": "958780a"
   },
-  "suggestedOps.factChangedTooltip": "When suggested: {then} / Now: {now}",
+  "suggestedOps.factChangedTooltip": "Beim Vorschlag: {then} / Jetzt: {now}",
   "@suggestedOps.factChangedTooltip": {
     "sourceHash": "8bf4166"
   },
-  "suggestedOps.fileMissing": "Moved or deleted",
+  "suggestedOps.fileMissing": "Bewegt oder gelöscht",
   "@suggestedOps.fileMissing": {
     "sourceHash": "2073c5b"
   },
-  "suggestedOps.snapshotOnly": "From when the AI suggested this",
+  "suggestedOps.snapshotOnly": "Stand von dem Moment, als die KI das vorgeschlagen hat",
   "@suggestedOps.snapshotOnly": {
     "sourceHash": "f6b2d27"
   },
-  "suggestedOps.snapshotOnlyTooltip": "Cmdr couldn’t check this file just now, so this is what it was when the AI suggested it.",
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr konnte diese Datei gerade nicht prüfen, deshalb siehst du den Stand von dem Moment, als die KI das vorgeschlagen hat.",
   "@suggestedOps.snapshotOnlyTooltip": {
     "sourceHash": "d6a081c"
   },
-  "suggestedOps.sourceNotConnected": "Cmdr isn’t connected to the drive these files are on, so their sizes and dates are from when the AI suggested this.",
+  "suggestedOps.sourceNotConnected": "Cmdr ist nicht mit dem Laufwerk verbunden, auf dem diese Dateien liegen, deshalb stammen ihre Größen und Änderungsdaten von dem Moment, als die KI das vorgeschlagen hat.",
   "@suggestedOps.sourceNotConnected": {
     "sourceHash": "07d5134"
   },
-  "suggestedOps.sourceGone": "The drive these files were on isn’t here any more, so their sizes and dates are from when the AI suggested this.",
+  "suggestedOps.sourceGone": "Das Laufwerk, auf dem diese Dateien lagen, ist nicht mehr da, deshalb stammen ihre Größen und Änderungsdaten von dem Moment, als die KI das vorgeschlagen hat.",
   "@suggestedOps.sourceGone": {
     "sourceHash": "1b30de5"
   },
-  "suggestedOps.factUnknown": "Unknown",
+  "suggestedOps.factUnknown": "Unbekannt",
   "@suggestedOps.factUnknown": {
     "sourceHash": "b764cdc"
   },
-  "suggestedOps.includeFile": "Include {name}",
+  "suggestedOps.includeFile": "„{name}“ einbeziehen",
   "@suggestedOps.includeFile": {
     "sourceHash": "a44fb71"
   },
-  "suggestedOps.showMore": "Show {countText} more",
+  "suggestedOps.showMore": "{countText} weitere anzeigen",
   "@suggestedOps.showMore": {
     "sourceHash": "4061571"
   },
-  "suggestedOps.showAll": "Show all {countText}",
+  "suggestedOps.showAll": "Alle {countText} anzeigen",
   "@suggestedOps.showAll": {
     "sourceHash": "912b5d0"
   },
@@ -295,11 +296,11 @@
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "sourceHash": "f4cfc9e"
   },
-  "suggestedOps.refusal.nothingSelected.message": "None of the files you ticked are in this suggestion any more, so nothing ran.",
+  "suggestedOps.refusal.nothingSelected.message": "Keine der Dateien, die du angehakt hast, gehört noch zu diesem Vorschlag, deshalb lief nichts.",
   "@suggestedOps.refusal.nothingSelected.message": {
     "sourceHash": "7de9324"
   },
-  "suggestedOps.refusal.nothingSelected.suggestion": "Tick the files you want, then approve it again.",
+  "suggestedOps.refusal.nothingSelected.suggestion": "Hake die gewünschten Dateien an und stimme dem Vorschlag dann noch einmal zu.",
   "@suggestedOps.refusal.nothingSelected.suggestion": {
     "sourceHash": "db90f78"
   },

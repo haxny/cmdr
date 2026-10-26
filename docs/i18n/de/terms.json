@@ -246,7 +246,8 @@
     "confidence": "high",
     "decision": "Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `settings.advanced.logLlmCalls.*`, `commands.askCmdrToggle.*`)",
     "exceptions": {
-      "fileExplorer.list.rowKind.archive": "English sense: the zip-file row kind (concept archive), not hiding a chat, so it's the noun Archiv"
+      "fileExplorer.list.rowKind.archive": "English sense: the zip-file row kind (concept archive), not hiding a chat, so it's the noun Archiv",
+      "suggestedOps.facts.archive": "English sense: the noun label before the zip file a compress suggestion creates (concept archive), not hiding a chat, so it's the noun Archiv"
     },
     "forms": "badge Archiviert; unarchive → Archivierung aufheben (mirrors Auswahl aufheben); Archivierte ausblenden",
     "note": "Archivierung aufheben is tentative: no direct unarchive source.",
@@ -1563,7 +1564,10 @@
     "chosen": "Zum Papierkorb gehen",
     "confidence": "high",
     "decision": "Papierkorb-Toast: Widerrufen und Zurücklegen",
-    "sources": "catalog sibling frame (Zum übergeordneten Ordner gehen)"
+    "sources": "catalog sibling frame (Zum übergeordneten Ordner gehen)",
+    "exceptions": {
+      "suggestedOps.reversible.trash": "English sense: the files go to the Trash on approval, not the Go to trash command; in den Papierkorb follows move-to-trash"
+    }
   },
   "got-it": {
     "avoid": [
@@ -2044,7 +2048,10 @@
     "confidence": "high",
     "decision": "A move that could not be confirmed",
     "exceptions": {
-      "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren"
+      "errors.eject.busy": "the message also covers copying and deleting, so it names the Vorgang, not Cmdr’s Move command",
+      "errors.write.moveNotConfirmed.suggestion": "es points back at the move named in the title; Your originals haven’t moved → liegen noch dort, wo sie waren",
+      "multiRename.movedRow": "reordering a row in the preview list, not relocating a file; the announcement names only the new place (Jetzt an Position …), like the rücken family of the move-up/down keys",
+      "suggestedOps.reversible.moveBack": "putting files back where they were is zurücklegen (style digest), like the trash undo's Zurücklegen"
     },
     "forms": "button Bewegen; progress Wird bewegt; the one move as a noun → die Bewegung, the act → das Bewegen; moves as an enumerated noun has no German noun, so enumerate verbs (umzubenennen, zu bewegen und aufzuräumen)",
     "note": "Don't use bewegen for a message that also covers copying and deleting: say Vorgang there.",
@@ -2186,7 +2193,9 @@
       "feedback.dialog.description": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
       "feedback.dialog.invalid": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
       "feedback.sentToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
-      "feedback.sentWithoutLogsToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface"
+      "feedback.sentWithoutLogsToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
+      "settings.suggestedOps.suppressApprovalNotice.label": "English sense: the app's own notice at the top of the AI suggestions dialog, not text the user writes, so it's a Hinweis",
+      "settings.suggestedOps.suppressApprovalNotice.description": "English sense: the app's own notice at the top of the AI suggestions dialog, not text the user writes, so it's a Hinweis"
     },
     "sources": "MS terminology (note → Notiz); catalog (errorReporter.dialog.noteLabel)"
   },
@@ -4029,5 +4038,22 @@
     "confidence": "high",
     "forms": "unlock the phone → entsperre das Telefon",
     "sources": "MS terminology (unlock a device/phone → entsperren); macOS Finder (Datei … entsperren); catalog (fileExplorer.navigation.favoriteUnreachable.phoneUnplugged)"
+  },
+  "from-to": {
+    "accept": ["Von", "Nach"],
+    "chosen": "Von / Nach",
+    "confidence": "high",
+    "exceptions": {
+      "fileOperations.delete.fromPath": "the delete dialog names where files are removed from, with no paired To; Aus: {path} reads as the source location"
+    },
+    "forms": "group headings and fact labels → Von / Nach; with a colon → Von:",
+    "sources": "catalog (fileOperations.transferDialog.sourceGroupTitle Von, targetGroupTitle Nach, scanPhase.fromLabel Von:); Total Commander de (NACH:)"
+  },
+  "unknown": {
+    "accept": ["Unbekannt", "unbekannte"],
+    "chosen": "unbekannt",
+    "confidence": "high",
+    "forms": "a bare value or table cell → Unbekannt; after a noun → Größe unbekannt, Kosten unbekannt",
+    "sources": "macOS (Unbekannt, Unbekannter Fehler); catalog (ai.local.modelUnknown Unbekannt, askCmdr.cost.unknown Kosten unbekannt)"
   }
 }

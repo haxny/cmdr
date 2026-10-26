@@ -13,6 +13,9 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   one-line swap.
 - **„AI suggestions are waiting.“ → „KI-Vorschläge warten auf dich.“** (`suggestedOps.indicatorTooltip`): coined; the
   alternative „Es liegen KI-Vorschläge bereit.“ is more matter-of-fact and less of a nudge.
+- **`angehakt` / `Hake … an`** (`suggestedOps.refusal.nothingSelected.*`): casual tick-box verb; `ausgewählt` is the
+  formal alternative. Also `Stand von dem Moment, als die KI das vorgeschlagen hat` (`suggestedOps.snapshotOnly*`,
+  `sourceNotConnected`, `sourceGone`): long for a screen-reader name; `Stand beim Vorschlag der KI` is the terse option.
 - **`Klicken, um in den Einstellungen einen einzurichten.`** (`askCmdr.wake.needsApiKey`): the bare pronoun `einen` for
   the provider is correct but bald at the end of a tooltip; the alternative repeats `einen Anbieter`.
 - **`Gib Cmdr auf AlternativeTo ein Like`** (`onboarding.stepBeta.checklist.alternativeTo`): Duden has `das Like`, and

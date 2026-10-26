@@ -685,3 +685,10 @@ Apple's `Dock.app` `DockMenus.strings` supplies almost every phrase (`KEEP_IN_DO
 
 - `Feld` (TC `Pluginfelder`); names per Nautilus/Thunar; artist → `Interpret` (MS) over `Künstler`;
   `hat dieses Feld nicht` dodges a gendered `keine(s)`.
+
+## KI-Vorschläge (`suggestedOps.*`, `menu.view.suggestedOps`, `commands.suggestedOpsShow.label`)
+
+- Title `KI-Vorschläge` (same English as `fileOperations.mkdir.aiSuggestions*`) over `Vorgeschlagene Aktionen`; `Why:` →
+  `Warum:` like `Warum?`.
+- Pills pair `Du kannst das widerrufen:` / `Das lässt sich nicht widerrufen:`; the app's notice is a `Hinweis` (not
+  `Notiz`); tick box → `einbeziehen` (macOS „Anhänge einbeziehen“).
