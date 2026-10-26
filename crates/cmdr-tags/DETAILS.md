@@ -12,7 +12,7 @@ those aliases so the file never carries two copies.
 | AlbumArtist | `TPE2`                             | `aART`                                          | `ALBUMARTIST`     | `ALBUM ARTIST` (Vorbis) |
 | Album       | `TALB`                             | `©alb`                                          | `ALBUM`           |                         |
 | Performer   | `TXXX:Performer`                   | freeform `PERFORMER`                            | `PERFORMER`       |                         |
-| Composer    | `TCOM` (removed for audiobooks)    | `©wrt` (removed for audiobooks)                 | `COMPOSER`        |                         |
+| Composer    | `TCOM`                             | `©wrt`                                          | `COMPOSER`        |                         |
 | Date        | `TYER` / `TDRC` (lofty downgrades) | `©day`                                          | `DATE`            |                         |
 | Genre       | `TCON`                             | freeform `GENRE` (one entry per value) + `©gen` | `GENRE`, repeated |                         |
 | Publisher   | `TPUB`                             | freeform `publisher`                            | `PUBLISHER`       |                         |
@@ -32,13 +32,13 @@ picture, so an MP3 whose only picture is "Other" never ends up with two. A FLAC'
 picture blocks, then the comments' `METADATA_BLOCK_PICTURE`s. A cover equal to the current one (MIME and bytes) is left
 as it is, type and description included. With the cover removed, the reader shows the next untyped picture, if any.
 
-Audiobooks also lose `TPE3` (conductor) on MP3. A known total (`WriteOptions::track_total` / `disc_total`) goes in
-`TRCK` / `TPOS` as `N/Total`, in `trkn` / `disk`'s total slot, or as a `TRACKTOTAL` / `DISCTOTAL` key (foobar2000's
-convention); without one the number is plain, and a total without its number isn't written. A zero total is no total.
-Vorbis `TRACKTOTAL`, `TOTALTRACKS`, `DISCTOTAL`, and `TOTALDISCS` are managed: never extras, removed on write unless
-`TRACKTOTAL` / `DISCTOTAL` is being written. The reader strips `/N` from track and disc in every format; the totals and
-an MP3's `TPE3` are read apart, as crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo
-store.
+Composer holds the author of the music, for audiobooks too (user, 2026-10-26); an audiobook write removes only `TPE3`
+(conductor) on MP3. A known total (`WriteOptions::track_total` / `disc_total`) goes in `TRCK` / `TPOS` as `N/Total`, in
+`trkn` / `disk`'s total slot, or as a `TRACKTOTAL` / `DISCTOTAL` key (foobar2000's convention); without one the number
+is plain, and a total without its number isn't written. A zero total is no total. Vorbis `TRACKTOTAL`, `TOTALTRACKS`,
+`DISCTOTAL`, and `TOTALDISCS` are managed: never extras, removed on write unless `TRACKTOTAL` / `DISCTOTAL` is being
+written. The reader strips `/N` from track and disc in every format; the totals and an MP3's `TPE3` are read apart, as
+crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo store.
 
 M4A freeform atoms live under mean `com.apple.iTunes`. Reading prefers the freeform `GENRE` and never doubles values
 with `©gen` (which holds them joined with `"; "`).
@@ -131,8 +131,8 @@ The types the app's IPC carries derive `Serialize` / `Deserialize` in camelCase,
 (`failed` as `[path, error]` pairs), `ApplyId` (a plain string), `CaseTool` (`"sentence"`, ...), and `TagError` as
 `{"type": "<variant>", "data": ...}`, an `Io` error's data being `[kind, message]` with the kind's `std::io::ErrorKind`
 name (`"NotFound"`; an unknown name reads back as `Other`). Shapes are pinned in `serde_test.rs`.
-`WriteOptions::default()` is lossless music: `ContentKind::Music` (an audiobook write deletes composer and `TPE3`, so
-the caller picks it on purpose), no totals, no frame loss.
+`WriteOptions::default()` is lossless music: `ContentKind::Music` (an audiobook write deletes `TPE3`, so the caller
+picks it on purpose), no totals, no frame loss.
 
 ## Undo store layout
 
@@ -166,10 +166,10 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
 - **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
   works), and a move whose source isn't recorded is ignored.
 - **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
-  passes, so a composer comes back, with that entry's recorded totals, and `TPE3` when it had one. Of the caller's
-  `WriteOptions` only `allow_frame_loss` applies. A file not at its path is `missing`; any write error is `failed` (an
-  extra that can't come back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover
-  again. It never deletes the record; the caller `forget`s it.
+  passes, with that entry's recorded totals, and `TPE3` when it had one. Of the caller's `WriteOptions` only
+  `allow_frame_loss` applies. A file not at its path is `missing`; any write error is `failed` (an extra that can't come
+  back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover again. It never
+  deletes the record; the caller `forget`s it.
 - **Limits**: an MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes` (one named like a managed key
   can't come back: `failed`). Vorbis total keys come back under their canonical names (`TOTALTRACKS` as `TRACKTOTAL`).
 

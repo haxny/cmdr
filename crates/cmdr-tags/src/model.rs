@@ -20,7 +20,7 @@ pub enum TagField {
     Album,
     /// Performer; for audiobooks, the narrator.
     Performer,
-    /// Composer; removed for audiobooks.
+    /// Composer; for audiobooks, the author of the music.
     Composer,
     /// Release date or year.
     Date,
@@ -110,7 +110,7 @@ pub struct FileTags {
 }
 
 /// What kind of content a batch of files is, which decides how fields map
-/// (audiobooks drop the composer).
+/// (audiobooks drop ID3's `TPE3`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ContentKind {

@@ -204,8 +204,8 @@ impl UndoStore {
         write_manifest(&dir, &Manifest { entries, ..manifest })
     }
 
-    /// Writes each recorded file's old tags back as they were: as music (so a composer and an
-    /// MP3's `TPE3` come back), with the totals recorded for that file. Of `opts` only
+    /// Writes each recorded file's old tags back as they were: as music (so an MP3's `TPE3`
+    /// comes back), with the totals recorded for that file. Of `opts` only
     /// `allow_frame_loss` applies. A file not at its path is `missing`; a write that fails is
     /// `failed` and the rest go on. The record stays until [`UndoStore::forget`].
     pub fn restore(&self, id: &ApplyId, opts: &WriteOptions) -> Result<RestoreReport, TagError> {

@@ -479,7 +479,9 @@ fn restore_after_an_audiobook_apply_brings_back_composer_and_conductor() {
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
     store.record(&id("op-1"), &paths).unwrap();
     for path in &paths {
-        write(path, &read(path), &BOOK);
+        let mut edited = read(path);
+        edited.fields.remove(&TagField::Composer);
+        write(path, &edited, &BOOK);
         assert!(!read(path).fields.contains_key(&TagField::Composer), "{path:?}");
     }
     assert_eq!(read_raw(&mp3).unwrap().conductor, None);

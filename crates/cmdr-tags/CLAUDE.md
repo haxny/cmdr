@@ -18,7 +18,8 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - **An empty field is an absent key**: a write removes it, never writes `""`, `None`, `n/a`, or "Unknown ...".
 - **`write_tags` writes values as given.** The no-diacritics rule (all fields but `Comment`, `Description`, `Www`) is
   applied by the tools and the app, before writing.
-- **Artist = album artist = author; Performer = narrator; Composer is removed for audiobooks** (`ContentKind`).
+- **Artist = album artist = author; Performer = narrator; Composer = the music's author**, kept for audiobooks too; an
+  audiobook write (`ContentKind`) removes only MP3's `TPE3`.
 - **Genre is multi-value**; one-string formats join values with `"; "`, and every reader splits on it.
 - **Track and disc are plain**; `N/Total` only when the caller passes a total.
 - **MP3 is written as ID3v2.3.** Unmanaged frames, atoms, and keys stay untouched; unmanaged text items are

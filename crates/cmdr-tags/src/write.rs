@@ -42,13 +42,13 @@ use crate::write_extras::{added_extras, dropped_extras, upper_extra_keys};
 
 /// How a write maps fields.
 ///
-/// The default is lossless music: [`ContentKind::Music`] (an audiobook write removes the
-/// composer and `TPE3`, which the caller must choose deliberately), no totals, and no frame
-/// loss allowed.
+/// The default is lossless music: [`ContentKind::Music`] (an audiobook write removes ID3's
+/// `TPE3`, which the caller must choose deliberately), no totals, and no frame loss allowed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WriteOptions {
-    /// Audiobooks drop the composer (and ID3's `TPE3`) whatever `FileTags` holds.
+    /// Audiobooks drop ID3's `TPE3` (conductor), which `FileTags` doesn't hold. The composer
+    /// stays: it holds the author of the book's music.
     pub kind: ContentKind,
     /// The number of tracks, when the caller knows it: the track is then written `N/Total`
     /// (MP3), with `trkn`'s total (M4A), or with a `TRACKTOTAL` key (Vorbis); otherwise plain.
@@ -81,7 +81,7 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
 }
 
 /// Writes a snapshot back as it was: `tags`, the totals in `raw`, and on MP3 the conductor
-/// (`TPE3`) when `raw` has one, as music so a composer and a conductor stay. The undo store's
+/// (`TPE3`) when `raw` has one, as music so a conductor stays. The undo store's
 /// write.
 pub(crate) fn restore_tags(
     path: &Path,
@@ -123,7 +123,7 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
         AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => upper_extra_keys(tags),
         AudioFormat::Mp3 | AudioFormat::Mp4 => tags.clone(),
     };
-    let values = values_to_write(tags, opts.kind);
+    let values = values_to_write(tags);
     let mut source = File::open(path)?;
     let parse = write_parse_options(format);
     let defaults = LoftyWriteOptions::default();
@@ -217,14 +217,12 @@ fn refuse_tag_behind_junk(source: &mut File) -> Result<(), TagError> {
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 /// The managed values a write puts in the file, by field: trimmed, empties dropped, one
-/// value for a single-value field, no Composer for audiobooks. A field missing here is
-/// removed from the file.
+/// value for a single-value field. A field missing here is removed from the file.
 type Values = BTreeMap<TagField, Vec<String>>;
 
-fn values_to_write(tags: &FileTags, kind: ContentKind) -> Values {
+fn values_to_write(tags: &FileTags) -> Values {
     tags.fields
         .iter()
-        .filter(|(field, _)| !(kind == ContentKind::Audiobook && **field == TagField::Composer))
         .filter_map(|(field, values)| {
             let limit = if field.is_multi() { usize::MAX } else { 1 };
             let values: Vec<String> = values

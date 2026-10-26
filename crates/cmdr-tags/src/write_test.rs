@@ -256,8 +256,10 @@ fn mp3_duplicate_single_value_frames_collapse_to_one() {
     assert_eq!(read(&path).fields[&TagField::Date], strings(&["2001"]));
 }
 
+/// Composer holds the music's author, which an audiobook keeps (Ruling 29); only ID3's
+/// `TPE3` goes.
 #[test]
-fn audiobook_removes_composer() {
+fn audiobook_keeps_composer() {
     let dir = tempfile::tempdir().unwrap();
     let mut tag = Id3v2Tag::new();
     text_frame(&mut tag, "TCOM", "Skladatel");
@@ -272,17 +274,21 @@ fn audiobook_removes_composer() {
 
     for path in [&mp3, &flac, &m4a] {
         write(path, &read(path), &BOOK);
-        assert!(!read(path).fields.contains_key(&TagField::Composer), "{path:?}");
+        assert_eq!(
+            read(path).fields.get(&TagField::Composer),
+            Some(&strings(&["Skladatel"])),
+            "{path:?}"
+        );
     }
 
     let raw = raw_id3(&mp3);
-    assert!(!id3_has(&raw, "TCOM") && !id3_has(&raw, "TPE3"));
-    assert!(
-        raw_flac(&flac)
-            .vorbis_comments()
-            .is_none_or(|c| c.get("COMPOSER").is_none())
+    assert_eq!(id3_text(&raw, "TCOM"), Some("Skladatel"));
+    assert!(!id3_has(&raw, "TPE3"));
+    assert_eq!(
+        raw_flac(&flac).vorbis_comments().and_then(|c| c.get("COMPOSER")),
+        Some("Skladatel")
     );
-    assert!(fourcc(&raw_ilst(&m4a), *b"\xA9wrt").is_empty());
+    assert_eq!(fourcc(&raw_ilst(&m4a), *b"\xA9wrt"), vec![&utf8("Skladatel")]);
 }
 
 #[test]
@@ -801,7 +807,7 @@ fn corrupting_save_is_refused() {
     let before = fs::read(&path).unwrap();
     let names = listing(dir.path());
 
-    let result = write_tags(&path, &read(&path), &BOOK);
+    let result = write_tags(&path, &without(read(&path), TagField::Composer), &MUSIC);
 
     assert!(matches!(result, Err(TagError::Write(_))), "{result:?}");
     assert_eq!(fs::read(&path).unwrap(), before);
