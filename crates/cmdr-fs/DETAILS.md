@@ -416,9 +416,11 @@ dialog reads `supports_trash`, so the two can't disagree about a drive.
   delete dialog on every USB stick.
 - **A network or FUSE mount doesn't.** The OS refuses each item with `NSFeatureUnsupportedError`
   (`TrashRefusalKind::NoTrashForVolume`) and deletes nothing.
-- **An unrecognized or unread type promises nothing**, the allowlist's own conservative side. A block device (`/dev/…`
-  source) is a local disk whatever its type, but the volume list passes no source, so an unrecognized type on a block
-  device reads `false` there and `true` in `MountClass`. Add the type to the allowlist when one shows up.
+- **An unrecognized or unread type promises nothing**, the allowlist's own conservative side, unless the source is a
+  block device (`/dev/…`), which is a local disk whatever its type. So both readers pass the SAME two facts: the
+  registry's `MountClass` probes source and type, and the volume list's `supports_trash_for_mount(source, fs_type)`
+  takes the mount row's source wherever it has one. Only the boot volume and cloud folders pass `None`, since their type
+  (APFS, HFS+, ext4) answers alone.
 - **Linux follows the same rule unverified** for FAT, exFAT, and NTFS (the FreeDesktop trash via the `trash` crate). A
   refusal there trashes nothing (`TrashRefused`), never deletes.
 

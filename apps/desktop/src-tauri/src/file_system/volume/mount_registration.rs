@@ -147,7 +147,7 @@ pub(crate) fn adopt_mount_serving(volume_id: &str, path: &Path) -> Option<Arc<dy
 
 /// The live mount that owns `path`, named by the ID funnel.
 fn live_mount_under(path: &Path) -> Option<MountIdentity> {
-    let (root, _fs_type) = platform::get_mount_point(&path.to_string_lossy())?;
+    let (root, _fs_type, _source) = platform::get_mount_point(&path.to_string_lossy())?;
     let volume_id = platform::volume_id_for_mount(&root);
     Some(MountIdentity {
         root: PathBuf::from(root),

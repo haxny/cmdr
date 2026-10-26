@@ -3,7 +3,7 @@
 //! an `is_dir()` probe, and the filesystem type comes from whichever real mount
 //! contains it.
 
-use super::fs_type::supports_trash_for_fs_type;
+use super::fs_type::supports_trash_for_mount;
 use super::{LocationCategory, LocationInfo, MountEntry, linux_mounts};
 use std::path::Path;
 
@@ -22,8 +22,10 @@ pub(super) fn get_cloud_drives(mounts: &[MountEntry]) -> Vec<LocationInfo> {
     for (path, name, id) in candidates {
         if path.is_dir() {
             let path_str = path.to_string_lossy().to_string();
-            let fs_type = linux_mounts::fs_type_for_path_from_entries(Path::new(&path_str), mounts);
-            let supports_trash = supports_trash_for_fs_type(fs_type.as_deref());
+            let mount = linux_mounts::mount_entry_for_path_from_entries(Path::new(&path_str), mounts);
+            let fs_type = mount.map(|mount| mount.fstype.clone());
+            let supports_trash =
+                mount.is_some_and(|mount| supports_trash_for_mount(Some(&mount.device), Some(&mount.fstype)));
             drives.push(LocationInfo {
                 id: id.to_string(),
                 name: name.to_string(),

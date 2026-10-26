@@ -6,7 +6,7 @@
 
 use super::{
     LocationCategory, LocationInfo, SmbMountInfo, disk_image, get_icon_for_path, get_volume_name, get_volume_uuid,
-    is_network_fs_type, is_smb_fs_type, is_volume_ejectable, parse_smb_mount_source, supports_trash_for_fs_type,
+    is_network_fs_type, is_smb_fs_type, is_volume_ejectable, parse_smb_mount_source, supports_trash_for_mount,
     volume_id_for, volume_name_from_path,
 };
 use cmdr_fs::volume::canonical_root::collapse_by_volume_id;
@@ -58,13 +58,6 @@ pub(crate) fn mount_type_and_source_for(path: &Path) -> Option<(String, String)>
     mount_under(&enumerate_mounts()?, path).map(|m| (m.fs_type.clone(), m.mount_from.clone()))
 }
 
-/// The filesystem type of the mount `path` lies on, from a table already read: lexical, so it
-/// can't hang on the mount it names. What favorites discovery asks before it decides whether a
-/// folder may be stat'd at all.
-pub(super) fn fs_type_under<'a>(mounts: &'a [MountEntry], path: &Path) -> Option<&'a str> {
-    mount_under(mounts, path).map(|mount| mount.fs_type.as_str())
-}
-
 /// A browsable mount-table row for a sibling module's test, which can't name the private fields.
 #[cfg(test)]
 pub(super) fn mount_entry_for_test(mount_point: &str, fs_type: &str) -> MountEntry {
@@ -108,7 +101,7 @@ pub(crate) fn smb_mount_info_at(mount_point: &str) -> Option<SmbMountInfo> {
 }
 
 /// [`mount_type_and_source_for`] over a table already read.
-fn mount_under<'a>(mounts: &'a [MountEntry], path: &Path) -> Option<&'a MountEntry> {
+pub(super) fn mount_under<'a>(mounts: &'a [MountEntry], path: &Path) -> Option<&'a MountEntry> {
     // `max_by_key` keeps the LAST of equal keys, so a stacked mount wins.
     mounts
         .iter()
@@ -328,7 +321,7 @@ fn build_attached_location(
     if !is_user_facing_mount(mount, provider) {
         return None;
     }
-    let supports_trash = supports_trash_for_fs_type(Some(&fs_type));
+    let supports_trash = supports_trash_for_mount(Some(&mount.mount_from), Some(&fs_type));
 
     let (id, name, is_ejectable, icon, is_disk_image) = if is_network_fs_type(Some(&fs_type)) {
         // Network mount: derive everything from the non-blocking snapshot. Never

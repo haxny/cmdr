@@ -240,7 +240,7 @@ flat ~30s (one smbfs kernel timeout). (Incident: live NAS QA, 2026-07-13.)
    from `/`, never enumerating.
 4. **Favorites never touch a network path.** `list_locations` reads ONE `getfsstat` snapshot and hands it to both
    `attached_volumes_in` and `get_favorites`. Per favorite, the containing mount's fs type comes from that snapshot
-   (`mounts::fs_type_under`, lexical); a folder under a network mount, or a `scheme://` path, gets no `exists()`, no
+   (`mounts::mount_under`, lexical); a folder under a network mount, or a `scheme://` path, gets no `exists()`, no
    `statfs`, and no NSWorkspace icon (`favorites/target.rs::on_disk`). Only a folder on a local disk is stat'd, and it
    gets its icon only when it's there. No favorite is filtered out: a missing one publishes its row for the reach pass to
    word (`favorites/DETAILS.md` § The read side).

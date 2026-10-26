@@ -3,7 +3,7 @@
 //! (virtual filesystems, system internals, bind mounts nested under another
 //! volume, double mounts of one filesystem).
 
-use super::fs_type::{is_virtual_fs, supports_trash_for_fs_type};
+use super::fs_type::{is_virtual_fs, supports_trash_for_mount};
 use super::ids::volume_id_for_mount;
 use super::{LocationCategory, LocationInfo, MountEntry};
 use cmdr_fs::volume::canonical_root::collapse_by_volume_id;
@@ -131,7 +131,7 @@ fn get_mounted_volumes_with(mounts: &[MountEntry], volume_id: impl Fn(&str) -> S
         let is_removable = is_removable_mount(&entry.mountpoint, &username);
         let name = mount_display_name(&entry.mountpoint);
         let fs_type = Some(entry.fstype.clone());
-        let supports_trash = supports_trash_for_fs_type(fs_type.as_deref());
+        let supports_trash = supports_trash_for_mount(Some(&entry.device), fs_type.as_deref());
 
         volumes.push(LocationInfo {
             id: volume_id(&entry.mountpoint),

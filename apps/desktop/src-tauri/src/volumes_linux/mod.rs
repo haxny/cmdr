@@ -24,7 +24,7 @@ mod smb;
 #[cfg(test)]
 mod test_support;
 
-pub use fs_type::{get_volume_space, supports_trash_for_fs_type};
+pub use fs_type::{get_volume_space, supports_trash_for_mount};
 pub use mounts::get_mounted_volumes;
 pub use smb::{SmbMountInfo, enrich_from_volume_registry, get_smb_mount_info};
 
@@ -201,10 +201,11 @@ fn favorite_location(
 
     let path = Path::new(&favorite.path);
     // ❗ Only an OS path has a containing mount: the table lookup matches `/` for anything.
-    let fs_type = path
+    let mount = path
         .is_absolute()
-        .then(|| linux_mounts::fs_type_for_path_from_entries(path, mounts))
+        .then(|| linux_mounts::mount_entry_for_path_from_entries(path, mounts))
         .flatten();
+    let fs_type = mount.map(|mount| mount.fstype.clone());
     let probe = match fs_type.as_deref().is_some_and(linux_mounts::is_network_fs_type) {
         true => Probe::NetworkMount,
         false => Probe::Stat,
@@ -214,7 +215,7 @@ fn favorite_location(
         id: format!("fav-{}", favorite.id),
         name: favorite.name,
         // A scheme path has no mount, so no OS trash either.
-        supports_trash: fs_type.is_some() && supports_trash_for_fs_type(fs_type.as_deref()),
+        supports_trash: mount.is_some_and(|mount| supports_trash_for_mount(Some(&mount.device), Some(&mount.fstype))),
         path: favorite.path,
         category: LocationCategory::Favorite,
         icon: None,
@@ -238,8 +239,9 @@ fn favorite_location(
 
 /// Get the root filesystem as the main volume.
 fn get_main_volume(mounts: &[MountEntry]) -> Option<LocationInfo> {
-    let fs_type = linux_mounts::fs_type_for_path_from_entries(Path::new("/"), mounts);
-    let supports_trash = supports_trash_for_fs_type(fs_type.as_deref());
+    let mount = linux_mounts::mount_entry_for_path_from_entries(Path::new("/"), mounts);
+    let fs_type = mount.map(|mount| mount.fstype.clone());
+    let supports_trash = mount.is_some_and(|mount| supports_trash_for_mount(Some(&mount.device), Some(&mount.fstype)));
     Some(LocationInfo {
         id: DEFAULT_VOLUME_ID.to_string(),
         name: "Root".to_string(),
@@ -275,10 +277,10 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
         let gvfs = parse_gvfs_smb_dirname(dirname)?;
         return Some(smb::gvfs_share_location(root.to_string(), gvfs.share));
     }
-    let (mount_point, fs_type) = get_mount_point(path)?;
+    let (mount_point, fs_type, source) = get_mount_point(path)?;
 
     let name = mounts::mount_display_name(&mount_point);
-    let supports_trash = supports_trash_for_fs_type(Some(&fs_type));
+    let supports_trash = supports_trash_for_mount(Some(&source), Some(&fs_type));
     let category = if mount_point == "/" {
         LocationCategory::MainVolume
     } else {
