@@ -28,6 +28,7 @@
         setRailWidth,
     } from './ask-cmdr-trigger.svelte'
     import { railGate } from './ask-cmdr-gate.svelte'
+    import { contentSignature } from './ask-cmdr-rounds'
     import { cloudConsentState } from '#lib/ai/cloud-consent.svelte.js'
     import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
     import { openSessions, sessionsState } from './ask-cmdr-sessions.svelte'
@@ -73,12 +74,11 @@
         if (el) wasNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
     }
 
-    // Keep the newest message in view as the thread grows or text streams in, but only
-    // when the user is already at the bottom.
-    const lastText = $derived(askCmdrState.messages.at(-1))
+    // Keep the newest message in view as the thread grows or a turn streams in (a round, a tool
+    // line, prose, its stats), but only when the user is already at the bottom.
+    const tail = $derived(contentSignature(askCmdrState.messages))
     $effect(() => {
-        // Track the message count and the live tail so streaming deltas also scroll.
-        dependOn(askCmdrState.messages.length, lastText && lastText.kind === 'assistant' ? lastText.text : '')
+        dependOn(tail)
         if (!wasNearBottom) return
         void tick().then(() => {
             if (listElement) listElement.scrollTop = listElement.scrollHeight

@@ -28,10 +28,10 @@ The frontend of Ask Cmdr: a right-side panel for chatting with a BYO-key LLM abo
   `'left'|'right'` `focusedPane` union; never widen it. It is NON-modal: ❌ never add it to `isModalDialogOpen()`.
 - **No reasoning blob reaches the frontend.** `MessageView` carries display blocks only. ❌ Never add a wire field
   leaking provider state.
-- **Turn events are subscribed by CONVERSATION, never per send**, so a reload mid-answer keeps rendering: ❌ never key a
-  turn to the invoke that started it. Any live event means a turn is running, except `proposalDecided` (a decision
-  line); `discarded`: a quiet wake deleted the thread. Each mutates the LAST assistant message, cancel finalizes
-  LOCALLY.
+- **Turn events are subscribed by CONVERSATION, never per send**, so a reload mid-answer keeps rendering. Any live event
+  means a turn runs, except `proposalDecided`; `discarded`: a quiet wake deleted the thread.
+- **A turn is ONE bubble of rounds; live must equal reload** (`ask-cmdr-turn-parity.test.ts`). A line is
+  `(messageId, callId)`, ❌ never the call id alone; turn edges come from the backend (`turnId`).
 - **The wake indicator is SILENT while any gate is shut or `askCmdr.proactive` is off**, and shows a running wake either
   way (it's spending money now). `wakeIndicatorMode` is the gate. ❌ Subscription stays in the `.svelte.ts`.
 - **The toggle is wired in four places; a miss fails silently** (`ask-cmdr-shortcut.test.ts`).

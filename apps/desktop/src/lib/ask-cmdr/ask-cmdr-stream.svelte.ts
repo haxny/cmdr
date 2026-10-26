@@ -21,9 +21,8 @@
 
 import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
-import type { RailMessage } from './ask-cmdr-messages'
-import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
-import { outcomeOk } from './ask-cmdr-tool-line'
+import type { AssistantItem, RailMessage, RailToolCall, Round } from './ask-cmdr-messages'
+import type { LineRef, ManagedAiRefusal, ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 import {
   discardStagedRenameProposals,
   openStagedRenameReview,
@@ -228,7 +227,7 @@ function applyStreamEvent(event: TurnEvent): void {
       return
     case 'assistantStarted':
       adoptLiveTurn()
-      ensureAssistant()
+      openRound()
       return
     case 'textDelta':
       adoptLiveTurn()
@@ -244,10 +243,10 @@ function applyStreamEvent(event: TurnEvent): void {
       stageRenameProposal(event.proposal)
       return
     case 'done':
-      applyDone(event.messageId)
+      applyDone(event.messageId, event.turn)
       return
     case 'failed':
-      applyFailed(event.kind, event.detail, event.managed)
+      applyFailed(event.kind, event.detail, event.managed, event.turn)
       return
     case 'stopped':
       // Terminal: it clears the stopped mark (`handleTurnEvent`). The local stop already
@@ -282,11 +281,12 @@ function handleLineOrContextEvent(
       applyToolStarted(event.callId, event.tool)
       return
     case 'toolCallsResolved':
-      // The round's batch; the lines don't carry what it says yet.
+      adoptLiveTurn()
+      applyToolCallsResolved(event.messageId, event.calls)
       return
     case 'toolCallFinished':
       adoptLiveTurn()
-      applyToolFinished(event.callId, outcomeOk(event.outcome))
+      applyToolFinished({ messageId: event.messageId, callId: event.callId }, event.outcome, event.subject)
       return
     case 'contextTrimmed':
       applyContextTrimmed(event.elidedResults)
@@ -311,23 +311,40 @@ function adoptLiveTurn(): void {
 
 /** The streaming bubble this turn writes into, created if the rail wasn't watching when it
  * started (a reload lands on a thread whose `assistantStarted` is already in the past). */
-function ensureAssistant(): Extract<RailMessage, { kind: 'assistant' }> {
+function ensureAssistant(): AssistantItem {
   const assistant = currentAssistant()
   if (assistant) {
     assistant.streaming = true
     return assistant
   }
-  const fresh: Extract<RailMessage, { kind: 'assistant' }> = {
+  const fresh: AssistantItem = {
     kind: 'assistant',
     id: null,
-    text: '',
-    tools: [],
+    // Patched when the opener persists (`userPersisted`), which comes after round 1 streamed.
+    turnId: null,
+    rounds: [],
     thinking: false,
     stalled: false,
     streaming: true,
+    stats: null,
   }
   askCmdrState.messages.push(fresh)
   return fresh
+}
+
+/**
+ * The round this turn is streaming into, opened if there is none. A round with a `messageId` is
+ * SEALED (its row is stored), so a chunk after it starts the next round. That is also what makes
+ * a reload mid-turn come out right: every folded round is sealed, so the live chunks that follow
+ * open a round of their own instead of writing into a stored one.
+ */
+function openRound(): Round {
+  const assistant = ensureAssistant()
+  const last = assistant.rounds.at(-1)
+  if (last && last.messageId === null) return last
+  assistant.rounds.push({ messageId: null, text: '', calls: [] })
+  // The pushed object, through the state proxy, so later writes are reactive.
+  return assistant.rounds[assistant.rounds.length - 1]
 }
 
 /** Record what this turn's prompt cost, for the footer gauge. One event per answered turn, so
@@ -348,54 +365,120 @@ function applyContextTrimmed(elidedResults: number): void {
   }
 }
 
+/** The opener persisted: the user bubble gets its id, and the turn's bubble its turn identity. */
 function applyUserPersisted(messageId: number): void {
   const user = lastUserMessage()
   if (user) user.id = messageId
+  const assistant = currentAssistant()
+  if (assistant?.streaming) assistant.turnId = messageId
 }
 
+/** Into the current round even when its calls already started: the wire may interleave a
+ * round's text and its `toolCallStarted`s, but the stored row holds the text first, and so does
+ * the round. */
 function applyTextDelta(text: string): void {
+  openRound().text += text
   const assistant = ensureAssistant()
-  assistant.text += text
   assistant.thinking = false
   assistant.stalled = false
   resetProgressWatchdog()
 }
 
 function applyThinking(): void {
+  openRound()
   ensureAssistant().thinking = true
 }
 
-/** Idempotent per call: the tool lines are keyed by call id, and a repeated key crashes the
- * whole window (Svelte's `each_key_duplicate`, ERR-FRMAR). */
+/** Idempotent per call within its round: a repeated line crashes the whole window (Svelte's
+ * `each_key_duplicate`, ERR-FRMAR). */
 function applyToolStarted(callId: string, tool: string): void {
+  const round = openRound()
+  if (!round.calls.some((candidate) => candidate.callId === callId)) {
+    round.calls.push({ callId, tool, running: true, subject: null, outcome: null, repeatOf: null })
+  }
+  resetProgressWatchdog()
+}
+
+/**
+ * A round's row persisted, with every call of its final message. The batch is the round's truth:
+ * it stamps the row id (sealing the round), gives each line its subject and repeat mark, adds a
+ * line whose start never came, and drops a started line the stored message doesn't hold (a
+ * nameless call the provider sent and the backend discarded). The k-th call with an id takes the
+ * k-th started line with it, as the backend pairs them.
+ */
+function applyToolCallsResolved(messageId: number, calls: ResolvedCall[]): void {
   const assistant = ensureAssistant()
-  if (!assistant.tools.some((candidate) => candidate.callId === callId)) {
-    assistant.tools.push({ callId, tool, running: true, ok: true, path: null })
+  let round = assistant.rounds.at(-1)
+  if (!round || (round.messageId !== null && round.messageId !== messageId)) round = openRound()
+  const started = round.calls
+  const taken: RailToolCall[] = []
+  round.messageId = messageId
+  round.calls = calls.map((resolved) => {
+    const line = started.find((candidate) => candidate.callId === resolved.callId && !taken.includes(candidate)) ?? {
+      callId: resolved.callId,
+      tool: resolved.tool,
+      running: true,
+      subject: null,
+      outcome: null,
+      repeatOf: null,
+    }
+    taken.push(line)
+    return { ...line, tool: resolved.tool, subject: resolved.subject, repeatOf: resolved.repeatOf }
+  })
+  resetProgressWatchdog()
+}
+
+/** A call's result row persisted. Found by its line, `(messageId, callId)`: call ids collide
+ * across rounds, so the id alone could settle another round's line. */
+function applyToolFinished(line: LineRef, outcome: ToolOutcome, subject: ToolSubject): void {
+  const call = findLine(line)
+  if (call) {
+    call.running = false
+    call.outcome = outcome
+    call.subject = subject
   }
   resetProgressWatchdog()
 }
 
-/** Only within the CURRENT bubble: a call id alone collides across rounds and turns, so a
- * thread-wide lookup could settle an earlier turn's line. The latest line with the id is this
- * round's. */
-function applyToolFinished(callId: string, ok: boolean): void {
-  const tool = currentAssistant()?.tools.findLast((candidate) => candidate.callId === callId)
-  if (tool) {
-    tool.running = false
-    tool.ok = ok
+/** The line `ref` names, newest bubble first. Within a round that called one id twice, the first
+ * still waiting for its result is the next to finish (results persist in call order). */
+function findLine({ messageId, callId }: LineRef): RailToolCall | undefined {
+  for (let i = askCmdrState.messages.length - 1; i >= 0; i--) {
+    const item = askCmdrState.messages[i]
+    if (item.kind !== 'assistant') continue
+    const round = item.rounds.find((candidate) => candidate.messageId === messageId)
+    if (!round) continue
+    const withId = round.calls.filter((candidate) => candidate.callId === callId)
+    return withId.find((candidate) => candidate.outcome === null) ?? withId.at(-1)
   }
-  resetProgressWatchdog()
+  return undefined
 }
 
-function applyDone(messageId: number): void {
-  finalizeAssistant(messageId)
+/** The answer round is text-only, so no `toolCallsResolved` stamped it: `done` does, BEFORE the
+ * bubble settles, or settling would drop the answer as never stored. */
+function applyDone(messageId: number, stats: TurnStats | null): void {
+  const assistant = currentAssistant()
+  if (assistant) {
+    const last = assistant.rounds.at(-1)
+    if (last?.messageId === null) last.messageId = messageId
+    else if (last?.messageId !== messageId) assistant.rounds.push({ messageId, text: '', calls: [] })
+    assistant.stats = stats
+  }
+  finalizeAssistant()
   askCmdrState.streaming = false
   clearProgressWatchdog()
   // The turn boundary is what makes a job's batches ONE review.
   openStagedRenameReview()
 }
 
-function applyFailed(kind: AskCmdrErrorKind, detail: string | null, managed: ManagedAiRefusal | null = null): void {
+function applyFailed(
+  kind: AskCmdrErrorKind,
+  detail: string | null,
+  managed: ManagedAiRefusal | null = null,
+  stats: TurnStats | null = null,
+): void {
+  const assistant = currentAssistant()
+  if (assistant) assistant.stats = stats
   finalizeAssistant()
   askCmdrState.messages.push({
     kind: 'error',

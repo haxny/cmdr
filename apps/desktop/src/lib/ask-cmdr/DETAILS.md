@@ -49,32 +49,48 @@ Three things follow from the subscription being conversation-keyed rather than p
   "working…", so the thread goes on a stopped list until a terminal event (`done`, `failed`, `stopped`, `discarded`) or
   a new send clears it.
 
+**One bubble per turn, made of rounds.** An assistant item (`AssistantItem`, `ask-cmdr-messages.ts`) is one turn:
+`rounds` (one per model call: `{ messageId, text, calls }`), `turnId` (the opener row's id), and `stats`. A round's text
+renders BEFORE its calls whatever order the wire interleaved them in, because that is the order the stored row holds
+(genai's `StreamEnd` yields one text, then all calls). `displaySegments` (`ask-cmdr-rounds.ts`) turns rounds into what
+the bubble renders: each round's text, then its calls, with consecutive tool runs merged when the round between them
+said nothing. Only the last round's prose is a live region. A line is `(messageId, callId)` everywhere, `each` keys
+included (`r<index>:<callId>` while the round has no id, plus an occurrence suffix for an id repeated within one round),
+because call ids collide across rounds as the norm.
+
 `sendMessage` optimistically appends a `{ kind: 'user' }` item and flips `streaming` on, then calls
 `sendAskCmdrMessage`. Events drive the render (`applyStreamEvent`), each delegating to a tiny mutator so the switch
 stays simple:
 
 - `started` → the thread exists and is being worked on. A fresh chat has no id until this arrives (or until the send's
   promise resolves, whichever is first); a wake emits it too, which is what tells the session list.
-- `assistantStarted` → push a streaming `{ kind: 'assistant', text: '', tools: [] }`.
-- `textDelta` → append to the last assistant's `text`; clear its `thinking`.
-- `reasoningTick` → set the last assistant's `thinking` (a subtle "thinking…" line; the reasoning content itself never
-  crosses).
-- `toolCallStarted` / `toolCallFinished` → push / update a `RailToolCall` (the collapsible "looked at X" line).
-  `toolCallFinished` carries the line's identity (`messageId` + `callId`), its typed `outcome`, and its refined
-  `subject`; today the reducer derives `ok` from the outcome through `outcomeOk` (`ask-cmdr-tool-line.ts`, an exhaustive
-  `Record` over outcome kinds mirroring the backend's `ToolOutcome::ok`, shared with the history fold) and finds the
-  line by `callId` within the CURRENT bubble only, because ids collide across rounds and turns. `toolCallsResolved` (one
-  per round: every call of the final message, with subjects and repeat marks) is ignored for now.
+- `assistantStarted` → open a round in the current bubble (creating the bubble if needed).
+- **A round with a `messageId` is SEALED** (its row is stored): `textDelta`, `reasoningTick`, and `toolCallStarted`
+  arriving on a sealed round open a new one first (`openRound`). That is what makes a reload mid-turn come out right:
+  every folded round is sealed, so the live chunks that follow get a round of their own.
+- `textDelta` → append to the current round's text, even after its calls started; clear `thinking`.
+- `reasoningTick` → set the bubble's `thinking` (a subtle "thinking…" line; the reasoning content itself never crosses).
+- `userPersisted` → the user item gets its id and the streaming bubble its `turnId` (it arrives after round 1 streamed,
+  on the first `End`).
+- `toolCallStarted` → add a running line to the current round, idempotent by `callId` within the round (ERR-FRMAR).
+- `toolCallsResolved` → the round's stored truth, once per tool round: stamp its `messageId` (sealing it), set each
+  line's subject and `repeatOf` (and the tool's wire name), add a line whose start never came, and drop a started line
+  the batch doesn't list (a nameless call the backend discarded). The k-th call with an id takes the k-th started line
+  with it.
+- `toolCallFinished` → find the line by `(messageId, callId)` across the thread (newest bubble first) and set its
+  outcome and refined subject. `ok` derives from the outcome through `outcomeOk` (`ask-cmdr-tool-line.ts`, an exhaustive
+  `Record` mirroring the backend's `ToolOutcome::ok`); a settled line with no outcome reads as done.
+- `done` → stamp the current round with its `messageId` FIRST (the answer round is text-only, so no `toolCallsResolved`
+  stamped it, and settling would drop it as never stored), attach `turn` as `stats`, finalize, `streaming = false`.
+- `failed` → attach `turn` as `stats`, finalize, push a typed `{ kind: 'error' }` item, `streaming = false`. The item
+  carries the source error's own wording (`detail`, when the backend has one — a retired model slug, a quota reset time)
+  under the friendly headline, rendered as escaped plain text (never `{@html}`), so the user sees what to fix. Display
+  only: the UI branches on `errorKind`, never on `detail`. `managedByOrganization` (the organization's MDM policy
+  refused the turn, nothing sent) words the rule that refused through `managedAiRefusalMessage`: the send refusal and
+  the `failed` event carry it as `managed` beside the unit kind. `askCmdr.error.managedByOrganization` is the fallback
+  when none came.
 - `stopped` → the backend's terminal for a cancelled turn. Today it only clears the stopped mark; the local stop already
   finalized the bubble.
-- `done` → finalize the bubble, stamp its persisted id, `streaming = false`.
-- `failed` → drop an empty bubble, push a typed `{ kind: 'error' }` item, `streaming = false`. The item carries the
-  source error's own wording (`detail`, when the backend has one — a retired model slug, a quota reset time) under the
-  friendly headline, rendered as escaped plain text (never `{@html}`), so the user sees what to fix. Display only: the
-  UI branches on `errorKind`, never on `detail`. `managedByOrganization` (the organization's MDM policy refused the
-  turn, nothing sent) words the rule that refused through `managedAiRefusalMessage`: the send refusal and the `failed`
-  event carry it as `managed` beside the unit kind. `askCmdr.error.managedByOrganization` is the fallback when none
-  came.
 - `modelChanged` / `chatMemoryChanged` → insert a `{ kind: 'modelChange' }` / `{ kind: 'chatMemoryChange' }` timeline
   line BEFORE the current user bubble (the change happened between the turns; the backend already persisted the event
   row). Both go through the one `insertBeforeCurrentTurn` helper. `chatMemoryChanged` carries a token COUNT and the rail
@@ -86,9 +102,13 @@ stays simple:
   `src-tauri/src/agent/chat/DETAILS.md` § Budget enforcement.
 - `proposalDecided` → not a turn event at all, and handled before the reducer: § How an open thread stays current.
 
-Every terminal path uses the same assistant finalizer. It clears thinking/stalled state and removes tool rows that never
-received `toolCallFinished`, while retaining completed tool history. This also covers local cancellation, the
-progress-watchdog timeout, and a send invocation that rejects before stream events can report a typed failure.
+**Every terminal path uses the same finalizer, and it settles the bubble the way a reload reads the stored rows**
+(`finalizeAssistant` + `settleRounds`): rounds without a `messageId` are dropped (they never reached `End`, so nothing
+was stored: crash case a), calls still running settle with no outcome (no result row exists), empty rounds go, the
+bubble takes its last persisted round's id, and a bubble with nothing left is removed. This covers `done`, `failed`, the
+local stop, the progress-watchdog timeout, and a send invocation that rejects before stream events can report a typed
+failure. Tradeoff, chosen for live-equals-reload: a turn that ends without an answer loses the text of the round it was
+streaming, because a reload wouldn't show it either.
 
 **Slot-change events, live path.** `settings-applier.ts` calls the trigger's `noteSlotSettingChanged()` on the five
 slot-affecting settings (`ai.provider` / `ai.cloudProvider` / `ai.cloudProviderConfigs` / `askCmdr.interactiveModel` /
@@ -105,11 +125,17 @@ thread on the stopped list so the chunks still in flight are ignored rather than
 backend's `stopped` arrives once the round's calls have run.
 
 **Terminal events carry the turn's stats.** `done`, `failed`, and `stopped` carry `turn: TurnStats | null` (tool calls,
-wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. The rail doesn't show it
-yet.
+wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. `done` and `failed` put
+it on the bubble's `stats`; the rail doesn't render it yet.
 
-History loads through `getAskCmdrConversation` on rail open (bootstrapping the most recent thread) and folds `tool`-role
-result rows into their assistant tool line by `callId`, so the thread shows one line per call.
+**History folds into the same bubbles** (`buildRailMessages`, `ask-cmdr-history.ts`), loaded through
+`getAskCmdrConversation` on rail open. Rows group by the backend's `turnId` (never a frontend guess at turn edges): each
+assistant row is one round (its text blocks joined, its `toolCall` blocks as lines carrying their own subject, outcome,
+and repeat mark), the bubble's id is the turn's last assistant row, and its stats ride that row's `turnStats`. An event
+row with `duringTurn` is hoisted above its turn's bubble (where the live rail's `showDecision` put it); the rest stay in
+place. An event row with no blocks (a turn's `TurnFinished` record, an unknown kind) draws nothing. Result-less calls
+fold settled. `ask-cmdr-turn-parity.test.ts` pins that the live reducer and the fold build EQUAL items for one scripted
+turn (interleaved deltas, two rounds reusing `fake-call-0`, a mid-turn and a post-turn decision).
 
 ## What a wake's thread opens with
 
@@ -280,8 +306,15 @@ registry lives below `commands/` rather than inside the chat command.
   restore after) and its auto-scroll-to-bottom only fires when the user was already near the bottom (`wasNearBottom`,
   tracked on scroll), so streaming follows but loading older doesn't jump. The backend pairs each call with its result
   across a page seam (`src-tauri/src/agent/chat/DETAILS.md` § What a reloaded page says), so a history line reads its
-  `outcome` and `subject` off its own `toolCall` block; tool rows carry no blocks. Page-boundary caveat:
-  `buildRailMessages` folds each loaded page independently, so one assistant item can still split into two at a seam.
+  `outcome` and `subject` off its own `toolCall` block; tool rows carry no blocks. A 12-call turn is about 20 rows
+  against a 50-row page, so seams cut turns routinely: `loadOlderMessages` joins the halves with `mergeAtSeam`
+  (`ask-cmdr-rounds.ts`), which merges the older page's last bubble with the newer list's first bubble exactly when
+  their `turnId`s match (rounds concatenated, the newer half's id and flags, the stats that exist), keeping any event
+  the newer page hoisted above it.
+- **The "start a fresh one?" nudge counts user items + ROUNDS + every other item** (`softCapCount`) against
+  `THREAD_SOFT_CAP_MESSAGES` (40, mirroring the Rust constant). Each round counts, as each assistant row did when it was
+  its own bubble, so folding a turn into one bubble didn't make the nudge fire far later. A `TurnFinished` row draws no
+  item, so it doesn't count.
 - **Only the latest thread load may touch the rail** (`latestThreadLoad` in `ask-cmdr-trigger.svelte.ts`). Every read is
   its own command, so the first one asked can be the last one answered: picking thread A and then B must leave B on
   screen whichever answers second, and a late answer must not repaint a chat the user cleared with "new chat". An
@@ -608,9 +641,10 @@ scripted `FakeAgentLlm` when `CMDR_E2E_ASK_CMDR_FAKE=1` (set for the whole E2E r
 `desktop-svelte-e2e-playwright` check). It streams a fixed "Hi! I'm the test assistant." so `ask-cmdr.spec.ts` can
 assert send-and-render deterministically, zero network. The scripted turn is Say-only (no tools), so no tool dispatch
 runs. `ask-cmdr-trigger.test.ts` covers the full event model (tool lines, stop, soft cap, message paging, attachments)
-with mocked events; `ask-cmdr-sessions.test.ts` covers list paging/search/rename/archive. The E2E spec also drives the
-sessions path end-to-end (create two threads, search finds the right one via real FTS over the persisted messages,
-switch works) — it seeds a per-run nonce into the message text so search never matches a thread left by an earlier run.
+with mocked events, and `ask-cmdr-turn-parity.test.ts` the round reducer and live-equals-reload;
+`ask-cmdr-sessions.test.ts` covers list paging/search/rename/archive. The E2E spec also drives the sessions path
+end-to-end (create two threads, search finds the right one via real FTS over the persisted messages, switch works) — it
+seeds a per-run nonce into the message text so search never matches a thread left by an earlier run.
 
 **The fake gets its own prompt budget.** It answers as a LOCAL provider with no local server behind it, so the real
 resolution would size its budget from `ai.localContextSize` — a setting the harness has no reason to touch, and whose

@@ -1,6 +1,7 @@
 <!--
-  One rendered thread item: a user bubble, an assistant turn (tool lines + a "thinking…"
-  indicator + markdown-lite prose with a streaming cursor), or a typed failure notice.
+  One rendered thread item: a user bubble, an assistant turn (its rounds as markdown-lite
+  narration and tool lines, in order, plus a "thinking…" indicator and a streaming cursor), or a
+  typed failure notice.
 
   Assistant prose is the XSS boundary: it's untrusted model text, so it goes through
   `renderAssistantMarkdown` (HTML-entity escape + snarkdown) before {@html}. User text and
@@ -12,6 +13,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { errorMessage, undoSkipMessage } from './ask-cmdr-labels'
     import { renderAssistantMarkdown } from './ask-cmdr-markdown'
+    import { displaySegments } from './ask-cmdr-rounds'
     import AskCmdrToolLine from './AskCmdrToolLine.svelte'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import AskCmdrWakeDigest from './AskCmdrWakeDigest.svelte'
@@ -23,6 +25,8 @@
         message: RailMessage
     }
     const { message }: Props = $props()
+
+    const segments = $derived(message.kind === 'assistant' ? displaySegments(message.rounds) : [])
 
     /** A count as both the preformatted string the sentence drops in and the raw
      *  integer that picks the plural form (the catalogs' `*Text` convention). */
@@ -94,27 +98,30 @@
         <AskCmdrProposalDecisions decisions={message.decisions} />
     </div>
 {:else if message.kind === 'assistant'}
+    <!-- One turn: each round's narration, then its tool lines, in the order they happened. Only
+         the last round's prose is a live region, so earlier narration doesn't re-announce. -->
     <div class="msg">
-        {#if message.tools.length > 0}
-            <div class="tools">
-                {#each message.tools as tool (tool.callId)}
-                    <AskCmdrToolLine {tool} />
-                {/each}
-            </div>
-        {/if}
+        {#each segments as segment, index (segment.key)}
+            {#if segment.kind === 'tools'}
+                <div class="tools">
+                    {#each segment.lines as line (line.key)}
+                        <AskCmdrToolLine tool={line.call} />
+                    {/each}
+                </div>
+            {:else}
+                <div class="prose" data-text-region aria-live={segment.lastRound ? 'polite' : undefined}>
+                    <!-- eslint-disable-next-line svelte/no-at-html-tags -- untrusted model text is HTML-entity-escaped (escapeForMarkdownLite) before snarkdown inside renderAssistantMarkdown; this is the XSS boundary. -->
+                    {@html renderAssistantMarkdown(segment.text)}{#if message.streaming && index === segments.length - 1}<span
+                            class="cursor"
+                            aria-hidden="true"
+                        ></span>{/if}
+                </div>
+            {/if}
+        {/each}
         {#if message.thinking || message.stalled}
             <div class="status-line" role="status">
                 <span class="status-glyph"><Spinner size="sm" /></span>
                 <span>{message.stalled ? tString('askCmdr.stalled') : tString('askCmdr.thinking')}</span>
-            </div>
-        {/if}
-        {#if message.text}
-            <div class="prose" data-text-region aria-live="polite">
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -- untrusted model text is HTML-entity-escaped (escapeForMarkdownLite) before snarkdown inside renderAssistantMarkdown; this is the XSS boundary. -->
-                {@html renderAssistantMarkdown(message.text)}{#if message.streaming}<span
-                        class="cursor"
-                        aria-hidden="true"
-                    ></span>{/if}
             </div>
         {/if}
     </div>
@@ -324,6 +331,11 @@
         line-height: var(--font-line-height-prose);
         color: var(--color-text-primary);
         word-break: break-word;
+    }
+
+    /* Narration followed by the tool lines it introduces. */
+    .prose:not(:last-child) {
+        margin-bottom: var(--spacing-xs);
     }
 
     /* snarkdown output: tighten the default block margins to the rail's rhythm. */

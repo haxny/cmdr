@@ -20,6 +20,7 @@ import { focusHome } from '#lib/ui/focus-restore.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
+import { mergeAtSeam } from './ask-cmdr-rounds'
 import { askCmdrState, hasOlderMessages, MESSAGE_PAGE, RAIL_MAX_WIDTH, RAIL_MIN_WIDTH } from './ask-cmdr-state.svelte'
 import { settleDecisionsHeardWhileLoading, stopStreaming } from './ask-cmdr-stream.svelte'
 import { growMainWindowForRail, shrinkMainWindowForRail } from './rail-window'
@@ -252,7 +253,8 @@ export async function loadOlderMessages(): Promise<void> {
     const offset = remaining - limit
     const detail = await getAskCmdrConversation(id, limit, offset)
     if (!detail || shownBy !== latestThreadLoad) return
-    askCmdrState.messages = [...buildRailMessages(detail), ...askCmdrState.messages]
+    // A turn longer than the page boundary arrives in two halves; they fold back into one bubble.
+    askCmdrState.messages = mergeAtSeam(buildRailMessages(detail), askCmdrState.messages)
     askCmdrState.historyCount += detail.messages.length
   } catch (e) {
     log.warn('loading earlier messages failed: {error}', { error: e })

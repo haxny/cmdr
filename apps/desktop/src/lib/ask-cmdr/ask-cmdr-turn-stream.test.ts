@@ -79,6 +79,11 @@ function assistantAt(index: number): Extract<RailMessage, { kind: 'assistant' }>
   return message
 }
 
+/** A bubble's narration across its rounds. */
+function textOf(item: Extract<RailMessage, { kind: 'assistant' }>): string {
+  return item.rounds.map((round) => round.text).join('')
+}
+
 beforeEach(() => {
   stopAskCmdrTurnStream()
   sendMock.mockReset()
@@ -118,7 +123,7 @@ describe('the main window subscription', () => {
 
     askCmdrState.conversationId = OPEN_THREAD
     listenMock.mock.calls[0][0]({ conversationId: OPEN_THREAD, event: { type: 'textDelta', text: 'live' } })
-    expect(assistantAt(0).text).toBe('live')
+    expect(textOf(assistantAt(0))).toBe('live')
   })
 
   it('stops listening on teardown, and can be started again', async () => {
@@ -166,7 +171,7 @@ describe('picking a turn up part-way through', () => {
     fire(OPEN_THREAD, { type: 'textDelta', text: 'of an answer' })
 
     expect(askCmdrState.streaming).toBe(true)
-    expect(assistantAt(0).text).toBe('the second half of an answer')
+    expect(textOf(assistantAt(0))).toBe('the second half of an answer')
     expect(assistantAt(0).streaming).toBe(true)
 
     fire(OPEN_THREAD, {
@@ -182,9 +187,9 @@ describe('picking a turn up part-way through', () => {
     expect(assistantAt(0).id).toBe(12)
   })
 
-  /** A cancel gets no terminal event back, so the backend keeps dribbling for a chunk or two.
+  /** After a cancel the backend keeps dribbling for a chunk or two before its `stopped`.
    *  Without the stopped list those chunks would read as a live turn and put the rail back
-   *  into "working…" with nothing coming to clear it. */
+   *  into "working…" or open a bubble the stop already settled away. */
   it('a chunk arriving after the user stopped does not restart the turn', async () => {
     sendMessage('long one')
     fire(OPEN_THREAD, { type: 'started' })
@@ -196,7 +201,8 @@ describe('picking a turn up part-way through', () => {
     fire(OPEN_THREAD, { type: 'textDelta', text: ' and more' })
 
     expect(askCmdrState.streaming).toBe(false)
-    expect(assistantAt(1).text).toBe('partial')
+    // Nothing of that turn was stored yet, so the stop left no bubble, and the chunk opens none.
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user'])
   })
 })
 
@@ -355,7 +361,7 @@ describe('an answer to a suggestion', () => {
 
     expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['proposalDecisions', 'assistant'])
     expect(askCmdrState.messages[0]).toEqual(decisionLine(32, ran))
-    expect(assistantAt(1).text).toBe('the first half and the second')
+    expect(textOf(assistantAt(1))).toBe('the first half and the second')
   })
 
   /** A stopped thread drops late chunks so they can't restart the turn. A decision is not a

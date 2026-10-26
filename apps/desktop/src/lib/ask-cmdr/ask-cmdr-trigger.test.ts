@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AskCmdrSendOutcome, AskCmdrStreamEvent } from '#lib/tauri-commands/index.js'
-import type { ToolOutcome, ToolSubject } from '#lib/ipc/bindings.js'
+import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageView } from '#lib/tauri-commands/index.js'
+import type { ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
 const cancelMock = vi.fn<(id: number) => Promise<void>>()
@@ -76,6 +76,7 @@ import {
   switchToThread,
   THREAD_SOFT_CAP_MESSAGES,
   type RailMessage,
+  type RailToolCall,
 } from './ask-cmdr-trigger.svelte'
 import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
 
@@ -86,6 +87,13 @@ const THREAD_ID = 1
 const ANSWERED: ToolOutcome = { kind: 'answered' }
 const REFUSED: ToolOutcome = { kind: 'refused', reason: { kind: 'problem' } }
 const UNPARSED: ToolSubject = { kind: 'unparsed' }
+const PANES: ToolSubject = { kind: 'panes' }
+const STATS: TurnStats = { toolCalls: 2, wallMs: 1200, promptTokens: 10, completionTokens: 2 }
+
+/** One call of a `toolCallsResolved` batch. */
+function resolved(callId: string, tool: string): ResolvedCall {
+  return { callId, tool, subject: UNPARSED, repeatOf: null }
+}
 
 /** Feed one stream event in as the backend emits it, for the thread the rail is on. A rail with
  * no thread yet is put on the named one first: production gets there through `started`, which
@@ -130,6 +138,16 @@ function assistantAt(index: number): Extract<RailMessage, { kind: 'assistant' }>
   return message
 }
 
+/** A bubble's narration across its rounds. */
+function textOf(item: Extract<RailMessage, { kind: 'assistant' }>): string {
+  return item.rounds.map((round) => round.text).join('')
+}
+
+/** A bubble's tool lines across its rounds. */
+function linesOf(item: Extract<RailMessage, { kind: 'assistant' }>): RailToolCall[] {
+  return item.rounds.flatMap((round) => round.calls)
+}
+
 describe('sendMessage + streaming', () => {
   it('appends a user message and streams the answer into an assistant bubble', () => {
     sendMessage('hello')
@@ -141,7 +159,7 @@ describe('sendMessage + streaming', () => {
     fire({ type: 'assistantStarted' })
     fire({ type: 'textDelta', text: 'Hi ' })
     fire({ type: 'textDelta', text: 'there' })
-    expect(assistantAt(1).text).toBe('Hi there')
+    expect(textOf(assistantAt(1))).toBe('Hi there')
     expect(assistantAt(1).streaming).toBe(true)
 
     fire({
@@ -162,42 +180,19 @@ describe('sendMessage + streaming', () => {
     sendMessage('what am I looking at?')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'app_state' })
-    expect(assistantAt(1).tools[0]).toMatchObject({ callId: 'c1', tool: 'app_state', running: true })
-    fire({ type: 'toolCallFinished', messageId: 1, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
-    expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: true })
+    expect(linesOf(assistantAt(1))[0]).toMatchObject({ callId: 'c1', tool: 'app_state', running: true })
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'app_state')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: PANES })
+    expect(linesOf(assistantAt(1))[0]).toMatchObject({ running: false, outcome: ANSWERED, subject: PANES })
   })
 
-  it('a refused outcome settles its line as not ok', () => {
+  it('a refused outcome settles its line with that outcome', () => {
     sendMessage('look')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'delete' })
-    fire({ type: 'toolCallFinished', messageId: 1, callId: 'c1', outcome: REFUSED, subject: UNPARSED })
-    expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: false })
-  })
-
-  it('a finished call settles the line in the current bubble, never an earlier turn reusing its id', () => {
-    // Call ids collide across turns (a provider resets them per response), so the line is looked
-    // up in the bubble being streamed, not across the thread.
-    sendMessage('first')
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
-    fire({ type: 'toolCallFinished', messageId: 1, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
-    fire({
-      type: 'done',
-      messageId: 2,
-      seq: 2,
-      stop: 'completed',
-      usage: { promptTokens: 1, completionTokens: 1 },
-      turn: null,
-    })
-
-    // The second turn's start for `c1` was never heard (a reload landed after it).
-    sendMessage('second')
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'toolCallFinished', messageId: 4, callId: 'c1', outcome: REFUSED, subject: UNPARSED })
-
-    expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: true })
-    expect(assistantAt(3).tools).toEqual([])
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'delete')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: REFUSED, subject: UNPARSED })
+    expect(linesOf(assistantAt(1))[0]).toMatchObject({ running: false, outcome: REFUSED })
   })
 
   it('a repeated start for a call already on screen adds no second tool line', () => {
@@ -209,28 +204,39 @@ describe('sendMessage + streaming', () => {
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
     fire({ type: 'toolCallStarted', callId: 'c2', tool: 'app_state' })
-    expect(assistantAt(1).tools.map((tool) => tool.callId)).toEqual(['c1', 'c2'])
+    expect(linesOf(assistantAt(1)).map((tool) => tool.callId)).toEqual(['c1', 'c2'])
   })
 
-  it('a successful turn retires unfinished activity while keeping completed tool history', () => {
+  it("a turn's end settles a call that never reported back, keeping it with no outcome", () => {
     sendMessage('inspect this folder')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'finished', tool: 'list_dir' })
-    fire({ type: 'toolCallFinished', messageId: 1, callId: 'finished', outcome: ANSWERED, subject: UNPARSED })
     fire({ type: 'toolCallStarted', callId: 'unfinished', tool: 'list_volumes' })
+    fire({
+      type: 'toolCallsResolved',
+      messageId: 2,
+      calls: [resolved('finished', 'list_dir'), resolved('unfinished', 'list_volumes')],
+    })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'finished', outcome: ANSWERED, subject: UNPARSED })
+    fire({ type: 'assistantStarted' })
     fire({ type: 'reasoningTick' })
+    fire({ type: 'textDelta', text: 'Here it is.' })
 
     fire({
       type: 'done',
-      messageId: 42,
-      seq: 2,
+      messageId: 6,
+      seq: 6,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
       turn: null,
     })
 
-    expect(assistantAt(1).tools.map((tool) => tool.callId)).toEqual(['finished'])
-    expect(assistantAt(1)).toMatchObject({ thinking: false, stalled: false, streaming: false })
+    expect(linesOf(assistantAt(1)).map((tool) => [tool.callId, tool.running, tool.outcome])).toEqual([
+      ['finished', false, ANSWERED],
+      ['unfinished', false, null],
+    ])
+    expect(assistantAt(1)).toMatchObject({ id: 6, thinking: false, stalled: false, streaming: false })
+    expect(textOf(assistantAt(1))).toBe('Here it is.')
   })
 
   it('a typed failure ends streaming and shows an honest notice', () => {
@@ -243,7 +249,29 @@ describe('sendMessage + streaming', () => {
     expect(last).toEqual({ kind: 'error', errorKind: 'rateLimited', detail: undefined })
   })
 
-  it('a typed failure retires unfinished tool activity', () => {
+  /** What wasn't stored goes, as a reload wouldn't show it: the round that never reached `End`.
+   *  The rounds that did stay, with what the turn spent. */
+  it('a typed failure keeps what persisted and drops the round that never did', () => {
+    sendMessage('inspect this folder')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'list_dir')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'I found part of it.' })
+
+    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null, turn: STATS })
+
+    expect(assistantAt(1).rounds.map((round) => round.messageId)).toEqual([2])
+    expect(assistantAt(1)).toMatchObject({ id: 2, thinking: false, streaming: false, stats: STATS })
+    expect(askCmdrState.messages.at(-1)).toEqual({
+      kind: 'error',
+      errorKind: 'budgetExhausted',
+      detail: undefined,
+    })
+  })
+
+  it('a typed failure before anything persisted leaves no bubble', () => {
     sendMessage('inspect this folder')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
@@ -251,13 +279,7 @@ describe('sendMessage + streaming', () => {
 
     fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null, turn: null })
 
-    expect(assistantAt(1).tools).toEqual([])
-    expect(assistantAt(1)).toMatchObject({ thinking: false, streaming: false })
-    expect(askCmdrState.messages.at(-1)).toEqual({
-      kind: 'error',
-      errorKind: 'budgetExhausted',
-      detail: undefined,
-    })
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'error'])
   })
 
   it('a rejected send settles the turn without blaming the provider or showing raw IPC text', async () => {
@@ -429,34 +451,43 @@ describe('slot settings changes', () => {
 })
 
 describe('stopStreaming', () => {
-  it('cancels the active turn and finalizes locally (no terminal event arrives)', () => {
+  /** A round of `partial` narration whose row persisted, then a second round still streaming. */
+  function streamPastOneRound(): void {
     sendMessage('long one')
     fire({ type: 'started' }, 3)
     fire({ type: 'assistantStarted' })
     fire({ type: 'textDelta', text: 'partial' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+    fire({ type: 'toolCallsResolved', messageId: 5, calls: [resolved('c1', 'list_dir')] })
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'textDelta', text: 'never stored' })
+  }
+
+  it('cancels the active turn and settles it locally to what persisted', () => {
+    streamPastOneRound()
     stopStreaming()
     expect(cancelMock).toHaveBeenCalledWith(3)
     expect(askCmdrState.streaming).toBe(false)
-    expect(assistantAt(1).streaming).toBe(false)
-    expect(assistantAt(1).text).toBe('partial')
+    expect(assistantAt(1)).toMatchObject({ id: 5, streaming: false })
+    expect(textOf(assistantAt(1))).toBe('partial')
+    // The call that was running has no result row yet, so it settles with no outcome.
+    expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: false, outcome: null }])
   })
 
   it("the backend's stopped event after a local stop changes nothing and lets the next turn stream", () => {
-    sendMessage('long one')
-    fire({ type: 'started' }, 3)
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'partial' })
+    streamPastOneRound()
     stopStreaming()
 
-    fire({ type: 'stopped', turn: { toolCalls: 2, wallMs: 1200, promptTokens: 10, completionTokens: 2 } })
-    expect(assistantAt(1)).toMatchObject({ text: 'partial', streaming: false })
+    fire({ type: 'stopped', turn: STATS })
+    expect(assistantAt(1)).toMatchObject({ streaming: false })
+    expect(textOf(assistantAt(1))).toBe('partial')
     expect(askCmdrState.streaming).toBe(false)
 
     fire({ type: 'textDelta', text: 'a later turn' })
     expect(askCmdrState.streaming).toBe(true)
   })
 
-  it('removes unfinished tool activity when the user cancels', () => {
+  it('drops a bubble nothing of which persisted', () => {
     sendMessage('long one')
     fire({ type: 'started' }, 3)
     fire({ type: 'assistantStarted' })
@@ -465,22 +496,17 @@ describe('stopStreaming', () => {
 
     stopStreaming()
 
-    expect(assistantAt(1).tools).toEqual([])
-    expect(assistantAt(1)).toMatchObject({ thinking: false, streaming: false })
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user'])
   })
 
-  it('removes unfinished tool activity when the progress watchdog times out', async () => {
+  it('settles the turn when the progress watchdog times out', async () => {
     vi.useFakeTimers()
     try {
-      sendMessage('long one')
-      fire({ type: 'started' }, 3)
-      fire({ type: 'assistantStarted' })
-      fire({ type: 'textDelta', text: 'partial' })
-      fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+      streamPastOneRound()
 
       await vi.advanceTimersByTimeAsync(90_000)
 
-      expect(assistantAt(1).tools).toEqual([])
+      expect(linesOf(assistantAt(1))).toMatchObject([{ callId: 'c1', running: false, outcome: null }])
       expect(assistantAt(1)).toMatchObject({ thinking: false, stalled: false, streaming: false })
       expect(askCmdrState.messages.at(-1)).toEqual({ kind: 'error', errorKind: 'timeout' })
     } finally {
@@ -551,8 +577,13 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     // The user + assistant items; the tool row draws nothing, its result rides the call's line.
     expect(askCmdrState.messages).toHaveLength(2)
     const assistant = assistantAt(1)
-    expect(assistant.text).toBe('hello')
-    expect(assistant.tools[0]).toMatchObject({ callId: 'c1', tool: 'list_dir', ok: true, path: '/x' })
+    expect(textOf(assistant)).toBe('hello')
+    expect(linesOf(assistant)[0]).toMatchObject({
+      callId: 'c1',
+      tool: 'list_dir',
+      subject: { kind: 'folder', path: '/x' },
+      outcome: { kind: 'items', returned: 1, total: 1, lowerBound: false },
+    })
   })
 
   it('folds persisted event rows into model-change timeline lines', async () => {
@@ -681,6 +712,30 @@ describe('isOverSoftCap', () => {
     expect(askCmdrState.messages.length).toBe(THREAD_SOFT_CAP_MESSAGES + 1)
     expect(isOverSoftCap()).toBe(true)
   })
+
+  /** A turn is one bubble, but each of its rounds counts, as each assistant row did when it was
+   *  its own bubble: a long tool-heavy thread still gets the nudge on time. */
+  it("counts a bubble's rounds, not the bubble", () => {
+    const rounds = Array.from({ length: THREAD_SOFT_CAP_MESSAGES }, (_, i) => ({
+      messageId: i + 2,
+      text: 'x',
+      calls: [],
+    }))
+    askCmdrState.messages = [
+      { kind: 'user', id: 1, text: 'hi', attachments: [] },
+      {
+        kind: 'assistant',
+        id: null,
+        turnId: 1,
+        rounds,
+        thinking: false,
+        stalled: false,
+        streaming: false,
+        stats: null,
+      },
+    ]
+    expect(isOverSoftCap()).toBe(true)
+  })
 })
 
 /** A minimal user-role MessageView for paging fixtures. */
@@ -697,6 +752,11 @@ function userMessage(id: number, seq: number) {
     duringTurn: false,
     turnStats: null,
   }
+}
+
+/** A minimal text-only assistant-role MessageView. */
+function assistantRow(id: number, seq: number, text: string) {
+  return { ...userMessage(id, seq), role: 'assistant' as const, blocks: [{ type: 'text' as const, text }] }
 }
 
 /** A detail page covering seqs [offset, offset+limit) out of `total`. */
@@ -764,6 +824,33 @@ describe('message paging (tail-first, load older)', () => {
     expect(askCmdrState.messages).toHaveLength(2)
     expect(askCmdrState.historyCount).toBe(2)
     expect(askCmdrState.loadingOlder).toBe(false)
+  })
+
+  /** A tool-heavy turn is many rows, so page boundaries cut turns routinely. Loading the older
+   *  half joins it back into the one bubble a whole-thread load would show. */
+  it('load-older folds a turn the page boundary split back into one bubble', async () => {
+    const total = MESSAGE_PAGE + 2
+    const rows: MessageView[] = Array.from({ length: total }, (_, seq) => userMessage(seq + 1, seq))
+    // Rows 0–2 are one turn: its opener, then two rounds; the tail page starts at its second round.
+    rows[0] = { ...rows[0], turnId: 1 }
+    rows[1] = { ...assistantRow(2, 1, 'first half'), turnId: 1 }
+    rows[2] = { ...assistantRow(3, 2, 'second half'), turnId: 1 }
+    getMock.mockImplementation((...args: unknown[]) => {
+      const [, limit, offset] = args as [number, number, number]
+      return Promise.resolve({
+        conversation: conversationRow(9),
+        totalMessages: total,
+        messages: rows.slice(offset, offset + limit),
+      })
+    })
+    await switchToThread(9)
+    expect(askCmdrState.messages[0]).toMatchObject({ kind: 'assistant', id: 3 })
+
+    await loadOlderMessages()
+
+    expect(askCmdrState.messages.slice(0, 3).map((m) => m.kind)).toEqual(['user', 'assistant', 'user'])
+    expect(assistantAt(1)).toMatchObject({ id: 3, turnId: 1 })
+    expect(assistantAt(1).rounds.map((round) => round.text)).toEqual(['first half', 'second half'])
   })
 
   it('a short thread loads in one page with nothing older', async () => {

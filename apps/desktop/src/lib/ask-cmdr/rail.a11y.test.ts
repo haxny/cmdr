@@ -114,6 +114,18 @@ function container(): HTMLDivElement {
   return target
 }
 
+/** A settled tool line that looked at a folder. */
+function folderLine(path: string): RailToolCall {
+  return {
+    callId: 'c1',
+    tool: 'list_dir',
+    running: false,
+    subject: { kind: 'folder', path },
+    outcome: { kind: 'items', returned: 3, total: 3, lowerBound: false },
+    repeatOf: null,
+  }
+}
+
 /** The composer's "Ask about selection" read, with nothing to attach. */
 const noSelection = () => Promise.resolve({ kind: 'refs' as const, refs: [], leftOut: 0 })
 
@@ -330,10 +342,15 @@ describe('AskCmdrMessage a11y', () => {
     const target = mountMessage({
       kind: 'assistant',
       id: null,
-      text: 'Your **Downloads** folder is the largest.',
-      tools: [{ callId: 'c1', tool: 'largest_dirs', running: false, ok: true, path: '/Users/me' }],
+      turnId: 1,
+      rounds: [
+        { messageId: 2, text: 'Let me look.', calls: [folderLine('/Users/me')] },
+        { messageId: null, text: 'Your **Downloads** folder is the largest.', calls: [] },
+      ],
       thinking: true,
+      stalled: false,
       streaming: true,
+      stats: null,
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -343,10 +360,12 @@ describe('AskCmdrMessage a11y', () => {
     const target = mountMessage({
       kind: 'assistant',
       id: 5,
-      text: 'Here is a list:\n\n- one\n- two',
-      tools: [],
+      turnId: 4,
+      rounds: [{ messageId: 5, text: 'Here is a list:\n\n- one\n- two', calls: [] }],
       thinking: false,
+      stalled: false,
       streaming: false,
+      stats: null,
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -454,10 +473,12 @@ describe('AskCmdrRail a11y', () => {
       {
         kind: 'assistant',
         id: 2,
-        text: 'Your **Downloads** folder is the largest.',
-        tools: [{ callId: 'c1', tool: 'largest_dirs', running: false, ok: true, path: '/Users/me' }],
+        turnId: 1,
+        rounds: [{ messageId: 2, text: 'Your **Downloads** folder is the largest.', calls: [folderLine('/Users/me')] }],
         thinking: false,
+        stalled: false,
         streaming: false,
+        stats: null,
       },
     ] satisfies RailMessage[]
     const target = mountRail()
@@ -484,7 +505,15 @@ describe('AskCmdrRail a11y', () => {
  */
 describe('AskCmdrToolLine a11y', () => {
   function tool(overrides: Partial<RailToolCall> = {}): RailToolCall {
-    return { callId: 'c1', tool: 'list_dir', running: false, ok: true, path: null, ...overrides }
+    return {
+      callId: 'c1',
+      tool: 'list_dir',
+      running: false,
+      subject: null,
+      outcome: { kind: 'answered' },
+      repeatOf: null,
+      ...overrides,
+    }
   }
 
   function mountLine(t: RailToolCall): HTMLElement {
@@ -500,13 +529,13 @@ describe('AskCmdrToolLine a11y', () => {
   })
 
   it('a finished line with a path has no a11y violations', async () => {
-    const target = mountLine(tool({ path: '/Users/me/Documents' }))
+    const target = mountLine(tool({ subject: { kind: 'folder', path: '/Users/me/Documents' } }))
     await tick()
     await expectNoA11yViolations(target)
   })
 
   it('an expanded line has no a11y violations', async () => {
-    const target = mountLine(tool({ path: '/Users/me/Documents' }))
+    const target = mountLine(tool({ subject: { kind: 'folder', path: '/Users/me/Documents' } }))
     await tick()
     const toggle = target.querySelector<HTMLButtonElement>('.tool-toggle')
     if (toggle === null) throw new Error('expected a .tool-toggle button')
@@ -517,7 +546,7 @@ describe('AskCmdrToolLine a11y', () => {
   })
 
   it('a refused line has no a11y violations', async () => {
-    const target = mountLine(tool({ ok: false }))
+    const target = mountLine(tool({ outcome: { kind: 'refused', reason: { kind: 'problem' } } }))
     await tick()
     await expectNoA11yViolations(target)
   })

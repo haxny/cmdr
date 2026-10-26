@@ -14,7 +14,8 @@
  */
 
 import type { ContextUsage } from './ask-cmdr-context-usage'
-import type { RailMessage } from './ask-cmdr-messages'
+import type { AssistantItem, RailMessage } from './ask-cmdr-messages'
+import { settleRounds, softCapCount } from './ask-cmdr-rounds'
 import type { AttachmentRef, RenameEvidence, RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 
 /** Past this many thread messages the rail nudges "start a fresh one?" (mirrors the Rust
@@ -123,9 +124,10 @@ export const askCmdrState = $state<AskCmdrState>({
   deniedNames: [],
 })
 
-/** True once the thread grows past the soft cap (drives the "start a fresh one?" nudge). */
+/** True once the thread grows past the soft cap (drives the "start a fresh one?" nudge). Each
+ * round counts, as each assistant row did when it was its own bubble (`softCapCount`). */
 export function isOverSoftCap(): boolean {
-  return askCmdrState.messages.length > THREAD_SOFT_CAP_MESSAGES
+  return softCapCount(askCmdrState.messages) > THREAD_SOFT_CAP_MESSAGES
 }
 
 /** True when older history pages exist beyond what's loaded (drives "load earlier"). */
@@ -133,7 +135,7 @@ export function hasOlderMessages(): boolean {
   return askCmdrState.historyCount < askCmdrState.messageTotal
 }
 
-export function currentAssistant(): Extract<RailMessage, { kind: 'assistant' }> | null {
+export function currentAssistant(): AssistantItem | null {
   const last = askCmdrState.messages.at(-1)
   return last?.kind === 'assistant' ? last : null
 }
@@ -146,17 +148,23 @@ export function lastUserMessage(): Extract<RailMessage, { kind: 'user' }> | null
   return null
 }
 
-/** Finalize the streaming assistant bubble: retire unfinished activity, stop its cursor,
- * and drop it if it never produced anything. Finished tool history stays visible. */
-export function finalizeAssistant(messageId?: number): void {
+/**
+ * Settle the streaming assistant bubble the way a reload would read its stored rows: stop its
+ * cursor, keep only the rounds that persisted (`settleRounds`: a round that never reached `End`
+ * goes, a call still running settles with no outcome), take the last persisted round's id, and
+ * drop the bubble if nothing of it was stored.
+ *
+ * ⚠️ So a turn that ends without an answer loses the text of the round it was streaming: it was
+ * never stored, and a reload wouldn't show it either.
+ */
+export function finalizeAssistant(): void {
   const assistant = currentAssistant()
   if (!assistant) return
   assistant.streaming = false
   assistant.thinking = false
   assistant.stalled = false
-  assistant.tools = assistant.tools.filter((tool) => !tool.running)
-  if (messageId !== undefined) assistant.id = messageId
-  if (assistant.text.length === 0 && assistant.tools.length === 0) {
-    askCmdrState.messages.pop()
-  }
+  const lastPersisted = assistant.rounds.findLast((round) => round.messageId !== null)
+  if (lastPersisted) assistant.id = lastPersisted.messageId
+  assistant.rounds = settleRounds(assistant.rounds)
+  if (assistant.rounds.length === 0) askCmdrState.messages.pop()
 }

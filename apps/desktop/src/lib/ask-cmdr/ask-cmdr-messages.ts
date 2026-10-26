@@ -14,18 +14,55 @@ import type {
   WakeDigestFolderView,
   WakeDigestRollupView,
 } from '#lib/tauri-commands/index.js'
-import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import type { LineRef, ManagedAiRefusal, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
-/** One tool call the assistant made, as the collapsible "looked at X" line shows it. */
+/** One tool call the assistant made, as its line shows it. The line's identity is its round's
+ * `messageId` plus `callId`: call ids collide across rounds. */
 export interface RailToolCall {
   callId: string
   /** The wire tool name; the localized label is derived in `ask-cmdr-labels.ts`. */
   tool: string
   running: boolean
-  ok: boolean
-  /** The path the call looked at (a folder, or the first file), shown as escaped plain text. `null`
-   * if none. */
-  path: string | null
+  /** What the call looks at. `null` until the round resolves (live, only the name is known
+   * while its arguments stream). */
+  subject: ToolSubject | null
+  /** What came back. `null` while running, and on a settled call no result was recorded for
+   * (a stopped or crashed turn). Whether it got what it asked for is `outcomeOk`. */
+  outcome: ToolOutcome | null
+  /** The turn's earlier identical call this one repeats. */
+  repeatOf: LineRef | null
+}
+
+/**
+ * One model call of a turn: what it said, then the tools it called. A turn is one assistant
+ * bubble made of rounds, so narration sits between the tool lines it explains.
+ *
+ * `messageId` is the round's persisted assistant row, `null` while it still streams. A round
+ * with an id is SEALED: a later chunk opens a new round rather than writing into it. Its text
+ * always renders before its calls, the order the stored row has whatever order the wire
+ * interleaved them in.
+ */
+export interface Round {
+  messageId: number | null
+  text: string
+  calls: RailToolCall[]
+}
+
+/** One assistant turn: its rounds, plus what the whole turn spent once it ended. */
+export interface AssistantItem {
+  kind: 'assistant'
+  /** The turn's last persisted round, `null` until one lands. */
+  id: number | null
+  /** The opener row's id (the backend's turn identity), so a turn split across history pages
+   * folds back into one bubble. `null` until the opener persists, and for rows before a
+   * thread's first opener. */
+  turnId: number | null
+  rounds: Round[]
+  thinking: boolean
+  stalled: boolean
+  streaming: boolean
+  /** What the turn spent: `null` while it runs, and for a turn that ran no tool. */
+  stats: TurnStats | null
 }
 
 /** One rendered item in the thread. `attachments` on a user turn are the chips shown
@@ -33,15 +70,7 @@ export interface RailToolCall {
  * stored blocks). */
 export type RailMessage =
   | { kind: 'user'; id: number | null; text: string; attachments: AttachmentRef[] }
-  | {
-      kind: 'assistant'
-      id: number | null
-      text: string
-      tools: RailToolCall[]
-      thinking: boolean
-      stalled?: boolean
-      streaming: boolean
-    }
+  | AssistantItem
   | {
       kind: 'error'
       errorKind: AskCmdrErrorKind

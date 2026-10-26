@@ -9,6 +9,7 @@
     import Spinner from '#lib/ui/Spinner.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { toolLabel, toolRefusedLabel } from './ask-cmdr-labels'
+    import { outcomeOk, subjectPath } from './ask-cmdr-tool-line'
     import type { RailToolCall } from './ask-cmdr-trigger.svelte'
 
     interface Props {
@@ -18,10 +19,13 @@
 
     let expanded = $state(false)
 
+    // A settled call with no recorded outcome reads as done, not refused.
+    const ok = $derived(tool.outcome === null || outcomeOk(tool.outcome))
+    const path = $derived(tool.subject === null ? null : subjectPath(tool.subject))
     const label = $derived(
-        tool.running ? toolLabel(tool.tool, true) : tool.ok ? toolLabel(tool.tool, false) : toolRefusedLabel(),
+        tool.running ? toolLabel(tool.tool, true) : ok ? toolLabel(tool.tool, false) : toolRefusedLabel(),
     )
-    const hasDetail = $derived(tool.path !== null)
+    const hasDetail = $derived(path !== null)
 </script>
 
 <div class="tool-line" role="status" aria-busy={tool.running}>
@@ -35,22 +39,22 @@
         <span class="glyph">
             {#if tool.running}
                 <Spinner size="sm" />
-            {:else if tool.ok}
+            {:else if ok}
                 <Icon name="circle-check" size={13} aria-hidden="true" />
             {:else}
                 <Icon name="circle-x" size={13} aria-hidden="true" />
             {/if}
         </span>
         <span class="label">{label}</span>
-        {#if tool.path}
-            <span class="path" use:tooltip={{ text: tool.path, overflowOnly: true }}>{tool.path}</span>
+        {#if path}
+            <span class="path" use:tooltip={{ text: path, overflowOnly: true }}>{path}</span>
             <span class="chevron">
                 <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={13} aria-hidden="true" />
             </span>
         {/if}
     </button>
-    {#if expanded && tool.path}
-        <div class="detail">{tool.path}</div>
+    {#if expanded && path}
+        <div class="detail">{path}</div>
     {/if}
 </div>
 
