@@ -9,23 +9,23 @@
 
 mod format;
 mod model;
+mod read;
 pub mod text;
 
 // Dependencies the later tasks (read, write, tools, undo) use; declared now so the
 // crate's manifest is final. Each `as _` goes when its first user lands.
-use lofty as _;
 use regex as _;
 use serde_json as _;
-// Test-only: real tagged files and temp dirs for the read/write tests.
-#[cfg(test)]
-use cmdr_media_meta as _;
-#[cfg(test)]
-use tempfile as _;
 
 #[cfg(test)]
 mod format_test;
+#[cfg(test)]
+mod read_test;
+#[cfg(test)]
+mod test_files;
 #[cfg(test)]
 mod text_test;
 
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, TagError, TagField};
+pub use read::read_tags;

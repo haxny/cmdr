@@ -9,8 +9,9 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - `model.rs`: the vocabulary. `TagField` (15 managed fields, `ALL`, `keeps_diacritics`, `is_multi`), `FileTags`
   (`fields`, `cover`, `extras`), `Cover`, `ContentKind`, `TagError`.
 - `format.rs`: `AudioFormat` and `format_of`, by extension only.
-- Later modules (read, write, tools, undo) land with their tasks; the field map and the undo store layout are in
-  `DETAILS.md`.
+- `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments). Test files are built in
+  `test_files.rs` with lofty's concrete tag types.
+- Later modules (write, tools, undo) land with their tasks; the field map and the undo store layout are in `DETAILS.md`.
 
 ## Must-knows
 
