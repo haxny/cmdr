@@ -45,6 +45,11 @@ mod schema;
 mod dir_tree;
 pub(crate) use dir_tree::{ARENA_FULL, DirTree};
 
+// Not part of the split either: a volume's database opened read-only with no
+// live instance, for answering about a volume that isn't indexing.
+mod stored;
+pub(crate) use stored::StoredIndex;
+
 pub(in crate::indexing) use meta::now_unix;
 
 pub use collation::{normalize_for_comparison, register_platform_case_collation};

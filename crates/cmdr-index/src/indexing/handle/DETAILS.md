@@ -137,8 +137,8 @@ files rather than volumes, and `HandleMethods` 38 → 40 with no new root promis
 
 - **`disk_footprint()`** — the bytes every index database occupies, sidecars included, plus the importance databases a
   forget removes with them. It reads the data dir, ❌ never the registry: the whole point is the database a walk built
-  that nothing re-registered after a restart, which `status(volume_id)` reports as absent because it asks the live
-  instance.
+  that nothing re-registered after a restart, which the registry can't see (`status(volume_id)` reads such a database's
+  last-scan facts, § "A stopped volume's last scan", but says nothing about its size).
 - **`forget_all_volumes()`** — the whole-index sibling of `forget_volume`, reaching those same unregistered databases.
   Each volume still goes through `clear_index`, so a live one drains its writer and withdraws its read handles first.
   What a forget takes beside the index: `crates/cmdr-index/DETAILS.md` § "A volume's files, and the one door they leave
@@ -180,6 +180,23 @@ Why no disposition fits: the policy is the scanner's and has to stay single-sour
 boot prefixes into the host is out; no existing method answers "would you have skipped this path"; and
 `SYSTEM_DIR_EXCLUDES` (the one exclusion list already promised) is search's default-hidden tier, which the scanner
 deliberately does NOT apply.
+
+## A stopped volume's last scan: folded into `status`, no ceiling moved
+
+Added 2026-10-26 (#749). Ask Cmdr has to answer about a volume that isn't connected (a saved NAS share asleep at home):
+its last root and the date of what its index holds, both in that volume's database on disk, with nothing registered. The
+read-only opener that reads them is crate-private (`../store/stored.rs`, `StoredIndex`): it opens the file
+`SQLITE_OPEN_READ_ONLY`, refuses typed (`Missing`, `OtherSchema`, `Unreadable`) a database this build can't read without
+touching it, and holds one connection that closes with it, ❌ never a cached per-thread one (§ "A stop retires too" in
+`crates/cmdr-index/DETAILS.md`).
+
+Disposition: **fold**. `status(volume_id)` already promised "last-scan facts" and answered a stopped volume with none,
+though they were on disk; now an uninstanced volume's `index_status` comes off its database, with `initialized` staying
+`false`. ❌ Not folded into `volume_status`: that one runs per badge and per `cmdr://state` row, and its `enabled` and
+`freshness` must keep saying "not indexed" for a volume with no instance (the "registered is not indexed" trap). The
+opener's row reads (an offline `list_dir`) fold into `list_children` / `dir_stats` the same way when they land, so the
+concept costs no method. Callers of `status` at the fold: the root status IPC (root is always instanced) and
+`list_dir`'s `walked_roots` (empty either way), so neither changed behavior.
 
 ## The mapping
 

@@ -463,8 +463,21 @@ impl Index {
     // ── What the index knows about a volume ──────────────────────────
 
     /// One volume's scan counters, database size, and last-scan facts.
+    ///
+    /// A volume with no instance (a saved share that isn't connected, an ejected
+    /// drive) still has the facts its database on disk records: those arrive in
+    /// `index_status`, read-only, with `initialized` staying `false`. Nothing is
+    /// registered, opened for writing, or rebuilt to answer, and a database this
+    /// build can't read leaves `index_status` empty. That's where a stopped
+    /// volume's root (`volume_path`) and the date of what it holds come from.
     pub fn status(&self, volume_id: &str) -> Result<IndexStatusResponse, IndexError> {
-        crate::indexing::read::queries::get_status(volume_id).map_err(Into::into)
+        let mut status = crate::indexing::read::queries::get_status(volume_id)?;
+        if !status.initialized && status.index_status.is_none() {
+            status.index_status = crate::indexing::store::StoredIndex::open_for_volume(volume_id)
+                .and_then(|stored| stored.last_scan())
+                .ok();
+        }
+        Ok(status)
     }
 
     /// How many bytes every index database occupies on disk right now, across all

@@ -245,3 +245,34 @@ async fn a_handle_scans_an_in_memory_volume_and_reports_to_its_own_sink() {
 
     index.forget_volume(volume_id).expect("tear the test index down");
 }
+
+/// A saved share that isn't connected has no instance, but its index is on disk,
+/// and that file is the only place its last root and the date of what it holds
+/// live. `status` reads them off it without standing anything up: the volume
+/// still reads as not indexed, so the "registered is not indexed" trap stays shut.
+#[test]
+fn a_stopped_volumes_status_carries_its_last_scan_off_disk_without_registering_it() {
+    use crate::indexing::store::IndexStore;
+
+    let _serialized = crate::indexing::handle::test_lock();
+    let data = tempfile::tempdir().expect("index data dir");
+    let (index, _installed) = Index::builder().data_dir(data.path()).install_for_test();
+    let volume_id = "smb-192-0-2-60-445-naspi";
+    let db_path = data.path().join(format!("index-{volume_id}.db"));
+    let store = IndexStore::open(&db_path).expect("write the index a past scan left");
+    let conn = IndexStore::open_write_connection(&db_path).expect("write connection");
+    IndexStore::update_meta(&conn, "volume_path", "/Volumes/naspi").expect("root");
+    IndexStore::update_meta(&conn, "scan_completed_at", "1761400000").expect("stamp");
+    drop((conn, store));
+
+    let status = index.status(volume_id).expect("status answers");
+    let last = status.index_status.expect("the last scan's facts, off disk");
+    assert_eq!(last.volume_path.as_deref(), Some("/Volumes/naspi"));
+    assert_eq!(last.scan_completed_at.as_deref(), Some("1761400000"));
+    assert!(!status.initialized, "nothing was stood up to answer");
+    assert!(
+        !index.volume_status(volume_id).enabled,
+        "and it still reads as not indexed"
+    );
+    assert!(index.read_pool(volume_id).is_none(), "no read pool was installed");
+}

@@ -22,7 +22,7 @@ hold data/operations; `history.rs` owns recents; `ai/` translates NL (`ai/CLAUDE
 - **Superseding a run ≠ cancelling it**: events stop, the walk runs on. Cancel is the dialog close (which SPARES
   `keep_run_id`), Escape, or quit — ❌ never the arena idle-drop, `RunOrigin::Dialog` only.
 - **Non-root indices are mount-relative**: PREFIX the mount root onto read paths, STRIP it from scopes. Mount root is
-  the `volume_path` meta OR the live registry, ❌ never assume the meta is set.
+  `location::resolve::volume_root`'s (live registry first, else the `volume_path` meta), ❌ never assume the meta is set.
 - **Honesty is TYPED, diagnostics are structural**: `uncovered_scopes`, `unresolved_scopes`, and `SearchRunCoverage`.
   `summarize_query_for_diagnostics` logs the pattern's shape only, and scope roots / exclusions as keyed
   `path=` / `dir=` fields a report tokenizes; `summarize_query` stays literal for MCP `interpreted_query`. A resolved scope can't distinguish a typo from not-yet-walked ground.
