@@ -17,7 +17,9 @@ const currentYear = new Date().getFullYear()
     >
     </div>
 
-    <div class="hero-content relative z-10 pt-16 text-left md:pt-24">
+    <!-- The section's `pt-16` clears the fixed header; this top padding mirrors the section's side
+         padding per breakpoint, so the gap above the eyebrow matches the gap on its left. -->
+    <div class="hero-content relative z-10 pt-6 text-left md:pt-12 lg:pt-20">
         <!-- Open-beta eyebrow - Step 1 -->
         <a
             href="/features"
