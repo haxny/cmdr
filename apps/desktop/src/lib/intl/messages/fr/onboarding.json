@@ -159,7 +159,7 @@
   "@onboarding.stepFda.postAction.intro": {
     "sourceHash": "cac5247"
   },
-  "onboarding.stepFda.postAction.body": "Quand vous êtes prêt, cliquez sur <restart>Redémarrer Cmdr</restart> ci-dessous. Si vous changez d’avis, cliquez plutôt sur <deny>Refuser</deny> ci-dessus.",
+  "onboarding.stepFda.postAction.body": "Le moment venu, cliquez sur <restart>Redémarrer Cmdr</restart> ci-dessous. Si vous changez d’avis, cliquez plutôt sur <deny>Refuser</deny> ci-dessus.",
   "@onboarding.stepFda.postAction.body": {
     "sourceHash": "7a5c238"
   },
