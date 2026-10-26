@@ -18,7 +18,7 @@ interface ResultAsk {
   occurrence: number
 }
 const resultMock = vi.fn<(ask: ResultAsk) => Promise<AskCmdrToolResult>>()
-const settings = vi.hoisted(() => ({ toolGroupsOnAnswer: 'collapse' as 'collapse' | 'keep' }))
+const settings = vi.hoisted(() => ({ toolGroupsOnAnswer: 'collapse' }))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
@@ -168,7 +168,7 @@ describe('group open state through a turn', () => {
     ['stopped elsewhere', { type: 'stopped', turn: STATS }],
   ] as const)('applies the setting on a turn that %s', (_, terminal) => {
     streamOneGroup()
-    fire(terminal as AskCmdrStreamEvent)
+    fire(terminal)
     expect(firstGroup().open).toBe(false)
   })
 
@@ -264,7 +264,7 @@ describe('the expanded line', () => {
     expect(isLineExpanded('5:c1')).toBe(true)
     expect(toolDetail('5:c1')).toEqual({ status: 'loading' })
     await vi.waitFor(() => {
-      expect(toolDetail('5:c1')).toEqual({ status: 'ready', detail: ready.found && ready.detail })
+      expect(toolDetail('5:c1')).toEqual({ status: 'ready', detail: ready.detail })
     })
     expect(resultMock).toHaveBeenCalledWith({ conversationId: THREAD_ID, messageId: 5, callId: 'c1', occurrence: 0 })
 

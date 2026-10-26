@@ -524,7 +524,10 @@ describe('AskCmdrToolLine a11y', () => {
     const target = container()
     mount(AskCmdrToolLine, {
       target,
-      props: { line: { key: `1:${t.callId}`, messageId: 1, call: t }, revealPath: () => Promise.resolve() },
+      props: {
+        line: { key: `1:${t.callId}`, messageId: 1, occurrence: 0, call: t },
+        revealPath: () => Promise.resolve(),
+      },
     })
     return target
   }
@@ -574,6 +577,7 @@ describe('AskCmdrToolLine a11y', () => {
     const lines = ['c1', 'c2'].map((callId) => ({
       key: `1:${callId}`,
       messageId: 1,
+      occurrence: 0,
       call: tool({ callId, subject: { kind: 'folder', path: `/Users/me/${callId}` } }),
     }))
     mount(AskCmdrToolGroup, { target, props: { lines, live: true, revealPath: () => Promise.resolve() } })
