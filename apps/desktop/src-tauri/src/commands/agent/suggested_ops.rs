@@ -19,16 +19,19 @@
 use std::path::Path;
 use std::time::Duration;
 
+use cmdr_fs::deadline::{io_budget, timeout_detached_typed};
+use cmdr_fs::log_error::LogError;
 use serde::Serialize;
 use tauri::AppHandle;
 
 use super::{now_secs, with_read_connection};
 use crate::agent::store::proposals::{AcceptanceOutcome, ClaimRefusal};
 use crate::agent::store::proposals::{
-    GroupSummary, ProposalOp, ProposalSweep, count_ops, get_sweep, list_groups, page_ops,
+    GroupSummary, ProposalGroup, ProposalOp, ProposalSweep, count_ops, get_sweep, list_groups, page_ops,
 };
 use crate::agent::suggested_ops::bridge::{ApprovalOutcome, ApprovalRefusal};
 use crate::agent::types::{OpStatus, ProposalStatus, ProposalVerb, Reversibility};
+use crate::file_system::volume::VolumeError;
 use cmdr_operations::{RenameStartError, WriteOperationError};
 /// Why a suggested-ops read or answer didn't happen.
 ///
@@ -70,8 +73,9 @@ impl std::fmt::Display for SuggestedOpsError {
 
 impl std::error::Error for SuggestedOpsError {}
 
-/// How long the destination check may take before the row says it doesn't know. A dead mount
-/// must leave the dialog usable rather than hanging the whole list.
+/// How long the destination check may take on a local disk or a kernel mount before the row
+/// says it doesn't know; a volume with a live session gets `io_budget`'s longer wait. A dead
+/// mount must leave the dialog usable rather than hanging the whole list.
 const DESTINATION_CHECK_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// One sweep, with the groups still waiting on the user.
@@ -129,7 +133,11 @@ pub enum DestinationState {
     Exists,
     /// Approving creates it, exactly as a user-started move into a missing folder would.
     WillBeCreated,
-    /// The volume didn't answer in time, or isn't mounted.
+    /// The destination's volume is one Cmdr knows (a saved share or server, a listed phone) but
+    /// nothing has connected it, so there's nothing to ask. Approving refuses until it's
+    /// connected, the same as a clicked move onto it would.
+    NotConnected,
+    /// The volume didn't answer in time, refused the check, or left the registry.
     Unknown,
 }
 
@@ -179,14 +187,16 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
     .await
     .map_err(|detail| SuggestedOpsError::Store { detail })?;
 
-    // The destination checks touch the filesystem, so they run OUTSIDE the database read and
-    // each under its own deadline: one unresponsive mount must cost one row's certainty, not
-    // the list.
-    let mut rows = Vec::with_capacity(summaries.len());
-    for (summary, sweep) in summaries {
-        let state = destination_state(&summary).await;
-        rows.push((to_group_view(summary, state), sweep));
-    }
+    // The destination checks touch the filesystem, so they run OUTSIDE the database read, all
+    // at once, each under its own deadline: one unresponsive mount costs one row's certainty
+    // and the list one budget, never N of them back to back.
+    let states =
+        futures_util::future::join_all(summaries.iter().map(|(summary, _)| destination_state(&summary.group))).await;
+    let rows = summaries
+        .into_iter()
+        .zip(states)
+        .map(|((summary, sweep), state)| (to_group_view(summary, state), sweep))
+        .collect();
     Ok(group_into_sweeps(rows))
 }
 
@@ -349,12 +359,15 @@ fn orphan_sweep(sweep_id: i64) -> ProposalSweep {
 ///
 /// The check goes through the volume manager for EVERY volume, root included, so there is no
 /// second copy of "is this path local" to drift against the one the rename preflight owns.
-async fn destination_state(summary: &GroupSummary) -> DestinationState {
-    let group = &summary.group;
+///
+/// It asks for the entry rather than `exists`, because `exists` folds "the volume refused" into
+/// "not there", and that would read as "will be created" on a share that merely didn't answer.
+/// Every answer short of a real one is logged with its reason.
+async fn destination_state(group: &ProposalGroup) -> DestinationState {
     if !destination_check_applies(group.verb) {
         return DestinationState::NotApplicable;
     }
-    let Some(destination) = group.destination.as_deref() else {
+    let Some(destination) = group.destination.clone() else {
         return DestinationState::NotApplicable;
     };
     let volume_id = group
@@ -362,254 +375,75 @@ async fn destination_state(summary: &GroupSummary) -> DestinationState {
         .as_deref()
         .unwrap_or(group.source_volume_id.as_str());
     let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(volume_id) else {
-        return DestinationState::Unknown;
+        // A `saved` share or server row is published only while its volume ISN'T registered, so
+        // this is the branch every such destination lands in. Asking never dials.
+        return match crate::unregistered_volumes::why_unregistered(volume_id).await {
+            crate::unregistered_volumes::Unregistered::NotConnected => {
+                log::debug!(
+                    target: "agent::suggested_ops",
+                    "group {}: the destination's volume {volume_id} isn't connected",
+                    group.id
+                );
+                DestinationState::NotConnected
+            }
+            crate::unregistered_volumes::Unregistered::Gone => {
+                log::warn!(
+                    target: "agent::suggested_ops",
+                    "group {}: no volume is registered as {volume_id}, so its destination can't be checked",
+                    group.id
+                );
+                DestinationState::Unknown
+            }
+        };
     };
-    let path = Path::new(destination).to_path_buf();
-    match tokio::time::timeout(DESTINATION_CHECK_TIMEOUT, async move { volume.exists(&path).await }).await {
-        Ok(true) => DestinationState::Exists,
-        Ok(false) => DestinationState::WillBeCreated,
-        Err(_) => DestinationState::Unknown,
+    let budget = io_budget(volume.connection_state(), DESTINATION_CHECK_TIMEOUT);
+    let answer = timeout_detached_typed(
+        budget,
+        || DestinationGap::TimedOut,
+        DestinationGap::Panicked,
+        async move { Ok(volume.get_metadata(Path::new(&destination)).await) },
+    )
+    .await;
+    match answer {
+        Ok(Ok(_)) => DestinationState::Exists,
+        Ok(Err(VolumeError::NotFound(_))) => DestinationState::WillBeCreated,
+        Ok(Err(e)) => {
+            log::debug!(
+                target: "agent::suggested_ops",
+                "group {}: the destination check was refused: {:?}",
+                group.id,
+                LogError(&e)
+            );
+            DestinationState::Unknown
+        }
+        Err(DestinationGap::TimedOut) => {
+            log::debug!(
+                target: "agent::suggested_ops",
+                "group {}: the destination's volume {volume_id} didn't answer within {budget:?}",
+                group.id
+            );
+            DestinationState::Unknown
+        }
+        Err(DestinationGap::Panicked(detail)) => {
+            log::warn!(
+                target: "agent::suggested_ops",
+                "group {}: the destination check panicked: {detail}",
+                group.id
+            );
+            DestinationState::Unknown
+        }
     }
+}
+
+/// Why the destination check gave no answer. Only ever logged.
+enum DestinationGap {
+    TimedOut,
+    Panicked(String),
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::agent::store::proposals::ProposalGroup;
-
-    /// Every refusal sends the user somewhere different, so the mapping is the thing worth
-    /// pinning: "somebody already answered" closes the group, "the list changed" sends them back
-    /// to re-read it, and an unmounted drive is neither. Collapsing any two would make the
-    /// dialog say the wrong thing in one of the cases.
-    #[test]
-    fn each_refusal_keeps_the_recovery_it_implies() {
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::NotAccepted(AcceptanceOutcome::NotPending {
-                found: ProposalStatus::Approved
-            })),
-            ApprovalResultView::AlreadyAnswered
-        ));
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::Claim(ClaimRefusal::StaleStatus {
-                found: ProposalStatus::Rejected
-            })),
-            ApprovalResultView::AlreadyAnswered
-        ));
-        assert!(
-            matches!(
-                refusal_view(ApprovalRefusal::Claim(ClaimRefusal::BindingMismatch {
-                    accepted: None,
-                    live: crate::agent::store::proposals::OpBinding {
-                        op_count: 3,
-                        digest: "abc".into()
-                    }
-                })),
-                ApprovalResultView::ListChanged
-            ),
-            "a changed op set is re-readable, never an already-answered group"
-        );
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::NotAccepted(AcceptanceOutcome::Unknown)),
-            ApprovalResultView::Unknown
-        ));
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::Claim(ClaimRefusal::Unknown)),
-            ApprovalResultView::Unknown
-        ));
-    }
-
-    /// Every refusal to START reaches the dialog as a reason it can word, ❌ never a sentence
-    /// it can only log (#184). An unconnected phone keeps the transfer dialogs' own variant, so
-    /// the suggestion reads exactly as a clicked copy off that phone would.
-    #[test]
-    fn a_refusal_to_start_carries_a_reason_the_dialog_can_word() {
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::SourceUnavailable(
-                WriteOperationError::SourceNotConnected {
-                    path: "/DCIM/one.jpg".into()
-                }
-            )),
-            ApprovalResultView::Refused {
-                error: WriteOperationError::SourceNotConnected { .. }
-            }
-        ));
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::Rename(RenameStartError::Engine {
-                error: WriteOperationError::SourceNoLongerConnected { path: "/a.png".into() }
-            })),
-            ApprovalResultView::Refused {
-                error: WriteOperationError::SourceNoLongerConnected { .. }
-            }
-        ));
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::Rename(RenameStartError::NothingToRename)),
-            ApprovalResultView::NothingToRun
-        ));
-        assert!(matches!(
-            refusal_view(ApprovalRefusal::TargetMissing {
-                verb: ProposalVerb::Move
-            }),
-            ApprovalResultView::CouldNotStart
-        ));
-    }
-
-    fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
-        GroupSummary {
-            group: ProposalGroup {
-                id,
-                set_id,
-                seq: 0,
-                verb,
-                status: ProposalStatus::Pending,
-                source_volume_id: "root".into(),
-                destination: Some("/Users/someone/Documents/Invoices".into()),
-                destination_volume_id: None,
-                reversible: Reversibility::RestoreMove,
-                display_name: "five invoices".into(),
-                rationale: Some("They all look like invoices.".into()),
-                selector: None,
-                created_at: 100,
-                decided_at: None,
-            },
-            live_op_count: 5,
-            total_op_count: 7,
-        }
-    }
-
-    fn sweep(id: i64) -> ProposalSweep {
-        ProposalSweep {
-            id,
-            conversation_id: Some(3),
-            created_at: 100,
-            created_by_model: Some("some-model".into()),
-            rationale: Some("Ten new files in Downloads.".into()),
-        }
-    }
-
-    /// Every field here is something the user weighs before approving. A mapping that dropped
-    /// one would take a disclosure off the screen while the dialog still looked complete,
-    /// which is the failure this whole surface exists to prevent.
-    #[test]
-    fn a_group_view_carries_every_fact_the_user_judges_it_by() {
-        let view = to_group_view(group(7, 2, ProposalVerb::Move), DestinationState::WillBeCreated);
-
-        assert_eq!(view.group_id, 7);
-        assert_eq!(view.sweep_id, 2);
-        assert_eq!(view.verb, ProposalVerb::Move);
-        assert_eq!(view.status, ProposalStatus::Pending);
-        assert_eq!(view.display_name, "five invoices");
-        assert_eq!(view.rationale.as_deref(), Some("They all look like invoices."));
-        assert_eq!(view.source_volume_id, "root");
-        assert_eq!(view.destination.as_deref(), Some("/Users/someone/Documents/Invoices"));
-        assert_eq!(view.reversible, Reversibility::RestoreMove);
-        assert_eq!(view.destination_state, DestinationState::WillBeCreated);
-        assert_eq!(view.live_op_count, 5);
-        assert_eq!(view.total_op_count, 7, "the deselected rows are part of the record");
-        assert!(!view.from_selector);
-    }
-
-    /// A group a pattern produced says so, because "why is this file here?" has a different
-    /// answer for a list the user never watched being built.
-    #[test]
-    fn a_selector_built_group_reports_its_provenance() {
-        let mut summary = group(1, 1, ProposalVerb::Trash);
-        summary.group.selector = Some("{\"root\":\"~/Downloads\"}".into());
-
-        assert!(to_group_view(summary, DestinationState::NotApplicable).from_selector);
-    }
-
-    /// An index that held nothing must stay absent all the way to the row. A zero would render
-    /// as an empty file and a 1970 date, both of which are claims nothing can back.
-    #[test]
-    fn an_op_with_no_snapshot_reports_absence_rather_than_zero() {
-        let bare = to_op_view(ProposalOp {
-            id: 4,
-            group_id: 1,
-            seq: 0,
-            source_path: "/Users/someone/Downloads/one.dmg".into(),
-            destination: None,
-            status: OpStatus::Pending,
-            snapshot_size: None,
-            snapshot_mtime: None,
-            snapshot_inode: None,
-        });
-
-        assert_eq!(bare.snapshot_size, None);
-        assert_eq!(bare.snapshot_modified, None);
-        let wire = serde_json::to_value(&bare).expect("serializes");
-        assert!(wire["snapshotSize"].is_null());
-        assert!(wire["snapshotModified"].is_null());
-    }
-
-    /// The marker answers for the verbs that create a folder, and stays quiet for the ones
-    /// where it would mean something else: a rename binds the parent its sources already sit
-    /// in, and a compress binds an archive path whose overwrite risk `reversible` already
-    /// carries.
-    #[test]
-    fn only_the_verbs_that_can_create_a_folder_answer_the_destination_question() {
-        for verb in [ProposalVerb::Move, ProposalVerb::Copy, ProposalVerb::Extract] {
-            assert!(destination_check_applies(verb), "{verb:?} binds a destination folder");
-        }
-        for verb in [
-            ProposalVerb::Rename,
-            ProposalVerb::Compress,
-            ProposalVerb::Trash,
-            ProposalVerb::Delete,
-        ] {
-            assert!(
-                !destination_check_applies(verb),
-                "{verb:?} must not claim to create one"
-            );
-        }
-    }
-
-    /// A sweep is how the user sees one thing the agent noticed, so its groups arrive under one
-    /// header however many there are.
-    #[test]
-    fn groups_fold_under_the_sweep_that_produced_them() {
-        let rows = vec![
-            (
-                to_group_view(group(1, 10, ProposalVerb::Move), DestinationState::Exists),
-                Some(sweep(10)),
-            ),
-            (
-                to_group_view(group(2, 10, ProposalVerb::Trash), DestinationState::NotApplicable),
-                Some(sweep(10)),
-            ),
-            (
-                to_group_view(group(3, 11, ProposalVerb::Delete), DestinationState::NotApplicable),
-                Some(sweep(11)),
-            ),
-        ];
-
-        let sweeps = group_into_sweeps(rows);
-
-        assert_eq!(sweeps.len(), 2, "two wakes, not three groups: {sweeps:?}");
-        assert_eq!(sweeps[0].sweep_id, 10);
-        assert_eq!(sweeps[0].groups.len(), 2);
-        assert_eq!(sweeps[0].rationale.as_deref(), Some("Ten new files in Downloads."));
-        assert_eq!(sweeps[1].sweep_id, 11);
-        assert_eq!(sweeps[1].groups.len(), 1);
-    }
-
-    /// A sweep row missing under its own groups can't happen through any path here, but
-    /// dropping the groups would hide work the user is being asked about. They get a
-    /// placeholder header instead.
-    #[test]
-    fn groups_whose_sweep_row_is_missing_are_still_shown() {
-        let rows = vec![(
-            to_group_view(group(1, 42, ProposalVerb::Move), DestinationState::Exists),
-            None,
-        )];
-
-        let sweeps = group_into_sweeps(rows);
-
-        assert_eq!(sweeps.len(), 1);
-        assert_eq!(sweeps[0].sweep_id, 42);
-        assert_eq!(sweeps[0].groups.len(), 1);
-        assert_eq!(sweeps[0].rationale, None);
-    }
-}
+#[path = "suggested_ops_test.rs"]
+mod suggested_ops_test;
 
 /// What approving a group did, in the terms the dialog acts on.
 ///
@@ -740,32 +574,5 @@ fn refusal_view(refusal: ApprovalRefusal) -> ApprovalResultView {
             );
             ApprovalResultView::CouldNotStart
         }
-    }
-}
-
-#[cfg(test)]
-mod wire_tests {
-    use super::SuggestedOpsError;
-
-    /// "The store isn't open" (agent features off) and "the store refused" (a
-    /// locked database) call for different answers from the dialog, so they stay
-    /// separate variants rather than two spellings of one sentence.
-    #[test]
-    fn a_store_that_isnt_open_is_not_a_store_that_refused() {
-        assert_eq!(
-            serde_json::to_value(SuggestedOpsError::StoreNotOpen).unwrap(),
-            serde_json::json!({ "type": "storeNotOpen" })
-        );
-        assert_eq!(
-            serde_json::to_value(SuggestedOpsError::Store {
-                detail: "database is locked".to_string()
-            })
-            .unwrap(),
-            serde_json::json!({ "type": "store", "detail": "database is locked" })
-        );
-        assert_eq!(
-            serde_json::to_value(SuggestedOpsError::ApprovalDidntFinish).unwrap(),
-            serde_json::json!({ "type": "approvalDidntFinish" })
-        );
     }
 }

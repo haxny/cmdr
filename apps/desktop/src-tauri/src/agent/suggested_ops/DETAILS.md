@@ -211,3 +211,11 @@ winner claims), never as an extra check on the execution path.
 ❌ No path, file name, rationale, or selector pattern rides on the event. It crosses to every window, and `main.db` is a map of the user's life that stays local.
 
 The emitter is wired once at startup (`init_suggestions_event_emitter`, beside the operation manager's). Before wiring — every unit test — emitting is a silent no-op, and a count that can't be read is logged and dropped rather than propagated: failing an approval that already succeeded because a badge couldn't refresh would be the tail wagging the dog.
+
+## What the review reads beside the agent's words
+
+The dialog's facts are Cmdr's, read through the group's own volumes (`commands/agent/suggested_ops.rs` for the wire, `facts.rs` for the stats and the rules).
+
+**The destination check** (`destination_state`) asks the destination volume for the entry, not `exists`: `exists` folds "the volume refused" into "not there", which would read as "will be created" on a share that only didn't answer. The list runs every group's check at once, each through `timeout_detached_typed` with `io_budget` (2 s, or at least 10 s on a live session). An unregistered volume is classified by `crate::unregistered_volumes`: a saved share or server nobody connected answers `NotConnected`, an id nothing knows answers `Unknown` with a warning. Every `Unknown` logs its reason under `agent::suggested_ops`.
+
+Gotcha: a `saved` SMB row in the switcher is published ONLY while that share's volume isn't registered (`server_volumes.rs::fold_saved_smb_shares`), so "the share shows `saved`" always means the registry lookup comes back empty. Before #747 that branch answered `Unknown` silently, and every move onto a saved NAS share read "Cmdr couldn't check the target folder" (QA 2026-10, a Downloads cleanup onto `naspi`).
