@@ -106,6 +106,7 @@ fn a_selector_freezes_at_creation_and_is_never_resolved_again() {
     let AcceptanceOutcome::Accepted { binding } = record_acceptance(
         &conn,
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         200,
     )
@@ -296,6 +297,7 @@ fn an_approval_is_announced_when_it_settles_and_not_when_it_is_claimed() {
     record_acceptance(
         &conn,
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         150,
     )
@@ -344,6 +346,7 @@ fn an_approved_group_in_a_thread(conn: &Connection) -> (i64, i64) {
     record_acceptance(
         conn,
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         150,
     )

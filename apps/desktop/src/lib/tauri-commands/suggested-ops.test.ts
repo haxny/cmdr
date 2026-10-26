@@ -90,11 +90,11 @@ describe('approveSuggestedGroup', () => {
       data: { kind: 'started', operationId: 'op-9' },
     } as never)
 
-    await expect(approveSuggestedGroup(7, { mode: 'only', opIds: [4, 9] })).resolves.toEqual({
+    await expect(approveSuggestedGroup(7, 3, { mode: 'only', opIds: [4, 9] })).resolves.toEqual({
       kind: 'started',
       operationId: 'op-9',
     })
-    expect(commands.suggestedOpsApprove).toHaveBeenCalledWith(7, { mode: 'only', opIds: [4, 9] })
+    expect(commands.suggestedOpsApprove).toHaveBeenCalledWith(7, 3, { mode: 'only', opIds: [4, 9] })
   })
 
   it('passes a refusal through rather than throwing, since each kind means something different', async () => {
@@ -103,7 +103,9 @@ describe('approveSuggestedGroup', () => {
       data: { kind: 'listChanged' },
     } as never)
 
-    await expect(approveSuggestedGroup(7, { mode: 'allExcept', opIds: [] })).resolves.toEqual({ kind: 'listChanged' })
+    await expect(approveSuggestedGroup(7, 3, { mode: 'allExcept', opIds: [] })).resolves.toEqual({
+      kind: 'listChanged',
+    })
   })
 
   it('throws when the call itself failed', async () => {
@@ -112,7 +114,7 @@ describe('approveSuggestedGroup', () => {
       error: { message: 'no store' },
     } as never)
 
-    await expect(approveSuggestedGroup(7, { mode: 'allExcept', opIds: [] })).rejects.toThrow()
+    await expect(approveSuggestedGroup(7, 3, { mode: 'allExcept', opIds: [] })).rejects.toThrow()
   })
 })
 

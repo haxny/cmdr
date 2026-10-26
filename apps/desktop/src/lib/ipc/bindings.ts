@@ -3685,8 +3685,10 @@ export const commands = {
    *  back over a oneshot, so the command still answers the caller directly rather than making the
    *  dialog wait on an event.
    */
-  suggestedOpsApprove: (groupId: number, selection: OpSelection) =>
-    typedError<ApprovalResultView, SuggestedOpsError>(__TAURI_INVOKE('suggested_ops_approve', { groupId, selection })),
+  suggestedOpsApprove: (groupId: number, revision: number, selection: OpSelection) =>
+    typedError<ApprovalResultView, SuggestedOpsError>(
+      __TAURI_INVOKE('suggested_ops_approve', { groupId, revision, selection }),
+    ),
   /**
    *  A settings change may have moved an open thread's slot — the model it sends to, the chat
    *  memory each message carries, or both: record what actually moved as conversation events
@@ -6112,7 +6114,10 @@ export type ApprovalResultView =
   | { kind: 'started'; operationId: string }
   // The group left `pending` before this arrived: approved, rejected, or gone.
   | { kind: 'alreadyAnswered' }
-  // The op set is not what preflight accepted, so nothing ran. The user re-reads it.
+  /**
+   *  The group isn't the version the user read (the agent amended it), or its op set isn't what
+   *  preflight accepted, so nothing ran. The user re-reads it.
+   */
   | { kind: 'listChanged' }
   // No group with that id.
   | { kind: 'unknown' }
@@ -17699,6 +17704,11 @@ export type StreamingListingStartResult = {
 export type SuggestedGroupView = {
   groupId: number
   sweepId: number
+  /**
+   *  Which version of the group this is: every amend bumps it. Send it back with the approval,
+   *  and an approval of a version the agent has since replaced answers `listChanged`.
+   */
+  revision: number
   verb: ProposalVerb
   status: ProposalStatus
   /**

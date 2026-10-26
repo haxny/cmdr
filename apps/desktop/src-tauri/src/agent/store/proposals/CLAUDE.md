@@ -28,8 +28,8 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
 - **`live_binding` STREAMS.** One row in memory at a time, so a 60 000-op group claims as cheaply as a three-op one.
   `page_ops` is the only op-row-materializing read here, and a test asserts the claim path never calls it — so a
   comparison rewritten to load the ops fails that test rather than quietly costing 60 000 rows twice.
-- **`pending` is the only mutable status.** `repropose_group` guards on it and TEARS UP the acceptance record, so a
-  preflight against the old op list can't carry an approval onto a new one. `approved`, `interrupted`, `completed`, and
+- **`pending` is the only mutable status.** `repropose_group` guards on it, TEARS UP the acceptance record, and bumps
+  `revision`, which an approval must name, so a click on the old version can't approve the new one. `approved`, `interrupted`, `completed`, and
   `rejected` are the user's.
 - **Run `recover_interrupted_groups` exactly once per launch, from `agent::start`.** ❌ Not from
   `open_write_connection`, which runs the ladder on every connection open: a sweep there would reclassify a group that

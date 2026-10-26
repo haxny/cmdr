@@ -9,7 +9,7 @@ use crate::agent::types::{OpStatus, ProposalStatus};
 /// the state it will really see.
 fn approved_group(conn: &rusqlite::Connection, ops: usize) -> i64 {
     let group_id = group_with_ops(conn, ops);
-    record_acceptance(conn, group_id, &OpSelection::all_except(&[]), 200).expect("preflight");
+    record_acceptance(conn, group_id, 0, &OpSelection::all_except(&[]), 200).expect("preflight");
     match claim_group_for_execution(conn, group_id, 200).expect("claim") {
         ClaimOutcome::Claimed(_) => group_id,
         other => panic!("the fixture group must claim cleanly, got {other:?}"),
@@ -92,7 +92,7 @@ fn an_excluded_op_is_never_overwritten_by_an_outcome() {
     let group_id = group_with_ops(&conn, 2);
     let ops = page_ops(&conn, group_id, 10, 0).expect("ops");
     let excluded = ops[0].id;
-    record_acceptance(&conn, group_id, &OpSelection::all_except(&[excluded]), 200).expect("preflight");
+    record_acceptance(&conn, group_id, 0, &OpSelection::all_except(&[excluded]), 200).expect("preflight");
 
     assert!(!record_op_outcome(&conn, excluded, OpStatus::Done).expect("write"));
 
@@ -125,7 +125,7 @@ fn a_deselected_op_does_not_count_toward_the_badge() {
     let conn = migrated_conn();
     let group_id = group_with_ops(&conn, 3);
     let first = page_ops(&conn, group_id, 10, 0).expect("ops")[0].id;
-    record_acceptance(&conn, group_id, &OpSelection::all_except(&[first]), 200).expect("preflight");
+    record_acceptance(&conn, group_id, 0, &OpSelection::all_except(&[first]), 200).expect("preflight");
 
     let (groups, ops) = count_pending(&conn, ProposalStatus::Pending).expect("count");
     assert_eq!(groups, 1);

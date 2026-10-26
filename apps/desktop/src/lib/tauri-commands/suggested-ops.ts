@@ -64,9 +64,15 @@ export async function rejectSuggestedGroup(groupId: number): Promise<RejectResul
 /** Approve a group: claim it and hand its ops to the queue. Send whichever ids are fewer: the ones
  *  the user turned off (`allExcept`) or the ones they kept (`only`), so neither approving a
  *  60,000-op group whole nor ticking three of them carries 60,000 ids. An `only` that keeps
- *  nothing answers `nothingSelected` and runs nothing. */
-export async function approveSuggestedGroup(groupId: number, selection: OpSelection): Promise<ApprovalResultView> {
-  const res = await commands.suggestedOpsApprove(groupId, selection)
+ *  nothing answers `nothingSelected` and runs nothing. `revision` is the group's `revision` the
+ *  review showed: if the agent amended the group since, the approval answers `listChanged` and
+ *  nothing runs. */
+export async function approveSuggestedGroup(
+  groupId: number,
+  revision: number,
+  selection: OpSelection,
+): Promise<ApprovalResultView> {
+  const res = await commands.suggestedOpsApprove(groupId, revision, selection)
   if (res.status === 'error') throwSuggestedOpsError(res.error)
   return res.data
 }

@@ -252,6 +252,9 @@ pub struct ProposalGroup {
     pub created_at: i64,
     /// When the group left `pending`.
     pub decided_at: Option<i64>,
+    /// Bumped by every amend (`repropose_group`); 0 at creation. An approval names the revision
+    /// the user read, and preflight refuses any other ([`AcceptanceOutcome::RevisionChanged`]).
+    pub revision: i64,
 }
 
 /// Decode a stored token, or report which column held what.

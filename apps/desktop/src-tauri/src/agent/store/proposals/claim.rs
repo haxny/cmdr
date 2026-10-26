@@ -47,6 +47,12 @@ pub enum AcceptanceOutcome {
         found: ProposalStatus,
     },
     Unknown,
+    /// The group was amended since the review the user approved from: `shown` is the revision
+    /// the review read, `found` the one it holds now. Nothing recorded; the user re-reads it.
+    RevisionChanged {
+        shown: i64,
+        found: i64,
+    },
     /// The selection leaves nothing to run (`Only` with no ids, or ids the group doesn't
     /// have, or `AllExcept` every op). Refused and rolled back, so the rows keep the last
     /// review's statuses and nothing records an acceptance of an empty set.
@@ -97,17 +103,31 @@ pub enum RejectOutcome {
 /// rows, selected ones that an earlier review excluded come back) and stores a hash plus
 /// count of what that set carries. From here on, that record is the only thing the claim
 /// trusts about what the user saw, whichever form the selection came in.
+///
+/// `shown_revision` is the group revision the review displayed. A group amended since (any new
+/// verb, target, or list) refuses as [`AcceptanceOutcome::RevisionChanged`] before anything is
+/// touched, because preflighting the NEW list would approve something nobody read.
 pub fn record_acceptance(
     conn: &Connection,
     group_id: i64,
+    shown_revision: i64,
     selection: &OpSelection,
     now: i64,
 ) -> Result<AcceptanceOutcome, AgentStoreError> {
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
-    match read_status(&tx, group_id)? {
-        None => return Ok(AcceptanceOutcome::Unknown),
-        Some(ProposalStatus::Pending) => {}
-        Some(found) => return Ok(AcceptanceOutcome::NotPending { found }),
+    let Some(group) = get_group(&tx, group_id)? else {
+        return Ok(AcceptanceOutcome::Unknown);
+    };
+    if group.status != ProposalStatus::Pending {
+        return Ok(AcceptanceOutcome::NotPending { found: group.status });
+    }
+    // In the same transaction as the binding below, so an amend can't land between the check
+    // and the record: the record describes the revision the user read, or there is none.
+    if group.revision != shown_revision {
+        return Ok(AcceptanceOutcome::RevisionChanged {
+            shown: shown_revision,
+            found: group.revision,
+        });
     }
 
     // Only `pending` and `excluded` rows are ever moved, so an op that already ran keeps its

@@ -166,7 +166,9 @@ pub enum ReproposeOutcome {
 ///
 /// Guarded twice over, both inside one `BEGIN IMMEDIATE`: the conditional `UPDATE ... WHERE
 /// status = 'pending'` both checks and locks, and the acceptance record is DELETED, so a
-/// preflight taken against the old op list can never carry an approval onto the new one.
+/// preflight taken against the old op list can never carry an approval onto the new one. It also
+/// bumps `revision`, so an approval the user gave while reading the OLD version refuses even
+/// though it would preflight the new list afresh.
 pub fn repropose_group(
     conn: &Connection,
     group_id: i64,
@@ -179,7 +181,8 @@ pub fn repropose_group(
         .prepare_cached(
             "UPDATE proposals SET
                 verb = ?2, source_volume_id = ?3, destination = ?4, destination_volume_id = ?5,
-                reversible = ?6, display_name = ?7, rationale = ?8, selector = ?9, created_at = ?10
+                reversible = ?6, display_name = ?7, rationale = ?8, selector = ?9, created_at = ?10,
+                revision = revision + 1
              WHERE id = ?1 AND status = ?11",
         )?
         .execute(params![

@@ -132,6 +132,11 @@ The `messages` row a decided group's thread line lives in, so an approval's "run
 when it settles. `ON DELETE SET NULL`. Its rationale and the writes that use it: `proposals/DETAILS.md` § A decided
 group's thread line.
 
+## v11: `proposals.revision`
+
+Bumped by every amend, so an approval binds the version of a group the user read. Rationale and the check:
+`proposals/DETAILS.md` § What preflight accepts.
+
 ## No auto-retention in v1
 
 Transcripts are small (spec §3), so there's no pruning yet. When real sizes exist, the operation log's

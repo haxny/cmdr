@@ -58,7 +58,7 @@ pub struct GroupSummary {
 }
 
 const GROUP_COLUMNS: &str = "id, set_id, seq, verb, status, source_volume_id, destination, destination_volume_id,
-     reversible, display_name, rationale, selector, created_at, decided_at";
+     reversible, display_name, rationale, selector, created_at, decided_at, revision";
 
 /// Read one group header. `None` when there's no such group.
 pub fn get_group(conn: &Connection, group_id: i64) -> Result<Option<ProposalGroup>, AgentStoreError> {
@@ -136,8 +136,8 @@ pub fn list_groups(conn: &Connection, status: Option<ProposalStatus>) -> Result<
     while let Some(row) = rows.next()? {
         out.push(GroupSummary {
             group: map_group_row(row)?,
-            live_op_count: row.get(14)?,
-            total_op_count: row.get(15)?,
+            live_op_count: row.get(15)?,
+            total_op_count: row.get(16)?,
         });
     }
     Ok(out)
@@ -247,6 +247,7 @@ fn map_group_row(row: &rusqlite::Row<'_>) -> Result<ProposalGroup, AgentStoreErr
         selector: row.get(11)?,
         created_at: row.get(12)?,
         decided_at: row.get(13)?,
+        revision: row.get(14)?,
     })
 }
 

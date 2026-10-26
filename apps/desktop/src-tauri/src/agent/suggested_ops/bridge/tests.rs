@@ -175,6 +175,7 @@ fn settling_ends_the_group_whatever_the_operation_did() {
     crate::agent::store::proposals::record_acceptance(
         &conn,
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         200,
     )
@@ -201,6 +202,7 @@ fn a_group_the_decorator_settled_survives_the_next_launch_sweep() {
     crate::agent::store::proposals::record_acceptance(
         &conn,
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         200,
     )
@@ -381,6 +383,7 @@ async fn an_approval_the_engine_refuses_returns_the_group_to_pending() {
         reporting,
         Arc::new(CollectorEventSink::new()),
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         200,
         None,
@@ -486,6 +489,7 @@ async fn approve(conn: &Connection, reporting: Connection, group_id: i64) -> sup
         reporting,
         Arc::new(CollectorEventSink::new()),
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         200,
         None,
@@ -599,6 +603,7 @@ async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
     record_acceptance(
         &conn,
         group_id,
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         150,
     )

@@ -100,6 +100,9 @@ pub struct SuggestedSweepView {
 pub struct SuggestedGroupView {
     pub group_id: i64,
     pub sweep_id: i64,
+    /// Which version of the group this is: every amend bumps it. Send it back with the approval,
+    /// and an approval of a version the agent has since replaced answers `listChanged`.
+    pub revision: i64,
     pub verb: ProposalVerb,
     pub status: ProposalStatus,
     /// The friendly name the group leads with. Carries the selector's pattern as display text
@@ -512,6 +515,7 @@ fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroup
     SuggestedGroupView {
         group_id: group.id,
         sweep_id: group.set_id,
+        revision: group.revision,
         verb: group.verb,
         status: group.status,
         display_name: group.display_name,
@@ -664,7 +668,8 @@ pub enum ApprovalResultView {
     Started { operation_id: String },
     /// The group left `pending` before this arrived: approved, rejected, or gone.
     AlreadyAnswered,
-    /// The op set is not what preflight accepted, so nothing ran. The user re-reads it.
+    /// The group isn't the version the user read (the agent amended it), or its op set isn't what
+    /// preflight accepted, so nothing ran. The user re-reads it.
     ListChanged,
     /// No group with that id.
     Unknown,
@@ -700,6 +705,7 @@ pub enum ApprovalResultView {
 pub async fn suggested_ops_approve(
     app: AppHandle,
     group_id: i64,
+    revision: i64,
     selection: OpSelection,
 ) -> Result<ApprovalResultView, SuggestedOpsError> {
     let db_path = super::db_path(&app).ok_or(SuggestedOpsError::StoreNotOpen)?;
@@ -724,7 +730,7 @@ pub async fn suggested_ops_approve(
             let reporting = crate::agent::store::open_write_connection(&db_path).map_err(|e| e.to_string())?;
             let sink = std::sync::Arc::new(crate::operations_host::TauriEventSink::new(app));
             crate::agent::suggested_ops::bridge::approve_and_execute(
-                &conn, reporting, sink, group_id, &selection, now, memory,
+                &conn, reporting, sink, group_id, revision, &selection, now, memory,
             )
             .await
             .map_err(|e| e.to_string())
@@ -758,10 +764,11 @@ fn refusal_view(refusal: ApprovalRefusal) -> ApprovalResultView {
             ApprovalResultView::Unknown
         }
         ApprovalRefusal::NotAccepted(AcceptanceOutcome::NothingSelected) => ApprovalResultView::NothingSelected,
-        ApprovalRefusal::NotAccepted(_) | ApprovalRefusal::Claim(ClaimRefusal::StaleStatus { .. }) => {
-            ApprovalResultView::AlreadyAnswered
-        }
-        ApprovalRefusal::Claim(ClaimRefusal::BindingMismatch { .. }) => ApprovalResultView::ListChanged,
+        // `Accepted` never arrives as a refusal; it's named so a new variant can't slip into this arm.
+        ApprovalRefusal::NotAccepted(AcceptanceOutcome::NotPending { .. } | AcceptanceOutcome::Accepted { .. })
+        | ApprovalRefusal::Claim(ClaimRefusal::StaleStatus { .. }) => ApprovalResultView::AlreadyAnswered,
+        ApprovalRefusal::Claim(ClaimRefusal::BindingMismatch { .. })
+        | ApprovalRefusal::NotAccepted(AcceptanceOutcome::RevisionChanged { .. }) => ApprovalResultView::ListChanged,
         ApprovalRefusal::SourceUnavailable(error)
         | ApprovalRefusal::Engine(error)
         | ApprovalRefusal::Rename(RenameStartError::Engine { error }) => ApprovalResultView::Refused { error },

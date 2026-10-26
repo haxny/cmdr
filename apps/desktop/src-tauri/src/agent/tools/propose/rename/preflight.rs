@@ -145,10 +145,16 @@ fn record_user_acceptance(
         .filter(|row| !allowed_row_ids.contains(&row.row_id))
         .filter_map(|row| super::store::numeric_id(&row.row_id))
         .collect();
+    // The revision this call reads itself: a rename review binds what it checked through the
+    // digest of each row's id, path, and NAME (above), which an amend changes too.
+    let Some(group) = crate::agent::store::proposals::get_group(conn, group_id)? else {
+        return Ok(false);
+    };
     Ok(matches!(
         crate::agent::store::proposals::record_acceptance(
             conn,
             group_id,
+            group.revision,
             &crate::agent::store::proposals::OpSelection::AllExcept { op_ids: deselected },
             now_secs(),
         )?,

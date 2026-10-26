@@ -109,11 +109,12 @@ pub async fn approve_and_execute(
     reporting_conn: Connection,
     events: Arc<dyn OperationEventSink>,
     group_id: i64,
+    shown_revision: i64,
     selection: &OpSelection,
     now: i64,
     memory: Option<MemoryStore>,
 ) -> Result<ApprovalOutcome, AgentStoreError> {
-    match record_acceptance(conn, group_id, selection, now)? {
+    match record_acceptance(conn, group_id, shown_revision, selection, now)? {
         AcceptanceOutcome::Accepted { .. } => {}
         other => return Ok(ApprovalOutcome::Refused(ApprovalRefusal::NotAccepted(other))),
     }

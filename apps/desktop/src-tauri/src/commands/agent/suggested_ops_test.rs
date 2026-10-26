@@ -9,6 +9,16 @@ use crate::agent::store::proposals::ProposalGroup;
 /// dialog say the wrong thing in one of the cases.
 #[test]
 fn each_refusal_keeps_the_recovery_it_implies() {
+    assert!(
+        matches!(
+            refusal_view(ApprovalRefusal::NotAccepted(AcceptanceOutcome::RevisionChanged {
+                shown: 0,
+                found: 1
+            })),
+            ApprovalResultView::ListChanged
+        ),
+        "an amended group is re-readable, never already answered"
+    );
     assert!(matches!(
         refusal_view(ApprovalRefusal::NotAccepted(AcceptanceOutcome::NotPending {
             found: ProposalStatus::Approved
@@ -100,6 +110,7 @@ fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
             selector: None,
             created_at: 100,
             decided_at: None,
+            revision: 0,
         },
         live_op_count: 5,
         total_op_count: 7,

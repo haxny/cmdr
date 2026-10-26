@@ -126,6 +126,7 @@ fn an_accepted_preflight_does_not_survive_a_store_reopen() {
         record_acceptance(
             &conn,
             last_group_id(&conn),
+            0,
             &crate::agent::store::proposals::OpSelection::all_except(&[]),
             200,
         )
@@ -177,6 +178,7 @@ fn no_batch_of_an_accumulated_review_keeps_its_approval_across_a_store_reopen() 
             record_acceptance(
                 &conn,
                 last_group_id(&conn),
+                0,
                 &crate::agent::store::proposals::OpSelection::all_except(&[]),
                 200,
             )
@@ -352,6 +354,7 @@ fn staged_with_accepted_preflight(
     record_acceptance(
         conn,
         last_group_id(conn),
+        0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
         200,
     )
