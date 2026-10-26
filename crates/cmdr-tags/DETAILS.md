@@ -91,8 +91,9 @@ them as the fields and is written with `COMM` / `TPOS`.
 - **FLAC**: saving the comments rewrites every picture block from the comments' own pictures, so the file's picture
   blocks move into the comments first (block pictures ahead of in-tag ones, keeping the reader's cover).
 - **M4A**: lofty panics on an ilst it can't encode, so a cover type outside JPEG/PNG/BMP/GIF is refused up front. lofty
-  moves the `stco` / `co64` chunk offsets when the tag grows and shifts `mdat` (verified in
-  `write_test::m4a_chunk_offsets_follow_a_growing_tag`, lofty 0.25.4, 2026-10-26).
+  moves the `stco` / `co64` chunk offsets of every track when the tag grows and shifts `mdat`, an audiobook's chapter
+  text track included (verified in `write_test::m4a_chunk_offsets_follow_a_growing_tag` and
+  `write_m4b_test::m4b_chapter_track_offsets_follow_a_growing_tag`, lofty 0.25.4, 2026-10-26).
 - **MP3 behind junk**: a strict parse doesn't search for an ID3v2 tag after junk bytes, so when only the lenient parse
   finds one the write is refused (`TagError::Parse`) instead of adding a second tag in front.
 - **FLAC icons**: lofty keeps one picture per icon type when the pictures are gathered; a file with two fails the write

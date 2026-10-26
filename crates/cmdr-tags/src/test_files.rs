@@ -218,31 +218,68 @@ pub const CHUNK_LEN: usize = 64;
 /// at `chunks` chunks inside `mdat`, chunk `i` filled with byte `i + 1`, as in a real file
 /// whose `moov` comes before `mdat`. Growing the tag moves `mdat`, so every offset must move.
 pub fn m4a_with_chunks(chunks: u8) -> Vec<u8> {
-    let moov = |offsets: &[u32]| {
-        let mut table = u32::try_from(offsets.len()).unwrap().to_be_bytes().to_vec();
-        for offset in offsets {
-            table.extend(offset.to_be_bytes());
-        }
-        let stbl = atom(b"stbl", &atom(b"stco", &full(0, &table)));
-        let trak = atom(b"trak", &atom(b"mdia", &atom(b"minf", &stbl)));
-        atom(b"moov", &concat(&[&mvhd_v0(0), &trak]))
+    m4a_with_tracks(b"M4A ", &[(b"soun", chunks)])
+}
+
+/// An MP4 of brand `brand` with one `trak` per `(handler, chunks)` (an `hdlr` of that handler
+/// type and an `stco`), every track's chunks inside the one `mdat` after `moov`: track `t`'s
+/// chunk `i` is filled with byte `0x10 * t + i + 1`. An audiobook's chapter track is a second
+/// `trak` with handler `text` whose samples also live in `mdat`.
+pub fn m4a_with_tracks(brand: &[u8; 4], tracks: &[(&[u8; 4], u8)]) -> Vec<u8> {
+    let moov = |offsets: &[Vec<u32>]| {
+        let traks: Vec<Vec<u8>> = tracks
+            .iter()
+            .zip(offsets)
+            .map(|((handler, _), offsets)| {
+                let mut table = u32::try_from(offsets.len()).unwrap().to_be_bytes().to_vec();
+                for offset in offsets {
+                    table.extend(offset.to_be_bytes());
+                }
+                let hdlr_body = concat(&[&[0; 4], &handler[..], &[0; 12], b"\0"]);
+                let stbl = atom(b"stbl", &atom(b"stco", &full(0, &table)));
+                let mdia = concat(&[&atom(b"hdlr", &full(0, &hdlr_body)), &atom(b"minf", &stbl)]);
+                atom(b"trak", &atom(b"mdia", &mdia))
+            })
+            .collect();
+        let parts: Vec<&[u8]> = traks.iter().map(Vec::as_slice).collect();
+        atom(b"moov", &concat(&[&mvhd_v0(0), &concat(&parts)]))
     };
-    let head = ftyp(b"M4A ");
-    let count = usize::from(chunks);
-    let mdat_body_at = head.len() + moov(&vec![0; count]).len() + 8;
-    let offsets: Vec<u32> = (0..count)
-        .map(|i| u32::try_from(mdat_body_at + i * CHUNK_LEN).unwrap())
-        .collect();
-    let payload: Vec<u8> = (1..=chunks).flat_map(|i| [i; CHUNK_LEN]).collect();
+    let head = ftyp(brand);
+    let zeros: Vec<Vec<u32>> = tracks.iter().map(|(_, n)| vec![0; usize::from(*n)]).collect();
+    let mut at = head.len() + moov(&zeros).len() + 8;
+    let mut offsets = Vec::new();
+    let mut payload = Vec::new();
+    for (t, (_, chunks)) in tracks.iter().enumerate() {
+        let mut table = Vec::new();
+        for i in 0..*chunks {
+            table.push(u32::try_from(at).unwrap());
+            payload.extend([chunk_byte(t, usize::from(i)); CHUNK_LEN]);
+            at += CHUNK_LEN;
+        }
+        offsets.push(table);
+    }
     concat(&[&head, &moov(&offsets), &atom(b"mdat", &payload)])
+}
+
+/// The byte [`m4a_with_tracks`] fills track `track`'s chunk `chunk` with.
+pub fn chunk_byte(track: usize, chunk: usize) -> u8 {
+    u8::try_from(0x10 * track + chunk + 1).expect("a small test file")
 }
 
 /// The offsets in the first `stco` of an MP4 file's bytes.
 pub fn stco_offsets(bytes: &[u8]) -> Vec<usize> {
-    let at = bytes.windows(4).position(|w| w == b"stco").expect("an stco atom");
+    all_stco_offsets(bytes).into_iter().next().expect("an stco atom")
+}
+
+/// The offsets in every `stco` of an MP4 file's bytes, in file order.
+pub fn all_stco_offsets(bytes: &[u8]) -> Vec<Vec<usize>> {
     let word = |pos: usize| u32::from_be_bytes(bytes[pos..pos + 4].try_into().unwrap()) as usize;
-    let count = word(at + 8);
-    (0..count).map(|i| word(at + 12 + 4 * i)).collect()
+    bytes
+        .windows(4)
+        .enumerate()
+        .filter(|(_, w)| *w == b"stco")
+        .map(|(at, _)| (0..word(at + 8)).map(|i| word(at + 12 + 4 * i)).collect())
+        .collect()
 }
 
 // ── Ogg ───────────────────────────────────────────────────────────────────────
