@@ -344,8 +344,8 @@
         "reason": "Agreement, not drift: the copy-to-clipboard confirmations (`Kopierat`) are neuter, about text (det är kopierat); the Git column's `fileExplorer.git.status.copied` describes a file (en fil), so it takes the common-gender `Kopierad`, like its siblings `Ändrad`, `Tillagd`, `Raderad` and git's own sv `kopierad:`."
       },
       {
-        "source": "File",
-        "reason": "The menu bar's File menu is Apple's own Swedish title `Arkiv` (Finder, AppKit); the suggested-ops column names an ordinary file, `Fil`."
+        "source": "Archive",
+        "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`Arkivera`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip file a compress suggestion creates (`Arkiv`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
       },
       {
         "source": "Modified",
@@ -374,6 +374,10 @@
       {
         "source": "Start",
         "reason": "Two different things in Multi-rename. `Startvärde` is the counter’s first number (`multiRename.counterEditor.start`, beside `Steg` and `Antal siffror`); `Början` is the first edge of a character range (`multiRename.rangeEditor.start`, paired with `Slut` and the `Från början`/`Från slutet` options). A range edge isn’t a number, and `Startvärde` beside `Slut` would read as a number field."
+      },
+      {
+        "source": "Unknown",
+        "reason": "Gender agreement, not drift: `Okänd` agrees with a model (`ai.local.modelUnknown`, en modell); `suggestedOps.factUnknown` stands for either a size (en storlek) or a date (ett datum), so it takes the neuter `Okänt`. The `unknown` ruling in `docs/i18n/sv/terms.json`."
       }
     ],
     "vi": [

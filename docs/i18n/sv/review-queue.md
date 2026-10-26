@@ -100,6 +100,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `Tillåt anslutningar från icke-privilegierade portar` (not verified against a live DSM).
 - **Favorite shortcut key** (`menu.volume.editFavoriteShortcut`): `Ange genvägstangent…` builds on the ruled `genväg`;
   the pile has no "shortcut key" label. Confirm it reads better than `Ange snabbtangent…`.
+- **AI-förslag batch headings and cells** (`suggestedOps.sweepWhen.*`, `.factUnknown`, `.refusal.nothingSelected.*`):
+  the passive `Föreslogs nyss` has no subject to make active; `Okänt` (neuter) stands for a size or a date; ticking is
+  `bocka för`. Confirm all three read naturally in the dialog.
 
 ## Layout (overflow-check against the pseudolocale)
 

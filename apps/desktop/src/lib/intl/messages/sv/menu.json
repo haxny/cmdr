@@ -312,9 +312,9 @@
   "@menu.view.operationLog": {
     "sourceHash": "2c97965"
   },
-  "menu.view.suggestedOps": "Föreslagna åtgärder",
+  "menu.view.suggestedOps": "AI-förslag",
   "@menu.view.suggestedOps": {
-    "sourceHash": "4f24ca6"
+    "sourceHash": "1a1f5b9"
   },
   "menu.view.askCmdr": "Ask Cmdr",
   "@menu.view.askCmdr": {
