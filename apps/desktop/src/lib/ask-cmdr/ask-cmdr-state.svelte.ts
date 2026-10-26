@@ -145,12 +145,6 @@ export function streamingAssistant(): AssistantItem | null {
   return last?.kind === 'assistant' && last.streaming ? last : null
 }
 
-/** Settle the streaming bubble ({@link settleAssistant}), when there is one. */
-export function finalizeAssistant(): void {
-  const assistant = streamingAssistant()
-  if (assistant) settleAssistant(assistant)
-}
-
 /**
  * Settle a turn's bubble the way a reload would read its stored rows: stop its cursor, keep only
  * the rounds that persisted (`settleRounds`: a round that never reached `End` goes, a call still

@@ -57,6 +57,29 @@ pub fn turn_opener_at(conn: &Connection, conversation_id: i64, seq: i64) -> Resu
     }
 }
 
+/// The row `message_id` of `conversation_id` plus every row after it up to the next opener: the
+/// rows holding an assistant row's results. `None` when that thread holds no such row, so another
+/// thread's id never reads.
+pub fn row_and_rest_of_turn(
+    conn: &Connection,
+    conversation_id: i64,
+    message_id: i64,
+) -> Result<Option<Vec<StoredMessage>>, AgentStoreError> {
+    let mut stmt = conn.prepare_cached("SELECT seq FROM messages WHERE id = ?1 AND conversation_id = ?2")?;
+    let mut found = stmt.query(rusqlite::params![message_id, conversation_id])?;
+    let Some(row) = found.next()? else {
+        return Ok(None);
+    };
+    let seq: i64 = row.get(0)?;
+    let rows = rows_where(
+        conn,
+        "seq >= ?2 AND seq < COALESCE(
+             (SELECT MIN(seq) FROM messages WHERE conversation_id = ?1 AND role = ?3 AND seq > ?2), ?4)",
+        rusqlite::params![conversation_id, seq, AgentRole::User.as_token(), i64::MAX],
+    )?;
+    Ok(Some(rows))
+}
+
 /// A conversation's rows matching `filter` (over `seq`, with `?1` bound to the conversation),
 /// seq ascending.
 fn rows_where(

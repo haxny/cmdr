@@ -233,6 +233,17 @@ describe('AdvancedSection a11y', () => {
     expect(highlights.length).toBeGreaterThan(0)
     await expectNoA11yViolations(target)
   })
+
+  it('renders a choice as radios, its default named by its label rather than its token', async () => {
+    clearSearchIndex()
+    const target = container()
+    mount(AdvancedSection, { target, props: { searchQuery: 'tool groups' } })
+    await tick()
+    expect(target.querySelectorAll('.section-card-wrap').length).toBe(1)
+    expect(target.querySelectorAll('[role="radio"], input[type="radio"]').length).toBe(2)
+    expect(target.querySelector('.setting-default')?.textContent).toContain('Fold them away')
+    await expectNoA11yViolations(target)
+  })
 })
 
 /**

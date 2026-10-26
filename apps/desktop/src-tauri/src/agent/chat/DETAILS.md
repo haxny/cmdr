@@ -690,6 +690,12 @@ what the live one did: the same `tools::line` functions over the stored argument
 - **Tool rows project to no blocks**: a call's outcome rides its own block. A lone row
   (`to_message_view`, the stream's opener) knows no turn, so its calls carry argument-only
   subjects and no outcome.
+- **The raw result's one door** is `ask_cmdr_tool_result(conversation_id, message_id, call_id)`,
+  called on the user's expand of one line: `store::row_and_rest_of_turn` (the ownership check),
+  then `tool_result_detail` pairs the way the page does (the FIRST call with that id in the row)
+  and answers `preview_of` plus the pretty-printed content for Copy. ❌ Never in the stream or a
+  page, never logged (only a store failure is), and its `Err` is the fieldless
+  `AskCmdrToolResultError { NotFound, StoreUnavailable }`.
 
 ### One transport, keyed by conversation (`stream.rs`)
 

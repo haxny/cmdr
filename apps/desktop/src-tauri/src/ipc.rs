@@ -491,6 +491,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::suggested_ops_approve,
                     crate::commands::agent::ask_cmdr_record_slot_change,
                     crate::commands::agent::ask_cmdr_get_conversation,
+                    crate::commands::agent::ask_cmdr_tool_result,
                     crate::commands::agent::ask_cmdr_list_conversations,
                     crate::commands::agent::ask_cmdr_search_conversations,
                     crate::commands::agent::ask_cmdr_rename_conversation,

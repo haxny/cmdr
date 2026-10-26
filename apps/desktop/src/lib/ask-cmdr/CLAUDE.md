@@ -15,7 +15,6 @@ Ask Cmdr's frontend: a right-side panel for chatting with a BYO-key LLM, read-on
 - `AskCmdrRail.svelte`: the panel, mounted beside `DualPaneExplorer` by `routes/(main)/+page.svelte`, overlaid by
   `AskCmdrSessions.svelte`, with its `AskCmdrMessage` / `ToolLine` / `TurnStats` / `Composer` / `AttachmentChip` /
   `WakeDigest` / `ProposalDecisions` parts. `BulkRenameReviewDialog.svelte` is the rename review.
-- The rest are named for what they do.
 
 ## Must-knows
 
@@ -33,12 +32,13 @@ Ask Cmdr's frontend: a right-side panel for chatting with a BYO-key LLM, read-on
 - **A turn is ONE bubble of rounds; live must equal reload** (`ask-cmdr-turn-parity.test.ts`). A line is
   `(messageId, callId)`, ❌ never the call id alone; turn edges come from the backend (`turnId`).
 - **Tool lines: our words per typed variant** (`ask-cmdr-labels.ts`); paths reach the panes ONLY via the `revealPath`
-  prop. ❌ Never a live region.
+  prop. ❌ Never a live region. Group/expand state and the raw result: `ask-cmdr-tool-groups.svelte.ts`, ❌ never the
+  message list.
 - **The wake indicator is SILENT while any gate is shut or `askCmdr.proactive` is off**, and shows a running wake either
   way (it's spending money now). `wakeIndicatorMode` is the gate. ❌ Subscription stays in the `.svelte.ts`.
 - **The toggle is wired in four places; a miss fails silently** (`ask-cmdr-shortcut.test.ts`).
-- **Opening the rail GROWS the main window so panes keep their size** (`rail-window.ts`). ❌ Never grow on hydration or
-  re-open: the window is already rail-inclusive.
+- **Opening the rail GROWS the main window so panes keep their size** (`rail-window.ts`); ❌ never on hydration or
+  re-open.
 - **The rename review is a guardrail surface, not a table.** Every state saying nothing inside the file was read keeps
   saying so (`nothingRead` / `nameKept`). The name is EDITABLE and the SERVER owns it: ❌ never patch `destinationName`
   locally or disable it.

@@ -84,7 +84,9 @@ thread's cost).
 
 A turn is every row from one user-role row (its opener) to the next. What a tool line says is turn-scoped while the
 history pages by rows, so `turn_context` reads the rows completing a page's first and last turns, and `turn_opener_at`
-a row's opener. They return rows; what the rows mean is `agent::chat::message_view`'s.
+a row's opener. `row_and_rest_of_turn` reads one assistant row plus the rest of its turn (the rows holding its results)
+for the expanded line, and it is the ownership check: a `message_id` of another thread reads as `None`. They return
+rows; what the rows mean is `agent::chat::message_view`'s.
 
 ## FTS5 comes from `bundled`, not a feature
 

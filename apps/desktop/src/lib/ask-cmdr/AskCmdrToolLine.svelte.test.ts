@@ -32,7 +32,7 @@ function render(tool: RailToolCall): { target: HTMLElement; revealPath: ReturnTy
   const target = document.createElement('div')
   document.body.appendChild(target)
   const revealPath = vi.fn((_target: PathTarget) => Promise.resolve())
-  mount(AskCmdrToolLine, { target, props: { tool, revealPath } })
+  mount(AskCmdrToolLine, { target, props: { line: { key: `7:${tool.callId}`, messageId: 7, call: tool }, revealPath } })
   flushSync()
   return { target, revealPath }
 }

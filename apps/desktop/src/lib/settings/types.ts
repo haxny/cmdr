@@ -368,6 +368,7 @@ export type AiLocalContextSize = '32768' | '65536' | '131072' | '262144'
  * window; a preset overrides it and is honoured as given (the section warns when it is
  * larger than the window Cmdr believes the model has).
  */
+export type AskCmdrToolGroupsOnAnswer = 'collapse' | 'keep'
 export type AskCmdrChatMemorySize = 'auto' | '16000' | '32000' | '60000' | '128000' | '200000'
 
 /**
@@ -702,6 +703,9 @@ export interface SettingsValues {
   // The legacy held "no" to Ask Cmdr's old opt-in. Nothing writes it; only the one-time
   // `askCmdr.enabled` mapping reads it (backend-side, through `ask_cmdr_legacy_opt_in`).
   'askCmdr.consentRevokePending': boolean
+  // What a finished answer does with the tool groups it left open: close them all, or leave
+  // each as the person had it. Pure frontend, read at each turn's end.
+  'askCmdr.toolGroupsOnAnswer': AskCmdrToolGroupsOnAnswer
 
   // Developer
   'developer.mcpEnabled': boolean

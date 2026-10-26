@@ -8,6 +8,9 @@ import type { AssistantItem, RailMessage, RailToolCall, Round } from './ask-cmdr
 /** One tool line as the bubble renders it, with the key its `each` block uses. */
 export interface DisplayLine {
   key: string
+  /** The line's round's row, `null` while the round still streams: with `call.callId`, the
+   * line's identity. */
+  messageId: number | null
   call: RailToolCall
 }
 
@@ -56,8 +59,18 @@ function lineKeys(round: Round, roundIndex: number): DisplayLine[] {
     const occurrence = seen.get(call.callId) ?? 0
     seen.set(call.callId, occurrence + 1)
     const suffix = occurrence === 0 ? '' : `#${String(occurrence)}`
-    return { key: `${roundKey}:${call.callId}${suffix}`, call }
+    return { key: `${roundKey}:${call.callId}${suffix}`, messageId: round.messageId, call }
   })
+}
+
+/**
+ * What a run of tool lines' open state is remembered by: its first line's key, once that line's
+ * round has a row. Stable for the rest of the turn, since calls only append. `null` while the
+ * first round still streams: such a group can't be toggled yet, so it needs no key.
+ */
+export function groupKey(lines: DisplayLine[]): string | null {
+  const first = lines.at(0)
+  return first === undefined || first.messageId === null ? null : first.key
 }
 
 /**

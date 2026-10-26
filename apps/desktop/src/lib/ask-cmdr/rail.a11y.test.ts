@@ -104,6 +104,10 @@ import AskCmdrCostFooter from './AskCmdrCostFooter.svelte'
 import AskCmdrMessage from './AskCmdrMessage.svelte'
 import AskCmdrRail from './AskCmdrRail.svelte'
 import AskCmdrToolLine from './AskCmdrToolLine.svelte'
+import AskCmdrToolGroup from './AskCmdrToolGroup.svelte'
+import AskCmdrToolPreview from './AskCmdrToolPreview.svelte'
+import AskCmdrTurnStats from './AskCmdrTurnStats.svelte'
+import type { ToolDetailState } from './ask-cmdr-tool-groups.svelte'
 import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
 import { setSetting } from '#lib/settings/index.js'
 
@@ -518,7 +522,10 @@ describe('AskCmdrToolLine a11y', () => {
 
   function mountLine(t: RailToolCall): HTMLElement {
     const target = container()
-    mount(AskCmdrToolLine, { target, props: { tool: t, revealPath: () => Promise.resolve() } })
+    mount(AskCmdrToolLine, {
+      target,
+      props: { line: { key: `1:${t.callId}`, messageId: 1, call: t }, revealPath: () => Promise.resolve() },
+    })
     return target
   }
 
@@ -558,6 +565,72 @@ describe('AskCmdrToolLine a11y', () => {
 
   it('a refused line has no a11y violations', async () => {
     const target = mountLine(tool({ outcome: { kind: 'refused', reason: { kind: 'problem' } } }))
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('an open group of lines has no a11y violations, and its header is no live region', async () => {
+    const target = container()
+    const lines = ['c1', 'c2'].map((callId) => ({
+      key: `1:${callId}`,
+      messageId: 1,
+      call: tool({ callId, subject: { kind: 'folder', path: `/Users/me/${callId}` } }),
+    }))
+    mount(AskCmdrToolGroup, { target, props: { lines, live: true, revealPath: () => Promise.resolve() } })
+    await tick()
+    const toggle = target.querySelector('.group-toggle')
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true')
+    expect(target.querySelector('[role="status"], [aria-live]')).toBeNull()
+    await expectNoA11yViolations(target)
+  })
+
+  it('a turn’s stats line has no a11y violations', async () => {
+    const target = container()
+    mount(AskCmdrTurnStats, {
+      target,
+      props: { stats: { toolCalls: 3, wallMs: 4200, promptTokens: 1200, completionTokens: 80 } },
+    })
+    await tick()
+    expect(target.textContent).toContain('3 tool calls')
+    await expectNoA11yViolations(target)
+  })
+
+  it('an expanded preview with rows, a refusal, and Copy has no a11y violations', async () => {
+    const target = container()
+    const detail: ToolDetailState = {
+      status: 'ready',
+      detail: {
+        rawJson: '{}',
+        preview: {
+          rows: [
+            {
+              name: 'a.txt',
+              path: '/Users/me/a.txt',
+              kind: 'file',
+              sizeBytes: 1200,
+              line: 4,
+              snippet: 'hello',
+              status: null,
+            },
+            {
+              name: 'gone.txt',
+              path: null,
+              kind: 'other',
+              sizeBytes: null,
+              line: null,
+              snippet: null,
+              status: 'missing',
+            },
+          ],
+          rowsGivenToModel: 2,
+          total: 40,
+          lowerBound: false,
+          problem: 'A sentence for the model.',
+          setAside: false,
+        },
+      },
+    }
+    mount(AskCmdrToolPreview, { target, props: { id: 'p1', detail, revealPath: () => Promise.resolve() } })
     await tick()
     await expectNoA11yViolations(target)
   })

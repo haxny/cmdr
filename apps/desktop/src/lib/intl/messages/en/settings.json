@@ -3496,6 +3496,30 @@
   "@settings.advanced.card.updates": {
     "description": "Heading of the updates card (update-check interval) in Settings > Advanced."
   },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "description": "Heading of the Ask Cmdr card (what happens to the assistant’s tool groups when an answer arrives) in Settings > Advanced. “Ask Cmdr” is the product name of the in-app assistant; keep it untranslated."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "description": "Label for a choice in Settings > Advanced > Ask Cmdr. In the Ask Cmdr chat, the assistant’s requests to look at files show as a group of short lines that opens while it works; this picks what that group does once the answer is in."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "description": "Help text under the tool-groups choice in Settings > Advanced > Ask Cmdr. “Those lines” are the short lines in the chat naming each folder, file, or search the assistant checked. “Ask Cmdr” is the product name; keep it untranslated."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "description": "Radio-button option for the tool-groups choice in Settings > Advanced > Ask Cmdr: when the answer arrives, every group of tool lines closes to a one-line summary."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "description": "Radio-button option for the tool-groups choice in Settings > Advanced > Ask Cmdr: when the answer arrives, each group of tool lines stays open or closed, whichever the person left it."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "description": "Search keywords for the “Tool groups when the answer arrives” setting (settings.askCmdr.toolGroupsOnAnswer.label) in Settings > Advanced > Ask Cmdr. What it does: picks whether the assistant’s groups of tool lines close once it answers. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
   "settings.updates.card.updates": "Updates",
   "@settings.updates.card.updates": {
     "description": "Heading of the updates card (auto-check for updates, show what’s new on update) in Settings > Updates & privacy.",

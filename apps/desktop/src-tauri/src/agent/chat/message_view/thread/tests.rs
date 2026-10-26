@@ -415,3 +415,98 @@ fn a_legacy_nameless_call_and_odd_arguments_load_as_fallbacks() {
     );
     assert_eq!(lines[1].1, ToolSubject::Unparsed);
 }
+
+// ── The expanded line ─────────────────────────────────────────────────────────
+
+impl Thread {
+    /// The row `id` and the rest of its turn, as `store::row_and_rest_of_turn` reads them.
+    fn rest_of_turn_at(&self, id: i64) -> Vec<StoredMessage> {
+        let start = self.rows.iter().position(|row| row.id == id).expect("the row exists");
+        let end = self.rows[start + 1..]
+            .iter()
+            .position(|row| is_role(row, AgentRole::User))
+            .map_or(self.rows.len(), |offset| start + 1 + offset);
+        self.rows[start..end].to_vec()
+    }
+}
+
+#[test]
+fn a_found_call_gives_its_preview_and_the_pretty_raw_result() {
+    let mut thread = Thread::default();
+    thread.user("look");
+    let id = thread.assistant(vec![list_dir("c1", "/a")], (10, 1));
+    thread.result("c1", listing(3));
+
+    let detail = tool_result_detail(thread.rest_of_turn_at(id), "c1").expect("found");
+    assert_eq!(detail.preview.rows_given_to_model, Some(3));
+    assert_eq!(
+        detail.raw_json,
+        serde_json::to_string_pretty(&listing(3)).expect("json"),
+        "the very result the model read, indented"
+    );
+}
+
+#[test]
+fn an_unknown_call_or_one_with_no_result_has_no_detail() {
+    let mut thread = Thread::default();
+    thread.user("look");
+    let id = thread.assistant(vec![list_dir("c1", "/a"), list_dir("c2", "/b")], (10, 1));
+    thread.result("c1", listing(1));
+
+    assert!(tool_result_detail(thread.rest_of_turn_at(id), "nope").is_none());
+    assert!(
+        tool_result_detail(thread.rest_of_turn_at(id), "c2").is_none(),
+        "no result row"
+    );
+}
+
+#[test]
+fn a_refusal_shows_its_problem_and_a_set_aside_row_says_so() {
+    let mut thread = Thread::default();
+    thread.user("look");
+    let id = thread.assistant(vec![list_dir("c1", "/a"), list_dir("c2", "/b")], (10, 1));
+    thread.result("c1", problem());
+    thread.message(
+        AgentRole::Tool,
+        vec![AgentPart::ToolResult(AgentToolResult {
+            call_id: "c2".into(),
+            content: json!({ "set": "aside" }),
+            elided: true,
+        })],
+        None,
+    );
+
+    let refused = tool_result_detail(thread.rest_of_turn_at(id), "c1").expect("found");
+    assert_eq!(refused.preview.problem.as_deref(), Some("list_dir needs path."));
+    let set_aside = tool_result_detail(thread.rest_of_turn_at(id), "c2").expect("found");
+    assert!(set_aside.preview.set_aside);
+    assert!(set_aside.preview.rows.is_empty());
+}
+
+/// The fake reuses `fake-call-0` in every round, so each round's row must read its OWN result.
+#[test]
+fn two_rounds_reusing_a_call_id_each_read_their_own_result() {
+    let mut thread = Thread::default();
+    thread.user("look");
+    let first = thread.assistant(vec![list_dir("fake-call-0", "/a")], (10, 1));
+    thread.result("fake-call-0", listing(3));
+    let second = thread.assistant(vec![list_dir("fake-call-0", "/b")], (20, 2));
+    thread.result("fake-call-0", problem());
+
+    let first = tool_result_detail(thread.rest_of_turn_at(first), "fake-call-0").expect("found");
+    let second = tool_result_detail(thread.rest_of_turn_at(second), "fake-call-0").expect("found");
+    assert_eq!(first.preview.rows_given_to_model, Some(3));
+    assert!(first.preview.problem.is_none());
+    assert_eq!(second.preview.problem.as_deref(), Some("list_dir needs path."));
+}
+
+#[test]
+fn a_row_that_is_not_an_assistant_row_has_no_detail() {
+    let mut thread = Thread::default();
+    let user = thread.user("look");
+    thread.assistant(vec![list_dir("c1", "/a")], (10, 1));
+    thread.result("c1", listing(1));
+
+    assert!(tool_result_detail(thread.rest_of_turn_at(user), "c1").is_none());
+    assert!(tool_result_detail(Vec::new(), "c1").is_none());
+}

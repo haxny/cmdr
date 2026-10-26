@@ -138,6 +138,7 @@ describe('getAdvancedSettings', () => {
       boolean: 'switch',
       number: 'number-input',
       duration: 'duration',
+      enum: 'radio',
     } as const
 
     for (const setting of getAdvancedSettings()) {

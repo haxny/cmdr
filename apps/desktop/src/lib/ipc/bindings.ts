@@ -3731,6 +3731,15 @@ export const commands = {
       } | null,
       string
     >(__TAURI_INVOKE('ask_cmdr_get_conversation', { id, msgLimit, msgOffset })),
+  /**
+   *  What one tool line's call returned, for its expanded view: the curated preview plus the raw
+   *  result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds.
+   *  ❌ The content is private (file text, EXIF incl. GPS): only the store's failure is logged.
+   */
+  askCmdrToolResult: (conversationId: number, messageId: number, callId: string) =>
+    typedError<ToolResultDetailView, AskCmdrToolResultError>(
+      __TAURI_INVOKE('ask_cmdr_tool_result', { conversationId, messageId, callId }),
+    ),
   // Conversations newest-activity first, paged. Empty when the store never opened.
   askCmdrListConversations: (limit: number, offset: number, includeArchived: boolean) =>
     typedError<ConversationRow[], string>(
@@ -6381,6 +6390,13 @@ export type AskCmdrStreamEvent =
    *  there is nothing left to read. Whoever is showing that conversation drops it.
    */
   | { type: 'discarded' }
+
+// Why an expanded tool line has nothing to show. ❌ Not prose: the rail words each one.
+export type AskCmdrToolResultError =
+  // No such call with a result in this thread (the thread was deleted underneath, say).
+  | 'notFound'
+  // The store never opened, or wouldn't answer.
+  | 'storeUnavailable'
 
 /**
  *  One turn event, and the thread it happened in.
@@ -18304,6 +18320,56 @@ export type ToolOutcome =
   // A memory note landed.
   | { kind: 'saved' }
   | { kind: 'refused'; reason: RefusalReason }
+
+/**
+ *  The expanded line: a curated look at what the model received. ❌ It never claims the model
+ *  saw rows it didn't: `rows` is a prefix of what the result carried.
+ */
+export type ToolPreview = {
+  // The first [`PREVIEW_ROWS`] rows. Empty for a tool with no list.
+  rows: ToolPreviewRow[]
+  // How many rows the result handed the model.
+  rowsGivenToModel: number | null
+  // What those rows were cut from (a search's `matchCount`).
+  total: number | null
+  lowerBound: boolean
+  /**
+   *  The verbatim sentence the model was told, when the call was refused. Model-facing English,
+   *  shown labeled as such.
+   */
+  problem: string | null
+  // The stored result is a set-aside stub, so there's nothing to show of it.
+  setAside: boolean
+}
+
+// One row of a preview. Names, paths, and snippets are file data, so they render as plain text.
+export type ToolPreviewRow = {
+  name: string
+  path: string | null
+  kind: ToolPreviewRowKind
+  sizeBytes: number | null
+  // A `find` hit's line number.
+  line: number | null
+  // A `find` hit's text, or a photo's recognized text.
+  snippet: string | null
+  // Why this path came back without an answer.
+  status: ToolPreviewRowStatus | null
+}
+
+export type ToolPreviewRowKind = 'file' | 'folder' | 'other'
+
+// A per-path answer that isn't one: `inspect_file`'s statuses and `image_facts`' not-indexed.
+export type ToolPreviewRowStatus = 'missing' | 'unreadable' | 'unreachable' | 'unsupportedVolume' | 'notIndexed'
+
+/**
+ *  What an expanded tool line shows: the curated preview, plus the raw result pretty-printed for
+ *  Copy. The raw result is the one door to what a call returned (it can hold file text and EXIF
+ *  incl. GPS), so it crosses only on the user's expand, and ❌ is never logged.
+ */
+export type ToolResultDetailView = {
+  preview: ToolPreview
+  rawJson: string
+}
 
 // What one call looked at. Every path is absolute (`~` expanded); every string is bounded.
 export type ToolSubject =

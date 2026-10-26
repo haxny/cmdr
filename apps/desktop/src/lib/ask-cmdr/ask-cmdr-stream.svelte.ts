@@ -30,7 +30,8 @@ import {
   openStagedRenameReview,
   stageRenameProposal,
 } from './ask-cmdr-rename-review.svelte'
-import { askCmdrState, finalizeAssistant, settleAssistant, streamingAssistant } from './ask-cmdr-state.svelte'
+import { askCmdrState, settleAssistant, streamingAssistant } from './ask-cmdr-state.svelte'
+import { holdTurnGroupsOpen, settleTurnGroups } from './ask-cmdr-tool-groups.svelte'
 import {
   cancelAskCmdr,
   sendAskCmdrMessage,
@@ -168,6 +169,7 @@ export function stopStreaming(): void {
     bubble.streaming = false
     bubble.thinking = false
     bubble.stalled = false
+    holdTurnGroupsOpen(bubble)
   }
   askCmdrState.streaming = false
   clearProgressWatchdog()
@@ -232,6 +234,7 @@ function settlePendingStop(conversationId: number, event: TurnEvent): boolean {
   if (event.type === 'done') stampAnswer(bubble, event.messageId)
   bubble.stats = event.turn
   settleAssistant(bubble)
+  settleTurnGroups(bubble)
   return true
 }
 
@@ -625,8 +628,12 @@ function applyFailed(
  */
 function endTurn(stats: TurnStats | null): void {
   const assistant = streamingAssistant()
-  if (assistant) assistant.stats = stats
-  finalizeAssistant()
+  if (assistant) {
+    assistant.stats = stats
+    settleAssistant(assistant)
+    // The answer is in: the turn's groups close, or keep what they show, per the setting.
+    settleTurnGroups(assistant)
+  }
   askCmdrState.streaming = false
   clearProgressWatchdog()
   // The turn boundary is what makes a job's batches ONE review, and whatever got staged before

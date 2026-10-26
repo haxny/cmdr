@@ -21,6 +21,7 @@ import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
 import { mergeAtSeam } from './ask-cmdr-rounds'
+import { carryGroupStateAcrossSeam, forgetToolDetails } from './ask-cmdr-tool-groups.svelte'
 import { askCmdrState, hasOlderMessages, MESSAGE_PAGE, RAIL_MAX_WIDTH, RAIL_MIN_WIDTH } from './ask-cmdr-state.svelte'
 import { resumeThread, settleDecisionsHeardWhileLoading, stopStreaming } from './ask-cmdr-stream.svelte'
 import { growMainWindowForRail, shrinkMainWindowForRail } from './rail-window'
@@ -139,6 +140,7 @@ export function newChat(): void {
   askCmdrState.messageTotal = 0
   askCmdrState.historyCount = 0
   askCmdrState.attachments = []
+  forgetToolDetails()
   // A fresh chat has measured nothing, so the gauge must not carry the previous thread's fill.
   askCmdrState.contextUsage = null
   askCmdrState.deniedNames = []
@@ -218,6 +220,7 @@ async function loadConversation(id: number): Promise<void> {
       detail = (await getAskCmdrConversation(id, MESSAGE_PAGE, tailOffset)) ?? probe
     }
     if (load !== latestThreadLoad) return
+    if (askCmdrState.conversationId !== id) forgetToolDetails()
     askCmdrState.conversationId = id
     askCmdrState.messageTotal = detail.totalMessages
     askCmdrState.historyCount = detail.messages.length
@@ -254,8 +257,11 @@ export async function loadOlderMessages(): Promise<void> {
     const offset = remaining - limit
     const detail = await getAskCmdrConversation(id, limit, offset)
     if (!detail || shownBy !== latestThreadLoad) return
-    // A turn longer than the page boundary arrives in two halves; they fold back into one bubble.
+    // A turn longer than the page boundary arrives in two halves; they fold back into one bubble,
+    // and a group the seam joined keeps the open state it had.
+    const head = askCmdrState.messages.find((item) => item.kind === 'assistant')
     askCmdrState.messages = mergeAtSeam(buildRailMessages(detail), askCmdrState.messages)
+    carryGroupStateAcrossSeam(head, askCmdrState.messages)
     askCmdrState.historyCount += detail.messages.length
   } catch (e) {
     log.warn('loading earlier messages failed: {error}', { error: e })

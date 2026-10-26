@@ -1,8 +1,10 @@
 <!--
   One tool call the assistant made, as one calm row: a glyph, the label naming what the call
-  looked at, a "same as above" tag on a repeat, and what came back.
+  looked at, a "same as above" tag on a repeat, what came back, and an arrow that expands a peek
+  at what the model received (`AskCmdrToolPreview`).
 
-  Every path in the label is a link that shows it in a pane. Paths, names, and queries are
+  Every path in the label is a link that shows it in a pane, so the expand is its own control
+  beside the label (a link can't nest in a button). Paths, names, and queries are
   attacker-controlled (a crafted filename), so they render as plain text through Svelte's
   escaping interpolation and `<Trans>` snippets, never {@html}. Not a live region: a 12-call
   turn would chatter; the bubble's last prose is the one that announces.
@@ -17,18 +19,32 @@
     import { conjunctionListParts } from '#lib/intl/list-format.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { lineLabelText, toolLineLabel, toolOutcomeText, type LinePlace } from './ask-cmdr-labels'
+    import type { DisplayLine } from './ask-cmdr-rounds'
+    import { isLineExpanded, toggleLineExpanded, toolDetail } from './ask-cmdr-tool-groups.svelte'
     import { outcomeOk, showsRepeatTag, type RevealPath } from './ask-cmdr-tool-line'
-    import { returnFocusToPane, type RailToolCall } from './ask-cmdr-trigger.svelte'
+    import { returnFocusToPane } from './ask-cmdr-trigger.svelte'
+    import AskCmdrToolPreview from './AskCmdrToolPreview.svelte'
 
     interface Props {
-        tool: RailToolCall
+        line: DisplayLine
         /** Shows a path in a pane; `+page.svelte` implements it over the explorer. */
         revealPath: RevealPath
     }
-    const { tool, revealPath }: Props = $props()
+    const { line, revealPath }: Props = $props()
 
     const uid = $props.id()
     const repeatId = `${uid}-repeat`
+    const previewId = `${uid}-preview`
+
+    const tool = $derived(line.call)
+    // Only a call with a stored result has something to show: not while it runs, not before its
+    // round has a row, and not when it settled with no answer recorded.
+    const expandable = $derived(line.messageId !== null && !tool.running && tool.outcome !== null)
+    const expanded = $derived(expandable && isLineExpanded(line.key))
+
+    function toggleExpanded(): void {
+        if (line.messageId !== null) toggleLineExpanded(line.key, { messageId: line.messageId, callId: tool.callId })
+    }
 
     // A settled call with no recorded outcome reads as done, not refused: its note says the rest.
     const ok = $derived(tool.outcome === null || outcomeOk(tool.outcome))
@@ -91,7 +107,21 @@
     {#if outcome !== null}
         <span class="outcome" use:tooltip={{ text: outcome, overflowOnly: true }}>{outcome}</span>
     {/if}
+    <button
+        type="button"
+        class="expand"
+        aria-label={tString('askCmdr.tool.details')}
+        aria-expanded={expanded}
+        aria-controls={expanded ? previewId : undefined}
+        disabled={!expandable}
+        onclick={toggleExpanded}
+    >
+        <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={13} aria-hidden="true" />
+    </button>
 </div>
+{#if expanded}
+    <AskCmdrToolPreview id={previewId} detail={toolDetail(line.key)} {revealPath} />
+{/if}
 
 <style>
     .tool-line {
@@ -141,5 +171,26 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         color: var(--color-text-tertiary);
+    }
+
+    /* Pushed to the row's end, so the arrows of a group line up. Hidden until it can do
+       something, but kept in the layout so a line doesn't shift when its result lands. */
+    .expand {
+        display: flex;
+        flex: none;
+        margin-left: auto;
+        padding: var(--spacing-xxs);
+        border: none;
+        border-radius: var(--radius-xs);
+        background: none;
+        color: var(--color-text-tertiary);
+    }
+
+    .expand:disabled {
+        visibility: hidden;
+    }
+
+    .expand:not(:disabled):hover {
+        background: var(--color-bg-tertiary);
     }
 </style>

@@ -13,10 +13,12 @@
 
 use std::path::Path;
 
+use serde::Serialize;
+
 use super::{CallFacts, MessageView, RowFacts, project_row};
 use crate::agent::llm::types::{AgentPart, AgentRole, AgentToolCall, AgentToolResult};
 use crate::agent::store::{ConversationEvent, StoredContent, StoredMessage, TurnContext, TurnStats};
-use crate::agent::tools::line::{LineRef, outcome_of, repeat_marks, subject_of};
+use crate::agent::tools::line::{LineRef, ToolPreview, outcome_of, preview_of, repeat_marks, subject_of};
 
 /// What the page's projection needs beyond the rows.
 pub struct PageContext<'a> {
@@ -101,6 +103,32 @@ fn thread_facts(rows: &[StoredMessage], ctx: &PageContext<'_>) -> Vec<RowFacts> 
         }
     }
     facts
+}
+
+/// What an expanded tool line shows: the curated preview, plus the raw result pretty-printed for
+/// Copy. The raw result is the one door to what a call returned (it can hold file text and EXIF
+/// incl. GPS), so it crosses only on the user's expand, and ❌ is never logged.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolResultDetailView {
+    pub preview: ToolPreview,
+    pub raw_json: String,
+}
+
+/// The expanded line for the call `call_id` of `rows[0]`, an assistant row followed by the rest
+/// of its turn (`store::row_and_rest_of_turn`). Pairs the way the page does, so it reads the same
+/// result the line's outcome came from. `None` when the row made no such call, or it has no
+/// result row.
+pub fn tool_result_detail(rows: Vec<StoredMessage>, call_id: &str) -> Option<ToolResultDetailView> {
+    let row = rows.first().filter(|row| is_role(row, AgentRole::Assistant))?;
+    let calls = calls_of(row);
+    let results = pair_results(&rows, 0, &calls);
+    let (call, result) = calls.iter().zip(results).find(|(call, _)| call.call_id == call_id)?;
+    let result = result?;
+    Some(ToolResultDetailView {
+        preview: preview_of(&call.tool, result),
+        raw_json: serde_json::to_string_pretty(&result.content).unwrap_or_default(),
+    })
 }
 
 /// One assistant row of a turn (at `offset` in it): its calls, and each one's result.

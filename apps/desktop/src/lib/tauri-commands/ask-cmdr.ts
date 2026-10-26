@@ -36,6 +36,8 @@ import {
   type WakeDigestFolderView,
   type WakeDigestRollupView,
   type ProposalDecision,
+  type AskCmdrToolResultError,
+  type ToolResultDetailView,
 } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
@@ -198,6 +200,26 @@ export async function getAskCmdrConversation(
   const res = await commands.askCmdrGetConversation(id, msgLimit, msgOffset)
   if (res.status === 'error') throwIpcError(res.error)
   return res.data
+}
+
+/** What one tool line's call returned: the preview and the raw result for Copy, or why there's
+ * nothing to show. */
+export type AskCmdrToolResult =
+  | { found: true; detail: ToolResultDetailView }
+  | { found: false; reason: AskCmdrToolResultError }
+
+/**
+ * What the call `(messageId, callId)` of a thread returned, for its expanded line. The one door a
+ * raw tool result crosses by: on the user's expand, never in the stream or a history page.
+ * ❌ Never log it: it can hold file text and photo locations.
+ */
+export async function askCmdrToolResult(
+  conversationId: number,
+  messageId: number,
+  callId: string,
+): Promise<AskCmdrToolResult> {
+  const res = await commands.askCmdrToolResult(conversationId, messageId, callId)
+  return res.status === 'ok' ? { found: true, detail: res.data } : { found: false, reason: res.error }
 }
 
 /** Conversations newest-activity first, paged. Empty when the store never opened. */

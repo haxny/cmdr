@@ -11,6 +11,7 @@
         formatDurationSetting,
     } from '#lib/settings/index.js'
     import SettingsSection from '../components/SettingsSection.svelte'
+    import SettingRadioGroup from '../components/SettingRadioGroup.svelte'
     import SectionCard from '#lib/ui/SectionCard.svelte'
     import Button from '#lib/ui/Button.svelte'
     import Icon from '#lib/ui/Icon.svelte'
@@ -82,6 +83,17 @@
         if (id.endsWith('Mb') || id.includes('DiskSpace')) return tString('common.sizeUnit.megabyte')
         if (id === 'fileExplorer.typeToJump.resetDelay') return 'ms'
         return ''
+    }
+
+    /** A setting's default as the row shows it: a duration in words, a choice by its option's
+     * label (never the stored token), anything else as it is. */
+    function defaultText(setting: (typeof allAdvancedSettings)[number]): string {
+        if (setting.type === 'duration') return formatDurationSetting(Number(setting.default))
+        if (setting.type === 'enum') {
+            const option = setting.constraints?.options?.find((candidate) => candidate.value === setting.default)
+            if (option) return option.label
+        }
+        return String(setting.default)
     }
 
     function handleReset(id: SettingId) {
@@ -204,9 +216,7 @@ Timestamp: ${info.timestamp}
                     <div class="setting-description">{setting.description}</div>
                     <div class="setting-default">
                         {tString('settings.advanced.defaultPrefix')}
-                        {setting.type === 'duration'
-                            ? formatDurationSetting(Number(setting.default))
-                            : String(setting.default)}
+                        {defaultText(setting)}
                         {#if modified}
                             <button
                                 class="reset-link"
@@ -232,6 +242,8 @@ Timestamp: ${info.timestamp}
                             id={setting.id}
                             unit={setting.type === 'number' ? numberUnitLabel(setting.id) : ''}
                         />
+                    {:else if setting.type === 'enum'}
+                        <SettingRadioGroup id={setting.id} />
                     {/if}
                                 </div>
                             </div>

@@ -2,9 +2,11 @@
 
 use tauri::AppHandle;
 
-use super::{ConversationDetailView, with_read_connection, with_write_connection};
+use super::{
+    AskCmdrToolResultError, ConversationDetailView, ToolResultDetailView, with_read_connection, with_write_connection,
+};
 use crate::agent::chat::cancel::turn_in_flight_since_seq;
-use crate::agent::chat::message_view::thread::{PageContext, project_page};
+use crate::agent::chat::message_view::thread::{PageContext, project_page, tool_result_detail};
 use crate::agent::store::{self, ConversationRow, ConversationSearchHit, TurnContext};
 
 /// One conversation's header plus a page of its display messages (oldest first). `None`
@@ -58,6 +60,40 @@ pub async fn ask_cmdr_get_conversation(
         }))
     })
     .await
+}
+
+/// What one tool line's call returned, for its expanded view: the curated preview plus the raw
+/// result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds.
+/// ❌ The content is private (file text, EXIF incl. GPS): only the store's failure is logged.
+#[tauri::command]
+#[specta::specta]
+pub async fn ask_cmdr_tool_result(
+    app: AppHandle,
+    conversation_id: i64,
+    message_id: i64,
+    call_id: String,
+) -> Result<ToolResultDetailView, AskCmdrToolResultError> {
+    let Some(db_path) = super::db_path(&app) else {
+        return Err(AskCmdrToolResultError::StoreUnavailable);
+    };
+    let read = tauri::async_runtime::spawn_blocking(move || {
+        let conn = store::open_read_connection(&db_path)?;
+        store::row_and_rest_of_turn(&conn, conversation_id, message_id)
+    })
+    .await;
+    match read {
+        Ok(Ok(rows)) => rows
+            .and_then(|rows| tool_result_detail(rows, &call_id))
+            .ok_or(AskCmdrToolResultError::NotFound),
+        Ok(Err(error)) => {
+            log::warn!(target: super::LOG_TARGET, "ask_cmdr_tool_result: the store wouldn't read: {error}");
+            Err(AskCmdrToolResultError::StoreUnavailable)
+        }
+        Err(error) => {
+            log::warn!(target: super::LOG_TARGET, "ask_cmdr_tool_result: the read task ended early: {error}");
+            Err(AskCmdrToolResultError::StoreUnavailable)
+        }
+    }
 }
 
 /// Conversations newest-activity first, paged. Empty when the store never opened.

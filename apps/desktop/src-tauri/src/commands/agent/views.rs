@@ -1,7 +1,8 @@
 //! The specta-typed shapes the query commands return ([`ConversationDetailView`],
 //! [`AttachmentRef`], the send refusal) and the pure mappings that produce them. Everything here
-//! DROPS backend-only material — no reasoning blob, no provider state, no raw tool-result content
-//! ever crosses.
+//! DROPS backend-only material: no reasoning blob, no provider state. A raw tool result crosses
+//! through ONE door only, [`ToolResultDetailView`], fetched on the user's expand of one line
+//! (`ask_cmdr_tool_result`); never in the stream or a history page.
 //!
 //! One stored row's display projection ([`MessageView`]) lives one level down, in
 //! `agent::chat::message_view`, because the live stream carries it too; it is re-exported here.
@@ -10,6 +11,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::agent::chat::context::{AttachmentKind, EnvelopeAttachment};
+pub use crate::agent::chat::message_view::thread::ToolResultDetailView;
 pub use crate::agent::chat::message_view::{MessageBlock, MessageRoleView, MessageView};
 use crate::agent::chat::stream::AgentErrorKindView;
 use crate::agent::store::ConversationRow;
@@ -103,6 +105,16 @@ pub struct ConversationDetailView {
     /// after it are that turn's, still being written, so a result-less call among them is running
     /// (every other result-less call is settled). `None` when nothing runs.
     pub turn_in_flight_since_seq: Option<i64>,
+}
+
+/// Why an expanded tool line has nothing to show. ❌ Not prose: the rail words each one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum AskCmdrToolResultError {
+    /// No such call with a result in this thread (the thread was deleted underneath, say).
+    NotFound,
+    /// The store never opened, or wouldn't answer.
+    StoreUnavailable,
 }
 
 /// A thread's last measured context usage, on the wire. Both figures are `chars/4` estimates.

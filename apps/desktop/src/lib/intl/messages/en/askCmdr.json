@@ -536,6 +536,165 @@
   "@askCmdr.tool.outcome.noAnswer": {
     "description": "Shown after a tool line’s label when the answer was stopped (or the app quit) before this request came back, so there’s no result to show. Calm, not a fault. Lowercase where your language allows."
   },
+  "askCmdr.tool.details": "What came back",
+  "@askCmdr.tool.details": {
+    "description": "Accessible name of the small arrow button at the end of an Ask Cmdr tool line that opens a peek at what the request returned to the assistant. Screen readers announce it together with whether it’s open; it isn’t shown."
+  },
+  "askCmdr.tool.preview.loading": "Getting what came back",
+  "@askCmdr.tool.preview.loading": {
+    "description": "Screen-reader text for the small spinner shown while an opened Ask Cmdr tool line fetches what its request returned. Usually takes a moment."
+  },
+  "askCmdr.tool.preview.given": "Showed the model {givenText} of {totalText}",
+  "@askCmdr.tool.preview.given": {
+    "description": "A note in an opened Ask Cmdr tool line: the list had more entries than the AI model was handed, so it saw only {givenText} of them. “The model” is the AI that writes the answers.",
+    "placeholders": {
+      "givenText": "How many entries the model was given, as a formatted number.",
+      "totalText": "How many entries there are in all, as a formatted number."
+    }
+  },
+  "askCmdr.tool.preview.givenSoFar": "Showed the model {givenText} of {totalText} found so far",
+  "@askCmdr.tool.preview.givenSoFar": {
+    "description": "Like askCmdr.tool.preview.given, when the search hadn’t covered everything yet (a drive still being indexed), so the total may grow.",
+    "placeholders": {
+      "givenText": "How many entries the model was given, as a formatted number.",
+      "totalText": "How many were found so far, as a formatted number."
+    }
+  },
+  "askCmdr.tool.preview.firstRows": "{count, plural, one {Here’s the first one. Copy has the whole result.} other {Here are the first {countText}. Copy has the whole result.}}",
+  "@askCmdr.tool.preview.firstRows": {
+    "description": "A note under the short list in an opened Ask Cmdr tool line: only the first few entries are listed here, and the Copy button next to it copies everything the request returned.",
+    "placeholders": {
+      "countText": "How many entries are listed here, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.preview.noRows": "There’s no list to show for this one. Copy has the whole result.",
+  "@askCmdr.tool.preview.noRows": {
+    "description": "Shown in an opened Ask Cmdr tool line whose request returned facts rather than a list (the panes, a folder’s importance, a note), next to a Copy button that copies the full result."
+  },
+  "askCmdr.tool.preview.problemLabel": "What the model was told:",
+  "@askCmdr.tool.preview.problemLabel": {
+    "description": "A label in an opened Ask Cmdr tool line, before the exact sentence Cmdr sent the AI model when the request couldn’t be carried out. That sentence follows in English, as the model read it. Keep the colon (or your language’s equivalent)."
+  },
+  "askCmdr.tool.preview.setAside": "This result was set aside to make room, so there’s nothing left of it to show.",
+  "@askCmdr.tool.preview.setAside": {
+    "description": "Shown in an opened Ask Cmdr tool line when the request’s result was later dropped from the conversation to fit the AI’s memory limit, so only a placeholder was kept."
+  },
+  "askCmdr.tool.preview.notFound": "This result isn’t here anymore.",
+  "@askCmdr.tool.preview.notFound": {
+    "description": "Shown in an opened Ask Cmdr tool line when its result can’t be found (the conversation was deleted in the meantime, for example). Calm, not a fault."
+  },
+  "askCmdr.tool.preview.unavailable": "Cmdr can’t read this result right now.",
+  "@askCmdr.tool.preview.unavailable": {
+    "description": "Shown in an opened Ask Cmdr tool line when Cmdr’s chat history couldn’t be read at the moment. Calm, not a fault."
+  },
+  "askCmdr.tool.preview.line": "line {lineText}",
+  "@askCmdr.tool.preview.line": {
+    "description": "Beside a search hit in an opened Ask Cmdr tool line: which line of the file the matching text is on. Lowercase where your language allows.",
+    "placeholders": { "lineText": "The line number, as a formatted number." }
+  },
+  "askCmdr.tool.preview.status.missing": "not there",
+  "@askCmdr.tool.preview.status.missing": {
+    "description": "Beside a file in an opened Ask Cmdr tool line: the assistant asked about this path, and nothing exists there. Lowercase where your language allows."
+  },
+  "askCmdr.tool.preview.status.unreadable": "couldn’t be read",
+  "@askCmdr.tool.preview.status.unreadable": {
+    "description": "Beside a file in an opened Ask Cmdr tool line: the file exists but Cmdr couldn’t open it (permissions, a damaged file). Lowercase where your language allows."
+  },
+  "askCmdr.tool.preview.status.unreachable": "out of reach",
+  "@askCmdr.tool.preview.status.unreachable": {
+    "description": "Beside a file in an opened Ask Cmdr tool line: the drive or share it’s on didn’t answer in time. Lowercase where your language allows."
+  },
+  "askCmdr.tool.preview.status.unsupportedVolume": "on a drive it can’t look inside",
+  "@askCmdr.tool.preview.status.unsupportedVolume": {
+    "description": "Beside a file in an opened Ask Cmdr tool line: the file is on a kind of drive (a phone, a cloud share) whose files the assistant can’t open. “It” is the assistant. Lowercase where your language allows."
+  },
+  "askCmdr.tool.preview.status.notIndexed": "not indexed yet",
+  "@askCmdr.tool.preview.status.notIndexed": {
+    "description": "Beside a photo in an opened Ask Cmdr tool line: Cmdr hasn’t analyzed this photo yet, so there were no facts about it to give. Lowercase where your language allows."
+  },
+  "askCmdr.tool.preview.copy": "Copy",
+  "@askCmdr.tool.preview.copy": {
+    "description": "A small button in an opened Ask Cmdr tool line that copies the full, raw result the AI model received (as JSON text) to the clipboard. For advanced users. Verb, short."
+  },
+  "askCmdr.tool.preview.copyLabel": "Copy the whole result as JSON",
+  "@askCmdr.tool.preview.copyLabel": {
+    "description": "Accessible name of the Copy button in an opened Ask Cmdr tool line. Screen readers announce it; it isn’t shown. Keep “JSON” as is (a text format)."
+  },
+  "askCmdr.tool.preview.copied": "Copied",
+  "@askCmdr.tool.preview.copied": {
+    "description": "Shown on the Copy button of an opened Ask Cmdr tool line for a moment after the result was copied."
+  },
+  "askCmdr.tool.preview.copyRefused": "The clipboard didn’t take it. Try again?",
+  "@askCmdr.tool.preview.copyRefused": {
+    "description": "Shown under the Copy button of an opened Ask Cmdr tool line when the system clipboard wouldn’t accept the text. Calm, not a fault."
+  },
+  "askCmdr.toolGroup.summary": "Looked around: {parts}",
+  "@askCmdr.toolGroup.summary": {
+    "description": "The one-line header of a group of Ask Cmdr tool lines, once every request in it came back: what the assistant looked at, as counts. Clicking it opens or closes the group. Sentence case.",
+    "placeholders": { "parts": "Counts already joined into a list, for example “6 folders, 2 searches”." }
+  },
+  "askCmdr.toolGroup.summaryRunning": "Looking around: {parts}",
+  "@askCmdr.toolGroup.summaryRunning": {
+    "description": "Like askCmdr.toolGroup.summary, while some requests in the group are still running. Sentence case.",
+    "placeholders": { "parts": "Counts already joined into a list, for example “6 folders, 2 searches”." }
+  },
+  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} folder} other {{countText} folders}}",
+  "@askCmdr.toolGroup.folders": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): how many folders the assistant looked at. Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.toolGroup.files": "{count, plural, one {{countText} file} other {{countText} files}}",
+  "@askCmdr.toolGroup.files": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): how many files the assistant looked inside. Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} search} other {{countText} searches}}",
+  "@askCmdr.toolGroup.searches": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): how many searches the assistant ran (by name or for photos). Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} check} other {{countText} checks}}",
+  "@askCmdr.toolGroup.checks": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): how many quick overviews the assistant asked for (what the panes show, the drives, recent file operations, suggestions). Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} plan} other {{countText} plans}}",
+  "@askCmdr.toolGroup.plans": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): how many sets of changes the assistant prepared for the person to review (nothing changes until they approve). Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} note} other {{countText} notes}}",
+  "@askCmdr.toolGroup.notes": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): how many of its own notes the assistant wrote or edited. Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.toolGroup.other": "{count, plural, one {{countText} other step} other {{countText} other steps}}",
+  "@askCmdr.toolGroup.other": {
+    "description": "One count in an Ask Cmdr tool group’s header (askCmdr.toolGroup.summary): requests that fit none of the other counts (one still starting, or a tool it doesn’t have). Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
   "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {duration} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
   "@askCmdr.turnStats.summary": {
     "description": "A small, quiet line under one answer in the Ask Cmdr chat, saying what that answer cost: how many tool requests the assistant made, how long it took, and how many tokens the AI used. Shown under finished, stopped, and unfinished answers alike. “Tool calls” are the assistant’s requests to look at files; “tokens” are the units a language model processes (keep the AI term, matching the chat’s cost footer). Keep the middle dots as separators.",

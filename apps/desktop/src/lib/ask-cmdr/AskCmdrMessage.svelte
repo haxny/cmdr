@@ -13,7 +13,10 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { errorMessage, undoSkipMessage } from './ask-cmdr-labels'
     import { renderAssistantMarkdown } from './ask-cmdr-markdown'
-    import { displaySegments } from './ask-cmdr-rounds'
+    import { displaySegments, groupKey } from './ask-cmdr-rounds'
+    import { groupSummaryText } from './ask-cmdr-tool-group-summary'
+    import { claimGroupAnnouncement } from './ask-cmdr-tool-groups.svelte'
+    import AskCmdrToolGroup from './AskCmdrToolGroup.svelte'
     import AskCmdrToolLine from './AskCmdrToolLine.svelte'
     import AskCmdrTurnStats from './AskCmdrTurnStats.svelte'
     import type { RevealPath } from './ask-cmdr-tool-line'
@@ -31,6 +34,19 @@
     const { message, revealPath }: Props = $props()
 
     const segments = $derived(message.kind === 'assistant' ? displaySegments(message.rounds) : [])
+
+    /** A live group's summary as it settles: every call in it came back. A reloaded bubble's
+     * groups were settled before anyone was listening, so they say nothing. */
+    let groupAnnouncement = $state('')
+    $effect(() => {
+        if (message.kind !== 'assistant' || !message.streaming) return
+        for (const segment of segments) {
+            if (segment.kind !== 'tools' || segment.lines.length < 2) continue
+            const key = groupKey(segment.lines)
+            if (key === null || segment.lines.some((line) => line.call.running)) continue
+            if (claimGroupAnnouncement(key)) groupAnnouncement = groupSummaryText(segment.lines.map((line) => line.call))
+        }
+    })
 
     /** A count as both the preformatted string the sentence drops in and the raw
      *  integer that picks the plural form (the catalogs' `*Text` convention). */
@@ -108,9 +124,11 @@
         {#each segments as segment, index (segment.key)}
             {#if segment.kind === 'tools'}
                 <div class="tools">
-                    {#each segment.lines as line (line.key)}
-                        <AskCmdrToolLine tool={line.call} {revealPath} />
-                    {/each}
+                    {#if segment.lines.length > 1}
+                        <AskCmdrToolGroup lines={segment.lines} live={message.streaming} {revealPath} />
+                    {:else}
+                        <AskCmdrToolLine line={segment.lines[0]} {revealPath} />
+                    {/if}
                 </div>
             {:else}
                 <div class="prose" data-text-region aria-live={segment.lastRound ? 'polite' : undefined}>
@@ -129,6 +147,9 @@
             </div>
         {/if}
         <AskCmdrTurnStats stats={message.stats} />
+        <!-- The bubble's one word on its groups: each group's summary, once, when it settles. The
+             headers themselves stay quiet, so a 12-call turn doesn't chatter. -->
+        <span class="sr-only" role="status">{groupAnnouncement}</span>
     </div>
 {:else if message.kind === 'error'}
     <div class="msg error" role="status">

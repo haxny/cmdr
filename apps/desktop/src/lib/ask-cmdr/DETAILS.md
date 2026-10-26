@@ -17,6 +17,8 @@ Wrappers in `../tauri-commands/ask-cmdr.ts`:
   indicator.
 - `cancelAskCmdr(id)`, `getAskCmdrConversation(id, limit, offset)`, `listAskCmdrConversations(...)` — plain specta
   commands.
+- `askCmdrToolResult(conversationId, messageId, callId)` — what one line's call returned (the preview plus the raw JSON
+  for Copy), fetched on the user's expand: the one door a raw result crosses by. § Groups and the expanded line.
 - `preflightBulkRename` / `reviseBulkRenameRow` / `applyBulkRename` / `cancelBulkRenameProposal` — the review dialog's
   four actions. Only opaque ids cross, plus the one name the user typed.
 
@@ -117,7 +119,8 @@ takes its last persisted round's id, and a bubble with nothing left is removed. 
 a stopped turn's terminal, and a send invocation that rejects before stream events can report a typed failure. Tradeoff,
 chosen for live-equals-reload: a turn that ends without an answer loses the text of the round it was streaming, because
 a reload wouldn't show it either. A Stop defers that loss to the terminal: the round may still reach `End` and be
-stored.
+stored. Every terminal also settles the turn's tool groups per the setting (`settleTurnGroups`, § Groups and the
+expanded line).
 
 **Slot-change events, live path.** `settings-applier.ts` calls the trigger's `noteSlotSettingChanged()` on the five
 slot-affecting settings (`ai.provider` / `ai.cloudProvider` / `ai.cloudProviderConfigs` / `askCmdr.interactiveModel` /
@@ -202,6 +205,52 @@ a quieter note saying what came back. Every word is ours: the backend sends type
   answered, failed, or stopped: calls, wall time (`formatMilliseconds`, left out for an old turn with `wallMs: null`),
   and tokens. Tokens are the cost meter's (`totalTokens`: prompt plus completion per row), so the turns add up to the
   thread's `AskCmdrCostFooter`.
+
+## Groups and the expanded line
+
+A `tools` display segment of two or more lines renders as `AskCmdrToolGroup.svelte`: one quiet header ("Looked around: 6
+folders, 2 searches", `groupSummaryText` in `ask-cmdr-tool-group-summary.ts`) over its lines. A single line renders
+alone, with no group chrome.
+
+- **The header counts per category** (`SUBJECT_CATEGORY`, a `Record` over every subject kind): folders, files (every
+  path an `inspect_file` call asked about counts, so "3 files" stays true for one call), searches, checks (panes,
+  drives, the operation log, suggestions), plans, notes, and "other" (an unknown tool, and a line with no subject yet,
+  so an unresolved call never breaks the header). Categories join with `formatUnitList`. "Looking around" while any line
+  runs.
+- **Open state lives outside the message list** (`ask-cmdr-tool-groups.svelte.ts`): `AskCmdrRail.svelte` keys messages
+  by index, so component state would jump on a prepend. A group is keyed by its first line's key once that round has a
+  row (`groupKey`; calls only append, so it holds for the turn), a line by its display key. A group with no key yet
+  can't be toggled. Nothing is persisted.
+- **Lifecycle.** Live, an undecided group is open, and a toggle the person makes sticks. The turn's terminal (any kind,
+  a pending stop's included) applies `askCmdr.toolGroupsOnAnswer` (Settings > Advanced > Ask Cmdr): `'collapse'` closes
+  the turn's groups, `'keep'` freezes each as it stands (an untouched one stays open). A local Stop holds each untouched
+  group open until that terminal (`holdTurnGroupsOpen`), since the bubble stops streaming at the click. Reloaded groups
+  start closed under both values (decision: "as you left it" has nothing to remember across a reload), except one with a
+  running line after a reload mid-turn. Before a collapse drops a focused line, `$effect.pre` moves focus to the group's
+  toggle.
+- **The seam.** When "load earlier" folds a turn back together, the newer half's first group may now continue an older
+  group under that group's key; `carryGroupStateAcrossSeam` moves its entry there.
+- **a11y.** The header is a plain `aria-expanded` button, never a live region. Each bubble has ONE visually hidden
+  polite status that says a live group's summary once, when all its lines settled (`claimGroupAnnouncement`); a reloaded
+  bubble announces nothing.
+
+**The expanded line.** Each line ends in its own expand control (a path link can't nest in a button), enabled only when
+a stored result exists: not while running, not before the round has a row, not on a settled `outcome: null` line
+(disabled, it's hidden but keeps its place so the row doesn't shift). The first expand calls `askCmdrToolResult` with
+the line's `(messageId, callId)` and the conversation on screen. Within one round, a duplicated call id fetches the
+first call's result (the backend pairs by occurrence for the page but the command takes the id alone).
+
+- **The cache is private**: a `SvelteMap` keyed by line key (it never proxies its values), never inside the deep
+  `askCmdrState` message list, and ❌ never logged (the raw result can hold file text and EXIF incl. GPS). An answer
+  arriving after the person switched threads is dropped, and a thread switch forgets every fetched result
+  (`forgetToolDetails`).
+- **The preview** (`AskCmdrToolPreview.svelte`, notes from `ask-cmdr-tool-preview.ts`): the first rows (name, its path a
+  `LinkButton` through `revealPath` then `returnFocusToPane`, size, `find` line and snippet, a per-path status), "Showed
+  the model N of M" (or "found so far" for a lower bound), "Here are the first N" when the preview holds fewer than the
+  model got, the verbatim `problem` labeled as what the model was told, the set-aside note, or "no list" for a
+  facts-only tool. `notFound` (a thread deleted underneath) and `unavailable` each get one calm line.
+- **Copy** (`Button variant="secondary" size="mini"`, `copyToClipboard`) copies the raw JSON, which renders nowhere.
+  "Copied" for two seconds; a clipboard that refuses says so.
 
 ## What a wake's thread opens with
 

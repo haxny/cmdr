@@ -95,3 +95,24 @@ fn the_opener_at_a_row_is_the_latest_user_row_at_or_before_it() {
     assert_eq!(turn_opener_at(&conn, id, 3).expect("opener"), Some(rows[0]));
     assert_eq!(turn_opener_at(&conn, id, 6).expect("opener"), Some(rows[4]));
 }
+
+#[test]
+fn an_assistant_row_reads_with_the_rest_of_its_turn() {
+    let conn = migrated_conn();
+    let (id, rows) = two_turns(&conn);
+
+    let read = row_and_rest_of_turn(&conn, id, rows[1]).expect("read").expect("found");
+    assert_eq!(ids(&read), rows[1..4], "from the row up to the next opener");
+    let read = row_and_rest_of_turn(&conn, id, rows[5]).expect("read").expect("found");
+    assert_eq!(ids(&read), rows[5..7], "the last turn runs to the thread's end");
+}
+
+#[test]
+fn another_threads_row_is_not_found() {
+    let conn = migrated_conn();
+    let (_, rows) = two_turns(&conn);
+    let other = create_conversation(&conn, "other", 100, None).expect("create");
+
+    assert!(row_and_rest_of_turn(&conn, other, rows[1]).expect("read").is_none());
+    assert!(row_and_rest_of_turn(&conn, other, 999_999).expect("read").is_none());
+}
