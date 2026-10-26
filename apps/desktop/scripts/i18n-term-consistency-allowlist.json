@@ -478,18 +478,6 @@
       {
         "source": "Why",
         "reason": "Two shapes. `onboarding.stepFda.why` is a question link (`为什么？`); `suggestedOps.agentReason` is a label leading the AI's reason, where Chinese names the noun (`原因：`, which its spoken form `原因，按 AI 的说法：` starts with). A `为什么：` label before a statement reads wrong."
-      },
-      {
-        "source": "Archive",
-        "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`存档`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip a compress suggestion creates (`压缩文件`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
-      },
-      {
-        "source": "Last modified",
-        "reason": "`suggestedOps.columnModified` is a date column heading, so it takes Finder's `修改日期` like `fileExplorer.columns.modified`; the date tooltip `fileExplorer.dateTooltip.lastModified` lists events (`上次修改`). The `modified` ruling in `docs/i18n/zh/terms.json`."
-      },
-      {
-        "source": "Why",
-        "reason": "Two shapes. `onboarding.stepFda.why` is a question link (`为什么？`); `suggestedOps.agentReason` is a label leading the AI's reason, where Chinese names the noun (`原因：`, which its spoken form `原因，按 AI 的说法：` starts with). A `为什么：` label before a statement reads wrong."
       }
     ],
     "zh-Hant": [
