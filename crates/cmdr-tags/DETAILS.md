@@ -46,6 +46,9 @@ with `©gen` (which holds them joined with `"; "`).
 Every reader splits a multi-value field's value on `"; "`, Vorbis included (a tagger may write `GENRE=a; b` instead of
 repeating the key); the writer writes Vorbis values as repeated keys. Single-value fields are never split.
 
+`format_of` goes by extension, case-insensitively (`.M4B` is MP4); an unknown extension is `None`, and `read_tags` /
+`write_tags` report it as `TagError::NotSupported`.
+
 ## Why concrete tag types
 
 lofty's generic `Tag` normalizes keys across formats, which drops the format-native keys the map above depends on
@@ -169,3 +172,15 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   again. It never deletes the record; the caller `forget`s it.
 - **Limits**: an MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes` (one named like a managed key
   can't come back: `failed`). Vorbis total keys come back under their canonical names (`TOTALTRACKS` as `TRACKTOTAL`).
+
+## Notes for the UI (Plan 2)
+
+- **Apply the no-diacritics rule before writing.** `write_tags` writes values as given; strip every field for which
+  `TagField::keeps_diacritics` is false (`tools::strip_diacritics`) before the apply.
+- **Wrap every call in the app's `contain_panics`** (`apps/desktop/src-tauri/src/crash_reporter/contain.rs`). The writer
+  catches lofty's panics as `TagError::Write`, but a caught panic still files a crash report unless the app contains it.
+- **One `UndoStore` writer.** Its calls read and rewrite the store's directories without locking; keep one store behind
+  a `Mutex` and never open two on one root.
+- **Show `TagError::WouldDrop` to the user with the option to proceed.** It names what the write would lose (values the
+  editor doesn't show, frames ID3v2.3 can't hold); proceeding is the same write with `WriteOptions::allow_frame_loss`.
+- **Record before the apply writes**: `UndoStore::record(id, paths)` reads the files itself.

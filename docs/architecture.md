@@ -455,7 +455,7 @@ the vendored fork are ordinary members.
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`
   refuses a bare reqwest client. See `crates/cmdr-http/CLAUDE.md`
 - `crates/cmdr-tags/`: the tag editor's engine: read and write the text tags and front cover of MP3, M4A/M4B, FLAC, Ogg
-  Vorbis, and Opus files (field map, diacritics stripping, safe overwrite). See `crates/cmdr-tags/CLAUDE.md`
+  Vorbis, and Opus files (field map, clean-up tools, undo store, safe overwrite). See `crates/cmdr-tags/CLAUDE.md`
 - `crates/cmdr-update-trust/`: what makes a macOS update archive a Cmdr release (the installer's extraction plus Cmdr's
   Developer ID code signature), shared by the updater and the release gate binary `cmdr-vet-update`. See
   `crates/cmdr-update-trust/CLAUDE.md`

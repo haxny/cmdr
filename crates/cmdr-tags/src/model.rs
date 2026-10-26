@@ -62,9 +62,10 @@ impl TagField {
         TagField::Www,
     ];
 
-    /// Whether the field is written as typed. Every other field is stripped of
-    /// diacritics on write; comments and descriptions are prose, and web
-    /// addresses are not words.
+    /// Whether the field may keep diacritics (the user's rule: no diacritics in any written
+    /// field but these). Comments and descriptions are prose, and web addresses are not
+    /// words. `write_tags` writes every value as given; `tools::strip_diacritics` and the app
+    /// apply the rule, skipping these fields.
     pub fn keeps_diacritics(self) -> bool {
         matches!(self, TagField::Comment | TagField::Description | TagField::Www)
     }

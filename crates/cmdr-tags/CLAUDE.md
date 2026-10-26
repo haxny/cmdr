@@ -6,40 +6,30 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 
 ## Module map
 
-- `model.rs`: the vocabulary. `TagField` (15 managed fields, `ALL`, `keeps_diacritics`, `is_multi`), `FileTags`
-  (`fields`, `cover`, `extras`), `Cover`, `ContentKind`, `TagError`.
-- `format.rs`: `AudioFormat` and `format_of`, by extension only.
-- `read.rs`: `read_tags`, one private reader per container (ID3v2, MP4 `ilst`, Vorbis comments), and the key tables.
-- `write.rs`: `write_tags` + `WriteOptions`, each writer the exact inverse of its reader; `write_extras.rs` decides
-  which extras go and come. `save.rs`: `save_safely`. Test files are built in `test_files.rs` with lofty's concrete tag
-  types.
-- `shared.rs`: the foobar2000-style view. `shared_view` (per field `Empty`/`Same`/`Multiple`), `apply_edits` (`Edit`,
-  `CoverEdit`), `changes` (the "what will change" list). Pure, never mutates input.
-- `undo.rs`: `UndoStore` (`record`, `repath`, `restore`, `forget`), the old tags of an apply, written back after
-  renames. Layout in `DETAILS.md`.
+- `model.rs`: `TagField` (15 fields, `keeps_diacritics`, `is_multi`), `FileTags`, `Cover`, `ContentKind`, `TagError`.
+- `format.rs`: `format_of`, by extension. `read.rs`: `read_tags`, one reader per container, the key tables.
+- `write.rs`: `write_tags` + `WriteOptions`, each writer the inverse of its reader; `write_extras.rs`; `save.rs`:
+  `save_safely`. Test files come from `test_files.rs`.
+- `shared.rs`: the foobar2000-style view, edits, and change list. `tools.rs` / `text.rs`: pure clean-up tools.
+- `undo.rs`: `UndoStore`, an apply's old tags, written back after renames.
 
 ## Must-knows
 
-- **An empty field is an absent key.** `FileTags::fields` never holds an empty `Vec` or an empty string, and a write
-  removes the frame, atom, or key instead of writing `""`, `None`, `n/a`, or "Unknown ...".
-- **No diacritics in any written text field except `Comment`, `Description`, and `Www`** (`TagField::keeps_diacritics`).
-  The clean-up tools strip them; `write_tags` writes values as given.
+- **An empty field is an absent key**: a write removes it, never writes `""`, `None`, `n/a`, or "Unknown ...".
+- **`write_tags` writes values as given.** The no-diacritics rule (all fields but `Comment`, `Description`, `Www`) is
+  applied by the tools and the app, before writing.
 - **Artist = album artist = author; Performer = narrator; Composer is removed for audiobooks** (`ContentKind`).
-- **Genre is multi-value**: repeated Vorbis keys, one freeform data entry per value; where a format stores one string,
-  values join with `"; "`.
-- **Track and disc are plain** (`3`); `3/12` only when the caller passes a known total.
-- **MP3 is written as ID3v2.3**, and frames, atoms, and keys we don't manage are left untouched on write. Unmanaged text
-  items surface in `FileTags::extras`; dropping a key there removes it on write, and a key the file lacks is added
-  (`TagError::UnwritableExtra` when it can't be).
-- **Concrete lofty tag types, not the generic `Tag`**: the generic one loses format-native keys we depend on (why, in
-  `DETAILS.md`).
-- **A write is safe-overwrite** (`save_safely`): temp clone in the same directory, save, read back and compare with the
-  intended tags, fsync, rename over the original. ❌ Never write in place. lofty has corrupted files and dropped items
-  silently; the strict parse before and the comparison after are the guards (`DETAILS.md`).
-- **No silent loss on MP3**: frames ID3v2.3 can't hold fail the write as `TagError::WouldDrop` unless the caller sets
-  `allow_frame_loss`.
-- **`format_of` goes by extension, case-insensitively.** An unknown extension is `None`, reported as
-  `TagError::NotSupported`.
+- **Genre is multi-value**; one-string formats join values with `"; "`, and every reader splits on it.
+- **Track and disc are plain**; `N/Total` only when the caller passes a total.
+- **MP3 is written as ID3v2.3.** Unmanaged frames, atoms, and keys stay untouched; unmanaged text items are
+  `FileTags::extras`.
+- **No silent loss**: a value the reader hides that differs from the one it shows, or a frame ID3v2.3 can't hold, fails
+  the write as `TagError::WouldDrop` unless `allow_frame_loss`.
+- **The cover is a front cover, else an untyped picture**; back covers and booklets are never touched.
+- **Safe overwrite only** (`save_safely`): strict parse, write a temp clone, read back and compare, rename. ❌ Never
+  write in place: lofty has corrupted files and dropped items silently.
+- **Concrete lofty tag types, not the generic `Tag`**, which loses format-native keys.
+- **`UndoStore` has one writer at a time**; callers serialize access.
 - **Errors are typed** (`TagError`); ❌ never classify one by its message text.
 
-Field map, format quirks, and decisions: `DETAILS.md`.
+Field map, write mechanics, undo layout, serialized shapes, and notes for the UI: `DETAILS.md`.
