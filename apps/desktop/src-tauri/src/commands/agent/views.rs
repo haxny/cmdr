@@ -1,7 +1,7 @@
 //! The specta-typed shapes the query commands return ([`ConversationDetailView`],
 //! [`AttachmentRef`], the send refusal) and the pure mappings that produce them. Everything here
-//! DROPS backend-only material — no reasoning blob, no provider state, no raw tool-result
-//! content ever crosses.
+//! DROPS backend-only material — no reasoning blob, no provider state, no raw tool-result content
+//! ever crosses.
 //!
 //! One stored row's display projection ([`MessageView`]) lives one level down, in
 //! `agent::chat::message_view`, because the live stream carries it too; it is re-exported here.
@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::agent::chat::context::{AttachmentKind, EnvelopeAttachment};
-pub use crate::agent::chat::message_view::{MessageBlock, MessageRoleView, MessageView, to_message_view};
+pub use crate::agent::chat::message_view::{MessageBlock, MessageRoleView, MessageView};
 use crate::agent::chat::stream::AgentErrorKindView;
 use crate::agent::store::ConversationRow;
 
@@ -99,6 +99,10 @@ pub struct ConversationDetailView {
     /// reopened thread shows its real gauge instead of an empty one. `None` until a turn has
     /// finished: read as "not measured yet", never as zero usage.
     pub last_context_usage: Option<ContextUsageView>,
+    /// The running turn's seq high-water mark, when a turn runs in this thread right now: rows
+    /// after it are that turn's, still being written, so a result-less call among them is running
+    /// (every other result-less call is settled). `None` when nothing runs.
+    pub turn_in_flight_since_seq: Option<i64>,
 }
 
 /// A thread's last measured context usage, on the wire. Both figures are `chars/4` estimates.

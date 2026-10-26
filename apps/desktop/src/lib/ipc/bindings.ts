@@ -3704,6 +3704,11 @@ export const commands = {
   /**
    *  One conversation's header plus a page of its display messages (oldest first). `None`
    *  when the thread is absent or the store never opened.
+   *
+   *  Each tool line on the page says what it looked at, what came back, and whether it repeats an
+   *  earlier call; each turn's last assistant view carries what the turn spent. All of that is
+   *  turn-scoped, so the rows completing the page's first and last turns are read too
+   *  (`store::turn_context`), never the whole thread.
    */
   askCmdrGetConversation: (id: number, msgLimit: number, msgOffset: number) =>
     typedError<
@@ -3717,6 +3722,12 @@ export const commands = {
          *  finished: read as "not measured yet", never as zero usage.
          */
         lastContextUsage: ContextUsageView | null
+        /**
+         *  The running turn's seq high-water mark, when a turn runs in this thread right now: rows
+         *  after it are that turn's, still being written, so a result-less call among them is running
+         *  (every other result-less call is settled). `None` when nothing runs.
+         */
+        turnInFlightSinceSeq: number | null
       } | null,
       string
     >(__TAURI_INVOKE('ask_cmdr_get_conversation', { id, msgLimit, msgOffset })),
@@ -7388,6 +7399,12 @@ export type ConversationDetailView = {
    *  finished: read as "not measured yet", never as zero usage.
    */
   lastContextUsage: ContextUsageView | null
+  /**
+   *  The running turn's seq high-water mark, when a turn runs in this thread right now: rows
+   *  after it are that turn's, still being written, so a result-less call among them is running
+   *  (every other result-less call is settled). `None` when nothing runs.
+   */
+  turnInFlightSinceSeq: number | null
 }
 
 /**
@@ -12048,16 +12065,20 @@ export type MessageBlock =
   // Assistant or user prose (rendered markdown-lite, entity-escaped first).
   | { type: 'text'; text: string }
   /**
-   *  A tool the model invoked. `arguments` is the raw JSON call arguments as a string
-   *  (the frontend `JSON.parse`s it to build a localized "looked at X" label); both
-   *  `tool` and any filesystem-derived args render as escaped plain text, never `{@html}`.
+   *  A tool the model invoked, as its line says it: what it looked at, what came back (`None`
+   *  while no result row exists: still running, or a turn that never finished), and the
+   *  turn's earlier identical call it repeats. Typed facts from `tools::line`, never the raw
+   *  arguments or result; the line is `(this row's id, call_id)`. Its result rides this block,
+   *  so a tool-role row projects to no blocks.
    */
-  | { type: 'toolCall'; callId: string; tool: string; arguments: string }
-  /**
-   *  A tool result, reduced to its status (`ok`/`elided`) — the raw content stays
-   *  backend-only.
-   */
-  | { type: 'toolResult'; callId: string; ok: boolean; elided: boolean }
+  | {
+      type: 'toolCall'
+      callId: string
+      tool: string
+      subject: ToolSubject
+      outcome: ToolOutcome | null
+      repeatOf: LineRef | null
+    }
   /**
    *  The conversation's effective model changed between turns; `model` is the new name.
    *  Rendered as a small centered timeline line, escaped plain text (never `{@html}`).
@@ -12106,7 +12127,11 @@ export type MessageRoleView =
   // A UI-facing timeline entry (a model change), not transcript content.
   | 'event'
 
-// A message as the rail displays it: id/seq/role, its display blocks, and token counts.
+/**
+ *  A message as the rail displays it: id/seq/role, its display blocks, and token counts, plus
+ *  where it sits among the thread's turns. Turn edges come from here, never from a frontend
+ *  guess.
+ */
 export type MessageView = {
   id: number
   seq: number
@@ -12115,6 +12140,21 @@ export type MessageView = {
   promptTokens: number | null
   completionTokens: number | null
   createdAt: number
+  /**
+   *  The id of the user-role row that opened this row's turn (a user row's own id). `None` for
+   *  rows before the thread's first user row.
+   */
+  turnId: number | null
+  /**
+   *  An event row recorded while its turn still ran: it sits before the turn's last assistant
+   *  row. Always `false` for a transcript row.
+   */
+  duringTurn: boolean
+  /**
+   *  What the turn spent, on the turn's LAST assistant view only. `None` elsewhere, for a turn
+   *  that ran no tool, and for the turn still running (its stats ride the live terminal event).
+   */
+  turnStats: TurnStats | null
 }
 
 /**

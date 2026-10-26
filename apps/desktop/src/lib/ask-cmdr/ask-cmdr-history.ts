@@ -7,17 +7,11 @@
 
 import type { ConversationDetailView, MessageView } from '#lib/tauri-commands/index.js'
 import type { RailMessage, RailToolCall } from './ask-cmdr-messages'
+import { outcomeOk, subjectPath } from './ask-cmdr-tool-line'
 
-/** Fold a loaded conversation's messages into rail items: tool results are attached to the
- * assistant tool call they answer (by `callId`), so the thread shows one line per call. */
+/** Fold a loaded conversation's messages into rail items, one line per tool call. The backend
+ * already paired each call with its result, so a line reads its own outcome off its block. */
 export function buildRailMessages(detail: ConversationDetailView): RailMessage[] {
-  // A plain lookup (not a reactive SvelteMap): purely local to this pure transform.
-  const resultOk: Record<string, boolean> = {}
-  for (const message of detail.messages) {
-    for (const block of message.blocks) {
-      if (block.type === 'toolResult') resultOk[block.callId] = block.ok
-    }
-  }
   const out: RailMessage[] = []
   for (const message of detail.messages) {
     if (message.role === 'user') {
@@ -41,7 +35,7 @@ export function buildRailMessages(detail: ConversationDetailView): RailMessage[]
         kind: 'assistant',
         id: message.id,
         text: joinText(message),
-        tools: toolCallsOf(message, resultOk),
+        tools: toolCallsOf(message),
         thinking: false,
         streaming: false,
       })
@@ -69,28 +63,15 @@ function joinText(message: MessageView): string {
     .join('')
 }
 
-function toolCallsOf(message: MessageView, resultOk: Record<string, boolean>): RailToolCall[] {
+function toolCallsOf(message: MessageView): RailToolCall[] {
   return message.blocks
     .filter((b): b is Extract<typeof b, { type: 'toolCall' }> => b.type === 'toolCall')
     .map((b) => ({
       callId: b.callId,
       tool: b.tool,
       running: false,
-      ok: resultOk[b.callId] ?? true,
-      path: pathFromArguments(b.arguments),
+      // A call with no result row yet (still running, or a turn that never finished) reads as ok.
+      ok: b.outcome ? outcomeOk(b.outcome) : true,
+      path: subjectPath(b.subject),
     }))
-}
-
-/** Pull a `path` field out of a tool call's JSON arguments for the "looked at X" label. */
-export function pathFromArguments(argumentsJson: string): string | null {
-  try {
-    const parsed = JSON.parse(argumentsJson) as unknown
-    if (parsed && typeof parsed === 'object' && 'path' in parsed) {
-      const path = parsed.path
-      if (typeof path === 'string' && path.length > 0) return path
-    }
-  } catch {
-    // Malformed arguments just yield no path suffix.
-  }
-  return null
 }

@@ -504,6 +504,9 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
         {
           id: 2,
@@ -511,20 +514,33 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           role: 'assistant',
           blocks: [
             { type: 'text', text: 'hello' },
-            { type: 'toolCall', callId: 'c1', tool: 'list_dir', arguments: '{"path":"/x"}' },
+            {
+              type: 'toolCall',
+              callId: 'c1',
+              tool: 'list_dir',
+              subject: { kind: 'folder', path: '/x' },
+              outcome: { kind: 'items', returned: 1, total: 1, lowerBound: false },
+              repeatOf: null,
+            },
           ],
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
         {
           id: 3,
           seq: 2,
           role: 'tool',
-          blocks: [{ type: 'toolResult', callId: 'c1', ok: true, elided: false }],
+          blocks: [],
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
       ],
     })
@@ -532,7 +548,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     expect(askCmdrState.open).toBe(true)
     expect(askCmdrState.conversationId).toBe(9)
     expect(saveMock).toHaveBeenCalledWith({ askCmdrRailOpen: true })
-    // The user + assistant items; the tool-result row folds into the assistant's tool line.
+    // The user + assistant items; the tool row draws nothing, its result rides the call's line.
     expect(askCmdrState.messages).toHaveLength(2)
     const assistant = assistantAt(1)
     expect(assistant.text).toBe('hello')
@@ -553,6 +569,9 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
         {
           id: 2,
@@ -562,6 +581,9 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
       ],
     })
@@ -671,6 +693,9 @@ function userMessage(id: number, seq: number) {
     promptTokens: null,
     completionTokens: null,
     createdAt: 0,
+    turnId: null,
+    duringTurn: false,
+    turnStats: null,
   }
 }
 

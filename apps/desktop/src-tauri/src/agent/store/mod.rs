@@ -22,6 +22,7 @@ mod migrations;
 pub mod proposals;
 mod query;
 mod rows;
+mod turns;
 
 use std::path::{Path, PathBuf};
 
@@ -46,6 +47,7 @@ pub use query::{
     search_conversations, set_conversation_context_usage, set_conversation_last_chat_memory,
     set_conversation_last_model,
 };
+pub use turns::{TurnContext, turn_context, turn_opener_at};
 
 /// The durable store's file name in the app data dir. Peer to `operation-log.db`.
 pub const MAIN_DB_FILE: &str = "main.db";

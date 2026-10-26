@@ -146,6 +146,10 @@ fn slot_event_view(recorded: RecordedSlotEvent) -> MessageView {
         prompt_tokens: None,
         completion_tokens: None,
         created_at: recorded.created_at,
+        turn_id: recorded.turn_id,
+        // Recorded under the thread's quiet lock, so never while a turn runs.
+        during_turn: false,
+        turn_stats: None,
     }
 }
 

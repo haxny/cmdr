@@ -10,8 +10,8 @@ One message in, an answer out, crash-safe and within budget.
   and `wake`, both single-flight), `events.rs` + `dispatch.rs` (the two seams).
 - Leaves: `system_prompt.rs`, `session.rs`, `stream.rs` (`AskCmdrTurn`, a turn's one progress
   transport), `message_view.rs` (one stored row's display projection, shared by history and the
-  stream), and `cancel.rs` (the in-flight-turn registry, keyed by conversation, so a wake can
-  register too).
+  stream; `message_view/thread.rs` projects a history page with its turns in view), and
+  `cancel.rs` (the in-flight-turn registry, keyed by conversation, so a wake can register too).
 
 ## Must-knows
 

@@ -257,6 +257,9 @@ fn user_persisted_carries_the_opener_as_history_shows_it() {
         prompt_tokens: None,
         completion_tokens: None,
         created_at: 100,
+        turn_id: Some(4),
+        during_turn: false,
+        turn_stats: None,
     };
     let event = wire(AgentChatEvent::UserPersisted { opener });
     assert_eq!(event["type"], "userPersisted");

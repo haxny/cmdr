@@ -6,7 +6,7 @@ use super::fixtures;
 use super::result;
 use crate::agent::llm::types::{AgentToolResult, ToolId};
 use crate::agent::tools::line::{
-    MAX_TEXT_CHARS, PREVIEW_ROWS, PreviewRow, PreviewRowKind, PreviewRowStatus, ToolPreview, preview_of,
+    MAX_TEXT_CHARS, PREVIEW_ROWS, ToolPreview, ToolPreviewRow, ToolPreviewRowKind, ToolPreviewRowStatus, preview_of,
 };
 use crate::agent::tools::read::pane_listing::PaneListingScope;
 
@@ -23,17 +23,17 @@ fn a_listing_shows_its_rows_with_paths_joined_onto_the_folder() {
     let shown = preview(ToolId::ListDir, fixtures::list_dir());
     assert_eq!(
         shown.rows[0],
-        PreviewRow {
+        ToolPreviewRow {
             name: "big.iso".into(),
             path: Some("/Users/u/Downloads/big.iso".into()),
-            kind: PreviewRowKind::File,
+            kind: ToolPreviewRowKind::File,
             size_bytes: Some(9_000_000_000),
             line: None,
             snippet: None,
             status: None,
         }
     );
-    assert_eq!(shown.rows[1].kind, PreviewRowKind::Folder);
+    assert_eq!(shown.rows[1].kind, ToolPreviewRowKind::Folder);
     assert_eq!(
         (shown.rows_given_to_model, shown.total, shown.lower_bound),
         (Some(2), Some(5), false)
@@ -45,7 +45,7 @@ fn a_listing_shows_its_rows_with_paths_joined_onto_the_folder() {
         fixtures::pane_listing(PaneListingScope::Folder, &["a.jpg", "Sub/"], 2),
     );
     assert_eq!(pane.rows[0].path.as_deref(), Some("/Users/u/Photos/a.jpg"));
-    assert_eq!(pane.rows[1].kind, PreviewRowKind::Folder);
+    assert_eq!(pane.rows[1].kind, ToolPreviewRowKind::Folder);
 }
 
 #[test]
@@ -90,9 +90,9 @@ fn inspect_shows_a_row_per_find_hit_and_each_paths_status() {
     );
     assert_eq!(shown.rows[1].line, Some(812));
     assert_eq!(shown.rows[0].size_bytes, Some(1_234));
-    assert_eq!(shown.rows[2].status, Some(PreviewRowStatus::Missing));
+    assert_eq!(shown.rows[2].status, Some(ToolPreviewRowStatus::Missing));
     assert_eq!(shown.rows[2].path.as_deref(), Some("/Users/u/gone.txt"));
-    assert_eq!(shown.rows[3].status, Some(PreviewRowStatus::Unreadable));
+    assert_eq!(shown.rows[3].status, Some(ToolPreviewRowStatus::Unreadable));
     assert_eq!((shown.rows_given_to_model, shown.total), (Some(3), Some(4)));
 }
 
@@ -106,7 +106,7 @@ fn photo_tools_show_their_recognized_text_and_not_indexed_paths() {
     let facts = preview(ToolId::ImageFacts, fixtures::image_facts());
     assert_eq!(facts.rows[0].snippet.as_deref(), Some("TOTAL 42.00"));
     assert_eq!(facts.rows[0].status, None);
-    assert_eq!(facts.rows[1].status, Some(PreviewRowStatus::NotIndexed));
+    assert_eq!(facts.rows[1].status, Some(ToolPreviewRowStatus::NotIndexed));
 }
 
 #[test]

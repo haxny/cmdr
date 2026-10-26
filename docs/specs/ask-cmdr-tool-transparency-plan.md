@@ -429,17 +429,12 @@ terminal event from ONE place; the UI still looks like today.
 - **Turn ids** (decision 16): every `MessageView` gains `turnId: Option<i64>` (the opener row's id; `None` before the
   first user row), and every event view `duringTurn: bool`.
 - **`ConversationDetailView.turnInFlightSinceSeq: Option<i64>`** from the registry (decision 14).
-- **Command**
-  `ask_cmdr_tool_result(conversation_id, message_id, call_id) -> Result<ToolResultDetailView, AskCmdrToolResultError>`
-  in `commands/agent/`, registered in the `ipc.rs` manifest. It checks that `message_id` belongs to `conversation_id`
-  (else `NotFound`), loads that assistant row (for the `ToolId`) and the rows after it up to the next user row, pairs as
-  above, and returns `preview_of` + `to_string_pretty(&content)`. Only that result part crosses, ❌ never a reasoning
-  part or `content_blocks` whole. ❌ Never log the content.
+- The `ask_cmdr_tool_result` command moved to milestone 5: registered with no caller, it fails `ipc-unused`, and an
+  allowlist entry would be a loosening (David's call), so it lands with the expand that calls it.
 - `pnpm bindings:regen`, then the smallest frontend change: history fills today's `path` from `Folder` / `Files`
   subjects and `ok` from `outcome`; `pathFromArguments` deleted.
 
-**Intentions**: a reloaded thread carries the same facts the stream does, and the expand command works; the UI still
-looks like today.
+**Intentions**: a reloaded thread carries the same facts the stream does; the UI still looks like today.
 
 **Landmines**: `content_blocks` is backend-only (reasoning blob): the store helper returns typed parts, the command maps
 to the view. Old-shape threads (raw args of any shape, colliding call ids, no `TurnFinished`) must load. The views tests
@@ -449,8 +444,7 @@ match the old block shapes; update them, keeping intent.
 row calling the same `call_id` twice pairs by occurrence; a result row on a different page than its call still
 annotates; a page starting mid-turn gets the right `turnId`s and marks; event views carry `duringTurn` correctly
 (mid-turn and post-turn decisions); an old-shape thread loads with fallback stats; a legacy `Unrecognized("")` call
-loads; `turnInFlightSinceSeq` reflects the registry, and the in-flight turn gets NO fallback stats; command: found, not
-found, a `message_id` from another conversation (`NotFound`), a refusal, a set-aside row.
+loads; `turnInFlightSinceSeq` reflects the registry, and the in-flight turn gets NO fallback stats.
 
 **DONE**: green Rust tests + clippy + svelte checks; bindings regenerated; the rail looks as before.
 
@@ -626,6 +620,27 @@ fitting card exists; check `AdvancedSection.svelte`), the `askCmdr.*` and `setti
   header. A single-call segment renders the line alone, no group chrome. A group auto-opens when it first appears and
   stays open for the rest of the live turn; at the terminal event, `'collapse'` closes all that turn's groups and
   `'keep'` freezes each one's state. No "last segment" tracking.
+- **The result command** (moved here from 2b, so it lands with its caller and `ipc-unused` stays green):
+  `ask_cmdr_tool_result(conversation_id, message_id, call_id) -> Result<ToolResultDetailView, AskCmdrToolResultError>`
+  in `commands/agent/conversations.rs`, registered in the `ipc.rs` manifest, plus its typed wrapper in
+  `src/lib/tauri-commands/ask-cmdr.ts`. Worked out in 2b (built, tested, then set aside), so don't rediscover it:
+  - Store helper `store::row_and_rest_of_turn(conn, conversation_id, message_id) -> Option<Vec<StoredMessage>>` in
+    `agent/store/turns.rs`: first `SELECT seq FROM messages WHERE id = ?1 AND conversation_id = ?2` (the OWNERSHIP
+    check: another thread's `message_id` is `None` → `NotFound`), then that row plus every row up to the next user-role
+    row, through the file's `rows_where` helper.
+  - Pure `tool_result_detail(rows, call_id) -> Option<ToolResultDetailView>` beside `project_page` in
+    `agent/chat/message_view/thread.rs`: `calls_of(rows[0])`, then the SAME `pair_results(rows, 0, &calls)` the page
+    uses (k-th occurrence of an id pairs with the k-th result carrying it, before the next assistant or user row), the
+    FIRST call with that id; `None` when the row made no such call or it has no result. Returns
+    `preview_of(&call.tool, result)` + `serde_json::to_string_pretty(&result.content)`.
+  - `ToolResultDetailView { preview: ToolPreview, raw_json: String }` (specta, camelCase) lives in `thread.rs`,
+    re-exported from `commands/agent/views.rs`; the error is a fieldless
+    `AskCmdrToolResultError { NotFound, StoreUnavailable }` in `views.rs`. The command uses `db_path(&app)` (no store →
+    `StoreUnavailable`) and `spawn_blocking`, logs only the store error, ❌ never the content.
+  - Tests: found (preview + pretty JSON), unknown call id, a call with no result row, a refusal's `problem`, a set-aside
+    row, two rounds reusing `fake-call-0` (each row reads its own), another thread's `message_id`. Update the `views.rs`
+    header, `store/DETAILS.md` § Turn-scoped reads, and `chat/DETAILS.md` § What a reloaded page says (raw result's one
+    door).
 - **Expand on the line** (added here; milestone 4 removed today's chevron): see "Expanded line" below.
 - **Setting** `askCmdr.toolGroupsOnAnswer`: `'collapse' | 'keep'` (default `'collapse'`), `section: ['Advanced']`, radio
   or select, label/description/keywords per the guide (then `node apps/desktop/scripts/sync-locale-keys.ts`). Pure

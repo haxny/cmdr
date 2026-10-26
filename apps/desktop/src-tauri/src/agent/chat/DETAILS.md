@@ -665,6 +665,31 @@ detail, or cancelled) and emits no terminal event itself. `run_turn` then, once 
 after a turn as a live turn. A `Failed` from outside a turn (the command layer's refusals and
 spawn failures) carries `turn: None`. `Done.usage` stays the LAST call's usage.
 
+### What a reloaded page says (`message_view/thread.rs`)
+
+`ask_cmdr_get_conversation` projects a page through `project_page`, so a reloaded tool line says
+what the live one did: the same `tools::line` functions over the stored arguments and results.
+
+- **Turn-scoped window.** A line's result sits on a later row, a repeat points at an earlier
+  round, and a turn's stats ride its last assistant row, while the history pages by rows. So the
+  command also reads `store::turn_context`: from the opener of the page's first turn to the end
+  of its last turn, ❌ never the whole thread. Only the page's own rows come back.
+- **Pairing**: the k-th call with an id in an assistant row takes the k-th result with that id
+  after it, before the next assistant or user row. Results persist in call order, and the bound
+  keeps a later round's colliding id out.
+- **Turn edges**: every view carries `turn_id` (the opener's row id; `None` before the first user
+  row), every event view `during_turn` (before its turn's last assistant row). A slot event's
+  `turn_id` comes from `store::turn_opener_at`, since it is projected alone.
+- **One stats rule**: the turn's stats ride its LAST assistant view, from its `TurnFinished` row,
+  else rebuilt from its rows (every result row a call, tokens summed per row, `wall_ms: None`).
+  The turn holding rows after `turn_in_flight_since_seq` gets no rebuilt stats: it is still
+  running, and the live terminal event brings them. The mark is read BEFORE the rows, so a turn
+  ending in between reads as running for one load, never as settled with its last results
+  missing.
+- **Tool rows project to no blocks**: a call's outcome rides its own block. A lone row
+  (`to_message_view`, the stream's opener) knows no turn, so its calls carry argument-only
+  subjects and no outcome.
+
 ### One transport, keyed by conversation (`stream.rs`)
 
 Each wire event leaves as an `AskCmdrTurn { conversation_id, event }`, a `tauri_specta::Event`.

@@ -61,10 +61,10 @@ stays simple:
   crosses).
 - `toolCallStarted` / `toolCallFinished` → push / update a `RailToolCall` (the collapsible "looked at X" line).
   `toolCallFinished` carries the line's identity (`messageId` + `callId`), its typed `outcome`, and its refined
-  `subject`; today the reducer derives `ok` from the outcome (`refused` and `notStaged` aren't ok, the backend's
-  `ToolOutcome::ok` rule) and finds the line by `callId` within the CURRENT bubble only, because ids collide across
-  rounds and turns. `toolCallsResolved` (one per round: every call of the final message, with subjects and repeat marks)
-  is ignored for now.
+  `subject`; today the reducer derives `ok` from the outcome through `outcomeOk` (`ask-cmdr-tool-line.ts`, an exhaustive
+  `Record` over outcome kinds mirroring the backend's `ToolOutcome::ok`, shared with the history fold) and finds the
+  line by `callId` within the CURRENT bubble only, because ids collide across rounds and turns. `toolCallsResolved` (one
+  per round: every call of the final message, with subjects and repeat marks) is ignored for now.
 - `stopped` → the backend's terminal for a cancelled turn. Today it only clears the stopped mark; the local stop already
   finalized the bubble.
 - `done` → finalize the bubble, stamp its persisted id, `streaming = false`.
@@ -278,9 +278,10 @@ registry lives below `commands/` rather than inside the chat command.
   from `messageTotal - historyCount` so pages tile without overlap and live-streamed rows (newer than the load-time
   total) are never disturbed. The rail preserves the scroll position across a prepend (capture `scrollHeight` before,
   restore after) and its auto-scroll-to-bottom only fires when the user was already near the bottom (`wasNearBottom`,
-  tracked on scroll), so streaming follows but loading older doesn't jump. Page-boundary caveat: `buildRailMessages`
-  folds each loaded page independently, so a tool result split across a page seam may render unfolded — negligible in
-  practice (threads sit under the ~40 soft cap, well below a 50-message page, so paging rarely fires at all).
+  tracked on scroll), so streaming follows but loading older doesn't jump. The backend pairs each call with its result
+  across a page seam (`src-tauri/src/agent/chat/DETAILS.md` § What a reloaded page says), so a history line reads its
+  `outcome` and `subject` off its own `toolCall` block; tool rows carry no blocks. Page-boundary caveat:
+  `buildRailMessages` folds each loaded page independently, so one assistant item can still split into two at a seam.
 - **Only the latest thread load may touch the rail** (`latestThreadLoad` in `ask-cmdr-trigger.svelte.ts`). Every read is
   its own command, so the first one asked can be the last one answered: picking thread A and then B must leave B on
   screen whichever answers second, and a late answer must not repaint a chat the user cleared with "new chat". An

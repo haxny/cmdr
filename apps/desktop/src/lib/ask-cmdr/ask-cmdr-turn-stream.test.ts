@@ -246,11 +246,20 @@ describe('an answer to a suggestion', () => {
       promptTokens: null,
       completionTokens: null,
       createdAt: 0,
+      turnId: null,
+      duringTurn: false,
+      turnStats: null,
     }
   }
 
   function thread(id: number, messages: MessageView[]): ConversationDetailView {
-    return { conversation: row(id), messages, totalMessages: messages.length, lastContextUsage: null }
+    return {
+      conversation: row(id),
+      messages,
+      totalMessages: messages.length,
+      lastContextUsage: null,
+      turnInFlightSinceSeq: null,
+    }
   }
 
   function decisionLine(messageId: number, decision: ProposalDecision = turnedDown): RailMessage {

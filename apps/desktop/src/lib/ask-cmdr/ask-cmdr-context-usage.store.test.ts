@@ -87,6 +87,7 @@ describe('the context gauge state', () => {
       messages: [],
       totalMessages: 0,
       lastContextUsage: { estimatedTokens: 44_000, budgetTokens: 60_000 },
+      turnInFlightSinceSeq: null,
     })
 
     await switchToThread(7)
@@ -105,6 +106,7 @@ describe('the context gauge state', () => {
       messages: [],
       totalMessages: 0,
       lastContextUsage: null,
+      turnInFlightSinceSeq: null,
     })
 
     await switchToThread(8)

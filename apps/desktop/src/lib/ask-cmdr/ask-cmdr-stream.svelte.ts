@@ -22,7 +22,8 @@
 import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import type { RailMessage } from './ask-cmdr-messages'
-import type { ManagedAiRefusal, ToolOutcome } from '#lib/ipc/bindings.js'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { outcomeOk } from './ask-cmdr-tool-line'
 import {
   discardStagedRenameProposals,
   openStagedRenameReview,
@@ -372,12 +373,6 @@ function applyToolStarted(callId: string, tool: string): void {
     assistant.tools.push({ callId, tool, running: true, ok: true, path: null })
   }
   resetProgressWatchdog()
-}
-
-/** Whether a call got what it asked for: a refusal and a plan that staged nothing didn't. The
- * same rule as the backend's `ToolOutcome::ok`. */
-function outcomeOk(outcome: ToolOutcome): boolean {
-  return outcome.kind !== 'refused' && outcome.kind !== 'notStaged'
 }
 
 /** Only within the CURRENT bubble: a call id alone collides across rounds and turns, so a

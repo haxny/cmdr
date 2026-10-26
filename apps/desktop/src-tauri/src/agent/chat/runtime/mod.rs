@@ -296,6 +296,8 @@ pub struct RecordedSlotEvent {
     pub message_id: i64,
     pub seq: i64,
     pub created_at: i64,
+    /// The turn the row sits after (slot changes land between turns), as history reads it.
+    pub turn_id: Option<i64>,
     pub event: store::ConversationEvent,
 }
 
@@ -311,6 +313,7 @@ fn append_slot_event(
         message_id,
         seq,
         created_at,
+        turn_id: store::turn_opener_at(conn, conversation_id, seq)?,
         event,
     })
 }

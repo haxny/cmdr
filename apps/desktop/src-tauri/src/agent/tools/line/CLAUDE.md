@@ -6,7 +6,7 @@ Named after the UI's "tool line".
 
 ## Module map
 
-- `mod.rs`: the wire vocabulary (`LineRef`, the enums, `PreviewRow`) and the string bound.
+- `mod.rs`: the wire vocabulary (`LineRef`, the enums, `ToolPreviewRow`) and the string bound.
 - `subject.rs` / `outcome.rs` / `preview.rs` / `repeat.rs`: one pure function each. `tests/`: a table per tool.
 
 ## Must-knows

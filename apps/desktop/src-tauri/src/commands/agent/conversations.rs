@@ -2,12 +2,18 @@
 
 use tauri::AppHandle;
 
-use super::views::to_message_view;
 use super::{ConversationDetailView, with_read_connection, with_write_connection};
-use crate::agent::store::{self, ConversationRow, ConversationSearchHit};
+use crate::agent::chat::cancel::turn_in_flight_since_seq;
+use crate::agent::chat::message_view::thread::{PageContext, project_page};
+use crate::agent::store::{self, ConversationRow, ConversationSearchHit, TurnContext};
 
 /// One conversation's header plus a page of its display messages (oldest first). `None`
 /// when the thread is absent or the store never opened.
+///
+/// Each tool line on the page says what it looked at, what came back, and whether it repeats an
+/// earlier call; each turn's last assistant view carries what the turn spent. All of that is
+/// turn-scoped, so the rows completing the page's first and last turns are read too
+/// (`store::turn_context`), never the whole thread.
 #[tauri::command]
 #[specta::specta]
 pub async fn ask_cmdr_get_conversation(
@@ -16,10 +22,26 @@ pub async fn ask_cmdr_get_conversation(
     msg_limit: u32,
     msg_offset: u32,
 ) -> Result<Option<ConversationDetailView>, String> {
+    let memory_root = crate::agent::memory::store_for(&app).map(|memory| memory.root().to_path_buf());
     with_read_connection(app, None, move |conn| {
         let Some(detail) = store::get_conversation(conn, id, msg_limit, msg_offset)? else {
             return Ok(None);
         };
+        // Read before the rows, so a turn that ends in between reads as running for one load
+        // rather than as settled with its last results missing.
+        let turn_in_flight_since_seq = turn_in_flight_since_seq(id);
+        let context = match (detail.messages.first(), detail.messages.last()) {
+            (Some(first), Some(last)) => store::turn_context(conn, id, first.seq, last.seq)?,
+            _ => TurnContext::default(),
+        };
+        let messages = project_page(
+            context,
+            detail.messages,
+            PageContext {
+                in_flight_since_seq: turn_in_flight_since_seq,
+                memory_root: memory_root.as_deref(),
+            },
+        );
         // The gauge's figure survives a restart, so reopening a thread shows what its last turn
         // actually cost rather than an empty bar.
         let last_context_usage =
@@ -29,9 +51,10 @@ pub async fn ask_cmdr_get_conversation(
             });
         Ok(Some(ConversationDetailView {
             conversation: detail.conversation,
-            messages: detail.messages.into_iter().map(to_message_view).collect(),
+            messages,
             total_messages: detail.total_messages,
             last_context_usage,
+            turn_in_flight_since_seq,
         }))
     })
     .await

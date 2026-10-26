@@ -181,7 +181,7 @@ pub enum IndexUnavailableReason {
 #[serde(rename_all = "camelCase")]
 pub struct ToolPreview {
     /// The first [`PREVIEW_ROWS`] rows. Empty for a tool with no list.
-    pub rows: Vec<PreviewRow>,
+    pub rows: Vec<ToolPreviewRow>,
     /// How many rows the result handed the model.
     pub rows_given_to_model: Option<u32>,
     /// What those rows were cut from (a search's `matchCount`).
@@ -197,22 +197,22 @@ pub struct ToolPreview {
 /// One row of a preview. Names, paths, and snippets are file data, so they render as plain text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub struct PreviewRow {
+pub struct ToolPreviewRow {
     pub name: String,
     pub path: Option<String>,
-    pub kind: PreviewRowKind,
+    pub kind: ToolPreviewRowKind,
     pub size_bytes: Option<u64>,
     /// A `find` hit's line number.
     pub line: Option<u32>,
     /// A `find` hit's text, or a photo's recognized text.
     pub snippet: Option<String>,
     /// Why this path came back without an answer.
-    pub status: Option<PreviewRowStatus>,
+    pub status: Option<ToolPreviewRowStatus>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub enum PreviewRowKind {
+pub enum ToolPreviewRowKind {
     File,
     Folder,
     Other,
@@ -221,7 +221,7 @@ pub enum PreviewRowKind {
 /// A per-path answer that isn't one: `inspect_file`'s statuses and `image_facts`' not-indexed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub enum PreviewRowStatus {
+pub enum ToolPreviewRowStatus {
     Missing,
     Unreadable,
     Unreachable,

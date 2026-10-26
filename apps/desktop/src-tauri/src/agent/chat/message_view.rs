@@ -1,16 +1,20 @@
 //! The rail's display projection of one stored row ([`MessageView`]), and the pure mapping that
 //! builds it. Everything here DROPS backend-only material: no reasoning blob, no provider state,
-//! no raw tool-result content ever crosses.
+//! no raw tool-result content ever crosses. A history page projects through [`thread`], which
+//! reads the rows around each one (its turn) to say what every tool line did and what each turn
+//! spent.
 //!
 //! Below `commands/` because the live stream carries a view too: a persisted user row rides
 //! `UserPersisted` as a [`MessageView`], so a rail that reloaded before the row landed can show
 //! it, and a wake (which may not import upward) streams through the same transport.
 
+pub mod thread;
+
 use serde::Serialize;
-use serde_json::Value;
 
 use crate::agent::llm::types::{AgentPart, AgentRole};
-use crate::agent::store::{self, StoredMessage};
+use crate::agent::store::{self, StoredMessage, TurnStats};
+use crate::agent::tools::line::{LineRef, ToolOutcome, ToolSubject, subject_of};
 use crate::agent::types::ProposalDecision;
 
 /// A message's role, on the wire.
@@ -44,17 +48,18 @@ impl From<AgentRole> for MessageRoleView {
 pub enum MessageBlock {
     /// Assistant or user prose (rendered markdown-lite, entity-escaped first).
     Text { text: String },
-    /// A tool the model invoked. `arguments` is the raw JSON call arguments as a string
-    /// (the frontend `JSON.parse`s it to build a localized "looked at X" label); both
-    /// `tool` and any filesystem-derived args render as escaped plain text, never `{@html}`.
+    /// A tool the model invoked, as its line says it: what it looked at, what came back (`None`
+    /// while no result row exists: still running, or a turn that never finished), and the
+    /// turn's earlier identical call it repeats. Typed facts from `tools::line`, never the raw
+    /// arguments or result; the line is `(this row's id, call_id)`. Its result rides this block,
+    /// so a tool-role row projects to no blocks.
     ToolCall {
         call_id: String,
         tool: String,
-        arguments: String,
+        subject: ToolSubject,
+        outcome: Option<ToolOutcome>,
+        repeat_of: Option<LineRef>,
     },
-    /// A tool result, reduced to its status (`ok`/`elided`) — the raw content stays
-    /// backend-only.
-    ToolResult { call_id: String, ok: bool, elided: bool },
     /// The conversation's effective model changed between turns; `model` is the new name.
     /// Rendered as a small centered timeline line, escaped plain text (never `{@html}`).
     ModelChanged { model: String },
@@ -114,7 +119,9 @@ pub struct WakeDigestRollupView {
     pub changes: u64,
 }
 
-/// A message as the rail displays it: id/seq/role, its display blocks, and token counts.
+/// A message as the rail displays it: id/seq/role, its display blocks, and token counts, plus
+/// where it sits among the thread's turns. Turn edges come from here, never from a frontend
+/// guess.
 #[derive(Debug, Clone, PartialEq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageView {
@@ -125,37 +132,85 @@ pub struct MessageView {
     pub prompt_tokens: Option<u32>,
     pub completion_tokens: Option<u32>,
     pub created_at: i64,
+    /// The id of the user-role row that opened this row's turn (a user row's own id). `None` for
+    /// rows before the thread's first user row.
+    pub turn_id: Option<i64>,
+    /// An event row recorded while its turn still ran: it sits before the turn's last assistant
+    /// row. Always `false` for a transcript row.
+    pub during_turn: bool,
+    /// What the turn spent, on the turn's LAST assistant view only. `None` elsewhere, for a turn
+    /// that ran no tool, and for the turn still running (its stats ride the live terminal event).
+    pub turn_stats: Option<TurnStats>,
 }
 
-/// True when a persisted tool result is a real answer rather than a refusal or a handler
-/// problem. Reads OUR OWN typed result keys (`available` / `problem`), never external
-/// wording — matching the runtime's `dispatch_ok`.
-fn tool_result_ok(content: &Value) -> bool {
-    let refused = content.get("available") == Some(&Value::Bool(false));
-    let problem = content.get("problem").is_some();
-    !(refused || problem)
+/// What a row's projection needs beyond the row itself: its place among the turns, and one
+/// line's facts per tool call, in the row's call order.
+#[derive(Debug, Default)]
+struct RowFacts {
+    turn_id: Option<i64>,
+    during_turn: bool,
+    turn_stats: Option<TurnStats>,
+    calls: Vec<CallFacts>,
 }
 
-/// Project one stored message into its display form, dropping reasoning parts. Event
-/// rows project to `role: Event` with their single typed block.
+#[derive(Debug)]
+struct CallFacts {
+    subject: ToolSubject,
+    outcome: Option<ToolOutcome>,
+    repeat_of: Option<LineRef>,
+}
+
+/// Project one stored row on its own, with no thread around it: a user row is its own turn's
+/// opener, and a tool call says only what its arguments do (no outcome, no repeat mark, a memory
+/// path as plain text). For the live stream's opener; a history page goes through
+/// [`thread::project_page`], which knows the turn.
 pub fn to_message_view(message: StoredMessage) -> MessageView {
+    let mut facts = RowFacts::default();
+    if let store::StoredContent::Message { role, parts } = &message.content {
+        if *role == AgentRole::User {
+            facts.turn_id = Some(message.id);
+        }
+        facts.calls = parts
+            .iter()
+            .filter_map(|part| match part {
+                AgentPart::ToolCall(call) => Some(CallFacts {
+                    subject: subject_of(call, None, None),
+                    outcome: None,
+                    repeat_of: None,
+                }),
+                _ => None,
+            })
+            .collect();
+    }
+    project_row(message, facts)
+}
+
+/// Project one stored message into its display form, dropping reasoning parts and tool results
+/// (their facts ride the calls). Event rows project to `role: Event` with their single typed
+/// block.
+fn project_row(message: StoredMessage, facts: RowFacts) -> MessageView {
+    let mut calls = facts.calls.into_iter();
     let (role, blocks): (MessageRoleView, Vec<MessageBlock>) = match message.content {
         store::StoredContent::Message { role, parts } => {
             let blocks = parts
                 .into_iter()
                 .filter_map(|part| match part {
                     AgentPart::Text(text) => Some(MessageBlock::Text { text }),
-                    AgentPart::ToolCall(call) => Some(MessageBlock::ToolCall {
-                        call_id: call.call_id,
-                        tool: call.tool.as_wire_name().to_string(),
-                        arguments: call.arguments.to_string(),
-                    }),
-                    AgentPart::ToolResult(result) => Some(MessageBlock::ToolResult {
-                        ok: tool_result_ok(&result.content),
-                        call_id: result.call_id,
-                        elided: result.elided,
-                    }),
-                    AgentPart::Reasoning(_) => None,
+                    AgentPart::ToolCall(call) => {
+                        let facts = calls.next().unwrap_or_else(|| CallFacts {
+                            subject: subject_of(&call, None, None),
+                            outcome: None,
+                            repeat_of: None,
+                        });
+                        Some(MessageBlock::ToolCall {
+                            call_id: call.call_id,
+                            tool: call.tool.as_wire_name().to_string(),
+                            subject: facts.subject,
+                            outcome: facts.outcome,
+                            repeat_of: facts.repeat_of,
+                        })
+                    }
+                    AgentPart::ToolResult(_) | AgentPart::Reasoning(_) => None,
                     AgentPart::WakeDigest(digest) => Some(MessageBlock::WakeDigest {
                         folders: digest
                             .folders
@@ -216,6 +271,9 @@ pub fn to_message_view(message: StoredMessage) -> MessageView {
         prompt_tokens: message.prompt_tokens,
         completion_tokens: message.completion_tokens,
         created_at: message.created_at,
+        turn_id: facts.turn_id,
+        during_turn: facts.during_turn,
+        turn_stats: facts.turn_stats,
     }
 }
 

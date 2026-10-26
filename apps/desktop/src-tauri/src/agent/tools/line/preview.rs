@@ -3,7 +3,8 @@
 use serde_json::Value;
 
 use super::{
-    PreviewRow, PreviewRowKind, PreviewRowStatus, ToolOutcome, ToolPreview, bounded, bounded_to, count_u32, outcome_of,
+    ToolOutcome, ToolPreview, ToolPreviewRow, ToolPreviewRowKind, ToolPreviewRowStatus, bounded, bounded_to, count_u32,
+    outcome_of,
 };
 use crate::agent::llm::types::{AgentToolResult, ToolId};
 use crate::agent::tools::read::join_child_path;
@@ -60,7 +61,7 @@ pub fn preview_of(tool: &ToolId, result: &AgentToolResult) -> ToolPreview {
 
 /// The rows of a list-carrying result, in the order the model read them. Builds at most
 /// [`PREVIEW_ROWS`] from each list, so a 200-row answer costs 20.
-fn rows_of(tool: &ToolId, content: &Value) -> Vec<PreviewRow> {
+fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
     match tool {
         ToolId::ListDir | ToolId::ListPaneFiles => {
             let parent = content.get("path").and_then(Value::as_str);
@@ -72,7 +73,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<PreviewRow> {
             items(content, list)
                 .filter_map(|entry| {
                     let name = entry.get("name")?.as_str()?;
-                    Some(PreviewRow {
+                    Some(ToolPreviewRow {
                         path: parent.map(|parent| bounded(&join_child_path(parent, name))),
                         kind: file_or_folder(entry, "isDirectory"),
                         size_bytes: entry.get("size").and_then(Value::as_u64),
@@ -82,14 +83,14 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<PreviewRow> {
                 .collect()
         }
         ToolId::ImportantFolders => items(content, "folders")
-            .filter_map(|folder| path_row(folder, PreviewRowKind::Folder))
+            .filter_map(|folder| path_row(folder, ToolPreviewRowKind::Folder))
             .collect(),
         ToolId::ListVolumes => items(content, "volumes")
             .filter_map(|volume| {
                 let name = volume.get("name")?.as_str()?;
-                Some(PreviewRow {
+                Some(ToolPreviewRow {
                     path: volume.get("mountPath").and_then(Value::as_str).map(bounded),
-                    kind: PreviewRowKind::Folder,
+                    kind: ToolPreviewRowKind::Folder,
                     ..row(name)
                 })
             })
@@ -98,7 +99,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<PreviewRow> {
         ToolId::Search => items(content, "entries")
             .filter_map(|entry| {
                 let name = entry.get("name")?.as_str()?;
-                Some(PreviewRow {
+                Some(ToolPreviewRow {
                     path: entry.get("path").and_then(Value::as_str).map(bounded),
                     kind: file_or_folder(entry, "isDirectory"),
                     size_bytes: entry.get("sizeBytes").and_then(Value::as_u64),
@@ -108,27 +109,27 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<PreviewRow> {
             .collect(),
         ToolId::SearchPhotos => items(content, "hits")
             .filter_map(|hit| {
-                Some(PreviewRow {
+                Some(ToolPreviewRow {
                     snippet: hit.get("matchText").and_then(Value::as_str).map(bounded),
-                    ..path_row(hit, PreviewRowKind::File)?
+                    ..path_row(hit, ToolPreviewRowKind::File)?
                 })
             })
             .collect(),
         ToolId::ImageFacts => items(content, "facts")
             .filter_map(|facts| {
                 let indexed = facts.get("state").and_then(Value::as_str) != Some("notIndexed");
-                Some(PreviewRow {
+                Some(ToolPreviewRow {
                     snippet: facts.get("text").and_then(Value::as_str).map(bounded),
-                    status: (!indexed).then_some(PreviewRowStatus::NotIndexed),
-                    ..path_row(facts, PreviewRowKind::File)?
+                    status: (!indexed).then_some(ToolPreviewRowStatus::NotIndexed),
+                    ..path_row(facts, ToolPreviewRowKind::File)?
                 })
             })
             .collect(),
         ToolId::GetSuggestionGroup => items(content, "ops")
             .filter_map(|op| {
-                Some(PreviewRow {
+                Some(ToolPreviewRow {
                     snippet: op.get("newName").and_then(Value::as_str).map(bounded),
-                    ..path_row(op, PreviewRowKind::Other)?
+                    ..path_row(op, ToolPreviewRowKind::Other)?
                 })
             })
             .collect(),
@@ -152,7 +153,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<PreviewRow> {
 }
 
 /// `inspect_file`: one row per file, or one per `find` hit, carrying the per-path status.
-fn inspect_rows(content: &Value) -> Vec<PreviewRow> {
+fn inspect_rows(content: &Value) -> Vec<ToolPreviewRow> {
     let mut rows = Vec::new();
     for file in items(content, "files") {
         if rows.len() >= PREVIEW_ROWS {
@@ -166,18 +167,18 @@ fn inspect_rows(content: &Value) -> Vec<PreviewRow> {
             .and_then(Value::as_str)
             .unwrap_or_else(|| base_name(path));
         let status = match file.get("status").and_then(Value::as_str) {
-            Some("missing") => Some(PreviewRowStatus::Missing),
-            Some("unreadable") => Some(PreviewRowStatus::Unreadable),
-            Some("unreachable") => Some(PreviewRowStatus::Unreachable),
-            Some("unsupportedVolume") => Some(PreviewRowStatus::UnsupportedVolume),
+            Some("missing") => Some(ToolPreviewRowStatus::Missing),
+            Some("unreadable") => Some(ToolPreviewRowStatus::Unreadable),
+            Some("unreachable") => Some(ToolPreviewRowStatus::Unreachable),
+            Some("unsupportedVolume") => Some(ToolPreviewRowStatus::UnsupportedVolume),
             _ => None,
         };
         let kind = if file.get("status").and_then(Value::as_str) == Some("folder") {
-            PreviewRowKind::Folder
+            ToolPreviewRowKind::Folder
         } else {
-            PreviewRowKind::File
+            ToolPreviewRowKind::File
         };
-        let base = PreviewRow {
+        let base = ToolPreviewRow {
             path: Some(bounded(path)),
             kind,
             size_bytes: file.get("sizeBytes").and_then(Value::as_u64),
@@ -192,7 +193,7 @@ fn inspect_rows(content: &Value) -> Vec<PreviewRow> {
         match hits {
             Some(hits) if !hits.is_empty() => {
                 for hit in hits.iter().take(PREVIEW_ROWS - rows.len()) {
-                    rows.push(PreviewRow {
+                    rows.push(ToolPreviewRow {
                         // A PDF hit's `line` counts within its page, so it isn't a line number.
                         line: if hit.get("page").is_some() {
                             None
@@ -221,11 +222,11 @@ fn items<'a>(content: &'a Value, key: &str) -> impl Iterator<Item = &'a Value> {
 }
 
 /// A row with only a name.
-fn row(name: &str) -> PreviewRow {
-    PreviewRow {
+fn row(name: &str) -> ToolPreviewRow {
+    ToolPreviewRow {
         name: bounded(name),
         path: None,
-        kind: PreviewRowKind::Other,
+        kind: ToolPreviewRowKind::Other,
         size_bytes: None,
         line: None,
         snippet: None,
@@ -234,20 +235,20 @@ fn row(name: &str) -> PreviewRow {
 }
 
 /// A row named after the last component of the object's `path`.
-fn path_row(object: &Value, kind: PreviewRowKind) -> Option<PreviewRow> {
+fn path_row(object: &Value, kind: ToolPreviewRowKind) -> Option<ToolPreviewRow> {
     let path = object.get("path")?.as_str()?;
-    Some(PreviewRow {
+    Some(ToolPreviewRow {
         path: Some(bounded(path)),
         kind,
         ..row(base_name(path))
     })
 }
 
-fn file_or_folder(entry: &Value, key: &str) -> PreviewRowKind {
+fn file_or_folder(entry: &Value, key: &str) -> ToolPreviewRowKind {
     if entry.get(key).and_then(Value::as_bool) == Some(true) {
-        PreviewRowKind::Folder
+        ToolPreviewRowKind::Folder
     } else {
-        PreviewRowKind::File
+        ToolPreviewRowKind::File
     }
 }
 

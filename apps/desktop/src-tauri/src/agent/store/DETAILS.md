@@ -77,6 +77,14 @@ thread's cost).
 - **The downgrade cost** (accepted): a build from before the `Unknown` tolerant parse can't load, or send into, a thread
   holding this row. A tolerant build reads it as `Unknown` and shows nothing for it.
 - A persist problem writing it is logged and dropped: a footer is worth no turn.
+- It projects to an empty event view: the history page reads its stats onto the turn's last assistant view instead
+  (`../chat/DETAILS.md` § What a reloaded page says).
+
+### Turn-scoped reads (`turns.rs`)
+
+A turn is every row from one user-role row (its opener) to the next. What a tool line says is turn-scoped while the
+history pages by rows, so `turn_context` reads the rows completing a page's first and last turns, and `turn_opener_at`
+a row's opener. They return rows; what the rows mean is `agent::chat::message_view`'s.
 
 ## FTS5 comes from `bundled`, not a feature
 

@@ -23,7 +23,8 @@ export interface RailToolCall {
   tool: string
   running: boolean
   ok: boolean
-  /** A path pulled from the call arguments, shown as escaped plain text. `null` if none. */
+  /** The path the call looked at (a folder, or the first file), shown as escaped plain text. `null`
+   * if none. */
   path: string | null
 }
 

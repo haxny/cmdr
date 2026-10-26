@@ -313,10 +313,10 @@ pub fn get_conversation(
 
 // ── Messages ─────────────────────────────────────────────────────────────────
 
-const MESSAGE_COLUMNS: &str =
+pub(super) const MESSAGE_COLUMNS: &str =
     "id, seq, role, content_blocks, text_for_search, prompt_tokens, completion_tokens, created_at";
 
-fn map_message_row(row: &rusqlite::Row<'_>) -> Result<StoredMessage, AgentStoreError> {
+pub(super) fn map_message_row(row: &rusqlite::Row<'_>) -> Result<StoredMessage, AgentStoreError> {
     let role_token: String = row.get(2)?;
     let content_blocks: String = row.get(3)?;
     let content = if role_token == EVENT_ROLE_TOKEN {

@@ -1,10 +1,10 @@
 /**
- * The pure history fold: a loaded conversation becomes rail items, with each tool result
- * attached to the call it answers.
+ * The pure history fold: a loaded conversation becomes rail items, each tool line reading the
+ * outcome and subject the backend paired onto its call.
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildRailMessages, pathFromArguments } from './ask-cmdr-history'
+import { buildRailMessages } from './ask-cmdr-history'
 import type { ConversationDetailView } from '#lib/tauri-commands/index.js'
 
 function detail(messages: ConversationDetailView['messages']): ConversationDetailView {
@@ -13,21 +13,14 @@ function detail(messages: ConversationDetailView['messages']): ConversationDetai
     messages,
     totalMessages: messages.length,
     lastContextUsage: null,
+    turnInFlightSinceSeq: null,
   }
 }
 
-describe('pathFromArguments', () => {
-  it('extracts a path field and tolerates malformed JSON', () => {
-    expect(pathFromArguments('{"path":"/Users/x/Documents"}')).toBe('/Users/x/Documents')
-    expect(pathFromArguments('{"limit":10}')).toBeNull()
-    expect(pathFromArguments('not json')).toBeNull()
-  })
-})
-
 describe('buildRailMessages', () => {
-  /** One line per tool call, carrying the result's ok flag from the `tool`-role row that
-   *  answered it — that fold is why history renders like a live turn did. */
-  it('folds a tool result into the call it answers', () => {
+  /** One line per tool call, its ok flag from the outcome the backend paired onto it and its path
+   *  from its subject, so history renders like a live turn did. A call with no result yet reads ok. */
+  it('reads each line off its call block', () => {
     const items = buildRailMessages(
       detail([
         {
@@ -35,6 +28,9 @@ describe('buildRailMessages', () => {
           seq: 0,
           role: 'user',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [{ type: 'text', text: 'what am I looking at?' }],
@@ -44,11 +40,29 @@ describe('buildRailMessages', () => {
           seq: 1,
           role: 'assistant',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [
             { type: 'text', text: 'Checking.' },
-            { type: 'toolCall', callId: 'c1', tool: 'list_dir', arguments: '{"path":"/shots"}' },
+            {
+              type: 'toolCall',
+              callId: 'c1',
+              tool: 'list_dir',
+              subject: { kind: 'folder', path: '/shots' },
+              outcome: { kind: 'refused', reason: { kind: 'problem' } },
+              repeatOf: null,
+            },
+            {
+              type: 'toolCall',
+              callId: 'c2',
+              tool: 'inspect_file',
+              subject: { kind: 'files', firstPath: '/shots/a.png', count: 2 },
+              outcome: null,
+              repeatOf: null,
+            },
           ],
         },
         {
@@ -56,9 +70,12 @@ describe('buildRailMessages', () => {
           seq: 2,
           role: 'tool',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
-          blocks: [{ type: 'toolResult', callId: 'c1', ok: false, elided: false }],
+          blocks: [],
         },
       ]),
     )
@@ -67,7 +84,10 @@ describe('buildRailMessages', () => {
     const assistant = items[1]
     if (assistant.kind !== 'assistant') throw new Error('expected an assistant item')
     expect(assistant.text).toBe('Checking.')
-    expect(assistant.tools).toEqual([{ callId: 'c1', tool: 'list_dir', running: false, ok: false, path: '/shots' }])
+    expect(assistant.tools).toEqual([
+      { callId: 'c1', tool: 'list_dir', running: false, ok: false, path: '/shots' },
+      { callId: 'c2', tool: 'inspect_file', running: false, ok: true, path: '/shots/a.png' },
+    ])
   })
 
   /** A model change persists as an `event` row, and renders as its own timeline line. */
@@ -79,6 +99,9 @@ describe('buildRailMessages', () => {
           seq: 0,
           role: 'event',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [{ type: 'modelChanged', model: 'claude-opus-5' }],
@@ -99,6 +122,9 @@ describe('buildRailMessages', () => {
           seq: 0,
           role: 'event',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [{ type: 'chatMemoryChanged', chatMemoryTokens: 16_000 }],
@@ -121,6 +147,9 @@ describe('buildRailMessages', () => {
           seq: 0,
           role: 'user',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [
@@ -162,6 +191,9 @@ describe('buildRailMessages', () => {
           seq: 0,
           role: 'event',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [{ type: 'proposalDecisions', decisions: [rejected] }],
@@ -171,6 +203,9 @@ describe('buildRailMessages', () => {
           seq: 1,
           role: 'user',
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
           promptTokens: null,
           completionTokens: null,
           blocks: [{ type: 'proposalDecisions', decisions: [rejected] }],
