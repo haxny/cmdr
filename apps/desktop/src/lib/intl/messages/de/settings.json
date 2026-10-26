@@ -2941,6 +2941,30 @@
     "sourceHash": "22e2bad",
     "sameAsSourceJustification": "'Updates' is the kept loanword (standard DE UI, as in settings.section.updatesAndPrivacy 'Updates & Datenschutz'); spelled identically."
   },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "While Ask Cmdr works, it shows what it’s looking at. Pick whether those lines fold away once it answers.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "0be1969"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
+  },
   "settings.updates.card.updates": "Updates",
   "@settings.updates.card.updates": {
     "sourceHash": "22e2bad",
