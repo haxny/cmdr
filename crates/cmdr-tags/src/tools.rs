@@ -28,8 +28,10 @@ pub enum CaseTool {
 static NARRATOR: LazyLock<Regex> = LazyLock::new(|| {
     let word = r"(?-i:\p{Lu}\.|\p{Lu}[\p{L}'’-]*)";
     let name = format!(r"{word}(?:[ \t]+{word}){{0,3}}");
+    // A second or later narrator needs at least two words, so "Čte: Jan Novák, Povídky o lásce" stops at Novák.
+    let later_name = format!(r"{word}(?:[ \t]+{word}){{1,3}}");
     let pattern = format!(
-        r"(?i)\b(?:čte|čtou|cte|ctou|interpret|vypráví|vypravi)[ \t]*:[ \t]*({name}(?:(?:[ \t]*,[ \t]*|[ \t]+(?-i:a|and)[ \t]+){name})*)"
+        r"(?i)\b(?:čte|čtou|cte|ctou|interpret|vypráví|vypravi)[ \t]*:[ \t]*({name}(?:(?:[ \t]*,[ \t]*|[ \t]+(?-i:a|and)[ \t]+){later_name})*)"
     );
     Regex::new(&pattern).expect("narrator regex is valid")
 });

@@ -298,3 +298,17 @@ fn tools_return_changed_copies_and_leave_the_input_unchanged() {
     assert_ne!(clear_redundant_titles(&input), snapshot);
     assert_eq!(input, snapshot);
 }
+
+#[test]
+fn later_narrators_need_two_words() {
+    let out = narrator_from_text(&[
+        file(&[(TagField::Comment, "Čte: Jan Novák, Povídky o lásce")]),
+        file(&[(TagField::Comment, "Čte: Jan Novák a J. Dvořák")]),
+    ]);
+    assert_eq!(get(&out[0], TagField::Performer), Some(vec!["Jan Novak".into()]));
+    assert_eq!(one(&out[0], TagField::Comment).as_deref(), Some("Povídky o lásce"));
+    assert_eq!(
+        get(&out[1], TagField::Performer),
+        Some(vec!["Jan Novak".into(), "J. Dvorak".into()])
+    );
+}
