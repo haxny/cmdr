@@ -119,13 +119,15 @@ pub enum ContentKind {
     Music,
 }
 
-/// Why a tag read or write didn't happen.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Why a tag read or write didn't happen. Serialized as `{"type": "<variant>", "data": ...}`
+/// (camelCase variant names), an `Io` kind as its `std::io::ErrorKind` name (`"NotFound"`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum TagError {
     /// The file's format isn't one the editor handles.
     NotSupported,
     /// A filesystem failure, with its kind and the OS message.
-    Io(std::io::ErrorKind, String),
+    Io(#[serde(with = "io_kind")] std::io::ErrorKind, String),
     /// The file's tags couldn't be parsed.
     Parse(String),
     /// The tags couldn't be written.
@@ -159,5 +161,68 @@ impl std::error::Error for TagError {}
 impl From<std::io::Error> for TagError {
     fn from(err: std::io::Error) -> Self {
         TagError::Io(err.kind(), err.to_string())
+    }
+}
+
+/// `std::io::ErrorKind` as its name (`"NotFound"`); a name this build doesn't know reads back
+/// as `Other`.
+mod io_kind {
+    use std::io::ErrorKind;
+
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    /// The kinds that read back as themselves.
+    const KINDS: [ErrorKind; 39] = [
+        ErrorKind::NotFound,
+        ErrorKind::PermissionDenied,
+        ErrorKind::ConnectionRefused,
+        ErrorKind::ConnectionReset,
+        ErrorKind::HostUnreachable,
+        ErrorKind::NetworkUnreachable,
+        ErrorKind::ConnectionAborted,
+        ErrorKind::NotConnected,
+        ErrorKind::AddrInUse,
+        ErrorKind::AddrNotAvailable,
+        ErrorKind::NetworkDown,
+        ErrorKind::BrokenPipe,
+        ErrorKind::AlreadyExists,
+        ErrorKind::WouldBlock,
+        ErrorKind::NotADirectory,
+        ErrorKind::IsADirectory,
+        ErrorKind::DirectoryNotEmpty,
+        ErrorKind::ReadOnlyFilesystem,
+        ErrorKind::StaleNetworkFileHandle,
+        ErrorKind::InvalidInput,
+        ErrorKind::InvalidData,
+        ErrorKind::TimedOut,
+        ErrorKind::WriteZero,
+        ErrorKind::StorageFull,
+        ErrorKind::NotSeekable,
+        ErrorKind::QuotaExceeded,
+        ErrorKind::FileTooLarge,
+        ErrorKind::ResourceBusy,
+        ErrorKind::ExecutableFileBusy,
+        ErrorKind::Deadlock,
+        ErrorKind::CrossesDevices,
+        ErrorKind::TooManyLinks,
+        ErrorKind::InvalidFilename,
+        ErrorKind::ArgumentListTooLong,
+        ErrorKind::Interrupted,
+        ErrorKind::Unsupported,
+        ErrorKind::UnexpectedEof,
+        ErrorKind::OutOfMemory,
+        ErrorKind::Other,
+    ];
+
+    pub(super) fn serialize<S: Serializer>(kind: &ErrorKind, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(&format_args!("{kind:?}"))
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<ErrorKind, D::Error> {
+        let name = String::deserialize(deserializer)?;
+        Ok(KINDS
+            .into_iter()
+            .find(|kind| format!("{kind:?}") == name)
+            .unwrap_or(ErrorKind::Other))
     }
 }

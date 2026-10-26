@@ -120,6 +120,16 @@ The read-back exists because lofty 0.25.4's `replace_range` truncates to `old_le
 `start + new_len` when the edited range ends at EOF and shrinks: a FLAC whose metadata runs to the end of the file came
 out cut mid-STREAMINFO (verified in `write_test::corrupting_save_is_refused`, 2026-10-26).
 
+## Serialized shapes
+
+The types the app's IPC carries derive `Serialize` / `Deserialize` in camelCase, like the model types: `FileTags`,
+`TagField`, `ContentKind`, `WriteOptions` (`{"kind","trackTotal","discTotal","allowFrameLoss"}`), `RestoreReport`
+(`failed` as `[path, error]` pairs), `ApplyId` (a plain string), `CaseTool` (`"sentence"`, ...), and `TagError` as
+`{"type": "<variant>", "data": ...}`, an `Io` error's data being `[kind, message]` with the kind's `std::io::ErrorKind`
+name (`"NotFound"`; an unknown name reads back as `Other`). Shapes are pinned in `serde_test.rs`.
+`WriteOptions::default()` is lossless music: `ContentKind::Music` (an audiobook write deletes composer and `TPE3`, so
+the caller picks it on purpose), no totals, no frame loss.
+
 ## Undo store layout
 
 `UndoStore` (`undo.rs`) keeps one directory per apply under a root the app owns, named by the caller's `ApplyId` (one

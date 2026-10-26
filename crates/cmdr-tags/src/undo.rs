@@ -28,7 +28,7 @@ const MANIFEST_VERSION: u32 = 1;
 /// becomes a directory name, so it must be one safe path component: not empty, no `/`, `\`,
 /// or NUL, no `..`, and no leading `.`. Anything else is refused as
 /// `TagError::Io(ErrorKind::InvalidInput, _)`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ApplyId(pub String);
 
 /// How much the store keeps. After each record the oldest applies go until both hold; the
@@ -52,7 +52,8 @@ impl Default for UndoLimits {
 }
 
 /// What a restore did, per file, in the order the files were recorded.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RestoreReport {
     /// Files whose old tags are back.
     pub restored: Vec<PathBuf>,
@@ -63,6 +64,11 @@ pub struct RestoreReport {
 }
 
 /// Snapshots of applies' old tags, in a directory the store owns.
+///
+/// One writer at a time: `record`, `repath`, `restore`, `forget`, and the pruning inside
+/// `record` read and rewrite the store's directories without locking, so two calls at once
+/// (or two stores on one root) can lose or half-prune a record. Callers serialize access;
+/// the app keeps one store behind a `Mutex`.
 #[derive(Debug)]
 pub struct UndoStore {
     root: PathBuf,

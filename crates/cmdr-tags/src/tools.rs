@@ -4,12 +4,14 @@
 use std::sync::LazyLock;
 
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 use crate::model::{FileTags, TagField};
 use crate::text::{remove_diacritics, sentence_case, title_case};
 
 /// How [`change_case`] rewrites a value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum CaseTool {
     /// First letter upper, the rest lower.
     Sentence,

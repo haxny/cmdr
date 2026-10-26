@@ -27,6 +27,7 @@ use lofty::ogg::{OggPictureStorage, OpusFile, VorbisFile};
 use lofty::picture::{MimeType, Picture, PictureInformation, PictureType};
 use lofty::tag::TagExt;
 use lofty::tag::items::Timestamp;
+use serde::{Deserialize, Serialize};
 
 use crate::format::AudioFormat;
 use crate::model::{ContentKind, Cover, FileTags, TagError, TagField};
@@ -40,7 +41,12 @@ use crate::save::save_safely;
 use crate::write_extras::{added_extras, dropped_extras, upper_extra_keys};
 
 /// How a write maps fields.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// The default is lossless music: [`ContentKind::Music`] (an audiobook write removes the
+/// composer and `TPE3`, which the caller must choose deliberately), no totals, and no frame
+/// loss allowed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WriteOptions {
     /// Audiobooks drop the composer (and ID3's `TPE3`) whatever `FileTags` holds.
     pub kind: ContentKind,
@@ -90,6 +96,17 @@ pub(crate) fn restore_tags(
         allow_frame_loss,
     };
     write_with(path, tags, &opts, raw.conductor.as_deref())
+}
+
+impl Default for WriteOptions {
+    fn default() -> Self {
+        Self {
+            kind: ContentKind::Music,
+            track_total: None,
+            disc_total: None,
+            allow_frame_loss: false,
+        }
+    }
 }
 
 /// [`write_tags`], plus a `TPE3` to write on MP3 (`None` leaves the file's, or for an

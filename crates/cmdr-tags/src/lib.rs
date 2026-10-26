@@ -25,6 +25,8 @@ mod read_test;
 #[cfg(test)]
 mod save_test;
 #[cfg(test)]
+mod serde_test;
+#[cfg(test)]
 mod shared_test;
 #[cfg(test)]
 mod test_files;
