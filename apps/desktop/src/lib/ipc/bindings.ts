@@ -15112,6 +15112,21 @@ export type RowText =
   | 'logDisplay'
 
 /**
+ *  Why an approved group would refuse to run, known before the user approves it.
+ *
+ *  A fact to DISCLOSE before the click, never an execution-path refusal of our own: the engine
+ *  already refuses these exactly as it would a user-started action, and the dialog's job is to
+ *  say so up front instead of offering a button that can only fail.
+ */
+export type RunBlocker =
+  /**
+   *  A trash group whose source volume keeps no Trash (`Volume::has_trash`). The OS refuses
+   *  every item there (`TrashRefusalKind::NoTrashForVolume`) and NOTHING is deleted, so the
+   *  group can't run at all; it isn't "irreversible".
+   */
+  'noTrash'
+
+/**
  *  The mimalloc heap split into live data and allocator slack.
  *
  *  `liveBytes` is what the program holds; `residentBytes` is what the heap costs (its VM
@@ -17684,8 +17699,9 @@ export type SuggestedGroupView = {
    */
   destination: string | null
   /**
-   *  What the switcher calls the volume `destination` is on ("naspi on 192.168.1.5",
-   *  "Macintosh HD"). `None` when there's no destination, or no listed volume has that id.
+   *  What the destination's volume is called ("naspi on 192.168.1.5", "Macintosh HD"): the
+   *  registered volume's own name, or a saved place's while nobody has connected it. `None`
+   *  when there's no destination, or nothing knows that id.
    */
   destinationVolumeName: string | null
   /**
@@ -17694,11 +17710,16 @@ export type SuggestedGroupView = {
    */
   sourceFolder: string | null
   /**
-   *  How far an approved group could be taken back, worked out NOW from the source volume's
-   *  real capabilities (a trash group on a volume with no trash can't be undone). A fact to
-   *  DISCLOSE; per the guiding principle it is never a reason to refuse a group.
+   *  How far an approved group could be taken back, once it runs. A fact to DISCLOSE; per the
+   *  guiding principle it is never a reason to refuse a group.
    */
   reversible: Reversibility
+  /**
+   *  What would stop this group from running at all, worked out NOW from its source volume
+   *  (a trash group on a volume with no Trash: the OS refuses every item and deletes
+   *  nothing). `None` when nothing known would. Agrees with the agent's own read.
+   */
+  runBlocker: RunBlocker | null
   // Whether that destination is already there, and so whether approving creates it.
   destinationState: DestinationState
   // Ops in the live set: what would run.

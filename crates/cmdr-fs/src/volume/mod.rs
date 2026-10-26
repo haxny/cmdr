@@ -1020,6 +1020,23 @@ pub trait Volume: Send + Sync {
         self.supports_local_fs_access()
     }
 
+    /// Whether moving one of this volume's paths to the Trash can land it in a
+    /// Trash the user restores from.
+    ///
+    /// Trash goes through the OS on raw paths (`trashItemAtURL` in
+    /// `cmdr-operations`'s `delete/trash.rs`), whatever backend serves the pane,
+    /// and the OS keeps a Trash only for a LOCAL disk. On a network mount it
+    /// refuses every item with `NSFeatureUnsupportedError` (the engine's
+    /// `TrashRefusalKind::NoTrashForVolume`), and a path the OS can't see has
+    /// nothing to trash at all. Neither DELETES anything: the items stay put.
+    ///
+    /// Default `false`, the safe answer for every session, device, and view
+    /// backend. A backend reached through `std::fs` answers from the mount its
+    /// registration probed. No I/O: callers ask it per row.
+    fn has_trash(&self) -> bool {
+        false
+    }
+
     /// What a live watch on the listing at `path` observes right now. Used by
     /// `cmdr_listing::Listings::authoritative_listing` to decide
     /// whether a cached listing can replace a real read in write-op pre-flight,

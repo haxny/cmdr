@@ -1,4 +1,4 @@
-//! What a group's sources look like on disk, and how far a group can really be taken back.
+//! What a group's sources look like on disk, and what would stop a group from running.
 //!
 //! Two reads of the same thing at two moments: the CREATION SNAPSHOT a group freezes when it's
 //! proposed, and the LIVE stat the review dialog shows beside it. Both go through the group's
@@ -19,7 +19,7 @@ use cmdr_fs::log_error::LogError;
 use futures_util::StreamExt;
 
 use crate::agent::store::proposals::OpSnapshot;
-use crate::agent::types::{ProposalVerb, Reversibility};
+use crate::agent::types::ProposalVerb;
 use crate::file_system::volume::{Volume, VolumeError};
 
 /// How long one batch of stats may take on a local disk or a kernel mount. A volume with a live
@@ -137,23 +137,38 @@ fn classify(answer: Result<cmdr_fs::entry::FileEntry, VolumeError>) -> SourceSta
     }
 }
 
-/// How far an approved group can really be taken back, given what its source volume can do.
+/// Why an approved group would refuse to run, known before the user approves it.
 ///
-/// `stored` is the intent's answer (`GroupIntent::reversibility`, the per-VERB part, frozen at
-/// creation). The per-VOLUME part is only known at read time, because a volume's capabilities
-/// change while a suggestion waits: trash is undoable only where there IS a trash. So a trash
-/// group promises undo only when `source_has_trash` says yes; an unknown answer promises
-/// nothing, because a promise the app can't keep is the worse error.
-pub fn reversibility_on_source(
-    verb: ProposalVerb,
-    stored: Reversibility,
-    source_has_trash: Option<bool>,
-) -> Reversibility {
-    match (verb, source_has_trash) {
-        (ProposalVerb::Trash, Some(true)) => stored,
-        (ProposalVerb::Trash, _) => Reversibility::Irreversible,
-        _ => stored,
+/// A fact to DISCLOSE before the click, never an execution-path refusal of our own: the engine
+/// already refuses these exactly as it would a user-started action, and the dialog's job is to
+/// say so up front instead of offering a button that can only fail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum RunBlocker {
+    /// A trash group whose source volume keeps no Trash (`Volume::has_trash`). The OS refuses
+    /// every item there (`TrashRefusalKind::NoTrashForVolume`) and NOTHING is deleted, so the
+    /// group can't run at all; it isn't "irreversible".
+    NoTrash,
+}
+
+/// What would stop a group of `verb` from running on `source`, or `None` when nothing known
+/// would. Pure, so the rule is pinned by tests; [`source_run_blocker`] is the registry lookup
+/// both the dialog and the agent's own read go through.
+///
+/// An unregistered source (`None`) isn't a blocker here: approving it already refuses with
+/// its own typed reason (`SourceNotConnected`), which the dialog words.
+pub fn run_blocker(verb: ProposalVerb, source: Option<&dyn Volume>) -> Option<RunBlocker> {
+    match (verb, source) {
+        (ProposalVerb::Trash, Some(volume)) if !volume.has_trash() => Some(RunBlocker::NoTrash),
+        _ => None,
     }
+}
+
+/// [`run_blocker`] for a stored group, against the volume registered under its source id.
+/// No I/O: a registry lookup and a predicate, so every read can ask it per group.
+pub fn source_run_blocker(verb: ProposalVerb, source_volume_id: &str) -> Option<RunBlocker> {
+    let source = crate::file_system::volume::manager::get_volume_manager().get(source_volume_id);
+    run_blocker(verb, source.as_deref())
 }
 
 #[cfg(test)]
@@ -161,37 +176,72 @@ mod tests {
     use super::*;
     use cmdr_fs::volume::InMemoryVolume;
 
-    /// Trash promises undo only on a volume that has a trash. A share without one, or a volume
-    /// nobody could ask, must not read "you can undo this" (QA on an SMB Downloads cleanup).
+    /// A volume that keeps a Trash, as `LocalPosixVolume` on a local disk does.
+    struct LocalDisk(InMemoryVolume);
+
+    impl Volume for LocalDisk {
+        fn name(&self) -> &str {
+            self.0.name()
+        }
+        fn root(&self) -> &Path {
+            self.0.root()
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+        fn list_directory<'a>(
+            &'a self,
+            path: &'a Path,
+            on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+        ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>>
+        {
+            self.0.list_directory(path, on_progress)
+        }
+        fn get_metadata<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> std::pin::Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>>
+        {
+            self.0.get_metadata(path)
+        }
+        fn has_trash(&self) -> bool {
+            true
+        }
+    }
+
+    /// Trash on a volume with no Trash can't run at all: the OS refuses each item and deletes
+    /// nothing (QA on an SMB Downloads cleanup, #747). Saying "can't be undone" there would be
+    /// wrong twice over.
     #[test]
-    fn trash_is_undoable_only_where_the_source_volume_has_a_trash() {
-        let stored = Reversibility::RestoreMove;
+    fn a_trash_group_on_a_volume_without_a_trash_cant_run() {
+        let share = InMemoryVolume::new("naspi");
+        let disk = LocalDisk(InMemoryVolume::new("Macintosh HD"));
+
         assert_eq!(
-            reversibility_on_source(ProposalVerb::Trash, stored, Some(true)),
-            Reversibility::RestoreMove
+            run_blocker(ProposalVerb::Trash, Some(&share)),
+            Some(RunBlocker::NoTrash)
         );
+        assert_eq!(run_blocker(ProposalVerb::Trash, Some(&disk)), None);
         assert_eq!(
-            reversibility_on_source(ProposalVerb::Trash, stored, Some(false)),
-            Reversibility::Irreversible
-        );
-        assert_eq!(
-            reversibility_on_source(ProposalVerb::Trash, stored, None),
-            Reversibility::Irreversible,
-            "an unknown volume earns no promise"
+            run_blocker(ProposalVerb::Trash, None),
+            None,
+            "an unconnected source refuses with its own typed reason at approval"
         );
     }
 
-    /// Every other verb's answer is the intent's own, whatever the volume can do.
+    /// Only trash depends on a Trash: every other verb runs the same on either volume.
     #[test]
-    fn other_verbs_keep_the_intents_answer() {
-        for (verb, stored) in [
-            (ProposalVerb::Move, Reversibility::RestoreMove),
-            (ProposalVerb::Copy, Reversibility::DeleteWhatWasWritten),
-            (ProposalVerb::Delete, Reversibility::Irreversible),
-            (ProposalVerb::Rename, Reversibility::RestoreMove),
+    fn other_verbs_have_no_trash_blocker() {
+        let share = InMemoryVolume::new("naspi");
+        for verb in [
+            ProposalVerb::Move,
+            ProposalVerb::Copy,
+            ProposalVerb::Delete,
+            ProposalVerb::Rename,
+            ProposalVerb::Compress,
+            ProposalVerb::Extract,
         ] {
-            assert_eq!(reversibility_on_source(verb, stored, Some(false)), stored, "{verb:?}");
-            assert_eq!(reversibility_on_source(verb, stored, None), stored, "{verb:?}");
+            assert_eq!(run_blocker(verb, Some(&share)), None, "{verb:?}");
         }
     }
 

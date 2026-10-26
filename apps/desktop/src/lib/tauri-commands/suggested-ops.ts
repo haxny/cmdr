@@ -84,6 +84,7 @@ export type {
   SuggestionChange,
   SuggestionsChanged,
   RejectResultView,
+  RunBlocker,
   SuggestedGroupView,
   SuggestedOpLiveFact,
   SuggestedOpPage,

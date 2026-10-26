@@ -285,6 +285,7 @@ fn fold_saved_smb_shares(
     is_registered: impl Fn(&str) -> bool,
 ) {
     for share in shares {
+        let name = saved_share_name(&share);
         let (Some(id), Some(mount_path)) = (share.volume_id, share.mount_path) else {
             continue;
         };
@@ -298,9 +299,7 @@ fn fold_saved_smb_shares(
             continue;
         }
         volumes.push(LocationInfo {
-            // The mount row's own spelling (`volumes/mounts.rs::network_name`),
-            // so a share reads the same greyed as it does mounted.
-            name: format!("{} on {}", share.share_name, share.server_name),
+            name,
             root_label: Some(share.share_name.clone()),
             mount_account: None,
             id,
@@ -323,6 +322,22 @@ fn fold_saved_smb_shares(
             favorite_target: None,
         });
     }
+}
+
+/// What a saved SMB share is called while unmounted: the mount row's own spelling
+/// (`volumes/mounts.rs::network_name`), so a share reads the same greyed as it does mounted.
+fn saved_share_name(share: &crate::network::known_shares::KnownNetworkShare) -> String {
+    format!("{} on {}", share.share_name, share.server_name)
+}
+
+/// The switcher's name for a SAVED place nobody has connected (an SFTP, WebDAV, S3, or NFS
+/// place, or a saved SMB share), from cached state only. `None` for any other id: a
+/// registered volume names itself (`Volume::name`). Never dials.
+pub(crate) fn saved_place_name(volume_id: &str) -> Option<String> {
+    if let Some(place) = server_places().into_iter().find(|place| place.id == volume_id) {
+        return Some(place.name);
+    }
+    crate::network::known_shares::share_by_volume_id(volume_id).map(|share| saved_share_name(&share))
 }
 
 /// The app-facing root of the place `volume_id` names, for an event payload that

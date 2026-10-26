@@ -548,6 +548,7 @@ export type {
   DestinationState,
   LiveFileState,
   RejectResultView,
+  RunBlocker,
   SuggestionChange,
   SuggestionsChanged,
   SuggestedGroupView,

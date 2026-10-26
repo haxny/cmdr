@@ -108,81 +108,103 @@ fn facts(destination_state: DestinationState) -> GroupReadFacts {
         destination_state,
         destination_volume_name: None,
         source_folder: None,
-        reversible: Reversibility::RestoreMove,
+        run_blocker: None,
     }
 }
 
-fn listed(id: &str, name: &str, supports_trash: bool) -> crate::volume_listing::LocationInfo {
-    crate::volume_listing::LocationInfo {
-        id: id.to_string(),
-        name: name.to_string(),
-        path: format!("/Volumes/{id}"),
-        category: crate::volume_listing::LocationCategory::AttachedVolume,
-        icon: None,
-        is_ejectable: false,
-        mount_is_read_only: false,
-        is_disk_image: false,
-        is_cloud_mount: false,
-        fs_type: None,
-        supports_trash,
-        connection_state: None,
-        pinned: None,
-        landing_path: None,
-        device_readiness: None,
-        usb_speed: None,
-        capabilities: None,
-        favorite_shortcut: None,
-        favorite_target: None,
-        root_label: None,
-        mount_account: None,
+/// Two registered volumes, named as their backends name them: an SMB share (no Trash) and the
+/// boot disk (which `LocalPosixVolume` reports as keeping one).
+fn registered(id: &str) -> Option<std::sync::Arc<dyn Volume>> {
+    use cmdr_fs::volume::InMemoryVolume;
+    match id {
+        "smb-naspi" => Some(std::sync::Arc::new(InMemoryVolume::new("naspi on 192.168.1.5"))),
+        "root" => Some(std::sync::Arc::new(TrashKeeping(InMemoryVolume::new("Macintosh HD")))),
+        _ => None,
     }
 }
 
-/// A trash group says "you can undo this" only when its source volume has a trash: on a NAS
-/// share without one, the files are gone for good, and the dialog must say so (#747).
+fn saved_name(id: &str) -> Option<String> {
+    (id == "smb-saved").then(|| "archive on 192.168.1.5".to_string())
+}
+
+fn volume_facts() -> VolumeFacts<'static> {
+    VolumeFacts {
+        registered: &registered,
+        saved_name: &saved_name,
+    }
+}
+
+/// An in-memory volume that keeps a Trash, as a local disk does.
+struct TrashKeeping(cmdr_fs::volume::InMemoryVolume);
+
+impl Volume for TrashKeeping {
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+    fn root(&self) -> &Path {
+        self.0.root()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
+        self.0.list_directory(path, on_progress)
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
+        self.0.get_metadata(path)
+    }
+    fn has_trash(&self) -> bool {
+        true
+    }
+}
+
+/// A trash group on a volume with no Trash says it can't run, before anyone approves it: the OS
+/// refuses every item and deletes nothing (#747). The undo promise stays the verb's own.
 #[test]
-fn a_trash_group_promises_undo_only_on_a_volume_with_a_trash() {
+fn a_trash_group_on_a_volume_without_a_trash_says_it_cant_run() {
     let mut trash = group(1, 1, ProposalVerb::Trash).group;
     trash.destination = None;
-    let volumes = [
-        listed("root", "Macintosh HD", true),
-        listed("smb-naspi", "naspi on 192.168.1.5", false),
-    ];
 
-    let on_root = read_facts(&trash, &volumes, DestinationState::NotApplicable, None);
+    let on_root = read_facts(&trash, volume_facts(), DestinationState::NotApplicable, None);
     trash.source_volume_id = "smb-naspi".into();
-    let on_share = read_facts(&trash, &volumes, DestinationState::NotApplicable, None);
-    trash.source_volume_id = "nothing-lists-this".into();
-    let on_unlisted = read_facts(&trash, &volumes, DestinationState::NotApplicable, None);
+    let on_share = read_facts(&trash, volume_facts(), DestinationState::NotApplicable, None);
+    trash.source_volume_id = "smb-saved".into();
+    let on_unconnected = read_facts(&trash, volume_facts(), DestinationState::NotApplicable, None);
 
-    assert_eq!(on_root.reversible, Reversibility::RestoreMove);
-    assert_eq!(on_share.reversible, Reversibility::Irreversible);
+    assert_eq!(on_root.run_blocker, None);
+    assert_eq!(on_share.run_blocker, Some(RunBlocker::NoTrash));
     assert_eq!(
-        on_unlisted.reversible,
-        Reversibility::Irreversible,
-        "unknown earns no promise"
+        on_unconnected.run_blocker, None,
+        "approval refuses an unconnected source with its own typed reason"
     );
 }
 
-/// The header names the destination's volume as the switcher does, falling back to the source
-/// volume for a rename (whose parent lives there), and names nothing for trash.
+/// The header names the destination's volume as its backend does, falls back to a saved
+/// place's name while nobody has connected it (the QA case), uses the source volume for a
+/// rename (whose parent lives there), and names nothing for trash.
 #[test]
-fn the_destination_volume_is_named_as_the_switcher_names_it() {
-    let volumes = [
-        listed("root", "Macintosh HD", true),
-        listed("smb-naspi", "naspi on 192.168.1.5", false),
-    ];
+fn the_destination_volume_is_named_even_before_anyone_connects_it() {
     let mut moving = group(1, 1, ProposalVerb::Move).group;
     moving.destination_volume_id = Some("smb-naspi".into());
-    let mut renaming = group(2, 1, ProposalVerb::Rename).group;
+    let mut onto_saved = group(2, 1, ProposalVerb::Move).group;
+    onto_saved.destination_volume_id = Some("smb-saved".into());
+    let mut renaming = group(3, 1, ProposalVerb::Rename).group;
     renaming.destination_volume_id = None;
-    let mut trashing = group(3, 1, ProposalVerb::Trash).group;
+    let mut trashing = group(4, 1, ProposalVerb::Trash).group;
     trashing.destination = None;
 
     let name = |group: &ProposalGroup| {
-        read_facts(group, &volumes, DestinationState::NotApplicable, None).destination_volume_name
+        read_facts(group, volume_facts(), DestinationState::NotApplicable, None).destination_volume_name
     };
     assert_eq!(name(&moving).as_deref(), Some("naspi on 192.168.1.5"));
+    assert_eq!(name(&onto_saved).as_deref(), Some("archive on 192.168.1.5"));
     assert_eq!(name(&renaming).as_deref(), Some("Macintosh HD"));
     assert_eq!(name(&trashing), None);
 }
@@ -208,7 +230,7 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
             destination_state: DestinationState::WillBeCreated,
             destination_volume_name: Some("Macintosh HD".into()),
             source_folder: Some("/Users/someone/Downloads".into()),
-            reversible: Reversibility::RestoreMove,
+            run_blocker: Some(RunBlocker::NoTrash),
         },
     );
 
@@ -222,7 +244,12 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
     assert_eq!(view.destination.as_deref(), Some("/Users/someone/Documents/Invoices"));
     assert_eq!(view.destination_volume_name.as_deref(), Some("Macintosh HD"));
     assert_eq!(view.source_folder.as_deref(), Some("/Users/someone/Downloads"));
-    assert_eq!(view.reversible, Reversibility::RestoreMove);
+    assert_eq!(
+        view.reversible,
+        Reversibility::RestoreMove,
+        "the verb's own promise, from the store"
+    );
+    assert_eq!(view.run_blocker, Some(RunBlocker::NoTrash));
     assert_eq!(view.destination_state, DestinationState::WillBeCreated);
     assert_eq!(view.live_op_count, 5);
     assert_eq!(view.total_op_count, 7, "the deselected rows are part of the record");

@@ -659,6 +659,12 @@ impl Volume for LocalPosixVolume {
         Some(self.mount)
     }
 
+    /// From the mount its registration probed: a local disk keeps a Trash, a
+    /// network or FUSE mount doesn't (the OS refuses each item there).
+    fn has_trash(&self) -> bool {
+        matches!(self.mount, MountClass::LocalDisk)
+    }
+
     fn supports_export(&self) -> bool {
         true
     }

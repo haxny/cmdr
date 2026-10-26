@@ -63,6 +63,17 @@ fn a_mount_on_any_other_network_filesystem_cant_be_indexed() {
     assert!(!volume.capabilities().can_be_indexed);
 }
 
+/// Trash goes through the OS on raw paths, and the OS keeps a Trash only on a local disk: on a
+/// network mount it refuses every item and deletes nothing (#747).
+#[test]
+fn only_a_local_disk_keeps_a_trash() {
+    let on = |mount| LocalPosixVolume::on_mount("v", "/Volumes/v", mount, VolumeHost::detached());
+    assert!(LocalPosixVolume::local_folder("Macintosh HD", "/", VolumeHost::detached()).has_trash());
+    assert!(on(MountClass::LocalDisk).has_trash());
+    assert!(!on(MountClass::SmbShare).has_trash());
+    assert!(!on(MountClass::OtherNetwork).has_trash());
+}
+
 #[test]
 fn a_rerooted_volume_keeps_its_mount_class() {
     let volume = LocalPosixVolume::on_mount(
