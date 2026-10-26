@@ -18,8 +18,10 @@ used, in `../pane/DETAILS.md`. Only the layout facts that none of those carry li
 - **`navigate-and-select.ts` holds TWO families with deliberately different contracts.** `navigateToDirInPane` /
   `navigateToFileInPane` ALWAYS navigate the pane they're given (the Go-to-path contract); `revealFileInBestPane` /
   `navigateToDirInBestPane` instead REUSE a pane already showing the target dir (volume-safe, active tab only) so the
-  downloads reveal doesn't duplicate a view. Both await `navigate()`'s `NavigateResult`, bailing on `'refused'` and
-  awaiting `settled` otherwise. Don't collapse the two families.
+  downloads reveal doesn't duplicate a view. `revealPathInBestPane` is the best-pane family's one door for an absolute
+  path of either kind (the Ask Cmdr tool line's links): it resolves the drive, opens a folder or lands on a file, and
+  swallows the `moveCursor` throw below. Both await `navigate()`'s `NavigateResult`, bailing on `'refused'` and awaiting
+  `settled` otherwise. Don't collapse the two families.
 - **`path-resolution.ts` exists to break an import cycle**, holding only the walk-up `resolveValidPath`:
   `path-navigation.ts` imports `getLastUsedPathForVolume` from `app-status-store.ts`, so `app-status-store.ts` needs a
   cycle-free way to reach the resolver. Folding it back into `path-navigation.ts` reintroduces the cycle.

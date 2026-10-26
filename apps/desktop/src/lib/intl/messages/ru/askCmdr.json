@@ -200,10 +200,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Этот запрос недоступен",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Добавьте API-ключ в настройках, чтобы начать общение.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

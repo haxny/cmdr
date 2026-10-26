@@ -3,10 +3,43 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { _setLocaleForTests } from './locale'
 import {
   _clearListFormatCacheForTests,
+  conjunctionListParts,
   formatConjunctionList,
   formatDisjunctionList,
   formatUnitList,
 } from './list-format'
+
+describe('conjunctionListParts', () => {
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  /** Joining the parts back gives exactly the string join, so a list of links reads the same. */
+  function joined(items: string[]): string {
+    return conjunctionListParts(items)
+      .map((part) => (part.kind === 'item' ? items[part.index] : part.text))
+      .join('')
+  }
+
+  it('hands back each item by index between the language’s own connectives', () => {
+    _setLocaleForTests('en-US')
+    expect(conjunctionListParts([])).toEqual([])
+    expect(conjunctionListParts(['Documents'])).toEqual([{ kind: 'item', index: 0 }])
+    expect(conjunctionListParts(['Documents', 'Desktop'])).toEqual([
+      { kind: 'item', index: 0 },
+      { kind: 'literal', text: ' and ' },
+      { kind: 'item', index: 1 },
+    ])
+  })
+
+  it('reads the same as the string join, in any language', () => {
+    for (const locale of ['en-US', 'de-DE', 'zh', 'ja']) {
+      _setLocaleForTests(locale)
+      const items = ['Documents', 'Desktop', '写真']
+      expect(joined(items)).toBe(formatConjunctionList(items))
+    }
+  })
+})
 
 describe('formatDisjunctionList', () => {
   afterEach(() => {

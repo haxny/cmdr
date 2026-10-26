@@ -201,10 +201,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Dat verzoek was niet beschikbaar",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Voeg je API-sleutel toe in instellingen om te beginnen met chatten.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

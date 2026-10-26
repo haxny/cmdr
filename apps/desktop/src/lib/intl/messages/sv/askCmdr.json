@@ -200,10 +200,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Den förfrågan var inte tillgänglig",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Lägg till din API-nyckel i inställningarna för att börja chatta.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

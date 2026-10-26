@@ -4,9 +4,11 @@
  * The one place a list of names becomes a phrase inside a sentence, so no
  * feature module hand-joins with `', '` and a hardcoded English "and". The
  * callers: the eject refusal that names the apps still holding a drive
- * (`#lib/file-explorer/navigation/eject-error-messages.ts`), and the transfer
+ * (`#lib/file-explorer/navigation/eject-error-messages.ts`), the transfer
  * toast naming the metadata a destination couldn't keep
- * (`#lib/file-operations/transfer/transfer-complete-toast.ts`).
+ * (`#lib/file-operations/transfer/transfer-complete-toast.ts`), and the Ask Cmdr
+ * tool line listing the folders a search looked in, as links
+ * (`conjunctionListParts`).
  *
  * The locale is {@link getUiLocale}, not the OS formatting one: this is a
  * conjunction inside catalog copy, so it has to speak the language the sentence
@@ -69,6 +71,37 @@ function getJoiner(type: ListType): ListJoiner {
  */
 export function formatConjunctionList(items: readonly string[]): string {
   return formatList(items, 'conjunction')
+}
+
+/** One piece of a joined list: an item, by its index in the input, or the words between items. */
+export type ListPart = { kind: 'item'; index: number } | { kind: 'literal'; text: string }
+
+/**
+ * {@link formatConjunctionList} as pieces, for a list whose items render as something other
+ * than text (the Ask Cmdr tool line's path links). Joined back, the pieces read exactly as the
+ * string join does, connectives and Han spacing included. Empty for an empty list.
+ */
+export function conjunctionListParts(items: readonly string[]): ListPart[] {
+  if (items.length === 0) return []
+  const { formatter, spacesHan } = getJoiner('conjunction')
+  if (formatter === undefined) {
+    const separator = enumerationSeparator()
+    return items.flatMap((_, index): ListPart[] =>
+      index === 0
+        ? [{ kind: 'item', index }]
+        : [
+            { kind: 'literal', text: separator },
+            { kind: 'item', index },
+          ],
+    )
+  }
+  const parts = formatter.formatToParts(items)
+  let next = 0
+  return parts.map((part, i): ListPart => {
+    if (part.type === 'element') return { kind: 'item', index: next++ }
+    const text = spacesHan ? spaceLiteral(part.value, parts[i - 1]?.value, parts[i + 1]?.value) : part.value
+    return { kind: 'literal', text }
+  })
 }
 
 /**

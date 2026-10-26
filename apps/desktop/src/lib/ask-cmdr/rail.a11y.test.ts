@@ -314,7 +314,7 @@ describe('AskCmdrCostFooter a11y', () => {
 describe('AskCmdrMessage a11y', () => {
   function mountMessage(message: RailMessage): HTMLElement {
     const target = container()
-    mount(AskCmdrMessage, { target, props: { message } })
+    mount(AskCmdrMessage, { target, props: { message, revealPath: () => Promise.resolve() } })
     return target
   }
 
@@ -411,7 +411,7 @@ describe('AskCmdrRail a11y', () => {
 
   function mountRail(): HTMLElement {
     const target = container()
-    mount(AskCmdrRail, { target, props: { readSelection: noSelection } })
+    mount(AskCmdrRail, { target, props: { readSelection: noSelection, revealPath: () => Promise.resolve() } })
     return target
   }
 
@@ -498,10 +498,10 @@ describe('AskCmdrRail a11y', () => {
 /**
  * Tier 3 a11y tests for `AskCmdrToolLine.svelte`.
  *
- * One collapsible "looked at X" line for a tool call. Covers the running state (a busy
- * status with a spinner), a finished-ok line with an expandable path, its expanded state,
- * and a refused line. `role="status"` + `aria-busy` and the toggle's `aria-expanded` are
- * the load-bearing attributes.
+ * One tool call's row: what it looked at, with each path a link, and what came back. Covers the
+ * running state (a spinner), a finished line with a path link, a search naming several folders,
+ * a repeat with its tag, and a refused line. Lines are deliberately NOT live regions (a 12-call
+ * turn would chatter): the bubble's last prose is the one that announces.
  */
 describe('AskCmdrToolLine a11y', () => {
   function tool(overrides: Partial<RailToolCall> = {}): RailToolCall {
@@ -518,7 +518,7 @@ describe('AskCmdrToolLine a11y', () => {
 
   function mountLine(t: RailToolCall): HTMLElement {
     const target = container()
-    mount(AskCmdrToolLine, { target, props: { tool: t } })
+    mount(AskCmdrToolLine, { target, props: { tool: t, revealPath: () => Promise.resolve() } })
     return target
   }
 
@@ -534,14 +534,25 @@ describe('AskCmdrToolLine a11y', () => {
     await expectNoA11yViolations(target)
   })
 
-  it('an expanded line has no a11y violations', async () => {
-    const target = mountLine(tool({ subject: { kind: 'folder', path: '/Users/me/Documents' } }))
+  it('a search naming several folders has no a11y violations', async () => {
+    const target = mountLine(
+      tool({
+        tool: 'search',
+        subject: { kind: 'search', query: '*.pdf', scopePaths: ['/Users/me/Documents', '/Users/me/Desktop'] },
+        outcome: { kind: 'matches', returned: 3, matchCount: 3, lowerBound: false },
+      }),
+    )
     await tick()
-    const toggle = target.querySelector<HTMLButtonElement>('.tool-toggle')
-    if (toggle === null) throw new Error('expected a .tool-toggle button')
-    toggle.click()
+    expect(target.querySelectorAll('button.link-button')).toHaveLength(2)
+    await expectNoA11yViolations(target)
+  })
+
+  it('a repeat with its tag has no a11y violations', async () => {
+    const target = mountLine(
+      tool({ subject: { kind: 'folder', path: '/Users/me/Documents' }, repeatOf: { messageId: 1, callId: 'c0' } }),
+    )
     await tick()
-    expect(target.querySelector('.detail')).not.toBeNull()
+    expect(target.querySelector('.repeat')).not.toBeNull()
     await expectNoA11yViolations(target)
   })
 

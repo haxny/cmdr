@@ -200,10 +200,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Ez a kérés nem volt elérhető",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Add meg az API-kulcsodat a beállításokban, hogy elkezdhess csevegni.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

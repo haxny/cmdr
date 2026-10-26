@@ -31,6 +31,8 @@
          * toggle button, pressed or not. Button form only.
          */
         'aria-pressed'?: boolean
+        /** A note elsewhere on the row that says more about where the link goes. */
+        'aria-describedby'?: string
         children: Snippet
     }
 
@@ -45,13 +47,22 @@
         'aria-expanded': ariaExpanded,
         'aria-controls': ariaControls,
         'aria-pressed': ariaPressed,
+        'aria-describedby': ariaDescribedby,
         children,
     }: Props = $props()
 </script>
 
 {#if href}
     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external URL in a Tauri app, not a SvelteKit route; resolve() does not apply -->
-    <a class="link-button" {href} {target} {rel} {onclick} aria-label={ariaLabel}>
+    <a
+        class="link-button"
+        {href}
+        {target}
+        {rel}
+        {onclick}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedby}
+    >
         {@render children()}
     </a>
 {:else}
@@ -64,6 +75,7 @@
         aria-expanded={ariaExpanded}
         aria-controls={ariaControls}
         aria-pressed={ariaPressed}
+        aria-describedby={ariaDescribedby}
     >
         {@render children()}
     </button>

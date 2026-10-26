@@ -200,10 +200,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Diese Anfrage war nicht möglich",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Füge deinen API-Schlüssel in den Einstellungen hinzu, um chatten zu können.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

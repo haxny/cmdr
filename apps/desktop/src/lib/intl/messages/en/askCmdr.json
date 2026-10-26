@@ -207,9 +207,355 @@
   "@askCmdr.tool.unknown.done": {
     "description": "Past-tense fallback label for a tool the rail doesn't have a specific label for."
   },
-  "askCmdr.tool.refused": "That request wasn’t available",
-  "@askCmdr.tool.refused": {
-    "description": "Shown on a tool line when the assistant asked for something Ask Cmdr can't do (it's read-only). The apostrophe is U+2019."
+  "askCmdr.tool.listDir.folder.doing": "Listing <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant lists one folder’s contents. {name} is the folder’s own name (the last part of its path, like “Downloads”); the <place> tag makes it a link that opens the folder in a file pane, so keep the tag around the name. Pairs with askCmdr.tool.listDir.folder.done. Keep it short: it sits on one line.",
+    "placeholders": { "name": "The folder’s name, for example Downloads." }
+  },
+  "askCmdr.tool.listDir.folder.done": "Listed <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.done": {
+    "description": "Past-tense label on the same tool line once the folder was listed. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.listDir.folder.doing.",
+    "placeholders": { "name": "The folder’s name, for example Downloads." }
+  },
+  "askCmdr.tool.listPaneFiles.selection.doing": "Listing your selection in <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the files the person selected in the folder their file pane shows. {name} is that folder’s name, linked by the <place> tag to open it in a pane. Pairs with askCmdr.tool.listPaneFiles.selection.done.",
+    "placeholders": { "name": "The folder’s name, for example Desktop." }
+  },
+  "askCmdr.tool.listPaneFiles.selection.done": "Listed your selection in <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.done": {
+    "description": "Past-tense label on the same tool line once the assistant read the selected files. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.listPaneFiles.selection.doing.",
+    "placeholders": { "name": "The folder’s name, for example Desktop." }
+  },
+  "askCmdr.tool.folderImportance.folder.doing": "Checking how important <place>{name}</place> is",
+  "@askCmdr.tool.folderImportance.folder.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant scores how important one folder is to the person (how often it’s used, what it holds). {name} is the folder’s name, linked by the <place> tag to open it in a pane. Pairs with askCmdr.tool.folderImportance.folder.done.",
+    "placeholders": { "name": "The folder’s name, for example Projects." }
+  },
+  "askCmdr.tool.folderImportance.folder.done": "Checked how important <place>{name}</place> is",
+  "@askCmdr.tool.folderImportance.folder.done": {
+    "description": "Past-tense label on the same tool line once the folder was scored. {name} is the folder’s name, linked by the <place> tag. Pairs with askCmdr.tool.folderImportance.folder.doing.",
+    "placeholders": { "name": "The folder’s name, for example Projects." }
+  },
+  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Looking inside <place>{name}</place>} one {Looking inside <place>{name}</place> and {othersText} more} other {Looking inside <place>{name}</place> and {othersText} more}}",
+  "@askCmdr.tool.inspectFile.files.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the details and a bounded part of the contents of one or more files. {name} is the first file’s name, linked by the <place> tag to show it in a file pane; {othersText} is how many other files the same call reads. Pairs with askCmdr.tool.inspectFile.files.done.",
+    "placeholders": {
+      "name": "The first file’s name, for example notes.txt.",
+      "othersText": "How many more files, as a formatted number.",
+      "others": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {Looked inside <place>{name}</place>} one {Looked inside <place>{name}</place> and {othersText} more} other {Looked inside <place>{name}</place> and {othersText} more}}",
+  "@askCmdr.tool.inspectFile.files.done": {
+    "description": "Past-tense label on the same tool line once the assistant finished reading the files. {name} is the first file’s name, linked by the <place> tag; {othersText} is how many other files it read. Pairs with askCmdr.tool.inspectFile.files.doing.",
+    "placeholders": {
+      "name": "The first file’s name, for example notes.txt.",
+      "othersText": "How many more files, as a formatted number.",
+      "others": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Reading what’s in <place>{name}</place>} one {Reading what’s in <place>{name}</place> and {othersText} more} other {Reading what’s in <place>{name}</place> and {othersText} more}}",
+  "@askCmdr.tool.imageFacts.files.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant reads the text and tags Cmdr recognized inside specific photos. This line is a transparency surface, so the wording should make clear that image content is being read. {name} is the first photo’s name, linked by the <place> tag; {othersText} is how many other photos the same call reads. The apostrophe is U+2019. Pairs with askCmdr.tool.imageFacts.files.done.",
+    "placeholders": {
+      "name": "The first photo’s name, for example IMG_1024.jpg.",
+      "othersText": "How many more photos, as a formatted number.",
+      "others": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Read what’s in <place>{name}</place>} one {Read what’s in <place>{name}</place> and {othersText} more} other {Read what’s in <place>{name}</place> and {othersText} more}}",
+  "@askCmdr.tool.imageFacts.files.done": {
+    "description": "Past-tense label on the same tool line once the assistant finished reading what Cmdr recognized inside those photos. {name} is the first photo’s name, linked by the <place> tag; {othersText} is how many other photos it read. The apostrophe is U+2019. Pairs with askCmdr.tool.imageFacts.files.doing.",
+    "placeholders": {
+      "name": "The first photo’s name, for example IMG_1024.jpg.",
+      "othersText": "How many more photos, as a formatted number.",
+      "others": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.search.queryIn.doing": "Searching for “{query}” in <places>{placesText}</places>",
+  "@askCmdr.tool.search.queryIn.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files by name in some folders. It searches names and details, never what is inside a file. {query} is the name pattern exactly as the assistant typed it (keep the quotes around it, in your language’s quote marks); {placesText} is the list of folder names, already joined with your language’s “and”, and the <places> tag turns each folder into a link. Pairs with askCmdr.tool.search.queryIn.done.",
+    "placeholders": {
+      "query": "The name pattern searched for, for example *.pdf. Never translate it.",
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+    }
+  },
+  "askCmdr.tool.search.queryIn.done": "Searched for “{query}” in <places>{placesText}</places>",
+  "@askCmdr.tool.search.queryIn.done": {
+    "description": "Past-tense label on the same tool line once the search finished. {query} is the name pattern (keep the quotes); {placesText} is the joined list of folder names, each a link via the <places> tag. Pairs with askCmdr.tool.search.queryIn.doing.",
+    "placeholders": {
+      "query": "The name pattern searched for, for example *.pdf. Never translate it.",
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+    }
+  },
+  "askCmdr.tool.search.query.doing": "Searching for “{query}”",
+  "@askCmdr.tool.search.query.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files by name everywhere it can. It searches names and details, never what is inside a file. {query} is the name pattern exactly as the assistant typed it; keep the quotes around it, in your language’s quote marks. Pairs with askCmdr.tool.search.query.done.",
+    "placeholders": { "query": "The name pattern searched for, for example *.pdf. Never translate it." }
+  },
+  "askCmdr.tool.search.query.done": "Searched for “{query}”",
+  "@askCmdr.tool.search.query.done": {
+    "description": "Past-tense label on the same tool line once the search finished. {query} is the name pattern; keep the quotes. Pairs with askCmdr.tool.search.query.doing.",
+    "placeholders": { "query": "The name pattern searched for, for example *.pdf. Never translate it." }
+  },
+  "askCmdr.tool.search.in.doing": "Searching in <places>{placesText}</places>",
+  "@askCmdr.tool.search.in.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant looks for files in some folders by size, date, or type rather than by name. {placesText} is the list of folder names, already joined with your language’s “and”, and the <places> tag turns each folder into a link. Pairs with askCmdr.tool.search.in.done.",
+    "placeholders": {
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+    }
+  },
+  "askCmdr.tool.search.in.done": "Searched in <places>{placesText}</places>",
+  "@askCmdr.tool.search.in.done": {
+    "description": "Past-tense label on the same tool line once the search finished. {placesText} is the joined list of folder names, each a link via the <places> tag. Pairs with askCmdr.tool.search.in.doing.",
+    "placeholders": {
+      "placesText": "The folders searched in, already joined, for example Documents and Desktop."
+    }
+  },
+  "askCmdr.tool.searchPhotos.query.doing": "Searching your photos for “{query}”",
+  "@askCmdr.tool.searchPhotos.query.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant searches the person’s photos by description, by text recognized inside them, or by tag. {query} is what the assistant searched for, in its own words; keep the quotes around it, in your language’s quote marks. Pairs with askCmdr.tool.searchPhotos.query.done.",
+    "placeholders": { "query": "What it searched for, for example beach at sunset." }
+  },
+  "askCmdr.tool.searchPhotos.query.done": "Searched your photos for “{query}”",
+  "@askCmdr.tool.searchPhotos.query.done": {
+    "description": "Past-tense label on the same tool line once the photo search finished. {query} is what it searched for; keep the quotes. Pairs with askCmdr.tool.searchPhotos.query.doing.",
+    "placeholders": { "query": "What it searched for, for example beach at sunset." }
+  },
+  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Preparing a plan to rename {countText} file} other {Preparing a plan to rename {countText} files}}",
+  "@askCmdr.tool.proposeRenamePlan.count.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant prepares a rename proposal for the person to review. Nothing is renamed yet. {countText} is how many files the plan covers. Pairs with askCmdr.tool.proposeRenamePlan.count.done.",
+    "placeholders": {
+      "countText": "How many files, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {Prepared a plan to rename {countText} file} other {Prepared a plan to rename {countText} files}}",
+  "@askCmdr.tool.proposeRenamePlan.count.done": {
+    "description": "Past-tense label on the same tool line once the rename proposal is ready. The person still reviews and approves it, so this must not read as if anything was renamed. {countText} is how many files the plan covers. Pairs with askCmdr.tool.proposeRenamePlan.count.doing.",
+    "placeholders": {
+      "countText": "How many files, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Preparing {countText} suggestion} other {Preparing {countText} suggestions}}",
+  "@askCmdr.tool.proposeSuggestions.count.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant prepares groups of file operations for the person to review. Nothing happens to any file: the person decides. {countText} is how many suggestions. Pairs with askCmdr.tool.proposeSuggestions.count.done.",
+    "placeholders": {
+      "countText": "How many suggestions, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {Prepared {countText} suggestion} other {Prepared {countText} suggestions}}",
+  "@askCmdr.tool.proposeSuggestions.count.done": {
+    "description": "Past-tense label on the same tool line once the suggestions are ready to review. It must not read as if anything ran. {countText} is how many suggestions. Pairs with askCmdr.tool.proposeSuggestions.count.doing.",
+    "placeholders": {
+      "countText": "How many suggestions, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.memoryWrite.file.doing": "Saving a note to <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant saves something it learned about this person into one file of its own small notes folder. {name} is that note file’s name inside the folder; the <place> tag links it when it can be shown in a pane. Pairs with askCmdr.tool.memoryWrite.file.done.",
+    "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
+  },
+  "askCmdr.tool.memoryWrite.file.done": "Saved a note to <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.done": {
+    "description": "Past-tense label on the same tool line once the note is saved. Calm and ordinary, not an alert. {name} is the note file’s name, linked by the <place> tag. Pairs with askCmdr.tool.memoryWrite.file.doing.",
+    "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
+  },
+  "askCmdr.tool.memoryWrite.file.tried": "Tried to save a note to <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.tried": {
+    "description": "Label on the same tool line when the note was NOT saved (a short reason follows it on the line). It must not claim the note landed. {name} is the note file’s name, linked by the <place> tag when it can be shown.",
+    "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
+  },
+  "askCmdr.tool.memoryWrite.tried": "Tried to save a note",
+  "@askCmdr.tool.memoryWrite.tried": {
+    "description": "Label on a tool line in the Ask Cmdr chat rail when the assistant tried to save a note about the person and it was NOT saved (a short reason follows it on the line), and it isn’t known which file it meant. It must not claim the note landed."
+  },
+  "askCmdr.tool.memoryEdit.file.doing": "Updating <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant changes one part of a note file it keeps about this person. {name} is that note file’s name inside its notes folder, linked by the <place> tag when it can be shown in a pane. Pairs with askCmdr.tool.memoryEdit.file.done.",
+    "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
+  },
+  "askCmdr.tool.memoryEdit.file.done": "Updated <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.done": {
+    "description": "Past-tense label on the same tool line once the note file is updated. {name} is the note file’s name, linked by the <place> tag. Pairs with askCmdr.tool.memoryEdit.file.doing.",
+    "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
+  },
+  "askCmdr.tool.memoryEdit.file.tried": "Tried to update <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.tried": {
+    "description": "Label on the same tool line when the note file was NOT changed (a short reason follows it on the line). It must not claim the change landed. {name} is the note file’s name, linked by the <place> tag when it can be shown.",
+    "placeholders": { "name": "The note file’s path inside the notes folder, for example preferences.md." }
+  },
+  "askCmdr.tool.memoryEdit.tried": "Tried to update its notes",
+  "@askCmdr.tool.memoryEdit.tried": {
+    "description": "Label on a tool line in the Ask Cmdr chat rail when the assistant tried to change its notes about the person and nothing changed (a short reason follows it on the line), and it isn’t known which file it meant. “Its” refers to the assistant. It must not claim the change landed."
+  },
+  "askCmdr.tool.unknown.named.doing": "Asking for “{name}”",
+  "@askCmdr.tool.unknown.named.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail when the assistant asked for a tool Ask Cmdr doesn’t have (a made-up or mistyped name). {name} is that name exactly as the assistant wrote it; keep the quotes, in your language’s quote marks, and never translate the name. Pairs with askCmdr.tool.unknown.named.done.",
+    "placeholders": { "name": "The tool name the assistant asked for, for example delete." }
+  },
+  "askCmdr.tool.unknown.named.done": "Asked for “{name}”",
+  "@askCmdr.tool.unknown.named.done": {
+    "description": "Past-tense label on the same tool line once the request came back (a short note follows saying it isn’t a tool it has). {name} is the name exactly as the assistant wrote it; keep the quotes. Pairs with askCmdr.tool.unknown.named.doing.",
+    "placeholders": { "name": "The tool name the assistant asked for, for example delete." }
+  },
+  "askCmdr.tool.showInPane": "Show {path} in a pane",
+  "@askCmdr.tool.showInPane": {
+    "description": "Accessible name of a link on an Ask Cmdr tool line: activating it opens the folder (or shows the file) the assistant looked at in one of the two file panes. Screen readers announce it; it isn’t shown. {path} is the full path.",
+    "placeholders": { "path": "The full path, for example /Users/sam/Downloads." }
+  },
+  "askCmdr.tool.repeat": "Same as above",
+  "@askCmdr.tool.repeat": {
+    "description": "A small tag at the end of an Ask Cmdr tool line saying the assistant made this exact request earlier in the same answer, so the person can tell a repeat apart from new work. Not a fault. Sentence case, no period."
+  },
+  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} item} other {{countText} items}}",
+  "@askCmdr.tool.outcome.items": {
+    "description": "What came back, shown after a tool line’s label in a quieter color: how many entries a list returned (files in a folder, drives, folders). Lowercase where your language allows, like a short note after the label.",
+    "placeholders": {
+      "countText": "How many entries, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.outcome.itemsShown": "showed {shownText} of {totalText}",
+  "@askCmdr.tool.outcome.itemsShown": {
+    "description": "What came back, after a tool line’s label: the list had more entries than the assistant was given, so it saw only the first {shownText} of {totalText}. The subject is the tool, which showed the entries to the assistant. Lowercase where your language allows.",
+    "placeholders": {
+      "shownText": "How many entries the assistant was given, as a formatted number.",
+      "totalText": "How many entries there are in all, as a formatted number."
+    }
+  },
+  "askCmdr.tool.outcome.itemsShownAtLeast": "showed {shownText} of at least {totalText}",
+  "@askCmdr.tool.outcome.itemsShownAtLeast": {
+    "description": "Like askCmdr.tool.outcome.itemsShown, when the total is only a lower bound: there are {totalText} entries or more. Lowercase where your language allows.",
+    "placeholders": {
+      "shownText": "How many entries the assistant was given, as a formatted number.",
+      "totalText": "The smallest the total can be, as a formatted number."
+    }
+  },
+  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} match} other {{countText} matches}}",
+  "@askCmdr.tool.outcome.matches": {
+    "description": "What came back, after a search tool line’s label: how many files or photos matched. Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many matches, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {{countText} match so far} other {{countText} matches so far}}",
+  "@askCmdr.tool.outcome.matchesSoFar": {
+    "description": "Like askCmdr.tool.outcome.matches, when the search hadn’t covered everything yet (a drive still being indexed), so there may be more. Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many matches so far, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.outcome.nothingFound": "nothing found",
+  "@askCmdr.tool.outcome.nothingFound": {
+    "description": "What came back, after a search tool line’s label: the search covered everything and matched nothing. A calm, complete answer. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.nothingFoundYet": "nothing found yet",
+  "@askCmdr.tool.outcome.nothingFoundYet": {
+    "description": "What came back, after a search tool line’s label: nothing matched in what the search could cover, but some places weren’t covered yet (a drive still being indexed), so this must not read as “there’s none”. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.imageIndexingOff": "photo indexing is off",
+  "@askCmdr.tool.outcome.imageIndexingOff": {
+    "description": "What came back, after a photo tool line’s label: it couldn’t answer because Cmdr’s photo indexing is turned off in settings. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "the photo search model isn’t installed",
+  "@askCmdr.tool.outcome.semanticModelNotInstalled": {
+    "description": "What came back, after a photo search tool line’s label: it couldn’t search by description because the on-device model that understands photos isn’t downloaded yet. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} ready to review} other {{countText} ready to review}}",
+  "@askCmdr.tool.outcome.staged": {
+    "description": "What came back, after a tool line that prepared changes: how many are waiting for the person to review. Nothing has happened to any file yet. Lowercase where your language allows.",
+    "placeholders": {
+      "countText": "How many changes, as a formatted number.",
+      "count": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.tool.outcome.notStaged": "nothing to review",
+  "@askCmdr.tool.outcome.notStaged": {
+    "description": "What came back, after a tool line that tried to prepare changes: none were ready for the person to review (the assistant was told why and usually tries again). Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.toolUnavailable": "not a tool it has",
+  "@askCmdr.tool.outcome.toolUnavailable": {
+    "description": "What came back, after a tool line’s label: the assistant asked for something Ask Cmdr can’t do (it’s read-only, or the name was made up), so nothing ran. “It” is the assistant. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.repeatedCall": "skipped: it tried this already",
+  "@askCmdr.tool.outcome.repeatedCall": {
+    "description": "What came back, after a tool line’s label: the assistant repeated a request that hadn’t worked earlier in the same answer, so Cmdr didn’t run it again. “It” is the assistant. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.problem": "that didn’t go through",
+  "@askCmdr.tool.outcome.problem": {
+    "description": "What came back, after a tool line’s label: the request couldn’t be carried out (a path that isn’t there, a request missing something), and the assistant was told why. Calm, not a fault message. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.outsideMemory": "that’s outside its notes folder",
+  "@askCmdr.tool.outcome.memory.outsideMemory": {
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant named a file outside the small folder its notes live in, and it may only write there. “Its” is the assistant’s. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.notMarkdown": "notes have to be Markdown files",
+  "@askCmdr.tool.outcome.memory.notMarkdown": {
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant named a file that isn’t a Markdown (.md) file. Keep “Markdown” as is. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.noPath": "no note was named",
+  "@askCmdr.tool.outcome.memory.noPath": {
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant didn’t say which note file to write. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.directoryFull": "the notes folder is full",
+  "@askCmdr.tool.outcome.memory.directoryFull": {
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant’s notes folder reached its size limit, and the assistant was told to tidy up first. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.noSuchFile": "that note isn’t there",
+  "@askCmdr.tool.outcome.memory.noSuchFile": {
+    "description": "Why a note wasn’t changed, after the tool line’s label: the assistant tried to edit a note file that doesn’t exist. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.noMatch": "the text to change wasn’t in the note",
+  "@askCmdr.tool.outcome.memory.noMatch": {
+    "description": "Why a note wasn’t changed, after the tool line’s label: the assistant asked to replace some text the note doesn’t contain. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.notUnique": "the text to change is in the note more than once",
+  "@askCmdr.tool.outcome.memory.notUnique": {
+    "description": "Why a note wasn’t changed, after the tool line’s label: the text the assistant asked to replace appears several times, so Cmdr didn’t guess which one. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.unwritable": "the note couldn’t be written",
+  "@askCmdr.tool.outcome.memory.unwritable": {
+    "description": "Why a note wasn’t saved, after the tool line’s label: the disk refused the write (no space, no permission). Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.unavailable": "its notes folder isn’t available",
+  "@askCmdr.tool.outcome.memory.unavailable": {
+    "description": "Why a note wasn’t saved, after the tool line’s label: the assistant’s notes folder couldn’t be reached this session. “Its” is the assistant’s. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.memory.other": "the note wasn’t changed",
+  "@askCmdr.tool.outcome.memory.other": {
+    "description": "Why a note wasn’t saved, after the tool line’s label, when this version of Cmdr doesn’t know the exact reason (a newer version recorded it). Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.noAnswer": "no answer recorded",
+  "@askCmdr.tool.outcome.noAnswer": {
+    "description": "Shown after a tool line’s label when the answer was stopped (or the app quit) before this request came back, so there’s no result to show. Calm, not a fault. Lowercase where your language allows."
+  },
+  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {duration} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
+  "@askCmdr.turnStats.summary": {
+    "description": "A small, quiet line under one answer in the Ask Cmdr chat, saying what that answer cost: how many tool requests the assistant made, how long it took, and how many tokens the AI used. Shown under finished, stopped, and unfinished answers alike. “Tool calls” are the assistant’s requests to look at files; “tokens” are the units a language model processes (keep the AI term, matching the chat’s cost footer). Keep the middle dots as separators.",
+    "placeholders": {
+      "callsText": "How many tool requests, as a formatted number.",
+      "calls": "The same count as a number, to pick the plural form.",
+      "duration": "How long the answer took, already formatted, for example 4.2s or 1m 5s.",
+      "tokensText": "How many tokens, as a formatted number.",
+      "tokens": "The same count as a number, to pick the plural form."
+    }
+  },
+  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
+  "@askCmdr.turnStats.summaryNoDuration": {
+    "description": "Like askCmdr.turnStats.summary, for an answer recorded before Cmdr measured how long answers take, so the time is left out. Keep the middle dot as the separator.",
+    "placeholders": {
+      "callsText": "How many tool requests, as a formatted number.",
+      "calls": "The same count as a number, to pick the plural form.",
+      "tokensText": "How many tokens, as a formatted number.",
+      "tokens": "The same count as a number, to pick the plural form."
+    }
   },
   "askCmdr.error.noKey": "Add your API key in settings to start chatting.",
   "@askCmdr.error.noKey": {

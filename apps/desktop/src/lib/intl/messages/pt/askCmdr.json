@@ -200,10 +200,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Esse pedido não estava disponível",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Adicione sua chave de API nos ajustes para começar a conversar.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

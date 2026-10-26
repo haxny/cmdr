@@ -200,10 +200,6 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Yêu cầu đó không khả dụng",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
-  },
   "askCmdr.error.noKey": "Thêm khóa API của bạn trong cài đặt để bắt đầu trò chuyện.",
   "@askCmdr.error.noKey": {
     "sourceHash": "0a78f37"

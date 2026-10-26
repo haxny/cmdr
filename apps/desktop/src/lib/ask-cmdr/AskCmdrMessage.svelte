@@ -15,6 +15,8 @@
     import { renderAssistantMarkdown } from './ask-cmdr-markdown'
     import { displaySegments } from './ask-cmdr-rounds'
     import AskCmdrToolLine from './AskCmdrToolLine.svelte'
+    import AskCmdrTurnStats from './AskCmdrTurnStats.svelte'
+    import type { RevealPath } from './ask-cmdr-tool-line'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import AskCmdrWakeDigest from './AskCmdrWakeDigest.svelte'
     import AskCmdrProposalDecisions from './AskCmdrProposalDecisions.svelte'
@@ -23,8 +25,10 @@
 
     interface Props {
         message: RailMessage
+        /** Shows a tool line's path in a pane. */
+        revealPath: RevealPath
     }
-    const { message }: Props = $props()
+    const { message, revealPath }: Props = $props()
 
     const segments = $derived(message.kind === 'assistant' ? displaySegments(message.rounds) : [])
 
@@ -105,7 +109,7 @@
             {#if segment.kind === 'tools'}
                 <div class="tools">
                     {#each segment.lines as line (line.key)}
-                        <AskCmdrToolLine tool={line.call} />
+                        <AskCmdrToolLine tool={line.call} {revealPath} />
                     {/each}
                 </div>
             {:else}
@@ -124,6 +128,7 @@
                 <span>{message.stalled ? tString('askCmdr.stalled') : tString('askCmdr.thinking')}</span>
             </div>
         {/if}
+        <AskCmdrTurnStats stats={message.stats} />
     </div>
 {:else if message.kind === 'error'}
     <div class="msg error" role="status">

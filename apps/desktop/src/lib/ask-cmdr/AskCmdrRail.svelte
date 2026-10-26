@@ -33,13 +33,16 @@
     import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
     import { openSessions, sessionsState } from './ask-cmdr-sessions.svelte'
     import type { SelectionAttachmentsRead } from '#lib/file-explorer/pane/selection-attachments-read.js'
+    import type { RevealPath } from './ask-cmdr-tool-line'
 
     interface Props {
         /** The composer's "Ask about selection" read, handed down from the explorer. */
         readSelection: () => Promise<SelectionAttachmentsRead>
+        /** Shows a tool line's path in a pane, handed down from the explorer. */
+        revealPath: RevealPath
     }
 
-    const { readSelection }: Props = $props()
+    const { readSelection, revealPath }: Props = $props()
 
     const badgeStatus = getBadgeStatus('ask-cmdr')
 
@@ -162,7 +165,7 @@
                 </div>
             {:else}
                 {#each askCmdrState.messages as message, index (index)}
-                    <AskCmdrMessage {message} />
+                    <AskCmdrMessage {message} {revealPath} />
                 {/each}
                 {#if isOverSoftCap()}
                     <div class="soft-cap">

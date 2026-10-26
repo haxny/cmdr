@@ -88,7 +88,11 @@
     import { initSystemStrings } from '#lib/system-strings.svelte.js'
     import { getShowFunctionKeyBar, getShowHiddenFiles } from '#lib/settings/reactive-settings.svelte.js'
     import { addToast } from '#lib/ui/toast/index.js'
-    import { revealSearchResultInPane } from '#lib/file-explorer/navigation/navigate-and-select.js'
+    import {
+        revealPathInBestPane,
+        revealSearchResultInPane,
+    } from '#lib/file-explorer/navigation/navigate-and-select.js'
+    import type { PathTarget } from '#lib/ask-cmdr/ask-cmdr-tool-line.js'
     import {
         handleCommandExecute as dispatchCommand,
         type CommandDispatchContext,
@@ -161,6 +165,10 @@
     /** Ask Cmdr's "Ask about selection" reads the focused pane; with no explorer, nothing attaches. */
     function readSelectionAttachments(): Promise<SelectionAttachmentsRead> {
         return explorerRef?.readSelectionAttachments() ?? Promise.resolve({ kind: 'refs', refs: [], leftOut: 0 })
+    }
+    /** An Ask Cmdr tool line's path link shows its folder or file in the best pane. */
+    async function revealAskCmdrPath(target: PathTarget): Promise<void> {
+        if (explorerRef) await revealPathInBestPane(explorerRef, target)
     }
     /**
      * Whether the title bar says "Personal use only". Mirrors Rust's
@@ -943,7 +951,7 @@
                     closedMessage={tString('askCmdr.railBoundary.closedToast')}
                 >
                     {#if askCmdrState.open}
-                        <AskCmdrRail readSelection={readSelectionAttachments} />
+                        <AskCmdrRail readSelection={readSelectionAttachments} revealPath={revealAskCmdrPath} />
                     {/if}
                 </DialogBoundary>
             </div>

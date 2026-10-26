@@ -154,7 +154,7 @@ watchdog's timeout is a Stop too (`stopStreaming`, then a `timeout` item).
 
 **Terminal events carry the turn's stats.** `done`, `failed`, and `stopped` carry `turn: TurnStats | null` (tool calls,
 wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. Each puts it on the
-bubble's `stats`, a stopped turn's included; the rail doesn't render it yet.
+bubble's `stats`, a stopped turn's included, and the bubble renders it as its stats line (§ The tool line).
 
 **History folds into the same bubbles** (`buildRailMessages`, `ask-cmdr-history.ts`), loaded through
 `getAskCmdrConversation` on rail open. Rows group by the backend's `turnId` (never a frontend guess at turn edges): each
@@ -168,6 +168,40 @@ an event row among them is hoisted above it (the turn is still going, so it is m
 yet, every bubble folds closed and the first live event opens a new one. `ask-cmdr-turn-parity.test.ts` pins that the
 live reducer and the fold build EQUAL items for one scripted turn (interleaved deltas, two rounds reusing `fake-call-0`,
 a mid-turn and a post-turn decision).
+
+## The tool line
+
+`AskCmdrToolLine.svelte` is one calm row: a glyph, the label naming what the call looked at, a "Same as above" tag, and
+a quieter note saying what came back. Every word is ours: the backend sends typed facts (`ToolSubject`, `ToolOutcome`,
+`repeatOf`, `TurnStats`) and `ask-cmdr-labels.ts` picks the catalog message per variant.
+
+- **The label** (`toolLineLabel`): keys stay per TOOL (doing while running, done after), and a subject that names
+  something swaps in a key with params (`SUBJECT_WORDS`, a `Record` over every subject kind, so a new kind is a compile
+  error). `null` or `unparsed` subjects keep the tool's param-less words, an unknown name keeps "Working" / "Used a
+  tool", and a named `unknownTool` says what it asked for. Search has four shapes: pattern plus folders, pattern only,
+  folders only, neither. A count rides as `{countText}` plus `{count}`.
+- **Decision: a refused note says "Tried to…".** The memory tools' done words ("Saved a note") claim the very thing a
+  refusal denies, so those two tools carry a `tried` key the label uses when the outcome isn't ok. Every other tool's
+  done words describe the activity, and its outcome note says it was turned down.
+- **Paths are links.** A message names its paths with tags (`<place>` one, `<places>` a list), rendered through
+  `<Trans>` snippets as `LinkButton`s; `<places>` joins its links with `conjunctionListParts` (`#lib/intl/list-format`),
+  the language's own "and". A link shows the path's last segment (`placeName`), its full path in a tooltip and in its
+  accessible name ("Show {path} in a pane"). A note path is linked only when the backend resolved it inside the notes
+  folder (`absolute`); otherwise it's plain text. Click → `revealPath({ path, kind })`, a prop handed down from
+  `routes/(main)/+page.svelte` (`revealPathInBestPane`, over the `navigate-and-select` primitives), then
+  `returnFocusToPane()`. Only subject paths reach it, ❌ never a raw search scope string.
+- **What came back** (`toolOutcomeText`): a `Record` over every outcome kind. Counts, "showed N of M" when the model got
+  part of a list, "so far" / "yet" for a lower bound (❌ never "nothing found" while ground is uncovered), one note per
+  refusal reason and per `MemoryRefusalKind`, and nothing for `answered` / `saved` (the label and glyph say it). A
+  settled call with no outcome says no answer was recorded.
+- **The repeat tag** (`showsRepeatTag`) marks a call with `repeatOf`, and the link's `aria-describedby` points at it.
+  The breaker's own `refused: repeatedCall` already says so in its note, so it gets no tag.
+- **Not a live region.** Lines carry no `role="status"` / `aria-busy`: a 12-call turn would chatter. The last round's
+  prose is the bubble's one live region.
+- **The stats line** (`AskCmdrTurnStats.svelte`, `turnStatsText`) sits under any bubble whose `stats` ran a tool,
+  answered, failed, or stopped: calls, wall time (`formatMilliseconds`, left out for an old turn with `wallMs: null`),
+  and tokens. Tokens are the cost meter's (`totalTokens`: prompt plus completion per row), so the turns add up to the
+  thread's `AskCmdrCostFooter`.
 
 ## What a wake's thread opens with
 

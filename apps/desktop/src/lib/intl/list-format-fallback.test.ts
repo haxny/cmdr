@@ -4,6 +4,7 @@ import { formatNarrowDuration } from './duration-format'
 import { _setLocaleForTests } from './locale'
 import {
   _clearListFormatCacheForTests,
+  conjunctionListParts,
   formatConjunctionList,
   formatDisjunctionList,
   formatUnitList,
@@ -42,6 +43,15 @@ describe('without Intl.ListFormat (Catalina WebKit)', () => {
     expect(formatConjunctionList(['Preview', 'Warp'])).toBe('Preview、Warp')
     _setLocaleForTests('ja')
     expect(formatUnitList(['写真', 'コピー中'])).toBe('写真、コピー中')
+  })
+
+  it('splits a list into its items and enumeration commas', () => {
+    _setLocaleForTests('en-US')
+    expect(conjunctionListParts(['Documents', 'Desktop'])).toEqual([
+      { kind: 'item', index: 0 },
+      { kind: 'literal', text: ', ' },
+      { kind: 'item', index: 1 },
+    ])
   })
 
   it('still lists standalone facts for an accessible name', () => {

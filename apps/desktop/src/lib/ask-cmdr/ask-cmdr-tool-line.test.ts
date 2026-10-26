@@ -3,7 +3,8 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { outcomeOk, subjectPath } from './ask-cmdr-tool-line'
+import type { RailToolCall } from './ask-cmdr-messages'
+import { outcomeOk, placeName, showsRepeatTag } from './ask-cmdr-tool-line'
 
 describe('outcomeOk', () => {
   /** The backend's `ToolOutcome::ok`: a refusal and a plan that staged nothing aren't ok. */
@@ -16,11 +17,34 @@ describe('outcomeOk', () => {
   })
 })
 
-describe('subjectPath', () => {
-  it('names a folder or the first file, and nothing for other subjects', () => {
-    expect(subjectPath({ kind: 'folder', path: '/a' })).toBe('/a')
-    expect(subjectPath({ kind: 'files', firstPath: '/a/b.txt', count: 3 })).toBe('/a/b.txt')
-    expect(subjectPath({ kind: 'drives' })).toBeNull()
-    expect(subjectPath({ kind: 'search', query: 'x', scopePaths: ['/a'] })).toBeNull()
+describe('placeName', () => {
+  it('shows a path’s last segment, and the root as itself', () => {
+    expect(placeName('/Users/me/Downloads')).toBe('Downloads')
+    expect(placeName('/Users/me/Downloads/')).toBe('Downloads')
+    expect(placeName('/a/notes.txt')).toBe('notes.txt')
+    expect(placeName('/')).toBe('/')
+    expect(placeName('prefs.md')).toBe('prefs.md')
+  })
+})
+
+describe('showsRepeatTag', () => {
+  const call = (overrides: Partial<RailToolCall>): RailToolCall => ({
+    callId: 'c1',
+    tool: 'list_volumes',
+    running: false,
+    subject: { kind: 'drives' },
+    outcome: { kind: 'answered' },
+    repeatOf: null,
+    ...overrides,
+  })
+
+  it('tags a repeat, but not the breaker’s refusal, which says so itself', () => {
+    const repeatOf = { messageId: 1, callId: 'fake-call-0' }
+    expect(showsRepeatTag(call({}))).toBe(false)
+    expect(showsRepeatTag(call({ repeatOf }))).toBe(true)
+    expect(showsRepeatTag(call({ repeatOf, running: true, outcome: null }))).toBe(true)
+    expect(showsRepeatTag(call({ repeatOf, outcome: { kind: 'refused', reason: { kind: 'repeatedCall' } } }))).toBe(
+      false,
+    )
   })
 })
