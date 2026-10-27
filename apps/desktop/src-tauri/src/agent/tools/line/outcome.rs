@@ -17,7 +17,8 @@ use crate::location::miss::MissToken;
 /// 3. `repeatedCall`: the repeat breaker KEEPS the original `problem` beside it, so it has to
 ///    win over `problem`.
 /// 4. `readyForReview` on a propose tool: `ensure_review_verdict` stamps `false` onto every
-///    propose problem, so a propose problem is `NotStaged`.
+///    propose problem, so a propose problem is `NotStaged`, or `LocationMiss` when it's a
+///    place that can't run now (it carries the read tools' `miss`).
 /// 5. `problem`, then 6. `refused` (memory), then 7. `miss` (the location contract's typed
 ///    miss, any tool that takes a place), then the per-tool success shapes.
 ///
@@ -38,6 +39,9 @@ pub fn outcome_of(tool: &ToolId, result: &AgentToolResult) -> ToolOutcome {
     {
         return if ready {
             staged(tool, content)
+        } else if let Some(miss) = miss_of(content) {
+            // A place that can't run now refuses in the read tools' miss shape.
+            ToolOutcome::LocationMiss { miss }
         } else {
             ToolOutcome::NotStaged
         };
@@ -50,10 +54,15 @@ pub fn outcome_of(tool: &ToolId, result: &AgentToolResult) -> ToolOutcome {
             refusal: MemoryRefusalKind::from_token(token),
         });
     }
-    if let Some(miss) = content.get("miss").and_then(|token| MissToken::deserialize(token).ok()) {
+    if let Some(miss) = miss_of(content) {
         return ToolOutcome::LocationMiss { miss };
     }
     answered(tool, content).unwrap_or(ToolOutcome::Answered)
+}
+
+/// The location contract's typed miss, when the result carries a token this build knows.
+fn miss_of(content: &Value) -> Option<MissToken> {
+    content.get("miss").and_then(|token| MissToken::deserialize(token).ok())
 }
 
 fn refused(reason: RefusalReason) -> ToolOutcome {

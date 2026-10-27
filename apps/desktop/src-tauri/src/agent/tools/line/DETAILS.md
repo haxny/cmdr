@@ -50,7 +50,9 @@ Taking it as a value keeps the function pure; a caller with no root passes `None
 2. `available: false` → `Refused(ToolUnavailable)`, the view gate (a hallucinated tool).
 3. `repeatedCall: true` → `Refused(RepeatedCall)`. The breaker KEEPS the original `problem`, so this must win.
 4. A propose tool with `readyForReview` → `Staged { count }` or `NotStaged`. `ensure_review_verdict` stamps `false` onto
-   every propose problem, so a propose problem is `NotStaged`, its sentence still in the preview.
+   every propose problem, so a propose problem is `NotStaged`, its sentence still in the preview. A `propose_suggestions`
+   location refusal carries the read tools' `miss` instead of a `problem` (`suggestions/DETAILS.md` § Where a proposal
+   may point), so it reads as `LocationMiss { miss }`: still not staged, and the line says why.
 5. `problem` → `Refused(Problem)`: the schema gate and a handler problem look the same, and we won't add a key.
 6. `refused: <token>` → `Refused(Memory { refusal })` via `MemoryRefusalKind::from_token` (unknown → `Other`).
 7. `miss: <token>` → `LocationMiss { miss }`, the location contract's typed miss (`location/miss.rs::MissToken`), on

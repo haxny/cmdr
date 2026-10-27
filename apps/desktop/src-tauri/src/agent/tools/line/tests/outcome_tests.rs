@@ -267,6 +267,25 @@ fn a_propose_problem_is_not_staged_with_its_problem_kept_for_the_preview() {
     assert_eq!(outcome(ToolId::ProposeRenamePlan, evidence), ToolOutcome::NotStaged);
 }
 
+/// A proposal naming a place that can't run now refuses in the read tools' miss shape, so the
+/// line says why ("that drive isn't connected") the way a read's does, still never as staged.
+#[test]
+fn a_propose_location_refusal_reads_as_its_miss() {
+    let mut refused = fixtures::location_miss();
+    refused["readyForReview"] = json!(false);
+    refused["refusal"] = json!("location");
+    refused["group"] = json!(0);
+    refused["field"] = json!("destination");
+    let read = outcome(ToolId::ProposeSuggestions, refused);
+    assert_eq!(
+        read,
+        ToolOutcome::LocationMiss {
+            miss: MissToken::VolumeNotConnected
+        }
+    );
+    assert!(!read.ok());
+}
+
 #[test]
 fn a_memory_refusal_carries_its_kind() {
     for kind in MemoryRefusalKind::ALL {
