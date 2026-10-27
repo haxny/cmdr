@@ -173,6 +173,32 @@ describe('AskCmdrCostFooter', () => {
     target.remove()
   })
 
+  it('never lets an older read of the same thread land last and show a lower total', async () => {
+    let releaseFirst: ((cost: ConversationCost) => void) | undefined
+    costMock.mockReturnValueOnce(
+      new Promise<ConversationCost>((resolve) => {
+        releaseFirst = resolve
+      }),
+    )
+    costMock.mockResolvedValue({ ...base, costMicros: 2_000_000, providers: ['openAi'] })
+    triggerState.streaming = true
+    const target = mountFooter()
+    flushSync()
+
+    // A second metered call re-reads the same thread; its (newer) answer lands first.
+    triggerState.costRevision += 1
+    flushSync()
+    await Promise.resolve()
+    flushSync()
+    releaseFirst?.({ ...base, costMicros: 1_000_000, providers: ['openAi'] })
+    await Promise.resolve()
+    flushSync()
+
+    expect(target.textContent).toContain('$2.00')
+    expect(target.textContent).not.toContain('$1.00')
+    target.remove()
+  })
+
   it('re-reads the meter after each metered call while the turn is still running', async () => {
     triggerState.streaming = true
     const target = await renderWith({ ...base, costMicros: 1_000_000, providers: ['openAi'] })

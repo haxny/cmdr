@@ -34,6 +34,10 @@
         fetched !== null && fetched.conversationId === askCmdrState.conversationId ? fetched.cost : null,
     )
 
+    // Each read is numbered, so only the newest one lands: an older read of the same thread
+    // answering last would show a lower total, and one for a thread already left the wrong one.
+    let readSeq = 0
+
     // Refetch when the active thread changes, after each metered call (`costRevision`, so the
     // total moves mid-turn), and when a turn ends (the backstop for a turn whose events this
     // window missed). A brand-new, unsaved thread (id null) has nothing metered.
@@ -41,11 +45,11 @@
         const id = askCmdrState.conversationId
         dependOn(askCmdrState.costRevision)
         dependOn(askCmdrState.streaming)
+        const seq = ++readSeq
         if (id === null) return
         void askCmdrConversationCost(id).then(
             (c) => {
-                // A slow read for a thread the user already left must not replace the newer one.
-                if (askCmdrState.conversationId === id) fetched = { conversationId: id, cost: c }
+                if (seq === readSeq) fetched = { conversationId: id, cost: c }
             },
             (e: unknown) => {
                 log.warn('reading chat cost failed: {error}', { error: e })
