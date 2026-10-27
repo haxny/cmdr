@@ -400,7 +400,8 @@ fn host_is_loopback(parsed: &reqwest::Url) -> bool {
 /// Model ids from an OpenAI-shaped `{ "data": [{ "id" }] }` answer, in the provider's order.
 /// Together answers a bare `[{ "id" }]` array instead (per its API reference; not verified
 /// live, no key), so that shape counts too. Empty on a shape we don't know (connected, but
-/// nothing to suggest).
+/// nothing to suggest). A model the provider itself marks as unable to chat is left out
+/// ([`ModelEntry::cannot_chat`]); picked, it would fail every request.
 fn openai_model_ids(body: &str) -> Vec<String> {
     #[derive(serde::Deserialize)]
     #[serde(untagged)]
@@ -408,16 +409,52 @@ fn openai_model_ids(body: &str) -> Vec<String> {
         Wrapped { data: Vec<ModelEntry> },
         Bare(Vec<ModelEntry>),
     }
-    #[derive(serde::Deserialize)]
-    struct ModelEntry {
-        id: String,
-    }
 
     serde_json::from_str::<ModelsResponse>(body)
         .map(|r| match r {
-            ModelsResponse::Wrapped { data } | ModelsResponse::Bare(data) => data.into_iter().map(|m| m.id).collect(),
+            ModelsResponse::Wrapped { data } | ModelsResponse::Bare(data) => {
+                data.into_iter().filter(|m| !m.cannot_chat()).map(|m| m.id).collect()
+            }
         })
         .unwrap_or_default()
+}
+
+/// One entry of an OpenAI-shaped model list, plus the provider markers that say it can't chat
+/// (verified on each provider's live `/models`, 2026-10-27).
+#[derive(serde::Deserialize)]
+struct ModelEntry {
+    id: String,
+    /// Mistral: `{ "completion_chat": false }` on embeddings, OCR, and moderation models.
+    #[serde(default)]
+    capabilities: Option<ModelEntryCapabilities>,
+    /// Groq: `["speech"]` or `["transcription"]` on its TTS and Whisper models.
+    #[serde(default)]
+    output_modalities: Option<Vec<String>>,
+    /// Fireworks: `"EMBEDDING_MODEL"` on embedders and rerankers, which still claim `supports_chat`.
+    #[serde(default)]
+    kind: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct ModelEntryCapabilities {
+    #[serde(default)]
+    completion_chat: Option<bool>,
+}
+
+impl ModelEntry {
+    /// True only on a positive marker; an entry without one (OpenAI marks none) stays offered.
+    fn cannot_chat(&self) -> bool {
+        let no_chat_capability = self
+            .capabilities
+            .as_ref()
+            .is_some_and(|c| c.completion_chat == Some(false));
+        let no_text_output = self
+            .output_modalities
+            .as_ref()
+            .is_some_and(|out| !out.iter().any(|m| m == "text"));
+        let embedder = self.kind.as_deref() == Some("EMBEDDING_MODEL");
+        no_chat_capability || no_text_output || embedder
+    }
 }
 
 /// The `gemini-*` chat models in a native Gemini list, as bare ids. A model must offer

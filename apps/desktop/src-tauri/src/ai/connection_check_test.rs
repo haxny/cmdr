@@ -181,6 +181,34 @@ async fn an_openai_compatible_probe_sends_a_bearer_key_and_sorts_the_list() {
     assert_eq!(header(&requests[0], "x-api-key"), None);
 }
 
+/// A model the provider itself marks as unable to chat never reaches the picker, where choosing
+/// it would fail every request: Mistral's `capabilities.completion_chat: false` (embeddings, OCR,
+/// moderation), Groq's speech and transcription models (`output_modalities` without `text`), and
+/// Fireworks' `kind: EMBEDDING_MODEL` (rerankers too, which still claim `supports_chat`). Shapes
+/// from each live `/models` (2026-10-27). An entry with no such marker stays: OpenAI marks none.
+#[test]
+fn models_the_provider_marks_as_unable_to_chat_are_not_offered() {
+    let body = r#"{"data":[
+        {"id":"magistral-medium-latest","capabilities":{"completion_chat":true,"reasoning":true}},
+        {"id":"mistral-embed","capabilities":{"completion_chat":false}},
+        {"id":"openai/gpt-oss-120b","input_modalities":["text"],"output_modalities":["text"]},
+        {"id":"whisper-large-v3","input_modalities":["audio"],"output_modalities":["transcription"]},
+        {"id":"canopylabs/orpheus-v1-english","input_modalities":["text"],"output_modalities":["speech"]},
+        {"id":"accounts/fireworks/models/deepseek-v4p1-flash","kind":"HF_BASE_MODEL","supports_chat":true},
+        {"id":"accounts/fireworks/models/qwen3-reranker-8b","kind":"EMBEDDING_MODEL","supports_chat":true},
+        {"id":"gpt-4.1-mini","owned_by":"system"}
+    ]}"#;
+    assert_eq!(
+        openai_model_ids(body),
+        [
+            "magistral-medium-latest",
+            "openai/gpt-oss-120b",
+            "accounts/fireworks/models/deepseek-v4p1-flash",
+            "gpt-4.1-mini",
+        ]
+    );
+}
+
 /// Gemini's native list: the key in `x-goog-api-key`, only `generateContent` models, only
 /// `gemini-*` ids (the ones that route natively), as bare ids.
 #[tokio::test]
