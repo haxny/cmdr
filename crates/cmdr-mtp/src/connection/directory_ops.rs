@@ -806,6 +806,21 @@ impl MtpConnectionManager {
         }
     }
 
+    /// Forgets the listings of `old_path` and every folder under it, for a
+    /// folder that moved or was renamed away from there: they describe a place
+    /// that no longer holds those items, and a folder later arriving at that
+    /// path (the same one, moved back by an undo) would otherwise be answered
+    /// from them, with handles the device may no longer know.
+    pub(super) async fn invalidate_listing_subtree(&self, device_id: &str, storage_id: u32, old_path: &Path) {
+        let devices = self.devices.lock().await;
+        if let Some(entry) = devices.get(device_id)
+            && let Ok(mut cache_map) = entry.listing_cache.write()
+            && let Some(storage_cache) = cache_map.get_mut(&storage_id)
+        {
+            storage_cache.listings.retain(|dir, _| !dir.starts_with(old_path));
+        }
+    }
+
     /// Handles a device disconnection (called when we detect the device was unplugged).
     ///
     /// Drops the device entry, detaches its volumes, and reports the disconnect,

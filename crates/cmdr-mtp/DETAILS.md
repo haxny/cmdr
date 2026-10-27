@@ -127,6 +127,20 @@ user ends up with a duplicate, which Cmdr then lists as two rows (`src/connectio
 ❌ Don't reach for a lock or a retry loop here. Cmdr isn't the only writer — the phone's own apps and MTP's other
 clients mutate the same storage — so a lock this side would buy nothing and read like a guarantee.
 
+### A move that also renames
+
+A cross-folder `rename` with a new name is two calls, since `MoveObject` keeps the name. Moved first under its OLD name
+into a folder already holding that name, the item REPLACES the file there: Android's `MoveObject` is a filesystem
+rename, and so is the virtual device's. So when the destination holds the old name, `src/volume/move_rename.rs` renames
+the item where it is first, under an interim `<old>.cmdr-moving-<stamp>` name when the source folder holds the new one,
+and then moves it. A move refused after that first rename puts the old name back. The interim name is deliberately not
+one of `cmdr_fs::staging`'s scratch names: a sweep deletes those, and this is the user's file. Every other cross-folder
+rename keeps the plain move-then-rename. Cells: `src/volume/move_rename_test.rs`.
+
+A folder that moves or is renamed also forgets the listings cached under its old path (`invalidate_listing_subtree`): a
+folder arriving back at that path (an undo) was otherwise answered from them, and the virtual device's handles don't
+survive the move (the folder cell in the same file).
+
 ## Dates on copies
 
 Both halves keep the date. (The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the
@@ -199,6 +213,8 @@ test lives on" states in full. Both sides drive the same virtual device through 
 - `volume/read_range_test.rs` — both read paths, sharing one fixture: the DIRECT `read_range` (a ranged read costs one
   device operation, not three) and the WINDOWED `open_read_stream` the copy engine and native drag-out go through.
 - `volume/streams_test.rs` — the `VolumeReadStream` → chunk-stream adapter, with no device behind it.
+- `src/volume/move_rename_test.rs` — a cross-folder rename with a new name beside a file holding the old one (§ "A move
+  that also renames").
 - `volume/twins_test.rs` and `connection/same_name_test.rs` — two same-named items in one folder, through the `Volume`
   surface and the session layer. `testing::make_twins` makes them (`src/connection/DETAILS.md` § "Same-named siblings").
 - `volume/host_seam_test.rs` — the PACE of what this backend tells the listing seam, which no type can hold: one call

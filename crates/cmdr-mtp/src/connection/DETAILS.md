@@ -206,8 +206,9 @@ the parent the same way, recursively up to the constant root) and looks again.
   v0.44.0): repeated copies, moves, and deletes of files the pane still showed failed as a generic "Path not in cache"
   `IoError`.
 - **The heal honors the 5 s listing cache.** Both caches are written together in `finalize_listing`, and every mutation
-  that drops a path also invalidates its parent's listing, so a fresh listing without the name is a real answer. A copy
-  of many already-gone siblings pays one listing, not one per file.
+  that drops a path also invalidates its parent's listing (and a folder's move or rename every listing under its old
+  path, `invalidate_listing_subtree`), so a fresh listing without the name is a real answer. A copy of many already-gone
+  siblings pays one listing, not one per file.
 - **The heal listing takes a foreground guard** (it goes through `list_directory`), even under a READ. That's safe: the
   guard lives for the one listing, before any window is read, and no yield point runs inside it.
 - ❌ Never call it holding the device lock: the heal re-lists through that non-reentrant `tokio::sync::Mutex`.

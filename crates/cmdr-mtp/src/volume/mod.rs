@@ -10,6 +10,7 @@
 
 mod cancel;
 mod mapping;
+mod move_rename;
 mod scan;
 mod streams;
 /// The two instruments a test outside this backend reads it with.
@@ -29,6 +30,9 @@ mod disconnected_test;
 /// What this backend tells the host's seams, and how often.
 #[cfg(all(test, feature = "virtual-device"))]
 mod host_seam_test;
+/// A rename that also changes folder, beside a file holding the old name.
+#[cfg(all(test, feature = "virtual-device"))]
+mod move_rename_test;
 /// `MtpVolume`'s identity and the path conversions every operation starts with.
 #[cfg(test)]
 mod path_test;

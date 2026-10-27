@@ -472,32 +472,41 @@ impl Volume for MtpVolume {
                     .await;
                 }
             } else {
-                // Different directory: use MTP MoveObject
+                // Different directory: MTP's MoveObject, which keeps the name, so
+                // a new name takes a second call. ❗ The order matters: moved
+                // under its OLD name into a folder already holding that name, the
+                // item REPLACES the file there (Android's MoveObject is a
+                // filesystem rename). So when the destination holds the old name,
+                // the item is renamed where it is first, and moves under a name
+                // the destination doesn't hold. `DETAILS.md` § "A move that also
+                // renames".
                 let to_parent_str = to_parent.to_string_lossy().to_string();
-                self.manager
-                    .move_object(&self.device_id, self.storage_id, &from_mtp, &to_parent_str)
-                    .await
-                    .map(|_| ())
-                    .map_err(map_mtp_error)?;
-
-                // If the name also changed, rename after moving
-                if !same_name {
-                    let moved_path = format!(
-                        "{}{}{}",
-                        to_parent_str,
-                        if to_parent_str.is_empty() || to_parent_str.ends_with('/') {
-                            ""
-                        } else {
-                            "/"
-                        },
-                        from_name
-                    );
-                    let new_name = to_name.to_string();
+                let old_name_taken_there = !same_name
+                    && match to.parent() {
+                        Some(folder) => self.exists(&folder.join(from_name)).await,
+                        None => false,
+                    };
+                if old_name_taken_there {
+                    self.rename_then_move(from, &from_mtp, from_name, &to_parent_str, to_name)
+                        .await?;
+                } else {
                     self.manager
-                        .rename_object(&self.device_id, self.storage_id, &moved_path, &new_name)
+                        .move_object(&self.device_id, self.storage_id, &from_mtp, &to_parent_str)
                         .await
                         .map(|_| ())
                         .map_err(map_mtp_error)?;
+                    if !same_name {
+                        self.manager
+                            .rename_object(
+                                &self.device_id,
+                                self.storage_id,
+                                &super::move_rename::child_of(&to_parent_str, from_name),
+                                to_name,
+                            )
+                            .await
+                            .map(|_| ())
+                            .map_err(map_mtp_error)?;
+                    }
                 }
 
                 // Cross-directory move: remove from source dir, add in dest dir

@@ -483,6 +483,9 @@ impl MtpConnectionManager {
 
         // Invalidate the parent directory's listing cache (rename affects the parent listing)
         self.invalidate_listing_cache(device_id, storage_id, parent).await;
+        if is_dir {
+            self.invalidate_listing_subtree(device_id, storage_id, &old_path).await;
+        }
 
         debug!(
             "MTP rename complete: {} -> {}",
@@ -594,6 +597,9 @@ impl MtpConnectionManager {
                 // Invalidate listing cache for both old and new parent directories
                 let old_parent = twins::folder_of(&old_path).unwrap_or(Path::new("/"));
                 self.invalidate_listing_cache(device_id, storage_id, old_parent).await;
+                if is_dir {
+                    self.invalidate_listing_subtree(device_id, storage_id, &old_path).await;
+                }
                 let new_parent = normalize_mtp_path(new_parent_path);
                 self.invalidate_listing_cache(device_id, storage_id, &new_parent).await;
 
