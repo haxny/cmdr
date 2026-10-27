@@ -119,13 +119,13 @@ runs below, 2026-10-27):
 - **Anthropic** (native Messages API): every `thinking` block (its `thinking` text plus `signature`) and every
   `redacted_thinking` block (its `data`) of the assistant turn, in order, ahead of the text and `tool_use`. Claude 5.x
   thinks adaptively by default with the text omitted, so a block comes back as an empty `thinking` plus a signature,
-  and goes back the same way. genai 0.7 captures both kinds from the stream (`ThoughtSignature` + `ReasoningContent`
-  pairs, `redacted_thinking` as a `Custom` part) and rebuilds them on replay; 0.6.5 dropped them (Gap A). Anthropic
+  and goes back the same way. genai captures both kinds from the stream (`ThoughtSignature` + `ReasoningContent`
+  pairs, `redacted_thinking` as a `Custom` part) and rebuilds them on replay. Anthropic
   accepts a turn with its thinking dropped, so a model switch losing it is safe.
 - **OpenAI Responses** (`gpt-5*`, `*-codex`, `*-pro`): each `reasoning` item's `encrypted_content`, sent back as a
   top-level `{type: "reasoning", encrypted_content}` input item ahead of the `function_call`. Requests run `store:
-  false`, so the encrypted copy is the only one (`include: ["reasoning.encrypted_content"]`). genai 0.7 captures it as
-  a `ThoughtSignature`; 0.6.5 never re-serialized it (Gap B).
+  false`, so the encrypted copy is the only one (`include: ["reasoning.encrypted_content"]`). genai captures it as
+  a `ThoughtSignature` and sends it back as that input item.
 - **OpenAI chat-completions** (`o3`, `gpt-4.1`, Azure OpenAI): stateless. OpenAI keeps the reasoning server-side and
   returns none, so nothing round-trips and nothing has to.
 - **Gemini** (native API): the `thoughtSignature` on each `functionCall` part, back on that same part (Gemini 3
@@ -186,9 +186,16 @@ adapter maps onto its provider's knob:
 
 Caveats for the picker:
 
-- An explicit level sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is a 400 there. Only
-  `ProviderDefault` is safe everywhere, so the picker must know the model reasons (the model-capabilities fetch in
-  `ai/`).
+- An explicit level sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is a 400 there, so the
+  picker must know the model reasons (`chat::effort`, from the model-capabilities fetch in `ai/`).
+- `ProviderDefault` is NOT enough on the OpenAI Responses API: it means `medium` there, and the reasoning capture adds
+  `reasoning.summary` plus the encrypted include, and a model that doesn't reason 400s on each ("Unsupported
+  parameter", verified on `gpt-4.1-mini` and `gpt-4o` via `/v1/responses`, `curl`, 2026-10-27). So
+  `CallSettings.model_reasons = Some(false)` sends none of it, and its `capture_reasoning_content: false` keeps
+  `adjust_for_model` from filling in `low`. No served OpenAI model hits this today (genai routes only `gpt-5*`,
+  `*-codex`, and `*-pro` to Responses, and the chat-tuned `gpt-5*-chat-latest` ids 404, 2026-10-27); it guards the
+  next one. Elsewhere `ProviderDefault` sends nothing and ran green live on Claude, `gpt-4o-mini`, Gemini, and
+  Fireworks (2026-10-27).
 - Reasoning spends the same `max_tokens` as the visible reply and the tool calls, so the picker raises the ceiling
   with the level (`chat::effort::reply_room`). A think that still outruns it ends the turn as `UnfinishedReply`. genai's legacy
   Anthropic `budget_tokens` (24,000 at `High`, pre-adaptive Claude only) exceeds the slot outright.

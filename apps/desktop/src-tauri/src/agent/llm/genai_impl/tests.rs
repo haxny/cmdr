@@ -178,10 +178,31 @@ fn effort_maps_to_genai_and_provider_default_sends_nothing() {
         CallSettings {
             effort: ReasoningEffort::High,
             max_output_tokens: 32_000,
+            model_reasons: Some(true),
         },
     );
     assert_eq!(keyword(options.reasoning_effort), Some("high"));
     assert_eq!(options.capture_reasoning_content, Some(true));
+}
+
+#[test]
+fn a_model_known_not_to_reason_is_asked_for_no_reasoning_at_all() {
+    // On the Responses API a model that doesn't reason 400s on `reasoning.effort` AND on the
+    // `reasoning.summary` + encrypted include that reasoning capture turns on, so neither goes
+    // out, whatever the effort says. `capture_reasoning_content: false` is also what keeps
+    // `crate::ai`'s `adjust_for_model` from filling in its own effort.
+    for effort in [ReasoningEffort::ProviderDefault, ReasoningEffort::High] {
+        let options = build_options(
+            AdapterKind::OpenAIResp,
+            CallSettings {
+                effort,
+                model_reasons: Some(false),
+                ..CallSettings::default()
+            },
+        );
+        assert_eq!(keyword(options.reasoning_effort), None, "{effort:?}");
+        assert_eq!(options.capture_reasoning_content, Some(false), "{effort:?}");
+    }
 }
 
 #[test]
@@ -379,6 +400,7 @@ fn agent_calls_leave_room_for_reasoning_and_a_tool_call() {
         CallSettings {
             effort: ReasoningEffort::ProviderDefault,
             max_output_tokens: 32_000,
+            model_reasons: None,
         },
     );
     assert_eq!(options.max_tokens, Some(32_000));

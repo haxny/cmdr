@@ -25,8 +25,9 @@ decision rationale): `DETAILS.md`.
   drops it. ❌ Don't drop `capture_reasoning_content`: it's genai's opt-in for Anthropic signatures and OpenAI's
   encrypted items. Chat-completions reasoning goes back only to allowlisted hosts (DeepSeek 400s without it, Groq 400s
   with it). Per-provider rules and evidence: `DETAILS.md` § Reasoning round-trip.
-- **`ReasoningEffort` is a per-call input; only `ProviderDefault` is safe on every model** (an explicit level 400s on
-  a model that doesn't reason). `DETAILS.md` § Reasoning effort.
+- **A model that doesn't reason must say so: `CallSettings.model_reasons = Some(false)`.** An explicit effort 400s on
+  it, and on the OpenAI Responses API so does asking for reasoning back, even under `ProviderDefault`.
+  `DETAILS.md` § Reasoning effort.
 - **`ToolId::Unrecognized` is the read-only choke point, not an error.** A raw provider tool name resolves through
   `ToolId::from_wire_name`; an unknown name becomes `Unrecognized(raw)`, which is never in the agent's tool view, so
   dispatch refuses it. The gate is a typed variant/view check, never a string match on the name.
@@ -35,8 +36,8 @@ decision rationale): `DETAILS.md`.
   outbound drops what old threads already stored (the call plus its result). Keep both halves.
 - **`ToolId` and errors classify by variant/HTTP status, never by message string**. Provider
   errors are status-classified upstream in `crate::ai` and mapped variant-to-variant here.
-- **Tool declarations are never `strict: true`** (Gap D): OpenAI strict also demands all-required, which genai doesn't
+- **Tool declarations are never `strict: true`**: OpenAI strict also demands all-required, which genai doesn't
   enforce, so an optional prop 400s. `tool_declaration_to_genai` leaves strict unset.
 
-The `AgentPart` ⇄ genai `ContentPart` mapping table, blob shapes, the thought-signature dedupe, error mapping, and live
+The `AgentPart` ⇄ genai `ContentPart` mapping table, blob shapes, the reasoning round-trip, error mapping, and live
 smokes: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or advising.

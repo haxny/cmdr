@@ -1,13 +1,13 @@
 //! The typed message-part model the `AgentLlm` seam speaks.
 //!
-//! The genai spike proved the make-or-break invariant this file encodes: an
+//! The make-or-break invariant this file encodes: an
 //! assistant turn is an ordered list of **typed parts** (text, tool call,
 //! tool result, reasoning), and opaque reasoning state is **provider-tagged and
 //! rides on the part that owns it** — never flattened to `content: String +
 //! reasoning: String`. That lossy shape is exactly what breaks a multi-step tool
-//! loop on step 3 (spike Gaps A/B): the provider blob has to be re-attached to
+//! loop: the provider blob has to be re-attached to
 //! the right structural position, so it cannot be concatenated into a text field.
-//! See `DETAILS.md` for the mapping table and the spike-gap rationale.
+//! See `DETAILS.md` for the mapping table and the per-provider reasoning round-trip.
 //!
 //! These types carry `serde` for DB persistence (`main.db` `content_blocks`)
 //! and are pure data — no dependency on `genai` or `crate::ai`. The genai
@@ -59,7 +59,7 @@ impl AgentRole {
 /// where the opaque `blob` originated so a replay re-attaches it in the shape that
 /// provider expects. Distinguishes the two OpenAI surfaces because their reasoning
 /// round-trip differs (chat-completions is stateless; Responses carries encrypted
-/// items — spike Gap B).
+/// items).
 ///
 /// Two-way split, like the operation log's `token_enum!` types: the serde/specta
 /// wire form is camelCase (for IPC + `bindings.ts` — the `cost_meter` provider on
@@ -119,9 +119,9 @@ impl ProviderTag {
 /// `reasoning_effort`, Gemini `thinkingLevel` / `thinkingBudget`, DeepSeek `thinking.type`).
 /// The mapping table and its caveats: `DETAILS.md` § Reasoning effort.
 ///
-/// Only [`ProviderDefault`](Self::ProviderDefault) is safe on every model: an explicit level
-/// sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is a 400 there,
-/// so whatever offers the other levels must know the model reasons first.
+/// An explicit level sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is
+/// a 400 there, so whatever offers the other levels must know the model reasons first. For a
+/// model known not to reason, [`CallSettings::model_reasons`] overrides even `ProviderDefault`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ReasoningEffort {
@@ -147,14 +147,21 @@ pub enum ReasoningEffort {
 pub struct CallSettings {
     pub effort: ReasoningEffort,
     pub max_output_tokens: u32,
+    /// Whether the model reasons, when something knows (`chat::effort::EffortOptions::reasons`).
+    /// `Some(false)` makes the call ask for no reasoning at all, whatever `effort` says: no
+    /// effort, and no reasoning summary or encrypted items back. On the OpenAI Responses API a
+    /// model that doesn't reason 400s on either ("Unsupported parameter: 'reasoning.effort'" /
+    /// "'reasoning.summary'", verified on `gpt-4.1-mini` and `gpt-4o`, `curl`, 2026-10-27).
+    pub model_reasons: Option<bool>,
 }
 
 impl Default for CallSettings {
-    /// The provider decides, inside the base reply slot: safe on every model.
+    /// The provider decides, inside the base reply slot.
     fn default() -> Self {
         Self {
             effort: ReasoningEffort::ProviderDefault,
             max_output_tokens: crate::agent::chat::budget::AGENT_MAX_OUTPUT_TOKENS,
+            model_reasons: None,
         }
     }
 }
@@ -564,7 +571,7 @@ pub struct AgentMessage {
 }
 
 /// A tool the agent declares to the provider. Built from a [`ToolId`] plus its
-/// description and JSON schema. NEVER emitted with `strict: true` (spike Gap D:
+/// description and JSON schema. NEVER emitted with `strict: true` (
 /// OpenAI strict mode also demands all-required, which genai does not enforce, so
 /// an optional prop 400s); the genai mapping leaves strict unset.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -359,6 +359,7 @@ pub fn resolve_call_settings(app: &AppHandle, provider: ProviderTag, model: &str
     CallSettings {
         effort: resolved.effort,
         max_output_tokens: resolved.max_output_tokens,
+        model_reasons: options.reasons,
     }
 }
 

@@ -161,9 +161,15 @@ fn build_options(adapter: AdapterKind, call: CallSettings) -> ChatOptions {
         .with_max_tokens(call.max_output_tokens)
         .with_capture_content(true)
         .with_capture_tool_calls(true)
-        .with_capture_usage(true)
-        .with_capture_reasoning_content(true);
+        .with_capture_usage(true);
 
+    // A model known not to reason gets asked for none: no effort, and no reasoning capture,
+    // which on the Responses API would add a `reasoning.summary` it 400s on. The explicit
+    // `false` is also what stops `crate::ai`'s `adjust_for_model` filling in an effort.
+    if call.model_reasons == Some(false) {
+        return options.with_capture_reasoning_content(false);
+    }
+    let options = options.with_capture_reasoning_content(true);
     match genai_effort(adapter, call.effort) {
         Some(effort) => options.with_reasoning_effort(effort),
         None => options,
@@ -186,8 +192,8 @@ fn genai_effort(adapter: AdapterKind, effort: ReasoningEffort) -> Option<GenaiRe
     }
 }
 
-/// Never sets `strict: true` — spike Gap D (OpenAI strict also demands all-required,
-/// which genai does not enforce, so an optional prop 400s).
+/// Never sets `strict: true`: OpenAI strict also demands all-required, which genai does not
+/// enforce, so an optional prop 400s.
 fn tool_declaration_to_genai(decl: &ToolDeclaration) -> GenaiTool {
     let mut tool = GenaiTool::new(decl.name.as_wire_name());
     if !decl.description.is_empty() {
@@ -401,8 +407,8 @@ fn genai_content_to_agent_parts(content: &MessageContent, origin: &ReasoningOrig
 
 fn genai_tool_call_to_agent(call: &GenaiToolCall, origin: &ReasoningOrigin) -> AgentToolCall {
     // Capture any per-call reasoning (e.g. Gemini's `thoughtSignature`) into the
-    // opaque blob so it survives persistence and rides back on replay — the whole
-    // point of the typed-parts model (spike Gaps A/B).
+    // opaque blob so it survives persistence and rides back on replay, the whole
+    // point of the typed-parts model.
     let reasoning = call
         .thought_signatures
         .as_ref()

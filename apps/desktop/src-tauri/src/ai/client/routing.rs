@@ -98,7 +98,9 @@ pub(super) fn adjust_for_model(options: &ChatOptions, target: &ServiceTarget) ->
     let mut opts = options.clone();
     opts.temperature = None;
     opts.top_p = None;
-    if opts.reasoning_effort.is_none() {
+    // An explicit `capture_reasoning_content: false` is the caller saying the model doesn't
+    // reason (the agent's `CallSettings::model_reasons`); an effort sent to it is a 400.
+    if opts.reasoning_effort.is_none() && opts.capture_reasoning_content != Some(false) {
         opts.reasoning_effort = Some(ReasoningEffort::Low);
     }
     opts

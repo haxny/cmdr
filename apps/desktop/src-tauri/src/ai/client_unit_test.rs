@@ -306,6 +306,19 @@ fn the_anthropic_adapter_sends_no_sampling_knobs() {
     assert_eq!(sent.max_tokens, Some(200), "everything else passes through");
 }
 
+/// The Responses API fills an unset effort with `low`, except for a caller that turned
+/// reasoning capture off: that's the agent saying the model doesn't reason, and an effort sent
+/// to such a model is a 400 (`agent::llm::CallSettings::model_reasons`).
+#[test]
+fn a_caller_opting_out_of_reasoning_gets_no_effort_filled_in() {
+    let target = target_for(AdapterKind::OpenAIResp, "gpt-5.5");
+    let filled = adjust_for_model(&ChatOptions::default(), &target);
+    assert!(filled.reasoning_effort.is_some(), "an unset effort still gets `low`");
+
+    let opted_out = adjust_for_model(&ChatOptions::default().with_capture_reasoning_content(false), &target);
+    assert!(opted_out.reasoning_effort.is_none());
+}
+
 #[test]
 fn an_openai_compatible_model_keeps_its_sampling_knobs() {
     let tuned = ChatOptions::default().with_temperature(0.3).with_top_p(0.9);
