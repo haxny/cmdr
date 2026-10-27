@@ -33,12 +33,15 @@ picture blocks, then the comments' `METADATA_BLOCK_PICTURE`s. A cover equal to t
 as it is, type and description included. With the cover removed, the reader shows the next untyped picture, if any.
 
 Composer holds the author of the music, for audiobooks too (user, 2026-10-26); an audiobook write removes only `TPE3`
-(conductor) on MP3. A known total (`WriteOptions::track_total` / `disc_total`) goes in `TRCK` / `TPOS` as `N/Total`, in
-`trkn` / `disk`'s total slot, or as a `TRACKTOTAL` / `DISCTOTAL` key (foobar2000's convention); without one the number
-is plain, and a total without its number isn't written. A zero total is no total. Vorbis `TRACKTOTAL`, `TOTALTRACKS`,
-`DISCTOTAL`, and `TOTALDISCS` are managed: never extras, removed on write unless `TRACKTOTAL` / `DISCTOTAL` is being
-written. The reader strips `/N` from track and disc in every format; the totals and an MP3's `TPE3` are read apart, as
-crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo store.
+(conductor) on MP3. The totals are the fields `TrackTotal` / `DiscTotal` (`WriteOptions::track_total` / `disc_total`
+only when the field is absent): a total goes in `TRCK` / `TPOS` as `N/Total`, in `trkn` / `disk`'s total slot, or as a
+`TRACKTOTAL` / `DISCTOTAL` key (foobar2000's convention); without one the number is plain. A total without its number is
+neither written nor shown by the reader, a zero total is no total, and one that isn't a whole number fails the write
+(`TagError::Write`). Vorbis `TRACKTOTAL`, `TOTALTRACKS`, `DISCTOTAL`, and `TOTALDISCS` are managed: never extras, read
+as the total (a key wins over `N/T`), written back as `TRACKTOTAL` / `DISCTOTAL` only. The reader strips `/N` from track
+and disc in every format and keeps the number's text (`03`), except MP4, which stores integers (`normalize_for` shows
+that before a write). Vorbis is read without lofty's implicit conversions, which would turn `03` into `3`. An MP3's
+`TPE3` is read apart, as crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo store.
 
 M4A freeform atoms live under mean `com.apple.iTunes`. Genre is written only as the freeform `GENRE`, and a write
 removes `©gen`: foobar2000 on macOS shows `©gen` and `GENRE` together, doubled; Plexamp reads only `©gen` and so loses
@@ -63,21 +66,21 @@ lofty's generic `Tag` normalizes keys across formats, which drops the format-nat
 
 ## How a write works
 
-Each writer parses the original strictly (`ParsingMode::Strict`; Vorbis also without implicit conversions). The lenient
-parse the reader uses drops what lofty can't decode (a `covr` atom with one unknown entry, a bad picture block, a second
-`VORBIS_COMMENT` block), and saving from it would delete those from the file; strictly, such a file is refused as
-`TagError::Parse`. Reading stays lenient. Then the writer removes everything its reader maps to a managed field
-(aliases, duplicates, and case variants of TXXX descriptions, freeform names, and Vorbis keys included), removes the
-extras that `FileTags::extras` no longer has a key for, then writes one frame, atom, or key per field. An extra the file
-has and `extras` keeps stays as the file has it (its values in `extras` are ignored). An extra in `extras` that the file
-lacks is added, so an undo can put back one an edit removed: a `TXXX` with that description (values null-separated), a
-freeform atom of that name under mean `com.apple.iTunes` (one UTF-8 entry per value; an extra that had another mean
-comes back under the iTunes one), or that Vorbis key once per value (Vorbis extra keys are uppercased first, as the
-reader reports them; keys differing only in case merge). An extra the file lacks that can't be added (an empty key, no
-values, or a key the reader would take for a managed field or a Vorbis total, like a `PERFORMER` that was under a
-foreign MP4 mean) fails the write as `TagError::UnwritableExtra(key)`: never a silent skip. An ID3 extra in another
-letter case than the file's `TXXX` renames the frame (the old one is dropped, the new one added). Single-value fields
-write their first value only (the reader shows only that one).
+Each writer parses the original strictly (`ParsingMode::Strict`; Vorbis without implicit conversions, as the reader).
+The lenient parse the reader uses drops what lofty can't decode (a `covr` atom with one unknown entry, a bad picture
+block, a second `VORBIS_COMMENT` block), and saving from it would delete those from the file; strictly, such a file is
+refused as `TagError::Parse`. Reading stays lenient. Then the writer removes everything its reader maps to a managed
+field (aliases, duplicates, and case variants of TXXX descriptions, freeform names, and Vorbis keys included), removes
+the extras that `FileTags::extras` no longer has a key for, then writes one frame, atom, or key per field. An extra the
+file has and `extras` keeps stays as the file has it (its values in `extras` are ignored). An extra in `extras` that the
+file lacks is added, so an undo can put back one an edit removed: a `TXXX` with that description (values
+null-separated), a freeform atom of that name under mean `com.apple.iTunes` (one UTF-8 entry per value; an extra that
+had another mean comes back under the iTunes one), or that Vorbis key once per value (Vorbis extra keys are uppercased
+first, as the reader reports them; keys differing only in case merge). An extra the file lacks that can't be added (an
+empty key, no values, or a key the reader would take for a managed field or a Vorbis total, like a `PERFORMER` that was
+under a foreign MP4 mean) fails the write as `TagError::UnwritableExtra(key)`: never a silent skip. An ID3 extra in
+another letter case than the file's `TXXX` renames the frame (the old one is dropped, the new one added). Single-value
+fields write their first value only (the reader shows only that one).
 
 **Hidden values never go silently.** Each reader lists every item it maps to a managed field (`read::Mapped`:
 `id3_items`, `ilst_items`, `vorbis_items`) and builds the fields from that list; the writer removes all of them. So
@@ -112,8 +115,8 @@ them as the fields and is written with `COMM` / `TPOS`.
 
 After saving the copy, the writer reads it back (same strict parse) and compares it with what it meant to write: the
 fields as the reader reports them (joined values split, numbers and ID3 dates normalized), the cover, the extras, and
-the `RawTags` (totals as passed, `TPE3` as kept, removed, or restored). Any difference refuses the write, so whatever
-lofty silently drops or changes never replaces the original.
+the `RawTags` (`TPE3` as kept, removed, or restored). Any difference refuses the write, so whatever lofty silently drops
+or changes never replaces the original.
 
 ## Safe overwrite
 
@@ -147,7 +150,7 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
 `TagError::Io(InvalidInput, _)`):
 
 ```
-<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"trackTotal","discTotal","conductor"},"written"?:{"size","modified","inode","changed"}}]}
+<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"conductor"},"written"?:{"size","modified","inode","changed"}}]}
 <root>/<id>/<k>.cover       one file per distinct cover; entries with the same bytes share it
 <root>/.<id>.staging/       a record being built
 ```
@@ -167,8 +170,10 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   won't load (damaged, or another manifest version) can't be restored but still counts toward both limits, and goes
   first, oldest by the directory's modification time, so a pile of them can't fill the disk past `max_bytes`.
 - **`record(id, paths)` reads the files itself**, each with one parse (`read::read_snapshot`): the `FileTags` and the
-  `RawTags` (track and disc totals, MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states
-  of the file. Call it before the apply writes. A file that can't be read fails the whole record; nothing is stored.
+  `RawTags` (MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states of the file. A record
+  from before the totals were fields still loads (its `raw.trackTotal` / `discTotal` are ignored), and restores the
+  numbers without their totals. Call it before the apply writes. A file that can't be read fails the whole record;
+  nothing is stored.
 - **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
   works), and a move whose source isn't recorded is ignored. A sealed entry takes the fingerprint of the file at its new
   path (a rename moves the ctime), so the caller repaths right after its own renames.
@@ -179,7 +184,7 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   and the manifest version stays 1). Why: a record is keyed by path, and a rename after the apply can put another file
   at that path (a swap of `01`/`03`); without the check, undo writes one file's old tags into another.
 - **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
-  passes, with that entry's recorded totals, and `TPE3` when it had one. Of the caller's `WriteOptions` only
+  passes, totals from its recorded fields, and `TPE3` when it had one. Of the caller's `WriteOptions` only
   `allow_frame_loss` applies. A file not at its path is `missing`; a sealed entry whose file no longer has its
   fingerprint is `changed` and untouched (checked right before its write); any write error is `failed` (an extra that
   can't come back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover again. It
@@ -201,7 +206,8 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   editor doesn't show, frames ID3v2.3 can't hold); proceeding is the same write with `WriteOptions::allow_frame_loss`.
 - **One dispatcher, one check, file length.** `tools::TagTool` (`{"kind":"renumber","start":1}`, camelCase kinds) with
   `apply_tool` runs any tool, so the app and MCP share the set. `tools::fields_with_diacritics` lists the fields that
-  must not carry diacritics and do (for the warning before a write). `renumber` on a single file removes its Track (a
+  must not carry diacritics and do (for the warning before a write). `renumber` pads to the last number's width
+  (`tools::track_width`: at least two digits, `001` past 99) and on a single file removes its Track and TrackTotal (a
   one-file book has no track number). `read_duration(path)` reads lofty's audio properties (which `read_tags` skips) and
   is `None` for anything unreadable.
 - **Record before the apply writes**: `UndoStore::record(id, paths)` reads the files itself.

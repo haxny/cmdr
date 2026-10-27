@@ -672,7 +672,7 @@ fn m4a_round_trip_all_fields() {
         },
     );
 
-    assert_eq!(read(&path), tags);
+    assert_eq!(read(&path), with(tags, TagField::TrackTotal, &["12"]));
     let raw = raw_ilst(&path);
     assert_eq!(fourcc(&raw, *b"\xA9ART"), vec![&utf8("A; B")]);
     assert_eq!(freeform_data(&raw, "PERFORMER"), vec![&utf8("Jan Novotny")]);
@@ -960,7 +960,11 @@ fn flac_track_total_written_only_when_given() {
     let raw = comments(&path);
     assert_eq!(raw.get_all("TRACKNUMBER").collect::<Vec<_>>(), ["3"]);
     assert_eq!(raw.get_all("TRACKTOTAL").collect::<Vec<_>>(), ["12"]);
-    assert_eq!(read(&path), tags, "the total is no extra");
+    assert_eq!(
+        read(&path),
+        with(tags.clone(), TagField::TrackTotal, &["12"]),
+        "the total is a field, no extra"
+    );
 
     write(&path, &tags, &MUSIC);
     let raw = comments(&path);
@@ -982,14 +986,19 @@ fn flac_write_without_total_removes_old_totals() {
         comments.push(key.to_owned(), value.to_owned());
     }
     let path = write_flac(dir.path(), "a.flac", comments, 0);
+    let keys = |path: &Path| -> Vec<String> {
+        let raw = raw_flac(path).vorbis_comments().cloned().unwrap_or_default();
+        raw.items().map(|(key, value)| format!("{key}={value}")).collect()
+    };
     let tags = read(&path);
-    assert_eq!(tags, with(FileTags::default(), TagField::Track, &["3"]));
+    let track = with(FileTags::default(), TagField::Track, &["3"]);
+    assert_eq!(tags, with(track.clone(), TagField::TrackTotal, &["12"]));
 
     write(&path, &tags, &MUSIC);
+    assert_eq!(keys(&path), ["TRACKNUMBER=3", "TRACKTOTAL=12"], "one spelling each");
 
-    let raw = raw_flac(&path).vorbis_comments().cloned().unwrap_or_default();
-    let keys: Vec<_> = raw.items().map(|(key, value)| format!("{key}={value}")).collect();
-    assert_eq!(keys, ["TRACKNUMBER=3"]);
+    write(&path, &track, &MUSIC);
+    assert_eq!(keys(&path), ["TRACKNUMBER=3"]);
 }
 
 /// A FLAC with a back cover as a picture block and the front cover only inside the comments.

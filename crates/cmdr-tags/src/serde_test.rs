@@ -110,3 +110,10 @@ fn a_cover_is_a_byte_array_on_the_wire() {
     };
     assert_eq!(round_trip(&cover), json!({"mime": "image/png", "data": [1, 2, 255]}));
 }
+
+#[test]
+fn an_undo_record_from_before_totals_were_fields_still_reads() {
+    let raw: crate::read::RawTags =
+        serde_json::from_value(json!({"trackTotal": 12, "discTotal": null, "conductor": "Dirigent"})).unwrap();
+    assert_eq!(raw.conductor.as_deref(), Some("Dirigent"));
+}

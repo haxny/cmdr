@@ -18384,10 +18384,17 @@ export type TagField =
   | 'publisher'
   // Translator.
   | 'translator'
-  // Track number, plain unless the caller passes a known total.
+  // Track number, as written (`03` stays padded where the format holds text).
   | 'track'
+  /**
+   *  The number of tracks, written beside the track (`3/12`, `trkn`'s total, `TRACKTOTAL`)
+   *  and only when the track is set.
+   */
+  | 'trackTotal'
   // Disc number.
   | 'disc'
+  // The number of discs, written beside the disc and only when the disc is set.
+  | 'discTotal'
   // Free-form comment.
   | 'comment'
   // Longer description.

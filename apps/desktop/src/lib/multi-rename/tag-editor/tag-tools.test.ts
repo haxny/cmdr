@@ -42,7 +42,7 @@ describe('tag-tools', () => {
     expect(DIACRITICS_FIELDS).toEqual(TAG_FIELDS.filter((f) => f !== 'comment' && f !== 'description'))
     expect(DIACRITICS_FIELDS).not.toContain('comment')
     expect(DIACRITICS_FIELDS).not.toContain('description')
-    expect(DIACRITICS_FIELDS).toHaveLength(13)
+    expect(DIACRITICS_FIELDS).toHaveLength(15)
   })
 
   it.each([

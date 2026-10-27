@@ -10,6 +10,7 @@
 mod fingerprint;
 mod format;
 mod model;
+mod normalize;
 mod read;
 mod save;
 pub mod shared;
@@ -21,6 +22,8 @@ mod write_extras;
 
 #[cfg(test)]
 mod format_test;
+#[cfg(test)]
+mod normalize_test;
 #[cfg(test)]
 mod read_test;
 #[cfg(test)]
@@ -55,6 +58,7 @@ mod write_totals_test;
 pub use fingerprint::Fingerprint;
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, KindRemoval, TagError, TagField};
+pub use normalize::normalize_for;
 pub use read::{read_duration, read_tags, removed_by_kind};
 pub use undo::{ApplyId, RestoreReport, UndoLimits, UndoStore};
 pub use write::{WriteOptions, write_tags};

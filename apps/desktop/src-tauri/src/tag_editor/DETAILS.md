@@ -52,7 +52,8 @@ file that something else renamed.
 3. `UndoStore::record(tags-<unix millis>-<session>, paths)` BEFORE any write; a refusal is `TagEditorError::Undo` and
    nothing is written. Millis never repeat within the process, so two applies can't share (and replace) a record.
 4. Each file is re-checked right before its write (the TOCTOU window shrinks to one stat), then `write_tags` with
-   `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }`. `WouldDrop` → `wouldDrop`, any other
+   `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }` (the totals travel as the fields
+   `TrackTotal` / `DiscTotal`, so an edit keeps them). `WouldDrop` → `wouldDrop`, any other
    error → `failed`, a lofty panic (`contain_panics`) → `failed` with `TagError::Write`.
 5. `UndoStore::seal` narrows the record to the files written (`forget` when none), each with its `Fingerprint` taken
    right after its write, so an undo never rewrites a file the apply skipped, failed on, or found changed, nor one that

@@ -208,7 +208,7 @@ fn tool_renumber_uses_current_order() {
         .collect();
     assert_eq!(
         numbered,
-        vec![("a.mp3", Some("1")), ("c.mp3", Some("2")), ("b.mp3", Some("3"))]
+        vec![("a.mp3", Some("01")), ("c.mp3", Some("02")), ("b.mp3", Some("03"))]
     );
     close(&id);
     close_rename(&id);

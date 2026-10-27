@@ -433,22 +433,20 @@ fn restore_brings_back_track_and_disc_totals() {
     }
     let flac = write_flac(files.path(), "c.flac", comments, 0);
     let paths = vec![mp3, m4b, flac];
-    let totals = RawTags {
-        track_total: Some(12),
-        disc_total: Some(2),
-        conductor: None,
-    };
+    let totals = [
+        (TagField::TrackTotal, strings(&["12"])),
+        (TagField::DiscTotal, strings(&["2"])),
+    ];
     let before = snapshot(&paths);
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
     store.record(&id("op-1"), &paths).unwrap();
     for path in &paths {
-        assert_eq!(read_raw(path).unwrap(), totals, "{path:?}");
-        write(path, &read(path), &MUSIC);
-        assert_eq!(
-            read_raw(path).unwrap(),
-            RawTags::default(),
-            "{path:?}: the apply dropped the totals"
-        );
+        let mut tags = read(path);
+        for (field, values) in &totals {
+            assert_eq!(tags.fields.remove(field).as_ref(), Some(values), "{path:?}");
+        }
+        write(path, &tags, &MUSIC);
+        assert_eq!(read(path), tags, "{path:?}: the apply dropped the totals");
     }
 
     let report = store.restore(&id("op-1"), &MUSIC).unwrap();
@@ -456,7 +454,9 @@ fn restore_brings_back_track_and_disc_totals() {
     assert_eq!(report.restored, paths);
     for (path, tags) in &before {
         assert_eq!(read(path), *tags, "{path:?}");
-        assert_eq!(read_raw(path).unwrap(), totals, "{path:?}");
+        for (field, values) in &totals {
+            assert_eq!(tags.fields.get(field), Some(values), "{path:?}");
+        }
     }
 }
 

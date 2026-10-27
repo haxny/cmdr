@@ -193,24 +193,40 @@ pub fn strip_track_prefix(files: &[FileTags]) -> Vec<FileTags> {
         .collect()
 }
 
-/// Numbers the files `start`, `start + 1`, ... in session order. Disc is untouched. A single
-/// file has its track removed instead: a one-file book has no track number.
+/// Numbers the files `start`, `start + 1`, ... in session order, padded to the width of the
+/// last number ([`track_width`]: `01` … `12`, `001` … `120`). Disc and the totals are
+/// untouched. A single file has its track and track total removed instead: a one-file book
+/// has no track number.
 pub fn renumber(files: &[FileTags], start: u32) -> Vec<FileTags> {
     if let [only] = files {
         let mut out = only.clone();
         out.fields.remove(&TagField::Track);
+        out.fields.remove(&TagField::TrackTotal);
         return vec![out];
     }
+    let number = |index: usize| u32::try_from(index).map_or(u32::MAX, |i| start.saturating_add(i));
+    let width = track_width(number(files.len().saturating_sub(1)));
     files
         .iter()
         .enumerate()
         .map(|(index, file)| {
             let mut out = file.clone();
-            let number = u32::try_from(index).map_or(u32::MAX, |i| start.saturating_add(i));
-            out.fields.insert(TagField::Track, vec![number.to_string()]);
+            out.fields
+                .insert(TagField::Track, vec![pad_number(number(index), width)]);
             out
         })
         .collect()
+}
+
+/// `n` in decimal with leading zeros up to `width` digits; a longer number stays whole.
+pub fn pad_number(n: u32, width: usize) -> String {
+    format!("{n:0width$}")
+}
+
+/// How many digits track numbers up to `total` are padded to: at least two (`01`), more
+/// when `total` has more (`001` for 100 and up).
+pub fn track_width(total: u32) -> usize {
+    total.to_string().len().max(2)
 }
 
 /// Sets the album artist to a copy of the artist where there is none yet.

@@ -50,11 +50,13 @@ pub struct WriteOptions {
     /// Audiobooks drop ID3's `TPE3` (conductor), which `FileTags` doesn't hold. The composer
     /// stays: it holds the author of the book's music.
     pub kind: ContentKind,
-    /// The number of tracks, when the caller knows it: the track is then written `N/Total`
-    /// (MP3), with `trkn`'s total (M4A), or with a `TRACKTOTAL` key (Vorbis); otherwise plain.
+    /// The number of tracks when `FileTags` has no [`TagField::TrackTotal`] (the field wins):
+    /// the track is then written `N/Total` (MP3), with `trkn`'s total (M4A), or with a
+    /// `TRACKTOTAL` key (Vorbis); otherwise plain.
     pub track_total: Option<u32>,
-    /// The number of discs, when the caller knows it: the disc is then written `N/Total`
-    /// (MP3), with `disk`'s total (M4A), or with a `DISCTOTAL` key (Vorbis); otherwise plain.
+    /// The number of discs when `FileTags` has no [`TagField::DiscTotal`] (the field wins):
+    /// the disc is then written `N/Total` (MP3), with `disk`'s total (M4A), or with a
+    /// `DISCTOTAL` key (Vorbis); otherwise plain.
     pub disc_total: Option<u32>,
     /// Whether an MP3 write may drop the ID3v2.4-only frames ID3v2.3 has no place for
     /// (`TSOP`, `RVA2`, ...). When false, such a write fails with [`TagError::WouldDrop`],
@@ -80,7 +82,7 @@ pub fn write_tags(path: &Path, tags: &FileTags, opts: &WriteOptions) -> Result<(
     write_with(path, tags, opts, None)
 }
 
-/// Writes a snapshot back as it was: `tags`, the totals in `raw`, and on MP3 the conductor
+/// Writes a snapshot back as it was: `tags` (totals included), and on MP3 the conductor
 /// (`TPE3`) when `raw` has one, as music so a conductor stays. The undo store's
 /// write.
 pub(crate) fn restore_tags(
@@ -91,8 +93,8 @@ pub(crate) fn restore_tags(
 ) -> Result<(), TagError> {
     let opts = WriteOptions {
         kind: ContentKind::Music,
-        track_total: raw.track_total,
-        disc_total: raw.disc_total,
+        track_total: None,
+        disc_total: None,
         allow_frame_loss,
     };
     write_with(path, tags, &opts, raw.conductor.as_deref())
@@ -115,8 +117,8 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
     let format = format_of_path(path)?;
     // A zero total is no total: MP4 stores none as zero.
     let opts = &WriteOptions {
-        track_total: opts.track_total.filter(|t| *t > 0),
-        disc_total: opts.disc_total.filter(|t| *t > 0),
+        track_total: total_of(tags, TagField::TrackTotal, opts.track_total)?.filter(|t| *t > 0),
+        disc_total: total_of(tags, TagField::DiscTotal, opts.disc_total)?.filter(|t| *t > 0),
         ..*opts
     };
     let tags = &match format {
@@ -143,8 +145,8 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
             };
             write_id3(&mut id3, &current, tags, &values, opts, conductor.as_deref())?;
             refuse_loss(hidden.into_iter().chain(v23_losses(&id3)), opts.allow_frame_loss)?;
-            let expected = expected_tags(&current, tags, &values, format, &read_id3(&id3))?;
-            let raw = expected_raw(&values, opts, conductor);
+            let expected = expected_tags(&current, tags, &values, opts, format, &read_id3(&id3))?;
+            let raw = RawTags { conductor };
             let v23 = LoftyWriteOptions::new().use_id3v23(true);
             save_safely(path, |out| save(&id3, out, v23, format, &expected, &raw))
         }
@@ -154,8 +156,8 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
             let current = read_ilst(&ilst);
             refuse_loss(hidden_items(&ilst_items(&ilst), &current), opts.allow_frame_loss)?;
             write_ilst(&mut ilst, &current, tags, &values, opts)?;
-            let expected = expected_tags(&current, tags, &values, format, &read_ilst(&ilst))?;
-            let raw = expected_raw(&values, opts, None);
+            let expected = expected_tags(&current, tags, &values, opts, format, &read_ilst(&ilst))?;
+            let raw = RawTags::default();
             save_safely(path, |out| save(&ilst, out, defaults, format, &expected, &raw))
         }
         AudioFormat::Flac => {
@@ -172,34 +174,28 @@ fn write_with(path: &Path, tags: &FileTags, opts: &WriteOptions, conductor: Opti
                 }
             }
             let (comments, expected) = write_vorbis_family(&comments, tags, &values, opts, format)?;
-            let raw = expected_raw(&values, opts, None);
+            let raw = RawTags::default();
             save_safely(path, |out| save(&comments, out, defaults, format, &expected, &raw))
         }
         AudioFormat::OggVorbis => {
             let file = VorbisFile::read_from(&mut source, parse).map_err(parse_error)?;
             let (comments, expected) = write_vorbis_family(file.vorbis_comments(), tags, &values, opts, format)?;
-            let raw = expected_raw(&values, opts, None);
+            let raw = RawTags::default();
             save_safely(path, |out| save(&comments, out, defaults, format, &expected, &raw))
         }
         AudioFormat::Opus => {
             let file = OpusFile::read_from(&mut source, parse).map_err(parse_error)?;
             let (comments, expected) = write_vorbis_family(file.vorbis_comments(), tags, &values, opts, format)?;
-            let raw = expected_raw(&values, opts, None);
+            let raw = RawTags::default();
             save_safely(path, |out| save(&comments, out, defaults, format, &expected, &raw))
         }
     }
 }
 
-/// How a write parses: strictly, so an item lofty can't decode fails the write instead of
-/// being dropped from the copy that gets saved. Vorbis comments also without implicit
-/// conversions, so lofty keeps `TRACKNUMBER` as the file has it instead of splitting a
-/// `3/12` into a `TRACKTOTAL` key of its own.
+/// How a write parses: as the reader does ([`parse_options`]), but strictly, so an item lofty
+/// can't decode fails the write instead of being dropped from the copy that gets saved.
 fn write_parse_options(format: AudioFormat) -> ParseOptions {
-    let mut strict = parse_options().parsing_mode(ParsingMode::Strict);
-    match format {
-        AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => strict.implicit_conversions(false),
-        AudioFormat::Mp3 | AudioFormat::Mp4 => strict,
-    }
+    parse_options(format).parsing_mode(ParsingMode::Strict)
 }
 
 /// A strict parse doesn't search for an ID3v2 tag behind junk bytes before the audio; the
@@ -207,7 +203,7 @@ fn write_parse_options(format: AudioFormat) -> ParseOptions {
 /// in front of the one the reader shows, so such a file is refused.
 fn refuse_tag_behind_junk(source: &mut File) -> Result<(), TagError> {
     source.rewind()?;
-    let lenient = MpegFile::read_from(source, parse_options()).map_err(parse_error)?;
+    let lenient = MpegFile::read_from(source, parse_options(AudioFormat::Mp3)).map_err(parse_error)?;
     if lenient.id3v2().is_some() {
         return Err(TagError::Parse("the ID3v2 tag doesn't start the file".to_owned()));
     }
@@ -218,12 +214,14 @@ fn refuse_tag_behind_junk(source: &mut File) -> Result<(), TagError> {
 
 /// The managed values a write puts in the file, by field: trimmed, empties dropped, one
 /// value for a single-value field; a multi-value field's values split on [`JOIN`] and each
-/// kept once, as the readers show them. A field missing here is removed from the file.
+/// kept once, as the readers show them. A field missing here is removed from the file. The
+/// totals are no entries: they go beside their number ([`total_of`]).
 type Values = BTreeMap<TagField, Vec<String>>;
 
 fn values_to_write(tags: &FileTags) -> Values {
     tags.fields
         .iter()
+        .filter(|(field, _)| !matches!(field, TagField::TrackTotal | TagField::DiscTotal))
         .filter_map(|(field, values)| {
             let values: Vec<String> = if field.is_multi() {
                 unique(
@@ -248,14 +246,30 @@ fn values_to_write(tags: &FileTags) -> Values {
         .collect()
 }
 
+/// The total `field` (`TrackTotal` / `DiscTotal`) of `tags`, else `fallback` when the field is
+/// absent. A total that isn't a whole number fails the write: no format could hold it.
+fn total_of(tags: &FileTags, field: TagField, fallback: Option<u32>) -> Result<Option<u32>, TagError> {
+    let Some(text) = tags
+        .fields
+        .get(&field)
+        .and_then(|v| v.iter().map(|t| t.trim()).find(|t| !t.is_empty()))
+    else {
+        return Ok(fallback);
+    };
+    text.parse::<u32>()
+        .map(Some)
+        .map_err(|e| TagError::Write(format!("{text:?} isn't a track or disc total: {e}")))
+}
+
 /// What the saved file must read back as: `values` as the reader of `format` reports them
-/// (numbers and ID3 dates come back normalized),
+/// (numbers and ID3 dates come back normalized), each total of `opts` beside its number,
 /// `tags.cover`, and the file's extras that `tags` kept. With the cover removed, the reader
 /// falls back to another picture: `edited` is the tag as it will be saved, which says which.
 fn expected_tags(
     current: &FileTags,
     tags: &FileTags,
     values: &Values,
+    opts: &WriteOptions,
     format: AudioFormat,
     edited: &FileTags,
 ) -> Result<FileTags, TagError> {
@@ -279,6 +293,14 @@ fn expected_tags(
             fields.insert(*field, read_back);
         }
     }
+    for (number, field, total) in [
+        (TagField::Track, TagField::TrackTotal, opts.track_total),
+        (TagField::Disc, TagField::DiscTotal, opts.disc_total),
+    ] {
+        if let Some(total) = total.filter(|_| fields.contains_key(&number)) {
+            fields.insert(field, vec![total.to_string()]);
+        }
+    }
     let extras = tags
         .extras
         .keys()
@@ -291,16 +313,6 @@ fn expected_tags(
         cover: tags.cover.clone().or_else(|| edited.cover.clone()),
         extras,
     })
-}
-
-/// What the saved file's [`RawTags`] must be: each total when its number is written, and
-/// `conductor`.
-fn expected_raw(values: &Values, opts: &WriteOptions, conductor: Option<String>) -> RawTags {
-    RawTags {
-        track_total: opts.track_total.filter(|_| values.contains_key(&TagField::Track)),
-        disc_total: opts.disc_total.filter(|_| values.contains_key(&TagField::Disc)),
-        conductor,
-    }
 }
 
 /// A track or disc number as text: the number before any `/`, plus `/total` when known.
@@ -354,7 +366,7 @@ fn save<T: TagExt>(
         ("fields", written.fields != expected.fields),
         ("cover", written.cover != expected.cover),
         ("extras", written.extras != expected.extras),
-        ("totals or conductor", written_raw != *raw),
+        ("conductor", written_raw != *raw),
     ]
     .into_iter()
     .filter_map(|(part, differs)| differs.then_some(part))
@@ -495,6 +507,8 @@ fn id3_frame(field: TagField, values: &[String], opts: &WriteOptions) -> Result<
             timestamp(&joined)?,
         )),
         TagField::Comment => Frame::Comment(CommentFrame::new(TextEncoding::UTF8, *b"eng", String::new(), joined)),
+        // Written beside their number, never on their own (`values_to_write` leaves them out).
+        TagField::TrackTotal | TagField::DiscTotal => return unreachable_field(field),
         TagField::Performer | TagField::Translator | TagField::Description | TagField::Www => {
             let description = TXXX_FIELDS
                 .iter()
@@ -640,6 +654,8 @@ fn ilst_atoms(field: TagField, values: &[String], opts: &WriteOptions) -> Result
         TagField::Comment => vec![text(*b"\xA9cmt")],
         TagField::Track => vec![number_atom(*b"trkn", &values.join(JOIN), opts.track_total, 8)?],
         TagField::Disc => vec![number_atom(*b"disk", &values.join(JOIN), opts.disc_total, 6)?],
+        // Written beside their number, never on their own (`values_to_write` leaves them out).
+        TagField::TrackTotal | TagField::DiscTotal => return unreachable_field(field),
         TagField::Genre
         | TagField::Performer
         | TagField::Publisher
@@ -702,7 +718,7 @@ fn write_vorbis_family(
         set_ogg_cover(&mut comments, tags.cover.as_ref())?;
     }
     let edited = read_vorbis(&comments, comments.pictures().iter().map(|(p, _)| p));
-    let expected = expected_tags(&current, tags, values, format, &edited)?;
+    let expected = expected_tags(&current, tags, values, opts, format, &edited)?;
     Ok((comments, expected))
 }
 

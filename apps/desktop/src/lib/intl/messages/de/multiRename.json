@@ -996,9 +996,17 @@
   "@multiRename.tags.field.track": {
     "sourceHash": "051f01f"
   },
+  "multiRename.tags.field.trackTotal": "Total tracks",
+  "@multiRename.tags.field.trackTotal": {
+    "sourceHash": "5677198"
+  },
   "multiRename.tags.field.disc": "Disc",
   "@multiRename.tags.field.disc": {
     "sourceHash": "0c3ae2c"
+  },
+  "multiRename.tags.field.discTotal": "Total discs",
+  "@multiRename.tags.field.discTotal": {
+    "sourceHash": "2f1663d"
   },
   "multiRename.tags.field.comment": "Comment",
   "@multiRename.tags.field.comment": {

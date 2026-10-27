@@ -257,3 +257,46 @@ fn changes_with_different_lengths_marks_extra_rows_changed() {
         }]
     );
 }
+
+#[test]
+fn totals_are_shared_fields() {
+    let files = [
+        file(&[(TagField::Track, &["01"]), (TagField::TrackTotal, &["12"])]),
+        file(&[
+            (TagField::Track, &["02"]),
+            (TagField::TrackTotal, &["12"]),
+            (TagField::DiscTotal, &["2"]),
+        ]),
+    ];
+    let view = shared_view(&files);
+    assert_eq!(view[&TagField::TrackTotal], SharedValue::Same(strings(&["12"])));
+    assert_eq!(view[&TagField::DiscTotal], SharedValue::Multiple);
+    let edited = apply_edits(
+        &files,
+        &[Edit::SetAll {
+            field: TagField::TrackTotal,
+            values: strings(&["14"]),
+        }],
+    );
+    assert!(
+        edited
+            .iter()
+            .all(|f| f.fields[&TagField::TrackTotal] == strings(&["14"]))
+    );
+}
+
+#[test]
+fn totals_follow_their_numbers_in_display_order() {
+    let at = |field| TagField::ALL.iter().position(|f| *f == field).unwrap();
+    assert_eq!(at(TagField::TrackTotal), at(TagField::Track) + 1);
+    assert_eq!(at(TagField::DiscTotal), at(TagField::Disc) + 1);
+    assert!(
+        TagField::TrackTotal < TagField::Disc,
+        "the derive order is the display order"
+    );
+    for total in [TagField::TrackTotal, TagField::DiscTotal] {
+        assert!(!total.is_multi() && !total.keeps_diacritics());
+    }
+    assert_eq!(serde_json::to_string(&TagField::TrackTotal).unwrap(), r#""trackTotal""#);
+    assert_eq!(serde_json::to_string(&TagField::DiscTotal).unwrap(), r#""discTotal""#);
+}
