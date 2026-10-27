@@ -2,13 +2,13 @@
     /**
      * What a tag write did: how many files got their tags, and every file it left alone, each in its own list:
      * failed (with why, by the error's kind), changed on disk since it was read (with a way to read the files again),
-     * and skipped by the user. A write whose old tags couldn't be kept says it can't be undone. Nothing is left out.
+     * and skipped by the user; when no file was written, it says that first. A write whose old tags couldn't be kept says it can't be undone. Nothing is left out.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import Button from '#lib/ui/Button.svelte'
-    import { failureKey, fileNameOf, type ApplyOutcome } from './apply-outcome'
+    import { failureKey, failureParams, fileNameOf, type ApplyOutcome } from './apply-outcome'
 
     interface Props {
         outcome: ApplyOutcome
@@ -27,7 +27,7 @@
                 rows: outcome.failed.map((row) =>
                     tString('multiRename.tags.write.failedRow', {
                         fileName: fileNameOf(row.path),
-                        reason: tString(failureKey(row.error)),
+                        reason: tString(failureKey(row.error), failureParams(row.error)),
                     }),
                 ),
             },
@@ -44,6 +44,9 @@
 </script>
 
 <div class="outcome">
+    {#if outcome.written === 0 && lists.length > 0}
+        <p role="alert">{tString('multiRename.tags.write.refused')}</p>
+    {/if}
     {#if outcome.written > 0}
         <p role="status">
             {tString('multiRename.tags.write.done', { count: outcome.written, countText: formatInteger(outcome.written) })}

@@ -519,11 +519,11 @@ fn text_frame(id: &'static str, value: String) -> Frame<'static> {
 }
 
 /// A date lofty can write. lofty drops a date it can't parse from an ID3v2.3 tag without a
-/// word, so an unparseable one fails the write instead.
+/// word, so an unparseable or out-of-range one fails the write as [`TagError::BadDate`], which
+/// the user corrects in the Date row.
 fn timestamp(value: &str) -> Result<Timestamp, TagError> {
-    let parsed: Timestamp = value
-        .parse()
-        .map_err(|e| TagError::Write(format!("date {value:?} isn't a timestamp: {e}")))?;
+    let bad_date = || TagError::BadDate(value.to_owned());
+    let parsed: Timestamp = value.parse().map_err(|_| bad_date())?;
     // The range check lofty's ID3v2.3 writer applies (its own `verify` is private).
     let in_range = |field: Option<u8>, limit: u8| field.is_none_or(|f| f <= limit);
     let valid = parsed.year <= 9999
@@ -533,7 +533,7 @@ fn timestamp(value: &str) -> Result<Timestamp, TagError> {
         && in_range(parsed.minute, 59)
         && in_range(parsed.second, 59);
     if !valid {
-        return Err(TagError::Write(format!("date {value:?} is out of range")));
+        return Err(bad_date());
     }
     Ok(parsed)
 }

@@ -97,12 +97,14 @@ with any ID3v2.3 losses below, unless `WriteOptions::allow_frame_loss` is set. A
 them as the fields and is written with `COMM` / `TPOS`.
 
 - **MP3**: text is UTF-8 in memory; lofty writes UTF-16 for v2.3. The date is a `TDRC` timestamp that lofty splits into
-  `TYER` (+ `TDAT`, `TIME`); a date it can't parse fails the write, because lofty would drop it silently. lofty's v2.3
-  writer discards v2.4-only frames (`TSOP`, `TSOA`, `TSOT`, `TMOO`, `TDRL`, `RVA2`, ...; `write::DROPPED_BY_V23`, from
-  lofty 0.25.4's `FRAMES_TO_DISCARD`) and outdated v2.2 IDs, cuts a `TDOR` to its year (`TORY`), and merges `TMCL` into
-  `TIPL` (one `IPLS`; a lone `TIPL` round-trips). A write that would lose any of these fails with `TagError::WouldDrop`
-  (the IDs) unless `WriteOptions::allow_frame_loss` is set; the app asks the user. The cover is replaced where it
-  stands: `FrameList::insert` replaces any frame it considers equal, so it is used only for frames just removed.
+  `TYER` (+ `TDAT`, `TIME`); a date it can't parse or hold (month 20, as some taggers leave `2010-20-09`) fails the
+  write as `TagError::BadDate(date)`, because lofty would drop it silently; the UI names the date to correct. lofty's
+  v2.3 writer discards v2.4-only frames (`TSOP`, `TSOA`, `TSOT`, `TMOO`, `TDRL`, `RVA2`, ...; `write::DROPPED_BY_V23`,
+  from lofty 0.25.4's `FRAMES_TO_DISCARD`) and outdated v2.2 IDs, cuts a `TDOR` to its year (`TORY`), and merges `TMCL`
+  into `TIPL` (one `IPLS`; a lone `TIPL` round-trips). A write that would lose any of these fails with
+  `TagError::WouldDrop` (the IDs) unless `WriteOptions::allow_frame_loss` is set; the app asks the user. The cover is
+  replaced where it stands: `FrameList::insert` replaces any frame it considers equal, so it is used only for frames
+  just removed.
 - **FLAC**: saving the comments rewrites every picture block from the comments' own pictures, so the file's picture
   blocks move into the comments first (block pictures ahead of in-tag ones, keeping the reader's cover).
 - **M4A**: lofty panics on an ilst it can't encode, so a cover type outside JPEG/PNG/BMP/GIF is refused up front. lofty

@@ -64,6 +64,14 @@ file that something else renamed.
   `Replace`), which `cmdr-tags` can't depend on; they validate first, change nothing on a bad pattern, never strip
   diacritics, and take a scope like every other tool.
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.
+- **Covers are hashed once per read, never per view.** `Loaded::cover_key` is taken in `read_entry` and, for a cover new
+  to the session, in `store` (once per shared buffer, however many files get it); `view::build` and `same_cover` compare
+  keys and sizes, never bytes. Every edit rebuilds the view, and 22 tracks with a 2 MiB cover each are 44 MiB to hash.
+  `big_book_test.rs` counts the hashes and, ignored, times an audiobook (debug build, 2026-10-27: an edit
+  ~6.6 ms before, ~0.35 ms after; open ~22 ms before, ~120 ms after, the hashing moved there; the change list ~10 ms).
+- **The log**: `activity.rs` writes one `info` line per action under target `tag_editor` (open, edit, tool, text tool,
+  cover from file, changes, apply, undo: counts and milliseconds), and the apply's failures by kind at `debug`. No paths
+  or values, and errors by kind only.
 
 ## Write and undo
 

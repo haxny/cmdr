@@ -187,6 +187,9 @@ pub enum TagError {
     Parse(String),
     /// The tags couldn't be written.
     Write(String),
+    /// The Date to write (this value) isn't a date the format can hold: not a date at all, or
+    /// out of range (month 20). The user corrects it in the Date row. Nothing was written.
+    BadDate(String),
     /// The write would lose these items (sorted IDs such as `TSOP`, `TXXX:Comment`, `COMM:ces`,
     /// `TITLE#2`): values the reader doesn't show that differ from what it shows (a second value
     /// of a single-value field, a legacy or duplicate frame), or on MP3 frames ID3v2.3 has no
@@ -205,6 +208,7 @@ impl fmt::Display for TagError {
             TagError::Io(kind, msg) => write!(f, "I/O error ({kind}): {msg}"),
             TagError::Parse(msg) => write!(f, "couldn't parse tags: {msg}"),
             TagError::Write(msg) => write!(f, "couldn't write tags: {msg}"),
+            TagError::BadDate(date) => write!(f, "{date:?} isn't a date the tag can hold"),
             TagError::WouldDrop(ids) => write!(f, "the write would drop {}", ids.join(", ")),
             TagError::UnwritableExtra(key) => write!(f, "can't add the extra {key:?}"),
         }

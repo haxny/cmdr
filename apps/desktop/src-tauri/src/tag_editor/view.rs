@@ -12,7 +12,7 @@ use cmdr_tags::shared::{SharedValue, ValueCount, distinct_values, shared_view};
 use cmdr_tags::tools::fields_with_diacritics;
 use cmdr_tags::{Cover, FileTags, TagField};
 
-use super::session::Entry;
+use super::session::{Entry, Loaded};
 
 /// How many distinct values a «multiple values» row lists.
 const CHOICE_LIMIT: usize = 50;
@@ -113,16 +113,12 @@ pub(super) struct Access {
 }
 
 /// The tab for `tracks` (path and entry, in the session's current order). Unreadable files
-/// are listed but count in no summary.
+/// are listed but count in no summary. Hashes no cover: each file's key comes from its read.
 pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView {
-    let edited: Vec<FileTags> = tracks
-        .iter()
-        .filter_map(|(_, entry)| entry.loaded().map(|loaded| loaded.edited.clone()))
-        .collect();
+    let loaded: Vec<&Loaded> = tracks.iter().filter_map(|(_, entry)| entry.loaded()).collect();
+    let edited: Vec<FileTags> = loaded.iter().map(|file| file.edited.clone()).collect();
     let shared = shared_view(&edited);
-    let dirty = tracks
-        .iter()
-        .any(|(_, entry)| entry.loaded().is_some_and(|loaded| loaded.changed()));
+    let dirty = loaded.iter().any(|file| file.changed());
     TagEditorView {
         editable: access.editable,
         read_only_reason: access.reason,
@@ -140,7 +136,7 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             })
             .collect(),
         tracks: tracks.iter().map(|(path, entry)| track_row(path, entry)).collect(),
-        cover: cover_summary(&edited),
+        cover: cover_summary(&loaded),
         extras: edited
             .iter()
             .flat_map(|tags| tags.extras.keys().cloned())
@@ -189,14 +185,14 @@ fn first_value(tags: &FileTags, field: TagField) -> Option<String> {
     tags.fields.get(&field).and_then(|values| values.first()).cloned()
 }
 
-fn cover_summary(files: &[FileTags]) -> CoverSummary {
-    let Some((first, rest)) = files.split_first() else {
+fn cover_summary(files: &[&Loaded]) -> CoverSummary {
+    let Some(first) = files.first() else {
         return CoverSummary::Empty;
     };
-    if rest.iter().any(|file| !same_cover(&file.cover, &first.cover)) {
+    if files.iter().any(|file| !same_cover(file, first)) {
         return CoverSummary::Multiple;
     }
-    match &first.cover {
+    match &first.edited.cover {
         None => CoverSummary::Empty,
         Some(cover) => {
             let (width, height) = pixel_size(cover).unzip();
@@ -205,28 +201,87 @@ fn cover_summary(files: &[FileTags]) -> CoverSummary {
                 bytes: cover.data.len(),
                 width,
                 height,
-                key: content_key(&cover.data),
+                key: format!("{:016x}", first.cover_key.unwrap_or_else(|| cover_key(cover))),
             }
         }
     }
 }
 
-/// Equal covers: both absent, or the same MIME and the same bytes (a shared pointer settles it
-/// without comparing them).
-pub(super) fn same_cover(a: &Option<Cover>, b: &Option<Cover>) -> bool {
-    match (a, b) {
+/// The cover every file shares (their edited tags); `None` when there are no files, none has a
+/// cover, or the covers differ.
+pub(super) fn common_cover<'a>(files: &[&'a Loaded]) -> Option<&'a Cover> {
+    let first = files.first()?;
+    files
+        .iter()
+        .all(|file| same_cover(file, first))
+        .then_some(first.edited.cover.as_ref())?
+}
+
+/// Whether two files' edited covers are equal: both absent, or the same MIME and size and
+/// either one shared buffer or the same key (`Loaded::cover_key`), so no bytes are compared.
+fn same_cover(a: &Loaded, b: &Loaded) -> bool {
+    match (&a.edited.cover, &b.edited.cover) {
         (None, None) => true,
-        (Some(a), Some(b)) => a.mime == b.mime && (Arc::ptr_eq(&a.data, &b.data) || a.data == b.data),
+        (Some(x), Some(y)) => {
+            x.mime == y.mime
+                && x.data.len() == y.data.len()
+                && (Arc::ptr_eq(&x.data, &y.data) || (a.cover_key.is_some() && a.cover_key == b.cover_key))
+        }
         _ => false,
     }
 }
 
-/// A short hash of the cover's bytes (stable within the process; only compared, never stored).
-fn content_key(data: &[u8]) -> String {
+/// The key of a cover: a hash of its bytes, stable within the process (only compared, never
+/// stored). Taken once per read (`session::read_entry`) or new cover (`session::store`), never
+/// per view: 22 tracks with a 2 MiB cover each are 44 MiB to hash.
+pub(super) fn cover_key(cover: &Cover) -> u64 {
     use std::hash::{DefaultHasher, Hasher};
+    #[cfg(test)]
+    HASHES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let mut hasher = DefaultHasher::new();
-    hasher.write(data);
-    format!("{:016x}", hasher.finish())
+    hasher.write(&cover.data);
+    hasher.finish()
+}
+
+/// Covers already keyed, by their shared buffer, so a cover reached again isn't hashed again: an
+/// edit hands covers on as shared buffers, so only a cover new to the session is hashed, once
+/// however many files it goes to.
+#[derive(Default)]
+pub(super) struct CoverKeys {
+    known: Vec<(Cover, u64)>,
+}
+
+impl CoverKeys {
+    pub(super) fn remember(&mut self, cover: &Option<Cover>, key: Option<u64>) {
+        if let (Some(cover), Some(key)) = (cover, key)
+            && self.find(cover).is_none()
+        {
+            self.known.push((cover.clone(), key));
+        }
+    }
+
+    fn find(&self, cover: &Cover) -> Option<u64> {
+        self.known
+            .iter()
+            .find(|(known, _)| known.mime == cover.mime && Arc::ptr_eq(&known.data, &cover.data))
+            .map(|(_, key)| *key)
+    }
+
+    pub(super) fn key_of(&mut self, cover: &Option<Cover>) -> Option<u64> {
+        let cover = cover.as_ref()?;
+        let key = self.find(cover).unwrap_or_else(|| cover_key(cover));
+        self.remember(&Some(cover.clone()), Some(key));
+        Some(key)
+    }
+}
+
+/// How many covers were hashed so far in this process (nextest runs each test in its own).
+#[cfg(test)]
+static HASHES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+#[cfg(test)]
+pub(super) fn cover_hashes() -> usize {
+    HASHES.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// The image's size from its header. A decoder that panics on a hostile image costs the

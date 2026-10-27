@@ -1476,6 +1476,13 @@
   "@multiRename.tags.write.error.write": {
     "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
   },
+  "multiRename.tags.write.error.badDate": "its date “{date}” isn’t a real date; correct it in the Date row",
+  "@multiRename.tags.write.error.badDate": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name: its Date tag can’t be saved as a date (for example month 20). Date is the field’s label in the tag table. Lower case, no full stop.",
+    "placeholders": {
+      "date": "the file’s Date tag as it reads, for example 2010-20-09"
+    }
+  },
   "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
   "@multiRename.tags.write.error.wouldDrop": {
     "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written: writing it would drop tag data the editor doesn’t show. Lower case, no full stop."
@@ -1604,7 +1611,27 @@
   },
   "multiRename.tags.write.refused": "No file was written.",
   "@multiRename.tags.write.refused": {
-    "description": "Shown in the Tags tab of Multi-Rename: after a write the app refused before touching any file (it couldn’t keep the old tags for Undo)."
+    "description": "Shown in the Tags tab of Multi-Rename: after a write that wrote no file at all (refused before touching any file, or every file was left unwritten). A reason follows."
+  },
+  "multiRename.tags.write.waiting": "Finishing the last change…",
+  "@multiRename.tags.write.waiting": {
+    "description": "Shown in the Tags tab of Multi-Rename, beside a spinner, after the user pressed Write: the app waits for the last tag edit to land before it lists or writes the changes."
+  },
+  "multiRename.tags.write.stillBusy": "Cmdr is still reading the files. Try again in a moment.",
+  "@multiRename.tags.write.stillBusy": {
+    "description": "Shown in the Tags tab of Multi-Rename, next to the Write buttons: the app waited for an earlier tag call to finish and gave up, so nothing was listed or written. The user can press again."
+  },
+  "multiRename.tags.write.listFailed": "Cmdr couldn’t check what will change. Try again in a moment.",
+  "@multiRename.tags.write.listFailed": {
+    "description": "Shown in the Tags tab of Multi-Rename, next to the Write buttons: the list of what a write will change couldn’t be made, so nothing was written."
+  },
+  "multiRename.tags.write.sessionGone": "The tags aren’t open any more. Close Multi-Rename and open it again.",
+  "@multiRename.tags.write.sessionGone": {
+    "description": "Shown in the Tags tab of Multi-Rename after “No file was written.”: the app’s session for these files ended, so the write was refused."
+  },
+  "multiRename.tags.write.stopped": "The write stopped before it finished, so some files may not have their new tags.",
+  "@multiRename.tags.write.stopped": {
+    "description": "Shown in the Tags tab of Multi-Rename: a write ended unexpectedly, possibly after writing some files."
   },
   "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
   "@multiRename.tags.write.noUndoSome": {

@@ -27,7 +27,7 @@ use cmdr_tags::{
     format_of, normalize_for, read_duration, read_tags, removed_by_kind,
 };
 
-use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build, same_cover};
+use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, common_cover, cover_key};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::mask::MaskError;
@@ -129,6 +129,8 @@ pub(super) struct Loaded {
     pub disk: FileTags,
     pub edited: FileTags,
     pub duration_ms: Option<u64>,
+    /// The key of `edited`'s cover ([`cover_key`]), so a view build never hashes a cover.
+    pub cover_key: Option<u64>,
     /// Taken just BEFORE the read, so a change during the read shows as a change. `None` when
     /// the file couldn't be stat'ed, which counts as changed.
     pub fingerprint: Option<Fingerprint>,
@@ -217,7 +219,9 @@ fn code_of(error: &TagError) -> ReadErrorCode {
         TagError::NotSupported => ReadErrorCode::Unsupported,
         TagError::Io(..) => ReadErrorCode::Io,
         TagError::Parse(_) => ReadErrorCode::Parse,
-        TagError::Write(_) | TagError::WouldDrop(_) | TagError::UnwritableExtra(_) => ReadErrorCode::Unreadable,
+        TagError::Write(_) | TagError::BadDate(_) | TagError::WouldDrop(_) | TagError::UnwritableExtra(_) => {
+            ReadErrorCode::Unreadable
+        }
     }
 }
 
@@ -232,6 +236,7 @@ fn read_entry(path: &Path) -> Entry {
                 .flatten()
                 .map(|duration| u64::try_from(duration.as_millis()).unwrap_or(u64::MAX));
             Entry::Loaded(Box::new(Loaded {
+                cover_key: tags.cover.as_ref().map(cover_key),
                 disk: tags.clone(),
                 edited: tags,
                 duration_ms,
@@ -281,14 +286,12 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
 /// there are no readable files, or the files' covers differ. Needs an open session.
 pub fn shared_cover(session_id: &str) -> Result<Option<Cover>, TagEditorError> {
     with_session(session_id, |layout, session| {
-        let (_, edited) = readable(layout, session);
-        let Some((first, rest)) = edited.split_first() else {
-            return Ok(None);
-        };
-        if rest.iter().any(|file| !same_cover(&file.cover, &first.cover)) {
-            return Ok(None);
-        }
-        Ok(first.cover.clone())
+        let loaded: Vec<&Loaded> = layout
+            .tracks
+            .iter()
+            .filter_map(|path| session.by_path.get(path)?.loaded())
+            .collect();
+        Ok(common_cover(&loaded).cloned())
     })
 }
 
@@ -413,10 +416,14 @@ fn drop_orphan_totals(mut tags: FileTags) -> FileTags {
 /// Stores `edited` (parallel to `paths`) as the files' edited tags, as each file's format holds
 /// them, so every edit path (edits, tools) shows what a write will leave. A total whose number is
 /// absent is dropped the same way: it wouldn't be written.
+/// Each cover keeps its key ([`CoverKeys`]).
 fn store(session: &mut TagSession, paths: Vec<PathBuf>, edited: Vec<FileTags>) {
+    let mut keys = CoverKeys::default();
     for (path, tags) in paths.into_iter().zip(edited) {
         if let Some(Entry::Loaded(loaded)) = session.by_path.get_mut(&path) {
+            keys.remember(&loaded.edited.cover, loaded.cover_key);
             loaded.edited = as_format_holds(&path, tags);
+            loaded.cover_key = keys.key_of(&loaded.edited.cover);
         }
     }
 }
@@ -650,6 +657,7 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
             (Entry::Loaded(loaded), Entry::Loaded(now)) => {
                 if loaded.edited == requested {
                     loaded.edited = now.disk.clone();
+                    loaded.cover_key = now.cover_key;
                 }
                 loaded.disk = now.disk;
                 loaded.fingerprint = now.fingerprint;
@@ -707,7 +715,11 @@ pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
 fn follow_disk(held: &mut Entry, now: &Entry) {
     match (held, now) {
         (Entry::Loaded(held), Entry::Loaded(now)) => {
+            let mut keys = CoverKeys::default();
+            keys.remember(&held.edited.cover, held.cover_key);
+            keys.remember(&now.edited.cover, now.cover_key);
             held.edited = rebase(&held.disk, &held.edited, &now.disk);
+            held.cover_key = keys.key_of(&held.edited.cover);
             held.disk = now.disk.clone();
             held.fingerprint = now.fingerprint.clone();
             held.duration_ms = now.duration_ms;

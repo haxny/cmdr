@@ -17,6 +17,12 @@ Setting `multiRename.tagEditor` (boolean, default off). On, `SheetTabs` appears 
 - **`settled()` is bounded** (`SETTLE_LIMIT_MS`, 5 s): a call that never answers (a stalled network mount) can't hold
   the sheet. It answers `false` then, and the discard guard asks "Discard tag changes?" anyway, so Cancel and Esc always
   end in a question or a close.
+- **A write press always answers** (`ApplyPanel`): it waits up to `WRITE_WAIT_LIMIT_MS` (30 s, `write-wait.ts`) for the
+  calls out, showing "Finishing the last change…" after `WAITING_SHOWN_AFTER_MS`; a wait that gives up, a list that
+  can't be made, and a refused write are worded next to the buttons (`notice`, the `refused` step), never only at the
+  top of the tab. A write where no file was written says "No file was written." first, each file with why. Regression
+  anchor (2026-10-27): on a real 22-file audiobook every file was refused for a bad date and the write looked like
+  nothing happened.
 - **Apply / undo**: the old tags are recorded before any write; failures are per file and the rest are written; Undo
   restores exactly the written files after asking, and leaves one that changed since (its fingerprint moved) alone.
   Other open sessions keep their unwritten edits, rebased per field. One Multi-Rename sheet is open at a time.

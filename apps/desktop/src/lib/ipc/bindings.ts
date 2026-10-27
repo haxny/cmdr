@@ -18456,6 +18456,11 @@ export type TagError =
   // The tags couldn't be written.
   | { type: 'write'; data: string }
   /**
+   *  The Date to write (this value) isn't a date the format can hold: not a date at all, or
+   *  out of range (month 20). The user corrects it in the Date row. Nothing was written.
+   */
+  | { type: 'badDate'; data: string }
+  /**
    *  The write would lose these items (sorted IDs such as `TSOP`, `TXXX:Comment`, `COMM:ces`,
    *  `TITLE#2`): values the reader doesn't show that differ from what it shows (a second value
    *  of a single-value field, a legacy or duplicate frame), or on MP3 frames ID3v2.3 has no

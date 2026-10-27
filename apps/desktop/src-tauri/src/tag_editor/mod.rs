@@ -1,6 +1,7 @@
 //! The Tags tab of Multi-Rename: a tag session per Multi-Rename session, edited in memory.
 //! See `CLAUDE.md`.
 
+pub(crate) mod activity;
 pub(crate) mod apply;
 pub(crate) mod cover;
 pub(crate) mod playback;
@@ -11,6 +12,8 @@ pub(crate) mod view;
 
 #[cfg(test)]
 mod apply_test;
+#[cfg(test)]
+mod big_book_test;
 #[cfg(test)]
 mod cover_test;
 #[cfg(test)]

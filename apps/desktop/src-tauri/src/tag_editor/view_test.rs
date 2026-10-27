@@ -1,12 +1,12 @@
 //! The tab's pure view: summaries over entries, unreadable rows left out of them.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cmdr_tags::shared::{SharedValue, ValueCount};
 use cmdr_tags::{Cover, FileTags, TagField};
 
 use super::session::{Entry, Loaded};
-use super::view::{Access, CoverSummary, ReadErrorCode, build};
+use super::view::{Access, CoverSummary, ReadErrorCode, build, cover_hashes, cover_key};
 
 fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> Entry {
     let mut tags = FileTags::default();
@@ -21,6 +21,7 @@ fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> 
         tags.extras.insert((*key).to_string(), vec!["x".to_string()]);
     }
     Entry::Loaded(Box::new(Loaded {
+        cover_key: tags.cover.as_ref().map(cover_key),
         disk: tags.clone(),
         edited: tags,
         duration_ms: Some(1500),
@@ -165,4 +166,26 @@ fn same_row_has_no_choices() {
         SharedValue::Same(vec!["Book".to_string()])
     );
     assert!(view.shared.iter().all(|row| row.choices.is_empty()));
+}
+
+/// An audiobook's 22 tracks with a 2 MiB cover each: building the view (which every edit does)
+/// hashes no cover, the keys come from the read.
+#[test]
+fn a_view_build_hashes_no_cover() {
+    let cover = vec![7_u8; 2 * 1024 * 1024];
+    let entries: Vec<(PathBuf, Entry)> = (1..=22)
+        .map(|index| {
+            (
+                PathBuf::from(format!("/m/{index:02}.mp3")),
+                loaded(&[], Some(&cover), &[]),
+            )
+        })
+        .collect();
+    let tracks: Vec<(&Path, &Entry)> = entries.iter().map(|(path, entry)| (path.as_path(), entry)).collect();
+
+    let before = cover_hashes();
+    let view = build(OPEN, &tracks);
+
+    assert_eq!(cover_hashes(), before);
+    assert!(matches!(view.cover, CoverSummary::Same { bytes, .. } if bytes == cover.len()));
 }

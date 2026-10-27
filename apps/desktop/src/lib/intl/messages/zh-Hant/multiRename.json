@@ -1296,6 +1296,10 @@
   "@multiRename.tags.write.error.write": {
     "sourceHash": "99f4775"
   },
+  "multiRename.tags.write.error.badDate": "its date “{date}” isn’t a real date; correct it in the Date row",
+  "@multiRename.tags.write.error.badDate": {
+    "sourceHash": "55698d1"
+  },
   "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
   "@multiRename.tags.write.error.wouldDrop": {
     "sourceHash": "8429c5f"
@@ -1399,6 +1403,26 @@
   "multiRename.tags.write.refused": "No file was written.",
   "@multiRename.tags.write.refused": {
     "sourceHash": "6762f25"
+  },
+  "multiRename.tags.write.waiting": "Finishing the last change…",
+  "@multiRename.tags.write.waiting": {
+    "sourceHash": "e49e983"
+  },
+  "multiRename.tags.write.stillBusy": "Cmdr is still reading the files. Try again in a moment.",
+  "@multiRename.tags.write.stillBusy": {
+    "sourceHash": "f9beee0"
+  },
+  "multiRename.tags.write.listFailed": "Cmdr couldn’t check what will change. Try again in a moment.",
+  "@multiRename.tags.write.listFailed": {
+    "sourceHash": "74dd272"
+  },
+  "multiRename.tags.write.sessionGone": "The tags aren’t open any more. Close Multi-Rename and open it again.",
+  "@multiRename.tags.write.sessionGone": {
+    "sourceHash": "00fb6eb"
+  },
+  "multiRename.tags.write.stopped": "The write stopped before it finished, so some files may not have their new tags.",
+  "@multiRename.tags.write.stopped": {
+    "sourceHash": "05bfca4"
   },
   "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
   "@multiRename.tags.write.noUndoSome": {

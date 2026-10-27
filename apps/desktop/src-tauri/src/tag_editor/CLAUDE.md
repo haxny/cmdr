@@ -9,7 +9,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - `view.rs` the pure `TagEditorView`: shared rows, track rows, cover, extras, dirty, diacritics.
 - `cover.rs` cover files from the session's folder (plain name, regular file, size; type from the magic bytes, never
   the name) and the thumbnail `data:` URL; IPC in `commands/tag_editor.rs`.
-- `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`.
+- `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`; `activity.rs` the
+  `tag_editor` log lines (counts and durations, never paths or values).
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
   Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the viewer's choke point) and "open in

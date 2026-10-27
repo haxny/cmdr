@@ -5,7 +5,10 @@ use cmdr_tags::shared::CoverEdit;
 use cmdr_tags::tools::TagTool;
 use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
+use std::time::Instant;
+
 use crate::multi_rename::session::files_of;
+use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
 use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover, thumbnail_url};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
@@ -29,14 +32,26 @@ async fn blocking<T: Send + 'static>(
 #[tauri::command]
 #[specta::specta]
 pub async fn open_tag_editor(session_id: String, restart: bool) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || open(&session_id, restart)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = open(&session_id, restart);
+        activity::opened(&result, started);
+        result
+    })
+    .await
 }
 
 /// Applies edits in memory; an unknown track refuses the whole batch.
 #[tauri::command]
 #[specta::specta]
 pub async fn edit_tags(session_id: String, edits: Vec<TagEdit>) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || edit(&session_id, edits)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = edit(&session_id, edits);
+        activity::edited("edit", &result, started);
+        result
+    })
+    .await
 }
 
 /// Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
@@ -47,7 +62,13 @@ pub async fn run_tag_tool(
     tool: TagTool,
     scope: Option<Vec<String>>,
 ) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || run_tool(&session_id, tool, scope)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = run_tool(&session_id, tool, scope);
+        activity::edited("tool", &result, started);
+        result
+    })
+    .await
 }
 
 /// Runs find/replace or a field-from-mask format over the tracks at `scope`, or the whole session
@@ -59,7 +80,13 @@ pub async fn run_tag_text_tool(
     tool: TagTextTool,
     scope: Option<Vec<String>>,
 ) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || run_text_tool(&session_id, tool, scope)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = run_text_tool(&session_id, tool, scope);
+        activity::edited("text tool", &result, started);
+        result
+    })
+    .await
 }
 
 /// What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
@@ -77,7 +104,13 @@ pub async fn preview_tags_from_names(
 #[tauri::command]
 #[specta::specta]
 pub async fn get_tag_changes(session_id: String, kind: ContentKind) -> Result<Vec<FileChangeView>, TagEditorError> {
-    blocking(move || changes(&session_id, kind)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = changes(&session_id, kind);
+        activity::listed(&result, started);
+        result
+    })
+    .await
 }
 
 /// Writes the changed files.
@@ -88,7 +121,13 @@ pub async fn apply_tags(
     session_id: String,
     request: ApplyRequest,
 ) -> Result<TagApplyReport, TagEditorError> {
-    blocking(move || crate::tag_editor::apply::apply(&app, &session_id, request)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = crate::tag_editor::apply::apply(&app, &session_id, request);
+        activity::applied(&result, started);
+        result
+    })
+    .await
 }
 
 /// Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
@@ -101,7 +140,13 @@ pub async fn undo_tag_apply(
     apply_id: String,
     session_id: Option<String>,
 ) -> Result<RestoreReport, TagEditorError> {
-    blocking(move || crate::tag_editor::undo::undo(&app, apply_id, session_id)).await
+    blocking(move || {
+        let started = Instant::now();
+        let result = crate::tag_editor::undo::undo(&app, apply_id, session_id);
+        activity::undone(&result, started);
+        result
+    })
+    .await
 }
 
 /// Ends the tag session, dropping its edits.
@@ -160,13 +205,17 @@ pub async fn list_cover_candidates(session_id: String) -> Result<Vec<CoverCandid
 #[specta::specta]
 pub async fn set_cover_from_file(session_id: String, file_name: String) -> Result<TagEditorView, TagEditorError> {
     blocking(move || {
-        let cover = read_cover(&local_folder(&session_id)?, &file_name)?;
-        edit(
-            &session_id,
-            vec![TagEdit::Cover {
-                edit: CoverEdit::Set(cover),
-            }],
-        )
+        let started = Instant::now();
+        let result = read_cover(&local_folder(&session_id)?, &file_name).and_then(|cover| {
+            edit(
+                &session_id,
+                vec![TagEdit::Cover {
+                    edit: CoverEdit::Set(cover),
+                }],
+            )
+        });
+        activity::edited("cover from file", &result, started);
+        result
     })
     .await
 }
