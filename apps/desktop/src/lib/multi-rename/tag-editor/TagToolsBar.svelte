@@ -160,7 +160,7 @@
             </Button>
         </div>
     {:else if open === 'replace' && !disabled}
-        <div class="panel text-panel" id="tag-tools-replace"><ReplacePanel {disabled} state={tags} {runScoped} /></div>
+        <div class="panel text-panel" id="tag-tools-replace"><ReplacePanel {disabled} state={tags} {runScoped} {focusedField} /></div>
     {:else if open === 'format' && !disabled}
         <div class="panel text-panel" id="tag-tools-format"><FormatPanel {disabled} state={tags} {runScoped} /></div>
     {:else if open === 'name' && !disabled}

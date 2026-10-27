@@ -195,6 +195,24 @@ describe('createTagEditorState', () => {
     expect(state.busy).toBe(false)
   })
 
+  it('a good preview clears only the bad-pattern error it owns', async () => {
+    const state = createTagEditorState('S')
+    const pattern = { kind: 'format', pattern: '%title%' } as const
+    ipc.previewTagsFromNames.mockResolvedValue({ ok: true, value: [] })
+    ipc.editTags.mockResolvedValueOnce({ ok: false, error: { kind: 'unknownTrack' } })
+    await state.edit([])
+    await state.previewFromNames(pattern)
+    expect(state.error).toEqual({ kind: 'unknownTrack' })
+    ipc.previewTagsFromNames.mockResolvedValueOnce({
+      ok: false,
+      error: { kind: 'badPattern', error: { kind: 'badRegex' } },
+    })
+    await state.previewFromNames(pattern)
+    expect(state.error?.kind).toBe('badPattern')
+    await state.previewFromNames(pattern)
+    expect(state.error).toBeNull()
+  })
+
   it('changes returns the backend answer and sets the error on failure', async () => {
     const state = createTagEditorState('S')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: true, value: [] })

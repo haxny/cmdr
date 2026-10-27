@@ -146,7 +146,11 @@ describe('MultiRenameDialog Tags tab', () => {
     expect(ipc.openTagEditor).not.toHaveBeenCalled()
   })
 
-  it('the ⌘⌥ option keys do nothing while the Tags tab shows', async () => {
+  it.each([
+    ['C', 'ç', 'KeyC'],
+    ['F', 'ƒ', 'KeyF'],
+    ['R', '®', 'KeyR'],
+  ])('⌘⌥%s does nothing while the Tags tab shows', async (_letter, composed, code) => {
     flags.tagEditor = true
     const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
     navigatorSpy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
@@ -155,8 +159,8 @@ describe('MultiRenameDialog Tags tab', () => {
       tab('Tags').click()
       await settle()
       const event = new KeyboardEvent('keydown', {
-        key: 'ƒ',
-        code: 'KeyF',
+        key: composed,
+        code,
         metaKey: true,
         altKey: true,
         bubbles: true,
@@ -167,8 +171,9 @@ describe('MultiRenameDialog Tags tab', () => {
       expect(event.defaultPrevented).toBe(false)
       tab('Rename').click()
       await settle()
-      const chip = document.querySelector('.search-options button[aria-label="First match only"]')
-      expect(chip?.getAttribute('aria-pressed')).toBe('false')
+      const chips = [...document.querySelectorAll('.search-options button[aria-pressed]')]
+      expect(chips.length).toBeGreaterThan(0)
+      expect(chips.every((chip) => chip.getAttribute('aria-pressed') === 'false')).toBe(true)
     } finally {
       navigatorSpy.mockRestore()
     }

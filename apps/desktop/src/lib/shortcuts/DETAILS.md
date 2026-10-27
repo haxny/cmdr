@@ -186,6 +186,9 @@ declares, `shortcuts.json` persists, `shortcut-dispatch` keys its map by, `confl
   `Space`, `Tab`, `Home`, `End`. Arrows stay symbols (`↑ ↓ ← →`) on every platform. macOS reports a PC keyboard's Insert
   key as `Help` (both `key` and `code`; verified on macOS 27 with a Genius PC keyboard, Safari key log, 2026-10-05), so
   `Help` canonicalizes to `Insert`.
+- **⌥Space records as `⌥Space`**: macOS types a NBSP for ⌥Space, and key-capture maps NBSP back to Space only with ⌥
+  held (so a bare NBSP stays a typed character). `multiRename.playTrack` (⌥Space) is listed in Settings even with the
+  tag editor off, like `multiRename.tabRename` and `multiRename.tabTags`.
 - **A symbol typed with Shift alone is named by its CHARACTER, without the ⇧**: US ⇧8, Swedish ⇧', and the numpad all
   give `*`; Hungarian ⇧3 and US ⇧= give `+`; French ⇧1 gives `1`. "Symbol" means a one-character key with no case
   (`isTypedSymbol`), so letters keep their Shift (`⇧H`), and so do Space (`⇧Space` is Quick Look) and named keys (`⇧F8`,

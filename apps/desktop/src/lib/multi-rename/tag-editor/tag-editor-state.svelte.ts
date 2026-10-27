@@ -121,13 +121,18 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let viewShown = 0
 
   /** Runs one backend call with `busy` on, keeps its error, and hands the result back. */
-  async function track<T>(call: () => Promise<TagEditorResult<T>>): Promise<TagEditorResult<T>> {
+  async function track<T>(
+    call: () => Promise<TagEditorResult<T>>,
+    /** Whether a success clears `error`; a call that owns only some errors passes which. */
+    clears: (current: TagStateError) => boolean = () => true,
+  ): Promise<TagEditorResult<T>> {
     pending += 1
     const running = call()
     inFlight.add(running)
     try {
       const res = await running
-      error = res.ok ? null : res.error
+      if (!res.ok) error = res.error
+      else if (error !== null && clears(error)) error = null
       return res
     } finally {
       inFlight.delete(running)
@@ -193,7 +198,12 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
     tool: (tool, scope = null) => replaceView(() => runTagTool(sessionId, tool, scope)),
     textTool: (tool, scope = null) => replaceView(() => runTagTextTool(sessionId, tool, scope)),
-    previewFromNames: (pattern, scope = null) => track(() => previewTagsFromNames(sessionId, pattern, scope)),
+    // A preview owns only a bad pattern: a good one leaves any other notice (a failed edit, a cover) standing.
+    previewFromNames: (pattern, scope = null) =>
+      track(
+        () => previewTagsFromNames(sessionId, pattern, scope),
+        (current) => current.kind === 'badPattern',
+      ),
     settled,
     async coverImage() {
       const res = await getCoverImage(sessionId)

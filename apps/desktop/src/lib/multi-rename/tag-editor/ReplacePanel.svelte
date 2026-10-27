@@ -1,6 +1,6 @@
 <script lang="ts">
     /**
-     * Find and replace inside tag values (not file names), on the fields ticked here: Title to start with, or all.
+     * Find and replace inside tag values (not file names), on the fields ticked here: the focused field when the panel opens, else Title to start with, or all.
      * The search follows Multi-Rename's rules (wildcards, `$1` groups with Regular expression, case-insensitive
      * unless Match case); the three option chips are Multi-Rename's own. A value that ends up empty is dropped by the
      * backend. A bad regular expression is worded like Multi-Rename words it.
@@ -21,16 +21,20 @@
         disabled: boolean
         state: TagEditorState
         runScoped: RunScoped
+        /** The tag box that had focus when the panel opened; preselected. `null` keeps Title. */
+        focusedField?: TagField | null
     }
 
-    const { disabled, state: tags, runScoped }: Props = $props()
+    const { disabled, state: tags, runScoped, focusedField = null }: Props = $props()
 
     const CHIPS: readonly SearchOptionField[] = ['caseSensitive', 'firstOnly', 'regex']
 
     let search = $state('')
     let replacement = $state('')
     let allFields = $state(false)
-    let chosen = $state.raw<readonly TagField[]>(['title'])
+    // Read once: the panel is mounted when it opens, and later focus changes must not move the ticks.
+    // svelte-ignore state_referenced_locally
+    let chosen = $state.raw<readonly TagField[]>([focusedField ?? 'title'])
     let options = $state<Pick<MultiRenameSpec, SearchOptionField>>({
         caseSensitive: false,
         firstOnly: false,

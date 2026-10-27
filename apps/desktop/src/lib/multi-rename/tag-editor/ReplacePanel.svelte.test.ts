@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { tick } from 'svelte'
 import ReplacePanel from './ReplacePanel.svelte'
+import type { TagField } from '#lib/ipc/bindings.js'
 import { TAG_FIELDS } from './field-labels'
 import { byId, mountInto, typeInto } from './tag-cell.test-helper'
 import { SCOPE, asTags, boxNamed, buttonNamed, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
@@ -12,10 +13,15 @@ afterEach(() => {
   cleanup = undefined
 })
 
-async function mountPanel(over: { disabled?: boolean; scope?: string[] | null } = {}) {
+async function mountPanel(over: { disabled?: boolean; scope?: string[] | null; focusedField?: TagField | null } = {}) {
   const tags = fakeTags()
   const runScoped = fakeRunScoped(over.scope === undefined ? SCOPE : over.scope)
-  const mounted = await mountInto(ReplacePanel, { disabled: over.disabled ?? false, state: asTags(tags), runScoped })
+  const mounted = await mountInto(ReplacePanel, {
+    disabled: over.disabled ?? false,
+    state: asTags(tags),
+    runScoped,
+    focusedField: over.focusedField ?? null,
+  })
   cleanup = mounted.cleanup
   return { root: mounted.root, tags, runScoped }
 }
@@ -48,6 +54,13 @@ describe('ReplacePanel', () => {
       },
       SCOPE,
     )
+  })
+
+  it('preselects the focused field when it opens, Title otherwise', async () => {
+    const { root, tags } = await mountPanel({ focusedField: 'album' })
+    await fill(root, 'a', 'b')
+    await click(buttonNamed(root, 'Replace'))
+    expect(tags.textTool).toHaveBeenCalledWith(expect.objectContaining({ fields: ['album'] }), SCOPE)
   })
 
   it('goes over every track when none is checked', async () => {
