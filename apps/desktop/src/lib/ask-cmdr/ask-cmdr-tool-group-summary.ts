@@ -33,6 +33,7 @@ export const SUBJECT_CATEGORY: Record<ToolSubject['kind'], GroupCategory> = {
   suggestions: 'check',
   suggestionGroup: 'check',
   suggestionSweep: 'plan',
+  serverSuggestion: 'plan',
   nothingToSuggest: 'other',
   memoryFile: 'note',
   unknownTool: 'other',

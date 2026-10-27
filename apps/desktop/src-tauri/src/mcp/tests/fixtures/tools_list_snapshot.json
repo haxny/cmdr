@@ -853,6 +853,10 @@
             "type": "string",
             "description": "Scope string: comma-separated paths, ! for excludes (for example, \"~/projects, !node_modules\"). A search covers ONE volume, so every include path must be on the same drive; omit to search the boot volume."
           },
+          "volumeId": {
+            "type": "string",
+            "description": "The volume to search, from list_volumes: its whole root, or the scope's paths on it. Reaches a volume that isn't connected, from its index."
+          },
           "caseSensitive": {
             "type": "boolean",
             "description": "Case-sensitive matching. Default: false on macOS, true on Linux"
@@ -1460,13 +1464,17 @@
     },
     {
       "name": "list_dir",
-      "description": "List a folder's children from the drive index (never the disk), plus its recursive size total. Sort by name, size, or modified; page with limit/offset. sortBy size ranks files and folders together by space used, to find where space goes inside ONE folder; search ranks a whole drive.",
+      "description": "List a folder's children and recursive size from the drive index; an unindexed folder is read live, without folder sizes, and a volume that isn't connected answers from its last index, dated. Sort by name, size, or modified; page with limit/offset. sortBy size ranks files and folders together by space used, to find where space goes inside ONE folder; search ranks a whole drive.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "path": {
             "type": "string",
             "description": "Absolute or ~-relative folder to list. Relay the coverage block and any lower-bound size rather than a total the index can't back."
+          },
+          "volumeId": {
+            "type": "string",
+            "description": "The volume the path is on, from list_volumes or a result's location. Omit for a path on a connected volume."
           },
           "sortBy": {
             "type": "string",

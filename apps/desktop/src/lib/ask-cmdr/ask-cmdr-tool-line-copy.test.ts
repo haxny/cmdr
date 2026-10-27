@@ -203,6 +203,7 @@ describe('toolLineLabel', () => {
       suggestions: ['list_suggestions', { kind: 'suggestions' }],
       suggestionGroup: ['get_suggestion_group', { kind: 'suggestionGroup' }],
       suggestionSweep: ['propose_suggestions', { kind: 'suggestionSweep', count: 2 }],
+      serverSuggestion: ['propose_server', { kind: 'serverSuggestion' }],
       nothingToSuggest: ['nothing_to_suggest', { kind: 'nothingToSuggest' }],
       memoryFile: ['memory_write', { kind: 'memoryFile', path: 'a.md', absolute: null }],
       unknownTool: ['nope', { kind: 'unknownTool', name: 'nope' }],

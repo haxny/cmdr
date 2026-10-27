@@ -311,7 +311,7 @@ which rides `TurnParams.call` into every `respond` of the turn.
 
 ### A local window too small to use
 
-A window that gives the reply its 12,000 tokens has to hold `FIXED_PROMPT_OVERHEAD_TOKENS` (6,263) plus a paged tool
+A window that gives the reply its 12,000 tokens has to hold `FIXED_PROMPT_OVERHEAD_TOKENS` (7,241) plus a paged tool
 result before it holds a single word of the conversation, so the floor is `MIN_LOCAL_CONTEXT_TOKENS = 32_768`, which
 resolves to 17,652. `ai.localContextSize` offers nothing smaller, and a smaller stored size no longer validates (it
 resolves to the 32,768 default on load, migrating an early tester instead of leaving them broken).

@@ -197,7 +197,7 @@ pub fn wake_digest_budget(prompt_tokens: usize) -> usize {
 /// system string is never elided (`context::assemble_prompt` tightens tool results only), so
 /// every byte of memory is a permanent tax on every turn of every thread. Run the numbers a
 /// flat 8 KB would give at the smallest window the app supports: [`MIN_LOCAL_CONTEXT_TOKENS`]
-/// resolves to a 17,652-token budget, the fixed overhead takes 6,263 of it, and 8 KB of memory
+/// resolves to a 17,652-token budget, the fixed overhead takes 7,241 of it, and 8 KB of memory
 /// at [`CHARS_PER_TOKEN_ESTIMATE`] takes 2,048 more, so memory alone would claim about a fifth
 /// of what is left for the digest, the envelope, the history, and every tool result, and it would
 /// claim the same 2,048 on a window a tenth the size. **And the agent writes this file itself**,
