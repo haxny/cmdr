@@ -56,9 +56,9 @@ dependencies = [
 
 [[package]]
 name = "aes"
-version = "0.9.1"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1fc76eaeac4c9164506c466d4ffdd8ec9d0c5bf57ee97177c4d8eceb3a0e138"
+checksum = "35f0f96ce78e38c3dc6d8948aa8163d06385be74000f3c7a95bf1eef35d3ea32"
 dependencies = [
  "cipher 0.5.2",
  "cpubits",
@@ -87,7 +87,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fdf011db2e21ce0d575593d749db5554b47fed37aff429e4dc50bc91ac93a028"
 dependencies = [
  "aead 0.6.1",
- "aes 0.9.1",
+ "aes 0.9.3",
  "cipher 0.5.2",
  "ctr 0.10.1",
  "ghash 0.6.0",
@@ -6584,9 +6584,9 @@ dependencies = [
 
 [[package]]
 name = "mtp-rs"
-version = "0.34.3"
+version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88b669205b9f3b9b6de3e312ae11fdb4b51944d2b523fca1bcf35c9aa39bebe6"
+checksum = "dc62499ec8b3fd93766cf3bcd0e757bb7723032b6d928a1c34c8b18a3dd0bd21"
 dependencies = [
  "async-trait",
  "bytes",
@@ -8190,7 +8190,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63d440a804ec8d6fafbb6b84471e013286658d373248927692ab3366686220ca"
 dependencies = [
- "aes 0.9.1",
+ "aes 0.9.3",
  "aes-gcm 0.11.0",
  "cbc 0.2.1",
  "der",
@@ -9148,7 +9148,7 @@ version = "0.64.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba61e87b9ec9a39a59a6bbed4c0b8ff7fb07073405b24a767a1f2c8560ac8f58"
 dependencies = [
- "aes 0.9.1",
+ "aes 0.9.3",
  "aws-lc-rs",
  "bitflags 2.13.2",
  "block-padding 0.4.2",
@@ -9838,7 +9838,7 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f0c68c0e8289bfd09e49ef433e8de02c7c464afc1d7f5a275c99749a880e301"
 dependencies = [
- "aes 0.9.1",
+ "aes 0.9.3",
  "bzip2",
  "cbc 0.2.1",
  "crc32fast",
@@ -10018,11 +10018,11 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "smb2"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "191e0bf6d61480771778dd0fb7c34ca0dbec2c2f66eb8f06aa2bafddfd1b5374"
+checksum = "b8b71a22b45c9d42e0a91395a4c18d813e8768f8998fe8beebf1b1f66a700aaa"
 dependencies = [
- "aes 0.9.1",
+ "aes 0.9.3",
  "aes-gcm 0.11.0",
  "async-trait",
  "ccm",
@@ -10212,7 +10212,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d801accda99469cde6d73da741422610fdf6508a72d9a69d1b55cb241c720597"
 dependencies = [
  "aead 0.6.1",
- "aes 0.9.1",
+ "aes 0.9.3",
  "aes-gcm 0.11.0",
  "chacha20 0.10.2",
  "cipher 0.5.2",
@@ -11082,7 +11082,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -13210,7 +13210,7 @@ dependencies = [
 name = "zip"
 version = "9.0.5"
 dependencies = [
- "aes 0.9.1",
+ "aes 0.9.3",
  "constant_time_eq 0.6.1",
  "crc32fast",
  "flate2",

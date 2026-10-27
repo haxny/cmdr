@@ -53,7 +53,7 @@
     },
     {
       "name": "aes",
-      "version": "0.9.1",
+      "version": "0.9.3",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/RustCrypto/block-ciphers"
     },
@@ -2369,7 +2369,7 @@
     },
     {
       "name": "mtp-rs",
-      "version": "0.34.3",
+      "version": "0.35.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/vdavid/mtp-rs"
     },
@@ -3629,7 +3629,7 @@
     },
     {
       "name": "smb2",
-      "version": "0.35.0",
+      "version": "0.36.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/vdavid/smb2"
     },
