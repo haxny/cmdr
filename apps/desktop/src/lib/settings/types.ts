@@ -736,6 +736,8 @@ export interface SettingsValues {
    */
   'advanced.oldMacosNoticeShown': boolean
   'fileExplorer.tabs.closedTabHistorySize': number
+  /** Adds the opt-in Tags tab to Multi-Rename. Off by default: off, the sheet is exactly upstream's. */
+  'multiRename.tagEditor': boolean
 
   // Search
   'search.autoApply': boolean

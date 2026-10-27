@@ -60,6 +60,11 @@
     import { isOperationLogRecording } from '#lib/operation-log/recording.js'
     import { createResults } from './results.svelte'
     import { createFieldHistoryMenu } from './field-history-menu.svelte'
+    import { getSetting } from '#lib/settings/index.js'
+    import SheetTabs from './tag-editor/SheetTabs.svelte'
+    import TagsTab from './tag-editor/TagsTab.svelte'
+    import { createTagEditorState } from './tag-editor/tag-editor-state.svelte'
+    import type { SheetTab } from './tag-editor/sheet-tab-keys'
 
     interface Props {
         session: MultiRenameOpened
@@ -101,6 +106,10 @@
     // The mask fields' range editors show what a range takes from the files around the list's cursor.
     provideRangeSampleSource(tool)
     const results = createResults(tool)
+    // The opt-in Tags tab (setting off: no tab strip, no tag session, no tag IPC).
+    const tags = getSetting('multiRename.tagEditor') ? createTagEditorState(session.sessionId) : null
+    let sheetTab = $state<SheetTab>('rename')
+    onDestroy(() => { void tags?.close() })
     const fieldHistory = createFieldHistoryMenu({
         inputOf: (field) =>
             ({ nameMask: nameMaskInput, extensionMask: extensionMaskInput, search: searchInput, replace: replaceInput })[
@@ -333,6 +342,8 @@
     {/snippet}
 
     <div class="sheet">
+        {#if tags}<SheetTabs active={sheetTab} onSelect={(tab) => { sheetTab = tab }} />{/if}
+        {#if tags && sheetTab === 'tags'}<TagsTab state={tags} />{:else}
         <div class="controls">
             <!-- The first two rows share one grid, so their edges line up: the masks with the
                  placeholders they take, then the search, the replacement, and the search's own
@@ -515,6 +526,7 @@
             onCursorChange={tool.setCursor}
             onMoveRow={tool.moveCursorRow}
         />
+        {/if}
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->
         <Menu menu={fieldHistory.menu} ariaLabel={tString('multiRename.history')} minWidth={240} />

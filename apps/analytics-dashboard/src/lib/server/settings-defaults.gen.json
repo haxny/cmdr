@@ -2624,6 +2624,7 @@
     "mediaIndex.semanticSearch.enabled": true,
     "mediaIndex.showFileStatusIcons": true,
     "mediaIndex.showInSearch": false,
+    "multiRename.tagEditor": false,
     "network.customTimeout": 15,
     "network.directSmbConnection": true,
     "network.enabled": true,

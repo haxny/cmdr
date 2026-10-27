@@ -923,5 +923,29 @@
   "multiRename.placeholderHelp.rangeEditHint": "Поставьте курсор внутрь обозначения, например [N], и нажмите ↓, чтобы выбрать его символы.",
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
+  },
+  "multiRename.tabs.label": "Multi-Rename sections",
+  "@multiRename.tabs.label": {
+    "sourceHash": "f66219f"
+  },
+  "multiRename.tabs.rename": "Rename",
+  "@multiRename.tabs.rename": {
+    "sourceHash": "3064d79"
+  },
+  "multiRename.tabs.tags": "Tags",
+  "@multiRename.tabs.tags": {
+    "sourceHash": "1331275"
+  },
+  "multiRename.tags.reading": "Reading tags…",
+  "@multiRename.tags.reading": {
+    "sourceHash": "c4a8191"
+  },
+  "multiRename.tags.trackCount": "{count, plural, one {{countText} track} few {{countText} tracks} many {{countText} tracks} other {{countText} tracks}}",
+  "@multiRename.tags.trackCount": {
+    "sourceHash": "20a56bf"
+  },
+  "multiRename.tags.error": "Couldn’t read the tags.",
+  "@multiRename.tags.error": {
+    "sourceHash": "fc228a3"
   }
 }

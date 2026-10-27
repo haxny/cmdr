@@ -924,5 +924,29 @@
   "multiRename.placeholderHelp.rangeEditHint": "Đặt con trỏ văn bản vào một phần giữ chỗ như [N] rồi nhấn ↓ để chọn các ký tự của nó.",
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
+  },
+  "multiRename.tabs.label": "Multi-Rename sections",
+  "@multiRename.tabs.label": {
+    "sourceHash": "f66219f"
+  },
+  "multiRename.tabs.rename": "Rename",
+  "@multiRename.tabs.rename": {
+    "sourceHash": "3064d79"
+  },
+  "multiRename.tabs.tags": "Tags",
+  "@multiRename.tabs.tags": {
+    "sourceHash": "1331275"
+  },
+  "multiRename.tags.reading": "Reading tags…",
+  "@multiRename.tags.reading": {
+    "sourceHash": "c4a8191"
+  },
+  "multiRename.tags.trackCount": "{count, plural, one {{countText} track} other {{countText} tracks}}",
+  "@multiRename.tags.trackCount": {
+    "sourceHash": "20a56bf"
+  },
+  "multiRename.tags.error": "Couldn’t read the tags.",
+  "@multiRename.tags.error": {
+    "sourceHash": "fc228a3"
   }
 }

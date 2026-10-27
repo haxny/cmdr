@@ -3448,5 +3448,21 @@
   "settings.license.getLicense.keywords": "licens, köp, köpa, pris, priser, kommersiell, personlig, uppgradera",
   "@settings.license.getLicense.keywords": {
     "sourceHash": "5454f6d"
+  },
+  "settings.advanced.card.multiRename": "Multi-Rename",
+  "@settings.advanced.card.multiRename": {
+    "sourceHash": "566cd7f"
+  },
+  "settings.multiRename.tagEditor.label": "Tag editor in Multi-Rename",
+  "@settings.multiRename.tagEditor.label": {
+    "sourceHash": "1afc844"
+  },
+  "settings.multiRename.tagEditor.description": "Adds a Tags tab to Multi-Rename for editing music and audiobook tags before renaming.",
+  "@settings.multiRename.tagEditor.description": {
+    "sourceHash": "1569f38"
+  },
+  "settings.multiRename.tagEditor.keywords": "tags, id3, mp3, m4b, audiobook, music, metadata, artist, album",
+  "@settings.multiRename.tagEditor.keywords": {
+    "sourceHash": "8981b26"
   }
 }

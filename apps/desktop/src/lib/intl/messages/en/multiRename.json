@@ -1060,5 +1060,32 @@
   "multiRename.placeholderHelp.rangeEditHint": "Put the caret in a placeholder like [N] and press ↓ to choose its characters.",
   "@multiRename.placeholderHelp.rangeEditHint": {
     "description": "In the Multi-rename sheet, a tooltip on a placeholder button (such as [N], [E], or [C]) explains what that placeholder puts in the new name, lists a few of its other forms, and shows each with an example on a made-up file (Beach day.jpg, in the folder Trips/Lisbon 2026, last changed 2026-07-14 09:05:30). Last line of the [N], [E], and [P] tooltips: with the text cursor in such a placeholder in the mask, the down arrow key opens a small editor to pick which characters it takes. Keep [N] and ↓ as they are."
+  },
+  "multiRename.tabs.label": "Multi-Rename sections",
+  "@multiRename.tabs.label": {
+    "description": "Accessible name of the tab strip at the top of the Multi-Rename sheet, which switches between the Rename and Tags tabs. Only read aloud by screen readers."
+  },
+  "multiRename.tabs.rename": "Rename",
+  "@multiRename.tabs.rename": {
+    "description": "Label of the tab that shows the usual Multi-Rename sheet (masks, search and replace, preview). Shown in a tab strip beside \"Tags\"."
+  },
+  "multiRename.tabs.tags": "Tags",
+  "@multiRename.tabs.tags": {
+    "description": "Label of the tab that edits the tags inside music and audiobook files (artist, album, title). Shown in a tab strip beside \"Rename\"."
+  },
+  "multiRename.tags.reading": "Reading tags…",
+  "@multiRename.tags.reading": {
+    "description": "Shown in the Tags tab of Multi-Rename while Cmdr reads the tags of the selected music files."
+  },
+  "multiRename.tags.trackCount": "{count, plural, one {{countText} track} other {{countText} tracks}}",
+  "@multiRename.tags.trackCount": {
+    "description": "Shown in the Tags tab of Multi-Rename once the tags are read: how many audio files (tracks) it found. Counts files.",
+    "placeholders": {
+      "countText": "how many audio files the Tags tab found, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.error": "Couldn’t read the tags.",
+  "@multiRename.tags.error": {
+    "description": "Shown in the Tags tab of Multi-Rename when reading the tags of the selected files failed."
   }
 }
