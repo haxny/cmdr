@@ -3042,6 +3042,7 @@ export type MessageKey =
   | 'multiRename.tags.reload.title'
   | 'multiRename.tags.select.all'
   | 'multiRename.tags.select.track'
+  | 'multiRename.tags.selectionGone'
   | 'multiRename.tags.shared.label'
   | 'multiRename.tags.tools.albumArtistFromArtist'
   | 'multiRename.tags.tools.caseButton'

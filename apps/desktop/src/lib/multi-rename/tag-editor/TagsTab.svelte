@@ -29,6 +29,9 @@
     const selection = createTrackSelection()
     const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
 
+    let selectionGone = $state(false)
+
+    // Converges: `prune` writes only when a checked path is dropped.
     $effect(() => {
         selection.prune(allPaths)
     })
@@ -73,7 +76,15 @@
     /** A tool works on what the files hold now, so an edit a blur just sent lands first. */
     async function runTool(tool: TagTool): Promise<void> {
         await tags.settled()
-        await tags.tool(tool, selection.scope(allPaths))
+        const scope = selection.scope(allPaths)
+        if (scope.kind === 'gone') {
+            // The checked tracks are gone: never widen to every track. The next run takes them all.
+            selection.clearGone()
+            selectionGone = true
+            return
+        }
+        selectionGone = false
+        await tags.tool(tool, scope.kind === 'some' ? scope.paths : null)
     }
 
     /** The sheet's Start while this tab shows: the Apply panel lists the changes, then writes them. */
@@ -109,6 +120,9 @@
         {#if tags.error !== null}
             <p class="notice" role="alert">{tString(editErrorKey(tags.error))}</p>
         {/if}
+        {#if selectionGone}
+            <p class="notice" role="status">{tString('multiRename.tags.selectionGone')}</p>
+        {/if}
         <div bind:this={toolsBar}>
         <TagToolsBar
             trackCount={view.tracks.length}
@@ -125,8 +139,8 @@
                     tracks={view.tracks}
                     editable={view.editable}
                     selected={selection.selected}
-                    onToggle={(path: string) => { selection.toggle(path) }}
-                    onToggleAll={(on: boolean) => { selection.setAll(allPaths, on) }}
+                    onToggle={(path: string) => { selectionGone = false; selection.toggle(path) }}
+                    onToggleAll={(on: boolean) => { selectionGone = false; selection.setAll(allPaths, on) }}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
             </div>
             <aside class="side">

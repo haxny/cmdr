@@ -162,6 +162,41 @@ describe('TagsTab', () => {
     expect(second()?.checked).toBe(false)
   })
 
+  it('when every checked track vanished, the tool does not run and a notice says so; the next run takes all', async () => {
+    const state = $state({
+      view: VIEW,
+      error: null,
+      busy: false,
+      open: vi.fn(() => Promise.resolve()),
+      edit: vi.fn(() => Promise.resolve()),
+      coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
+      coverImage: vi.fn(() => Promise.resolve(null)),
+      undoable: null,
+      settled: vi.fn(() => Promise.resolve()),
+      tool: vi.fn(() => Promise.resolve()),
+    })
+    const mounted = await mountInto(TagsTab, { state: asTagState(state) })
+    cleanup = mounted.cleanup
+    const renumber = () =>
+      [...mounted.root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Renumber')?.click()
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+    mounted.root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')?.click()
+    await tick()
+    const renamed = VIEW.tracks.map((t) => ({ ...t, path: `${t.path}.new` }))
+    state.view = { ...VIEW, tracks: renamed }
+    await tick()
+
+    renumber()
+    await settle()
+    expect(state.tool).not.toHaveBeenCalled()
+    expect(mounted.root.textContent).toContain('The checked tracks are no longer here, so nothing was changed.')
+
+    renumber()
+    await settle()
+    expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, null)
+    expect(mounted.root.textContent).not.toContain('no longer here')
+  })
+
   it('Case changes the field whose box last had focus', async () => {
     const { root, state } = await mountTab()
     byId(root, 'tag-field-album').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))

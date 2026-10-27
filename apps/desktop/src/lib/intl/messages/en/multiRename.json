@@ -1651,5 +1651,9 @@
   "multiRename.tags.choices.empty": "‹empty›",
   "@multiRename.tags.choices.empty": {
     "description": "Greyed text for a value in the list of a «multiple values» row in the Tags tab of Multi-Rename when some files have no value for that tag at all."
+  },
+  "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
+  "@multiRename.tags.selectionGone": {
+    "description": "Notice in the Tags tab of Multi-Rename: the user checked some tracks, then they disappeared (for example renamed on the Rename tab), and a tag tool was pressed. The tool did not run, so it can’t change every track by surprise."
   }
 }

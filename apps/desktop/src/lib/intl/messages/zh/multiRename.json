@@ -1435,5 +1435,9 @@
   "multiRename.tags.choices.empty": "‹empty›",
   "@multiRename.tags.choices.empty": {
     "sourceHash": "d58e123"
+  },
+  "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
+  "@multiRename.tags.selectionGone": {
+    "sourceHash": "17373af"
   }
 }

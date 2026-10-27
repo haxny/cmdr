@@ -151,4 +151,28 @@ describe('TrackList', () => {
     await tick()
     expect(all.onToggleAll).toHaveBeenCalledWith(false)
   })
+
+  it('Tab reaches a row checkbox, Space toggles it, and Enter / Escape in a cell still commit / revert beside it', async () => {
+    const { root, onToggle, onEdit } = await mountList()
+    const head = box(root, 'Select all tracks')
+    const first = box(root, 'Select 02.mp3')
+    first.focus()
+    expect(document.activeElement).toBe(first)
+    expect(first.tabIndex).toBeGreaterThanOrEqual(0)
+    expect(head.tabIndex).toBeGreaterThanOrEqual(0)
+    // A native checkbox toggles on Space: the browser turns it into a click.
+    first.click()
+    await tick()
+    expect(onToggle).toHaveBeenCalledWith('/b/02.mp3')
+
+    const title = byId<HTMLInputElement>(root, 'tag-track-title-1')
+    await typeInto(title, 'Změna')
+    await press(title, 'Enter')
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setOne', path: '/b/01.mp3', field: 'title', values: ['Změna'] }])
+    const other = byId<HTMLInputElement>(root, 'tag-track-title-0')
+    await typeInto(other, 'Nic')
+    const esc = await press(other, 'Escape')
+    expect(other.value).toBe('Druhá')
+    expect(esc.defaultPrevented).toBe(true)
+  })
 })
