@@ -139,7 +139,7 @@ runs below, 2026-10-27):
   dialect (`ai::client::chat_dialect_for_host`), which also sends `thinking: {type}` for the effort.
 - **Mistral** (`magistral-*`): reasoning streams as `thinking` content chunks and must go back as a leading `thinking`
   chunk; a `reasoning_content` field 422s (extra fields forbidden). The host routes to genai's Mistral dialect, which
-  does both.
+  does both. Not yet run live (the key was rate-limited on every call, 2026-10-27): `smoke_mistral_tool_loop`.
 - **Groq**: returns reasoning in `reasoning`, and 400s an assistant turn carrying `reasoning_content` ("property
   'reasoning_content' is unsupported", verified on `openai/gpt-oss-120b`, live tool loop, 2026-10-27). Reasoning stays
   out of the replay.
