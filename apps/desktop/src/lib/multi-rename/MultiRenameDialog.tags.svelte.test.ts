@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import MultiRenameDialog from './MultiRenameDialog.svelte'
 import { setLastMultiRenameRun } from './last-run.svelte'
-import { typeInto, leave } from './tag-editor/tag-cell.test-helper'
+import { typeInto, leave, press } from './tag-editor/tag-cell.test-helper'
 
 const flags = vi.hoisted(() => ({ tagEditor: false }))
 const ipc = vi.hoisted(() => ({
@@ -158,7 +158,7 @@ describe('MultiRenameDialog Tags tab', () => {
     expect(document.querySelector('.controls')).toBeNull()
   })
 
-  it('arrow keys, Home/End and the ⌘1/⌘2 commands switch tabs', async () => {
+  it('arrow keys, Home/End and the ⌘⇧[/⌘⇧] commands switch tabs', async () => {
     // `formatKeyCombo` emits ⌘-form modifiers only when `isMacOS()` is true, and happy-dom reports a Linux UA.
     const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
     navigatorSpy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
@@ -182,12 +182,26 @@ describe('MultiRenameDialog Tags tab', () => {
     await settle()
     expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
     document.body.dispatchEvent(
-      new KeyboardEvent('keydown', { key: '1', code: 'Digit1', metaKey: true, bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: '{',
+        code: 'BracketLeft',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
     )
     await settle()
     expect(tab('Rename').getAttribute('aria-selected')).toBe('true')
     document.body.dispatchEvent(
-      new KeyboardEvent('keydown', { key: '2', code: 'Digit2', metaKey: true, bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: '}',
+        code: 'BracketRight',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
     )
     await settle()
     expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
@@ -496,7 +510,7 @@ describe('MultiRenameDialog Tags tab', () => {
       }
     })
 
-    it('⌘2 then ⌘1 while a Tags box is focused commits its text first', async () => {
+    it('⌘⇧[ while a Tags box is focused commits its text first', async () => {
       const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple' }] }
       ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
       ipc.editTags.mockResolvedValue({ ok: true, value: { ...base, dirty: true } })
@@ -512,7 +526,14 @@ describe('MultiRenameDialog Tags tab', () => {
         await typeInto(album, 'Dracula')
         expect(ipc.editTags).not.toHaveBeenCalled()
         document.body.dispatchEvent(
-          new KeyboardEvent('keydown', { key: '1', code: 'Digit1', metaKey: true, bubbles: true, cancelable: true }),
+          new KeyboardEvent('keydown', {
+            key: '{',
+            code: 'BracketLeft',
+            metaKey: true,
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
         )
         await settle()
         expect(tab('Rename').getAttribute('aria-selected')).toBe('true')
@@ -520,6 +541,67 @@ describe('MultiRenameDialog Tags tab', () => {
       } finally {
         spy.mockRestore()
       }
+    })
+
+    describe('in a multi-line box (Comment)', () => {
+      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'comment', value: 'multiple' }] }
+
+      async function commentBox(): Promise<HTMLTextAreaElement> {
+        ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
+        ipc.editTags.mockResolvedValue({ ok: true, value: { ...base, dirty: true } })
+        flags.tagEditor = true
+        await mountSheet()
+        tab('Tags').click()
+        await settle()
+        const box = document.querySelector<HTMLTextAreaElement>('textarea#tag-field-comment')
+        if (!box) throw new Error('no comment textarea')
+        return box
+      }
+
+      async function onMac(run: () => Promise<void>): Promise<void> {
+        const spy = vi.spyOn(globalThis, 'navigator', 'get')
+        spy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
+        try {
+          await run()
+        } finally {
+          spy.mockRestore()
+        }
+      }
+
+      it('⌘⏎ (the registry’s multiRename.rename) commits the text and goes no further; a plain ⏎ is a new line', async () => {
+        await onMac(async () => {
+          const box = await commentBox()
+          await typeInto(box, 'Line one')
+          const plain = await press(box, 'Enter')
+          expect(plain.defaultPrevented).toBe(false)
+          expect(ipc.editTags).not.toHaveBeenCalled()
+          await press(box, 'Enter', { metaKey: true })
+          await settle()
+          expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'comment', values: ['Line one'] }])
+          // Claimed by the box: the sheet's Start never lists or writes.
+          expect(ipc.getTagChanges).not.toHaveBeenCalled()
+        })
+      })
+
+      it('typing { and } stays typing; only ⌘⇧[ / ⌘⇧] switch tabs', async () => {
+        await onMac(async () => {
+          const box = await commentBox()
+          for (const [key, code] of [
+            ['{', 'BracketLeft'],
+            ['}', 'BracketRight'],
+            ['[', 'BracketLeft'],
+          ] as const) {
+            const typed = await press(box, key, { code, shiftKey: key !== '[' })
+            expect(typed.defaultPrevented, key).toBe(false)
+          }
+          await settle()
+          expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
+          const command = await press(box, '{', { code: 'BracketLeft', metaKey: true, shiftKey: true })
+          await settle()
+          expect(command.defaultPrevented).toBe(true)
+          expect(tab('Rename').getAttribute('aria-selected')).toBe('true')
+        })
+      })
     })
   })
 })

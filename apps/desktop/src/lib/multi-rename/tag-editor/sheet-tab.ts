@@ -7,7 +7,7 @@ export interface TagsTabApi {
   start(): Promise<void>
 }
 
-/** The registry command that picks each tab (⌘1 and ⌘2). */
+/** The registry command that picks each tab (⌘⇧[ and ⌘⇧]). */
 export const TAB_COMMANDS: readonly { tab: SheetTab; command: CommandId }[] = [
   { tab: 'rename', command: 'multiRename.tabRename' },
   { tab: 'tags', command: 'multiRename.tabTags' },

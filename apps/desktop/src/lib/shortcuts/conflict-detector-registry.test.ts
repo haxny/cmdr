@@ -13,7 +13,6 @@
 
 import { describe, it, expect } from 'vitest'
 import { getAllConflicts } from './conflict-detector'
-import { isAllowedConflictSet } from './allowed-conflicts.test-helper'
 
 /**
  * The one conflict the defaults DO carry, and only off macOS: `toPlatformShortcut` maps
@@ -27,9 +26,7 @@ const PLATFORM_COLLAPSED_COMBOS = new Set(['Ctrl+D'])
 
 describe('conflict-detector over the real registry (default bindings)', () => {
   it('reports no conflicts for the shipped defaults', () => {
-    const conflicts = getAllConflicts().filter(
-      (c) => !PLATFORM_COLLAPSED_COMBOS.has(c.shortcut) && !isAllowedConflictSet(c.commandIds),
-    )
+    const conflicts = getAllConflicts().filter((c) => !PLATFORM_COLLAPSED_COMBOS.has(c.shortcut))
     // Surface the offending combos in the failure message rather than a bare count.
     const summary = conflicts.map((c) => `${c.shortcut}: ${c.commandIds.join(', ')}`)
     expect(summary).toEqual([])

@@ -1,8 +1,8 @@
 <script lang="ts">
     /**
      * The tab strip of the Multi-Rename sheet: Rename (today's sheet) and Tags. Only mounted when the
-     * `multiRename.tagEditor` setting is on. ←/→ and Home/End move between the tabs (roving tabindex), ⌘1 and ⌘2
-     * (registry commands) pick one from anywhere in the sheet.
+     * `multiRename.tagEditor` setting is on. ←/→ and Home/End move between the tabs (roving tabindex), ⌘⇧[ and ⌘⇧]
+     * (registry commands, macOS's previous / next tab) pick one from anywhere in the sheet.
      */
     import { onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -18,8 +18,8 @@
     const { active, onSelect }: Props = $props()
 
     const TABS: { id: SheetTab; labelKey: 'multiRename.tabs.rename' | 'multiRename.tabs.tags'; chip: string }[] = [
-        { id: 'rename', labelKey: 'multiRename.tabs.rename', chip: '⌘1' },
-        { id: 'tags', labelKey: 'multiRename.tabs.tags', chip: '⌘2' },
+        { id: 'rename', labelKey: 'multiRename.tabs.rename', chip: '⌘⇧[' },
+        { id: 'tags', labelKey: 'multiRename.tabs.tags', chip: '⌘⇧]' },
     ]
 
     let tablist = $state<HTMLElement>()
@@ -39,7 +39,7 @@
         select(TABS[(target + TABS.length) % TABS.length].id, true)
     }
 
-    // ⌘1 / ⌘2 would otherwise reach the main window's view-mode keys.
+    // Claimed in the capture phase, so a focused box never sees the combo.
     onMount(() => {
         const onWindowKeydown = (e: KeyboardEvent): void => {
             if (e.isComposing) return

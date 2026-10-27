@@ -5,8 +5,9 @@ The Tags tab lives in `tag-editor/` (its own pieces, backend: `src-tauri/src/tag
 `MultiRenameDialog.svelte` carries one import (`tag-editor/index.ts`). Only `RenamePanel` / `SheetTabs` / `TagsTab`, the
 discard guard and the state factory cross that line.
 
-- **⌘1 / ⌘2** pick Rename / Tags: registry commands `multiRename.tabRename` / `tabTags`, an allowed conflict with
-  `view.fullMode` / `view.briefMode` (`shortcuts/allowed-conflicts.test-helper.ts`).
+- **⌘⇧[ / ⌘⇧]** pick Rename / Tags: registry commands `multiRename.tabRename` / `tabTags`. ❌ Never a combo another
+  command holds in an overlapping scope: the Keyboard shortcuts settings would show a conflict to every user, setting
+  off too (⌘1/⌘2 hit `view.*Mode`, ⌃Tab `tab.next`).
 - **Unwritten edits are never lost silently**: closing, Rename, and switching sessions go through `discard-guard.ts`
   ("Discard tag changes?").
 - **The tag canon is shown, not enforced**: diacritics are allowed only in Comment and Description (a warning with a

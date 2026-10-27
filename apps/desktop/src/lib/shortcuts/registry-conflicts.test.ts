@@ -26,7 +26,13 @@ vi.hoisted(() => {
 import { commands } from '#lib/commands/command-registry.js'
 import { findConflictsForShortcut, getAllConflicts } from './conflict-detector'
 import { getDefaultShortcuts } from './shortcuts-store'
-import { allowedConflicts } from './allowed-conflicts.test-helper'
+
+/**
+ * Clashes we've decided to keep, each with the reason it's safe. Adding a line here is
+ * a deliberate product decision, not a way to quiet the test: every entry means one of
+ * the two commands loses the combo at runtime.
+ */
+const allowedConflicts: { shortcut: string; commandIds: string[]; why: string }[] = []
 
 /** `{ shortcut, commandIds }` rendered as a stable, greppable line. */
 function describeConflict(conflict: { shortcut: string; commandIds: string[] }): string {
