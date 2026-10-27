@@ -12,7 +12,9 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - `format.rs`: `format_of`, by extension. `read.rs`: `read_tags`, one reader per container, the key tables.
 - `write.rs`: `write_tags` + `WriteOptions`, each writer the inverse of its reader; `write_extras.rs`; `save.rs`:
   `save_safely`. Test files come from `test_files.rs`.
-- `shared.rs`: the foobar2000-style view, edits, and change list. `tools.rs` / `text.rs`: pure clean-up tools.
+- `shared.rs`: the foobar2000-style view, edits, change list, and `distinct_values`. `tools.rs` / `text.rs`: pure
+  clean-up tools. `name_pattern.rs`: `%track% - %title%` and named-group regex patterns that read tags from file names
+  (`FromFileName`).
 - `undo.rs`: `UndoStore`, an apply's old tags, written back after renames; `fingerprint.rs`: what a sealed record
   checks.
 

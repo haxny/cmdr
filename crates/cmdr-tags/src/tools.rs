@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{FileTags, TagField};
+use crate::name_pattern::{NamePattern, compile_pattern};
 use crate::numbering::{NumberOptions, auto_number};
 use crate::text::{remove_diacritics, sentence_case, title_case};
 
@@ -62,6 +63,11 @@ pub enum TagTool {
     },
     /// [`auto_number`] with these options.
     AutoNumber(NumberOptions),
+    /// [`from_file_name`] with this pattern.
+    FromFileName {
+        /// How to read the file names.
+        pattern: NamePattern,
+    },
 }
 
 /// What the file-name tools know about the session's files, each list parallel to `files`.
@@ -82,6 +88,7 @@ pub fn apply_tool(files: &[FileTags], tool: &TagTool) -> Vec<FileTags> {
 pub fn apply_tool_in(files: &[FileTags], ctx: &ToolContext, tool: &TagTool) -> Vec<FileTags> {
     match tool {
         TagTool::AutoNumber(options) => auto_number(files, ctx, options),
+        TagTool::FromFileName { pattern } => from_file_name(files, ctx, pattern),
         TagTool::Case { fields, case } => change_case(files, fields, *case),
         TagTool::StripDiacritics { fields } => strip_diacritics(files, fields),
         TagTool::StripTrackPrefix => strip_track_prefix(files),
@@ -91,6 +98,37 @@ pub fn apply_tool_in(files: &[FileTags], ctx: &ToolContext, tool: &TagTool) -> V
         TagTool::ClearRedundantTitles => clear_redundant_titles(files),
         TagTool::RemoveExtras { keys } => remove_extras(files, keys),
     }
+}
+
+/// Sets fields from each file's name (`ctx.stems`) by `pattern`. A file whose name doesn't match,
+/// has no stem in `ctx`, or any file when the pattern is bad is left unchanged. A matched value
+/// replaces the field as one value (multi-value fields aren't split) and keeps its text as matched.
+pub fn from_file_name(files: &[FileTags], ctx: &ToolContext, pattern: &NamePattern) -> Vec<FileTags> {
+    let Ok(compiled) = compile_pattern(pattern) else {
+        return files.to_vec();
+    };
+    files
+        .iter()
+        .enumerate()
+        .map(|(i, file)| {
+            let mut out = file.clone();
+            let pairs = ctx
+                .stems
+                .get(i)
+                .and_then(|stem| compiled.read(stem))
+                .unwrap_or_default();
+            let mut set = Vec::new();
+            for (field, value) in pairs {
+                if !set.contains(&field) {
+                    set.push(field);
+                    out.fields.insert(field, vec![value]);
+                } else if field.is_multi() {
+                    out.fields.entry(field).or_default().push(value);
+                }
+            }
+            out
+        })
+        .collect()
 }
 
 /// The fields of `tags` that must not carry diacritics and do: those not kept

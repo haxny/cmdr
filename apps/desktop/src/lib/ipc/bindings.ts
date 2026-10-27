@@ -13114,6 +13114,21 @@ export type NameFilterResult = {
   sequence: number | null
 }
 
+// How to read tags from a file name (without its extension).
+export type NamePattern =
+  // Mp3tag-style: literal text with `%field%` placeholders; the last one takes the rest.
+  | {
+      kind: 'format'
+      // The pattern, like `%track% - %title%`.
+      pattern: string
+    }
+  // A regular expression whose named groups are tag fields (`(?<track>\d+)_(?<title>.+)`).
+  | {
+      kind: 'regex'
+      // The expression.
+      pattern: string
+    }
+
 export type NegotiatedSummaryDto = {
   dialect: string
   max_read_size: number
@@ -18501,6 +18516,12 @@ export type TagTool =
     }
   // [`auto_number`] with these options.
   | ({ kind: 'autoNumber' } & NumberOptions)
+  // [`from_file_name`] with this pattern.
+  | {
+      kind: 'fromFileName'
+      // How to read the file names.
+      pattern: NamePattern
+    }
 
 /**
  *  `tags-skipped`: a color-tag toggle (keyboard command or context-menu circle) left
