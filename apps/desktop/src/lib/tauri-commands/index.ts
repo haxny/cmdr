@@ -1167,3 +1167,29 @@ export type {
   RangeSample,
   RenameExample,
 } from './multi-rename'
+
+// Tags tab of Multi-Rename
+export {
+  openTagEditor,
+  editTags,
+  runTagTool,
+  getTagChanges,
+  applyTags,
+  undoTagApply,
+  closeTagEditor,
+  listCoverCandidates,
+  setCoverFromFile,
+  getCoverImage,
+} from './tag-editor'
+export type {
+  ApplyRequest,
+  CoverCandidate,
+  FileChangeView,
+  RestoreReport,
+  TagApplyReport,
+  TagEdit,
+  TagEditorError,
+  TagEditorResult,
+  TagEditorView,
+  TagTool,
+} from './tag-editor'

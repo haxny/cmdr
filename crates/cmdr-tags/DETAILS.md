@@ -147,7 +147,7 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
 `TagError::Io(InvalidInput, _)`):
 
 ```
-<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"trackTotal","discTotal","conductor"}}]}
+<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"trackTotal","discTotal","conductor"},"written"?:{"size","modified","inode","changed"}}]}
 <root>/<id>/<k>.cover       one file per distinct cover; entries with the same bytes share it
 <root>/.<id>.staging/       a record being built
 ```
@@ -170,12 +170,20 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   `RawTags` (track and disc totals, MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states
   of the file. Call it before the apply writes. A file that can't be read fails the whole record; nothing is stored.
 - **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
-  works), and a move whose source isn't recorded is ignored.
+  works), and a move whose source isn't recorded is ignored. A sealed entry takes the fingerprint of the file at its new
+  path (a rename moves the ctime), so the caller repaths right after its own renames.
+- **`retain(id, keep)`** drops the entries whose path isn't in `keep`, and the covers only they used, so an app that
+  recorded every file it meant to write can narrow the record to the files it did write before anyone restores it.
+- **`seal(id, written)`** is `retain` plus each file's `Fingerprint` (`fingerprint.rs`: size, mtime, inode, ctime) right
+  after the apply wrote it, stored in the manifest as `written` (so it survives a restart; an unsealed entry has none
+  and the manifest version stays 1). Why: a record is keyed by path, and a rename after the apply can put another file
+  at that path (a swap of `01`/`03`); without the check, undo writes one file's old tags into another.
 - **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
   passes, with that entry's recorded totals, and `TPE3` when it had one. Of the caller's `WriteOptions` only
-  `allow_frame_loss` applies. A file not at its path is `missing`; any write error is `failed` (an extra that can't come
-  back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover again. It never
-  deletes the record; the caller `forget`s it.
+  `allow_frame_loss` applies. A file not at its path is `missing`; a sealed entry whose file no longer has its
+  fingerprint is `changed` and untouched (checked right before its write); any write error is `failed` (an extra that
+  can't come back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover again. It
+  never deletes the record; the caller `forget`s it.
 - **Limits**: an MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes` (one named like a managed key
   can't come back: `failed`). Vorbis total keys come back under their canonical names (`TOTALTRACKS` as `TRACKTOTAL`).
 
@@ -187,6 +195,13 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   catches lofty's panics as `TagError::Write`, but a caught panic still files a crash report unless the app contains it.
 - **One `UndoStore` writer.** Its calls read and rewrite the store's directories without locking; keep one store behind
   a `Mutex` and never open two on one root.
+- **List what the kind removes before writing.** `removed_by_kind(path, kind)` names what a write as `kind` drops beyond
+  the fields (`KindRemoval::Conductor`: an MP3's `TPE3` under Audiobook), parsing the file without writing.
 - **Show `TagError::WouldDrop` to the user with the option to proceed.** It names what the write would lose (values the
   editor doesn't show, frames ID3v2.3 can't hold); proceeding is the same write with `WriteOptions::allow_frame_loss`.
+- **One dispatcher, one check, file length.** `tools::TagTool` (`{"kind":"renumber","start":1}`, camelCase kinds) with
+  `apply_tool` runs any tool, so the app and MCP share the set. `tools::fields_with_diacritics` lists the fields that
+  must not carry diacritics and do (for the warning before a write). `renumber` on a single file removes its Track (a
+  one-file book has no track number). `read_duration(path)` reads lofty's audio properties (which `read_tags` skips) and
+  is `None` for anything unreadable.
 - **Record before the apply writes**: `UndoStore::record(id, paths)` reads the files itself.

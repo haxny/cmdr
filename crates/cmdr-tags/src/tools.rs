@@ -11,6 +11,7 @@ use crate::text::{remove_diacritics, sentence_case, title_case};
 
 /// How [`change_case`] rewrites a value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum CaseTool {
     /// First letter upper, the rest lower.
@@ -21,6 +22,67 @@ pub enum CaseTool {
     Lower,
     /// All upper.
     Upper,
+}
+
+/// Every tool as one serializable value, so the app and the MCP server share one tool set.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum TagTool {
+    /// [`change_case`] on `fields`.
+    Case {
+        /// Fields to change.
+        fields: Vec<TagField>,
+        /// The case to apply.
+        case: CaseTool,
+    },
+    /// [`strip_diacritics`] on `fields`.
+    StripDiacritics {
+        /// Fields to strip.
+        fields: Vec<TagField>,
+    },
+    /// [`strip_track_prefix`].
+    StripTrackPrefix,
+    /// [`renumber`] from `start`.
+    Renumber {
+        /// The first track number.
+        start: u32,
+    },
+    /// [`album_artist_from_artist`].
+    AlbumArtistFromArtist,
+    /// [`narrator_from_text`].
+    NarratorFromText,
+    /// [`clear_redundant_titles`].
+    ClearRedundantTitles,
+    /// [`remove_extras`] for `keys`.
+    RemoveExtras {
+        /// Native keys of the extras to drop.
+        keys: Vec<String>,
+    },
+}
+
+/// Runs `tool` over `files`; the input is never mutated.
+pub fn apply_tool(files: &[FileTags], tool: &TagTool) -> Vec<FileTags> {
+    match tool {
+        TagTool::Case { fields, case } => change_case(files, fields, *case),
+        TagTool::StripDiacritics { fields } => strip_diacritics(files, fields),
+        TagTool::StripTrackPrefix => strip_track_prefix(files),
+        TagTool::Renumber { start } => renumber(files, *start),
+        TagTool::AlbumArtistFromArtist => album_artist_from_artist(files),
+        TagTool::NarratorFromText => narrator_from_text(files),
+        TagTool::ClearRedundantTitles => clear_redundant_titles(files),
+        TagTool::RemoveExtras { keys } => remove_extras(files, keys),
+    }
+}
+
+/// The fields of `tags` that must not carry diacritics and do: those not kept
+/// ([`TagField::keeps_diacritics`]) whose values change under [`remove_diacritics`].
+pub fn fields_with_diacritics(tags: &FileTags) -> Vec<TagField> {
+    tags.fields
+        .iter()
+        .filter(|(field, values)| !field.keeps_diacritics() && values.iter().any(|v| remove_diacritics(v) != *v))
+        .map(|(field, _)| *field)
+        .collect()
 }
 
 /// Matches "Čte: Tomáš Jirman, Eva Nováková": a narrator cue, then one or more names joined by
@@ -131,8 +193,14 @@ pub fn strip_track_prefix(files: &[FileTags]) -> Vec<FileTags> {
         .collect()
 }
 
-/// Numbers the files `start`, `start + 1`, ... in session order. Disc is untouched.
+/// Numbers the files `start`, `start + 1`, ... in session order. Disc is untouched. A single
+/// file has its track removed instead: a one-file book has no track number.
 pub fn renumber(files: &[FileTags], start: u32) -> Vec<FileTags> {
+    if let [only] = files {
+        let mut out = only.clone();
+        out.fields.remove(&TagField::Track);
+        return vec![out];
+    }
     files
         .iter()
         .enumerate()

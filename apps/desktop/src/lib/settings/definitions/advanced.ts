@@ -527,4 +527,15 @@ export const advancedSettings: SettingDefinitionSource[] = [
       maxMs: 86400000, // 24 hours
     },
   },
+  {
+    id: 'multiRename.tagEditor',
+    section: ['Advanced'],
+    cardKey: 'settings.advanced.card.multiRename',
+    labelKey: 'settings.multiRename.tagEditor.label',
+    descriptionKey: 'settings.multiRename.tagEditor.description',
+    keywordsKey: 'settings.multiRename.tagEditor.keywords',
+    type: 'boolean',
+    default: false,
+    component: 'switch',
+  },
 ]

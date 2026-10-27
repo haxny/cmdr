@@ -10,10 +10,12 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
+use crate::fingerprint::Fingerprint;
 use crate::model::{Cover, FileTags, TagError, TagField};
 use crate::read::{RawTags, read_snapshot};
 use crate::write::{WriteOptions, restore_tags};
@@ -53,12 +55,16 @@ impl Default for UndoLimits {
 
 /// What a restore did, per file, in the order the files were recorded.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub struct RestoreReport {
     /// Files whose old tags are back.
     pub restored: Vec<PathBuf>,
     /// Files no longer at their (repathed) path.
     pub missing: Vec<PathBuf>,
+    /// Files changed since the apply wrote them (written again, or another file renamed onto
+    /// the path): left alone, so one file's old tags never land in another.
+    pub changed: Vec<PathBuf>,
     /// Files the write refused or failed on, unchanged, with why.
     pub failed: Vec<(PathBuf, TagError)>,
 }
@@ -94,6 +100,10 @@ struct Entry {
     cover: Option<CoverRef>,
     /// The totals and MP3 conductor, which `fields` doesn't hold.
     raw: RawTags,
+    /// The file as the apply left it ([`UndoStore::seal`]); a restore skips the file when it
+    /// moved. `None` (a record never sealed) restores whatever is at the path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    written: Option<Fingerprint>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -186,7 +196,9 @@ impl UndoStore {
     /// Points the record at the files' new paths after the apply renamed them. Each move is
     /// net: (the path as recorded, the file's final path), never an intermediate step of a
     /// chain. The moves apply all at once, so swaps work; a move whose old path isn't
-    /// recorded is ignored.
+    /// recorded is ignored. A sealed entry ([`UndoStore::seal`]) takes the fingerprint of the
+    /// file at its new path (a rename moves the status-change time), so call it right after the
+    /// apply's renames.
     pub fn repath(&self, id: &ApplyId, moves: &[(PathBuf, PathBuf)]) -> Result<(), TagError> {
         let dir = self.apply_dir(id)?;
         let manifest = load_manifest(&dir)?;
@@ -196,6 +208,11 @@ impl UndoStore {
             .map(|entry| match moves.iter().find(|(from, _)| *from == entry.path) {
                 Some((_, to)) => Entry {
                     path: to.clone(),
+                    // One that can't be stat'ed keeps the old fingerprint, which won't hold.
+                    written: entry
+                        .written
+                        .as_ref()
+                        .map(|old| Fingerprint::of(to).unwrap_or_else(|| old.clone())),
                     ..entry
                 },
                 None => entry,
@@ -204,10 +221,54 @@ impl UndoStore {
         write_manifest(&dir, &Manifest { entries, ..manifest })
     }
 
+    /// Keeps only the entries whose recorded path is in `keep`, and the covers they use, so a
+    /// restore writes back exactly the files the apply wrote (a file it skipped or failed on
+    /// keeps whatever it holds). A path in `keep` that isn't recorded is ignored.
+    pub fn retain(&self, id: &ApplyId, keep: &[PathBuf]) -> Result<(), TagError> {
+        self.keep_entries(id, |entry| keep.contains(&entry.path).then_some(entry))
+    }
+
+    /// [`UndoStore::retain`] the files the apply wrote, each with its fingerprint right after
+    /// its write. A restore then writes a file back only while it still has that fingerprint;
+    /// one changed since (written again, or another file renamed onto its path, say by a
+    /// rename that swapped two names) is reported as `changed` and left alone.
+    pub fn seal(&self, id: &ApplyId, written: &[(PathBuf, Fingerprint)]) -> Result<(), TagError> {
+        self.keep_entries(id, |entry| {
+            let (_, fingerprint) = written.iter().find(|(path, _)| *path == entry.path)?;
+            Some(Entry {
+                written: Some(fingerprint.clone()),
+                ..entry
+            })
+        })
+    }
+
+    /// Rewrites the record with the entries `keep` returns, and drops the covers no entry uses.
+    fn keep_entries(&self, id: &ApplyId, keep: impl Fn(Entry) -> Option<Entry>) -> Result<(), TagError> {
+        let dir = self.apply_dir(id)?;
+        let manifest = load_manifest(&dir)?;
+        let entries: Vec<Entry> = manifest.entries.into_iter().filter_map(keep).collect();
+        let used: Vec<String> = entries
+            .iter()
+            .filter_map(|entry| entry.cover.as_ref().map(|cover| cover.file.clone()))
+            .collect();
+        write_manifest(&dir, &Manifest { entries, ..manifest })?;
+        // The manifest no longer names the others; a cover left behind only takes space.
+        for item in fs::read_dir(&dir)? {
+            let item = item?;
+            let name = item.file_name().to_string_lossy().into_owned();
+            if is_cover_name(&name) && !used.contains(&name) {
+                fs::remove_file(item.path())?;
+            }
+        }
+        sync_dir(&dir);
+        Ok(())
+    }
+
     /// Writes each recorded file's old tags back as they were: as music (so an MP3's `TPE3`
     /// comes back), with the totals recorded for that file. Of `opts` only
-    /// `allow_frame_loss` applies. A file not at its path is `missing`; a write that fails is
-    /// `failed` and the rest go on. The record stays until [`UndoStore::forget`].
+    /// `allow_frame_loss` applies. A file not at its path is `missing`; a sealed file whose
+    /// fingerprint moved is `changed` and not touched; a write that fails is `failed` and the
+    /// rest go on. The record stays until [`UndoStore::forget`].
     pub fn restore(&self, id: &ApplyId, opts: &WriteOptions) -> Result<RestoreReport, TagError> {
         let dir = self.apply_dir(id)?;
         let manifest = load_manifest(&dir)?;
@@ -215,8 +276,9 @@ impl UndoStore {
         for entry in &manifest.entries {
             let path = entry.path.clone();
             match restore_entry(&dir, entry, opts) {
-                Ok(true) => report.restored.push(path),
-                Ok(false) => report.missing.push(path),
+                Ok(Restored::Yes) => report.restored.push(path),
+                Ok(Restored::Missing) => report.missing.push(path),
+                Ok(Restored::Changed) => report.changed.push(path),
                 Err(err) => report.failed.push((path, err)),
             }
         }
@@ -341,7 +403,7 @@ fn write_apply(dir: &Path, seq: u64, paths: &[PathBuf]) -> Result<(), TagError> 
     for (path, tags, raw) in &snapshots {
         let cover = match &tags.cover {
             Some(cover) => {
-                let file = match files.get(cover.data.as_slice()) {
+                let file = match files.get(&cover.data[..]) {
                     Some(file) => file.clone(),
                     None => {
                         let file = format!("{}{COVER_SUFFIX}", files.len());
@@ -363,6 +425,7 @@ fn write_apply(dir: &Path, seq: u64, paths: &[PathBuf]) -> Result<(), TagError> 
             extras: tags.extras.clone(),
             cover,
             raw: raw.clone(),
+            written: None,
         });
     }
     let manifest = Manifest {
@@ -404,15 +467,26 @@ fn load_manifest(dir: &Path) -> Result<Manifest, TagError> {
     Ok(manifest)
 }
 
-/// Writes one entry's old tags back: `Ok(false)` when the file isn't there.
-fn restore_entry(dir: &Path, entry: &Entry, opts: &WriteOptions) -> Result<bool, TagError> {
+/// What [`restore_entry`] did with a file it could reach.
+enum Restored {
+    Yes,
+    Missing,
+    Changed,
+}
+
+/// Writes one entry's old tags back, unless the file isn't there or (sealed) moved since the
+/// apply wrote it. The check runs right before the write.
+fn restore_entry(dir: &Path, entry: &Entry, opts: &WriteOptions) -> Result<Restored, TagError> {
     if !entry.path.try_exists()? {
-        return Ok(false);
+        return Ok(Restored::Missing);
+    }
+    if entry.written.is_some() && !Fingerprint::holds(entry.written.as_ref(), &entry.path) {
+        return Ok(Restored::Changed);
     }
     let cover = match &entry.cover {
         Some(cover) => Some(Cover {
             mime: cover.mime.clone(),
-            data: fs::read(dir.join(&cover.file))?,
+            data: Arc::from(fs::read(dir.join(&cover.file))?),
         }),
         None => None,
     };
@@ -422,9 +496,9 @@ fn restore_entry(dir: &Path, entry: &Entry, opts: &WriteOptions) -> Result<bool,
         extras: entry.extras.clone(),
     };
     match restore_tags(&entry.path, &tags, &entry.raw, opts.allow_frame_loss) {
-        Ok(()) => Ok(true),
+        Ok(()) => Ok(Restored::Yes),
         // Gone between the check and the write.
-        Err(TagError::Io(ErrorKind::NotFound, _)) => Ok(false),
+        Err(TagError::Io(ErrorKind::NotFound, _)) => Ok(Restored::Missing),
         Err(err) => Err(err),
     }
 }

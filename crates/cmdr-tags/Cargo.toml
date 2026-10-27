@@ -11,9 +11,16 @@ publish = false
 [lints]
 workspace = true
 
+[features]
+# `specta::Type` on the types the app's IPC carries (`TagField`, `Edit`, `TagTool`, ...), so the
+# app's commands can name them without mirror types.
+specta = ["dep:specta"]
+
 [dependencies]
 # Reads and writes ID3v2, MP4 `ilst`, and Vorbis comments, pure Rust, MIT OR Apache-2.0.
 lofty = "0.25.4"
+# Optional: only the app, which generates the TypeScript bindings, turns it on (same pin as the app).
+specta = { version = "=2.0.0-rc.24", features = ["derive"], optional = true }
 # Same regex crate the app pins; the tag tools (rename, find/replace) use it.
 regex = "1"
 # `TagField`, `FileTags`, and the undo store's records are serialized.

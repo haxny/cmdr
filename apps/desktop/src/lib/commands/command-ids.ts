@@ -223,6 +223,8 @@ export const COMMAND_IDS = [
   'multiRename.fieldHistory',
   'multiRename.moveRowUp',
   'multiRename.moveRowDown',
+  'multiRename.tabRename',
+  'multiRename.tabTags',
   'multiRename.rename',
   'file.view',
   'file.edit',

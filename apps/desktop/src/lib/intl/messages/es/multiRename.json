@@ -923,5 +923,485 @@
   "multiRename.placeholderHelp.rangeEditHint": "Pon el cursor de texto en un marcador como [N] y pulsa ↓ para elegir sus caracteres.",
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
+  },
+  "multiRename.tabs.label": "Multi-Rename sections",
+  "@multiRename.tabs.label": {
+    "sourceHash": "f66219f"
+  },
+  "multiRename.tabs.rename": "Rename",
+  "@multiRename.tabs.rename": {
+    "sourceHash": "3064d79"
+  },
+  "multiRename.tabs.tags": "Tags",
+  "@multiRename.tabs.tags": {
+    "sourceHash": "1331275"
+  },
+  "multiRename.tags.reading": "Reading tags…",
+  "@multiRename.tags.reading": {
+    "sourceHash": "c4a8191"
+  },
+  "multiRename.tags.trackCount": "{count, plural, one {{countText} track} many {{countText} tracks} other {{countText} tracks}}",
+  "@multiRename.tags.trackCount": {
+    "sourceHash": "20a56bf"
+  },
+  "multiRename.tags.error": "Couldn’t read the tags.",
+  "@multiRename.tags.error": {
+    "sourceHash": "fc228a3"
+  },
+  "multiRename.tags.field.title": "Title",
+  "@multiRename.tags.field.title": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.tags.field.artist": "Artist",
+  "@multiRename.tags.field.artist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.tags.field.albumArtist": "Album artist",
+  "@multiRename.tags.field.albumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.tags.field.album": "Album",
+  "@multiRename.tags.field.album": {
+    "sourceHash": "f05e840"
+  },
+  "multiRename.tags.field.performer": "Performer",
+  "@multiRename.tags.field.performer": {
+    "sourceHash": "f4b163a"
+  },
+  "multiRename.tags.field.composer": "Composer",
+  "@multiRename.tags.field.composer": {
+    "sourceHash": "9cb2832"
+  },
+  "multiRename.tags.field.date": "Date",
+  "@multiRename.tags.field.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.tags.field.genre": "Genre",
+  "@multiRename.tags.field.genre": {
+    "sourceHash": "6da795a"
+  },
+  "multiRename.tags.field.publisher": "Publisher",
+  "@multiRename.tags.field.publisher": {
+    "sourceHash": "2137854"
+  },
+  "multiRename.tags.field.translator": "Translator",
+  "@multiRename.tags.field.translator": {
+    "sourceHash": "e6fe8ee"
+  },
+  "multiRename.tags.field.track": "Track",
+  "@multiRename.tags.field.track": {
+    "sourceHash": "051f01f"
+  },
+  "multiRename.tags.field.disc": "Disc",
+  "@multiRename.tags.field.disc": {
+    "sourceHash": "0c3ae2c"
+  },
+  "multiRename.tags.field.comment": "Comment",
+  "@multiRename.tags.field.comment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.tags.field.description": "Description",
+  "@multiRename.tags.field.description": {
+    "sourceHash": "526e008"
+  },
+  "multiRename.tags.field.www": "Web address",
+  "@multiRename.tags.field.www": {
+    "sourceHash": "45099c5"
+  },
+  "multiRename.tags.shared.label": "Tags shared by the files",
+  "@multiRename.tags.shared.label": {
+    "sourceHash": "41d61a3"
+  },
+  "multiRename.tags.multipleValues": "‹multiple values›",
+  "@multiRename.tags.multipleValues": {
+    "sourceHash": "39e9850"
+  },
+  "multiRename.tags.tracks.label": "Tracks",
+  "@multiRename.tags.tracks.label": {
+    "sourceHash": "8898015"
+  },
+  "multiRename.tags.col.number": "#",
+  "@multiRename.tags.col.number": {
+    "sourceHash": "334359b"
+  },
+  "multiRename.tags.col.title": "Title",
+  "@multiRename.tags.col.title": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.tags.col.length": "Length",
+  "@multiRename.tags.col.length": {
+    "sourceHash": "adc9560"
+  },
+  "multiRename.tags.col.fileName": "File name",
+  "@multiRename.tags.col.fileName": {
+    "sourceHash": "3efed3d"
+  },
+  "multiRename.tags.track.titleLabel": "Title of {fileName}",
+  "@multiRename.tags.track.titleLabel": {
+    "sourceHash": "d1d8d11"
+  },
+  "multiRename.tags.track.numberLabel": "Track number of {fileName}",
+  "@multiRename.tags.track.numberLabel": {
+    "sourceHash": "312b18b"
+  },
+  "multiRename.tags.track.unreadable": "Can’t read the tags of this file",
+  "@multiRename.tags.track.unreadable": {
+    "sourceHash": "f6093cc"
+  },
+  "multiRename.tags.readOnly": "Tags can only be edited for files on a local disk.",
+  "@multiRename.tags.readOnly": {
+    "sourceHash": "c08c76d"
+  },
+  "multiRename.tags.cover.label": "Cover",
+  "@multiRename.tags.cover.label": {
+    "sourceHash": "fa8d845"
+  },
+  "multiRename.tags.cover.none": "No cover",
+  "@multiRename.tags.cover.none": {
+    "sourceHash": "b2ec318"
+  },
+  "multiRename.tags.cover.multiple": "Multiple covers",
+  "@multiRename.tags.cover.multiple": {
+    "sourceHash": "ea5c728"
+  },
+  "multiRename.tags.cover.details": "{mime}, {sizeText}",
+  "@multiRename.tags.cover.details": {
+    "sourceHash": "1d0fb10"
+  },
+  "multiRename.tags.cover.detailsPixels": "{mime}, {width}×{height} px, {sizeText}",
+  "@multiRename.tags.cover.detailsPixels": {
+    "sourceHash": "1e4795e"
+  },
+  "multiRename.tags.cover.fromFolder": "From folder…",
+  "@multiRename.tags.cover.fromFolder": {
+    "sourceHash": "9c18b8d"
+  },
+  "multiRename.tags.cover.remove": "Remove",
+  "@multiRename.tags.cover.remove": {
+    "sourceHash": "c3812fc"
+  },
+  "multiRename.tags.cover.pickerLabel": "Pictures in the folder",
+  "@multiRename.tags.cover.pickerLabel": {
+    "sourceHash": "c65dd9f"
+  },
+  "multiRename.tags.cover.candidate": "{fileName} ({sizeText})",
+  "@multiRename.tags.cover.candidate": {
+    "sourceHash": "6e3e460"
+  },
+  "multiRename.tags.cover.noImages": "No pictures (jpg, png, webp) in this folder.",
+  "@multiRename.tags.cover.noImages": {
+    "sourceHash": "a1857ea"
+  },
+  "multiRename.tags.cover.listFailed": "Couldn’t list the pictures in this folder.",
+  "@multiRename.tags.cover.listFailed": {
+    "sourceHash": "1b3c24c"
+  },
+  "multiRename.tags.cover.tooLarge": "That picture is too large (over 10 MB).",
+  "@multiRename.tags.cover.tooLarge": {
+    "sourceHash": "9bc62eb"
+  },
+  "multiRename.tags.cover.unreadable": "Couldn’t read that picture, or it isn’t a supported image.",
+  "@multiRename.tags.cover.unreadable": {
+    "sourceHash": "4598a37"
+  },
+  "multiRename.tags.cover.notAnImage": "That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.",
+  "@multiRename.tags.cover.notAnImage": {
+    "sourceHash": "bef4ab5"
+  },
+  "multiRename.tags.editFailed": "Couldn’t apply that change.",
+  "@multiRename.tags.editFailed": {
+    "sourceHash": "9747a7c"
+  },
+  "multiRename.tags.discard.title": "Discard tag changes?",
+  "@multiRename.tags.discard.title": {
+    "sourceHash": "fb94558"
+  },
+  "multiRename.tags.discard.message": "You changed tags that haven’t been written to the files yet. Closing now loses those changes. Cancel keeps editing.",
+  "@multiRename.tags.discard.message": {
+    "sourceHash": "0362274"
+  },
+  "multiRename.tags.discard.confirm": "Discard",
+  "@multiRename.tags.discard.confirm": {
+    "sourceHash": "eb1a70e"
+  },
+  "multiRename.tags.clearRow": "Clear",
+  "@multiRename.tags.clearRow": {
+    "sourceHash": "83b12c2"
+  },
+  "multiRename.tags.clearRowLabel": "Clear {field} for all files",
+  "@multiRename.tags.clearRowLabel": {
+    "sourceHash": "ac716fc"
+  },
+  "multiRename.tags.tools.label": "Clean-up tools",
+  "@multiRename.tags.tools.label": {
+    "sourceHash": "2e5d3d6"
+  },
+  "multiRename.tags.tools.caseButton": "Case",
+  "@multiRename.tags.tools.caseButton": {
+    "sourceHash": "15f86e2"
+  },
+  "multiRename.tags.tools.caseFields": "Changes: {fields}",
+  "@multiRename.tags.tools.caseFields": {
+    "sourceHash": "008465f"
+  },
+  "multiRename.tags.tools.caseSentence": "Sentence case",
+  "@multiRename.tags.tools.caseSentence": {
+    "sourceHash": "2f29e30"
+  },
+  "multiRename.tags.tools.caseTitle": "Title Case",
+  "@multiRename.tags.tools.caseTitle": {
+    "sourceHash": "c897dd8"
+  },
+  "multiRename.tags.tools.caseLower": "lower case",
+  "@multiRename.tags.tools.caseLower": {
+    "sourceHash": "99f7180"
+  },
+  "multiRename.tags.tools.caseUpper": "UPPER CASE",
+  "@multiRename.tags.tools.caseUpper": {
+    "sourceHash": "cc4c2e4"
+  },
+  "multiRename.tags.tools.removeDiacritics": "Remove diacritics",
+  "@multiRename.tags.tools.removeDiacritics": {
+    "sourceHash": "4103ca1"
+  },
+  "multiRename.tags.tools.removeDiacriticsTooltip": "Removes diacritics from every field except Comment and Description.",
+  "@multiRename.tags.tools.removeDiacriticsTooltip": {
+    "sourceHash": "ceb2678"
+  },
+  "multiRename.tags.tools.stripTrackPrefix": "Strip track prefix",
+  "@multiRename.tags.tools.stripTrackPrefix": {
+    "sourceHash": "6f8b4db"
+  },
+  "multiRename.tags.tools.renumber": "Renumber",
+  "@multiRename.tags.tools.renumber": {
+    "sourceHash": "26216cd"
+  },
+  "multiRename.tags.tools.albumArtistFromArtist": "Album artist = Artist",
+  "@multiRename.tags.tools.albumArtistFromArtist": {
+    "sourceHash": "c6f45e3"
+  },
+  "multiRename.tags.tools.narratorFromText": "Narrator from text",
+  "@multiRename.tags.tools.narratorFromText": {
+    "sourceHash": "f55986d"
+  },
+  "multiRename.tags.tools.clearRedundantTitles": "Clear title = album",
+  "@multiRename.tags.tools.clearRedundantTitles": {
+    "sourceHash": "135f3e7"
+  },
+  "multiRename.tags.tools.removeExtras": "Remove extras…",
+  "@multiRename.tags.tools.removeExtras": {
+    "sourceHash": "e56d9d0"
+  },
+  "multiRename.tags.tools.extrasLabel": "Extra tags to remove",
+  "@multiRename.tags.tools.extrasLabel": {
+    "sourceHash": "346d424"
+  },
+  "multiRename.tags.tools.removeChecked": "{count, plural, one {Remove {countText} extra tag} many {Remove {countText} extra tags} other {Remove {countText} extra tags}}",
+  "@multiRename.tags.tools.removeChecked": {
+    "sourceHash": "adc79db"
+  },
+  "multiRename.tags.kind.label": "Content",
+  "@multiRename.tags.kind.label": {
+    "sourceHash": "47bd290"
+  },
+  "multiRename.tags.kind.audiobook": "Audiobook",
+  "@multiRename.tags.kind.audiobook": {
+    "sourceHash": "8716cb3"
+  },
+  "multiRename.tags.kind.music": "Music",
+  "@multiRename.tags.kind.music": {
+    "sourceHash": "6eb00b4"
+  },
+  "multiRename.tags.write.review": "Write tags…",
+  "@multiRename.tags.write.review": {
+    "sourceHash": "c4ffa01"
+  },
+  "multiRename.tags.write.confirm": "Write tags",
+  "@multiRename.tags.write.confirm": {
+    "sourceHash": "975c614"
+  },
+  "multiRename.tags.write.back": "Back",
+  "@multiRename.tags.write.back": {
+    "sourceHash": "76900f1"
+  },
+  "multiRename.tags.write.checking": "Checking what will change…",
+  "@multiRename.tags.write.checking": {
+    "sourceHash": "c8b6fc4"
+  },
+  "multiRename.tags.write.writing": "Writing tags…",
+  "@multiRename.tags.write.writing": {
+    "sourceHash": "cb12323"
+  },
+  "multiRename.tags.write.changeLabel": "Files that will change",
+  "@multiRename.tags.write.changeLabel": {
+    "sourceHash": "49b54dc"
+  },
+  "multiRename.tags.write.fileChanges": "{fileName}: {fields}",
+  "@multiRename.tags.write.fileChanges": {
+    "sourceHash": "aaca806"
+  },
+  "multiRename.tags.write.cover": "cover",
+  "@multiRename.tags.write.cover": {
+    "sourceHash": "3fa405a"
+  },
+  "multiRename.tags.write.extras": "extra tags",
+  "@multiRename.tags.write.extras": {
+    "sourceHash": "c1d0d74"
+  },
+  "multiRename.tags.write.removesConductor": "conductor (removed)",
+  "@multiRename.tags.write.removesConductor": {
+    "sourceHash": "af05198"
+  },
+  "multiRename.tags.write.nothing": "Nothing to write: the tags are as they are on disk.",
+  "@multiRename.tags.write.nothing": {
+    "sourceHash": "0457bbd"
+  },
+  "multiRename.tags.write.done": "{count, plural, one {Tags written to {countText} file} many {Tags written to {countText} files} other {Tags written to {countText} files}}",
+  "@multiRename.tags.write.done": {
+    "sourceHash": "c536765"
+  },
+  "multiRename.tags.write.noUndo": "This write can’t be undone: the old tags couldn’t be kept.",
+  "@multiRename.tags.write.noUndo": {
+    "sourceHash": "7b96c5b"
+  },
+  "multiRename.tags.write.failedHeading": "Not written:",
+  "@multiRename.tags.write.failedHeading": {
+    "sourceHash": "20468cb"
+  },
+  "multiRename.tags.write.failedRow": "{fileName}: {reason}",
+  "@multiRename.tags.write.failedRow": {
+    "sourceHash": "7939f8f"
+  },
+  "multiRename.tags.write.error.notSupported": "this file type isn’t supported",
+  "@multiRename.tags.write.error.notSupported": {
+    "sourceHash": "cce56b8"
+  },
+  "multiRename.tags.write.error.io": "the file couldn’t be opened or saved",
+  "@multiRename.tags.write.error.io": {
+    "sourceHash": "338680a"
+  },
+  "multiRename.tags.write.error.parse": "its tags couldn’t be read",
+  "@multiRename.tags.write.error.parse": {
+    "sourceHash": "a9d0236"
+  },
+  "multiRename.tags.write.error.write": "the tags couldn’t be saved",
+  "@multiRename.tags.write.error.write": {
+    "sourceHash": "99f4775"
+  },
+  "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
+  "@multiRename.tags.write.error.wouldDrop": {
+    "sourceHash": "8429c5f"
+  },
+  "multiRename.tags.write.error.unwritableExtra": "an extra tag can’t be written to it",
+  "@multiRename.tags.write.error.unwritableExtra": {
+    "sourceHash": "468d4a5"
+  },
+  "multiRename.tags.write.changedOnDiskHeading": "Changed on disk since it was read, not written:",
+  "@multiRename.tags.write.changedOnDiskHeading": {
+    "sourceHash": "1093cd1"
+  },
+  "multiRename.tags.write.skippedHeading": "Skipped, not written:",
+  "@multiRename.tags.write.skippedHeading": {
+    "sourceHash": "d163fc8"
+  },
+  "multiRename.tags.write.reload": "Read the files again",
+  "@multiRename.tags.write.reload": {
+    "sourceHash": "c8652e6"
+  },
+  "multiRename.tags.reload.title": "Read the files again?",
+  "@multiRename.tags.reload.title": {
+    "sourceHash": "257fdce"
+  },
+  "multiRename.tags.reload.message": "This reads every file’s tags from disk again. Changes you haven’t written are lost.",
+  "@multiRename.tags.reload.message": {
+    "sourceHash": "4a53628"
+  },
+  "multiRename.tags.reload.confirm": "Read again",
+  "@multiRename.tags.reload.confirm": {
+    "sourceHash": "d8cb92f"
+  },
+  "multiRename.tags.diacritics.warning": "Diacritics in: {fields}",
+  "@multiRename.tags.diacritics.warning": {
+    "sourceHash": "7eb7f45"
+  },
+  "multiRename.tags.diacritics.fix": "Remove diacritics",
+  "@multiRename.tags.diacritics.fix": {
+    "sourceHash": "4103ca1"
+  },
+  "multiRename.tags.undo.button": "Undo tag changes",
+  "@multiRename.tags.undo.button": {
+    "sourceHash": "aa8e020"
+  },
+  "multiRename.tags.undo.tooltip": "Puts the files back as they were before the last tag write. Any change made to them since is overwritten.",
+  "@multiRename.tags.undo.tooltip": {
+    "sourceHash": "6480424"
+  },
+  "multiRename.tags.undo.title": "Undo tag changes?",
+  "@multiRename.tags.undo.title": {
+    "sourceHash": "1d85df2"
+  },
+  "multiRename.tags.undo.message": "{count, plural, one {This puts the tags of the {countText} file the last write changed back as they were before it. Any change made to that file since the write is overwritten.} many {This puts the tags of the {countText} files the last write changed back as they were before it. Any change made to those files since the write is overwritten.} other {This puts the tags of the {countText} files the last write changed back as they were before it. Any change made to those files since the write is overwritten.}}",
+  "@multiRename.tags.undo.message": {
+    "sourceHash": "6826af9"
+  },
+  "multiRename.tags.undo.confirm": "Undo",
+  "@multiRename.tags.undo.confirm": {
+    "sourceHash": "a8283ad"
+  },
+  "multiRename.tags.undo.done": "{count, plural, one {Tags restored in {countText} file} many {Tags restored in {countText} files} other {Tags restored in {countText} files}}",
+  "@multiRename.tags.undo.done": {
+    "sourceHash": "2eb1c9d"
+  },
+  "multiRename.tags.undo.notRestored": "{count, plural, one {{countText} file couldn’t be restored.} many {{countText} files couldn’t be restored.} other {{countText} files couldn’t be restored.}}",
+  "@multiRename.tags.undo.notRestored": {
+    "sourceHash": "97939fa"
+  },
+  "multiRename.tags.undo.changedSince": "{count, plural, one {{countText} file changed after the write, for example by a rename, so it was left as it is.} many {{countText} files changed after the write, for example by a rename, so they were left as they are.} other {{countText} files changed after the write, for example by a rename, so they were left as they are.}}",
+  "@multiRename.tags.undo.changedSince": {
+    "sourceHash": "78c31f1"
+  },
+  "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
+  "@multiRename.tags.wouldDrop.title": {
+    "sourceHash": "5afab0b"
+  },
+  "multiRename.tags.wouldDrop.message": "{count, plural, one {Writing {countText} file would drop the tag data listed below, which the editor doesn’t show. It wasn’t written.} many {Writing {countText} files would drop the tag data listed below, which the editor doesn’t show. They weren’t written.} other {Writing {countText} files would drop the tag data listed below, which the editor doesn’t show. They weren’t written.}}",
+  "@multiRename.tags.wouldDrop.message": {
+    "sourceHash": "684fc18"
+  },
+  "multiRename.tags.wouldDrop.listLabel": "Files that would lose tag data",
+  "@multiRename.tags.wouldDrop.listLabel": {
+    "sourceHash": "43f0321"
+  },
+  "multiRename.tags.wouldDrop.row": "{fileName}: {items}",
+  "@multiRename.tags.wouldDrop.row": {
+    "sourceHash": "50de2de"
+  },
+  "multiRename.tags.wouldDrop.writeAnyway": "Write anyway",
+  "@multiRename.tags.wouldDrop.writeAnyway": {
+    "sourceHash": "00b17b2"
+  },
+  "multiRename.tags.wouldDrop.skip": "Skip these files",
+  "@multiRename.tags.wouldDrop.skip": {
+    "sourceHash": "ddb7a77"
+  },
+  "multiRename.tags.write.summaryAs": "{count, plural, one {Writing as {kind}: {countText} file will change:} many {Writing as {kind}: {countText} files will change:} other {Writing as {kind}: {countText} files will change:}}",
+  "@multiRename.tags.write.summaryAs": {
+    "sourceHash": "cba70de"
+  },
+  "multiRename.tags.write.refused": "No file was written.",
+  "@multiRename.tags.write.refused": {
+    "sourceHash": "6762f25"
+  },
+  "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
+  "@multiRename.tags.write.noUndoSome": {
+    "sourceHash": "3ae488c"
+  },
+  "multiRename.tags.undoStoreUnavailable": "Couldn’t use the store that keeps the old tags for Undo.",
+  "@multiRename.tags.undoStoreUnavailable": {
+    "sourceHash": "1455c16"
+  },
+  "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
+  "@multiRename.tags.undo.unwrittenLost": {
+    "sourceHash": "2ad42a1"
   }
 }

@@ -4107,5 +4107,21 @@
   "settings.license.getLicense.keywords": "license, buy, purchase, pricing, commercial, personal, upgrade",
   "@settings.license.getLicense.keywords": {
     "description": "Search keywords for the “Get a license” row (licensing.section.getLicense) in Settings > License. What it does: a button that opens the page where you can buy a license. Never shown. Search already matches its label, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.advanced.card.multiRename": "Multi-Rename",
+  "@settings.advanced.card.multiRename": {
+    "description": "Heading of the Multi-Rename card (the tag editor switch) in Settings > Advanced."
+  },
+  "settings.multiRename.tagEditor.label": "Tag editor in Multi-Rename",
+  "@settings.multiRename.tagEditor.label": {
+    "description": "Advanced-section label for the switch that adds a Tags tab to the Multi-Rename sheet. \"Multi-Rename\" is the feature name, keep it."
+  },
+  "settings.multiRename.tagEditor.description": "Adds a Tags tab to Multi-Rename for editing music and audiobook tags before renaming.",
+  "@settings.multiRename.tagEditor.description": {
+    "description": "Help text for the tag-editor switch in Settings > Advanced. \"Multi-Rename\" is the feature name, keep it. \"Tags\" is the name of the tab. Tags are the metadata inside audio files (artist, album, title)."
+  },
+  "settings.multiRename.tagEditor.keywords": "tags, id3, mp3, m4b, audiobook, music, metadata, artist, album",
+  "@settings.multiRename.tagEditor.keywords": {
+    "description": "Search keywords for the “Tag editor in Multi-Rename” setting (settings.multiRename.tagEditor.label) in Settings > Advanced. What it does: adds a tab to the batch-rename sheet for editing the tags inside music and audiobook files. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
   }
 }

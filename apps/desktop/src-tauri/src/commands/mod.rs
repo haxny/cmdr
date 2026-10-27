@@ -38,6 +38,7 @@ pub mod mtp;
 pub mod multi_rename;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub mod network;
+pub mod tag_editor;
 // NFS: the same gate and the same reason as `sftp`. ❌ No stub counterpart.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub mod nfs;

@@ -789,6 +789,29 @@ describe('createMultiRenameState with media fields', () => {
     vi.useRealTimers()
   })
 
+  // Review focus 5: a tag write (or its undo) has the backend read the written files again
+  // (`tag_editor::apply::reread_media`), which reports as a media read; its end re-previews, so a
+  // `[=tag.*]` mask shows the new values.
+  it('a re-read after a tag write or undo previews again and shows the new values', async () => {
+    ipc.getMultiRenameLastSettings.mockResolvedValue({
+      spec: { ...DEFAULT_SPEC, nameMask: '[=tag.album] [N]' },
+      presetId: null,
+    })
+    ipc.previewMultiRename.mockResolvedValue(preview(1, [row(0, 'a.mp3', 'Book a.mp3')]))
+    const tool = createMultiRenameState('S')
+    await settle()
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    const calls = ipc.previewMultiRename.mock.calls.length
+    ipc.previewMultiRename.mockResolvedValue(preview(2, [row(0, 'a.mp3', 'Kniha a.mp3')]))
+    emit({ sessionId: 'S', read: 0, total: 1, done: false })
+    emitDone()
+    await settle()
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    expect(ipc.previewMultiRename.mock.calls.length).toBeGreaterThan(calls)
+    expect(tool.rowAt(0)?.newName).toBe('Kniha a.mp3')
+    tool.dispose()
+  })
+
   it('counts the rows still reading among the listed ones', async () => {
     const tool = await readingSheet()
     expect(tool.total).toBe(3)

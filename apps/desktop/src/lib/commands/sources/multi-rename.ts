@@ -183,4 +183,25 @@ export const multiRenameCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     fixedKey: true,
   },
+  {
+    // The Tags tab's strip (only mounted with the `multiRename.tagEditor` setting). ⌘⇧[ / ⌘⇧] are macOS's
+    // previous / next tab, and no other command claims them in an overlapping scope, so Settings shows no conflict
+    // (⌘1/⌘2 clashed with the main window's view modes; ⌃Tab with `tab.next`).
+    id: 'multiRename.tabRename',
+    nameKey: 'commands.multiRenameTabRename.label',
+    scope: 'Main window/Multi-rename',
+    showInPalette: false,
+    shortcuts: ['⌘⇧['],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    fixedKey: true,
+  },
+  {
+    id: 'multiRename.tabTags',
+    nameKey: 'commands.multiRenameTabTags.label',
+    scope: 'Main window/Multi-rename',
+    showInPalette: false,
+    shortcuts: ['⌘⇧]'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    fixedKey: true,
+  },
 ]

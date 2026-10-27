@@ -1,5 +1,8 @@
 # Multi-Rename sheet: details
 
+The opt-in Tags tab (fork, setting `multiRename.tagEditor`) has its own docs: `tag-editor/CLAUDE.md` and
+`tag-editor/DETAILS.md`.
+
 - **Keyboard-first**: the name mask has focus on open; Tab walks the fields; Enter in a text field starts (TC's Start!),
   a button or menu keeps its own Enter; ⌘⏎ (`multiRename.rename`, the chip on the Rename button) starts from anywhere, a
   checkbox or the preview included; Esc closes. The placeholder buttons (`PlaceholderChips.svelte`: house `Chip`s,

@@ -3,11 +3,13 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
 /// A text field the editor manages. The order is the editor's display order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum TagField {
     /// Track or book title.
@@ -88,11 +90,30 @@ impl TagField {
 
 /// A front cover: its MIME type and the encoded image bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Cover {
     /// MIME type, like `image/jpeg`.
     pub mime: String,
-    /// The encoded image.
-    pub data: Vec<u8>,
+    /// The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
+    /// every file given the same cover) is a pointer copy. Serialized as a byte array.
+    #[serde(with = "cover_bytes")]
+    #[cfg_attr(feature = "specta", specta(type = Vec<u8>))]
+    pub data: Arc<[u8]>,
+}
+
+/// `Arc<[u8]>` as a plain byte array, the wire shape the cover always had.
+mod cover_bytes {
+    use std::sync::Arc;
+
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S: Serializer>(data: &Arc<[u8]>, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(data.iter())
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Arc<[u8]>, D::Error> {
+        Vec::<u8>::deserialize(deserializer).map(Arc::from)
+    }
 }
 
 /// One file's tags as the editor sees them.
@@ -112,6 +133,7 @@ pub struct FileTags {
 /// What kind of content a batch of files is, which decides how fields map
 /// (audiobooks drop ID3's `TPE3`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum ContentKind {
     /// Spoken-word books.
@@ -120,15 +142,31 @@ pub enum ContentKind {
     Music,
 }
 
+/// What a write as a [`ContentKind`] removes that [`FileTags`] doesn't show, named so the app
+/// can list it before writing ([`crate::removed_by_kind`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+#[serde(rename_all = "camelCase")]
+pub enum KindRemoval {
+    /// An MP3's conductor (`TPE3`), which an audiobook write removes.
+    Conductor,
+}
+
 /// Why a tag read or write didn't happen. Serialized as `{"type": "<variant>", "data": ...}`
 /// (camelCase variant names), an `Io` kind as its `std::io::ErrorKind` name (`"NotFound"`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum TagError {
     /// The file's format isn't one the editor handles.
     NotSupported,
     /// A filesystem failure, with its kind and the OS message.
-    Io(#[serde(with = "io_kind")] std::io::ErrorKind, String),
+    Io(
+        #[serde(with = "io_kind")]
+        #[cfg_attr(feature = "specta", specta(type = String))]
+        std::io::ErrorKind,
+        String,
+    ),
     /// The file's tags couldn't be parsed.
     Parse(String),
     /// The tags couldn't be written.

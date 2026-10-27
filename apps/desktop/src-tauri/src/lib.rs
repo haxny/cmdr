@@ -170,6 +170,7 @@ mod subprocess;
 mod system_events;
 mod system_memory;
 mod system_strings;
+mod tag_editor;
 mod tauri_builder;
 pub mod test_mode;
 /// The sanctioned way to wait for background work in a Rust test. See `docs/testing.md`.

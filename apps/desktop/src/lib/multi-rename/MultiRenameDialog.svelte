@@ -60,6 +60,8 @@
     import { isOperationLogRecording } from '#lib/operation-log/recording.js'
     import { createResults } from './results.svelte'
     import { createFieldHistoryMenu } from './field-history-menu.svelte'
+    import { getSetting } from '#lib/settings/index.js'
+    import { RenamePanel, SheetTabs, TagsTab, createDiscardGuard, createTagEditorState, type SheetTab, type TagsTabApi } from './tag-editor/index'
 
     interface Props {
         session: MultiRenameOpened
@@ -101,6 +103,12 @@
     // The mask fields' range editors show what a range takes from the files around the list's cursor.
     provideRangeSampleSource(tool)
     const results = createResults(tool)
+    // The opt-in Tags tab (setting off: no tab strip, no tag session, no tag IPC).
+    const tags = getSetting('multiRename.tagEditor') ? createTagEditorState(session.sessionId) : null
+    let sheetTab = $state<SheetTab>('rename')
+    let tagsTab = $state<TagsTabApi>()
+    const guard = createDiscardGuard(tags, onClose)
+    onDestroy(() => { void tags?.close() })
     const fieldHistory = createFieldHistoryMenu({
         inputOf: (field) =>
             ({ nameMask: nameMaskInput, extensionMask: extensionMaskInput, search: searchInput, replace: replaceInput })[
@@ -223,7 +231,8 @@
     }
 
     async function start(): Promise<void> {
-        if (!canStart) return
+        if (sheetTab === 'tags') return tagsTab?.start()
+        if (!canStart || (guard.dirty && !tool.queued && !(await guard.confirm()))) return
         const wasQueued = tool.queued
         const run = tool.apply()
         // A press that queues or cancels changes only the button's words: say it.
@@ -247,7 +256,7 @@
     /** Hands the last run's reversal to the queue, as the operation log's Roll back does. */
     async function undoLastRun(): Promise<void> {
         const run = lastRun
-        if (!run || undoing) return
+        if (!run || undoing || (guard.dirty && !(await guard.confirm()))) return
         undoing = true
         undoNotice = null
         try {
@@ -321,7 +330,7 @@
     resizable
     containerStyle="width: min(1100px, 92vw); min-width: {MIN_WIDTH_PX}px; height: min(760px, 88vh)"
     fillBody
-    onclose={onClose}
+    onclose={guard.close}
     onkeydown={handleKeydown}
 >
     <!-- The title bar's `<h2>` is already the row (gap + badge alignment live there),
@@ -333,6 +342,8 @@
     {/snippet}
 
     <div class="sheet">
+        {#if tags}<SheetTabs active={sheetTab} onSelect={(tab: SheetTab) => { sheetTab = tab }} />{/if}
+        {#snippet renameBody()}
         <div class="controls">
             <!-- The first two rows share one grid, so their edges line up: the masks with the
                  placeholders they take, then the search, the replacement, and the search's own
@@ -515,6 +526,10 @@
             onCursorChange={tool.setCursor}
             onMoveRow={tool.moveCursorRow}
         />
+        {/snippet}
+        {#if tags && sheetTab === 'tags'}<TagsTab bind:this={tagsTab} state={tags} />
+        <!-- eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -- Svelte {@render} syntax -->
+        {:else if tags}<RenamePanel>{@render renameBody()}</RenamePanel>{:else}{@render renameBody()}{/if}
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->
         <Menu menu={fieldHistory.menu} ariaLabel={tString('multiRename.history')} minWidth={240} />
@@ -562,8 +577,9 @@
             >
                 {tString('multiRename.results')}
             </Button>
-            <Button onclick={onClose}>{tString('multiRename.cancel')}</Button>
+            <Button onclick={guard.close}>{tString('multiRename.cancel')}</Button>
             <!-- "Starting…" while it waits for the tags; its width may change with the words. -->
+            {#if sheetTab === 'rename'}<!-- The Tags tab writes with its own button. -->
             <Button
                 variant="primary"
                 onclick={() => { void start() }}
@@ -573,6 +589,7 @@
             >
                 {tool.queued ? tString('multiRename.starting') : tString('multiRename.rename', { count: tool.counts.ready })}
             </Button>
+            {/if}
         </span>
     {/snippet}
 </ModalDialog>

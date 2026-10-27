@@ -10,9 +10,10 @@ use lofty::ogg::tag::VorbisComments;
 use lofty::picture::PictureType;
 use lofty::tag::Accessor;
 
-use crate::model::{FileTags, TagError, TagField};
-use crate::read::read_tags;
+use crate::model::{ContentKind, FileTags, KindRemoval, TagError, TagField};
+use crate::read::{read_raw, read_tags, removed_by_kind};
 use crate::test_files::*;
+use crate::write::{WriteOptions, write_tags};
 
 fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|v| (*v).to_owned()).collect()
@@ -336,4 +337,70 @@ fn reads_ogg_vorbis_artists_extras_and_cover() {
 fn reads_opus_artists_extras_and_cover() {
     let dir = tempfile::tempdir().unwrap();
     assert_ogg_family(&write_opus(dir.path(), "a.opus", ogg_comments(), 250));
+}
+
+#[test]
+fn read_duration_of_a_real_file() {
+    use std::time::Duration;
+    let dir = tempfile::tempdir().unwrap();
+    // 13 x 3 frames of 1152 samples at 44.1 kHz.
+    let frames = 39.0_f64;
+    let path = write_bytes(dir.path(), "a.mp3", mp3_frames().repeat(13));
+    let expected = Duration::from_secs_f64(frames * 1152.0 / 44100.0);
+    let got = crate::read::read_duration(&path).expect("a duration");
+    assert!(
+        got.abs_diff(expected) <= Duration::from_millis(50),
+        "{got:?} vs {expected:?}"
+    );
+}
+
+#[test]
+fn read_duration_none_for_garbage() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_bytes(dir.path(), "g.mp3", vec![0x42; 64]);
+    assert_eq!(crate::read::read_duration(&path), None);
+    for name in ["g.m4a", "g.m4b", "g.flac", "g.ogg", "g.opus"] {
+        let junk = write_bytes(dir.path(), name, vec![0x42; 64]);
+        assert_eq!(crate::read::read_duration(&junk), None, "{name}");
+    }
+    assert_eq!(crate::read::read_duration(&dir.path().join("missing.mp3")), None);
+    let unknown = write_bytes(dir.path(), "g.txt", vec![1, 2, 3]);
+    assert_eq!(crate::read::read_duration(&unknown), None);
+}
+
+/// What the change list says an audiobook write removes is what `write_tags` removes.
+#[test]
+fn removed_by_kind_names_the_conductor_an_audiobook_write_drops() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TPE3", "Dirigent");
+    let with = write_mp3(dir.path(), "with.mp3", &tag);
+    let without = write_mp3(dir.path(), "without.mp3", &Id3v2Tag::new());
+    let mut comments = VorbisComments::new();
+    comments.push("CONDUCTOR".to_owned(), "Dirigent".to_owned());
+    let flac = write_flac(dir.path(), "c.flac", comments, 0);
+
+    assert_eq!(
+        removed_by_kind(&with, ContentKind::Audiobook).unwrap(),
+        vec![KindRemoval::Conductor]
+    );
+    assert_eq!(removed_by_kind(&with, ContentKind::Music).unwrap(), vec![]);
+    assert_eq!(removed_by_kind(&without, ContentKind::Audiobook).unwrap(), vec![]);
+    assert_eq!(removed_by_kind(&flac, ContentKind::Audiobook).unwrap(), vec![]);
+
+    let opts = WriteOptions {
+        kind: ContentKind::Audiobook,
+        track_total: None,
+        disc_total: None,
+        allow_frame_loss: false,
+    };
+    let mut tags = read(&with);
+    tags.fields.insert(TagField::Title, strings(&["Kapitola"]));
+    write_tags(&with, &tags, &opts).unwrap();
+    assert_eq!(
+        read_raw(&with).unwrap().conductor,
+        None,
+        "the write removed what was listed"
+    );
+    assert_eq!(removed_by_kind(&with, ContentKind::Audiobook).unwrap(), vec![]);
 }

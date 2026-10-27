@@ -2040,6 +2040,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "specta",
  "tempfile",
  "unicode-normalization",
 ]

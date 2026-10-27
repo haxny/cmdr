@@ -1546,5 +1546,13 @@
   "commands.handler.viewDebugLog.unavailable": "Couldn’t open the debug log. Try again.",
   "@commands.handler.viewDebugLog.unavailable": {
     "description": "Toast after the View debug log action cannot get the log path or open the internal viewer window. No diagnostic details or placeholders. Suggest retrying."
+  },
+  "commands.multiRenameTabRename.label": "Show the Rename tab",
+  "@commands.multiRenameTabRename.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It switches the tool to the Rename tab."
+  },
+  "commands.multiRenameTabTags.label": "Show the Tags tab",
+  "@commands.multiRenameTabTags.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It switches the tool to the Tags tab."
   }
 }

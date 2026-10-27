@@ -1629,6 +1629,42 @@ export const commands = {
    */
   saveMultiRenameLastSettings: (spec: MultiRenameSpec, presetId: string | null) =>
     __TAURI_INVOKE<void>('save_multi_rename_last_settings', { spec, presetId }),
+  // Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session.
+  openTagEditor: (sessionId: string, restart: boolean) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('open_tag_editor', { sessionId, restart })),
+  // Applies edits in memory; an unknown track refuses the whole batch.
+  editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
+  // Runs a clean-up tool over the whole session.
+  runTagTool: (sessionId: string, tool: TagTool) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool })),
+  // What a write as `kind` would change, per file, including what the kind removes.
+  getTagChanges: (sessionId: string, kind: ContentKind) =>
+    typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
+  // Writes the changed files.
+  applyTags: (sessionId: string, request: ApplyRequest) =>
+    typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request })),
+  /**
+   *  Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
+   *  the restored files as read, edits to them dropped (its user confirmed that); any other keeps
+   *  its unwritten edits.
+   */
+  undoTagApply: (applyId: string, sessionId: string | null) =>
+    typedError<RestoreReport, TagEditorError>(__TAURI_INVOKE('undo_tag_apply', { applyId, sessionId })),
+  // Ends the tag session, dropping its edits.
+  closeTagEditor: (sessionId: string) => __TAURI_INVOKE<void>('close_tag_editor', { sessionId }),
+  // The images of the session's folder that can be a cover.
+  listCoverCandidates: (sessionId: string) =>
+    typedError<CoverCandidate[], TagEditorError>(__TAURI_INVOKE('list_cover_candidates', { sessionId })),
+  // Gives every file the cover image `file_name` of the session's folder.
+  setCoverFromFile: (sessionId: string, fileName: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_file', { sessionId, fileName })),
+  /**
+   *  The cover every file shares, as a `data:` URL for the thumbnail, or `None` when there is none,
+   *  the files differ, or it isn't a JPEG, PNG, or WebP image.
+   */
+  getCoverImage: (sessionId: string) =>
+    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId })),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -6101,6 +6137,15 @@ export type AppearedDuringMove = {
   folderCount: number
 }
 
+// What the user asked to write.
+export type ApplyRequest = {
+  kind: ContentKind
+  // Write files whose write would drop items (the user chose "Write anyway").
+  allowFrameLoss: boolean
+  // Paths the user chose to skip, as the view shows them.
+  skip: string[]
+}
+
 /**
  *  What approving a group did, in the terms the dialog acts on.
  *
@@ -6726,6 +6771,17 @@ export type CaseChange =
   // Every word's first letter upper, the rest lower.
   | 'words'
 
+// How [`change_case`] rewrites a value.
+export type CaseTool =
+  // First letter upper, the rest lower.
+  | 'sentence'
+  // Every word starts upper, the rest lower.
+  | 'title'
+  // All lower.
+  | 'lower'
+  // All upper.
+  | 'upper'
+
 /**
  *  A server certificate the OS refused and a person may trust anyway, and what
  *  to say about it.
@@ -7310,6 +7366,16 @@ export type ConnectionState =
   | 'saved'
 
 /**
+ *  What kind of content a batch of files is, which decides how fields map
+ *  (audiobooks drop ID3's `TPE3`).
+ */
+export type ContentKind =
+  // Spoken-word books.
+  | 'audiobook'
+  // Music.
+  | 'music'
+
+/**
  *  The user's keyboard shortcuts as they stand right now: command-registry id → the
  *  combo in the frontend's canonical spelling (`⌘⇧C`, `F5`, `Space`). The frontend
  *  pushes it with every popup, straight out of the shortcut registry, so a command
@@ -7478,6 +7544,76 @@ export type CountFolderSizesError =
   | { type: 'gone'; listingId: string }
   // No volume answers for the listing's folder (unplugged, disconnected).
   | { type: 'notConnected'; volumeId: string }
+
+// A front cover: its MIME type and the encoded image bytes.
+export type Cover = Cover_Serialize | Cover_Deserialize
+
+// An image file of the session's folder that can become the cover.
+export type CoverCandidate = {
+  fileName: string
+  size: number
+}
+
+// What to do with the front cover of every file.
+export type CoverEdit = CoverEdit_Serialize | CoverEdit_Deserialize
+
+// What to do with the front cover of every file.
+export type CoverEdit_Deserialize =
+  // Leave covers as they are.
+  | 'keep'
+  // Give every file this cover.
+  | { set: Cover_Deserialize }
+  // Remove every cover.
+  | 'remove'
+
+// What to do with the front cover of every file.
+export type CoverEdit_Serialize =
+  // Leave covers as they are.
+  | 'keep'
+  // Give every file this cover.
+  | { set: Cover_Serialize }
+  // Remove every cover.
+  | 'remove'
+
+// The front cover across the files.
+export type CoverSummary =
+  // No file has a cover.
+  | { kind: 'empty' }
+  // The files have different covers, or only some have one.
+  | { kind: 'multiple' }
+  // Every file has this cover.
+  | {
+      kind: 'same'
+      mime: string
+      bytes: number
+      // Pixel size, when the image header could be read.
+      width: number | null
+      height: number | null
+      // A hash of the bytes, so the thumbnail follows a new cover of the same type and size.
+      key: string
+    }
+
+// A front cover: its MIME type and the encoded image bytes.
+export type Cover_Deserialize = {
+  // MIME type, like `image/jpeg`.
+  mime: string
+  /**
+   *  The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
+   *  every file given the same cover) is a pointer copy. Serialized as a byte array.
+   */
+  data: number[]
+}
+
+// A front cover: its MIME type and the encoded image bytes.
+export type Cover_Serialize = {
+  // MIME type, like `image/jpeg`.
+  mime: string
+  /**
+   *  The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
+   *  every file given the same cover) is a pointer copy. Serialized as a byte array.
+   */
+  data: number[]
+}
 
 /**
  *  What ground a run's answer was drawn from: the index, a live walk, or both.
@@ -8749,6 +8885,11 @@ export type ExecuteCommand = {
  */
 export type ExecutionStatus = 'queued' | 'running' | 'done' | 'failed' | 'canceled'
 
+export type FailedRow = {
+  path: string
+  error: TagError
+}
+
 // Whether a pick of a favorite gets there, and if not, why. One decision site: `favorites/reach.rs`.
 export type FavoriteReach =
   // The volume is live: a pick opens the folder.
@@ -8848,6 +8989,17 @@ export type FieldUsage = {
   missing: number
   // Files still being read.
   reading: number
+}
+
+// What a file's change looks like when the user reviews it before writing.
+export type FileChangeView = {
+  path: string
+  fileName: string
+  fields: TagField[]
+  cover: boolean
+  extras: boolean
+  // What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
+  removes: KindRemoval[]
 }
 
 /**
@@ -10249,6 +10401,14 @@ export type KeychainError =
   | { type: 'access_denied'; message: string }
   // Other error
   | { type: 'other'; message: string }
+
+/**
+ *  What a write as a [`ContentKind`] removes that [`FileTags`] doesn't show, named so the app
+ *  can list it before writing ([`crate::removed_by_kind`]).
+ */
+export type KindRemoval =
+  // An MP3's conductor (`TPE3`), which an audiobook write removes.
+  'conductor'
 
 /**
  *  A file the dialog's conflict check found at the destination under a name
@@ -14377,6 +14537,17 @@ export type RangeSample = {
   taken: TakenChars | null
 }
 
+// Why a file has no tags in the list. A stable code, worded by the UI.
+export type ReadErrorCode =
+  // The tag parser gave up on the file, or panicked on it.
+  | 'unreadable'
+  // The file's format isn't one the editor handles.
+  | 'unsupported'
+  // The file couldn't be opened or read.
+  | 'io'
+  // The file's tags couldn't be parsed.
+  | 'parse'
+
 /**
  *  Which route made a folder or a row read-only, so the sheet names it: a repo's
  *  `.git` portal reads as git history, an archive as an archive.
@@ -14388,6 +14559,11 @@ export type ReadOnlyPlace =
   | 'gitPortal'
   // A restic repo's `Browse snapshots` row, or anything inside its snapshots.
   | 'resticSnapshots'
+
+// Why the tab can't write. A stable code, worded by the UI.
+export type ReadOnlyReason =
+  // The session's folder isn't on the local disk; v1 writes local files only.
+  'remoteVolume'
 
 /**
  *  Which half of a transfer refused the write, for [`WriteOperationError::ReadOnlyDevice`].
@@ -14813,6 +14989,21 @@ export type ResticSnapshotMeta = {
    *  spelled them.
    */
   paths: string[]
+}
+
+// What a restore did, per file, in the order the files were recorded.
+export type RestoreReport = {
+  // Files whose old tags are back.
+  restored: string[]
+  // Files no longer at their (repathed) path.
+  missing: string[]
+  /**
+   *  Files changed since the apply wrote them (written again, or another file renamed onto
+   *  the path): left alone, so one file's old tags never land in another.
+   */
+  changed: string[]
+  // Files the write refused or failed on, unchanged, with why.
+  failed: [string, TagError][]
 }
 
 export type RestrictedPathsChangedPayload = {
@@ -17066,6 +17257,21 @@ export type ShareListResult = {
   fromCache: boolean
 }
 
+// One shared row: a field and what the files say about it.
+export type SharedRow = {
+  field: TagField
+  value: SharedValue
+}
+
+// What one field looks like across the selected files.
+export type SharedValue =
+  // No file has the field.
+  | 'empty'
+  // Every file has exactly these values.
+  | { same: string[] }
+  // The files differ, or only some have the field.
+  | 'multiple'
+
 /**
  *  `show-search-result-in-folder`: a snapshot context-menu click. The primary
  *  right-clicked path travels with the event so the frontend never rereads a
@@ -18038,6 +18244,157 @@ export type TabInfo = {
   active: boolean
 }
 
+// What a write did, per file. Paths are as the view shows them.
+export type TagApplyReport = {
+  // What undoes this write; `None` when nothing was written.
+  applyId: string | null
+  written: string[]
+  // Not written: the write would drop these items. The UI asks.
+  wouldDrop: WouldDropRow[]
+  // Not written, with why.
+  failed: FailedRow[]
+  // Not written: something else changed the file since the session read it.
+  changedOnDisk: string[]
+  // Files were written, but the undo store couldn't keep their old tags: no undo.
+  undoUnavailable: boolean
+}
+
+/**
+ *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
+ *  the edit to another file.
+ */
+export type TagEdit = TagEdit_Serialize | TagEdit_Deserialize
+
+/**
+ *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
+ *  the edit to another file.
+ */
+export type TagEdit_Deserialize =
+  // Set the field on every file. Empty values remove it.
+  | { kind: 'setAll'; field: TagField; values: string[] }
+  // Set the field on the track at `path`.
+  | { kind: 'setOne'; path: string; field: TagField; values: string[] }
+  // Change the cover of every file.
+  | { kind: 'cover'; edit: CoverEdit_Deserialize }
+
+/**
+ *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
+ *  the edit to another file.
+ */
+export type TagEdit_Serialize =
+  // Set the field on every file. Empty values remove it.
+  | { kind: 'setAll'; field: TagField; values: string[] }
+  // Set the field on the track at `path`.
+  | { kind: 'setOne'; path: string; field: TagField; values: string[] }
+  // Change the cover of every file.
+  | { kind: 'cover'; edit: CoverEdit_Serialize }
+
+// Why a tag-editor call didn't answer.
+export type TagEditorError =
+  // The Multi-Rename session is gone.
+  | { kind: 'noSession' }
+  // `open` wasn't called for this session.
+  | { kind: 'notOpen' }
+  // The session's volume is read-only for the tag editor.
+  | { kind: 'readOnly' }
+  // An edit names a path that isn't a readable track of the session. Nothing was applied.
+  | { kind: 'unknownTrack' }
+  // The undo store refused: recording before a write (nothing was written), or an undo.
+  | { kind: 'undo'; error: TagError }
+  // The app's data folder, which holds the undo store, isn't available. Nothing was written.
+  | { kind: 'noAppDataDir' }
+  // A cover file name that isn't a plain file name inside the session's folder.
+  | { kind: 'badCoverName' }
+  // The cover file is over the size limit (10 MiB).
+  | { kind: 'coverTooLarge' }
+  // The cover file couldn't be read (or isn't a regular file, or has an unsupported name).
+  | { kind: 'coverUnreadable' }
+  // The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
+  | { kind: 'coverNotAnImage' }
+  // The background task running the call failed.
+  | { kind: 'taskFailed' }
+
+// The whole tab.
+export type TagEditorView = {
+  // `false` means read-only (a non-local volume).
+  editable: boolean
+  readOnlyReason: ReadOnlyReason | null
+  // Every field in `TagField::ALL` order except Title and Track, which the track list carries.
+  shared: SharedRow[]
+  // The supported audio files, in the session's current order.
+  tracks: TrackRow[]
+  cover: CoverSummary
+  // The union of the files' unmanaged text keys, sorted.
+  extras: string[]
+  // Edited tags differ from the ones on disk.
+  dirty: boolean
+  // The fields whose edited values still carry diacritics they must not.
+  diacritics: TagField[]
+}
+
+/**
+ *  Why a tag read or write didn't happen. Serialized as `{"type": "<variant>", "data": ...}`
+ *  (camelCase variant names), an `Io` kind as its `std::io::ErrorKind` name (`"NotFound"`).
+ */
+export type TagError =
+  // The file's format isn't one the editor handles.
+  | { type: 'notSupported' }
+  // A filesystem failure, with its kind and the OS message.
+  | { type: 'io'; data: [string, string] }
+  // The file's tags couldn't be parsed.
+  | { type: 'parse'; data: string }
+  // The tags couldn't be written.
+  | { type: 'write'; data: string }
+  /**
+   *  The write would lose these items (sorted IDs such as `TSOP`, `TXXX:Comment`, `COMM:ces`,
+   *  `TITLE#2`): values the reader doesn't show that differ from what it shows (a second value
+   *  of a single-value field, a legacy or duplicate frame), or on MP3 frames ID3v2.3 has no
+   *  place for. Nothing was written; `WriteOptions::allow_frame_loss` writes anyway.
+   */
+  | { type: 'wouldDrop'; data: string[] }
+  /**
+   *  `FileTags::extras` asks for an extra (this key) that the file lacks and the write
+   *  can't add: an empty key, no values, or a key the format's reader would take for a
+   *  managed field. Nothing was written.
+   */
+  | { type: 'unwritableExtra'; data: string }
+
+// A text field the editor manages. The order is the editor's display order.
+export type TagField =
+  // Track or book title.
+  | 'title'
+  // Artist; for audiobooks, the author.
+  | 'artist'
+  // Album artist; for audiobooks, the author as well.
+  | 'albumArtist'
+  // Album; for audiobooks, the book.
+  | 'album'
+  // Performer; for audiobooks, the narrator.
+  | 'performer'
+  // Composer; for audiobooks, the author of the music.
+  | 'composer'
+  // Release date or year.
+  | 'date'
+  // Genre.
+  | 'genre'
+  // Publisher.
+  | 'publisher'
+  // Translator.
+  | 'translator'
+  // Track number, plain unless the caller passes a known total.
+  | 'track'
+  // Disc number.
+  | 'disc'
+  // Free-form comment.
+  | 'comment'
+  // Longer description.
+  | 'description'
+  // A web address.
+  | 'www'
+
 /**
  *  One tag-filter hit: an image path and the confidence of the matched tag. Crosses
  *  the IPC boundary (tag search is surfaced by a command), so it derives `Serialize`
@@ -18068,6 +18425,43 @@ export type TagRef = {
    */
   color: number
 }
+
+// Every tool as one serializable value, so the app and the MCP server share one tool set.
+export type TagTool =
+  // [`change_case`] on `fields`.
+  | {
+      kind: 'case'
+      // Fields to change.
+      fields: TagField[]
+      // The case to apply.
+      case: CaseTool
+    }
+  // [`strip_diacritics`] on `fields`.
+  | {
+      kind: 'stripDiacritics'
+      // Fields to strip.
+      fields: TagField[]
+    }
+  // [`strip_track_prefix`].
+  | { kind: 'stripTrackPrefix' }
+  // [`renumber`] from `start`.
+  | {
+      kind: 'renumber'
+      // The first track number.
+      start: number
+    }
+  // [`album_artist_from_artist`].
+  | { kind: 'albumArtistFromArtist' }
+  // [`narrator_from_text`].
+  | { kind: 'narratorFromText' }
+  // [`clear_redundant_titles`].
+  | { kind: 'clearRedundantTitles' }
+  // [`remove_extras`] for `keys`.
+  | {
+      kind: 'removeExtras'
+      // Native keys of the extras to drop.
+      keys: string[]
+    }
 
 /**
  *  `tags-skipped`: a color-tag toggle (keyboard command or context-menu circle) left
@@ -18193,6 +18587,19 @@ export type TotalRows =
    *  estimate on anything else, exactly as its line count was an estimate before.
    */
   | { kind: 'estimated'; rows: number }
+
+// One audio file in the per-track list.
+export type TrackRow = {
+  path: string
+  fileName: string
+  track: string | null
+  title: string | null
+  durationMs: number | null
+  // Edited tags differ from the ones on disk.
+  changed: boolean
+  // Set when the file couldn't be read: the row is shown greyed and never written.
+  readError: ReadErrorCode | null
+}
 
 /**
  *  The live shape of a running transfer, on every progress event AND on
@@ -20098,6 +20505,11 @@ export type WipeLeftover =
 // The outcome of a wipe. Empty `leftovers` means everything went.
 export type WipeReport = {
   leftovers: WipeLeftover[]
+}
+
+export type WouldDropRow = {
+  path: string
+  items: string[]
 }
 
 /**

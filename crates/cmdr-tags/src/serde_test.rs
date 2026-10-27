@@ -85,6 +85,7 @@ fn restore_report_apply_id_and_case_tool_round_trip() {
     let report = RestoreReport {
         restored: vec![PathBuf::from("/a.mp3")],
         missing: vec![PathBuf::from("/b.mp3")],
+        changed: vec![PathBuf::from("/d.mp3")],
         failed: vec![(PathBuf::from("/c.mp3"), TagError::Write("x".to_owned()))],
     };
     assert_eq!(
@@ -92,10 +93,20 @@ fn restore_report_apply_id_and_case_tool_round_trip() {
         json!({
             "restored": ["/a.mp3"],
             "missing": ["/b.mp3"],
+            "changed": ["/d.mp3"],
             "failed": [["/c.mp3", {"type": "write", "data": "x"}]],
         })
     );
     assert_eq!(round_trip(&ApplyId("op-1".to_owned())), json!("op-1"));
     assert_eq!(round_trip(&CaseTool::Sentence), json!("sentence"));
     assert_eq!(round_trip(&CaseTool::Upper), json!("upper"));
+}
+
+#[test]
+fn a_cover_is_a_byte_array_on_the_wire() {
+    let cover = crate::model::Cover {
+        mime: "image/png".to_owned(),
+        data: vec![1, 2, 255].into(),
+    };
+    assert_eq!(round_trip(&cover), json!({"mime": "image/png", "data": [1, 2, 255]}));
 }

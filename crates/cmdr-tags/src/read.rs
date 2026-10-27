@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::path::Path;
+use std::sync::Arc;
 
 use lofty::config::ParseOptions;
 use lofty::file::AudioFile;
@@ -18,7 +19,7 @@ use lofty::picture::{Picture, PictureType};
 use serde::{Deserialize, Serialize};
 
 use crate::format::{AudioFormat, format_of};
-use crate::model::{Cover, FileTags, TagError, TagField};
+use crate::model::{ContentKind, Cover, FileTags, KindRemoval, TagError, TagField};
 
 /// The separator the editor joins multiple values with where a format stores one string.
 pub(crate) const JOIN: &str = "; ";
@@ -36,6 +37,32 @@ pub(crate) fn parse_error(e: impl std::fmt::Display) -> TagError {
 pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
     let format = format_of_path(path)?;
     read_from(&mut File::open(path)?, format, parse_options())
+}
+
+/// The playing time of the audio file at `path` from lofty's audio properties, or `None` when
+/// the file can't be opened or parsed (or isn't a supported format). Lofty errors become `None`;
+/// lofty panics are not caught here, so the app wraps the call in `contain_panics`.
+pub fn read_duration(path: &Path) -> Option<std::time::Duration> {
+    let format = format_of_path(path).ok()?;
+    let mut file = File::open(path).ok()?;
+    let options = ParseOptions::new().read_properties(true).read_tags(false);
+    match format {
+        AudioFormat::Mp3 => MpegFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::Mp4 => Mp4File::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::Flac => FlacFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::OggVorbis => VorbisFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+        AudioFormat::Opus => OpusFile::read_from(&mut file, options)
+            .ok()
+            .map(|f| f.properties().duration()),
+    }
 }
 
 /// Reads the tags of `format` from `source` with `options`.
@@ -56,6 +83,19 @@ pub(crate) struct RawTags {
     pub(crate) track_total: Option<u32>,
     pub(crate) disc_total: Option<u32>,
     pub(crate) conductor: Option<String>,
+}
+
+/// What writing the audio file at `path` as `kind` removes beyond the fields it shows: an
+/// MP3's conductor (`TPE3`) under [`ContentKind::Audiobook`], as `write_tags` does. Parses the
+/// file, writes nothing. A music write removes nothing.
+pub fn removed_by_kind(path: &Path, kind: ContentKind) -> Result<Vec<KindRemoval>, TagError> {
+    match kind {
+        ContentKind::Music => Ok(Vec::new()),
+        ContentKind::Audiobook => {
+            let (_, raw) = read_snapshot(path)?;
+            Ok(raw.conductor.map(|_| KindRemoval::Conductor).into_iter().collect())
+        }
+    }
 }
 
 /// Reads the [`RawTags`] of the audio file at `path`, parsing as [`read_tags`] does.
@@ -343,7 +383,7 @@ fn pick_cover<'a>(pictures: impl Iterator<Item = &'a Picture> + Clone) -> Option
     let chosen = pictures.clone().nth(cover_position(pictures)?)?;
     Some(Cover {
         mime: chosen.mime_type().map_or(UNKNOWN_MIME, |m| m.as_str()).to_owned(),
-        data: chosen.data().to_vec(),
+        data: Arc::from(chosen.data()),
     })
 }
 
