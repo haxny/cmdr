@@ -189,7 +189,7 @@ mime_guess = "2"
 base64 = "0.23.0"
 rayon = "1.11.0"
 regex = "1"
-uuid = { version = "1.19.0", features = ["v4", "v7"] }
+uuid = { version = "1.29.0", features = ["v4", "v7"] }
 tauri-plugin-clipboard-manager = "2"
 notify-debouncer-full = "0.7.0"
 bincode2 = "2"
@@ -300,7 +300,7 @@ cmdr-mtp = { path = "../../../crates/cmdr-mtp" }
 # mDNS discovery for network host browsing (pure Rust, cross-platform).
 # 0.21.5 is the floor: older releases retry a failed multicast join every 5 s forever
 # on Macs with VM or container bridges. See `src/network/DETAILS.md`.
-mdns-sd = { version = "0.21.5", features = ["logging"] }
+mdns-sd = { version = "0.21.6", features = ["logging"] }
 # SMB2/3 protocol client for share enumeration (pure Rust, pipelined I/O).
 # When bumping: also re-vendor the test containers per
 # apps/desktop/test/smb-servers/.compose/VENDORED.md
@@ -315,11 +315,11 @@ url = "2"
 semver = "1"
 # Property lists: macOS bundle and Dock plists, and the managed-policy values (`managed_policy/`),
 # which the test-build plist-file override also reads on Linux.
-plist = "1.8.0"
+plist = "1.10.3"
 # CommonMark rendering for the What's-new popup, so a lead renders the way GitHub and the website
 # render the same changelog, and for the viewer's rendered Markdown view. `html` only: the default
 # `getopts` feature is the crate's own CLI.
-pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0.13.5", default-features = false, features = ["html"] }
 # Sanitizes the HTML the viewer renders from an untrusted Markdown file (READMEs carry raw `<img>`,
 # `<details>`, `<a>`): an allowlist of tags and attributes, so no script, handler, form, or frame
 # reaches the viewer's webview. Also hands back the parsed DOM, where the image sources get rewritten.
