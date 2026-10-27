@@ -3,7 +3,9 @@
      * The Tags tab's clean-up tools, one button each; every tool runs in the backend over all the session's files.
      * Case changes the focused field, or with none the five name fields, and says which. Renumber is hidden for a
      * single file (a single-file book has no track number). Remove extras… lists the files' extra tags with nothing
-     * checked, so nothing goes without an explicit choice.
+     * checked, so nothing goes without an explicit choice. A second row opens the text tools' panels (Find and replace,
+     * Format a field, From file name), one at a time; they call their tools through `runScoped`, which the tab gives the
+     * checked tracks.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -13,7 +15,11 @@
     import Button from '#lib/ui/Button.svelte'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import { FIELD_LABELS } from './field-labels'
-    import { DIACRITICS_FIELDS, caseFields, caseTool, removeExtrasTool, showsRenumber } from './tag-tools'
+    import FormatPanel from './FormatPanel.svelte'
+    import NamePatternPanel from './NamePatternPanel.svelte'
+    import ReplacePanel from './ReplacePanel.svelte'
+    import type { TagEditorState } from './tag-editor-state.svelte'
+    import { DIACRITICS_FIELDS, caseFields, caseTool, removeExtrasTool, showsRenumber, type RunScoped } from './tag-tools'
 
     interface Props {
         trackCount: number
@@ -23,9 +29,21 @@
         focusedField: TagField | null
         disabled: boolean
         onTool: (tool: TagTool) => void
+        /** The tab's state and scoped runner, for the text tools' panels. */
+        state: TagEditorState
+        runScoped: RunScoped
     }
 
-    const { trackCount, extras, focusedField, disabled, onTool }: Props = $props()
+    const { trackCount, extras, focusedField, disabled, onTool, state: tags, runScoped }: Props = $props()
+
+    type PanelId = 'case' | 'extras' | 'replace' | 'format' | 'name'
+
+    /** The text tools: a button each, opening its panel under the bar. */
+    const TEXT_TOOLS: readonly { id: 'replace' | 'format' | 'name'; label: MessageKey }[] = [
+        { id: 'replace', label: 'multiRename.tags.tools.replace.button' },
+        { id: 'format', label: 'multiRename.tags.tools.format.button' },
+        { id: 'name', label: 'multiRename.tags.tools.name.button' },
+    ]
 
     const CASES: readonly { value: CaseTool; label: MessageKey }[] = [
         { value: 'sentence', label: 'multiRename.tags.tools.caseSentence' },
@@ -42,12 +60,12 @@
         { label: 'multiRename.tags.tools.clearRedundantTitles', tool: { kind: 'clearRedundantTitles' } },
     ]
 
-    let open = $state<'case' | 'extras' | null>(null)
+    let open = $state<PanelId | null>(null)
     let checked = $state.raw<readonly string[]>([])
 
     const caseFieldNames = $derived(formatUnitList(caseFields(focusedField).map((field) => tString(FIELD_LABELS[field]))))
 
-    function toggle(panel: 'case' | 'extras'): void {
+    function toggle(panel: PanelId): void {
         open = open === panel ? null : panel
         checked = []
     }
@@ -101,6 +119,19 @@
             {tString('multiRename.tags.tools.removeExtras')}
         </Button>
     </div>
+    <div class="row" role="group" aria-label={tString('multiRename.tags.tools.moreLabel')}>
+        {#each TEXT_TOOLS as text (text.id)}
+            <Button
+                size="mini"
+                {disabled}
+                aria-expanded={open === text.id}
+                aria-controls="tag-tools-{text.id}"
+                onclick={() => { toggle(text.id) }}
+            >
+                {tString(text.label)}
+            </Button>
+        {/each}
+    </div>
     {#if open === 'case' && !disabled}
         <div class="panel" id="tag-tools-case">
             {#each CASES as choice (choice.value)}
@@ -121,6 +152,12 @@
                 {tString('multiRename.tags.tools.removeChecked', { count: checked.length, countText: formatInteger(checked.length) })}
             </Button>
         </div>
+    {:else if open === 'replace' && !disabled}
+        <div class="panel text-panel" id="tag-tools-replace"><ReplacePanel {disabled} state={tags} {runScoped} /></div>
+    {:else if open === 'format' && !disabled}
+        <div class="panel text-panel" id="tag-tools-format"><FormatPanel {disabled} state={tags} {runScoped} /></div>
+    {:else if open === 'name' && !disabled}
+        <div class="panel text-panel" id="tag-tools-name"><NamePatternPanel {disabled} state={tags} {runScoped} /></div>
     {/if}
 </div>
 
@@ -141,6 +178,10 @@
 
     .hint {
         color: var(--color-text-secondary);
+    }
+
+    .text-panel {
+        display: block;
     }
 
     .extras {

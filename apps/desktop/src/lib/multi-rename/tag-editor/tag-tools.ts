@@ -41,3 +41,10 @@ export function removeExtrasTool(checked: readonly string[]): TagTool | null {
   if (checked.length === 0) return null
   return { kind: 'removeExtras', keys: [...new Set(checked)].sort() }
 }
+
+/**
+ * Runs a backend call over the tracks the Tags tab's tools work on: waits for pending edits, then hands the call the
+ * checked tracks' paths (`null` for every track). Resolves `undefined` without calling when the checked tracks are
+ * gone (the tab says so). The panels under the tools bar call their tools through it.
+ */
+export type RunScoped = <T>(call: (scope: string[] | null) => Promise<T>) => Promise<T | undefined>

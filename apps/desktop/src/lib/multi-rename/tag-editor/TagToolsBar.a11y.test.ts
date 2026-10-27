@@ -4,6 +4,7 @@ import { afterEach, describe, it, vi } from 'vitest'
 import { tick } from 'svelte'
 import TagToolsBar from './TagToolsBar.svelte'
 import { mountInto } from './tag-cell.test-helper'
+import { asTags, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 let cleanup: (() => void) | undefined
@@ -20,6 +21,8 @@ async function mountBar(disabled = false): Promise<HTMLElement> {
     focusedField: null,
     disabled,
     onTool: vi.fn(),
+    state: asTags(fakeTags()),
+    runScoped: fakeRunScoped(),
   })
   cleanup = mounted.cleanup
   return mounted.root

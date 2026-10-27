@@ -5,6 +5,7 @@ import type { TagField } from '#lib/ipc/bindings.js'
 import TagToolsBar from './TagToolsBar.svelte'
 import { DIACRITICS_FIELDS } from './tag-tools'
 import { mountInto } from './tag-cell.test-helper'
+import { asTags, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
 
 let cleanup: (() => void) | undefined
 afterEach(() => {
@@ -22,6 +23,8 @@ async function mountBar(
     focusedField: over.focusedField ?? null,
     disabled: over.disabled ?? false,
     onTool,
+    state: asTags(fakeTags()),
+    runScoped: fakeRunScoped(),
   })
   cleanup = mounted.cleanup
   return { root: mounted.root, onTool }

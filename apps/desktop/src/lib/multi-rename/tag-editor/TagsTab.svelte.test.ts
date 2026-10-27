@@ -71,6 +71,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     undoable: null,
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
+    textTool: vi.fn(() => Promise.resolve()),
   }
   const mounted = await mountInto(TagsTab, { state: asTagState(state) })
   cleanup = mounted.cleanup
@@ -195,6 +196,28 @@ describe('TagsTab', () => {
     await settle()
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, null)
     expect(mounted.root.textContent).not.toContain('no longer here')
+  })
+
+  it('the Find and replace panel works on the checked tracks alone', async () => {
+    const { root, state } = await mountTab()
+    root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')?.click()
+    await tick()
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Find and replace')?.click()
+    await tick()
+    await typeInto(byId<HTMLInputElement>(root, 'tag-replace-search'), 'a')
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Replace')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.settled).toHaveBeenCalled()
+    expect(state.textTool).toHaveBeenCalledWith(expect.objectContaining({ kind: 'replace' }), ['/b/02.mp3'])
+  })
+
+  it.each([
+    { kind: 'badRegex' },
+    { kind: 'badMask', error: { type: 'unclosed', at: 0 } },
+    { kind: 'badPattern', error: { kind: 'noFields' } },
+  ] as const)('a %j error is left to the panel that worded it, not the generic notice', async (error) => {
+    const { root } = await mountTab({ error })
+    expect(root.querySelector('[role="alert"]')).toBeNull()
   })
 
   it('Case changes the field whose box last had focus', async () => {

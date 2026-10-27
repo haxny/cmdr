@@ -14,7 +14,7 @@
     import SharedFieldsTable from './SharedFieldsTable.svelte'
     import TagToolsBar from './TagToolsBar.svelte'
     import TrackList from './TrackList.svelte'
-    import { focusedFieldOf } from './tag-tools'
+    import { focusedFieldOf, type RunScoped } from './tag-tools'
     import { createTrackSelection } from './track-selection.svelte'
     import type { TagsTabApi } from './sheet-tab'
     import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
@@ -41,8 +41,13 @@
     })
 
     /** What a failed edit or cover pick says; a failure to read the tags at all is worded where there is no view. */
-    function editErrorKey(error: TagStateError): MessageKey {
+    function editErrorKey(error: TagStateError): MessageKey | null {
         switch (error.kind) {
+            // The text tools' panels word these where the user typed them.
+            case 'badRegex':
+            case 'badMask':
+            case 'badPattern':
+                return null
             case 'coverTooLarge':
                 return 'multiRename.tags.cover.tooLarge'
             case 'badCoverName':
@@ -73,18 +78,25 @@
     }
     let applyPanel = $state<TagsTabApi>()
 
-    /** A tool works on what the files hold now, so an edit a blur just sent lands first. */
-    async function runTool(tool: TagTool): Promise<void> {
+    /**
+     * A tool works on what the files hold now, so an edit a blur just sent lands first, and on the checked tracks
+     * alone (`null` for all). Resolves `undefined` without calling when the checked tracks are gone.
+     */
+    const runScoped: RunScoped = async (call) => {
         await tags.settled()
         const scope = selection.scope(allPaths)
         if (scope.kind === 'gone') {
             // The checked tracks are gone: never widen to every track. The next run takes them all.
             selection.clearGone()
             selectionGone = true
-            return
+            return undefined
         }
         selectionGone = false
-        await tags.tool(tool, scope.kind === 'some' ? scope.paths : null)
+        return await call(scope.kind === 'some' ? scope.paths : null)
+    }
+
+    async function runTool(tool: TagTool): Promise<void> {
+        await runScoped((scope) => tags.tool(tool, scope))
     }
 
     /** The sheet's Start while this tab shows: the Apply panel lists the changes, then writes them. */
@@ -118,7 +130,8 @@
             <p class="notice" role="status">{tString('multiRename.tags.readOnly')}</p>
         {/if}
         {#if tags.error !== null}
-            <p class="notice" role="alert">{tString(editErrorKey(tags.error))}</p>
+            {@const errorKey = editErrorKey(tags.error)}
+            {#if errorKey !== null}<p class="notice" role="alert">{tString(errorKey)}</p>{/if}
         {/if}
         {#if selectionGone}
             <p class="notice" role="status">{tString('multiRename.tags.selectionGone')}</p>
@@ -130,6 +143,8 @@
             {focusedField}
             disabled={!view.editable}
             onTool={(tool: TagTool) => void runTool(tool)}
+            state={tags}
+            {runScoped}
         />
         </div>
         <div class="columns">

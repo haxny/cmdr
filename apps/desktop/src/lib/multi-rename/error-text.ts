@@ -2,14 +2,19 @@
  * The sheet's error line: every typed refusal the backend can answer, in words.
  */
 import { tString } from '#lib/intl/messages.svelte.js'
-import type { SpecError } from '#lib/ipc/bindings.js'
+import type { MaskError, SpecError } from '#lib/ipc/bindings.js'
 import type { MultiRenameError } from '#lib/tauri-commands/index.js'
+
+/** Why a mask doesn't parse, in words; the Tags tab's Format panel words its mask the same way. */
+export function maskErrorText(error: MaskError): string {
+  return error.type === 'unclosed'
+    ? tString('multiRename.error.unclosed')
+    : tString('multiRename.error.unknown', { placeholder: error.placeholder })
+}
 
 function specErrorText(error: SpecError): string {
   if (error.type === 'badRegex') return tString('multiRename.error.badRegex')
-  return error.error.type === 'unclosed'
-    ? tString('multiRename.error.unclosed')
-    : tString('multiRename.error.unknown', { placeholder: error.error.placeholder })
+  return maskErrorText(error.error)
 }
 
 function readOnlyText(place: Extract<MultiRenameError, { type: 'readOnly' }>['place']): string {

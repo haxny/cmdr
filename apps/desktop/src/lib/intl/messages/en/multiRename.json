@@ -1655,5 +1655,130 @@
   "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
   "@multiRename.tags.selectionGone": {
     "description": "Notice in the Tags tab of Multi-Rename: the user checked some tracks, then they disappeared (for example renamed on the Rename tab), and a tag tool was pressed. The tool did not run, so it can’t change every track by surprise."
+  },
+  "multiRename.tags.tools.moreLabel": "More tag tools",
+  "@multiRename.tags.tools.moreLabel": {
+    "description": "Accessible name of the second row of tool buttons in the Tags tab of Multi-Rename, which holds Find and replace, Format a field and From file name."
+  },
+  "multiRename.tags.tools.replace.button": "Find and replace",
+  "@multiRename.tags.tools.replace.button": {
+    "description": "Button in the Tags tab of Multi-Rename that opens the panel for replacing text inside tag values (not in file names)."
+  },
+  "multiRename.tags.tools.format.button": "Format a field",
+  "@multiRename.tags.tools.format.button": {
+    "description": "Button in the Tags tab of Multi-Rename that opens the panel which rebuilds one tag from a Multi-rename mask such as [N3-]."
+  },
+  "multiRename.tags.tools.name.button": "From file name",
+  "@multiRename.tags.tools.name.button": {
+    "description": "Button in the Tags tab of Multi-Rename that opens the panel which reads tags out of the file names, with a preview before anything is taken."
+  },
+  "multiRename.tags.tools.replace.fieldsLabel": "Fields to search",
+  "@multiRename.tags.tools.replace.fieldsLabel": {
+    "description": "Accessible name of the group of checkboxes choosing which tag fields the Find and replace panel changes in the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.replace.allFields": "All fields",
+  "@multiRename.tags.tools.replace.allFields": {
+    "description": "Checkbox in the Find and replace panel of the Tags tab of Multi-Rename: change every tag field instead of the checked ones."
+  },
+  "multiRename.tags.tools.replace.search": "Find",
+  "@multiRename.tags.tools.replace.search": {
+    "description": "Label of the text box with the text to find in the Find and replace panel of the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.replace.replaceWith": "Replace with",
+  "@multiRename.tags.tools.replace.replaceWith": {
+    "description": "Label of the text box with the replacement text in the Find and replace panel of the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.replace.run": "Replace",
+  "@multiRename.tags.tools.replace.run": {
+    "description": "Button that runs Find and replace on the tag values of the files in the Tags tab of Multi-Rename. Disabled while the Find box is empty."
+  },
+  "multiRename.tags.tools.format.field": "Field",
+  "@multiRename.tags.tools.format.field": {
+    "description": "Label of the tag field picker in the Format a field panel of the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.format.mask": "Mask",
+  "@multiRename.tags.tools.format.mask": {
+    "description": "Label of the mask text box in the Format a field panel of the Tags tab of Multi-Rename. The mask is a Multi-rename mask where [N] stands for the field’s current value."
+  },
+  "multiRename.tags.tools.format.hint": "Format keeps only the first value of a field that holds several, such as Artist or Genre.",
+  "@multiRename.tags.tools.format.hint": {
+    "description": "Hint under the Format a field panel in the Tags tab of Multi-Rename: a field with several values (Artist, Genre) ends with just one value, built from the first."
+  },
+  "multiRename.tags.tools.format.run": "Format",
+  "@multiRename.tags.tools.format.run": {
+    "description": "Button that rebuilds the chosen tag field from the mask in the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.name.mode": "How to read the file names",
+  "@multiRename.tags.tools.name.mode": {
+    "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.name.modePattern": "Pattern",
+  "@multiRename.tags.tools.name.modePattern": {
+    "description": "Option in the From file name panel of the Tags tab of Multi-Rename: read file names with a simple pattern such as %track% - %title%."
+  },
+  "multiRename.tags.tools.name.modeRegex": "Regular expression",
+  "@multiRename.tags.tools.name.modeRegex": {
+    "description": "Option in the From file name panel of the Tags tab of Multi-Rename: read file names with a regular expression whose named groups are tag fields."
+  },
+  "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
+  "@multiRename.tags.tools.name.patternPattern": {
+    "description": "Label of the pattern text box in the From file name panel of the Tags tab of Multi-Rename while the Pattern mode is on. The percent signs wrap tag field names and must stay as they are."
+  },
+  "multiRename.tags.tools.name.patternRegex": "Regular expression, like {example}",
+  "@multiRename.tags.tools.name.patternRegex": {
+    "description": "Label of the pattern text box in the From file name panel of the Tags tab of Multi-Rename while the Regular expression mode is on. Named groups are tag field names.",
+    "placeholders": {
+      "example": "a sample regular expression with named groups, like (?<track>\\d+)_(?<title>.+); never translate it"
+    }
+  },
+  "multiRename.tags.tools.name.recent": "Recent patterns",
+  "@multiRename.tags.tools.name.recent": {
+    "description": "Accessible name of the list of the patterns used last in the From file name panel of the Tags tab of Multi-Rename. Picking one fills the pattern box."
+  },
+  "multiRename.tags.tools.name.preview": "Preview",
+  "@multiRename.tags.tools.name.preview": {
+    "description": "Button in the From file name panel of the Tags tab of Multi-Rename: shows what the pattern reads from each file name without changing any tag."
+  },
+  "multiRename.tags.tools.name.take": "Take",
+  "@multiRename.tags.tools.name.take": {
+    "description": "Button in the From file name panel of the Tags tab of Multi-Rename: puts the values read from the file names into the tags. Disabled until the current pattern was previewed."
+  },
+  "multiRename.tags.tools.name.stale": "Preview again to take this pattern.",
+  "@multiRename.tags.tools.name.stale": {
+    "description": "Hint in the From file name panel of the Tags tab of Multi-Rename, shown after the pattern was edited since the last preview, because Take works only on a pattern that was previewed."
+  },
+  "multiRename.tags.tools.name.previewLabel": "What the pattern reads from each file name",
+  "@multiRename.tags.tools.name.previewLabel": {
+    "description": "Accessible name of the preview table in the From file name panel of the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.tools.name.columnFile": "File name",
+  "@multiRename.tags.tools.name.columnFile": {
+    "description": "Column heading of the preview table in the From file name panel of the Tags tab of Multi-Rename: the file’s name."
+  },
+  "multiRename.tags.tools.name.columnFields": "Read from it",
+  "@multiRename.tags.tools.name.columnFields": {
+    "description": "Column heading of the preview table in the From file name panel of the Tags tab of Multi-Rename: the tag values the pattern reads from that file name."
+  },
+  "multiRename.tags.tools.name.noMatch": "Doesn’t match",
+  "@multiRename.tags.tools.name.noMatch": {
+    "description": "Cell of the preview table in the From file name panel of the Tags tab of Multi-Rename: the pattern doesn’t fit this file name, so nothing would be taken from it."
+  },
+  "multiRename.tags.tools.name.badRegex": "The pattern isn’t a valid regular expression.",
+  "@multiRename.tags.tools.name.badRegex": {
+    "description": "Error in the From file name panel of the Tags tab of Multi-Rename: the regular expression doesn’t compile. Nothing was changed."
+  },
+  "multiRename.tags.tools.name.unknownField": "“{name}” isn’t a tag field.",
+  "@multiRename.tags.tools.name.unknownField": {
+    "description": "Error in the From file name panel of the Tags tab of Multi-Rename: the pattern names a tag field Cmdr doesn’t know. Nothing was changed.",
+    "placeholders": {
+      "name": "the unknown field name exactly as the user wrote it, like titel"
+    }
+  },
+  "multiRename.tags.tools.name.noFields": "The pattern reads no tag field. Use a field like %title% or a named group like {example}.",
+  "@multiRename.tags.tools.name.noFields": {
+    "description": "Error in the From file name panel of the Tags tab of Multi-Rename: the pattern has no placeholder or named group, so there is nothing to read. The percent signs must stay as they are.",
+    "placeholders": {
+      "example": "a sample named group, like (?<title>.+); never translate it"
+    }
   }
 }

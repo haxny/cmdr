@@ -18,13 +18,17 @@
     import { SEARCH_OPTIONS, searchExampleKey, type SearchOptionField } from './search-option-help'
 
     interface Props {
-        spec: MultiRenameSpec
+        spec: Pick<MultiRenameSpec, SearchOptionField>
+        /** Shows just these options (the Tags tab's Find and replace has three); every option when absent. */
+        only?: readonly SearchOptionField[]
         onToggle: (field: SearchOptionField) => void
         /** Each example's text, keyed as asked; `null` until the engine rendered them. */
         rendered: ReadonlyMap<string, string> | null
     }
 
-    const { spec, onToggle, rendered }: Props = $props()
+    const { spec, only, onToggle, rendered }: Props = $props()
+
+    const options = $derived(only === undefined ? SEARCH_OPTIONS : SEARCH_OPTIONS.filter((o) => only.includes(o.field)))
 
     /** Each chip's tooltip body, which the tooltip adopts on show. */
     const tips = $state<Partial<Record<SearchOptionField, HTMLDivElement>>>({})
@@ -37,7 +41,7 @@
 </script>
 
 <div class="search-options" role="group" aria-label={tString('multiRename.searchOptions')}>
-    {#each SEARCH_OPTIONS as option (option.field)}
+    {#each options as option (option.field)}
         <Chip
             variant="toggle"
             size="field"
@@ -52,7 +56,7 @@
     {/each}
 </div>
 
-{#each SEARCH_OPTIONS as option (option.field)}
+{#each options as option (option.field)}
     {@const shown = results(option.field)}
     <div hidden>
         <div class="search-option-tip" bind:this={tips[option.field]}>
