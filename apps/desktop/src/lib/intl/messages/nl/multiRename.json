@@ -1647,6 +1647,10 @@
   "@multiRename.tags.play.playerUnavailable": {
     "sourceHash": "753fba0"
   },
+  "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
+  "@multiRename.tags.play.nothingReadable": {
+    "sourceHash": "914f007"
+  },
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
     "sourceHash": "d8d01f0"

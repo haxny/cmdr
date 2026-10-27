@@ -1182,6 +1182,9 @@ export {
   listCoverCandidates,
   setCoverFromFile,
   getCoverImage,
+  tagTrackAudioUrl,
+  releaseTagTrackAudio,
+  openTagsInPlayer,
 } from './tag-editor'
 export type {
   ApplyRequest,

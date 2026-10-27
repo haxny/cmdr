@@ -41,8 +41,8 @@ Setting `multiRename.tagEditor` (boolean, default off). On, `SheetTabs` appears 
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the tab shows what the format will
   hold (M4A integers). The one-file-BOOK rule (no track number) is decided on the session's readable track count
   (`session_files`), not on the scope.
-- **Text tools live in the app**: find/replace, format a field and file name to tags run in
-  `src-tauri/src/tag_editor/text_tools.rs`, reusing Multi-Rename's `Transform`/`Replace`/`Mask`, so the wildcard, case
-  and regex rules match the Rename tab; the pure tag tools stay in `cmdr-tags`.
+- **Text tools live in the app**: find/replace and format a field run in `src-tauri/src/tag_editor/text_tools.rs`,
+  reusing Multi-Rename's `Transform`/`Replace`/`Mask`, so the wildcard, case and regex rules match the Rename tab; the
+  pure tag tools (file name → tags, `cmdr_tags::TagTool::FromFileName`, among them) stay in `cmdr-tags`.
 - **Strings**: `multiRename.tags.*` in `messages/en/multiRename.json`; other locales hold untranslated skeletons (Czech
   comes with the Czech locale port).

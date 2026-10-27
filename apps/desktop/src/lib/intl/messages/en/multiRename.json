@@ -1871,6 +1871,10 @@
   "@multiRename.tags.play.playerUnavailable": {
     "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 found neither foobar2000 nor any other app that could open the tracks."
   },
+  "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
+  "@multiRename.tags.play.nothingReadable": {
+    "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 was pressed with only unreadable tracks checked; nothing was opened."
+  },
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
     "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 failed for a reason other than a missing player, for example a track that is no longer in the list."

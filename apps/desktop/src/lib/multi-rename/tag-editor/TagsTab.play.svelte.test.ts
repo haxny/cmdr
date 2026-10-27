@@ -101,7 +101,13 @@ async function mountTab() {
 
 /** ⌥Space the way macOS sends it: the key is a non-breaking space, the code says Space. */
 function altSpace(target: HTMLElement): KeyboardEvent {
-  const event = new KeyboardEvent('keydown', { key: ' ', code: 'Space', altKey: true, bubbles: true, cancelable: true })
+  const event = new KeyboardEvent('keydown', {
+    key: '\u00a0',
+    code: 'Space',
+    altKey: true,
+    bubbles: true,
+    cancelable: true,
+  })
   target.dispatchEvent(event)
   return event
 }
@@ -185,11 +191,30 @@ describe('Open in foobar2000', () => {
   const openButton = (root: HTMLElement) =>
     [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Open in foobar2000')
 
-  it('with nothing checked opens every track', async () => {
+  it('with nothing checked opens every readable track (the backend refuses an unreadable one)', async () => {
     const { root } = await mountTab()
     openButton(root)?.click()
     await settle()
-    expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/01.mp3', '/b/02.mp3', '/b/03.mp3'])
+    expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/01.mp3', '/b/02.mp3'])
+  })
+
+  it('with only an unreadable track checked sends nothing and says so', async () => {
+    const { root } = await mountTab()
+    root.querySelector<HTMLInputElement>('input[aria-label="Select 03.mp3"]')?.click()
+    await settle()
+    openButton(root)?.click()
+    await settle()
+    expect(openTagsInPlayer).not.toHaveBeenCalled()
+    expect(root.textContent).toContain('None of those tracks can be read')
+  })
+
+  it('with a readable and an unreadable track checked opens the readable one', async () => {
+    const { root } = await mountTab()
+    for (const n of ['01', '03']) root.querySelector<HTMLInputElement>(`input[aria-label="Select ${n}.mp3"]`)?.click()
+    await settle()
+    openButton(root)?.click()
+    await settle()
+    expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/01.mp3'])
   })
 
   it('with tracks checked opens those alone', async () => {

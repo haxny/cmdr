@@ -75,8 +75,19 @@
     /** Opens the checked tracks (every track when none is checked) in foobar2000, else each in its default app. */
     async function openInPlayer(): Promise<void> {
         playerError = null
-        const res = await runScoped((scope) => openTagsInPlayer(tags.sessionId, scope ?? allPaths))
-        if (res === undefined || res.ok) return
+        // Unreadable tracks are not the session's tracks for the backend (it refuses the call for one), so they never go.
+        const readable = new Set(tags.view?.tracks.filter((track) => track.readError === null).map((track) => track.path))
+        const res = await runScoped(async (scope) => {
+            const paths = (scope ?? allPaths).filter((path) => readable.has(path))
+            if (paths.length === 0) return 'nothingReadable' as const
+            return await openTagsInPlayer(tags.sessionId, paths)
+        })
+        if (res === undefined) return
+        if (res === 'nothingReadable') {
+            playerError = 'multiRename.tags.play.nothingReadable'
+            return
+        }
+        if (res.ok) return
         playerError =
             res.error.kind === 'playerUnavailable' ? 'multiRename.tags.play.playerUnavailable' : 'multiRename.tags.play.openFailed'
     }
@@ -151,6 +162,7 @@
     }
 </script>
 
+<!-- svelte-ignore a11y_interactive_supports_focus -- the key handler only hears keys bubbling from the focused rows inside -->
 <div
     class="tags-tab"
     id="sheet-panel-tags"
@@ -223,7 +235,7 @@
                 />
             </aside>
         </div>
-        <ApplyPanel bind:this={applyPanel} {tags} />
+        <ApplyPanel bind:this={applyPanel} {tags} onWriting={player.stop} />
     {/if}
 </div>
 

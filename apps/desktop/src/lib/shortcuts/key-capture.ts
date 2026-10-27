@@ -135,7 +135,7 @@ const NBSP = '\u00a0'
  * Normalize an `event.key` to its canonical name (see the module header).
  * Single characters are uppercased, special keys are mapped to word forms.
  */
-export function normalizeKeyName(key: string, code?: string): string {
+export function normalizeKeyName(key: string, code?: string, altKey = false): string {
   // On macOS, Option+key often produces "Dead"; fall back to the physical key via event.code
   if (key === 'Dead' && code) {
     const match = /^Key([A-Z])$/.exec(code) ?? /^Digit(\d)$/.exec(code)
@@ -144,8 +144,9 @@ export function normalizeKeyName(key: string, code?: string): string {
     return code // last resort: raw code name
   }
 
-  // macOS reports ⌥Space as a non-breaking space; the key is Space (code `Space`) either way.
-  if (key === NBSP) return 'Space'
+  // macOS reports ⌥Space as a non-breaking space; the key is Space (code `Space`) either way. Only with ⌥ held: a
+  // layout that types NBSP with no modifier reported (AltGr on Linux) is a typed character, not the Space key.
+  if (key === NBSP && altKey) return 'Space'
 
   // Single printable characters are uppercased
   if (key.length === 1 && key !== ' ') {
@@ -200,7 +201,7 @@ export function toCanonicalShortcut(shortcut: string): string {
  * and Space (`⇧Space` is Quick Look) keep their Shift.
  */
 function isTypedSymbol(key: string): boolean {
-  return Array.from(key).length === 1 && key !== ' ' && key !== NBSP && key.toLowerCase() === key.toUpperCase()
+  return Array.from(key).length === 1 && key !== ' ' && key.toLowerCase() === key.toUpperCase()
 }
 
 /** True when ⌘ / ⌃ (Ctrl / Super off macOS) is held: the combo is a command, never typing. */
@@ -238,7 +239,7 @@ export function formatKeyCombo(event: KeyboardEvent): string {
 
   // Don't include modifier keys themselves as the main key
   if (!isModifierKey(event.key)) {
-    const key = normalizeKeyName(event.key, event.code)
+    const key = normalizeKeyName(event.key, event.code, event.altKey)
     parts.push(key)
   }
 

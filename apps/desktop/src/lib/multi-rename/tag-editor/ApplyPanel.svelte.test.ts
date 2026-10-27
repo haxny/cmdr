@@ -40,6 +40,20 @@ describe('ApplyPanel', () => {
     expect(fake.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] }, { after: [] })
   })
 
+  it('tells the tab a write is starting, just before it asks the state to apply', async () => {
+    const fake = fakeState()
+    const order: string[] = []
+    fake.apply.mockImplementation(() => {
+      order.push('apply')
+      return Promise.resolve({ ok: true, value: applyReport() })
+    })
+    const mounted = await mountInto(ApplyPanel, { tags: asState(fake), onWriting: () => order.push('writing') })
+    cleanup = mounted.cleanup
+    await press(mounted.root, 'Write tags…')
+    await press(mounted.root, 'Write tags')
+    expect(order).toEqual(['writing', 'apply'])
+  })
+
   it('a list with nothing in it writes nothing, so ⌘⏎ ⌘⏎ keeps the last Undo', async () => {
     const fake = fakeState()
     fake.changes.mockResolvedValue({ ok: true, value: [] })

@@ -3053,6 +3053,7 @@ export type MessageKey =
   | 'multiRename.tags.numbering.total'
   | 'multiRename.tags.numbering.track'
   | 'multiRename.tags.play.failed'
+  | 'multiRename.tags.play.nothingReadable'
   | 'multiRename.tags.play.openFailed'
   | 'multiRename.tags.play.openInPlayer'
   | 'multiRename.tags.play.play'
