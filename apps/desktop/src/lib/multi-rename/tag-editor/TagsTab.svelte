@@ -210,7 +210,7 @@
         </div>
         <div class="columns">
             <div class="main">
-                <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
+                <SharedFieldsTable rows={view.shared} editable={view.editable} badDates={view.badDates} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
                 <TrackList
                     tracks={view.tracks}
                     editable={view.editable}

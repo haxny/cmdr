@@ -538,6 +538,12 @@ fn timestamp(value: &str) -> Result<Timestamp, TagError> {
     Ok(parsed)
 }
 
+/// Whether the writer takes `value` as the Date of a file in `format`. Only an MP3 (ID3v2.3) date is
+/// checked, by the same function the write uses, so the editor flags exactly what Write would refuse.
+pub fn date_is_writable(format: AudioFormat, value: &str) -> bool {
+    format != AudioFormat::Mp3 || timestamp(value).is_ok()
+}
+
 fn unreachable_field<T>(field: TagField) -> Result<T, TagError> {
     Err(TagError::Write(format!("no key for {field:?} in this format")))
 }

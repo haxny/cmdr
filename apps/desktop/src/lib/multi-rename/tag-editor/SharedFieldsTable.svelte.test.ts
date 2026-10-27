@@ -30,12 +30,13 @@ const ROWS: SharedRow[] = [
   { field: 'description', value: 'empty', choices: [] },
 ]
 
-async function mountTable(over: { rows?: SharedRow[]; editable?: boolean } = {}) {
+async function mountTable(over: { rows?: SharedRow[]; editable?: boolean; badDates?: number } = {}) {
   // An edit stays out until the test says otherwise, as one does until the backend answers.
   const onEdit = vi.fn((_edits: TagEdit[]) => new Promise<void>(() => {}))
   const mounted = await mountInto(SharedFieldsTable, {
     rows: over.rows ?? ROWS,
     editable: over.editable ?? true,
+    badDates: over.badDates ?? 0,
     onEdit,
   })
   cleanup = mounted.cleanup
@@ -43,11 +44,10 @@ async function mountTable(over: { rows?: SharedRow[]; editable?: boolean } = {})
 }
 
 describe('SharedFieldsTable', () => {
-  it('multiple_values_row_untouched_sends_nothing', async () => {
+  it('multiple_values_row_shows_its_values_and_untouched_sends_nothing', async () => {
     const { root, onEdit } = await mountTable()
     const album = byId<HTMLInputElement>(root, 'tag-field-album')
-    expect(album.value).toBe('')
-    expect(album.placeholder).toBe('‹multiple values›')
+    expect(album.value).toBe('‹multiple values› Book one; Book two')
 
     // Focus and leave.
     album.focus()
@@ -56,13 +56,39 @@ describe('SharedFieldsTable', () => {
     album.focus()
     const enter = await press(album, 'Enter')
     await leave(album)
-    // Typing and deleting again lands on the same blank.
-    await typeInto(album, 'x')
-    await typeInto(album, '')
+    // Editing the text but keeping the marker.
+    await typeInto(album, '‹multiple values› Book one')
     await leave(album)
 
     expect(onEdit).not.toHaveBeenCalled()
     expect(enter.defaultPrevented).toBe(true)
+  })
+
+  it('deleting the marker sets what is left on every file', async () => {
+    const { root, onEdit } = await mountTable()
+    const album = byId<HTMLInputElement>(root, 'tag-field-album')
+    await typeInto(album, 'Book one')
+    await leave(album)
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: ['Book one'] }])
+  })
+
+  it('an emptied multiple-values box clears the field on every file', async () => {
+    const { root, onEdit } = await mountTable()
+    const album = byId<HTMLInputElement>(root, 'tag-field-album')
+    await typeInto(album, '')
+    await leave(album)
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: [] }])
+  })
+
+  it('a long value stays whole in the box (it is cut with … by the display only)', async () => {
+    const long = 'A very long album name '.repeat(20).trim()
+    const rows: SharedRow[] = [{ field: 'album', value: { same: [long] }, choices: [] }]
+    const { root, onEdit } = await mountTable({ rows })
+    const album = byId<HTMLInputElement>(root, 'tag-field-album')
+    expect(album.value).toBe(long)
+    album.focus()
+    await leave(album)
+    expect(onEdit).not.toHaveBeenCalled()
   })
 
   it('editing_shared_row_sends_set_all', async () => {
@@ -228,5 +254,41 @@ describe('SharedFieldsTable', () => {
     const { root } = await mountTable({ editable: false })
     const choices = [...root.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'Album values')
     expect(choices?.disabled).toBe(true)
+  })
+
+  describe('an unwritable date', () => {
+    const DATE_ROWS: SharedRow[] = [{ field: 'date', value: { same: ['2010-20-09'] }, choices: [] }]
+
+    it('flags the Date row and says why, as soon as it is shown', async () => {
+      const { root } = await mountTable({ rows: DATE_ROWS, badDates: 22 })
+      const date = byId<HTMLInputElement>(root, 'tag-field-date')
+      expect(date.getAttribute('aria-invalid')).toBe('true')
+      const hint = byId(root, 'tag-field-date-hint')
+      expect(hint.textContent).toContain("This date doesn't exist")
+      expect(date.getAttribute('aria-describedby')).toBe('tag-field-date-hint')
+    })
+
+    it('shows no flag when every date can be written', async () => {
+      const { root } = await mountTable({ rows: DATE_ROWS, badDates: 0 })
+      expect(byId(root, 'tag-field-date').getAttribute('aria-invalid')).toBeNull()
+      expect(root.querySelector('#tag-field-date-hint')).toBeNull()
+    })
+
+    it('the flag clears once the Date is edited to a good one', async () => {
+      const onEdit = vi.fn((_edits: TagEdit[]) => Promise.resolve())
+      const props = $state({ rows: DATE_ROWS, editable: true, badDates: 22, onEdit })
+      const mounted = await mountInto(SharedFieldsTable, props)
+      cleanup = mounted.cleanup
+      const date = byId<HTMLInputElement>(mounted.root, 'tag-field-date')
+      await typeInto(date, '2010')
+      await leave(date)
+      expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'date', values: ['2010'] }])
+      // The backend's answer: a new view with the date fixed.
+      props.rows = [{ field: 'date', value: { same: ['2010'] }, choices: [] }]
+      props.badDates = 0
+      await tick()
+      expect(mounted.root.querySelector('#tag-field-date-hint')).toBeNull()
+      expect(byId(mounted.root, 'tag-field-date').getAttribute('aria-invalid')).toBeNull()
+    })
   })
 })

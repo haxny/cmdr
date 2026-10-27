@@ -124,6 +124,7 @@ describe('MultiRenameDialog Tags tab', () => {
         extras: [],
         dirty: false,
         diacritics: [],
+        badDates: 0,
       },
     })
   })
@@ -220,6 +221,7 @@ describe('MultiRenameDialog Tags tab', () => {
         extras: [],
         dirty: true,
         diacritics: [],
+        badDates: 0,
       },
     })
     const row = (index: number, name: string) => ({
@@ -354,6 +356,7 @@ describe('MultiRenameDialog Tags tab', () => {
       extras: [],
       dirty: true,
       diacritics: [],
+      badDates: 0,
     }
 
     function button(text: string): HTMLButtonElement {

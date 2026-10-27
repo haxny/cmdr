@@ -1030,6 +1030,10 @@
   "@multiRename.tags.multipleValues": {
     "sourceHash": "39e9850"
   },
+  "multiRename.tags.date.invalid": "This date doesn't exist (month 20). Type the right one, for example 2010, before writing.",
+  "@multiRename.tags.date.invalid": {
+    "sourceHash": "04ede92"
+  },
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
     "sourceHash": "8898015"

@@ -20,11 +20,15 @@
         placeholder?: string
         multiline?: boolean
         disabled?: boolean
+        /** Error state: red border, `aria-invalid`. */
+        invalid?: boolean
+        /** The id of the element that explains the box (a hint under it). */
+        describedBy?: string
         /** Called with the typed text, only when it changed. A returned promise settles when the model has answered. */
         onCommit: (text: string) => void | Promise<void>
     }
 
-    const { id, value, ariaLabel, placeholder, multiline = false, disabled = false, onCommit }: Props = $props()
+    const { id, value, ariaLabel, placeholder, multiline = false, disabled = false, invalid = false, describedBy, onCommit }: Props = $props()
 
     const log = getAppLogger('multiRename')
 
@@ -72,7 +76,7 @@
 </script>
 
 {#if multiline}
-    <TextArea {id} bind:value={draft} {ariaLabel} {placeholder} {disabled} rows={3} onblur={commit} {onkeydown} />
+    <TextArea {id} bind:value={draft} {ariaLabel} {placeholder} {disabled} {invalid} aria-describedby={describedBy} rows={3} onblur={commit} {onkeydown} />
 {:else}
-    <TextInput {id} bind:value={draft} {ariaLabel} {placeholder} {disabled} onblur={commit} {onkeydown} />
+    <TextInput {id} bind:value={draft} {ariaLabel} {placeholder} {disabled} {invalid} aria-describedby={describedBy} onblur={commit} {onkeydown} />
 {/if}

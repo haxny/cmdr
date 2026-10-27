@@ -3009,6 +3009,7 @@ export type MessageKey =
   | 'multiRename.tags.cover.remove'
   | 'multiRename.tags.cover.tooLarge'
   | 'multiRename.tags.cover.unreadable'
+  | 'multiRename.tags.date.invalid'
   | 'multiRename.tags.diacritics.fix'
   | 'multiRename.tags.diacritics.warning'
   | 'multiRename.tags.discard.confirm'

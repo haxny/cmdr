@@ -7,7 +7,9 @@
  * the text form can't tell the two apart. That is inherent to showing several values in one box.
  */
 
-import type { SharedValue, TagField } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { SharedValue, TagField, ValueCount } from '#lib/ipc/bindings.js'
+import type { TagEdit } from '#lib/tauri-commands/index.js'
 
 /** What joins the values of a multi-value field in its text. */
 export const MULTI_SEPARATOR = '; '
@@ -47,6 +49,28 @@ export function formatFieldValue(value: SharedValue): { text: string; multiple: 
   if (value === 'empty') return { text: '', multiple: false }
   if (value === 'multiple') return { text: '', multiple: true }
   return { text: value.same.join(MULTI_SEPARATOR), multiple: false }
+}
+
+/**
+ * What the box of a «multiple values» row holds, as foobar2000 shows it: the marker, then every value the files
+ * carry (flattened, each once, in the order of the counts) joined with "; ". The box keeps all of it; a long line
+ * is cut with … by the display (CSS), never in the text.
+ */
+export function multipleText(choices: readonly ValueCount[]): string {
+  const marker = tString('multiRename.tags.multipleValues')
+  const values = [...new Set(choices.flatMap((choice) => choice.values))]
+  return values.length === 0 ? marker : `${marker} ${values.join(MULTI_SEPARATOR)}`
+}
+
+/**
+ * What the user typed into a shared row's box, as an edit. `null` when nothing is to be sent: the text is as it was
+ * (`original`), or the «multiple values» marker is still in it (the per-file values stay). Without the marker, the
+ * text is what every file gets (`setAll`), and an empty box clears the field, as Clear does.
+ */
+export function parseSharedEdit(field: TagField, original: string, typed: string): TagEdit | null {
+  if (typed === original) return null
+  if (typed.includes(tString('multiRename.tags.multipleValues'))) return null
+  return { kind: 'setAll', field, values: parseFieldText(field, typed) }
 }
 
 /** A track length as `m:ss`, or `h:mm:ss` from an hour on; blank when the file has none. */

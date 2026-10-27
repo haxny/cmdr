@@ -18440,6 +18440,11 @@ export type TagEditorView = {
   dirty: boolean
   // The fields whose edited values still carry diacritics they must not.
   diacritics: TagField[]
+  /**
+   *  How many files carry a Date the writer would refuse (an MP3 whose TDAT reads as month 20):
+   *  flagged on open, so the user corrects it before writing.
+   */
+  badDates: number
 }
 
 /**

@@ -10,33 +10,51 @@
     import EditableCell from './EditableCell.svelte'
     import { FIELD_LABELS } from './field-labels'
     import ValueChoices from './ValueChoices.svelte'
-    import { formatFieldValue, isMultiLineField, parseFieldText } from './shared-field-input'
+    import { formatFieldValue, isMultiLineField, multipleText, parseSharedEdit } from './shared-field-input'
 
     interface Props {
         rows: SharedRow[]
         editable: boolean
+        /** How many files carry a Date the writer would refuse; the Date row is flagged while it is above 0. */
+        badDates?: number
         onEdit: (edits: TagEdit[]) => void | Promise<void>
     }
 
-    const { rows, editable, onEdit }: Props = $props()
+    const { rows, editable, badDates = 0, onEdit }: Props = $props()
 
     const shown = $derived(
-        rows.map((row) => ({ field: row.field, choices: row.choices, empty: row.value === 'empty', ...formatFieldValue(row.value) })),
+        rows.map((row) => {
+            const { text, multiple } = formatFieldValue(row.value)
+            return {
+                field: row.field,
+                choices: row.choices,
+                empty: row.value === 'empty',
+                multiple,
+                text: multiple ? multipleText(row.choices) : text,
+            }
+        }),
     )
+
+    function commit(row: (typeof shown)[number], typed: string): void | Promise<void> {
+        const edit = parseSharedEdit(row.field, row.text, typed)
+        if (edit) return onEdit([edit])
+    }
 </script>
 
 <div class="shared" role="group" aria-label={tString('multiRename.tags.shared.label')}>
     {#each shown as row (row.field)}
-        <label class="label" class:top={isMultiLineField(row.field)} for="tag-field-{row.field}">
+        {@const badDate = row.field === 'date' && badDates > 0}
+        <label class="label" class:top={isMultiLineField(row.field)} class:bad={badDate} for="tag-field-{row.field}">
             {tString(FIELD_LABELS[row.field])}
         </label>
         <EditableCell
             id="tag-field-{row.field}"
             value={row.text}
-            placeholder={row.multiple ? tString('multiRename.tags.multipleValues') : undefined}
             multiline={isMultiLineField(row.field)}
             disabled={!editable}
-            onCommit={(text: string) => onEdit([{ kind: 'setAll', field: row.field, values: parseFieldText(row.field, text) }])}
+            invalid={badDate}
+            describedBy={badDate ? 'tag-field-date-hint' : undefined}
+            onCommit={(typed: string) => commit(row, typed)}
         />
         <span class="actions">
             {#if row.multiple && row.choices.length > 0}
@@ -56,6 +74,9 @@
                 {tString('multiRename.tags.clearRow')}
             </Button>
         </span>
+        {#if badDate}
+            <p class="hint" id="tag-field-date-hint">{tString('multiRename.tags.date.invalid')}</p>
+        {/if}
     {/each}
 </div>
 
@@ -75,6 +96,22 @@
     .label {
         color: var(--color-text-secondary);
         white-space: nowrap;
+    }
+
+    .label.bad,
+    .hint {
+        color: var(--color-error-text);
+    }
+
+    .hint {
+        grid-column: 2 / -1;
+        margin: 0;
+        font-size: var(--font-size-sm);
+    }
+
+    /* A long value is cut with … by the display only; the box keeps the whole text. */
+    .shared :global(input) {
+        text-overflow: ellipsis;
     }
 
     .label.top {

@@ -189,3 +189,27 @@ fn a_view_build_hashes_no_cover() {
     assert_eq!(cover_hashes(), before);
     assert!(matches!(view.cover, CoverSummary::Same { bytes, .. } if bytes == cover.len()));
 }
+
+#[test]
+fn files_with_a_date_the_writer_refuses_are_counted_on_open() {
+    let a = Path::new("/m/a.mp3");
+    let b = Path::new("/m/b.mp3");
+    let m4a = Path::new("/m/c.m4a");
+    let ok = loaded(&[(TagField::Date, "2010")], None, &[]);
+    let bad = loaded(&[(TagField::Date, "2010-20-09")], None, &[]);
+    let view = build(OPEN, &[(a, &bad), (b, &ok), (m4a, &bad)]);
+    // The M4A keeps its date as text, so only the MP3 is unwritable.
+    assert_eq!(view.bad_dates, 1);
+    assert_eq!(build(OPEN, &[(a, &ok), (b, &loaded(&[], None, &[]))]).bad_dates, 0);
+}
+
+#[test]
+fn the_date_flag_clears_once_the_date_is_edited() {
+    let a = Path::new("/m/a.mp3");
+    let Entry::Loaded(mut file) = loaded(&[(TagField::Date, "2010-20-09")], None, &[]) else {
+        unreachable!()
+    };
+    assert_eq!(build(OPEN, &[(a, &Entry::Loaded(file.clone()))]).bad_dates, 1);
+    file.edited.fields.insert(TagField::Date, vec!["2010".to_string()]);
+    assert_eq!(build(OPEN, &[(a, &Entry::Loaded(file))]).bad_dates, 0);
+}

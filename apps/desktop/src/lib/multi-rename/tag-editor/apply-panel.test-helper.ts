@@ -22,6 +22,7 @@ export const PANEL_VIEW: TagEditorView = {
   extras: [],
   dirty: true,
   diacritics: [],
+  badDates: 0,
 }
 
 export const CHANGES: FileChangeView[] = [

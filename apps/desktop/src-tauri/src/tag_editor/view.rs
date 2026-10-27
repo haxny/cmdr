@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use cmdr_tags::shared::{SharedValue, ValueCount, distinct_values, shared_view};
 use cmdr_tags::tools::fields_with_diacritics;
-use cmdr_tags::{Cover, FileTags, TagField};
+use cmdr_tags::{Cover, FileTags, TagField, date_is_writable, format_of};
 
 use super::session::{Entry, Loaded};
 
@@ -103,6 +103,9 @@ pub struct TagEditorView {
     pub dirty: bool,
     /// The fields whose edited values still carry diacritics they must not.
     pub diacritics: Vec<TagField>,
+    /// How many files carry a Date the writer would refuse (an MP3 whose TDAT reads as month 20):
+    /// flagged on open, so the user corrects it before writing.
+    pub bad_dates: u32,
 }
 
 /// What the session's rules say about the tab, apart from the files.
@@ -150,7 +153,27 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect(),
+        bad_dates: count_bad_dates(tracks),
     }
+}
+
+/// The readable files whose edited Date is one the writer refuses (`cmdr_tags::date_is_writable`).
+fn count_bad_dates(tracks: &[(&Path, &Entry)]) -> u32 {
+    let bad = tracks
+        .iter()
+        .filter(|(path, entry)| {
+            let Some(loaded) = entry.loaded() else { return false };
+            let Some(format) = path.file_name().and_then(|name| format_of(&name.to_string_lossy())) else {
+                return false;
+            };
+            loaded
+                .edited
+                .fields
+                .get(&TagField::Date)
+                .is_some_and(|values| values.iter().any(|value| !date_is_writable(format, value)))
+        })
+        .count();
+    u32::try_from(bad).unwrap_or(u32::MAX)
 }
 
 fn track_row(path: &Path, entry: &Entry) -> TrackRow {

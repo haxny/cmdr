@@ -51,6 +51,7 @@ const VIEW: TagEditorView = {
   extras: [],
   dirty: false,
   diacritics: [],
+  badDates: 0,
 }
 
 /** The mock stands in for the state; only what the tab reads is there. */

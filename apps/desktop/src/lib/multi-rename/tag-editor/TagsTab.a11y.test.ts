@@ -55,6 +55,7 @@ const VIEW: TagEditorView = {
   extras: [],
   dirty: false,
   diacritics: [],
+  badDates: 0,
 }
 
 async function mountTab(over: Partial<TagEditorState>): Promise<HTMLElement> {

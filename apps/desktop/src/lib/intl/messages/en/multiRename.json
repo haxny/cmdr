@@ -1164,6 +1164,10 @@
   "@multiRename.tags.multipleValues": {
     "description": "Greyed placeholder in a tag box of the Tags tab of Multi-Rename when the selected files have different values for that tag. Leaving the box untouched keeps each file's own value; typing replaces it in every file."
   },
+  "multiRename.tags.date.invalid": "This date doesn't exist (month 20). Type the right one, for example 2010, before writing.",
+  "@multiRename.tags.date.invalid": {
+    "description": "Hint under the Date row of the Tags tab of Multi-Rename, shown as soon as the book opens when some file carries a date the tag can't hold (an MP3 whose day and month were swapped, so its month reads 20). Writing is refused until the date is corrected."
+  },
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
     "description": "Accessible name of the list of audio files in the Tags tab of Multi-Rename, where each file's title and track number can be edited."
