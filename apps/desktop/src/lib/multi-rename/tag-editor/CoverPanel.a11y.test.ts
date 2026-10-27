@@ -30,7 +30,7 @@ async function mountPanel(cover: CoverSummary, editable = true): Promise<HTMLEle
 describe('CoverPanel a11y', () => {
   it('a shared cover has no violations', async () => {
     await expectNoA11yViolations(
-      await mountPanel({ kind: 'same', mime: 'image/png', bytes: 5000, width: 10, height: 10 }),
+      await mountPanel({ kind: 'same', mime: 'image/png', bytes: 5000, width: 10, height: 10, key: 'k' }),
     )
   })
 

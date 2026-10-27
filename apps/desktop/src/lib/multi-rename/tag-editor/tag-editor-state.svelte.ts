@@ -19,7 +19,6 @@ import {
   undoTagApply,
   type ApplyRequest,
   type CoverCandidate,
-  type CoverImage,
   type FileChangeView,
   type RestoreReport,
   type TagApplyReport,
@@ -65,8 +64,8 @@ export interface TagEditorState {
   tool(tool: TagTool): Promise<void>
   /** Resolves when every call now out has answered (an edit a blur just started included). */
   settled(): Promise<void>
-  /** The cover every file shares, with its bytes; `null` when there is none, the files differ, or it can't be read. */
-  coverImage(): Promise<CoverImage | null>
+  /** The cover every file shares, as a `data:` URL; `null` when there is none, the files differ, or it can't be read. */
+  coverImage(): Promise<string | null>
   /** The images in the session's folder a cover can come from. */
   coverCandidates(): Promise<TagStateResult<CoverCandidate[]>>
   /** Gives every file the folder image `fileName` as its cover. */

@@ -175,7 +175,7 @@ describe('setCoverFromFile', () => {
 
 describe('getCoverImage', () => {
   it('passes the shared cover through', async () => {
-    const cover = { mime: 'image/png', data: [1, 2, 3] }
+    const cover = 'data:image/png;base64,iVBORw0KGgo='
     vi.mocked(commands.getCoverImage).mockResolvedValue({ status: 'ok', data: cover } as never)
     expect(await getCoverImage('s1')).toEqual({ ok: true, value: cover })
     expect(commands.getCoverImage).toHaveBeenCalledWith('s1')

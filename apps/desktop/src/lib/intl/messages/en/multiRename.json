@@ -1264,6 +1264,10 @@
   "@multiRename.tags.cover.unreadable": {
     "description": "Shown in the Tags tab of Multi-Rename when the chosen cover picture couldn't be read or isn't a jpg, png or webp image."
   },
+  "multiRename.tags.cover.notAnImage": "That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.",
+  "@multiRename.tags.cover.notAnImage": {
+    "description": "Shown in the Tags tab of Multi-Rename when the picked cover file’s content is not a JPEG, PNG, or WebP image, for example a web page saved with a .jpg name. Nothing is changed."
+  },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {
     "description": "Shown in the Tags tab of Multi-Rename when an edit to a tag couldn't be applied. Nothing was changed."

@@ -24,7 +24,17 @@ file that something else renamed.
   exists. `open` asks `files_of` again after inserting (never under the tag lock: order rename → tag) and drops what it
   inserted if the rename session is gone.
 - **Cover size** comes from the image header (`image`), under `contain_panics`; `None` when unreadable.
-- A failed read of one file is a row with a `readError`, never a `TagEditorError`. Cover-file errors (`BadCoverName`, `CoverTooLarge`, `CoverUnreadable`) come from `cover.rs`: a name must be one plain file name that resolves directly inside the session's folder (no separators, `..`, or symlink out), at most 10 MiB; `TaskFailed` is a blocking task that didn't finish.
+- A failed read of one file is a row with a `readError`, never a `TagEditorError`. Cover-file errors (`BadCoverName`,
+  `CoverTooLarge`, `CoverUnreadable`, `CoverNotAnImage`) come from `cover.rs`: a name must be one plain file name that
+  resolves directly inside the session's folder (no separators, `..`, or symlink out; a symlink to a file in the folder
+  reads that file), it must be a regular file (checked before the open, so a FIFO named `x.jpg` can't block a pool
+  thread), it is opened at the resolved path with `O_NOFOLLOW | O_NONBLOCK` (a symlink or FIFO swapped in after the
+  check fails), and it is at most 10 MiB, enforced on the read too. Its MIME type comes from the magic bytes (JPEG
+  `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF????WEBP`), never the name: a WebP saved as `.jpg` is written as
+  `image/webp`, anything else is `CoverNotAnImage`. `TaskFailed` is a blocking task that didn't finish.
+- **Thumbnail.** `get_cover_image` answers the shared cover as a `data:` URL (base64, typed by the bytes), because the
+  app's CSP (`tauri.conf.json` `img-src`) allows `data:` but not `blob:`. `CoverSummary::Same::key` is a hash of the
+  bytes, so the panel fetches again when a cover of the same type and size replaces another.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.

@@ -92,6 +92,7 @@ describe('TagsTab', () => {
     [{ kind: 'coverTooLarge' }, 'That picture is too large (over 10 MB).'],
     [{ kind: 'coverUnreadable' }, 'Couldn’t read that picture, or it isn’t a supported image.'],
     [{ kind: 'badCoverName' }, 'Couldn’t read that picture, or it isn’t a supported image.'],
+    [{ kind: 'coverNotAnImage' }, 'That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.'],
     [{ kind: 'unknownTrack' }, 'Couldn’t apply that change.'],
   ] as const)('a failed edit (%j) over the tags says %j', async (error, text) => {
     const { root } = await mountTab({ error })

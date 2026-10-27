@@ -1,13 +1,13 @@
 //! IPC for the Tags tab of the Multi-Rename Tool. Thin: the work is `crate::tag_editor`.
 //! File work runs on the blocking pool, never on the IPC thread.
 
+use cmdr_tags::RestoreReport;
 use cmdr_tags::shared::CoverEdit;
 use cmdr_tags::tools::TagTool;
-use cmdr_tags::{Cover, RestoreReport};
 
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
-use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover};
+use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover, thumbnail_url};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, TagEdit, TagEditorError, changes, close, edit, open, shared_cover,
     tool as run_tool,
@@ -115,9 +115,10 @@ pub async fn set_cover_from_file(session_id: String, file_name: String) -> Resul
     .await
 }
 
-/// The cover every file shares (its type and bytes), or `None` when there is none or the files differ.
+/// The cover every file shares, as a `data:` URL for the thumbnail, or `None` when there is none,
+/// the files differ, or it isn't a JPEG, PNG, or WebP image.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_cover_image(session_id: String) -> Result<Option<Cover>, TagEditorError> {
-    blocking(move || shared_cover(&session_id)).await
+pub async fn get_cover_image(session_id: String) -> Result<Option<String>, TagEditorError> {
+    blocking(move || Ok(shared_cover(&session_id)?.and_then(|cover| thumbnail_url(&cover.data)))).await
 }

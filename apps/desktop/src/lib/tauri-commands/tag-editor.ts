@@ -5,7 +5,6 @@ import {
   commands,
   type ApplyRequest,
   type CoverCandidate,
-  type Cover_Serialize,
   type FileChangeView,
   type RestoreReport,
   type TagApplyReport,
@@ -18,7 +17,6 @@ import {
 export type {
   ApplyRequest,
   CoverCandidate,
-  Cover_Serialize as CoverImage,
   FileChangeView,
   RestoreReport,
   TagApplyReport,
@@ -90,6 +88,7 @@ export async function setCoverFromFile(sessionId: string, fileName: string): Pro
 }
 
 /** The cover every file shares, with its bytes (for a thumbnail), or `null` when there is none or the files differ. */
-export async function getCoverImage(sessionId: string): Promise<TagEditorResult<Cover_Serialize | null>> {
+/** The shared cover as a `data:` URL for the thumbnail, or `null` when there is none or it isn't a known image. */
+export async function getCoverImage(sessionId: string): Promise<TagEditorResult<string | null>> {
   return result(await commands.getCoverImage(sessionId))
 }

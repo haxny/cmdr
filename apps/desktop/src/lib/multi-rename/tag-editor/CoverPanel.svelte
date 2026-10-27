@@ -2,13 +2,14 @@
     /**
      * The cover of the selected files: what they share (type, size, pixel size), «multiple covers», or none. "From
      * folder…" lists the pictures beside the files and gives the chosen one to every file; "Remove" takes the cover
-     * out of every file. The view carries no picture bytes, so there is no thumbnail yet.
+     * out of every file. The thumbnail is a `data:` URL the backend builds from the shared cover's bytes (the app's
+     * CSP allows `data:` images, not `blob:`), fetched again whenever the view's cover key (a hash of the bytes) moves.
      */
     import { onDestroy } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { CoverSummary } from '#lib/ipc/bindings.js'
     import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
-    import type { CoverCandidate, CoverImage, TagEdit } from '#lib/tauri-commands/index.js'
+    import type { CoverCandidate, TagEdit } from '#lib/tauri-commands/index.js'
     import { formatFileSizeWithFormat } from '#lib/units/byte-size.js'
     import Button from '#lib/ui/Button.svelte'
 
@@ -17,8 +18,8 @@
         editable: boolean
         /** The folder's pictures, or `null` when listing them failed. */
         listCandidates: () => Promise<CoverCandidate[] | null>
-        /** The shared cover's bytes for the thumbnail; `null` when it can't be had. */
-        loadImage: () => Promise<CoverImage | null>
+        /** The shared cover as a `data:` URL for the thumbnail; `null` when it can't be had. */
+        loadImage: () => Promise<string | null>
         onPick: (fileName: string) => void
         onEdit: (edits: TagEdit[]) => void
     }
@@ -59,40 +60,28 @@
         picker = candidates === null ? { status: 'failed' } : { status: 'list', candidates }
     }
 
-    /** The thumbnail: a blob URL of the shared cover, replaced (and the old one revoked) when the cover changes. */
+    /** The thumbnail: a `data:` URL of the shared cover, replaced when the cover changes. */
     let thumbnail = $state<string | null>(null)
-    let thumbnailUrl: string | null = null
+    /** Which answer the thumbnail waits for: an answer for an earlier cover is dropped. */
     let thumbnailAsk = 0
 
-    function showThumbnail(url: string | null): void {
-        if (thumbnailUrl !== null) URL.revokeObjectURL(thumbnailUrl)
-        thumbnailUrl = url
-        thumbnail = url
-    }
-
-    /** Changes when the shared cover does; the view carries no bytes, so this stands for them. */
-    const coverKey = $derived(
-        cover.kind === 'same' ? `${cover.mime}|${String(cover.bytes)}|${String(cover.width)}|${String(cover.height)}` : null,
-    )
+    /** Changes when the shared cover's bytes do (the view's key is a hash of them). */
+    const coverKey = $derived(cover.kind === 'same' ? cover.key : null)
 
     $effect(() => {
         const key = coverKey
         const ask = ++thumbnailAsk
         if (key === null) {
-            showThumbnail(null)
+            thumbnail = null
             return
         }
-        void loadImage().then((image) => {
-            if (ask !== thumbnailAsk) return
-            showThumbnail(
-                image === null ? null : URL.createObjectURL(new Blob([Uint8Array.from(image.data)], { type: image.mime })),
-            )
+        void loadImage().then((url) => {
+            if (ask === thumbnailAsk) thumbnail = url
         })
     })
 
     onDestroy(() => {
         thumbnailAsk++
-        showThumbnail(null)
     })
 
     function pick(fileName: string): void {

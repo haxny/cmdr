@@ -2998,6 +2998,7 @@ export type MessageKey =
   | 'multiRename.tags.cover.multiple'
   | 'multiRename.tags.cover.noImages'
   | 'multiRename.tags.cover.none'
+  | 'multiRename.tags.cover.notAnImage'
   | 'multiRename.tags.cover.pickerLabel'
   | 'multiRename.tags.cover.remove'
   | 'multiRename.tags.cover.tooLarge'

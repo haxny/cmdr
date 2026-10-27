@@ -7,7 +7,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 
 - `session.rs` the store (`SESSIONS`), `open` / `edit` / `tool` / `changes` / `close`, and `TagEditorError`.
 - `view.rs` the pure `TagEditorView`: shared rows, track rows, cover, extras, dirty, diacritics.
-- `cover.rs` cover files from the session's folder (name, size and header checks); IPC in `commands/tag_editor.rs`.
+- `cover.rs` cover files from the session's folder (plain name, regular file, size; type from the magic bytes, never
+  the name) and the thumbnail `data:` URL; IPC in `commands/tag_editor.rs`.
 - `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`.
 
 ## Must-knows

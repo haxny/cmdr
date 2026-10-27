@@ -434,10 +434,10 @@ describe('createTagEditorState', () => {
     expect(state.busy).toBe(false)
   })
 
-  it('coverImage returns the bytes, or null (logged by kind) without touching busy or the error', async () => {
+  it('coverImage returns the data URL, or null (logged by kind) without touching busy or the error', async () => {
     const state = createTagEditorState('S')
-    ipc.getCoverImage.mockResolvedValue({ ok: true, value: { mime: 'image/png', data: [1] } })
-    expect(await state.coverImage()).toEqual({ mime: 'image/png', data: [1] })
+    ipc.getCoverImage.mockResolvedValue({ ok: true, value: 'data:image/png;base64,iVBORw0KGgo=' })
+    expect(await state.coverImage()).toBe('data:image/png;base64,iVBORw0KGgo=')
     ipc.getCoverImage.mockResolvedValue({ ok: false, error: { kind: 'noSession' } })
     expect(await state.coverImage()).toBeNull()
     expect(state.error).toBeNull()

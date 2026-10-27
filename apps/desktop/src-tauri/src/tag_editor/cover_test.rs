@@ -1,8 +1,16 @@
-//! Cover files: which ones are listed, the size limit, and that a name never leaves the folder.
+//! Cover files: which ones are listed, the size limit, that a name never leaves the folder, and
+//! that the type comes from the bytes.
 
-use super::cover::{MAX_COVER_BYTES, candidates_in, read_cover};
+use std::sync::mpsc;
+use std::time::Duration;
+
+use super::cover::{MAX_COVER_BYTES, candidates_in, read_capped, read_cover, thumbnail_url};
 use super::session::TagEditorError;
 use crate::test_support::TestDir;
+
+const JPEG: &[u8] = &[0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, b'J', b'F', b'I', b'F'];
+const PNG: &[u8] = b"\x89PNG\r\n\x1A\n\0\0\0\rIHDR";
+const WEBP: &[u8] = b"RIFF\x24\0\0\0WEBPVP8 ";
 
 #[test]
 fn cover_candidates_lists_images_only() {
@@ -29,11 +37,11 @@ fn oversized_cover_is_refused() {
     let dir = TestDir::new("cover-oversized");
     let big = vec![0u8; usize::try_from(MAX_COVER_BYTES).expect("fits") + 1];
     std::fs::write(dir.join("big.jpg"), big).expect("writes");
-    std::fs::write(dir.join("ok.png"), [7u8; 4]).expect("writes");
+    std::fs::write(dir.join("ok.png"), PNG).expect("writes");
     assert_eq!(read_cover(&dir, "big.jpg"), Err(TagEditorError::CoverTooLarge));
     let cover = read_cover(&dir, "ok.png").expect("a small image reads");
     assert_eq!(cover.mime, "image/png");
-    assert_eq!(&*cover.data, &[7u8; 4]);
+    assert_eq!(&*cover.data, PNG);
 }
 
 #[test]
@@ -41,8 +49,8 @@ fn cover_name_cannot_leave_the_folder() {
     let root = TestDir::new("cover-escape");
     let folder = root.join("album");
     std::fs::create_dir(&folder).expect("creates");
-    std::fs::write(root.join("secret.jpg"), [1u8; 4]).expect("writes");
-    std::fs::write(folder.join("in.jpg"), [2u8; 4]).expect("writes");
+    std::fs::write(root.join("secret.jpg"), JPEG).expect("writes");
+    std::fs::write(folder.join("in.jpg"), JPEG).expect("writes");
     std::os::unix::fs::symlink(root.join("secret.jpg"), folder.join("link.jpg")).expect("links");
     for name in [
         "../secret.jpg",
@@ -60,4 +68,84 @@ fn cover_name_cannot_leave_the_folder() {
     assert_eq!(read_cover(&folder, "missing.jpg"), Err(TagEditorError::CoverUnreadable));
     assert_eq!(read_cover(&folder, "in.txt"), Err(TagEditorError::CoverUnreadable));
     assert!(read_cover(&folder, "in.jpg").is_ok());
+}
+
+#[test]
+fn a_webp_named_jpg_gets_the_webp_type() {
+    let dir = TestDir::new("cover-mislabeled");
+    std::fs::write(dir.join("cover.jpg"), WEBP).expect("writes");
+    let cover = read_cover(&dir, "cover.jpg").expect("reads");
+    assert_eq!(cover.mime, "image/webp");
+}
+
+#[test]
+fn a_jpeg_named_png_gets_the_jpeg_type() {
+    let dir = TestDir::new("cover-mislabeled-png");
+    std::fs::write(dir.join("cover.png"), JPEG).expect("writes");
+    assert_eq!(read_cover(&dir, "cover.png").expect("reads").mime, "image/jpeg");
+}
+
+#[test]
+fn html_or_an_empty_file_named_jpg_is_not_an_image() {
+    let dir = TestDir::new("cover-not-image");
+    std::fs::write(dir.join("error.jpg"), b"<!DOCTYPE html><html>404</html>").expect("writes");
+    std::fs::write(dir.join("empty.jpg"), b"").expect("writes");
+    std::fs::write(dir.join("riff.webp"), b"RIFF\0\0\0\0WAVE").expect("writes");
+    for name in ["error.jpg", "empty.jpg", "riff.webp"] {
+        assert_eq!(read_cover(&dir, name), Err(TagEditorError::CoverNotAnImage), "{name}");
+    }
+}
+
+/// A FIFO named like a picture would block a plain `open` until a writer comes, forever.
+#[test]
+fn a_fifo_named_jpg_is_refused_without_blocking() {
+    let dir = TestDir::new("cover-fifo");
+    let fifo = dir.join("pipe.jpg");
+    let status = std::process::Command::new("mkfifo")
+        .arg(&fifo)
+        .status()
+        .expect("mkfifo runs");
+    assert!(status.success());
+    let (send, answer) = mpsc::channel();
+    let folder = dir.to_path_buf();
+    std::thread::spawn(move || {
+        let _ = send.send(read_cover(&folder, "pipe.jpg"));
+    });
+    let result = answer
+        .recv_timeout(Duration::from_secs(5))
+        .expect("read_cover answers instead of blocking on the FIFO");
+    assert_eq!(result, Err(TagEditorError::CoverUnreadable));
+}
+
+/// A symlink whose target sits in the folder reads the target, typed by the target's bytes
+/// whatever the link's name; one leading out is refused (`cover_name_cannot_leave_the_folder`).
+#[test]
+fn a_symlink_inside_the_folder_reads_its_target_by_its_bytes() {
+    let dir = TestDir::new("cover-symlink-in");
+    std::fs::write(dir.join("real.png"), PNG).expect("writes");
+    std::os::unix::fs::symlink(dir.join("real.png"), dir.join("link.jpg")).expect("links");
+    let cover = read_cover(&dir, "link.jpg").expect("reads");
+    assert_eq!(cover.mime, "image/png");
+    assert_eq!(&*cover.data, PNG);
+}
+
+/// The size limit holds on the read itself, for a file that grows after the stat.
+#[test]
+fn the_read_stops_past_the_limit() {
+    let at_limit = vec![0u8; 16];
+    assert_eq!(read_capped(at_limit.as_slice(), 16).expect("fits").len(), 16);
+    let over = vec![0u8; 17];
+    assert_eq!(read_capped(over.as_slice(), 16), Err(TagEditorError::CoverTooLarge));
+    // An endless reader stops at limit + 1 bytes.
+    assert_eq!(read_capped(std::io::repeat(1), 16), Err(TagEditorError::CoverTooLarge));
+}
+
+#[test]
+fn the_thumbnail_is_a_data_url_typed_by_the_bytes() {
+    assert_eq!(
+        thumbnail_url(PNG).as_deref(),
+        Some("data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==")
+    );
+    assert!(thumbnail_url(WEBP).is_some_and(|url| url.starts_with("data:image/webp;base64,")));
+    assert_eq!(thumbnail_url(b"<html>"), None);
 }

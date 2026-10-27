@@ -1184,7 +1184,6 @@ export {
 export type {
   ApplyRequest,
   CoverCandidate,
-  CoverImage,
   FileChangeView,
   RestoreReport,
   TagApplyReport,

@@ -348,6 +348,36 @@ fn cover_edit_is_summarized_and_extras_are_listed() {
     close_rename(&id);
 }
 
+/// Two covers with the same type and size: the summary's key tells them apart, so the
+/// thumbnail follows the new one.
+#[test]
+fn cover_key_follows_the_bytes() {
+    let (_dir, _listing, id) = album("tag-editor-cover-key");
+    open(&id, false).expect("opens");
+    let key_after = |byte: u8| {
+        let cover = Cover {
+            mime: "image/png".to_string(),
+            data: vec![byte; 12].into(),
+        };
+        let view = edit(
+            &id,
+            vec![TagEdit::Cover {
+                edit: CoverEdit::Set(cover),
+            }],
+        )
+        .expect("edits");
+        match view.cover {
+            CoverSummary::Same { key, .. } => key,
+            other => panic!("one shared cover, got {other:?}"),
+        }
+    };
+    let first = key_after(0);
+    assert_ne!(first, key_after(1));
+    assert_eq!(first, key_after(0), "the same bytes keep the key");
+    close(&id);
+    close_rename(&id);
+}
+
 #[test]
 fn shared_cover_is_the_common_cover_or_none() {
     let (_dir, _listing, id) = album("tag-editor-shared-cover");

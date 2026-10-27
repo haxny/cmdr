@@ -1,5 +1,5 @@
 /** The cover panel: the shared cover, «multiple covers» or none; the folder picker; Remove; read-only locks both. */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CoverSummary } from '#lib/ipc/bindings.js'
 import CoverPanel from './CoverPanel.svelte'
 import { mountInto } from './tag-cell.test-helper'
@@ -13,14 +13,14 @@ afterEach(() => {
   cleanup = undefined
 })
 
-const SAME: CoverSummary = { kind: 'same', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400 }
+const SAME: CoverSummary = { kind: 'same', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400, key: 'k1' }
 
 async function mountPanel(
   over: {
     cover?: CoverSummary
     editable?: boolean
     candidates?: { fileName: string; size: number }[] | null
-    loadImage?: () => Promise<{ mime: string; data: number[] } | null>
+    loadImage?: () => Promise<string | null>
   } = {},
 ) {
   const props = {
@@ -115,33 +115,15 @@ describe('CoverPanel', () => {
   })
 
   describe('thumbnail', () => {
-    const urls = { created: [] as string[], revoked: [] as string[] }
-    beforeEach(() => {
-      urls.created = []
-      urls.revoked = []
-      vi.stubGlobal('URL', {
-        ...URL,
-        createObjectURL: vi.fn(() => {
-          const url = `blob:cover-${String(urls.created.length)}`
-          urls.created.push(url)
-          return url
-        }),
-        revokeObjectURL: vi.fn((url: string) => urls.revoked.push(url)),
-      })
-    })
-    afterEach(() => {
-      vi.unstubAllGlobals()
-    })
+    const PNG_URL = 'data:image/png;base64,iVBORw0KGgo='
+    const JPEG_URL = 'data:image/jpeg;base64,/9j/'
 
-    it('shows the shared cover as a blob URL and revokes it on unmount', async () => {
-      const loadImage = vi.fn(() => Promise.resolve({ mime: 'image/jpeg', data: [1, 2, 3] }))
+    it('shows the shared cover as the data URL the backend built (the CSP allows data:, not blob:)', async () => {
+      const loadImage = vi.fn(() => Promise.resolve(PNG_URL))
       const { root } = await mountPanel({ loadImage })
       await settle()
       expect(loadImage).toHaveBeenCalledTimes(1)
-      expect(root.querySelector('img.thumbnail')?.getAttribute('src')).toBe('blob:cover-0')
-      cleanup?.()
-      cleanup = undefined
-      expect(urls.revoked).toEqual(['blob:cover-0'])
+      expect(root.querySelector('img.thumbnail')?.getAttribute('src')).toBe(PNG_URL)
     })
 
     it('has no thumbnail for no cover or multiple covers, and asks for none', async () => {
@@ -152,11 +134,9 @@ describe('CoverPanel', () => {
       expect(root.querySelector('img')).toBeNull()
     })
 
-    it('a changed cover replaces the thumbnail and revokes the old URL; a late old answer is dropped', async () => {
-      const answers: ((image: { mime: string; data: number[] }) => void)[] = []
-      const loadImage = vi.fn(
-        () => new Promise<{ mime: string; data: number[] } | null>((resolve) => answers.push(resolve)),
-      )
+    it('a new cover of the same type and size (only the key moves) replaces the thumbnail; a late old answer is dropped', async () => {
+      const answers: ((url: string) => void)[] = []
+      const loadImage = vi.fn(() => new Promise<string | null>((resolve) => answers.push(resolve)))
       const props = $state<ComponentProps<typeof CoverPanel>>({
         cover: SAME,
         editable: true,
@@ -173,21 +153,19 @@ describe('CoverPanel', () => {
         root.remove()
       }
       await settle()
-      props.cover = { ...SAME, bytes: 4096 }
+      props.cover = { ...SAME, key: 'other-bytes' }
       await settle()
       expect(answers).toHaveLength(2)
       // The newer answer lands first, then the stale one.
-      answers[1]({ mime: 'image/jpeg', data: [2] })
+      answers[1](JPEG_URL)
       await settle()
-      answers[0]({ mime: 'image/jpeg', data: [1] })
+      answers[0](PNG_URL)
       await settle()
-      expect(urls.created).toEqual(['blob:cover-0'])
-      expect(root.querySelector('img.thumbnail')?.getAttribute('src')).toBe('blob:cover-0')
-      // Removing the cover drops the thumbnail and revokes its URL.
+      expect(root.querySelector('img.thumbnail')?.getAttribute('src')).toBe(JPEG_URL)
+      // Removing the cover drops the thumbnail.
       props.cover = { kind: 'empty' }
       await settle()
       expect(root.querySelector('img')).toBeNull()
-      expect(urls.revoked).toEqual(['blob:cover-0'])
     })
   })
 

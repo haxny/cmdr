@@ -36,6 +36,8 @@
             case 'badCoverName':
             case 'coverUnreadable':
                 return 'multiRename.tags.cover.unreadable'
+            case 'coverNotAnImage':
+                return 'multiRename.tags.cover.notAnImage'
             case 'undo':
             case 'noAppDataDir':
                 return 'multiRename.tags.undoStoreUnavailable'

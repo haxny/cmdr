@@ -51,8 +51,10 @@ pub enum TagEditorError {
     BadCoverName,
     /// The cover file is over the size limit (10 MiB).
     CoverTooLarge,
-    /// The cover file couldn't be read, or isn't a supported image.
+    /// The cover file couldn't be read (or isn't a regular file, or has an unsupported name).
     CoverUnreadable,
+    /// The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
+    CoverNotAnImage,
     /// The background task running the call failed.
     TaskFailed,
 }

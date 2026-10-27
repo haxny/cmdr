@@ -1659,20 +1659,12 @@ export const commands = {
   // Gives every file the cover image `file_name` of the session's folder.
   setCoverFromFile: (sessionId: string, fileName: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_file', { sessionId, fileName })),
-  // The cover every file shares (its type and bytes), or `None` when there is none or the files differ.
+  /**
+   *  The cover every file shares, as a `data:` URL for the thumbnail, or `None` when there is none,
+   *  the files differ, or it isn't a JPEG, PNG, or WebP image.
+   */
   getCoverImage: (sessionId: string) =>
-    typedError<
-      {
-        // MIME type, like `image/jpeg`.
-        mime: string
-        /**
-         *  The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
-         *  every file given the same cover) is a pointer copy. Serialized as a byte array.
-         */
-        data: number[]
-      } | null,
-      TagEditorError
-    >(__TAURI_INVOKE('get_cover_image', { sessionId })),
+    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId })),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -7597,6 +7589,8 @@ export type CoverSummary =
       // Pixel size, when the image header could be read.
       width: number | null
       height: number | null
+      // A hash of the bytes, so the thumbnail follows a new cover of the same type and size.
+      key: string
     }
 
 // A front cover: its MIME type and the encoded image bytes.
@@ -18306,8 +18300,10 @@ export type TagEditorError =
   | { kind: 'badCoverName' }
   // The cover file is over the size limit (10 MiB).
   | { kind: 'coverTooLarge' }
-  // The cover file couldn't be read, or isn't a supported image.
+  // The cover file couldn't be read (or isn't a regular file, or has an unsupported name).
   | { kind: 'coverUnreadable' }
+  // The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
+  | { kind: 'coverNotAnImage' }
   // The background task running the call failed.
   | { kind: 'taskFailed' }
 

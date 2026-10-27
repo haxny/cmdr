@@ -1104,6 +1104,10 @@
   "@multiRename.tags.cover.unreadable": {
     "sourceHash": "4598a37"
   },
+  "multiRename.tags.cover.notAnImage": "That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.",
+  "@multiRename.tags.cover.notAnImage": {
+    "sourceHash": "bef4ab5"
+  },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {
     "sourceHash": "9747a7c"

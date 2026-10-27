@@ -44,7 +44,7 @@ const VIEW: TagEditorView = {
       readError: 'unreadable',
     },
   ],
-  cover: { kind: 'same', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400 },
+  cover: { kind: 'same', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400, key: 'k' },
   extras: [],
   dirty: false,
   diacritics: [],

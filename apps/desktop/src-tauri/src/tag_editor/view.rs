@@ -75,6 +75,8 @@ pub enum CoverSummary {
         /// Pixel size, when the image header could be read.
         width: Option<u32>,
         height: Option<u32>,
+        /// A hash of the bytes, so the thumbnail follows a new cover of the same type and size.
+        key: String,
     },
 }
 
@@ -191,6 +193,7 @@ fn cover_summary(files: &[FileTags]) -> CoverSummary {
                 bytes: cover.data.len(),
                 width,
                 height,
+                key: content_key(&cover.data),
             }
         }
     }
@@ -204,6 +207,14 @@ pub(super) fn same_cover(a: &Option<Cover>, b: &Option<Cover>) -> bool {
         (Some(a), Some(b)) => a.mime == b.mime && (Arc::ptr_eq(&a.data, &b.data) || a.data == b.data),
         _ => false,
     }
+}
+
+/// A short hash of the cover's bytes (stable within the process; only compared, never stored).
+fn content_key(data: &[u8]) -> String {
+    use std::hash::{DefaultHasher, Hasher};
+    let mut hasher = DefaultHasher::new();
+    hasher.write(data);
+    format!("{:016x}", hasher.finish())
 }
 
 /// The image's size from its header. A decoder that panics on a hostile image costs the
