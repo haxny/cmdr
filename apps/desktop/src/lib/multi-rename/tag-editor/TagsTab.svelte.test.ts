@@ -271,6 +271,10 @@ describe('TagsTab', () => {
     const { root } = await mountTab({ view: { ...VIEW, editable: false, readOnlyReason: 'remoteVolume' } })
     expect(root.textContent).toContain('Tags can only be edited for files on a local disk.')
     for (const box of root.querySelectorAll<HTMLInputElement>('input')) expect(box.disabled).toBe(true)
-    for (const button of root.querySelectorAll('button')) expect(button.disabled).toBe(true)
+    // Playing writes nothing, so the play buttons and Open in foobar2000 stay available.
+    const writers = [...root.querySelectorAll('button')].filter(
+      (b) => !b.classList.contains('play') && b.textContent.trim() !== 'Open in foobar2000',
+    )
+    for (const button of writers) expect(button.disabled).toBe(true)
   })
 })

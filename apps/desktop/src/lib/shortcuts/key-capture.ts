@@ -128,6 +128,9 @@ const codeToKey: Record<string, string> = {
   Slash: '/',
 }
 
+/** What macOS types, and reports as `event.key`, for ⌥Space. */
+const NBSP = '\u00a0'
+
 /**
  * Normalize an `event.key` to its canonical name (see the module header).
  * Single characters are uppercased, special keys are mapped to word forms.
@@ -140,6 +143,9 @@ export function normalizeKeyName(key: string, code?: string): string {
     if (code in codeToKey) return codeToKey[code]
     return code // last resort: raw code name
   }
+
+  // macOS reports ⌥Space as a non-breaking space; the key is Space (code `Space`) either way.
+  if (key === NBSP) return 'Space'
 
   // Single printable characters are uppercased
   if (key.length === 1 && key !== ' ') {
@@ -194,7 +200,7 @@ export function toCanonicalShortcut(shortcut: string): string {
  * and Space (`⇧Space` is Quick Look) keep their Shift.
  */
 function isTypedSymbol(key: string): boolean {
-  return Array.from(key).length === 1 && key !== ' ' && key.toLowerCase() === key.toUpperCase()
+  return Array.from(key).length === 1 && key !== ' ' && key !== NBSP && key.toLowerCase() === key.toUpperCase()
 }
 
 /** True when ⌘ / ⌃ (Ctrl / Super off macOS) is held: the combo is a command, never typing. */

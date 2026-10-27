@@ -1282,5 +1282,9 @@
   "commands.multiRenameTabTags.label": "Show the Tags tab",
   "@commands.multiRenameTabTags.label": {
     "sourceHash": "4236482"
+  },
+  "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
+  "@commands.multiRenamePlayTrack.label": {
+    "sourceHash": "2aeb9e0"
   }
 }

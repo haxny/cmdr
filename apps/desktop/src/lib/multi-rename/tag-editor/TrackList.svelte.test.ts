@@ -29,7 +29,13 @@ const TRACKS: TrackRow[] = [
   row({ path: '/b/01.mp3', track: '1', title: 'První', durationMs: 3_725_000 }),
 ]
 
-async function mountList(tracks: TrackRow[] = TRACKS, editable = true, checked: string[] = []) {
+async function mountList(
+  tracks: TrackRow[] = TRACKS,
+  editable = true,
+  checked: string[] = [],
+  playing: string | null = null,
+) {
+  const onPlay = vi.fn((_path: string) => {})
   const onEdit = vi.fn((_edits: TagEdit[]) => {})
   const onToggle = vi.fn((_path: string) => {})
   const onToggleAll = vi.fn((_on: boolean) => {})
@@ -40,9 +46,11 @@ async function mountList(tracks: TrackRow[] = TRACKS, editable = true, checked: 
     onEdit,
     onToggle,
     onToggleAll,
+    playing,
+    onPlay,
   })
   cleanup = mounted.cleanup
-  return { root: mounted.root, onEdit, onToggle, onToggleAll }
+  return { root: mounted.root, onEdit, onToggle, onToggleAll, onPlay }
 }
 
 function box(root: HTMLElement, label: string): HTMLInputElement {
@@ -55,7 +63,7 @@ describe('TrackList', () => {
   it('shows number, title, length and file name in the session order', async () => {
     const { root } = await mountList()
     const heads = [...root.querySelectorAll('th')].map((th) => th.textContent.trim())
-    expect(heads).toEqual(['', '#', 'Title', 'Length', 'File name'])
+    expect(heads).toEqual(['', 'Play', '#', 'Title', 'Length', 'File name'])
     const rows = [...root.querySelectorAll('tbody tr')]
     expect(rows.map((r) => r.querySelector('.file')?.textContent.trim())).toEqual(['02.mp3', '01.mp3'])
     expect(rows.map((r) => r.querySelector('.length')?.textContent.trim())).toEqual(['1:01', '1:02:05'])
@@ -97,7 +105,7 @@ describe('TrackList', () => {
   it('single_file_hides_track_column', async () => {
     const { root } = await mountList([row({ path: '/b/kniha.m4b', title: null, durationMs: 7_200_000 })])
     const heads = [...root.querySelectorAll('th')].map((th) => th.textContent.trim())
-    expect(heads).toEqual(['', 'Title', 'Length', 'File name'])
+    expect(heads).toEqual(['', 'Play', 'Title', 'Length', 'File name'])
     expect(root.querySelector('[id^="tag-track-number-"]')).toBeNull()
     expect(byId<HTMLInputElement>(root, 'tag-track-title-0').value).toBe('')
   })
@@ -174,5 +182,22 @@ describe('TrackList', () => {
     const esc = await press(other, 'Escape')
     expect(other.value).toBe('Druhá')
     expect(esc.defaultPrevented).toBe(true)
+  })
+
+  it('every row has a play button named for its file; the playing one reads Stop, and a press names the path', async () => {
+    const { root, onPlay } = await mountList(TRACKS, true, [], '/b/01.mp3')
+    expect(root.querySelector('button[aria-label="Play 02.mp3"]')).not.toBeNull()
+    const stop = root.querySelector<HTMLButtonElement>('button[aria-label="Stop 01.mp3"]')
+    expect(stop?.getAttribute('aria-pressed')).toBe('true')
+    root.querySelector<HTMLButtonElement>('button[aria-label="Play 02.mp3"]')?.click()
+    expect(onPlay).toHaveBeenCalledWith('/b/02.mp3')
+  })
+
+  it('a row carries its path, so the play key finds the row that holds focus', async () => {
+    const { root } = await mountList()
+    expect([...root.querySelectorAll('tbody tr')].map((r) => r.getAttribute('data-track-path'))).toEqual([
+      '/b/02.mp3',
+      '/b/01.mp3',
+    ])
   })
 })

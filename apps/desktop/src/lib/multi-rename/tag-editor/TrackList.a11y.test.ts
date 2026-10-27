@@ -40,6 +40,8 @@ async function mountList(tracks: TrackRow[], editable = true): Promise<HTMLEleme
     onEdit: () => {},
     onToggle: () => {},
     onToggleAll: () => {},
+    playing: '/b/01.mp3',
+    onPlay: () => {},
   })
   cleanup = mounted.cleanup
   return mounted.root

@@ -1,8 +1,8 @@
 <script lang="ts">
     /**
      * The audio files of the session, in the sheet's order: track number, title, length and file name. Number and
-     * title edit in place (one file each). A single-file session has no track-number column: a single-file book has
-     * no track number.
+     * title edit in place (one file each), and a button plays the track. A single-file session has no track-number column:
+     * a single-file book has no track number.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -10,6 +10,7 @@
     import type { TagEdit } from '#lib/tauri-commands/index.js'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import EditableCell from './EditableCell.svelte'
+    import PlayButton from './PlayButton.svelte'
     import { formatTrackLength, parseFieldText } from './shared-field-input'
 
     interface Props {
@@ -20,10 +21,14 @@
         onToggle: (path: string) => void
         /** The header box: check every track (`true`) or uncheck them all. */
         onToggleAll: (on: boolean) => void
+        /** The path of the track playing now, or `null`. */
+        playing: string | null
+        /** Plays the track at `path`, or stops it when it is the one playing. */
+        onPlay: (path: string) => void
         onEdit: (edits: TagEdit[]) => void | Promise<void>
     }
 
-    const { tracks, editable, selected, onToggle, onToggleAll, onEdit }: Props = $props()
+    const { tracks, editable, selected, onToggle, onToggleAll, playing, onPlay, onEdit }: Props = $props()
 
     const showNumber = $derived(tracks.length !== 1)
     const checkedCount = $derived(tracks.filter((track) => selected.has(track.path)).length)
@@ -53,6 +58,7 @@
                         onCheckedChange={() => { onToggleAll(!allChecked) }}
                     />
                 </th>
+                <th scope="col" class="play"><span class="sr-only">{tString('multiRename.tags.col.play')}</span></th>
                 {#if showNumber}<th scope="col" class="number">{tString('multiRename.tags.col.number')}</th>{/if}
                 <th scope="col">{tString('multiRename.tags.col.title')}</th>
                 <th scope="col" class="length">{tString('multiRename.tags.col.length')}</th>
@@ -62,13 +68,21 @@
         <tbody>
             {#each tracks as track, index (track.path)}
                 {@const editableRow = editable && track.readError === null}
-                <tr class:unreadable={track.readError !== null} class:changed={track.changed}>
+                <tr class:unreadable={track.readError !== null} class:changed={track.changed} data-track-path={track.path}>
                     <td class="select">
                         <Checkbox
                             ariaLabel={tString('multiRename.tags.select.track', { fileName: track.fileName })}
                             checked={selected.has(track.path)}
                             disabled={!editable}
                             onCheckedChange={() => { onToggle(track.path) }}
+                        />
+                    </td>
+                    <td class="play">
+                        <PlayButton
+                            fileName={track.fileName}
+                            playing={playing === track.path}
+                            disabled={track.readError !== null}
+                            onToggle={() => { onPlay(track.path) }}
                         />
                     </td>
                     {#if showNumber}
@@ -140,6 +154,10 @@
 
     .select {
         width: 32px;
+    }
+
+    .play {
+        width: 36px;
     }
 
     .number {

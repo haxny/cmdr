@@ -75,6 +75,7 @@ export type DispatchExemptId =
   | 'multiRename.moveRowDown'
   | 'multiRename.tabRename'
   | 'multiRename.tabTags'
+  | 'multiRename.playTrack'
   | 'multiRename.rename'
   | 'network.selectHost'
   | 'share.back'

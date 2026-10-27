@@ -88,6 +88,7 @@ export const FIXED_KEY_COMMAND_IDS = [
   'multiRename.moveRowDown',
   'multiRename.tabRename',
   'multiRename.tabTags',
+  'multiRename.playTrack',
   'multiRename.rename',
   'network.selectHost',
   'share.back',

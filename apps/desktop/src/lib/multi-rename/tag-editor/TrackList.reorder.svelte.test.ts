@@ -36,6 +36,8 @@ describe('TrackList order', () => {
       onEdit,
       onToggle: () => {},
       onToggleAll: () => {},
+      playing: null,
+      onPlay: () => {},
     })
     const root = document.createElement('div')
     document.body.appendChild(root)

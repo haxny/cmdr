@@ -46,6 +46,10 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
   onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
   prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
+  // The Tags tab's player; nothing here plays.
+  tagTrackAudioUrl: vi.fn(() => Promise.resolve({ ok: false, error: { kind: 'unknownTrack' } })),
+  releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
+  openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
   ...ipc,
 }))
 

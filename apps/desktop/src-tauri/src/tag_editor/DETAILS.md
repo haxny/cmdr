@@ -54,6 +54,15 @@ file that something else renamed.
   supported extension is stored as given.
 - **«Multiple values» rows carry their values.** `SharedRow::choices` is `cmdr_tags::shared::distinct_values` (most
   common first, at most 50) for a `Multiple` row, empty for every other.
+- **Audio tokens are per tag session.** `playback::audio_url` mints a `cmdr-media://` token only for a readable track
+  of the session (canonical-path match, never a path the frontend made up) and keeps it under the session id;
+  `release` drops one, and `session::close` drops all that remain. The viewer's `session::close_session` is not
+  the only place a media token is freed (`file_viewer/media.rs`). `open_in_player` opens foobar2000
+  (`com.foobar2000.mac`) when installed, else each file in its default app; `UnknownTrack` for a path outside the
+  session, `PlayerUnavailable` when nothing could start.
+- **Text tools run in the app.** `text_tools.rs` builds on `multi_rename::{mask, transform}` (`Mask`, `Transform`,
+  `Replace`), which `cmdr-tags` can't depend on; they validate first, change nothing on a bad pattern, never strip
+  diacritics, and take a scope like every other tool.
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.
 
 ## Write and undo

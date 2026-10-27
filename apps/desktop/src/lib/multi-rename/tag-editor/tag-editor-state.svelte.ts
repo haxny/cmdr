@@ -59,6 +59,8 @@ export interface ApplyOptions {
 }
 
 export interface TagEditorState {
+  /** The backend tag session this state talks to (the player mints its audio URLs in it). */
+  readonly sessionId: string
   readonly view: TagEditorView | null
   readonly error: TagStateError | null
   readonly busy: boolean
@@ -174,6 +176,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   }
 
   return {
+    sessionId,
     get view() {
       return view
     },

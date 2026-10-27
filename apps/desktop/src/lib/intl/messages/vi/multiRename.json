@@ -1616,5 +1616,33 @@
   "multiRename.tags.numbering.cancel": "Cancel",
   "@multiRename.tags.numbering.cancel": {
     "sourceHash": "19766ed"
+  },
+  "multiRename.tags.col.play": "Play",
+  "@multiRename.tags.col.play": {
+    "sourceHash": "436e610"
+  },
+  "multiRename.tags.play.play": "Play {fileName}",
+  "@multiRename.tags.play.play": {
+    "sourceHash": "d684027"
+  },
+  "multiRename.tags.play.stop": "Stop {fileName}",
+  "@multiRename.tags.play.stop": {
+    "sourceHash": "a116eda"
+  },
+  "multiRename.tags.play.failed": "Couldn’t play that track.",
+  "@multiRename.tags.play.failed": {
+    "sourceHash": "0b91294"
+  },
+  "multiRename.tags.play.openInPlayer": "Open in foobar2000",
+  "@multiRename.tags.play.openInPlayer": {
+    "sourceHash": "bca23db"
+  },
+  "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
+  "@multiRename.tags.play.playerUnavailable": {
+    "sourceHash": "753fba0"
+  },
+  "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
+  "@multiRename.tags.play.openFailed": {
+    "sourceHash": "d8d01f0"
   }
 }

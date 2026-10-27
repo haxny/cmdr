@@ -4,11 +4,14 @@
      * share, the track list (title and number edit in place), the cover, and the write (`ApplyPanel`). It opens the tag
      * session the first time it shows. The sheet's Start comes to `start()` while the tab shows.
      */
-    import { onMount } from 'svelte'
+    import { onDestroy, onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool } from '#lib/ipc/bindings.js'
-    import type { TagEdit } from '#lib/tauri-commands/index.js'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { claimKey } from '#lib/shortcuts/claim-key.js'
+    import { openTagsInPlayer, type TagEdit } from '#lib/tauri-commands/index.js'
+    import Button from '#lib/ui/Button.svelte'
     import ApplyPanel from './ApplyPanel.svelte'
     import CoverPanel from './CoverPanel.svelte'
     import SharedFieldsTable from './SharedFieldsTable.svelte'
@@ -16,6 +19,7 @@
     import TrackList from './TrackList.svelte'
     import { focusedFieldOf, type RunScoped } from './tag-tools'
     import { createTrackSelection } from './track-selection.svelte'
+    import { createTrackPlayer } from './track-player.svelte'
     import type { TagsTabApi } from './sheet-tab'
     import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
 
@@ -41,6 +45,41 @@
     onMount(() => {
         void tags.open()
     })
+
+    /**
+     * The tracks play here, one at a time. The Rename tab unmounts this component (and so does closing the sheet), and
+     * either way playback stops and its URL is released.
+     */
+    const player = createTrackPlayer(tags.sessionId)
+    onDestroy(player.stop)
+
+    /**
+     * ⌥Space (`multiRename.playTrack`) plays or stops the track whose row holds focus. Only inside the track list:
+     * elsewhere the key is none of ours and goes on. It claims the key when it acts: macOS types a non-breaking space
+     * for ⌥Space, which would land in the title the cell holds.
+     */
+    function answerPlayKey(e: KeyboardEvent): void {
+        if (e.isComposing || !eventMatchesCommand(e, 'multiRename.playTrack')) return
+        if (!(e.target instanceof Element)) return
+        const path = e.target.closest<HTMLElement>('tr[data-track-path]')?.dataset.trackPath
+        if (path === undefined) return
+        const row = tags.view?.tracks.find((track) => track.path === path)
+        if (row === undefined || row.readError !== null) return
+        claimKey(e)
+        void player.toggle(path)
+    }
+
+    /** Why the last Open in foobar2000 failed, when it did. */
+    let playerError = $state<MessageKey | null>(null)
+
+    /** Opens the checked tracks (every track when none is checked) in foobar2000, else each in its default app. */
+    async function openInPlayer(): Promise<void> {
+        playerError = null
+        const res = await runScoped((scope) => openTagsInPlayer(tags.sessionId, scope ?? allPaths))
+        if (res === undefined || res.ok) return
+        playerError =
+            res.error.kind === 'playerUnavailable' ? 'multiRename.tags.play.playerUnavailable' : 'multiRename.tags.play.openFailed'
+    }
 
     /** What a failed edit or cover pick says; a failure to read the tags at all is worded where there is no view. */
     function editErrorKey(error: TagStateError): MessageKey | null {
@@ -117,6 +156,7 @@
     id="sheet-panel-tags"
     role="tabpanel"
     aria-labelledby="sheet-tab-tags"
+    onkeydown={answerPlayKey}
     onfocusin={(e) => { followFocus(e.target) }}
     onfocusout={(e) => { if (e.relatedTarget instanceof Node && !e.currentTarget.contains(e.relatedTarget)) focusedField = null }}
 >
@@ -134,6 +174,12 @@
         {#if tags.error !== null}
             {@const errorKey = editErrorKey(tags.error)}
             {#if errorKey !== null}<p class="notice" role="alert">{tString(errorKey)}</p>{/if}
+        {/if}
+        {#if player.failed}
+            <p class="notice" role="alert">{tString('multiRename.tags.play.failed')}</p>
+        {/if}
+        {#if playerError !== null}
+            <p class="notice" role="alert">{tString(playerError)}</p>
         {/if}
         {#if selectionGone}
             <p class="notice" role="status">{tString('multiRename.tags.selectionGone')}</p>
@@ -159,7 +205,12 @@
                     selected={selection.selected}
                     onToggle={(path: string) => { selectionGone = false; selection.toggle(path) }}
                     onToggleAll={(on: boolean) => { selectionGone = false; selection.setAll(allPaths, on) }}
+                    playing={player.playing}
+                    onPlay={(path: string) => void player.toggle(path)}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
+                <div class="player">
+                    <Button size="mini" onclick={() => void openInPlayer()}>{tString('multiRename.tags.play.openInPlayer')}</Button>
+                </div>
             </div>
             <aside class="side">
                 <CoverPanel
@@ -202,6 +253,11 @@
         min-width: 0;
         min-height: 0;
         overflow: auto;
+    }
+
+    .player {
+        display: flex;
+        gap: var(--spacing-xs);
     }
 
     .side {

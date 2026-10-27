@@ -1840,5 +1840,39 @@
   "multiRename.tags.numbering.cancel": "Cancel",
   "@multiRename.tags.numbering.cancel": {
     "description": "Button that closes the auto-numbering dialog without numbering anything."
+  },
+  "multiRename.tags.col.play": "Play",
+  "@multiRename.tags.col.play": {
+    "description": "Column header (read only by screen readers) above the play buttons in the track list of the Tags tab of Multi-Rename."
+  },
+  "multiRename.tags.play.play": "Play {fileName}",
+  "@multiRename.tags.play.play": {
+    "description": "Accessible name and tooltip of the play button at the end of a track row in the Tags tab of Multi-Rename. It plays the track so you can hear which one you are naming.",
+    "placeholders": {
+      "fileName": "the file name of the track, like 01.mp3"
+    }
+  },
+  "multiRename.tags.play.stop": "Stop {fileName}",
+  "@multiRename.tags.play.stop": {
+    "description": "Accessible name and tooltip of the play button of a track that is playing in the Tags tab of Multi-Rename. It stops the track.",
+    "placeholders": {
+      "fileName": "the file name of the track, like 01.mp3"
+    }
+  },
+  "multiRename.tags.play.failed": "Couldn’t play that track.",
+  "@multiRename.tags.play.failed": {
+    "description": "Notice in the Tags tab of Multi-Rename when a track could not be played: the file is gone, unreadable, or its format can't be played here."
+  },
+  "multiRename.tags.play.openInPlayer": "Open in foobar2000",
+  "@multiRename.tags.play.openInPlayer": {
+    "description": "Button in the Tags tab of Multi-Rename. It opens the checked tracks (or all of them when none is checked) in the foobar2000 music player when it is installed, otherwise in each file's default app."
+  },
+  "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
+  "@multiRename.tags.play.playerUnavailable": {
+    "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 found neither foobar2000 nor any other app that could open the tracks."
+  },
+  "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
+  "@multiRename.tags.play.openFailed": {
+    "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 failed for a reason other than a missing player, for example a track that is no longer in the list."
   }
 }
