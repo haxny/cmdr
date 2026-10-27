@@ -299,6 +299,10 @@
   "@ai.cloud.effort.max": {
     "sourceHash": "a1a5936"
   },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr gebruikt een eigen model ({model}), dus dit stelt de inspanning van dat model in.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "ed98085"
+  },
   "ai.cloud.effort.levelsUnknown": "Deze service geeft niet aan welke inspanningsniveaus dit model aankan, dus de service beslist zelf.",
   "@ai.cloud.effort.levelsUnknown": {
     "sourceHash": "7bb5384"

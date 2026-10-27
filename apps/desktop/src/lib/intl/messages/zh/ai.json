@@ -299,6 +299,10 @@
   "@ai.cloud.effort.max": {
     "sourceHash": "a1a5936"
   },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr 使用它自己的模型（{model}），所以这里设置的是该模型的思考强度。",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "ed98085"
+  },
   "ai.cloud.effort.levelsUnknown": "这个服务没有说明此模型支持哪些思考强度，所以由服务自行决定。",
   "@ai.cloud.effort.levelsUnknown": {
     "sourceHash": "7bb5384"

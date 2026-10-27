@@ -299,6 +299,10 @@
   "@ai.cloud.effort.max": {
     "sourceHash": "a1a5936"
   },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr использует собственную модель ({model}), поэтому здесь задается глубина размышлений этой модели.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "ed98085"
+  },
   "ai.cloud.effort.levelsUnknown": "Этот сервис не сообщает, какие уровни глубины размышлений поддерживает эта модель, поэтому решает сам сервис.",
   "@ai.cloud.effort.levelsUnknown": {
     "sourceHash": "7bb5384"

@@ -299,6 +299,10 @@
   "@ai.cloud.effort.max": {
     "sourceHash": "a1a5936"
   },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr dùng mô hình riêng ({model}), nên mục này đặt mức nỗ lực cho mô hình đó.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "ed98085"
+  },
   "ai.cloud.effort.levelsUnknown": "Dịch vụ này không cho biết mô hình này nhận những mức nỗ lực nào, nên dịch vụ sẽ tự quyết định.",
   "@ai.cloud.effort.levelsUnknown": {
     "sourceHash": "7bb5384"
