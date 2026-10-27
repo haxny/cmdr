@@ -11,7 +11,13 @@ import type { AiEffortOptions, AiModelLimits, ManagedAiRefusal, SettingLock } fr
 
 // A model known not to reason: no Effort picker. Hoisted with the stubs that use it.
 const { NO_EFFORT } = vi.hoisted(() => ({
-  NO_EFFORT: { reasons: false, levels: [], canTurnOff: false, recommended: null, source: null } as AiEffortOptions,
+  NO_EFFORT: {
+    reasons: false,
+    levels: [],
+    canTurnOff: false,
+    recommended: null,
+    source: null,
+  } satisfies AiEffortOptions,
 }))
 
 const stubs = vi.hoisted(() => ({
@@ -23,7 +29,12 @@ const stubs = vi.hoisted(() => ({
   managedConsent: null as ManagedAiRefusal | null,
   refusedUrls: new Set<string>(),
   localAiSupported: true,
-  modelLimits: { contextWindowTokens: null, maxOutputTokens: null, source: null, effort: NO_EFFORT } as AiModelLimits,
+  modelLimits: {
+    contextWindowTokens: null,
+    maxOutputTokens: null,
+    source: null,
+    effort: NO_EFFORT,
+  } satisfies AiModelLimits,
 }))
 
 vi.mock('#lib/settings/index.js', async (importOriginal) => {

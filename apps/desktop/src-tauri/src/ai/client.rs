@@ -399,7 +399,7 @@ impl Display for AiError {
 ///
 /// `options` are the caller-supplied generation knobs, fixed up per adapter by
 /// [`adjust_for_model`]: reasoning-class models lose `temperature`/`top_p` and gain
-/// [`ReasoningEffort::Low`] (see [`is_openai_chat_reasoning_model`]); Anthropic keeps
+/// `ReasoningEffort::Low` (see `routing::is_openai_chat_reasoning_model`); Anthropic keeps
 /// `temperature` but loses `top_p`, which it rejects alongside it.
 pub async fn chat_completion(
     backend: &AiBackend,

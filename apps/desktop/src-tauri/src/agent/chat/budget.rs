@@ -220,7 +220,7 @@ pub fn memory_slice_bytes(prompt_tokens: usize) -> usize {
 
 /// One family's context window, matched by model-id prefix. The FIRST matching row wins, so a
 /// more specific id sits above the family it shares a stem with. The budget is DERIVED from
-/// the window ([`budget_for_window`]) rather than stored beside it, so a family can't carry a
+/// the window ([`budget_for`]) rather than stored beside it, so a family can't carry a
 /// budget its window couldn't hold.
 struct ModelFamily {
     prefix: &'static str,
@@ -590,7 +590,7 @@ fn normalized_model_id(model: &str) -> String {
 /// The assembled-prompt token budget for one slot, and where the number came from.
 ///
 /// The user's explicit choice wins outright, even above the window we think the model has
-/// (warned, never blocked). "Automatic" spends the whole known window ([`budget_for_window`]):
+/// (warned, never blocked). "Automatic" spends the whole known window ([`budget_for`]):
 /// the local server's for a local model, the provider's report or the family table for a cloud
 /// one, and falls back to [`DEFAULT_PROMPT_TOKEN_BUDGET`] for a model nothing here recognizes.
 pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget, BudgetRefusal> {

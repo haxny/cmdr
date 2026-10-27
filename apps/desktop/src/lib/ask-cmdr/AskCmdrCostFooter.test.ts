@@ -168,7 +168,7 @@ describe('AskCmdrCostFooter', () => {
     const target = mountFooter()
     flushSync()
 
-    expect(target.querySelector('.cost-footer')?.textContent?.trim()).toBe('0 tokens')
+    expect(target.querySelector('.cost-footer')?.textContent.trim()).toBe('0 tokens')
     expect(target.querySelector('[role="meter"]')).toBeNull()
     target.remove()
   })

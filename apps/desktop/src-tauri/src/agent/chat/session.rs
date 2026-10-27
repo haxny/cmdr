@@ -337,7 +337,7 @@ pub fn reported_window_tokens(app: &AppHandle, provider: ProviderTag, model: &st
 }
 
 /// How hard the slot's model thinks and how much room its reply gets, gathered here and decided
-/// in the pure [`effort`](super::effort) module: the user's choice for this provider and model
+/// in the pure [`effort`] module: the user's choice for this provider and model
 /// (`ai.reasoningEfforts`, read fresh per send), and what the provider reports about the
 /// model's reasoning and longest reply. A choice the model can't take is logged with what it
 /// became. A local model and the E2E fake get the default: the provider decides.

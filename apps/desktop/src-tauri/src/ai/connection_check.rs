@@ -217,7 +217,7 @@ pub(super) struct ListedModels {
     pub(super) capabilities: super::model_capabilities::ModelCatalog,
 }
 
-/// The request half of [`probe_ai_endpoint`], shared with the capability refresh
+/// The request half of [`check_ai_connection`], shared with the capability refresh
 /// (`model_capabilities`): the key check and the model list, or the typed problem. The caller
 /// has already asked the policy and consent; this guards the key against plaintext.
 pub(super) async fn list_models(
