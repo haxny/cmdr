@@ -723,3 +723,68 @@ fn a_one_track_scope_keeps_its_number() {
     close(&id);
     close_rename(&id);
 }
+
+/// A damaged file is still part of the book: one readable track of two keeps its number.
+#[test]
+fn an_unreadable_file_still_counts_as_part_of_the_book() {
+    let (dir, listing) = folder(
+        "tag-editor-book-unreadable",
+        "root",
+        &[("01.mp3", mp3_frames()), ("02.flac", vec![0x42; 64])],
+    );
+    tag_file(&dir, "01.mp3", &[(TagField::Track, "4")]);
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let id = session.session_id;
+    open(&id, false).expect("opens");
+    let view = tool(&id, TagTool::Renumber { start: 1 }, None).expect("renumbers");
+    assert_eq!(view.tracks[0].track.as_deref(), Some("01"));
+    let wizard = TagTool::AutoNumber(cmdr_tags::NumberOptions {
+        track_start: 1,
+        track_total: false,
+        track_pad: true,
+        disc: None,
+    });
+    let view = tool(&id, wizard, None).expect("numbers");
+    assert_eq!(view.tracks[0].track.as_deref(), Some("01"));
+    close(&id);
+    close_rename(&id);
+}
+
+/// A total without its number won't be written, so the view and the change list don't show it.
+#[test]
+fn a_total_without_its_number_is_dropped_in_store() {
+    let (dir, _listing, id) = album("tag-editor-orphan-total");
+    open(&id, false).expect("opens");
+    let edits = vec![
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::TrackTotal,
+            values: vec!["9".to_string()],
+        },
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::DiscTotal,
+            values: vec!["2".to_string()],
+        },
+    ];
+    let view = edit(&id, edits).expect("edits");
+    assert!(!view.dirty, "nothing is left to write");
+    assert!(changes(&id, ContentKind::Audiobook).expect("changes").is_empty());
+    // With the number, the total stays.
+    let edits = vec![
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::Track,
+            values: vec!["1".to_string()],
+        },
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::TrackTotal,
+            values: vec!["9".to_string()],
+        },
+    ];
+    let view = edit(&id, edits).expect("edits");
+    assert!(view.dirty);
+    close(&id);
+    close_rename(&id);
+}

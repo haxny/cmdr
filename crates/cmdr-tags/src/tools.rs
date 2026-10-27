@@ -135,6 +135,11 @@ pub fn from_file_name(files: &[FileTags], ctx: &ToolContext, pattern: &NamePatte
                 .unwrap_or_default();
             let mut set = Vec::new();
             for (field, value) in pairs {
+                // A one-file book has no track number, however the name spells it.
+                let skipped = matches!(field, TagField::Track | TagField::TrackTotal);
+                if skipped && ctx.single_file_book(files.len()) {
+                    continue;
+                }
                 if !set.contains(&field) {
                     set.push(field);
                     out.fields.insert(field, vec![value]);

@@ -386,14 +386,33 @@ fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
 /// `tags` as the file at `path` will hold them (an M4A track `01` is `1`); as given when the
 /// name has no supported format.
 fn as_format_holds(path: &Path, tags: FileTags) -> FileTags {
-    match format_of(&file_name_of(path)) {
+    let held = match format_of(&file_name_of(path)) {
         Some(format) => normalize_for(format, &tags),
         None => tags,
+    };
+    drop_orphan_totals(held)
+}
+
+/// `tags` without a TrackTotal or DiscTotal whose Track or Disc number is empty.
+fn drop_orphan_totals(mut tags: FileTags) -> FileTags {
+    for (total, number) in [
+        (TagField::TrackTotal, TagField::Track),
+        (TagField::DiscTotal, TagField::Disc),
+    ] {
+        let numbered = tags
+            .fields
+            .get(&number)
+            .is_some_and(|values| values.iter().any(|value| !value.trim().is_empty()));
+        if !numbered {
+            tags.fields.remove(&total);
+        }
     }
+    tags
 }
 
 /// Stores `edited` (parallel to `paths`) as the files' edited tags, as each file's format holds
-/// them, so every edit path (edits, tools) shows what a write will leave.
+/// them, so every edit path (edits, tools) shows what a write will leave. A total whose number is
+/// absent is dropped the same way: it wouldn't be written.
 fn store(session: &mut TagSession, paths: Vec<PathBuf>, edited: Vec<FileTags>) {
     for (path, tags) in paths.into_iter().zip(edited) {
         if let Some(Entry::Loaded(loaded)) = session.by_path.get_mut(&path) {
@@ -457,7 +476,7 @@ pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Resu
 
 /// Replaces the tags of the readable tracks at `scope` (every readable track for `None`, in session
 /// order) with what `f` returns for them, parallel to its input. `f` gets the scoped paths, their
-/// edited tags, and the book's size (the readable tracks of the whole session). The others keep
+/// edited tags, and the book's size (every audio track the session lists, readable or not). The others keep
 /// their tags; an unknown path refuses the run (`UnknownTrack`), an empty scope changes nothing
 /// (`f` isn't called), and an error from `f` leaves everything as it was.
 pub(super) fn edit_scoped(
@@ -469,11 +488,8 @@ pub(super) fn edit_scoped(
         require_editable(layout)?;
         let (paths, before) = scoped(layout, session, scope.as_deref())?;
         if !paths.is_empty() {
-            let book = session
-                .by_path
-                .values()
-                .filter(|entry| entry.loaded().is_some())
-                .count();
+            // Every audio track the session lists: a damaged file is still part of the book.
+            let book = layout.tracks.len();
             let after = f(&paths, &before, book)?;
             store(session, paths, after);
         }

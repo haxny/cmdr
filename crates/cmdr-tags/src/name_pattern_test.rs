@@ -285,3 +285,40 @@ fn from_file_name_duplicate_fields_follow_the_multi_rule() {
     let out = apply_tool_in(&files, &ctx, &artists);
     assert_eq!(out[1].fields[&TagField::Artist], vec!["A".to_string(), "B".to_string()]);
 }
+
+#[test]
+fn from_file_name_skips_track_on_a_one_file_book() {
+    let files = [tagged("old")];
+    let ctx = ToolContext {
+        folders: vec![],
+        stems: vec!["03 - New".to_string()],
+        session_files: 1,
+    };
+    let tool_track = TagTool::FromFileName {
+        pattern: format("%track% - %title%"),
+    };
+    let out = apply_tool_in(&files, &ctx, &tool_track);
+    assert_eq!(out[0].fields[&TagField::Title], vec!["New".to_string()]);
+    assert!(
+        !out[0].fields.contains_key(&TagField::Track),
+        "a one-file book has no track"
+    );
+    // A bigger book keeps it.
+    let book = ToolContext {
+        session_files: 4,
+        ..ctx.clone()
+    };
+    let out = apply_tool_in(&files, &book, &tool_track);
+    assert_eq!(out[0].fields[&TagField::Track], vec!["03".to_string()]);
+    // TrackTotal is skipped too.
+    let ctx2 = ToolContext {
+        stems: vec!["03 of 09 - New".to_string()],
+        ..ctx
+    };
+    let tool = TagTool::FromFileName {
+        pattern: format("%track% of %tracktotal% - %title%"),
+    };
+    let out = apply_tool_in(&files, &ctx2, &tool);
+    assert!(!out[0].fields.contains_key(&TagField::TrackTotal));
+    assert!(!out[0].fields.contains_key(&TagField::Track));
+}
