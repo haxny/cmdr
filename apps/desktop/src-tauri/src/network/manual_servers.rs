@@ -2,7 +2,8 @@
 //!
 //! Handles user-added SMB servers: address parsing, TCP reachability checks
 //! (`manual_servers_reachability.rs`), persistence to `manual-servers.json`, and
-//! injection into the discovery state.
+//! injection into the discovery state, which a host saved without contact skips
+//! until its first mount ([`save_manual_server_without_contact`]).
 
 use crate::network::server_identity::SmbServer;
 use crate::network::{HostSource, NetworkHost, on_host_found, on_host_lost};
@@ -97,6 +98,14 @@ pub struct ManualServerEntry {
     /// as guest (`typed_username`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
+    /// Saved without contacting it ([`save_manual_server_without_contact`], an
+    /// approved Ask Cmdr suggestion), and no mount has gone through since. Such a
+    /// host stays out of the discovery list, so nothing lists its shares on Cmdr's
+    /// own initiative, until the user first connects it ([`note_first_connect`]).
+    /// ❗ Absent reads `false`: every entry saved before the field is an ordinary
+    /// typed host.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub awaiting_first_connect: bool,
 }
 
 /// What an add or an edit sets on a host besides its address.
@@ -468,6 +477,10 @@ fn read_store<R: Runtime>(app: &AppHandle<R>) -> ManualServersStore {
 /// ❗ Re-adding a host keeps the name and account it had when the new add brings none: adding
 /// an address someone saved earlier is an ordinary move, and it must not unname
 /// their server behind their back. Renaming is [`name_server_entry_at_path`]'s.
+///
+/// ❗ A host already saved as an ordinary one stays ordinary: a contact-free save of it
+/// can't take it out of the discovery list. A user's add of a waiting host makes it
+/// ordinary.
 fn add_server_entry_to_path(path: &Path, mut entry: ManualServerEntry) {
     let _guard = get_store_lock().lock().unwrap_or_else(|e| e.into_inner());
     let mut store = read_store_from_path(path);
@@ -478,6 +491,7 @@ fn add_server_entry_to_path(path: &Path, mut entry: ManualServerEntry) {
         if entry.username.is_none() {
             entry.username = existing.username.clone();
         }
+        entry.awaiting_first_connect &= existing.awaiting_first_connect;
         *existing = entry;
     } else {
         store.servers.push(entry);
@@ -500,14 +514,37 @@ pub async fn add_manual_server<R: Runtime>(
     app_handle: &AppHandle<R>,
 ) -> Result<ManualConnectResult, AddServerError> {
     let parsed = checked_parse(input, reachability).await?;
+    let saved = save_parsed_at(
+        get_store_path(app_handle).as_deref(),
+        parsed,
+        details,
+        Contact::Ordinary,
+    );
+    on_host_found(saved.host.clone(), app_handle);
+    Ok(saved)
+}
 
-    // Build the network host
+/// Whether a save may put its host in the discovery list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Contact {
+    /// A host the user typed: it joins the list now.
+    Ordinary,
+    /// Saved without contact: it joins once the user first connects it.
+    AwaitingFirstConnect,
+}
+
+/// The write both saves share: the entry at `path` (none written without one), the
+/// share the address named, the log line, and the republish. Answers the host.
+fn save_parsed_at(
+    path: Option<&Path>,
+    parsed: ParsedAddress,
+    details: &HostEdit,
+    contact: Contact,
+) -> ManualConnectResult {
     let host = create_network_host(&parsed.host, parsed.port);
-
     let username = typed_account(details.username.as_deref()).or_else(|| parsed.username.clone());
 
-    // Persist to disk
-    if let Some(path) = get_store_path(app_handle) {
+    if let Some(path) = path {
         let entry = ManualServerEntry {
             id: host.id.clone(),
             display_name: details.name.trim().to_string(),
@@ -515,8 +552,9 @@ pub async fn add_manual_server<R: Runtime>(
             port: parsed.port,
             added_at: chrono::Utc::now().to_rfc3339(),
             username: username.clone(),
+            awaiting_first_connect: contact == Contact::AwaitingFirstConnect,
         };
-        add_server_entry_to_path(&path, entry);
+        add_server_entry_to_path(path, entry);
     }
 
     // A share the address named (`smb://sven@host/Container`) is the place the
@@ -529,7 +567,7 @@ pub async fn add_manual_server<R: Runtime>(
     // The address, never `host.name` (a `host:port` display form) or the typed display name:
     // `Loaded manual server` logs the same address, so one server reads as one token.
     info!(
-        "Added manual server: host={:?}, port={}, serverId={:?}",
+        "Added manual server: host={:?}, port={}, serverId={:?}, contact={contact:?}",
         LogPrivate::host(&parsed.host),
         parsed.port,
         host.id
@@ -538,13 +576,10 @@ pub async fn add_manual_server<R: Runtime>(
     // volume did: the hub re-reads them on `volumes-changed`.
     crate::volume_broadcast::emit_volumes_changed();
 
-    // Inject into discovery state
-    on_host_found(host.clone(), app_handle);
-
-    Ok(ManualConnectResult {
+    ManualConnectResult {
         host,
         share_path: parsed.share_path,
-    })
+    }
 }
 
 /// Names the host `server_id` names and sets its account, protected by
@@ -585,6 +620,7 @@ fn name_server_entry_at_path(
             port,
             added_at: chrono::Utc::now().to_rfc3339(),
             username: typed_account(edit.username.as_deref()),
+            awaiting_first_connect: false,
         };
         store.servers.push(entry.clone());
         entry
@@ -690,19 +726,22 @@ pub fn remove_manual_server<R: Runtime>(server_id: &str, app_handle: &AppHandle<
     Ok(())
 }
 
-/// Loads persisted manual servers and injects them into discovery state.
+/// Loads persisted manual servers and injects them into discovery state, except a
+/// host saved without contact that nobody connected yet ([`discoverable`]).
 ///
-/// Called at startup, before the frontend subscribes to events.
+/// Called at startup, before the frontend subscribes to events, and on every
+/// network action (`note_network_action`).
 pub fn load_manual_servers<R: Runtime>(app_handle: &AppHandle<R>) {
     let store = read_store(app_handle);
+    let entries: Vec<&ManualServerEntry> = discoverable(&store.servers).collect();
 
-    if store.servers.is_empty() {
+    if entries.is_empty() {
         return;
     }
 
-    info!("Loading {} persisted manual server(s)", store.servers.len());
+    info!("Loading {} persisted manual server(s)", entries.len());
 
-    for entry in &store.servers {
+    for entry in entries {
         let host = create_network_host(&entry.address, entry.port);
         on_host_found(host, app_handle);
         debug!(
@@ -721,6 +760,16 @@ pub use account::set_account;
 #[path = "manual_servers_relocate.rs"]
 mod relocate;
 pub use relocate::relocate_manual_server;
+
+#[path = "manual_servers_contact.rs"]
+mod contact;
+use contact::discoverable;
+pub use contact::note_first_connect;
+#[expect(
+    unused_imports,
+    reason = "approving an Ask Cmdr server proposal calls it; that approval is next in #749"
+)]
+pub use contact::save_manual_server_without_contact;
 
 #[path = "manual_servers_reachability.rs"]
 mod reachability;

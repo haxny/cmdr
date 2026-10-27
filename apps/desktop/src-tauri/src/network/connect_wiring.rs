@@ -78,6 +78,8 @@ impl AttemptTable {
         places: Vec<String>,
         set_out: DialTicket,
     ) -> (CancellationToken, AttemptGuard) {
+        #[cfg(test)]
+        DIALS_FILED.with(|filed| filed.set(filed.get() + 1));
         let cancel = CancellationToken::new();
         if CALLED_OFF_EARLY.lock_ignore_poison().contains(attempt_id) {
             cancel.cancel();
@@ -154,6 +156,20 @@ impl AttemptTable {
     pub fn is_filed(&self, attempt_id: &str) -> bool {
         self.entries.lock_ignore_poison().contains_key(attempt_id)
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    static DIALS_FILED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// How many dials this thread filed in any backend's table, the seam a test reads
+/// to prove a save dialed nothing: every connect wiring's dial (SFTP, WebDAV, S3,
+/// NFS, a saved SMB share) files one before it opens a socket. Per thread, so a
+/// `#[tokio::test]` (current-thread) counts only its own.
+#[cfg(test)]
+pub fn dials_filed() -> u64 {
+    DIALS_FILED.with(std::cell::Cell::get)
 }
 
 /// Attempt ids called off before their dial filed them, across every table: a

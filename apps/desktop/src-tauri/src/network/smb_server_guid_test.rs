@@ -52,6 +52,33 @@ fn a_zero_guid_is_probed_like_a_missing_one() {
     assert_eq!(rows_to_probe(&rows).len(), 1);
 }
 
+/// ❗ **The probe never dials a host nobody connected.** A share an add named (an
+/// approved Ask Cmdr suggestion, or `smb://host/share` in Add server) has no mount
+/// behind it yet: it's never a target, and it doesn't make a connected twin one
+/// either, since its own GUID couldn't be learned to pair them anyway.
+#[test]
+fn a_share_no_mount_went_through_is_never_probed_nor_counted_as_a_twin() {
+    let named = KnownNetworkShare {
+        address: None,
+        volume_id: None,
+        mount_path: None,
+        pinned: false,
+        ..row("nas-backup.example", "naspi", None)
+    };
+    let mounted = row("192.168.1.111", "naspi", None);
+
+    assert!(rows_to_probe(std::slice::from_ref(&named)).is_empty());
+    assert!(
+        rows_to_probe(&[named.clone(), mounted.clone()]).is_empty(),
+        "the mounted row has no connected twin"
+    );
+    let picked: Vec<_> = rows_to_probe(&[named, mounted, row("100.127.48.122", "naspi", Some(BOX))])
+        .iter()
+        .map(|r| r.address.clone())
+        .collect();
+    assert_eq!(picked, [Some("192.168.1.111".to_string())]);
+}
+
 /// A direct session coming up records the GUID its NEGOTIATE answered, read off
 /// the session's diagnostics with no I/O. A guest session only fills, and a share
 /// with no saved row keeps it in memory for the row a mount saves later.

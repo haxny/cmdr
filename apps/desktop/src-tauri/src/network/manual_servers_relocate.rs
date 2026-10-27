@@ -44,6 +44,7 @@ pub(super) fn relocate_at_path(
             |at| store.servers[at].added_at.clone(),
         ),
         username: typed_account(edit.username.as_deref()),
+        awaiting_first_connect: false,
     };
     match existing {
         Some(at) => store.servers[at] = entry.clone(),

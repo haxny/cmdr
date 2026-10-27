@@ -63,7 +63,8 @@ pub struct MountedShare<'a> {
 /// can list it, and the next mount fills the id in.
 ///
 /// ❗ The first mount of a share whose server MOVED completes the move: its id is the
-/// one favorites and tabs re-key to (`server_move::smb::complete`).
+/// one favorites and tabs re-key to (`server_move::smb::complete`). It is also the
+/// first connect of a host saved without contact (`manual_servers::note_first_connect`).
 pub async fn remember_mount(mounted: MountedShare<'_>) -> Option<String> {
     let volume_id = smb_upgrade::mounted_volume_id(mounted.mount_path).await;
     let completed = known_shares::remember_share(KnownNetworkShare {
@@ -91,6 +92,11 @@ pub async fn remember_mount(mounted: MountedShare<'_>) -> Option<String> {
     if let Some(completed) = completed {
         crate::server_move::smb::complete(completed).await;
     }
+    // A host saved without contact is connected now, so it may join the discovery list.
+    crate::network::manual_servers::note_first_connect(&crate::network::server_identity::SmbServer::new(
+        mounted.address,
+        mounted.port,
+    ));
     if let Some(id) = &volume_id {
         crate::network::smb_server_guid::adopt_live_guid(id);
     }
@@ -123,6 +129,9 @@ pub async fn remember_mount_since(mounted: MountedShare<'_>, set_out: DialTicket
 /// ❗ Republishes the lists: the hub re-reads the saved stores on `volumes-changed`,
 /// and an Add that changed only a share's account changed no volume, so the row
 /// kept its old account until the pane left the hub.
+///
+/// ❗ Contacts nothing: no mount went through, so the GUID probe skips the row
+/// (`smb_server_guid::rows_to_probe`) until one does.
 pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>) {
     known_shares::remember_share(KnownNetworkShare {
         server_name: host_name.to_string(),
@@ -140,7 +149,6 @@ pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>
         server_guid: None,
         server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
-    crate::network::smb_server_guid::schedule_probe(Duration::ZERO);
     crate::volume_broadcast::emit_volumes_changed();
 }
 

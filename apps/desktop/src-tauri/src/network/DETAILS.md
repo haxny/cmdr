@@ -18,7 +18,7 @@ of the app build.
 
 - **Discovery**: `mdns_discovery.rs`: Pure Rust mDNS using `mdns-sd` crate. Cross-platform. `discovery_gate.rs` decides
   when it browses and `discovery_cache.rs` holds what it found (§ "Discovery runs only while something needs it").
-- **Manual servers**: `manual_servers.rs`: User-added servers via the "Add server" sheet. Parses addresses, checks TCP reachability (`manual_servers_reachability.rs`), persists to `manual-servers.json`, and injects synthetic `NetworkHost` entries with `source: Manual` into the discovery cache as pinned hosts. Loaded at startup. An entry's `displayName` is a name a person typed, read through `label()` / `is_named()` (§ "A manual server's name").
+- **Manual servers**: `manual_servers.rs`: User-added servers via the "Add server" sheet. Parses addresses, checks TCP reachability (`manual_servers_reachability.rs`), persists to `manual-servers.json`, and injects synthetic `NetworkHost` entries with `source: Manual` into the discovery cache as pinned hosts, except one saved without contact until its first mount (§ "A manual server saved without contact"). Loaded at startup. An entry's `displayName` is a name a person typed, read through `label()` / `is_named()` (§ "A manual server's name").
 - **E2E testing**: `virtual_smb_hosts.rs`: Injects 14 synthetic `NetworkHost` entries for smb2's consumer Docker containers. Hosts come from `SMB_E2E_{SVC}_HOST` (default `localhost`). Ports come from `SMB_E2E_{SVC}_PORT` when set, else `smb2::testing::*_port()` (which reads `SMB_CONSUMER_*_PORT`, default 10480+). `SMB_E2E_*_PORT` is the test-suite contract (same var the frontend fixture reads), so backend and fixture agree on which port to connect to. This matters inside Docker where containers listen on `:445` internally but `SMB_CONSUMER_*_PORT` would point at the host-side mapping. Gated behind `smb-e2e` Cargo feature. Never enabled in production.
 - **Share listing**: Split across multiple files:
   - `smb_client.rs`: Top-level share-listing entry point; orchestrates guest -> keychain -> prompt auth flow; tries smb2 first, falls back to smbutil (macOS only)
@@ -309,6 +309,23 @@ only for a named entry, so a Bonjour name still outranks an address nobody chose
 ### TCP reachability check runs in the dialog, before the host is added
 
 `add_manual_server` does a TCP connect to `host:port` and fails up front if the port is closed, so the dialog shows the error inline and the host is never added on an unreachable address (with a Local Network hint when the kernel refused the route to a LAN address: § "This Mac refusing the route"). Discovered hosts can sit in a "Resolving…" state because mDNS guarantees they exist; a typed address has no such guarantee, so without the up-front check a typo or dead host would clutter the list with an entry that never works. The check proves only that the port is open, not that SMB is healthy: protocol/auth failures still surface later through the normal share-listing pipeline once the host is in the list.
+
+### A manual server saved without contact
+
+`save_manual_server_without_contact` (`manual_servers_contact.rs`) is the SMB save behind an approved Ask Cmdr
+suggestion: the entry and the share its address names, and NO network contact. No reachability check; no
+`on_host_found`, since a host in the discovery list is one the servers view may list shares of (signing in, as a guest
+where it can) while it's on screen; and no GUID probe, which skips a share no mount went through (§ "Which server a share
+SMB share is on"). The entry carries `awaitingFirstConnect: true` (absent reads `false`), so `load_manual_servers` (at
+launch and on every network action) leaves it out of the list too.
+
+- **Its first mount makes it ordinary** (`note_first_connect`, from `smb_saved_shares::remember_mount`, every Cmdr
+  mount): the flag clears, and the next load lists it. The hub needs no discovery entry to show or open it: a saved host
+  mDNS isn't seeing is drawn from the saved listing (`servers-hub-rows.ts::savedHostFor`).
+- **A contact-free save never hides an ordinary host**, and the user's own add of a waiting host makes it ordinary: a
+  re-save keeps the flag only while both saves say so (`add_server_entry_to_path`).
+- **Decision: the add sheet's "Add anyway" keeps joining the list** (`add_manual_server` with `Reachability::Skip`):
+  the person typed that address and asked for it. Whether it should save contact-free too is David's call (#749).
 
 ### Mount path disambiguation for same-name shares
 
@@ -775,8 +792,11 @@ an `authenticated` one on BOTH rows lets one id answer for the other.
   upgrade can land before `remember_mount`'s row does.
 - **The probe fills the rest**: a NEGOTIATE-only dial of the saved address (`cmdr_smb::connection::probe_server_guid`,
   no session, no credentials, 3 s per step), only for rows with no GUID whose share name another row shares, one pass
-  at a time, 20 s after startup and whenever a share row is saved. ❗ It only ever FILLS: whatever answers on a saved
-  LAN IP from a hotel network isn't proven to be the share's server, so it can't replace a recorded GUID.
+  at a time, 20 s after startup and whenever a mount saves a share row. ❗ It only ever FILLS: whatever answers on a
+  saved LAN IP from a hotel network isn't proven to be the share's server, so it can't replace a recorded GUID.
+- ❗ **Only rows a mount went through count** (`volume_id` set), as a target or as a twin (`rows_to_probe`): a share an
+  add named (`smb://host/share`, or an approved Ask Cmdr suggestion) is on a host nobody connected, and Cmdr doesn't
+  dial one on its own initiative. Its first mount makes it count (`smb_server_guid_test.rs`).
 - ❌ **Never from a tool handler**: a model's read must not dial a host. Nothing under `agent/`, `mcp/`, or `location/`
   names the recorder or the probe (`smb_server_guid_test.rs::no_tool_handler_reaches_the_probe`).
 - The Docker SMB fixtures answer distinct GUIDs per container (verified on smb2 0.35.0 with the `guest` and `auth`

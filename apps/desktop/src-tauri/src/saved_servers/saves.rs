@@ -165,3 +165,7 @@ fn entry_of(server: ServerTarget) -> Option<Entry> {
     };
     Some(entry)
 }
+
+#[cfg(test)]
+#[path = "saves_test.rs"]
+mod saves_test;

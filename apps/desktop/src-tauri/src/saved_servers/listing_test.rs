@@ -17,6 +17,7 @@ fn manual_entry(address: &str) -> ManualServerEntry {
         port: 445,
         added_at: "2026-09-03T00:00:00Z".to_string(),
         username: None,
+        awaiting_first_connect: false,
     }
 }
 
@@ -266,6 +267,7 @@ fn manual_entry_on_port(address: &str, port: u16, name: &str) -> ManualServerEnt
         port,
         added_at: "2026-09-03T00:00:00Z".to_string(),
         username: None,
+        awaiting_first_connect: false,
     }
 }
 

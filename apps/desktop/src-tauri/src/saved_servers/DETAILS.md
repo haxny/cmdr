@@ -45,3 +45,16 @@
   server (`server_move.rs`). An S3 place or NFS export naming another place answers `AccountChanged`, since its address
   IS the place. A place nobody saved any more answers `Unreachable`, ❌ never a quiet re-save.
 - A connected place's edit applies live over its session (`network/live_server_edit.rs`).
+
+## Saving without contact
+
+An approved Ask Cmdr suggestion to add a server saves it the way "Add anyway" does, and contacts nothing until the user
+first connects it.
+
+- **SFTP, WebDAV, S3, NFS**: `save_target` already contacts nothing for a place that isn't connected: each wiring's
+  `save_without_connecting` writes the store, and only a CONNECTED place's edit talks to the server, over the session
+  the user opened. Pinned by `saves_test.rs` through `network::connect_wiring::dials_filed`, the per-thread count of
+  dials any backend filed.
+- **SMB**: the add core is `network::manual_servers` (below `commands` already), and its contact-free save is
+  `save_manual_server_without_contact`: the host and the share its address names, out of the discovery list and the
+  GUID probe until its first mount (`network/DETAILS.md` § "A manual server saved without contact").

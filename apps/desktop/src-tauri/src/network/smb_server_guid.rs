@@ -12,8 +12,8 @@
 //!   adopts it ([`adopt_live_guid`]).
 //! - **The background probe** ([`schedule_probe`]): a NEGOTIATE-only dial of a
 //!   saved address, no credentials, for rows saved before Cmdr kept GUIDs. Runs
-//!   only when two or more share rows share a share name and one lacks a GUID,
-//!   one pass at a time, each dial bounded by [`PROBE_TIMEOUT`], and only ever
+//!   only when two or more share rows a mount went through share a share name
+//!   and one lacks a GUID (never a host nobody connected), one pass at a time, each dial bounded by [`PROBE_TIMEOUT`], and only ever
 //!   FILLS. ❌ Never from a tool handler: a model's read must not dial a host
 //!   (pinned by `probe_tests::no_tool_handler_reaches_the_probe`).
 
@@ -109,14 +109,21 @@ pub(crate) fn adopt_live_guid(volume_id: &str) {
 /// The saved shares a probe pass dials: rows with no GUID whose share name another
 /// share row also has, so a GUID could prove them one share. Rows already holding
 /// a GUID are never dialed: a probe can't change them anyway. Pure.
+///
+/// ❗ Only rows a mount went through (`volume_id`) count, as a target or as a twin:
+/// a share an add named (an approved Ask Cmdr suggestion included) is on a host
+/// nobody connected yet, and Cmdr doesn't dial one on its own initiative.
 pub(crate) fn rows_to_probe(rows: &[KnownNetworkShare]) -> Vec<&KnownNetworkShare> {
     let fold = known_shares::fold_name;
     let has_guid = |row: &KnownNetworkShare| row.server_guid.as_deref().and_then(ServerGuid::parse).is_some();
+    let connected = |row: &&KnownNetworkShare| row.is_share() && row.volume_id.is_some();
     rows.iter()
-        .filter(|row| row.is_share() && !has_guid(row))
+        .filter(connected)
+        .filter(|row| !has_guid(row))
         .filter(|row| {
             rows.iter()
-                .filter(|other| other.is_share() && fold(&other.share_name) == fold(&row.share_name))
+                .filter(connected)
+                .filter(|other| fold(&other.share_name) == fold(&row.share_name))
                 .count()
                 >= 2
         })
