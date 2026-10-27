@@ -164,9 +164,7 @@ impl ChatRuntime {
         let _guard = self.locks.acquire(conversation_id, &sink).await;
         let _in_flight = mark_in_flight(&conn, conversation_id);
 
-        let cmdr_md = read_cmdr_md();
-        let memory = crate::agent::memory::read_for_turn(app, prompt_budget);
-        let tools = crate::agent::tools::agent_tool_declarations();
+        let PrefixParts { cmdr_md, memory, tools } = PrefixParts::read(app, prompt_budget);
         let dispatcher = AppHandleDispatcher::new(app.clone(), conversation_id);
         let params = TurnParams {
             conversation_id,
@@ -271,6 +269,38 @@ impl ChatRuntime {
 
         Ok(recorded)
     }
+}
+
+/// The prefix parts a rail turn reads fresh from disk: the user's `CMDR.md`, the memory slice
+/// for this budget, and the tool declarations. One reader for the send and the rail's baseline
+/// gauge, so the baseline can't drift from what a call actually carries.
+struct PrefixParts {
+    cmdr_md: Option<String>,
+    memory: Option<String>,
+    tools: Vec<crate::agent::llm::types::ToolDeclaration>,
+}
+
+impl PrefixParts {
+    fn read<R: Runtime>(app: &AppHandle<R>, prompt_budget: usize) -> Self {
+        Self {
+            cmdr_md: read_cmdr_md(),
+            memory: crate::agent::memory::read_for_turn(app, prompt_budget),
+            tools: crate::agent::tools::agent_tool_declarations(),
+        }
+    }
+}
+
+/// What every rail call costs before the user has said a word, at this budget: the prefix
+/// alone (`context::prefix_tokens`), read the way a send reads it. The gauge's baseline.
+pub fn baseline_prompt_tokens<R: Runtime>(app: &AppHandle<R>, prompt_budget: usize) -> usize {
+    let parts = PrefixParts::read(app, prompt_budget);
+    let system_prompt = super::system_prompt::system_prompt();
+    context::prefix_tokens(&context::PrefixInputs {
+        system_prompt: &system_prompt,
+        cmdr_md: parts.cmdr_md.as_deref(),
+        memory: parts.memory.as_deref(),
+        tools: &parts.tools,
+    })
 }
 
 /// Mark the thread's turn as running since its last row, for a reload to tell this turn's

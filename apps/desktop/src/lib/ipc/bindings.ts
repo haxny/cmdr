@@ -3815,6 +3815,27 @@ export const commands = {
    */
   askCmdrModelWindow: () => __TAURI_INVOKE<ModelWindowView>('ask_cmdr_model_window'),
   /**
+   *  What the rail shows before anything is sent: whether a provider is set up (its warning and
+   *  the Send button's reason), and the floor every call of a new chat costs (the footer's
+   *  baseline). Off the IPC thread: the prefix reads `CMDR.md` and the memory folder from disk.
+   *  `None` only when that read panicked; the rail then keeps what it last knew.
+   */
+  askCmdrSlotStatus: () =>
+    __TAURI_INVOKE<{
+      readiness: ProviderReadiness
+      /**
+       *  The provider and model the next send would meter under, and whether that model has a
+       *  price, so a chat with nothing metered yet can say "free", "about $0", or "cost unknown"
+       *  honestly. `None` while AI is off: there is nothing to price.
+       */
+      nextCall: NextCallPricing | null
+      /**
+       *  What every call of a new chat costs at minimum. `None` when no budget resolves (AI is
+       *  off, or a local window under the floor, which the send refuses on its own).
+       */
+      baseline: BaselineUsage | null
+    } | null>('ask_cmdr_slot_status'),
+  /**
    *  Tell the wake loop its settings moved, so it re-reads them and re-arms.
    *
    *  Called from `settings-applier.ts` for each of the three `askCmdr` cadence rows. ⚠️ **Not
@@ -3925,15 +3946,6 @@ export const commands = {
    *  in; with the env vars unset it answers `None`.
    */
   getAutomatedRun: () => __TAURI_INVOKE<AutomatedRun>('get_automated_run'),
-  /**
-   *  Returns `true` when the Ask Cmdr send path is served by the deterministic
-   *  scripted fake LLM (`CMDR_E2E_ASK_CMDR_FAKE`). The composer reads this to treat
-   *  the fake as an active provider, so send isn't gated off during E2E even though
-   *  `ai.provider` is `off`. Consults the same accessor `agent::resolve_agent_llm`
-   *  uses, so the send-allowed and send-answered decisions share one source of truth.
-   *  Always compiled in; reading an unset env var is a no-op in production.
-   */
-  askCmdrFakeActive: () => __TAURI_INVOKE<boolean>('ask_cmdr_fake_active'),
   /**
    *  Returns `true` when `CMDR_FORCE_ONBOARDING` is set, regardless of value.
    *
@@ -5483,6 +5495,7 @@ export const events = {
   aiExtracting: makeEvent<AiExtracting>('ai-extracting'),
   aiInstallComplete: makeEvent<AiInstallComplete>('ai-install-complete'),
   aiInstalling: makeEvent<AiInstalling>('ai-installing'),
+  aiModelCapabilitiesChanged: makeEvent<AiModelCapabilitiesChanged>('ai-model-capabilities-changed'),
   aiServerReady: makeEvent<AiServerReady>('ai-server-ready'),
   aiStarting: makeEvent<AiStarting>('ai-starting'),
   aiVerifying: makeEvent<AiVerifying>('ai-verifying'),
@@ -5495,7 +5508,6 @@ export const events = {
   cloudAiConsentChanged: makeEvent<CloudAiConsentChanged>('cloud-ai-consent-changed'),
   dateSortMenuPick: makeEvent<DateSortMenuPick>('date-sort-menu-pick'),
   directoryDeleted: makeEvent<DirectoryDeletedEvent>('directory-deleted'),
-  aiModelCapabilitiesChanged: makeEvent<AiModelCapabilitiesChanged>('ai-model-capabilities-changed'),
   directoryDiff: makeEvent<DirectoryDiff>('directory-diff'),
   displayAccessibilityChanged: makeEvent<DisplayAccessibilityChanged>('display-accessibility-changed'),
   downloadDetected: makeEvent<DownloadDetectedEvent>('download-detected'),
@@ -5935,6 +5947,9 @@ export type AiInstallComplete = null
 
 export type AiInstalling = null
 
+// Tells the windows a catalog arrived, so Settings › AI re-reads the window it shows.
+export type AiModelCapabilitiesChanged = null
+
 // Model info returned to frontend.
 export type AiModelInfo = {
   id: string
@@ -5946,21 +5961,6 @@ export type AiModelInfo = {
   baseOverheadBytes: number
 }
 
-// How much AI the organization allows.
-// Tells the windows a catalog arrived, so Settings › AI re-reads the window it shows.
-export type AiModelCapabilitiesChanged = null
-
-export type AiPolicy =
-  // Any provider, cloud hosts subject to `AllowedCloudAIHosts`.
-  | 'allowed'
-  // Cmdr's own local model only.
-  | 'localOnly'
-  // No AI at all.
-  | 'off'
-
-export type AiPolicyView = {
-  mode: AiPolicy
-  /**
 // What Settings › AI shows under the model picker.
 export type AiModelLimits = {
   // `None` when nothing knows the window, so the UI shows nothing rather than a guess.
@@ -5977,6 +5977,18 @@ export type AiModelLimitsSource =
   // Cmdr's built-in table: a verified floor that may have aged.
   | 'builtInTable'
 
+// How much AI the organization allows.
+export type AiPolicy =
+  // Any provider, cloud hosts subject to `AllowedCloudAIHosts`.
+  | 'allowed'
+  // Cmdr's own local model only.
+  | 'localOnly'
+  // No AI at all.
+  | 'off'
+
+export type AiPolicyView = {
+  mode: AiPolicy
+  /**
    *  The hosts cloud AI may reach, normalized (`api.openai.com`, `*.openai.azure.com`,
    *  `localhost:11434`). `null` when any host goes, or when cloud AI is off altogether.
    */
@@ -6394,10 +6406,16 @@ export type AskCmdrStreamEvent =
    */
   | { type: 'contextTrimmed'; elidedResults: number; approxTokens: number }
   /**
-   *  What this turn's prompt cost against its budget, once per answered turn, for the rail's
-   *  usage gauge. Both figures are `chars/4` estimates and the UI labels them so.
+   *  What one completed model call's prompt cost against its budget, for the rail's usage
+   *  gauge, so the gauge moves round by round. Both figures are `chars/4` estimates and the UI
+   *  labels them so.
    */
   | { type: 'contextUsage'; estimatedTokens: number; budgetTokens: number; elidedResults: number }
+  /**
+   *  A completed model call was just metered; the rail re-reads the thread's cost so the
+   *  footer moves during the turn. No figures ride along: the meter is the one source.
+   */
+  | { type: 'costMetered' }
   /**
    *  The user answered a suggestion this thread made, and the line saying so just landed in
    *  its timeline. The persisted event row's identity rides along, so a subscriber that also
@@ -6497,6 +6515,15 @@ export type BackendCapabilities = {
 
 // Which backend strategy is active for a session.
 export type BackendType = 'fullLoad' | 'byteSeek' | 'lineIndex'
+
+/**
+ *  The prefix's estimated size against the budget the next send resolves. Both are `chars/4`
+ *  estimates, like every other gauge figure.
+ */
+export type BaselineUsage = {
+  estimatedTokens: number
+  budgetTokens: number
+}
 
 /**
  *  The signup outcome, returned across IPC so the frontend reacts on a typed `kind` discriminant
@@ -13204,6 +13231,11 @@ export type NetworkHostLost = {
  */
 export type NetworkHostResolved = NetworkHost
 
+export type NextCallPricing = {
+  provider: ProviderTag
+  priced: boolean
+}
+
 // What asking a server for its exports produced.
 export type NfsExportList =
   // The exports the server lists, each canonical (`/Public`, `/volume1/data`).
@@ -14353,6 +14385,23 @@ export type Provider =
   | 'cmVolumes'
   // Any unrecognized dir under `~/Library/CloudStorage/`.
   | 'genericCloudStorage'
+
+/**
+ *  Whether a send could reach a model, as far as SETUP goes. The rail warns on every variant
+ *  but `Ready`, and its Send button says why it's disabled.
+ */
+export type ProviderReadiness =
+  | 'ready'
+  // The AI provider is "off" (its default), or not one we recognize.
+  | 'off'
+  // Cloud is picked and its provider needs an API key, but none is stored.
+  | 'cloudNeedsKey'
+  // Cloud is picked with no endpoint (a custom provider left blank).
+  | 'cloudNeedsEndpoint'
+  // Local is picked and its model isn't downloaded yet (or is still downloading).
+  | 'localNotSetUp'
+  // Local is picked, the model is there, and its server is neither running nor starting.
+  | 'localNotRunning'
 
 /**
  *  Which provider a reasoning blob came from. The tag is descriptive: it records
@@ -17461,6 +17510,22 @@ export type SkipReason =
    *  A user flag or an ACL the copy carried over is cleared, never reported here.
    */
   | 'locked'
+
+// The slot as the rail sees it before a send.
+export type SlotStatus = {
+  readiness: ProviderReadiness
+  /**
+   *  The provider and model the next send would meter under, and whether that model has a
+   *  price, so a chat with nothing metered yet can say "free", "about $0", or "cost unknown"
+   *  honestly. `None` while AI is off: there is nothing to price.
+   */
+  nextCall: NextCallPricing | null
+  /**
+   *  What every call of a new chat costs at minimum. `None` when no budget resolves (AI is
+   *  off, or a local window under the floor, which the send refuses on its own).
+   */
+  baseline: BaselineUsage | null
+}
 
 /**
  *  Which operation a slowness breadcrumb is about. Mirrors the frontend's

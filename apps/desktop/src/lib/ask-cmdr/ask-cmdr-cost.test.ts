@@ -5,7 +5,8 @@
 
 import { describe, it, expect, beforeAll } from 'vitest'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
-import { formatUsdMicros, isLocalOnly, totalTokens } from './ask-cmdr-cost'
+import type { ConversationCost } from '#lib/tauri-commands/index.js'
+import { costReading, formatUsdMicros, isLocalOnly, totalTokens } from './ask-cmdr-cost'
 
 beforeAll(() => {
   _setLocaleForTests('en-US')
@@ -45,5 +46,35 @@ describe('isLocalOnly', () => {
     expect(isLocalOnly(['local', 'openai'])).toBe(false)
     expect(isLocalOnly(['anthropic'])).toBe(false)
     expect(isLocalOnly([])).toBe(false)
+  })
+})
+
+describe('costReading', () => {
+  const metered = (over: Partial<ConversationCost>): ConversationCost => ({
+    promptTokens: 1_000,
+    completionTokens: 200,
+    costMicros: 1_500,
+    fullyPriced: true,
+    providers: ['anthropic'],
+    ...over,
+  })
+  const empty = metered({ promptTokens: 0, completionTokens: 0, costMicros: 0, providers: [] })
+  const cloud = { provider: 'anthropic' as const, priced: true }
+
+  it('reads a metered thread from the meter, whatever the next call would use', () => {
+    expect(costReading(metered({}), cloud)).toEqual({ tokens: 1_200, price: { kind: 'estimate', micros: 1_500 } })
+    expect(costReading(metered({ providers: ['local'] }), cloud)).toEqual({ tokens: 1_200, price: { kind: 'free' } })
+    expect(costReading(metered({ fullyPriced: false }), cloud)).toEqual({ tokens: 1_200, price: { kind: 'unknown' } })
+  })
+
+  it('reads an unmetered thread as zero, priced the way its first call would be', () => {
+    // A brand-new chat shows "0 tokens" plus an honest word, never a silent $0 for an unpriced model.
+    expect(costReading(null, cloud)).toEqual({ tokens: 0, price: { kind: 'estimate', micros: 0 } })
+    expect(costReading(empty, { provider: 'local', priced: true })).toEqual({ tokens: 0, price: { kind: 'free' } })
+    expect(costReading(empty, { provider: 'openAi', priced: false })).toEqual({ tokens: 0, price: { kind: 'unknown' } })
+  })
+
+  it('names no price while AI is off: there is nothing to price', () => {
+    expect(costReading(null, null)).toEqual({ tokens: 0, price: null })
   })
 })

@@ -431,13 +431,21 @@ function applyStreamEvent(event: TurnEvent): void {
   }
 }
 
-/** The events about a round's tool lines, and the two that report on the CONTEXT (what the
- * assembly set aside, and what it cost). Split out so `applyStreamEvent` stays under the
- * complexity ceiling and both halves stay exhaustive. */
+/** The events about a round's tool lines, the two that report on the CONTEXT (what the
+ * assembly set aside, and what it cost), and the meter's per-call nudge. Split out so
+ * `applyStreamEvent` stays under the complexity ceiling and both halves stay exhaustive. */
 function handleLineOrContextEvent(
   event: Extract<
     TurnEvent,
-    { type: 'toolCallStarted' | 'toolCallsResolved' | 'toolCallFinished' | 'contextTrimmed' | 'contextUsage' }
+    {
+      type:
+        | 'toolCallStarted'
+        | 'toolCallsResolved'
+        | 'toolCallFinished'
+        | 'contextTrimmed'
+        | 'contextUsage'
+        | 'costMetered'
+    }
   >,
 ): void {
   switch (event.type) {
@@ -458,6 +466,10 @@ function handleLineOrContextEvent(
       return
     case 'contextUsage':
       applyContextUsage(event.estimatedTokens, event.budgetTokens, event.elidedResults)
+      return
+    case 'costMetered':
+      // The footer re-reads the meter (the one source of the total) on each bump.
+      askCmdrState.costRevision += 1
   }
 }
 
@@ -514,8 +526,8 @@ function openRoundIn(assistant: AssistantItem): Round {
   return assistant.rounds[assistant.rounds.length - 1]
 }
 
-/** Record what this turn's prompt cost, for the footer gauge. One event per answered turn, so
- * this is a straight replace rather than an accumulation. */
+/** Record what one call's prompt cost, for the footer gauge. Each completed call reports its own
+ * whole assembly, so this is a straight replace rather than an accumulation. */
 function applyContextUsage(estimatedTokens: number, budgetTokens: number, elidedResults: number): void {
   askCmdrState.contextUsage = { estimatedTokens, budgetTokens, elidedResults }
 }

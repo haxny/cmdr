@@ -1,10 +1,10 @@
 /** Component tests for the per-thread cost footer: the honest free / estimate / unknown
- * miss-path, and hidden when the thread has no metered turn. */
+ * miss-path, a new chat's zero line and baseline gauge, and the mid-turn re-read. */
 
 import { describe, it, expect, vi, afterEach, beforeEach, beforeAll } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
-import type { ConversationCost } from '#lib/tauri-commands/index.js'
+import type { ConversationCost, SlotStatus } from '#lib/tauri-commands/index.js'
 
 const { costMock } = vi.hoisted(() => ({
   costMock: vi.fn<(id: number) => Promise<ConversationCost>>(),
@@ -16,6 +16,11 @@ vi.mock('./ask-cmdr-trigger.svelte', async () => ({
   askCmdrState: (await import('./ask-cmdr-state.svelte')).askCmdrState,
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ({ askCmdrConversationCost: (id: number) => costMock(id) }))
+// A plain object: each test sets it before mounting, so the footer needn't react to it here.
+const slot = vi.hoisted(() => ({
+  slotStatusState: { status: null as SlotStatus | null },
+}))
+vi.mock('./ask-cmdr-slot-status.svelte', () => slot)
 vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
@@ -30,6 +35,12 @@ beforeEach(() => {
   vi.clearAllMocks()
   triggerState.conversationId = 1
   triggerState.streaming = false
+  triggerState.contextUsage = null
+  slot.slotStatusState.status = {
+    readiness: 'ready',
+    nextCall: { provider: 'openAi', priced: false },
+    baseline: { estimatedTokens: 6_300, budgetTokens: 16_000 },
+  }
 })
 
 // Unmounted after each test: the state is shared and reactive, so a footer left mounted would
@@ -94,7 +105,8 @@ describe('AskCmdrCostFooter', () => {
     triggerState.conversationId = 2
     flushSync()
 
-    expect(target.querySelector('.cost-footer')).toBeNull()
+    expect(target.textContent).not.toContain('$1.23')
+    expect(target.textContent).toContain('0 tokens')
     target.remove()
   })
 
@@ -122,9 +134,57 @@ describe('AskCmdrCostFooter', () => {
     target.remove()
   })
 
-  it('stays hidden until the thread has a metered turn', async () => {
-    const target = await renderWith({ ...base, promptTokens: 0, completionTokens: 0, providers: [] })
-    expect(target.querySelector('.cost-footer')).toBeNull()
+  it('shows a brand-new chat as zero tokens, priced the way its first call will be, with the baseline gauge', () => {
+    triggerState.conversationId = null
+    slot.slotStatusState.status = {
+      readiness: 'ready',
+      nextCall: { provider: 'anthropic', priced: true },
+      baseline: { estimatedTokens: 6_300, budgetTokens: 16_000 },
+    }
+    const target = mountFooter()
+    flushSync()
+
+    expect(target.textContent).toContain('0 tokens')
+    expect(target.textContent).toContain('$0')
+    expect(costMock).not.toHaveBeenCalled()
+    const meter = target.querySelector('[role="meter"]')
+    expect(meter?.getAttribute('aria-valuenow')).toBe('39')
+    target.remove()
+  })
+
+  it('reads "cost unknown" for a new chat on an unpriced model, never a silent $0', () => {
+    triggerState.conversationId = null
+    const target = mountFooter()
+    flushSync()
+
+    expect(target.textContent).toContain('0 tokens')
+    expect(target.textContent).toContain('unknown')
+    target.remove()
+  })
+
+  it('shows only the token count while AI is off, with no gauge', () => {
+    triggerState.conversationId = null
+    slot.slotStatusState.status = { readiness: 'off', nextCall: null, baseline: null }
+    const target = mountFooter()
+    flushSync()
+
+    expect(target.querySelector('.cost-footer')?.textContent?.trim()).toBe('0 tokens')
+    expect(target.querySelector('[role="meter"]')).toBeNull()
+    target.remove()
+  })
+
+  it('re-reads the meter after each metered call while the turn is still running', async () => {
+    triggerState.streaming = true
+    const target = await renderWith({ ...base, costMicros: 1_000_000, providers: ['openAi'] })
+    expect(target.textContent).toContain('$1.00')
+
+    costMock.mockResolvedValue({ ...base, costMicros: 2_000_000, providers: ['openAi'] })
+    triggerState.costRevision += 1
+    flushSync()
+    await Promise.resolve()
+    flushSync()
+
+    expect(target.textContent).toContain('$2.00')
     target.remove()
   })
 })

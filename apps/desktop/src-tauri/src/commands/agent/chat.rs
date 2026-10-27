@@ -45,6 +45,7 @@ use crate::agent::chat::runtime::{AgentChatEvent, ChatRuntime, RecordedSlotEvent
 use crate::agent::chat::session::{
     AgentSlot, admit_send, capture_envelope, local_offset, provider_and_model, resolve_agent_llm, resolve_prompt_budget,
 };
+use crate::agent::chat::slot_status::{SlotStatus, slot_status};
 use crate::agent::chat::stream::{AgentErrorKindView, AskCmdrStreamEvent, emit_turn_event, forward_to_windows};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::ProviderTag;
@@ -90,6 +91,22 @@ pub fn ask_cmdr_model_window(app: AppHandle) -> ModelWindowView {
     ModelWindowView {
         model,
         known_window_tokens,
+    }
+}
+
+/// What the rail shows before anything is sent: whether a provider is set up (its warning and
+/// the Send button's reason), and the floor every call of a new chat costs (the footer's
+/// baseline). Off the IPC thread: the prefix reads `CMDR.md` and the memory folder from disk.
+/// `None` only when that read panicked; the rail then keeps what it last knew.
+#[tauri::command]
+#[specta::specta]
+pub async fn ask_cmdr_slot_status(app: AppHandle) -> Option<SlotStatus> {
+    match tauri::async_runtime::spawn_blocking(move || slot_status(&app)).await {
+        Ok(status) => Some(status),
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "reading the Ask Cmdr slot status failed: {e}");
+            None
+        }
     }
 }
 

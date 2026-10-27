@@ -305,6 +305,8 @@ async fn drive(
         tally.completion_tokens = tally.completion_tokens.saturating_add(usage.completion_tokens);
         transcript.push(message.clone());
         meter_cost(conn, params, usage);
+        emit(sink, AgentChatEvent::CostMetered);
+        report_context_usage(conn, params.conversation_id, &assembled.elision, sink);
 
         // Terminal vs. another tool turn.
         let calls: Vec<&AgentToolCall> = message
@@ -316,7 +318,6 @@ async fn drive(
             })
             .collect();
         if calls.is_empty() {
-            report_context_usage(conn, params.conversation_id, &assembled.elision, sink);
             return TurnEnd::Answered {
                 message_id: assistant_id,
                 seq: assistant_seq,
@@ -504,15 +505,13 @@ async fn consume_stream(mut stream: crate::agent::llm::AgentDeltaStream, sink: &
     }
 }
 
-/// Tell the user, once per answered turn, how full the model's view got — and remember it with
-/// the thread, so reopening the chat shows the last known figure instead of an empty gauge.
+/// Tell the user how full the model's view got on one completed call, and remember it with the
+/// thread, so reopening the chat shows the last known figure instead of the baseline.
 ///
-/// Called on the answered path with THAT call's assembly, which is the turn's last and largest:
-/// within one turn each tool result joins the same prompt, and the biggest is what answers "is
-/// this chat filling up?"
-///
-/// A failed or cancelled turn deliberately reports nothing: the user is looking at an error
-/// line, and the previous turn's stored figure stays the last thing actually measured. A
+/// Called after every `End`, so a tool-running turn moves the gauge round by round; its last
+/// call is its largest assembly (each tool result joins the same prompt), which is what the
+/// thread keeps. A call that never reached `End` reports nothing: the user is looking at an
+/// error line, and the previous call's stored figure stays the last thing actually measured. A
 /// persist problem here is logged and dropped — a gauge is worth no turn.
 fn report_context_usage(conn: &rusqlite::Connection, conversation_id: i64, facts: &ElisionFacts, sink: &ChatEventSink) {
     emit(

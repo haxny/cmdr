@@ -720,10 +720,6 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
-  "askCmdr.composer.providerOff": "在設定裡開啟一個 AI 提供者，就可以開始聊了。",
-  "@askCmdr.composer.providerOff": {
-    "sourceHash": "e466415"
-  },
   "askCmdr.attachment.remove": "移除附件",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"

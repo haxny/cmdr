@@ -1,7 +1,7 @@
 /**
- * The context gauge's state slice: a `contextUsage` event records the turn's figures, opening a
- * thread restores its last measured figures, and a fresh chat carries none of the previous
- * thread's fill.
+ * The footer's state slice: a `contextUsage` event records one call's figures, a `costMetered`
+ * event nudges the cost re-read, opening a thread restores its last measured figures, and a
+ * fresh chat carries none of the previous thread's fill.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -100,7 +100,17 @@ describe('the context gauge state', () => {
     })
   })
 
-  it('shows no gauge for a thread that never finished a turn', async () => {
+  it('nudges the footer to re-read the meter after each metered call, mid-turn', () => {
+    sendMessage('name these')
+    const before = askCmdrState.costRevision
+
+    fire({ type: 'costMetered' })
+    fire({ type: 'costMetered' })
+
+    expect(askCmdrState.costRevision).toBe(before + 2)
+  })
+
+  it('has no measured figure for a thread that never finished a call, so the gauge shows the baseline', async () => {
     getConversationMock.mockResolvedValue({
       conversation: { id: 8, title: 't', createdAt: 0, updatedAt: 0, archived: false, origin: null },
       messages: [],

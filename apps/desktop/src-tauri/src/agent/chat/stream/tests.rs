@@ -183,6 +183,7 @@ fn every_runtime_event_maps_to_its_tagged_wire_event() {
         }),
         json!({ "type": "contextTrimmed", "elidedResults": 3, "approxTokens": 4200 })
     );
+    assert_eq!(wire(AgentChatEvent::CostMetered), json!({ "type": "costMetered" }));
 }
 
 /// The typed `ToolId` becomes its WIRE name, because the frontend's label map is keyed on

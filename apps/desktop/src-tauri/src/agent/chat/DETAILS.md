@@ -268,17 +268,29 @@ refused, not assembled: `BudgetRefusal::LocalWindowBelowFloor` reaches the rail 
 
 ### Reporting what a turn cost
 
-Two events carry context pressure to the user, and both are once per turn:
+Three events carry context pressure and spend to the user:
 
-- `ContextTrimmed` — the budget pushed history out. Fired only when the BUDGET forced it (`ElisionFacts::budget_forced`),
-  not on ordinary age-based elision, or it would cry wolf every turn on a small window.
-- `ContextUsage` — what the prompt cost against its budget, plus the set-aside count, for the rail's gauge. Emitted on
-  the ANSWERED path from that call's own assembly, which is the turn's last and largest (each tool result joins the same
-  prompt). A failed or cancelled turn reports nothing: the user is looking at an error line, and the previous turn's
-  stored figure stays the last thing actually measured.
+- `ContextTrimmed` — the budget pushed history out, once per turn. Fired only when the BUDGET forced it
+  (`ElisionFacts::budget_forced`), not on ordinary age-based elision, or it would cry wolf every turn on a small window.
+- `ContextUsage` — what the prompt cost against its budget, plus the set-aside count, for the rail's gauge. Emitted after
+  EVERY completed call (its `End`) from that call's own assembly, so the gauge moves round by round through a
+  tool-running turn; the turn's last report is its largest assembly (each tool result joins the same prompt). A call
+  that never reached `End` reports nothing: the user is looking at an error line, and the previous call's stored figure
+  stays the last thing actually measured.
+- `CostMetered` — right after `meter_cost` folds a completed call in, no payload. The rail re-reads
+  `ask_cmdr_conversation_cost` on it, so the footer's total moves mid-turn while the meter stays its one source.
+  ❌ Don't put the call's usage on it for the rail to add up: two totals drift.
 
-The same call stamps `conversations.last_prompt_tokens` / `last_prompt_budget` (store migration v3, nullable, no
-backfill), so reopening a thread shows its last real reading instead of an empty gauge. The pair is read as a pair: a
+Before any call, the rail's gauge shows the BASELINE (`slot_status.rs`, `ask_cmdr_slot_status`): `context::prefix_tokens`
+over the same prefix parts a send reads (`runtime::PrefixParts`, so the two can't drift) against the budget the next
+send would resolve. It's the honest floor, since every call carries the whole prefix. The same command answers whether
+a provider is set up at all (`ProviderReadiness`: setup only; consent is the rail gate's question and a managed refusal
+the send's) and how the next call is priced, so a new chat's footer says "free", "about $0", or "cost unknown" from the
+start. The E2E fake reads as ready there, from the same `test_mode::ask_cmdr_fake_active` accessor `resolve_agent_llm`
+gates on, so "send allowed" and "send answered" can't disagree.
+
+Each `ContextUsage` stamps `conversations.last_prompt_tokens` / `last_prompt_budget` (store migration v3, nullable, no
+backfill), so reopening a thread shows its last real reading instead of the baseline. The pair is read as a pair: a
 size without the budget it was measured against can't become a percentage, so a half-recorded row is no measurement at
 all. A persist problem is logged and dropped — a gauge is worth no turn.
 

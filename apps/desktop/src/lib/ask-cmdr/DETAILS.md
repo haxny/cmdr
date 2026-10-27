@@ -759,14 +759,28 @@ move it: the highlight marks the row Space acts on.
 
 `AskCmdrContextGauge.svelte` sits in the footer row beside the cost line, and the two answer different questions on
 purpose: **cost is what the whole thread has SPENT** (cumulative, only ever rising), the **gauge is how much of ONE
-prompt's room the last turn used** (it drops when history is set aside). The gauge's tooltip spells out "N of M tokens
-used (estimated)" so the two numbers can't read as a contradiction. Each half hides independently — a local-only thread
-has a real context reading and no money to report.
+prompt's room the last call used** (it drops when history is set aside). The gauge's tooltip spells out "N of M tokens
+used (estimated)" so the two numbers can't read as a contradiction.
+
+**The footer shows whenever the chat does, and both halves move after every model call**, not only at the turn's end:
+the backend emits `contextUsage` and `costMetered` after each completed call (`agent/chat/DETAILS.md` § Reporting what a
+turn cost). `contextUsage` replaces the figure; `costMetered` bumps `askCmdrState.costRevision`, and the footer re-reads
+`ask_cmdr_conversation_cost` on each bump (the meter stays the one source of the total, so the rail never adds figures
+up itself).
+
+**Before anything is measured, the footer reads the slot status** (`ask-cmdr-slot-status.svelte.ts`):
+
+- The gauge shows the **baseline** (`gaugeReading`): the prefix every call carries against the next send's budget. It's
+  honest, not a placeholder: no call of this chat can cost less. Its tooltip says so
+  (`askCmdr.context.baselineTooltip`).
+- The cost line reads "0 tokens", priced the way the first call would be (`costReading` over `nextCall`): "free,
+  on-device" for local, "about $0.00" for a priced cloud model, "cost unknown" for an unpriced one, and no price at all
+  while AI is off. A thread whose turns all failed has nothing metered either, so it reads the same way.
 
 State lives in `ask-cmdr-context-usage.ts`, pure and unit-tested, as four named states:
 
-- `unmeasured` — no turn finished yet, so the gauge renders NOTHING. Deliberately not 0%: an empty bar reads as "plenty
-  of room" for a thread nobody measured.
+- `unmeasured` — no reading at all: neither a measured call nor a baseline (AI is off, or the slot status hasn't been
+  read yet), so the gauge renders NOTHING. Deliberately not 0%: an empty bar reads as "plenty of room".
 - `calm` — under `FILLING_THRESHOLD_PERCENT` (80).
 - `filling` — at or over the threshold, nothing dropped yet.
 - `setAside` — history left the model's view this turn. **Going over budget lands here too**, not in a fifth state: the
@@ -778,7 +792,7 @@ Two rules the tests pin: the state follows the percentage the gauge SHOWS (79.99
 The figure survives a restart: the backend stores it per conversation and `ConversationDetailView.lastContextUsage`
 returns it, so reopening a thread shows its last real reading. A restored reading reports `elidedResults: 0` because
 whether THAT turn set anything aside isn't persisted, and inventing a count would be a false claim. A fresh chat clears
-it, so no thread inherits another's fill.
+it, so no thread inherits another's fill, and falls back to the baseline.
 
 ## The E2E fake-LLM path
 
@@ -805,11 +819,10 @@ value would then decide what the gauge shows in every E2E run. `resolve_prompt_b
 `DEFAULT_PROMPT_TOKEN_BUDGET` (16,000) for the fake instead, so the harness keeps mirroring a real user's settings and
 an E2E run's gauge reads as a normal calm chat rather than pinned.
 
-The composer's Send gate (`AskCmdrComposer.svelte`) disables sending when `ai.provider` is `off` (its default), so the
-fake path — which never sets a real provider — needs the gate to treat the fake as an active provider. It reads
-`ask_cmdr_fake_active()` (the `commands/e2e.rs` command over `test_mode::ask_cmdr_fake_active`, the SAME accessor
-`resolve_agent_llm` gates on), so "send is allowed" and "send is answered" can't drift. Off E2E the command returns
-`false` and the gate behaves normally.
+The composer's Send gate (`AskCmdrComposer.svelte`) disables sending while no provider is set up, and `ai.provider` is
+`off` by default, so the fake path (which never sets a real provider) needs the gate to treat the fake as ready. The
+backend's slot status does that (`ask_cmdr_slot_status` reads `test_mode::ask_cmdr_fake_active`, the SAME accessor
+`resolve_agent_llm` gates on), so "send is allowed" and "send is answered" can't drift.
 
 ## Gates, cost, and settings
 
@@ -817,9 +830,9 @@ fake path — which never sets a real provider — needs the gate to treat the f
   order: `askCmdr.enabled` off → `off` (a "Turn on Ask Cmdr" button that sets the setting); Cloud with consent unknown →
   `loading` (the rail renders nothing, so nothing flashes); Cloud without consent → `cloudOff` (an "Open AI settings"
   button to the Allow cloud AI switch, `openCloudConsentSettings('ask-cmdr-cloud-gate')`); otherwise `chat`. Local and
-  "off" need no consent (nothing leaves the Mac; the composer says when no provider is set up). The rail reads both
-  settings reactively and `cloudConsentState` from `#lib/ai/cloud-consent.svelte.ts` (`lib/ai/DETAILS.md` § Cloud AI
-  consent owns consent itself).
+  "off" need no consent (nothing leaves the Mac; the provider notice below says when no provider is set up). The rail
+  reads both settings reactively and `cloudConsentState` from `#lib/ai/cloud-consent.svelte.ts` (`lib/ai/DETAILS.md` §
+  Cloud AI consent owns consent itself).
   - `openRail` awaits `refreshRailGate()` and bootstraps history only when the gate reads `chat`; when a gate opens
     later with the rail up, the rail calls `ensureThreadLoaded()` on the transition.
   - The backend enforces both gates on every send, before a thread exists (`AskCmdrOff` / `NoCloudConsent` refusals). A
@@ -832,11 +845,24 @@ fake path — which never sets a real provider — needs the gate to treat the f
     step): a recorded legacy opt-in (any copy version, no held "no") maps to on, anything else to off, an unreadable
     store to nothing (next launch asks again). It runs only after onboarding finished and only while the switch was
     never set explicitly; fresh installs get it from the onboarding AI pick.
+- **The provider notice** (`AskCmdrProviderNotice.svelte`, over `ask-cmdr-slot-status.svelte.ts`): a yellow,
+  non-dismissable strip at the top of the rail body whenever the slot status reads a setup gap (`off`, `cloudNeedsKey`,
+  `cloudNeedsEndpoint`, `localNotSetUp`, `localNotRunning`), one sentence per gap plus "Open AI settings" (Settings >
+  AI > Provider). It sits ABOVE whichever gate or chat follows, so with Ask Cmdr off the user sees both steps. It's
+  independent of the gates: readiness is setup only, consent stays `cloudOff`'s. The composer's Send is disabled on the
+  same gap (`providerGap`), with the reason as a tooltip on a wrapper (a disabled button gets no hover). An unread
+  status counts as no gap, so Send never flashes disabled on open; the backend refuses an unset provider on its own.
+  - **When the status is re-read** (`watchSlotStatus`, live while the rail is mounted): on mount, after THIS window's
+    `pushConfigToBackend` lands (`onAiConfigPushed`, so never before the change reaches the backend), on
+    `ai-server-ready` / `ai-install-complete`, on window focus (a change made in the Settings window pushes from there,
+    and the user comes back to the main window), and on a thread switch or a turn's end (memory and budget may have
+    moved). Each read is numbered, so a slow one can't overwrite a newer answer.
 - **Cost footer** (`AskCmdrCostFooter.svelte` + pure `ask-cmdr-cost.ts`): the active thread's cumulative tokens + cost,
-  refetched (`ask_cmdr_conversation_cost`) when the thread changes or a turn finishes streaming. Honest miss-path: a
-  local-only thread reads "free, on-device", an unpriced model reads "cost unknown", a priced thread shows "about
-  {amount}" — never a silent $0. Hidden until a metered turn exists. A fetched total is keyed by the thread it was read
-  for: a thread switch hides it at once, and a slow read for a thread the user already left is dropped.
+  refetched (`ask_cmdr_conversation_cost`) when the thread changes, after each metered call (`costRevision`), and when a
+  turn finishes streaming. Honest miss-path (`costReading`): a local-only thread reads "free, on-device", an unpriced
+  model reads "cost unknown", a priced thread shows "about {amount}" — never a silent $0. Always shown with the chat; a
+  thread with nothing metered reads zero (§ The context gauge). A fetched total is keyed by the thread it was read for:
+  a thread switch drops it at once, and a slow read for a thread the user already left is dropped.
 - **Settings section** (`settings/sections/AskCmdrSection.svelte`, top-level `Ask Cmdr`): the `askCmdr.enabled` switch,
   a "cloud AI is off" hint plus an "Open AI settings" button when it's on over Cloud without consent, the provider hint
   (reads `ai.provider`) + the interactive-model row (`askCmdr.interactiveModel`), the two memory controls, and the
@@ -848,10 +874,10 @@ fake path — which never sets a real provider — needs the gate to treat the f
 
 Copy lives in `intl/messages/en/askCmdr.json` (`askCmdr.*`, including the `askCmdr.sessions.*`,
 `askCmdr.composer.attach`/`dropHint`, `askCmdr.attachment.*`, `askCmdr.loadEarlier`, `askCmdr.wake.*`,
-`askCmdr.wakeDigest.*`, `askCmdr.gate.*`, and `askCmdr.cost.*` keys; the "what Ask Cmdr sends" list moved to
-`ai.cloudConsent.askCmdr.*` in `ai.json`), the settings copy in `settings.json` (`settings.askCmdr.*`,
-`settings.section.askCmdr`), and the command label in `commands.json` (`commands.askCmdrToggle.*`), each with an `@key`
-translator description. Translated across all 10 locales, so `desktop-i18n-coverage` is green. The name and the gate
+`askCmdr.wakeDigest.*`, `askCmdr.gate.*`, `askCmdr.providerNotice.*`, and `askCmdr.cost.*` keys; the "what Ask Cmdr
+sends" list moved to `ai.cloudConsent.askCmdr.*` in `ai.json`), the settings copy in `settings.json`
+(`settings.askCmdr.*`, `settings.section.askCmdr`), and the command label in `commands.json`
+(`commands.askCmdrToggle.*`), each with an `@key` translator description. The name, the gate, and the provider-notice
 copy are the re-translation surface if David adjusts the product calls. Tool + error labels are literal-keyed records in
 `ask-cmdr-labels.ts` (a computed prefix would trip the unused-key check).
 

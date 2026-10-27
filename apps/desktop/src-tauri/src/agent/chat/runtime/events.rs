@@ -106,10 +106,10 @@ pub enum AgentChatEvent {
         /// Roughly how many tokens of detail that removed.
         approx_tokens: usize,
     },
-    /// What this turn's prompt actually cost, against the budget it was assembled for.
-    /// Emitted ONCE per answered turn, from the turn's LAST assembly (the largest one, since
-    /// each tool result joins the same turn), so the gauge reports the peak the user should
-    /// judge "is this chat filling up?" by, not the cheapest moment in the turn.
+    /// What one model call's prompt cost, against the budget it was assembled for. Emitted
+    /// once per COMPLETED call (its `End`), so the gauge moves as each tool result joins the
+    /// turn; the turn's last report is its largest assembly, the peak "is this chat filling
+    /// up?" is judged by. A call that never reached `End` reports nothing.
     ///
     /// Both numbers are `chars/4` ESTIMATES, not a tokenizer's count, and the UI says so.
     ContextUsage {
@@ -121,6 +121,10 @@ pub enum AgentChatEvent {
         /// "set aside" state without a second event.
         elided_results: usize,
     },
+    /// One completed model call was just folded into the cost meter. Carries no numbers on
+    /// purpose: the meter stays the one source of the thread's total, so the rail re-reads it
+    /// (`ask_cmdr_conversation_cost`) rather than adding up figures of its own.
+    CostMetered,
 }
 
 /// One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: which tool, what it

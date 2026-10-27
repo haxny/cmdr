@@ -721,10 +721,6 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
-  "askCmdr.composer.providerOff": "Bật một nhà cung cấp AI trong cài đặt để bắt đầu trò chuyện.",
-  "@askCmdr.composer.providerOff": {
-    "sourceHash": "e466415"
-  },
   "askCmdr.attachment.remove": "Gỡ bỏ tệp đính kèm",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"

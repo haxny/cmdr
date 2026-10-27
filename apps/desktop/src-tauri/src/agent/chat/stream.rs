@@ -141,13 +141,17 @@ pub enum AskCmdrStreamEvent {
         elided_results: usize,
         approx_tokens: usize,
     },
-    /// What this turn's prompt cost against its budget, once per answered turn, for the rail's
-    /// usage gauge. Both figures are `chars/4` estimates and the UI labels them so.
+    /// What one completed model call's prompt cost against its budget, for the rail's usage
+    /// gauge, so the gauge moves round by round. Both figures are `chars/4` estimates and the UI
+    /// labels them so.
     ContextUsage {
         estimated_tokens: usize,
         budget_tokens: usize,
         elided_results: usize,
     },
+    /// A completed model call was just metered; the rail re-reads the thread's cost so the
+    /// footer moves during the turn. No figures ride along: the meter is the one source.
+    CostMetered,
     /// The user answered a suggestion this thread made, and the line saying so just landed in
     /// its timeline. The persisted event row's identity rides along, so a subscriber that also
     /// loaded the row shows it once.
@@ -373,6 +377,7 @@ pub fn to_wire_event(event: AgentChatEvent) -> AskCmdrStreamEvent {
             budget_tokens,
             elided_results,
         },
+        AgentChatEvent::CostMetered => AskCmdrStreamEvent::CostMetered,
     }
 }
 

@@ -150,6 +150,7 @@ async fn a_multi_tool_turn_resolves_each_round_then_finishes_each_call_then_answ
             AgentChatEvent::ToolCallsResolved { .. } => "resolved",
             AgentChatEvent::ToolCallFinished { .. } => "finished",
             AgentChatEvent::TextDelta { .. } => "text",
+            AgentChatEvent::CostMetered => "metered",
             AgentChatEvent::ContextUsage { .. } => "usage",
             AgentChatEvent::Done { .. } => "done",
             other => panic!("unexpected {other:?}"),
@@ -162,15 +163,20 @@ async fn a_multi_tool_turn_resolves_each_round_then_finishes_each_call_then_answ
             "started",
             "started",
             "user",
+            "metered",
+            "usage",
             "resolved",
             "finished",
             "finished", //
             "assistant",
             "started",
+            "metered",
+            "usage",
             "resolved",
             "finished", //
             "assistant",
             "text",
+            "metered",
             "usage",
             "done",
         ]

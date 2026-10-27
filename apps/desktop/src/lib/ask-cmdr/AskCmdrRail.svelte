@@ -1,7 +1,7 @@
 <!--
   The Ask Cmdr chat rail: a toggleable right-side panel next to the panes. Header (title +
-  ALPHA badge + new-chat + close), the scrolling thread, the getting-long nudge, and the
-  composer. A left-edge drag handle resizes it (persisted). Below ~900px it overlays the
+  ALPHA badge + new-chat + close), the no-provider notice when one applies, the scrolling
+  thread, the getting-long nudge, the composer, and the cost footer. A left-edge drag handle resizes it (persisted). Below ~900px it overlays the
   right pane instead of compressing the panes below their min-width.
 -->
 <script lang="ts">
@@ -28,6 +28,8 @@
         setRailWidth,
     } from './ask-cmdr-trigger.svelte'
     import { railGate } from './ask-cmdr-gate.svelte'
+    import AskCmdrProviderNotice from './AskCmdrProviderNotice.svelte'
+    import { providerGap, refreshSlotStatus, slotStatusState, watchSlotStatus } from './ask-cmdr-slot-status.svelte'
     import { contentSignature } from './ask-cmdr-rounds'
     import { cloudConsentState } from '#lib/ai/cloud-consent.svelte.js'
     import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
@@ -66,6 +68,20 @@
             wasChatting = now
         })
     })
+
+    // Whether a provider is set up, and the footer's baseline: read while the rail is up, and
+    // again on a thread switch or a turn's end (the memory slice and the budget may have moved).
+    $effect(() => watchSlotStatus())
+    let lastSeen: { id: number | null; streaming: boolean } | null = null
+    $effect(() => {
+        const now = { id: askCmdrState.conversationId, streaming: askCmdrState.streaming }
+        untrack(() => {
+            const turnEnded = lastSeen?.streaming === true && !now.streaming
+            if (lastSeen !== null && (turnEnded || lastSeen.id !== now.id)) void refreshSlotStatus()
+            lastSeen = now
+        })
+    })
+    const gap = $derived(providerGap(slotStatusState.status))
 
     let listElement = $state<HTMLDivElement | null>(null)
     // Whether the user was near the bottom before the last content change. Streaming
@@ -147,6 +163,11 @@
             </button>
         </span>
     </header>
+
+    <!-- Above whichever gate or chat follows, so with Ask Cmdr off both steps show at once. -->
+    {#if gap}
+        <AskCmdrProviderNotice {gap} />
+    {/if}
 
     {#if gate === 'off' || gate === 'cloudOff'}
         <AskCmdrGate kind={gate} />

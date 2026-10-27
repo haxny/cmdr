@@ -28,6 +28,22 @@ fn prefix_is_byte_identical_across_calls() {
     assert_eq!(first.tools, second.tools, "tool declarations must be byte-identical");
 }
 
+/// The rail's baseline gauge reads `prefix_tokens` before any send, so it has to be exactly
+/// what an assembly with nothing in the transcript estimates, CMDR.md and memory included.
+#[test]
+fn prefix_tokens_is_what_an_empty_assembly_costs() {
+    let tools = [declaration(ToolId::AppState), declaration(ToolId::ListDir)];
+    let full = PrefixInputs {
+        memory: Some("Likes tidy Downloads."),
+        ..prefix(Some("Answer in Hungarian."), &tools)
+    };
+
+    let assembled = assemble_prompt(&full, &[], &envelope_at(1_000), offset(), BUDGET);
+
+    assert_eq!(prefix_tokens(&full), assembled.elision.estimated_tokens);
+    assert!(prefix_tokens(&full) > prefix_tokens(&prefix(None, &tools)));
+}
+
 #[test]
 fn a_changed_envelope_does_not_touch_the_prefix() {
     let tools = [declaration(ToolId::AppState)];

@@ -263,10 +263,6 @@
   "@askCmdr.composer.selectionCapped": {
     "sourceHash": "8c1eaa6"
   },
-  "askCmdr.composer.providerOff": "Activa un proveedor de IA en Configuración para empezar a chatear.",
-  "@askCmdr.composer.providerOff": {
-    "sourceHash": "f72de54"
-  },
   "askCmdr.gate.cloudOff.body": "Ask Cmdr habla con el servicio de IA en la nube que configuraste. Permite primero la IA en la nube en Configuración y ya podrás chatear.",
   "@askCmdr.gate.cloudOff.body": {
     "sourceHash": "0e65edc"

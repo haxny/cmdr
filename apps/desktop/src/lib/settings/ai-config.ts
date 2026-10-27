@@ -28,6 +28,19 @@ const logger = getAppLogger('ai-settings')
 /** Stable id so the same toast replaces in place across consecutive failed startup attempts. */
 const secretErrorToastId = 'ai-secret-store-error'
 
+const pushedListeners = new Set<() => void>()
+
+/**
+ * Run `listener` after each push from THIS window lands in the backend, so a reader of the
+ * backend's AI state (Ask Cmdr's provider readiness) re-reads it after the change, never before.
+ * A push from another window doesn't reach here; such a reader also refreshes when its window
+ * regains focus. Returns the unsubscribe.
+ */
+export function onAiConfigPushed(listener: () => void): () => void {
+  pushedListeners.add(listener)
+  return () => pushedListeners.delete(listener)
+}
+
 /**
  * Push current AI config (provider, context size, cloud endpoint) to the Rust backend. Everything
  * here comes from `settings.json`; the API key does NOT travel with it. We send the cloud provider
@@ -69,6 +82,7 @@ export async function pushConfigToBackend(): Promise<void> {
         id: secretErrorToastId,
       })
     }
+    for (const listener of pushedListeners) listener()
   } catch (e) {
     logger.error("Couldn't push AI config to backend: {error}", { error: e })
   }

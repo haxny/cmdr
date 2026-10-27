@@ -900,10 +900,33 @@
   "@askCmdr.composer.dropHint": {
     "description": "Overlay shown on the composer while a file or folder is dragged over it, inviting a drop. Sentence case."
   },
-  "askCmdr.composer.providerOff": "Turn on an AI provider in settings to start chatting.",
-  "@askCmdr.composer.providerOff": {
-    "description": "Inline hint shown under the Ask Cmdr composer when no AI provider is turned on, so the Send button is disabled. Points the user at settings to turn one on. Friendly and actionable; avoids the words error and failed.",
-    "screenshot": "ask-cmdr-empty.png"
+  "askCmdr.composer.sendNeedsProvider": "Set up an AI provider to send",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "description": "Tooltip on the Ask Cmdr Send button while it's disabled because no AI provider is ready (none picked, a missing API key, or local AI not set up). A yellow notice at the top of the panel says which and links to settings. Sentence case, no period."
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr needs an AI provider to chat. Pick one in Settings.",
+  "@askCmdr.providerNotice.off": {
+    "description": "Yellow notice at the top of the Ask Cmdr side panel when the AI provider is set to off (the default), so nothing can be sent. A link that opens Settings > AI > Provider follows. Friendly and actionable; avoids the words error and failed."
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Your cloud AI provider needs an API key before Ask Cmdr can chat. Add it in Settings.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "description": "Yellow notice at the top of the Ask Cmdr side panel when cloud AI is picked but its provider has no API key saved yet. A link that opens Settings > AI > Provider follows. Friendly and actionable; avoids the words error and failed."
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Your cloud AI provider needs an address before Ask Cmdr can chat. Add it in Settings.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "description": "Yellow notice at the top of the Ask Cmdr side panel when cloud AI is picked with a custom provider whose server address (URL) is blank. A link that opens Settings > AI > Provider follows. Friendly and actionable; avoids the words error and failed."
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Local AI isn’t downloaded yet, so Ask Cmdr can’t chat. Set it up in Settings.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "description": "Yellow notice at the top of the Ask Cmdr side panel when local (on-device) AI is picked but its model isn't downloaded yet (or is still downloading). A link that opens Settings > AI > Provider follows. Friendly; avoids the words error and failed. The apostrophes are U+2019."
+  },
+  "askCmdr.providerNotice.localNotRunning": "Local AI isn’t running, so Ask Cmdr can’t chat. Start it in Settings.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "description": "Yellow notice at the top of the Ask Cmdr side panel when local (on-device) AI is picked and downloaded, but its server isn't running. A link that opens Settings > AI > Provider follows. Friendly; avoids the words error and failed. The apostrophes are U+2019."
+  },
+  "askCmdr.providerNotice.openSettings": "Open AI settings",
+  "@askCmdr.providerNotice.openSettings": {
+    "description": "Link under the yellow no-AI-provider notice in the Ask Cmdr side panel. Opens Settings > AI > Provider. Starts with a verb. Sentence case."
   },
   "askCmdr.attachment.remove": "Remove attachment",
   "@askCmdr.attachment.remove": {
@@ -1389,6 +1412,15 @@
       "budget": "the same budget number (drives the singular/plural form of the noun)"
     },
     "screenshot": "ask-cmdr-chat.png"
+  },
+  "askCmdr.context.baselineTooltip": "Every message starts with {usedText} of {budgetText} {budget, plural, one {token} other {tokens}} (estimated) for Cmdr’s instructions and tools",
+  "@askCmdr.context.baselineTooltip": {
+    "description": "Tooltip on the context-usage gauge before the chat has sent anything: the bar then shows the fixed part every message to the AI carries (Cmdr's instructions, its tool descriptions, and its notes about the user), measured against the room one message has. usedText and budgetText are preformatted numbers (with thousands separators). Both are chars/4 estimates, so the copy says so. The apostrophe is U+2019.",
+    "placeholders": {
+      "usedText": "how many tokens the fixed part of every message takes, preformatted (for example 6,300)",
+      "budgetText": "the room one message has, in tokens, preformatted (for example 16,000)",
+      "budget": "the same budget number (drives the singular/plural form of the noun)"
+    }
   },
   "askCmdr.wake.thinking": "Cmdr is having a look at what changed. Open the chat.",
   "@askCmdr.wake.thinking": {

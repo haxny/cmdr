@@ -95,9 +95,12 @@ interface AskCmdrState {
   /** Files/folders staged in the composer for the next send (path + kind only). */
   attachments: AttachmentRef[]
   renameReview: BulkRenameReview | null
-  /** How full the model's view got on the thread's last measured turn, for the footer gauge.
-   * `null` means no turn has been measured, which the gauge shows as nothing at all. */
+  /** How full the model's view got on the thread's last measured call, for the footer gauge.
+   * `null` means no call has been measured, and the gauge shows the slot's baseline instead. */
   contextUsage: ContextUsage | null
+  /** Bumped on each `costMetered` event (one per completed model call), so the footer re-reads
+   * the meter mid-turn. A counter, never a total: the meter stays the one source of the cost. */
+  costRevision: number
   /** Destination names the user turned down in the last review, newest first, waiting to ride
    * the NEXT send so a retry doesn't propose the same style again. Cleared once sent: they're
    * feedback on one decision, not a permanent denylist. */
@@ -121,6 +124,7 @@ export const askCmdrState = $state<AskCmdrState>({
   attachments: [],
   renameReview: null,
   contextUsage: null,
+  costRevision: 0,
   deniedNames: [],
 })
 

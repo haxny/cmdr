@@ -30,6 +30,9 @@ import {
   type ConversationCost,
   type CostSummary,
   type ModelWindowView,
+  type NextCallPricing,
+  type ProviderReadiness,
+  type SlotStatus,
   type RenameEvidence,
   type RenameProposalRowSnapshot,
   type StopReasonView,
@@ -57,6 +60,9 @@ export type {
   ConversationCost,
   CostSummary,
   ModelWindowView,
+  NextCallPricing,
+  ProviderReadiness,
+  SlotStatus,
   RenameEvidence,
   /** One folder a wake's digest named outright, with its four counts. Numbers and a path
    * only: every word around them is the rail's, so ten locales can say it their own way. */
@@ -267,18 +273,6 @@ export async function resolveAskCmdrAttachments(paths: string[]): Promise<Attach
   return commands.askCmdrResolveAttachments(paths)
 }
 
-/** True when the Ask Cmdr send path is served by the deterministic scripted fake LLM
- * (`CMDR_E2E_ASK_CMDR_FAKE`, E2E only). The composer treats the fake as an active
- * provider so Send isn't gated off while `ai.provider` is `off` under E2E. Returns
- * false when not, or when the backend isn't reachable (non-Tauri context, like Vitest). */
-export async function askCmdrFakeActive(): Promise<boolean> {
-  try {
-    return await commands.askCmdrFakeActive()
-  } catch {
-    return false
-  }
-}
-
 /**
  * What the legacy Ask Cmdr opt-in says, for the one-time `askCmdr.enabled` mapping at startup.
  * `storeUnavailable` means write nothing and ask again next launch.
@@ -317,6 +311,15 @@ export async function askCmdrCostSummary(): Promise<CostSummary> {
  */
 export async function askCmdrModelWindow(): Promise<ModelWindowView> {
   return commands.askCmdrModelWindow()
+}
+
+/**
+ * What the rail knows before anything is sent: whether an AI provider is set up, how the next
+ * call is priced, and what every call of a new chat costs at minimum (the gauge's baseline).
+ * `null` only when the backend's read itself broke; keep what was last known then.
+ */
+export async function askCmdrSlotStatus(): Promise<SlotStatus | null> {
+  return commands.askCmdrSlotStatus()
 }
 
 /**

@@ -609,6 +609,17 @@ fn calls_by_call_id(transcript: &[AgentMessage]) -> HashMap<&str, ElidedCall<'_>
 
 // ── Token estimation (heuristic, drives elision + the stub hint) ──────────────
 
+/// What the prefix alone costs: the floor every call of a thread pays before the user has
+/// said a word. The rail's gauge shows it for a chat no turn has measured yet, so it's the
+/// same estimate an assembly with an empty transcript makes, never a second formula.
+pub fn prefix_tokens(prefix: &PrefixInputs<'_>) -> usize {
+    estimate_prompt_tokens(
+        &build_system(prefix.system_prompt, prefix.cmdr_md, prefix.memory),
+        prefix.tools,
+        &[],
+    )
+}
+
 /// Estimate the assembled prompt's token size: the system string, the serialized tool
 /// declarations, and every message part. A rough heuristic (`super::budget`'s single
 /// chars-per-token divisor), not a real tokenizer — enough to keep assembly in the band.
