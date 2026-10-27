@@ -195,7 +195,7 @@ races it.
   `connected`, `needsCredentials`, `needsApproval`, `rejected` (a refused guest session), or `stillReconnecting`, whose
   detail tells the model not to poll. With no window listening, the wait ends `stillReconnecting`, which is true.
 - Registered and `needs_sign_in` / a host key to approve → `needsCredentials` / `needsApproval`, no dial.
-- Not registered (a `saved` row) → the only dial: `server_connect::connect_saved_place` with no secret and no
+- Not registered (a `saved` row) → the only dial: `saved_servers::connect_saved_place` with no secret and no
   account, so a missing Keychain password answers `needsCredentials` before anything mounts, and every NetFS mount is
   `NoUI` anyway (`network/CLAUDE.md`). A Keychain access prompt on a user-started turn is acceptable (invariant 7).
   `connected` echoes the root it landed on, which may have moved (`naspi-2`).

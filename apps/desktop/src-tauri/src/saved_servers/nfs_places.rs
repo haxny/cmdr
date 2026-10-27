@@ -1,11 +1,10 @@
-//! The NFS half of the servers facade: a server's saved exports grouped into one
-//! hub row, and the saved entry a target describes. Split out of `servers.rs` to
-//! keep that file under its length cap; the facade's rationale stays there.
+//! The NFS half of the saved servers: a server's saved exports grouped into one
+//! hub row, and the saved entry a target describes.
 
 use super::wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol, ServerTarget};
+use super::{ServerConnectOutcome, outcome_from_nfs};
 use crate::network::nfs_known_places::{self, KnownNfsPlace};
 use crate::network::nfs_volume_wiring;
-use crate::server_connect::{ServerConnectOutcome, outcome_from_nfs};
 
 /// Every saved NFS place, grouped under its SERVER: one [`SavedServer`] per host
 /// plus port, its places the saved exports, each with its own id, pin, and
@@ -108,7 +107,7 @@ pub(super) fn nfs_place(target: ServerTarget) -> Option<(KnownNfsPlace, String)>
 }
 
 /// Dials an NFS target the user just typed (`connect_server`'s NFS arm).
-pub(super) async fn connect(target: ServerTarget, attempt_id: &str) -> ServerConnectOutcome {
+pub(crate) async fn connect(target: ServerTarget, attempt_id: &str) -> ServerConnectOutcome {
     let Some((place, server_name)) = nfs_place(target) else {
         return ServerConnectOutcome::Unreachable;
     };

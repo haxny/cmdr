@@ -5,9 +5,9 @@ Thin Tauri IPC layer. Each file groups one domain's `#[tauri::command]` function
 
 ## Module map
 
-One file per domain plus `mod.rs` (re-exports + platform gates), and the directories `agent/`, `file_system/`,
-`media_index/`, and `servers/` (`servers.rs`'s own wire-vocabulary sibling, `wire.rs`). `servers.rs` is the
-protocol-agnostic facade over `sftp.rs`, `webdav.rs`, `s3.rs`, and `network.rs`; `volume_sign_in.rs` holds the
+One file per domain plus `mod.rs` (re-exports + platform gates), and the directories `agent/`, `file_system/`, and
+`media_index/`. `servers.rs` is the protocol-agnostic facade over `sftp.rs`, `webdav.rs`, `s3.rs`, and `network.rs`,
+thin over `saved_servers/` (`../saved_servers/CLAUDE.md`); `volume_sign_in.rs` holds the
 backend-neutral reconnect and sign-in commands. AI and space-poller commands register
 themselves; the index subsystems are the reverse, since they can't carry `tauri::`. Timeouts and budgets come from
 `cmdr_fs::deadline` (`crates/cmdr-fs/src/deadline/CLAUDE.md`).

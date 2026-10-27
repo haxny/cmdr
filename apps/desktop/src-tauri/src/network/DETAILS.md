@@ -48,7 +48,7 @@ of the app build.
 - **Server identity**: `server_identity.rs`: `SmbServer` (host + port, compared with `SmbServer::is`) is the one answer to "which SMB server is this"; `same_machine` is the name equivalence under it (mDNS service name, `.local` hostname, IP, enriched from the discovery state) and only answers "which MACHINE": one machine can run several servers, so a port-blind caller is a bug. Callers that still compare machines alone, because no port exists there: the Finder system-keychain aliases, the direct-connection opt-out list (`ShareRef` has no port), the OS-mount notice ledger, and the Linux GVFS mount check. Used by the mount-path disambiguation and the already-mounted short-circuit so string-shape differences can't split one server into two.
 - **Auth** (platform-agnostic):
   - `keychain.rs`: SMB credential management. Delegates storage to `crate::secrets::store()` (see `secrets/CLAUDE.md` for backend details)
-- **Dialing a saved place**: `dial_flights.rs`: one dial per place, however many callers ask (the core is `apps/desktop/src-tauri/src/server_connect/mod.rs`, under both the `connect_saved_place` command and Ask Cmdr's `connect_volume`). A caller with no typed secret joins a dial already out; one carrying a secret waits it out, then dials its own; each caller's cancel lets only that caller go, and the dial is called off once nobody waits. Why: a saved place registers only when its dial lands, so "already registered?" can't guard the 30 s a dial is out, and two dials register two volumes. The flight dials under an attempt id of its own, so a call-off can arrive before an SFTP or S3 dial (which reads the Keychain first) has filed it: `connect_wiring::call_off_early` marks the id so the attempt registers already cancelled.
+- **Dialing a saved place**: `dial_flights.rs`: one dial per place, however many callers ask (the core is `apps/desktop/src-tauri/src/saved_servers/mod.rs`, under both the `connect_saved_place` command and Ask Cmdr's `connect_volume`). A caller with no typed secret joins a dial already out; one carrying a secret waits it out, then dials its own; each caller's cancel lets only that caller go, and the dial is called off once nobody waits. Why: a saved place registers only when its dial lands, so "already registered?" can't guard the 30 s a dial is out, and two dials register two volumes. The flight dials under an attempt id of its own, so a call-off can arrive before an SFTP or S3 dial (which reads the Keychain first) has filed it: `connect_wiring::call_off_early` marks the id so the attempt registers already cancelled.
 - **Events**: `events.rs`: every `tauri_specta::Event` payload the module emits (discovery, the host context menu, `volume-connection-changed`, `volume-reconnect-requested` (Ask Cmdr handing a dropped volume to the frontend's reconnect manager), the OS-mount fallback notice) plus the wire enums only they carry, re-exported from `mod.rs`. Always compiled, because `ipc.rs`'s `collect_events!` can't cfg-gate inline and names each one on every platform.
 - **State**: `known_shares.rs`: Connection history in `known-shares.json` (usernames, last auth mode, timestamps), the saved SMB share places (rows with a share name, § "Saved SMB shares"), plus the shares switched off Cmdr's direct connection (`direct_connection_opt_outs`). `smb_saved_shares.rs` is the wiring around the share rows. `server_guid.rs` + `smb_server_guid.rs` record which server each share row is on (§ "Which server a share is on").
 
@@ -734,7 +734,7 @@ the migration, and what Forget does). What the code has to defend:
   Forget server, the one row a place id found for Forget share. ❌ Never "whatever this name matches", which reached
   rows on other ports of the same machine.
 - **The volume id is stored as the mount reported it, ❌ never re-derived** from `server_name`: only the mount knows
-  which spelling of the server it got. `server_connect::saved_by_id` looks SMB ids up in the store for that reason.
+  which spelling of the server it got. `saved_servers::saved_by_id` looks SMB ids up in the store for that reason.
   So a host that MOVED keeps each share's old id until a mount at the new address reports the real one
   (`pending_moves`, § "Moving a saved server to a new address").
 - **The volume list** (`server_volumes::fold_saved_smb_shares`) gives an unmounted share a `saved` row at its last
@@ -1005,7 +1005,7 @@ rather than a fact about a secret, so the saved-server list is its home. ❗ It 
 doesn't name it: SFTP has always come back on its own, and a missing field must not switch that off under servers saved
 before the setting existed.
 
-`sftp_volume_wiring::save_without_connecting` (behind `update_saved_server`, through `commands/servers/saves.rs` and, for an edit that keeps its address, `server_move.rs`)
+`sftp_volume_wiring::save_without_connecting` (behind `update_saved_server`, through `saved_servers/saves.rs` and, for an edit that keeps its address, `server_move.rs`)
 moves both copies: the saved entry, and on a connected place the live volume's switch, so it takes effect now rather
 than on the next connect. The row menus' checkbox takes the narrow twin, `apply_auto_reconnect` (behind
 `set_place_auto_reconnect`): the same two copies, one field, through the store's own in-place writer
@@ -1063,8 +1063,8 @@ id, never by comparing fields. The provider preset rides as `S3ProviderChoice` (
 `s3+<scheme>://<host>:<port>`, scope the key id), so every bucket under one key reads one Keychain entry, and forgetting
 one place's secret forgets it for its siblings. `s3_volume_wiring.rs` is WebDAV's three steps (dial, register retiring the
 incumbent, remember). A place's edit changes only its switch, since provider, key id, and bucket ARE the place; the
-switch reaches a live volume at once. `commands/servers.rs` groups the places back under one hub row per account
-(`servers/s3_accounts.rs`), and `server_volumes::server_volume_for_path` picks the MOST specific saved root, because the
+switch reaches a live volume at once. `saved_servers/` groups the places back under one hub row per account
+(`saved_servers/s3_accounts.rs`), and `server_volumes::server_volume_for_path` picks the MOST specific saved root, because the
 account root and a bucket place spell one object the same way.
 
 ❗ **The name is the ACCOUNT's, ❌ never a place's**, the SMB host-and-shares shape: the account row shows the name a
@@ -1094,7 +1094,7 @@ leaves no volume, no saved server, and no secret.
 `nfs_known_places.rs` is the S3 store's shape (`nfs_known_places.json`): one entry per EXPORT, each its own volume with
 its own id (`cmdr_fs::volume::nfs_volume_id`, from host, the canonical port, and the export), pin, start folder, and
 switch, found by that id. The name is the SERVER's (one `KnownNfsServer` record per named host plus port, written by
-`adopt_typed_name`, the S3 account rule), and an export reads as its own path. `commands/servers/nfs_places.rs` groups
+`adopt_typed_name`, the S3 account rule), and an export reads as its own path. `saved_servers/nfs_places.rs` groups
 the exports back under one hub row per server, whose id is its root export's place id.
 
 - **Decision (revisit in review): the uid and gid live in the entry, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
@@ -1108,7 +1108,7 @@ the exports back under one hub row per server, whose id is its root export's pla
   (`live_server_edit.rs`, below). A changed uid or gid is a NEW connection, since every call's credential carries them:
   it dials its own, confirms the start folder through it, and replaces the live volume through
   `install_retiring_incumbent`, so transfers on the old connection finish there. A refusal at any step moves nothing.
-- **No address move.** The host, port, and export ARE the place, so `commands/servers/saves.rs` answers an edit naming
+- **No address move.** The host, port, and export ARE the place, so `saved_servers/saves.rs` answers an edit naming
   another one `AccountChanged`; `server_move.rs` only calls off and drops NFS dials to the old ids.
 - **No sign-in, anywhere.** The volume's `sign_in_prompt` is `Nothing`, and `commands/volume_sign_in.rs` answers
   `Nothing` for a saved export that isn't connected (its fallback would be `Password`). Refusals are typed

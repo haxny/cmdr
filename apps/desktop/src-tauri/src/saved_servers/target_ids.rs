@@ -1,6 +1,5 @@
 //! The id a [`ServerTarget`] names, through the same id funnel the servers
-//! listing uses (`cmdr_fs::volume::ids`). Behind `saved_server_id`; split out of
-//! `servers.rs` to keep that file under its length cap.
+//! listing uses (`cmdr_fs::volume::ids`). Behind `saved_server_id`.
 
 use super::s3_accounts::s3_place;
 use super::webdav_params;
@@ -8,7 +7,7 @@ use super::wire::ServerTarget;
 
 /// The place id `server` names, or `None` for a WebDAV address that isn't an
 /// `http`/`https` URL (and an S3 target whose provider makes no endpoint).
-pub(super) fn place_id(server: ServerTarget) -> Option<String> {
+pub(crate) fn place_id(server: ServerTarget) -> Option<String> {
     match server {
         ServerTarget::Sftp {
             host, port, username, ..

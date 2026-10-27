@@ -1,6 +1,5 @@
-//! The S3 half of the servers facade: an account's saved places grouped into
-//! one hub row, and the saved entry a target describes. Split out of `servers.rs` to keep that
-//! file under its length cap; the facade's rationale stays there.
+//! The S3 half of the saved servers: an account's saved places grouped into one
+//! hub row, and the saved entry a target describes.
 
 use super::wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol};
 use crate::network::s3_known_places;

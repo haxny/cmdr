@@ -1,7 +1,5 @@
 //! The SMB half of the saved-server listing: one row per host, carrying its saved
-//! shares as places. Split out of `servers.rs` to keep that file under its length
-//! cap; the listing's own rationale stays there. Model:
-//! `docs/specs/saved-smb-shares.md`.
+//! shares as places. Model: `docs/specs/saved-smb-shares.md`.
 //!
 //! ❗ **A host's identity is where it dials: address and port.** Never the name a
 //! person gave it (that's a label they can change), and never the address alone
@@ -103,7 +101,7 @@ pub(super) fn smb_hosts(
 ///
 /// ❗ An address that doesn't parse answers `Unreachable`, the save nobody could
 /// confirm: the sheet refuses one before it gets here.
-pub(super) async fn edit_host(
+pub(crate) async fn edit_host(
     id: &str,
     edit: manual_servers::HostEdit,
     address: Option<&str>,
@@ -121,7 +119,7 @@ pub(super) async fn edit_host(
 /// [`edit_host`] for "Eject and save": a move takes down every saved share still
 /// mounted from the old address first (`server_move::smb::eject_and_move`). An edit
 /// that moves nothing has no mount in its way, so it saves as [`edit_host`] does.
-pub(super) async fn eject_and_edit_host(
+pub(crate) async fn eject_and_edit_host(
     id: &str,
     edit: manual_servers::HostEdit,
     address: Option<&str>,

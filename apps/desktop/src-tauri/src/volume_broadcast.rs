@@ -235,7 +235,7 @@ pub enum RootChangeKind {
 /// id follows to the new one instead of being sent home. What the panes do with
 /// it: `apps/desktop/src/lib/file-explorer/pane/server-move-follow.ts`. Why it's
 /// not a `volume-root-changed`: that event keeps the id, and a move is exactly an
-/// id change. The move itself: `commands/servers/moves.rs`.
+/// id change. The move itself: `server_move.rs`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type, Event)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerPlaceMoved {

@@ -1161,7 +1161,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             // place (network/live_server_edit.rs), or a renamed drive (volumes/lifecycle.rs).
             VolumeRootChanged,
             // A saved server moved to a new address, so its places have new ids
-            // (commands/servers/moves.rs).
+            // (server_move.rs).
             ServerPlaceMoved,
             VolumesBusyChanged,
             // The volumes with an eject still running (file_system/volume/eject/in_flight.rs).

@@ -1,7 +1,7 @@
 # Saved SMB shares: a share and its account, as a row under its server
 
 Tracks vdavid/cmdr-reports#7. Why: an SMB server in the Servers list is a bare host, so "user + server + share", which
-is what a person means to save, has nowhere to live. `commands/servers/wire.rs` `SavedServer` names the missing piece: a
+is what a person means to save, has nowhere to live. `saved_servers/wire.rs` `SavedServer` names the missing piece: a
 share-level writer at mount time. This builds it.
 
 ## The model

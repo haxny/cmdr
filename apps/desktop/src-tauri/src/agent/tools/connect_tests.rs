@@ -405,7 +405,7 @@ fn every_dial_outcome_maps_to_the_models_vocabulary() {
         fingerprint: "AB:CD".to_string(),
         kind: cmdr_fs::volume::tls::CertificatePromptKind::Unknown,
     };
-    let revoked = crate::server_connect::outcome::SftpHostKeyIdentity {
+    let revoked = crate::saved_servers::outcome::SftpHostKeyIdentity {
         algorithm: "ssh-ed25519".to_string(),
         fingerprint: "SHA256:abc".to_string(),
     };

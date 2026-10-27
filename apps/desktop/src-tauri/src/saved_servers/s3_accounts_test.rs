@@ -1,12 +1,12 @@
 //! An S3 account's places as the hub lists them: grouped under one account row,
 //! each with its own id and pin, and the account's id the one its root names.
 
-use super::super::wire::{ServerNameSource, ServerProtocol};
+use super::super::{ServerConnectOutcome, outcome_from_s3};
+use super::super::{ServerNameSource, ServerProtocol};
 use super::{s3_accounts, s3_place};
 use crate::network::s3_known_places::{self, KnownS3Place, S3ProviderChoice};
 use crate::network::s3_volume_wiring::S3Connection;
 use crate::network::saved_server_fields::SavedServerOutcome;
-use crate::server_connect::{ServerConnectOutcome, outcome_from_s3};
 
 fn place(key: &str, bucket: Option<&str>, pinned: bool) -> KnownS3Place {
     KnownS3Place {
@@ -99,11 +99,11 @@ async fn renaming_the_account_relabels_its_row_and_an_empty_name_unnames_it() {
     s3_known_places::remember(place(key, Some("photos"), true));
     let id = listed(key)[0].id.clone();
 
-    let saved = super::super::update_saved_s3_account(id.clone(), "Studio".to_string(), None).await;
+    let saved = crate::server_move::edit_s3_account(&id, "Studio", None).await;
     assert_eq!(saved, SavedServerOutcome::Saved);
     assert_eq!(listed(key)[0].display_name, "Studio");
 
-    let unnamed = super::super::update_saved_s3_account(id.clone(), String::new(), None).await;
+    let unnamed = crate::server_move::edit_s3_account(&id, "", None).await;
     assert_eq!(unnamed, SavedServerOutcome::Saved);
     let account = &listed(key)[0];
     assert_eq!(account.display_name, "AKIARENAMED@s3.eu-central-1.wasabisys.com");
@@ -111,7 +111,7 @@ async fn renaming_the_account_relabels_its_row_and_an_empty_name_unnames_it() {
 
     let nobody = s3_known_places::account_id(&place("AKIANOBODY", None, false).params().expect("valid"));
     assert_eq!(
-        super::super::update_saved_s3_account(nobody, "Ghost".to_string(), None).await,
+        crate::server_move::edit_s3_account(&nobody, "Ghost", None).await,
         SavedServerOutcome::Unreachable,
         "an account nothing saved has nothing to name"
     );

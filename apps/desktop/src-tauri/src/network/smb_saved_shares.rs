@@ -20,7 +20,7 @@ use crate::network::mount::MountError;
 use crate::network::one_shot_credentials::SecretOffer;
 use crate::network::os_mount_notice::FallbackNotice;
 use crate::network::{keychain, smb_upgrade};
-use crate::server_connect::ServerConnectOutcome;
+use crate::saved_servers::ServerConnectOutcome;
 use cmdr_fs::log_private::LogPrivate;
 
 /// How long a Keychain read or write may take, the bound the secret commands use.

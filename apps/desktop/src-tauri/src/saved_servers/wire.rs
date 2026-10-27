@@ -1,7 +1,5 @@
-//! The wire vocabulary `servers.rs`'s commands speak: every type a command
-//! hands the frontend. Split out of `servers.rs` to keep that file under its
-//! length cap; the commands themselves, and the facade's own rationale, stay
-//! there.
+//! The wire vocabulary the servers commands (`commands::servers`) speak: every
+//! type a command hands the frontend, re-exported there.
 
 use serde::{Deserialize, Serialize};
 

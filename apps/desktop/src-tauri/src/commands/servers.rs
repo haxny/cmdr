@@ -19,6 +19,9 @@
 //! `VolumeInfo`; a PIN is whether a place shows in the volume switcher. SFTP and
 //! WebDAV have exactly one place per account; SMB and S3 have many (an S3
 //! account's buckets, plus its root when saved).
+//!
+//! The cores under these commands (listing, saving, editing, dialing) live in
+//! `saved_servers/` (`saved_servers/CLAUDE.md`), where Ask Cmdr reaches them too.
 
 use crate::network::nfs_volume_wiring;
 use crate::network::one_shot_credentials::SecretOffer;
@@ -31,21 +34,13 @@ use crate::network::{
 };
 use cmdr_sftp::SftpConnectionParams;
 
-mod nfs_places;
-mod s3_accounts;
-mod saves;
-mod smb_hosts;
-mod target_ids;
-mod wire;
-// The connect vocabulary lives below `commands` (`server_connect`), where Ask Cmdr dials too.
-use crate::server_connect::{
-    SavedEntry, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, saved_by_id, webdav_params,
+// Every core lives below `commands` (`saved_servers`), where Ask Cmdr reads and saves too.
+use crate::saved_servers::{
+    SavedEntry, nfs_places, outcome_from_s3, outcome_from_sftp, outcome_from_webdav, save_edit, save_target,
+    saved_by_id, smb_hosts, target_ids, webdav_params,
 };
-pub use crate::server_connect::{SavedPlaceRefusal, ServerConnectOutcome};
-use s3_accounts::s3_accounts;
-use saves::{save_edit, save_target};
-use smb_hosts::smb_hosts;
-pub use wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol, ServerTarget};
+pub use crate::saved_servers::{SavedPlaceRefusal, ServerConnectOutcome};
+use crate::saved_servers::{SavedServer, ServerTarget};
 
 // ============================================================================
 // Listing
@@ -59,99 +54,11 @@ pub use wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol, Server
 #[tauri::command]
 #[specta::specta]
 pub fn list_saved_servers(app: tauri::AppHandle) -> Vec<SavedServer> {
-    saved_servers(
+    crate::saved_servers::listing(
         manual_servers::all(&app),
         known_shares::get_all_known_shares(),
         &crate::network::fresh_discovered_hosts(),
     )
-}
-
-/// The listing, over a manual-server list the caller supplies.
-///
-/// Split out because the manual SMB store reads a FILE through an `AppHandle`,
-/// and the union itself is a pure fold that a cell can drive: the share store and
-/// the discovery list come in as arguments too, so a cell never races another
-/// over the process-global copies.
-fn saved_servers(
-    manual: Vec<manual_servers::ManualServerEntry>,
-    known: Vec<known_shares::KnownNetworkShare>,
-    hosts: &[crate::network::NetworkHost],
-) -> Vec<SavedServer> {
-    let manager = crate::file_system::volume::manager::get_volume_manager();
-    // The app roots, from the module that mints them for the volume listing, so
-    // the hub's rows and the switcher's rows spell one prefix.
-    let app_roots: std::collections::HashMap<String, String> = crate::server_volumes::server_places()
-        .into_iter()
-        .map(|place| (place.id, place.app_root))
-        .collect();
-    let mut servers = Vec::new();
-
-    for entry in sftp_known_servers::all() {
-        let volume_id = cmdr_fs::volume::sftp_volume_id(&entry.host, entry.port, &entry.username);
-        let Some(app_root) = app_roots.get(&volume_id).cloned() else {
-            log::warn!(target: "volume", "a saved SFTP server has no place in the volume listing; leaving it out");
-            continue;
-        };
-        let label = entry.label();
-        servers.push(SavedServer {
-            places: vec![SavedPlace {
-                connected: manager.get(&volume_id).is_some(),
-                volume_id: volume_id.clone(),
-                name: label.clone(),
-                pinned: entry.pinned,
-                app_root,
-                username: Some(entry.username.clone()),
-                auto_reconnect: Some(entry.auto_reconnect),
-            }],
-            id: volume_id,
-            protocol: ServerProtocol::Sftp,
-            display_name: label,
-            name_source: ServerNameSource::of_account(&entry.display_name),
-            address: format!("{}:{}", entry.host, entry.port),
-            username: Some(entry.username),
-            pinned: entry.pinned,
-            last_connected_at: Some(entry.last_connected_at),
-            auto_reconnect: Some(entry.auto_reconnect),
-        });
-    }
-
-    for entry in webdav_known_servers::all() {
-        let Some(params) = webdav_params(&entry.url, &entry.username, "/") else {
-            log::warn!(target: "volume", "a saved WebDAV server's address isn't a URL any more; leaving it out of the listing");
-            continue;
-        };
-        let volume_id = cmdr_fs::volume::webdav_volume_id(params.host(), params.port(), &entry.username);
-        let Some(app_root) = app_roots.get(&volume_id).cloned() else {
-            log::warn!(target: "volume", "a saved WebDAV server has no place in the volume listing; leaving it out");
-            continue;
-        };
-        let label = entry.label();
-        servers.push(SavedServer {
-            places: vec![SavedPlace {
-                connected: manager.get(&volume_id).is_some(),
-                volume_id: volume_id.clone(),
-                name: label.clone(),
-                pinned: entry.pinned,
-                app_root,
-                username: Some(entry.username.clone()),
-                auto_reconnect: Some(entry.auto_reconnect),
-            }],
-            id: volume_id,
-            protocol: ServerProtocol::Webdav,
-            display_name: label,
-            name_source: ServerNameSource::of_account(&entry.display_name),
-            address: entry.url,
-            username: Some(entry.username),
-            pinned: entry.pinned,
-            last_connected_at: Some(entry.last_connected_at),
-            auto_reconnect: Some(entry.auto_reconnect),
-        });
-    }
-
-    servers.extend(s3_accounts(manager, &app_roots));
-    servers.extend(nfs_places::nfs_servers(manager, &app_roots));
-    servers.extend(smb_hosts(manual, known, hosts));
-    servers
 }
 
 // ============================================================================
@@ -173,7 +80,7 @@ fn saved_servers(
 /// the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
 /// the account.
 ///
-/// ❗ **One dial per place** (`server_connect`): a second caller while a dial
+/// ❗ **One dial per place** (`saved_servers`): a second caller while a dial
 /// is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
 /// instead of dialing again, which would register a second volume.
 #[tauri::command]
@@ -184,7 +91,7 @@ pub async fn connect_saved_place(
     secret: Option<SecretOffer>,
     username: Option<String>,
 ) -> Result<ServerConnectOutcome, SavedPlaceRefusal> {
-    crate::server_connect::connect_saved_place(&volume_id, &attempt_id, secret, username).await
+    crate::saved_servers::connect_saved_place(&volume_id, &attempt_id, secret, username).await
 }
 
 /// Dials a server the user just typed, in add mode.
@@ -274,7 +181,7 @@ pub async fn connect_server(
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_server_connect(attempt_id: String) -> bool {
-    crate::server_connect::cancel_connect(&attempt_id)
+    crate::saved_servers::cancel_connect(&attempt_id)
 }
 
 /// Drops a place's session and takes it out of the registry, answering whether

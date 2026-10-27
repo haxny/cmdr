@@ -1,11 +1,10 @@
 //! The per-protocol save behind `update_saved_server`: an add without a dial, an
-//! edit in place, or an edit that moves a server to a new address. Split out of
-//! `servers.rs` to keep that file under its length cap; the facade's rationale
-//! stays there.
+//! edit in place, or an edit that moves a server to a new address.
 
 use super::nfs_places::nfs_place;
 use super::s3_accounts::s3_place;
 use super::wire::ServerTarget;
+use super::{SavedEntry, saved_by_id};
 use crate::network::nfs_known_places::KnownNfsPlace;
 use crate::network::nfs_volume_wiring;
 use crate::network::s3_known_places::KnownS3Place;
@@ -15,7 +14,6 @@ use crate::network::sftp_known_servers::KnownSftpServer;
 use crate::network::sftp_volume_wiring;
 use crate::network::webdav_known_servers::KnownWebdavServer;
 use crate::network::webdav_volume_wiring;
-use crate::server_connect::{SavedEntry, saved_by_id};
 
 /// Saves `server` with no saved entry behind the request: an "Add anyway".
 ///
@@ -23,7 +21,7 @@ use crate::server_connect::{SavedEntry, saved_by_id};
 /// per-protocol IPC command behind it any more (nothing but its own test ever
 /// called `update_known_sftp_server` / `update_known_webdav_server`), so this
 /// facade builds the known-servers entry itself instead of forwarding.
-pub(super) async fn save_target(server: ServerTarget) -> SavedServerOutcome {
+pub(crate) async fn save_target(server: ServerTarget) -> SavedServerOutcome {
     let Some(entry) = entry_of(server) else {
         return SavedServerOutcome::Unreachable;
     };
@@ -45,7 +43,7 @@ async fn save_entry(entry: Entry) -> SavedServerOutcome {
 /// ❗ A place nobody saved any more (a Forget in another pane) answers
 /// `Unreachable`, the save nobody could confirm, ❌ never a quiet re-save. One
 /// naming another protocol or account answers `AccountChanged`.
-pub(super) async fn save_edit(id: &str, server: ServerTarget) -> SavedServerOutcome {
+pub(crate) async fn save_edit(id: &str, server: ServerTarget) -> SavedServerOutcome {
     let Some(saved) = saved_by_id(id) else {
         return SavedServerOutcome::Unreachable;
     };

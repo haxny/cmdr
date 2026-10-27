@@ -4871,7 +4871,7 @@ export const commands = {
    *  the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
    *  the account.
    *
-   *  ❗ **One dial per place** (`server_connect`): a second caller while a dial
+   *  ❗ **One dial per place** (`saved_servers`): a second caller while a dial
    *  is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
    *  instead of dialing again, which would register a second volume.
    */
@@ -17038,7 +17038,7 @@ export type ServerNameSource =
  *  id follows to the new one instead of being sent home. What the panes do with
  *  it: `apps/desktop/src/lib/file-explorer/pane/server-move-follow.ts`. Why it's
  *  not a `volume-root-changed`: that event keeps the id, and a move is exactly an
- *  id change. The move itself: `commands/servers/moves.rs`.
+ *  id change. The move itself: `server_move.rs`.
  */
 export type ServerPlaceMoved = {
   /**

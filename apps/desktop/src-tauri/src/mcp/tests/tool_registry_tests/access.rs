@@ -88,7 +88,7 @@ const EXPECTED_MEMORY_TOOL_NAMES: &[&str] = &["memory_write", "memory_edit"];
 /// having read the handler.
 ///
 /// `connect_volume` (`agent/tools/connect.rs`): dials only a saved, unregistered place through
-/// `server_connect::connect_saved_place` with no secret and no account, hands a dropped one to the
+/// `saved_servers::connect_saved_place` with no secret and no account, hands a dropped one to the
 /// frontend's reconnect manager, and takes no address, secret, or account parameter.
 const EXPECTED_SESSION_TOOL_NAMES: &[&str] = &["connect_volume"];
 

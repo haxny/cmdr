@@ -4,7 +4,7 @@
 //! places, one per export, and each is its own volume with its own id
 //! (`cmdr_fs::volume::nfs_volume_id`), pin, switch, uid, and gid, so each is its
 //! own entry; the servers listing groups them back under their server
-//! (`commands/servers/nfs_places.rs`).
+//! (`saved_servers/nfs_places.rs`).
 //!
 //! ❗ **The NAME is the server's, ❌ never a place's**, the S3 store's rule
 //! (`s3_known_places.rs`): a person names the server (host plus port), and an
