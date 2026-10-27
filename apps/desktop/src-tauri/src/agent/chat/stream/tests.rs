@@ -409,6 +409,7 @@ fn a_decision_crosses_with_its_row_and_no_authored_sentence() {
                 skipped: 1,
                 failed: 0,
             },
+            protocol: None,
         },
     };
 
@@ -423,6 +424,7 @@ fn a_decision_crosses_with_its_row_and_no_authored_sentence() {
                 "what": "/Users/dana/Downloads/*.dmg",
                 "ops": 3,
                 "outcome": { "kind": "ran", "done": 2, "skipped": 1, "failed": 0 },
+                "protocol": null,
             },
         })
     );

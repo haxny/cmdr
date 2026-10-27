@@ -102,6 +102,11 @@ pub const MIGRATIONS: &[Migration] = &[
         description: "proposals.source_folder: the folder a group's ops share, backfilled once",
         up: migrate_v12_proposal_source_folder,
     },
+    Migration {
+        version: 13,
+        description: "proposal_server_drafts: the server a zero-op server group proposes",
+        up: migrate_v13_proposal_server_drafts,
+    },
 ];
 
 /// The meta key holding the integer schema version (as text). Absent ⇒ 0 (a fresh DB
@@ -565,4 +570,28 @@ fn migrate_v12_proposal_source_folder(tx: &Transaction<'_>) -> rusqlite::Result<
         }
     }
     Ok(())
+}
+
+/// Version 13: `proposal_server_drafts`, the server an `add_server` / `edit_server` group
+/// proposes. Such a group has no ops: this row IS what it asks for, so the spine writes it in
+/// the group's own transaction (unlike rename's evidence sidecar, which its producer writes
+/// after). One row per group, cascading with it.
+///
+/// `draft` and `previous` are the spine's own `ServerDraft` as JSON, a type with no field that
+/// could hold a secret. `editing_id` and `previous` are set together, for an edit only, which
+/// the CHECK holds. `completion_note` is a `ServerSaveNote` token, set when an approved save
+/// wrote something but not everything. Rationale: `proposals/DETAILS.md` § A server group.
+fn migrate_v13_proposal_server_drafts(tx: &Transaction<'_>) -> rusqlite::Result<()> {
+    tx.execute_batch(
+        "
+        CREATE TABLE proposal_server_drafts (
+            group_id        INTEGER PRIMARY KEY REFERENCES proposals(id) ON DELETE CASCADE,
+            draft           TEXT NOT NULL,   -- ServerDraft JSON: what the click saves
+            editing_id      TEXT,            -- the saved place an edit changes; NULL for an add
+            previous        TEXT,            -- ServerDraft JSON: that place as the proposal saw it
+            completion_note TEXT,            -- ServerSaveNote token; NULL unless a save was partial
+            CHECK ((editing_id IS NULL) = (previous IS NULL))
+        );
+        ",
+    )
 }

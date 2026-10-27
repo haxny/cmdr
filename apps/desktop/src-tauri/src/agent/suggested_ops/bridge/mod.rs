@@ -55,7 +55,8 @@ pub struct ApprovedGroup {
 /// Why an approval did not become a running operation.
 #[derive(Debug, Clone)]
 pub enum ApprovalRefusal {
-    /// Preflight would not accept: the group had already left `pending`, or is unknown.
+    /// Preflight would not accept: the group had already left `pending`, is unknown, or is a
+    /// server group, which this path never approves (`AcceptanceOutcome::NotAFileGroup`).
     NotAccepted(AcceptanceOutcome),
     /// The claim transaction refused. Its two variants mean different recoveries.
     Claim(ClaimRefusal),
@@ -396,6 +397,11 @@ async fn start_for(
                 .await
                 .map(|started| started.operation)
                 .map_err(ApprovalRefusal::Rename)
+        }
+        // Unreachable: preflight refuses a server group before any claim. Named so a server
+        // group can never fall into a file executor's arm.
+        ProposalVerb::AddServer | ProposalVerb::EditServer => {
+            Err(ApprovalRefusal::NotAccepted(AcceptanceOutcome::NotAFileGroup))
         }
     }
 }

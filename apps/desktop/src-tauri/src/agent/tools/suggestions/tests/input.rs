@@ -162,6 +162,33 @@ fn rename_carries_its_own_names_and_refuses_a_pattern() {
     );
 }
 
+/// The verb type is the store's, so a server verb deserializes; this tool still never stages
+/// a server group from paths.
+#[test]
+fn a_server_verb_is_not_a_file_suggestion() {
+    for verb in ["addServer", "editServer"] {
+        let refusal = plan_sweep(
+            &json!({ "groups": [{
+                "verb": verb,
+                "sourceVolumeId": "root",
+                "displayName": "x",
+                "paths": ["/Users/someone/a.txt"],
+            }] }),
+            NOW,
+            &local_facts(),
+        )
+        .expect_err("a server verb refuses");
+        assert_eq!(
+            refusal,
+            PlanRefusal::Group {
+                group: 0,
+                problem: GroupProblem::NotAFileVerb
+            },
+            "{verb}"
+        );
+    }
+}
+
 #[test]
 fn a_selector_supplies_the_volume_and_the_title_itself() {
     // Sending either alongside it would be a second, drifting answer to a settled question:

@@ -240,6 +240,8 @@ mod tests {
             ProposalVerb::Rename,
             ProposalVerb::Compress,
             ProposalVerb::Extract,
+            ProposalVerb::AddServer,
+            ProposalVerb::EditServer,
         ] {
             assert_eq!(run_blocker(verb, Some(&share)), None, "{verb:?}");
         }

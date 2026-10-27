@@ -8368,6 +8368,9 @@ export type DownloadsWatcherStatus = {
   fdaPending: boolean
 }
 
+// Which kind of server a server proposal describes, stored inside its draft.
+export type DraftProtocol = 'smb' | 'sftp' | 'webdav' | 'nfs' | 's3'
+
 /**
  *  `drag-image-size`: the OS drag image's pixel dimensions, read on drag enter
  *  (macOS swizzle in `drag_image_detection.rs`). Used to size / suppress the
@@ -14426,9 +14429,14 @@ export type ProposalDecision = {
   verb: ProposalVerb
   // The group's display name: a path or a pattern, so the user's own data rather than copy.
   what: string
-  // The live op count the user was answering about.
+  // The live op count the user was answering about. 0 for a server group, which has none.
   ops: number
   outcome: ProposalOutcomeKind
+  /**
+   *  The kind of server a server group proposed; absent for a file group. Optional on disk
+   *  too, so a line written before servers could be proposed still reads.
+   */
+  protocol?: DraftProtocol | null
 }
 
 /**
@@ -14458,6 +14466,11 @@ export type ProposalOutcomeKind =
    *  next launch, so a line never reads "running" after the run it named is gone.
    */
   | { kind: 'interrupted' }
+  /**
+   *  The user approved a server proposal and Cmdr saved it: all of it, unless `note` says
+   *  what it left undone. A server group has no ops, so there are no tallies.
+   */
+  | { kind: 'saved'; note: ServerSaveNote | null }
 
 /**
  *  Where a group sits in its lifecycle, stored in `proposals.status`.
@@ -14497,7 +14510,21 @@ export type ProposalStatus =
  *  (`agent/store/proposals/`), which pairs the verb with them so a wrong combination can't
  *  be built.
  */
-export type ProposalVerb = 'move' | 'copy' | 'trash' | 'delete' | 'rename' | 'compress' | 'extract'
+export type ProposalVerb =
+  | 'move'
+  | 'copy'
+  | 'trash'
+  | 'delete'
+  | 'rename'
+  | 'compress'
+  | 'extract'
+  /**
+   *  Save a new server. Zero ops: the group's server draft is the whole proposal
+   *  (`agent/store/proposals/DETAILS.md` § A server group).
+   */
+  | 'addServer'
+  // Change a saved server's editable fields. Zero ops, like `AddServer`.
+  | 'editServer'
 
 /**
  *  Known cloud/mount provider. The variant identity crosses IPC (serialized
@@ -15385,6 +15412,8 @@ export type Reversibility =
    *  existing archive (the seed is unconditional and the prior bytes are gone).
    */
   | 'irreversible'
+  // A saved server's settings: forgotten again, or changed back, in Servers.
+  | 'serverSettings'
 
 /**
  *  What a rollback DISPATCH returns to the FE/MCP: the inverse op's id. The
@@ -17085,6 +17114,14 @@ export type ServerRequestError =
    *  failure: ❌ never log it at warn or error.
    */
   | { type: 'blockedByPolicy' }
+
+/**
+ *  What an approved server save left undone, stored beside the group's draft when the save
+ *  wrote something but not everything. Absent on a whole save.
+ */
+export type ServerSaveNote =
+  // An SMB add saved the host but not its share row.
+  'shareNotSaved'
 
 /**
  *  Which server to dial, in add mode.

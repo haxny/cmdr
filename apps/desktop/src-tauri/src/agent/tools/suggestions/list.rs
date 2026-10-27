@@ -11,7 +11,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::agent::AgentDb;
-use crate::agent::store::proposals::{GroupSummary, ProposalSweep, get_sweep, list_groups};
+use crate::agent::store::proposals::{GroupSummary, ProposalSweep, ServerDraft, get_sweep, list_groups};
 use crate::agent::suggested_ops::facts::{RunBlocker, source_run_blocker};
 use crate::agent::types::{ProposalStatus, ProposalVerb, Reversibility};
 use crate::mcp::{ToolError, ToolResult};
@@ -86,6 +86,22 @@ pub(super) struct GroupSummaryOut {
     /// True when a pattern produced this group. Its `displayName` IS that pattern.
     #[serde(skip_serializing_if = "crate::agent::tools::read::is_false")]
     pub from_selector: bool,
+    /// What an `addServer` / `editServer` group would save. Such a group has no ops, so its
+    /// `opCount` is 0 and this is the whole proposal. Never a secret: a draft has no field for
+    /// one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server: Option<ServerOut>,
+}
+
+/// A server group's draft as the model reads it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ServerOut {
+    #[serde(flatten)]
+    pub draft: ServerDraft,
+    /// The saved place an edit changes; absent for an add.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub editing: Option<String>,
 }
 
 fn is_zero(count: &u64) -> bool {
@@ -228,6 +244,7 @@ pub(super) fn to_group_summary(summary: GroupSummary) -> GroupSummaryOut {
         group,
         live_op_count,
         total_op_count,
+        server,
     } = summary;
     let run_blocker = source_run_blocker(group.verb, &group.source_volume_id);
     GroupSummaryOut {
@@ -244,5 +261,9 @@ pub(super) fn to_group_summary(summary: GroupSummary) -> GroupSummaryOut {
         op_count: live_op_count,
         excluded_op_count: total_op_count.saturating_sub(live_op_count),
         from_selector: group.selector.is_some(),
+        server: server.map(|proposal| ServerOut {
+            draft: proposal.draft,
+            editing: proposal.edit.map(|edit| edit.editing),
+        }),
     }
 }

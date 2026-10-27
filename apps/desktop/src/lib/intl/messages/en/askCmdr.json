@@ -1664,6 +1664,36 @@
   "@askCmdr.decision.verbExtract": {
     "description": "The name of one action Ask Cmdr can suggest (unpacking an archive), dropped into the askCmdr.decision.rejected and askCmdr.decision.approved sentences as their verbName placeholder. Translate it in whatever form those two sentences need in your language (English uses the -ing form); the two sentences and these seven names are translated together. Lowercase, no full stop."
   },
+  "askCmdr.decision.serverRejected": "You turned down {verbName}",
+  "@askCmdr.decision.serverRejected": {
+    "description": "A line in the Ask Cmdr chat rail recording that the person said no when the agent suggested saving a server (a NAS, an SFTP or WebDAV server, and the like) or changing a saved one. It appears in the thread the suggestion came from, and the server's name is shown beside it rather than inside this sentence. Sentence case, no full stop. Address the person directly, in the informal register this app uses throughout.",
+    "placeholders": {
+      "verbName": "The suggestion, already translated, from askCmdr.decision.verbAddServer or askCmdr.decision.verbEditServer: for English, adding a server or changing a server."
+    }
+  },
+  "askCmdr.decision.serverApproved": "You approved {verbName}",
+  "@askCmdr.decision.serverApproved": {
+    "description": "A line in the Ask Cmdr chat rail recording that the person approved the agent's suggestion to save a server (a NAS, an SFTP or WebDAV server, and the like) or change a saved one. It appears in the thread the suggestion came from, and the server's name is shown beside it rather than inside this sentence. The next line says how it went: askCmdr.decision.saved or askCmdr.decision.savedNotShare. Sentence case, no full stop. Address the person directly, in the informal register this app uses throughout.",
+    "placeholders": {
+      "verbName": "The suggestion, already translated, from askCmdr.decision.verbAddServer or askCmdr.decision.verbEditServer: for English, adding a server or changing a server."
+    }
+  },
+  "askCmdr.decision.verbAddServer": "adding a server",
+  "@askCmdr.decision.verbAddServer": {
+    "description": "The name of one suggestion Ask Cmdr can make (saving a new server in Cmdr's server list), dropped into the askCmdr.decision.serverRejected and askCmdr.decision.serverApproved sentences as their verbName placeholder. Translate it in whatever form those two sentences need in your language (English uses the -ing form). Lowercase, no full stop."
+  },
+  "askCmdr.decision.verbEditServer": "changing a server",
+  "@askCmdr.decision.verbEditServer": {
+    "description": "The name of one suggestion Ask Cmdr can make (changing the settings of a server already saved in Cmdr's server list), dropped into the askCmdr.decision.serverRejected and askCmdr.decision.serverApproved sentences as their verbName placeholder. Translate it in whatever form those two sentences need in your language (English uses the -ing form). Lowercase, no full stop."
+  },
+  "askCmdr.decision.saved": "Saved",
+  "@askCmdr.decision.saved": {
+    "description": "A second line in the Ask Cmdr chat rail, under an approved suggestion to save or change a server (askCmdr.decision.serverApproved), saying Cmdr saved it. Saving doesn't connect to the server. Short status, sentence case, no full stop."
+  },
+  "askCmdr.decision.savedNotShare": "Saved the server, not its share",
+  "@askCmdr.decision.savedNotShare": {
+    "description": "A second line in the Ask Cmdr chat rail, under an approved suggestion to save a network server together with one shared folder on it (askCmdr.decision.serverApproved), saying Cmdr saved the server but not the shared folder. \"Share\" is a network share: a folder a NAS or computer offers over the network. Sentence case, no full stop, and no words like error or failed: it states what happened, calmly."
+  },
   "askCmdr.railBoundary.closedToast": "Ask Cmdr ran into a problem and closed. Open it again to keep going.",
   "@askCmdr.railBoundary.closedToast": {
     "description": "Toast shown when the Ask Cmdr chat rail broke unexpectedly, while opening, in use, or while closing. The app has already closed the rail and put keyboard focus back on the file list; reopening the rail brings the conversation back. \"Ask Cmdr\" is the product name; keep it as-is."

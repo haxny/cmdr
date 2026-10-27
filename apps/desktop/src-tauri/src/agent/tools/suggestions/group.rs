@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager, Runtime};
 
 use super::list::{GroupSummaryOut, to_group_summary};
 use crate::agent::AgentDb;
-use crate::agent::store::proposals::{GroupSummary, ProposalOp, count_ops, get_group, page_ops};
+use crate::agent::store::proposals::{GroupSummary, ProposalOp, count_ops, get_group, page_ops, read_server_proposal};
 use crate::agent::types::OpStatus;
 use crate::mcp::{ToolError, ToolResult};
 use crate::search::{format_size, format_timestamp};
@@ -98,6 +98,7 @@ pub async fn execute_get_suggestion_group<R: Runtime>(app: &AppHandle<R>, params
             group,
             live_op_count: count_ops(&conn, group_id, Some(OpStatus::Pending))?,
             total_op_count: count_ops(&conn, group_id, None)?,
+            server: read_server_proposal(&conn, group_id)?,
         };
         let ops = page_ops(&conn, group_id, limit, offset)?;
         Ok(Some((summary, ops)))

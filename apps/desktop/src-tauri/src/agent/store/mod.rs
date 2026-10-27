@@ -78,6 +78,24 @@ pub enum AgentStoreError {
     /// A persisted `content_blocks` JSON value failed to parse back into the typed
     /// message-part model. Carried for logging only.
     ContentBlocks(serde_json::Error),
+    /// A server group with no draft row, or one whose JSON won't decode. A server group's
+    /// draft IS what it proposes, so the read fails closed rather than showing or saving a
+    /// guess. Names the group, ❌ never the JSON, which holds a host and an account.
+    ServerDraft {
+        group_id: i64,
+        problem: ServerDraftProblem,
+    },
+}
+
+/// What's wrong with a server group's stored draft.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServerDraftProblem {
+    /// The group has no `proposal_server_drafts` row.
+    Missing,
+    /// The row's `draft` or `previous` isn't a `ServerDraft` this build reads.
+    Undecodable,
+    /// The row's `completion_note` isn't a `ServerSaveNote` token.
+    UnknownNote,
 }
 
 impl std::fmt::Display for AgentStoreError {
@@ -95,6 +113,9 @@ impl std::fmt::Display for AgentStoreError {
                 write!(f, "main.db undecodable token in {column}: {value:?}")
             }
             AgentStoreError::ContentBlocks(e) => write!(f, "main.db undecodable content_blocks: {e}"),
+            AgentStoreError::ServerDraft { group_id, problem } => {
+                write!(f, "main.db server group {group_id} has no readable draft ({problem:?})")
+            }
         }
     }
 }

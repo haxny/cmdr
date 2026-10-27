@@ -24,9 +24,11 @@ export interface RefusalReason {
 /**
  * Which `errors.write.<field>.<op>` arm a group's verb reads from. A `Record` over every verb
  * makes a new verb a compile error here rather than a missing key at runtime. A rename runs as
- * a move where it can't rename in place, and extract is a copy out of an archive.
+ * a move where it can't rename in place, and extract is a copy out of an archive. A server
+ * suggestion runs no transfer, so it has no arm: the write engine never refuses one.
  */
-const OPERATION_TYPE: Record<SuggestedGroupView['verb'], TransferOperationType> = {
+type FileVerb = Exclude<SuggestedGroupView['verb'], 'addServer' | 'editServer'>
+const OPERATION_TYPE: Record<FileVerb, TransferOperationType> = {
   move: 'move',
   copy: 'copy',
   extract: 'copy',
@@ -39,6 +41,8 @@ const OPERATION_TYPE: Record<SuggestedGroupView['verb'], TransferOperationType> 
 export function refusalReason(refusal: GroupRefusal, verb: SuggestedGroupView['verb']): RefusalReason {
   switch (refusal.kind) {
     case 'refused': {
+      // Unreachable for a server suggestion (the backend answers `couldNotStart`), so it reads that way.
+      if (verb === 'addServer' || verb === 'editServer') return refusalReason({ kind: 'couldNotStart' }, verb)
       const friendly = getUserFriendlyMessage(refusal.error, OPERATION_TYPE[verb])
       return { message: friendly.message, suggestion: friendly.suggestion }
     }

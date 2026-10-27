@@ -115,6 +115,7 @@ fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
         },
         live_op_count: 5,
         total_op_count: 7,
+        server: None,
     }
 }
 

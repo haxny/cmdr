@@ -147,7 +147,10 @@ A group whose sweep can't be read is dropped rather than shown parentless: the s
 undated one reads as new.
 
 Every group summary carries BOTH ids (`groupId`, `sweepId`), because an amendment needs the pair, and both counts
-(`opCount` live, `excludedOpCount` for what the user deselected), since a deselected op keeps its row.
+(`opCount` live, `excludedOpCount` for what the user deselected), since a deselected op keeps its row. A server group
+(`addServer` / `editServer`) has `opCount: 0` and carries `server`: its draft (protocol, name, address, account, and the
+rest it holds; there's no field for a secret) plus `editing` for an edit. `propose_suggestions` refuses a server verb as
+`notAFileVerb`: the verb type is the store's, so it deserializes, and a file sweep never builds a server group.
 
 **`get_suggestion_group`** reports `truncated` when the size cut took rows off the page OR the page doesn't reach the
 end of the group: both mean "there's more", and the model has to say "returned of total" either way. Its op fields are

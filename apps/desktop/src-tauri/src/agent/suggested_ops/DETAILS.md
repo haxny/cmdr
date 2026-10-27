@@ -148,6 +148,11 @@ the ones it just wrote.
 `MemoryStore` is resolved by the command layer and MOVED in beside the reporting connection, for the same reason that
 one is: the operation outlives the call that started it. This is the concrete payoff of `MemoryStore` being pure.
 
+**A server group's line names the server, not a count** (`store::proposals::decision_of`, below `wake/` so the follow-up
+builds the same line without a cycle): `ProposalDecision.protocol` comes
+from its draft, and a settled one is `ProposalOutcomeKind::Saved { note }`, the note saying what a partial save left
+undone ("saved the SMB server naspolya, not its share"). There are no ops to tally.
+
 **Decision: `RejectSource` separates a dismissal from a rejection.**
 **Why**: `cancel_bulk_rename_proposal` calls `reject` when somebody closes the rename review, and the group does need
 an answer. But nobody expressed an opinion about the proposal by pressing Escape. Learning from it teaches the agent

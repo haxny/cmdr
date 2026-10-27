@@ -185,6 +185,12 @@ Bumped by every amend, so an approval binds the version of a group the user read
 
 The folder every op of a group sits directly in, NULL when they span folders, written with the op list. The step backfills existing groups once by streaming their paths, with the rule COPIED into the step so it keeps doing what it shipped doing. Why a column: `../suggested_ops/DETAILS.md` § Header facts.
 
+## v13: `proposal_server_drafts`
+
+The server a zero-op `add_server` / `edit_server` group proposes, one row per group, cascading with it and written in
+the group's own transaction. Rationale, the claim it feeds, and why the spine writes it when rename's producer writes its
+own sidecar: `proposals/DETAILS.md` § A server group.
+
 ## No auto-retention in v1
 
 Transcripts are small (spec §3), so there's no pruning yet. When real sizes exist, the operation log's

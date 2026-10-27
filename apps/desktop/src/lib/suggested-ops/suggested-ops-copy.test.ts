@@ -36,6 +36,15 @@ describe('the approve button', () => {
     expect(approveKey('trash')).toBe('suggestedOps.approve.trash')
     expect(approveKey('delete')).toBe('suggestedOps.approve.delete')
     expect(approveKey('extract')).toBe('suggestedOps.approve.extract')
+    expect(approveKey('addServer')).toBe('suggestedOps.approve.addServer')
+    expect(approveKey('editServer')).toBe('suggestedOps.approve.editServer')
+  })
+})
+
+describe('a server suggestion’s pill', () => {
+  it('says where the user takes a saved server back', () => {
+    expect(reversibilityKey('addServer', 'serverSettings')).toBe('suggestedOps.reversible.forgetServer')
+    expect(reversibilityKey('editServer', 'serverSettings')).toBe('suggestedOps.reversible.changeServerBack')
   })
 })
 

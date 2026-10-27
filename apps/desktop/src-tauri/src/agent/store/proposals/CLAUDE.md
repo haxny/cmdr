@@ -11,6 +11,7 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
 - `claim.rs` — preflight, the claim transaction and its release, rejection, and the streaming binding.
 - `complete.rs` — what execution writes back: per-op outcomes, and the group's own end.
 - `recovery.rs` — the `interrupted` startup sweep.
+- `draft.rs` — a server group's plain shapes (`ServerDraft`); `server.rs` — its draft writes (v13) and its claim.
 - `thread_line.rs` — a group's one thread line (v10), rewritten in place.
 
 ## Must-knows
@@ -18,16 +19,13 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
 - **The claim is the one place a bug applies ops to real files twice.** One `BEGIN IMMEDIATE`: read the stored
   acceptance, compare the live op set as a hash plus count, conditional `UPDATE ... WHERE status = 'pending'`, refuse on
   a mismatch **or** on `rows_affected == 0` as two distinct typed variants (the recovery differs). ❌ Don't reorder it.
-  It also leaves op statuses alone, which is what makes a losing concurrent claim report stale status instead of a
-  mismatch the winner caused. That one needs no rule, because a test holds it:
-  `tests/claim.rs::two_concurrent_claims_leave_exactly_one_winner_and_a_typed_refusal` goes red if the claim starts
-  writing them.
+  It leaves op statuses alone, so a losing concurrent claim reports stale status, not a mismatch the winner caused
+  (`tests/claim.rs::two_concurrent_claims_leave_exactly_one_winner_and_a_typed_refusal` holds it).
 - **The acceptance record is SERVER-OWNED.** The client presents an `OpSelection` of op IDS, never values
   (`DETAILS.md` § What preflight accepts). Comparing `proposal_ops` against itself is a tautology once the agent can
   amend a pending group, so the record held apart from the rows is the whole mechanism.
-- **`live_binding` STREAMS.** One row in memory at a time, so a 60 000-op group claims as cheaply as a three-op one.
-  `page_ops` is the only op-row-materializing read here, and a test asserts the claim path never calls it — so a
-  comparison rewritten to load the ops fails that test rather than quietly costing 60 000 rows twice.
+- **`live_binding` STREAMS**, one row at a time, so a 60 000-op group claims as cheaply as a three-op one. `page_ops`
+  is the only op-row-materializing read, and a test asserts the claim path never calls it.
 - **`pending` is the only mutable status.** `repropose_group` guards on it, TEARS UP the acceptance record, and bumps
   `revision`, which an approval must name, so a click on the old version can't approve the new one. `approved`, `interrupted`, `completed`, and
   `rejected` are the user's.
@@ -37,12 +35,14 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
 - **`GroupIntent` makes the wrong shapes unrepresentable.** Each variant carries the target its executor binds AND its
   op shape, so a trash group with a destination can't be built. Reversibility falls out of the same enum (what a VOLUME blocks:
   `../../suggested_ops/facts.rs`). Add a verb by adding a variant, never a check.
-- **`completed` is written on SETTLE, whatever the operation did**, because the question it answers is "still in
-  flight, or not?" Marking only on success leaves a cancelled group `approved`, so the next launch calls it
-  `interrupted` — a claim the app died, about an operation the user stopped. Per-op statuses carry the rest.
+- **`completed` is written on SETTLE, whatever the operation did**: it answers "still in flight?". Marking only on
+  success leaves a cancelled group to read `interrupted` next launch. Per-op statuses carry the rest.
 - **`WritableDestination` stops a group being built to write where a ROUTE serves**: inside an archive, or inside a
   repo's `.git` trees. Those take no bound write, and the engine's refusal would fire AFTER the user approved. Refusing
   here costs the agent a retry and the user nothing.
 - **A deselected op keeps its ROW** (`OpStatus::Excluded`). The decision record says what was offered, not only what ran.
+- **A server group has zero ops and its own claim.** Its draft is written in the group's own transaction and fails
+  closed on read; the revision is its binding. Neither claim takes the other's kind (`NotAFileGroup` /
+  `NotAServerGroup`). `DETAILS.md` § A server group.
 
 Service layer above this (selectors, analytics): `../../suggested_ops/CLAUDE.md`.

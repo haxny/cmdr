@@ -537,6 +537,9 @@ fn plan_shape(
         // The caller routes a rename to its own op shape before reaching here, so this arm
         // exists only to keep the match total.
         ProposalVerb::Rename => Err(GroupProblem::RenamesVerbMismatch),
+        // The verb type is shared with the store, so these deserialize; a server group isn't
+        // built from files, and this tool never stages one.
+        ProposalVerb::AddServer | ProposalVerb::EditServer => Err(GroupProblem::NotAFileVerb),
     }
 }
 

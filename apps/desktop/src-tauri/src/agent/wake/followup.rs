@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
-use super::super::store::proposals::{count_ops, get_sweep, rejected_groups_since};
+use super::super::store::proposals::{count_ops, decision_of, get_sweep, rejected_groups_since};
 use super::super::types::{OpStatus, ProposalDecision, ProposalOutcomeKind, ProposalOutcomes};
 use super::{WakeReadiness, WakeSettings};
 
@@ -127,13 +127,11 @@ pub(super) fn prepare(conn: &Connection, set_id: i64, since: i64) -> Option<Prep
     };
     let decisions: Vec<ProposalDecision> = groups
         .into_iter()
-        .map(|group| ProposalDecision {
+        .map(|group| {
             // The rows never move out of `pending` on a rejection, so this is still the set the
             // user was looking at when they said no.
-            ops: count_ops(conn, group.id, Some(OpStatus::Pending)).unwrap_or(0) as u32,
-            verb: group.verb,
-            what: group.display_name,
-            outcome: ProposalOutcomeKind::Rejected,
+            let ops = count_ops(conn, group.id, Some(OpStatus::Pending)).unwrap_or(0) as u32;
+            decision_of(conn, &group, ops, ProposalOutcomeKind::Rejected)
         })
         .collect();
     if decisions.is_empty() {

@@ -13,9 +13,9 @@ proposal spine. Depth: `DETAILS.md`.
 - `events.rs` — `ConversationEvent`, the timeline half of `messages`; `rows.rs` — the shared insert; `turns.rs` —
   turn-scoped reads.
 - `consent.rs` — `meta` consent records: "Allow cloud AI" (`ai/cloud_consent.rs`'s) and Ask Cmdr's read-only legacy one.
-- `proposals/` — the sweep / group / op spine and the claim transaction, its own C+D pair:
-  `proposals/CLAUDE.md`. A producer's own per-op sidecar table lives with that producer (`proposal_rename_evidence` is
-  `agent/tools/propose/rename/`'s), never as columns on the shared `proposal_ops`.
+- `proposals/` — the sweep / group / op spine and the claim transaction: `proposals/CLAUDE.md`. A producer's per-op
+  sidecar lives with that producer (`proposal_rename_evidence`), never as `proposal_ops` columns; only a server group's
+  draft (v13) is the spine's own.
 
 ## Must-knows
 
@@ -30,9 +30,8 @@ proposal spine. Depth: `DETAILS.md`.
 - **`search_conversations` JOINs the FTS match back to `messages`, which MASKS orphan index rows**, so a broken delete
   trigger looks fine through search. External-content FTS5 desyncs easily, so test de-indexing against `messages_fts`
   directly, never only through the search API.
-- **`cost_meter.conversation_id` is NOT NULL by necessity.** SQLite treats NULLs as distinct in a PK, so a nullable PK
-  column breaks `ON CONFLICT DO UPDATE` (every write duplicates instead of upserting). The per-day cross-thread rollup
-  is computed at query time.
+- **`cost_meter.conversation_id` is NOT NULL by necessity.** A nullable PK column breaks `ON CONFLICT DO UPDATE` (SQLite
+  treats NULLs as distinct, so every write duplicates). The cross-thread rollup is computed at query time.
 - **One reserved conversation row nothing lists** (origin `quiet_wakes`, v8) keeps what quiet wakes spent once their
   threads are deleted. ❌ Never count threads with a bare `COUNT(*) FROM conversations`. `delete_conversation` is the
   store's one delete; a thread that spent anything goes through `discard_conversation_keeping_cost`, which folds its

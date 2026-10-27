@@ -15,6 +15,9 @@ pub(super) const PHONE_NAME_UNITS: usize = 254;
 /// What one group got wrong.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum GroupProblem {
+    /// A server verb (`addServer`, `editServer`): the store's verb vocabulary has them, and a
+    /// file sweep can't carry one.
+    NotAFileVerb,
     /// Neither `paths`, `renames`, nor `selector`.
     NoSources,
     /// More than one of them: which one the user would be reviewing is a coin toss.

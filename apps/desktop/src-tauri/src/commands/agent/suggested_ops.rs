@@ -673,6 +673,14 @@ fn refusal_view(refusal: ApprovalRefusal) -> ApprovalResultView {
             log::warn!(target: "agent::suggested_ops", "a stored rename group spans folders, so it can't start");
             ApprovalResultView::CouldNotStart
         }
+        // A server card approves through its own command; the dialog never sends one here.
+        ApprovalRefusal::NotAccepted(AcceptanceOutcome::NotAFileGroup) => {
+            log::warn!(
+                target: "agent::suggested_ops",
+                "a server group reached the file approval, which never saves a server"
+            );
+            ApprovalResultView::CouldNotStart
+        }
         ApprovalRefusal::TargetMissing { verb } => {
             log::warn!(
                 target: "agent::suggested_ops",

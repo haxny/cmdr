@@ -27,8 +27,10 @@
 
 mod claim;
 mod complete;
+mod draft;
 mod read;
 mod recovery;
+mod server;
 mod thread_line;
 mod write;
 
@@ -40,12 +42,16 @@ pub use claim::{
     claim_group_for_execution, live_binding, record_acceptance, reject_group, release_claim,
 };
 pub use complete::{CompleteOutcome, mark_group_completed, record_op_outcome};
+pub use draft::{ServerDraft, ServerEdit, ServerProposal};
 pub use read::{
     GroupSummary, ProposalOp, ProposalSweep, count_ops, count_pending, get_group, get_sweep, list_groups, page_ops,
-    rejected_groups_since,
+    read_server_proposal, rejected_groups_since,
 };
 pub use recovery::recover_interrupted_groups;
-pub use thread_line::{RunningLine, ThreadLine, open_running_line, rewrite_line, running_lines, settle_line};
+pub use server::{ClaimedServer, ServerClaimOutcome, claim_server_group, mark_server_group_completed};
+pub use thread_line::{
+    RunningLine, ThreadLine, decision_of, open_running_line, rewrite_line, running_lines, settle_line,
+};
 pub use write::{
     NewGroup, NewOp, NewRename, NewSweep, OpSnapshot, ReproposeOutcome, TransferOp, create_group, create_sweep,
     repropose_group,
@@ -102,6 +108,10 @@ impl WritableDestination {
 /// source and destination parents differ, so its group binds the shared PARENT rather than a
 /// target). Extract, compress, trash, and delete ops can't carry a name at all.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "a handful are built per proposal call and written straight away: boxing the draft buys nothing"
+)]
 pub enum GroupIntent {
     /// Move every source into one shared destination directory, each under its own name or
     /// the one its op carries.
@@ -136,6 +146,14 @@ pub enum GroupIntent {
     Trash { sources: Vec<NewOp> },
     /// Delete every source permanently. Binds no target, and nothing takes it back.
     Delete { sources: Vec<NewOp> },
+    /// Save a server: a new one, or (with `edit`) changes to a saved one. ZERO ops: the draft
+    /// is the whole proposal, stored beside the group in its own transaction, and the group
+    /// takes the server claim rather than the acceptance record (`DETAILS.md` § A server
+    /// group).
+    SaveServer {
+        draft: ServerDraft,
+        edit: Option<ServerEdit>,
+    },
 }
 
 impl GroupIntent {
@@ -149,6 +167,8 @@ impl GroupIntent {
             GroupIntent::Rename { .. } => ProposalVerb::Rename,
             GroupIntent::Trash { .. } => ProposalVerb::Trash,
             GroupIntent::Delete { .. } => ProposalVerb::Delete,
+            GroupIntent::SaveServer { edit: None, .. } => ProposalVerb::AddServer,
+            GroupIntent::SaveServer { edit: Some(_), .. } => ProposalVerb::EditServer,
         }
     }
 
@@ -170,6 +190,7 @@ impl GroupIntent {
                 }
             }
             GroupIntent::Delete { .. } => Reversibility::Irreversible,
+            GroupIntent::SaveServer { .. } => Reversibility::ServerSettings,
         }
     }
 
@@ -189,7 +210,18 @@ impl GroupIntent {
                 (Some(archive.path.as_str()), Some(archive.volume_id.as_str()))
             }
             GroupIntent::Rename { parent, .. } => (Some(parent.as_str()), None),
-            GroupIntent::Trash { .. } | GroupIntent::Delete { .. } => (None, None),
+            GroupIntent::Trash { .. } | GroupIntent::Delete { .. } | GroupIntent::SaveServer { .. } => (None, None),
+        }
+    }
+
+    /// What `proposals.source_volume_id` (NOT NULL) holds. A file group's is the volume its
+    /// sources live on, as given. A server group has no sources: an edit stores the place it
+    /// changes, an add `""`, and nothing reads either.
+    pub(super) fn stored_source_volume<'a>(&'a self, given: &'a str) -> &'a str {
+        match self {
+            GroupIntent::SaveServer { edit: Some(edit), .. } => edit.editing.as_str(),
+            GroupIntent::SaveServer { edit: None, .. } => "",
+            _ => given,
         }
     }
 
@@ -202,6 +234,7 @@ impl GroupIntent {
             | GroupIntent::Trash { sources }
             | GroupIntent::Delete { sources } => sources.len(),
             GroupIntent::Rename { renames, .. } => renames.len(),
+            GroupIntent::SaveServer { .. } => 0,
         }
     }
 
@@ -230,6 +263,7 @@ impl GroupIntent {
                     op.snapshot.as_ref(),
                 )
             })),
+            GroupIntent::SaveServer { .. } => Box::new(std::iter::empty()),
         }
     }
 }

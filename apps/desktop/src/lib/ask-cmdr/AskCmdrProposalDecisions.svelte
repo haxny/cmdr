@@ -34,12 +34,19 @@
         rename: 'askCmdr.decision.verbRename',
         compress: 'askCmdr.decision.verbCompress',
         extract: 'askCmdr.decision.verbExtract',
+        addServer: 'askCmdr.decision.verbAddServer',
+        editServer: 'askCmdr.decision.verbEditServer',
     }
 
-    /** The headline: what was asked for, over how much, and what the person said. */
+    /** The headline: what was asked for, over how much, and what the person said. A server
+     *  suggestion has no files, so its headline names no count. */
     function headline(decision: ProposalDecision): string {
-        const key =
-            decision.outcome.kind === 'rejected' ? 'askCmdr.decision.rejected' : 'askCmdr.decision.approved'
+        const rejected = decision.outcome.kind === 'rejected'
+        if (decision.verb === 'addServer' || decision.verb === 'editServer') {
+            const serverKey = rejected ? 'askCmdr.decision.serverRejected' : 'askCmdr.decision.serverApproved'
+            return tString(serverKey, { verbName: tString(VERB_KEYS[decision.verb]) })
+        }
+        const key = rejected ? 'askCmdr.decision.rejected' : 'askCmdr.decision.approved'
         return tString(key, {
             verbName: tString(VERB_KEYS[decision.verb]),
             countText: formatInteger(decision.ops),
@@ -64,6 +71,8 @@
                     skippedText: formatInteger(outcome.skipped),
                     failedText: formatInteger(outcome.failed),
                 })
+            case 'saved':
+                return tString(outcome.note === 'shareNotSaved' ? 'askCmdr.decision.savedNotShare' : 'askCmdr.decision.saved')
         }
     }
 </script>

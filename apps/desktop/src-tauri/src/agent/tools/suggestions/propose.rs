@@ -312,6 +312,12 @@ pub(super) fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
 
 fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
     match problem {
+        GroupProblem::NotAFileVerb => (
+            "notAFileVerb",
+            "This tool suggests what to do with files: move, copy, trash, delete, rename, compress, or extract. A \
+             server isn't proposed here."
+                .into(),
+        ),
         GroupProblem::NoSources => (
             "noSources",
             "This group names nothing to act on. Give paths, renames, or a selector.".into(),

@@ -83,6 +83,14 @@
   "@suggestedOps.approve.extract": {
     "description": "Primary button on a suggestion that unpacks archives (zip files and the like) into a folder. {countText} is how many archives would be unpacked, already formatted."
   },
+  "suggestedOps.approve.addServer": "Add server",
+  "@suggestedOps.approve.addServer": {
+    "description": "Primary button on a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. Pressing it saves the server without connecting to it. Takes no count."
+  },
+  "suggestedOps.approve.editServer": "Save changes",
+  "@suggestedOps.approve.editServer": {
+    "description": "Primary button on a suggestion to change the settings of a server already saved in Cmdr's server list (its name, folder, or account). Pressing it saves the changes. Takes no count."
+  },
   "suggestedOps.reject": "Reject",
   "@suggestedOps.reject": {
     "description": "Button that turns one suggestion down. Nothing happens to the files."
@@ -154,6 +162,14 @@
   "suggestedOps.irreversible.other": "This can’t be undone",
   "@suggestedOps.irreversible.other": {
     "description": "Warning pill on a suggestion nothing can take back, when there's no more specific reason to give. Disclosure only: the user can still approve it."
+  },
+  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "@suggestedOps.reversible.forgetServer": {
+    "description": "Pill on a suggestion to save a new server, saying the user can take it back: they can remove (forget) the saved server again in the Servers view. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
+  },
+  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "@suggestedOps.reversible.changeServerBack": {
+    "description": "Pill on a suggestion to change a saved server's settings, saying the user can take it back by editing the server again in the Servers view. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
   },
   "suggestedOps.folderWillBeCreated": "Cmdr will create this folder",
   "@suggestedOps.folderWillBeCreated": {

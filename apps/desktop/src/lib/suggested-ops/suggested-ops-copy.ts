@@ -30,6 +30,10 @@ export function approveKey(verb: ProposalVerb): MessageKey {
       return 'suggestedOps.approve.compress'
     case 'extract':
       return 'suggestedOps.approve.extract'
+    case 'addServer':
+      return 'suggestedOps.approve.addServer'
+    case 'editServer':
+      return 'suggestedOps.approve.editServer'
   }
 }
 
@@ -53,6 +57,9 @@ export function reversibilityKey(verb: ProposalVerb, reversible: Reversibility):
       if (verb === 'delete') return 'suggestedOps.irreversible.delete'
       if (verb === 'compress') return 'suggestedOps.irreversible.overwrite'
       return 'suggestedOps.irreversible.other'
+    case 'serverSettings':
+      if (verb === 'editServer') return 'suggestedOps.reversible.changeServerBack'
+      return 'suggestedOps.reversible.forgetServer'
   }
 }
 

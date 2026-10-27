@@ -81,6 +81,36 @@ describe('AskCmdrProposalDecisions', () => {
     expect(target.textContent).not.toContain('Running')
   })
 
+  /** A server suggestion has no files, so its line names the server and no count. */
+  it('says a server suggestion was saved, naming no count', async () => {
+    const target = render([
+      decision({ verb: 'addServer', what: 'build-box', ops: 0, outcome: { kind: 'saved', note: null } }),
+    ])
+    await tick()
+
+    expect(target.textContent).toContain('You approved adding a server')
+    expect(target.textContent).toContain('build-box')
+    expect(target.textContent).toContain('Saved')
+    expect(target.textContent).not.toContain('0 items')
+  })
+
+  /** A save that wrote the host but not its share says so, so the user doesn't look for it. */
+  it('says when a saved server is missing its share', async () => {
+    const target = render([
+      decision({ verb: 'addServer', what: 'naspolya', ops: 0, outcome: { kind: 'saved', note: 'shareNotSaved' } }),
+    ])
+    await tick()
+
+    expect(target.textContent).toContain('Saved the server, not its share')
+  })
+
+  it('says what server change the user turned down', async () => {
+    const target = render([decision({ verb: 'editServer', what: 'naspolya', ops: 0 })])
+    await tick()
+
+    expect(target.textContent).toContain('You turned down changing a server')
+  })
+
   /** A rejection never ran, so there is nothing to report about it. */
   it('says nothing about a run for a suggestion that was turned down', async () => {
     const target = render([decision()])
