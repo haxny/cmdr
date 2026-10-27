@@ -14,6 +14,10 @@ id = "RUSTSEC-2023-0071"
 reason = "rsa (Marvin attack: private-key timing side channel, no patched version exists). Reaches the app only through russh in cmdr-sftp, our SSH client, which signs one auth challenge per connect with the user's own RSA key file; it never decrypts, and an attacker can't drive private-key operations at will. Full analysis, and when to re-check, in deny.toml."
 
 [[IgnoredVulns]]
+id = "GHSA-qwgh-2vcv-g2f7"
+reason = "block-buffer (a panic inside the caller's block callback, caught with catch_unwind, can leave the buffer's cursor corrupt). Fixed in 0.12.1, which we use; the 0.10.4 copy under digest 0.10 (md-5, sha1, sha2 0.10) has no fixed release on its line. Not exploitable here: the only callbacks digest 0.10 passes are the hashes' own fixed compression functions, which don't panic on any input, so no input can trigger it. Goes away when md-5, sha1, and sha2 0.10's dependents move to digest 0.11 (`cargo tree -i block-buffer@0.10.4 -e normal --target aarch64-apple-darwin`, 2026-10-27)."
+
+[[IgnoredVulns]]
 id = "RUSTSEC-2026-0192"
 reason = "ttf-parser is unmaintained (notice only, no known vulnerability): pulled in by lopdf 0.42 under pdf-extract (the AI agent's PDF text reader), whose latest release still pins lopdf ^0.42. lopdf 0.45 swapped it for skrifa, so this goes away when pdf-extract moves up."
 
