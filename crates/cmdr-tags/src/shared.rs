@@ -1,7 +1,7 @@
 //! The foobar2000-style view over several files at once: what they share, the edits a user
 //! makes against that view, and the list of what an apply would change.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
@@ -115,13 +115,17 @@ fn shared_value(files: &[FileTags], field: TagField) -> SharedValue {
 /// (ties in order of first appearance), at most `limit`. Files without the field aren't counted.
 pub fn distinct_values(files: &[FileTags], field: TagField, limit: usize) -> Vec<ValueCount> {
     let mut counts: Vec<ValueCount> = Vec::new();
+    let mut index: HashMap<&Vec<String>, usize> = HashMap::new();
     for values in files.iter().filter_map(|f| f.fields.get(&field)) {
-        match counts.iter_mut().find(|c| &c.values == values) {
-            Some(count) => count.files += 1,
-            None => counts.push(ValueCount {
-                values: values.clone(),
-                files: 1,
-            }),
+        match index.get(values) {
+            Some(&at) => counts[at].files += 1,
+            None => {
+                index.insert(values, counts.len());
+                counts.push(ValueCount {
+                    values: values.clone(),
+                    files: 1,
+                });
+            }
         }
     }
     counts.sort_by_key(|c| std::cmp::Reverse(c.files)); // stable: ties keep first appearance

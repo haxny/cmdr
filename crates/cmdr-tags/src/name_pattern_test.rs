@@ -190,3 +190,95 @@ fn from_file_name_bad_pattern_changes_nothing() {
     let tool = TagTool::FromFileName { pattern: regex("(") };
     assert_eq!(apply_tool_in(&files, &ctx, &tool), files.to_vec());
 }
+
+#[test]
+fn dummy_only_patterns_have_no_fields() {
+    assert_eq!(compile_pattern(&format("%dummy%")).unwrap_err(), PatternError::NoFields);
+    assert_eq!(
+        compile_pattern(&format("%dummy%-%DUMMY%")).unwrap_err(),
+        PatternError::NoFields
+    );
+    assert_eq!(
+        compile_pattern(&regex(r"(?<dummy>.+)")).unwrap_err(),
+        PatternError::NoFields
+    );
+    assert_eq!(
+        compile_pattern(&regex(r"(.+)_(.+)")).unwrap_err(),
+        PatternError::NoFields
+    );
+}
+
+#[test]
+fn pattern_literals_are_nfc_normalized() {
+    // A pattern pasted from a macOS (NFD) file name: e + U+0301.
+    let nfd_format = format("Kapitola e\u{301} - %title%");
+    assert_eq!(
+        read(&nfd_format, "Kapitola \u{e9} - A"),
+        Some(vec![pair(TagField::Title, "A")])
+    );
+    let nfd_regex = regex("Kapitola e\u{301} - (?<title>.+)");
+    assert_eq!(
+        read(&nfd_regex, "Kapitola \u{e9} - A"),
+        Some(vec![pair(TagField::Title, "A")])
+    );
+}
+
+#[test]
+fn double_percent_is_a_literal_percent() {
+    assert_eq!(
+        read(&format("50%% off %title%"), "50% off Sale"),
+        Some(vec![pair(TagField::Title, "Sale")])
+    );
+    assert_eq!(read(&format("50%% off %title%"), "50 off Sale"), None);
+}
+
+#[test]
+fn format_placeholders_cover_the_wire_only_fields() {
+    let p = format("%translator%|%disctotal%|%description%|%www%");
+    assert_eq!(
+        read(&p, "a|2|c|d"),
+        Some(vec![
+            pair(TagField::Translator, "a"),
+            pair(TagField::DiscTotal, "2"),
+            pair(TagField::Description, "c"),
+            pair(TagField::Www, "d"),
+        ])
+    );
+}
+
+#[test]
+fn regex_group_names_cover_every_field() {
+    let p = regex(r"(?<translator>a)\|(?<discTotal>2)\|(?<description>c)\|(?<www>d)\|(?<trackTotal>9)");
+    assert_eq!(
+        read(&p, "a|2|c|d|9"),
+        Some(vec![
+            pair(TagField::Translator, "a"),
+            pair(TagField::DiscTotal, "2"),
+            pair(TagField::Description, "c"),
+            pair(TagField::Www, "d"),
+            pair(TagField::TrackTotal, "9"),
+        ])
+    );
+}
+
+#[test]
+fn from_file_name_duplicate_fields_follow_the_multi_rule() {
+    let files = [FileTags::default()];
+    let ctx = ToolContext {
+        folders: vec![],
+        stems: vec!["2008-2009".to_string(), "A - B".to_string()],
+    };
+    let files = [files[0].clone(), files[0].clone()];
+    // Single-value field (date, via the year alias): the first match wins.
+    let dates = TagTool::FromFileName {
+        pattern: regex(r"(?<date>\d+)-(?<year>\d+)"),
+    };
+    let out = apply_tool_in(&files, &ctx, &dates);
+    assert_eq!(out[0].fields[&TagField::Date], vec!["2008".to_string()]);
+    // Multi-value field (artist twice): the values append.
+    let artists = TagTool::FromFileName {
+        pattern: format("%artist% - %artist%"),
+    };
+    let out = apply_tool_in(&files, &ctx, &artists);
+    assert_eq!(out[1].fields[&TagField::Artist], vec!["A".to_string(), "B".to_string()]);
+}

@@ -1,7 +1,7 @@
 //! Reading tags from a file name: an Mp3tag-style `%track% - %title%` pattern or a regular
 //! expression with named groups. Pure; the tools module applies the result.
 
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
@@ -85,35 +85,61 @@ fn field_named(name: &str) -> Result<Option<TagField>, PatternError> {
     Ok(Some(field))
 }
 
+/// Compiled-size cap for a pattern (the crate default is 10 MB); a file name needs far less.
+const REGEX_SIZE_LIMIT: usize = 1 << 20;
+
+fn build_regex(source: &str) -> Result<Regex, PatternError> {
+    RegexBuilder::new(source)
+        .size_limit(REGEX_SIZE_LIMIT)
+        .build()
+        .map_err(|_| PatternError::BadRegex)
+}
+
+/// A pattern is real when at least one group sets a field (not only `dummy` or unnamed groups).
+fn sets_a_field(groups: &[Option<Option<TagField>>]) -> bool {
+    groups.iter().any(|g| matches!(g, Some(Some(_))))
+}
+
 fn compile_format(pattern: &str) -> Result<CompiledPattern, PatternError> {
-    let placeholder = Regex::new(r"%([^%]+)%").expect("placeholder regex is valid");
-    let matches: Vec<_> = placeholder.captures_iter(pattern).collect();
-    if matches.is_empty() {
-        return Err(PatternError::NoFields);
-    }
+    let pattern: String = pattern.nfc().collect();
+    // `%%` is a literal percent sign; otherwise `%name%` is a placeholder.
+    let token = Regex::new(r"%%|%([^%]+)%").expect("placeholder regex is valid");
+    let placeholders = token.captures_iter(&pattern).filter(|c| c.get(1).is_some()).count();
     let mut source = String::from("(?s)^");
     let mut groups = Vec::new();
     let mut at = 0;
-    for (i, caps) in matches.iter().enumerate() {
+    for caps in token.captures_iter(&pattern) {
         let whole = caps.get(0).expect("group 0 always exists");
         source.push_str(&regex::escape(&pattern[at..whole.start()]));
-        groups.push(Some(field_named(&caps[1])?));
-        source.push_str(if i + 1 == matches.len() { "(.+)" } else { "(.+?)" });
         at = whole.end();
+        match caps.get(1) {
+            None => source.push_str(&regex::escape("%")),
+            Some(name) => {
+                groups.push(Some(field_named(name.as_str())?));
+                source.push_str(if groups.len() == placeholders { "(.+)" } else { "(.+?)" });
+            }
+        }
+    }
+    if !sets_a_field(&groups) {
+        return Err(PatternError::NoFields);
     }
     source.push_str(&regex::escape(&pattern[at..]));
     source.push('$');
-    let regex = Regex::new(&source).map_err(|_| PatternError::BadRegex)?;
-    Ok(CompiledPattern { regex, groups })
+    Ok(CompiledPattern {
+        regex: build_regex(&source)?,
+        groups,
+    })
 }
 
+/// Regex mode matches anywhere in the stem unless the pattern anchors itself with `^` / `$`.
 fn compile_regex(pattern: &str) -> Result<CompiledPattern, PatternError> {
-    let regex = Regex::new(pattern).map_err(|_| PatternError::BadRegex)?;
+    let pattern: String = pattern.nfc().collect();
+    let regex = build_regex(&pattern)?;
     let mut groups = Vec::new();
     for name in regex.capture_names().skip(1) {
         groups.push(name.map(field_named).transpose()?);
     }
-    if groups.iter().all(Option::is_none) {
+    if !sets_a_field(&groups) {
         return Err(PatternError::NoFields);
     }
     Ok(CompiledPattern { regex, groups })

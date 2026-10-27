@@ -348,3 +348,20 @@ fn distinct_values_ties_keep_first_appearance_and_multi_values_group() {
     assert_eq!(got[1].values, strings(&["c"]));
     assert_eq!(got[2].values, strings(&["d"]));
 }
+
+#[test]
+fn distinct_values_many_distinct_values_in_order() {
+    let files: Vec<FileTags> = (0..2000)
+        .map(|i| file(&[(TagField::Title, &[&format!("t{}", i % 1000)])]))
+        .collect();
+    let got = distinct_values(&files, TagField::Title, 5);
+    assert_eq!(got.len(), 5);
+    assert_eq!(
+        got[0],
+        ValueCount {
+            values: strings(&["t0"]),
+            files: 2
+        }
+    );
+    assert_eq!(got[4].values, strings(&["t4"]));
+}
