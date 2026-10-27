@@ -421,8 +421,8 @@ spent on one broken payload, and from the user's side the agent simply stopped a
 model had nothing new to read, so it had nothing new to try.
 
 `FailedCalls` is a per-turn map from the tool's wire name plus its whole serialized arguments
-object (`serde_json`'s `Map` is a `BTreeMap`, so key order can't split one call into two
-records) to what that call came back with. The driver judges each call before dispatching:
+object, keys sorted at every depth (`AgentToolCall::identity_key`; `serde_json` keeps insertion order in this
+build, so it sorts explicitly and key order can't split one call into two records) to what that call came back with. The driver judges each call before dispatching:
 
 1. **Nothing identical failed yet** ⇒ dispatch, and record the content if `dispatch_ok` says it
    came back with a problem.

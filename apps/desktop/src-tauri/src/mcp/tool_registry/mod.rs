@@ -27,8 +27,9 @@
 //!
 //! Wire output must stay byte-identical: each schema is the exact `json!` block (hoisted into
 //! [`schemas`] verbatim), and the tool order is the historical category concatenation. The
-//! `tool_snapshot_tests` fixture pins it. Schema keys serialize alphabetically (serde_json `Map`
-//! is a `BTreeMap`; `preserve_order` is off), so authored key order never affects the bytes.
+//! `tool_snapshot_tests` fixture pins it. Schema keys serialize in authored order: genai turns on
+//! serde_json's `preserve_order` for the whole build, so reordering a `json!` block's keys changes the
+//! bytes (and the snapshot). Anything a model reads as a key LIST sorts explicitly (`params.rs`).
 //!
 //! Split: this file is the mechanism (the two view dimensions, the params gate, and the
 //! `mcp_tools!` macro); `table.rs` is the data the macro expands. Layering: the table depends on the
