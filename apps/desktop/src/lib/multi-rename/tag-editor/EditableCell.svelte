@@ -7,6 +7,7 @@
      */
     import { untrack } from 'svelte'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import TextArea from '#lib/ui/TextArea.svelte'
     import TextInput from '#lib/ui/TextInput.svelte'
 
@@ -50,7 +51,7 @@
     function onkeydown(e: KeyboardEvent): void {
         if (e.isComposing) return
         // A textarea keeps Enter for new lines; ⌘/Ctrl+Enter commits there.
-        if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) {
+        if (e.key === 'Enter' && (!multiline || eventMatchesCommand(e, 'multiRename.rename'))) {
             claimKey(e)
             commit()
         } else if (e.key === 'Escape' && draft !== committed) {

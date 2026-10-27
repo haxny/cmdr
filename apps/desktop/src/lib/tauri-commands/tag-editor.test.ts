@@ -56,7 +56,7 @@ describe('openTagEditor', () => {
   })
 
   it('returns the typed error', async () => {
-    vi.mocked(commands.openTagEditor).mockResolvedValue(failure as never)
+    vi.mocked(commands.openTagEditor).mockResolvedValue(failure)
     expect(await openTagEditor('s1')).toEqual({ ok: false, error: noSession })
   })
 })
@@ -96,7 +96,7 @@ describe('getTagChanges', () => {
   })
 
   it('returns the typed error', async () => {
-    vi.mocked(commands.getTagChanges).mockResolvedValue(failure as never)
+    vi.mocked(commands.getTagChanges).mockResolvedValue(failure)
     expect(await getTagChanges('s1')).toEqual({ ok: false, error: noSession })
   })
 })
@@ -131,14 +131,14 @@ describe('undoTagApply', () => {
   })
 
   it('returns the typed error', async () => {
-    vi.mocked(commands.undoTagApply).mockResolvedValue(failure as never)
+    vi.mocked(commands.undoTagApply).mockResolvedValue(failure)
     expect(await undoTagApply('x', null)).toEqual({ ok: false, error: noSession })
   })
 })
 
 describe('closeTagEditor', () => {
   it('closes the session', async () => {
-    vi.mocked(commands.closeTagEditor).mockResolvedValue(undefined as never)
+    vi.mocked(commands.closeTagEditor).mockResolvedValue(undefined)
     await closeTagEditor('s1')
     expect(commands.closeTagEditor).toHaveBeenCalledWith('s1')
   })
@@ -152,7 +152,7 @@ describe('listCoverCandidates', () => {
   })
 
   it('returns the typed error', async () => {
-    vi.mocked(commands.listCoverCandidates).mockResolvedValue(failure as never)
+    vi.mocked(commands.listCoverCandidates).mockResolvedValue(failure)
     expect(await listCoverCandidates('s1')).toEqual({ ok: false, error: noSession })
   })
 })
@@ -187,7 +187,7 @@ describe('getCoverImage', () => {
   })
 
   it('returns the typed error', async () => {
-    vi.mocked(commands.getCoverImage).mockResolvedValue(failure as never)
+    vi.mocked(commands.getCoverImage).mockResolvedValue(failure)
     expect(await getCoverImage('s1')).toEqual({ ok: false, error: noSession })
   })
 })

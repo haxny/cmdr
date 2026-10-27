@@ -4114,13 +4114,11 @@
   },
   "settings.multiRename.tagEditor.label": "Tag editor in Multi-Rename",
   "@settings.multiRename.tagEditor.label": {
-    "description": "Advanced-section label for the switch that adds a Tags tab to the Multi-Rename sheet. \"Multi-Rename\" is the feature name, keep it.",
-    "screenshot": "settings-advanced.png"
+    "description": "Advanced-section label for the switch that adds a Tags tab to the Multi-Rename sheet. \"Multi-Rename\" is the feature name, keep it."
   },
   "settings.multiRename.tagEditor.description": "Adds a Tags tab to Multi-Rename for editing music and audiobook tags before renaming.",
   "@settings.multiRename.tagEditor.description": {
-    "description": "Help text for the tag-editor switch in Settings > Advanced. \"Multi-Rename\" is the feature name, keep it. \"Tags\" is the name of the tab. Tags are the metadata inside audio files (artist, album, title).",
-    "screenshot": "settings-advanced.png"
+    "description": "Help text for the tag-editor switch in Settings > Advanced. \"Multi-Rename\" is the feature name, keep it. \"Tags\" is the name of the tab. Tags are the metadata inside audio files (artist, album, title)."
   },
   "settings.multiRename.tagEditor.keywords": "tags, id3, mp3, m4b, audiobook, music, metadata, artist, album",
   "@settings.multiRename.tagEditor.keywords": {

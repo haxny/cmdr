@@ -43,6 +43,11 @@ const VIEW: TagEditorView = {
   diacritics: [],
 }
 
+/** The mock stands in for the state; only what the tab reads is there. */
+function asTagState(mock: object): TagEditorState {
+  return mock as TagEditorState
+}
+
 async function mountTab(over: { view?: TagEditorView; error?: TagStateError | null } = {}) {
   const state = {
     view: over.view ?? VIEW,
@@ -57,7 +62,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
   }
-  const mounted = await mountInto(TagsTab, { state: state as unknown as TagEditorState })
+  const mounted = await mountInto(TagsTab, { state: asTagState(state) })
   cleanup = mounted.cleanup
   return { root: mounted.root, state }
 }

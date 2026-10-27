@@ -21,6 +21,7 @@ export async function mountInto<P extends Record<string, unknown>>(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- the type argument names the element a test expects
 export function byId<T extends HTMLElement>(root: HTMLElement, id: string): T {
   const el = root.querySelector<T>(`#${id}`)
   if (!el) throw new Error(`no #${id}`)

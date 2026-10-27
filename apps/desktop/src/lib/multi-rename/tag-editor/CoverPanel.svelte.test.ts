@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CoverSummary } from '#lib/ipc/bindings.js'
 import CoverPanel from './CoverPanel.svelte'
 import { mountInto } from './tag-cell.test-helper'
-import { mount, tick, unmount } from 'svelte'
+import { mount, tick, unmount, type ComponentProps } from 'svelte'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'binary' }))
 
@@ -157,7 +157,7 @@ describe('CoverPanel', () => {
       const loadImage = vi.fn(
         () => new Promise<{ mime: string; data: number[] } | null>((resolve) => answers.push(resolve)),
       )
-      const props = $state({
+      const props = $state<ComponentProps<typeof CoverPanel>>({
         cover: SAME,
         editable: true,
         listCandidates: () => Promise.resolve([]),

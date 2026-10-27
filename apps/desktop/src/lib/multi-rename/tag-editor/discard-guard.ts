@@ -14,9 +14,9 @@ export interface DiscardGuard {
   /** There are tag edits not yet written to the files, or one still on its way. */
   readonly dirty: boolean
   /** Resolves true when the sheet may go on to close or rename: nothing to lose, or the user chose Discard. */
-  confirm(): Promise<boolean>
+  confirm: () => Promise<boolean>
   /** Closes right away when nothing is unwritten; otherwise asks first (one question at a time). */
-  close(): void
+  close: () => void
 }
 
 /** `tags` is `null` while the Tags tab is off: the guard then never asks and `close` is `onClose`. */

@@ -84,6 +84,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let view = $state.raw<TagEditorView | null>(null)
   let error = $state.raw<TagStateError | null>(null)
   let pending = $state(0)
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping of pending promises, nothing renders from it
   const inFlight = new Set<Promise<unknown>>()
   let opening: Promise<void> | null = null
   let started = false

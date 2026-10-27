@@ -61,8 +61,8 @@
     import { createResults } from './results.svelte'
     import { createFieldHistoryMenu } from './field-history-menu.svelte'
     import { getSetting } from '#lib/settings/index.js'
-    import { RenamePanel, SheetTabs, TagsTab, createDiscardGuard, createTagEditorState } from './tag-editor/index'
-    import type { SheetTab, TagsTabApi } from './tag-editor/index'
+    import { RenamePanel, SheetTabs, TagsTab, createDiscardGuard, createTagEditorState, type SheetTab, type TagsTabApi } from './tag-editor/index'
+    /* eslint-disable @typescript-eslint/no-confusing-void-expression -- Svelte {@render} of the local renameBody snippet */
 
     interface Props {
         session: MultiRenameOpened
@@ -343,7 +343,7 @@
     {/snippet}
 
     <div class="sheet">
-        {#if tags}<SheetTabs active={sheetTab} onSelect={(tab) => { sheetTab = tab }} />{/if}
+        {#if tags}<SheetTabs active={sheetTab} onSelect={(tab: SheetTab) => { sheetTab = tab }} />{/if}
         {#snippet renameBody()}
         <div class="controls">
             <!-- The first two rows share one grid, so their edges line up: the masks with the

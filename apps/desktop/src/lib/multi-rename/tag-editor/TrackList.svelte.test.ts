@@ -1,6 +1,7 @@
 /** The track list: inline title and number edits go out as `SetOne` by path, and a single file has no # column. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TrackRow } from '#lib/ipc/bindings.js'
+import type { TagEdit } from '#lib/tauri-commands/index.js'
 import TrackList from './TrackList.svelte'
 import { byId, leave, mountInto, press, typeInto } from './tag-cell.test-helper'
 
@@ -28,7 +29,7 @@ const TRACKS: TrackRow[] = [
 ]
 
 async function mountList(tracks: TrackRow[] = TRACKS, editable = true) {
-  const onEdit = vi.fn()
+  const onEdit = vi.fn((_edits: TagEdit[]) => {})
   const mounted = await mountInto(TrackList, { tracks, editable, onEdit })
   cleanup = mounted.cleanup
   return { root: mounted.root, onEdit }

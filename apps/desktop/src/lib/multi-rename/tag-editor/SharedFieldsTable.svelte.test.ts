@@ -4,6 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SharedRow } from '#lib/ipc/bindings.js'
+import type { TagEdit } from '#lib/tauri-commands/index.js'
 import SharedFieldsTable from './SharedFieldsTable.svelte'
 import { byId, leave, mountInto, press, typeInto } from './tag-cell.test-helper'
 
@@ -23,7 +24,7 @@ const ROWS: SharedRow[] = [
 
 async function mountTable(over: { rows?: SharedRow[]; editable?: boolean } = {}) {
   // An edit stays out until the test says otherwise, as one does until the backend answers.
-  const onEdit = vi.fn(() => new Promise<void>(() => {}))
+  const onEdit = vi.fn((_edits: TagEdit[]) => new Promise<void>(() => {}))
   const mounted = await mountInto(SharedFieldsTable, {
     rows: over.rows ?? ROWS,
     editable: over.editable ?? true,
@@ -176,7 +177,7 @@ describe('SharedFieldsTable', () => {
     const { root, onEdit } = await mountTable()
     await typeInto(byId<HTMLInputElement>(root, 'tag-field-album'), 'Dracula')
     await leave(byId(root, 'tag-field-album'))
-    expect(onEdit.mock.calls.flat(2).every((edit: { field: string }) => edit.field !== 'title')).toBe(true)
+    expect(onEdit.mock.calls.flat(2).every((edit) => !('field' in edit) || edit.field !== 'title')).toBe(true)
   })
 
   it('read_only_disables_inputs', async () => {

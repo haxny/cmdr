@@ -16,16 +16,16 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 2983 / 4920 keys have a screenshot (61%):** 1681 direct (34%) and 1302 representative (26%). 1747 remain
+**Total: 2991 / 5095 keys have a screenshot (59%):** 1681 direct (33%) and 1310 representative (26%). 1914 remain
 uncoupled, and 190 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
 | --------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
 | adb             |      3 |              0 |        17 |      0 |    20 |   15% |
-| ai              |      0 |            123 |         0 |      0 |   123 |  100% |
+| ai              |      0 |            127 |         0 |      0 |   127 |  100% |
 | askCmdr         |     65 |              0 |       135 |      0 |   200 |   33% |
 | commandPalette  |      3 |              2 |         2 |      0 |     7 |   71% |
-| commands        |    224 |              1 |        93 |      0 |   318 |   71% |
+| commands        |    224 |              1 |        95 |      0 |   320 |   70% |
 | common          |      8 |              1 |         9 |      0 |    18 |   50% |
 | crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
@@ -41,9 +41,9 @@ uncoupled, and 190 are native surfaces a webview capture cannot reach.
 | main            |      7 |              0 |        46 |      2 |    55 |   13% |
 | menu            |      4 |              0 |         0 |    188 |   192 |    2% |
 | mtp             |     18 |              2 |         0 |      0 |    20 |  100% |
-| multiRename     |      0 |              0 |       231 |      0 |   231 |    0% |
+| multiRename     |      0 |              0 |       348 |      0 |   348 |    0% |
 | notifications   |      0 |              0 |         1 |      0 |     1 |    0% |
-| onboarding      |     96 |             39 |        25 |      0 |   160 |   84% |
+| onboarding      |     96 |             43 |        25 |      0 |   164 |   85% |
 | operationLog    |     26 |             30 |         0 |      0 |    56 |  100% |
 | queryUi         |     41 |            127 |         0 |      0 |   168 |  100% |
 | queue           |     24 |             19 |         5 |      0 |    48 |   90% |
@@ -51,10 +51,10 @@ uncoupled, and 190 are native surfaces a webview capture cannot reach.
 | securityNotices |      0 |              0 |        13 |      0 |    13 |    0% |
 | selection       |     14 |              0 |         1 |      0 |    15 |   93% |
 | servers         |     84 |             27 |       116 |      0 |   227 |   49% |
-| settings        |    422 |             36 |       396 |      0 |   854 |   54% |
+| settings        |    422 |             36 |       403 |      0 |   861 |   53% |
 | shortcuts       |     35 |             28 |         0 |      0 |    63 |  100% |
 | stateRecovery   |      0 |              0 |        32 |      0 |    32 |    0% |
-| suggestedOps    |      0 |              0 |        38 |      0 |    38 |    0% |
+| suggestedOps    |      0 |              0 |        79 |      0 |    79 |    0% |
 | transfer        |      2 |             22 |         0 |      0 |    24 |  100% |
 | ui              |      8 |              0 |        20 |      0 |    28 |   29% |
 | updates         |      5 |             27 |         0 |      0 |    32 |  100% |
