@@ -7402,6 +7402,20 @@ export type ConflictResolutionOutcome =
    */
   | 'unknown_operation'
 
+// What the tool answers, as `outcome`.
+export type ConnectOutcome =
+  | 'connected'
+  | 'alreadyConnected'
+  | 'stillReconnecting'
+  | 'needsCredentials'
+  // A host key or certificate the user approves in the app.
+  | 'needsApproval'
+  // The server, or the saved place's own settings, said no.
+  | 'rejected'
+  | 'unreachable'
+  | 'notSaved'
+  | 'cancelled'
+
 // Information about a connected device, including its storages.
 export type ConnectedDeviceInfo = {
   // Device information.
@@ -12434,6 +12448,32 @@ export type MetricsSnapshotDto = {
   // Revivals that gave up.
   reconnects_failed: number
 }
+
+// What kind of miss this is: the token a model branches on.
+export type MissToken =
+  | 'unknownVolume'
+  | 'pathOutsideVolume'
+  | 'noVolumeAtPath'
+  /**
+   *  The volume resolved, but it isn't connected and no source the tool has can
+   *  answer for it.
+   */
+  | 'volumeNotConnected'
+  /**
+   *  Reading the place would raise a macOS privacy prompt (the Full Disk Access
+   *  question is still open), or macOS privacy refused the read.
+   */
+  | 'needsDiskAccess'
+  // The volume didn't answer in time, or an earlier read on it is still stuck.
+  | 'unreachable'
+  // Nothing is at this path on the volume, or it leads off the volume.
+  | 'notFound'
+  // The place is a system, build, or cache folder a default search leaves out.
+  | 'excluded'
+  // The folder's own permissions refuse the read (not macOS privacy).
+  | 'permissionDenied'
+  // The user stopped the turn while the place was being read.
+  | 'cancelled'
 
 /**
  *  What the chat-memory setting needs to warn honestly: the model the next turn would use,
@@ -18557,6 +18597,13 @@ export type ToolOutcome =
   // A memory note landed.
   | { kind: 'saved' }
   | { kind: 'refused'; reason: RefusalReason }
+  /**
+   *  The place couldn't be read or resolved: the location contract's typed miss
+   *  (`location/miss.rs`).
+   */
+  | { kind: 'locationMiss'; miss: MissToken }
+  // How `connect_volume` went.
+  | { kind: 'connection'; outcome: ConnectOutcome }
 
 /**
  *  The expanded line: a curated look at what the model received. ❌ It never claims the model
@@ -18600,7 +18647,14 @@ export type ToolPreviewRow = {
 export type ToolPreviewRowKind = 'file' | 'folder' | 'other'
 
 // A per-path answer that isn't one: `inspect_file`'s statuses and `image_facts`' not-indexed.
-export type ToolPreviewRowStatus = 'missing' | 'unreadable' | 'unreachable' | 'unsupportedVolume' | 'notIndexed'
+export type ToolPreviewRowStatus =
+  | 'missing'
+  | 'unreadable'
+  | 'unreachable'
+  | 'unsupportedVolume'
+  // Under a mount point with nothing mounted there: the volume isn't connected.
+  | 'noVolumeAtPath'
+  | 'notIndexed'
 
 /**
  *  What an expanded tool line shows: the curated preview, plus the raw result pretty-printed for
@@ -18632,6 +18686,8 @@ export type ToolSubject =
   | { kind: 'importantFolders' }
   // `list_volumes`.
   | { kind: 'drives' }
+  // `connect_volume`: the volume id the model asked to connect.
+  | { kind: 'volume'; id: string }
   // `operations_list`.
   | { kind: 'operationLog' }
   // `operations_get`.

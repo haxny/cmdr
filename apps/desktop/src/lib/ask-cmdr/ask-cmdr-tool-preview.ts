@@ -47,6 +47,7 @@ const STATUS_KEYS: Record<ToolPreviewRowStatus, MessageKey> = {
   unreadable: 'askCmdr.tool.preview.status.unreadable',
   unreachable: 'askCmdr.tool.preview.status.unreachable',
   unsupportedVolume: 'askCmdr.tool.preview.status.unsupportedVolume',
+  noVolumeAtPath: 'askCmdr.tool.preview.status.noVolumeAtPath',
   notIndexed: 'askCmdr.tool.preview.status.notIndexed',
 }
 

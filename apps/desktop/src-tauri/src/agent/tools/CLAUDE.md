@@ -19,9 +19,8 @@ and typed result shapes colocated here.
 
 ## Must-knows
 
-- **Reuse the shipped core; never re-derive.** A handler calls a deterministic core (`indexing::read::queries`, the
-  importance `snapshot_*` functions, `snapshot_volumes`, the proposal store, `file_viewer`'s seams) and only SHAPES
-  the result.
+- **Reuse the shipped core; never re-derive.** A handler calls a deterministic core (`indexing::read::queries`,
+  `snapshot_*`, the proposal store, `file_viewer`'s seams) and only SHAPES the result.
 - **A place is `path` + optional `volumeId` in, `location` out, via `crate::location`'s one resolver**; a miss is a
   typed `Ok`, ❌ never an empty listing. `DETAILS.md` § The location contract.
 - **A result that carries a list must fit ONE tool result.** Page it with `mcp::fit_to_result_budget` and report
@@ -42,13 +41,12 @@ and typed result shapes colocated here.
   the ledger a `revoke_call`. `propose/DETAILS.md`.
 - **Handlers never touch a live filesystem, except `inspect_file` and `list_dir`'s live read**: bounded, the thread
   ABANDONED past a deadline (`unreachable`). Stop abandons any call but a `Propose` / `Memory` one
-  (`../chat/DETAILS.md`). `list_dir` reads live only where no index lists the folder, is FDA-gated on the link-resolved target before any stat, and never shows ground the index's scanner skips (`DETAILS.md` § The
-  live source). `inspect_file` alone egresses contents (text windows, `find` snippets, PDF pages, archive entry names,
+  (`../chat/DETAILS.md`). `list_dir`'s live read is FDA-gated and index-shaped (`DETAILS.md` § The live source).
+  `inspect_file` alone egresses contents (text windows, `find` snippets, PDF pages, archive entry names,
   EXIF incl. GPS; never bytes), each named in the cloud AI disclosure; a new KIND is a copy change plus a
   `CLOUD_AI_CONSENT_VERSION` bump. § Reading a file the way the viewer does.
 - **New agent tool** = registry entry + handler/schema/result here + a `ToolId` variant + `EXPECTED_AGENT_TOOL_NAMES`
-  + `ToolId::KNOWN` + a `line/` subject, outcome, and preview arm + a rail label in `ask-cmdr-labels.ts` (a missing
-  label shows "Working"; a test pins it).
+  + `ToolId::KNOWN` + a `line/` subject, outcome, and preview arm + a rail label in `ask-cmdr-labels.ts`.
 
 The two-view registry model, the tool catalog, the honesty and size contracts, and the dispatch gate: `DETAILS.md`.
 Read it before any non-trivial work here: editing, planning, reorganizing, or advising.

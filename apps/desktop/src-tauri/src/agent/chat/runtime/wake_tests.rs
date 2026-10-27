@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::test_support::{OkDispatcher, params, runtime_with_stamped_conversation};
 use crate::agent::chat::cancel::turn_in_flight_since_seq;
-use crate::agent::chat::runtime::{AgentChatEvent, ToolDispatchOutcome, ToolDispatcher, TurnResult};
+use crate::agent::chat::runtime::{AgentChatEvent, CallContext, ToolDispatchOutcome, ToolDispatcher, TurnResult};
 use crate::agent::llm::fake::{FakeAgentLlm, ScriptedTurn};
 use crate::agent::llm::types::{AgentToolCall, AgentToolResult, ToolId};
 use crate::agent::store;
@@ -88,7 +88,11 @@ async fn a_running_turn_marks_its_thread_in_flight_since_its_last_row() {
         seen: Mutex<Option<Option<i64>>>,
     }
     impl ToolDispatcher for MarkProbe {
-        fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+        fn dispatch<'a>(
+            &'a self,
+            call: &'a AgentToolCall,
+            _turn: CallContext<'a>,
+        ) -> BoxFuture<'a, ToolDispatchOutcome> {
             async move {
                 *self.seen.lock().expect("lock") = Some(turn_in_flight_since_seq(self.conversation_id));
                 ToolDispatchOutcome {

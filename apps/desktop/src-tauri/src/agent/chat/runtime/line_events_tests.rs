@@ -291,7 +291,7 @@ struct DeletesThreadMidDispatch {
 }
 
 impl ToolDispatcher for DeletesThreadMidDispatch {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             let other = store::open_write_connection(&self.db).expect("open");
             store::delete_conversation(&other, self.conversation_id).expect("delete");

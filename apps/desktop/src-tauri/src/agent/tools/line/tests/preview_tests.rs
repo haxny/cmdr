@@ -46,6 +46,28 @@ fn a_listing_shows_its_rows_with_paths_joined_onto_the_folder() {
     );
     assert_eq!(pane.rows[0].path.as_deref(), Some("/Users/u/Photos/a.jpg"));
     assert_eq!(pane.rows[1].kind, ToolPreviewRowKind::Folder);
+
+    // A thread stored before results carried `location` named its folder as a bare `path`.
+    let mut legacy = fixtures::list_dir();
+    legacy["path"] = legacy["location"]["path"].take();
+    legacy.as_object_mut().expect("an object").remove("location");
+    let old = preview(ToolId::ListDir, legacy);
+    assert_eq!(old.rows[0].path.as_deref(), Some("/Users/u/Downloads/big.iso"));
+}
+
+#[test]
+fn a_location_miss_shows_no_rows_and_no_counts() {
+    for tool in [
+        ToolId::ListDir,
+        ToolId::ImportantFolders,
+        ToolId::Search,
+        ToolId::InspectFile,
+    ] {
+        let shown = preview(tool.clone(), fixtures::location_miss());
+        assert!(shown.rows.is_empty(), "{tool:?}");
+        assert_eq!((shown.rows_given_to_model, shown.total), (None, None), "{tool:?}");
+        assert_eq!(shown.problem, None, "a miss is an answer, not a refusal: {tool:?}");
+    }
 }
 
 #[test]
@@ -83,7 +105,10 @@ fn a_search_reports_its_match_count_and_lower_bound() {
 #[test]
 fn inspect_shows_a_row_per_find_hit_and_each_paths_status() {
     let shown = preview(ToolId::InspectFile, fixtures::inspect_with_find());
-    assert_eq!(names(&shown), vec!["notes.txt", "notes.txt", "gone.txt", "locked.txt"]);
+    assert_eq!(
+        names(&shown),
+        vec!["notes.txt", "notes.txt", "gone.txt", "locked.txt", "tax.pdf"]
+    );
     assert_eq!(
         (shown.rows[0].line, shown.rows[0].snippet.as_deref()),
         (Some(12), Some("invoice 2026"))
@@ -93,7 +118,9 @@ fn inspect_shows_a_row_per_find_hit_and_each_paths_status() {
     assert_eq!(shown.rows[2].status, Some(ToolPreviewRowStatus::Missing));
     assert_eq!(shown.rows[2].path.as_deref(), Some("/Users/u/gone.txt"));
     assert_eq!(shown.rows[3].status, Some(ToolPreviewRowStatus::Unreadable));
-    assert_eq!((shown.rows_given_to_model, shown.total), (Some(3), Some(4)));
+    assert_eq!(shown.rows[4].status, Some(ToolPreviewRowStatus::NoVolumeAtPath));
+    assert_eq!(shown.rows[4].path.as_deref(), Some("/Volumes/naspi/papers/tax.pdf"));
+    assert_eq!((shown.rows_given_to_model, shown.total), (Some(4), Some(5)));
 }
 
 #[test]
@@ -141,6 +168,10 @@ fn a_tool_with_no_list_shows_no_rows_and_no_counts() {
         (ToolId::AppState, json!({ "focusedPane": "left" })),
         (ToolId::MemoryWrite, fixtures::memory_saved()),
         (ToolId::ProposeRenamePlan, json!({ "readyForReview": true, "count": 3 })),
+        (
+            ToolId::ConnectVolume,
+            fixtures::connect(crate::agent::tools::connect::ConnectOutcome::Connected),
+        ),
     ] {
         let shown = preview(tool.clone(), content);
         assert!(shown.rows.is_empty(), "{tool:?}");

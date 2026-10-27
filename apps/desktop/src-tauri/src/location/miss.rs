@@ -6,14 +6,14 @@
 //! shape (`agent/tools/DETAILS.md` § The location contract):
 //! `{ miss, location, detail, root?, nearby?, sameShareAs? }`.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::resolve::{LocationInput, LocationMiss, NearbyVolume, ResolvedLocation, VolumeFacts, nearby};
 
 /// What kind of miss this is: the token a model branches on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum MissToken {
+pub enum MissToken {
     UnknownVolume,
     PathOutsideVolume,
     NoVolumeAtPath,

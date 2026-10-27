@@ -8,7 +8,7 @@ import type { RailToolCall } from './ask-cmdr-messages'
 
 /** Which outcomes got what the call asked for. A `Record` over every kind, so a new outcome
  * variant is a compile error here rather than a silent guess. Mirrors `ToolOutcome::ok`. */
-const OUTCOME_OK: Record<ToolOutcome['kind'], boolean> = {
+const OUTCOME_OK: Record<Exclude<ToolOutcome['kind'], 'connection'>, boolean> = {
   items: true,
   matches: true,
   nothingFound: true,
@@ -18,10 +18,15 @@ const OUTCOME_OK: Record<ToolOutcome['kind'], boolean> = {
   notStaged: false,
   saved: true,
   refused: false,
+  locationMiss: false,
 }
 
-/** Whether a call got what it asked for: a refusal and a plan that staged nothing didn't. */
+/**
+ * Whether a call got what it asked for: a refusal, a plan that staged nothing, a place that
+ * couldn't be read, and a volume that didn't end up connected didn't.
+ */
 export function outcomeOk(outcome: ToolOutcome): boolean {
+  if (outcome.kind === 'connection') return outcome.outcome === 'connected' || outcome.outcome === 'alreadyConnected'
   return OUTCOME_OK[outcome.kind]
 }
 

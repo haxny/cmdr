@@ -203,9 +203,13 @@
   "@askCmdr.tool.connectVolume.doing": {
     "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant connects a server or network share the person saved earlier (a NAS, for example), using the password already stored for it. Pairs with askCmdr.tool.connectVolume.done."
   },
-  "askCmdr.tool.connectVolume.done": "Tried connecting to your server",
+  "askCmdr.tool.connectVolume.done": "Connected to your server",
   "@askCmdr.tool.connectVolume.done": {
-    "description": "Past-tense label on the same tool line once the connect attempt ended. Says “tried” because the attempt may not have gone through (no saved password, the server didn't answer); the assistant's reply says how it went. Pairs with askCmdr.tool.connectVolume.doing."
+    "description": "Past-tense label on the same tool line once the server or share is connected (or already was). Pairs with askCmdr.tool.connectVolume.doing; askCmdr.tool.connectVolume.tried replaces it when the attempt didn’t connect."
+  },
+  "askCmdr.tool.connectVolume.tried": "Tried connecting to your server",
+  "@askCmdr.tool.connectVolume.tried": {
+    "description": "Label on the same tool line when the connect attempt did NOT connect (a short reason follows it on the line, like “needs you to sign in”). It must not claim the server is connected."
   },
   "askCmdr.tool.unknown.doing": "Working",
   "@askCmdr.tool.unknown.doing": {
@@ -508,6 +512,78 @@
   "@askCmdr.tool.outcome.problem": {
     "description": "What came back, after a tool line’s label: the request couldn’t be carried out (a path that isn’t there, a request missing something), and the assistant was told why. Calm, not a fault message. Lowercase where your language allows."
   },
+  "askCmdr.tool.outcome.miss.unknownVolume": "no drive by that name",
+  "@askCmdr.tool.outcome.miss.unknownVolume": {
+    "description": "What came back, after a tool line’s label: the assistant named a drive or server Cmdr doesn’t know. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "that’s not on the drive it named",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "description": "What came back, after a tool line’s label: the folder the assistant asked about isn’t on the drive it said it was on. “It” is the assistant. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "no drive is connected there",
+  "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
+    "description": "What came back, after a tool line’s label: the path points into a drive or network share that isn’t connected right now, so there was nothing to look at. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "that drive isn’t connected",
+  "@askCmdr.tool.outcome.miss.volumeNotConnected": {
+    "description": "What came back, after a tool line’s label: the drive or network share the assistant asked about isn’t connected, and Cmdr had nothing saved about it to answer with. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "needs Full Disk Access",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "description": "What came back, after a tool line’s label: macOS keeps Cmdr out of this folder until the person grants Full Disk Access. “Full Disk Access” is the macOS setting’s name: use the name macOS shows in your language. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "the drive didn’t answer",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "description": "What came back, after a tool line’s label: the drive or network share it’s on didn’t respond in time. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.notFound": "not there",
+  "@askCmdr.tool.outcome.miss.notFound": {
+    "description": "What came back, after a tool line’s label: nothing exists at the path the assistant asked about. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.excluded": "a system folder it skips",
+  "@askCmdr.tool.outcome.miss.excluded": {
+    "description": "What came back, after a tool line’s label: the folder is a system, build, or cache folder that searches leave out. “It” is the assistant. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.permissionDenied": "no permission to look",
+  "@askCmdr.tool.outcome.miss.permissionDenied": {
+    "description": "What came back, after a tool line’s label: the folder’s own permissions don’t let Cmdr read it. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "stopped while reading",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "description": "What came back, after a tool line’s label: the person stopped the reply while the folder was being read. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.alreadyConnected": "it was already connected",
+  "@askCmdr.tool.outcome.connection.alreadyConnected": {
+    "description": "What came back, after the “Connected to your server” label: the server or share was connected before the assistant asked, so nothing new happened. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.stillReconnecting": "still reconnecting",
+  "@askCmdr.tool.outcome.connection.stillReconnecting": {
+    "description": "What came back, after the “Tried connecting to your server” label: Cmdr is still reconnecting to the server in the background and hadn’t finished yet. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.needsCredentials": "needs you to sign in",
+  "@askCmdr.tool.outcome.connection.needsCredentials": {
+    "description": "What came back, after the “Tried connecting to your server” label: the server needs a password or sign-in that the person has to give in Cmdr. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.needsApproval": "needs your approval",
+  "@askCmdr.tool.outcome.connection.needsApproval": {
+    "description": "What came back, after the “Tried connecting to your server” label: the server presented a security key or certificate the person has to approve in Cmdr first. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.rejected": "the server said no",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "description": "What came back, after the “Tried connecting to your server” label: the server (or the saved place’s own settings) turned the connection down. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "the server didn’t answer",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "description": "What came back, after the “Tried connecting to your server” label: the server couldn’t be reached. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.notSaved": "not a saved server",
+  "@askCmdr.tool.outcome.connection.notSaved": {
+    "description": "What came back, after the “Tried connecting to your server” label: the assistant asked for a server the person never saved in Cmdr, and it may only connect saved ones. Lowercase where your language allows."
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "stopped while connecting",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "description": "What came back, after the “Tried connecting to your server” label: the person stopped the reply while it was connecting. Lowercase where your language allows."
+  },
   "askCmdr.tool.outcome.memory.outsideMemory": "that’s outside its notes folder",
   "@askCmdr.tool.outcome.memory.outsideMemory": {
     "description": "Why a note wasn’t saved, after the tool line’s label: the assistant named a file outside the small folder its notes live in, and it may only write there. “Its” is the assistant’s. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
@@ -624,6 +700,10 @@
   "askCmdr.tool.preview.status.unsupportedVolume": "on a drive it can’t look inside",
   "@askCmdr.tool.preview.status.unsupportedVolume": {
     "description": "Beside a file in an opened Ask Cmdr tool line: the file is on a kind of drive (a phone, a cloud share) whose files the assistant can’t open. “It” is the assistant. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
+  },
+  "askCmdr.tool.preview.status.noVolumeAtPath": "on a drive that isn’t connected",
+  "@askCmdr.tool.preview.status.noVolumeAtPath": {
+    "description": "Beside a file in an opened Ask Cmdr tool line: the file’s path points into a drive or network share that isn’t connected right now. Lowercase where your language allows."
   },
   "askCmdr.tool.preview.status.notIndexed": "not indexed yet",
   "@askCmdr.tool.preview.status.notIndexed": {

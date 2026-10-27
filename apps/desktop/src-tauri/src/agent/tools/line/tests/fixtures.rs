@@ -6,17 +6,32 @@
 use serde_json::{Value, json};
 
 use super::to_json;
+use crate::agent::tools::connect::{ConnectAnswer, ConnectOutcome};
 use crate::agent::tools::read::importance::{ImportantFoldersResult, RankedFolderOut};
 use crate::agent::tools::read::inspect::{
-    Content, FileRow, FindHits, FindLine, InspectResult, InspectedFile, TextContent,
+    Content, FileRow, FindHits, FindLine, InspectResult, InspectRow, InspectedFile, TextContent,
 };
 use crate::agent::tools::read::pane_listing::{PaneListingEntry, PaneListingResult, PaneListingScope};
+use crate::location::Location;
+
+fn on_root(path: &str) -> Location {
+    Location {
+        volume_id: "root".into(),
+        path: path.into(),
+    }
+}
+
+fn on_root_row(row: FileRow) -> InspectRow {
+    InspectRow {
+        volume_id: Some("root".into()),
+        row,
+    }
+}
 
 pub(super) fn pane_listing(scope: PaneListingScope, names: &[&str], total: usize) -> Value {
     to_json(&PaneListingResult {
         pane: "left".into(),
-        path: "/Users/u/Photos".into(),
-        volume_id: "root".into(),
+        location: on_root("/Users/u/Photos"),
         scope,
         total,
         returned: names.len(),
@@ -34,8 +49,8 @@ pub(super) fn pane_listing(scope: PaneListingScope, names: &[&str], total: usize
     })
 }
 
-fn inspected(path: &str, content: Content) -> FileRow {
-    FileRow::Ok(Box::new(InspectedFile {
+fn inspected(path: &str, content: Content) -> InspectRow {
+    on_root_row(FileRow::Ok(Box::new(InspectedFile {
         path: path.into(),
         name: path.rsplit('/').next().unwrap_or(path).into(),
         extension: Some("txt".into()),
@@ -45,11 +60,11 @@ fn inspected(path: &str, content: Content) -> FileRow {
         modified_human: None,
         mime: None,
         content,
-    }))
+    })))
 }
 
-/// Four paths asked: the first read with two `find` hits, the second missing, the third
-/// unreadable, and the fourth unanswered.
+/// Five paths asked: the first read with two `find` hits, the second missing, the third
+/// unreadable, the fourth under a mount point with nothing mounted, and the fifth unanswered.
 pub(super) fn inspect_with_find() -> Value {
     let find = |lines: Vec<(usize, &str)>| {
         Content::Text(TextContent {
@@ -86,29 +101,39 @@ pub(super) fn inspect_with_find() -> Value {
                 "/Users/u/notes.txt",
                 find(vec![(12, "invoice 2026"), (812, "invoice paid")]),
             ),
-            FileRow::Missing {
+            on_root_row(FileRow::Missing {
                 path: "/Users/u/gone.txt".into(),
-            },
-            FileRow::Unreadable {
+            }),
+            on_root_row(FileRow::Unreadable {
                 path: "/Users/u/locked.txt".into(),
                 reason: crate::agent::tools::read::inspect::UnreadableReason::Permission,
+            }),
+            InspectRow {
+                volume_id: None,
+                row: FileRow::NoVolumeAtPath {
+                    path: "/Volumes/naspi/papers/tax.pdf".into(),
+                },
             },
         ],
-        total: 4,
-        returned: 3,
+        total: 5,
+        returned: 4,
         truncated: true,
         unanswered: vec!["/Users/u/slow.txt".into()],
+        nearby: Some(Vec::new()),
     })
 }
 
 pub(super) fn important_folders(paths: &[&str], truncated: bool) -> Value {
     to_json(&ImportantFoldersResult {
+        under: None,
         folders: paths
             .iter()
             .map(|path| RankedFolderOut {
-                volume: "root".into(),
-                path: (*path).into(),
+                location: on_root(path),
                 score: 0.9,
+                why: String::new(),
+                folded: 0,
+                via: None,
             })
             .collect(),
         truncated,
@@ -119,7 +144,7 @@ pub(super) fn important_folders(paths: &[&str], truncated: bool) -> Value {
 /// `list_dir` (`read/listing.rs::ListDirResult`): a page of 2 children of 5.
 pub(super) fn list_dir() -> Value {
     json!({
-        "path": "/Users/u/Downloads",
+        "location": { "volumeId": "root", "path": "/Users/u/Downloads" },
         "coverage": { "indexStatus": "fresh", "authoritative": true },
         "volume": { "id": "root" },
         "children": [
@@ -130,6 +155,37 @@ pub(super) fn list_dir() -> Value {
         "returned": 2,
         "truncated": true,
         "sortedBy": "size"
+    })
+}
+
+/// A location miss (`location/miss.rs::LocationMissResult`), the shape every tool that takes a
+/// place answers when it can't place or read it.
+pub(super) fn location_miss() -> Value {
+    to_json(&crate::location::miss::LocationMissResult {
+        miss: crate::location::miss::MissToken::VolumeNotConnected,
+        location: crate::location::resolve::LocationInput {
+            volume_id: Some("smb-naspi".into()),
+            path: "/Volumes/naspi/papers".into(),
+        },
+        detail: "naspi isn't connected. connect_volume can connect it.".into(),
+        root: None,
+        nearby: Some(Vec::new()),
+        same_share_as: Some(Vec::new()),
+    })
+}
+
+/// `connect_volume` (`tools/connect.rs::ConnectAnswer`).
+pub(super) fn connect(outcome: ConnectOutcome) -> Value {
+    let connected = matches!(outcome, ConnectOutcome::Connected | ConnectOutcome::AlreadyConnected);
+    to_json(&ConnectAnswer {
+        outcome,
+        location: connected.then(|| Location {
+            volume_id: "smb-naspi".into(),
+            path: "/Volumes/naspi".into(),
+        }),
+        via: None,
+        reason: None,
+        detail: "What to do next.",
     })
 }
 

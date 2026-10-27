@@ -24,6 +24,7 @@ pub fn subject_of(call: &AgentToolCall, result: Option<&Value>, memory_root: Opt
         ToolId::SearchPhotos => str_arg(args, "query").map(|query| ToolSubject::PhotoSearch { query: bounded(query) }),
         ToolId::ImportantFolders => Some(ToolSubject::ImportantFolders),
         ToolId::ListVolumes => Some(ToolSubject::Drives),
+        ToolId::ConnectVolume => str_arg(args, "volumeId").map(|id| ToolSubject::Volume { id: bounded(id) }),
         ToolId::OperationsList => Some(ToolSubject::OperationLog),
         ToolId::OperationsGet => str_arg(args, "operationId").map(|id| ToolSubject::Operation { id: bounded(id) }),
         ToolId::ProposeRenamePlan => array_len(args, "renames").map(|count| ToolSubject::RenamePlan { count }),
@@ -42,10 +43,7 @@ pub fn subject_of(call: &AgentToolCall, result: Option<&Value>, memory_root: Opt
 fn focused_pane(result: Option<&Value>) -> ToolSubject {
     let answer = result.filter(|content| content.get("entries").is_some());
     ToolSubject::FocusedPane {
-        folder: answer
-            .and_then(|content| content.get("path"))
-            .and_then(Value::as_str)
-            .map(LinePath::of),
+        folder: answer.and_then(super::location_path).map(LinePath::of),
         selection_only: answer
             .and_then(|content| content.get("scope"))
             .and_then(Value::as_str)

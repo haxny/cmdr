@@ -26,6 +26,7 @@ export const SUBJECT_CATEGORY: Record<ToolSubject['kind'], GroupCategory> = {
   photoSearch: 'search',
   importantFolders: 'check',
   drives: 'check',
+  volume: 'other',
   operationLog: 'check',
   operation: 'check',
   renamePlan: 'plan',

@@ -25,6 +25,8 @@ pub use repeat::repeat_marks;
 pub use subject::subject_of;
 
 use crate::agent::memory::MemoryRefusalKind;
+use crate::agent::tools::connect::ConnectOutcome;
+use crate::location::miss::MissToken;
 
 /// A line's identity: the assistant row that made the call, plus the call's id. ❌ Never the
 /// call id alone: ids collide across rounds (the fake mints `fake-call-{index}` per round, and
@@ -95,6 +97,10 @@ pub enum ToolSubject {
     ImportantFolders,
     /// `list_volumes`.
     Drives,
+    /// `connect_volume`: the volume id the model asked to connect.
+    Volume {
+        id: String,
+    },
     /// `operations_list`.
     OperationLog,
     /// `operations_get`.
@@ -169,15 +175,37 @@ pub enum ToolOutcome {
     Refused {
         reason: RefusalReason,
     },
+    /// The place couldn't be read or resolved: the location contract's typed miss
+    /// (`location/miss.rs`).
+    LocationMiss {
+        miss: MissToken,
+    },
+    /// How `connect_volume` went.
+    Connection {
+        outcome: ConnectOutcome,
+    },
 }
 
 impl ToolOutcome {
-    /// Whether the call got what it asked for. A refusal and a plan that staged nothing are not
-    /// ok; everything else is. Agrees with `dispatch_ok` except where that one reads a typed
-    /// refusal without a `problem` key as ok: a memory refusal and a rename plan whose evidence
-    /// was rejected.
+    /// Whether the call got what it asked for. A refusal, a plan that staged nothing, a location
+    /// miss, and a volume that didn't end up connected are not ok; everything else is. Agrees with
+    /// `dispatch_ok` except where that one reads a typed answer without a `problem` key as ok: a
+    /// memory refusal, a rename plan whose evidence was rejected, a location miss, and a connect
+    /// that didn't connect.
     pub fn ok(&self) -> bool {
-        !matches!(self, ToolOutcome::Refused { .. } | ToolOutcome::NotStaged)
+        match self {
+            ToolOutcome::Refused { .. } | ToolOutcome::NotStaged | ToolOutcome::LocationMiss { .. } => false,
+            ToolOutcome::Connection { outcome } => {
+                matches!(outcome, ConnectOutcome::Connected | ConnectOutcome::AlreadyConnected)
+            }
+            ToolOutcome::Items { .. }
+            | ToolOutcome::Matches { .. }
+            | ToolOutcome::NothingFound { .. }
+            | ToolOutcome::Answered
+            | ToolOutcome::IndexUnavailable { .. }
+            | ToolOutcome::Staged { .. }
+            | ToolOutcome::Saved => true,
+        }
     }
 }
 
@@ -257,6 +285,8 @@ pub enum ToolPreviewRowStatus {
     Unreadable,
     Unreachable,
     UnsupportedVolume,
+    /// Under a mount point with nothing mounted there: the volume isn't connected.
+    NoVolumeAtPath,
     NotIndexed,
 }
 
@@ -273,6 +303,16 @@ fn bounded_to(text: &str, max_chars: usize) -> String {
         Some((cut, _)) => format!("{}…", &text[..cut]),
         None => text.to_string(),
     }
+}
+
+/// A result's place: `location.path` (the location contract's output), else the bare `path` a
+/// thread stored before results carried a `location`.
+fn location_path(object: &serde_json::Value) -> Option<&str> {
+    object
+        .get("location")
+        .and_then(|location| location.get("path"))
+        .or_else(|| object.get("path"))
+        .and_then(serde_json::Value::as_str)
 }
 
 /// A count off the wire as a `u32`, saturating: a hostile or huge number never panics.

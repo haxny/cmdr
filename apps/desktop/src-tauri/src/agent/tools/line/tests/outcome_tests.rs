@@ -6,8 +6,10 @@ use super::fixtures;
 use super::result;
 use crate::agent::llm::types::{AgentToolResult, ToolId};
 use crate::agent::memory::MemoryRefusalKind;
+use crate::agent::tools::connect::ConnectOutcome;
 use crate::agent::tools::line::{IndexUnavailableReason, RefusalReason, ToolOutcome, outcome_of};
 use crate::agent::tools::read::pane_listing::PaneListingScope;
+use crate::location::miss::MissToken;
 
 fn outcome(tool: ToolId, content: Value) -> ToolOutcome {
     outcome_of(&tool, &result(content))
@@ -55,7 +57,7 @@ fn success_table() -> Vec<(ToolId, Value, ToolOutcome)> {
             ToolOutcome::Answered,
         ),
         (ToolId::ListVolumes, fixtures::list_volumes(), items(2, Some(2))),
-        (ToolId::InspectFile, fixtures::inspect_with_find(), items(3, Some(4))),
+        (ToolId::InspectFile, fixtures::inspect_with_find(), items(4, Some(5))),
         (ToolId::OperationsList, fixtures::operations_list(), items(1, Some(3))),
         (
             ToolId::OperationsGet,
@@ -147,6 +149,13 @@ fn success_table() -> Vec<(ToolId, Value, ToolOutcome)> {
         ),
         (ToolId::MemoryWrite, fixtures::memory_saved(), ToolOutcome::Saved),
         (ToolId::MemoryEdit, fixtures::memory_saved(), ToolOutcome::Saved),
+        (
+            ToolId::ConnectVolume,
+            fixtures::connect(ConnectOutcome::Connected),
+            ToolOutcome::Connection {
+                outcome: ConnectOutcome::Connected,
+            },
+        ),
     ]
 }
 
@@ -162,6 +171,65 @@ fn every_known_tool_has_a_success_row() {
     let covered: Vec<ToolId> = success_table().into_iter().map(|(tool, ..)| tool).collect();
     for tool in ToolId::KNOWN {
         assert!(covered.contains(&tool), "{tool:?} has no success fixture");
+    }
+}
+
+#[test]
+fn a_capped_live_listing_counts_a_lower_bound() {
+    let mut capped = fixtures::list_dir();
+    capped["totalIsLowerBound"] = json!(true);
+    assert_eq!(
+        outcome(ToolId::ListDir, capped),
+        ToolOutcome::Items {
+            returned: 2,
+            total: Some(5),
+            lower_bound: true,
+        }
+    );
+}
+
+#[test]
+fn a_location_miss_reads_as_its_token_on_every_tool_that_takes_a_place() {
+    let placed = [
+        ToolId::ListDir,
+        ToolId::ImportantFolders,
+        ToolId::FolderImportance,
+        ToolId::Search,
+        ToolId::InspectFile,
+    ];
+    for tool in placed {
+        let read = outcome(tool.clone(), fixtures::location_miss());
+        assert_eq!(
+            read,
+            ToolOutcome::LocationMiss {
+                miss: MissToken::VolumeNotConnected,
+            },
+            "{tool:?}"
+        );
+        assert!(!read.ok(), "{tool:?}");
+    }
+    // A token from a newer build reads as a plain answer, never a panic.
+    let unknown = json!({ "miss": "fromTheFuture", "location": { "path": "/x" }, "detail": "…" });
+    assert_eq!(outcome(ToolId::ListDir, unknown), ToolOutcome::Answered);
+}
+
+#[test]
+fn a_connect_reads_as_how_it_went_and_only_a_live_volume_is_ok() {
+    let all = [
+        (ConnectOutcome::Connected, true),
+        (ConnectOutcome::AlreadyConnected, true),
+        (ConnectOutcome::StillReconnecting, false),
+        (ConnectOutcome::NeedsCredentials, false),
+        (ConnectOutcome::NeedsApproval, false),
+        (ConnectOutcome::Rejected, false),
+        (ConnectOutcome::Unreachable, false),
+        (ConnectOutcome::NotSaved, false),
+        (ConnectOutcome::Cancelled, false),
+    ];
+    for (connect, ok) in all {
+        let read = outcome(ToolId::ConnectVolume, fixtures::connect(connect));
+        assert_eq!(read, ToolOutcome::Connection { outcome: connect });
+        assert_eq!(read.ok(), ok, "{connect:?}");
     }
 }
 
@@ -239,7 +307,8 @@ fn an_unexpected_shape_falls_back_to_answered_never_a_panic() {
 
 /// The line's glyph and the breaker's judgement read the same keys, so they agree on every
 /// fixture EXCEPT where a typed refusal carries no `problem` key (`dispatch_ok` reads those as
-/// ok): a memory refusal, and a rename plan whose evidence was rejected.
+/// ok): a memory refusal, a rename plan whose evidence was rejected, a location miss, and a
+/// connect that didn't connect.
 #[test]
 fn ok_agrees_with_dispatch_ok_except_typed_refusals_without_a_problem_key() {
     let mut agreeing: Vec<(ToolId, Value)> = success_table()
@@ -269,6 +338,11 @@ fn ok_agrees_with_dispatch_ok_except_typed_refusals_without_a_problem_key() {
         (
             ToolId::ProposeRenamePlan,
             json!({ "readyForReview": false, "evidenceRejected": [], "guidance": "…" }),
+        ),
+        (ToolId::ListDir, fixtures::location_miss()),
+        (
+            ToolId::ConnectVolume,
+            fixtures::connect(ConnectOutcome::NeedsCredentials),
         ),
     ];
     for (tool, content) in disagreeing {

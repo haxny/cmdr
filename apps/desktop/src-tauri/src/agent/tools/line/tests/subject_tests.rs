@@ -65,6 +65,18 @@ fn argument_only_subjects_per_tool() {
             ToolSubject::ImportantFolders,
         ),
         (ToolId::ListVolumes, json!({}), ToolSubject::Drives),
+        (
+            ToolId::ConnectVolume,
+            json!({ "volumeId": "smb-naspi" }),
+            ToolSubject::Volume { id: "smb-naspi".into() },
+        ),
+        (
+            ToolId::ListDir,
+            json!({ "path": "/Volumes/naspi/papers", "volumeId": "smb-naspi" }),
+            ToolSubject::Folder {
+                path: LinePath::of("/Volumes/naspi/papers"),
+            },
+        ),
         (ToolId::OperationsList, json!({}), ToolSubject::OperationLog),
         (
             ToolId::OperationsGet,
@@ -216,6 +228,20 @@ fn list_pane_files_takes_its_folder_and_scope_from_the_result() {
             folder: Some(LinePath::of("/Users/u/Photos")),
             selection_only: Some(false),
         }
+    );
+    // A thread stored before results carried `location` named its folder as a bare `path`.
+    let legacy = json!({ "pane": "left", "path": "/Users/u/Old", "scope": "folder", "entries": [] });
+    assert_eq!(
+        subject_of(&pane_call, Some(&legacy), None),
+        ToolSubject::FocusedPane {
+            folder: Some(LinePath::of("/Users/u/Old")),
+            selection_only: Some(false),
+        }
+    );
+    assert_eq!(
+        subject_of(&pane_call, Some(&fixtures::location_miss()), None),
+        unknown,
+        "a miss lists no folder"
     );
 }
 

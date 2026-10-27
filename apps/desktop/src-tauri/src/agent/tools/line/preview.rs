@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use super::{
     LinePath, ToolOutcome, ToolPreview, ToolPreviewRow, ToolPreviewRowKind, ToolPreviewRowStatus, bounded, bounded_to,
-    count_u32, outcome_of,
+    count_u32, location_path, outcome_of,
 };
 use crate::agent::llm::types::{AgentToolResult, ToolId};
 use crate::agent::tools::read::join_child_path;
@@ -64,7 +64,7 @@ pub fn preview_of(tool: &ToolId, result: &AgentToolResult) -> ToolPreview {
 fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
     match tool {
         ToolId::ListDir | ToolId::ListPaneFiles => {
-            let parent = content.get("path").and_then(Value::as_str);
+            let parent = location_path(content);
             let list = if matches!(tool, ToolId::ListDir) {
                 "children"
             } else {
@@ -83,7 +83,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
                 .collect()
         }
         ToolId::ImportantFolders => items(content, "folders")
-            .filter_map(|folder| path_row(folder, ToolPreviewRowKind::Folder))
+            .filter_map(|folder| Some(place_row(location_path(folder)?, ToolPreviewRowKind::Folder)))
             .collect(),
         ToolId::ListVolumes => items(content, "volumes")
             .filter_map(|volume| {
@@ -152,6 +152,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
         | ToolId::ProposeRenamePlan
         | ToolId::ProposeSuggestions
         | ToolId::NothingToSuggest
+        | ToolId::ConnectVolume
         | ToolId::MemoryWrite
         | ToolId::MemoryEdit
         | ToolId::Unrecognized(_) => Vec::new(),
@@ -177,6 +178,7 @@ fn inspect_rows(content: &Value) -> Vec<ToolPreviewRow> {
             Some("unreadable") => Some(ToolPreviewRowStatus::Unreadable),
             Some("unreachable") => Some(ToolPreviewRowStatus::Unreachable),
             Some("unsupportedVolume") => Some(ToolPreviewRowStatus::UnsupportedVolume),
+            Some("noVolumeAtPath") => Some(ToolPreviewRowStatus::NoVolumeAtPath),
             _ => None,
         };
         let kind = if file.get("status").and_then(Value::as_str) == Some("folder") {
@@ -242,12 +244,16 @@ fn row(name: &str) -> ToolPreviewRow {
 
 /// A row named after the last component of the object's `path`.
 fn path_row(object: &Value, kind: ToolPreviewRowKind) -> Option<ToolPreviewRow> {
-    let path = object.get("path")?.as_str()?;
-    Some(ToolPreviewRow {
+    Some(place_row(object.get("path")?.as_str()?, kind))
+}
+
+/// A row named after the last component of `path`.
+fn place_row(path: &str, kind: ToolPreviewRowKind) -> ToolPreviewRow {
+    ToolPreviewRow {
         path: LinePath::linkable_text(path),
         kind,
         ..row(base_name(path))
-    })
+    }
 }
 
 fn file_or_folder(entry: &Value, key: &str) -> ToolPreviewRowKind {

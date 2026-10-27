@@ -1,10 +1,13 @@
 //! What came back from a call, read off the result's own typed keys.
 
+use serde::Deserialize;
 use serde_json::Value;
 
 use super::{IndexUnavailableReason, RefusalReason, ToolOutcome, count_u32, len_u32};
 use crate::agent::llm::types::{AgentToolResult, ToolId};
 use crate::agent::memory::MemoryRefusalKind;
+use crate::agent::tools::connect::ConnectOutcome;
+use crate::location::miss::MissToken;
 
 /// What `result` says happened. The check order is the contract:
 ///
@@ -15,7 +18,8 @@ use crate::agent::memory::MemoryRefusalKind;
 ///    win over `problem`.
 /// 4. `readyForReview` on a propose tool: `ensure_review_verdict` stamps `false` onto every
 ///    propose problem, so a propose problem is `NotStaged`.
-/// 5. `problem`, then 6. `refused` (memory), then the per-tool success shapes.
+/// 5. `problem`, then 6. `refused` (memory), then 7. `miss` (the location contract's typed
+///    miss, any tool that takes a place), then the per-tool success shapes.
 ///
 /// Total: a shape it doesn't recognize reads as [`ToolOutcome::Answered`].
 pub fn outcome_of(tool: &ToolId, result: &AgentToolResult) -> ToolOutcome {
@@ -45,6 +49,9 @@ pub fn outcome_of(tool: &ToolId, result: &AgentToolResult) -> ToolOutcome {
         return refused(RefusalReason::Memory {
             refusal: MemoryRefusalKind::from_token(token),
         });
+    }
+    if let Some(miss) = content.get("miss").and_then(|token| MissToken::deserialize(token).ok()) {
+        return ToolOutcome::LocationMiss { miss };
     }
     answered(tool, content).unwrap_or(ToolOutcome::Answered)
 }
@@ -141,6 +148,9 @@ fn answered(tool: &ToolId, content: &Value) -> Option<ToolOutcome> {
             "ok" => paged(content),
             other => index_unavailable(other),
         },
+        ToolId::ConnectVolume => Some(ToolOutcome::Connection {
+            outcome: ConnectOutcome::deserialize(content.get("outcome")?).ok()?,
+        }),
         ToolId::MemoryWrite | ToolId::MemoryEdit => match content.get("saved") {
             Some(Value::Bool(true)) => Some(ToolOutcome::Saved),
             _ => None,
@@ -148,12 +158,13 @@ fn answered(tool: &ToolId, content: &Value) -> Option<ToolOutcome> {
     }
 }
 
-/// The paged-list contract every list tool shares: `returned` of `total`.
+/// The paged-list contract every list tool shares: `returned` of `total`, a lower bound when a
+/// capped live `list_dir` read only counted what it kept (`totalIsLowerBound`).
 fn paged(content: &Value) -> Option<ToolOutcome> {
     Some(ToolOutcome::Items {
         returned: count_u32(content.get("returned"))?,
         total: content.get("total").and_then(Value::as_u64),
-        lower_bound: false,
+        lower_bound: flag(Some(content), "totalIsLowerBound"),
     })
 }
 

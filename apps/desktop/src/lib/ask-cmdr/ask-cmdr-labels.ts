@@ -11,10 +11,12 @@ import { formatMilliseconds } from '#lib/units/index.js'
 import type { AskCmdrErrorKind, RenameEvidenceSource, SkipBreakdown, SkipReason } from '#lib/tauri-commands/index.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type {
+  ConnectOutcome,
   IndexUnavailableReason,
   LinePath,
   ManagedAiRefusal,
   MemoryRefusalKind,
+  MissToken,
   RefusalReason,
   ToolOutcome,
   ToolSubject,
@@ -61,7 +63,6 @@ const TOOL_LABEL_KEYS: Partial<Record<string, PhaseKeys>> = {
     doing: 'askCmdr.tool.nothingToSuggest.doing',
     done: 'askCmdr.tool.nothingToSuggest.done',
   },
-<<<<<<< HEAD
   memory_write: {
     doing: 'askCmdr.tool.memoryWrite.doing',
     done: 'askCmdr.tool.memoryWrite.done',
@@ -72,7 +73,11 @@ const TOOL_LABEL_KEYS: Partial<Record<string, PhaseKeys>> = {
     done: 'askCmdr.tool.memoryEdit.done',
     tried: 'askCmdr.tool.memoryEdit.tried',
   },
-  connect_volume: { doing: 'askCmdr.tool.connectVolume.doing', done: 'askCmdr.tool.connectVolume.done' },
+  connect_volume: {
+    doing: 'askCmdr.tool.connectVolume.doing',
+    done: 'askCmdr.tool.connectVolume.done',
+    tried: 'askCmdr.tool.connectVolume.tried',
+  },
 }
 
 const UNKNOWN_TOOL_KEYS: PhaseKeys = { doing: 'askCmdr.tool.unknown.doing', done: 'askCmdr.tool.unknown.done' }
@@ -237,6 +242,8 @@ const SUBJECT_WORDS: { [K in ToolSubject['kind']]: (subject: SubjectOf<K>, tool:
   panes: noWords,
   importantFolders: noWords,
   drives: noWords,
+  // A volume id is a token (`smb-192-168-1-5-…`), not a name a person knows the server by.
+  volume: noWords,
   operationLog: noWords,
   operation: noWords,
   suggestions: noWords,
@@ -304,6 +311,32 @@ const INDEX_UNAVAILABLE_KEYS: Record<IndexUnavailableReason, MessageKey> = {
   semanticModelNotInstalled: 'askCmdr.tool.outcome.semanticModelNotInstalled',
 }
 
+const MISS_KEYS: Record<MissToken, MessageKey> = {
+  unknownVolume: 'askCmdr.tool.outcome.miss.unknownVolume',
+  pathOutsideVolume: 'askCmdr.tool.outcome.miss.pathOutsideVolume',
+  noVolumeAtPath: 'askCmdr.tool.outcome.miss.noVolumeAtPath',
+  volumeNotConnected: 'askCmdr.tool.outcome.miss.volumeNotConnected',
+  needsDiskAccess: 'askCmdr.tool.outcome.miss.needsDiskAccess',
+  unreachable: 'askCmdr.tool.outcome.miss.unreachable',
+  notFound: 'askCmdr.tool.outcome.miss.notFound',
+  excluded: 'askCmdr.tool.outcome.miss.excluded',
+  permissionDenied: 'askCmdr.tool.outcome.miss.permissionDenied',
+  cancelled: 'askCmdr.tool.outcome.miss.cancelled',
+}
+
+/** `null` for a fresh connection: the label ("Connected to your server") already says it. */
+const CONNECTION_KEYS: Record<ConnectOutcome, MessageKey | null> = {
+  connected: null,
+  alreadyConnected: 'askCmdr.tool.outcome.connection.alreadyConnected',
+  stillReconnecting: 'askCmdr.tool.outcome.connection.stillReconnecting',
+  needsCredentials: 'askCmdr.tool.outcome.connection.needsCredentials',
+  needsApproval: 'askCmdr.tool.outcome.connection.needsApproval',
+  rejected: 'askCmdr.tool.outcome.connection.rejected',
+  unreachable: 'askCmdr.tool.outcome.connection.unreachable',
+  notSaved: 'askCmdr.tool.outcome.connection.notSaved',
+  cancelled: 'askCmdr.tool.outcome.connection.cancelled',
+}
+
 /**
  * What came back, as the short note after a line's label. `null` while the call runs, and for a
  * plain answer or a saved note, where the label and the glyph already say it all, and for a count
@@ -357,6 +390,11 @@ const OUTCOME_TEXT: { [K in ToolOutcome['kind']]: (outcome: OutcomeOf<K>) => str
   notStaged: () => tString('askCmdr.tool.outcome.notStaged'),
   refused: ({ reason }) =>
     tString(reason.kind === 'memory' ? MEMORY_REFUSAL_KEYS[reason.refusal] : REFUSAL_KEYS[reason.kind]),
+  locationMiss: ({ miss }) => tString(MISS_KEYS[miss]),
+  connection: ({ outcome }) => {
+    const key = CONNECTION_KEYS[outcome]
+    return key === null ? null : tString(key)
+  },
   answered: () => null,
   saved: () => null,
 }

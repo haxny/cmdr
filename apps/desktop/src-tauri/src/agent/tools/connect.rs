@@ -33,7 +33,7 @@ use std::time::Duration;
 use cmdr_fs::volume::ConnectionState;
 use cmdr_fs::volume::host::events::VolumeConnection;
 use futures_util::future::{BoxFuture, FutureExt};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::{AppHandle, Runtime};
 use tokio::sync::broadcast;
@@ -52,9 +52,9 @@ use crate::server_connect::{SavedPlaceDial, SavedPlaceRefusal, ServerConnectOutc
 pub(crate) const RECONNECT_WAIT: Duration = Duration::from_secs(10);
 
 /// What the tool answers, as `outcome`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum ConnectOutcome {
+pub enum ConnectOutcome {
     Connected,
     AlreadyConnected,
     StillReconnecting,

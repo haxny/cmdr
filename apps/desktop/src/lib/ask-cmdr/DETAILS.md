@@ -89,7 +89,8 @@ stays simple:
   with it.
 - `toolCallFinished` → find the line by `(messageId, callId)` across the thread (newest bubble first) and set its
   outcome and refined subject. `ok` derives from the outcome through `outcomeOk` (`ask-cmdr-tool-line.ts`, an exhaustive
-  `Record` mirroring the backend's `ToolOutcome::ok`); a settled line with no outcome reads as done.
+  `Record` mirroring the backend's `ToolOutcome::ok`, plus the `connection` arm, ok only for a live volume); a settled
+  line with no outcome reads as done.
 - `done` → stamp the current round with its `messageId` FIRST (the answer round is text-only, so no `toolCallsResolved`
   stamped it, and settling would drop it as never stored), attach `turn` as `stats`, finalize, `streaming = false`.
 - `failed` → attach `turn` as `stats`, finalize, push a typed `{ kind: 'error' }` item, `streaming = false`. The item
@@ -200,8 +201,10 @@ a quieter note saying what came back. Every word is ours: the backend sends type
   tool", and a named `unknownTool` says what it asked for. Search has four shapes: pattern plus folders, pattern only,
   folders only, neither. A count rides as `{countText}` plus `{count}`.
 - **Decision: a refused note says "Tried to…".** The memory tools' done words ("Saved a note") claim the very thing a
-  refusal denies, so those two tools carry a `tried` key the label uses when the outcome isn't ok. Every other tool's
-  done words describe the activity, and its outcome note says it was turned down.
+  refusal denies, so those two tools carry a `tried` key the label uses when the outcome isn't ok; so does
+  `connect_volume` ("Connected to your server" vs "Tried connecting…", its outcome note saying why). Every other tool's
+  done words describe the activity, and its outcome note says it was turned down. A `volume` subject keeps the tool's
+  own words: its id is a token, not a name a person knows the server by.
 - **Paths are links.** A message names its paths with tags (`<place>` one, `<places>` a list), rendered through
   `<Trans>` snippets as `LinkButton`s; `<places>` joins its links with `conjunctionListParts` (`#lib/intl/list-format`),
   the language's own "and". A link shows the path's last segment (`placeName`), its full path in a tooltip and in its

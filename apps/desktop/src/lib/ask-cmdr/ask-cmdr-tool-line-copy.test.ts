@@ -4,7 +4,14 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { MemoryRefusalKind, RefusalReason, ToolOutcome, ToolSubject } from '#lib/ipc/bindings.js'
+import type {
+  ConnectOutcome,
+  MemoryRefusalKind,
+  MissToken,
+  RefusalReason,
+  ToolOutcome,
+  ToolSubject,
+} from '#lib/ipc/bindings.js'
 import { lineLabelText, toolLineLabel, toolOutcomeText, turnStatsText } from './ask-cmdr-labels'
 import type { RailToolCall } from './ask-cmdr-messages'
 
@@ -155,6 +162,20 @@ describe('toolLineLabel', () => {
     expect(said('memory_edit', null, { outcome: refused })).toBe('Tried to update its notes')
   })
 
+  it('never claims a server connected when it didn’t', () => {
+    const volume: ToolSubject = { kind: 'volume', id: 'smb-naspi' }
+    expect(said('connect_volume', volume, { running: true, outcome: null })).toBe('Connecting to your server')
+    expect(said('connect_volume', volume, { outcome: { kind: 'connection', outcome: 'connected' } })).toBe(
+      'Connected to your server',
+    )
+    expect(said('connect_volume', volume, { outcome: { kind: 'connection', outcome: 'alreadyConnected' } })).toBe(
+      'Connected to your server',
+    )
+    expect(said('connect_volume', volume, { outcome: { kind: 'connection', outcome: 'needsCredentials' } })).toBe(
+      'Tried connecting to your server',
+    )
+  })
+
   it('names what a call outside the agent’s view asked for, and keeps the generic words for a nameless one', () => {
     expect(said('delete', { kind: 'unknownTool', name: 'delete' })).toBe('Asked for “delete”')
     expect(said('', { kind: 'unknownTool', name: '' })).toBe('Used a tool')
@@ -175,6 +196,7 @@ describe('toolLineLabel', () => {
       photoSearch: ['search_photos', { kind: 'photoSearch', query: 'x' }],
       importantFolders: ['important_folders', { kind: 'importantFolders' }],
       drives: ['list_volumes', { kind: 'drives' }],
+      volume: ['connect_volume', { kind: 'volume', id: 'smb-naspi' }],
       operationLog: ['operations_list', { kind: 'operationLog' }],
       operation: ['operations_get', { kind: 'operation', id: 'op-1' }],
       renamePlan: ['propose_rename_plan', { kind: 'renamePlan', count: 2 }],
@@ -213,9 +235,15 @@ describe('toolOutcomeText', () => {
     expect(settled({ kind: 'nothingFound', lowerBound: true })).toBe('nothing found yet')
   })
 
-  it('says nothing more for a plain answer or a saved note: the label already said it', () => {
+  it('says nothing more for a plain answer, a saved note, or a fresh connection: the label already said it', () => {
     expect(settled({ kind: 'answered' })).toBeNull()
     expect(settled({ kind: 'saved' })).toBeNull()
+    expect(settled({ kind: 'connection', outcome: 'connected' })).toBeNull()
+  })
+
+  it('says why a place couldn’t be read', () => {
+    expect(settled({ kind: 'locationMiss', miss: 'volumeNotConnected' })).toBe('that drive isn’t connected')
+    expect(settled({ kind: 'locationMiss', miss: 'needsDiskAccess' })).toBe('needs Full Disk Access')
   })
 
   it('says nothing more when the count only repeats the paths the label names, and keeps a partial answer', () => {
@@ -252,6 +280,31 @@ describe('toolOutcomeText', () => {
       notStaged: [{ kind: 'notStaged' }],
       saved: [],
       refused: [],
+      locationMiss: [],
+      connection: [],
+    }
+    const misses: Record<MissToken, true> = {
+      unknownVolume: true,
+      pathOutsideVolume: true,
+      noVolumeAtPath: true,
+      volumeNotConnected: true,
+      needsDiskAccess: true,
+      unreachable: true,
+      notFound: true,
+      excluded: true,
+      permissionDenied: true,
+      cancelled: true,
+    }
+    // `connected` says nothing more: the label already says "Connected to your server".
+    const connections: Record<Exclude<ConnectOutcome, 'connected'>, true> = {
+      alreadyConnected: true,
+      stillReconnecting: true,
+      needsCredentials: true,
+      needsApproval: true,
+      rejected: true,
+      unreachable: true,
+      notSaved: true,
+      cancelled: true,
     }
     const reasons: Record<Exclude<RefusalReason['kind'], 'memory'>, RefusalReason> = {
       toolUnavailable: { kind: 'toolUnavailable' },
@@ -276,6 +329,11 @@ describe('toolOutcomeText', () => {
       ...(Object.keys(memory) as MemoryRefusalKind[]).map((refusal): ToolOutcome => ({
         kind: 'refused',
         reason: { kind: 'memory', refusal },
+      })),
+      ...(Object.keys(misses) as MissToken[]).map((miss): ToolOutcome => ({ kind: 'locationMiss', miss })),
+      ...(Object.keys(connections) as ConnectOutcome[]).map((outcome): ToolOutcome => ({
+        kind: 'connection',
+        outcome,
       })),
     ]
     const texts = all.map((outcome) => settled(outcome))
