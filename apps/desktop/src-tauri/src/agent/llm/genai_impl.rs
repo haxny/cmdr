@@ -5,21 +5,22 @@
 //! call, and maps the stream events to [`AgentDelta`]s. The mapping table and the
 //! reasoning-blob shapes it owns are documented in `DETAILS.md`.
 //!
-//! Reasoning posture (spike verdict): reasoning is kept OFF on the Anthropic and
-//! OpenAI-Responses paths in v1, because genai drops their reasoning state on
-//! replay (Gaps A/B) so a reasoning-on multi-step loop breaks. Gemini round-trips
-//! its per-`functionCall` `thoughtSignature` correctly, so its reasoning rides on
-//! the tool call and is preserved end to end.
+//! Reasoning round-trip: every reasoning part genai captures (Anthropic signed and
+//! redacted thinking blocks, OpenAI Responses encrypted items, Gemini thought
+//! signatures, chat-completions `reasoning_content`) is kept in wire order, stamped
+//! with the model that produced it, and replayed verbatim to that same model only.
+//! Per-provider requirements: `DETAILS.md` § Reasoning round-trip.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures_util::future::{BoxFuture, FutureExt};
 use futures_util::stream::StreamExt;
+use genai::ModelIden;
 use genai::adapter::AdapterKind;
 use genai::chat::{
-    ChatMessage, ChatOptions, ChatRequest, ChatRole, ChatStreamEvent, ContentPart, MessageContent, ReasoningEffort,
-    StopReason as GenaiStopReason, StreamEnd, Tool as GenaiTool, ToolCall as GenaiToolCall,
-    ToolResponse as GenaiToolResponse, Usage as GenaiUsage,
+    ChatMessage, ChatOptions, ChatRequest, ChatRole, ChatStreamEvent, ContentPart, CustomPart, MessageContent,
+    ReasoningEffort as GenaiReasoningEffort, StopReason as GenaiStopReason, StreamEnd, Tool as GenaiTool,
+    ToolCall as GenaiToolCall, ToolResponse as GenaiToolResponse, Usage as GenaiUsage,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -27,7 +28,7 @@ use crate::ai::client::{AiBackend, AiError, map_genai_error};
 
 use super::types::{
     AgentDelta, AgentLlmError, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentToolResult,
-    AgentUsage, ProviderTag, ReasoningState, ToolDeclaration, ToolId,
+    AgentUsage, ProviderTag, ReasoningEffort, ReasoningState, ToolDeclaration, ToolId,
 };
 use super::{AgentDeltaStream, AgentLlm};
 
@@ -60,18 +61,20 @@ impl AgentLlm for GenaiAgentLlm {
         system: &'a str,
         tools: &'a [ToolDeclaration],
         messages: &'a [AgentMessage],
+        effort: ReasoningEffort,
         cancel: CancellationToken,
     ) -> BoxFuture<'a, Result<AgentDeltaStream, AgentLlmError>> {
         async move {
-            let adapter = self.backend.resolve_adapter().await.map_err(AgentLlmError::from)?;
-            let provider = provider_tag_for(adapter);
+            let model = self.backend.resolve_model().await.map_err(AgentLlmError::from)?;
+            let adapter = model.adapter_kind;
+            let origin = ReasoningOrigin::of(&model).with_chat_reasoning(self.backend.replays_chat_reasoning());
 
-            let request = build_request(system, tools, messages);
-            let options = build_options(adapter);
+            let request = build_request(system, tools, messages, &origin);
+            let options = build_options(adapter, effort);
 
             log::debug!(
                 target: LOG_TARGET,
-                "respond: opening stream (adapter={adapter:?}, provider={provider:?}, tools={}, messages={})",
+                "respond: opening stream (adapter={adapter:?}, effort={effort:?}, tools={}, messages={})",
                 tools.len(),
                 messages.len()
             );
@@ -89,7 +92,7 @@ impl AgentLlm for GenaiAgentLlm {
             let cancel_signal = cancel.clone();
             let stream = map_stream(
                 response.take_until(async move { cancel_signal.cancelled().await }),
-                provider,
+                origin,
             );
 
             Ok(stream)
@@ -105,14 +108,14 @@ impl AgentLlm for GenaiAgentLlm {
 /// would otherwise start several times. The rail keys its tool lines by call id, and a
 /// repeated key took the whole window down (`ERR-FRMAR`, a local Ministral 3B on
 /// llama-server).
-fn map_stream<S>(events: S, provider: ProviderTag) -> AgentDeltaStream
+fn map_stream<S>(events: S, origin: ReasoningOrigin) -> AgentDeltaStream
 where
     S: futures_util::Stream<Item = genai::Result<ChatStreamEvent>> + Send + 'static,
 {
     let mut started = std::collections::HashSet::<String>::new();
     events
         .filter_map(move |item| {
-            let delta = map_stream_event(item, provider).filter(|delta| match delta {
+            let delta = map_stream_event(item, &origin).filter(|delta| match delta {
                 Ok(AgentDelta::ToolCallStarted { call_id, .. }) => started.insert(call_id.clone()),
                 _ => true,
             });
@@ -125,11 +128,21 @@ where
 
 /// Builds the genai request from the assembled prompt. System and tools go into
 /// their dedicated request slots; the message history maps part-for-part.
-fn build_request(system: &str, tools: &[ToolDeclaration], messages: &[AgentMessage]) -> ChatRequest {
-    let tool_names = tool_names_by_call_id(messages);
+/// `origin` is the model this request goes to: reasoning that some other model produced stays
+/// out of the replay ([`ReasoningOrigin::may_replay`]).
+fn build_request(
+    system: &str,
+    tools: &[ToolDeclaration],
+    messages: &[AgentMessage],
+    origin: &ReasoningOrigin,
+) -> ChatRequest {
+    let replay = Replay {
+        tool_names: tool_names_by_call_id(messages),
+        origin,
+    };
     let chat_messages: Vec<ChatMessage> = messages
         .iter()
-        .map(|message| agent_message_to_genai(message, &tool_names))
+        .map(|message| agent_message_to_genai(message, &replay))
         // A message whose every part was dropped would go out as an empty turn, which
         // adapters reject. It happens to the pair a nameless tool call leaves behind in a
         // thread persisted before the inbound guard existed.
@@ -143,9 +156,13 @@ fn build_request(system: &str, tools: &[ToolDeclaration], messages: &[AgentMessa
     request
 }
 
-/// Capture everything needed to rebuild the final [`AgentMessage`] on stream end,
-/// plus the per-provider reasoning posture.
-fn build_options(adapter: AdapterKind) -> ChatOptions {
+/// Capture everything needed to rebuild the final [`AgentMessage`] on stream end, plus the
+/// call's reasoning effort.
+///
+/// `capture_reasoning_content` is load-bearing, not just for display: it's genai's opt-in for
+/// Anthropic's thinking-block signatures and the OpenAI Responses `reasoning.encrypted_content`
+/// include, the halves a tool loop has to replay.
+fn build_options(adapter: AdapterKind, effort: ReasoningEffort) -> ChatOptions {
     let options = ChatOptions::default()
         .with_max_tokens(AGENT_MAX_OUTPUT_TOKENS)
         .with_capture_content(true)
@@ -153,12 +170,25 @@ fn build_options(adapter: AdapterKind) -> ChatOptions {
         .with_capture_usage(true)
         .with_capture_reasoning_content(true);
 
-    match adapter {
-        // Round-trip broken on these in v1 (spike Gaps A/B): keep reasoning off so
-        // a multi-step tool loop does not 400 / silently degrade. `crate::ai`'s
-        // `adjust_for_model` won't override an explicit effort.
-        AdapterKind::Anthropic | AdapterKind::OpenAIResp => options.with_reasoning_effort(ReasoningEffort::None),
-        _ => options,
+    match genai_effort(adapter, effort) {
+        Some(effort) => options.with_reasoning_effort(effort),
+        None => options,
+    }
+}
+
+/// The agent's effort level as genai's, which each adapter then maps onto its provider's knob
+/// (`DETAILS.md` § Reasoning effort). `None` sends nothing, so the provider decides.
+fn genai_effort(adapter: AdapterKind, effort: ReasoningEffort) -> Option<GenaiReasoningEffort> {
+    match effort {
+        // `crate::ai`'s `adjust_for_model` fills an unset effort with `Low` on the Responses API,
+        // which suits a one-line translation, not an agent loop. `Medium` is OpenAI's own default.
+        ReasoningEffort::ProviderDefault if adapter == AdapterKind::OpenAIResp => Some(GenaiReasoningEffort::Medium),
+        ReasoningEffort::ProviderDefault => None,
+        ReasoningEffort::Off => Some(GenaiReasoningEffort::Zero),
+        ReasoningEffort::Low => Some(GenaiReasoningEffort::Low),
+        ReasoningEffort::Medium => Some(GenaiReasoningEffort::Medium),
+        ReasoningEffort::High => Some(GenaiReasoningEffort::High),
+        ReasoningEffort::Max => Some(GenaiReasoningEffort::Max),
     }
 }
 
@@ -172,7 +202,7 @@ fn tool_declaration_to_genai(decl: &ToolDeclaration) -> GenaiTool {
     tool.with_schema(decl.schema.clone())
 }
 
-fn agent_message_to_genai<'a>(message: &'a AgentMessage, tool_names: &ToolNames<'a>) -> ChatMessage {
+fn agent_message_to_genai(message: &AgentMessage, replay: &Replay<'_>) -> ChatMessage {
     let role = match message.role {
         AgentRole::System => ChatRole::System,
         AgentRole::User => ChatRole::User,
@@ -182,13 +212,38 @@ fn agent_message_to_genai<'a>(message: &'a AgentMessage, tool_names: &ToolNames<
     let parts: Vec<ContentPart> = message
         .parts
         .iter()
-        .flat_map(|part| agent_part_to_genai(part, tool_names))
+        .flat_map(|part| agent_part_to_genai(part, replay))
         .collect();
     ChatMessage::new(role, MessageContent::from_parts(parts))
 }
 
 /// Wire tool name per `call_id`, resolved across the whole assembled transcript.
 type ToolNames<'a> = std::collections::HashMap<&'a str, &'a str>;
+
+/// What replaying one transcript needs beyond the part itself: the tool names results borrow,
+/// and the model the request goes to, which decides whose reasoning may ride along.
+struct Replay<'a> {
+    tool_names: ToolNames<'a>,
+    origin: &'a ReasoningOrigin,
+}
+
+impl Replay<'_> {
+    /// The reasoning state as genai parts, or nothing when another model produced it.
+    fn reasoning(&self, state: &ReasoningState) -> Vec<ContentPart> {
+        if !self.origin.may_replay(state) {
+            return Vec::new();
+        }
+        if let Some(signatures) = blob_thought_signatures(&state.blob) {
+            signatures.into_iter().map(ContentPart::ThoughtSignature).collect()
+        } else if let Some(reasoning) = blob_reasoning_content(&state.blob) {
+            vec![ContentPart::ReasoningContent(reasoning)]
+        } else if let Some(data) = blob_custom(&state.blob) {
+            vec![ContentPart::Custom(CustomPart { model_iden: None, data })]
+        } else {
+            Vec::new()
+        }
+    }
+}
 
 /// Indexes every tool CALL in the transcript by `call_id`, so the tool RESULT that
 /// answers it can be replayed carrying the originating function name. Gemini's
@@ -207,10 +262,10 @@ fn tool_names_by_call_id(messages: &[AgentMessage]) -> ToolNames<'_> {
         .collect()
 }
 
-/// Maps one agent part to zero-or-more genai parts. A reasoning part that genai
-/// can't represent (e.g. an Anthropic thinking blob — Gap A) maps to nothing; v1
-/// runs those paths reasoning-off, so it does not arise in practice.
-fn agent_part_to_genai(part: &AgentPart, tool_names: &ToolNames<'_>) -> Vec<ContentPart> {
+/// Maps one agent part to zero-or-more genai parts. Reasoning (standalone, or on a tool call)
+/// goes out only to the model that produced it.
+fn agent_part_to_genai(part: &AgentPart, replay: &Replay<'_>) -> Vec<ContentPart> {
+    let tool_names = &replay.tool_names;
     match part {
         // The envelope a user turn was sent with is prose to the provider, replayed verbatim.
         AgentPart::Text(text) | AgentPart::Envelope(text) => vec![ContentPart::Text(text.clone())],
@@ -227,7 +282,11 @@ fn agent_part_to_genai(part: &AgentPart, tool_names: &ToolNames<'_>) -> Vec<Cont
             call_id: call.call_id.clone(),
             fn_name: call.tool.as_wire_name().to_string(),
             fn_arguments: object_arguments(&call.arguments),
-            thought_signatures: call.reasoning.as_ref().and_then(|r| blob_thought_signatures(&r.blob)),
+            thought_signatures: call
+                .reasoning
+                .as_ref()
+                .filter(|state| replay.origin.may_replay(state))
+                .and_then(|state| blob_thought_signatures(&state.blob)),
         })],
         // The result answering a dropped call goes with it: an orphan tool response is
         // rejected in its own right.
@@ -237,15 +296,7 @@ fn agent_part_to_genai(part: &AgentPart, tool_names: &ToolNames<'_>) -> Vec<Cont
             fn_name: tool_names.get(result.call_id.as_str()).map(|name| (*name).to_string()),
             content: value_to_tool_content(&result.content),
         })],
-        AgentPart::Reasoning(state) => {
-            if let Some(signatures) = blob_thought_signatures(&state.blob) {
-                signatures.into_iter().map(ContentPart::ThoughtSignature).collect()
-            } else if let Some(reasoning) = blob_reasoning_content(&state.blob) {
-                vec![ContentPart::ReasoningContent(reasoning)]
-            } else {
-                Vec::new()
-            }
-        }
+        AgentPart::Reasoning(state) => replay.reasoning(state),
     }
 }
 
@@ -274,12 +325,33 @@ fn object_arguments(arguments: &serde_json::Value) -> serde_json::Value {
 // region: --- Response parse (genai -> agent)
 
 /// Rebuilds the final assistant message from the captured stream content.
-fn build_agent_message_from_stream_end(end: &StreamEnd, provider: ProviderTag, at: i64) -> AgentMessage {
-    let parts = end
+///
+/// A chat-completions stream (DeepSeek, Mistral, Groq, a local server) keeps its reasoning text
+/// out of `captured_content`, in `captured_reasoning_content` only, so it joins the message
+/// here, leading, the way it came, when the endpoint takes it back
+/// ([`ReasoningOrigin::takes_reasoning`]). DeepSeek 400s a tool loop that doesn't send it. The
+/// native adapters already put what they replay into the content; their
+/// `captured_reasoning_content` is a display copy (Anthropic) or a summary nothing replays
+/// (Gemini, OpenAI Responses).
+fn build_agent_message_from_stream_end(end: &StreamEnd, origin: &ReasoningOrigin, at: i64) -> AgentMessage {
+    let mut parts = end
         .captured_content
         .as_ref()
-        .map(|content| genai_content_to_agent_parts(content, provider))
+        .map(|content| genai_content_to_agent_parts(content, origin))
         .unwrap_or_default();
+    let has_reasoning_text = end.captured_content.as_ref().is_some_and(|content| {
+        content
+            .parts()
+            .iter()
+            .any(|part| matches!(part, ContentPart::ReasoningContent(_)))
+    });
+    if origin.provider == ProviderTag::OpenAi
+        && origin.takes_reasoning()
+        && !has_reasoning_text
+        && let Some(reasoning) = end.captured_reasoning_content.as_ref().filter(|r| !r.is_empty())
+    {
+        parts.insert(0, origin.reasoning_part(reasoning_content_blob(reasoning.clone())));
+    }
     AgentMessage {
         role: AgentRole::Assistant,
         parts,
@@ -287,16 +359,15 @@ fn build_agent_message_from_stream_end(end: &StreamEnd, provider: ProviderTag, a
     }
 }
 
-/// Maps genai content back to typed agent parts, tagging any reasoning with
-/// `provider`. genai attaches captured thought signatures BOTH to the first tool
-/// call AND as leading standalone parts, so a standalone `ThoughtSignature` is
-/// skipped when the message has tool calls (it would duplicate the tool call's
-/// reasoning).
-fn genai_content_to_agent_parts(content: &MessageContent, provider: ProviderTag) -> Vec<AgentPart> {
-    let has_tool_calls = content
-        .parts()
-        .iter()
-        .any(|part| matches!(part, ContentPart::ToolCall(call) if !call.fn_name.trim().is_empty()));
+/// Maps genai content back to typed agent parts, stamping any reasoning with `origin`.
+///
+/// Every reasoning part is kept, in wire order, and so is each tool call's own
+/// `thought_signatures`, even where they repeat: genai mirrors the leading signatures onto
+/// the first tool call, and each adapter picks its canonical copy on replay (Anthropic and
+/// OpenAI Responses read the leading parts, Gemini the call's own and skips the repeat). A
+/// dedupe here would have to know which one each adapter reads; replaying exactly what came
+/// back doesn't.
+fn genai_content_to_agent_parts(content: &MessageContent, origin: &ReasoningOrigin) -> Vec<AgentPart> {
     let mut out = Vec::new();
     for part in content.parts() {
         match part {
@@ -311,25 +382,22 @@ fn genai_content_to_agent_parts(content: &MessageContent, provider: ProviderTag)
                     call.call_id
                 );
             }
-            ContentPart::ToolCall(call) => out.push(AgentPart::ToolCall(genai_tool_call_to_agent(call, provider))),
+            ContentPart::ToolCall(call) => out.push(AgentPart::ToolCall(genai_tool_call_to_agent(call, origin))),
             ContentPart::ToolResponse(response) => out.push(AgentPart::ToolResult(AgentToolResult {
                 call_id: response.call_id.clone(),
                 content: tool_content_to_value(&response.content),
                 elided: false,
             })),
             ContentPart::ThoughtSignature(signature) => {
-                if !has_tool_calls {
-                    out.push(AgentPart::Reasoning(ReasoningState {
-                        provider,
-                        blob: thought_signatures_blob(vec![signature.clone()]),
-                    }));
-                }
+                out.push(origin.reasoning_part(thought_signatures_blob(vec![signature.clone()])));
             }
-            ContentPart::ReasoningContent(reasoning) => out.push(AgentPart::Reasoning(ReasoningState {
-                provider,
-                blob: reasoning_content_blob(reasoning.clone()),
-            })),
-            ContentPart::Binary(_) | ContentPart::Custom(_) => {
+            ContentPart::ReasoningContent(reasoning) => {
+                out.push(origin.reasoning_part(reasoning_content_blob(reasoning.clone())));
+            }
+            // The custom parts genai captures into an answer are provider continuation state:
+            // Anthropic `redacted_thinking`, OpenRouter `reasoning_details`. They go back as is.
+            ContentPart::Custom(custom) => out.push(origin.reasoning_part(custom_blob(custom.data.clone()))),
+            ContentPart::Binary(_) => {
                 // The agent's read-only toolset never produces these; drop them.
             }
         }
@@ -337,7 +405,7 @@ fn genai_content_to_agent_parts(content: &MessageContent, provider: ProviderTag)
     out
 }
 
-fn genai_tool_call_to_agent(call: &GenaiToolCall, provider: ProviderTag) -> AgentToolCall {
+fn genai_tool_call_to_agent(call: &GenaiToolCall, origin: &ReasoningOrigin) -> AgentToolCall {
     // Capture any per-call reasoning (e.g. Gemini's `thoughtSignature`) into the
     // opaque blob so it survives persistence and rides back on replay — the whole
     // point of the typed-parts model (spike Gaps A/B).
@@ -345,10 +413,7 @@ fn genai_tool_call_to_agent(call: &GenaiToolCall, provider: ProviderTag) -> Agen
         .thought_signatures
         .as_ref()
         .filter(|signatures| !signatures.is_empty())
-        .map(|signatures| ReasoningState {
-            provider,
-            blob: thought_signatures_blob(signatures.clone()),
-        });
+        .map(|signatures| origin.reasoning_state(thought_signatures_blob(signatures.clone())));
     AgentToolCall {
         call_id: call.call_id.clone(),
         tool: ToolId::from_wire_name(&call.fn_name),
@@ -359,10 +424,10 @@ fn genai_tool_call_to_agent(call: &GenaiToolCall, provider: ProviderTag) -> Agen
 
 fn map_stream_event(
     item: genai::Result<ChatStreamEvent>,
-    provider: ProviderTag,
+    origin: &ReasoningOrigin,
 ) -> Option<Result<AgentDelta, AgentLlmError>> {
     match item {
-        Ok(ChatStreamEvent::Start) => None,
+        Ok(ChatStreamEvent::Start | ChatStreamEvent::Heartbeat) => None,
         Ok(ChatStreamEvent::Chunk(chunk)) => (!chunk.content.is_empty()).then_some(Ok(AgentDelta::Text(chunk.content))),
         Ok(ChatStreamEvent::ReasoningChunk(_) | ChatStreamEvent::ThoughtSignatureChunk(_)) => {
             Some(Ok(AgentDelta::ReasoningTick))
@@ -378,7 +443,7 @@ fn map_stream_event(
                 .map(map_stop_reason)
                 .unwrap_or(AgentStopReason::Completed);
             let usage = end.captured_usage.clone().map(map_usage).unwrap_or_default();
-            let message = build_agent_message_from_stream_end(&end, provider, now_secs());
+            let message = build_agent_message_from_stream_end(&end, origin, now_secs());
             Some(Ok(AgentDelta::End { stop, usage, message }))
         }
         Err(error) => Some(Err(AgentLlmError::from(map_genai_error(error)))),
@@ -396,10 +461,18 @@ fn map_stop_reason(reason: GenaiStopReason) -> AgentStopReason {
     }
 }
 
+/// Reasoning is billed as output, and genai's `completion_tokens` already counts it on every
+/// adapter (Anthropic `output_tokens`, OpenAI `completion_tokens` / `output_tokens`, Gemini
+/// candidates plus thoughts). The one gap: genai 0.7.1 leaves `completion_tokens` unset when
+/// Gemini reports thoughts and no candidates, so the thoughts stand in rather than metering $0.
 fn map_usage(usage: GenaiUsage) -> AgentUsage {
+    let reasoning_tokens = usage
+        .completion_tokens_details
+        .as_ref()
+        .and_then(|details| details.reasoning_tokens);
     AgentUsage {
         prompt_tokens: non_negative(usage.prompt_tokens),
-        completion_tokens: non_negative(usage.completion_tokens),
+        completion_tokens: non_negative(usage.completion_tokens.or(reasoning_tokens)),
     }
 }
 
@@ -428,9 +501,10 @@ impl From<AiError> for AgentLlmError {
     }
 }
 
-/// Maps the resolved adapter to a descriptive provider tag for reasoning state.
-/// The local llama-server forces the OpenAI chat-completions adapter, so it tags as
-/// `OpenAi` here; honest local labeling (free/on-device cost) is the slot's job.
+/// Maps the resolved adapter to a descriptive provider tag for reasoning state. Every
+/// chat-completions dialect (DeepSeek, Mistral, Groq, …) and the local llama-server tag as
+/// `OpenAi`; the precise model rides in the blob's origin stamp ([`ReasoningOrigin`]), and
+/// honest local labeling (free/on-device cost) is the slot's job.
 fn provider_tag_for(adapter: AdapterKind) -> ProviderTag {
     match adapter {
         AdapterKind::Anthropic => ProviderTag::Anthropic,
@@ -440,19 +514,104 @@ fn provider_tag_for(adapter: AdapterKind) -> ProviderTag {
     }
 }
 
+/// The model a reasoning blob came from, and the model a request goes to. Reasoning replays
+/// only to the model that produced it: a signature is a provider's own continuation token, so
+/// an Anthropic signature sent to OpenAI as `encrypted_content` (or one Claude's to another)
+/// is a 400, and DeepSeek's `reasoning_content` would 422 on Mistral. A thread that switches
+/// model mid-way drops the old model's reasoning, which every provider accepts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ReasoningOrigin {
+    provider: ProviderTag,
+    /// The genai adapter, lowercase (`anthropic`, `deepseek`, `openai_resp`, …).
+    adapter: &'static str,
+    /// The bare model name, without a genai namespace.
+    model: String,
+    /// Whether a chat-completions endpoint takes reasoning text back (`AiBackend::
+    /// replays_chat_reasoning`): Groq 400s on it, DeepSeek 400s without it. Not part of the
+    /// stamp, since it's the endpoint's rule, not the reasoning's.
+    chat_reasoning: bool,
+}
+
+impl ReasoningOrigin {
+    fn of(model: &ModelIden) -> Self {
+        Self {
+            provider: provider_tag_for(model.adapter_kind),
+            adapter: model.adapter_kind.as_lower_str(),
+            model: model.model_name.namespace_and_name().1.to_string(),
+            chat_reasoning: false,
+        }
+    }
+
+    fn with_chat_reasoning(mut self, replays: bool) -> Self {
+        self.chat_reasoning = replays;
+        self
+    }
+
+    /// Whether this endpoint gets reasoning back at all. The native protocols always do; a
+    /// chat-completions one only when it's known to take it.
+    fn takes_reasoning(&self) -> bool {
+        self.provider != ProviderTag::OpenAi || self.chat_reasoning
+    }
+
+    fn stamp(&self) -> serde_json::Value {
+        serde_json::json!({ "adapter": self.adapter, "model": self.model })
+    }
+
+    /// `blob` stamped with this origin.
+    fn reasoning_state(&self, mut blob: serde_json::Value) -> ReasoningState {
+        if let Some(map) = blob.as_object_mut() {
+            map.insert(ORIGIN_KEY.to_string(), self.stamp());
+        }
+        ReasoningState {
+            provider: self.provider,
+            blob,
+        }
+    }
+
+    fn reasoning_part(&self, blob: serde_json::Value) -> AgentPart {
+        AgentPart::Reasoning(self.reasoning_state(blob))
+    }
+
+    /// Whether `state` may ride a request to this origin's model. A blob stored before the
+    /// stamp existed carries only its provider family, so it replays within that family, as
+    /// it always did.
+    fn may_replay(&self, state: &ReasoningState) -> bool {
+        if !self.takes_reasoning() {
+            return false;
+        }
+        match state.blob.get(ORIGIN_KEY) {
+            Some(stamp) => *stamp == self.stamp(),
+            None => state.provider == self.provider,
+        }
+    }
+}
+
 // endregion: --- Error + provider mapping
 
 // region: --- Small helpers
 
-/// The reasoning blob is opaque outside this module; these keys are its whole
-/// vocabulary. Gemini's per-`functionCall` signatures and standalone thought
-/// signatures use `thought_signatures`; reasoning text uses `reasoning_content`.
+/// The reasoning blob is opaque outside this module; these keys are its whole vocabulary.
+/// Each blob holds ONE reasoning part, in the position it came: `thought_signatures` (a
+/// signature: Anthropic's thinking-block half, OpenAI Responses `encrypted_content`, Gemini's
+/// `thoughtSignature`), `reasoning_content` (reasoning text: Anthropic's thinking-block half,
+/// chat-completions `reasoning_content`), or `custom` (a provider block genai keeps whole:
+/// Anthropic `redacted_thinking`, OpenRouter `reasoning_details`), plus the `origin` stamp.
+const ORIGIN_KEY: &str = "origin";
+
 fn thought_signatures_blob(signatures: Vec<String>) -> serde_json::Value {
     serde_json::json!({ "thought_signatures": signatures })
 }
 
 fn reasoning_content_blob(reasoning: String) -> serde_json::Value {
     serde_json::json!({ "reasoning_content": reasoning })
+}
+
+fn custom_blob(data: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({ "custom": data })
+}
+
+fn blob_custom(blob: &serde_json::Value) -> Option<serde_json::Value> {
+    blob.get("custom").cloned()
 }
 
 fn blob_thought_signatures(blob: &serde_json::Value) -> Option<Vec<String>> {

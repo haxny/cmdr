@@ -20,11 +20,13 @@ decision rationale): `DETAILS.md`.
   (the genai reasoning-replay gaps). The
   `ReasoningState.blob` is opaque outside `genai_impl.rs`: persist and replay it untouched, never inspect or reshape it,
   and it NEVER crosses to the frontend.
-- **Reasoning is OFF on the Anthropic and OpenAI-Responses paths in v1.** genai drops their reasoning state on replay
-  (Gaps A/B), so a reasoning-on loop 400s / degrades. Gemini round-trips its per-`functionCall` `thoughtSignature`
-  correctly and keeps reasoning. `build_options` sets `ReasoningEffort::None` for those two adapters — don't "helpfully"
-  turn it on before the genai capture+replay patch lands. Claude 5.x thinks anyway; dropping its thinking blocks on
-  replay is accepted (`DETAILS.md` § Reasoning posture).
+- **Reasoning is on everywhere and replays verbatim, in wire order, to the model that made it.** Every reasoning part
+  genai captures is kept (no dedupe: each adapter picks its own copy) and stamped `{adapter, model}`; a model switch
+  drops it. ❌ Don't drop `capture_reasoning_content`: it's genai's opt-in for Anthropic signatures and OpenAI's
+  encrypted items. Chat-completions reasoning goes back only to allowlisted hosts (DeepSeek 400s without it, Groq 400s
+  with it). Per-provider rules and evidence: `DETAILS.md` § Reasoning round-trip.
+- **`ReasoningEffort` is a per-call input; only `ProviderDefault` is safe on every model** (an explicit level 400s on
+  a model that doesn't reason). `DETAILS.md` § Reasoning effort.
 - **`ToolId::Unrecognized` is the read-only choke point, not an error.** A raw provider tool name resolves through
   `ToolId::from_wire_name`; an unknown name becomes `Unrecognized(raw)`, which is never in the agent's tool view, so
   dispatch refuses it. The gate is a typed variant/view check, never a string match on the name.

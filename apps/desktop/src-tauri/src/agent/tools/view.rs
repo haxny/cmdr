@@ -318,7 +318,13 @@ mod tests {
         // the dispatch gate refuses — execute_tool is never involved.
         let fake = FakeAgentLlm::script(vec![ScriptedTurn::CallRawTool("delete".into(), json!({ "path": "/" }))]);
         let stream = fake
-            .respond("sys", &[], &[], CancellationToken::new())
+            .respond(
+                "sys",
+                &[],
+                &[],
+                crate::agent::llm::ReasoningEffort::ProviderDefault,
+                CancellationToken::new(),
+            )
             .await
             .expect("turn starts");
         let deltas: Vec<AgentDelta> = stream.map(|d| d.expect("no stream error")).collect().await;

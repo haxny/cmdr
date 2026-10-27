@@ -17,7 +17,7 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::types::{
     AgentDelta, AgentLlmError, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentUsage,
-    ToolDeclaration, ToolId,
+    ReasoningEffort, ToolDeclaration, ToolId,
 };
 use super::{AgentDeltaStream, AgentLlm};
 
@@ -98,6 +98,7 @@ impl AgentLlm for FakeAgentLlm {
         _system: &'a str,
         _tools: &'a [ToolDeclaration],
         messages: &'a [AgentMessage],
+        _effort: ReasoningEffort,
         cancel: CancellationToken,
     ) -> BoxFuture<'a, Result<AgentDeltaStream, AgentLlmError>> {
         async move {
@@ -241,7 +242,13 @@ mod tests {
 
         let first_prompt = vec![user_message("what is big?")];
         let first = fake
-            .respond("sys", &[], &first_prompt, cancel.clone())
+            .respond(
+                "sys",
+                &[],
+                &first_prompt,
+                ReasoningEffort::ProviderDefault,
+                cancel.clone(),
+            )
             .await
             .expect("first turn starts");
         let first_deltas = collect(first).await;
@@ -254,7 +261,13 @@ mod tests {
 
         let second_prompt = vec![user_message("what is big?"), user_message("and small?")];
         let second = fake
-            .respond("sys", &[], &second_prompt, cancel.clone())
+            .respond(
+                "sys",
+                &[],
+                &second_prompt,
+                ReasoningEffort::ProviderDefault,
+                cancel.clone(),
+            )
             .await
             .expect("second turn starts");
         let second_deltas = collect(second).await;
@@ -279,7 +292,13 @@ mod tests {
         // doesn't know resolves to `Unrecognized`, which dispatch will refuse.
         let fake = FakeAgentLlm::script(vec![ScriptedTurn::CallRawTool("delete".into(), json!({}))]);
         let stream = fake
-            .respond("sys", &[], &[], CancellationToken::new())
+            .respond(
+                "sys",
+                &[],
+                &[],
+                ReasoningEffort::ProviderDefault,
+                CancellationToken::new(),
+            )
             .await
             .expect("turn starts");
         let deltas = collect(stream).await;
@@ -311,7 +330,13 @@ mod tests {
             ],
         }]);
         let stream = fake
-            .respond("sys", &[], &[], CancellationToken::new())
+            .respond(
+                "sys",
+                &[],
+                &[],
+                ReasoningEffort::ProviderDefault,
+                CancellationToken::new(),
+            )
             .await
             .expect("turn starts");
         let deltas = collect(stream).await;
@@ -376,7 +401,13 @@ mod tests {
             assistant,
         ];
         let stream = fake
-            .respond("sys", &[], &prompt, CancellationToken::new())
+            .respond(
+                "sys",
+                &[],
+                &prompt,
+                ReasoningEffort::ProviderDefault,
+                CancellationToken::new(),
+            )
             .await
             .expect("turn starts");
         let deltas = collect(stream).await;
@@ -389,7 +420,15 @@ mod tests {
         let fake = FakeAgentLlm::script(vec![ScriptedTurn::Fail(AgentLlmError::NoKey)]);
         // Match on the result rather than `expect_err` — the Ok type is a boxed
         // stream, which isn't `Debug`.
-        let result = fake.respond("sys", &[], &[], CancellationToken::new()).await;
+        let result = fake
+            .respond(
+                "sys",
+                &[],
+                &[],
+                ReasoningEffort::ProviderDefault,
+                CancellationToken::new(),
+            )
+            .await;
         assert!(
             matches!(result, Err(AgentLlmError::NoKey)),
             "a Fail turn errors with its typed error"

@@ -207,7 +207,13 @@ async fn drive(
         }
 
         let stream = match llm
-            .respond(&assembled.system, &assembled.tools, &assembled.messages, cancel.clone())
+            .respond(
+                &assembled.system,
+                &assembled.tools,
+                &assembled.messages,
+                params.reasoning_effort,
+                cancel.clone(),
+            )
             .await
         {
             Ok(stream) => stream,

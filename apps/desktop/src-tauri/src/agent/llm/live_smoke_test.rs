@@ -2,9 +2,10 @@
 //! provider plus the local slot. Each drives ONE real streaming `respond` call
 //! through the whole seam (build request → exec → map deltas → final message), so a
 //! regression in adapter routing, tool-call mapping, or stream handling fails here
-//! instead of silently in production. Anthropic also runs a real two-round tool loop
-//! per current Claude model (`smoke_anthropic_tool_loop_*`), the case that proves a
-//! thinking-on loop survives genai dropping the thinking blocks on replay.
+//! instead of silently in production. Each reasoning dialect also runs a real
+//! multi-round tool loop with reasoning on (`smoke_*_tool_loop`), the case that proves
+//! the provider accepts the reasoning the agent replays (`DETAILS.md` § Reasoning
+//! round-trip records which ran green, and when).
 //!
 //! `#[ignore]`-gated on the matching env var, never in CI's critical path. Verify
 //! current model ids from each provider's models endpoint at run time — never from
@@ -15,6 +16,7 @@
 //!   cargo nextest run --lib --run-ignored only agent::llm::live_smoke_test
 //! OPENAI_API_KEY=$(secret OPENAI_API_KEY)   cargo nextest run --lib --run-ignored only agent::llm::live_smoke_test::smoke_openai
 //! GEMINI_API_KEY=$(secret GEMINI_API_KEY)   cargo nextest run --lib --run-ignored only agent::llm::live_smoke_test::smoke_gemini
+//! # Other loops read MISTRAL_API_KEY, GROQ_API_KEY, FIREWORKS_AI_API_KEY, OPENROUTER_API_KEY.
 //! # Local: point at a running Cmdr llama-server.
 //! LLAMA_PORT=18437 cargo nextest run --lib --run-ignored only agent::llm::live_smoke_test::smoke_local
 //! ```
@@ -27,7 +29,8 @@ use crate::ai::client::AiBackend;
 use super::AgentLlm;
 use super::genai_impl::GenaiAgentLlm;
 use super::types::{
-    AgentDelta, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolResult, ToolDeclaration, ToolId,
+    AgentDelta, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolResult, ReasoningEffort, ToolDeclaration,
+    ToolId,
 };
 
 fn env_or_skip(var: &str) -> String {
@@ -55,6 +58,7 @@ async fn run_one(backend: AiBackend, prompt: &str) -> String {
             "You are a terse assistant. Answer in one short sentence.",
             &[],
             &messages,
+            ReasoningEffort::ProviderDefault,
             CancellationToken::new(),
         )
         .await
@@ -82,6 +86,9 @@ struct LoopOutcome {
     /// `ReasoningTick` deltas across the loop: proof a thinking block came back, since
     /// Claude 5.x omits the thinking text and genai keeps no Anthropic signature.
     reasoning_ticks: usize,
+    /// Reasoning the loop persisted and replayed: standalone `Reasoning` parts plus tool calls
+    /// carrying their own signature.
+    reasoning_parts: usize,
     answer: String,
 }
 
@@ -113,7 +120,7 @@ fn fake_list_dir(arguments: &serde_json::Value) -> serde_json::Value {
 /// Drives a real tool loop through `GenaiAgentLlm` the way `run_turn` does: each
 /// `End` message is replayed verbatim as the assistant turn (reasoning parts and
 /// all), followed by a tool turn with the results, until the model answers in prose.
-async fn run_tool_loop(backend: AiBackend) -> LoopOutcome {
+async fn run_tool_loop(backend: AiBackend, effort: ReasoningEffort) -> LoopOutcome {
     let llm = GenaiAgentLlm::new(backend);
     let tools = [ToolDeclaration {
         name: ToolId::ListDir,
@@ -132,6 +139,7 @@ async fn run_tool_loop(backend: AiBackend) -> LoopOutcome {
     let mut outcome = LoopOutcome {
         tool_rounds: 0,
         reasoning_ticks: 0,
+        reasoning_parts: 0,
         answer: String::new(),
     };
 
@@ -141,6 +149,7 @@ async fn run_tool_loop(backend: AiBackend) -> LoopOutcome {
                 "You are a file assistant. Use the tools; never guess folder contents.",
                 &tools,
                 &messages,
+                effort,
                 CancellationToken::new(),
             )
             .await
@@ -156,6 +165,15 @@ async fn run_tool_loop(backend: AiBackend) -> LoopOutcome {
         outcome.reasoning_ticks += deltas
             .iter()
             .filter(|delta| matches!(delta, AgentDelta::ReasoningTick))
+            .count();
+        outcome.reasoning_parts += message
+            .parts
+            .iter()
+            .filter(|part| match part {
+                AgentPart::Reasoning(_) => true,
+                AgentPart::ToolCall(call) => call.reasoning.is_some(),
+                _ => false,
+            })
             .count();
         let results: Vec<AgentPart> = message
             .parts
@@ -209,44 +227,187 @@ async fn smoke_anthropic() {
     assert!(!answer.trim().is_empty(), "expected a visible answer, got {answer:?}");
 }
 
-async fn assert_anthropic_tool_loop(model: &str) {
-    let outcome = run_tool_loop(anthropic_backend(model)).await;
+/// Runs the multi-step loop with reasoning on and asserts it reached the right answer. A
+/// provider that rejects the replayed reasoning fails on step 2 inside `run_tool_loop`.
+/// `expect_reasoning` says the provider is known to hand back replayable reasoning on this
+/// model, so a loop that persisted none means the capture broke.
+async fn assert_tool_loop(label: &str, backend: AiBackend, effort: ReasoningEffort, expect_reasoning: bool) {
+    let outcome = run_tool_loop(backend, effort).await;
+    log::info!(
+        target: "agent::llm",
+        "{label}: {} tool rounds, {} reasoning ticks, {} reasoning parts replayed",
+        outcome.tool_rounds,
+        outcome.reasoning_ticks,
+        outcome.reasoning_parts
+    );
     assert!(
         outcome.tool_rounds >= 2,
-        "{model}: expected 2+ tool rounds, got {}",
+        "{label}: expected 2+ tool rounds, got {}",
         outcome.tool_rounds
     );
     assert!(
         outcome.answer.contains('3'),
-        "{model}: expected the answer 3, got {:?}",
+        "{label}: expected the answer 3, got {:?}",
         outcome.answer
     );
-    // No assertion on `reasoning_ticks`: adaptive thinking may skip a turn. On
-    // 2026-10-26 all three models thought and the thinking-dropped replay still passed.
-    log::info!(
-        target: "agent::llm",
-        "{model}: {} tool rounds, {} reasoning ticks",
-        outcome.tool_rounds,
-        outcome.reasoning_ticks
-    );
+    if expect_reasoning {
+        assert!(
+            outcome.reasoning_parts > 0,
+            "{label}: the loop thought ({} ticks) but persisted no reasoning to replay",
+            outcome.reasoning_ticks
+        );
+    }
+}
+
+fn remote(env_var: &str, base_url: &str, model: &str) -> AiBackend {
+    AiBackend::remote_for_tests(env_or_skip(env_var), base_url.into(), model.into())
 }
 
 #[tokio::test]
 #[ignore = "real API call: set ANTHROPIC_API_KEY to run"]
 async fn smoke_anthropic_tool_loop_haiku() {
-    assert_anthropic_tool_loop("claude-haiku-5-5").await;
+    assert_tool_loop(
+        "haiku",
+        anthropic_backend("claude-haiku-5-5"),
+        ReasoningEffort::High,
+        true,
+    )
+    .await;
 }
 
 #[tokio::test]
 #[ignore = "real API call: set ANTHROPIC_API_KEY to run"]
 async fn smoke_anthropic_tool_loop_sonnet() {
-    assert_anthropic_tool_loop("claude-sonnet-5-5").await;
+    assert_tool_loop(
+        "sonnet",
+        anthropic_backend("claude-sonnet-5-5"),
+        ReasoningEffort::High,
+        true,
+    )
+    .await;
 }
 
 #[tokio::test]
 #[ignore = "real API call: set ANTHROPIC_API_KEY to run"]
 async fn smoke_anthropic_tool_loop_opus() {
-    assert_anthropic_tool_loop("claude-opus-5-5").await;
+    assert_tool_loop(
+        "opus",
+        anthropic_backend("claude-opus-5-5"),
+        ReasoningEffort::High,
+        true,
+    )
+    .await;
+}
+
+/// Opus with nothing asked: Claude 5.x thinks by default with the text omitted, so the replay
+/// carries signature-only thinking blocks.
+#[tokio::test]
+#[ignore = "real API call: set ANTHROPIC_API_KEY to run"]
+async fn smoke_anthropic_tool_loop_opus_default_effort() {
+    assert_tool_loop(
+        "opus default",
+        anthropic_backend("claude-opus-5-5"),
+        ReasoningEffort::ProviderDefault,
+        false,
+    )
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENAI_API_KEY to run"]
+async fn smoke_openai_responses_tool_loop() {
+    let backend = remote("OPENAI_API_KEY", "https://api.openai.com/v1/", "gpt-5.5");
+    assert_tool_loop("gpt-5.5", backend, ReasoningEffort::High, true).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENAI_API_KEY to run"]
+async fn smoke_openai_chat_reasoning_tool_loop() {
+    // `o3` stays on chat-completions, where OpenAI keeps reasoning server-side: nothing
+    // comes back to replay, and nothing has to.
+    let backend = remote("OPENAI_API_KEY", "https://api.openai.com/v1/", "o3");
+    assert_tool_loop("o3", backend, ReasoningEffort::Medium, false).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set GEMINI_API_KEY to run"]
+async fn smoke_gemini_tool_loop() {
+    let backend = remote(
+        "GEMINI_API_KEY",
+        "https://generativelanguage.googleapis.com/v1/",
+        "gemini-3.6-flash",
+    );
+    assert_tool_loop("gemini-3.6-flash", backend, ReasoningEffort::High, true).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set MISTRAL_API_KEY to run"]
+async fn smoke_mistral_tool_loop() {
+    // Routes to genai's Mistral dialect by host: the reasoning goes back as a `thinking` chunk,
+    // since Mistral 422s on `reasoning_content`.
+    let backend = remote(
+        "MISTRAL_API_KEY",
+        "https://api.mistral.ai/v1",
+        "magistral-medium-latest",
+    );
+    assert_tool_loop("magistral-medium", backend, ReasoningEffort::ProviderDefault, true).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set GROQ_API_KEY to run"]
+async fn smoke_groq_tool_loop() {
+    // Groq 400s an assistant turn carrying `reasoning_content`, so its reasoning stays out of
+    // the replay (`ai::client::replays_chat_reasoning_for_host`): this proves the loop runs.
+    let backend = remote("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b");
+    assert_tool_loop("groq gpt-oss-120b", backend, ReasoningEffort::Medium, false).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set FIREWORKS_AI_API_KEY to run"]
+async fn smoke_fireworks_deepseek_tool_loop() {
+    // DeepSeek V4 on Fireworks speaks DeepSeek's own reasoning format (`reasoning_content`,
+    // required back mid-loop), so it stands in for api.deepseek.com without a DeepSeek key.
+    let backend = remote(
+        "FIREWORKS_AI_API_KEY",
+        "https://api.fireworks.ai/inference/v1",
+        "accounts/fireworks/models/deepseek-v4p1-flash",
+    );
+    assert_tool_loop(
+        "fireworks deepseek-v4p1-flash",
+        backend,
+        ReasoningEffort::ProviderDefault,
+        true,
+    )
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENROUTER_API_KEY to run"]
+async fn smoke_openrouter_deepseek_tool_loop() {
+    let backend = remote(
+        "OPENROUTER_API_KEY",
+        "https://openrouter.ai/api/v1",
+        "deepseek/deepseek-v4.1-flash",
+    );
+    assert_tool_loop("openrouter deepseek", backend, ReasoningEffort::Medium, false).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENROUTER_API_KEY to run"]
+async fn smoke_openrouter_claude_tool_loop() {
+    let backend = remote(
+        "OPENROUTER_API_KEY",
+        "https://openrouter.ai/api/v1",
+        "anthropic/claude-sonnet-5.5",
+    );
+    assert_tool_loop("openrouter claude", backend, ReasoningEffort::Medium, false).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENROUTER_API_KEY to run"]
+async fn smoke_openrouter_grok_tool_loop() {
+    let backend = remote("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "x-ai/grok-4.7");
+    assert_tool_loop("openrouter grok", backend, ReasoningEffort::Medium, false).await;
 }
 
 #[tokio::test]

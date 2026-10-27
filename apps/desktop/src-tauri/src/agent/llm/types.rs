@@ -113,6 +113,32 @@ impl ProviderTag {
     }
 }
 
+/// How hard the model should think before it answers: a per-call input to
+/// [`AgentLlm::respond`](super::AgentLlm::respond), mapped onto each provider's own knob in
+/// `genai_impl.rs` (Anthropic `output_config.effort`, OpenAI `reasoning.effort` /
+/// `reasoning_effort`, Gemini `thinkingLevel` / `thinkingBudget`, DeepSeek `thinking.type`).
+/// The mapping table and its caveats: `DETAILS.md` § Reasoning effort.
+///
+/// Only [`ProviderDefault`](Self::ProviderDefault) is safe on every model: an explicit level
+/// sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is a 400 there,
+/// so whatever offers the other levels must know the model reasons first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ReasoningEffort {
+    /// Send no effort and let the provider decide, except on the OpenAI Responses API, where
+    /// it means `medium` (OpenAI's documented default; `crate::ai` would otherwise pick `low`).
+    #[default]
+    ProviderDefault,
+    /// Ask for no reasoning. Models that can't stop thinking (Gemini Pro, Claude Fable) keep
+    /// their default.
+    Off,
+    Low,
+    Medium,
+    High,
+    /// The provider's highest level; where there is none above `high`, `high`.
+    Max,
+}
+
 /// Opaque, provider-tagged reasoning state. The `blob` shape is owned solely by
 /// the genai adapter mapping (`genai_impl.rs`); everything else treats it as
 /// opaque and must persist and replay it untouched. Never inspect or reshape it
@@ -323,13 +349,32 @@ pub struct AgentToolCall {
 
 impl AgentToolCall {
     /// What makes two calls "the same call": the tool's wire name plus its whole arguments
-    /// object. `serde_json`'s `Map` is a `BTreeMap`, so two calls that mean the same thing
-    /// render the same bytes whatever order the provider emitted their keys in. The call id
+    /// object, keys sorted at every depth ([`canonical_json`]), so two calls that mean the same
+    /// thing render the same bytes whatever order the provider emitted their keys in. The call id
     /// is NOT part of it (ids collide across rounds). One definition for the repeat breaker
     /// (`chat/runtime/repeats.rs`) and the rail's repeat mark (`agent/tools/line/`).
     pub fn identity_key(&self) -> String {
         // A unit separator, so no tool name plus arguments can collide with another pair.
-        format!("{}\u{1f}{}", self.tool.as_wire_name(), self.arguments)
+        format!("{}\u{1f}{}", self.tool.as_wire_name(), canonical_json(&self.arguments))
+    }
+}
+
+/// `value` with every object's keys sorted, at every depth. Not `serde_json`'s own order: genai
+/// turns on `preserve_order` for the whole build, so a `Map` iterates as it was filled.
+fn canonical_json(value: &serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut entries: Vec<_> = map.iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(b.0));
+            serde_json::Value::Object(
+                entries
+                    .into_iter()
+                    .map(|(key, value)| (key.clone(), canonical_json(value)))
+                    .collect(),
+            )
+        }
+        serde_json::Value::Array(items) => serde_json::Value::Array(items.iter().map(canonical_json).collect()),
+        other => other.clone(),
     }
 }
 

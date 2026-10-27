@@ -177,6 +177,7 @@ impl ChatRuntime {
             provider,
             model,
             prompt_budget,
+            reasoning_effort: crate::agent::llm::ReasoningEffort::ProviderDefault,
         };
         run_turn(llm, &dispatcher, &conn, &tools, &params, &sink, &cancel).await;
         Ok(conversation_id)

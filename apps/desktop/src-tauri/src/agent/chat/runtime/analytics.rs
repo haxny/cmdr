@@ -111,6 +111,7 @@ mod tests {
             provider,
             model: "test-model".to_string(),
             prompt_budget: 1000,
+            reasoning_effort: crate::agent::llm::ReasoningEffort::ProviderDefault,
         }
     }
 

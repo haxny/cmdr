@@ -11,7 +11,7 @@ use chrono::FixedOffset;
 
 use super::events::AgentErrorKind;
 use crate::agent::chat::context::ContextEnvelope;
-use crate::agent::llm::types::{AgentPart, ProviderTag, WakeDigest};
+use crate::agent::llm::types::{AgentPart, ProviderTag, ReasoningEffort, WakeDigest};
 use crate::agent::store::TurnStats;
 use crate::agent::types::ProposalOutcomes;
 
@@ -75,6 +75,9 @@ pub struct TurnParams<'a> {
     /// The resolved model's assembled-prompt token budget (`super::budget`). Resolved in the
     /// command layer alongside the model, because a local server's window is a user setting.
     pub prompt_budget: usize,
+    /// How hard the model thinks on every call this turn makes. Rides each call rather than
+    /// the slot so a picker can change it between turns without rebuilding the LLM.
+    pub reasoning_effort: ReasoningEffort,
 }
 
 /// How a turn ended, for the caller's bookkeeping. The events already told the

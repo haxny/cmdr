@@ -16,7 +16,7 @@ The trait is written as a boxed-future return (`BoxFuture`) rather than `async f
 Two implementations:
 - `GenaiAgentLlm` (`genai_impl.rs`) wraps a configured `crate::ai::AiBackend` (the interactive model slot; the slot is
   resolved in the command layer). It reuses the backend's adapter routing (`remote_model_iden` — the load-bearing Ollama-fallback
-  fix) and its stream-cancel model, via two `pub(crate)` seam methods added to `AiBackend`: `resolve_adapter` and
+  fix) and its stream-cancel model, via `pub(crate)` seam methods on `AiBackend`: `resolve_model`, `replays_chat_reasoning`, and
   `exec_chat_stream_request` (the prompt-only helpers can't express a multipart tool loop).
 - `FakeAgentLlm` (`fake.rs`) is scripted with `ScriptedTurn`s (one consumed per `respond`, or picked per call from the
   prompt with `by_prompt`, which `latest_user_turn` serves) and records every `messages` slice via `calls_seen()`, so a
@@ -29,14 +29,16 @@ Two implementations:
 ## `AgentPart` ⇄ genai `ContentPart` mapping
 
 `genai_impl.rs` owns the only translation between the typed part model and genai's wire model. The reasoning `blob` is
-opaque everywhere else; its whole vocabulary is two keys, owned here: `thought_signatures` (an array) and
-`reasoning_content` (a string).
+opaque everywhere else; its whole vocabulary is owned here. Each blob holds ONE genai reasoning part, in the position it
+came: `thought_signatures` (an array), `reasoning_content` (a string), or `custom` (a provider block genai keeps whole),
+plus an `origin` stamp `{adapter, model}` (`ReasoningOrigin`). Blobs stored before the stamp existed have no `origin`.
 
 Agent → genai (request / replay), per `agent_part_to_genai`:
 
 - `Text(s)` and `Envelope(s)` → `ContentPart::Text(s)` (the envelope is a user turn's rendered context, replayed verbatim; `chat/DETAILS.md` § Anatomy of one call).
 - `ToolCall{call_id, tool, arguments, reasoning}` → `ContentPart::ToolCall{call_id, fn_name = tool.as_wire_name(),
-  fn_arguments = arguments, thought_signatures = blob.thought_signatures}`, except that a nameless call
+  fn_arguments = arguments, thought_signatures = blob.thought_signatures}` (the signatures only when the reasoning may
+  replay, below), except that a nameless call
   (`ToolId::is_nameless`) maps to nothing, and `fn_arguments` that isn't a JSON object goes out as `{}`. See
   "Degenerate tool calls" below.
 - `ToolResult{call_id, content}` → `ContentPart::ToolResponse{call_id, fn_name, content = JSON string}` (a bare string
@@ -46,20 +48,25 @@ Agent → genai (request / replay), per `agent_part_to_genai`:
   keys on the function name rather than the call ID, so an unnamed result degrades tool calling there; every other
   adapter correlates by call ID and ignores the field. A result whose call already fell out of the assembled window
   resolves to `None` (unnamed beats wrongly named).
-- `Reasoning(state)` → `ThoughtSignature` part(s) if the blob carries signatures, else a `ReasoningContent` part if it
-  carries reasoning text, else nothing. An Anthropic thinking blob has no lossless genai representation (Gap A) and maps
-  to nothing — v1 runs Anthropic reasoning-off, so it doesn't arise.
+- `Reasoning(state)` → the genai part its blob holds (`ThoughtSignature`, `ReasoningContent`, or `Custom`), when
+  `ReasoningOrigin::may_replay` allows it, else nothing. It allows a stamped blob only to the exact `{adapter, model}`
+  that produced it, an unstamped one only within its `ProviderTag` family, and nothing at all to a chat-completions
+  endpoint that doesn't take reasoning back (§ Reasoning round-trip).
 
-genai → agent (parse), per `genai_content_to_agent_parts(content, provider)`:
+genai → agent (parse), per `genai_content_to_agent_parts(content, origin)`, stamping every blob with `origin`:
 
-- `Text` → `Text`; `ToolResponse` → `ToolResult`; `ReasoningContent` → `Reasoning{reasoning_content}`.
-- `ToolCall` → `AgentToolCall`, with `tool = ToolId::from_wire_name(fn_name)` and reasoning captured from
-  `thought_signatures` (tagged with `provider`). A call with a blank `fn_name` is dropped instead, and doesn't count
-  toward the `has_tool_calls` test the `ThoughtSignature` rule below reads.
-- `ThoughtSignature` (standalone) → a `Reasoning` part **only when the message has no tool calls**. genai attaches
-  captured thought signatures BOTH to the first tool call AND as leading standalone parts (see genai `StreamEnd::from`),
-  so mapping both would duplicate the reasoning; the tool call is the canonical home when tool calls exist.
-- `Binary` / `Custom` → dropped (the agent's read-only toolset never produces them).
+- `Text` → `Text`; `ToolResponse` → `ToolResult`.
+- `ThoughtSignature`, `ReasoningContent`, `Custom` → one `Reasoning` part each, in wire order. Nothing is deduped: genai
+  leads a captured answer with its reasoning parts AND mirrors their signatures onto the first tool call, and each
+  adapter picks its canonical copy on replay (Anthropic and OpenAI Responses read the leading parts and ignore the
+  mirror; Gemini reads each call's own signature and skips a leading one that repeats it). Replaying exactly what came
+  back is right for all three; any dedupe here would have to know which copy each adapter reads.
+- `ToolCall` → `AgentToolCall`, with `tool = ToolId::from_wire_name(fn_name)` and its own `thought_signatures` kept as
+  its reasoning. A call with a blank `fn_name` is dropped instead.
+- `Binary` → dropped (the agent's read-only toolset never produces it).
+- After the parts, `build_agent_message_from_stream_end` adds the stream's `captured_reasoning_content` as a LEADING
+  `Reasoning{reasoning_content}` part, for a chat-completions endpoint that takes it back, when the content holds no
+  `ReasoningContent` already: genai's chat-completions streamer keeps reasoning text out of `captured_content`.
 
 Stream events → `AgentDelta` (`map_stream_event`): `Chunk` → `Text` (empty chunks skipped); `ReasoningChunk` /
 `ThoughtSignatureChunk` → `ReasoningTick` (content never surfaced); `ToolCallChunk` → `ToolCallStarted`, **once per
@@ -100,29 +107,88 @@ Three guards, and all three earn their place:
 Downstream, `runtime/turn.rs` treats an assistant message with no parts as `UnfinishedReply` rather than an answer, so
 what's left after the inbound drop fails honestly and persists nothing instead of showing a blank bubble.
 
-## Reasoning posture (spike verdict)
+## Reasoning round-trip
 
-`build_options` captures content + tool calls + usage + reasoning content, and sets the reasoning effort per adapter:
+Reasoning is on for every provider. A multi-step tool loop only stays coherent (and, on some providers, only stays
+legal) when each call carries the reasoning the model produced earlier in the turn back in the exact shape the
+provider issued it. `build_options` sets `capture_reasoning_content`, which genai also reads as the opt-in for
+Anthropic's thinking signatures and the OpenAI Responses `reasoning.encrypted_content` include, so it's load-bearing,
+not cosmetic. What each provider needs (verified on genai 0.7.1, reading its adapter sources plus the live and fixture
+runs below, 2026-10-27):
 
-- Anthropic, OpenAI-Responses: `ReasoningEffort::None`. genai drops their reasoning state on replay (Gaps A/B: the
-  Anthropic adapter never re-serializes the thinking block + signature; the OpenAI-Responses adapter never re-serializes
-  reasoning items and forces `store=false`), so a reasoning-on multi-step loop 400s or silently degrades. Off is the
-  honest v1 posture. `crate::ai`'s `adjust_for_model` won't override an explicit effort.
-- On Claude 5.x, "off" doesn't mean no thinking. genai 0.6.5 still sends `thinking: {type: "adaptive"}` for
-  `claude-opus-*` ≥4.7 even with `ReasoningEffort::None` (no effort, so the model's default), and Haiku and Sonnet 5.5
-  think adaptively with no `thinking` param at all. The thinking text comes back empty (display omitted), only a
-  signature, so genai captures nothing and the replay carries text + `tool_use` without the thinking block. Anthropic
-  accepts that mid-loop (verified on `claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`: two-round tool loop
-  through `GenaiAgentLlm` plus a raw-API replay of a signed Opus thinking block dropped before its `tool_result`,
-  2026-10-26). The cost is continuity: the model can't reread its own earlier thinking, which is what the genai
-  capture+replay patch below would buy back.
-- Gemini and everything else: left unset (provider default). Gemini round-trips its per-`functionCall`
-  `thoughtSignature` correctly, so its reasoning is preserved end to end; OpenAI chat-completions is stateless (nothing
-  to round-trip).
+- **Anthropic** (native Messages API): every `thinking` block (its `thinking` text plus `signature`) and every
+  `redacted_thinking` block (its `data`) of the assistant turn, in order, ahead of the text and `tool_use`. Claude 5.x
+  thinks adaptively by default with the text omitted, so a block comes back as an empty `thinking` plus a signature,
+  and goes back the same way. genai 0.7 captures both kinds from the stream (`ThoughtSignature` + `ReasoningContent`
+  pairs, `redacted_thinking` as a `Custom` part) and rebuilds them on replay; 0.6.5 dropped them (Gap A). Anthropic
+  accepts a turn with its thinking dropped, so a model switch losing it is safe.
+- **OpenAI Responses** (`gpt-5*`, `*-codex`, `*-pro`): each `reasoning` item's `encrypted_content`, sent back as a
+  top-level `{type: "reasoning", encrypted_content}` input item ahead of the `function_call`. Requests run `store:
+  false`, so the encrypted copy is the only one (`include: ["reasoning.encrypted_content"]`). genai 0.7 captures it as
+  a `ThoughtSignature`; 0.6.5 never re-serialized it (Gap B).
+- **OpenAI chat-completions** (`o3`, `gpt-4.1`, Azure OpenAI): stateless. OpenAI keeps the reasoning server-side and
+  returns none, so nothing round-trips and nothing has to.
+- **Gemini** (native API): the `thoughtSignature` on each `functionCall` part, back on that same part (Gemini 3
+  validates the first call's signature in the current turn), and one on a text part back on that text. genai 0.7 keeps
+  each call's own signature and skips the leading duplicate on replay.
+- **DeepSeek** (V4, `api.deepseek.com`): thinking is on by default (`high`), the text comes back as
+  `reasoning_content` beside `content`, and with `tools` in the request, EVERY earlier assistant turn's
+  `reasoning_content` must come back, or the API 400s (verified on DeepSeek's thinking-mode guide,
+  api-docs.deepseek.com/guides/thinking_mode, 2026-10-27). genai's chat-completions streamer keeps that text out of
+  the captured content, so `build_agent_message_from_stream_end` rejoins it. The host routes to genai's DeepSeek
+  dialect (`ai::client::chat_dialect_for_host`), which also sends `thinking: {type}` for the effort.
+- **Mistral** (`magistral-*`): reasoning streams as `thinking` content chunks and must go back as a leading `thinking`
+  chunk; a `reasoning_content` field 422s (extra fields forbidden). The host routes to genai's Mistral dialect, which
+  does both.
+- **Groq**: returns reasoning in `reasoning`, and 400s an assistant turn carrying `reasoning_content` ("property
+  'reasoning_content' is unsupported", verified on `openai/gpt-oss-120b`, live tool loop, 2026-10-27). Reasoning stays
+  out of the replay.
+- **Fireworks**: takes `reasoning_content` back (verified on `deepseek-v4p1-flash`, live tool loop, 2026-10-27), so
+  DeepSeek and Kimi there keep their continuity.
+- **OpenRouter**: continuity rides `reasoning_details` (signed, encrypted, and summary blocks). genai 0.7.1 captures
+  them on the non-streaming path only, and the agent streams, so they're lost; OpenRouter then drops the provider's
+  thinking for the next call. Unverified live (the key has no credits).
+- **Everything else on chat-completions** (Together, xAI, Qwen/DashScope, Perplexity, Ollama, LM Studio, custom, and
+  Cmdr's own llama-server): unverified, so they keep what they always got, no reasoning back. Wrongly sending it is a
+  400 that wedges the loop (Groq); wrongly withholding it costs continuity, except on a provider that requires it.
 
-Follow-up (plan §13): a scoped local `[patch.crates.io]` genai patch (or upstream PR to issue #213) for Anthropic
-thinking capture+replay, needed before Tier-1-certifying Anthropic with thinking on — newer Claude models default
-thinking on, so "just disable it" won't hold long-term.
+Which chat-completions endpoints get reasoning back is ONE allowlist by host, `ai::client::
+replays_chat_reasoning_for_host` (DeepSeek, Mistral, Fireworks), carried as `AiBackend::replays_chat_reasoning` into
+`ReasoningOrigin::takes_reasoning`. Off means the agent neither persists nor replays chat reasoning for that endpoint.
+To add a host, run its live tool loop (`live_smoke_test.rs`) and anchor the result here.
+
+**Replay goes only to the model that made it.** A signature is one provider's continuation token: Claude's sent to
+OpenAI as `encrypted_content` (or one Claude's to another) is a 400. Every blob carries the `{adapter, model}` it came
+from, and a thread that switches model mid-way drops the old model's reasoning. Blobs persisted before the stamp
+replay within their `ProviderTag` family, as they always did.
+
+## Reasoning effort
+
+`ReasoningEffort` (`types.rs`) is a per-call input to `AgentLlm::respond`, carried on `TurnParams.reasoning_effort`
+(every caller passes `ProviderDefault` until a picker sets it). `genai_effort` maps it onto genai's levels, which each
+adapter maps onto its provider's knob:
+
+- `ProviderDefault`: nothing sent, so the provider decides (Claude 5.x adaptive, Gemini dynamic, DeepSeek `high`).
+  The exception is OpenAI Responses, which gets `medium` (OpenAI's documented default), because `crate::ai`'s
+  `adjust_for_model` fills an unset effort with `low` there.
+- `Off` → genai `Zero`: Anthropic `thinking: {type: "disabled"}` on models thinking by default (Fable and Mythos can't
+  stop and send nothing), OpenAI `reasoning_effort: "none"`, Gemini no level (its default; Pro models can't turn
+  thinking off), DeepSeek `thinking: {type: "disabled"}`.
+- `Low` / `Medium` / `High` / `Max`: Anthropic `output_config.effort` (`max` where the model has it, else `high`),
+  OpenAI `reasoning.effort` / `reasoning_effort`, Gemini 3 `thinkingLevel` (`HIGH` tops out) and Gemini 2.5
+  `thinkingBudget`, DeepSeek `reasoning_effort` (it maps `medium` to `high`).
+
+Caveats for the picker:
+
+- An explicit level sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is a 400 there. Only
+  `ProviderDefault` is safe everywhere, so the picker must know the model reasons (the model-capabilities fetch in
+  `ai/`).
+- Reasoning spends the same `AGENT_MAX_OUTPUT_TOKENS` slot as the visible reply and the tool calls. At `High` and `Max`
+  a long think can hit `MaxTokens` before any tool call; that ends the turn as `UnfinishedReply`. genai's legacy
+  Anthropic `budget_tokens` (24,000 at `High`, pre-adaptive Claude only) exceeds the slot outright.
+- Reasoning is billed as output, and genai's `completion_tokens` already counts it (Anthropic `output_tokens`, OpenAI
+  `completion_tokens` / `output_tokens`, Gemini candidates plus thoughts), so `pricing.rs` meters it. `map_usage`
+  covers the one gap: Gemini reporting thoughts with no candidates.
 
 ## Error mapping
 
@@ -150,14 +216,19 @@ whose handler changes nothing, so that a wake's outcome is observable typed rath
 
 - `types.rs`: `ToolId` serializes as a bare wire name; the `from_wire_name` gate shape; an `AgentMessage` with a
   tool-call-with-reasoning survives a serde round-trip with the blob intact (DB persistence fidelity).
-- `genai_impl.rs`: the make-or-break genai round-trip (a tool-call-with-reasoning survives agent → genai → agent with
-  the blob untouched — the test that goes red the moment the mapping flattens); `AiError` → typed `AgentLlmError`; stop
-  reason and usage mapping; tools are never strict.
+- `genai_impl/tests.rs`: the make-or-break genai round-trip (a tool-call-with-reasoning survives agent → genai → agent
+  with the blob untouched — the test that goes red the moment the mapping flattens); every reasoning part survives in
+  wire order; replay only to the producing model; effort mapping; `AiError` → typed `AgentLlmError`; stop reason and
+  usage mapping; tools are never strict.
+- `genai_impl/tests/replay_fixtures.rs`: two-round tool loops through the REAL genai adapters against a loopback server
+  playing back provider-shaped streams (Anthropic signed, omitted, and redacted thinking; OpenAI Responses encrypted
+  items; Gemini call signatures; chat-completions `reasoning_content`, plus a host that takes none). Each asserts round
+  two's request body, the bytes the provider validates.
 - `fake.rs`: scripted-turn sequencing + `calls_seen` recording; `CallRawTool` yields an `Unrecognized` `ToolId`; a
   `Fail` turn returns its typed error; `SayThenCall` interleaves on the wire and ends text first; `by_prompt` picks from
   the latest user text and the rounds since.
 - `live_smoke_test.rs`: `#[ignore]`-gated, one real `respond` call per Tier-1 cloud provider + the local slot, plus a
-  real two-round `list_dir` tool loop per current Claude model (`smoke_anthropic_tool_loop_*`), run manually with the
+  real multi-round `list_dir` tool loop with reasoning on per reasoning dialect (`smoke_*_tool_loop`), run manually with the
   matching env key (never in CI's critical path). Verify current model ids from each provider's models endpoint at run
   time — never from training data. The Anthropic base URL must carry `/v1/` (the app's own default); without it genai
   404s.

@@ -243,6 +243,7 @@ pub fn turn_params<'a>(conversation_id: i64, user: UserTurn<'a>, params: &'a Run
         provider: params.provider,
         model: params.model.clone(),
         prompt_budget: params.prompt_budget,
+        reasoning_effort: crate::agent::llm::ReasoningEffort::ProviderDefault,
     }
 }
 
