@@ -13,7 +13,7 @@ discard guard and the state factory cross that line.
   one-click fix, never a silent strip); a single-file book hides the # column and Renumber; the write kind defaults to
   Audiobook. Details: `tag-editor/` header comments and the backend `DETAILS.md`.
 - **Writing is safe**: the undo record is saved first, a file changed on disk since the read is listed as
-  `changedOnDisk` and not written, "Write anyway" (data loss) is an explicit choice, and Undo asks first and overwrites
-  changes made after the write.
+  `changedOnDisk` and not written, "Write anyway" (data loss) is an explicit choice, and Undo asks first and leaves a
+  file that changed after the write (another write, a rename onto its name) alone, counted apart.
 
 Details: `DETAILS.md`; backend: `src-tauri/src/tag_editor/CLAUDE.md`.

@@ -16,10 +16,10 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
-use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
+pub(super) use cmdr_tags::Fingerprint;
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, apply_tool};
 use cmdr_tags::{Cover, FileTags, TagError, TagField, format_of, read_duration, read_tags};
@@ -84,49 +84,6 @@ pub struct FileChangeView {
     pub fields: Vec<TagField>,
     pub cover: bool,
     pub extras: bool,
-}
-
-/// What identifies a file's state on disk: size, modification time, and (on unix) inode and
-/// status-change time. A rewrite, a replace, and a rename-over each move at least one; the
-/// ctime also catches a write that put the mtime back (`touch -r`, a copy keeping dates).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct Fingerprint {
-    size: u64,
-    modified: Option<SystemTime>,
-    inode: Option<u64>,
-    changed: Option<(i64, i64)>,
-}
-
-impl Fingerprint {
-    /// The file's fingerprint now; `None` when it can't be stat'ed. Blocking: ❌ not under a lock.
-    pub(super) fn of(path: &Path) -> Option<Self> {
-        let meta = std::fs::metadata(path).ok()?;
-        let (inode, changed) = unix_ids(&meta);
-        Some(Self {
-            size: meta.len(),
-            modified: meta.modified().ok(),
-            inode,
-            changed,
-        })
-    }
-
-    /// Whether the file at `path` still has `recorded`, a fingerprint taken earlier. No
-    /// recorded fingerprint counts as changed. Blocking: ❌ not under a lock.
-    pub(super) fn holds(recorded: Option<&Self>, path: &Path) -> bool {
-        recorded.is_some_and(|recorded| Self::of(path).as_ref() == Some(recorded))
-    }
-}
-
-/// The inode and the status-change time (seconds, nanoseconds).
-#[cfg(unix)]
-fn unix_ids(meta: &std::fs::Metadata) -> (Option<u64>, Option<(i64, i64)>) {
-    use std::os::unix::fs::MetadataExt;
-    (Some(meta.ino()), Some((meta.ctime(), meta.ctime_nsec())))
-}
-
-#[cfg(not(unix))]
-fn unix_ids(_meta: &std::fs::Metadata) -> (Option<u64>, Option<(i64, i64)>) {
-    (None, None)
 }
 
 /// A file read from disk.

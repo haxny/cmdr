@@ -23,8 +23,9 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - **Every lofty call goes through `contain_panics`**; a panic is a `readError` or `failed` row, never a crash.
   Unreadable rows are never written and count in no summary.
 - **❌ No file read under `SESSIONS`' lock**; ❌ never log paths or tag values.
-- **Record before write**: `apply` records the old tags first, then narrows the record to the files written, so undo
-  touches exactly those. `WouldDrop` is never auto-accepted. Lock order: undo store → rename → tag.
+- **Record before write**: `apply` records the old tags first, then seals the record to the files written with their
+  post-write `Fingerprint`, so undo touches exactly those, and only while unchanged (never a file renamed onto the
+  path). `WouldDrop` is never auto-accepted. Lock order: the store is outermost (`undo.rs`).
 - `diacritics` only reports, it never strips.
 
 Details: `DETAILS.md`.

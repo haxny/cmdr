@@ -41,15 +41,21 @@ file that something else renamed.
 4. Each file is re-checked right before its write (the TOCTOU window shrinks to one stat), then `write_tags` with
    `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }`. `WouldDrop` → `wouldDrop`, any other
    error → `failed`, a lofty panic (`contain_panics`) → `failed` with `TagError::Write`.
-5. `UndoStore::retain` narrows the record to the files written (`forget` when none), so an undo never rewrites a file
-   the apply skipped, failed on, or found changed. If `retain` refuses, the record is forgotten instead and the report
-   has no `applyId` and `undoUnavailable: true`: the full record could revert someone else's later change.
+5. `UndoStore::seal` narrows the record to the files written (`forget` when none), each with its `Fingerprint` taken
+   right after its write, so an undo never rewrites a file the apply skipped, failed on, or found changed, nor one that
+   changed after the write. If `seal` refuses, the record is forgotten instead and the report has no `applyId` and
+   `undoUnavailable: true`: the full record could revert someone else's later change. A written file that can't be
+   stat'ed after its write is left out of the record (logged, no path).
 6. `mark_written` reads each written file again (outside the lock) and makes that the disk copy and fingerprint, and the
    edited copy too when it still equals what was written (a "Write anyway" may have dropped items). Then
    `multi_rename::media::SessionMedia::reread` for the written names in every session over the folder (`media_over`), so
    `[=tag.*]` previews show the new values.
 
-`undo(app, apply_id)` (`undo.rs`) restores (`allow_frame_loss: false`), forgets the record when nothing failed (kept
+`undo(app, apply_id)` (`undo.rs`) restores (`allow_frame_loss: false`) only the files still holding the fingerprint the
+write left; the others are `RestoreReport::changed` and untouched. Why: the record is keyed by path, and a Multi-Rename
+after the write can give a path to another file (renumbering `01…10` after a reorder swaps names), so a path-only
+restore would write one chapter's old tags into another. The fingerprint is in the record, so this holds after an app
+restart. The undo forgets the record when nothing failed (kept
 for a retry otherwise), re-reads the restored files into every open tag session that holds them (the undo can come
 from a later sheet than the one that wrote; each file is read once, outside the tag lock), and re-reads them in the
 media cache. It works after the session closed: the record holds paths. The asking sheet's session (`undo_tag_apply`'s

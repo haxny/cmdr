@@ -46,7 +46,9 @@ export function fakeState(view: TagEditorView = PANEL_VIEW, reports: TagApplyRep
     apply: vi.fn(() => Promise.resolve({ ok: true as const, value: queue.shift() ?? applyReport() })),
     tool: vi.fn(() => Promise.resolve()),
     reload: vi.fn(() => Promise.resolve()),
-    undo: vi.fn(() => Promise.resolve({ ok: true as const, value: { restored: [], missing: [], failed: [] } })),
+    undo: vi.fn(() =>
+      Promise.resolve({ ok: true as const, value: { restored: [], missing: [], changed: [], failed: [] } }),
+    ),
   }
 }
 

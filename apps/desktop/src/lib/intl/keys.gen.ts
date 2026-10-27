@@ -3057,6 +3057,7 @@ export type MessageKey =
   | 'multiRename.tags.trackCount'
   | 'multiRename.tags.tracks.label'
   | 'multiRename.tags.undo.button'
+  | 'multiRename.tags.undo.changedSince'
   | 'multiRename.tags.undo.confirm'
   | 'multiRename.tags.undo.done'
   | 'multiRename.tags.undo.message'

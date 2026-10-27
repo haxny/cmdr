@@ -5,7 +5,8 @@
 //! fingerprint moved since the session read it is `changedOnDisk` and never written. The rest
 //! are recorded in the undo store BEFORE any write, then written one by one, each re-checked
 //! right before its write. A `WouldDrop` is `wouldDrop` (the user decides), any other error
-//! `failed`. The record is narrowed to the files written, or forgotten when none was; written
+//! `failed`. The record is sealed to the files written, each with its fingerprint right after
+//! its write (an undo leaves a file alone once that moves), or forgotten when none was; written
 //! files become the session's disk copy, and Multi-Rename's media cache reads them again.
 
 use std::collections::HashMap;
@@ -15,9 +16,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use cmdr_tags::{ApplyId, ContentKind, FileTags, TagError, UndoStore, WriteOptions, write_tags};
+use cmdr_tags::{ApplyId, ContentKind, FileTags, Fingerprint, TagError, UndoStore, WriteOptions, write_tags};
 
-use super::session::{Fingerprint, Pending, TagEditorError, mark_written, pending};
+use super::session::{Pending, TagEditorError, mark_written, pending};
 use crate::crash_reporter::contain_panics;
 use crate::multi_rename::session::media_over;
 
@@ -118,26 +119,45 @@ pub(super) fn apply_with_before_write(
         allow_frame_loss: req.allow_frame_loss,
     };
     let written = write_each(ready, &opts, before_write, &mut report);
-    report.written = written.iter().map(|(path, ..)| shown(path)).collect();
-    let written_paths: Vec<PathBuf> = written.iter().map(|(path, ..)| path.clone()).collect();
-    if narrow_record(store, &id, &written_paths) {
+    report.written = written.iter().map(|file| shown(&file.path)).collect();
+    let written_paths: Vec<PathBuf> = written.iter().map(|file| file.path.clone()).collect();
+    let sealed: Vec<(PathBuf, Fingerprint)> = written
+        .iter()
+        .filter_map(|file| Some((file.path.clone(), file.fingerprint.clone()?)))
+        .collect();
+    if sealed.len() < written.len() {
+        // Gone or unreachable right after its write: an undo couldn't tell it's still ours.
+        log::warn!(target: LOG_TARGET, "A written file couldn't be stat'ed after its write, so its undo is unavailable");
+    }
+    if narrow_record(store, &id, &sealed) {
         report.apply_id = Some(id.0);
     } else {
         report.undo_unavailable = !written_paths.is_empty();
     }
-    mark_written(session_id, written);
+    mark_written(
+        session_id,
+        written.into_iter().map(|file| (file.path, file.tags)).collect(),
+    );
     reread_media(&target.volume_id, &written_paths);
     Ok(report)
 }
 
+/// A file written: its path, the tags asked for, and its fingerprint right after the write
+/// (`None` when it couldn't be stat'ed).
+struct Written {
+    path: PathBuf,
+    tags: FileTags,
+    fingerprint: Option<Fingerprint>,
+}
+
 /// Writes each file, re-checking its fingerprint right before. Files not written land in
-/// `report`; the written ones come back with the tags asked for.
+/// `report`; the written ones come back with the tags asked for and their new fingerprint.
 fn write_each(
     ready: Vec<Pending>,
     opts: &WriteOptions,
     before_write: &dyn Fn(&Path),
     report: &mut TagApplyReport,
-) -> Vec<(PathBuf, FileTags)> {
+) -> Vec<Written> {
     let mut written = Vec::new();
     for file in ready {
         before_write(&file.path);
@@ -147,7 +167,11 @@ fn write_each(
         }
         let outcome = contain_panics(|| write_tags(&file.path, &file.tags, opts)).unwrap_or_else(|| Err(panicked()));
         match outcome {
-            Ok(()) => written.push((file.path, file.tags)),
+            Ok(()) => written.push(Written {
+                fingerprint: Fingerprint::of(&file.path),
+                path: file.path,
+                tags: file.tags,
+            }),
             Err(TagError::WouldDrop(items)) => report.would_drop.push(WouldDropRow {
                 path: shown(&file.path),
                 items,
@@ -161,16 +185,17 @@ fn write_each(
     written
 }
 
-/// Keeps in the record only the files written, so an undo touches exactly those, and answers
-/// whether it can be undone; forgets the record when nothing was written. A store that can't
-/// narrow it drops it instead (the full record would also rewrite files this apply never wrote,
-/// changed since by someone else perhaps): the write stands, without an undo.
-pub(super) fn narrow_record(store: &UndoStore, id: &ApplyId, written: &[PathBuf]) -> bool {
+/// Seals the record to the files written, each with its fingerprint after its write, so an
+/// undo touches exactly those and only while they are still as written; answers whether it
+/// can be undone, and forgets the record when nothing was written. A store that can't seal it
+/// drops it instead (the full record would also rewrite files this apply never wrote, changed
+/// since by someone else perhaps): the write stands, without an undo.
+pub(super) fn narrow_record(store: &UndoStore, id: &ApplyId, written: &[(PathBuf, Fingerprint)]) -> bool {
     if written.is_empty() {
         forget_record(store, id);
         return false;
     }
-    match store.retain(id, written) {
+    match store.seal(id, written) {
         Ok(()) => true,
         Err(error) => {
             log::warn!(target: LOG_TARGET, "Couldn't narrow the undo record to the files written, so this write has no undo: {error:?}");

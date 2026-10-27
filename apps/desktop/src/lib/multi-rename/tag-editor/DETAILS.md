@@ -12,8 +12,8 @@ Setting `multiRename.tagEditor` (boolean, default off). On, `SheetTabs` appears 
   will change, the per-file result, Undo), `WouldDropDialog` (items a format would lose; Write anyway or Skip).
 - **Why edits are keyed by path**: the user may reorder rows in the Rename tab; every edit stays with its file.
 - **Apply / undo**: the old tags are recorded before any write; failures are per file and the rest are written; Undo
-  restores exactly the written files after asking, and overwrites changes made since. Other open sessions keep their
-  unwritten edits, rebased per field. One Multi-Rename sheet is open at a time.
+  restores exactly the written files after asking, and leaves one that changed since (its fingerprint moved) alone.
+  Other open sessions keep their unwritten edits, rebased per field. One Multi-Rename sheet is open at a time.
 - **Tag canon**: no diacritics except Comment and Description; ContentKind defaults to Audiobook; M4A genre is written
   only as freeform GENRE (the engine does it); a single-file book has no track number.
 - **Strings**: `multiRename.tags.*` in `messages/en/multiRename.json`; other locales hold untranslated skeletons (Czech

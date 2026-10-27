@@ -1,8 +1,9 @@
 //! The app's one undo store (`<app data>/tag-undo`), and undoing a tag write.
 //!
 //! The store has one writer at a time, so it lives behind a `Mutex` held for a whole apply or
-//! undo. Lock order: undo store → Multi-Rename's sessions → tag sessions; ❌ never take the
-//! store while holding either of the others.
+//! undo. Lock order: the store is outermost; under it, Multi-Rename's sessions and the tag
+//! sessions are taken one after another, never nested (the only nesting is rename → tag, in
+//! Multi-Rename's close and evict). ❌ Never take the store while holding either of the others.
 
 use std::sync::Mutex;
 
@@ -44,8 +45,9 @@ fn open_store<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<UndoStore,
 /// Writes the old tags of apply `apply_id` back, for the sheet whose tag session is `undoing`.
 /// The files it restored are read again into every open tag session that holds them (another
 /// sheet's keeps its unwritten edits; see [`reload`]), and Multi-Rename's media cache reads them
-/// again. A clean restore forgets the record; one with failures keeps it, so the user
-/// can try again.
+/// again. A file changed since the write (a later write, or another file renamed onto its path)
+/// is left alone and reported as `changed`. A restore without failures forgets the record; one
+/// with failures keeps it, so the user can try again.
 pub fn undo<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     apply_id: String,

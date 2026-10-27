@@ -655,7 +655,9 @@ fn a_record_that_cannot_be_narrowed_is_dropped_and_undo_is_unavailable() {
     let (dir, _listing, _id) = album("tag-apply-narrow-fails");
     let (store_dir, store) = store("tag-apply-narrow-fails-store");
     let never_recorded = cmdr_tags::ApplyId("tags-1-never-recorded".to_string());
-    assert!(!narrow_record(&store, &never_recorded, &[dir.join("a.mp3")]));
+    let a = dir.join("a.mp3");
+    let fingerprint = cmdr_tags::Fingerprint::of(&a).expect("a stats");
+    assert!(!narrow_record(&store, &never_recorded, &[(a, fingerprint)]));
     assert_eq!(records(&store_dir), 0);
 }
 
@@ -691,5 +693,56 @@ fn a_file_changed_right_before_its_write_is_skipped_and_left_out_of_undo() {
         .collect();
     assert_eq!(restored_names, vec!["a.mp3", "c.mp3"]);
     assert_eq!(title_of(&dir, "b.mp3"), one("Rewritten elsewhere"));
+    done(&id);
+}
+
+/// Ruling 20: after the write, a rename swapped two files' names (renumbering after a reorder
+/// does this). Undo must not write a's old tags into the file now called a.mp3 (which is b):
+/// both are reported as changed since the write and keep what they hold.
+#[test]
+fn undo_after_a_rename_swapped_two_written_files_touches_neither() {
+    let (dir, _listing, id) = album("tag-apply-undo-swap");
+    let (store_dir, store) = store("tag-apply-undo-swap-store");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Alpha written"),
+            set_title(&dir, "b.mp3", "Beta written"),
+        ],
+    )
+    .expect("edits");
+    let report = apply_with(&store, &id, request()).expect("applies");
+    assert_eq!(names(&report.written), vec!["a.mp3", "b.mp3"]);
+    let swap = dir.join("swap.tmp");
+    std::fs::rename(dir.join("a.mp3"), &swap).expect("a moves aside");
+    std::fs::rename(dir.join("b.mp3"), dir.join("a.mp3")).expect("b takes a's name");
+    std::fs::rename(&swap, dir.join("b.mp3")).expect("a takes b's name");
+
+    let restored = undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
+
+    assert!(restored.restored.is_empty(), "{restored:?}");
+    let changed: Vec<String> = restored
+        .changed
+        .iter()
+        .map(|path| path.file_name().expect("a file").to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(changed, vec!["a.mp3", "b.mp3"]);
+    assert_eq!(
+        title_of(&dir, "a.mp3"),
+        one("Beta written"),
+        "a.mp3 holds b's file, untouched"
+    );
+    assert_eq!(
+        title_of(&dir, "b.mp3"),
+        one("Alpha written"),
+        "b.mp3 holds a's file, untouched"
+    );
+    assert_eq!(records(&store_dir), 0, "nothing left to retry, so the record goes");
     done(&id);
 }

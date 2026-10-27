@@ -7,6 +7,7 @@
 //!
 //! Module map and must-knows: `CLAUDE.md`; field map and decisions: `DETAILS.md`.
 
+mod fingerprint;
 mod format;
 mod model;
 mod read;
@@ -35,6 +36,8 @@ mod text_test;
 #[cfg(test)]
 mod tools_test;
 #[cfg(test)]
+mod undo_seal_test;
+#[cfg(test)]
 mod undo_test;
 #[cfg(test)]
 mod write_cover_test;
@@ -49,6 +52,7 @@ mod write_test;
 #[cfg(test)]
 mod write_totals_test;
 
+pub use fingerprint::Fingerprint;
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, TagError, TagField};
 pub use read::{read_duration, read_tags};

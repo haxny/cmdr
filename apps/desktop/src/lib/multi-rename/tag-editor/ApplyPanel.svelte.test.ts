@@ -238,7 +238,7 @@ describe('ApplyPanel', () => {
     confirm.mockResolvedValueOnce(false)
     await press(root, 'Undo tag changes')
     expect(confirm.mock.calls[0][0]).toBe(
-      'This puts the tags of the 1 file the last write changed back as they were before it. Any change made to that file since the write is overwritten. Tag changes you haven’t written to those files yet are lost too.',
+      'This puts the tags of the 1 file the last write changed back as they were before it. If that file changed since the write, it’s left as it is. Tag changes you haven’t written to those files yet are lost too.',
     )
   })
 
@@ -250,7 +250,7 @@ describe('ApplyPanel', () => {
       return Promise.resolve({
         ok: false,
         error: { kind: 'taskFailed' },
-        restored: { restored: ['/b/03.mp3'], missing: [], failed: [] },
+        restored: { restored: ['/b/03.mp3'], missing: [], changed: [], failed: [] },
       } as never)
     })
     const { root } = await mountPanel(fake)
@@ -263,12 +263,12 @@ describe('ApplyPanel', () => {
     expect(root.textContent).toContain('2 files couldn’t be restored.')
   })
 
-  it('Undo tag changes warns that later changes are overwritten before undoing', async () => {
+  it('Undo tag changes says a file changed since the write is left alone, before undoing', async () => {
     const fake = { ...fakeState(), undoable: { applies: [{ applyId: 'A1', written: 3 }], partial: false } }
     const { root } = await mountPanel(fake)
     confirm.mockResolvedValueOnce(false)
     await press(root, 'Undo tag changes')
-    expect(confirm.mock.calls[0][0]).toContain('Any change made to those files since the write is overwritten.')
+    expect(confirm.mock.calls[0][0]).toContain('A file that changed since the write is left as it is.')
     expect(fake.undo).not.toHaveBeenCalled()
     await press(root, 'Undo tag changes')
     expect(fake.undo).toHaveBeenCalledTimes(1)

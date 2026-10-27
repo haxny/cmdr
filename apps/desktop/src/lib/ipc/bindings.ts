@@ -14993,6 +14993,11 @@ export type RestoreReport = {
   restored: string[]
   // Files no longer at their (repathed) path.
   missing: string[]
+  /**
+   *  Files changed since the apply wrote them (written again, or another file renamed onto
+   *  the path): left alone, so one file's old tags never land in another.
+   */
+  changed: string[]
   // Files the write refused or failed on, unchanged, with why.
   failed: [string, TagError][]
 }

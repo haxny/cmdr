@@ -192,7 +192,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
 }
 
 function emptyRestore(): RestoreReport {
-  return { restored: [], missing: [], failed: [] }
+  return { restored: [], missing: [], changed: [], failed: [] }
 }
 
 /** The write Undo reverses after `report`: this apply (when it wrote and kept the old tags) after `before`'s. */
@@ -231,6 +231,7 @@ async function undoAll(
     }
     merged.restored.push(...res.value.restored)
     merged.missing.push(...res.value.missing)
+    merged.changed.push(...res.value.changed)
     merged.failed.push(...res.value.failed)
     if (res.value.failed.length > 0) kept.unshift({ ...apply, written: res.value.failed.length })
   }

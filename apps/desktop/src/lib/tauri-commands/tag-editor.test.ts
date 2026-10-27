@@ -124,7 +124,7 @@ describe('applyTags', () => {
 
 describe('undoTagApply', () => {
   it('passes the apply id and the restore report through', async () => {
-    const report = { restored: ['/a.mp3'], missing: [], failed: [] }
+    const report = { restored: ['/a.mp3'], missing: [], changed: [], failed: [] }
     vi.mocked(commands.undoTagApply).mockResolvedValue({ status: 'ok', data: report } as never)
     expect(await undoTagApply('tags-1-s1', 's2')).toEqual({ ok: true, value: report })
     expect(commands.undoTagApply).toHaveBeenCalledWith('tags-1-s1', 's2')

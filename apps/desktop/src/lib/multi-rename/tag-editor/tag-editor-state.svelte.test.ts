@@ -154,7 +154,10 @@ describe('createTagEditorState', () => {
   it('undo reverses the last apply and then has nothing left', async () => {
     ipc.applyTags.mockResolvedValue({ ok: true, value: report({ applyId: 'A9' }) })
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
-    ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: ['/a.mp3'], missing: [], failed: [] } })
+    ipc.undoTagApply.mockResolvedValue({
+      ok: true,
+      value: { restored: ['/a.mp3'], missing: [], changed: [], failed: [] },
+    })
     const state = createTagEditorState('S')
     await state.apply(REQUEST)
     const res = await state.undo()
@@ -169,7 +172,7 @@ describe('createTagEditorState', () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
     ipc.undoTagApply
       .mockResolvedValueOnce({ ok: false, error: { kind: 'taskFailed' } })
-      .mockResolvedValueOnce({ ok: true, value: { restored: [], missing: [], failed: [] } })
+      .mockResolvedValueOnce({ ok: true, value: { restored: [], missing: [], changed: [], failed: [] } })
     const state = createTagEditorState('S')
     await state.apply(REQUEST)
     expect((await state.undo()).ok).toBe(false)
@@ -201,7 +204,10 @@ describe('createTagEditorState', () => {
     ipc.applyTags
       .mockResolvedValueOnce({ ok: true, value: report({ applyId: 'A1', written: ['/a.mp3', '/b.mp3'] }) })
       .mockResolvedValueOnce({ ok: true, value: report({ applyId: 'A2', written: ['/c.mp3'] }) })
-    ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: ['/x.mp3'], missing: [], failed: [] } })
+    ipc.undoTagApply.mockResolvedValue({
+      ok: true,
+      value: { restored: ['/x.mp3'], missing: [], changed: [], failed: [] },
+    })
     const state = createTagEditorState('S')
     const first = await state.apply(REQUEST)
     if (!first.ok) throw new Error('the first apply')
@@ -218,7 +224,7 @@ describe('createTagEditorState', () => {
       ['A2', 'S'],
       ['A1', 'S'],
     ])
-    expect(res).toEqual({ ok: true, value: { restored: ['/x.mp3', '/x.mp3'], missing: [], failed: [] } })
+    expect(res).toEqual({ ok: true, value: { restored: ['/x.mp3', '/x.mp3'], missing: [], changed: [], failed: [] } })
     expect(state.undoable).toBeNull()
   })
 
@@ -243,7 +249,7 @@ describe('createTagEditorState', () => {
       partial: false,
     })
     ipc.undoTagApply
-      .mockResolvedValueOnce({ ok: true, value: { restored: ['/b.mp3'], missing: [], failed: [] } })
+      .mockResolvedValueOnce({ ok: true, value: { restored: ['/b.mp3'], missing: [], changed: [], failed: [] } })
       .mockResolvedValueOnce({ ok: false, error: { kind: 'taskFailed' } })
     const state = createTagEditorState('S')
     await state.open()
@@ -252,7 +258,7 @@ describe('createTagEditorState', () => {
     expect(res).toEqual({
       ok: false,
       error: { kind: 'taskFailed' },
-      restored: { restored: ['/b.mp3'], missing: [], failed: [] },
+      restored: { restored: ['/b.mp3'], missing: [], changed: [], failed: [] },
     })
     expect(state.error).toEqual({ kind: 'taskFailed' })
     expect(getLastTagApply()).toEqual({ applies: [{ applyId: 'A1', written: 3 }], partial: false })
@@ -263,7 +269,7 @@ describe('createTagEditorState', () => {
     setLastTagApply({ applies: [{ applyId: 'A1', written: 2 }], partial: false })
     ipc.undoTagApply.mockResolvedValue({
       ok: true,
-      value: { restored: ['/a.mp3'], missing: [], failed: [['/b.mp3', { type: 'notSupported' }]] },
+      value: { restored: ['/a.mp3'], missing: [], changed: [], failed: [['/b.mp3', { type: 'notSupported' }]] },
     })
     const state = createTagEditorState('S')
     expect((await state.undo()).ok).toBe(true)
@@ -323,7 +329,7 @@ describe('createTagEditorState', () => {
   it('the write outlives the sheet: a new state of a later sheet can undo it', async () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
     ipc.applyTags.mockResolvedValue({ ok: true, value: report({ applyId: 'A7' }) })
-    ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: [], missing: [], failed: [] } })
+    ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: [], missing: [], changed: [], failed: [] } })
     const first = createTagEditorState('S')
     await first.apply(REQUEST)
     await first.close()

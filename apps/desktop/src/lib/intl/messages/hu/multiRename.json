@@ -1349,6 +1349,10 @@
   "@multiRename.tags.undo.notRestored": {
     "sourceHash": "97939fa"
   },
+  "multiRename.tags.undo.changedSince": "{count, plural, one {{countText} file changed after the write, for example by a rename, so it was left as it is.} other {{countText} files changed after the write, for example by a rename, so they were left as they are.}}",
+  "@multiRename.tags.undo.changedSince": {
+    "sourceHash": "78c31f1"
+  },
   "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
   "@multiRename.tags.wouldDrop.title": {
     "sourceHash": "5afab0b"

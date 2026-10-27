@@ -3,8 +3,9 @@
      * Writing the Tags tab's edits into the files. "Write tags…" first lists what will change, per file; only then
      * does "Write tags" write. Fields that still carry diacritics are named with a one-click fix, never stripped
      * silently. Files that would lose tag data ask (`WouldDropDialog`); every file left unwritten is listed with why
-     * (`ApplyOutcome.svelte`). "Undo tag changes" reverses the last write until the next one, and says it overwrites
-     * any change made to those files since. The sheet's Start (⌘⏎) comes here while the Tags tab shows: `start()`.
+     * (`ApplyOutcome.svelte`). "Undo tag changes" reverses the last write until the next one; a file changed since that
+     * write (written again, or another file renamed onto its name) is left alone and counted apart. The sheet's Start
+     * (⌘⏎) comes here while the Tags tab shows: `start()`.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -45,7 +46,7 @@
         | { step: 'done'; outcome: Outcome }
         /** The app refused before writing any file (it couldn't keep the old tags); the tab words why. */
         | { step: 'refused' }
-        | { step: 'undone'; restored: number; left: number }
+        | { step: 'undone'; restored: number; left: number; changed: number }
 
     let current = $state.raw<Step>({ step: 'idle' })
     let kind = $state<ContentKind>('audiobook')
@@ -136,7 +137,7 @@
         current = endedStep(res.ok ? [...reports, res.value] : reports)
     }
 
-    /** The undo question: how many files go back, that later changes to them are overwritten, and unwritten edits too. */
+    /** The undo question: how many files go back, that a file changed since is left alone, and unwritten edits are lost. */
     function undoQuestion(count: number): string {
         const message = tString('multiRename.tags.undo.message', { count, countText: formatInteger(count) })
         return tags.view?.dirty === true
@@ -161,10 +162,10 @@
     function undoneStep(res: TagUndoResult): Step {
         if (res.ok) {
             const left = res.value.missing.length + res.value.failed.length
-            return { step: 'undone', restored: res.value.restored.length, left }
+            return { step: 'undone', restored: res.value.restored.length, left, changed: res.value.changed.length }
         }
         const left = tags.undoable === null ? 0 : undoableCount(tags.undoable)
-        return { step: 'undone', restored: res.restored.restored.length, left }
+        return { step: 'undone', restored: res.restored.restored.length, left, changed: res.restored.changed.length }
     }
 
     async function removeDiacritics(fields: TagField[]): Promise<void> {
@@ -263,10 +264,11 @@
         {:else if current.step === 'refused'}
             <p role="status">{tString('multiRename.tags.write.refused')}</p>
         {:else if current.step === 'undone'}
-            {@const { restored, left } = current}
+            {@const { restored, left, changed } = current}
             <p role="status">
                 {#if restored > 0}{tString('multiRename.tags.undo.done', { count: restored, countText: formatInteger(restored) })}{/if}
                 {#if left > 0}{tString('multiRename.tags.undo.notRestored', { count: left, countText: formatInteger(left) })}{/if}
+                {#if changed > 0}{tString('multiRename.tags.undo.changedSince', { count: changed, countText: formatInteger(changed) })}{/if}
             </p>
         {/if}
         <div class="actions">

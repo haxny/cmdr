@@ -11,7 +11,8 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - `write.rs`: `write_tags` + `WriteOptions`, each writer the inverse of its reader; `write_extras.rs`; `save.rs`:
   `save_safely`. Test files come from `test_files.rs`.
 - `shared.rs`: the foobar2000-style view, edits, and change list. `tools.rs` / `text.rs`: pure clean-up tools.
-- `undo.rs`: `UndoStore`, an apply's old tags, written back after renames.
+- `undo.rs`: `UndoStore`, an apply's old tags, written back after renames; `fingerprint.rs`: what a sealed record
+  checks.
 
 ## Must-knows
 
@@ -31,7 +32,8 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 - **Safe overwrite only** (`save_safely`): strict parse, write a temp clone, read back and compare, rename. ❌ Never
   write in place: lofty has corrupted files and dropped items silently.
 - **Concrete lofty tag types, not the generic `Tag`**, which loses format-native keys.
-- **`UndoStore` has one writer at a time**; callers serialize access.
+- **`UndoStore` has one writer at a time**; callers serialize access. `seal` after the write, or a restore can't tell
+  the file it wrote from another one renamed onto the path.
 - **Errors are typed** (`TagError`); ❌ never classify one by its message text.
 
 Field map, write mechanics, undo layout, serialized shapes, and notes for the UI: `DETAILS.md`.

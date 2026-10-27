@@ -1507,7 +1507,7 @@
   "@multiRename.tags.undo.button": {
     "description": "Shown in the Tags tab of Multi-Rename: the button that puts the files written by the last tag write back as they were."
   },
-  "multiRename.tags.undo.tooltip": "Puts the files back as they were before the last tag write. Any change made to them since is overwritten.",
+  "multiRename.tags.undo.tooltip": "Puts the files back as they were before the last tag write. A file changed since then is left as it is.",
   "@multiRename.tags.undo.tooltip": {
     "description": "Shown in the Tags tab of Multi-Rename: tooltip of the Undo tag changes button."
   },
@@ -1515,7 +1515,7 @@
   "@multiRename.tags.undo.title": {
     "description": "Title of the question asked in the Tags tab of Multi-Rename before undoing the last tag write."
   },
-  "multiRename.tags.undo.message": "{count, plural, one {This puts the tags of the {countText} file the last write changed back as they were before it. Any change made to that file since the write is overwritten.} other {This puts the tags of the {countText} files the last write changed back as they were before it. Any change made to those files since the write is overwritten.}}",
+  "multiRename.tags.undo.message": "{count, plural, one {This puts the tags of the {countText} file the last write changed back as they were before it. If that file changed since the write, it’s left as it is.} other {This puts the tags of the {countText} files the last write changed back as they were before it. A file that changed since the write is left as it is.}}",
   "@multiRename.tags.undo.message": {
     "description": "Body of the question asked in the Tags tab of Multi-Rename before undoing the last tag write.",
     "placeholders": {
@@ -1536,6 +1536,13 @@
   "multiRename.tags.undo.notRestored": "{count, plural, one {{countText} file couldn’t be restored.} other {{countText} files couldn’t be restored.}}",
   "@multiRename.tags.undo.notRestored": {
     "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files kept their new tags (gone, or the restore failed).",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.undo.changedSince": "{count, plural, one {{countText} file changed after the write, for example by a rename, so it was left as it is.} other {{countText} files changed after the write, for example by a rename, so they were left as they are.}}",
+  "@multiRename.tags.undo.changedSince": {
+    "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files were not touched because they changed since the write, for example a rename gave another file their name. Undo never writes old tags into a different file.",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }

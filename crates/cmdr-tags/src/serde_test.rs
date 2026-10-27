@@ -85,6 +85,7 @@ fn restore_report_apply_id_and_case_tool_round_trip() {
     let report = RestoreReport {
         restored: vec![PathBuf::from("/a.mp3")],
         missing: vec![PathBuf::from("/b.mp3")],
+        changed: vec![PathBuf::from("/d.mp3")],
         failed: vec![(PathBuf::from("/c.mp3"), TagError::Write("x".to_owned()))],
     };
     assert_eq!(
@@ -92,6 +93,7 @@ fn restore_report_apply_id_and_case_tool_round_trip() {
         json!({
             "restored": ["/a.mp3"],
             "missing": ["/b.mp3"],
+            "changed": ["/d.mp3"],
             "failed": [["/c.mp3", {"type": "write", "data": "x"}]],
         })
     );
