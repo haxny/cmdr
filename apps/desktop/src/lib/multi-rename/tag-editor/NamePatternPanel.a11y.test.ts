@@ -34,7 +34,12 @@ async function settle(): Promise<void> {
 
 async function mountPanel(disabled = false) {
   const tags = fakeTags(ROWS)
-  const mounted = await mountInto(NamePatternPanel, { disabled, state: asTags(tags), runScoped: fakeRunScoped() })
+  const mounted = await mountInto(NamePatternPanel, {
+    disabled,
+    state: asTags(tags),
+    runScoped: fakeRunScoped(),
+    scopeKey: 'k',
+  })
   cleanup = mounted.cleanup
   await settle()
   return { root: mounted.root, tags }

@@ -21,19 +21,23 @@
         disabled: boolean
         state: TagEditorState
         runScoped: RunScoped
+        /** Changes whenever the checked tracks (or the track list) change, which makes a preview stale. */
+        scopeKey: string
     }
 
-    const { disabled, state: tags, runScoped }: Props = $props()
+    const { disabled, state: tags, runScoped, scopeKey }: Props = $props()
 
     let mode = $state<NamePattern['kind']>('format')
     let text = $state('')
     let history = $state.raw<NamePattern[]>([])
-    let previewed = $state.raw<{ pattern: NamePattern; rows: NamePreviewRow[] } | null>(null)
+    let previewed = $state.raw<{ pattern: NamePattern; rows: NamePreviewRow[]; scope: string[] | null; scopeKey: string } | null>(null)
     let failure = $state<string | null>(null)
 
     const current = $derived<NamePattern>({ kind: mode, pattern: text })
     const fresh = $derived(
-        previewed !== null && previewed.pattern.kind === mode && previewed.pattern.pattern === text,
+        previewed !== null && previewed.pattern.kind === mode &&
+            previewed.pattern.pattern === text &&
+            previewed.scopeKey === scopeKey,
     )
     const edited = $derived(previewed !== null && !fresh)
 
@@ -57,26 +61,30 @@
     async function preview(): Promise<void> {
         const asked = current
         failure = null
-        const res = await runScoped((scope) => tags.previewFromNames(asked, scope))
+        const askedKey = scopeKey
+        const res = await runScoped(async (scope) => ({ scope, result: await tags.previewFromNames(asked, scope) }))
         if (res === undefined) return
-        if (res.ok) {
-            previewed = { pattern: asked, rows: res.value }
+        if (res.result.ok) {
+            previewed = { pattern: asked, rows: res.result.value, scope: res.scope, scopeKey: askedKey }
         } else {
             previewed = null
-            failure = failureOf(res.error)
+            failure = failureOf(res.result.error)
         }
     }
 
     async function take(): Promise<void> {
-        const asked = current
+        // Exactly the tracks the preview listed.
+        const shown = previewed
+        if (shown === null || !fresh) return
+        const asked = shown.pattern
         failure = null
-        const ran = await runScoped(async (scope) => {
-            await tags.tool({ kind: 'fromFileName', pattern: asked }, scope)
+        const ran = await runScoped(async () => {
+            await tags.tool({ kind: 'fromFileName', pattern: asked }, shown.scope)
             return true
         })
         if (ran === undefined) return
         failure = failureOf(tags.error)
-        if (failure === null && tags.error === null) history = rememberNamePattern(history, asked)
+        if (tags.error === null) history = rememberNamePattern(history, asked)
     }
 
     function pick(entry: NamePattern): void {
@@ -109,7 +117,7 @@
         <Button size="mini" disabled={disabled || text === ''} onclick={() => void preview()}>
             {tString('multiRename.tags.tools.name.preview')}
         </Button>
-        <Button size="mini" variant="primary" disabled={disabled || !fresh} onclick={() => void take()}>
+        <Button size="mini" variant="primary" disabled={disabled || !fresh || tags.busy} onclick={() => void take()}>
             {tString('multiRename.tags.tools.name.take')}
         </Button>
     </div>

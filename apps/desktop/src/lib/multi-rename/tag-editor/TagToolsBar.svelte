@@ -32,9 +32,10 @@
         /** The tab's state and scoped runner, for the text tools' panels. */
         state: TagEditorState
         runScoped: RunScoped
+        scopeKey: string
     }
 
-    const { trackCount, extras, focusedField, disabled, onTool, state: tags, runScoped }: Props = $props()
+    const { trackCount, extras, focusedField, disabled, onTool, state: tags, runScoped, scopeKey }: Props = $props()
 
     type PanelId = 'case' | 'extras' | 'replace' | 'format' | 'name'
 
@@ -157,7 +158,7 @@
     {:else if open === 'format' && !disabled}
         <div class="panel text-panel" id="tag-tools-format"><FormatPanel {disabled} state={tags} {runScoped} /></div>
     {:else if open === 'name' && !disabled}
-        <div class="panel text-panel" id="tag-tools-name"><NamePatternPanel {disabled} state={tags} {runScoped} /></div>
+        <div class="panel text-panel" id="tag-tools-name"><NamePatternPanel {disabled} state={tags} {runScoped} {scopeKey} /></div>
     {/if}
 </div>
 

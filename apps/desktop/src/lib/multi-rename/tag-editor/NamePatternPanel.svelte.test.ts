@@ -46,14 +46,11 @@ async function settle(): Promise<void> {
 
 async function mountPanel(rows = ROWS) {
   const tags = fakeTags(rows)
-  const mounted = await mountInto(NamePatternPanel, {
-    disabled: false,
-    state: asTags(tags),
-    runScoped: fakeRunScoped(),
-  })
+  const props = $state({ disabled: false, state: asTags(tags), runScoped: fakeRunScoped(), scopeKey: 'A' })
+  const mounted = await mountInto(NamePatternPanel, props)
   cleanup = mounted.cleanup
   await settle()
-  return { root: mounted.root, tags }
+  return { root: mounted.root, tags, props }
 }
 
 async function click(el: HTMLElement): Promise<void> {
@@ -108,6 +105,21 @@ describe('NamePatternPanel', () => {
     expect(buttonNamed(root, 'Take').disabled).toBe(true)
     await click(buttonNamed(root, 'Preview'))
     expect(tags.previewFromNames).toHaveBeenLastCalledWith({ kind: 'regex', pattern: '(?<title>.+)' }, SCOPE)
+  })
+
+  it('Take applies to exactly the tracks the preview listed, and a changed selection makes the preview stale', async () => {
+    const { root, tags, props } = await mountPanel()
+    await typeInto(pattern(root), '%title%')
+    await click(buttonNamed(root, 'Preview'))
+    expect(tags.previewFromNames).toHaveBeenCalledWith(expect.anything(), SCOPE)
+    props.scopeKey = 'B'
+    await settle()
+    expect(buttonNamed(root, 'Take').disabled).toBe(true)
+    expect(root.textContent).toContain('Preview again to take this pattern.')
+    expect(tags.tool).not.toHaveBeenCalled()
+    await click(buttonNamed(root, 'Preview'))
+    await click(buttonNamed(root, 'Take'))
+    expect(tags.tool).toHaveBeenCalledWith(expect.anything(), SCOPE)
   })
 
   it('an empty pattern cannot be previewed', async () => {

@@ -10,6 +10,7 @@ export const SCOPE = ['/b/01.mp3', '/b/02.mp3']
 export function fakeTags(rows: NamePreviewRow[] = []) {
   const tags = {
     error: null as TagStateError | null,
+    busy: false,
     textTool: vi.fn<TagEditorState['textTool']>(() => Promise.resolve()),
     tool: vi.fn<TagEditorState['tool']>(() => Promise.resolve()),
     previewFromNames: vi.fn<TagEditorState['previewFromNames']>((): Promise<TagStateResult<NamePreviewRow[]>> =>

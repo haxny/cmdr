@@ -28,6 +28,8 @@
     /** The checked tracks; the tools work on these alone. Created once per mount, pruned on every view change. */
     const selection = createTrackSelection()
     const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
+    /** Changes with the checked tracks and the track list: a file-name preview is only good for the tracks it listed. */
+    const scopeKey = $derived(JSON.stringify([[...selection.selected].sort(), allPaths]))
 
     let selectionGone = $state(false)
 
@@ -145,6 +147,7 @@
             onTool={(tool: TagTool) => void runTool(tool)}
             state={tags}
             {runScoped}
+            {scopeKey}
         />
         </div>
         <div class="columns">

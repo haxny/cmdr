@@ -25,6 +25,7 @@ async function mountBar(
     onTool,
     state: asTags(fakeTags()),
     runScoped: fakeRunScoped(),
+    scopeKey: 'k',
   })
   cleanup = mounted.cleanup
   return { root: mounted.root, onTool }

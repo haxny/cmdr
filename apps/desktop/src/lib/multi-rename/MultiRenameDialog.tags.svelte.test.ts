@@ -142,6 +142,34 @@ describe('MultiRenameDialog Tags tab', () => {
     expect(ipc.openTagEditor).not.toHaveBeenCalled()
   })
 
+  it('the ⌘⌥ option keys do nothing while the Tags tab shows', async () => {
+    flags.tagEditor = true
+    const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
+    navigatorSpy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
+    try {
+      await mountSheet()
+      tab('Tags').click()
+      await settle()
+      const event = new KeyboardEvent('keydown', {
+        key: 'ƒ',
+        code: 'KeyF',
+        metaKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      document.querySelector('#sheet-panel-tags')?.dispatchEvent(event)
+      await settle()
+      expect(event.defaultPrevented).toBe(false)
+      tab('Rename').click()
+      await settle()
+      const chip = document.querySelector('.search-options button[aria-label="First match only"]')
+      expect(chip?.getAttribute('aria-pressed')).toBe('false')
+    } finally {
+      navigatorSpy.mockRestore()
+    }
+  })
+
   it('tags_tab_opens_tag_session_lazily', async () => {
     flags.tagEditor = true
     await mountSheet()

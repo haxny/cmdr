@@ -98,6 +98,12 @@ describe('ReplacePanel', () => {
     expect(chips).toEqual(['Match case', 'First match only', 'Regular expression'])
   })
 
+  it('chip tooltips advertise no ⌘⌥ key, which reaches the Rename tab’s options, not these', async () => {
+    const { root } = await mountPanel()
+    expect(root.querySelector('.search-option-tip')).not.toBeNull()
+    expect(root.querySelector('.search-option-tip kbd')).toBeNull()
+  })
+
   it('an empty search disables Replace', async () => {
     const { root } = await mountPanel()
     expect(buttonNamed(root, 'Replace').disabled).toBe(true)

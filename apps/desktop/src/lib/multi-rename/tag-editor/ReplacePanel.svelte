@@ -71,10 +71,11 @@
 <div class="panel">
     <div class="line">
         <label for="tag-replace-search">{tString('multiRename.tags.tools.replace.search')}</label>
-        <TextInput id="tag-replace-search" bind:value={search} {disabled} invalid={badRegex} mono />
+        <TextInput id="tag-replace-search" bind:value={search} {disabled} invalid={badRegex} mono oninput={() => { badRegex = false }} />
         <SearchOptionChips
             spec={options}
             only={CHIPS}
+            shortcuts={false}
             rendered={null}
             onToggle={(field: SearchOptionField) => { options = { ...options, [field]: !options[field] } }}
         />
