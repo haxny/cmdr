@@ -11,7 +11,9 @@ use cmdr_tags::shared::{CoverEdit, SharedValue};
 use cmdr_tags::tools::TagTool;
 use cmdr_tags::{Cover, FileTags, TagField, WriteOptions, read_tags, write_tags};
 
-use super::session::{TagEdit, TagEditorError, changes, close, edit, is_open, open, tool, unchanged_on_disk};
+use super::session::{
+    TagEdit, TagEditorError, changes, close, edit, is_open, open, shared_cover, tool, unchanged_on_disk,
+};
 use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
 use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};
 use crate::test_support::TestDir;
@@ -342,6 +344,44 @@ fn cover_edit_is_summarized_and_extras_are_listed() {
         }
     ));
     assert!(view.extras.is_empty());
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn shared_cover_is_the_common_cover_or_none() {
+    let (_dir, _listing, id) = album("tag-editor-shared-cover");
+    assert_eq!(shared_cover(&id), Err(TagEditorError::NotOpen));
+    open(&id, false).expect("opens");
+    assert_eq!(shared_cover(&id), Ok(None));
+    let cover = Cover {
+        mime: "image/png".to_string(),
+        data: vec![1, 2, 3].into(),
+    };
+    edit(
+        &id,
+        vec![TagEdit::Cover {
+            edit: CoverEdit::Set(cover.clone()),
+        }],
+    )
+    .expect("edits");
+    assert_eq!(shared_cover(&id), Ok(Some(cover)));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn shared_cover_is_none_when_the_files_differ() {
+    let (dir, _listing, id) = album("tag-editor-differing-cover");
+    let mut one = tags(&[(TagField::Title, "Alpha"), (TagField::Album, "Book")]);
+    one.cover = Some(Cover {
+        mime: "image/png".to_string(),
+        data: vec![9; 4].into(),
+    });
+    write_tags(&dir.join("a.mp3"), &one, &WriteOptions::default()).expect("writes the cover");
+    open(&id, false).expect("opens");
+    // One file has a cover, the others none.
+    assert_eq!(shared_cover(&id), Ok(None));
     close(&id);
     close_rename(&id);
 }

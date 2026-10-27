@@ -52,6 +52,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     edit: vi.fn(() => Promise.resolve()),
     coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [{ fileName: 'front.jpg', size: 10 }] })),
     coverFromFile: vi.fn(() => Promise.resolve()),
+    coverImage: vi.fn(() => Promise.resolve(null)),
   }
   const mounted = await mountInto(TagsTab, { state: state as unknown as TagEditorState })
   cleanup = mounted.cleanup

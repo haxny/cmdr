@@ -46,6 +46,9 @@
             const match = TAB_COMMANDS.find(({ command }) => eventMatchesCommand(e, command))
             if (!match) return
             claimKey(e)
+            // A box still in focus commits its text first, as a click on the tab strip would.
+            const focused = document.activeElement
+            if (focused instanceof HTMLElement && focused.closest('#sheet-panel-tags')) focused.blur()
             select(match.tab, false)
         }
         window.addEventListener('keydown', onWindowKeydown, true)

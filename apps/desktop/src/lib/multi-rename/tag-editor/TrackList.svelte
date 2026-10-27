@@ -14,15 +14,15 @@
     interface Props {
         tracks: TrackRow[]
         editable: boolean
-        onEdit: (edits: TagEdit[]) => void
+        onEdit: (edits: TagEdit[]) => void | Promise<void>
     }
 
     const { tracks, editable, onEdit }: Props = $props()
 
     const showNumber = $derived(tracks.length !== 1)
 
-    function setOne(path: string, field: 'title' | 'track', text: string): void {
-        onEdit([{ kind: 'setOne', path, field, values: parseFieldText(field, text) }])
+    function setOne(path: string, field: 'title' | 'track', text: string): void | Promise<void> {
+        return onEdit([{ kind: 'setOne', path, field, values: parseFieldText(field, text) }])
     }
 </script>
 
@@ -53,7 +53,7 @@
                                 value={track.track ?? ''}
                                 ariaLabel={tString('multiRename.tags.track.numberLabel', { fileName: track.fileName })}
                                 disabled={!editableRow}
-                                onCommit={(text) => { setOne(track.path, 'track', text) }}
+                                onCommit={(text) => setOne(track.path, 'track', text)}
                             />
                         </td>
                     {/if}
@@ -63,7 +63,7 @@
                             value={track.title ?? ''}
                             ariaLabel={tString('multiRename.tags.track.titleLabel', { fileName: track.fileName })}
                             disabled={!editableRow}
-                            onCommit={(text) => { setOne(track.path, 'title', text) }}
+                            onCommit={(text) => setOne(track.path, 'title', text)}
                         />
                     </td>
                     <td class="length">{formatTrackLength(track.durationMs)}</td>

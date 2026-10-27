@@ -9,6 +9,7 @@ import {
   applyTags,
   closeTagEditor,
   editTags,
+  getCoverImage,
   getTagChanges,
   listCoverCandidates,
   openTagEditor,
@@ -17,6 +18,7 @@ import {
   undoTagApply,
   type ApplyRequest,
   type CoverCandidate,
+  type CoverImage,
   type FileChangeView,
   type RestoreReport,
   type TagApplyReport,
@@ -42,6 +44,10 @@ export interface TagEditorState {
   open(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
   tool(tool: TagTool): Promise<void>
+  /** Resolves when every call now out has answered (an edit a blur just started included). */
+  settled(): Promise<void>
+  /** The cover every file shares, with its bytes; `null` when there is none, the files differ, or it can't be read. */
+  coverImage(): Promise<CoverImage | null>
   /** The images in the session's folder a cover can come from. */
   coverCandidates(): Promise<TagStateResult<CoverCandidate[]>>
   /** Gives every file the folder image `fileName` as its cover. */
@@ -58,6 +64,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let view = $state.raw<TagEditorView | null>(null)
   let error = $state.raw<TagStateError | null>(null)
   let pending = $state(0)
+  const inFlight = new Set<Promise<unknown>>()
   let opening: Promise<void> | null = null
   let started = false
   /** Set by `close()`: a reply that lands after it is dropped. */
@@ -68,11 +75,14 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   /** Runs one backend call with `busy` on, keeps its error, and hands the result back. */
   async function track<T>(call: () => Promise<TagEditorResult<T>>): Promise<TagEditorResult<T>> {
     pending += 1
+    const running = call()
+    inFlight.add(running)
     try {
-      const res = await call()
+      const res = await running
       error = res.ok ? null : res.error
       return res
     } finally {
+      inFlight.delete(running)
       pending -= 1
     }
   }
@@ -104,6 +114,16 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
     tool: (tool) => replaceView(() => runTagTool(sessionId, tool)),
+    settled: async () => {
+      while (inFlight.size > 0) await Promise.allSettled([...inFlight])
+    },
+    async coverImage() {
+      const res = await getCoverImage(sessionId)
+      if (res.ok) return res.value
+      // Only the thumbnail is missing; the kind is no path or value.
+      log.warn("couldn't read the cover image: {kind}", { kind: res.error.kind })
+      return null
+    },
     coverCandidates: () => track(() => listCoverCandidates(sessionId)),
     coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
     changes: () => track(() => getTagChanges(sessionId)),

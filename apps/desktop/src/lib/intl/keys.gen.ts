@@ -2983,6 +2983,8 @@ export type MessageKey =
   | 'multiRename.tabs.label'
   | 'multiRename.tabs.rename'
   | 'multiRename.tabs.tags'
+  | 'multiRename.tags.clearRow'
+  | 'multiRename.tags.clearRowLabel'
   | 'multiRename.tags.col.fileName'
   | 'multiRename.tags.col.length'
   | 'multiRename.tags.col.number'

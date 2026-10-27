@@ -22,7 +22,8 @@ const ROWS: SharedRow[] = [
 ]
 
 async function mountTable(over: { rows?: SharedRow[]; editable?: boolean } = {}) {
-  const onEdit = vi.fn()
+  // An edit stays out until the test says otherwise, as one does until the backend answers.
+  const onEdit = vi.fn(() => new Promise<void>(() => {}))
   const mounted = await mountInto(SharedFieldsTable, {
     rows: over.rows ?? ROWS,
     editable: over.editable ?? true,
@@ -98,13 +99,59 @@ describe('SharedFieldsTable', () => {
     expect(esc.defaultPrevented).toBe(false)
   })
 
-  it('does not send the same text twice (Enter, then blur)', async () => {
-    const { root, onEdit } = await mountTable()
-    const album = byId<HTMLInputElement>(root, 'tag-field-album')
+  it('does not send the same text twice while the first send is on its way (Enter, then blur)', async () => {
+    const onEdit = vi.fn(() => new Promise<void>(() => {}))
+    const mounted = await mountInto(SharedFieldsTable, { rows: ROWS, editable: true, onEdit })
+    cleanup = mounted.cleanup
+    const album = byId<HTMLInputElement>(mounted.root, 'tag-field-album')
     await typeInto(album, 'Dracula')
     await press(album, 'Enter')
     await leave(album)
     expect(onEdit).toHaveBeenCalledTimes(1)
+  })
+
+  it('a refused edit can be retried with the same text', async () => {
+    // The model never changes (the edit failed), so the box still differs from it once the call has answered.
+    const onEdit = vi.fn(() => Promise.resolve())
+    const mounted = await mountInto(SharedFieldsTable, { rows: ROWS, editable: true, onEdit })
+    cleanup = mounted.cleanup
+    const album = byId<HTMLInputElement>(mounted.root, 'tag-field-album')
+    await typeInto(album, 'Dracula')
+    await leave(album)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    album.focus()
+    await leave(album)
+    expect(onEdit).toHaveBeenCalledTimes(2)
+  })
+
+  it('a single-line value is trimmed', async () => {
+    const { root, onEdit } = await mountTable()
+    await typeInto(byId<HTMLInputElement>(root, 'tag-field-album'), '  Dracula ')
+    await leave(byId(root, 'tag-field-album'))
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
+  })
+
+  it('clear_for_all_files_sends_set_all_empty', async () => {
+    const { root, onEdit } = await mountTable()
+    const clear = (label: string): HTMLButtonElement => {
+      const found = root.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+      if (!found) throw new Error(label)
+      return found
+    }
+    // A «multiple values» row can be cleared too.
+    clear('Clear Album for all files').click()
+    clear('Clear Artist for all files').click()
+    expect(onEdit.mock.calls.map((c) => c[0])).toEqual([
+      [{ kind: 'setAll', field: 'album', values: [] }],
+      [{ kind: 'setAll', field: 'artist', values: [] }],
+    ])
+    // Nothing to clear where no file has the field.
+    expect(clear('Clear Comment for all files').disabled).toBe(true)
+  })
+
+  it('clear is disabled when read-only', async () => {
+    const { root } = await mountTable({ editable: false })
+    for (const button of root.querySelectorAll<HTMLButtonElement>('button')) expect(button.disabled).toBe(true)
   })
 
   it('comment_and_description_are_textareas_with_diacritics_allowed', async () => {

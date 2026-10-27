@@ -19,6 +19,7 @@ async function mountPanel(cover: CoverSummary, editable = true): Promise<HTMLEle
     cover,
     editable,
     listCandidates: () => Promise.resolve([{ fileName: 'cover.jpg', size: 2048 }]),
+    loadImage: () => Promise.resolve(null),
     onPick: () => {},
     onEdit: () => {},
   })

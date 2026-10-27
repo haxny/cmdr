@@ -59,6 +59,7 @@ async function mountTab(over: Partial<TagEditorState>): Promise<HTMLElement> {
     edit: vi.fn(() => Promise.resolve()),
     coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
     coverFromFile: vi.fn(() => Promise.resolve()),
+    coverImage: vi.fn(() => Promise.resolve(null)),
     ...over,
   } as TagEditorState
   const root = document.createElement('div')

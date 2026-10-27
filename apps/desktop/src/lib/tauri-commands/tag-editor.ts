@@ -5,6 +5,7 @@ import {
   commands,
   type ApplyRequest,
   type CoverCandidate,
+  type Cover_Serialize,
   type FileChangeView,
   type RestoreReport,
   type TagApplyReport,
@@ -17,6 +18,7 @@ import {
 export type {
   ApplyRequest,
   CoverCandidate,
+  Cover_Serialize as CoverImage,
   FileChangeView,
   RestoreReport,
   TagApplyReport,
@@ -82,4 +84,9 @@ export async function listCoverCandidates(sessionId: string): Promise<TagEditorR
 /** Gives every file the image `fileName` of the session's folder as its cover (a plain name, at most 10 MiB). */
 export async function setCoverFromFile(sessionId: string, fileName: string): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.setCoverFromFile(sessionId, fileName))
+}
+
+/** The cover every file shares, with its bytes (for a thumbnail), or `null` when there is none or the files differ. */
+export async function getCoverImage(sessionId: string): Promise<TagEditorResult<CoverImage | null>> {
+  return result(await commands.getCoverImage(sessionId))
 }

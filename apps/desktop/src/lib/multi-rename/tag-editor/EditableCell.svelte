@@ -18,8 +18,8 @@
         placeholder?: string
         multiline?: boolean
         disabled?: boolean
-        /** Called with the typed text, only when it changed. */
-        onCommit: (text: string) => void
+        /** Called with the typed text, only when it changed. A returned promise settles when the model has answered. */
+        onCommit: (text: string) => void | Promise<void>
     }
 
     const { id, value, ariaLabel, placeholder, multiline = false, disabled = false, onCommit }: Props = $props()
@@ -40,7 +40,11 @@
     function commit(): void {
         if (draft === committed) return
         committed = draft
-        onCommit(draft)
+        // Once the model has answered, the box is compared with what it holds: a refused edit leaves the old
+        // text there, so retyping the same text sends it again.
+        void Promise.resolve(onCommit(draft)).finally(() => {
+            committed = value
+        })
     }
 
     function onkeydown(e: KeyboardEvent): void {

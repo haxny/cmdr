@@ -11,8 +11,11 @@ vi.mock('#lib/logging/logger.js', () => ({
 
 import { createDiscardGuard } from './discard-guard'
 
-function tagsWith(view: { dirty: boolean } | null): TagEditorState {
-  return { view } as unknown as TagEditorState
+function tagsWith(
+  view: { dirty: boolean } | null,
+  over: { busy?: boolean; settled?: () => Promise<void> } = {},
+): TagEditorState {
+  return { view, busy: false, settled: () => Promise.resolve(), ...over } as unknown as TagEditorState
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -73,10 +76,12 @@ describe('createDiscardGuard', () => {
     const guard = createDiscardGuard(tagsWith({ dirty: true }), onClose)
     guard.close()
     guard.close()
+    await settle()
     expect(confirmDialog).toHaveBeenCalledTimes(1)
     answer(false)
     await settle()
     guard.close()
+    await settle()
     expect(confirmDialog).toHaveBeenCalledTimes(2)
   })
 
@@ -94,5 +99,41 @@ describe('createDiscardGuard', () => {
     expect(confirmDialog).not.toHaveBeenCalled()
     confirmDialog.mockResolvedValue(false)
     expect(await createDiscardGuard(tagsWith({ dirty: true }), vi.fn()).confirm()).toBe(false)
+  })
+
+  it('an edit still on its way counts as unwritten: the question waits for it, then decides on what it left', async () => {
+    let finish: () => void = () => {}
+    const tags = {
+      view: { dirty: false } as { dirty: boolean },
+      busy: true,
+      settled: () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        }),
+    } as unknown as TagEditorState
+    confirmDialog.mockResolvedValue(false)
+    const onClose = vi.fn()
+    const guard = createDiscardGuard(tags, onClose)
+    expect(guard.dirty).toBe(true)
+    guard.close()
+    await settle()
+    // Closing waits for the edit; nothing has closed or been asked yet.
+    expect(onClose).not.toHaveBeenCalled()
+    expect(confirmDialog).not.toHaveBeenCalled()
+    // The edit landed and left the tags unwritten: now it asks.
+    ;(tags.view as { dirty: boolean }).dirty = true
+    finish()
+    await settle()
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('an edit on its way that leaves nothing unwritten closes without a question', async () => {
+    const tags = tagsWith({ dirty: false }, { busy: true })
+    const onClose = vi.fn()
+    createDiscardGuard(tags, onClose).close()
+    await settle()
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

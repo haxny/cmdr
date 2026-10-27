@@ -57,16 +57,17 @@
         {/if}
         <div class="columns">
             <div class="main">
-                <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits) => void tags.edit(edits)} />
-                <TrackList tracks={view.tracks} editable={view.editable} onEdit={(edits) => void tags.edit(edits)} />
+                <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits) => tags.edit(edits)} />
+                <TrackList tracks={view.tracks} editable={view.editable} onEdit={(edits) => tags.edit(edits)} />
             </div>
             <aside class="side">
                 <CoverPanel
                     cover={view.cover}
                     editable={view.editable}
                     {listCandidates}
+                    loadImage={() => tags.coverImage()}
                     onPick={(fileName) => void tags.coverFromFile(fileName)}
-                    onEdit={(edits) => void tags.edit(edits)}
+                    onEdit={(edits) => tags.edit(edits)}
                 />
             </aside>
         </div>

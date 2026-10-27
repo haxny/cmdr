@@ -1179,10 +1179,12 @@ export {
   closeTagEditor,
   listCoverCandidates,
   setCoverFromFile,
+  getCoverImage,
 } from './tag-editor'
 export type {
   ApplyRequest,
   CoverCandidate,
+  CoverImage,
   FileChangeView,
   RestoreReport,
   TagApplyReport,

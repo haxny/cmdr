@@ -11,7 +11,7 @@ import type { TagEditorState } from './tag-editor-state.svelte'
 const log = getAppLogger('multiRename')
 
 export interface DiscardGuard {
-  /** There are tag edits not yet written to the files. */
+  /** There are tag edits not yet written to the files, or one still on its way. */
   readonly dirty: boolean
   /** Resolves true when the sheet may go on to close or rename: nothing to lose, or the user chose Discard. */
   confirm(): Promise<boolean>
@@ -24,6 +24,8 @@ export function createDiscardGuard(tags: TagEditorState | null, onClose: () => v
   let asking = false
 
   async function confirm(): Promise<boolean> {
+    // A cell that just lost focus has an edit on its way; the question is about what it leaves.
+    await tags?.settled()
     if (tags?.view?.dirty !== true) return true
     return confirmDialog(
       tString('multiRename.tags.discard.message'),
@@ -32,13 +34,13 @@ export function createDiscardGuard(tags: TagEditorState | null, onClose: () => v
     )
   }
 
-  return {
+  const guard: DiscardGuard = {
     get dirty() {
-      return tags?.view?.dirty === true
+      return tags !== null && (tags.busy || tags.view?.dirty === true)
     },
     confirm,
     close() {
-      if (tags?.view?.dirty !== true) {
+      if (!guard.dirty) {
         onClose()
         return
       }
@@ -57,4 +59,5 @@ export function createDiscardGuard(tags: TagEditorState | null, onClose: () => v
         })
     },
   }
+  return guard
 }

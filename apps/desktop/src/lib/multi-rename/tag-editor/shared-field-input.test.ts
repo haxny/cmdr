@@ -12,6 +12,8 @@ describe('parseFieldText', () => {
     ['genre', 'audiokniha', ['audiokniha']],
     ['album', 'Dracula; or, The Un-Dead', ['Dracula; or, The Un-Dead']],
     ['comment', 'Cte: Jan Novák; hudba: X', ['Cte: Jan Novák; hudba: X']],
+    ['album', '  Dracula  ', ['Dracula']],
+    ['comment', '  Čte: Jan  ', ['  Čte: Jan  ']],
     ['album', '', []],
     ['genre', '', []],
     ['album', '   ', []],

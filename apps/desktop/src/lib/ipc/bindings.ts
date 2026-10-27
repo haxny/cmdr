@@ -1655,6 +1655,20 @@ export const commands = {
   // Gives every file the cover image `file_name` of the session's folder.
   setCoverFromFile: (sessionId: string, fileName: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_file', { sessionId, fileName })),
+  // The cover every file shares (its type and bytes), or `None` when there is none or the files differ.
+  getCoverImage: (sessionId: string) =>
+    typedError<
+      {
+        // MIME type, like `image/jpeg`.
+        mime: string
+        /**
+         *  The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
+         *  every file given the same cover) is a pointer copy. Serialized as a byte array.
+         */
+        data: number[]
+      } | null,
+      TagEditorError
+    >(__TAURI_INVOKE('get_cover_image', { sessionId })),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**

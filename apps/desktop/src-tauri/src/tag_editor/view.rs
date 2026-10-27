@@ -198,7 +198,7 @@ fn cover_summary(files: &[FileTags]) -> CoverSummary {
 
 /// Equal covers: both absent, or the same MIME and the same bytes (a shared pointer settles it
 /// without comparing them).
-fn same_cover(a: &Option<Cover>, b: &Option<Cover>) -> bool {
+pub(super) fn same_cover(a: &Option<Cover>, b: &Option<Cover>) -> bool {
     match (a, b) {
         (None, None) => true,
         (Some(a), Some(b)) => a.mime == b.mime && (Arc::ptr_eq(&a.data, &b.data) || a.data == b.data),

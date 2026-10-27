@@ -22,9 +22,9 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, apply_tool};
-use cmdr_tags::{FileTags, TagError, TagField, format_of, read_duration, read_tags};
+use cmdr_tags::{Cover, FileTags, TagError, TagField, format_of, read_duration, read_tags};
 
-use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build};
+use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build, same_cover};
 use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
@@ -282,6 +282,21 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
         return Err(TagEditorError::NoSession);
     }
     Ok(view)
+}
+
+/// The cover every readable file shares (its edited tags), or `None` when no file has one,
+/// there are no readable files, or the files' covers differ. Needs an open session.
+pub fn shared_cover(session_id: &str) -> Result<Option<Cover>, TagEditorError> {
+    with_session(session_id, |layout, session| {
+        let (_, edited) = readable(layout, session);
+        let Some((first, rest)) = edited.split_first() else {
+            return Ok(None);
+        };
+        if rest.iter().any(|file| !same_cover(&file.cover, &first.cover)) {
+            return Ok(None);
+        }
+        Ok(first.cover.clone())
+    })
 }
 
 /// Drops entries whose path isn't in the layout any more.

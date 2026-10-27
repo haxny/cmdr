@@ -2,6 +2,9 @@
  * The pure half of the shared-fields table: text typed into a field ⇄ the values the field holds, and a track's
  * length as text. The «multiple values» rule lives in the components (an untouched row sends nothing); this only
  * says what a row looks like and what typed text means.
+ *
+ * ❗ A multi-value field whose single value contains "; " is split into two values when its row is committed again:
+ * the text form can't tell the two apart. That is inherent to showing several values in one box.
  */
 
 import type { SharedValue, TagField } from '#lib/ipc/bindings.js'
@@ -27,11 +30,12 @@ export function isMultiLineField(field: TagField): boolean {
 
 /**
  * The values `text` stands for. A multi-value field splits on "; " and trims each value; any other field keeps its
- * text whole as one value. Nothing left (blank text) is `[]`, which removes the field.
+ * text as one value (trimmed, except the prose fields Comment and Description, which are kept as typed). Nothing left (blank text) is `[]`, which removes the field.
  */
 export function parseFieldText(field: TagField, text: string): string[] {
   if (text.trim() === '') return []
-  if (!MULTI_FIELDS.has(field)) return [text]
+  if (isMultiLineField(field)) return [text]
+  if (!MULTI_FIELDS.has(field)) return [text.trim()]
   return text
     .split(MULTI_SEPARATOR)
     .map((value) => value.trim())

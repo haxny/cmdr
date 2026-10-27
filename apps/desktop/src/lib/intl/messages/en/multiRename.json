@@ -1279,5 +1279,16 @@
   "multiRename.tags.discard.confirm": "Discard",
   "@multiRename.tags.discard.confirm": {
     "description": "Button that throws away the unwritten tag edits and closes the Multi-Rename sheet."
+  },
+  "multiRename.tags.clearRow": "Clear",
+  "@multiRename.tags.clearRow": {
+    "description": "Small button at the end of a row of the shared tags table in the Tags tab of Multi-Rename: removes that tag from every selected file."
+  },
+  "multiRename.tags.clearRowLabel": "Clear {field} for all files",
+  "@multiRename.tags.clearRowLabel": {
+    "description": "Accessible name of the Clear button of a row in the Tags tab of Multi-Rename. Only read aloud by screen readers.",
+    "placeholders": {
+      "field": "the name of the tag the row edits, like Album or Genre"
+    }
   }
 }

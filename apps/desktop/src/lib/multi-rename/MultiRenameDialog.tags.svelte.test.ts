@@ -7,6 +7,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import MultiRenameDialog from './MultiRenameDialog.svelte'
+import { setLastMultiRenameRun } from './last-run.svelte'
+import { typeInto, leave } from './tag-editor/tag-cell.test-helper'
 
 const flags = vi.hoisted(() => ({ tagEditor: false }))
 const ipc = vi.hoisted(() => ({
@@ -26,6 +28,7 @@ const ipc = vi.hoisted(() => ({
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
   applyMultiRename: vi.fn(),
+  rollbackOperation: vi.fn(),
 }))
 const confirmDialog = vi.hoisted(() => vi.fn())
 vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog }))
@@ -347,6 +350,147 @@ describe('MultiRenameDialog Tags tab', () => {
       await settle()
       expect(confirmDialog).not.toHaveBeenCalled()
       expect(ipc.applyMultiRename).toHaveBeenCalledTimes(1)
+    })
+
+    /** A view with one shared row, so a cell can be typed in; the edit's answer is held until `release()`. */
+    function holdEdits(): { release: () => void } {
+      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple' }] }
+      ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
+      let release: () => void = () => {}
+      ipc.editTags.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            release = () => {
+              resolve({ ok: true, value: { ...base, dirty: true } })
+            }
+          }),
+      )
+      return {
+        release: () => {
+          release()
+        },
+      }
+    }
+
+    async function typeThenBlur(): Promise<void> {
+      flags.tagEditor = true
+      const album = document.querySelector<HTMLInputElement>('#tag-field-album')
+      if (!album) throw new Error('no album box')
+      await typeInto(album, 'Dracula')
+      await leave(album)
+    }
+
+    it('Cancel right after typing (edit still pending) asks once the edit has landed', async () => {
+      const { release } = holdEdits()
+      confirmDialog.mockResolvedValue(false)
+      const onClose = vi.fn()
+      flags.tagEditor = true
+      await mountSheet(onClose)
+      tab('Tags').click()
+      await settle()
+      await typeThenBlur()
+      expect(ipc.editTags).toHaveBeenCalledTimes(1)
+      button('Cancel').click()
+      await settle()
+      expect(onClose).not.toHaveBeenCalled()
+      expect(confirmDialog).not.toHaveBeenCalled()
+      release()
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(onClose).not.toHaveBeenCalled()
+    })
+
+    it('Rename right after typing (edit still pending) asks once the edit has landed', async () => {
+      const { release } = holdEdits()
+      ipc.previewMultiRename.mockResolvedValue({
+        ok: true,
+        value: {
+          previewId: 1,
+          counts: { ready: 1, unchanged: 0, problems: 0, reading: 0 },
+          rows: [
+            {
+              row: 0,
+              oldName: 'a.mp3',
+              newName: 'b.mp3',
+              status: { type: 'ready' },
+              iconId: 'ext:mp3',
+              isDirectory: false,
+            },
+          ],
+        },
+      })
+      ipc.applyMultiRename.mockResolvedValue({ ok: true, value: { operationId: 'op', renaming: 1 } })
+      confirmDialog.mockResolvedValue(false)
+      flags.tagEditor = true
+      await mountSheet()
+      tab('Tags').click()
+      await settle()
+      await typeThenBlur()
+      button('Rename 1').click()
+      await settle()
+      release()
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+    })
+
+    it('Undo rename with unwritten tag edits asks first: declining rolls nothing back, accepting does', async () => {
+      setLastMultiRenameRun({ operationId: 'op9', renaming: 3 })
+      ipc.rollbackOperation.mockResolvedValue({ inverseOpId: 'inv' })
+      confirmDialog.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      const onUndoStarted = vi.fn()
+      flags.tagEditor = true
+      ipc.openTagEditor.mockResolvedValue({ ok: true, value: DIRTY_VIEW })
+      const target = document.createElement('div')
+      document.body.appendChild(target)
+      mount(MultiRenameDialog, {
+        target,
+        props: {
+          session: { sessionId: 'S', count: 2 },
+          nothingSelected: false,
+          onApplied: () => {},
+          onUndoStarted,
+          onClose: () => {},
+        },
+      })
+      await settle()
+      tab('Tags').click()
+      await settle()
+      button('Undo rename').click()
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(ipc.rollbackOperation).not.toHaveBeenCalled()
+      button('Undo rename').click()
+      await settle()
+      expect(ipc.rollbackOperation).toHaveBeenCalledWith('op9')
+      expect(onUndoStarted).toHaveBeenCalledTimes(1)
+      setLastMultiRenameRun(null)
+    })
+
+    it('⌘2 then ⌘1 while a Tags box is focused commits its text first', async () => {
+      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple' }] }
+      ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
+      ipc.editTags.mockResolvedValue({ ok: true, value: { ...base, dirty: true } })
+      flags.tagEditor = true
+      const spy = vi.spyOn(globalThis, 'navigator', 'get')
+      spy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
+      try {
+        await mountSheet()
+        tab('Tags').click()
+        await settle()
+        const album = document.querySelector<HTMLInputElement>('#tag-field-album')
+        if (!album) throw new Error('no album box')
+        await typeInto(album, 'Dracula')
+        expect(ipc.editTags).not.toHaveBeenCalled()
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', { key: '1', code: 'Digit1', metaKey: true, bubbles: true, cancelable: true }),
+        )
+        await settle()
+        expect(tab('Rename').getAttribute('aria-selected')).toBe('true')
+        expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
+      } finally {
+        spy.mockRestore()
+      }
     })
   })
 })

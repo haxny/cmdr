@@ -15,6 +15,7 @@ const ipc = vi.hoisted(() => ({
   closeTagEditor: vi.fn(),
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
+  getCoverImage: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
 const warn = vi.hoisted(() => vi.fn())
@@ -250,5 +251,41 @@ describe('createTagEditorState', () => {
     await state.coverFromFile('big.jpg')
     expect(state.view).toBe(EDITED)
     expect(state.error).toEqual({ kind: 'coverTooLarge' })
+  })
+
+  it('settled waits for every call now out, busy included', async () => {
+    let answer: (res: unknown) => void = () => {}
+    ipc.editTags.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve
+        }),
+    )
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    const state = createTagEditorState('S')
+    await state.open()
+    const edit = state.edit([])
+    expect(state.busy).toBe(true)
+    let settled = false
+    void state.settled().then(() => {
+      settled = true
+    })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    answer({ ok: true, value: EDITED })
+    await edit
+    await state.settled()
+    expect(settled).toBe(true)
+    expect(state.busy).toBe(false)
+  })
+
+  it('coverImage returns the bytes, or null (logged by kind) without touching busy or the error', async () => {
+    const state = createTagEditorState('S')
+    ipc.getCoverImage.mockResolvedValue({ ok: true, value: { mime: 'image/png', data: [1] } })
+    expect(await state.coverImage()).toEqual({ mime: 'image/png', data: [1] })
+    ipc.getCoverImage.mockResolvedValue({ ok: false, error: { kind: 'noSession' } })
+    expect(await state.coverImage()).toBeNull()
+    expect(state.error).toBeNull()
+    expect(warn).toHaveBeenCalled()
   })
 })

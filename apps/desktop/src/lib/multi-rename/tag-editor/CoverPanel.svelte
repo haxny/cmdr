@@ -4,10 +4,11 @@
      * folder…" lists the pictures beside the files and gives the chosen one to every file; "Remove" takes the cover
      * out of every file. The view carries no picture bytes, so there is no thumbnail yet.
      */
+    import { onDestroy } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { CoverSummary } from '#lib/ipc/bindings.js'
     import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
-    import type { CoverCandidate, TagEdit } from '#lib/tauri-commands/index.js'
+    import type { CoverCandidate, CoverImage, TagEdit } from '#lib/tauri-commands/index.js'
     import { formatFileSizeWithFormat } from '#lib/units/byte-size.js'
     import Button from '#lib/ui/Button.svelte'
 
@@ -16,11 +17,13 @@
         editable: boolean
         /** The folder's pictures, or `null` when listing them failed. */
         listCandidates: () => Promise<CoverCandidate[] | null>
+        /** The shared cover's bytes for the thumbnail; `null` when it can't be had. */
+        loadImage: () => Promise<CoverImage | null>
         onPick: (fileName: string) => void
         onEdit: (edits: TagEdit[]) => void
     }
 
-    const { cover, editable, listCandidates, onPick, onEdit }: Props = $props()
+    const { cover, editable, listCandidates, loadImage, onPick, onEdit }: Props = $props()
 
     type Picker = { status: 'loading' } | { status: 'failed' } | { status: 'list'; candidates: CoverCandidate[] }
     let picker = $state<Picker | null>(null)
@@ -41,15 +44,56 @@
         return tString('multiRename.tags.cover.details', { mime: cover.mime, sizeText: sizeText(cover.bytes) })
     })
 
+    /** Which listing the picker waits for: an answer to an earlier one (the button pressed again) is dropped. */
+    let pickerAsk = 0
+
     async function openPicker(): Promise<void> {
+        const ask = ++pickerAsk
         if (picker !== null) {
             picker = null
             return
         }
         picker = { status: 'loading' }
         const candidates = await listCandidates()
+        if (ask !== pickerAsk) return
         picker = candidates === null ? { status: 'failed' } : { status: 'list', candidates }
     }
+
+    /** The thumbnail: a blob URL of the shared cover, replaced (and the old one revoked) when the cover changes. */
+    let thumbnail = $state<string | null>(null)
+    let thumbnailUrl: string | null = null
+    let thumbnailAsk = 0
+
+    function showThumbnail(url: string | null): void {
+        if (thumbnailUrl !== null) URL.revokeObjectURL(thumbnailUrl)
+        thumbnailUrl = url
+        thumbnail = url
+    }
+
+    /** Changes when the shared cover does; the view carries no bytes, so this stands for them. */
+    const coverKey = $derived(
+        cover.kind === 'same' ? `${cover.mime}|${String(cover.bytes)}|${String(cover.width)}|${String(cover.height)}` : null,
+    )
+
+    $effect(() => {
+        const key = coverKey
+        const ask = ++thumbnailAsk
+        if (key === null) {
+            showThumbnail(null)
+            return
+        }
+        void loadImage().then((image) => {
+            if (ask !== thumbnailAsk) return
+            showThumbnail(
+                image === null ? null : URL.createObjectURL(new Blob([Uint8Array.from(image.data)], { type: image.mime })),
+            )
+        })
+    })
+
+    onDestroy(() => {
+        thumbnailAsk++
+        showThumbnail(null)
+    })
 
     function pick(fileName: string): void {
         picker = null
@@ -59,6 +103,9 @@
 
 <section class="cover" aria-labelledby="tag-cover-heading">
     <h3 id="tag-cover-heading">{tString('multiRename.tags.cover.label')}</h3>
+    {#if thumbnail !== null}
+        <img class="thumbnail" src={thumbnail} alt="" />
+    {/if}
     <p class="summary">{summary}</p>
     <div class="actions">
         <Button disabled={!editable} onclick={() => { void openPicker() }}>
@@ -101,6 +148,14 @@
     h3 {
         margin: 0;
         font-size: var(--font-size-md);
+    }
+
+    .thumbnail {
+        max-width: 100%;
+        max-height: 200px;
+        object-fit: contain;
+        align-self: flex-start;
+        border-radius: var(--radius-sm);
     }
 
     .summary {

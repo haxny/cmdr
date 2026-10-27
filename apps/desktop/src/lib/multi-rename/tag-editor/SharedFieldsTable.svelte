@@ -7,13 +7,14 @@
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { SharedRow, TagField } from '#lib/ipc/bindings.js'
     import type { TagEdit } from '#lib/tauri-commands/index.js'
+    import Button from '#lib/ui/Button.svelte'
     import EditableCell from './EditableCell.svelte'
     import { formatFieldValue, isMultiLineField, parseFieldText } from './shared-field-input'
 
     interface Props {
         rows: SharedRow[]
         editable: boolean
-        onEdit: (edits: TagEdit[]) => void
+        onEdit: (edits: TagEdit[]) => void | Promise<void>
     }
 
     const { rows, editable, onEdit }: Props = $props()
@@ -36,7 +37,9 @@
         www: 'multiRename.tags.field.www',
     }
 
-    const shown = $derived(rows.map((row) => ({ field: row.field, ...formatFieldValue(row.value) })))
+    const shown = $derived(
+        rows.map((row) => ({ field: row.field, empty: row.value === 'empty', ...formatFieldValue(row.value) })),
+    )
 </script>
 
 <div class="shared" role="group" aria-label={tString('multiRename.tags.shared.label')}>
@@ -50,17 +53,23 @@
             placeholder={row.multiple ? tString('multiRename.tags.multipleValues') : undefined}
             multiline={isMultiLineField(row.field)}
             disabled={!editable}
-            onCommit={(text) => {
-                onEdit([{ kind: 'setAll', field: row.field, values: parseFieldText(row.field, text) }])
-            }}
+            onCommit={(text) => onEdit([{ kind: 'setAll', field: row.field, values: parseFieldText(row.field, text) }])}
         />
+        <Button
+            size="mini"
+            disabled={!editable || row.empty}
+            aria-label={tString('multiRename.tags.clearRowLabel', { field: tString(LABELS[row.field]) })}
+            onclick={() => { void onEdit([{ kind: 'setAll', field: row.field, values: [] }]) }}
+        >
+            {tString('multiRename.tags.clearRow')}
+        </Button>
     {/each}
 </div>
 
 <style>
     .shared {
         display: grid;
-        grid-template-columns: max-content minmax(0, 1fr);
+        grid-template-columns: max-content minmax(0, 1fr) max-content;
         gap: var(--spacing-xs) var(--spacing-md);
         align-items: center;
     }

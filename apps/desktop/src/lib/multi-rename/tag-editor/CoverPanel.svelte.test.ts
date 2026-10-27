@@ -1,9 +1,9 @@
 /** The cover panel: the shared cover, «multiple covers» or none; the folder picker; Remove; read-only locks both. */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CoverSummary } from '#lib/ipc/bindings.js'
 import CoverPanel from './CoverPanel.svelte'
 import { mountInto } from './tag-cell.test-helper'
-import { tick } from 'svelte'
+import { mount, tick, unmount } from 'svelte'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'binary' }))
 
@@ -16,12 +16,18 @@ afterEach(() => {
 const SAME: CoverSummary = { kind: 'same', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400 }
 
 async function mountPanel(
-  over: { cover?: CoverSummary; editable?: boolean; candidates?: { fileName: string; size: number }[] | null } = {},
+  over: {
+    cover?: CoverSummary
+    editable?: boolean
+    candidates?: { fileName: string; size: number }[] | null
+    loadImage?: () => Promise<{ mime: string; data: number[] } | null>
+  } = {},
 ) {
   const props = {
     cover: over.cover ?? SAME,
     editable: over.editable ?? true,
     listCandidates: vi.fn(() => Promise.resolve(over.candidates === undefined ? [] : over.candidates)),
+    loadImage: over.loadImage ?? vi.fn(() => Promise.resolve(null)),
     onPick: vi.fn(),
     onEdit: vi.fn(),
   }
@@ -106,5 +112,108 @@ describe('CoverPanel', () => {
     expect(button(root, 'Remove').disabled).toBe(true)
     button(root, 'From folder').click()
     expect(listCandidates).not.toHaveBeenCalled()
+  })
+
+  describe('thumbnail', () => {
+    const urls = { created: [] as string[], revoked: [] as string[] }
+    beforeEach(() => {
+      urls.created = []
+      urls.revoked = []
+      vi.stubGlobal('URL', {
+        ...URL,
+        createObjectURL: vi.fn(() => {
+          const url = `blob:cover-${String(urls.created.length)}`
+          urls.created.push(url)
+          return url
+        }),
+        revokeObjectURL: vi.fn((url: string) => urls.revoked.push(url)),
+      })
+    })
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('shows the shared cover as a blob URL and revokes it on unmount', async () => {
+      const loadImage = vi.fn(() => Promise.resolve({ mime: 'image/jpeg', data: [1, 2, 3] }))
+      const { root } = await mountPanel({ loadImage })
+      await settle()
+      expect(loadImage).toHaveBeenCalledTimes(1)
+      expect(root.querySelector('img.thumbnail')?.getAttribute('src')).toBe('blob:cover-0')
+      cleanup?.()
+      cleanup = undefined
+      expect(urls.revoked).toEqual(['blob:cover-0'])
+    })
+
+    it('has no thumbnail for no cover or multiple covers, and asks for none', async () => {
+      const loadImage = vi.fn(() => Promise.resolve(null))
+      const { root } = await mountPanel({ cover: { kind: 'multiple' }, loadImage })
+      await settle()
+      expect(loadImage).not.toHaveBeenCalled()
+      expect(root.querySelector('img')).toBeNull()
+    })
+
+    it('a changed cover replaces the thumbnail and revokes the old URL; a late old answer is dropped', async () => {
+      const answers: ((image: { mime: string; data: number[] }) => void)[] = []
+      const loadImage = vi.fn(
+        () => new Promise<{ mime: string; data: number[] } | null>((resolve) => answers.push(resolve)),
+      )
+      const props = $state({
+        cover: SAME,
+        editable: true,
+        listCandidates: () => Promise.resolve([]),
+        loadImage,
+        onPick: () => {},
+        onEdit: () => {},
+      })
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const panel = mount(CoverPanel, { target: root, props })
+      cleanup = () => {
+        void unmount(panel)
+        root.remove()
+      }
+      await settle()
+      props.cover = { ...SAME, bytes: 4096 }
+      await settle()
+      expect(answers).toHaveLength(2)
+      // The newer answer lands first, then the stale one.
+      answers[1]({ mime: 'image/jpeg', data: [2] })
+      await settle()
+      answers[0]({ mime: 'image/jpeg', data: [1] })
+      await settle()
+      expect(urls.created).toEqual(['blob:cover-0'])
+      expect(root.querySelector('img.thumbnail')?.getAttribute('src')).toBe('blob:cover-0')
+      // Removing the cover drops the thumbnail and revokes its URL.
+      props.cover = { kind: 'empty' }
+      await settle()
+      expect(root.querySelector('img')).toBeNull()
+      expect(urls.revoked).toEqual(['blob:cover-0'])
+    })
+  })
+
+  it('a second press while the first listing is out closes the picker for good', async () => {
+    let answer: (list: { fileName: string; size: number }[]) => void = () => {}
+    const props = {
+      cover: SAME,
+      editable: true,
+      listCandidates: vi.fn(
+        () =>
+          new Promise<{ fileName: string; size: number }[]>((resolve) => {
+            answer = resolve
+          }),
+      ),
+      loadImage: () => Promise.resolve(null),
+      onPick: () => {},
+      onEdit: () => {},
+    }
+    const second = await mountInto(CoverPanel, props)
+    cleanup = second.cleanup
+    button(second.root, 'From folder').click()
+    await settle()
+    button(second.root, 'From folder').click()
+    await settle()
+    answer([{ fileName: 'late.jpg', size: 1 }])
+    await settle()
+    expect(second.root.querySelector('.candidates')).toBeNull()
   })
 })

@@ -247,6 +247,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::tag_editor::close_tag_editor,
                     crate::commands::tag_editor::list_cover_candidates,
                     crate::commands::tag_editor::set_cover_from_file,
+                    crate::commands::tag_editor::get_cover_image,
                     crate::commands::rename::move_to_trash,
                     crate::commands::rename::get_trash_dir,
                     crate::commands::restricted_paths::get_restricted_paths,

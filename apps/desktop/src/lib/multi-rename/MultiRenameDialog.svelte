@@ -259,7 +259,7 @@
     /** Hands the last run's reversal to the queue, as the operation log's Roll back does. */
     async function undoLastRun(): Promise<void> {
         const run = lastRun
-        if (!run || undoing) return
+        if (!run || undoing || (guard.dirty && !(await guard.confirm()))) return
         undoing = true
         undoNotice = null
         try {

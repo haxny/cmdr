@@ -1123,5 +1123,13 @@
   "multiRename.tags.discard.confirm": "Discard",
   "@multiRename.tags.discard.confirm": {
     "sourceHash": "eb1a70e"
+  },
+  "multiRename.tags.clearRow": "Clear",
+  "@multiRename.tags.clearRow": {
+    "sourceHash": "83b12c2"
+  },
+  "multiRename.tags.clearRowLabel": "Clear {field} for all files",
+  "@multiRename.tags.clearRowLabel": {
+    "sourceHash": "ac716fc"
   }
 }
