@@ -382,12 +382,11 @@ to `"sandbox"` for local dev; the deployed worker overrides to `"live"` via a wr
 **Price IDs live in env vars (`PRICE_ID_*`)**, not code: sandbox and live Paddle accounts have different ids for the
 same products. `.dev.vars` carries sandbox ids, wrangler secrets carry live ids.
 
-**Paddle as Merchant of Record** (not Stripe, Gumroad, LemonSqueezy, or Polar): all-inclusive pricing (5% +
-$0.50, no
+**Paddle as Merchant of Record** (not Stripe, Gumroad, LemonSqueezy, or Polar): all-inclusive pricing (5% + $0.50, no
 hidden non-US or EU payout fees), aggregate monthly payouts (one invoice for the accountant instead of per-transaction),
-global VAT/GST calculation and remittance, established reputation (Sketch, etc.). On a $29
-sale: $1.95 fee → $27.05 net. At 30k sales that saves ~$7k/year versus LemonSqueezy. Stripe was rejected because a solo
-dev handling VAT in 27+ EU countries is impractical (Stripe is a payment processor, not an MoR).
+global VAT/GST calculation and remittance, established reputation (Sketch, etc.). On a $29 sale: $1.95 fee → $27.05 net.
+At 30k sales that saves ~$7k/year versus LemonSqueezy. Stripe was rejected because a solo dev handling VAT in 27+ EU
+countries is impractical (Stripe is a payment processor, not an MoR).
 
 **Commercial prices use `external` tax mode**, so commercial customers pay tax on top of the listed price. Configured
 per-price in the Paddle dashboard (both sandbox and live).

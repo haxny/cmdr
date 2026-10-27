@@ -42,8 +42,8 @@ phrase what happened and the next step (Hindi has neutral framings around `न�
   politely. Always use `आप`; never `तू`/`तुम` in UI, which reads as curt or talking down. Keep verb endings in the `आप`
   register (the `-इए` / `-एँ` polite imperative) consistently.
 - **Buttons and menu items: polite imperative.** macOS labels actions in the polite imperative: `कॉपी करें` (copy),
-  `रद्द करें` (cancel), `हटाएँ` (delete), `खोलें` (open), `बाहर निकालें` (eject). Keep these concise polite-imperative
-  forms; don't expand to full request sentences on buttons.
+  `रद्द करें` (cancel), `हटाएँ` (delete), `खोलें` (open), `बाहर निकालें` (eject). Keep these concise polite-imperative forms;
+  don't expand to full request sentences on buttons.
 
 ## Decision points
 
@@ -58,8 +58,8 @@ phrase what happened and the next step (Hindi has neutral framings around `न�
   correctly (matras attach, conjuncts form, no tofu boxes). This is a real complex-script rendering risk Latin languages
   don't have.
 - **Do NOT transliterate** product UI into Latin "Hinglish"; that's an informal chat register, never a localized-UI
-  convention. (Hinglish in the sense of English loanwords written in Devanagari, e.g. `फ़ोल्डर`, IS fine and standard;
-  the ban is on Latin-script Hindi.)
+  convention. (Hinglish in the sense of English loanwords written in Devanagari, e.g. `फ़ोल्डर`, IS fine and standard; the
+  ban is on Latin-script Hindi.)
 
 ### Tech-term strategy: follow macOS's middle register, borrow where people borrow
 
@@ -68,9 +68,9 @@ phrase what happened and the next step (Hindi has neutral framings around `न�
   macOS strikes the middle most users expect, and that's the recommended target. `tentative` on the overall lean
   (flagged above); individual terms below are `high`.
 - macOS uses English-loanword Devanagari for the most-borrowed nouns (`फ़ोल्डर` folder, `फ़ाइल` file, `कॉपी` copy, `टैब`
-  tab, `वॉल्यूम` volume) and native Hindi for verbs and some nouns (`हटाएँ` delete, `खोलें` open, `खोज` search,
-  `बाहर निकालें` eject, `रद्दी` trash). Follow that pattern: don't force a Sanskrit coinage where macOS and everyday
-  speech use the loan, and don't English-ify a word that has a natural, common Hindi form.
+  tab, `वॉल्यूम` volume) and native Hindi for verbs and some nouns (`हटाएँ` delete, `खोलें` open, `खोज` search, `बाहर निकालें`
+  eject, `रद्दी` trash). Follow that pattern: don't force a Sanskrit coinage where macOS and everyday speech use the
+  loan, and don't English-ify a word that has a natural, common Hindi form.
 
 ### Gender: grammatical gender pervades; keep UI gender-neutral toward the user
 
@@ -130,8 +130,8 @@ CLDR categories: **`one`, `other`** (verified with `new Intl.PluralRules('hi')`,
   Hindi, so the `one` branch must read naturally for 0 too, or use an `=0` exact branch where the English needs a
   distinct zero phrasing. Don't assume `one` means only the integer 1.
 - Hindi pluralizes nouns with inflection and gender/case agreement, so write the natural plural per noun (e.g. `फ़ाइल` →
-  `फ़ाइलें`, `फ़ोल्डर` → `फ़ोल्डर`/`फ़ोल्डरों` depending on case) rather than appending mechanically, and keep verb
-  agreement consistent inside each branch.
+  `फ़ाइलें`, `फ़ोल्डर` → `फ़ोल्डर`/`फ़ोल्डरों` depending on case) rather than appending mechanically, and keep verb agreement
+  consistent inside each branch.
 
 ## Notes and decisions
 

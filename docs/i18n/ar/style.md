@@ -48,9 +48,9 @@ Formality register is set above (plain MSA). These are the Arabic-specific calls
 - **Action verb form: masdar (verbal noun) vs imperative, sources split.** This is the single biggest phrasing decision
   and the majors disagree:
   - **macOS Arabic uses the masdar (verbal noun)** for action labels and descriptions, consistently: "Erase" → "مسح",
-    "Choose" → "اختيار", "Copies items …" → "نسخ العناصر …", "Moves items to the Trash" → "نقل العناصر إلى سلة
-    المهملات", "Cancel" → "إلغاء" (all verified in `ar/macOS/Finder/Localizable.json`, 2026-06-19). So a button reads as
-    "نسخ" (copying/copy) rather than the command "اِنسخ".
+    "Choose" → "اختيار", "Copies items …" → "نسخ العناصر …", "Moves items to the Trash" → "نقل العناصر إلى سلة المهملات",
+    "Cancel" → "إلغاء" (all verified in `ar/macOS/Finder/Localizable.json`, 2026-06-19). So a button reads as "نسخ"
+    (copying/copy) rather than the command "اِنسخ".
   - **Microsoft Arabic style guide recommends the imperative** and specifically says to use the plain imperative ("افتح
     التطبيق") instead of the قم بـ + infinitive construction ("قم بفتح التطبيق") (verified in
     `ar/microsoft-style-guides/StyleGuide.pdf`, 2026-06-19).

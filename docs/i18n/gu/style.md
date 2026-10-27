@@ -40,8 +40,8 @@ Confidence: confirmed.
   ending; mixing familiar and polite forms in one flow reads inconsistently. Pick polite and apply it everywhere.
   Confidence: high.
 - **English loanwords are common and expected in tech UI.** Gujarati tech copy freely uses transliterated English terms
-  ("ફાઇલ" = file, "ફોલ્ડર" = folder) rather than forcing Sanskrit-derived coinages. Follow the Microsoft/GNOME choice
-  per term; don't over-Sanskritize. Confidence: high (Microsoft + GNOME agree).
+  ("ફાઇલ" = file, "ફોલ્ડર" = folder) rather than forcing Sanskrit-derived coinages. Follow the Microsoft/GNOME choice per
+  term; don't over-Sanskritize. Confidence: high (Microsoft + GNOME agree).
 - **Gender: Gujarati has grammatical gender** (verbs and adjectives agree with the subject's gender), but addressing the
   user with polite "તમે" + the polite verb ending avoids gendering them in most UI sentences. Keep phrasing that doesn't
   force a gendered past-tense or adjective on the user. Confidence: high.
@@ -54,12 +54,12 @@ Confidence: confirmed.
 | English term | Gujarati  | Notes                                      |
 | ------------ | --------- | ------------------------------------------ |
 | Copy         | નકલ કરો   | GNOME ("નકલ કરો (\_C)")                    |
-| Move         | ખસેડવું   | Microsoft                                  |
+| Move         | ખસેડવું      | Microsoft                                  |
 | Delete       | કાઢી નાખો | GNOME ("કાઢી નાખો (\_D)")                  |
 | Cancel       | રદ કરો    | GNOME ("રદ કરો (\_C)")                     |
 | file         | ફાઇલ      | Microsoft + GNOME (transliterated English) |
-| folder       | ફોલ્ડર    | Microsoft + GNOME (transliterated English) |
-| trash        | કચરાપેટી  | GNOME (lit. "rubbish bin")                 |
+| folder       | ફોલ્ડર     | Microsoft + GNOME (transliterated English) |
+| trash        | કચરાપેટી   | GNOME (lit. "rubbish bin")                 |
 
 ## Brand and do-not-translate
 

@@ -818,16 +818,16 @@ when the held manager mutates in place. Returning a snapshot would silently seve
 **`FunctionKeyBar` reads the store, not props.** The F-key bar is mounted in `+page.svelte` (a sibling of
 `DualPaneExplorer`, not a child), yet it derives its capability flags from `explorerState` directly: one
 `activeTab = $derived(getActiveTab(getTabMgr(getFocusedPane())))` and
-`caps = $derived(capabilitiesForPane(activeTab.volumeId, activeTab.path))`, then `canMkdir` / `canMkfile` / `canRename`
-= `caps.canWrite` and `canSourceOps` = `caps.canBeSource` (capabilities, not a `volumeId === 'search-results'` string
-compare). ❌ The PANE's row, never `capabilitiesFor`'s volume row: both routed kinds are kind-from-path over a parent
-drive that is itself writable, so asking the volume id alone put New folder and Rename up as enabled inside a `.git`
-snapshot and inside a read-only tar, and the press then hit `readOnlyRefusal`'s alert. A zip keeps both, being the one
-archive format the managed edit flow writes. A store getter inside a `$derived` is reactive across the component
-boundary, so there's no `onFocusedVolumeChange` callback or `+page.svelte` mirror `$state` in the chain. Per-pane read
-only (P1): touch the focused pane's manager, never both. `canSourceOps` is derived here rather than passed in as a prop,
-so a focused `network` pane disables the source buttons too (`canBeSource: false`) instead of offering ops that no-op
-deep down.
+`caps = $derived(capabilitiesForPane(activeTab.volumeId, activeTab.path))`, then `canMkdir` / `canMkfile` /
+`canRename` = `caps.canWrite` and `canSourceOps` = `caps.canBeSource` (capabilities, not a
+`volumeId === 'search-results'` string compare). ❌ The PANE's row, never `capabilitiesFor`'s volume row: both routed
+kinds are kind-from-path over a parent drive that is itself writable, so asking the volume id alone put New folder and
+Rename up as enabled inside a `.git` snapshot and inside a read-only tar, and the press then hit `readOnlyRefusal`'s
+alert. A zip keeps both, being the one archive format the managed edit flow writes. A store getter inside a `$derived`
+is reactive across the component boundary, so there's no `onFocusedVolumeChange` callback or `+page.svelte` mirror
+`$state` in the chain. Per-pane read only (P1): touch the focused pane's manager, never both. `canSourceOps` is derived
+here rather than passed in as a prop, so a focused `network` pane disables the source buttons too (`canBeSource: false`)
+instead of offering ops that no-op deep down.
 
 **`FunctionKeyBar` dispatches `file.*` onto the bus.** Each button click calls a single
 `onCommand?: (id: CommandId) => void` prop, wired in `+page.svelte` to `handleCommandExecute`. The button-to-command
