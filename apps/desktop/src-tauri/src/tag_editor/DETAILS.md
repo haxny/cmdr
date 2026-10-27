@@ -7,7 +7,7 @@ store's lock. Without `restart` an existing tag session comes back with its edit
 Every other call runs under the lock on in-memory tags and first drops entries that left the layout.
 
 Guaranteed: the file set is the one at `open` (Multi-Rename's names are fixed per session, a reorder only changes the
-order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and `unchanged_on_disk` tells
+order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and (in tests) `unchanged_on_disk` tells
 whether it still holds (stat'ed outside the lock); after the app's own write `mark_written` makes the written tags the
 disk copy and takes a fresh fingerprint; closing or evicting the rename session closes the tag session (hooks in
 `multi_rename/session.rs`), and a `NoSession` answer removes a leftover one. Not done: nothing re-reads or follows a
@@ -24,7 +24,7 @@ file that something else renamed.
   exists. `open` asks `files_of` again after inserting (never under the tag lock: order rename → tag) and drops what it
   inserted if the rename session is gone.
 - **Cover size** comes from the image header (`image`), under `contain_panics`; `None` when unreadable.
-- **`TagEditorError::Read`** is reserved for the commands; a failed read of one file is a row, not an error.
+- A failed read of one file is a row with a `readError`, never a `TagEditorError`. Cover-file errors (`BadCoverName`, `CoverTooLarge`, `CoverUnreadable`) come from `cover.rs`: a name must be one plain file name that resolves directly inside the session's folder (no separators, `..`, or symlink out), at most 10 MiB; `TaskFailed` is a blocking task that didn't finish.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.

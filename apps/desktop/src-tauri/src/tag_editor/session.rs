@@ -29,7 +29,7 @@ use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
-pub(super) const LOCAL_VOLUME_ID: &str = "root";
+pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
 /// Why a tag-editor call didn't answer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -43,12 +43,18 @@ pub enum TagEditorError {
     ReadOnly,
     /// An edit names a path that isn't a readable track of the session. Nothing was applied.
     UnknownTrack,
-    /// A file couldn't be read.
-    Read { path: String, detail: String },
     /// The undo store refused: recording before a write (nothing was written), or an undo.
     Undo { error: TagError },
     /// The app's data folder, which holds the undo store, isn't available. Nothing was written.
     NoAppDataDir,
+    /// A cover file name that isn't a plain file name inside the session's folder.
+    BadCoverName,
+    /// The cover file is over the size limit (10 MiB).
+    CoverTooLarge,
+    /// The cover file couldn't be read, or isn't a supported image.
+    CoverUnreadable,
+    /// The background task running the call failed.
+    TaskFailed,
 }
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
@@ -168,7 +174,6 @@ static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(||
 struct Layout {
     access: Access,
     volume_id: String,
-    dir: PathBuf,
     tracks: Vec<PathBuf>,
 }
 
@@ -191,7 +196,6 @@ fn layout_of(files: &SessionFiles) -> Layout {
             reason: (!local).then_some(ReadOnlyReason::RemoteVolume),
         },
         volume_id: files.volume_id.clone(),
-        dir: files.dir.clone(),
         tracks,
     }
 }
@@ -406,6 +410,7 @@ pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> 
 
 /// Whether the file at `path` is still the one the session read, so a write may go ahead. A
 /// path that isn't a readable track of the session is not: refuse it.
+#[cfg(test)]
 pub(crate) fn unchanged_on_disk(session_id: &str, path: &Path) -> Result<bool, TagEditorError> {
     // The fingerprint is copied out under the lock; the stat runs after it.
     let recorded = with_session(session_id, |_, session| {
@@ -429,7 +434,6 @@ pub(super) struct Pending {
 /// Where a session's files are, for the writer's media-cache refresh.
 pub(super) struct Target {
     pub volume_id: String,
-    pub dir: PathBuf,
 }
 
 /// The readable files whose edited tags differ from the disk's, in current order, minus those
@@ -455,7 +459,6 @@ pub(super) fn pending(
             .collect();
         let target = Target {
             volume_id: layout.volume_id.clone(),
-            dir: layout.dir.clone(),
         };
         Ok((target, pending))
     })
