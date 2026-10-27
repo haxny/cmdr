@@ -411,8 +411,8 @@ importers:
         specifier: ~4.14.0
         version: 4.14.0
       cldr-core:
-        specifier: 48.2.0
-        version: 48.2.0
+        specifier: 49.0.0
+        version: 49.0.0
       dom-accessibility-api:
         specifier: 0.7.1
         version: 0.7.1
@@ -3473,8 +3473,8 @@ packages:
   cjs-module-lexer@1.2.3:
     resolution: {integrity: sha512-0TNiGstbQmCFwt4akjjBg5pLRTSyj/PkWQ1ZoO2zntmg9yLqSRxwEa4iCfQLGjqhiqBfOJa7W/E8wfGrTDmlZQ==}
 
-  cldr-core@48.2.0:
-    resolution: {integrity: sha512-zfmLothncSwfv2jlevoSrgI2VGgH8SDGHXst6jUEotHA8nq9Igeg9jzdJDFtBso9pgJuG89DK16TzrmZDdo2Bg==}
+  cldr-core@49.0.0:
+    resolution: {integrity: sha512-2Z2dYeDO95AbKIG9dIUdZy6DD4f0hhHjTYnaHZj/9JTQ82pX5EsJlCs2BXPWi4vd1d98MwotOivh4Uthxwri4A==}
 
   cli-boxes@3.0.0:
     resolution: {integrity: sha512-/lzGpEWL/8PfI0BmBOPRwp0c/wFNX1RdUML3jK/RcSBA9T8mZDdQpqYBKtCFTOfQbwPqWEOpjqW+Fnayc0969g==}
@@ -10042,7 +10042,7 @@ snapshots:
 
   cjs-module-lexer@1.2.3: {}
 
-  cldr-core@48.2.0: {}
+  cldr-core@49.0.0: {}
 
   cli-boxes@3.0.0: {}
 
