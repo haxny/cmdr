@@ -2,8 +2,8 @@
 //! guardrail that refuses a WHOLE plan rather than staging part of one.
 
 use super::super::plan::{
-    ProposalRefusal, RenameInput, check_row_evidence, is_archive_inner_path, missing_local_child, refusal_content,
-    refusal_reason, rows_problem, scoped_files, validate_destination_name,
+    ProposalRefusal, RenameInput, check_row_evidence, destination_key, is_archive_inner_path, missing_local_child,
+    refusal_content, refusal_reason, rows_problem, scoped_files, validate_destination_name,
 };
 use super::{THREAD, draft_row};
 use crate::agent::tools::propose::evidence::{EvidenceProblem, EvidenceSource, ImageFactsLedger};
@@ -69,6 +69,22 @@ fn destination_names_reject_paths_and_dot_entries() {
         assert!(validate_destination_name(name).is_err(), "{name}");
     }
     assert!(validate_destination_name("2026-07-20 - Receipt.png").is_ok());
+}
+
+/// Two destination names a filesystem may consider one are one, on every platform: the same
+/// fold a move's or copy's names and the transfer engine use (`cmdr_fs::name_fold::fold_name`).
+/// The machine-local fold this replaced was identity off macOS, so on Linux a case-only
+/// duplicate staged and then collided on a case-insensitive share.
+#[test]
+fn destination_names_are_one_name_ignoring_case_and_unicode_form_on_every_platform() {
+    assert_eq!(destination_key("Invoice.pdf"), destination_key("invoice.pdf"));
+    assert_eq!(destination_key("Caf\u{e9}.pdf"), destination_key("Cafe\u{301}.pdf"));
+    assert_eq!(
+        destination_key("Cafe\u{301}.PDF"),
+        cmdr_fs::name_fold::fold_name("caf\u{e9}.pdf"),
+        "one fold: NFC, then lowercase"
+    );
+    assert_ne!(destination_key("a.pdf"), destination_key("b.pdf"));
 }
 
 #[test]

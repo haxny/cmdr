@@ -163,6 +163,12 @@ boundary refuses a plan spanning two folders, and the VOLUME is a field of `Rena
 question apply can no longer ask, let alone answer wrong; the row snapshot's `volumeId` is filled from the proposal on
 its way to the dialog.
 
+The plan boundary's duplicate check keys each name by `plan.rs::destination_key`, which is `cmdr_fs::name_fold::fold_name`
+(NFC, then lowercase) on every platform: the same fold a move's or copy's names and the transfer engine use
+(`../suggestions/DETAILS.md` § Moving or copying under a new name), so every "are these one name?" answer in a proposal
+agrees. ❌ Not `normalize_for_comparison`: it follows THIS machine's disk (identity off macOS), so a Linux run missed a
+case-only duplicate bound for a case-insensitive share.
+
 The opaque ids the frontend holds are the group id and the op ids, as strings. Nothing above the store parses them: an
 id that isn't ours is simply unknown, and `load` answers `None` for it exactly as it does for a group that already left
 `pending`. Every later step (preflight, apply) resolves paths and names from the stored rows by id, so a client-supplied
