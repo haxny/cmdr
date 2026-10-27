@@ -686,3 +686,30 @@ export async function savePaneTabs(side: 'left' | 'right', paneTabs: PersistedPa
     // Silently fail
   }
 }
+
+// ============================================================================
+// Tag editor auto-numbering choices (fork: the Tags tab's numbering wizard)
+// ============================================================================
+
+const TAG_NUMBERING_KEY = 'tagNumbering'
+
+/** The numbering wizard's last choices as stored, unchecked (the wizard validates them field by field), or `null`. */
+export async function loadTagNumbering(): Promise<unknown> {
+  try {
+    const store = await getStore()
+    return (await store.get(TAG_NUMBERING_KEY)) ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Remembers the numbering wizard's choices. */
+export async function saveTagNumbering(options: unknown): Promise<void> {
+  try {
+    const store = await getStore()
+    await store.set(TAG_NUMBERING_KEY, options)
+    await store.save()
+  } catch {
+    // Silently fail - persistence is nice-to-have
+  }
+}

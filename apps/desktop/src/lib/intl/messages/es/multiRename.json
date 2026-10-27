@@ -1555,5 +1555,65 @@
   "multiRename.tags.tools.name.noFields": "The pattern reads no tag field. Use a field like %title% or a named group like {example}.",
   "@multiRename.tags.tools.name.noFields": {
     "sourceHash": "4be905c"
+  },
+  "multiRename.tags.numbering.button": "Auto-number…",
+  "@multiRename.tags.numbering.button": {
+    "sourceHash": "0981989"
+  },
+  "multiRename.tags.numbering.title": "Auto-numbering wizard",
+  "@multiRename.tags.numbering.title": {
+    "sourceHash": "fee1ba8"
+  },
+  "multiRename.tags.numbering.track": "Track number",
+  "@multiRename.tags.numbering.track": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.tags.numbering.disc": "Disc number",
+  "@multiRename.tags.numbering.disc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.tags.numbering.begin": "Begin at",
+  "@multiRename.tags.numbering.begin": {
+    "sourceHash": "b61275a"
+  },
+  "multiRename.tags.numbering.total": "Save total",
+  "@multiRename.tags.numbering.total": {
+    "sourceHash": "a0757b7"
+  },
+  "multiRename.tags.numbering.pad": "Leading zeros",
+  "@multiRename.tags.numbering.pad": {
+    "sourceHash": "cf43ab8"
+  },
+  "multiRename.tags.numbering.nextOnFolder": "Next disc on change of directory",
+  "@multiRename.tags.numbering.nextOnFolder": {
+    "sourceHash": "8134fba"
+  },
+  "multiRename.tags.numbering.nextOnField": "Next disc on change of",
+  "@multiRename.tags.numbering.nextOnField": {
+    "sourceHash": "94ce8a8"
+  },
+  "multiRename.tags.numbering.resetTrack": "Reset track counter on next disc",
+  "@multiRename.tags.numbering.resetTrack": {
+    "sourceHash": "92d5ca2"
+  },
+  "multiRename.tags.numbering.resetDisc": "Reset disc counter on change of",
+  "@multiRename.tags.numbering.resetDisc": {
+    "sourceHash": "29ae44a"
+  },
+  "multiRename.tags.numbering.singleFile": "A single-file book gets no track number; only the disc is numbered.",
+  "@multiRename.tags.numbering.singleFile": {
+    "sourceHash": "cec7894"
+  },
+  "multiRename.tags.numbering.invalidBegin": "Begin at must be a whole number, 0 or more.",
+  "@multiRename.tags.numbering.invalidBegin": {
+    "sourceHash": "3b288e2"
+  },
+  "multiRename.tags.numbering.ok": "OK",
+  "@multiRename.tags.numbering.ok": {
+    "sourceHash": "565339b"
+  },
+  "multiRename.tags.numbering.cancel": "Cancel",
+  "@multiRename.tags.numbering.cancel": {
+    "sourceHash": "19766ed"
   }
 }

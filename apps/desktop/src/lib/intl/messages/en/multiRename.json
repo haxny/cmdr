@@ -1780,5 +1780,65 @@
     "placeholders": {
       "example": "a sample named group, like (?<title>.+); never translate it"
     }
+  },
+  "multiRename.tags.numbering.button": "Auto-number…",
+  "@multiRename.tags.numbering.button": {
+    "description": "The button in the Tags tab's tools that opens the auto-numbering dialog (numbers tracks and discs with totals and leading zeros)."
+  },
+  "multiRename.tags.numbering.title": "Auto-numbering wizard",
+  "@multiRename.tags.numbering.title": {
+    "description": "Title of the auto-numbering dialog of the Tags tab in Multi-Rename."
+  },
+  "multiRename.tags.numbering.track": "Track number",
+  "@multiRename.tags.numbering.track": {
+    "description": "Heading of the track section of the auto-numbering dialog."
+  },
+  "multiRename.tags.numbering.disc": "Disc number",
+  "@multiRename.tags.numbering.disc": {
+    "description": "Checkbox heading of the disc section of the auto-numbering dialog; switching it on numbers discs too."
+  },
+  "multiRename.tags.numbering.begin": "Begin at",
+  "@multiRename.tags.numbering.begin": {
+    "description": "Label of the box holding the first number, in the track and the disc section of the auto-numbering dialog."
+  },
+  "multiRename.tags.numbering.total": "Save total",
+  "@multiRename.tags.numbering.total": {
+    "description": "Checkbox in the auto-numbering dialog: also write the total (the number of tracks or of discs). Switching it off removes an existing total."
+  },
+  "multiRename.tags.numbering.pad": "Leading zeros",
+  "@multiRename.tags.numbering.pad": {
+    "description": "Checkbox in the auto-numbering dialog: pad numbers with leading zeros (01, 02, …)."
+  },
+  "multiRename.tags.numbering.nextOnFolder": "Next disc on change of directory",
+  "@multiRename.tags.numbering.nextOnFolder": {
+    "description": "Checkbox in the disc section of the auto-numbering dialog: a new disc starts where the folder changes."
+  },
+  "multiRename.tags.numbering.nextOnField": "Next disc on change of",
+  "@multiRename.tags.numbering.nextOnField": {
+    "description": "Checkbox in the disc section of the auto-numbering dialog, followed by a choice of tag field: a new disc starts where that field's first value changes."
+  },
+  "multiRename.tags.numbering.resetTrack": "Reset track counter on next disc",
+  "@multiRename.tags.numbering.resetTrack": {
+    "description": "Checkbox in the disc section of the auto-numbering dialog: track numbers start again at the first number on each new disc."
+  },
+  "multiRename.tags.numbering.resetDisc": "Reset disc counter on change of",
+  "@multiRename.tags.numbering.resetDisc": {
+    "description": "Checkbox in the disc section of the auto-numbering dialog, followed by a choice of tag field: disc numbers start again at the first number where that field's first value changes."
+  },
+  "multiRename.tags.numbering.singleFile": "A single-file book gets no track number; only the disc is numbered.",
+  "@multiRename.tags.numbering.singleFile": {
+    "description": "Note in the auto-numbering dialog, shown when the book has only one track."
+  },
+  "multiRename.tags.numbering.invalidBegin": "Begin at must be a whole number, 0 or more.",
+  "@multiRename.tags.numbering.invalidBegin": {
+    "description": "Error shown under a Begin at box of the auto-numbering dialog when it doesn't hold a whole number of at least 0."
+  },
+  "multiRename.tags.numbering.ok": "OK",
+  "@multiRename.tags.numbering.ok": {
+    "description": "Button that runs the auto-numbering dialog."
+  },
+  "multiRename.tags.numbering.cancel": "Cancel",
+  "@multiRename.tags.numbering.cancel": {
+    "description": "Button that closes the auto-numbering dialog without numbering anything."
   }
 }

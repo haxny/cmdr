@@ -2,7 +2,8 @@
     /**
      * The Tags tab's clean-up tools, one button each; every tool runs in the backend over all the session's files.
      * Case changes the focused field, or with none the five name fields, and says which. Renumber is hidden for a
-     * single file (a single-file book has no track number). Remove extras… lists the files' extra tags with nothing
+     * single file (a single-file book has no track number). Auto-number… opens the numbering wizard (always, since it
+     * also numbers discs). Remove extras… lists the files' extra tags with nothing
      * checked, so nothing goes without an explicit choice. A second row opens the text tools' panels (Find and replace,
      * Format a field, From file name), one at a time; they call their tools through `runScoped`, which the tab gives the
      * checked tracks.
@@ -17,6 +18,7 @@
     import { FIELD_LABELS } from './field-labels'
     import FormatPanel from './FormatPanel.svelte'
     import NamePatternPanel from './NamePatternPanel.svelte'
+    import NumberingDialog from './NumberingDialog.svelte'
     import ReplacePanel from './ReplacePanel.svelte'
     import type { TagEditorState } from './tag-editor-state.svelte'
     import { DIACRITICS_FIELDS, caseFields, caseTool, removeExtrasTool, showsRenumber, type RunScoped } from './tag-tools'
@@ -62,6 +64,7 @@
     ]
 
     let open = $state<PanelId | null>(null)
+    let numbering = $state(false)
     let checked = $state.raw<readonly string[]>([])
 
     const caseFieldNames = $derived(formatUnitList(caseFields(focusedField).map((field) => tString(FIELD_LABELS[field]))))
@@ -107,6 +110,9 @@
                 {tString('multiRename.tags.tools.renumber')}
             </Button>
         {/if}
+        <Button size="mini" {disabled} onclick={() => { numbering = true }}>
+            {tString('multiRename.tags.numbering.button')}
+        </Button>
         {#each PLAIN as plain (plain.label)}
             <Button size="mini" {disabled} onclick={() => { run(plain.tool) }}>{tString(plain.label)}</Button>
         {/each}
@@ -161,6 +167,10 @@
         <div class="panel text-panel" id="tag-tools-name"><NamePatternPanel {disabled} state={tags} {runScoped} {scopeKey} /></div>
     {/if}
 </div>
+
+{#if numbering}
+    <NumberingDialog {trackCount} state={tags} {runScoped} onClose={() => { numbering = false }} />
+{/if}
 
 <style>
     .tools {
