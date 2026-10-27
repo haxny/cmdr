@@ -141,6 +141,10 @@ The viewer renders images and PDFs inline instead of showing the binary warning.
   `token -> { canonical_path, kind, mime }` (128-bit CSPRNG via `rand`, 32 hex chars) and returns the token;
   `resolve_token` / `drop_token` round it out. `read_image_dimensions` reads header-only pixel dimensions best-effort
   (the `image` crate; `None` for HEIC/SVG/errors).
+- `ViewerContentKind::Audio` is the tag editor's alone (`../tag_editor/playback.rs` mints it, MIME by format via
+  `audio_mime`): the classifier never answers it and `#[serde(skip)]` keeps it out of the viewer's wire type, so the
+  viewer can't meet it. Those tokens live per tag session and drop in `tag_editor::session::close`, not at the viewer's
+  choke point. `<audio>` needs `media-src 'self' cmdr-media:` in the CSP and streams through the same Range path.
 - `media_protocol.rs`: the async URI scheme handler. Pure helpers (`parse_token_from_uri`, `resolve_range`,
   `build_response`) are unit-tested; `handle_request` is the thin Tauri shell. It resolves the token (unknown -> 404),
   then runs its OWN `tauri::async_runtime::spawn_blocking` + `tokio::time::timeout` (expiry -> 504; deliberately NOT

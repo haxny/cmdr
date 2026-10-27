@@ -9,6 +9,7 @@
     import Button from '#lib/ui/Button.svelte'
     import EditableCell from './EditableCell.svelte'
     import { FIELD_LABELS } from './field-labels'
+    import ValueChoices from './ValueChoices.svelte'
     import { formatFieldValue, isMultiLineField, parseFieldText } from './shared-field-input'
 
     interface Props {
@@ -20,7 +21,7 @@
     const { rows, editable, onEdit }: Props = $props()
 
     const shown = $derived(
-        rows.map((row) => ({ field: row.field, empty: row.value === 'empty', ...formatFieldValue(row.value) })),
+        rows.map((row) => ({ field: row.field, choices: row.choices, empty: row.value === 'empty', ...formatFieldValue(row.value) })),
     )
 </script>
 
@@ -37,14 +38,24 @@
             disabled={!editable}
             onCommit={(text: string) => onEdit([{ kind: 'setAll', field: row.field, values: parseFieldText(row.field, text) }])}
         />
-        <Button
-            size="mini"
-            disabled={!editable || row.empty}
-            aria-label={tString('multiRename.tags.clearRowLabel', { field: tString(FIELD_LABELS[row.field]) })}
-            onclick={() => { void onEdit([{ kind: 'setAll', field: row.field, values: [] }]) }}
-        >
-            {tString('multiRename.tags.clearRow')}
-        </Button>
+        <span class="actions">
+            {#if row.multiple && row.choices.length > 0}
+                <ValueChoices
+                    field={tString(FIELD_LABELS[row.field])}
+                    choices={row.choices}
+                    disabled={!editable}
+                    onPick={(values: string[]) => { void onEdit([{ kind: 'setAll', field: row.field, values }]) }}
+                />
+            {/if}
+            <Button
+                size="mini"
+                disabled={!editable || row.empty}
+                aria-label={tString('multiRename.tags.clearRowLabel', { field: tString(FIELD_LABELS[row.field]) })}
+                onclick={() => { void onEdit([{ kind: 'setAll', field: row.field, values: [] }]) }}
+            >
+                {tString('multiRename.tags.clearRow')}
+            </Button>
+        </span>
     {/each}
 </div>
 
@@ -54,6 +65,11 @@
         grid-template-columns: max-content minmax(0, 1fr) max-content;
         gap: var(--spacing-xs) var(--spacing-md);
         align-items: center;
+    }
+
+    .actions {
+        display: flex;
+        gap: var(--spacing-xs);
     }
 
     .label {

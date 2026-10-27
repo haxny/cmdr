@@ -1,7 +1,7 @@
 //! The foobar2000-style view over several files at once: what they share, the edits a user
 //! makes against that view, and the list of what an apply would change.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
@@ -64,6 +64,17 @@ pub enum Edit {
     },
 }
 
+/// One distinct value set of a field and how many files carry it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+#[serde(rename_all = "camelCase")]
+pub struct ValueCount {
+    /// The field's values in one file (several for multi-value fields).
+    pub values: Vec<String>,
+    /// How many files have exactly these values.
+    pub files: u32,
+}
+
 /// What an apply would change in one file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -98,6 +109,28 @@ fn shared_value(files: &[FileTags], field: TagField) -> SharedValue {
         Some(values) => SharedValue::Same(values.clone()),
         None => SharedValue::Empty,
     }
+}
+
+/// The distinct value sets of `field` across `files` with their file counts, most common first
+/// (ties in order of first appearance), at most `limit`. Files without the field aren't counted.
+pub fn distinct_values(files: &[FileTags], field: TagField, limit: usize) -> Vec<ValueCount> {
+    let mut counts: Vec<ValueCount> = Vec::new();
+    let mut index: HashMap<&Vec<String>, usize> = HashMap::new();
+    for values in files.iter().filter_map(|f| f.fields.get(&field)) {
+        match index.get(values) {
+            Some(&at) => counts[at].files += 1,
+            None => {
+                index.insert(values, counts.len());
+                counts.push(ValueCount {
+                    values: values.clone(),
+                    files: 1,
+                });
+            }
+        }
+    }
+    counts.sort_by_key(|c| std::cmp::Reverse(c.files)); // stable: ties keep first appearance
+    counts.truncate(limit);
+    counts
 }
 
 /// Applies `edits` in order to a copy of `files`. Values are trimmed and blanks dropped; a field

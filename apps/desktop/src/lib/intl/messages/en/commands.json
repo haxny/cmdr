@@ -1554,5 +1554,9 @@
   "commands.multiRenameTabTags.label": "Show the Tags tab",
   "@commands.multiRenameTabTags.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It switches the tool to the Tags tab."
+  },
+  "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
+  "@commands.multiRenamePlayTrack.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It plays the audio of the track whose row has focus in the Tags tab, or stops it when it is already playing, so you can hear which track you are naming."
   }
 }

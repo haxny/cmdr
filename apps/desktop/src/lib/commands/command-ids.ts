@@ -225,6 +225,7 @@ export const COMMAND_IDS = [
   'multiRename.moveRowDown',
   'multiRename.tabRename',
   'multiRename.tabTags',
+  'multiRename.playTrack',
   'multiRename.rename',
   'file.view',
   'file.edit',

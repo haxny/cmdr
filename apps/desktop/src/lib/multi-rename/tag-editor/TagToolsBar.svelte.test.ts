@@ -5,6 +5,12 @@ import type { TagField } from '#lib/ipc/bindings.js'
 import TagToolsBar from './TagToolsBar.svelte'
 import { DIACRITICS_FIELDS } from './tag-tools'
 import { mountInto } from './tag-cell.test-helper'
+import { asTags, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
+
+vi.mock('#lib/app-status-store.js', () => ({
+  loadTagNumbering: vi.fn(() => Promise.resolve(null)),
+  saveTagNumbering: vi.fn(() => Promise.resolve()),
+}))
 
 let cleanup: (() => void) | undefined
 afterEach(() => {
@@ -22,6 +28,9 @@ async function mountBar(
     focusedField: over.focusedField ?? null,
     disabled: over.disabled ?? false,
     onTool,
+    state: asTags(fakeTags()),
+    runScoped: fakeRunScoped(),
+    scopeKey: 'k',
   })
   cleanup = mounted.cleanup
   return { root: mounted.root, onTool }
@@ -37,6 +46,15 @@ async function click(root: HTMLElement, text: string): Promise<void> {
   target.click()
   await tick()
 }
+
+describe('TagToolsBar numbering', () => {
+  it('opens the numbering wizard from Auto-number…, also for a single file', async () => {
+    const { root } = await mountBar({ trackCount: 1 })
+    expect(document.body.textContent).not.toContain('Auto-numbering wizard')
+    await click(root, 'Auto-number…')
+    expect(document.body.textContent).toContain('Auto-numbering wizard')
+  })
+})
 
 describe('TagToolsBar', () => {
   it.each([

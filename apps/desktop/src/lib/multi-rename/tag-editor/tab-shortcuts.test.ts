@@ -11,7 +11,13 @@ vi.hoisted(() => {
   vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' })
 })
 
-import { findConflictsForShortcut, getConflictCount, getConflictingCommandIds } from '#lib/shortcuts/index.js'
+import {
+  eventMatchesCommand,
+  resolveKeyCombo,
+  findConflictsForShortcut,
+  getConflictCount,
+  getConflictingCommandIds,
+} from '#lib/shortcuts/index.js'
 import { getDefaultShortcuts } from '#lib/shortcuts/shortcuts-store.js'
 import { TAB_COMMANDS } from './sheet-tab'
 
@@ -27,5 +33,24 @@ describe('the Tags tab commands in Settings › Keyboard shortcuts', () => {
       const [shortcut] = getDefaultShortcuts(command)
       expect(findConflictsForShortcut(shortcut, 'Main window/Multi-rename').map((c) => c.id)).toEqual([command])
     }
+  })
+})
+
+describe('the Tags tab’s play command', () => {
+  it('is ⌥Space, fixed, and no other command or menu item takes the combo', () => {
+    expect(getDefaultShortcuts('multiRename.playTrack')).toEqual(['⌥Space'])
+    expect(findConflictsForShortcut('⌥Space', 'Main window/Multi-rename').map((c) => c.id)).toEqual([
+      'multiRename.playTrack',
+    ])
+    expect(getConflictingCommandIds().has('multiRename.playTrack')).toBe(false)
+  })
+
+  it('matches the key macOS sends for ⌥Space (a non-breaking space) and no plain Space', () => {
+    const alt = new KeyboardEvent('keydown', { key: '\u00a0', code: 'Space', altKey: true })
+    const plain = new KeyboardEvent('keydown', { key: ' ', code: 'Space' })
+    expect(eventMatchesCommand(alt, 'multiRename.playTrack')).toBe(true)
+    expect(eventMatchesCommand(plain, 'multiRename.playTrack')).toBe(false)
+    // The bare-Space commands (file list, queue) never see ⌥Space.
+    expect(resolveKeyCombo(alt)).toBe('⌥Space')
   })
 })

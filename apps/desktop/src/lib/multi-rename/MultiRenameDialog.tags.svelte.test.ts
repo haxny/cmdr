@@ -24,6 +24,7 @@ const ipc = vi.hoisted(() => ({
   closeTagEditor: vi.fn(() => Promise.resolve()),
   editTags: vi.fn(),
   runTagTool: vi.fn(),
+  runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
@@ -45,6 +46,10 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   getMultiRenameMediaProgress: vi.fn(() => Promise.resolve({ ok: true, value: { read: 0, total: 0, done: true } })),
   onMultiRenameMediaProgress: vi.fn(() => Promise.resolve(() => {})),
   prioritizeMultiRenameMedia: vi.fn(() => Promise.resolve()),
+  // The Tags tab's player; nothing here plays.
+  tagTrackAudioUrl: vi.fn(() => Promise.resolve({ ok: false, error: { kind: 'unknownTrack' } })),
+  releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
+  openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
   ...ipc,
 }))
 
@@ -53,6 +58,7 @@ const TAG_CALLS = [
   ipc.closeTagEditor,
   ipc.editTags,
   ipc.runTagTool,
+  ipc.runTagTextTool,
   ipc.getTagChanges,
   ipc.applyTags,
   ipc.undoTagApply,
@@ -138,6 +144,39 @@ describe('MultiRenameDialog Tags tab', () => {
     expect(tab('Tags').getAttribute('aria-selected')).toBe('false')
     expect(document.querySelector('.controls')).not.toBeNull()
     expect(ipc.openTagEditor).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['C', 'ç', 'KeyC'],
+    ['F', 'ƒ', 'KeyF'],
+    ['R', '®', 'KeyR'],
+  ])('⌘⌥%s does nothing while the Tags tab shows', async (_letter, composed, code) => {
+    flags.tagEditor = true
+    const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
+    navigatorSpy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
+    try {
+      await mountSheet()
+      tab('Tags').click()
+      await settle()
+      const event = new KeyboardEvent('keydown', {
+        key: composed,
+        code,
+        metaKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      document.querySelector('#sheet-panel-tags')?.dispatchEvent(event)
+      await settle()
+      expect(event.defaultPrevented).toBe(false)
+      tab('Rename').click()
+      await settle()
+      const chips = [...document.querySelectorAll('.search-options button[aria-pressed]')]
+      expect(chips.length).toBeGreaterThan(0)
+      expect(chips.every((chip) => chip.getAttribute('aria-pressed') === 'false')).toBe(true)
+    } finally {
+      navigatorSpy.mockRestore()
+    }
   })
 
   it('tags_tab_opens_tag_session_lazily', async () => {
@@ -440,7 +479,7 @@ describe('MultiRenameDialog Tags tab', () => {
 
     /** A view with one shared row, so a cell can be typed in; the edit's answer is held until `release()`. */
     function holdEdits(): { release: () => void } {
-      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple' }] }
+      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple', choices: [] }] }
       ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
       let release: () => void = () => {}
       ipc.editTags.mockImplementation(
@@ -581,7 +620,7 @@ describe('MultiRenameDialog Tags tab', () => {
     })
 
     it('⌘⇧[ while a Tags box is focused commits its text first', async () => {
-      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple' }] }
+      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple', choices: [] }] }
       ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
       ipc.editTags.mockResolvedValue({ ok: true, value: { ...base, dirty: true } })
       flags.tagEditor = true
@@ -614,7 +653,7 @@ describe('MultiRenameDialog Tags tab', () => {
     })
 
     describe('in a multi-line box (Comment)', () => {
-      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'comment', value: 'multiple' }] }
+      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'comment', value: 'multiple', choices: [] }] }
 
       async function commentBox(): Promise<HTMLTextAreaElement> {
         ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })

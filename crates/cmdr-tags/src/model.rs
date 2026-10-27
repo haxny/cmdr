@@ -32,10 +32,15 @@ pub enum TagField {
     Publisher,
     /// Translator.
     Translator,
-    /// Track number, plain unless the caller passes a known total.
+    /// Track number, as written (`03` stays padded where the format holds text).
     Track,
+    /// The number of tracks, written beside the track (`3/12`, `trkn`'s total, `TRACKTOTAL`)
+    /// and only when the track is set.
+    TrackTotal,
     /// Disc number.
     Disc,
+    /// The number of discs, written beside the disc and only when the disc is set.
+    DiscTotal,
     /// Free-form comment.
     Comment,
     /// Longer description.
@@ -46,7 +51,7 @@ pub enum TagField {
 
 impl TagField {
     /// Every managed field, in display order.
-    pub const ALL: [TagField; 15] = [
+    pub const ALL: [TagField; 17] = [
         TagField::Title,
         TagField::Artist,
         TagField::AlbumArtist,
@@ -58,7 +63,9 @@ impl TagField {
         TagField::Publisher,
         TagField::Translator,
         TagField::Track,
+        TagField::TrackTotal,
         TagField::Disc,
+        TagField::DiscTotal,
         TagField::Comment,
         TagField::Description,
         TagField::Www,
@@ -70,6 +77,15 @@ impl TagField {
     /// apply the rule, skipping these fields.
     pub fn keeps_diacritics(self) -> bool {
         matches!(self, TagField::Comment | TagField::Description | TagField::Www)
+    }
+
+    /// Whether the field holds a track or disc number or total, which formats such as MP4
+    /// store as an integer.
+    pub fn is_number(self) -> bool {
+        matches!(
+            self,
+            TagField::Track | TagField::TrackTotal | TagField::Disc | TagField::DiscTotal
+        )
     }
 
     /// Whether the field holds several values (repeated Vorbis keys, one

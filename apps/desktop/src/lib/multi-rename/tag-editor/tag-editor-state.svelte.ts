@@ -7,7 +7,7 @@
  * The write Undo reverses is kept in `last-tag-apply.svelte.ts`, so it outlives the sheet.
  */
 
-import type { ContentKind } from '#lib/ipc/bindings.js'
+import type { ContentKind, TagTextTool } from '#lib/ipc/bindings.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import {
   applyTags,
@@ -17,12 +17,16 @@ import {
   getTagChanges,
   listCoverCandidates,
   openTagEditor,
+  previewTagsFromNames,
+  runTagTextTool,
   runTagTool,
   setCoverFromFile,
   undoTagApply,
   type ApplyRequest,
   type CoverCandidate,
   type FileChangeView,
+  type NamePattern,
+  type NamePreviewRow,
   type RestoreReport,
   type TagApplyReport,
   type TagEdit,
@@ -55,6 +59,8 @@ export interface ApplyOptions {
 }
 
 export interface TagEditorState {
+  /** The backend tag session this state talks to (the player mints its audio URLs in it). */
+  readonly sessionId: string
   readonly view: TagEditorView | null
   readonly error: TagStateError | null
   readonly busy: boolean
@@ -65,7 +71,15 @@ export interface TagEditorState {
   /** Reads every file again, dropping every unwritten edit (after "changed on disk since it was read"). */
   reload(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
-  tool(tool: TagTool): Promise<void>
+  /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
+  tool(tool: TagTool, scope?: string[] | null): Promise<void>
+  /**
+   * Runs find/replace or a field-from-mask format over the tracks at `scope` (or every track), replacing the view like
+   * `tool`. `format` turns the field's FIRST value into the one rendered value.
+   */
+  textTool(tool: TagTextTool, scope?: string[] | null): Promise<void>
+  /** What `pattern` would read from the file names of `scope` (or of every track), changing nothing. */
+  previewFromNames(pattern: NamePattern, scope?: string[] | null): Promise<TagStateResult<NamePreviewRow[]>>
   /**
    * Resolves `true` when every call now out has answered (an edit a blur just started included), or `false` after
    * `limitMs` (default `SETTLE_LIMIT_MS`) with one still out, say on a stalled network mount, so a caller can go on.
@@ -107,13 +121,18 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let viewShown = 0
 
   /** Runs one backend call with `busy` on, keeps its error, and hands the result back. */
-  async function track<T>(call: () => Promise<TagEditorResult<T>>): Promise<TagEditorResult<T>> {
+  async function track<T>(
+    call: () => Promise<TagEditorResult<T>>,
+    /** Whether a success clears `error`; a call that owns only some errors passes which. */
+    clears: (current: TagStateError) => boolean = () => true,
+  ): Promise<TagEditorResult<T>> {
     pending += 1
     const running = call()
     inFlight.add(running)
     try {
       const res = await running
-      error = res.ok ? null : res.error
+      if (!res.ok) error = res.error
+      else if (error !== null && clears(error)) error = null
       return res
     } finally {
       inFlight.delete(running)
@@ -162,6 +181,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   }
 
   return {
+    sessionId,
     get view() {
       return view
     },
@@ -176,7 +196,14 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
-    tool: (tool) => replaceView(() => runTagTool(sessionId, tool)),
+    tool: (tool, scope = null) => replaceView(() => runTagTool(sessionId, tool, scope)),
+    textTool: (tool, scope = null) => replaceView(() => runTagTextTool(sessionId, tool, scope)),
+    // A preview owns only a bad pattern: a good one leaves any other notice (a failed edit, a cover) standing.
+    previewFromNames: (pattern, scope = null) =>
+      track(
+        () => previewTagsFromNames(sessionId, pattern, scope),
+        (current) => current.kind === 'badPattern',
+      ),
     settled,
     async coverImage() {
       const res = await getCoverImage(sessionId)

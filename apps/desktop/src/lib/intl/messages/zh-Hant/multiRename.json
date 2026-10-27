@@ -992,9 +992,17 @@
   "@multiRename.tags.field.track": {
     "sourceHash": "051f01f"
   },
+  "multiRename.tags.field.trackTotal": "Total tracks",
+  "@multiRename.tags.field.trackTotal": {
+    "sourceHash": "5677198"
+  },
   "multiRename.tags.field.disc": "Disc",
   "@multiRename.tags.field.disc": {
     "sourceHash": "0c3ae2c"
+  },
+  "multiRename.tags.field.discTotal": "Total discs",
+  "@multiRename.tags.field.discTotal": {
+    "sourceHash": "2f1663d"
   },
   "multiRename.tags.field.comment": "Comment",
   "@multiRename.tags.field.comment": {
@@ -1403,5 +1411,241 @@
   "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
   "@multiRename.tags.undo.unwrittenLost": {
     "sourceHash": "2ad42a1"
+  },
+  "multiRename.tags.select.all": "Select all tracks",
+  "@multiRename.tags.select.all": {
+    "sourceHash": "9320e48"
+  },
+  "multiRename.tags.select.track": "Select {fileName}",
+  "@multiRename.tags.select.track": {
+    "sourceHash": "e7e5769"
+  },
+  "multiRename.tags.choices.button": "Values…",
+  "@multiRename.tags.choices.button": {
+    "sourceHash": "e8e4b2c"
+  },
+  "multiRename.tags.choices.label": "{field} values",
+  "@multiRename.tags.choices.label": {
+    "sourceHash": "fefdb59"
+  },
+  "multiRename.tags.choices.item": "{value} ({countText})",
+  "@multiRename.tags.choices.item": {
+    "sourceHash": "d2d9b66"
+  },
+  "multiRename.tags.choices.empty": "‹empty›",
+  "@multiRename.tags.choices.empty": {
+    "sourceHash": "d58e123"
+  },
+  "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
+  "@multiRename.tags.selectionGone": {
+    "sourceHash": "17373af"
+  },
+  "multiRename.tags.tools.moreLabel": "More tag tools",
+  "@multiRename.tags.tools.moreLabel": {
+    "sourceHash": "2b47838"
+  },
+  "multiRename.tags.tools.replace.button": "Find and replace",
+  "@multiRename.tags.tools.replace.button": {
+    "sourceHash": "9898ad0"
+  },
+  "multiRename.tags.tools.format.button": "Format a field",
+  "@multiRename.tags.tools.format.button": {
+    "sourceHash": "ece9485"
+  },
+  "multiRename.tags.tools.name.button": "From file name",
+  "@multiRename.tags.tools.name.button": {
+    "sourceHash": "79a196a"
+  },
+  "multiRename.tags.tools.replace.fieldsLabel": "Fields to search",
+  "@multiRename.tags.tools.replace.fieldsLabel": {
+    "sourceHash": "aff1d09"
+  },
+  "multiRename.tags.tools.replace.allFields": "All fields",
+  "@multiRename.tags.tools.replace.allFields": {
+    "sourceHash": "b2525b1"
+  },
+  "multiRename.tags.tools.replace.search": "Find",
+  "@multiRename.tags.tools.replace.search": {
+    "sourceHash": "822b2ae"
+  },
+  "multiRename.tags.tools.replace.replaceWith": "Replace with",
+  "@multiRename.tags.tools.replace.replaceWith": {
+    "sourceHash": "8382d31"
+  },
+  "multiRename.tags.tools.replace.run": "Replace",
+  "@multiRename.tags.tools.replace.run": {
+    "sourceHash": "95e1543"
+  },
+  "multiRename.tags.tools.format.field": "Field",
+  "@multiRename.tags.tools.format.field": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.tags.tools.format.mask": "Mask",
+  "@multiRename.tags.tools.format.mask": {
+    "sourceHash": "e368929"
+  },
+  "multiRename.tags.tools.format.hint": "Format keeps only the first value of a field that holds several, such as Artist or Genre.",
+  "@multiRename.tags.tools.format.hint": {
+    "sourceHash": "a319ffd"
+  },
+  "multiRename.tags.tools.format.run": "Format",
+  "@multiRename.tags.tools.format.run": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.tags.tools.name.mode": "How to read the file names",
+  "@multiRename.tags.tools.name.mode": {
+    "sourceHash": "b821cb1"
+  },
+  "multiRename.tags.tools.name.modePattern": "Pattern",
+  "@multiRename.tags.tools.name.modePattern": {
+    "sourceHash": "4288ade"
+  },
+  "multiRename.tags.tools.name.modeRegex": "Regular expression",
+  "@multiRename.tags.tools.name.modeRegex": {
+    "sourceHash": "9f896c3"
+  },
+  "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
+  "@multiRename.tags.tools.name.patternPattern": {
+    "sourceHash": "d0cd612"
+  },
+  "multiRename.tags.tools.name.patternRegex": "Regular expression, like {example}",
+  "@multiRename.tags.tools.name.patternRegex": {
+    "sourceHash": "6b2e8dd"
+  },
+  "multiRename.tags.tools.name.recent": "Recent patterns",
+  "@multiRename.tags.tools.name.recent": {
+    "sourceHash": "ba57dc2"
+  },
+  "multiRename.tags.tools.name.preview": "Preview",
+  "@multiRename.tags.tools.name.preview": {
+    "sourceHash": "324b134"
+  },
+  "multiRename.tags.tools.name.take": "Take",
+  "@multiRename.tags.tools.name.take": {
+    "sourceHash": "8b862ba"
+  },
+  "multiRename.tags.tools.name.stale": "Preview again to take this pattern.",
+  "@multiRename.tags.tools.name.stale": {
+    "sourceHash": "897c556"
+  },
+  "multiRename.tags.tools.name.previewLabel": "What the pattern reads from each file name",
+  "@multiRename.tags.tools.name.previewLabel": {
+    "sourceHash": "81130f8"
+  },
+  "multiRename.tags.tools.name.columnFile": "File name",
+  "@multiRename.tags.tools.name.columnFile": {
+    "sourceHash": "3efed3d"
+  },
+  "multiRename.tags.tools.name.columnFields": "Read from it",
+  "@multiRename.tags.tools.name.columnFields": {
+    "sourceHash": "0ba0b39"
+  },
+  "multiRename.tags.tools.name.noMatch": "Doesn’t match",
+  "@multiRename.tags.tools.name.noMatch": {
+    "sourceHash": "0533e1b"
+  },
+  "multiRename.tags.tools.name.badRegex": "The pattern isn’t a valid regular expression.",
+  "@multiRename.tags.tools.name.badRegex": {
+    "sourceHash": "3eab3bf"
+  },
+  "multiRename.tags.tools.name.unknownField": "“{name}” isn’t a tag field.",
+  "@multiRename.tags.tools.name.unknownField": {
+    "sourceHash": "aaeb7b5"
+  },
+  "multiRename.tags.tools.name.noFields": "The pattern reads no tag field. Use a field like %title% or a named group like {example}.",
+  "@multiRename.tags.tools.name.noFields": {
+    "sourceHash": "4be905c"
+  },
+  "multiRename.tags.numbering.button": "Auto-number…",
+  "@multiRename.tags.numbering.button": {
+    "sourceHash": "0981989"
+  },
+  "multiRename.tags.numbering.title": "Auto-numbering wizard",
+  "@multiRename.tags.numbering.title": {
+    "sourceHash": "fee1ba8"
+  },
+  "multiRename.tags.numbering.track": "Track number",
+  "@multiRename.tags.numbering.track": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.tags.numbering.disc": "Disc number",
+  "@multiRename.tags.numbering.disc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.tags.numbering.begin": "Begin at",
+  "@multiRename.tags.numbering.begin": {
+    "sourceHash": "b61275a"
+  },
+  "multiRename.tags.numbering.total": "Save total",
+  "@multiRename.tags.numbering.total": {
+    "sourceHash": "a0757b7"
+  },
+  "multiRename.tags.numbering.pad": "Leading zeros",
+  "@multiRename.tags.numbering.pad": {
+    "sourceHash": "cf43ab8"
+  },
+  "multiRename.tags.numbering.nextOnFolder": "Next disc on change of directory",
+  "@multiRename.tags.numbering.nextOnFolder": {
+    "sourceHash": "8134fba"
+  },
+  "multiRename.tags.numbering.nextOnField": "Next disc on change of",
+  "@multiRename.tags.numbering.nextOnField": {
+    "sourceHash": "94ce8a8"
+  },
+  "multiRename.tags.numbering.resetTrack": "Reset track counter on next disc",
+  "@multiRename.tags.numbering.resetTrack": {
+    "sourceHash": "92d5ca2"
+  },
+  "multiRename.tags.numbering.resetDisc": "Reset disc counter on change of",
+  "@multiRename.tags.numbering.resetDisc": {
+    "sourceHash": "29ae44a"
+  },
+  "multiRename.tags.numbering.singleFile": "A single-file book gets no track number; only the disc is numbered.",
+  "@multiRename.tags.numbering.singleFile": {
+    "sourceHash": "cec7894"
+  },
+  "multiRename.tags.numbering.invalidBegin": "Begin at must be a whole number, 0 or more.",
+  "@multiRename.tags.numbering.invalidBegin": {
+    "sourceHash": "3b288e2"
+  },
+  "multiRename.tags.numbering.ok": "OK",
+  "@multiRename.tags.numbering.ok": {
+    "sourceHash": "565339b"
+  },
+  "multiRename.tags.numbering.cancel": "Cancel",
+  "@multiRename.tags.numbering.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "multiRename.tags.col.play": "Play",
+  "@multiRename.tags.col.play": {
+    "sourceHash": "436e610"
+  },
+  "multiRename.tags.play.play": "Play {fileName}",
+  "@multiRename.tags.play.play": {
+    "sourceHash": "d684027"
+  },
+  "multiRename.tags.play.stop": "Stop {fileName}",
+  "@multiRename.tags.play.stop": {
+    "sourceHash": "a116eda"
+  },
+  "multiRename.tags.play.failed": "Couldn’t play that track.",
+  "@multiRename.tags.play.failed": {
+    "sourceHash": "0b91294"
+  },
+  "multiRename.tags.play.openInPlayer": "Open in foobar2000",
+  "@multiRename.tags.play.openInPlayer": {
+    "sourceHash": "bca23db"
+  },
+  "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
+  "@multiRename.tags.play.playerUnavailable": {
+    "sourceHash": "753fba0"
+  },
+  "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
+  "@multiRename.tags.play.nothingReadable": {
+    "sourceHash": "914f007"
+  },
+  "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
+  "@multiRename.tags.play.openFailed": {
+    "sourceHash": "d8d01f0"
   }
 }

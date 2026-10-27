@@ -9,6 +9,7 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
   runTagTool: vi.fn(),
+  runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
@@ -16,6 +17,7 @@ const ipc = vi.hoisted(() => ({
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
   getCoverImage: vi.fn(),
+  previewTagsFromNames: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
 const warn = vi.hoisted(() => vi.fn())
@@ -147,11 +149,68 @@ describe('createTagEditorState', () => {
     const state = createTagEditorState('S')
     ipc.runTagTool.mockResolvedValueOnce({ ok: true, value: EDITED })
     await state.tool({ kind: 'stripDiacritics' } as never)
-    expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'stripDiacritics' })
+    expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'stripDiacritics' }, null)
     expect(state.view).toBe(EDITED)
     ipc.runTagTool.mockResolvedValueOnce({ ok: false, error: { kind: 'readOnly' } })
     await state.tool({ kind: 'stripDiacritics' } as never)
     expect(state.error).toEqual({ kind: 'readOnly' })
+  })
+
+  it('tool passes the chosen tracks through', async () => {
+    const state = createTagEditorState('S')
+    ipc.runTagTool.mockResolvedValueOnce({ ok: true, value: EDITED })
+    await state.tool({ kind: 'renumber', start: 1 }, ['/a.mp3'])
+    expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'renumber', start: 1 }, ['/a.mp3'])
+    expect(state.view).toBe(EDITED)
+  })
+
+  it('textTool replaces the view, passes the scope, and keeps a typed error', async () => {
+    const state = createTagEditorState('S')
+    const tool = { kind: 'format', field: 'title', mask: '[N3-]' } as const
+    ipc.runTagTextTool.mockResolvedValueOnce({ ok: true, value: EDITED })
+    await state.textTool(tool)
+    expect(ipc.runTagTextTool).toHaveBeenCalledWith('S', tool, null)
+    expect(state.view).toBe(EDITED)
+    ipc.runTagTextTool.mockResolvedValueOnce({ ok: true, value: EDITED })
+    await state.textTool(tool, ['/a.mp3'])
+    expect(ipc.runTagTextTool).toHaveBeenLastCalledWith('S', tool, ['/a.mp3'])
+    ipc.runTagTextTool.mockResolvedValueOnce({ ok: false, error: { kind: 'badRegex' } })
+    await state.textTool(tool)
+    expect(state.error).toEqual({ kind: 'badRegex' })
+    expect(state.view).toBe(EDITED)
+  })
+
+  it('previewFromNames returns the rows and keeps a typed error', async () => {
+    const state = createTagEditorState('S')
+    const pattern = { kind: 'format', pattern: '%track% - %title%' } as const
+    const rows = [{ path: '/a.mp3', fileName: 'a.mp3', fields: null }]
+    ipc.previewTagsFromNames.mockResolvedValueOnce({ ok: true, value: rows })
+    expect(await state.previewFromNames(pattern)).toEqual({ ok: true, value: rows })
+    expect(ipc.previewTagsFromNames).toHaveBeenLastCalledWith('S', pattern, null)
+    const error = { kind: 'badPattern', error: { kind: 'badRegex' } }
+    ipc.previewTagsFromNames.mockResolvedValueOnce({ ok: false, error })
+    expect(await state.previewFromNames(pattern, ['/a.mp3'])).toEqual({ ok: false, error })
+    expect(ipc.previewTagsFromNames).toHaveBeenLastCalledWith('S', pattern, ['/a.mp3'])
+    expect(state.error).toEqual(error)
+    expect(state.busy).toBe(false)
+  })
+
+  it('a good preview clears only the bad-pattern error it owns', async () => {
+    const state = createTagEditorState('S')
+    const pattern = { kind: 'format', pattern: '%title%' } as const
+    ipc.previewTagsFromNames.mockResolvedValue({ ok: true, value: [] })
+    ipc.editTags.mockResolvedValueOnce({ ok: false, error: { kind: 'unknownTrack' } })
+    await state.edit([])
+    await state.previewFromNames(pattern)
+    expect(state.error).toEqual({ kind: 'unknownTrack' })
+    ipc.previewTagsFromNames.mockResolvedValueOnce({
+      ok: false,
+      error: { kind: 'badPattern', error: { kind: 'badRegex' } },
+    })
+    await state.previewFromNames(pattern)
+    expect(state.error?.kind).toBe('badPattern')
+    await state.previewFromNames(pattern)
+    expect(state.error).toBeNull()
   })
 
   it('changes returns the backend answer and sets the error on failure', async () => {

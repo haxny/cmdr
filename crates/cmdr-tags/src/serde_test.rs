@@ -110,3 +110,17 @@ fn a_cover_is_a_byte_array_on_the_wire() {
     };
     assert_eq!(round_trip(&cover), json!({"mime": "image/png", "data": [1, 2, 255]}));
 }
+
+#[test]
+fn raw_tags_keep_recorded_totals_and_omit_absent_ones() {
+    let raw: crate::read::RawTags =
+        serde_json::from_value(json!({"trackTotal": 12, "discTotal": null, "conductor": "Dirigent"})).unwrap();
+    assert_eq!(raw.track_total, Some(12));
+    assert_eq!(raw.disc_total, None);
+    assert_eq!(raw.conductor.as_deref(), Some("Dirigent"));
+    let only_conductor = crate::read::RawTags {
+        conductor: Some("Dirigent".to_owned()),
+        ..crate::read::RawTags::default()
+    };
+    assert_eq!(round_trip(&only_conductor), json!({"conductor": "Dirigent"}));
+}

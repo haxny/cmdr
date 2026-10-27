@@ -4,6 +4,7 @@ import { afterEach, describe, it, vi } from 'vitest'
 import { tick } from 'svelte'
 import TagToolsBar from './TagToolsBar.svelte'
 import { mountInto } from './tag-cell.test-helper'
+import { asTags, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 let cleanup: (() => void) | undefined
@@ -20,6 +21,9 @@ async function mountBar(disabled = false): Promise<HTMLElement> {
     focusedField: null,
     disabled,
     onTool: vi.fn(),
+    state: asTags(fakeTags()),
+    runScoped: fakeRunScoped(),
+    scopeKey: 'k',
   })
   cleanup = mounted.cleanup
   return mounted.root
@@ -46,6 +50,15 @@ describe('TagToolsBar a11y', () => {
     await open(root, 'Remove extras…')
     await expectNoA11yViolations(root)
   })
+
+  it.each(['Find and replace', 'Format a field', 'From file name'])(
+    'with the %s panel open has no violations',
+    async (name) => {
+      const root = await mountBar()
+      await open(root, name)
+      await expectNoA11yViolations(root)
+    },
+  )
 
   it('locked has no violations', async () => {
     await expectNoA11yViolations(await mountBar(true))

@@ -9,10 +9,13 @@
 //! token; the handler resolves token -> path. An unknown token is a 404, and there's no
 //! way to name an arbitrary file: the backend only ever exposes files it chose to.
 //!
-//! **Token lifetime == session lifetime.** [`drop_token`] is called from the single
+//! **Token lifetime == its owner's lifetime.** For the viewer, [`drop_token`] is called from the single
 //! `session::close_session` choke point that frees `SESSIONS`, so both teardown paths
 //! (the `viewer_close` IPC and the `WindowEvent::Destroyed` net) free the token too. A
-//! closed-window viewer must not leave a live token mapping a real path.
+//! closed-window viewer must not leave a live token mapping a real path. The Tags tab of
+//! Multi-Rename mints audio tokens too (`tag_editor/playback.rs`); it keeps them per tag
+//! session and drops them on release and when the tag session closes, not at the viewer's
+//! choke point.
 //!
 //! **A token can name bytes that don't exist locally yet** ([`DeferredMedia`]): an image
 //! in a Markdown document may sit on a phone, inside a zip, or on the web. Its token is

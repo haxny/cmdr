@@ -751,3 +751,34 @@ fn undo_after_a_rename_swapped_two_written_files_touches_neither() {
     assert_eq!(records(&store_dir), 0, "nothing left to retry, so the record goes");
     done(&id);
 }
+
+#[test]
+fn apply_keeps_a_track_total_it_did_not_edit() {
+    let (dir, _listing, id) = album("tag-apply-keeps-total");
+    let (_store_dir, store) = store("tag-apply-keeps-total-store");
+    tag_file(
+        &dir,
+        "a.mp3",
+        &[
+            (TagField::Title, "Alpha"),
+            (TagField::Album, "Book"),
+            (TagField::Track, "3"),
+            (TagField::TrackTotal, "12"),
+        ],
+    );
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_album("Renamed book")]).expect("edits");
+
+    let report = apply_with(&store, &id, request()).expect("applies");
+
+    assert!(names(&report.written).contains(&"a.mp3".to_string()));
+    let a = on_disk(&dir, "a.mp3");
+    assert_eq!(album_of(&dir, "a.mp3"), one("Renamed book"));
+    assert_eq!(a.fields.get(&TagField::Track).cloned(), one("3"));
+    assert_eq!(
+        a.fields.get(&TagField::TrackTotal).cloned(),
+        one("12"),
+        "the total survives the write"
+    );
+    done(&id);
+}

@@ -1,5 +1,6 @@
 /** The track list: inline title and number edits go out as `SetOne` by path, and a single file has no # column. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { tick } from 'svelte'
 import type { TrackRow } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
 import TrackList from './TrackList.svelte'
@@ -28,18 +29,41 @@ const TRACKS: TrackRow[] = [
   row({ path: '/b/01.mp3', track: '1', title: 'První', durationMs: 3_725_000 }),
 ]
 
-async function mountList(tracks: TrackRow[] = TRACKS, editable = true) {
+async function mountList(
+  tracks: TrackRow[] = TRACKS,
+  editable = true,
+  checked: string[] = [],
+  playing: string | null = null,
+) {
+  const onPlay = vi.fn((_path: string) => {})
   const onEdit = vi.fn((_edits: TagEdit[]) => {})
-  const mounted = await mountInto(TrackList, { tracks, editable, onEdit })
+  const onToggle = vi.fn((_path: string) => {})
+  const onToggleAll = vi.fn((_on: boolean) => {})
+  const mounted = await mountInto(TrackList, {
+    tracks,
+    editable,
+    selected: new Set(checked),
+    onEdit,
+    onToggle,
+    onToggleAll,
+    playing,
+    onPlay,
+  })
   cleanup = mounted.cleanup
-  return { root: mounted.root, onEdit }
+  return { root: mounted.root, onEdit, onToggle, onToggleAll, onPlay }
+}
+
+function box(root: HTMLElement, label: string): HTMLInputElement {
+  const found = root.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
+  if (!found) throw new Error(`no checkbox ${label}`)
+  return found
 }
 
 describe('TrackList', () => {
   it('shows number, title, length and file name in the session order', async () => {
     const { root } = await mountList()
     const heads = [...root.querySelectorAll('th')].map((th) => th.textContent.trim())
-    expect(heads).toEqual(['#', 'Title', 'Length', 'File name'])
+    expect(heads).toEqual(['', 'Play', '#', 'Title', 'Length', 'File name'])
     const rows = [...root.querySelectorAll('tbody tr')]
     expect(rows.map((r) => r.querySelector('.file')?.textContent.trim())).toEqual(['02.mp3', '01.mp3'])
     expect(rows.map((r) => r.querySelector('.length')?.textContent.trim())).toEqual(['1:01', '1:02:05'])
@@ -81,7 +105,7 @@ describe('TrackList', () => {
   it('single_file_hides_track_column', async () => {
     const { root } = await mountList([row({ path: '/b/kniha.m4b', title: null, durationMs: 7_200_000 })])
     const heads = [...root.querySelectorAll('th')].map((th) => th.textContent.trim())
-    expect(heads).toEqual(['Title', 'Length', 'File name'])
+    expect(heads).toEqual(['', 'Play', 'Title', 'Length', 'File name'])
     expect(root.querySelector('[id^="tag-track-number-"]')).toBeNull()
     expect(byId<HTMLInputElement>(root, 'tag-track-title-0').value).toBe('')
   })
@@ -96,5 +120,84 @@ describe('TrackList', () => {
     expect(byId<HTMLInputElement>(root, 'tag-track-title-2').disabled).toBe(true)
     expect(byId<HTMLInputElement>(root, 'tag-track-title-0').disabled).toBe(false)
     expect(root.textContent).toContain('Can’t read the tags of this file')
+  })
+
+  it('the checkbox column comes first and each box is named by its file', async () => {
+    const { root } = await mountList()
+    const first = root.querySelector('tbody tr td:first-child input')
+    expect(first?.getAttribute('aria-label')).toBe('Select 02.mp3')
+    expect(box(root, 'Select 01.mp3').checked).toBe(false)
+  })
+
+  it('checking a track reports its path, and a checked track shows checked', async () => {
+    const { root, onToggle } = await mountList(TRACKS, true, ['/b/01.mp3'])
+    expect(box(root, 'Select 01.mp3').checked).toBe(true)
+    expect(box(root, 'Select 02.mp3').checked).toBe(false)
+    box(root, 'Select 02.mp3').click()
+    await tick()
+    expect(onToggle).toHaveBeenCalledWith('/b/02.mp3')
+  })
+
+  it('the header box is mixed while some are checked, and checked once all are', async () => {
+    const some = await mountList(TRACKS, true, ['/b/01.mp3'])
+    expect(some.root.querySelector('[data-state="indeterminate"]')).not.toBeNull()
+    some.root.remove()
+    cleanup?.()
+    const all = await mountList(TRACKS, true, ['/b/01.mp3', '/b/02.mp3'])
+    expect(box(all.root, 'Select all tracks').checked).toBe(true)
+    expect(all.root.querySelector('[data-state="indeterminate"]')).toBeNull()
+  })
+
+  it('the header box checks every track, or unchecks them all once all are checked', async () => {
+    const none = await mountList()
+    box(none.root, 'Select all tracks').click()
+    await tick()
+    expect(none.onToggleAll).toHaveBeenCalledWith(true)
+    cleanup?.()
+    const all = await mountList(TRACKS, true, ['/b/01.mp3', '/b/02.mp3'])
+    box(all.root, 'Select all tracks').click()
+    await tick()
+    expect(all.onToggleAll).toHaveBeenCalledWith(false)
+  })
+
+  it('Tab reaches a row checkbox, Space toggles it, and Enter / Escape in a cell still commit / revert beside it', async () => {
+    const { root, onToggle, onEdit } = await mountList()
+    const head = box(root, 'Select all tracks')
+    const first = box(root, 'Select 02.mp3')
+    first.focus()
+    expect(document.activeElement).toBe(first)
+    expect(first.tabIndex).toBeGreaterThanOrEqual(0)
+    expect(head.tabIndex).toBeGreaterThanOrEqual(0)
+    // A native checkbox toggles on Space: the browser turns it into a click.
+    first.click()
+    await tick()
+    expect(onToggle).toHaveBeenCalledWith('/b/02.mp3')
+
+    const title = byId<HTMLInputElement>(root, 'tag-track-title-1')
+    await typeInto(title, 'Změna')
+    await press(title, 'Enter')
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setOne', path: '/b/01.mp3', field: 'title', values: ['Změna'] }])
+    const other = byId<HTMLInputElement>(root, 'tag-track-title-0')
+    await typeInto(other, 'Nic')
+    const esc = await press(other, 'Escape')
+    expect(other.value).toBe('Druhá')
+    expect(esc.defaultPrevented).toBe(true)
+  })
+
+  it('every row has a play button named for its file; the playing one reads Stop, and a press names the path', async () => {
+    const { root, onPlay } = await mountList(TRACKS, true, [], '/b/01.mp3')
+    expect(root.querySelector('button[aria-label="Play 02.mp3"]')).not.toBeNull()
+    const stop = root.querySelector<HTMLButtonElement>('button[aria-label="Stop 01.mp3"]')
+    expect(stop?.getAttribute('aria-pressed')).toBe('true')
+    root.querySelector<HTMLButtonElement>('button[aria-label="Play 02.mp3"]')?.click()
+    expect(onPlay).toHaveBeenCalledWith('/b/02.mp3')
+  })
+
+  it('a row carries its path, so the play key finds the row that holds focus', async () => {
+    const { root } = await mountList()
+    expect([...root.querySelectorAll('tbody tr')].map((r) => r.getAttribute('data-track-path'))).toEqual([
+      '/b/02.mp3',
+      '/b/01.mp3',
+    ])
   })
 })

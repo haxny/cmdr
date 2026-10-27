@@ -257,3 +257,111 @@ fn changes_with_different_lengths_marks_extra_rows_changed() {
         }]
     );
 }
+
+#[test]
+fn totals_are_shared_fields() {
+    let files = [
+        file(&[(TagField::Track, &["01"]), (TagField::TrackTotal, &["12"])]),
+        file(&[
+            (TagField::Track, &["02"]),
+            (TagField::TrackTotal, &["12"]),
+            (TagField::DiscTotal, &["2"]),
+        ]),
+    ];
+    let view = shared_view(&files);
+    assert_eq!(view[&TagField::TrackTotal], SharedValue::Same(strings(&["12"])));
+    assert_eq!(view[&TagField::DiscTotal], SharedValue::Multiple);
+    let edited = apply_edits(
+        &files,
+        &[Edit::SetAll {
+            field: TagField::TrackTotal,
+            values: strings(&["14"]),
+        }],
+    );
+    assert!(
+        edited
+            .iter()
+            .all(|f| f.fields[&TagField::TrackTotal] == strings(&["14"]))
+    );
+}
+
+#[test]
+fn totals_follow_their_numbers_in_display_order() {
+    let at = |field| TagField::ALL.iter().position(|f| *f == field).unwrap();
+    assert_eq!(at(TagField::TrackTotal), at(TagField::Track) + 1);
+    assert_eq!(at(TagField::DiscTotal), at(TagField::Disc) + 1);
+    assert!(
+        TagField::TrackTotal < TagField::Disc,
+        "the derive order is the display order"
+    );
+    for total in [TagField::TrackTotal, TagField::DiscTotal] {
+        assert!(!total.is_multi() && !total.keeps_diacritics());
+    }
+    assert_eq!(serde_json::to_string(&TagField::TrackTotal).unwrap(), r#""trackTotal""#);
+    assert_eq!(serde_json::to_string(&TagField::DiscTotal).unwrap(), r#""discTotal""#);
+}
+
+#[test]
+fn distinct_values_counts_and_orders() {
+    let files: Vec<FileTags> = ["X", "X", "Y", "X", "Y", "Z"]
+        .iter()
+        .map(|v| file(&[(TagField::Album, &[v])]))
+        .chain([file(&[(TagField::Title, &["no album"])])])
+        .collect();
+    let all = distinct_values(&files, TagField::Album, 10);
+    assert_eq!(
+        all,
+        vec![
+            ValueCount {
+                values: strings(&["X"]),
+                files: 3
+            },
+            ValueCount {
+                values: strings(&["Y"]),
+                files: 2
+            },
+            ValueCount {
+                values: strings(&["Z"]),
+                files: 1
+            },
+        ]
+    );
+    assert_eq!(distinct_values(&files, TagField::Album, 2).len(), 2);
+}
+
+#[test]
+fn distinct_values_ties_keep_first_appearance_and_multi_values_group() {
+    let files = [
+        file(&[(TagField::Genre, &["b", "a"])]),
+        file(&[(TagField::Genre, &["c"])]),
+        file(&[(TagField::Genre, &["b", "a"])]),
+        file(&[(TagField::Genre, &["d"])]),
+    ];
+    let got = distinct_values(&files, TagField::Genre, 10);
+    assert_eq!(
+        got[0],
+        ValueCount {
+            values: strings(&["b", "a"]),
+            files: 2
+        }
+    );
+    assert_eq!(got[1].values, strings(&["c"]));
+    assert_eq!(got[2].values, strings(&["d"]));
+}
+
+#[test]
+fn distinct_values_many_distinct_values_in_order() {
+    let files: Vec<FileTags> = (0..2000)
+        .map(|i| file(&[(TagField::Title, &[&format!("t{}", i % 1000)])]))
+        .collect();
+    let got = distinct_values(&files, TagField::Title, 5);
+    assert_eq!(got.len(), 5);
+    assert_eq!(
+        got[0],
+        ValueCount {
+            values: strings(&["t0"]),
+            files: 2
+        }
+    );
+    assert_eq!(got[4].values, strings(&["t4"]));
+}

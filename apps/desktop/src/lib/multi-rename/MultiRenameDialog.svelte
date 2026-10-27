@@ -285,7 +285,7 @@
         }
         // The option keys: ⌘⌥ plus a letter flips a checkbox or opens Letter case.
         const optionKey = optionKeyOf(e)
-        if (optionKey !== null) {
+        if (optionKey !== null && sheetTab === 'rename') {
             claimKey(e)
             if (optionKey.kind === 'toggle') toggle(optionKey.field)
             else openCaseMenu()

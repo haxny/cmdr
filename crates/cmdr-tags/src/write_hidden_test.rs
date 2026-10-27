@@ -10,6 +10,7 @@ use std::path::Path;
 use lofty::id3::v2::Id3v2Tag;
 use lofty::mp4::Ilst;
 use lofty::ogg::tag::VorbisComments;
+use lofty::tag::Accessor;
 
 use crate::model::{FileTags, TagError, TagField};
 use crate::test_files::*;
@@ -322,4 +323,121 @@ fn a_value_given_twice_is_written_once() {
     write(&path, &tags, &MUSIC);
 
     assert_eq!(vorbis(&path), strings(&["TITLE=Kniha", "GENRE=rock", "GENRE=pop"]));
+}
+
+// ── Totals the reader hides ───────────────────────────────────────────────────
+
+#[test]
+fn a_vorbis_slash_total_beside_a_differing_total_key_refuses_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(dir.path(), &[("TRACKNUMBER", "3/12"), ("TRACKTOTAL", "10")]);
+    assert_eq!(
+        read(&path).fields[&TagField::TrackTotal],
+        strings(&["10"]),
+        "a key wins"
+    );
+    refused(&path, &["TRACKNUMBER"]);
+    write(&path, &retitled(&path), &LOSSY);
+    assert_eq!(vorbis(&path), ["TITLE=Novy nazev", "TRACKNUMBER=3", "TRACKTOTAL=10"]);
+}
+
+#[test]
+fn two_differing_vorbis_total_keys_refuse_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(
+        dir.path(),
+        &[("TRACKNUMBER", "3"), ("TRACKTOTAL", "12"), ("TOTALTRACKS", "10")],
+    );
+    refused(&path, &["TOTALTRACKS"]);
+}
+
+#[test]
+fn equal_vorbis_totals_collapse_silently() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(
+        dir.path(),
+        &[("TRACKNUMBER", "3/12"), ("TRACKTOTAL", "12"), ("TOTALTRACKS", "012")],
+    );
+    write(&path, &retitled(&path), &MUSIC);
+    assert_eq!(vorbis(&path), ["TITLE=Novy nazev", "TRACKNUMBER=3", "TRACKTOTAL=12"]);
+}
+
+#[test]
+fn a_total_that_isnt_a_number_refuses_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(dir.path(), &[("TRACKNUMBER", "3"), ("TRACKTOTAL", "dvanact")]);
+    assert_eq!(read(&path).fields.get(&TagField::TrackTotal), None);
+    refused(&path, &["TRACKTOTAL"]);
+}
+
+#[test]
+fn a_vorbis_total_without_its_number_refuses_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = flac_with(dir.path(), &[("TRACKTOTAL", "12")]);
+    assert_eq!(
+        read(&path),
+        FileTags::default(),
+        "shown nowhere: it can't be written alone"
+    );
+    refused(&path, &["TRACKTOTAL"]);
+}
+
+#[test]
+fn an_mp4_total_without_its_number_refuses_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    ilst.set_track_total(12);
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+    assert_eq!(read(&path), FileTags::default());
+    refused(&path, &["trkn"]);
+}
+
+#[test]
+fn a_legacy_txxx_disc_number_keeps_its_total() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    txxx(&mut tag, "DiscNumber", "1/2");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+    let tags = read(&path);
+    assert_eq!(tags.fields[&TagField::Disc], strings(&["1"]));
+    assert_eq!(
+        tags.fields[&TagField::DiscTotal],
+        strings(&["2"]),
+        "the legacy frame's total shows"
+    );
+
+    write(&path, &retitled(&path), &MUSIC);
+    let raw = raw_id3(&path);
+    assert_eq!(
+        raw.get_text(&lofty::id3::v2::FrameId::Valid("TPOS".into())),
+        Some("1/2")
+    );
+    assert!(txxx_descriptions(&raw).is_empty());
+}
+
+#[test]
+fn a_legacy_txxx_disc_total_fills_a_tpos_without_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TPOS", "1");
+    txxx(&mut tag, "DiscNumber", "1/2");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+    assert_eq!(read(&path).fields[&TagField::DiscTotal], strings(&["2"]));
+    write(&path, &retitled(&path), &MUSIC);
+    let raw = raw_id3(&path);
+    assert_eq!(
+        raw.get_text(&lofty::id3::v2::FrameId::Valid("TPOS".into())),
+        Some("1/2")
+    );
+}
+
+#[test]
+fn a_legacy_txxx_disc_total_that_differs_from_tpos_refuses_the_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TPOS", "1/3");
+    txxx(&mut tag, "DiscNumber", "1/2");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+    assert_eq!(read(&path).fields[&TagField::DiscTotal], strings(&["3"]), "TPOS wins");
+    refused(&path, &["TXXX:DiscNumber"]);
 }

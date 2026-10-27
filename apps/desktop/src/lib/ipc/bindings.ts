@@ -1635,9 +1635,20 @@ export const commands = {
   // Applies edits in memory; an unknown track refuses the whole batch.
   editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
-  // Runs a clean-up tool over the whole session.
-  runTagTool: (sessionId: string, tool: TagTool) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool })),
+  // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
+  runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
+  /**
+   *  Runs find/replace or a field-from-mask format over the tracks at `scope`, or the whole session
+   *  for `None`.
+   */
+  runTagTextTool: (sessionId: string, tool: TagTextTool, scope: string[] | null) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_text_tool', { sessionId, tool, scope })),
+  // What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
+  previewTagsFromNames: (sessionId: string, pattern: NamePattern, scope: string[] | null) =>
+    typedError<NamePreviewRow[], TagEditorError>(
+      __TAURI_INVOKE('preview_tags_from_names', { sessionId, pattern, scope }),
+    ),
   // What a write as `kind` would change, per file, including what the kind removes.
   getTagChanges: (sessionId: string, kind: ContentKind) =>
     typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
@@ -1665,6 +1676,20 @@ export const commands = {
    */
   getCoverImage: (sessionId: string) =>
     typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId })),
+  /**
+   *  A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
+   *  Only a readable track of the session gets one (`UnknownTrack` otherwise).
+   */
+  tagTrackAudioUrl: (sessionId: string, path: string) =>
+    typedError<string, TagEditorError>(__TAURI_INVOKE('tag_track_audio_url', { sessionId, path })),
+  // Ends a URL `tag_track_audio_url` gave. Closing the tag session ends all of them.
+  releaseTagTrackAudio: (url: string) => __TAURI_INVOKE<void>('release_tag_track_audio', { url }),
+  /**
+   *  Opens tracks of the session in foobar2000 when it's installed, else each in its default app.
+   *  Returns once the launch is asked for, not when the player is up.
+   */
+  openTagsInPlayer: (sessionId: string, paths: string[]) =>
+    typedError<null, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths })),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -8165,6 +8190,24 @@ export type DirectorySortMode =
    */
   | 'mixedWithFiles'
 
+// What [`auto_number`] does with discs. Absent in [`NumberOptions`] means discs are left alone.
+export type DiscOptions = {
+  // The first disc number.
+  start: number
+  // Write DiscTotal (the number of discs in the run).
+  total: boolean
+  // Pad disc numbers to at least two digits (`01`).
+  pad: boolean
+  // A new disc starts where the folder changes.
+  nextOnFolder: boolean
+  // A new disc starts where this field's first value changes.
+  nextOnField: TagField | null
+  // Track numbers restart at the track start on each new disc.
+  resetTrack: boolean
+  // Disc numbers restart at `start` where this field's first value changes.
+  resetDiscOnField: TagField | null
+}
+
 /**
  *  The volume that left the mount table while a transfer was running.
  *
@@ -13096,6 +13139,35 @@ export type NameFilterResult = {
   sequence: number | null
 }
 
+// How to read tags from a file name (without its extension).
+export type NamePattern =
+  // Mp3tag-style: literal text with `%field%` placeholders; the last one takes the rest.
+  | {
+      kind: 'format'
+      // The pattern, like `%track% - %title%`.
+      pattern: string
+    }
+  // A regular expression whose named groups are tag fields (`(?<track>\d+)_(?<title>.+)`).
+  | {
+      kind: 'regex'
+      // The expression.
+      pattern: string
+    }
+
+// What a file-name pattern reads from one track's name.
+export type NamePreviewRow = {
+  path: string
+  fileName: string
+  // The fields the name gives, in pattern order; `None` when the name doesn't match.
+  fields: NameValue[] | null
+}
+
+// One field a file name gives.
+export type NameValue = {
+  field: TagField
+  value: string
+}
+
 export type NegotiatedSummaryDto = {
   dialect: string
   max_read_size: number
@@ -13273,6 +13345,18 @@ export type NotificationPermission =
   | 'notDetermined'
   // No way to tell: not macOS, a dev build, or macOS didn't answer.
   | 'unknown'
+
+// What [`auto_number`] does.
+export type NumberOptions = {
+  // The first track number.
+  trackStart: number
+  // Write TrackTotal.
+  trackTotal: boolean
+  // Pad track numbers to the width of the biggest one (at least two digits).
+  trackPad: boolean
+  // Disc numbering, or none to leave discs alone.
+  disc: DiscOptions | null
+}
 
 /**
  *  One OCR search hit: the matched image's path and a highlighted snippet of the
@@ -13971,6 +14055,19 @@ export type PathVolumeResolution = {
   volume: LocationInfo | null
   timedOut: boolean
 }
+
+// Why a pattern can't be used.
+export type PatternError =
+  // The regular expression doesn't compile.
+  | { kind: 'badRegex' }
+  // A placeholder or group names no field.
+  | {
+      kind: 'unknownField'
+      // The unknown name as written.
+      name: string
+    }
+  // The pattern has no placeholder or named group.
+  | { kind: 'noFields' }
 
 export type PatternType = 'glob' | 'regex'
 
@@ -17261,6 +17358,8 @@ export type ShareListResult = {
 export type SharedRow = {
   field: TagField
   value: SharedValue
+  // For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
+  choices: ValueCount[]
 }
 
 // What one field looks like across the selected files.
@@ -18316,6 +18415,14 @@ export type TagEditorError =
   | { kind: 'coverNotAnImage' }
   // The background task running the call failed.
   | { kind: 'taskFailed' }
+  // A file-name pattern that can't be used. Nothing was changed.
+  | { kind: 'badPattern'; error: PatternError }
+  // A find/replace search that isn't a valid regular expression. Nothing was changed.
+  | { kind: 'badRegex' }
+  // A Format mask that doesn't parse. Nothing was changed.
+  | { kind: 'badMask'; error: MaskError }
+  // Neither foobar2000 nor the files' default app could be launched.
+  | { kind: 'playerUnavailable' }
 
 // The whole tab.
 export type TagEditorView = {
@@ -18384,10 +18491,17 @@ export type TagField =
   | 'publisher'
   // Translator.
   | 'translator'
-  // Track number, plain unless the caller passes a known total.
+  // Track number, as written (`03` stays padded where the format holds text).
   | 'track'
+  /**
+   *  The number of tracks, written beside the track (`3/12`, `trkn`'s total, `TRACKTOTAL`)
+   *  and only when the track is set.
+   */
+  | 'trackTotal'
   // Disc number.
   | 'disc'
+  // The number of discs, written beside the disc and only when the disc is set.
+  | 'discTotal'
   // Free-form comment.
   | 'comment'
   // Longer description.
@@ -18426,6 +18540,31 @@ export type TagRef = {
   color: number
 }
 
+// A text tool over tag fields.
+export type TagTextTool =
+  /**
+   *  Replaces `search` with `replace` in every value of each listed field. Case-insensitive
+   *  unless `case_sensitive`; plain search takes Multi-Rename's wildcards, `regex` a regular
+   *  expression with `$1` groups. A value that becomes empty is dropped, and a field with no
+   *  value left is removed.
+   */
+  | {
+      kind: 'replace'
+      fields: TagField[]
+      search: string
+      replace: string
+      caseSensitive: boolean
+      firstOnly: boolean
+      regex: boolean
+    }
+  /**
+   *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
+   *  multi-value field loses its other values: the whole field becomes the one rendered value),
+   *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
+   *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
+   */
+  | { kind: 'format'; field: TagField; mask: string }
+
 // Every tool as one serializable value, so the app and the MCP server share one tool set.
 export type TagTool =
   // [`change_case`] on `fields`.
@@ -18461,6 +18600,14 @@ export type TagTool =
       kind: 'removeExtras'
       // Native keys of the extras to drop.
       keys: string[]
+    }
+  // [`auto_number`] with these options.
+  | ({ kind: 'autoNumber' } & NumberOptions)
+  // [`from_file_name`] with this pattern.
+  | {
+      kind: 'fromFileName'
+      // How to read the file names.
+      pattern: NamePattern
     }
 
 /**
@@ -19389,6 +19536,14 @@ export type ValidationError =
   | { kind: 'nameTooLong'; bytes: number; max: number }
   // Full path exceeds the maximum byte length.
   | { kind: 'pathTooLong'; bytes: number; max: number }
+
+// One distinct value set of a field and how many files carry it.
+export type ValueCount = {
+  // The field's values in one file (several for multi-value fields).
+  values: string[]
+  // How many files have exactly these values.
+  files: number
+}
 
 /**
  *  Result of verifying a license key without persisting it.

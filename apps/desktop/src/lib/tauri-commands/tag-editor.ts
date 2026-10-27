@@ -7,11 +7,14 @@ import {
   type ContentKind,
   type CoverCandidate,
   type FileChangeView,
+  type NamePattern,
+  type NamePreviewRow,
   type RestoreReport,
   type TagApplyReport,
   type TagEdit_Deserialize,
   type TagEditorError,
   type TagEditorView,
+  type TagTextTool,
   type TagTool,
 } from '#lib/ipc/bindings.js'
 
@@ -19,11 +22,14 @@ export type {
   ApplyRequest,
   CoverCandidate,
   FileChangeView,
+  NamePattern,
+  NamePreviewRow,
   RestoreReport,
   TagApplyReport,
   TagEdit_Deserialize as TagEdit,
   TagEditorError,
   TagEditorView,
+  TagTextTool,
   TagTool,
 }
 
@@ -50,9 +56,41 @@ export async function editTags(
   return result(await commands.editTags(sessionId, edits))
 }
 
-/** Runs a clean-up tool over all the session's files. */
-export async function runTagTool(sessionId: string, tool: TagTool): Promise<TagEditorResult<TagEditorView>> {
-  return result(await commands.runTagTool(sessionId, tool))
+/**
+ * Runs a tool over the tracks at `scope` (paths as `TrackRow.path` gives them, in session order), or over all the
+ * session's files when `scope` is `null`. A path the session doesn't have (`unknownTrack`) refuses the run.
+ */
+export async function runTagTool(
+  sessionId: string,
+  tool: TagTool,
+  scope: string[] | null = null,
+): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.runTagTool(sessionId, tool, scope))
+}
+
+/**
+ * Runs find/replace (`replace`) or rebuilds one field from a Multi-Rename mask (`format`, e.g. `[N3-]` cuts the first
+ * two characters) over the tracks at `scope`, or over all the session's files when `scope` is `null`. A bad search
+ * comes back as `badRegex`, a bad mask as `badMask`, an unknown path as `unknownTrack`; nothing changes then.
+ */
+export async function runTagTextTool(
+  sessionId: string,
+  tool: TagTextTool,
+  scope: string[] | null = null,
+): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.runTagTextTool(sessionId, tool, scope))
+}
+
+/**
+ * What `pattern` reads from each file name of `scope` (or of every file when `null`), without changing anything: a
+ * row's `fields` is `null` when its name doesn't match. A bad pattern comes back as `badPattern`.
+ */
+export async function previewTagsFromNames(
+  sessionId: string,
+  pattern: NamePattern,
+  scope: string[] | null = null,
+): Promise<TagEditorResult<NamePreviewRow[]>> {
+  return result(await commands.previewTagsFromNames(sessionId, pattern, scope))
 }
 
 /** What a write as `kind` would change, per file, in current order, with what the kind removes. */
@@ -92,4 +130,27 @@ export async function setCoverFromFile(sessionId: string, fileName: string): Pro
 /** The shared cover as a `data:` URL for the thumbnail, or `null` when there is none or it isn't a known image. */
 export async function getCoverImage(sessionId: string): Promise<TagEditorResult<string | null>> {
   return result(await commands.getCoverImage(sessionId))
+}
+
+/**
+ * A `cmdr-media://` URL that plays the track at `path` (as `TrackRow.path` gives it) in an `<audio>` element. A
+ * path that isn't a readable track of the session comes back as `unknownTrack`. Release it with
+ * `releaseTagTrackAudio` when playback stops; closing the tag session releases every one.
+ */
+export async function tagTrackAudioUrl(sessionId: string, path: string): Promise<TagEditorResult<string>> {
+  return result(await commands.tagTrackAudioUrl(sessionId, path))
+}
+
+/** Ends a URL `tagTrackAudioUrl` gave. Any other URL is ignored. */
+export async function releaseTagTrackAudio(url: string): Promise<void> {
+  await commands.releaseTagTrackAudio(url)
+}
+
+/**
+ * Opens tracks of the session in foobar2000 when it's installed, otherwise each in its default app. Resolves once
+ * the launch is asked for; `unknownTrack` for a path outside the session, `playerUnavailable` when nothing could
+ * start.
+ */
+export async function openTagsInPlayer(sessionId: string, paths: string[]): Promise<TagEditorResult<null>> {
+  return result(await commands.openTagsInPlayer(sessionId, paths))
 }

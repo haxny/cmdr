@@ -7,6 +7,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{FileTags, TagField};
+use crate::name_pattern::{NamePattern, compile_pattern};
+use crate::numbering::{NumberOptions, auto_number};
 use crate::text::{remove_diacritics, sentence_case, title_case};
 
 /// How [`change_case`] rewrites a value.
@@ -59,20 +61,95 @@ pub enum TagTool {
         /// Native keys of the extras to drop.
         keys: Vec<String>,
     },
+    /// [`auto_number`] with these options.
+    AutoNumber(NumberOptions),
+    /// [`from_file_name`] with this pattern.
+    FromFileName {
+        /// How to read the file names.
+        pattern: NamePattern,
+    },
 }
 
-/// Runs `tool` over `files`; the input is never mutated.
+/// What the file-name tools know about the session's files, each list parallel to `files`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ToolContext {
+    /// The parent folder of each file, as text.
+    pub folders: Vec<String>,
+    /// Each file's name without the extension.
+    pub stems: Vec<String>,
+    /// How many files the whole book has, when `files` is only a selection of it; 0 means
+    /// unknown, so `files` is the book. The numbering tools' single-file rule (a one-file book
+    /// has no track number) asks this count, never the selection's size.
+    pub session_files: usize,
+}
+
+impl ToolContext {
+    /// Whether `handed` files (the ones a tool got) make a one-file book.
+    pub(crate) fn single_file_book(&self, handed: usize) -> bool {
+        let book = if self.session_files == 0 {
+            handed
+        } else {
+            self.session_files
+        };
+        book == 1
+    }
+}
+
+/// Runs `tool` over `files` with no file-name context; the input is never mutated.
 pub fn apply_tool(files: &[FileTags], tool: &TagTool) -> Vec<FileTags> {
+    apply_tool_in(files, &ToolContext::default(), tool)
+}
+
+/// Runs `tool` over `files`, which `ctx` describes; the input is never mutated.
+pub fn apply_tool_in(files: &[FileTags], ctx: &ToolContext, tool: &TagTool) -> Vec<FileTags> {
     match tool {
+        TagTool::AutoNumber(options) => auto_number(files, ctx, options),
+        TagTool::FromFileName { pattern } => from_file_name(files, ctx, pattern),
         TagTool::Case { fields, case } => change_case(files, fields, *case),
         TagTool::StripDiacritics { fields } => strip_diacritics(files, fields),
         TagTool::StripTrackPrefix => strip_track_prefix(files),
-        TagTool::Renumber { start } => renumber(files, *start),
+        TagTool::Renumber { start } => renumber_in(files, ctx, *start),
         TagTool::AlbumArtistFromArtist => album_artist_from_artist(files),
         TagTool::NarratorFromText => narrator_from_text(files),
         TagTool::ClearRedundantTitles => clear_redundant_titles(files),
         TagTool::RemoveExtras { keys } => remove_extras(files, keys),
     }
+}
+
+/// Sets fields from each file's name (`ctx.stems`) by `pattern`. A file whose name doesn't match,
+/// has no stem in `ctx`, or any file when the pattern is bad is left unchanged. A matched value
+/// replaces the field as one value (multi-value fields aren't split) and keeps its text as matched.
+pub fn from_file_name(files: &[FileTags], ctx: &ToolContext, pattern: &NamePattern) -> Vec<FileTags> {
+    let Ok(compiled) = compile_pattern(pattern) else {
+        return files.to_vec();
+    };
+    files
+        .iter()
+        .enumerate()
+        .map(|(i, file)| {
+            let mut out = file.clone();
+            let pairs = ctx
+                .stems
+                .get(i)
+                .and_then(|stem| compiled.read(stem))
+                .unwrap_or_default();
+            let mut set = Vec::new();
+            for (field, value) in pairs {
+                // A one-file book has no track number, however the name spells it.
+                let skipped = matches!(field, TagField::Track | TagField::TrackTotal);
+                if skipped && ctx.single_file_book(files.len()) {
+                    continue;
+                }
+                if !set.contains(&field) {
+                    set.push(field);
+                    out.fields.insert(field, vec![value]);
+                } else if field.is_multi() {
+                    out.fields.entry(field).or_default().push(value);
+                }
+            }
+            out
+        })
+        .collect()
 }
 
 /// The fields of `tags` that must not carry diacritics and do: those not kept
@@ -193,24 +270,47 @@ pub fn strip_track_prefix(files: &[FileTags]) -> Vec<FileTags> {
         .collect()
 }
 
-/// Numbers the files `start`, `start + 1`, ... in session order. Disc is untouched. A single
-/// file has its track removed instead: a one-file book has no track number.
+/// Numbers the files `start`, `start + 1`, ... in session order, padded to the width of the
+/// last number ([`track_width`]: `01` … `12`, `001` … `120`). Disc and the totals are
+/// untouched. A single file has its track and track total removed instead: a one-file book
+/// has no track number.
 pub fn renumber(files: &[FileTags], start: u32) -> Vec<FileTags> {
-    if let [only] = files {
+    renumber_in(files, &ToolContext::default(), start)
+}
+
+/// [`renumber`] where `files` may be a selection of a bigger book (`ctx.session_files`): the
+/// no-track rule applies only to a one-file book, so one selected track of a bigger book is
+/// numbered `start`.
+pub fn renumber_in(files: &[FileTags], ctx: &ToolContext, start: u32) -> Vec<FileTags> {
+    if let ([only], true) = (files, ctx.single_file_book(files.len())) {
         let mut out = only.clone();
         out.fields.remove(&TagField::Track);
+        out.fields.remove(&TagField::TrackTotal);
         return vec![out];
     }
+    let number = |index: usize| u32::try_from(index).map_or(u32::MAX, |i| start.saturating_add(i));
+    let width = track_width(number(files.len().saturating_sub(1)));
     files
         .iter()
         .enumerate()
         .map(|(index, file)| {
             let mut out = file.clone();
-            let number = u32::try_from(index).map_or(u32::MAX, |i| start.saturating_add(i));
-            out.fields.insert(TagField::Track, vec![number.to_string()]);
+            out.fields
+                .insert(TagField::Track, vec![pad_number(number(index), width)]);
             out
         })
         .collect()
+}
+
+/// `n` in decimal with leading zeros up to `width` digits; a longer number stays whole.
+pub fn pad_number(n: u32, width: usize) -> String {
+    format!("{n:0width$}")
+}
+
+/// How many digits track numbers up to `total` are padded to: at least two (`01`), more
+/// when `total` has more (`001` for 100 and up).
+pub fn track_width(total: u32) -> usize {
+    total.to_string().len().max(2)
 }
 
 /// Sets the album artist to a copy of the artist where there is none yet.

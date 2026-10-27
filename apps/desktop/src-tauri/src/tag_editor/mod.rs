@@ -3,7 +3,9 @@
 
 pub(crate) mod apply;
 pub(crate) mod cover;
+pub(crate) mod playback;
 pub(crate) mod session;
+pub(crate) mod text_tools;
 pub(crate) mod undo;
 pub(crate) mod view;
 
@@ -14,6 +16,10 @@ mod cover_test;
 #[cfg(test)]
 mod kind_test;
 #[cfg(test)]
+mod playback_test;
+#[cfg(test)]
 mod session_test;
+#[cfg(test)]
+mod text_tools_test;
 #[cfg(test)]
 mod view_test;

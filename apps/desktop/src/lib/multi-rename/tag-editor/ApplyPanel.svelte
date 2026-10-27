@@ -26,9 +26,11 @@
 
     interface Props {
         tags: TagEditorState
+        /** Called just before a write starts (the Tags tab stops a playing track: lofty rewrites the file it streams). */
+        onWriting?: () => void
     }
 
-    const { tags }: Props = $props()
+    const { tags, onWriting }: Props = $props()
 
     type Step =
         | { step: 'idle' }
@@ -127,6 +129,7 @@
             return
         }
         current = { step: 'writing' }
+        onWriting?.()
         const res = await tags.apply({ kind: listedAs, allowFrameLoss: false, skip: [] }, { after: earlier })
         if (!res.ok) {
             current = earlier.length > 0 ? endedStep(earlier) : refusedStep(res.error.kind)
@@ -177,6 +180,7 @@
             return
         }
         const request = writeAnywayRequest(listedAs, last.wouldDrop, knownPaths(last))
+        onWriting?.()
         const res = await tags.apply(request, { after: reports })
         // A refused "Write anyway" leaves those files unwritten, as a skip does; the tab words the refusal.
         current = endedStep(res.ok ? [...reports, res.value] : reports)

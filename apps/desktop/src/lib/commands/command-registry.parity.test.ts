@@ -165,6 +165,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'multiRename.moveRowDown': 'Move the file down in the rename order',
   'multiRename.tabRename': 'Show the Rename tab',
   'multiRename.tabTags': 'Show the Tags tab',
+  'multiRename.playTrack': 'Play or stop the focused track',
   'multiRename.rename': 'Rename the files',
   'file.view': 'View',
   'file.edit': 'Edit in default editor',

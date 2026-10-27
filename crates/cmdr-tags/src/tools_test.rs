@@ -92,7 +92,7 @@ fn renumber_numbers_from_one_and_leaves_disc() {
         .collect();
     let out = renumber(&input, 1);
     for (i, tags) in out.iter().enumerate() {
-        assert_eq!(one(tags, TagField::Track), Some((i + 1).to_string()));
+        assert_eq!(one(tags, TagField::Track), Some(format!("{:02}", i + 1)));
         assert_eq!(one(tags, TagField::Disc).as_deref(), Some("2"));
     }
     assert_eq!(one(&out[39], TagField::Track).as_deref(), Some("40"));
@@ -354,10 +354,56 @@ fn apply_tool_dispatches_each_variant() {
 }
 
 #[test]
-fn renumber_single_file_clears_track() {
-    let out = renumber(&[file(&[(TagField::Track, "3"), (TagField::Disc, "2")])], 1);
+fn renumber_single_file_removes_track_and_total() {
+    let out = renumber(
+        &[file(&[
+            (TagField::Track, "3"),
+            (TagField::TrackTotal, "12"),
+            (TagField::Disc, "2"),
+            (TagField::DiscTotal, "3"),
+        ])],
+        1,
+    );
     assert_eq!(get(&out[0], TagField::Track), None);
+    assert_eq!(get(&out[0], TagField::TrackTotal), None);
     assert_eq!(one(&out[0], TagField::Disc).as_deref(), Some("2"));
+    assert_eq!(one(&out[0], TagField::DiscTotal).as_deref(), Some("3"));
+}
+
+#[test]
+fn renumber_pads_to_two() {
+    let input = vec![FileTags::default(); 3];
+    let out = renumber(&input, 1);
+    let tracks: Vec<Option<String>> = out.iter().map(|t| one(t, TagField::Track)).collect();
+    assert_eq!(tracks, [Some("01".into()), Some("02".into()), Some("03".into())]);
+}
+
+#[test]
+fn renumber_pads_to_three_past_99() {
+    let input = vec![FileTags::default(); 120];
+    let out = renumber(&input, 1);
+    assert_eq!(one(&out[0], TagField::Track).as_deref(), Some("001"));
+    assert_eq!(one(&out[98], TagField::Track).as_deref(), Some("099"));
+    assert_eq!(one(&out[119], TagField::Track).as_deref(), Some("120"));
+}
+
+#[test]
+fn renumber_width_follows_the_last_number_not_the_count() {
+    let out = renumber(&vec![FileTags::default(); 3], 98);
+    let tracks: Vec<Option<String>> = out.iter().map(|t| one(t, TagField::Track)).collect();
+    assert_eq!(tracks, [Some("098".into()), Some("099".into()), Some("100".into())]);
+}
+
+#[test]
+fn pad_number_and_track_width() {
+    assert_eq!(track_width(0), 2);
+    assert_eq!(track_width(9), 2);
+    assert_eq!(track_width(99), 2);
+    assert_eq!(track_width(100), 3);
+    assert_eq!(track_width(1000), 4);
+    assert_eq!(pad_number(3, 2), "03");
+    assert_eq!(pad_number(3, 3), "003");
+    assert_eq!(pad_number(120, 2), "120");
 }
 
 #[test]
@@ -404,4 +450,21 @@ fn apply_tool_renumber_on_a_single_file_removes_its_track() {
     assert_eq!(out.len(), 1);
     assert_eq!(get(&out[0], TagField::Track), None);
     assert_eq!(one(&out[0], TagField::Album), Some("Book".to_string()));
+}
+
+#[test]
+fn renumber_one_file_of_a_bigger_book_keeps_a_track() {
+    let input = [file(&[(TagField::Track, "7"), (TagField::TrackTotal, "9")])];
+    let ctx = ToolContext {
+        session_files: 5,
+        ..ToolContext::default()
+    };
+    let out = apply_tool_in(&input, &ctx, &TagTool::Renumber { start: 1 });
+    assert_eq!(one(&out[0], TagField::Track), Some("01".to_string()));
+    let alone = ToolContext {
+        session_files: 1,
+        ..ToolContext::default()
+    };
+    let out = apply_tool_in(&input, &alone, &TagTool::Renumber { start: 1 });
+    assert_eq!(get(&out[0], TagField::Track), None, "a one-file book has no track");
 }

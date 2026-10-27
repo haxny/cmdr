@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::format::{AudioFormat, format_of};
 use crate::model::{ContentKind, Cover, FileTags, KindRemoval, TagError, TagField};
+use crate::totals::{add_totals, id3_total_items, ilst_total_items, vorbis_total_items};
 
 /// The separator the editor joins multiple values with where a format stores one string.
 pub(crate) const JOIN: &str = "; ";
@@ -36,7 +37,7 @@ pub(crate) fn parse_error(e: impl std::fmt::Display) -> TagError {
 /// Formats the editor doesn't handle (WAV, ...) are [`TagError::NotSupported`].
 pub fn read_tags(path: &Path) -> Result<FileTags, TagError> {
     let format = format_of_path(path)?;
-    read_from(&mut File::open(path)?, format, parse_options())
+    read_from(&mut File::open(path)?, format, parse_options(format))
 }
 
 /// The playing time of the audio file at `path` from lofty's audio properties, or `None` when
@@ -75,12 +76,16 @@ pub(crate) fn read_from<R: Read + Seek>(
 }
 
 /// What a file holds beyond [`FileTags`] that a write can change and an undo must put back:
-/// the track and disc totals (the reader shows plain numbers) and, on MP3, the conductor
-/// (`TPE3`, which an audiobook write removes).
+/// on MP3, the conductor (`TPE3`, which an audiobook write removes).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RawTags {
+    /// Track and disc totals an undo record may carry here (records whose fields hold no
+    /// `TrackTotal` / `DiscTotal`): a restore writes each as the total of an absent field. The
+    /// reader never fills them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) track_total: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) disc_total: Option<u32>,
     pub(crate) conductor: Option<String>,
 }
@@ -108,7 +113,7 @@ pub(crate) fn read_raw(path: &Path) -> Result<RawTags, TagError> {
 /// describe the same state of the file (the undo store's snapshot).
 pub(crate) fn read_snapshot(path: &Path) -> Result<(FileTags, RawTags), TagError> {
     let format = format_of_path(path)?;
-    read_both_from(&mut File::open(path)?, format, parse_options())
+    read_both_from(&mut File::open(path)?, format, parse_options(format))
 }
 
 /// The [`FileTags`] and [`RawTags`] of `format` from `source` with `options`, from one parse.
@@ -126,19 +131,19 @@ pub(crate) fn read_both_from<R: Read + Seek>(
         }
         AudioFormat::Mp4 => {
             let file = Mp4File::read_from(source, options).map_err(parse_error)?;
-            file.ilst().map(|t| (read_ilst(t), raw_ilst(t))).unwrap_or_default()
+            (file.ilst().map(read_ilst).unwrap_or_default(), RawTags::default())
         }
         AudioFormat::Flac => {
             let file = FlacFile::read_from(source, options).map_err(parse_error)?;
             let comments = file.vorbis_comments().unwrap_or(&empty);
-            (read_vorbis(comments, flac_pictures(&file)), raw_vorbis(comments))
+            (read_vorbis(comments, flac_pictures(&file)), RawTags::default())
         }
         AudioFormat::OggVorbis => {
             let file = VorbisFile::read_from(source, options).map_err(parse_error)?;
             let comments = file.vorbis_comments();
             (
                 read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)),
-                raw_vorbis(comments),
+                RawTags::default(),
             )
         }
         AudioFormat::Opus => {
@@ -146,62 +151,17 @@ pub(crate) fn read_both_from<R: Read + Seek>(
             let comments = file.vorbis_comments();
             (
                 read_vorbis(comments, comments.pictures().iter().map(|(p, _)| p)),
-                raw_vorbis(comments),
+                RawTags::default(),
             )
         }
     })
 }
 
-/// The total in `"N/T"`; none for a plain number, a zero, or text that isn't a number.
-fn total_after_slash(value: &str) -> Option<u32> {
-    let (_, total) = value.split_once('/')?;
-    total.trim().parse().ok().filter(|t| *t > 0)
-}
-
 pub(crate) fn raw_id3(id3: &Id3v2Tag) -> RawTags {
     let text = |id: &'static str| id3.get_text(&FrameId::Valid(id.into()));
     RawTags {
-        track_total: text("TRCK").and_then(total_after_slash),
-        disc_total: text("TPOS").and_then(total_after_slash),
         conductor: text("TPE3").map(str::trim).filter(|c| !c.is_empty()).map(str::to_owned),
-    }
-}
-
-fn raw_ilst(ilst: &Ilst) -> RawTags {
-    // Bytes 4-5 of a `trkn` / `disk` atom's data, 0 meaning none.
-    let total = |fourcc: [u8; 4]| match ilst.get(&AtomIdent::Fourcc(fourcc)).and_then(|a| a.data().next()) {
-        Some(AtomData::Unknown { data, .. }) if data.len() >= 6 => {
-            Some(u32::from(u16::from_be_bytes([data[4], data[5]]))).filter(|t| *t > 0)
-        }
-        _ => None,
-    };
-    RawTags {
-        track_total: total(*b"trkn"),
-        disc_total: total(*b"disk"),
-        conductor: None,
-    }
-}
-
-fn raw_vorbis(comments: &VorbisComments) -> RawTags {
-    // A total key wins over a `N/T` number.
-    let total = |keys: [&str; 2], number: &str| {
-        let keyed = comments.items().find_map(|(key, value)| {
-            keys.iter()
-                .any(|k| k.eq_ignore_ascii_case(key))
-                .then(|| value.trim().parse().ok().filter(|t: &u32| *t > 0))
-                .flatten()
-        });
-        keyed.or_else(|| {
-            comments
-                .items()
-                .find(|(key, _)| key.eq_ignore_ascii_case(number))
-                .and_then(|(_, value)| total_after_slash(value))
-        })
-    };
-    RawTags {
-        track_total: total(["TRACKTOTAL", "TOTALTRACKS"], "TRACKNUMBER"),
-        disc_total: total(["DISCTOTAL", "TOTALDISCS"], "DISCNUMBER"),
-        conductor: None,
+        ..RawTags::default()
     }
 }
 
@@ -214,8 +174,15 @@ fn flac_pictures(file: &FlacFile) -> impl Iterator<Item = &Picture> + Clone {
 
 /// Only tags are wanted; skipping the audio properties also spares a read of the stream.
 /// Saving a tag never needs them: lofty's tag writers re-read the container themselves.
-pub(crate) fn parse_options() -> ParseOptions {
-    ParseOptions::new().read_properties(false)
+/// Vorbis comments without implicit conversions: lofty would otherwise re-parse
+/// `TRACKNUMBER=03` as `3` (the padding the writer kept would never show) and split a `3/12`
+/// into a `TRACKTOTAL` key of its own; the reader handles `N/T` itself.
+pub(crate) fn parse_options(format: AudioFormat) -> ParseOptions {
+    let mut options = ParseOptions::new().read_properties(false);
+    match format {
+        AudioFormat::Flac | AudioFormat::OggVorbis | AudioFormat::Opus => options.implicit_conversions(false),
+        AudioFormat::Mp3 | AudioFormat::Mp4 => options,
+    }
 }
 
 /// The format of `path`, by its file name.
@@ -461,6 +428,7 @@ pub(crate) fn read_id3(id3: &Id3v2Tag) -> FileTags {
         fields: shown_fields(&id3_items(id3)),
         ..FileTags::default()
     };
+    add_totals(&mut tags.fields, &id3_total_items(id3));
     for frame in id3 {
         if let Frame::UserText(f) = frame
             && txxx_field(&f.description).is_none()
@@ -541,7 +509,7 @@ pub(crate) fn freeform_field(name: &str) -> Option<TagField> {
 }
 
 /// A four-character code as text, each byte one Latin-1 character (`©nam`).
-fn fourcc_name(fourcc: &[u8; 4]) -> String {
+pub(crate) fn fourcc_name(fourcc: &[u8; 4]) -> String {
     fourcc.iter().map(|b| char::from(*b)).collect()
 }
 
@@ -573,6 +541,7 @@ pub(crate) fn read_ilst(ilst: &Ilst) -> FileTags {
         fields: shown_fields(&ilst_items(ilst)),
         ..FileTags::default()
     };
+    add_totals(&mut tags.fields, &ilst_total_items(ilst));
     for atom in ilst {
         if let AtomIdent::Freeform { mean, name } = atom.ident()
             && !(mean == ITUNES_MEAN && freeform_field(name).is_some())
@@ -611,8 +580,9 @@ pub(crate) const VORBIS_FIELDS: [(&str, TagField); 15] = [
 /// write instead of `ALBUMARTIST`.
 const VORBIS_ALIASES: [(&str, TagField); 1] = [("ALBUM ARTIST", TagField::AlbumArtist)];
 
-/// Track and disc totals, which the writer manages too: it writes `TRACKTOTAL` when the
-/// caller passes a total and removes every other one. Never an extra.
+/// Track and disc totals, which the reader shows as [`TagField::TrackTotal`] /
+/// [`TagField::DiscTotal`]: the writer writes `TRACKTOTAL` / `DISCTOTAL` beside the number and
+/// removes every other spelling. Never an extra.
 pub(crate) const VORBIS_TOTALS: [&str; 4] = ["TRACKTOTAL", "TOTALTRACKS", "DISCTOTAL", "TOTALDISCS"];
 
 /// The field a Vorbis key (uppercase) maps to, aliases included.
@@ -643,6 +613,7 @@ pub(crate) fn read_vorbis<'a>(
         fields: shown_fields(&vorbis_items(comments)),
         ..FileTags::default()
     };
+    add_totals(&mut tags.fields, &vorbis_total_items(comments));
     for (key, value) in comments.items() {
         let key = key.to_ascii_uppercase();
         if vorbis_field(&key).is_none() && !VORBIS_TOTALS.contains(&key.as_str()) {

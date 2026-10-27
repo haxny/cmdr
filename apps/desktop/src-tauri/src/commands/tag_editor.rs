@@ -3,15 +3,17 @@
 
 use cmdr_tags::shared::CoverEdit;
 use cmdr_tags::tools::TagTool;
-use cmdr_tags::{ContentKind, RestoreReport};
+use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
 use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover, thumbnail_url};
+use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
-    FileChangeView, LOCAL_VOLUME_ID, TagEdit, TagEditorError, changes, close, edit, open, shared_cover,
-    tool as run_tool,
+    FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open,
+    preview_names, shared_cover, tool as run_tool,
 };
+use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 
 /// Runs blocking `work` off the IPC thread.
@@ -37,11 +39,38 @@ pub async fn edit_tags(session_id: String, edits: Vec<TagEdit>) -> Result<TagEdi
     blocking(move || edit(&session_id, edits)).await
 }
 
-/// Runs a clean-up tool over the whole session.
+/// Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
 #[tauri::command]
 #[specta::specta]
-pub async fn run_tag_tool(session_id: String, tool: TagTool) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || run_tool(&session_id, tool)).await
+pub async fn run_tag_tool(
+    session_id: String,
+    tool: TagTool,
+    scope: Option<Vec<String>>,
+) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || run_tool(&session_id, tool, scope)).await
+}
+
+/// Runs find/replace or a field-from-mask format over the tracks at `scope`, or the whole session
+/// for `None`.
+#[tauri::command]
+#[specta::specta]
+pub async fn run_tag_text_tool(
+    session_id: String,
+    tool: TagTextTool,
+    scope: Option<Vec<String>>,
+) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || run_text_tool(&session_id, tool, scope)).await
+}
+
+/// What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
+#[tauri::command]
+#[specta::specta]
+pub async fn preview_tags_from_names(
+    session_id: String,
+    pattern: NamePattern,
+    scope: Option<Vec<String>>,
+) -> Result<Vec<NamePreviewRow>, TagEditorError> {
+    blocking(move || preview_names(&session_id, pattern, scope)).await
 }
 
 /// What a write as `kind` would change, per file, including what the kind removes.
@@ -80,6 +109,33 @@ pub async fn undo_tag_apply(
 #[specta::specta]
 pub async fn close_tag_editor(session_id: String) {
     close(&session_id);
+}
+
+/// A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
+/// Only a readable track of the session gets one (`UnknownTrack` otherwise).
+#[tauri::command]
+#[specta::specta]
+pub async fn tag_track_audio_url(session_id: String, path: String) -> Result<String, TagEditorError> {
+    blocking(move || audio_url(&session_id, &path)).await
+}
+
+/// Ends a URL `tag_track_audio_url` gave. Closing the tag session ends all of them.
+#[tauri::command]
+#[specta::specta]
+pub async fn release_tag_track_audio(url: String) {
+    release(&url);
+}
+
+/// Opens tracks of the session in foobar2000 when it's installed, else each in its default app.
+/// Returns once the launch is asked for, not when the player is up.
+#[tauri::command]
+#[specta::specta]
+pub async fn open_tags_in_player(
+    app: tauri::AppHandle,
+    session_id: String,
+    paths: Vec<String>,
+) -> Result<(), TagEditorError> {
+    blocking(move || open_in_player(&app, player_targets(&session_id, &paths)?)).await
 }
 
 /// The session's folder, when its files are on the local disk.

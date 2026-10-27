@@ -10,6 +10,7 @@ import { isSnapshotPath } from './file-explorer/navigation/real-folder-history'
 import { volumeScheme } from './volume-scheme'
 import { resolveStorePath } from './settings/store-path'
 import type { Location } from './tauri-commands'
+import type { NamePattern } from './ipc/bindings'
 
 const STORE_NAME = 'app-status.json'
 const DEFAULT_PATH = '~'
@@ -543,6 +544,49 @@ export async function saveTagWriteKind(kind: string): Promise<void> {
 }
 
 // ============================================================================
+// Tag editor file-name patterns (fork: "From file name" in the Tags tab)
+// ============================================================================
+
+const TAG_NAME_PATTERNS_KEY = 'tagNamePatterns'
+
+/** How many patterns the Tags tab remembers. */
+export const TAG_NAME_PATTERNS_MAX = 10
+
+/** The patterns in `raw` that are well formed, newest first, at most `TAG_NAME_PATTERNS_MAX`; anything else is dropped. */
+export function parseTagNamePatterns(raw: unknown): NamePattern[] {
+  if (!Array.isArray(raw)) return []
+  const valid: NamePattern[] = []
+  for (const entry of raw as unknown[]) {
+    if (typeof entry !== 'object' || entry === null) continue
+    const { kind, pattern } = entry as { kind?: unknown; pattern?: unknown }
+    if ((kind !== 'format' && kind !== 'regex') || typeof pattern !== 'string' || pattern === '') continue
+    valid.push({ kind, pattern })
+  }
+  return valid.slice(0, TAG_NAME_PATTERNS_MAX)
+}
+
+/** The file-name patterns the user last took, newest first; empty before any or when the stored value is unusable. */
+export async function loadTagNamePatterns(): Promise<NamePattern[]> {
+  try {
+    const store = await getStore()
+    return parseTagNamePatterns(await store.get(TAG_NAME_PATTERNS_KEY))
+  } catch {
+    return []
+  }
+}
+
+/** Remembers the file-name patterns (the caller keeps them newest first and capped). */
+export async function saveTagNamePatterns(patterns: readonly NamePattern[]): Promise<void> {
+  try {
+    const store = await getStore()
+    await store.set(TAG_NAME_PATTERNS_KEY, patterns.slice(0, TAG_NAME_PATTERNS_MAX))
+    await store.save()
+  } catch {
+    // Silently fail - persistence is nice-to-have
+  }
+}
+
+// ============================================================================
 // Tab persistence
 // ============================================================================
 
@@ -640,5 +684,32 @@ export async function savePaneTabs(side: 'left' | 'right', paneTabs: PersistedPa
     await store.save()
   } catch {
     // Silently fail
+  }
+}
+
+// ============================================================================
+// Tag editor auto-numbering choices (fork: the Tags tab's numbering wizard)
+// ============================================================================
+
+const TAG_NUMBERING_KEY = 'tagNumbering'
+
+/** The numbering wizard's last choices as stored, unchecked (the wizard validates them field by field), or `null`. */
+export async function loadTagNumbering(): Promise<unknown> {
+  try {
+    const store = await getStore()
+    return (await store.get(TAG_NUMBERING_KEY)) ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Remembers the numbering wizard's choices. */
+export async function saveTagNumbering(options: unknown): Promise<void> {
+  try {
+    const store = await getStore()
+    await store.set(TAG_NUMBERING_KEY, options)
+    await store.save()
+  } catch {
+    // Silently fail - persistence is nice-to-have
   }
 }

@@ -65,6 +65,7 @@ export const EXEMPT_IDS = [
   'multiRename.moveRowDown',
   'multiRename.tabRename',
   'multiRename.tabTags',
+  'multiRename.playTrack',
   'multiRename.rename',
   'network.selectHost',
   'share.back',

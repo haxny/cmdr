@@ -33,7 +33,16 @@ const TRACKS: TrackRow[] = [
 ]
 
 async function mountList(tracks: TrackRow[], editable = true): Promise<HTMLElement> {
-  const mounted = await mountInto(TrackList, { tracks, editable, onEdit: () => {} })
+  const mounted = await mountInto(TrackList, {
+    tracks,
+    editable,
+    selected: new Set(['/b/01.mp3']),
+    onEdit: () => {},
+    onToggle: () => {},
+    onToggleAll: () => {},
+    playing: '/b/01.mp3',
+    onPlay: () => {},
+  })
   cleanup = mounted.cleanup
   return mounted.root
 }

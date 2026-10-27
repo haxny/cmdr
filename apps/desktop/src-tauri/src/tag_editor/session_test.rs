@@ -9,10 +9,13 @@ use cmdr_local::reading::list_directory_core;
 use cmdr_media_meta::test_fixtures::{m4a_file, mp3_frames};
 use cmdr_tags::shared::{CoverEdit, SharedValue};
 use cmdr_tags::tools::TagTool;
-use cmdr_tags::{ContentKind, Cover, FileTags, TagField, WriteOptions, read_tags, write_tags};
+use cmdr_tags::{
+    ContentKind, Cover, FileTags, NamePattern, PatternError, TagField, WriteOptions, read_tags, write_tags,
+};
 
 use super::session::{
-    TagEdit, TagEditorError, changes, close, edit, is_open, open, shared_cover, tool, unchanged_on_disk,
+    NamePreviewRow, NameValue, TagEdit, TagEditorError, changes, close, edit, is_open, open, preview_names,
+    shared_cover, tool, unchanged_on_disk,
 };
 use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
 use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};
@@ -200,7 +203,7 @@ fn tool_renumber_uses_current_order() {
     let (_dir, _listing, id) = album("tag-editor-renumber");
     open(&id, false).expect("opens");
     move_row(&id, 2, RowMove::Up).expect("c goes above b");
-    let view = tool(&id, TagTool::Renumber { start: 1 }).expect("renumbers");
+    let view = tool(&id, TagTool::Renumber { start: 1 }, None).expect("renumbers");
     let numbered: Vec<(&str, Option<&str>)> = view
         .tracks
         .iter()
@@ -208,7 +211,7 @@ fn tool_renumber_uses_current_order() {
         .collect();
     assert_eq!(
         numbered,
-        vec![("a.mp3", Some("1")), ("c.mp3", Some("2")), ("b.mp3", Some("3"))]
+        vec![("a.mp3", Some("01")), ("c.mp3", Some("02")), ("b.mp3", Some("03"))]
     );
     close(&id);
     close_rename(&id);
@@ -221,7 +224,7 @@ fn a_single_file_session_renumbers_to_no_track() {
     let session = open_rename(listing.id(), true, None, 0).expect("opens");
     let view = open(&session.session_id, false).expect("opens");
     assert_eq!(view.tracks[0].track.as_deref(), Some("4"));
-    let view = tool(&session.session_id, TagTool::Renumber { start: 1 }).expect("renumbers");
+    let view = tool(&session.session_id, TagTool::Renumber { start: 1 }, None).expect("renumbers");
     assert_eq!(view.tracks[0].track, None);
     close(&session.session_id);
     close_rename(&session.session_id);
@@ -237,7 +240,7 @@ fn non_local_session_is_read_only() {
     assert!(view.tracks.is_empty(), "an unreachable volume lists no tracks");
     assert_eq!(edit(&session.session_id, vec![]), Err(TagEditorError::ReadOnly));
     assert_eq!(
-        tool(&session.session_id, TagTool::StripTrackPrefix),
+        tool(&session.session_id, TagTool::StripTrackPrefix, None),
         Err(TagEditorError::ReadOnly)
     );
     close(&session.session_id);
@@ -422,7 +425,7 @@ fn a_closed_or_unopened_session_is_typed() {
     assert_eq!(edit(&id, vec![]), Err(TagEditorError::NotOpen));
     open(&id, false).expect("opens");
     close(&id);
-    assert_eq!(tool(&id, TagTool::StripTrackPrefix), Err(TagEditorError::NotOpen));
+    assert_eq!(tool(&id, TagTool::StripTrackPrefix, None), Err(TagEditorError::NotOpen));
     close_rename(&id);
     assert_eq!(open(&id, false), Err(TagEditorError::NoSession));
 }
@@ -544,4 +547,244 @@ fn rebase_keeps_edits_and_follows_the_disk_elsewhere() {
             (TagField::Comment, "c")
         ])
     );
+}
+
+fn numbers(view: &TagEditorView) -> Vec<(&str, Option<&str>)> {
+    view.tracks
+        .iter()
+        .map(|row| (row.file_name.as_str(), row.track.as_deref()))
+        .collect()
+}
+
+fn format_pattern(pattern: &str) -> NamePattern {
+    NamePattern::Format {
+        pattern: pattern.to_string(),
+    }
+}
+
+#[test]
+fn tool_runs_on_scope_only() {
+    let mp3s: Vec<(&str, Vec<u8>)> = ["a.mp3", "b.mp3", "c.mp3", "d.mp3"]
+        .into_iter()
+        .map(|name| (name, mp3_frames()))
+        .collect();
+    let (dir, listing) = folder("tag-editor-scope", "root", &mp3s);
+    let id = open_rename(listing.id(), true, None, 0).expect("opens").session_id;
+    open(&id, false).expect("opens");
+    let scope = vec![path_of(&dir, "d.mp3"), path_of(&dir, "b.mp3")];
+    let view = tool(&id, TagTool::Renumber { start: 1 }, Some(scope)).expect("renumbers");
+    // Scoped files keep session order, whatever order the scope lists them in.
+    assert_eq!(
+        numbers(&view),
+        vec![
+            ("a.mp3", None),
+            ("b.mp3", Some("01")),
+            ("c.mp3", None),
+            ("d.mp3", Some("02"))
+        ]
+    );
+    let unchanged = tool(&id, TagTool::Renumber { start: 5 }, Some(vec![])).expect("an empty scope is a no-op");
+    assert_eq!(unchanged, view);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn unknown_scope_path_is_unknown_track() {
+    let (dir, _listing, id) = album("tag-editor-scope-unknown");
+    let before = open(&id, false).expect("opens");
+    let scope = vec![path_of(&dir, "a.mp3"), path_of(&dir, "nope.mp3")];
+    assert_eq!(
+        tool(&id, TagTool::Renumber { start: 1 }, Some(scope.clone())),
+        Err(TagEditorError::UnknownTrack)
+    );
+    assert_eq!(
+        preview_names(&id, format_pattern("%title%"), Some(scope)),
+        Err(TagEditorError::UnknownTrack)
+    );
+    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn store_normalizes_m4a() {
+    let (dir, listing) = folder(
+        "tag-editor-m4a",
+        "root",
+        &[("a.m4a", m4a_file()), ("b.m4a", m4a_file())],
+    );
+    tag_file(&dir, "a.m4a", &[(TagField::Track, "1")]);
+    tag_file(&dir, "b.m4a", &[(TagField::Track, "2")]);
+    let id = open_rename(listing.id(), true, None, 0).expect("opens").session_id;
+    open(&id, false).expect("opens");
+    for _ in 0..2 {
+        let view = tool(&id, TagTool::Renumber { start: 1 }, None).expect("renumbers");
+        assert_eq!(numbers(&view), vec![("a.m4a", Some("1")), ("b.m4a", Some("2"))]);
+        assert!(!view.dirty, "an M4A holds `01` as 1, which is on disk already");
+        assert!(changes(&id, ContentKind::Music).expect("changes").is_empty());
+    }
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn from_file_name_uses_stems() {
+    let (dir, listing) = folder(
+        "tag-editor-from-name",
+        "root",
+        &[("01 - Alpha.mp3", mp3_frames()), ("02 - Beta.mp3", mp3_frames())],
+    );
+    let id = open_rename(listing.id(), true, None, 0).expect("opens").session_id;
+    open(&id, false).expect("opens");
+    let pattern = format_pattern("%track% - %title%");
+    let scope = vec![path_of(&dir, "02 - Beta.mp3")];
+    let view = tool(&id, TagTool::FromFileName { pattern }, Some(scope)).expect("reads the names");
+    assert_eq!(titles(&view)[0].1, None, "outside the scope");
+    assert_eq!(view.tracks[1].title.as_deref(), Some("Beta"));
+    assert_eq!(view.tracks[1].track.as_deref(), Some("02"));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn bad_pattern_is_typed() {
+    let (_dir, _listing, id) = album("tag-editor-bad-pattern");
+    let before = open(&id, false).expect("opens");
+    let bad = NamePattern::Regex {
+        pattern: "(".to_string(),
+    };
+    let refused = TagEditorError::BadPattern {
+        error: PatternError::BadRegex,
+    };
+    assert_eq!(
+        tool(&id, TagTool::FromFileName { pattern: bad.clone() }, None),
+        Err(refused.clone())
+    );
+    assert_eq!(preview_names(&id, bad, None), Err(refused));
+    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn preview_names_unmatched_as_none() {
+    let (dir, listing) = folder(
+        "tag-editor-preview-names",
+        "root",
+        &[("01 - Alpha.mp3", mp3_frames()), ("notes.mp3", mp3_frames())],
+    );
+    let id = open_rename(listing.id(), true, None, 0).expect("opens").session_id;
+    open(&id, false).expect("opens");
+    let rows = preview_names(&id, format_pattern("%track% - %title%"), None).expect("previews");
+    assert_eq!(
+        rows,
+        vec![
+            NamePreviewRow {
+                path: path_of(&dir, "01 - Alpha.mp3"),
+                file_name: "01 - Alpha.mp3".to_string(),
+                fields: Some(vec![
+                    NameValue {
+                        field: TagField::Track,
+                        value: "01".to_string(),
+                    },
+                    NameValue {
+                        field: TagField::Title,
+                        value: "Alpha".to_string(),
+                    },
+                ]),
+            },
+            NamePreviewRow {
+                path: path_of(&dir, "notes.mp3"),
+                file_name: "notes.mp3".to_string(),
+                fields: None,
+            },
+        ]
+    );
+    assert!(
+        !edit(&id, vec![]).expect("a refresh").dirty,
+        "a preview changes nothing"
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+/// The single-file rule is about the book: one selected track of a bigger book keeps a number.
+#[test]
+fn a_one_track_scope_keeps_its_number() {
+    let (dir, _listing, id) = album("tag-editor-scope-one");
+    open(&id, false).expect("opens");
+    let scope = vec![path_of(&dir, "b.mp3")];
+    let view = tool(&id, TagTool::Renumber { start: 2 }, Some(scope)).expect("renumbers");
+    assert_eq!(
+        numbers(&view),
+        vec![("a.mp3", None), ("b.mp3", Some("02")), ("c.mp3", None)]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+/// A damaged file is still part of the book: one readable track of two keeps its number.
+#[test]
+fn an_unreadable_file_still_counts_as_part_of_the_book() {
+    let (dir, listing) = folder(
+        "tag-editor-book-unreadable",
+        "root",
+        &[("01.mp3", mp3_frames()), ("02.flac", vec![0x42; 64])],
+    );
+    tag_file(&dir, "01.mp3", &[(TagField::Track, "4")]);
+    let session = open_rename(listing.id(), true, None, 0).expect("opens");
+    let id = session.session_id;
+    open(&id, false).expect("opens");
+    let view = tool(&id, TagTool::Renumber { start: 1 }, None).expect("renumbers");
+    assert_eq!(view.tracks[0].track.as_deref(), Some("01"));
+    let wizard = TagTool::AutoNumber(cmdr_tags::NumberOptions {
+        track_start: 1,
+        track_total: false,
+        track_pad: true,
+        disc: None,
+    });
+    let view = tool(&id, wizard, None).expect("numbers");
+    assert_eq!(view.tracks[0].track.as_deref(), Some("01"));
+    close(&id);
+    close_rename(&id);
+}
+
+/// A total without its number won't be written, so the view and the change list don't show it.
+#[test]
+fn a_total_without_its_number_is_dropped_in_store() {
+    let (dir, _listing, id) = album("tag-editor-orphan-total");
+    open(&id, false).expect("opens");
+    let edits = vec![
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::TrackTotal,
+            values: vec!["9".to_string()],
+        },
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::DiscTotal,
+            values: vec!["2".to_string()],
+        },
+    ];
+    let view = edit(&id, edits).expect("edits");
+    assert!(!view.dirty, "nothing is left to write");
+    assert!(changes(&id, ContentKind::Audiobook).expect("changes").is_empty());
+    // With the number, the total stays.
+    let edits = vec![
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::Track,
+            values: vec!["1".to_string()],
+        },
+        TagEdit::SetOne {
+            path: path_of(&dir, "a.mp3"),
+            field: TagField::TrackTotal,
+            values: vec!["9".to_string()],
+        },
+    ];
+    let view = edit(&id, edits).expect("edits");
+    assert!(view.dirty);
+    close(&id);
+    close_rename(&id);
 }

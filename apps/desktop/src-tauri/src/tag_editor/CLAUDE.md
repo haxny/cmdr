@@ -10,14 +10,20 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - `cover.rs` cover files from the session's folder (plain name, regular file, size; type from the magic bytes, never
   the name) and the thumbnail `data:` URL; IPC in `commands/tag_editor.rs`.
 - `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`.
+- `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
+  Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
+- `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the viewer's choke point) and "open in
+  foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread, never awaited).
 
 ## Must-knows
 
 - **Edits are keyed by PATH.** The view walks Multi-Rename's CURRENT names (`multi_rename::session::files_of`) and looks
   each file up, so a reorder never moves an edit. `TagEdit::SetOne` names a track by path; an unknown or unreadable
   path refuses the batch (`UnknownTrack`). A file whose fingerprint moved since the read is never written.
-- **Tools get the WHOLE session's readable tags**, never a sub-selection (`renumber` removes the track of a one-file
-  session).
+- **Tools run on a scope** (track paths, `None` = all) in session order; an unknown path refuses (`UnknownTrack`).
+  `store` normalizes every edit for its format (M4A track `01` → `1`).
+- **The no-track rule is about the BOOK**: only a one-track session loses its track number, counting every audio
+  track the session lists, readable or not (`ToolContext::session_files`); one selected track of a bigger book is numbered.
 - **Only the `root` volume is editable**, as `multi_rename/run.rs` decides locality. Other volumes: `editable: false`,
   `RemoteVolume`; `edit` / `tool` / `apply` refuse with `ReadOnly`. Files are listed only if `std::fs` reaches the
   volume.

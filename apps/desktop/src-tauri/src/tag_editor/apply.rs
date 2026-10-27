@@ -112,6 +112,7 @@ pub(super) fn apply_with_before_write(
         .unwrap_or_else(|| Err(panicked()))
         .map_err(|error| TagEditorError::Undo { error })?;
 
+    // The totals travel in the tags (`TrackTotal`, `DiscTotal`), so no fallback is passed.
     let opts = WriteOptions {
         kind: req.kind,
         track_total: None,

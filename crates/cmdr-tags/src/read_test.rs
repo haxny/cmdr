@@ -297,6 +297,7 @@ fn reads_every_m4a_field_and_cover() {
         (TagField::Date, "2020"),
         (TagField::Comment, "Poznamka"),
         (TagField::Track, "3"),
+        (TagField::TrackTotal, "12"),
         (TagField::Disc, "1"),
     ];
     assert_eq!(tags.fields.len(), expected.len(), "{:?}", tags.fields);
@@ -403,4 +404,70 @@ fn removed_by_kind_names_the_conductor_an_audiobook_write_drops() {
         "the write removed what was listed"
     );
     assert_eq!(removed_by_kind(&with, ContentKind::Audiobook).unwrap(), vec![]);
+}
+
+#[test]
+fn mp3_track_total_reads_into_field() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TRCK", "03/12");
+    text_frame(&mut tag, "TPOS", "1/2");
+    let path = write_mp3(dir.path(), "a.mp3", &tag);
+
+    let tags = read(&path);
+
+    assert_eq!(field(&tags, TagField::Track), strings(&["03"]));
+    assert_eq!(field(&tags, TagField::TrackTotal), strings(&["12"]));
+    assert_eq!(field(&tags, TagField::Disc), strings(&["1"]));
+    assert_eq!(field(&tags, TagField::DiscTotal), strings(&["2"]));
+}
+
+#[test]
+fn m4a_track_total_reads_into_field() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut ilst = Ilst::new();
+    ilst.set_track(3);
+    ilst.set_track_total(12);
+    ilst.set_disk(1);
+    ilst.set_disk_total(2);
+    let path = write_m4a(dir.path(), "a.m4a", &ilst);
+
+    let tags = read(&path);
+
+    assert_eq!(field(&tags, TagField::Track), strings(&["3"]));
+    assert_eq!(field(&tags, TagField::TrackTotal), strings(&["12"]));
+    assert_eq!(field(&tags, TagField::Disc), strings(&["1"]));
+    assert_eq!(field(&tags, TagField::DiscTotal), strings(&["2"]));
+}
+
+#[test]
+fn vorbis_track_total_reads_into_field() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut comments = VorbisComments::new();
+    comments.push("TRACKNUMBER".to_owned(), "3".to_owned());
+    comments.push("TRACKTOTAL".to_owned(), "12".to_owned());
+    comments.push("DISCNUMBER".to_owned(), "1/2".to_owned());
+    let path = write_flac(dir.path(), "a.flac", comments, 0);
+
+    let tags = read(&path);
+
+    assert_eq!(field(&tags, TagField::Track), strings(&["3"]));
+    assert_eq!(field(&tags, TagField::TrackTotal), strings(&["12"]));
+    assert_eq!(field(&tags, TagField::Disc), strings(&["1"]));
+    assert_eq!(field(&tags, TagField::DiscTotal), strings(&["2"]));
+    assert!(tags.extras.is_empty(), "a total is no extra: {:?}", tags.extras);
+}
+
+#[test]
+fn a_total_without_its_number_reads_as_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut comments = VorbisComments::new();
+    comments.push("TRACKTOTAL".to_owned(), "12".to_owned());
+    let path = write_flac(dir.path(), "a.flac", comments, 0);
+
+    assert_eq!(
+        read(&path),
+        FileTags::default(),
+        "a write would drop it, so the view doesn't show it"
+    );
 }

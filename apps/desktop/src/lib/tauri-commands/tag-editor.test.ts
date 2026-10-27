@@ -10,6 +10,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     openTagEditor: vi.fn(),
     editTags: vi.fn(),
     runTagTool: vi.fn(),
+    runTagTextTool: vi.fn(),
     getTagChanges: vi.fn(),
     applyTags: vi.fn(),
     undoTagApply: vi.fn(),
@@ -17,6 +18,10 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     listCoverCandidates: vi.fn(),
     setCoverFromFile: vi.fn(),
     getCoverImage: vi.fn(),
+    previewTagsFromNames: vi.fn(),
+    tagTrackAudioUrl: vi.fn(),
+    releaseTagTrackAudio: vi.fn(),
+    openTagsInPlayer: vi.fn(),
   },
 }))
 
@@ -29,8 +34,13 @@ import {
   getTagChanges,
   listCoverCandidates,
   openTagEditor,
+  openTagsInPlayer,
+  previewTagsFromNames,
+  releaseTagTrackAudio,
+  runTagTextTool,
   runTagTool,
   setCoverFromFile,
+  tagTrackAudioUrl,
   undoTagApply,
 } from './tag-editor'
 
@@ -80,12 +90,59 @@ describe('runTagTool', () => {
   it('passes the tool and the view through', async () => {
     vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
     expect(await runTagTool('s1', 'renumber' as never)).toEqual({ ok: true, value: { dirty: true } })
-    expect(commands.runTagTool).toHaveBeenCalledWith('s1', 'renumber')
+    expect(commands.runTagTool).toHaveBeenCalledWith('s1', 'renumber', null)
+  })
+
+  it('passes the chosen tracks through', async () => {
+    vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    await runTagTool('s1', 'renumber' as never, ['/a.mp3'])
+    expect(commands.runTagTool).toHaveBeenCalledWith('s1', 'renumber', ['/a.mp3'])
   })
 
   it('returns the typed error', async () => {
     vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'error', error: { kind: 'readOnly' } } as never)
     expect(await runTagTool('s1', 'renumber' as never)).toEqual({ ok: false, error: { kind: 'readOnly' } })
+  })
+})
+
+describe('runTagTextTool', () => {
+  const tool = { kind: 'format', field: 'title', mask: '[N3-]' } as const
+
+  it('passes the tool, no scope by default, and the view through', async () => {
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    expect(await runTagTextTool('s1', tool)).toEqual({ ok: true, value: { dirty: true } })
+    expect(commands.runTagTextTool).toHaveBeenCalledWith('s1', tool, null)
+  })
+
+  it('passes the chosen tracks through', async () => {
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    await runTagTextTool('s1', tool, ['/a.mp3'])
+    expect(commands.runTagTextTool).toHaveBeenCalledWith('s1', tool, ['/a.mp3'])
+  })
+
+  it('returns a bad mask and a bad regex as typed errors', async () => {
+    const badMask = { kind: 'badMask', error: { type: 'unclosed', at: 0 } }
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'error', error: badMask } as never)
+    expect(await runTagTextTool('s1', tool)).toEqual({ ok: false, error: badMask })
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'error', error: { kind: 'badRegex' } } as never)
+    expect(await runTagTextTool('s1', tool)).toEqual({ ok: false, error: { kind: 'badRegex' } })
+  })
+})
+
+describe('previewTagsFromNames', () => {
+  const pattern = { kind: 'format', pattern: '%title%' } as const
+
+  it('passes the pattern, the scope, and the rows through', async () => {
+    const rows = [{ path: '/a.mp3', fileName: 'a.mp3', fields: null }]
+    vi.mocked(commands.previewTagsFromNames).mockResolvedValue({ status: 'ok', data: rows })
+    expect(await previewTagsFromNames('s1', pattern)).toEqual({ ok: true, value: rows })
+    expect(commands.previewTagsFromNames).toHaveBeenCalledWith('s1', pattern, null)
+  })
+
+  it('returns the typed error', async () => {
+    const error = { kind: 'badPattern', error: { kind: 'noFields' } } as const
+    vi.mocked(commands.previewTagsFromNames).mockResolvedValue({ status: 'error', error })
+    expect(await previewTagsFromNames('s1', pattern, ['/a.mp3'])).toEqual({ ok: false, error })
   })
 })
 
@@ -190,5 +247,42 @@ describe('getCoverImage', () => {
   it('returns the typed error', async () => {
     vi.mocked(commands.getCoverImage).mockResolvedValue(failure)
     expect(await getCoverImage('s1')).toEqual({ ok: false, error: noSession })
+  })
+})
+
+describe('tagTrackAudioUrl', () => {
+  it('passes the session, the path, and the URL through', async () => {
+    const url = 'cmdr-media://localhost/0123456789abcdef0123456789abcdef'
+    vi.mocked(commands.tagTrackAudioUrl).mockResolvedValue({ status: 'ok', data: url })
+    expect(await tagTrackAudioUrl('s1', '/books/a.mp3')).toEqual({ ok: true, value: url })
+    expect(commands.tagTrackAudioUrl).toHaveBeenCalledWith('s1', '/books/a.mp3')
+  })
+
+  it('returns a path outside the session as the typed error', async () => {
+    const unknown: TagEditorError = { kind: 'unknownTrack' }
+    vi.mocked(commands.tagTrackAudioUrl).mockResolvedValue({ status: 'error', error: unknown })
+    expect(await tagTrackAudioUrl('s1', '/etc/hosts')).toEqual({ ok: false, error: unknown })
+  })
+})
+
+describe('releaseTagTrackAudio', () => {
+  it('passes the URL through', async () => {
+    vi.mocked(commands.releaseTagTrackAudio).mockResolvedValue(undefined)
+    await releaseTagTrackAudio('cmdr-media://localhost/abc')
+    expect(commands.releaseTagTrackAudio).toHaveBeenCalledWith('cmdr-media://localhost/abc')
+  })
+})
+
+describe('openTagsInPlayer', () => {
+  it('passes the session and the paths through', async () => {
+    vi.mocked(commands.openTagsInPlayer).mockResolvedValue({ status: 'ok', data: null })
+    expect(await openTagsInPlayer('s1', ['/books/a.mp3', '/books/b.mp3'])).toEqual({ ok: true, value: null })
+    expect(commands.openTagsInPlayer).toHaveBeenCalledWith('s1', ['/books/a.mp3', '/books/b.mp3'])
+  })
+
+  it('returns a launch that could not start as the typed error', async () => {
+    const unavailable: TagEditorError = { kind: 'playerUnavailable' }
+    vi.mocked(commands.openTagsInPlayer).mockResolvedValue({ status: 'error', error: unavailable })
+    expect(await openTagsInPlayer('s1', ['/books/a.mp3'])).toEqual({ ok: false, error: unavailable })
   })
 })

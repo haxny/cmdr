@@ -10,6 +10,7 @@ import {
   typedCharacterCombo,
   keyComboCandidates,
   capturedKeyCombo,
+  normalizeKeyName,
   toAriaKeyShortcut,
 } from './key-capture'
 
@@ -443,5 +444,22 @@ describe('toAriaKeyShortcut', () => {
     expect(toAriaKeyShortcut('Ctrl++')).toBe('Control+Plus')
     expect(toAriaKeyShortcut('⌘+')).toBe('Meta+Plus')
     expect(toAriaKeyShortcut('⇧Space')).toBe('Shift+Space')
+  })
+})
+
+describe('⌥Space, which macOS reports as a non-breaking space', () => {
+  const nbsp = (init: KeyboardEventInit) => new KeyboardEvent('keydown', { key: '\u00a0', code: 'Space', ...init })
+
+  it('with ⌥ held is the Space key: its combo ends in Space, and bare Space is no candidate', () => {
+    expect(normalizeKeyName('\u00a0', 'Space', true)).toBe('Space')
+    const candidates = keyComboCandidates(nbsp({ altKey: true }))
+    expect(candidates[0]).toBe(formatKeyCombo(nbsp({ altKey: true })))
+    expect(candidates[0]).toMatch(/Space$/)
+    expect(candidates).not.toContain('Space')
+  })
+
+  it('with no modifier held (AltGr on some Linux layouts) stays the typed character', () => {
+    expect(normalizeKeyName('\u00a0', 'Space', false)).toBe('\u00a0')
+    expect(formatKeyCombo(nbsp({}))).not.toContain('Space')
   })
 })

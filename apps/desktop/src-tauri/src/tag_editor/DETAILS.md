@@ -40,6 +40,29 @@ file that something else renamed.
 - **`changes(session_id, kind)`** lists, per changed file, the fields, cover, and extras the edits change, plus what the
   kind removes beyond them (`cmdr_tags::removed_by_kind`: an MP3's `TPE3` under Audiobook), read from the file after the
   tag lock, so the review list says everything `apply` with that kind will do.
+- **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
+  `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
+  their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
+  out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent folder
+  and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also carries the session's readable track count
+  (`session_files`): the numbering tools drop the track number only for a one-file BOOK, so a one-track scope of a
+  bigger book is numbered; with a partial scope TrackTotal counts the files numbered (as Mp3tag does). A bad file-name pattern is
+  `BadPattern` before anything is touched; `preview_names` shows what a pattern reads per file (`fields: None` when the
+  name doesn't match), matching outside the lock and changing nothing.
+- **Every stored edit is normalized for its format** (`store` → `cmdr_tags::normalize_for`): an M4A holds track and disc
+  numbers as integers, so a padded `01` is kept as `1`, and the tab shows what the write will leave. A name with no
+  supported extension is stored as given.
+- **«Multiple values» rows carry their values.** `SharedRow::choices` is `cmdr_tags::shared::distinct_values` (most
+  common first, at most 50) for a `Multiple` row, empty for every other.
+- **Audio tokens are per tag session.** `playback::audio_url` mints a `cmdr-media://` token only for a readable track
+  of the session (canonical-path match, never a path the frontend made up) and keeps it under the session id;
+  `release` drops one, and `session::close` drops all that remain. The viewer's `session::close_session` is not
+  the only place a media token is freed (`file_viewer/media.rs`). `open_in_player` opens foobar2000
+  (`com.foobar2000.mac`) when installed, else each file in its default app; `UnknownTrack` for a path outside the
+  session, `PlayerUnavailable` when nothing could start.
+- **Text tools run in the app.** `text_tools.rs` builds on `multi_rename::{mask, transform}` (`Mask`, `Transform`,
+  `Replace`), which `cmdr-tags` can't depend on; they validate first, change nothing on a bad pattern, never strip
+  diacritics, and take a scope like every other tool.
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.
 
 ## Write and undo
@@ -52,7 +75,8 @@ file that something else renamed.
 3. `UndoStore::record(tags-<unix millis>-<session>, paths)` BEFORE any write; a refusal is `TagEditorError::Undo` and
    nothing is written. Millis never repeat within the process, so two applies can't share (and replace) a record.
 4. Each file is re-checked right before its write (the TOCTOU window shrinks to one stat), then `write_tags` with
-   `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }`. `WouldDrop` → `wouldDrop`, any other
+   `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }` (the totals travel as the fields
+   `TrackTotal` / `DiscTotal`, so an edit keeps them). `WouldDrop` → `wouldDrop`, any other
    error → `failed`, a lofty panic (`contain_panics`) → `failed` with `TagError::Write`.
 5. `UndoStore::seal` narrows the record to the files written (`forget` when none), each with its `Fingerprint` taken
    right after its write, so an undo never rewrites a file the apply skipped, failed on, or found changed, nor one that
