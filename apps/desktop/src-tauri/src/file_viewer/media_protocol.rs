@@ -393,6 +393,23 @@ mod build_response_tests {
         assert_eq!(resp.body().as_slice(), &body[10..=19]);
     }
 
+    /// `<audio>` streams and seeks with Range requests: an audio token answers 206 with its type.
+    #[test]
+    fn audio_range_is_206_with_the_audio_content_type() {
+        let body: Vec<u8> = (0..=255u8).collect();
+        let f = write_temp(&body);
+        let entry = MediaEntry {
+            canonical_path: f.path().to_path_buf(),
+            kind: ViewerContentKind::Audio,
+            mime: "audio/mpeg".to_string(),
+        };
+        let resp = build_response(&entry, Some("bytes=0-1".to_string()));
+        assert_eq!(resp.status(), StatusCode::PARTIAL_CONTENT);
+        assert_eq!(resp.headers().get(header::CONTENT_TYPE).unwrap(), "audio/mpeg");
+        assert_eq!(resp.headers().get(header::CONTENT_RANGE).unwrap(), "bytes 0-1/256");
+        assert_eq!(resp.body().as_slice(), &body[0..=1]);
+    }
+
     #[test]
     fn unsatisfiable_range_is_416() {
         let f = write_temp(b"short");

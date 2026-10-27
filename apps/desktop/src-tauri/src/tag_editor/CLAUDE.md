@@ -10,6 +10,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - `cover.rs` cover files from the session's folder (plain name, regular file, size; type from the magic bytes, never
   the name) and the thumbnail `data:` URL; IPC in `commands/tag_editor.rs`.
 - `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`.
+- `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`) and "open in
+  foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread, never awaited).
 
 ## Must-knows
 

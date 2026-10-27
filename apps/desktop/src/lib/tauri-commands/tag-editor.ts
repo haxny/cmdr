@@ -131,3 +131,26 @@ export async function setCoverFromFile(sessionId: string, fileName: string): Pro
 export async function getCoverImage(sessionId: string): Promise<TagEditorResult<string | null>> {
   return result(await commands.getCoverImage(sessionId))
 }
+
+/**
+ * A `cmdr-media://` URL that plays the track at `path` (as `TrackRow.path` gives it) in an `<audio>` element. A
+ * path that isn't a readable track of the session comes back as `unknownTrack`. Release it with
+ * `releaseTagTrackAudio` when playback stops; closing the tag session releases every one.
+ */
+export async function tagTrackAudioUrl(sessionId: string, path: string): Promise<TagEditorResult<string>> {
+  return result(await commands.tagTrackAudioUrl(sessionId, path))
+}
+
+/** Ends a URL `tagTrackAudioUrl` gave. Any other URL is ignored. */
+export async function releaseTagTrackAudio(url: string): Promise<void> {
+  await commands.releaseTagTrackAudio(url)
+}
+
+/**
+ * Opens tracks of the session in foobar2000 when it's installed, otherwise each in its default app. Resolves once
+ * the launch is asked for; `unknownTrack` for a path outside the session, `playerUnavailable` when nothing could
+ * start.
+ */
+export async function openTagsInPlayer(sessionId: string, paths: string[]): Promise<TagEditorResult<null>> {
+  return result(await commands.openTagsInPlayer(sessionId, paths))
+}

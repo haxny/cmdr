@@ -675,8 +675,9 @@ fn read_content(p: &Path, size: u64, ask: &TextAsk, cancel: &AtomicBool) -> Resu
         ViewerContentKind::Image => Ok(Content::Image(image_content(p, classify_head))),
         ViewerContentKind::Pdf => Ok(Content::Pdf(pdf::read_pdf(p, size, &head, ask, cancel)?)),
         // The classifier never answers `Markdown` (that's the viewer's own call, by
-        // extension); either way the agent reads the file's text.
-        ViewerContentKind::Text | ViewerContentKind::Markdown => {
+        // extension) nor `Audio` (only the tag editor mints that); either way the agent
+        // reads the file's text.
+        ViewerContentKind::Text | ViewerContentKind::Markdown | ViewerContentKind::Audio => {
             let encoding = detect_from_head(&head);
             if looks_binary(&head, encoding) {
                 return Ok(Content::Binary {});

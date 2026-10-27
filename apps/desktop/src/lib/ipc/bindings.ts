@@ -1676,6 +1676,20 @@ export const commands = {
    */
   getCoverImage: (sessionId: string) =>
     typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId })),
+  /**
+   *  A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
+   *  Only a readable track of the session gets one (`UnknownTrack` otherwise).
+   */
+  tagTrackAudioUrl: (sessionId: string, path: string) =>
+    typedError<string, TagEditorError>(__TAURI_INVOKE('tag_track_audio_url', { sessionId, path })),
+  // Ends a URL `tag_track_audio_url` gave. Closing the tag session ends all of them.
+  releaseTagTrackAudio: (url: string) => __TAURI_INVOKE<void>('release_tag_track_audio', { url }),
+  /**
+   *  Opens tracks of the session in foobar2000 when it's installed, else each in its default app.
+   *  Returns once the launch is asked for, not when the player is up.
+   */
+  openTagsInPlayer: (sessionId: string, paths: string[]) =>
+    typedError<null, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths })),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -18407,6 +18421,8 @@ export type TagEditorError =
   | { kind: 'badRegex' }
   // A Format mask that doesn't parse. Nothing was changed.
   | { kind: 'badMask'; error: MaskError }
+  // Neither foobar2000 nor the files' default app could be launched.
+  | { kind: 'playerUnavailable' }
 
 // The whole tab.
 export type TagEditorView = {

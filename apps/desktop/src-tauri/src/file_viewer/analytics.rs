@@ -24,6 +24,8 @@ pub(super) fn content_token(kind: ViewerContentKind) -> &'static str {
         ViewerContentKind::Image => "image",
         ViewerContentKind::Pdf => "pdf",
         ViewerContentKind::Markdown => "markdown",
+        // Unreachable from a viewer open (only the tag editor mints audio tokens); named anyway.
+        ViewerContentKind::Audio => "audio",
     }
 }
 

@@ -27,6 +27,10 @@ pub enum ViewerContentKind {
     Image,
     Pdf,
     Markdown,
+    /// An audio track the tag editor plays (`tag_editor/playback.rs`). Never classified here and
+    /// never sent to a viewer window, so it stays out of the wire type.
+    #[serde(skip)]
+    Audio,
 }
 
 /// The biggest Markdown file the viewer renders. Above it the file opens as text: a
@@ -131,9 +135,22 @@ pub fn looks_binary(head: &[u8], encoding: FileEncoding) -> bool {
 /// magic, so it's the extension-driven fallback when no raster magic matches.
 pub fn media_mime(head: &[u8], kind: ViewerContentKind) -> Option<&'static str> {
     match kind {
-        ViewerContentKind::Text | ViewerContentKind::Markdown => None,
+        // Audio has no magic sniff here: the tag editor knows the format (`audio_mime`).
+        ViewerContentKind::Text | ViewerContentKind::Markdown | ViewerContentKind::Audio => None,
         ViewerContentKind::Pdf => Some("application/pdf"),
         ViewerContentKind::Image => Some(image_mime(head)),
+    }
+}
+
+/// The MIME type an `<audio>` element gets for a track of `format`, chosen by the tag editor's
+/// format (the session lists only files `cmdr_tags::format_of` knows).
+pub fn audio_mime(format: cmdr_tags::AudioFormat) -> &'static str {
+    use cmdr_tags::AudioFormat;
+    match format {
+        AudioFormat::Mp3 => "audio/mpeg",
+        AudioFormat::Mp4 => "audio/mp4",
+        AudioFormat::Flac => "audio/flac",
+        AudioFormat::OggVorbis | AudioFormat::Opus => "audio/ogg",
     }
 }
 

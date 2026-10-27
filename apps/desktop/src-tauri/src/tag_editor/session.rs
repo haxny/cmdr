@@ -70,6 +70,8 @@ pub enum TagEditorError {
     BadRegex,
     /// A Format mask that doesn't parse. Nothing was changed.
     BadMask { error: MaskError },
+    /// Neither foobar2000 nor the files' default app could be launched.
+    PlayerUnavailable,
 }
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
@@ -733,10 +735,23 @@ fn rebase_map<K: Ord + Clone, V: PartialEq + Clone>(
 /// Ends the tag session, dropping its edits. A no-op when it's already gone.
 pub fn close(session_id: &str) {
     SESSIONS.lock_ignore_poison().remove(session_id);
+    // After the store's lock is gone: the two locks never nest.
+    super::playback::release_session(session_id);
+}
+
+/// The readable tracks of the open session, as the session names them, in current order.
+pub(super) fn loaded_tracks(session_id: &str) -> Result<Vec<PathBuf>, TagEditorError> {
+    with_session(session_id, |layout, session| {
+        Ok(layout
+            .tracks
+            .iter()
+            .filter(|path| session.by_path.get(*path).is_some_and(|entry| entry.loaded().is_some()))
+            .cloned()
+            .collect())
+    })
 }
 
 /// Whether a tag session exists for `session_id`.
-#[cfg(test)]
 pub(crate) fn is_open(session_id: &str) -> bool {
     SESSIONS.lock_ignore_poison().contains_key(session_id)
 }
