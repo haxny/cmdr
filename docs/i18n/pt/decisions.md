@@ -1,17 +1,16 @@
 # pt decisions
 
-The non-obvious why behind `terms.json` rulings, citing the keys each shaped. Forms live in `terms.json`, voice and
-grammar in `style.md`, open questions in `review-queue.md`.
+The non-obvious why behind `terms.json` rulings. Forms: `terms.json`; voice: `style.md`; open questions:
+`review-queue.md`.
 
 ## The bare `pt` pile is European (`settings.archives.compressionLevel.description`, `fileOperations.transferDialog.compressLevelCaption`)
 
-- Mining `_ignored/i18n/pt/` once shipped `ficheiros` and `demoram mais tempo a comprimir`. Re-check any ruling whose
-  sources name it.
+- Mining `_ignored/i18n/pt/` once shipped `ficheiros` and `demoram mais tempo a comprimir`. Re-check rulings citing it.
 
 ## Apagar, never Excluir (`fileOperations.delete.*`, `commands.fileDelete*`, `ai.local.delete*`, `settings.mediaIndex.*`, `transfer.delete`)
 
-- Finder pt-BR has zero `Excluir`. A files-vs-data split once left `Excluir modelo de IA?` over an `Apagar` button. The
-  noun `apagamento` (`queue.empty.body`) keeps `exclusão` out.
+- Finder pt-BR has zero `Excluir`; a files-vs-data split once put `Excluir modelo de IA?` over `Apagar`. The noun
+  `apagamento` (`queue.empty.body`) keeps `exclusão` out.
 
 ## `drive` is always `disco` (`errors.listing.*`, `errors.provider.pCloudFuse.*`, `fileExplorer.unreachable.*`)
 
@@ -285,9 +284,9 @@ grammar in `style.md`, open questions in `review-queue.md`.
 
 ## Old macOS and old WebKit (`main.oldMacos.*`, `main.oldWebkit.*`, `main.escapeFullScreenHint.*`, `settings.advanced.exitFullScreenOnEscape*`, `settings.analytics.*`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analytics*`)
 
-- `compatível` over `suportado`; best effort → `faz o que dá`. `Atualização de Software` keeps its capitals.
+- `compatível` over `suportado`; best effort → `faz o que dá`. `Atualização de Software` keeps capitals.
 - `Esc` (AppKit) over `ESC`. `Este aviso só aparece uma vez`: no `você`, no future.
-- No `anônimas` (a stable random id), ❌ never `pseudônimo` jargon: `um identificador aleatório`, `ligado a`.
+- ❌ `anônimas` (a stable id), ❌ `pseudônimo`: `um identificador aleatório`, `ligado a`.
 
 ## O original ficou (`errors.write.sourceNotRemoved.*`, `errors.write.permissionDenied.*`, `errors.write.deletePending.*`)
 
@@ -295,8 +294,7 @@ grammar in `style.md`, open questions in `review-queue.md`.
 
 ## What your organization manages (MDM) (`*.managed.*`, `updates.status.*`)
 
-- `O que sua organização gerencia`, `Só verificação manual`: no agreeing participle. `*Off` agrees with its row (macOS
-  Notifications).
+- `O que sua organização gerencia`, `Só verificação manual`: no agreeing participle. `*Off` agrees with its row.
 
 ## AI suggestions (`suggestedOps.*`)
 

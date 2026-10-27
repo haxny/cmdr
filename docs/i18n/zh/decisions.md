@@ -1,8 +1,8 @@
 # zh decisions
 
 "X over Y because Z" rulings, each defending a choice against a well-meant "fix"; the brief pulls a section whose
-heading cites a batch key. Forms live in `terms.json`, voice and typography in `style.md`, so neither is restated here.
-Tiers: macOS zh-CN (1), Microsoft zh-Hans (2), file managers (3); pile `_ignored/i18n/zh/` in the main clone.
+heading cites a batch key. Forms: `terms.json`; voice and typography: `style.md`. Tiers: macOS zh-CN (1), Microsoft
+zh-Hans (2), file managers (3); pile `_ignored/i18n/zh/` in the main clone.
 
 ## Settings vocabulary (`settings.section.*`, `settings.appearance.*`, `settings.summary.*`)
 
@@ -189,8 +189,8 @@ Header `检查更改` without `正在`, like `首次完整扫描` / `快速更�
 ## Awaiting-answer row + rollback confirm (`queue.row.statusAwaitingAnswer`/`.awaitingAnswerTooltip`, `fileOperations.rollbackConfirm.*`, `fileOperations.transferProgress.foregroundBusyToast`/`.rollbackTooltip`)
 
 `需要你回答`, never opening `等待` (the queued status). The prompt `那个问题` (`提示` is the hint banner). Keep
-`保留文件` (bare `保留` could mean the operation). The rollback tooltip's Stop `停止`, ❌ never `取消` (Cancel keeps
-finished files).
+`保留文件` (bare `保留` could mean the operation). The rollback tooltip's Stop `停止`, ❌ `取消` (Cancel keeps finished
+files).
 
 ## Unusable name + rename chain (`fileOperations.validation.nameNotUsable`, `fileExplorer.rename.chainKeptOriginalName*`)
 
@@ -293,7 +293,7 @@ One English word, two Chinese renderings; don't merge:
   `跳过没有把握的部分` verbatim.
 - `in {folder}` is a trailing `位于 {folder}` (as `downloads.toast.inSubdir`), so the cell never reads as the folder
   being deleted; bare folder name.
-- Rolling back a move deletes nothing: `…放回原处`, ❌ never `删除`.
+- Rolling back a move deletes nothing: `…放回原处`, ❌ `删除`.
 
 ## Rollback-done notice (`fileOperations.cancelRollback.*`, `fileOperations.rollbackConfirm.body`)
 
@@ -369,8 +369,8 @@ in); no `认证` / `验证身份`. The two reconnect and nothing-to-X shapes are
 
 ## Pin, trusted keys, ADB settings (`menu.network.pinToSwitcher`/`.unpin`, `servers.pinHint.*`, `settings.servers.*`, `settings.adb.*`, `settings.section.servers`/`.adb`, `settings.appearance.tintSmb.*`)
 
-- Pin `固定`, ❌ never `置顶` (move to top); Apple uses `固定` this way (`在菜单栏中固定`). `从宗卷选择器中取消固定`
-  mirrors `固定到宗卷选择器`; `servers.pinHint.body` quotes it whole.
+- Pin `固定`, ❌ `置顶` (move to top); Apple uses `固定` this way (`在菜单栏中固定`). `从宗卷选择器中取消固定` mirrors
+  `固定到宗卷选择器`; `servers.pinHint.body` quotes it whole.
 - `受信任的主机密钥`, date prefix `已信任`; `未找到`; `已找到：{path}`; `再次检查` (Check Again).
 - `正在留意接入的手机` (`等待` reads as stuck; tentative); no ADB server or sockets. `选取 adb 命令`.
 
@@ -455,7 +455,7 @@ shape (tentative); system default `跟随系统`, the app after it in full-width
   (`往它拷贝` / `往 {counterpart} 拷贝`), not stiff `来源` / `目标位置`.
 - Reassurance keeps `都` (`其余的都还在…`, `都留在了原处`), else it reads as an aside; `所以什么都没丢失` is the point.
 - ❗ `无法确认这次移动`, never "failed": the files may have arrived. The staging folder holds the USER's files: `发现`,
-  `没完成的`, ❌ never `不完整` or a delete; `…原处，也就是在…里` keeps Cmdr from seeming to move them.
+  `没完成的`, ❌ `不完整` or a delete; `…原处，也就是在…里` keeps Cmdr from seeming to move them.
 
 ## Favorites menu (`commands.favoritesOpen.label`/`.description`, `commands.favoritesOpenByNumber.label`, `commands.favoritesAdd.description`, `fileExplorer.navigation.favoritesAddCurrent`/`.favoritesAlreadyAdded`/`.favoritesCantAddHere`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
 
@@ -493,8 +493,8 @@ ratio).
 
 ## Look-alike names (`fileOperations.transferProgress.lookAlikeHint`, `errors.listing.ambiguousName.explanation`, `errors.volume.ambiguousName`)
 
-`看起来一样，但服务器存储的写法不同`, ❌ never `编码` / `规范化` / `Unicode` (tentative). `“覆盖”`; `现有的那一项`;
-error prose keeps spoken `改名` / `上一级文件夹`.
+`看起来一样，但服务器存储的写法不同`, ❌ `编码` / `规范化` / `Unicode` (tentative). `“覆盖”`; `现有的那一项`; error
+prose keeps spoken `改名` / `上一级文件夹`.
 
 ## Cloud AI consent (`ai.cloudConsent.*`, `askCmdr.gate.*`)
 

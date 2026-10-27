@@ -1,8 +1,8 @@
 # sv decisions
 
 Distilled rulings too long for a `terms.json` line, under headings citing their keys (`pnpm i18n:brief` pulls them in).
-Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in `review-queue.md`. Source tiers: macOS
-(read live when the pile lacks a bundle), Microsoft, Total Commander / Nautilus / Thunar / Dolphin, then the catalog.
+Terms: `terms.json`; voice: `style.md`; open questions: `review-queue.md`. Tiers: macOS (read live if the pile lacks a
+bundle), Microsoft, file managers, the catalog.
 
 ## Apple translates Quick Look and Keychain (`commands.fileQuickLook.mac.label`, `menu.file.quickLook`, `ai.secretError.keychainTitle`/`.keychainBody`, `servers.sheet.remember`)
 
@@ -14,7 +14,7 @@ Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in
 
 - `Full skivtillgång`, `Innehåll > Zoom > 100 %`, `Cmdr > Introduktion…`, `Skivverktyg > Skivkontroll`, `Lokalt nätverk`
   (❌ `Lokal nätverksåtkomst`), `Startobjekt och tillägg` (❌ `Inloggningsobjekt …`). A paraphrase sends users hunting,
-  and `{full_disk_access}` in `errors.*` resolves from the OS, so a paraphrase shows two names for one thing.
+  and `{full_disk_access}` in `errors.*` resolves from the OS (two names for one thing).
 
 ## Git: worktree kept, working tree translated (`errors.git.*`, `settings.fileExplorer.git.showVirtualGitPortal.description`, `fileExplorer.git.size.linkedWorktrees`)
 
@@ -86,7 +86,7 @@ Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in
 - A photo's location → `var den togs`: after `en bilds`, `plats` reads as where the file lives.
 - `kamerauppgifter` (`detaljer` is the technical-details section), `miniatyr` over `miniatyrbilder`; the archive list →
   `vilka filer som finns i ett arkiv`.
-- Never promise `skrivskyddad`: Cmdr writes notes and proposes renames, so say it changes no file without approval.
+- ❌ `skrivskyddad`: Cmdr writes notes and proposes renames; say it changes no file without approval.
 
 ## Image indexing: network drives, scope, badges, progress (`settings.mediaIndex.*`, `fileExplorer.imageIndex.*`, `search.imageResults.networkOff`/`.paused`, `askCmdr.renameReview.*`, `askCmdr.tool.proposeRenamePlan.*`, `askCmdr.tool.searchPhotos.*`, `askCmdr.tool.imageFacts.*`)
 
@@ -155,7 +155,7 @@ Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in
 
 ## Usage stats without "anonymous" (`settings.analytics.enabled.label`/`.description`, `settings.updates.emailPrivacyNote`, `onboarding.stepBeta.analyticsLede`/`.analyticsTitle`)
 
-- A stable random id, so ❌ `anonym` and ❌ `pseudonym(iserad)` jargon: `ett slumpmässigt id`, `kopplad till`.
+- A stable id: ❌ `anonym`, ❌ `pseudonym(iserad)`: `ett slumpmässigt id`, `kopplad till`.
 
 ## Awaiting-answer row and rollback confirm (`queue.row.statusAwaitingAnswer`/`.awaitingAnswerTooltip`, `fileOperations.rollbackConfirm.*`, `fileOperations.transferProgress.foregroundBusyToast`/`.rollbackTooltip`)
 
@@ -292,7 +292,7 @@ Terms live in `terms.json`, voice and mechanics in `style.md`, open questions in
 - forget → `glöm`, ❌ `Ta bort`; dialogs copy the menu labels; `Glöm den delade mappen` mirrors `Glöm servern`.
   `slutar visa servern i listan`: `anslutningen` and `servern` are both en-words. A browser host is `servern` in prose
   (`värden` also means "the values").
-- `{name}` never carries a participle: `Servern {name} är sparad`, `Inte ansluten till {name}`.
+- `{name}` takes no participle: `Servern {name} är sparad`, `Inte ansluten till {name}`.
 - `Den här servern använder en nyckel …` (as `authMethodUnsupported`), ❌ `loggar in med`. `retryTotalSeconds` /
   `.retryTotalMinutes` are bare blocks for `retryKeepsTrying`.
 
