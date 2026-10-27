@@ -26,24 +26,7 @@ vi.hoisted(() => {
 import { commands } from '#lib/commands/command-registry.js'
 import { findConflictsForShortcut, getAllConflicts } from './conflict-detector'
 import { getDefaultShortcuts } from './shortcuts-store'
-
-/**
- * Clashes we've decided to keep, each with the reason it's safe. Adding a line here is
- * a deliberate product decision, not a way to quiet the test: every entry means one of
- * the two commands loses the combo at runtime.
- */
-const allowedConflicts: { shortcut: string; commandIds: string[]; why: string }[] = [
-  {
-    shortcut: '⌘1',
-    commandIds: ['multiRename.tabRename', 'view.fullMode'],
-    why: 'The Multi-rename sheet is modal and its scope is the deeper one, so ⌘1 picks its Rename tab while it is open and Full view otherwise.',
-  },
-  {
-    shortcut: '⌘2',
-    commandIds: ['multiRename.tabTags', 'view.briefMode'],
-    why: 'The Multi-rename sheet is modal and its scope is the deeper one, so ⌘2 picks its Tags tab while it is open and Brief view otherwise.',
-  },
-]
+import { allowedConflicts } from './allowed-conflicts.test-helper'
 
 /** `{ shortcut, commandIds }` rendered as a stable, greppable line. */
 function describeConflict(conflict: { shortcut: string; commandIds: string[] }): string {

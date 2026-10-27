@@ -15,6 +15,10 @@ const ipc = vi.hoisted(() => ({
   closeTagEditor: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
+const warn = vi.hoisted(() => vi.fn())
+vi.mock('#lib/logging/logger.js', () => ({
+  getAppLogger: () => ({ warn, debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
+}))
 
 import { createTagEditorState } from './tag-editor-state.svelte'
 
@@ -205,6 +209,15 @@ describe('createTagEditorState', () => {
     finish({ ok: true, value: VIEW })
     await opening
     expect(state.view).toBeNull()
+  })
+
+  it('a close that fails is logged, not thrown', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.closeTagEditor.mockRejectedValue(new Error('gone'))
+    const state = createTagEditorState('S')
+    await state.open()
+    await expect(state.close()).resolves.toBeUndefined()
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 
   it('close before open does not touch the backend', async () => {

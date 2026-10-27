@@ -4,6 +4,7 @@
  * `open()` is lazy: the sheet calls it the first time the Tags tab shows, so a sheet that never shows it asks nothing.
  */
 
+import { getAppLogger } from '#lib/logging/logger.js'
 import {
   applyTags,
   closeTagEditor,
@@ -43,6 +44,8 @@ export interface TagEditorState {
   undo(): Promise<TagStateResult<RestoreReport>>
   close(): Promise<void>
 }
+
+const log = getAppLogger('multiRename')
 
 export function createTagEditorState(sessionId: string): TagEditorState {
   let view = $state.raw<TagEditorView | null>(null)
@@ -119,7 +122,12 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       closed = true
       undoable = { kind: 'nothingToUndo' }
       view = null
-      await closeTagEditor(sessionId)
+      try {
+        await closeTagEditor(sessionId)
+      } catch (e) {
+        // Nothing to show: the sheet is gone. No session id, path or tag value goes in the log.
+        log.warn("couldn't end the tag session: {reason}", { reason: e })
+      }
     },
   }
 }

@@ -63,6 +63,7 @@
     import { getSetting } from '#lib/settings/index.js'
     import SheetTabs from './tag-editor/SheetTabs.svelte'
     import TagsTab from './tag-editor/TagsTab.svelte'
+    import RenamePanel from './tag-editor/RenamePanel.svelte'
     import { createTagEditorState } from './tag-editor/tag-editor-state.svelte'
     import type { SheetTab } from './tag-editor/sheet-tab'
 
@@ -109,7 +110,7 @@
     // The opt-in Tags tab (setting off: no tab strip, no tag session, no tag IPC).
     const tags = getSetting('multiRename.tagEditor') ? createTagEditorState(session.sessionId) : null
     let sheetTab = $state<SheetTab>('rename')
-    onDestroy(() => { tags?.close().catch(() => {}) })
+    onDestroy(() => { void tags?.close() })
     const fieldHistory = createFieldHistoryMenu({
         inputOf: (field) =>
             ({ nameMask: nameMaskInput, extensionMask: extensionMaskInput, search: searchInput, replace: replaceInput })[
@@ -528,7 +529,7 @@
         />
         {/snippet}
         {#if tags && sheetTab === 'tags'}<TagsTab state={tags} />
-        {:else if tags}<div id="sheet-panel-rename" role="tabpanel" aria-labelledby="sheet-tab-rename" style="display: flex; flex-direction: column; gap: var(--spacing-sm); flex: 1; min-height: 0">{@render renameBody()}</div>
+        {:else if tags}<RenamePanel>{@render renameBody()}</RenamePanel>
         {:else}{@render renameBody()}{/if}
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->

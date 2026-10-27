@@ -149,6 +149,12 @@ describe('MultiRenameDialog Tags tab', () => {
     tab('Rename').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
     await settle()
     expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
+    tab('Tags').dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }))
+    await settle()
+    expect(tab('Rename').getAttribute('aria-selected')).toBe('true')
+    tab('Rename').dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }))
+    await settle()
+    expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
     document.body.dispatchEvent(
       new KeyboardEvent('keydown', { key: '1', code: 'Digit1', metaKey: true, bubbles: true, cancelable: true }),
     )
