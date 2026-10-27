@@ -157,6 +157,21 @@ mod tests {
     }
 
     #[test]
+    fn nested_argument_key_order_does_not_dodge_the_repeat_breaker() {
+        // serde_json keeps insertion order in this build (genai turns on `preserve_order`), so
+        // the key sorts its arguments itself, at every depth. Regression anchor: with insertion
+        // order, a model reshuffling an inner object's keys looped on a failing call unchecked.
+        let mut failed = FailedCalls::default();
+        let first = json!({ "paths": [{ "path": "/a", "volumeId": "root" }], "limit": 5 });
+        failed.record_failure(&call(ToolId::ImageFacts, first), &problem());
+        let reordered = json!({ "limit": 5, "paths": [{ "volumeId": "root", "path": "/a" }] });
+        assert!(matches!(
+            failed.judge(&call(ToolId::ImageFacts, reordered)),
+            Repeat::Refuse(_)
+        ));
+    }
+
+    #[test]
     fn two_tools_carrying_the_same_arguments_are_two_records() {
         let mut failed = FailedCalls::default();
         failed.record_failure(&call(ToolId::ListDir, json!({ "path": "/" })), &problem());
