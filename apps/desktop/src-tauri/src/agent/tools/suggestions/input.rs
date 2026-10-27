@@ -17,14 +17,15 @@
 
 use serde::Deserialize;
 
-use super::names::{NameRule, check_transfer_names, plain_name};
-use super::place::{GroupPlacer, PlaceField};
+use super::names::{check_transfer_names, plain_name};
+use super::place::GroupPlacer;
+pub(super) use super::problem::GroupProblem;
+use super::problem::PlaceField;
 use crate::agent::store::proposals::{GroupIntent, NewOp, NewRename, TransferOp, WritableDestination};
 use crate::agent::suggested_ops::OpSelector;
 use crate::agent::tools::read::expand_tilde;
 use crate::agent::types::ProposalVerb;
 use crate::location::Location;
-use crate::location::miss::LocationMissResult;
 use crate::location::resolve::{LocationInput, VolumeFacts};
 use crate::location::same_share::Via;
 
@@ -287,74 +288,6 @@ pub(super) enum PlanRefusal {
         group: usize,
         problem: GroupProblem,
     },
-}
-
-/// What one group got wrong.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) enum GroupProblem {
-    /// Neither `paths`, `renames`, nor `selector`.
-    NoSources,
-    /// More than one of them: which one the user would be reviewing is a coin toss.
-    AmbiguousSources,
-    /// `renames` under a verb that can't take names (extract, compress, trash, delete), or
-    /// `rename` without them.
-    RenamesVerbMismatch,
-    /// A selector under `rename`.
-    SelectorCantRename,
-    /// A destination a ROUTE serves, which takes no writes: inside an archive, or inside
-    /// a repo's virtual `.git` trees. Copy or move INTO a zip, and move OUT of one, plan
-    /// from their own walk rather than the per-source engine, so a group written there
-    /// could not be held to the sources the user reviewed; a snapshot has no file to
-    /// write to at all. Refused HERE, where it costs the model a retry, rather than at
-    /// execution where it would refuse after the user had already approved.
-    DestinationTakesNoWrites,
-    /// A field the verb's executor doesn't bind (a destination on a trash group, a parent
-    /// on a move).
-    UnboundField {
-        field: &'static str,
-    },
-    /// A field the verb's executor requires.
-    MissingField {
-        field: &'static str,
-    },
-    /// `sourceVolumeId` / `displayName` sent alongside a selector, which supplies both.
-    SelectorSuppliesField {
-        field: &'static str,
-    },
-    EmptySources,
-    TooManyPaths {
-        sent: usize,
-    },
-    /// A path that is neither absolute nor a `scheme://` virtual path.
-    RelativePath {
-        path: String,
-    },
-    /// A new name that isn't one plain name, and the rule it breaks.
-    NotABareName {
-        name: String,
-        rule: NameRule,
-    },
-    /// Two files of a move or copy would land under one name, ignoring case and Unicode form.
-    DuplicateLeaf {
-        name: String,
-    },
-    /// A file of a move or copy would land where another of its sources is.
-    ChainOverwrite {
-        path: String,
-    },
-    /// A move or copy with names whose destination already holds one of its sources: that's a
-    /// rename for those files.
-    UseRename,
-    /// A size or age window nothing can satisfy.
-    ImpossibleWindow,
-    /// A place the resolver couldn't put on a live volume, nor re-address onto a live sibling.
-    Location {
-        field: PlaceField,
-        miss: Box<LocationMissResult>,
-    },
-    /// Re-addressing would take the group onto two members of a share, or re-address one
-    /// place while another names a member of that share directly: one `via` can't say it.
-    MixedReaddress,
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────

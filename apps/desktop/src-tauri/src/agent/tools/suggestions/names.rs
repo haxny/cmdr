@@ -11,58 +11,15 @@
 
 use std::path::Path;
 
-use cmdr_fs::validation::{PlainLeafRefusal, validate_plain_leaf};
+use cmdr_fs::validation::validate_plain_leaf;
 use cmdr_operations::{LandingClash, TransferLeaves};
 
-use super::input::GroupProblem;
+use super::problem::{GroupProblem, NameRule, PHONE_NAME_UNITS};
 use crate::agent::store::proposals::TransferOp;
 use crate::mcp::resources::volumes::VolumeKind;
 
-/// The most UTF-16 code units a phone takes in a name: a PTP string's 255 count its
-/// terminator (`crates/cmdr-mtp/DETAILS.md` § Names a phone takes).
-const PHONE_NAME_UNITS: usize = 254;
-
 /// The characters Android's shared storage refuses in a name, FAT's reserved set.
 const PHONE_RESERVED: [char; 8] = ['"', '*', ':', '<', '>', '?', '\\', '|'];
-
-/// Which rule a proposed name breaks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum NameRule {
-    /// One of [`validate_plain_leaf`]'s.
-    Plain(PlainLeafRefusal),
-    /// Past [`PHONE_NAME_UNITS`] on a phone.
-    PhoneTooLong,
-    /// One of [`PHONE_RESERVED`] on a phone.
-    PhoneReserved(char),
-}
-
-impl NameRule {
-    /// What's wrong with the name, as the end of a sentence the model reads.
-    pub(super) fn reason(self) -> String {
-        match self {
-            NameRule::Plain(PlainLeafRefusal::Empty) => "it's empty".into(),
-            NameRule::Plain(PlainLeafRefusal::EdgeWhitespace) => "it starts or ends with a space".into(),
-            NameRule::Plain(PlainLeafRefusal::Separator) => {
-                "it holds a /, so it's a path; give the bare name it lands as".into()
-            }
-            NameRule::Plain(PlainLeafRefusal::DotName) => "it's . or .., which name a folder".into(),
-            NameRule::Plain(PlainLeafRefusal::TooLong { bytes }) => {
-                format!("it's longer than the 255 bytes a file name may be ({bytes})")
-            }
-            NameRule::Plain(PlainLeafRefusal::Control(ch)) => {
-                format!("it holds the control character U+{:04X}", u32::from(ch))
-            }
-            NameRule::Plain(PlainLeafRefusal::Invisible(ch)) => format!(
-                "it holds the invisible character U+{:04X}, which would make it read as something else",
-                u32::from(ch)
-            ),
-            NameRule::PhoneTooLong => {
-                format!("it's longer than the {PHONE_NAME_UNITS} UTF-16 characters a phone takes in a name")
-            }
-            NameRule::PhoneReserved(ch) => format!("a phone refuses {ch} in a name"),
-        }
-    }
-}
 
 /// A rename's new name, or the refusal saying which rule it breaks.
 pub(super) fn plain_name(name: &str) -> Result<(), GroupProblem> {

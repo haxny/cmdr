@@ -29,7 +29,7 @@ use super::input::{
     ExplicitNaming, GroupProblem, MAX_GROUPS, MAX_PATHS, PlanRefusal, PlannedGroup, PlannedOps, PlannedSources,
     PlannedSweep, plan_sweep,
 };
-use super::place::PlaceField;
+use super::problem::PlaceField;
 use crate::agent::AgentDb;
 use crate::agent::store::AgentStoreError;
 use crate::agent::store::proposals::{

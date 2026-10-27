@@ -7,7 +7,7 @@ use super::{NOW, local_facts, selector_call};
 use crate::agent::tools::suggestions::input::{
     GroupProblem, PlanRefusal, PlannedOps, PlannedSources, SourceShape, plan_sweep,
 };
-use crate::agent::tools::suggestions::names::NameRule;
+use crate::agent::tools::suggestions::problem::NameRule;
 use crate::mcp::resources::volumes::VolumeKind;
 use cmdr_fs::validation::PlainLeafRefusal;
 

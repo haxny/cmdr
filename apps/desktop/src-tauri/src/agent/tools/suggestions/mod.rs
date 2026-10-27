@@ -28,6 +28,7 @@ mod input;
 mod list;
 mod names;
 mod place;
+mod problem;
 mod propose;
 pub(crate) mod snapshot;
 

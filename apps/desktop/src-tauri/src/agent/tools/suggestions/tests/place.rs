@@ -9,7 +9,7 @@ use super::{FakeIndex, NOW, apply_over, local_facts, migrated_conn, volume};
 use crate::agent::store::proposals::{get_group, page_ops};
 use crate::agent::suggested_ops::SelectorRefusal;
 use crate::agent::tools::suggestions::input::{GroupProblem, PlanRefusal, PlannedOps, PlannedSources, plan_sweep};
-use crate::agent::tools::suggestions::place::PlaceField;
+use crate::agent::tools::suggestions::problem::PlaceField;
 use crate::agent::tools::suggestions::propose::{ApplyRefusal, plan_refusal_content};
 use crate::agent::tools::transcript_179_tests::{INVOICES, LAN, TAILSCALE, conversation_179, conversation_179_with};
 use crate::location::miss::{LocationMissResult, MissToken};

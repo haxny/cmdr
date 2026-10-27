@@ -8,7 +8,7 @@ use crate::agent::store::proposals::{
     AcceptanceOutcome, OpSelection, get_group, live_binding, page_ops, record_acceptance,
 };
 use crate::agent::tools::suggestions::input::{GroupProblem, PlanRefusal, PlannedOps, plan_sweep};
-use crate::agent::tools::suggestions::names::NameRule;
+use crate::agent::tools::suggestions::problem::NameRule;
 use crate::location::resolve::VolumeFacts;
 use crate::mcp::resources::volumes::VolumeKind;
 use cmdr_fs::validation::PlainLeafRefusal;

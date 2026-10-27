@@ -13,34 +13,11 @@
 //! member of the same share directly, refuses as `mixedReaddress`: one `via` can't describe it.
 //! The rules and the why: `DETAILS.md` § Where a proposal may point.
 
-use super::input::GroupProblem;
+use super::problem::{GroupProblem, PlaceField};
 use crate::location::Location;
 use crate::location::miss::{LocationMissResult, volume_not_connected};
 use crate::location::resolve::{LocationInput, VolumeFacts, resolve};
 use crate::location::same_share::Via;
-
-/// Which field of a group a place came from, so a refusal says which one to fix.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum PlaceField {
-    Destination,
-    SelectorRoot,
-    Paths,
-    Renames,
-    Parent,
-}
-
-impl PlaceField {
-    /// The field's name as the model wrote it.
-    pub(super) fn token(self) -> &'static str {
-        match self {
-            PlaceField::Destination => "destination",
-            PlaceField::SelectorRoot => "selector.root",
-            PlaceField::Paths => "paths",
-            PlaceField::Renames => "renames",
-            PlaceField::Parent => "parent",
-        }
-    }
-}
 
 /// Places one group's locations, remembering what it re-addressed so [`GroupPlacer::finish`]
 /// can hold the group to one `via`.

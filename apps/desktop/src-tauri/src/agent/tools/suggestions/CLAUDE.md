@@ -7,7 +7,9 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
 ## Module map
 
 - `input.rs`: what `propose_suggestions` accepts, validated into planned shapes that pair each verb with the target its
-  executor binds. All the refusal variants.
+  executor binds.
+- `problem.rs`: `GroupProblem`, the one refusal vocabulary every check below refuses in. It depends on none of them, so
+  the checks don't depend on each other.
 - `place.rs`: every place a group names, through the location resolver (and onto a proven live sibling).
 - `names.rs`: the names a group gives its files (a rename's, a move's or copy's), checked by the engine's own rules on
   the placed group. ❌ Never a second copy of those rules.
