@@ -102,7 +102,9 @@ fn set(tags: &mut FileTags, field: TagField, text: String) {
 /// `reset_track`), padded and with TrackTotal as asked: the files on the disc when tracks
 /// restart, else the files in the run. Discs count from `start`; DiscTotal is the number of
 /// discs in the run (in the stretch between two disc resets, when `reset_disc_on_field` is
-/// set). A single file gets no track number and no track total.
+/// set). A one-file BOOK (`ctx.session_files`, or `files` when that is 0) gets no track number
+/// and no track total; one selected file of a bigger book is numbered. With a partial selection
+/// TrackTotal counts the files numbered, not the book, as Mp3tag does.
 pub fn auto_number(files: &[FileTags], ctx: &ToolContext, opts: &NumberOptions) -> Vec<FileTags> {
     if files.is_empty() {
         return Vec::new();
@@ -110,6 +112,7 @@ pub fn auto_number(files: &[FileTags], ctx: &ToolContext, opts: &NumberOptions) 
     let groups = group_files(files, ctx, opts.disc.as_ref());
     let restart = opts.disc.as_ref().is_some_and(|d| d.reset_track);
     let mut out = files.to_vec();
+    let single = ctx.single_file_book(files.len());
     let mut next_track = opts.track_start;
     for group in &groups {
         if restart {
@@ -124,7 +127,7 @@ pub fn auto_number(files: &[FileTags], ctx: &ToolContext, opts: &NumberOptions) 
             0
         };
         for tags in &mut out[group.first..group.end] {
-            if files.len() == 1 {
+            if single {
                 tags.fields.remove(&TagField::Track);
                 tags.fields.remove(&TagField::TrackTotal);
             } else {

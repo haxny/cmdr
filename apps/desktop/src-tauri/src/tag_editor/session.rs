@@ -359,9 +359,11 @@ fn stem_of(path: &Path) -> String {
         .unwrap_or_default()
 }
 
-/// What the file-name tools know about `paths`: each one's folder and stem.
-fn context_of(paths: &[PathBuf]) -> ToolContext {
+/// What the tools know about `paths`, a selection of a book of `session_files` readable tracks:
+/// each one's folder and stem, and the book's size (for the one-file-book rule).
+fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
     ToolContext {
+        session_files,
         folders: paths
             .iter()
             .map(|path| {
@@ -436,6 +438,8 @@ pub fn edit(session_id: &str, edits: Vec<TagEdit>) -> Result<TagEditorView, TagE
 /// file-name pattern refuses it before anything is touched (`BadPattern`), and an empty scope
 /// changes nothing.
 pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Result<TagEditorView, TagEditorError> {
+    // Checked here because the engine leaves the files unchanged on a bad pattern: this is the
+    // only place it becomes a typed answer.
     if let TagTool::FromFileName { pattern } = &tool {
         compile_pattern(pattern).map_err(|error| TagEditorError::BadPattern { error })?;
     }
@@ -443,7 +447,12 @@ pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Resu
         require_editable(layout)?;
         let (paths, before) = scoped(layout, session, scope.as_deref())?;
         if !paths.is_empty() {
-            let after = apply_tool_in(&before, &context_of(&paths), &tool);
+            let book = session
+                .by_path
+                .values()
+                .filter(|entry| entry.loaded().is_some())
+                .count();
+            let after = apply_tool_in(&before, &context_of(&paths, book), &tool);
             store(session, paths, after);
         }
         Ok(view_of(layout, session))

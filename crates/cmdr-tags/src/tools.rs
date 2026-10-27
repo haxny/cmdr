@@ -77,6 +77,22 @@ pub struct ToolContext {
     pub folders: Vec<String>,
     /// Each file's name without the extension.
     pub stems: Vec<String>,
+    /// How many files the whole book has, when `files` is only a selection of it; 0 means
+    /// unknown, so `files` is the book. The numbering tools' single-file rule (a one-file book
+    /// has no track number) asks this count, never the selection's size.
+    pub session_files: usize,
+}
+
+impl ToolContext {
+    /// Whether `handed` files (the ones a tool got) make a one-file book.
+    pub(crate) fn single_file_book(&self, handed: usize) -> bool {
+        let book = if self.session_files == 0 {
+            handed
+        } else {
+            self.session_files
+        };
+        book == 1
+    }
 }
 
 /// Runs `tool` over `files` with no file-name context; the input is never mutated.
@@ -92,7 +108,7 @@ pub fn apply_tool_in(files: &[FileTags], ctx: &ToolContext, tool: &TagTool) -> V
         TagTool::Case { fields, case } => change_case(files, fields, *case),
         TagTool::StripDiacritics { fields } => strip_diacritics(files, fields),
         TagTool::StripTrackPrefix => strip_track_prefix(files),
-        TagTool::Renumber { start } => renumber(files, *start),
+        TagTool::Renumber { start } => renumber_in(files, ctx, *start),
         TagTool::AlbumArtistFromArtist => album_artist_from_artist(files),
         TagTool::NarratorFromText => narrator_from_text(files),
         TagTool::ClearRedundantTitles => clear_redundant_titles(files),
@@ -254,7 +270,14 @@ pub fn strip_track_prefix(files: &[FileTags]) -> Vec<FileTags> {
 /// untouched. A single file has its track and track total removed instead: a one-file book
 /// has no track number.
 pub fn renumber(files: &[FileTags], start: u32) -> Vec<FileTags> {
-    if let [only] = files {
+    renumber_in(files, &ToolContext::default(), start)
+}
+
+/// [`renumber`] where `files` may be a selection of a bigger book (`ctx.session_files`): the
+/// no-track rule applies only to a one-file book, so one selected track of a bigger book is
+/// numbered `start`.
+pub fn renumber_in(files: &[FileTags], ctx: &ToolContext, start: u32) -> Vec<FileTags> {
+    if let ([only], true) = (files, ctx.single_file_book(files.len())) {
         let mut out = only.clone();
         out.fields.remove(&TagField::Track);
         out.fields.remove(&TagField::TrackTotal);

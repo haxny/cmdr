@@ -169,6 +169,7 @@ fn from_file_name_leaves_unmatched_alone() {
     let ctx = ToolContext {
         folders: vec![],
         stems: vec!["03 - New".to_string(), "nomatch".to_string()],
+        session_files: 0,
     };
     let tool = TagTool::FromFileName {
         pattern: format("%track% - %title%"),
@@ -186,6 +187,7 @@ fn from_file_name_bad_pattern_changes_nothing() {
     let ctx = ToolContext {
         folders: vec![],
         stems: vec!["a".to_string()],
+        session_files: 0,
     };
     let tool = TagTool::FromFileName { pattern: regex("(") };
     assert_eq!(apply_tool_in(&files, &ctx, &tool), files.to_vec());
@@ -267,6 +269,7 @@ fn from_file_name_duplicate_fields_follow_the_multi_rule() {
     let ctx = ToolContext {
         folders: vec![],
         stems: vec!["2008-2009".to_string(), "A - B".to_string()],
+        session_files: 0,
     };
     let files = [files[0].clone(), files[0].clone()];
     // Single-value field (date, via the year alias): the first match wins.

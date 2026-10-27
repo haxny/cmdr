@@ -21,6 +21,7 @@ fn ctx(folders: &[&str]) -> ToolContext {
     ToolContext {
         folders: folders.iter().map(|f| (*f).to_string()).collect(),
         stems: Vec::new(),
+        session_files: 0,
     }
 }
 
@@ -290,4 +291,20 @@ fn a_missing_album_next_to_a_present_one_is_a_boundary() {
 fn empty_input_gives_empty_output() {
     let out = run(&[], &ctx(&[]), options(Some(disc())));
     assert!(out.is_empty());
+}
+
+#[test]
+fn one_file_of_a_bigger_book_is_numbered() {
+    let opts = NumberOptions {
+        track_total: true,
+        ..options(None)
+    };
+    let book = ToolContext {
+        session_files: 5,
+        ..ctx(&["a"])
+    };
+    let out = run(&files(&[""]), &book, opts);
+    assert_eq!(column(&out, TagField::Track), ["01"]);
+    // A partial scope counts the files it numbers, as Mp3tag does.
+    assert_eq!(column(&out, TagField::TrackTotal), ["1"]);
 }

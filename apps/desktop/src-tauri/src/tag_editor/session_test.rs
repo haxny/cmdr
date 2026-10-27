@@ -602,7 +602,7 @@ fn unknown_scope_path_is_unknown_track() {
         preview_names(&id, format_pattern("%title%"), Some(scope)),
         Err(TagEditorError::UnknownTrack)
     );
-    assert_eq!(edit(&id, vec![]).expect("a refresh"), before, "nothing changed");
+    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
     close(&id);
     close_rename(&id);
 }
@@ -662,7 +662,7 @@ fn bad_pattern_is_typed() {
         Err(refused.clone())
     );
     assert_eq!(preview_names(&id, bad, None), Err(refused));
-    assert_eq!(edit(&id, vec![]).expect("a refresh"), before, "nothing changed");
+    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
     close(&id);
     close_rename(&id);
 }
@@ -704,6 +704,21 @@ fn preview_names_unmatched_as_none() {
     assert!(
         !edit(&id, vec![]).expect("a refresh").dirty,
         "a preview changes nothing"
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+/// The single-file rule is about the book: one selected track of a bigger book keeps a number.
+#[test]
+fn a_one_track_scope_keeps_its_number() {
+    let (dir, _listing, id) = album("tag-editor-scope-one");
+    open(&id, false).expect("opens");
+    let scope = vec![path_of(&dir, "b.mp3")];
+    let view = tool(&id, TagTool::Renumber { start: 2 }, Some(scope)).expect("renumbers");
+    assert_eq!(
+        numbers(&view),
+        vec![("a.mp3", None), ("b.mp3", Some("02")), ("c.mp3", None)]
     );
     close(&id);
     close_rename(&id);

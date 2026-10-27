@@ -44,7 +44,9 @@ file that something else renamed.
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
   out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent folder
-  and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. A bad file-name pattern is
+  and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also carries the session's readable track count
+  (`session_files`): the numbering tools drop the track number only for a one-file BOOK, so a one-track scope of a
+  bigger book is numbered; with a partial scope TrackTotal counts the files numbered (as Mp3tag does). A bad file-name pattern is
   `BadPattern` before anything is touched; `preview_names` shows what a pattern reads per file (`fields: None` when the
   name doesn't match), matching outside the lock and changing nothing.
 - **Every stored edit is normalized for its format** (`store` → `cmdr_tags::normalize_for`): an M4A holds track and disc
