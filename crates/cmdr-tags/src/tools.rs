@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{FileTags, TagField};
+use crate::numbering::{NumberOptions, auto_number};
 use crate::text::{remove_diacritics, sentence_case, title_case};
 
 /// How [`change_case`] rewrites a value.
@@ -59,11 +60,28 @@ pub enum TagTool {
         /// Native keys of the extras to drop.
         keys: Vec<String>,
     },
+    /// [`auto_number`] with these options.
+    AutoNumber(NumberOptions),
 }
 
-/// Runs `tool` over `files`; the input is never mutated.
+/// What the file-name tools know about the session's files, each list parallel to `files`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ToolContext {
+    /// The parent folder of each file, as text.
+    pub folders: Vec<String>,
+    /// Each file's name without the extension.
+    pub stems: Vec<String>,
+}
+
+/// Runs `tool` over `files` with no file-name context; the input is never mutated.
 pub fn apply_tool(files: &[FileTags], tool: &TagTool) -> Vec<FileTags> {
+    apply_tool_in(files, &ToolContext::default(), tool)
+}
+
+/// Runs `tool` over `files`, which `ctx` describes; the input is never mutated.
+pub fn apply_tool_in(files: &[FileTags], ctx: &ToolContext, tool: &TagTool) -> Vec<FileTags> {
     match tool {
+        TagTool::AutoNumber(options) => auto_number(files, ctx, options),
         TagTool::Case { fields, case } => change_case(files, fields, *case),
         TagTool::StripDiacritics { fields } => strip_diacritics(files, fields),
         TagTool::StripTrackPrefix => strip_track_prefix(files),

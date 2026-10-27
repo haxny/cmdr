@@ -8165,6 +8165,24 @@ export type DirectorySortMode =
    */
   | 'mixedWithFiles'
 
+// What [`auto_number`] does with discs. Absent in [`NumberOptions`] means discs are left alone.
+export type DiscOptions = {
+  // The first disc number.
+  start: number
+  // Write DiscTotal (the number of discs in the run).
+  total: boolean
+  // Pad disc numbers to at least two digits (`01`).
+  pad: boolean
+  // A new disc starts where the folder changes.
+  nextOnFolder: boolean
+  // A new disc starts where this field's first value changes.
+  nextOnField: TagField | null
+  // Track numbers restart at the track start on each new disc.
+  resetTrack: boolean
+  // Disc numbers restart at `start` where this field's first value changes.
+  resetDiscOnField: TagField | null
+}
+
 /**
  *  The volume that left the mount table while a transfer was running.
  *
@@ -13273,6 +13291,18 @@ export type NotificationPermission =
   | 'notDetermined'
   // No way to tell: not macOS, a dev build, or macOS didn't answer.
   | 'unknown'
+
+// What [`auto_number`] does.
+export type NumberOptions = {
+  // The first track number.
+  trackStart: number
+  // Write TrackTotal.
+  trackTotal: boolean
+  // Pad track numbers to the width of the biggest one (at least two digits).
+  trackPad: boolean
+  // Disc numbering, or none to leave discs alone.
+  disc: DiscOptions | null
+}
 
 /**
  *  One OCR search hit: the matched image's path and a highlighted snippet of the
@@ -18469,6 +18499,8 @@ export type TagTool =
       // Native keys of the extras to drop.
       keys: string[]
     }
+  // [`auto_number`] with these options.
+  | ({ kind: 'autoNumber' } & NumberOptions)
 
 /**
  *  `tags-skipped`: a color-tag toggle (keyboard command or context-menu circle) left

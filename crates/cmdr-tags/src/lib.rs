@@ -11,6 +11,7 @@ mod fingerprint;
 mod format;
 mod model;
 mod normalize;
+mod numbering;
 mod read;
 mod save;
 pub mod shared;
@@ -25,6 +26,8 @@ mod write_extras;
 mod format_test;
 #[cfg(test)]
 mod normalize_test;
+#[cfg(test)]
+mod numbering_test;
 #[cfg(test)]
 mod read_test;
 #[cfg(test)]
