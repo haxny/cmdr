@@ -20,22 +20,26 @@ const { NO_EFFORT } = vi.hoisted(() => ({
   } satisfies AiEffortOptions,
 }))
 
-const stubs = vi.hoisted(() => ({
-  settings: Object.create(null) as Record<string, unknown>,
-  // Several subscribers per id (the section AND each `SettingRow`'s reset affordance).
-  listeners: new Map<string, Set<(value: unknown) => void>>(),
-  consent: { accepted: false },
-  locks: new Map<string, SettingLock>(),
-  managedConsent: null as ManagedAiRefusal | null,
-  refusedUrls: new Set<string>(),
-  localAiSupported: true,
-  modelLimits: {
+const stubs = vi.hoisted(() => {
+  // Annotated, not `satisfies`: the tests reassign it to real limits, so it needs the wide type.
+  const modelLimits: AiModelLimits = {
     contextWindowTokens: null,
     maxOutputTokens: null,
     source: null,
     effort: NO_EFFORT,
-  } satisfies AiModelLimits,
-}))
+  }
+  return {
+    settings: Object.create(null) as Record<string, unknown>,
+    // Several subscribers per id (the section AND each `SettingRow`'s reset affordance).
+    listeners: new Map<string, Set<(value: unknown) => void>>(),
+    consent: { accepted: false },
+    locks: new Map<string, SettingLock>(),
+    managedConsent: null as ManagedAiRefusal | null,
+    refusedUrls: new Set<string>(),
+    localAiSupported: true,
+    modelLimits,
+  }
+})
 
 vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
