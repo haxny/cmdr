@@ -53,7 +53,7 @@
 </script>
 
 {#if href}
-    <!-- eslint-disable svelte/no-navigation-without-resolve -- external URL in a Tauri app, not a SvelteKit route; resolve() does not apply. A block, not next-line: the rule reports on the `href` attribute's line. -->
+    <!-- eslint-disable svelte/no-navigation-without-resolve -- external URL in a Tauri app, not a SvelteKit route; resolve() does not apply. A block, since a next-line disable above `<a` doesn't cover where the rule reports. -->
     <a
         class="link-button"
         {href}
