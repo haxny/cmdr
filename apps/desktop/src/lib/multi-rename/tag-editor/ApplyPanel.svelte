@@ -34,16 +34,29 @@
         | { step: 'idle' }
         | { step: 'checking' }
         /**
-         * The list shown, and the view it was made from: an edit since then lists again before any write. `earlier`
-         * holds this press's applies so far (a re-list after the would-drop choice), so the next write continues them.
+         * The list shown, the kind it was made for (the write uses that one, so it does just what the list says), and
+         * the view it was made from: an edit since then lists again before any write. `earlier` holds this press's
+         * applies so far (a re-list after the would-drop choice), so the next write continues them.
          */
-        | { step: 'review'; changes: FileChangeView[]; seen: TagEditorView | null; earlier: TagApplyReport[] }
+        | {
+              step: 'review'
+              changes: FileChangeView[]
+              kind: ContentKind
+              seen: TagEditorView | null
+              earlier: TagApplyReport[]
+          }
         | { step: 'writing' }
         /**
          * This press's applies; the last one's would-drop files ask. `seen` is the view after it: an edit made while
          * the choice shows lists again.
          */
-        | { step: 'wouldDrop'; reports: TagApplyReport[]; seen: TagEditorView | null; answering: boolean }
+        | {
+              step: 'wouldDrop'
+              reports: TagApplyReport[]
+              kind: ContentKind
+              seen: TagEditorView | null
+              answering: boolean
+          }
         | { step: 'done'; outcome: Outcome }
         /** The app refused before writing any file (it couldn't keep the old tags); the tab words why. */
         | { step: 'refused' }
@@ -51,16 +64,16 @@
 
     let current = $state.raw<Step>({ step: 'idle' })
     let kind = $state<ContentKind>(DEFAULT_WRITE_KIND)
-    /** The remembered kind arrives once; a pick made before it lands wins. */
-    let picked = false
+    /** The remembered kind arrives once; a pick, or a list already made, before it lands wins. */
+    let kindChosen = false
     void loadWriteKind().then((remembered) => {
-        if (!picked) kind = remembered
+        if (!kindChosen) kind = remembered
     })
 
     function pickKind(value: string): void {
         const next = WRITE_KINDS.find((k) => k === value)
-        if (next === undefined) return
-        picked = true
+        if (next === undefined || kindLocked) return
+        kindChosen = true
         kind = next
         saveWriteKind(next)
     }
@@ -71,7 +84,9 @@
         { value: 'audiobook', label: tString('multiRename.tags.kind.audiobook') },
         { value: 'music', label: tString('multiRename.tags.kind.music') },
     ])
-    const kindLabel = $derived(kindOptions.find((option) => option.value === kind)?.label ?? '')
+    const labelOf = (of: ContentKind): string => kindOptions.find((option) => option.value === of)?.label ?? ''
+    /** While a list or a write is on its way the kind stays as it was asked for. */
+    const kindLocked = $derived(current.step === 'checking' || current.step === 'writing')
     const fieldNames = (fields: readonly TagField[]): string[] =>
         fields.map((field) => tString(FIELD_LABELS[field]))
 
@@ -90,31 +105,37 @@
 
     /** Lists what a write will change. `earlier` carries this press's applies so far through a re-list. */
     async function review(earlier: TagApplyReport[] = []): Promise<void> {
-        await tags.settled()
+        // A call still out after the wait (a stalled mount): list nothing rather than a list that may miss it.
+        if (!(await tags.settled())) return
+        const listedAs = kind
+        kindChosen = true
         current = { step: 'checking' }
-        const res = await tags.changes(kind)
+        const res = await tags.changes(listedAs)
         // A failure is worded by the tab, from the state's error.
-        if (res.ok) current = { step: 'review', changes: res.value, seen: tags.view, earlier }
+        if (res.ok) current = { step: 'review', changes: res.value, kind: listedAs, seen: tags.view, earlier }
         else current = endedStep(earlier)
     }
 
     /** Writes what `reviewed` listed. A list with nothing in it writes nothing (and so keeps the last Undo). */
     async function write(reviewed: Extract<Step, { step: 'review' }>): Promise<void> {
-        const { changes, seen, earlier } = reviewed
+        const { changes, kind: listedAs, seen, earlier } = reviewed
         if (changes.length === 0) return
-        await tags.settled()
+        // A call still out after the wait: write nothing; the list stays for another press.
+        if (!(await tags.settled())) return
         if (tags.view !== seen) {
             await review(earlier)
             return
         }
         current = { step: 'writing' }
-        const res = await tags.apply({ kind, allowFrameLoss: false, skip: [] }, { after: earlier })
+        const res = await tags.apply({ kind: listedAs, allowFrameLoss: false, skip: [] }, { after: earlier })
         if (!res.ok) {
             current = earlier.length > 0 ? endedStep(earlier) : refusedStep(res.error.kind)
             return
         }
         const reports = [...earlier, res.value]
-        if (res.value.wouldDrop.length > 0) current = { step: 'wouldDrop', reports, seen: tags.view, answering: false }
+        if (res.value.wouldDrop.length > 0) {
+            current = { step: 'wouldDrop', reports, kind: listedAs, seen: tags.view, answering: false }
+        }
         else current = endedStep(reports)
     }
 
@@ -139,18 +160,23 @@
         ]
     }
 
-    async function writeAnyway(reports: TagApplyReport[], seen: TagEditorView | null): Promise<void> {
+    async function writeAnyway(choice: Extract<Step, { step: 'wouldDrop' }>): Promise<void> {
+        const { reports, kind: listedAs, seen } = choice
         const last = reports.at(-1)
         if (last === undefined) return
-        current = { step: 'wouldDrop', reports, seen, answering: true }
-        await tags.settled()
+        current = { ...choice, answering: true }
+        if (!(await tags.settled())) {
+            // A call still out after the wait: write nothing, and the choice asks again.
+            current = { ...choice, answering: false }
+            return
+        }
         if (tags.view !== seen) {
             // Something was edited while the choice showed: nothing is written that wasn't listed. The applies so
             // far go along, so the next write continues them and their Undo isn't lost.
             await review(reports)
             return
         }
-        const request = writeAnywayRequest(kind, last.wouldDrop, knownPaths(last))
+        const request = writeAnywayRequest(listedAs, last.wouldDrop, knownPaths(last))
         const res = await tags.apply(request, { after: reports })
         // A refused "Write anyway" leaves those files unwritten, as a skip does; the tab words the refusal.
         current = endedStep(res.ok ? [...reports, res.value] : reports)
@@ -244,7 +270,7 @@
         {:else}
             <p>
                 {tString('multiRename.tags.write.summaryAs', {
-                    kind: kindLabel,
+                    kind: labelOf(reviewed.kind),
                     count: changes.length,
                     countText: formatInteger(changes.length),
                 })}
@@ -262,12 +288,12 @@
             <Button onclick={() => { current = endedStep(earlier) }}>{tString('multiRename.tags.write.back')}</Button>
         </div>
     {:else if current.step === 'wouldDrop'}
-        {@const { reports, seen, answering } = current}
+        {@const choice = current}
         <WouldDropDialog
-            rows={reports.at(-1)?.wouldDrop ?? []}
-            busy={answering}
-            onWriteAnyway={() => { void writeAnyway(reports, seen) }}
-            onSkip={() => { current = endedStep(reports) }}
+            rows={choice.reports.at(-1)?.wouldDrop ?? []}
+            busy={choice.answering}
+            onWriteAnyway={() => { void writeAnyway(choice) }}
+            onSkip={() => { current = endedStep(choice.reports) }}
         />
     {:else}
         {#if current.step === 'checking'}
@@ -296,7 +322,7 @@
                 value={kind}
                 options={kindOptions}
                 ariaLabel={tString('multiRename.tags.kind.label')}
-                disabled={!canWrite}
+                disabled={!canWrite || kindLocked}
                 onChange={pickKind}
             />
             <Button

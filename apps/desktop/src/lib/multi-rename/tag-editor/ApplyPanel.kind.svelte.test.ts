@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ApplyPanel from './ApplyPanel.svelte'
 import { mountInto } from './tag-cell.test-helper'
-import { CHANGES, asState, fakeState, press } from './apply-panel.test-helper'
+import { CHANGES, asState, fakeState, press, settle } from './apply-panel.test-helper'
 
 const disk = vi.hoisted(() => ({ kind: null as string | null }))
 const store = vi.hoisted(() => ({
@@ -67,5 +67,51 @@ describe('ApplyPanel write kind', () => {
     const { root } = await mountPanel(fake)
     await press(root, 'Write tags…')
     expect(listed(root)).toEqual(['02.mp3: Album, conductor (removed)'])
+  })
+
+  /** N1: the list says what the write does, so the write uses the kind the list was made with. */
+  it('a remembered kind that arrives after the list was made changes neither the list nor the write', async () => {
+    let remember: (kind: string | null) => void = () => {}
+    store.loadTagWriteKind.mockImplementationOnce(() => new Promise((resolve) => (remember = resolve)))
+    const { root, fake } = await mountPanel()
+    await press(root, 'Write tags…')
+    expect(fake.changes).toHaveBeenCalledWith('audiobook')
+    remember('music')
+    await press(root, 'Write tags')
+    expect(root.textContent).not.toContain('Writing as Music')
+    expect(fake.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] }, { after: [] })
+  })
+
+  it('listed as Music, a switch to Audiobook before the list shows can’t make the write drop the conductor unlisted', async () => {
+    disk.kind = 'music'
+    const fake = fakeState()
+    let answer: (res: unknown) => void = () => {}
+    fake.changes.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)) as never)
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    expect(fake.changes).toHaveBeenCalledWith('music')
+    // While the list is on its way the choice is locked; a click doesn't move it.
+    await press(root, 'Audiobook')
+    expect(store.saveTagWriteKind).not.toHaveBeenCalled()
+    answer({ ok: true, value: CHANGES })
+    await settle()
+    expect(root.textContent).toContain('Writing as Music')
+    await press(root, 'Write tags')
+    expect(fake.apply).toHaveBeenCalledWith({ kind: 'music', allowFrameLoss: false, skip: [] }, { after: [] })
+  })
+
+  /** N4: a wait that gave up (a call still out) lists nothing and writes nothing. */
+  it('a timed-out wait before the list lists nothing; one before the write writes nothing', async () => {
+    const fake = fakeState()
+    fake.settled.mockResolvedValueOnce(false)
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    expect(fake.changes).not.toHaveBeenCalled()
+    await press(root, 'Write tags…')
+    expect(fake.changes).toHaveBeenCalledTimes(1)
+    fake.settled.mockResolvedValueOnce(false)
+    await press(root, 'Write tags')
+    expect(fake.apply).not.toHaveBeenCalled()
+    expect(listed(root)).toHaveLength(2)
   })
 })
