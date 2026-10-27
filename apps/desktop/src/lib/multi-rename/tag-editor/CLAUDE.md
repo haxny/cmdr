@@ -8,8 +8,8 @@ discard guard and the state factory cross that line.
 - **⌘⇧[ / ⌘⇧]** pick Rename / Tags: registry commands `multiRename.tabRename` / `tabTags`. ❌ Never a combo another
   command holds in an overlapping scope: the Keyboard shortcuts settings would show a conflict to every user, setting
   off too (⌘1/⌘2 hit `view.*Mode`, ⌃Tab `tab.next`).
-- **Unwritten edits are never lost silently**: closing, Rename, and switching sessions go through `discard-guard.ts`
-  ("Discard tag changes?").
+- **Unwritten edits are never lost silently**: closing the sheet (Cancel, Esc), Rename, and Undo rename go through
+  `discard-guard.ts` ("Discard tag changes?"). One sheet is open at a time, so there is no session to switch to.
 - **The tag canon is shown, not enforced**: diacritics are allowed only in Comment and Description (a warning with a
   one-click fix, never a silent strip); a single-file book hides the # column and Renumber; the write kind is Audiobook
   on first run, then the user's last pick (`write-kind.ts`), and the change list names what it removes (an MP3's

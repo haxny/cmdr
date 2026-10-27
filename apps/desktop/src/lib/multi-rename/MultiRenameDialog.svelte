@@ -62,7 +62,6 @@
     import { createFieldHistoryMenu } from './field-history-menu.svelte'
     import { getSetting } from '#lib/settings/index.js'
     import { RenamePanel, SheetTabs, TagsTab, createDiscardGuard, createTagEditorState, type SheetTab, type TagsTabApi } from './tag-editor/index'
-    /* eslint-disable @typescript-eslint/no-confusing-void-expression -- Svelte {@render} of the local renameBody snippet */
 
     interface Props {
         session: MultiRenameOpened
@@ -529,8 +528,8 @@
         />
         {/snippet}
         {#if tags && sheetTab === 'tags'}<TagsTab bind:this={tagsTab} state={tags} />
-        {:else if tags}<RenamePanel>{@render renameBody()}</RenamePanel>
-        {:else}{@render renameBody()}{/if}
+        <!-- eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -- Svelte {@render} syntax -->
+        {:else if tags}<RenamePanel>{@render renameBody()}</RenamePanel>{:else}{@render renameBody()}{/if}
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->
         <Menu menu={fieldHistory.menu} ariaLabel={tString('multiRename.history')} minWidth={240} />
