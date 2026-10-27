@@ -104,6 +104,89 @@ pub fn validate_filename(name: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+/// Why a name isn't one plain, visible leaf, for [`validate_plain_leaf`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlainLeafRefusal {
+    /// Empty, or only whitespace.
+    Empty,
+    /// Starts or ends with whitespace, which reads exactly like the name without it.
+    EdgeWhitespace,
+    /// Holds a `/`, so it's a path, not one name.
+    Separator,
+    /// `.` or `..`, which name a folder, not an entry in one.
+    DotName,
+    /// Longer than [`MAX_NAME_BYTES`].
+    TooLong {
+        /// The name's length in bytes.
+        bytes: usize,
+    },
+    /// Holds a control character (`char::is_control`, NUL included).
+    Control(char),
+    /// Holds an invisible formatting character: a bidi embedding, override,
+    /// isolate, or mark, a zero-width character, a byte-order mark, or a soft
+    /// hyphen.
+    Invisible(char),
+}
+
+/// Checks that `name` is one plain, visible leaf: a name a reviewer reads as
+/// exactly what lands.
+///
+/// Stricter than [`validate_filename`] on purpose: it's for a name somebody
+/// else chose for the user (a per-item transfer name, a proposal), where a name
+/// that renders as something else is a spoof the review can't show:
+/// `invoice`, a right-to-left override, then `fdp.exe` reads as
+/// `invoiceexe.pdf`. Refuses an empty name, edge whitespace, `/`, `.` and
+/// `..`, more than [`MAX_NAME_BYTES`] bytes, any control character, and the
+/// invisible format characters [`is_invisible_format`] lists.
+pub fn validate_plain_leaf(name: &str) -> Result<(), PlainLeafRefusal> {
+    if name.trim().is_empty() {
+        return Err(PlainLeafRefusal::Empty);
+    }
+    if name.starts_with(char::is_whitespace) || name.ends_with(char::is_whitespace) {
+        return Err(PlainLeafRefusal::EdgeWhitespace);
+    }
+    if name.contains('/') {
+        return Err(PlainLeafRefusal::Separator);
+    }
+    if name == "." || name == ".." {
+        return Err(PlainLeafRefusal::DotName);
+    }
+    if name.len() > MAX_NAME_BYTES {
+        return Err(PlainLeafRefusal::TooLong { bytes: name.len() });
+    }
+    for ch in name.chars() {
+        if ch.is_control() {
+            return Err(PlainLeafRefusal::Control(ch));
+        }
+        if is_invisible_format(ch) {
+            return Err(PlainLeafRefusal::Invisible(ch));
+        }
+    }
+    Ok(())
+}
+
+/// The invisible format characters a plain leaf refuses: they change how a
+/// name renders, or hide inside it, without showing themselves. The bidi
+/// embeddings and overrides (U+202A–U+202E), the isolates (U+2066–U+2069), the
+/// marks (U+200E, U+200F, U+061C), the zero-width characters (U+200B–U+200D,
+/// U+2060), the byte-order mark (U+FEFF), and the soft hyphen (U+00AD). An
+/// explicit list rather than all of category `Cf`, so a legitimate name loses
+/// nothing it could show.
+pub fn is_invisible_format(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{202A}'..='\u{202E}'
+            | '\u{2066}'..='\u{2069}'
+            | '\u{200E}'
+            | '\u{200F}'
+            | '\u{061C}'
+            | '\u{200B}'..='\u{200D}'
+            | '\u{2060}'
+            | '\u{FEFF}'
+            | '\u{00AD}'
+    )
+}
+
 /// Validates that a full path doesn't exceed the filesystem path length limit.
 pub fn validate_path_length(path: &std::path::Path) -> Result<(), ValidationError> {
     let byte_len = path.as_os_str().len();
@@ -115,6 +198,10 @@ pub fn validate_path_length(path: &std::path::Path) -> Result<(), ValidationErro
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "validation_plain_leaf_test.rs"]
+mod plain_leaf_tests;
 
 #[cfg(test)]
 mod tests {
