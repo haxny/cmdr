@@ -1635,9 +1635,14 @@ export const commands = {
   // Applies edits in memory; an unknown track refuses the whole batch.
   editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
-  // Runs a clean-up tool over the whole session.
-  runTagTool: (sessionId: string, tool: TagTool) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool })),
+  // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
+  runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
+  // What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
+  previewTagsFromNames: (sessionId: string, pattern: NamePattern, scope: string[] | null) =>
+    typedError<NamePreviewRow[], TagEditorError>(
+      __TAURI_INVOKE('preview_tags_from_names', { sessionId, pattern, scope }),
+    ),
   // What a write as `kind` would change, per file, including what the kind removes.
   getTagChanges: (sessionId: string, kind: ContentKind) =>
     typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
@@ -13129,6 +13134,20 @@ export type NamePattern =
       pattern: string
     }
 
+// What a file-name pattern reads from one track's name.
+export type NamePreviewRow = {
+  path: string
+  fileName: string
+  // The fields the name gives, in pattern order; `None` when the name doesn't match.
+  fields: NameValue[] | null
+}
+
+// One field a file name gives.
+export type NameValue = {
+  field: TagField
+  value: string
+}
+
 export type NegotiatedSummaryDto = {
   dialect: string
   max_read_size: number
@@ -14016,6 +14035,19 @@ export type PathVolumeResolution = {
   volume: LocationInfo | null
   timedOut: boolean
 }
+
+// Why a pattern can't be used.
+export type PatternError =
+  // The regular expression doesn't compile.
+  | { kind: 'badRegex' }
+  // A placeholder or group names no field.
+  | {
+      kind: 'unknownField'
+      // The unknown name as written.
+      name: string
+    }
+  // The pattern has no placeholder or named group.
+  | { kind: 'noFields' }
 
 export type PatternType = 'glob' | 'regex'
 
@@ -17306,6 +17338,8 @@ export type ShareListResult = {
 export type SharedRow = {
   field: TagField
   value: SharedValue
+  // For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
+  choices: ValueCount[]
 }
 
 // What one field looks like across the selected files.
@@ -18361,6 +18395,8 @@ export type TagEditorError =
   | { kind: 'coverNotAnImage' }
   // The background task running the call failed.
   | { kind: 'taskFailed' }
+  // A file-name pattern that can't be used. Nothing was changed.
+  | { kind: 'badPattern'; error: PatternError }
 
 // The whole tab.
 export type TagEditorView = {
@@ -19449,6 +19485,14 @@ export type ValidationError =
   | { kind: 'nameTooLong'; bytes: number; max: number }
   // Full path exceeds the maximum byte length.
   | { kind: 'pathTooLong'; bytes: number; max: number }
+
+// One distinct value set of a field and how many files carry it.
+export type ValueCount = {
+  // The field's values in one file (several for multi-value fields).
+  values: string[]
+  // How many files have exactly these values.
+  files: number
+}
 
 /**
  *  Result of verifying a license key without persisting it.

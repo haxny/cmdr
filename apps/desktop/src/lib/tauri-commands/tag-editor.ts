@@ -7,6 +7,8 @@ import {
   type ContentKind,
   type CoverCandidate,
   type FileChangeView,
+  type NamePattern,
+  type NamePreviewRow,
   type RestoreReport,
   type TagApplyReport,
   type TagEdit_Deserialize,
@@ -19,6 +21,8 @@ export type {
   ApplyRequest,
   CoverCandidate,
   FileChangeView,
+  NamePattern,
+  NamePreviewRow,
   RestoreReport,
   TagApplyReport,
   TagEdit_Deserialize as TagEdit,
@@ -50,9 +54,28 @@ export async function editTags(
   return result(await commands.editTags(sessionId, edits))
 }
 
-/** Runs a clean-up tool over all the session's files. */
-export async function runTagTool(sessionId: string, tool: TagTool): Promise<TagEditorResult<TagEditorView>> {
-  return result(await commands.runTagTool(sessionId, tool))
+/**
+ * Runs a tool over the tracks at `scope` (paths as `TrackRow.path` gives them, in session order), or over all the
+ * session's files when `scope` is `null`. A path the session doesn't have (`unknownTrack`) refuses the run.
+ */
+export async function runTagTool(
+  sessionId: string,
+  tool: TagTool,
+  scope: string[] | null = null,
+): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.runTagTool(sessionId, tool, scope))
+}
+
+/**
+ * What `pattern` reads from each file name of `scope` (or of every file when `null`), without changing anything: a
+ * row's `fields` is `null` when its name doesn't match. A bad pattern comes back as `badPattern`.
+ */
+export async function previewTagsFromNames(
+  sessionId: string,
+  pattern: NamePattern,
+  scope: string[] | null = null,
+): Promise<TagEditorResult<NamePreviewRow[]>> {
+  return result(await commands.previewTagsFromNames(sessionId, pattern, scope))
 }
 
 /** What a write as `kind` would change, per file, in current order, with what the kind removes. */

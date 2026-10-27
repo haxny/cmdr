@@ -16,7 +16,16 @@ afterEach(() => {
 const VIEW: TagEditorView = {
   editable: true,
   readOnlyReason: null,
-  shared: [{ field: 'album', value: 'multiple' }],
+  shared: [
+    {
+      field: 'album',
+      value: 'multiple',
+      choices: [
+        { values: ['Book one'], files: 2 },
+        { values: ['Book two'], files: 1 },
+      ],
+    },
+  ],
   tracks: [
     {
       path: '/b/01.mp3',

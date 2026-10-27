@@ -8,11 +8,14 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
-use cmdr_tags::shared::{SharedValue, shared_view};
+use cmdr_tags::shared::{SharedValue, ValueCount, distinct_values, shared_view};
 use cmdr_tags::tools::fields_with_diacritics;
 use cmdr_tags::{Cover, FileTags, TagField};
 
 use super::session::Entry;
+
+/// How many distinct values a «multiple values» row lists.
+const CHOICE_LIMIT: usize = 50;
 
 /// Why the tab can't write. A stable code, worded by the UI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
@@ -42,6 +45,8 @@ pub enum ReadErrorCode {
 pub struct SharedRow {
     pub field: TagField,
     pub value: SharedValue,
+    /// For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
+    pub choices: Vec<ValueCount>,
 }
 
 /// One audio file in the per-track list.
@@ -125,7 +130,14 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .iter()
             .filter(|field| !matches!(field, TagField::Title | TagField::Track))
             .filter_map(|field| shared.get(field).map(|value| (*field, value.clone())))
-            .map(|(field, value)| SharedRow { field, value })
+            .map(|(field, value)| SharedRow {
+                choices: match value {
+                    SharedValue::Multiple => distinct_values(&edited, field, CHOICE_LIMIT),
+                    SharedValue::Empty | SharedValue::Same(_) => Vec::new(),
+                },
+                field,
+                value,
+            })
             .collect(),
         tracks: tracks.iter().map(|(path, entry)| track_row(path, entry)).collect(),
         cover: cover_summary(&edited),

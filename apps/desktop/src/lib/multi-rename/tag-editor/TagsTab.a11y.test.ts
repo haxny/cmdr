@@ -20,9 +20,16 @@ const VIEW: TagEditorView = {
   editable: true,
   readOnlyReason: null,
   shared: [
-    { field: 'artist', value: { same: ['Karel Capek'] } },
-    { field: 'album', value: 'multiple' },
-    { field: 'comment', value: 'empty' },
+    { field: 'artist', value: { same: ['Karel Capek'] }, choices: [] },
+    {
+      field: 'album',
+      value: 'multiple',
+      choices: [
+        { values: ['Book one'], files: 2 },
+        { values: ['Book two'], files: 1 },
+      ],
+    },
+    { field: 'comment', value: 'empty', choices: [] },
   ],
   tracks: [
     {

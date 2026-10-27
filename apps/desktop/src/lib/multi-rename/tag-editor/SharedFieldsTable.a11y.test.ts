@@ -12,11 +12,18 @@ afterEach(() => {
 })
 
 const ROWS: SharedRow[] = [
-  { field: 'artist', value: { same: ['Karel Capek'] } },
-  { field: 'album', value: 'multiple' },
-  { field: 'genre', value: { same: ['audiokniha', 'detektivka'] } },
-  { field: 'comment', value: 'empty' },
-  { field: 'description', value: { same: ['Dlouhy popis'] } },
+  { field: 'artist', value: { same: ['Karel Capek'] }, choices: [] },
+  {
+    field: 'album',
+    value: 'multiple',
+    choices: [
+      { values: ['Book one'], files: 2 },
+      { values: ['Book two'], files: 1 },
+    ],
+  },
+  { field: 'genre', value: { same: ['audiokniha', 'detektivka'] }, choices: [] },
+  { field: 'comment', value: 'empty', choices: [] },
+  { field: 'description', value: { same: ['Dlouhy popis'] }, choices: [] },
 ]
 
 async function mountTable(editable: boolean): Promise<HTMLElement> {

@@ -17,6 +17,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     listCoverCandidates: vi.fn(),
     setCoverFromFile: vi.fn(),
     getCoverImage: vi.fn(),
+    previewTagsFromNames: vi.fn(),
   },
 }))
 
@@ -29,6 +30,7 @@ import {
   getTagChanges,
   listCoverCandidates,
   openTagEditor,
+  previewTagsFromNames,
   runTagTool,
   setCoverFromFile,
   undoTagApply,
@@ -80,12 +82,35 @@ describe('runTagTool', () => {
   it('passes the tool and the view through', async () => {
     vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
     expect(await runTagTool('s1', 'renumber' as never)).toEqual({ ok: true, value: { dirty: true } })
-    expect(commands.runTagTool).toHaveBeenCalledWith('s1', 'renumber')
+    expect(commands.runTagTool).toHaveBeenCalledWith('s1', 'renumber', null)
+  })
+
+  it('passes the chosen tracks through', async () => {
+    vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    await runTagTool('s1', 'renumber' as never, ['/a.mp3'])
+    expect(commands.runTagTool).toHaveBeenCalledWith('s1', 'renumber', ['/a.mp3'])
   })
 
   it('returns the typed error', async () => {
     vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'error', error: { kind: 'readOnly' } } as never)
     expect(await runTagTool('s1', 'renumber' as never)).toEqual({ ok: false, error: { kind: 'readOnly' } })
+  })
+})
+
+describe('previewTagsFromNames', () => {
+  const pattern = { kind: 'format', pattern: '%title%' } as const
+
+  it('passes the pattern, the scope, and the rows through', async () => {
+    const rows = [{ path: '/a.mp3', fileName: 'a.mp3', fields: null }]
+    vi.mocked(commands.previewTagsFromNames).mockResolvedValue({ status: 'ok', data: rows })
+    expect(await previewTagsFromNames('s1', pattern)).toEqual({ ok: true, value: rows })
+    expect(commands.previewTagsFromNames).toHaveBeenCalledWith('s1', pattern, null)
+  })
+
+  it('returns the typed error', async () => {
+    const error = { kind: 'badPattern', error: { kind: 'noFields' } } as const
+    vi.mocked(commands.previewTagsFromNames).mockResolvedValue({ status: 'error', error })
+    expect(await previewTagsFromNames('s1', pattern, ['/a.mp3'])).toEqual({ ok: false, error })
   })
 })
 

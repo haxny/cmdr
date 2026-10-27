@@ -17,12 +17,15 @@ import {
   getTagChanges,
   listCoverCandidates,
   openTagEditor,
+  previewTagsFromNames,
   runTagTool,
   setCoverFromFile,
   undoTagApply,
   type ApplyRequest,
   type CoverCandidate,
   type FileChangeView,
+  type NamePattern,
+  type NamePreviewRow,
   type RestoreReport,
   type TagApplyReport,
   type TagEdit,
@@ -65,7 +68,10 @@ export interface TagEditorState {
   /** Reads every file again, dropping every unwritten edit (after "changed on disk since it was read"). */
   reload(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
-  tool(tool: TagTool): Promise<void>
+  /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
+  tool(tool: TagTool, scope?: string[] | null): Promise<void>
+  /** What `pattern` would read from the file names of `scope` (or of every track), changing nothing. */
+  previewFromNames(pattern: NamePattern, scope?: string[] | null): Promise<TagStateResult<NamePreviewRow[]>>
   /**
    * Resolves `true` when every call now out has answered (an edit a blur just started included), or `false` after
    * `limitMs` (default `SETTLE_LIMIT_MS`) with one still out, say on a stalled network mount, so a caller can go on.
@@ -176,7 +182,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
-    tool: (tool) => replaceView(() => runTagTool(sessionId, tool)),
+    tool: (tool, scope = null) => replaceView(() => runTagTool(sessionId, tool, scope)),
+    previewFromNames: (pattern, scope = null) => track(() => previewTagsFromNames(sessionId, pattern, scope)),
     settled,
     async coverImage() {
       const res = await getCoverImage(sessionId)

@@ -241,6 +241,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::tag_editor::open_tag_editor,
                     crate::commands::tag_editor::edit_tags,
                     crate::commands::tag_editor::run_tag_tool,
+                    crate::commands::tag_editor::preview_tags_from_names,
                     crate::commands::tag_editor::get_tag_changes,
                     crate::commands::tag_editor::apply_tags,
                     crate::commands::tag_editor::undo_tag_apply,

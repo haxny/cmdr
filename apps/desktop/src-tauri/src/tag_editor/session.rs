@@ -21,9 +21,10 @@ use serde::{Deserialize, Serialize};
 
 pub(super) use cmdr_tags::Fingerprint;
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
-use cmdr_tags::tools::{TagTool, apply_tool};
+use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
-    ContentKind, Cover, FileTags, KindRemoval, TagError, TagField, format_of, read_duration, read_tags, removed_by_kind,
+    ContentKind, Cover, FileTags, KindRemoval, NamePattern, PatternError, TagError, TagField, compile_pattern,
+    format_of, normalize_for, read_duration, read_tags, removed_by_kind,
 };
 
 use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build, same_cover};
@@ -62,6 +63,8 @@ pub enum TagEditorError {
     CoverNotAnImage,
     /// The background task running the call failed.
     TaskFailed,
+    /// A file-name pattern that can't be used. Nothing was changed.
+    BadPattern { error: PatternError },
 }
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
@@ -93,6 +96,24 @@ pub struct FileChangeView {
     pub extras: bool,
     /// What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
     pub removes: Vec<KindRemoval>,
+}
+
+/// What a file-name pattern reads from one track's name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NamePreviewRow {
+    pub path: String,
+    pub file_name: String,
+    /// The fields the name gives, in pattern order; `None` when the name doesn't match.
+    pub fields: Option<Vec<NameValue>>,
+}
+
+/// One field a file name gives.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NameValue {
+    pub field: TagField,
+    pub value: String,
 }
 
 /// A file read from disk.
@@ -303,11 +324,71 @@ fn readable(layout: &Layout, session: &TagSession) -> (Vec<PathBuf>, Vec<FileTag
         .unzip()
 }
 
-/// Stores `edited` (parallel to `paths`) as the files' edited tags.
+/// The readable tracks at `scope` (paths as `TrackRow::path` gives them) in current order, or every
+/// readable track for `None`. A path the session doesn't have is `UnknownTrack`; an unreadable track
+/// in the scope is left out (it is never written).
+fn scoped(
+    layout: &Layout,
+    session: &TagSession,
+    scope: Option<&[String]>,
+) -> Result<(Vec<PathBuf>, Vec<FileTags>), TagEditorError> {
+    let (paths, tags) = readable(layout, session);
+    let Some(scope) = scope else {
+        return Ok((paths, tags));
+    };
+    let wanted: HashSet<&Path> = scope.iter().map(Path::new).collect();
+    if wanted.iter().any(|path| !session.by_path.contains_key(*path)) {
+        return Err(TagEditorError::UnknownTrack);
+    }
+    Ok(paths
+        .into_iter()
+        .zip(tags)
+        .filter(|(path, _)| wanted.contains(path.as_path()))
+        .unzip())
+}
+
+fn file_name_of(path: &Path) -> String {
+    path.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+fn stem_of(path: &Path) -> String {
+    path.file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// What the file-name tools know about `paths`: each one's folder and stem.
+fn context_of(paths: &[PathBuf]) -> ToolContext {
+    ToolContext {
+        folders: paths
+            .iter()
+            .map(|path| {
+                path.parent()
+                    .map(|folder| folder.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            })
+            .collect(),
+        stems: paths.iter().map(|path| stem_of(path)).collect(),
+    }
+}
+
+/// `tags` as the file at `path` will hold them (an M4A track `01` is `1`); as given when the
+/// name has no supported format.
+fn as_format_holds(path: &Path, tags: FileTags) -> FileTags {
+    match format_of(&file_name_of(path)) {
+        Some(format) => normalize_for(format, &tags),
+        None => tags,
+    }
+}
+
+/// Stores `edited` (parallel to `paths`) as the files' edited tags, as each file's format holds
+/// them, so every edit path (edits, tools) shows what a write will leave.
 fn store(session: &mut TagSession, paths: Vec<PathBuf>, edited: Vec<FileTags>) {
     for (path, tags) in paths.into_iter().zip(edited) {
         if let Some(Entry::Loaded(loaded)) = session.by_path.get_mut(&path) {
-            loaded.edited = tags;
+            loaded.edited = as_format_holds(&path, tags);
         }
     }
 }
@@ -350,16 +431,48 @@ pub fn edit(session_id: &str, edits: Vec<TagEdit>) -> Result<TagEditorView, TagE
     })
 }
 
-/// Runs a clean-up tool over the WHOLE session's readable files (never a sub-selection: the
-/// renumber and single-file rules depend on seeing all of them).
-pub fn tool(session_id: &str, tool: TagTool) -> Result<TagEditorView, TagEditorError> {
+/// Runs a tool over the readable tracks at `scope` (every readable track for `None`), in session
+/// order; the others keep their tags. An unknown path refuses the run (`UnknownTrack`), a bad
+/// file-name pattern refuses it before anything is touched (`BadPattern`), and an empty scope
+/// changes nothing.
+pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Result<TagEditorView, TagEditorError> {
+    if let TagTool::FromFileName { pattern } = &tool {
+        compile_pattern(pattern).map_err(|error| TagEditorError::BadPattern { error })?;
+    }
     with_session(session_id, |layout, session| {
         require_editable(layout)?;
-        let (paths, before) = readable(layout, session);
-        let after = apply_tool(&before, &tool);
-        store(session, paths, after);
+        let (paths, before) = scoped(layout, session, scope.as_deref())?;
+        if !paths.is_empty() {
+            let after = apply_tool_in(&before, &context_of(&paths), &tool);
+            store(session, paths, after);
+        }
         Ok(view_of(layout, session))
     })
+}
+
+/// What `pattern` reads from the name of each readable track at `scope` (every one for `None`), in
+/// session order. Changes nothing, so a read-only session previews too. The names are matched
+/// after the lock.
+pub fn preview_names(
+    session_id: &str,
+    pattern: NamePattern,
+    scope: Option<Vec<String>>,
+) -> Result<Vec<NamePreviewRow>, TagEditorError> {
+    let compiled = compile_pattern(&pattern).map_err(|error| TagEditorError::BadPattern { error })?;
+    let (paths, _) = with_session(session_id, |layout, session| scoped(layout, session, scope.as_deref()))?;
+    Ok(paths
+        .iter()
+        .map(|path| NamePreviewRow {
+            path: path.to_string_lossy().into_owned(),
+            file_name: file_name_of(path),
+            fields: compiled.read(&stem_of(path)).map(|pairs| {
+                pairs
+                    .into_iter()
+                    .map(|(field, value)| NameValue { field, value })
+                    .collect()
+            }),
+        })
+        .collect())
 }
 
 /// What a write as `kind` would change, per file, in current order: the fields, cover, and
@@ -377,10 +490,7 @@ pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView
                     .next()?;
                 let view = FileChangeView {
                     path: path.to_string_lossy().into_owned(),
-                    file_name: path
-                        .file_name()
-                        .map(|name| name.to_string_lossy().into_owned())
-                        .unwrap_or_default(),
+                    file_name: file_name_of(path),
                     fields: change.fields,
                     cover: change.cover,
                     extras: change.extras,

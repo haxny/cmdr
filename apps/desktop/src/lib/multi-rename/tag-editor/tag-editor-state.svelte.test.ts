@@ -16,6 +16,7 @@ const ipc = vi.hoisted(() => ({
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
   getCoverImage: vi.fn(),
+  previewTagsFromNames: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
 const warn = vi.hoisted(() => vi.fn())
@@ -147,11 +148,34 @@ describe('createTagEditorState', () => {
     const state = createTagEditorState('S')
     ipc.runTagTool.mockResolvedValueOnce({ ok: true, value: EDITED })
     await state.tool({ kind: 'stripDiacritics' } as never)
-    expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'stripDiacritics' })
+    expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'stripDiacritics' }, null)
     expect(state.view).toBe(EDITED)
     ipc.runTagTool.mockResolvedValueOnce({ ok: false, error: { kind: 'readOnly' } })
     await state.tool({ kind: 'stripDiacritics' } as never)
     expect(state.error).toEqual({ kind: 'readOnly' })
+  })
+
+  it('tool passes the chosen tracks through', async () => {
+    const state = createTagEditorState('S')
+    ipc.runTagTool.mockResolvedValueOnce({ ok: true, value: EDITED })
+    await state.tool({ kind: 'renumber', start: 1 }, ['/a.mp3'])
+    expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'renumber', start: 1 }, ['/a.mp3'])
+    expect(state.view).toBe(EDITED)
+  })
+
+  it('previewFromNames returns the rows and keeps a typed error', async () => {
+    const state = createTagEditorState('S')
+    const pattern = { kind: 'format', pattern: '%track% - %title%' } as const
+    const rows = [{ path: '/a.mp3', fileName: 'a.mp3', fields: null }]
+    ipc.previewTagsFromNames.mockResolvedValueOnce({ ok: true, value: rows })
+    expect(await state.previewFromNames(pattern)).toEqual({ ok: true, value: rows })
+    expect(ipc.previewTagsFromNames).toHaveBeenLastCalledWith('S', pattern, null)
+    const error = { kind: 'badPattern', error: { kind: 'badRegex' } }
+    ipc.previewTagsFromNames.mockResolvedValueOnce({ ok: false, error })
+    expect(await state.previewFromNames(pattern, ['/a.mp3'])).toEqual({ ok: false, error })
+    expect(ipc.previewTagsFromNames).toHaveBeenLastCalledWith('S', pattern, ['/a.mp3'])
+    expect(state.error).toEqual(error)
+    expect(state.busy).toBe(false)
   })
 
   it('changes returns the backend answer and sets the error on failure', async () => {

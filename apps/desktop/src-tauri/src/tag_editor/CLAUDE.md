@@ -16,8 +16,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - **Edits are keyed by PATH.** The view walks Multi-Rename's CURRENT names (`multi_rename::session::files_of`) and looks
   each file up, so a reorder never moves an edit. `TagEdit::SetOne` names a track by path; an unknown or unreadable
   path refuses the batch (`UnknownTrack`). A file whose fingerprint moved since the read is never written.
-- **Tools get the WHOLE session's readable tags**, never a sub-selection (`renumber` removes the track of a one-file
-  session).
+- **Tools run on a scope** (track paths, `None` = all) in session order; an unknown path refuses (`UnknownTrack`).
+  `store` normalizes every edit for its format (M4A track `01` → `1`).
 - **Only the `root` volume is editable**, as `multi_rename/run.rs` decides locality. Other volumes: `editable: false`,
   `RemoteVolume`; `edit` / `tool` / `apply` refuse with `ReadOnly`. Files are listed only if `std::fs` reaches the
   volume.
