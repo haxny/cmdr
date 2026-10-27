@@ -529,7 +529,8 @@ pub struct ResolvedBudget {
     /// The window we believe this model has, when any source knows it. `None` means nothing
     /// here knows, so no claim about the window can honestly be made.
     pub known_window_tokens: Option<usize>,
-    /// The user's explicit size is larger than [`Self::known_window_tokens`]. It is used
+    /// The user's explicit size, plus the reply's room, is larger than
+    /// [`Self::known_window_tokens`]. It is used
     /// ANYWAY: our knowledge will be wrong sometimes and the user may be right about their own
     /// model. The settings surface warns that the model may refuse a message this long.
     pub over_known_window: bool,
@@ -612,7 +613,8 @@ pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget,
             prompt_tokens: chosen,
             source: BudgetSource::UserSetting,
             known_window_tokens,
-            over_known_window: known_window_tokens.is_some_and(|window| chosen > window),
+            // The reply comes out of the same window: a provider refuses prompt plus `max_tokens` past it.
+            over_known_window: known_window_tokens.is_some_and(|window| chosen + inputs.reply_tokens > window),
         });
     }
 
@@ -633,6 +635,25 @@ pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget,
         known_window_tokens,
         over_known_window: false,
     })
+}
+
+/// The chat memory a thread's timeline names ("Chat memory changed to …"), which moves only when
+/// the USER moved something: their "Chat memory size" or the model. It's the prompt budget with
+/// the base reply slot (an effort only reserves more reply), sized from the family table when
+/// the table knows the model (a provider report arriving mid-thread would otherwise read as a
+/// change nobody made). The actual budget a turn assembles against is [`resolve_prompt_budget`]'s.
+pub fn chat_memory_figure(inputs: BudgetInputs<'_>) -> Result<usize, BudgetRefusal> {
+    let table_knows = known_window(inputs.provider, inputs.model, inputs.local_context_tokens, None).is_some();
+    resolve_prompt_budget(BudgetInputs {
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
+        reported_window_tokens: if table_knows {
+            None
+        } else {
+            inputs.reported_window_tokens
+        },
+        ..inputs
+    })
+    .map(|resolved| resolved.prompt_tokens)
 }
 
 /// Estimate a string's token size (chars / [`CHARS_PER_TOKEN_ESTIMATE`]).

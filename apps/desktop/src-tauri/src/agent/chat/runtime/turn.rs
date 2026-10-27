@@ -649,12 +649,12 @@ fn record_chat_memory_transition(conn: &rusqlite::Connection, params: &TurnParam
             return;
         }
     };
-    if last == Some(params.prompt_budget) {
+    if last == Some(params.chat_memory_tokens) {
         return;
     }
     if last.is_some() {
         let event = store::ConversationEvent::ChatMemoryChanged {
-            chat_memory_tokens: params.prompt_budget,
+            chat_memory_tokens: params.chat_memory_tokens,
         };
         match store::append_event(conn, params.conversation_id, &event, params.now_secs) {
             Ok((message_id, seq)) => emit(
@@ -662,13 +662,13 @@ fn record_chat_memory_transition(conn: &rusqlite::Connection, params: &TurnParam
                 AgentChatEvent::ChatMemoryChanged {
                     message_id,
                     seq,
-                    chat_memory_tokens: params.prompt_budget,
+                    chat_memory_tokens: params.chat_memory_tokens,
                 },
             ),
             Err(e) => log::warn!(target: LOG_TARGET, "recording the chat-memory-change event failed: {e}"),
         }
     }
-    if let Err(e) = store::set_conversation_last_chat_memory(conn, params.conversation_id, params.prompt_budget) {
+    if let Err(e) = store::set_conversation_last_chat_memory(conn, params.conversation_id, params.chat_memory_tokens) {
         log::warn!(target: LOG_TARGET, "stamping the conversation's chat memory size failed: {e}");
     }
 }

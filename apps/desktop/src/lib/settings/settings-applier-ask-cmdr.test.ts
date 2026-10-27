@@ -8,12 +8,14 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { order, pushAdbConfigToBackend, scheduleAdbConfigPush, cancelScheduledAdbConfigPush } = vi.hoisted(() => ({
-  order: [] as string[],
-  pushAdbConfigToBackend: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  scheduleAdbConfigPush: vi.fn<() => void>(),
-  cancelScheduledAdbConfigPush: vi.fn<() => void>(),
-}))
+const { order, pushAdbConfigToBackend, scheduleAdbConfigPush, cancelScheduledAdbConfigPush, noteSlotSettingChanged } =
+  vi.hoisted(() => ({
+    order: [] as string[],
+    pushAdbConfigToBackend: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    scheduleAdbConfigPush: vi.fn<() => void>(),
+    cancelScheduledAdbConfigPush: vi.fn<() => void>(),
+    noteSlotSettingChanged: vi.fn<() => void>(),
+  }))
 
 /** The change listener the applier registers, captured so the test can fire it. */
 let changeListener: ((change: { id: string; value: unknown }) => void) | undefined
@@ -50,6 +52,8 @@ vi.mock('#lib/settings/index.js', async (importOriginal) => {
   }
 })
 
+vi.mock('#lib/ask-cmdr/ask-cmdr-trigger.svelte.js', () => ({ noteSlotSettingChanged }))
+
 vi.mock('#lib/adb/adb-settings.js', () => ({
   cancelScheduledAdbConfigPush,
   pushAdbConfigToBackend,
@@ -64,6 +68,7 @@ beforeEach(() => {
   pushAdbConfigToBackend.mockClear()
   scheduleAdbConfigPush.mockClear()
   cancelScheduledAdbConfigPush.mockClear()
+  noteSlotSettingChanged.mockClear()
 })
 
 afterEach(() => {
@@ -88,5 +93,14 @@ describe('settings-applier: fileOperations.adbBinaryPath', () => {
     changeListener?.({ id: 'fileOperations.adbBinaryPath', value: '/a' })
     changeListener?.({ id: 'fileOperations.adbBinaryPath', value: '/adb' })
     expect(scheduleAdbConfigPush).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('settings-applier: ai.reasoningEfforts', () => {
+  it('nudges the rail, since the effort moves the reply room and so the budget it shows', async () => {
+    await initSettingsApplier()
+
+    changeListener?.({ id: 'ai.reasoningEfforts', value: '{"anthropic/claude-opus-5-5":"max"}' })
+    expect(noteSlotSettingChanged).toHaveBeenCalledOnce()
   })
 })

@@ -237,3 +237,44 @@ fn the_choice_is_keyed_by_provider_and_model() {
     );
     assert_eq!(choice_for("not json", "anthropic", "x"), EffortChoice::Recommended);
 }
+
+/// A small reported window can't give the reply 32,000 tokens: the prompt would get almost none
+/// of it, and prompt plus `max_tokens` would overrun the window. The reply takes at most a
+/// quarter of the window, never less than the base slot while the window can spare it.
+#[test]
+fn a_high_effort_on_a_32k_window_leaves_the_prompt_a_working_budget() {
+    let high = resolve_effort(&claude(), EffortChoice::Level(EffortLevel::High), None);
+    let reply = fit_reply_to_window(high.max_output_tokens, Some(32_768));
+    assert_eq!(reply, AGENT_MAX_OUTPUT_TOKENS);
+    let prompt = (32_768 - reply as usize) * 85 / 100;
+    assert!(
+        prompt >= MIN_CLOUD_PROMPT_TOKENS,
+        "the prompt keeps room for the prefix and a paged result: {prompt}"
+    );
+}
+
+#[test]
+fn a_large_window_keeps_the_full_reply_room() {
+    assert_eq!(fit_reply_to_window(64_000, Some(1_000_000)), 64_000);
+    assert_eq!(
+        fit_reply_to_window(64_000, None),
+        64_000,
+        "an unknown window changes nothing"
+    );
+    // A quarter of 200,000 is 50,000: Max gives way, High doesn't.
+    assert_eq!(fit_reply_to_window(64_000, Some(200_000)), 50_000);
+    assert_eq!(fit_reply_to_window(32_000, Some(200_000)), 32_000);
+}
+
+/// Below the base slot's comfort zone, the reply shrinks so the prompt keeps its floor, but never
+/// under a usable minimum: a tiny window then overruns honestly rather than replying in nothing.
+#[test]
+fn a_tiny_window_shrinks_the_reply_to_keep_the_prompt_floor() {
+    let reply = fit_reply_to_window(AGENT_MAX_OUTPUT_TOKENS, Some(24_000));
+    assert!(reply < AGENT_MAX_OUTPUT_TOKENS);
+    assert!((24_000 - reply as usize) * 85 / 100 >= MIN_CLOUD_PROMPT_TOKENS);
+    assert_eq!(
+        fit_reply_to_window(AGENT_MAX_OUTPUT_TOKENS, Some(8_192)),
+        MIN_REPLY_TOKENS
+    );
+}

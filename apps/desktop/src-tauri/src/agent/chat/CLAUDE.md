@@ -25,8 +25,8 @@ One message in, an answer out, crash-safe and within budget.
   data. `DETAILS.md` § The memory block; `../memory/DETAILS.md`.
 - **Keep the pure core pure.** Offset, envelope, `CMDR.md`, memory, and budget arrive as values, so
   every context test runs with no tokio runtime and no filesystem; `context.rs` never learns the model.
-- **Automatic spends the whole window** (less the reply and a 15% estimator margin), sized from the provider's own
-  report when one arrived, else the family table. ❌ Don't re-add a cap for cost: that's compaction's job (planned).
+- **Automatic spends the whole window** (less the reply and a 15% margin), from the provider's report, else the
+  family table. ❌ Don't re-add a cap for cost: that's compaction's job (planned).
   `DETAILS.md` § Resolving one budget.
 - **Only budget pressure elides, oldest turn first; ❌ never by age.** While the prompt fits, history goes out
   byte-identical to the last call, which is what keeps the provider's prompt cache valid. `DETAILS.md` § Budget

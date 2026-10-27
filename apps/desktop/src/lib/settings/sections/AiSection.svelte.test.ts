@@ -389,4 +389,19 @@ describe('the Effort picker in Settings > AI > Provider', () => {
     const target = await mountSection()
     expect(target.querySelector('[id="setting-ai.reasoningEfforts"]')).toBeNull()
   })
+
+  it('sets the effort of the model Ask Cmdr actually uses when it has its own, and says so', async () => {
+    stubs.consent.accepted = true
+    stubs.settings['askCmdr.interactiveModel'] = 'gpt-5.5'
+    stubs.modelLimits = {
+      contextWindowTokens: 400_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: reasoning,
+    }
+    const target = await mountSection()
+
+    expect(vi.mocked(getAiModelLimits).mock.calls.some(([, , model]) => model === 'gpt-5.5')).toBe(true)
+    expect(target.textContent).toContain('Ask Cmdr uses its own model, gpt-5.5, so this sets its effort.')
+  })
 })

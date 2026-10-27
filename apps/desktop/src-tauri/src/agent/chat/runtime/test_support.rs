@@ -79,6 +79,7 @@ pub(super) fn params<'a>(conversation_id: i64, user_text: Option<&'a str>) -> Tu
         provider: ProviderTag::Local,
         model: "fake-model".to_string(),
         prompt_budget: TEST_PROMPT_BUDGET,
+        chat_memory_tokens: TEST_PROMPT_BUDGET,
         call: crate::agent::llm::CallSettings::default(),
     }
 }
@@ -420,6 +421,19 @@ pub(super) async fn run_answer_turn_sized(
     chat_memory_tokens: usize,
     user_text: &str,
 ) -> Vec<AgentChatEvent> {
+    run_answer_turn_budgeted(conn, id, model, chat_memory_tokens, chat_memory_tokens, user_text).await
+}
+
+/// The same, with the actual prompt budget apart from the chat memory the timeline names, for
+/// the tests about the budget moving for reasons the user didn't cause (an effort, a late report).
+pub(super) async fn run_answer_turn_budgeted(
+    conn: &Connection,
+    id: i64,
+    model: &str,
+    prompt_budget: usize,
+    chat_memory_tokens: usize,
+    user_text: &str,
+) -> Vec<AgentChatEvent> {
     let llm = ProgrammableLlm::new(vec![Program::Answer {
         chunks: vec!["ok".to_string()],
         usage: AgentUsage::default(),
@@ -427,7 +441,8 @@ pub(super) async fn run_answer_turn_sized(
     let (tx, mut rx) = unbounded_channel();
     let mut params = params(id, Some(user_text));
     params.model = model.to_string();
-    params.prompt_budget = chat_memory_tokens;
+    params.prompt_budget = prompt_budget;
+    params.chat_memory_tokens = chat_memory_tokens;
     let result = run_turn(&llm, &OkDispatcher, conn, &[], &params, &tx, &CancellationToken::new()).await;
     assert!(matches!(result, TurnResult::Answered { .. }), "turn answers");
     drain(&mut rx)

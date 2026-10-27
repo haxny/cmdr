@@ -88,6 +88,9 @@ pub struct ModelWindowView {
     /// provider reports, else the family table. `None` when nothing here knows it, so the UI
     /// stays quiet instead of guessing.
     pub known_window_tokens: Option<u32>,
+    /// The reply's ceiling the next send would ask for (`session::resolve_call_settings`). It comes
+    /// out of the same window, so a size plus this past the window is what a provider refuses.
+    pub reply_tokens: u32,
 }
 
 /// What a Stop reached, so the rail waits for exactly the terminals still coming

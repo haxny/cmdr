@@ -32,7 +32,10 @@ use super::spend;
 use super::{Inbox, InboxSummary, PrepareOutcome, PrepareParams, persist, prepare_wake};
 use crate::agent::chat::budget;
 use crate::agent::chat::runtime::day_for;
-use crate::agent::chat::session::{AgentSlot, local_offset, resolve_agent_llm, resolve_prompt_budget};
+use crate::agent::chat::session::{
+    AgentSlot, chat_memory_tokens, local_offset, resolve_agent_llm, resolve_prompt_budget_for,
+    resolve_wake_call_settings,
+};
 use crate::agent::store;
 
 const LOG_TARGET: &str = "agent::wake";
@@ -479,18 +482,24 @@ impl WakeLoop {
                 return None;
             }
         };
-        let prompt_budget = match resolve_prompt_budget(&self.app, provider, &model) {
+        // A wake thinks on Recommended, whatever the rail's pick, and its budget leaves room for
+        // exactly the reply it will ask for.
+        let call = resolve_wake_call_settings(&self.app, provider, &model);
+        let prompt_budget = match resolve_prompt_budget_for(&self.app, provider, &model, call) {
             Ok(tokens) => tokens,
             Err(refusal) => {
                 log::warn!(target: LOG_TARGET, "a wake came due with a budget it cannot use: {refusal:?}");
                 return None;
             }
         };
+        let chat_memory_tokens = chat_memory_tokens(&self.app, provider, &model).unwrap_or(prompt_budget);
         Some(PendingSlot {
             llm,
             provider,
             model,
             prompt_budget,
+            chat_memory_tokens,
+            call,
         })
     }
 }
@@ -502,6 +511,8 @@ struct PendingSlot {
     provider: crate::agent::llm::types::ProviderTag,
     model: String,
     prompt_budget: usize,
+    chat_memory_tokens: usize,
+    call: crate::agent::llm::CallSettings,
 }
 
 impl PendingSlot {
@@ -511,6 +522,8 @@ impl PendingSlot {
             provider: self.provider,
             model: self.model,
             prompt_budget: self.prompt_budget,
+            chat_memory_tokens: self.chat_memory_tokens,
+            call: self.call,
         }
     }
 }

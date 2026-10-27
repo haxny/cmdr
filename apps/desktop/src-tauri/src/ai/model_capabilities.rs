@@ -11,19 +11,18 @@
 //!
 //! **Never blocks a send.** A lookup reads the in-memory cache and, when the entry is missing
 //! or older than [`REFRESH_AFTER`], starts ONE background refresh; the send goes on with what
-//! is there (the table, on the first send after launch). `configure_ai` refreshes on every
-//! provider, key, model, or base-URL change, and a connection check stores what it already
-//! fetched. The cache is keyed by (provider id, base URL), the two things that decide which
+//! is there (the table, on the first send after launch). A connection check stores what it already
+//! fetched; a background refresh goes only to a trusted endpoint (see `Catalogs`). The cache is keyed by (provider id, base URL), the two things that decide which
 //! catalog answers.
 //!
 //! **Egress**: a model-list call carries no user data, but it reaches the provider, so a
-//! refresh asks the managed policy and cloud consent first, exactly like the connection check.
-//! Two callers start one: Ask Cmdr's lookup only while `ai.provider` is `cloud`, and
-//! Settings › AI for the provider being set up (like the connection check, whatever
-//! `ai.provider` says).
+//! refresh asks the managed policy and cloud consent first, exactly like the connection check,
+//! and goes only to a trusted endpoint (`Catalogs`). Ask Cmdr's lookup asks for one only while
+//! `ai.provider` is `cloud`; Settings › AI reads the cache, and its connection check fills it.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
@@ -121,38 +120,100 @@ impl CatalogSlot {
     }
 }
 
-static CATALOGS: Mutex<Option<HashMap<CatalogKey, CatalogSlot>>> = Mutex::new(None);
+/// Every catalog this run knows, and which endpoints may be fetched from in the background.
+///
+/// ⚠️ **A background fetch goes only to a TRUSTED endpoint**: one a connection check got a model
+/// list from (debounced, after the user stopped typing), or the one Cmdr started with (from
+/// `settings.json`, so committed). Never to an endpoint seen only through a lookup: a custom
+/// base URL reaches the backend on every keystroke, and `https://api.mycompany.co` (a prefix
+/// of `…company.com`) is a real host a stranger could own. The fetch carries the stored key.
+#[derive(Debug, Default)]
+struct Catalogs {
+    slots: HashMap<CatalogKey, CatalogSlot>,
+    trusted: HashSet<CatalogKey>,
+}
+
+impl Catalogs {
+    /// Whether to start a background fetch for `key` at `now`, marking it in flight if so.
+    fn begin_refresh(&mut self, key: &CatalogKey, now: Instant) -> bool {
+        if !self.trusted.contains(key) {
+            return false;
+        }
+        let slot = self.slots.entry(key.clone()).or_default();
+        if !slot.wants_refresh(now) {
+            return false;
+        }
+        slot.in_flight = true;
+        true
+    }
+
+    /// A fetch that failed: the retry waits [`RETRY_AFTER`].
+    fn fail(&mut self, key: &CatalogKey, now: Instant) {
+        if let Some(slot) = self.slots.get_mut(key) {
+            slot.in_flight = false;
+            slot.last_attempt = Some(now);
+        }
+    }
+
+    /// Keep `catalog` for `key`, which is now trusted, and drop every other endpoint but the
+    /// configured one, so a provider tried once in Settings doesn't stay in memory forever.
+    fn store(&mut self, key: CatalogKey, catalog: ModelCatalog, now: Instant, configured: Option<&CatalogKey>) {
+        let slot = self.slots.entry(key.clone()).or_default();
+        slot.catalog = Some((catalog, now));
+        slot.last_attempt = Some(now);
+        slot.in_flight = false;
+        self.trusted.insert(key.clone());
+        let keep = |k: &CatalogKey| *k == key || Some(k) == configured;
+        self.slots.retain(|k, _| keep(k));
+        self.trusted.retain(|k| keep(k));
+    }
+
+    fn lookup(&self, key: &CatalogKey, model: &str) -> Option<&ModelCapabilities> {
+        let (catalog, _) = self.slots.get(key)?.catalog.as_ref()?;
+        find_model(catalog, model)
+    }
+}
+
+static CATALOGS: Mutex<Option<Catalogs>> = Mutex::new(None);
+
+/// Whether `configure_ai` has handed over the endpoint Cmdr started with.
+static STARTUP_TRUSTED: AtomicBool = AtomicBool::new(false);
 
 /// Tells the windows a catalog arrived, so Settings › AI re-reads the window it shows.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
 pub struct AiModelCapabilitiesChanged;
 
-/// Keep what a model list answered, for (`provider_id`, `base_url`). Called by the connection
-/// check and by a refresh.
+fn configured_key() -> Option<CatalogKey> {
+    let provider_id = super::state::get_cloud_provider_id();
+    let (_, base_url, _) = super::state::get_cloud_config();
+    (!provider_id.is_empty() && !base_url.is_empty()).then(|| CatalogKey::new(&provider_id, &base_url))
+}
+
+/// Keep what a model list answered, for (`provider_id`, `base_url`), and trust that endpoint
+/// for later background refreshes. Called by the connection check and by a refresh.
 pub(super) fn store<R: Runtime>(app: &AppHandle<R>, provider_id: &str, base_url: &str, catalog: ModelCatalog) {
-    let now = Instant::now();
-    {
-        let mut catalogs = CATALOGS.lock_ignore_poison();
-        let slot = catalogs
-            .get_or_insert_with(HashMap::new)
-            .entry(CatalogKey::new(provider_id, base_url))
-            .or_default();
-        slot.catalog = Some((catalog, now));
-        slot.last_attempt = Some(now);
-        slot.in_flight = false;
-    }
+    let configured = configured_key();
+    CATALOGS
+        .lock_ignore_poison()
+        .get_or_insert_with(Catalogs::default)
+        .store(
+            CatalogKey::new(provider_id, base_url),
+            catalog,
+            Instant::now(),
+            configured.as_ref(),
+        );
     if let Err(e) = AiModelCapabilitiesChanged.emit(app) {
         log::debug!("couldn't announce new model capabilities: {e}");
     }
 }
 
-/// What the cache knows about `model` on (`provider_id`, `base_url`), with no I/O. Pair it with
-/// [`refresh`] where staying current matters.
+/// What the cache knows about `model` on (`provider_id`, `base_url`), with no I/O.
 pub fn lookup(provider_id: &str, base_url: &str, model: &str) -> Option<ModelCapabilities> {
-    let catalogs = CATALOGS.lock_ignore_poison();
-    let slot = catalogs.as_ref()?.get(&CatalogKey::new(provider_id, base_url))?;
-    let (catalog, _) = slot.catalog.as_ref()?;
-    find_model(catalog, model).cloned()
+    CATALOGS
+        .lock_ignore_poison()
+        .as_ref()?
+        .lookup(&CatalogKey::new(provider_id, base_url), model)
+        .cloned()
 }
 
 /// What the provider reports for `model` on the configured cloud provider, refreshing in the
@@ -163,46 +224,48 @@ pub fn for_configured_cloud_model<R: Runtime>(app: &AppHandle<R>, model: &str) -
     }
     let provider_id = super::state::get_cloud_provider_id();
     let (_, base_url, _) = super::state::get_cloud_config();
-    refresh(app, &provider_id, &base_url, Refresh::IfStale);
+    refresh(app, &provider_id, &base_url);
     lookup(&provider_id, &base_url, model)
 }
 
-/// When [`refresh`] should fetch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Refresh {
-    /// Only when the catalog is missing or stale, and no failed attempt is recent.
-    IfStale,
-    /// Now, unless a fetch is already running: the key or endpoint just changed, so neither
-    /// the cached catalog nor the last failure says anything about the new one.
-    Now,
+/// `configure_ai` hands over the endpoint it just stored. The FIRST one of a run is what Cmdr
+/// started with, read from `settings.json`, so it's committed and trusted; a later one may be a
+/// base URL mid-typing and is trusted only once a connection check vouches for it.
+pub fn configured<R: Runtime>(app: &AppHandle<R>, provider_id: &str, base_url: &str, cloud_on: bool) {
+    let first = !STARTUP_TRUSTED.swap(true, Ordering::SeqCst);
+    if provider_id.is_empty() || base_url.is_empty() {
+        return;
+    }
+    if first {
+        CATALOGS
+            .lock_ignore_poison()
+            .get_or_insert_with(Catalogs::default)
+            .trusted
+            .insert(CatalogKey::new(provider_id, base_url));
+    }
+    if cloud_on {
+        refresh(app, provider_id, base_url);
+    }
 }
 
-/// Start one background refresh of (`provider_id`, `base_url`)'s catalog, as `when` says.
-/// Returns at once; the result lands in the cache and announces itself.
-pub fn refresh<R: Runtime>(app: &AppHandle<R>, provider_id: &str, base_url: &str, when: Refresh) {
+/// Start one background refresh of (`provider_id`, `base_url`)'s catalog if that endpoint is
+/// trusted and its catalog missing or stale. Returns at once; the result lands in the cache and
+/// announces itself.
+pub fn refresh<R: Runtime>(app: &AppHandle<R>, provider_id: &str, base_url: &str) {
     if provider_id.is_empty() || base_url.is_empty() {
         return;
     }
     let key = CatalogKey::new(provider_id, base_url);
-    {
-        let mut catalogs = CATALOGS.lock_ignore_poison();
-        let slot = catalogs
-            .get_or_insert_with(HashMap::new)
-            .entry(key.clone())
-            .or_default();
-        let go = match when {
-            Refresh::IfStale => slot.wants_refresh(Instant::now()),
-            Refresh::Now => !slot.in_flight,
-        };
-        if !go {
-            return;
-        }
-        slot.in_flight = true;
+    let go = CATALOGS
+        .lock_ignore_poison()
+        .get_or_insert_with(Catalogs::default)
+        .begin_refresh(&key, Instant::now());
+    if !go {
+        return;
     }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let fetched = fetch_catalog(&app, &key).await;
-        match fetched {
+        match fetch_catalog(&app, &key).await {
             Some(catalog) => {
                 log::debug!(
                     "model capabilities for {}: {} models reported",
@@ -212,10 +275,8 @@ pub fn refresh<R: Runtime>(app: &AppHandle<R>, provider_id: &str, base_url: &str
                 store(&app, &key.provider_id, &key.base_url, catalog);
             }
             None => {
-                let mut catalogs = CATALOGS.lock_ignore_poison();
-                if let Some(slot) = catalogs.as_mut().and_then(|c| c.get_mut(&key)) {
-                    slot.in_flight = false;
-                    slot.last_attempt = Some(Instant::now());
+                if let Some(catalogs) = CATALOGS.lock_ignore_poison().as_mut() {
+                    catalogs.fail(&key, Instant::now());
                 }
             }
         }
@@ -503,12 +564,13 @@ pub struct AiEffortOptions {
 }
 
 /// The window and longest reply of `model` on the provider being set up, for Settings › AI.
-/// Reads the cache, falling back to the budget's family table; a missing or stale catalog
-/// starts a gated background refresh, and `AiModelCapabilitiesChanged` says when to ask again.
+/// Reads the cache, falling back to the budget's family table. A stale catalog for a TRUSTED
+/// endpoint refreshes in the background; an endpoint being typed waits for the connection check.
+/// `AiModelCapabilitiesChanged` says when to ask again.
 #[tauri::command]
 #[specta::specta]
 pub fn get_ai_model_limits(app: AppHandle, provider_id: String, base_url: String, model: String) -> AiModelLimits {
-    refresh(&app, &provider_id, &base_url, Refresh::IfStale);
+    refresh(&app, &provider_id, &base_url);
     let reported = lookup(&provider_id, &base_url, &model);
     limits_for(&model, reported.as_ref())
 }

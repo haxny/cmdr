@@ -38,6 +38,8 @@ pub(super) struct ResolvedSlot {
     pub provider: ProviderTag,
     pub model: String,
     pub prompt_budget: usize,
+    pub chat_memory_tokens: usize,
+    pub call: crate::agent::llm::CallSettings,
 }
 
 /// The two kinds of turn this thread runs, and everything that differs between them.
@@ -184,6 +186,8 @@ async fn run(app: AppHandle, slot: ResolvedSlot, turn: &BackgroundTurn) -> WakeC
         provider: slot.provider,
         model: slot.model,
         prompt_budget: slot.prompt_budget,
+        chat_memory_tokens: slot.chat_memory_tokens,
+        call: slot.call,
     };
     let dispatcher = AppHandleDispatcher::new(app.clone(), conversation_id);
 

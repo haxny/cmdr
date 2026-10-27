@@ -16,7 +16,9 @@
 //! ([`reply_room`]), capped at what the model can write. The prompt budget leaves exactly
 //! that much of the window free (`budget::BudgetInputs::reply_tokens`).
 
-use crate::agent::chat::budget::AGENT_MAX_OUTPUT_TOKENS;
+use crate::agent::chat::budget::{
+    AGENT_MAX_OUTPUT_TOKENS, ESTIMATE_SAFETY_PERCENT, FIXED_PROMPT_OVERHEAD_TOKENS, MAX_TOOL_RESULT_TOKENS,
+};
 use crate::agent::llm::ReasoningEffort;
 use crate::agent::llm::types::ProviderTag;
 use crate::ai::model_capabilities::ReasoningCapabilities;
@@ -377,6 +379,34 @@ pub fn resolve_effort(
         max_output_tokens: reported_max_output.map_or(ceiling, |max| ceiling.min(max)),
         adjusted_to,
     }
+}
+
+/// The least prompt a cloud call should keep: the fixed prefix plus one paged tool result. The
+/// local path has its own, stricter floor (`budget::MIN_LOCAL_CONTEXT_TOKENS`).
+pub const MIN_CLOUD_PROMPT_TOKENS: usize = FIXED_PROMPT_OVERHEAD_TOKENS + MAX_TOOL_RESULT_TOKENS;
+
+/// The smallest reply ceiling worth sending: a sentence and a tool call. Under it, a too-small
+/// window overruns honestly rather than asking for a reply it can't hold.
+pub const MIN_REPLY_TOKENS: u32 = 4_096;
+
+/// The reply's ceiling fitted to the model's known window, so a high effort on a small window
+/// can't starve the prompt (the budget leaves the reply's room free) or make prompt plus
+/// `max_tokens` overrun the window. At most a quarter of the window, but never under the base
+/// slot while the window can spare it; then, if the prompt would still fall under
+/// [`MIN_CLOUD_PROMPT_TOKENS`], less, down to [`MIN_REPLY_TOKENS`]. An unknown window changes
+/// nothing.
+pub fn fit_reply_to_window(reply: u32, window_tokens: Option<usize>) -> u32 {
+    let Some(window) = window_tokens else {
+        return reply;
+    };
+    let share = u32::try_from(window / 4)
+        .unwrap_or(u32::MAX)
+        .max(AGENT_MAX_OUTPUT_TOKENS);
+    let reply = reply.min(share);
+    // What the reply may take so the prompt keeps its floor after the estimator's margin.
+    let prompt_needs = (MIN_CLOUD_PROMPT_TOKENS * 100).div_ceil(100 - ESTIMATE_SAFETY_PERCENT);
+    let room = u32::try_from(window.saturating_sub(prompt_needs)).unwrap_or(u32::MAX);
+    reply.min(room.max(MIN_REPLY_TOKENS))
 }
 
 /// The offered level closest to `wanted` (ties go to the cheaper one); `None` for `wanted`

@@ -86,17 +86,27 @@
         const unlisten = onAiModelCapabilitiesChanged(() => { capabilitiesVersion += 1 })
         return () => { void unlisten.then((fn) => { fn() }) }
     })
+    // The reply's ceiling comes out of the same window, and the Effort pick moves it.
+    let replyTokens = $state(0)
+    let reasoningEfforts = $state(getSetting('ai.reasoningEfforts'))
+    $effect(() => onSpecificSettingChange('ai.reasoningEfforts', (v) => { reasoningEfforts = v }))
     $effect(() => {
-        dependOn(provider, model, capabilitiesVersion) // each one can move the window this compares against
+        dependOn(provider, model, capabilitiesVersion, reasoningEfforts) // each one can move what this compares against
         void askCmdrModelWindow().then(
-            (w) => { knownWindowTokens = w.knownWindowTokens },
+            (w) => {
+                knownWindowTokens = w.knownWindowTokens
+                replyTokens = w.replyTokens
+            },
             (e: unknown) => { log.warn('reading the model window failed: {error}', { error: e }) },
         )
     })
     // Only an explicit size can exceed a window; "Automatic" follows it by construction. An
-    // unknown window (a model Cmdr has no row for) stays quiet rather than guessing.
+    // unknown window (a model Cmdr has no row for) stays quiet rather than guessing. The reply
+    // counts: a provider refuses a prompt plus its `max_tokens` past the window.
     const overKnownWindow = $derived(
-        chatMemorySize !== 'auto' && knownWindowTokens !== null && Number(chatMemorySize) > knownWindowTokens,
+        chatMemorySize !== 'auto' &&
+            knownWindowTokens !== null &&
+            Number(chatMemorySize) + replyTokens > knownWindowTokens,
     )
 
     // The "On its own" group: whether Ask Cmdr may start conversations, how soon it looks, and

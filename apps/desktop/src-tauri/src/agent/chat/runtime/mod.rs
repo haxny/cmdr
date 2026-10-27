@@ -146,6 +146,7 @@ impl ChatRuntime {
         provider: ProviderTag,
         model: String,
         prompt_budget: usize,
+        chat_memory_tokens: usize,
         call: crate::agent::llm::CallSettings,
         conversation_id: Option<i64>,
         text: String,
@@ -178,6 +179,7 @@ impl ChatRuntime {
             provider,
             model,
             prompt_budget,
+            chat_memory_tokens,
             call,
         };
         run_turn(llm, &dispatcher, &conn, &tools, &params, &sink, &cancel).await;

@@ -342,25 +342,76 @@ pub fn reported_window_tokens(app: &AppHandle, provider: ProviderTag, model: &st
 /// model's reasoning and longest reply. A choice the model can't take is logged with what it
 /// became. A local model and the E2E fake get the default: the provider decides.
 pub fn resolve_call_settings(app: &AppHandle, provider: ProviderTag, model: &str) -> CallSettings {
+    let pick =
+        |provider_id: &str| effort::choice_for(&crate::settings::load_ai_reasoning_efforts(app), provider_id, model);
+    call_settings_for(app, provider, model, pick)
+}
+
+/// [`resolve_call_settings`] for a WAKE: Recommended, whatever the rail's pick, so a background
+/// sweep never inherits an expensive one, but sized like the rail's Recommended (Claude's
+/// default is high, so it gets High's room rather than thinking inside the base slot).
+pub fn resolve_wake_call_settings(app: &AppHandle, provider: ProviderTag, model: &str) -> CallSettings {
+    call_settings_for(app, provider, model, |_| effort::EffortChoice::Recommended)
+}
+
+fn call_settings_for(
+    app: &AppHandle,
+    provider: ProviderTag,
+    model: &str,
+    choice: impl FnOnce(&str) -> effort::EffortChoice,
+) -> CallSettings {
     if provider == ProviderTag::Local || crate::test_mode::ask_cmdr_fake_active() {
         return CallSettings::default();
     }
     let provider_id = crate::ai::state::get_cloud_provider_id();
     let reported = crate::ai::model_capabilities::for_configured_cloud_model(app, model);
     let options = effort::effort_options(provider, model, reported.as_ref().map(|c| &c.reasoning));
-    let choice = effort::choice_for(&crate::settings::load_ai_reasoning_efforts(app), &provider_id, model);
-    let resolved = effort::resolve_effort(&options, choice, reported.and_then(|c| c.max_output_tokens));
+    let choice = choice(&provider_id);
+    let resolved = effort::resolve_effort(&options, choice, reported.as_ref().and_then(|c| c.max_output_tokens));
     if let Some(adjusted_to) = resolved.adjusted_to {
         log::info!(
             target: LOG_TARGET,
             "reasoning effort {choice:?} isn't one {model} takes; sending {adjusted_to:?} instead" // allowed-pluralize-noun: `takes` is a verb here
         );
     }
+    // Fit the reply to the window it shares with the prompt, so a high effort on a small window
+    // can't starve the prompt or ask for more than prompt plus reply can hold.
+    let window = budget::known_window(
+        provider,
+        model,
+        crate::ai::state::get_local_context_size(),
+        reported.and_then(|c| c.context_window_tokens).map(|t| t as usize),
+    )
+    .map(|w| w.tokens);
+    let max_output_tokens = effort::fit_reply_to_window(resolved.max_output_tokens, window);
+    if max_output_tokens < resolved.max_output_tokens {
+        log::debug!(
+            target: LOG_TARGET,
+            "reply ceiling for {model} fitted to its window: {max_output_tokens} of {}",
+            resolved.max_output_tokens
+        );
+    }
     CallSettings {
         effort: resolved.effort,
-        max_output_tokens: resolved.max_output_tokens,
+        max_output_tokens,
         model_reasons: options.reasons,
     }
+}
+
+/// The chat memory the slot-change timeline names (`budget::chat_memory_figure`): moves only when
+/// the user's "Chat memory size" or the model does, never with an effort or a late report.
+pub fn chat_memory_tokens(app: &AppHandle, provider: ProviderTag, model: &str) -> Result<usize, budget::BudgetRefusal> {
+    if crate::test_mode::ask_cmdr_fake_active() {
+        return Ok(budget::DEFAULT_PROMPT_TOKEN_BUDGET);
+    }
+    budget::chat_memory_figure(budget::BudgetInputs {
+        provider,
+        model,
+        user_choice: crate::settings::load_ask_cmdr_chat_memory_size(app),
+        local_context_tokens: crate::ai::state::get_local_context_size(),
+        reported_window_tokens: reported_window_tokens(app, provider, model),
+        reply_tokens: budget::AGENT_MAX_OUTPUT_TOKENS as usize,
+    })
 }
 
 /// The assembled-prompt token budget for the resolved slot, gathered here and decided in the

@@ -461,6 +461,14 @@
     "description": "Option in the Effort picker (Settings > AI > Provider): the most thinking the model can do. Slowest and most expensive. Short for maximum; keep it short. Also used inside ai.cloud.effort.recommendedWithLevel.",
     "screenshot": "settings-ai-provider.png"
   },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr uses its own model, {model}, so this sets its effort.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "description": "Note under the Effort picker (Settings > AI > Provider) when Ask Cmdr (the app's chat assistant; keep the name) is set to its own model instead of the one picked above. The picker then sets that model's effort, since effort only affects Ask Cmdr. model is a model id, verbatim (for example gpt-5.5); keep it as is. “its” is Ask Cmdr's model. Sentence case.",
+    "placeholders": {
+      "model": "the model id Ask Cmdr uses, verbatim (for example gpt-5.5)"
+    },
+    "screenshot": "settings-ai-provider.png"
+  },
   "ai.cloud.effort.levelsUnknown": "This service doesn’t say which effort levels this model takes, so it decides.",
   "@ai.cloud.effort.levelsUnknown": {
     "description": "Note under the Effort picker (Settings > AI > Provider) when the AI service doesn't report which effort levels the chosen model accepts, so Recommended is the only option and the service picks. “it” is the service. The apostrophe is U+2019. Sentence case.",

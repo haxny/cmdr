@@ -159,10 +159,33 @@
             reasoningEfforts = newValue
         }),
     )
-    const effortOptions = $derived(modelLimits?.effort ?? null)
+    // Effort only matters to Ask Cmdr, so the row sets the effort of the model Ask Cmdr uses: its
+    // own model when it has one (`askCmdr.interactiveModel`), else this section's. For its own
+    // model, the menu comes from a second read of the same cache.
+    const effortModel = $derived(askCmdrModelOverride || controller.model.trim())
+    let overrideLimits = $state<AiModelLimits | null>(null)
+    $effect(() => {
+        const providerId = controller.providerId
+        const baseUrl = controller.resolvedBaseUrl
+        const model = askCmdrModelOverride
+        dependOn(limitsVersion)
+        if (locked || !providerId || !baseUrl || !model) {
+            overrideLimits = null
+            return
+        }
+        void getAiModelLimits(providerId, baseUrl, model).then(
+            (limits) => {
+                if (controller.providerId === providerId && askCmdrModelOverride === model) overrideLimits = limits
+            },
+            () => {
+                overrideLimits = null
+            },
+        )
+    })
+    const effortOptions = $derived((askCmdrModelOverride ? overrideLimits : modelLimits)?.effort ?? null)
     // What the next send will really ask for, so a pick the model can't take shows as what it became.
     const effortChoice = $derived.by(() => {
-        const stored = readEffortChoice(reasoningEfforts, controller.providerId, controller.model.trim())
+        const stored = readEffortChoice(reasoningEfforts, controller.providerId, effortModel)
         return effortOptions ? effectiveEffortChoice(effortOptions, stored) : stored
     })
     const effortItems = $derived<SelectItem[]>(
@@ -195,7 +218,7 @@
     function pickEffort(choice: string): void {
         setSetting(
             'ai.reasoningEfforts',
-            writeEffortChoice(reasoningEfforts, controller.providerId, controller.model.trim(), choice as EffortChoice),
+            writeEffortChoice(reasoningEfforts, controller.providerId, effortModel, choice as EffortChoice),
         )
     }
 
@@ -302,6 +325,11 @@
                 ariaLabel={tString('settings.ai.reasoningEfforts.label')}
             />
         </SettingRow>
+        {#if askCmdrModelOverride}
+            <p class="model-limits" role="note">
+                {tString('ai.cloud.effort.forAskCmdrModel', { model: askCmdrModelOverride })}
+            </p>
+        {/if}
         {#if effortOptions && effortOptions.levels.length === 0}
             <p class="model-limits" role="note">{tString('ai.cloud.effort.levelsUnknown')}</p>
         {/if}

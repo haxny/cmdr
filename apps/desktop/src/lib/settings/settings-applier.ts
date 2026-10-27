@@ -285,6 +285,11 @@ const passthroughBackendHandlers: Partial<Record<string, (value: unknown) => voi
   'askCmdr.chatMemorySize': () => {
     noteSlotSettingChanged()
   },
+  // Read fresh per send too. An effort moves the reply's room, and so the budget the rail's
+  // footer shows, but never the chat memory the timeline names (`budget::chat_memory_figure`).
+  'ai.reasoningEfforts': () => {
+    noteSlotSettingChanged()
+  },
   // The proactive loop's three rows. ⚠️ Unlike the two `askCmdr.*` settings above, these
   // can't be read fresh at send time, because there is no send: they drive a timer parked
   // on the wake loop's own thread. The push is what makes turning the gate on wake a

@@ -545,6 +545,7 @@ async fn attachments_reach_the_llm_in_the_envelope_and_nothing_more() {
         provider: ProviderTag::Local,
         model: "fake-model".to_string(),
         prompt_budget: TEST_PROMPT_BUDGET,
+        chat_memory_tokens: TEST_PROMPT_BUDGET,
         call: crate::agent::llm::CallSettings::default(),
     };
 

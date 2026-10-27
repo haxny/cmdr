@@ -85,6 +85,11 @@ pub struct RunWakeParams<'a> {
     pub provider: crate::agent::llm::types::ProviderTag,
     pub model: String,
     pub prompt_budget: usize,
+    /// The chat memory the slot-change timeline names (`session::chat_memory_tokens`).
+    pub chat_memory_tokens: usize,
+    /// How hard the model thinks and the reply's ceiling: Recommended, resolved like the rail's
+    /// (`session::resolve_wake_call_settings`), and the same value the budget was sized with.
+    pub call: crate::agent::llm::CallSettings,
     /// What the agent has written about the user, already cut to this turn's share of the
     /// budget (`agent::memory::read_for_turn`). A wake needs it as much as the rail does: it
     /// is what stops the agent re-proposing what was already turned down.
@@ -105,6 +110,11 @@ pub struct WakeParams<'a> {
     pub provider: crate::agent::llm::types::ProviderTag,
     pub model: String,
     pub prompt_budget: usize,
+    /// The chat memory the slot-change timeline names (`session::chat_memory_tokens`).
+    pub chat_memory_tokens: usize,
+    /// How hard the model thinks and the reply's ceiling: Recommended, resolved like the rail's
+    /// (`session::resolve_wake_call_settings`), and the same value the budget was sized with.
+    pub call: crate::agent::llm::CallSettings,
     /// What the agent has written about the user, cut to this turn's share of the budget.
     pub memory: Option<&'a str>,
 }
@@ -243,7 +253,8 @@ pub fn turn_params<'a>(conversation_id: i64, user: UserTurn<'a>, params: &'a Run
         provider: params.provider,
         model: params.model.clone(),
         prompt_budget: params.prompt_budget,
-        call: crate::agent::llm::CallSettings::default(),
+        chat_memory_tokens: params.chat_memory_tokens,
+        call: params.call,
     }
 }
 
@@ -299,6 +310,8 @@ pub async fn run_wake(
             provider: params.provider,
             model: params.model,
             prompt_budget: params.prompt_budget,
+            chat_memory_tokens: params.chat_memory_tokens,
+            call: params.call,
             memory: params.memory,
         },
         sink,

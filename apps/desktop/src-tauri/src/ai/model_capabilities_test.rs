@@ -212,6 +212,48 @@ fn a_refresh_waits_for_staleness_and_after_a_failure() {
     assert!(!running.wants_refresh(now), "one refresh at a time");
 }
 
+/// The key rides every background fetch, so an endpoint seen only through a lookup (a custom base
+/// URL arrives once per keystroke, and each prefix is a real host someone could own) is never
+/// fetched from. Only a connection check's success, or the endpoint Cmdr started with, trusts one.
+#[test]
+fn a_background_refresh_never_goes_to_an_untrusted_endpoint() {
+    let now = Instant::now();
+    let mut catalogs = Catalogs::default();
+    let typed = CatalogKey::new("custom", "https://api.mycompany.co");
+    assert!(
+        !catalogs.begin_refresh(&typed, now),
+        "a prefix seen mid-typing is never fetched from"
+    );
+    assert!(catalogs.slots.is_empty(), "and leaves nothing behind");
+
+    let checked = CatalogKey::new("custom", "https://api.mycompany.com/v1");
+    catalogs.store(checked.clone(), ModelCatalog::new(), now, None);
+    assert!(
+        catalogs.begin_refresh(&checked, now + REFRESH_AFTER + Duration::from_secs(1)),
+        "a checked endpoint refreshes once stale"
+    );
+}
+
+#[test]
+fn storing_a_catalog_evicts_every_endpoint_but_it_and_the_configured_one() {
+    let now = Instant::now();
+    let mut catalogs = Catalogs::default();
+    let configured = CatalogKey::new("anthropic", "https://api.anthropic.com/v1");
+    let tried = CatalogKey::new("openai", "https://api.openai.com/v1");
+    let latest = CatalogKey::new("groq", "https://api.groq.com/openai/v1");
+    catalogs.store(configured.clone(), ModelCatalog::new(), now, Some(&configured));
+    catalogs.store(tried.clone(), ModelCatalog::new(), now, Some(&configured));
+    catalogs.store(latest.clone(), ModelCatalog::new(), now, Some(&configured));
+
+    let mut kept: Vec<_> = catalogs.slots.keys().map(|k| k.provider_id.clone()).collect();
+    kept.sort();
+    assert_eq!(kept, vec!["anthropic".to_string(), "groq".to_string()]);
+    assert!(
+        !catalogs.trusted.contains(&tried),
+        "an evicted endpoint is no longer trusted either"
+    );
+}
+
 #[test]
 fn settings_shows_the_providers_window_or_the_tables_guess() {
     let reported = ModelCapabilities {

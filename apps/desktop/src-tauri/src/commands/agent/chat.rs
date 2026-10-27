@@ -42,9 +42,10 @@ use crate::agent::AgentDb;
 use crate::agent::chat::budget;
 use crate::agent::chat::cancel;
 use crate::agent::chat::runtime::{AgentChatEvent, ChatRuntime, RecordedSlotEvent};
+use crate::agent::chat::session::chat_memory_tokens as resolve_chat_memory_tokens;
 use crate::agent::chat::session::{
     AgentSlot, admit_send, capture_envelope, local_offset, provider_and_model, resolve_agent_llm,
-    resolve_call_settings, resolve_prompt_budget, resolve_prompt_budget_for,
+    resolve_call_settings, resolve_prompt_budget_for,
 };
 use crate::agent::chat::slot_status::{SlotStatus, slot_status};
 use crate::agent::chat::stream::{AgentErrorKindView, AskCmdrStreamEvent, emit_turn_event, forward_to_windows};
@@ -79,6 +80,7 @@ pub fn ask_cmdr_model_window(app: AppHandle) -> ModelWindowView {
         return ModelWindowView {
             model: String::new(),
             known_window_tokens: None,
+            reply_tokens: 0,
         };
     };
     let (provider, _) = provider_and_model(crate::settings::load_ask_cmdr_interactive_model(&app).as_deref());
@@ -89,9 +91,11 @@ pub fn ask_cmdr_model_window(app: AppHandle) -> ModelWindowView {
         crate::agent::chat::session::reported_window_tokens(&app, provider, &model),
     )
     .map(|window| window.tokens as u32);
+    let reply_tokens = resolve_call_settings(&app, provider, &model).max_output_tokens;
     ModelWindowView {
         model,
         known_window_tokens,
+        reply_tokens,
     }
 }
 
@@ -129,7 +133,7 @@ pub async fn ask_cmdr_record_slot_change(app: AppHandle, conversation_id: i64) -
     // The same resolution a send performs. A refusal (a local window under the floor) means
     // there is no honest size to name, so that facet stays quiet rather than guessing.
     let (provider, _) = provider_and_model(crate::settings::load_ask_cmdr_interactive_model(&app).as_deref());
-    let chat_memory_tokens = resolve_prompt_budget(&app, provider, &model).ok();
+    let chat_memory_tokens = resolve_chat_memory_tokens(&app, provider, &model).ok();
 
     match runtime
         .record_slot_change(conversation_id, &model, chat_memory_tokens)
@@ -221,6 +225,8 @@ pub async fn ask_cmdr_send_message(
     // prompt is refused honestly instead of assembled against and rejected by the server. The
     // effort comes first: the reply's ceiling it sets is room the prompt must leave free.
     let call = resolve_call_settings(&app, provider, &model);
+    // What the slot-change timeline names; a refusal is the budget's, answered below.
+    let chat_memory_tokens = resolve_chat_memory_tokens(&app, provider, &model).ok();
     let prompt_budget = match resolve_prompt_budget_for(&app, provider, &model, call) {
         Ok(tokens) => tokens,
         Err(budget::BudgetRefusal::LocalWindowBelowFloor {
@@ -287,6 +293,7 @@ pub async fn ask_cmdr_send_message(
             provider,
             model,
             prompt_budget,
+            chat_memory_tokens.unwrap_or(prompt_budget),
             call,
             conversation_id,
             text,
@@ -338,6 +345,8 @@ async fn drive_turn(
     // Resolved at send (see `resolve_prompt_budget`) and carried in as a value, so a settings
     // change mid-turn can't move the ceiling this turn assembles against.
     prompt_budget: usize,
+    // The chat memory the slot-change timeline names (`session::chat_memory_tokens`).
+    chat_memory_tokens: usize,
     // The same, for how hard the model thinks and the reply's ceiling (`session::resolve_call_settings`).
     call: crate::agent::llm::CallSettings,
     conversation_id: i64,
@@ -380,6 +389,7 @@ async fn drive_turn(
         provider,
         model,
         prompt_budget,
+        chat_memory_tokens,
         call,
         Some(conversation_id),
         text,

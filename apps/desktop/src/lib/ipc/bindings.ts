@@ -2530,8 +2530,9 @@ export const commands = {
     __TAURI_INVOKE<AiConnectionCheckResult>('check_ai_connection', { baseUrl, providerId }),
   /**
    *  The window and longest reply of `model` on the provider being set up, for Settings › AI.
-   *  Reads the cache, falling back to the budget's family table; a missing or stale catalog
-   *  starts a gated background refresh, and `AiModelCapabilitiesChanged` says when to ask again.
+   *  Reads the cache, falling back to the budget's family table. A stale catalog for a TRUSTED
+   *  endpoint refreshes in the background; an endpoint being typed waits for the connection check.
+   *  `AiModelCapabilitiesChanged` says when to ask again.
    */
   getAiModelLimits: (providerId: string, baseUrl: string, model: string) =>
     __TAURI_INVOKE<AiModelLimits>('get_ai_model_limits', { providerId, baseUrl, model }),
@@ -12397,6 +12398,11 @@ export type ModelWindowView = {
    *  stays quiet instead of guessing.
    */
   knownWindowTokens: number | null
+  /**
+   *  The reply's ceiling the next send would ask for (`session::resolve_call_settings`). It comes
+   *  out of the same window, so a size plus this past the window is what a provider refuses.
+   */
+  replyTokens: number
 }
 
 /**
@@ -14435,7 +14441,7 @@ export type ProviderReadiness =
  *  where the opaque `blob` originated so a replay re-attaches it in the shape that
  *  provider expects. Distinguishes the two OpenAI surfaces because their reasoning
  *  round-trip differs (chat-completions is stateless; Responses carries encrypted
- *  items — spike Gap B).
+ *  items).
  *
  *  Two-way split, like the operation log's `token_enum!` types: the serde/specta
  *  wire form is camelCase (for IPC + `bindings.ts` — the `cost_meter` provider on

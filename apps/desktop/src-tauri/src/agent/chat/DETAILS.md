@@ -247,8 +247,9 @@ and a "consider compacting" nudge past roughly 200,000 tokens. Elision (`context
 only under budget pressure. An explicit "Chat memory size" is the user's lever to spend less meanwhile.
 
 - **`UserSetting`** — an explicit size, used exactly as chosen. It is never clamped down: our knowledge will be wrong
-  sometimes and the user may be right about their own model. `over_known_window` rides along, the settings row warns
-  ("Your model may refuse a message this long"), and the provider gets the final say.
+  sometimes and the user may be right about their own model. `over_known_window` (the size plus the reply's room past the window: a provider refuses
+  prompt plus `max_tokens` over it) rides along, the settings row warns ("Your model may refuse a message this long"),
+  and the provider gets the final say.
 - **`LocalServerWindow`** — the whole of `ai.localContextSize`, as above.
 - **`ProviderReported`** — the whole window the provider's own model list reports (`ai::model_capabilities`, via
   `session::reported_window_tokens`). Wins over the table in both directions: the report is today's answer.
@@ -293,12 +294,18 @@ which rides `TurnParams.call` into every `respond` of the turn.
   reported `max_output_tokens`. Recommended sizes for what the provider will do (Claude's default is high, so 32,000).
   Decision/Why: at a flat 12,000, a High or Max think could hit `MaxTokens` before the tool call and end the turn
   unfinished; a ceiling is not a charge, the provider bills what the model writes.
+- **`fit_reply_to_window`**: the ceiling then fits the model's known window: at most a quarter of it, never under the
+  base slot while the window can spare it, and less (down to `MIN_REPLY_TOKENS`, 4,096) where the prompt would
+  otherwise fall under `MIN_CLOUD_PROMPT_TOKENS` (the prefix plus one paged result). Decision/Why: High on a 32K window
+  reserved 32,000 and left the prompt 652, under its own prefix, while prompt plus `max_tokens` overran the window.
 - **The budget leaves that room free**: `BudgetInputs::reply_tokens` is the same `max_output_tokens`, and the send path
   resolves the call settings once and hands both to `resolve_prompt_budget_for`, so prompt and reply can't overlap.
 - **`files_per_batch` stays on the base slot.** A bigger ceiling at a higher effort is room the model spends thinking,
   not room for more plan rows. The agent path has no exhaustion retry (`ai::client`'s empty-response retry serves the
   one-shot translate calls, with its own small ceiling).
-- **Wakes run on Recommended** (`CallSettings::default()`): a background sweep shouldn't inherit an expensive pick.
+- **Wakes run on Recommended** (`session::resolve_wake_call_settings`), resolved like the rail's, so Claude's
+  default-high thinking gets High's room; a background sweep never inherits the user's pick. The wake's budget is sized
+  with that same call (`resolve_prompt_budget_for`).
 - **Metering** already counts thinking as output: `completion_tokens` includes reasoning on every provider, and
   `genai_impl::map_usage` covers Gemini's thoughts-only gap (`../llm/DETAILS.md` § Reasoning effort).
 
@@ -600,8 +607,11 @@ logs it honestly as UI-facing event rows so the user sees which replies ran unde
 Two facets, each with its own persisted comparison and its own event:
 
 - the **effective model** (`conversations.last_model`, `ConversationEvent::ModelChanged`);
-- the **chat memory size**, meaning the resolved prompt budget
-  (`conversations.last_chat_memory`, `ConversationEvent::ChatMemoryChanged`).
+- the **chat memory size**, meaning `budget::chat_memory_figure` (`TurnParams.chat_memory_tokens`,
+  `conversations.last_chat_memory`, `ConversationEvent::ChatMemoryChanged`): the prompt budget with the base reply slot,
+  sized from the family table where it knows the model. It moves only when the user moved the setting or the model;
+  an Effort pick (it reserves more reply) or a provider report arriving mid-thread moves the actual budget, never this
+  line.
 
 They are separate because a model switch usually moves the budget too, and "switched to X"
 doesn't say what it costs the thread — the budget is the part the user can't see anywhere

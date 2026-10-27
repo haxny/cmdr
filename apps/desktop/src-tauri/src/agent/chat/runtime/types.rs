@@ -75,6 +75,10 @@ pub struct TurnParams<'a> {
     /// The resolved model's assembled-prompt token budget (`super::budget`). Resolved in the
     /// command layer alongside the model, because a local server's window is a user setting.
     pub prompt_budget: usize,
+    /// The chat memory the slot-change timeline names (`budget::chat_memory_figure`): the budget
+    /// less what an effort or a late provider report moved, so "Chat memory changed" lines mean
+    /// the user changed something.
+    pub chat_memory_tokens: usize,
     /// How hard the model thinks on every call this turn makes, and the output ceiling that
     /// thinking shares with the reply (`chat::effort`). Rides each call rather than the slot so
     /// the picker can change it between turns without rebuilding the LLM.

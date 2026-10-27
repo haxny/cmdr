@@ -32,6 +32,7 @@ export type MessageKey =
   | 'ai.cloud.connectionError'
   | 'ai.cloud.contextWindow'
   | 'ai.cloud.contextWindowEstimate'
+  | 'ai.cloud.effort.forAskCmdrModel'
   | 'ai.cloud.effort.high'
   | 'ai.cloud.effort.levelsUnknown'
   | 'ai.cloud.effort.low'

@@ -394,3 +394,60 @@ fn estimates_agree_across_the_shapes_they_measure() {
     let value = serde_json::json!({ "a": "bc" });
     assert_eq!(estimate_tokens_of_value(&value), estimate_serialized_tokens(&value));
 }
+
+/// The "Chat memory changed" line names what the USER moved: the setting or the model. A new
+/// effort (it only reserves more reply) or a provider report arriving for a model the table
+/// already knows moves the actual budget, and must not move this figure.
+#[test]
+fn the_chat_memory_figure_ignores_the_reply_reservation_and_a_late_report() {
+    let inputs = |reported_window_tokens, reply_tokens| BudgetInputs {
+        provider: ProviderTag::Gemini,
+        model: "gemini-3.8-flash",
+        user_choice: None,
+        local_context_tokens: 0,
+        reported_window_tokens,
+        reply_tokens,
+    };
+    let before = chat_memory_figure(inputs(None, AGENT_MAX_OUTPUT_TOKENS as usize));
+    assert_eq!(before, chat_memory_figure(inputs(None, 64_000)), "Max effort moved it");
+    assert_eq!(
+        before,
+        chat_memory_figure(inputs(Some(1_048_576), AGENT_MAX_OUTPUT_TOKENS as usize)),
+        "the catalog arriving moved it"
+    );
+    // A model only the report knows: the report is all there is, so it counts.
+    let unknown = |reported| BudgetInputs {
+        provider: ProviderTag::OpenAi,
+        model: "kimi-k3",
+        user_choice: None,
+        local_context_tokens: 0,
+        reported_window_tokens: reported,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
+    };
+    assert_ne!(
+        chat_memory_figure(unknown(None)),
+        chat_memory_figure(unknown(Some(1_048_576)))
+    );
+    // An explicit size is the figure, whatever else moved.
+    let explicit = BudgetInputs {
+        user_choice: Some(60_000),
+        ..inputs(Some(1_048_576), 64_000)
+    };
+    assert_eq!(chat_memory_figure(explicit), Ok(60_000));
+}
+
+/// Prompt plus reply must fit the window: a 200,000 size on a 200,000-token model with High's
+/// 32,000 reply is over, even though the size alone isn't.
+#[test]
+fn a_size_that_leaves_no_room_for_the_reply_is_over_the_window() {
+    let resolved = resolve_prompt_budget(BudgetInputs {
+        provider: ProviderTag::Anthropic,
+        model: "claude-opus-4-5",
+        user_choice: Some(200_000),
+        local_context_tokens: 0,
+        reported_window_tokens: None,
+        reply_tokens: 32_000,
+    })
+    .expect("a cloud slot is never refused");
+    assert!(resolved.over_known_window);
+}

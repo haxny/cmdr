@@ -111,6 +111,7 @@ mod tests {
             provider,
             model: "test-model".to_string(),
             prompt_budget: 1000,
+            chat_memory_tokens: 1000,
             call: crate::agent::llm::CallSettings::default(),
         }
     }
