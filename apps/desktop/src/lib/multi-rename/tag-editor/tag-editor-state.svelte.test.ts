@@ -13,6 +13,8 @@ const ipc = vi.hoisted(() => ({
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
   closeTagEditor: vi.fn(),
+  listCoverCandidates: vi.fn(),
+  setCoverFromFile: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
 const warn = vi.hoisted(() => vi.fn())
@@ -224,5 +226,29 @@ describe('createTagEditorState', () => {
     const state = createTagEditorState('S')
     await state.close()
     expect(ipc.closeTagEditor).not.toHaveBeenCalled()
+  })
+
+  it('coverCandidates lists the folder images, and a typed error stays', async () => {
+    ipc.listCoverCandidates.mockResolvedValue({ ok: true, value: [{ fileName: 'a.jpg', size: 3 }] })
+    const state = createTagEditorState('S')
+    expect(await state.coverCandidates()).toEqual({ ok: true, value: [{ fileName: 'a.jpg', size: 3 }] })
+    expect(ipc.listCoverCandidates).toHaveBeenCalledWith('S')
+    ipc.listCoverCandidates.mockResolvedValue({ ok: false, error: { kind: 'noSession' } })
+    expect((await state.coverCandidates()).ok).toBe(false)
+    expect(state.error).toEqual({ kind: 'noSession' })
+  })
+
+  it('coverFromFile replaces the view, and keeps the old one on a typed error', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.setCoverFromFile.mockResolvedValue({ ok: true, value: EDITED })
+    const state = createTagEditorState('S')
+    await state.open()
+    await state.coverFromFile('a.jpg')
+    expect(ipc.setCoverFromFile).toHaveBeenCalledWith('S', 'a.jpg')
+    expect(state.view).toBe(EDITED)
+    ipc.setCoverFromFile.mockResolvedValue({ ok: false, error: { kind: 'coverTooLarge' } })
+    await state.coverFromFile('big.jpg')
+    expect(state.view).toBe(EDITED)
+    expect(state.error).toEqual({ kind: 'coverTooLarge' })
   })
 })

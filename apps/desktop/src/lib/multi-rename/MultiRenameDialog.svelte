@@ -65,6 +65,7 @@
     import TagsTab from './tag-editor/TagsTab.svelte'
     import RenamePanel from './tag-editor/RenamePanel.svelte'
     import { createTagEditorState } from './tag-editor/tag-editor-state.svelte'
+    import { createDiscardGuard } from './tag-editor/discard-guard'
     import type { SheetTab } from './tag-editor/sheet-tab'
 
     interface Props {
@@ -110,6 +111,7 @@
     // The opt-in Tags tab (setting off: no tab strip, no tag session, no tag IPC).
     const tags = getSetting('multiRename.tagEditor') ? createTagEditorState(session.sessionId) : null
     let sheetTab = $state<SheetTab>('rename')
+    const guard = createDiscardGuard(tags, onClose)
     onDestroy(() => { void tags?.close() })
     const fieldHistory = createFieldHistoryMenu({
         inputOf: (field) =>
@@ -233,7 +235,7 @@
     }
 
     async function start(): Promise<void> {
-        if (!canStart) return
+        if (!canStart || (guard.dirty && !tool.queued && !(await guard.confirm()))) return
         const wasQueued = tool.queued
         const run = tool.apply()
         // A press that queues or cancels changes only the button's words: say it.
@@ -331,7 +333,7 @@
     resizable
     containerStyle="width: min(1100px, 92vw); min-width: {MIN_WIDTH_PX}px; height: min(760px, 88vh)"
     fillBody
-    onclose={onClose}
+    onclose={guard.close}
     onkeydown={handleKeydown}
 >
     <!-- The title bar's `<h2>` is already the row (gap + badge alignment live there),
@@ -578,7 +580,7 @@
             >
                 {tString('multiRename.results')}
             </Button>
-            <Button onclick={onClose}>{tString('multiRename.cancel')}</Button>
+            <Button onclick={guard.close}>{tString('multiRename.cancel')}</Button>
             <!-- "Starting…" while it waits for the tags; its width may change with the words. -->
             <Button
                 variant="primary"

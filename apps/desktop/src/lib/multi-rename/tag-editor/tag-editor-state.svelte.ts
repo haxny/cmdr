@@ -10,10 +10,13 @@ import {
   closeTagEditor,
   editTags,
   getTagChanges,
+  listCoverCandidates,
   openTagEditor,
   runTagTool,
+  setCoverFromFile,
   undoTagApply,
   type ApplyRequest,
+  type CoverCandidate,
   type FileChangeView,
   type RestoreReport,
   type TagApplyReport,
@@ -39,6 +42,10 @@ export interface TagEditorState {
   open(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
   tool(tool: TagTool): Promise<void>
+  /** The images in the session's folder a cover can come from. */
+  coverCandidates(): Promise<TagStateResult<CoverCandidate[]>>
+  /** Gives every file the folder image `fileName` as its cover. */
+  coverFromFile(fileName: string): Promise<void>
   changes(): Promise<TagStateResult<FileChangeView[]>>
   apply(request: ApplyRequest): Promise<TagStateResult<TagApplyReport>>
   undo(): Promise<TagStateResult<RestoreReport>>
@@ -97,6 +104,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
     tool: (tool) => replaceView(() => runTagTool(sessionId, tool)),
+    coverCandidates: () => track(() => listCoverCandidates(sessionId)),
+    coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
     changes: () => track(() => getTagChanges(sessionId)),
     async apply(request) {
       const res = await track(() => applyTags(sessionId, request))

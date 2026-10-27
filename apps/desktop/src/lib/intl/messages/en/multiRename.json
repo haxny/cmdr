@@ -1087,5 +1087,197 @@
   "multiRename.tags.error": "Couldn’t read the tags.",
   "@multiRename.tags.error": {
     "description": "Shown in the Tags tab of Multi-Rename when reading the tags of the selected files failed."
+  },
+  "multiRename.tags.field.title": "Title",
+  "@multiRename.tags.field.title": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the title of a track or book of the selected music files."
+  },
+  "multiRename.tags.field.artist": "Artist",
+  "@multiRename.tags.field.artist": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the artist (for an audiobook, the author) of the selected music files."
+  },
+  "multiRename.tags.field.albumArtist": "Album artist",
+  "@multiRename.tags.field.albumArtist": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the album artist (for an audiobook, the author as well) of the selected music files."
+  },
+  "multiRename.tags.field.album": "Album",
+  "@multiRename.tags.field.album": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the album (for an audiobook, the book) of the selected music files."
+  },
+  "multiRename.tags.field.performer": "Performer",
+  "@multiRename.tags.field.performer": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the performer (for an audiobook, the narrator) of the selected music files."
+  },
+  "multiRename.tags.field.composer": "Composer",
+  "@multiRename.tags.field.composer": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the composer (for an audiobook, the author of the music) of the selected music files."
+  },
+  "multiRename.tags.field.date": "Date",
+  "@multiRename.tags.field.date": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the release date or year of the selected music files."
+  },
+  "multiRename.tags.field.genre": "Genre",
+  "@multiRename.tags.field.genre": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the genre of the selected music files."
+  },
+  "multiRename.tags.field.publisher": "Publisher",
+  "@multiRename.tags.field.publisher": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the publisher of the selected music files."
+  },
+  "multiRename.tags.field.translator": "Translator",
+  "@multiRename.tags.field.translator": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the translator of the selected music files."
+  },
+  "multiRename.tags.field.track": "Track",
+  "@multiRename.tags.field.track": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the track number of the selected music files."
+  },
+  "multiRename.tags.field.disc": "Disc",
+  "@multiRename.tags.field.disc": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the disc number of the selected music files."
+  },
+  "multiRename.tags.field.comment": "Comment",
+  "@multiRename.tags.field.comment": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits a free-form comment of the selected music files."
+  },
+  "multiRename.tags.field.description": "Description",
+  "@multiRename.tags.field.description": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits a longer description of the selected music files."
+  },
+  "multiRename.tags.field.www": "Web address",
+  "@multiRename.tags.field.www": {
+    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits a web address of the selected music files."
+  },
+  "multiRename.tags.shared.label": "Tags shared by the files",
+  "@multiRename.tags.shared.label": {
+    "description": "Accessible name of the table of tag fields (artist, album, genre…) in the Tags tab of Multi-Rename. Typing in a row sets that tag on every selected file. Only read aloud by screen readers."
+  },
+  "multiRename.tags.multipleValues": "‹multiple values›",
+  "@multiRename.tags.multipleValues": {
+    "description": "Greyed placeholder in a tag box of the Tags tab of Multi-Rename when the selected files have different values for that tag. Leaving the box untouched keeps each file's own value; typing replaces it in every file."
+  },
+  "multiRename.tags.tracks.label": "Tracks",
+  "@multiRename.tags.tracks.label": {
+    "description": "Accessible name of the list of audio files in the Tags tab of Multi-Rename, where each file's title and track number can be edited."
+  },
+  "multiRename.tags.col.number": "#",
+  "@multiRename.tags.col.number": {
+    "description": "Column heading in the track list of the Tags tab of Multi-Rename: the track number."
+  },
+  "multiRename.tags.col.title": "Title",
+  "@multiRename.tags.col.title": {
+    "description": "Column heading in the track list of the Tags tab of Multi-Rename: the title tag of each file."
+  },
+  "multiRename.tags.col.length": "Length",
+  "@multiRename.tags.col.length": {
+    "description": "Column heading in the track list of the Tags tab of Multi-Rename: how long each audio file plays, like 3:07."
+  },
+  "multiRename.tags.col.fileName": "File name",
+  "@multiRename.tags.col.fileName": {
+    "description": "Column heading in the track list of the Tags tab of Multi-Rename: the name of each file on disk."
+  },
+  "multiRename.tags.track.titleLabel": "Title of {fileName}",
+  "@multiRename.tags.track.titleLabel": {
+    "description": "Accessible name of the box that edits one file's title in the track list of the Tags tab of Multi-Rename. Only read aloud by screen readers.",
+    "placeholders": {
+      "fileName": "the name of the audio file the title belongs to"
+    }
+  },
+  "multiRename.tags.track.numberLabel": "Track number of {fileName}",
+  "@multiRename.tags.track.numberLabel": {
+    "description": "Accessible name of the box that edits one file's track number in the track list of the Tags tab of Multi-Rename. Only read aloud by screen readers.",
+    "placeholders": {
+      "fileName": "the name of the audio file the track number belongs to"
+    }
+  },
+  "multiRename.tags.track.unreadable": "Can’t read the tags of this file",
+  "@multiRename.tags.track.unreadable": {
+    "description": "Shown in a row of the track list in the Tags tab of Multi-Rename for a file whose tags couldn't be read. The file is greyed out and is never changed."
+  },
+  "multiRename.tags.readOnly": "Tags can only be edited for files on a local disk.",
+  "@multiRename.tags.readOnly": {
+    "description": "Shown at the top of the Tags tab of Multi-Rename when the selected files are on a server or another non-local location, so the tag boxes are locked."
+  },
+  "multiRename.tags.cover.label": "Cover",
+  "@multiRename.tags.cover.label": {
+    "description": "Heading of the cover picture panel in the Tags tab of Multi-Rename (the album art embedded in the audio files)."
+  },
+  "multiRename.tags.cover.none": "No cover",
+  "@multiRename.tags.cover.none": {
+    "description": "Shown in the cover panel of the Tags tab of Multi-Rename when none of the selected files has an embedded cover picture."
+  },
+  "multiRename.tags.cover.multiple": "Multiple covers",
+  "@multiRename.tags.cover.multiple": {
+    "description": "Shown in the cover panel of the Tags tab of Multi-Rename when the selected files have different embedded cover pictures, or only some of them have one."
+  },
+  "multiRename.tags.cover.details": "{mime}, {sizeText}",
+  "@multiRename.tags.cover.details": {
+    "description": "In the cover panel of the Tags tab of Multi-Rename: the image type and file size of the cover all files share.",
+    "placeholders": {
+      "mime": "the image type, like image/jpeg",
+      "sizeText": "the size of the image, like 245 KB"
+    }
+  },
+  "multiRename.tags.cover.detailsPixels": "{mime}, {width}×{height} px, {sizeText}",
+  "@multiRename.tags.cover.detailsPixels": {
+    "description": "In the cover panel of the Tags tab of Multi-Rename: the image type, size in pixels and file size of the cover all files share.",
+    "placeholders": {
+      "mime": "the image type, like image/jpeg",
+      "width": "the width in pixels",
+      "height": "the height in pixels",
+      "sizeText": "the size of the image, like 245 KB"
+    }
+  },
+  "multiRename.tags.cover.fromFolder": "From folder…",
+  "@multiRename.tags.cover.fromFolder": {
+    "description": "Button in the cover panel of the Tags tab of Multi-Rename: lists the pictures in the files' folder so one can become the cover of every selected file."
+  },
+  "multiRename.tags.cover.remove": "Remove",
+  "@multiRename.tags.cover.remove": {
+    "description": "Button in the cover panel of the Tags tab of Multi-Rename: takes the cover picture out of every selected file."
+  },
+  "multiRename.tags.cover.pickerLabel": "Pictures in the folder",
+  "@multiRename.tags.cover.pickerLabel": {
+    "description": "Accessible name of the list of pictures offered as a cover in the Tags tab of Multi-Rename. Only read aloud by screen readers."
+  },
+  "multiRename.tags.cover.candidate": "{fileName} ({sizeText})",
+  "@multiRename.tags.cover.candidate": {
+    "description": "One picture offered as a cover in the Tags tab of Multi-Rename: its file name and size.",
+    "placeholders": {
+      "fileName": "the name of the picture file",
+      "sizeText": "the size of the picture, like 245 KB"
+    }
+  },
+  "multiRename.tags.cover.noImages": "No pictures (jpg, png, webp) in this folder.",
+  "@multiRename.tags.cover.noImages": {
+    "description": "Shown in the Tags tab of Multi-Rename when the folder of the selected files has no picture that could become the cover."
+  },
+  "multiRename.tags.cover.listFailed": "Couldn’t list the pictures in this folder.",
+  "@multiRename.tags.cover.listFailed": {
+    "description": "Shown in the cover panel of the Tags tab of Multi-Rename when looking for pictures in the files' folder failed."
+  },
+  "multiRename.tags.cover.tooLarge": "That picture is too large (over 10 MB).",
+  "@multiRename.tags.cover.tooLarge": {
+    "description": "Shown in the Tags tab of Multi-Rename when the chosen picture is too big to be embedded as a cover."
+  },
+  "multiRename.tags.cover.unreadable": "Couldn’t read that picture, or it isn’t a supported image.",
+  "@multiRename.tags.cover.unreadable": {
+    "description": "Shown in the Tags tab of Multi-Rename when the chosen cover picture couldn't be read or isn't a jpg, png or webp image."
+  },
+  "multiRename.tags.editFailed": "Couldn’t apply that change.",
+  "@multiRename.tags.editFailed": {
+    "description": "Shown in the Tags tab of Multi-Rename when an edit to a tag couldn't be applied. Nothing was changed."
+  },
+  "multiRename.tags.discard.title": "Discard tag changes?",
+  "@multiRename.tags.discard.title": {
+    "description": "Title of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the Tags tab have not been written to the files yet."
+  },
+  "multiRename.tags.discard.message": "You changed tags that haven’t been written to the files yet. Closing now loses those changes. Cancel keeps editing.",
+  "@multiRename.tags.discard.message": {
+    "description": "Body of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the Tags tab have not been written to the files yet. The Cancel button keeps the sheet open."
+  },
+  "multiRename.tags.discard.confirm": "Discard",
+  "@multiRename.tags.discard.confirm": {
+    "description": "Button that throws away the unwritten tag edits and closes the Multi-Rename sheet."
   }
 }

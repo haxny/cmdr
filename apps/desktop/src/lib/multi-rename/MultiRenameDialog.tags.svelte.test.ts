@@ -25,7 +25,10 @@ const ipc = vi.hoisted(() => ({
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
+  applyMultiRename: vi.fn(),
 }))
+const confirmDialog = vi.hoisted(() => vi.fn())
+vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog }))
 
 vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -58,7 +61,7 @@ async function settle(): Promise<void> {
   }
 }
 
-async function mountSheet(): Promise<HTMLElement & { dialog: ReturnType<typeof mount> }> {
+async function mountSheet(onClose = vi.fn()): Promise<HTMLElement & { dialog: ReturnType<typeof mount> }> {
   const target = document.createElement('div')
   document.body.appendChild(target)
   const dialog = mount(MultiRenameDialog, {
@@ -68,7 +71,7 @@ async function mountSheet(): Promise<HTMLElement & { dialog: ReturnType<typeof m
       nothingSelected: false,
       onApplied: () => {},
       onUndoStarted: () => {},
-      onClose: () => {},
+      onClose,
     },
   })
   await settle()
@@ -92,7 +95,27 @@ describe('MultiRenameDialog Tags tab', () => {
       ok: true,
       value: { previewId: 1, counts: { ready: 0, unchanged: 0, problems: 0, reading: 0 }, rows: [] },
     })
-    ipc.openTagEditor.mockResolvedValue({ ok: true, value: { editable: true, tracks: [{}, {}, {}], dirty: false } })
+    ipc.openTagEditor.mockResolvedValue({
+      ok: true,
+      value: {
+        editable: true,
+        readOnlyReason: null,
+        shared: [],
+        tracks: ['a', 'b', 'c'].map((n) => ({
+          path: `/m/${n}.mp3`,
+          fileName: `${n}.mp3`,
+          track: null,
+          title: null,
+          durationMs: null,
+          changed: false,
+          readError: null,
+        })),
+        cover: { kind: 'empty' },
+        extras: [],
+        dirty: false,
+        diacritics: [],
+      },
+    })
   })
 
   it('dialog_without_setting_has_no_tabs_and_no_tag_ipc', async () => {
@@ -193,5 +216,137 @@ describe('MultiRenameDialog Tags tab', () => {
     await settle()
     expect(ipc.closeTagEditor).toHaveBeenCalledTimes(1)
     expect(ipc.closeTagEditor).toHaveBeenCalledWith('S')
+  })
+
+  describe('the discard guard', () => {
+    const DIRTY_VIEW = {
+      editable: true,
+      readOnlyReason: null,
+      shared: [],
+      tracks: [],
+      cover: { kind: 'empty' },
+      extras: [],
+      dirty: true,
+      diacritics: [],
+    }
+
+    function button(text: string): HTMLButtonElement {
+      const found = [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent.trim().startsWith(text),
+      )
+      if (!found) throw new Error(`no ${text} button`)
+      return found
+    }
+
+    async function mountDirty(onClose = vi.fn()): Promise<void> {
+      flags.tagEditor = true
+      ipc.openTagEditor.mockResolvedValue({ ok: true, value: DIRTY_VIEW })
+      await mountSheet(onClose)
+      tab('Tags').click()
+      await settle()
+    }
+
+    it('close_with_unwritten_changes_asks: Cancel asks "Discard tag changes?" and Keep editing stays open', async () => {
+      confirmDialog.mockResolvedValue(false)
+      const onClose = vi.fn()
+      await mountDirty(onClose)
+      button('Cancel').click()
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(confirmDialog.mock.calls[0][1]).toBe('Discard tag changes?')
+      expect(onClose).not.toHaveBeenCalled()
+    })
+
+    it('Discard closes the sheet', async () => {
+      confirmDialog.mockResolvedValue(true)
+      const onClose = vi.fn()
+      await mountDirty(onClose)
+      button('Cancel').click()
+      await settle()
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('Esc asks too', async () => {
+      confirmDialog.mockResolvedValue(false)
+      const onClose = vi.fn()
+      await mountDirty(onClose)
+      document
+        .querySelector('.modal-overlay')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(onClose).not.toHaveBeenCalled()
+    })
+
+    it('closing with nothing unwritten does not ask', async () => {
+      flags.tagEditor = true
+      const onClose = vi.fn()
+      await mountSheet(onClose)
+      tab('Tags').click()
+      await settle()
+      button('Cancel').click()
+      await settle()
+      expect(confirmDialog).not.toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('rename_with_unwritten_tag_edits_asks_first: declining renames nothing, accepting renames', async () => {
+      ipc.previewMultiRename.mockResolvedValue({
+        ok: true,
+        value: {
+          previewId: 1,
+          counts: { ready: 1, unchanged: 0, problems: 0, reading: 0 },
+          rows: [
+            {
+              row: 0,
+              oldName: 'a.mp3',
+              newName: 'b.mp3',
+              status: { type: 'ready' },
+              iconId: 'ext:mp3',
+              isDirectory: false,
+            },
+          ],
+        },
+      })
+      ipc.applyMultiRename.mockResolvedValue({ ok: true, value: { operationId: 'op', renaming: 1 } })
+      confirmDialog.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      await mountDirty()
+      // The footer's Rename button stays live on the Tags tab; it goes through the same guard.
+      button('Rename 1').click()
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+      button('Rename 1').click()
+      await settle()
+      expect(confirmDialog).toHaveBeenCalledTimes(2)
+      expect(ipc.applyMultiRename).toHaveBeenCalledTimes(1)
+    })
+
+    it('Rename with nothing unwritten does not ask', async () => {
+      flags.tagEditor = true
+      ipc.previewMultiRename.mockResolvedValue({
+        ok: true,
+        value: {
+          previewId: 1,
+          counts: { ready: 1, unchanged: 0, problems: 0, reading: 0 },
+          rows: [
+            {
+              row: 0,
+              oldName: 'a.mp3',
+              newName: 'b.mp3',
+              status: { type: 'ready' },
+              iconId: 'ext:mp3',
+              isDirectory: false,
+            },
+          ],
+        },
+      })
+      ipc.applyMultiRename.mockResolvedValue({ ok: true, value: { operationId: 'op', renaming: 1 } })
+      await mountSheet()
+      button('Rename 1').click()
+      await settle()
+      expect(confirmDialog).not.toHaveBeenCalled()
+      expect(ipc.applyMultiRename).toHaveBeenCalledTimes(1)
+    })
   })
 })
