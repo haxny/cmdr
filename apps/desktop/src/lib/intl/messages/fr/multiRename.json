@@ -1418,5 +1418,29 @@
   "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
   "@multiRename.tags.undo.unwrittenLost": {
     "sourceHash": "2ad42a1"
+  },
+  "multiRename.tags.select.all": "Select all tracks",
+  "@multiRename.tags.select.all": {
+    "sourceHash": "9320e48"
+  },
+  "multiRename.tags.select.track": "Select {fileName}",
+  "@multiRename.tags.select.track": {
+    "sourceHash": "e7e5769"
+  },
+  "multiRename.tags.choices.button": "Values…",
+  "@multiRename.tags.choices.button": {
+    "sourceHash": "e8e4b2c"
+  },
+  "multiRename.tags.choices.label": "{field} values",
+  "@multiRename.tags.choices.label": {
+    "sourceHash": "fefdb59"
+  },
+  "multiRename.tags.choices.item": "{value} ({countText})",
+  "@multiRename.tags.choices.item": {
+    "sourceHash": "d2d9b66"
+  },
+  "multiRename.tags.choices.empty": "‹empty›",
+  "@multiRename.tags.choices.empty": {
+    "sourceHash": "d58e123"
   }
 }

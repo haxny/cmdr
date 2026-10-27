@@ -29,7 +29,14 @@ describe('TrackList order', () => {
     const onEdit = vi.fn()
     const first = row('/b/a.mp3', 'A')
     const second = row('/b/b.mp3', 'B')
-    const props = $state({ tracks: [first, second], editable: true, onEdit })
+    const props = $state({
+      tracks: [first, second],
+      editable: true,
+      selected: new Set<string>(),
+      onEdit,
+      onToggle: () => {},
+      onToggleAll: () => {},
+    })
     const root = document.createElement('div')
     document.body.appendChild(root)
     const list = mount(TrackList, { target: root, props })

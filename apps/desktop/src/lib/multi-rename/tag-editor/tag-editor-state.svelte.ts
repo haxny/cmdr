@@ -7,7 +7,7 @@
  * The write Undo reverses is kept in `last-tag-apply.svelte.ts`, so it outlives the sheet.
  */
 
-import type { ContentKind } from '#lib/ipc/bindings.js'
+import type { ContentKind, TagTextTool } from '#lib/ipc/bindings.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import {
   applyTags,

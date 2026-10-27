@@ -8,18 +8,26 @@
     import { formatInteger } from '#lib/intl/number-format.js'
     import type { TrackRow } from '#lib/ipc/bindings.js'
     import type { TagEdit } from '#lib/tauri-commands/index.js'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
     import EditableCell from './EditableCell.svelte'
     import { formatTrackLength, parseFieldText } from './shared-field-input'
 
     interface Props {
         tracks: TrackRow[]
         editable: boolean
+        /** The checked tracks' paths: the tag tools work on these alone. */
+        selected: ReadonlySet<string>
+        onToggle: (path: string) => void
+        /** The header box: check every track (`true`) or uncheck them all. */
+        onToggleAll: (on: boolean) => void
         onEdit: (edits: TagEdit[]) => void | Promise<void>
     }
 
-    const { tracks, editable, onEdit }: Props = $props()
+    const { tracks, editable, selected, onToggle, onToggleAll, onEdit }: Props = $props()
 
     const showNumber = $derived(tracks.length !== 1)
+    const checkedCount = $derived(tracks.filter((track) => selected.has(track.path)).length)
+    const allChecked = $derived(tracks.length > 0 && checkedCount === tracks.length)
 
     function setOne(path: string, field: 'title' | 'track', text: string): void | Promise<void> {
         return onEdit([{ kind: 'setOne', path, field, values: parseFieldText(field, text) }])
@@ -36,6 +44,15 @@
         </caption>
         <thead>
             <tr>
+                <th scope="col" class="select">
+                    <Checkbox
+                        ariaLabel={tString('multiRename.tags.select.all')}
+                        checked={allChecked}
+                        indeterminate={checkedCount > 0 && !allChecked}
+                        disabled={!editable || tracks.length === 0}
+                        onCheckedChange={() => { onToggleAll(!allChecked) }}
+                    />
+                </th>
                 {#if showNumber}<th scope="col" class="number">{tString('multiRename.tags.col.number')}</th>{/if}
                 <th scope="col">{tString('multiRename.tags.col.title')}</th>
                 <th scope="col" class="length">{tString('multiRename.tags.col.length')}</th>
@@ -46,6 +63,14 @@
             {#each tracks as track, index (track.path)}
                 {@const editableRow = editable && track.readError === null}
                 <tr class:unreadable={track.readError !== null} class:changed={track.changed}>
+                    <td class="select">
+                        <Checkbox
+                            ariaLabel={tString('multiRename.tags.select.track', { fileName: track.fileName })}
+                            checked={selected.has(track.path)}
+                            disabled={!editable}
+                            onCheckedChange={() => { onToggle(track.path) }}
+                        />
+                    </td>
                     {#if showNumber}
                         <td class="number">
                             <EditableCell
@@ -111,6 +136,10 @@
 
     td {
         padding: var(--spacing-xxs) var(--spacing-sm);
+    }
+
+    .select {
+        width: 32px;
     }
 
     .number {

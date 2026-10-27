@@ -15,6 +15,7 @@
     import TagToolsBar from './TagToolsBar.svelte'
     import TrackList from './TrackList.svelte'
     import { focusedFieldOf } from './tag-tools'
+    import { createTrackSelection } from './track-selection.svelte'
     import type { TagsTabApi } from './sheet-tab'
     import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
 
@@ -23,6 +24,14 @@
     }
 
     const { state: tags }: Props = $props()
+
+    /** The checked tracks; the tools work on these alone. Created once per mount, pruned on every view change. */
+    const selection = createTrackSelection()
+    const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
+
+    $effect(() => {
+        selection.prune(allPaths)
+    })
 
     onMount(() => {
         void tags.open()
@@ -64,7 +73,7 @@
     /** A tool works on what the files hold now, so an edit a blur just sent lands first. */
     async function runTool(tool: TagTool): Promise<void> {
         await tags.settled()
-        await tags.tool(tool)
+        await tags.tool(tool, selection.scope(allPaths))
     }
 
     /** The sheet's Start while this tab shows: the Apply panel lists the changes, then writes them. */
@@ -112,7 +121,13 @@
         <div class="columns">
             <div class="main">
                 <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
-                <TrackList tracks={view.tracks} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
+                <TrackList
+                    tracks={view.tracks}
+                    editable={view.editable}
+                    selected={selection.selected}
+                    onToggle={(path: string) => { selection.toggle(path) }}
+                    onToggleAll={(on: boolean) => { selection.setAll(allPaths, on) }}
+                    onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
             </div>
             <aside class="side">
                 <CoverPanel

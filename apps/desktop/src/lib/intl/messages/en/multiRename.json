@@ -1617,5 +1617,39 @@
   "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
   "@multiRename.tags.undo.unwrittenLost": {
     "description": "Second sentence of the question asked in the Tags tab of Multi-Rename before undoing the last tag write, when some tag changes are not written yet."
+  },
+  "multiRename.tags.select.all": "Select all tracks",
+  "@multiRename.tags.select.all": {
+    "description": "Accessible name of the checkbox in the header of the track list of the Tags tab of Multi-Rename. It checks or unchecks every track; the tag tools then work on the checked tracks only (all tracks when none is checked). Only read aloud by screen readers."
+  },
+  "multiRename.tags.select.track": "Select {fileName}",
+  "@multiRename.tags.select.track": {
+    "description": "Accessible name of the checkbox at the start of a track row in the Tags tab of Multi-Rename. Checked tracks are the only ones the tag tools work on. Only read aloud by screen readers.",
+    "placeholders": {
+      "fileName": "the file name of the track, like 01.mp3"
+    }
+  },
+  "multiRename.tags.choices.button": "Values…",
+  "@multiRename.tags.choices.button": {
+    "description": "Small button at the end of a «multiple values» row of the shared tags table in the Tags tab of Multi-Rename. It opens a list of the distinct values the files hold, to pick one for every file."
+  },
+  "multiRename.tags.choices.label": "{field} values",
+  "@multiRename.tags.choices.label": {
+    "description": "Accessible name of the Values button of a row in the Tags tab of Multi-Rename, and of the list it opens. Only read aloud by screen readers.",
+    "placeholders": {
+      "field": "the name of the tag the row edits, like Album or Genre"
+    }
+  },
+  "multiRename.tags.choices.item": "{value} ({countText})",
+  "@multiRename.tags.choices.item": {
+    "description": "One entry in the list of values of a «multiple values» row in the Tags tab of Multi-Rename: a value the files hold and, in brackets, how many files have exactly it. Picking it sets it on every file.",
+    "placeholders": {
+      "value": "the tag value, like an album title; several values of a multi-value tag are already joined with semicolons",
+      "countText": "how many files have exactly this value, ready to drop into the text (for example 1,234)"
+    }
+  },
+  "multiRename.tags.choices.empty": "‹empty›",
+  "@multiRename.tags.choices.empty": {
+    "description": "Greyed text for a value in the list of a «multiple values» row in the Tags tab of Multi-Rename when some files have no value for that tag at all."
   }
 }

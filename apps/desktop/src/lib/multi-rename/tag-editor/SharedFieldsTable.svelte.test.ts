@@ -3,6 +3,7 @@
  * sends `SetAll`, Esc reverts, Comment and Description are textareas, and a read-only session locks the boxes.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { tick } from 'svelte'
 import type { SharedRow } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
 import SharedFieldsTable from './SharedFieldsTable.svelte'
@@ -192,5 +193,40 @@ describe('SharedFieldsTable', () => {
     const boxes = root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')
     expect(boxes.length).toBe(ROWS.length)
     for (const box of boxes) expect(box.disabled).toBe(true)
+  })
+
+  it('clear_on_multiple_row_sends_empty_setAll', async () => {
+    const { root, onEdit } = await mountTable()
+    const clear = [...root.querySelectorAll('button')].find(
+      (b) => b.getAttribute('aria-label') === 'Clear Album for all files',
+    )
+    expect(clear?.disabled).toBe(false)
+    clear?.click()
+    expect(onEdit).toHaveBeenCalledTimes(1)
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: [] }])
+  })
+
+  it('the choices button shows only on a «multiple values» row', async () => {
+    const { root } = await mountTable()
+    const names = [...root.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))
+    expect(names.filter((n) => n?.endsWith(' values'))).toEqual(['Album values'])
+  })
+
+  it('picking a value from the list sends setAll with its value list', async () => {
+    const { root, onEdit } = await mountTable()
+    const choices = [...root.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'Album values')
+    choices?.click()
+    await tick()
+    const second = [...document.querySelectorAll<HTMLElement>('[role="option"]')].at(1)
+    expect(second?.textContent.trim()).toBe('Book two (1)')
+    second?.click()
+    await tick()
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: ['Book two'] }])
+  })
+
+  it('a read-only session locks the choices button', async () => {
+    const { root } = await mountTable({ editable: false })
+    const choices = [...root.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'Album values')
+    expect(choices?.disabled).toBe(true)
   })
 })
