@@ -1,13 +1,14 @@
 <script lang="ts">
     /**
      * The tab strip of the Multi-Rename sheet: Rename (today's sheet) and Tags. Only mounted when the
-     * `multiRename.tagEditor` setting is on. ←/→ move between the tabs (roving tabindex), ⌘1 and ⌘2 pick one
-     * from anywhere in the sheet.
+     * `multiRename.tagEditor` setting is on. ←/→ and Home/End move between the tabs (roving tabindex), ⌘1 and ⌘2
+     * (registry commands) pick one from anywhere in the sheet.
      */
     import { onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
-    import { sheetTabOfKey, type SheetTab } from './sheet-tab-keys'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { TAB_COMMANDS, type SheetTab } from './sheet-tab'
 
     interface Props {
         active: SheetTab
@@ -30,19 +31,22 @@
 
     function onTablistKeydown(e: KeyboardEvent): void {
         if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+        const at = TABS.findIndex(({ id }) => id === active)
+        const target =
+            e.key === 'ArrowRight' ? at + 1 : e.key === 'ArrowLeft' ? at - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : null
+        if (target === null) return
         claimKey(e)
-        const next = TABS[(TABS.findIndex(({ id }) => id === active) + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length]
-        select(next.id, true)
+        select(TABS[(target + TABS.length) % TABS.length].id, true)
     }
 
     // ⌘1 / ⌘2 would otherwise reach the main window's view-mode keys.
     onMount(() => {
         const onWindowKeydown = (e: KeyboardEvent): void => {
-            const tab = sheetTabOfKey(e)
-            if (tab === null) return
+            if (e.isComposing) return
+            const match = TAB_COMMANDS.find(({ command }) => eventMatchesCommand(e, command))
+            if (!match) return
             claimKey(e)
-            select(tab, false)
+            select(match.tab, false)
         }
         window.addEventListener('keydown', onWindowKeydown, true)
         return () => {
@@ -67,6 +71,7 @@
             class="tab"
             class:active={active === tab.id}
             aria-selected={active === tab.id}
+            aria-controls={active === tab.id ? `sheet-panel-${tab.id}` : undefined}
             tabindex={active === tab.id ? 0 : -1}
             onclick={() => { select(tab.id, false) }}
         >

@@ -64,7 +64,7 @@
     import SheetTabs from './tag-editor/SheetTabs.svelte'
     import TagsTab from './tag-editor/TagsTab.svelte'
     import { createTagEditorState } from './tag-editor/tag-editor-state.svelte'
-    import type { SheetTab } from './tag-editor/sheet-tab-keys'
+    import type { SheetTab } from './tag-editor/sheet-tab'
 
     interface Props {
         session: MultiRenameOpened
@@ -109,7 +109,7 @@
     // The opt-in Tags tab (setting off: no tab strip, no tag session, no tag IPC).
     const tags = getSetting('multiRename.tagEditor') ? createTagEditorState(session.sessionId) : null
     let sheetTab = $state<SheetTab>('rename')
-    onDestroy(() => { void tags?.close() })
+    onDestroy(() => { tags?.close().catch(() => {}) })
     const fieldHistory = createFieldHistoryMenu({
         inputOf: (field) =>
             ({ nameMask: nameMaskInput, extensionMask: extensionMaskInput, search: searchInput, replace: replaceInput })[
@@ -343,7 +343,7 @@
 
     <div class="sheet">
         {#if tags}<SheetTabs active={sheetTab} onSelect={(tab) => { sheetTab = tab }} />{/if}
-        {#if tags && sheetTab === 'tags'}<TagsTab state={tags} />{:else}
+        {#snippet renameBody()}
         <div class="controls">
             <!-- The first two rows share one grid, so their edges line up: the masks with the
                  placeholders they take, then the search, the replacement, and the search's own
@@ -526,7 +526,10 @@
             onCursorChange={tool.setCursor}
             onMoveRow={tool.moveCursorRow}
         />
-        {/if}
+        {/snippet}
+        {#if tags && sheetTab === 'tags'}<TagsTab state={tags} />
+        {:else if tags}<div id="sheet-panel-rename" role="tabpanel" aria-labelledby="sheet-tab-rename" style="display: flex; flex-direction: column; gap: var(--spacing-sm); flex: 1; min-height: 0">{@render renameBody()}</div>
+        {:else}{@render renameBody()}{/if}
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->
         <Menu menu={fieldHistory.menu} ariaLabel={tString('multiRename.history')} minWidth={240} />

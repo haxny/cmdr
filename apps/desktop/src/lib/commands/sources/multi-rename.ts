@@ -183,4 +183,23 @@ export const multiRenameCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     fixedKey: true,
   },
+  {
+    // The Tags tab's strip (only mounted with the `multiRename.tagEditor` setting). Beside the main window's ⌘1/⌘2.
+    id: 'multiRename.tabRename',
+    nameKey: 'commands.multiRenameTabRename.label',
+    scope: 'Main window/Multi-rename',
+    showInPalette: false,
+    shortcuts: ['⌘1'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    fixedKey: true,
+  },
+  {
+    id: 'multiRename.tabTags',
+    nameKey: 'commands.multiRenameTabTags.label',
+    scope: 'Main window/Multi-rename',
+    showInPalette: false,
+    shortcuts: ['⌘2'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    fixedKey: true,
+  },
 ]

@@ -155,6 +155,20 @@ describe('createTagEditorState', () => {
     expect(ipc.undoTagApply).toHaveBeenCalledTimes(1)
   })
 
+  it('a failed undo stays retryable', async () => {
+    ipc.applyTags.mockResolvedValue({ ok: true, value: report({ applyId: 'A5' }) })
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.undoTagApply
+      .mockResolvedValueOnce({ ok: false, error: { kind: 'taskFailed' } })
+      .mockResolvedValueOnce({ ok: true, value: { restored: [], missing: [], failed: [] } })
+    const state = createTagEditorState('S')
+    await state.apply(REQUEST)
+    expect((await state.undo()).ok).toBe(false)
+    expect(state.error).toEqual({ kind: 'taskFailed' })
+    expect((await state.undo()).ok).toBe(true)
+    expect(ipc.undoTagApply).toHaveBeenNthCalledWith(2, 'A5')
+  })
+
   it('undo with no apply is a typed refusal and no IPC', async () => {
     const state = createTagEditorState('S')
     expect(await state.undo()).toEqual({ ok: false, error: { kind: 'nothingToUndo' } })
@@ -179,6 +193,17 @@ describe('createTagEditorState', () => {
     await state.open()
     await state.close()
     expect(ipc.closeTagEditor).toHaveBeenCalledWith('S')
+    expect(state.view).toBeNull()
+  })
+
+  it('an open that lands after close does not bring the view back', async () => {
+    let finish: (value: unknown) => void = () => {}
+    ipc.openTagEditor.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    const state = createTagEditorState('S')
+    const opening = state.open()
+    await state.close()
+    finish({ ok: true, value: VIEW })
+    await opening
     expect(state.view).toBeNull()
   })
 

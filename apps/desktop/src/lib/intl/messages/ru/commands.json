@@ -1271,5 +1271,13 @@
   "commands.handler.viewDebugLog.unavailable": "Не удалось открыть журнал отладки. Попробуйте еще раз.",
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
+  },
+  "commands.multiRenameTabRename.label": "Show the Rename tab",
+  "@commands.multiRenameTabRename.label": {
+    "sourceHash": "3e496e2"
+  },
+  "commands.multiRenameTabTags.label": "Show the Tags tab",
+  "@commands.multiRenameTabTags.label": {
+    "sourceHash": "4236482"
   }
 }

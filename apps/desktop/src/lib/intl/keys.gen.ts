@@ -515,6 +515,8 @@ export type MessageKey =
   | 'commands.multiRenameReplaceWholeName.label'
   | 'commands.multiRenameResults.label'
   | 'commands.multiRenameSavePreset.label'
+  | 'commands.multiRenameTabRename.label'
+  | 'commands.multiRenameTabTags.label'
   | 'commands.multiRenameUndoRename.label'
   | 'commands.navBack.label'
   | 'commands.navDown.label'

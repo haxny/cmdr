@@ -22,7 +22,9 @@ import { getAllConflicts } from './conflict-detector'
  * skipping the check. ❌ Don't grow the set to quiet a new conflict: a second entry means
  * the mapping itself needs fixing.
  */
-const PLATFORM_COLLAPSED_COMBOS = new Set(['Ctrl+D'])
+// `Ctrl+1` / `Ctrl+2` are the same ⌘1 / ⌘2 clash of the Multi-rename tabs with the view modes, kept on purpose
+// on macOS (see `registry-conflicts.test.ts`); here they only show up as their off-macOS spelling.
+const PLATFORM_COLLAPSED_COMBOS = new Set(['Ctrl+D', 'Ctrl+1', 'Ctrl+2'])
 
 describe('conflict-detector over the real registry (default bindings)', () => {
   it('reports no conflicts for the shipped defaults', () => {

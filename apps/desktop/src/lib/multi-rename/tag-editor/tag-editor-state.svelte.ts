@@ -50,6 +50,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let pending = $state(0)
   let opening: Promise<void> | null = null
   let started = false
+  /** Set by `close()`: a reply that lands after it is dropped. */
+  let closed = false
   /** The last apply's id while it can be undone; otherwise why not. */
   let undoable: string | TagUndoRefusal = { kind: 'nothingToUndo' }
 
@@ -67,7 +69,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
 
   async function replaceView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<void> {
     const res = await track(call)
-    if (res.ok) view = res.value
+    if (res.ok && !closed) view = res.value
   }
 
   async function open(): Promise<void> {
@@ -106,12 +108,15 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       const applyId = undoable
       undoable = { kind: 'nothingToUndo' }
       const res = await track(() => undoTagApply(applyId))
-      if (res.ok) await replaceView(() => openTagEditor(sessionId))
+      // A failed undo leaves the apply undoable, so the user can retry.
+      if (!res.ok) undoable = applyId
+      else await replaceView(() => openTagEditor(sessionId))
       return res
     },
     async close() {
       if (!started) return
       started = false
+      closed = true
       undoable = { kind: 'nothingToUndo' }
       view = null
       await closeTagEditor(sessionId)

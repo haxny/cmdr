@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, tick } from 'svelte'
+import { mount, tick, unmount } from 'svelte'
 import MultiRenameDialog from './MultiRenameDialog.svelte'
 
 const flags = vi.hoisted(() => ({ tagEditor: false }))
@@ -58,10 +58,10 @@ async function settle(): Promise<void> {
   }
 }
 
-async function mountSheet(): Promise<HTMLElement> {
+async function mountSheet(): Promise<HTMLElement & { dialog: ReturnType<typeof mount> }> {
   const target = document.createElement('div')
   document.body.appendChild(target)
-  mount(MultiRenameDialog, {
+  const dialog = mount(MultiRenameDialog, {
     target,
     props: {
       session: { sessionId: 'S', count: 2 },
@@ -72,7 +72,7 @@ async function mountSheet(): Promise<HTMLElement> {
     },
   })
   await settle()
-  return target
+  return Object.assign(target, { dialog })
 }
 
 function tab(name: string): HTMLButtonElement {
@@ -132,21 +132,60 @@ describe('MultiRenameDialog Tags tab', () => {
     expect(document.querySelector('.controls')).toBeNull()
   })
 
-  it('arrow keys and command-2 switch tabs', async () => {
+  it('arrow keys, Home/End and the ⌘1/⌘2 commands switch tabs', async () => {
+    // `formatKeyCombo` emits ⌘-form modifiers only when `isMacOS()` is true, and happy-dom reports a Linux UA.
+    const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
+    navigatorSpy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
+    try {
+      await switchTabs()
+    } finally {
+      navigatorSpy.mockRestore()
+    }
+  })
+
+  async function switchTabs(): Promise<void> {
     flags.tagEditor = true
     await mountSheet()
     tab('Rename').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
     await settle()
     expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
     document.body.dispatchEvent(
-      new KeyboardEvent('keydown', { key: '1', metaKey: true, bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', { key: '1', code: 'Digit1', metaKey: true, bubbles: true, cancelable: true }),
     )
     await settle()
     expect(tab('Rename').getAttribute('aria-selected')).toBe('true')
     document.body.dispatchEvent(
-      new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', { key: '2', code: 'Digit2', metaKey: true, bubbles: true, cancelable: true }),
     )
     await settle()
     expect(tab('Tags').getAttribute('aria-selected')).toBe('true')
+  }
+
+  it('the Rename body is a tabpanel the Rename tab controls', async () => {
+    flags.tagEditor = true
+    await mountSheet()
+    const panel = document.querySelector('#sheet-panel-rename')
+    expect(panel?.getAttribute('role')).toBe('tabpanel')
+    expect(panel?.getAttribute('aria-labelledby')).toBe(tab('Rename').id)
+    expect(tab('Rename').getAttribute('aria-controls')).toBe('sheet-panel-rename')
+    expect(panel?.querySelector('.controls')).not.toBeNull()
+  })
+
+  it('closing the sheet with the setting off never closes a tag session', async () => {
+    const root = await mountSheet()
+    await unmount(root.dialog)
+    await settle()
+    expect(ipc.closeTagEditor).not.toHaveBeenCalled()
+  })
+
+  it('closing the sheet after the Tags tab showed closes the tag session once', async () => {
+    flags.tagEditor = true
+    const root = await mountSheet()
+    tab('Tags').click()
+    await settle()
+    await unmount(root.dialog)
+    await settle()
+    expect(ipc.closeTagEditor).toHaveBeenCalledTimes(1)
+    expect(ipc.closeTagEditor).toHaveBeenCalledWith('S')
   })
 })
