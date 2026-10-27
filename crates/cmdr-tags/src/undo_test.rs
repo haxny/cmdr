@@ -453,9 +453,10 @@ fn restore_brings_back_track_and_disc_totals() {
 
     assert_eq!(report.restored, paths);
     for (path, tags) in &before {
-        assert_eq!(read(path), *tags, "{path:?}");
+        let restored = read(path);
+        assert_eq!(restored, *tags, "{path:?}");
         for (field, values) in &totals {
-            assert_eq!(tags.fields.get(field), Some(values), "{path:?}");
+            assert_eq!(restored.fields.get(field), Some(values), "{path:?}");
         }
     }
 }
@@ -680,4 +681,39 @@ fn retain_of_an_unknown_apply_is_not_found() {
     let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
     let err = store.retain(&id("op-1"), &[]).unwrap_err();
     assert!(matches!(err, TagError::Io(ErrorKind::NotFound, _)), "{err:?}");
+}
+
+/// A record whose totals sit in `raw` (`trackTotal` / `discTotal`) instead of its fields, as
+/// the store wrote them before the totals were fields: the restore puts them back.
+#[test]
+fn restore_takes_the_totals_of_a_record_that_keeps_them_in_raw() {
+    let files = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TRCK", "3");
+    text_frame(&mut tag, "TPOS", "1");
+    let path = write_mp3(files.path(), "a.mp3", &tag);
+    let store = UndoStore::open(root.path().to_path_buf(), ROOMY).unwrap();
+    let apply = root.path().join("op-old");
+    fs::create_dir(&apply).unwrap();
+    let manifest = serde_json::json!({
+        "version": 1,
+        "seq": 1,
+        "entries": [{
+            "path": path,
+            "fields": {"title": ["Stary nazev"], "track": ["3"], "disc": ["1"]},
+            "extras": {},
+            "cover": null,
+            "raw": {"trackTotal": 12, "discTotal": 2, "conductor": null},
+        }],
+    });
+    fs::write(apply.join("manifest.json"), serde_json::to_vec(&manifest).unwrap()).unwrap();
+
+    let report = store.restore(&id("op-old"), &MUSIC).unwrap();
+
+    assert_eq!(report.restored, vec![path.clone()]);
+    let restored = read(&path);
+    assert_eq!(restored.fields[&TagField::Title], strings(&["Stary nazev"]));
+    assert_eq!(restored.fields[&TagField::TrackTotal], strings(&["12"]));
+    assert_eq!(restored.fields[&TagField::DiscTotal], strings(&["2"]));
 }

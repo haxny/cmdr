@@ -195,3 +195,11 @@ fn totals_are_read_from_every_spelling() {
         tags_of(&[(TagField::Track, "3"), (TagField::TrackTotal, "12")])
     );
 }
+
+#[test]
+fn a_total_without_its_number_is_not_checked_or_written() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_untagged_mp3(dir.path(), "a.mp3");
+    write(&path, &tags_of(&[(TagField::TrackTotal, "dvanact")]), &MUSIC);
+    assert_eq!(read(&path), FileTags::default());
+}

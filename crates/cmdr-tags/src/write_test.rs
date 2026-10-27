@@ -993,8 +993,17 @@ fn flac_write_without_total_removes_old_totals() {
     let tags = read(&path);
     let track = with(FileTags::default(), TagField::Track, &["3"]);
     assert_eq!(tags, with(track.clone(), TagField::TrackTotal, &["12"]));
+    assert_eq!(
+        write_tags(&path, &tags, &MUSIC),
+        Err(TagError::WouldDrop(strings(&["DISCTOTAL", "TOTALDISCS"]))),
+        "a disc total without its disc is named, never dropped silently"
+    );
 
-    write(&path, &tags, &MUSIC);
+    let lossy = WriteOptions {
+        allow_frame_loss: true,
+        ..MUSIC
+    };
+    write(&path, &tags, &lossy);
     assert_eq!(keys(&path), ["TRACKNUMBER=3", "TRACKTOTAL=12"], "one spelling each");
 
     write(&path, &track, &MUSIC);

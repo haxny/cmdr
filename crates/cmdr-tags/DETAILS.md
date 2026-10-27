@@ -35,13 +35,16 @@ as it is, type and description included. With the cover removed, the reader show
 Composer holds the author of the music, for audiobooks too (user, 2026-10-26); an audiobook write removes only `TPE3`
 (conductor) on MP3. The totals are the fields `TrackTotal` / `DiscTotal` (`WriteOptions::track_total` / `disc_total`
 only when the field is absent): a total goes in `TRCK` / `TPOS` as `N/Total`, in `trkn` / `disk`'s total slot, or as a
-`TRACKTOTAL` / `DISCTOTAL` key (foobar2000's convention); without one the number is plain. A total without its number is
-neither written nor shown by the reader, a zero total is no total, and one that isn't a whole number fails the write
-(`TagError::Write`). Vorbis `TRACKTOTAL`, `TOTALTRACKS`, `DISCTOTAL`, and `TOTALDISCS` are managed: never extras, read
-as the total (a key wins over `N/T`), written back as `TRACKTOTAL` / `DISCTOTAL` only. The reader strips `/N` from track
-and disc in every format and keeps the number's text (`03`), except MP4, which stores integers (`normalize_for` shows
-that before a write). Vorbis is read without lofty's implicit conversions, which would turn `03` into `3`. An MP3's
-`TPE3` is read apart, as crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo store.
+`TRACKTOTAL` / `DISCTOTAL` key (foobar2000's convention); without one the number is plain. A zero total is no total, and
+a total field that isn't a whole number fails the write (`TagError::Write`) when its number is written. Vorbis
+`TRACKTOTAL`, `TOTALTRACKS`, `DISCTOTAL`, and `TOTALDISCS` are managed: never extras, read as the total (a key wins over
+`N/T`), written back as `TRACKTOTAL` / `DISCTOTAL` only. MP3's disc total is `TPOS`'s, else the legacy
+`TXXX:DiscNumber`'s. Every item holding a total is a `Mapped` item of its total field (`totals::*_total_items`), so a
+total the reader doesn't show (a second one that differs, one without its number, one that isn't a number) is named by
+`WouldDrop` like any hidden value; equal duplicates collapse silently. The reader strips `/N` from track and disc in
+every format and keeps the number's text (`03`), except MP4, which stores integers (`normalize_for` shows that before a
+write). Vorbis is read without lofty's implicit conversions, which would turn `03` into `3`. An MP3's `TPE3` is read
+apart, as crate-private `read::RawTags` (`read_raw`), for the read-back check and the undo store.
 
 M4A freeform atoms live under mean `com.apple.iTunes`. Genre is written only as the freeform `GENRE`, and a write
 removes `©gen`: foobar2000 on macOS shows `©gen` and `GENRE` together, doubled; Plexamp reads only `©gen` and so loses
@@ -150,7 +153,7 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
 `TagError::Io(InvalidInput, _)`):
 
 ```
-<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"conductor"},"written"?:{"size","modified","inode","changed"}}]}
+<root>/<id>/manifest.json   {"version":1,"seq":N,"entries":[{"path","fields","extras","cover":{"file":"<k>.cover","mime"}|null,"raw":{"trackTotal"?,"discTotal"?,"conductor"},"written"?:{"size","modified","inode","changed"}}]}
 <root>/<id>/<k>.cover       one file per distinct cover; entries with the same bytes share it
 <root>/.<id>.staging/       a record being built
 ```
@@ -170,10 +173,10 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   won't load (damaged, or another manifest version) can't be restored but still counts toward both limits, and goes
   first, oldest by the directory's modification time, so a pile of them can't fill the disk past `max_bytes`.
 - **`record(id, paths)` reads the files itself**, each with one parse (`read::read_snapshot`): the `FileTags` and the
-  `RawTags` (MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states of the file. A record
-  from before the totals were fields still loads (its `raw.trackTotal` / `discTotal` are ignored), and restores the
-  numbers without their totals. Call it before the apply writes. A file that can't be read fails the whole record;
-  nothing is stored.
+  `RawTags` (MP3 `TPE3`) that `FileTags` doesn't hold, so the two can't describe different states of the file. A
+  record's `raw` may also carry `trackTotal` / `discTotal` (records that keep the totals there, not in `fields`); the
+  reader never fills them. Call it before the apply writes. A file that can't be read fails the whole record; nothing is
+  stored.
 - **`repath`** takes net moves (recorded path, final path), never the steps of a chain; they apply all at once (a swap
   works), and a move whose source isn't recorded is ignored. A sealed entry takes the fingerprint of the file at its new
   path (a rename moves the ctime), so the caller repaths right after its own renames.
@@ -184,11 +187,11 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   and the manifest version stays 1). Why: a record is keyed by path, and a rename after the apply can put another file
   at that path (a swap of `01`/`03`); without the check, undo writes one file's old tags into another.
 - **`restore`** writes each entry back as it was (`write::restore_tags`): as `ContentKind::Music` whatever the caller
-  passes, totals from its recorded fields, and `TPE3` when it had one. Of the caller's `WriteOptions` only
-  `allow_frame_loss` applies. A file not at its path is `missing`; a sealed entry whose file no longer has its
-  fingerprint is `changed` and untouched (checked right before its write); any write error is `failed` (an extra that
-  can't come back is `TagError::UnwritableExtra`) and the rest continue. `None` in `cover` removes the cover again. It
-  never deletes the record; the caller `forget`s it.
+  passes, totals from its recorded fields (`raw.trackTotal` / `discTotal` for an absent total field), and `TPE3` when it
+  had one. Of the caller's `WriteOptions` only `allow_frame_loss` applies. A file not at its path is `missing`; a sealed
+  entry whose file no longer has its fingerprint is `changed` and untouched (checked right before its write); any write
+  error is `failed` (an extra that can't come back is `TagError::UnwritableExtra`) and the rest continue. `None` in
+  `cover` removes the cover again. It never deletes the record; the caller `forget`s it.
 - **Limits**: an MP4 extra under a non-iTunes mean comes back under `com.apple.iTunes` (one named like a managed key
   can't come back: `failed`). Vorbis total keys come back under their canonical names (`TOTALTRACKS` as `TRACKTOTAL`).
 

@@ -16,6 +16,7 @@ mod save;
 pub mod shared;
 pub mod text;
 pub mod tools;
+mod totals;
 mod undo;
 mod write;
 mod write_extras;

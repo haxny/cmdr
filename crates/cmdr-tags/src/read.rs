@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::format::{AudioFormat, format_of};
 use crate::model::{ContentKind, Cover, FileTags, KindRemoval, TagError, TagField};
+use crate::totals::{add_totals, id3_total_items, ilst_total_items, vorbis_total_items};
 
 /// The separator the editor joins multiple values with where a format stores one string.
 pub(crate) const JOIN: &str = "; ";
@@ -75,12 +76,17 @@ pub(crate) fn read_from<R: Read + Seek>(
 }
 
 /// What a file holds beyond [`FileTags`] that a write can change and an undo must put back:
-/// on MP3, the conductor (`TPE3`, which an audiobook write removes). An undo record written
-/// before the totals became fields also carries `trackTotal` / `discTotal` here; they are
-/// ignored, so such a restore writes the numbers without their totals.
+/// on MP3, the conductor (`TPE3`, which an audiobook write removes).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RawTags {
+    /// Track and disc totals an undo record may carry here (records whose fields hold no
+    /// `TrackTotal` / `DiscTotal`): a restore writes each as the total of an absent field. The
+    /// reader never fills them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) track_total: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) disc_total: Option<u32>,
     pub(crate) conductor: Option<String>,
 }
 
@@ -151,81 +157,11 @@ pub(crate) fn read_both_from<R: Read + Seek>(
     })
 }
 
-/// The total in `"N/T"`; none for a plain number, a zero, or text that isn't a number.
-fn total_after_slash(value: &str) -> Option<u32> {
-    let (_, total) = value.split_once('/')?;
-    total.trim().parse().ok().filter(|t| *t > 0)
-}
-
 pub(crate) fn raw_id3(id3: &Id3v2Tag) -> RawTags {
     let text = |id: &'static str| id3.get_text(&FrameId::Valid(id.into()));
     RawTags {
         conductor: text("TPE3").map(str::trim).filter(|c| !c.is_empty()).map(str::to_owned),
-    }
-}
-
-/// A file's track and disc totals, as the reader shows them in [`TagField::TrackTotal`] and
-/// [`TagField::DiscTotal`].
-#[derive(Debug, Clone, Copy, Default)]
-struct Totals {
-    track: Option<u32>,
-    disc: Option<u32>,
-}
-
-/// Puts `totals` in `fields`, each only beside its number: a write drops a total without its
-/// number, so the view doesn't show one either.
-fn add_totals(fields: &mut BTreeMap<TagField, Vec<String>>, totals: Totals) {
-    for (number, field, total) in [
-        (TagField::Track, TagField::TrackTotal, totals.track),
-        (TagField::Disc, TagField::DiscTotal, totals.disc),
-    ] {
-        if let Some(total) = total.filter(|_| fields.contains_key(&number)) {
-            fields.insert(field, vec![total.to_string()]);
-        }
-    }
-}
-
-fn id3_totals(id3: &Id3v2Tag) -> Totals {
-    let text = |id: &'static str| id3.get_text(&FrameId::Valid(id.into()));
-    Totals {
-        track: text("TRCK").and_then(total_after_slash),
-        disc: text("TPOS").and_then(total_after_slash),
-    }
-}
-
-fn ilst_totals(ilst: &Ilst) -> Totals {
-    // Bytes 4-5 of a `trkn` / `disk` atom's data, 0 meaning none.
-    let total = |fourcc: [u8; 4]| match ilst.get(&AtomIdent::Fourcc(fourcc)).and_then(|a| a.data().next()) {
-        Some(AtomData::Unknown { data, .. }) if data.len() >= 6 => {
-            Some(u32::from(u16::from_be_bytes([data[4], data[5]]))).filter(|t| *t > 0)
-        }
-        _ => None,
-    };
-    Totals {
-        track: total(*b"trkn"),
-        disc: total(*b"disk"),
-    }
-}
-
-fn vorbis_totals(comments: &VorbisComments) -> Totals {
-    // A total key wins over a `N/T` number.
-    let total = |keys: [&str; 2], number: &str| {
-        let keyed = comments.items().find_map(|(key, value)| {
-            keys.iter()
-                .any(|k| k.eq_ignore_ascii_case(key))
-                .then(|| value.trim().parse().ok().filter(|t: &u32| *t > 0))
-                .flatten()
-        });
-        keyed.or_else(|| {
-            comments
-                .items()
-                .find(|(key, _)| key.eq_ignore_ascii_case(number))
-                .and_then(|(_, value)| total_after_slash(value))
-        })
-    };
-    Totals {
-        track: total(["TRACKTOTAL", "TOTALTRACKS"], "TRACKNUMBER"),
-        disc: total(["DISCTOTAL", "TOTALDISCS"], "DISCNUMBER"),
+        ..RawTags::default()
     }
 }
 
@@ -492,7 +428,7 @@ pub(crate) fn read_id3(id3: &Id3v2Tag) -> FileTags {
         fields: shown_fields(&id3_items(id3)),
         ..FileTags::default()
     };
-    add_totals(&mut tags.fields, id3_totals(id3));
+    add_totals(&mut tags.fields, &id3_total_items(id3));
     for frame in id3 {
         if let Frame::UserText(f) = frame
             && txxx_field(&f.description).is_none()
@@ -573,7 +509,7 @@ pub(crate) fn freeform_field(name: &str) -> Option<TagField> {
 }
 
 /// A four-character code as text, each byte one Latin-1 character (`©nam`).
-fn fourcc_name(fourcc: &[u8; 4]) -> String {
+pub(crate) fn fourcc_name(fourcc: &[u8; 4]) -> String {
     fourcc.iter().map(|b| char::from(*b)).collect()
 }
 
@@ -605,7 +541,7 @@ pub(crate) fn read_ilst(ilst: &Ilst) -> FileTags {
         fields: shown_fields(&ilst_items(ilst)),
         ..FileTags::default()
     };
-    add_totals(&mut tags.fields, ilst_totals(ilst));
+    add_totals(&mut tags.fields, &ilst_total_items(ilst));
     for atom in ilst {
         if let AtomIdent::Freeform { mean, name } = atom.ident()
             && !(mean == ITUNES_MEAN && freeform_field(name).is_some())
@@ -677,7 +613,7 @@ pub(crate) fn read_vorbis<'a>(
         fields: shown_fields(&vorbis_items(comments)),
         ..FileTags::default()
     };
-    add_totals(&mut tags.fields, vorbis_totals(comments));
+    add_totals(&mut tags.fields, &vorbis_total_items(comments));
     for (key, value) in comments.items() {
         let key = key.to_ascii_uppercase();
         if vorbis_field(&key).is_none() && !VORBIS_TOTALS.contains(&key.as_str()) {

@@ -8,6 +8,7 @@ read-only sibling that Multi-Rename uses; this crate is the writer.
 
 - `model.rs`: `TagField` (17 fields, `keeps_diacritics`, `is_multi`), `FileTags`, `Cover`, `ContentKind`, `TagError`.
 - `normalize.rs`: `normalize_for`, tags as a format holds them (MP4 numbers are integers).
+- `totals.rs`: track and disc totals, read (each total item checked like a hidden value) and written beside the number.
 - `format.rs`: `format_of`, by extension. `read.rs`: `read_tags`, one reader per container, the key tables.
 - `write.rs`: `write_tags` + `WriteOptions`, each writer the inverse of its reader; `write_extras.rs`; `save.rs`:
   `save_safely`. Test files come from `test_files.rs`.
