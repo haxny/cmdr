@@ -27,6 +27,9 @@ One message in, an answer out, crash-safe and within budget.
 - **Automatic spends the whole window** (less the reply and a 15% estimator margin), sized from the provider's own
   report when one arrived, else the family table. ❌ Don't re-add a cap for cost: that's compaction's job (planned).
   `DETAILS.md` § Resolving one budget.
+- **Only budget pressure elides, oldest turn first; ❌ never by age.** While the prompt fits, history goes out
+  byte-identical to the last call, which is what keeps the provider's prompt cache valid. `DETAILS.md` § Budget
+  enforcement lists what still rewrites earlier bytes.
 - **Budget pressure NEVER touches the current turn's tool results** (`MIN_ELISION_TURNS_BACK`).
   Handed a stub instead of content it was told to name files by, a model invents: that shipped,
   renaming 12 real files to fiction. Overrun honestly instead.

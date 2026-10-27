@@ -13,10 +13,13 @@
 //!   at message-send and passes the SAME value on every `respond` call of that turn's
 //!   tool loop, so the model's ground truth can't shift mid-turn.
 //!
-//! History compaction is **elide-only** (spec §2, §5): assistant prose always survives
-//! verbatim; tool results from OLDER turns collapse to a typed stub that says which tool ran,
-//! how the call read, what it held, and how to get it back ([`stub_for`], [`digest`]). The
-//! current turn's results are never elided
+//! History compaction is **elide-only** (spec §2, §5), and **only under budget pressure**:
+//! while the budget has room, every message goes out exactly as it went out last call, so a
+//! listing the agent paid for stays readable and the provider's prompt cache holds across the
+//! whole thread. When the prompt outgrows the budget, tool results from the OLDEST turns
+//! collapse first, one turn at a time, to a typed stub that says which tool ran, how the call
+//! read, what it held, and how to get it back ([`stub_for`], [`digest`]). Assistant prose
+//! always survives verbatim, and the current turn's results are never elided
 //! ([`MIN_ELISION_TURNS_BACK`]). Summarize-on-overflow is deferred; when even full elision
 //! can't fit the budget, the runtime shows the soft-cap nudge.
 //!
@@ -46,10 +49,6 @@ pub const MAX_TOOL_TURNS: usize = 8;
 /// Per user message wall-clock ceiling across the whole tool loop. Initial value;
 /// tune with use.
 pub const MAX_WALL_TIME: Duration = Duration::from_secs(120);
-
-/// Tool results this many turns back (or more) collapse to a typed stub; assistant
-/// prose always survives verbatim. Initial value; tune with use.
-pub const ELIDE_TOOL_RESULTS_AFTER_TURNS: usize = 3;
 
 /// The floor under every elision threshold: a tool result from the CURRENT turn is never
 /// elided, however tight the budget. It is the model's only view of what it just looked at,
@@ -263,8 +262,9 @@ pub struct ElisionFacts {
     /// downstream (the rename-evidence ledger) has to revoke them — the runtime does that,
     /// since revoking is I/O and this module is pure.
     pub elided_call_ids: Vec<String>,
-    /// The turns-back threshold the assembly settled on. Below
-    /// [`ELIDE_TOOL_RESULTS_AFTER_TURNS`] means the BUDGET forced the elision, not age.
+    /// The turns-back threshold the assembly settled on: tool results this many user turns
+    /// back or more were elided. Meaningful only when `elided_results > 0`; with nothing
+    /// elided it is one past the oldest turn holding a result.
     pub threshold: usize,
     /// The assembled prompt's estimated size.
     pub estimated_tokens: usize,
@@ -273,11 +273,11 @@ pub struct ElisionFacts {
 }
 
 impl ElisionFacts {
-    /// True when the budget (not plain age) is what dropped history: the assembly had to
-    /// tighten past the normal threshold. This is the case worth telling the user about —
-    /// something they might still be relying on left the conversation.
+    /// True when the budget dropped history. Only the budget elides, so this is any elision
+    /// at all, and the case worth telling the user about: something they might still be
+    /// relying on left the conversation.
     pub fn budget_forced(&self) -> bool {
-        self.elided_results > 0 && self.threshold < ELIDE_TOOL_RESULTS_AFTER_TURNS
+        self.elided_results > 0
     }
 
     /// True when even the tightest elision left the prompt over budget (prose alone is too
@@ -333,12 +333,14 @@ pub fn assemble_prompt(
     let system = build_system(prefix.system_prompt, prefix.cmdr_md, prefix.memory);
     let tools = prefix.tools.to_vec();
 
-    // Elide older tool results, tightening the threshold until the estimate fits the
-    // budget. Assistant prose is never touched (that's the soft-cap's job), and the floor
-    // is MIN_ELISION_TURNS_BACK: the turn in flight keeps its own results even if that
-    // leaves the prompt over budget. Better an honest overrun the runtime reports than a
-    // model answering about evidence it can no longer see.
-    let mut threshold = ELIDE_TOOL_RESULTS_AFTER_TURNS;
+    // Nothing elides while the prompt fits: rewriting an earlier message would cost the
+    // provider's prompt cache from that point on, and forget a result the agent paid for.
+    // Over budget, elide the OLDEST turn's tool results first, tightening one turn at a time
+    // until the estimate fits. Assistant prose is never touched (that's the soft-cap's job),
+    // and the floor is MIN_ELISION_TURNS_BACK: the turn in flight keeps its own results even
+    // if that leaves the prompt over budget. Better an honest overrun the runtime reports
+    // than a model answering about evidence it can no longer see.
+    let mut threshold = oldest_tool_turns_back(transcript) + 1;
     let mut messages = build_messages(transcript, envelope, offset, threshold);
     while threshold > MIN_ELISION_TURNS_BACK && estimate_prompt_tokens(&system, &tools, &messages) > budget {
         threshold -= 1;
@@ -463,6 +465,21 @@ fn render_history_timestamp(at: i64, offset: FixedOffset) -> String {
 fn format_timestamp(unix_secs: i64, offset: FixedOffset) -> String {
     let utc = DateTime::<Utc>::from_timestamp(unix_secs, 0).unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
     utc.with_timezone(&offset).format("%a %Y-%m-%d %H:%M").to_string()
+}
+
+/// How many user turns back the oldest tool-result message sits (`0` when there is none, or
+/// only the current turn's). A threshold one past it elides nothing.
+fn oldest_tool_turns_back(transcript: &[AgentMessage]) -> usize {
+    let mut users_after = 0;
+    let mut oldest = 0;
+    for message in transcript.iter().rev() {
+        match message.role {
+            AgentRole::User => users_after += 1,
+            AgentRole::Tool => oldest = oldest.max(users_after),
+            _ => {}
+        }
+    }
+    oldest
 }
 
 /// Transform the transcript into the messages to send at a given elision threshold:

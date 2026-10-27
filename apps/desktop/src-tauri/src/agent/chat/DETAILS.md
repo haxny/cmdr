@@ -19,9 +19,9 @@ Pull-tier docs for `agent/chat/`. Must-knows live in `CLAUDE.md`.
 2. **Tool declarations** (`tools` arg): `agent::tools::agent_tool_declarations()`. Stable,
    cached.
 3. **History**: every persisted turn, each user turn prefixed with its own local
-   timestamp marker (`[Fri 2026-07-11 09:15]`). Assistant prose survives verbatim; tool
-   results `ELIDE_TOOL_RESULTS_AFTER_TURNS` or more turns back collapse to a self-describing
-   stub (§ The elision stub). Eliding prose is never done — that's the soft-cap's job. The
+   timestamp marker (`[Fri 2026-07-11 09:15]`). Sent exactly as last call while the budget has
+   room (§ Budget enforcement); under pressure, the oldest turns' tool results collapse to a
+   self-describing stub (§ The elision stub). Assistant prose survives verbatim. Eliding prose is never done — that's the soft-cap's job. The
    current turn's results never elide either (see § Budget enforcement).
 4. **The envelope** opens the LATEST user turn only, as a tagged block (§9 field set):
    `[Sat 2026-07-12 21:30 · focused: <path> · cursor: <name|—> · <n> selected · volumes: <name> (<freshness>[, <connectivity>]), … · rename batch: up to <n> files]`.
@@ -128,8 +128,25 @@ How much memory a turn carries is `budget::memory_slice_bytes` — see § What t
 
 ## Budget enforcement (elide-only, floored, and reported)
 
-`assemble_prompt` takes the resolved model's `budget` and tightens the elision threshold
-turn by turn until the estimate fits, never touching prose.
+`assemble_prompt` takes the resolved model's `budget`. While the prompt fits, nothing elides. Over budget, it
+elides the OLDEST turn's tool results first and tightens one turn at a time until the estimate fits, never touching
+prose.
+
+**Decision: only budget pressure elides, never age.** Why: elision used to start at three turns back whatever the
+budget, which threw away listings the agent had already paid for and, worse, rewrote an earlier message on every turn.
+A caching provider (Anthropic, OpenAI, Gemini, DeepSeek) bills the prompt from the first changed byte at full price, so
+that rewrite made long chats MORE expensive, not less. With the budget now the whole window
+(§ Resolving one budget), a thread with room sends every earlier message byte-identical to the last call
+(`history_is_byte_stable_from_turn_to_turn_while_the_budget_has_room`). Cost control is compaction's job (planned).
+
+**What still moves earlier bytes between calls** (known, not yet fixed):
+
+- **The envelope swap.** The latest user turn carries the full envelope; once a newer turn arrives it re-renders as a
+  bare timestamp marker. So each new turn breaks the cache at the PREVIOUS user message, and that turn's tool results
+  are billed in full once more. Fixing it means persisting each turn's rendered envelope and replaying it verbatim.
+- **Memory writes.** Memory leads the system string, so a `memory_write` / `memory_edit` changes the prefix and the
+  next call re-reads the whole thread at full price. Inherent to memory living in the prefix.
+- **Budget-pressure elision itself** rewrites the turn it stubs, by design.
 
 **The floor: `MIN_ELISION_TURNS_BACK = 1`.** The loop stops there, and `build_messages`
 enforces it independently (`turns_back >= threshold.max(MIN_ELISION_TURNS_BACK)`), so no
@@ -178,7 +195,6 @@ In `context.rs` (turn shape and compaction):
 - `MAX_TOOL_TURNS = 8` — per message; the loop stops before the 9th tool respond fires.
 - `MAX_WALL_TIME = 120s` — per message wall-clock ceiling across the whole loop; leaves room for reasoning-heavy
   OpenAI-compatible models while the tool-turn cap still prevents a runaway loop.
-- `ELIDE_TOOL_RESULTS_AFTER_TURNS = 3` — tool results this many turns back (or more) elide.
 - `MIN_ELISION_TURNS_BACK = 1` — the floor above; the current turn's results never elide.
 - `THREAD_SOFT_CAP_MESSAGES = 40` — past this the UI nudges "start a fresh one?".
 
@@ -219,8 +235,8 @@ local server's window, the provider-reported window) and answers a `ResolvedBudg
 cap below the window. Decision/Why: a 1M-window user saw "23,648 of 60,000" and most of their model hidden behind a
 60K cap set for cost; David chose the whole window. **Cost is compaction's job, planned and not built**: `/compact`,
 auto-compacting old tool results once the one-hour prompt-cache TTL has lapsed (a re-read then costs full price anyway),
-and a "consider compacting" nudge past roughly 200,000 tokens. Elision (`context.rs`) is the only shrinking today, by
-age and under budget pressure. An explicit "Chat memory size" is the user's lever to spend less meanwhile.
+and a "consider compacting" nudge past roughly 200,000 tokens. Elision (`context.rs`) is the only shrinking today, and
+only under budget pressure. An explicit "Chat memory size" is the user's lever to spend less meanwhile.
 
 - **`UserSetting`** — an explicit size, used exactly as chosen. It is never clamped down: our knowledge will be wrong
   sometimes and the user may be right about their own model. `over_known_window` rides along, the settings row warns
@@ -270,8 +286,8 @@ refused, not assembled: `BudgetRefusal::LocalWindowBelowFloor` reaches the rail 
 
 Three events carry context pressure and spend to the user:
 
-- `ContextTrimmed` — the budget pushed history out, once per turn. Fired only when the BUDGET forced it
-  (`ElisionFacts::budget_forced`), not on ordinary age-based elision, or it would cry wolf every turn on a small window.
+- `ContextTrimmed` — the budget pushed history out, once per turn. Only the budget elides, so it fires whenever an
+  assembly elided anything (`ElisionFacts::budget_forced`), at most once per turn.
 - `ContextUsage` — what the prompt cost against its budget, plus the set-aside count, for the rail's gauge. Emitted after
   EVERY completed call (its `End`) from that call's own assembly, so the gauge moves round by round through a
   tool-running turn; the turn's last report is its largest assembly (each tool result joins the same prompt). A call

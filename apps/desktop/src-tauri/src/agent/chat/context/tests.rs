@@ -347,12 +347,9 @@ fn two_assemblies_within_one_turn_see_a_byte_identical_envelope() {
 
 // ── Elision ───────────────────────────────────────────────────────────────────
 
-#[test]
-fn old_tool_result_elides_to_a_typed_stub_and_prose_survives() {
-    // A four-turn thread. The oldest tool result (turn 0) is 3+ turns back, so it
-    // elides; the newest (the latest turn) survives. Assistant prose is untouched.
-    let big_listing = json!({ "big_folders": ["Movies 210 GB", "Photos 88 GB"] });
-    let transcript = [
+/// A four-turn thread whose oldest turn ran a tool. Shared by the room / no-room pair below.
+fn four_turns_with_an_old_listing(big_listing: &Value) -> [AgentMessage; 11] {
+    [
         user("turn 0", 1_000),
         assistant_tool_call("old", ToolId::ListDir, json!({ "path": "/", "sortBy": "size" }), 1_010),
         tool_result("old", big_listing.clone(), 1_020),
@@ -364,9 +361,119 @@ fn old_tool_result_elides_to_a_typed_stub_and_prose_survives() {
         user("turn 3 (latest)", 4_000),
         assistant_tool_call("new", ToolId::ListPaneFiles, json!({}), 4_010),
         tool_result("new", json!({ "entries": 5 }), 4_020),
-    ];
+    ]
+}
+
+/// Age alone never elides: a listing the agent already paid for stays readable while the
+/// budget has room, and nothing earlier in the thread is rewritten from call to call, which
+/// is what keeps the provider's prompt cache valid on a long chat.
+#[test]
+fn an_old_tool_result_survives_while_the_budget_has_room() {
+    let big_listing = json!({ "big_folders": ["Movies 210 GB", "Photos 88 GB"] });
+    let transcript = four_turns_with_an_old_listing(&big_listing);
 
     let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), BUDGET);
+
+    let AgentPart::ToolResult(old) = &assembled.messages[2].parts[0] else {
+        panic!("expected a tool-result part");
+    };
+    assert!(!old.elided, "three turns back, but the budget has room: keep it");
+    assert_eq!(old.content, big_listing);
+    assert_eq!(
+        assembled.elision,
+        ElisionFacts {
+            estimated_tokens: assembled.elision.estimated_tokens,
+            budget: BUDGET,
+            threshold: assembled.elision.threshold,
+            ..ElisionFacts::default()
+        }
+    );
+    assert!(!assembled.elision.budget_forced());
+}
+
+/// Between two turns of a thread with room, every message before the previous turn's user
+/// message is byte-identical, so a caching provider re-reads none of it at full price.
+#[test]
+fn history_is_byte_stable_from_turn_to_turn_while_the_budget_has_room() {
+    let bulky = json!({ "text": "z".repeat(4_000) });
+    let mut transcript = vec![];
+    for turn in 0..5_i64 {
+        let at = 1_000 * (turn + 1);
+        transcript.push(user(&format!("turn {turn}"), at));
+        transcript.push(assistant_tool_call(
+            &format!("c{turn}"),
+            ToolId::ImageFacts,
+            json!({ "paths": ["/a.png"] }),
+            at + 10,
+        ));
+        transcript.push(tool_result(&format!("c{turn}"), bulky.clone(), at + 20));
+        transcript.push(assistant_text(&format!("answer {turn}"), at + 30));
+    }
+    let budget = 1_000_000;
+    let before = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(5_000), offset(), budget);
+    let previous_latest_user = transcript.len() - 4;
+    transcript.push(user("turn 5", 6_000));
+    let after = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(6_000), offset(), budget);
+
+    assert_eq!(
+        before.messages[..previous_latest_user],
+        after.messages[..previous_latest_user],
+        "everything before the previous turn must reach the provider unchanged"
+    );
+    assert_eq!(after.elision.elided_results, 0);
+}
+
+/// Under pressure, the OLDEST turn's results go first, and only as many turns as the budget
+/// needs: a newer result the budget can still hold stays.
+#[test]
+fn budget_pressure_elides_the_oldest_results_first() {
+    let bulky = json!({ "text": "z".repeat(12_000) }); // ~3,000 estimated tokens each
+    let transcript = [
+        user("turn 0", 1_000),
+        assistant_tool_call("oldest", ToolId::ImageFacts, json!({ "paths": ["/a.png"] }), 1_010),
+        tool_result("oldest", bulky.clone(), 1_020),
+        user("turn 1", 2_000),
+        assistant_tool_call("older", ToolId::ImageFacts, json!({ "paths": ["/b.png"] }), 2_010),
+        tool_result("older", bulky.clone(), 2_020),
+        user("turn 2", 3_000),
+        assistant_tool_call("recent", ToolId::ImageFacts, json!({ "paths": ["/c.png"] }), 3_010),
+        tool_result("recent", bulky.clone(), 3_020),
+        user("turn 3 (latest)", 4_000),
+    ];
+    let all_in = assemble_prompt(
+        &prefix(None, &[]),
+        &transcript,
+        &envelope_at(4_000),
+        offset(),
+        1_000_000,
+    );
+    // Room for everything but about one result.
+    let budget = all_in.elision.estimated_tokens - 2_000;
+
+    let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), budget);
+
+    assert_eq!(assembled.elision.elided_call_ids, vec!["oldest".to_string()]);
+    assert!(
+        assembled.elision.budget_forced(),
+        "every elision is the budget's doing now"
+    );
+    assert!(!assembled.elision.over_budget());
+}
+
+#[test]
+fn an_old_tool_result_elides_to_a_typed_stub_under_pressure_and_prose_survives() {
+    // The same four-turn thread on a budget that can't hold the old listing: it elides to a
+    // typed stub, the newest (the latest turn) survives, and assistant prose is untouched.
+    let big_listing = json!({ "big_folders": ["Movies 210 GB", "Photos 88 GB"], "pad": "p".repeat(40_000) });
+    let transcript = four_turns_with_an_old_listing(&big_listing);
+
+    let assembled = assemble_prompt(
+        &prefix(None, &[]),
+        &transcript,
+        &envelope_at(4_000),
+        offset(),
+        TIGHT_BUDGET,
+    );
 
     // The old tool result (index 2) is now a typed stub naming its tool + size hint.
     let AgentPart::ToolResult(old) = &assembled.messages[2].parts[0] else {
