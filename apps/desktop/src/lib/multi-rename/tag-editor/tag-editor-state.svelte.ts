@@ -29,7 +29,7 @@ import {
   type TagEditorView,
   type TagTool,
 } from '#lib/tauri-commands/index.js'
-import { getLastTagApply, setLastTagApply, type LastTagApply } from './last-tag-apply.svelte'
+import { getLastTagApply, setLastTagApply, type LastTagApply, type UndoableApply } from './last-tag-apply.svelte'
 
 /** Why an Undo has nothing to reverse: no apply wrote anything yet, or the store couldn't keep the old tags. */
 export type TagUndoRefusal = { kind: 'nothingToUndo' } | { kind: 'undoUnavailable' }
@@ -38,6 +38,11 @@ export type TagUndoRefusal = { kind: 'nothingToUndo' } | { kind: 'undoUnavailabl
 export type TagStateError = TagEditorError | TagUndoRefusal
 
 export type TagStateResult<T> = { ok: true; value: T } | { ok: false; error: TagStateError }
+
+/** An undo's answer: on a failure, what it restored before it stopped comes with the error. */
+export type TagUndoResult =
+  | { ok: true; value: RestoreReport }
+  | { ok: false; error: TagStateError; restored: RestoreReport }
 
 export interface ApplyOptions {
   /** This apply finishes the last one ("Write anyway"): Undo reverses both, not just this one. */
@@ -66,7 +71,7 @@ export interface TagEditorState {
   changes(): Promise<TagStateResult<FileChangeView[]>>
   apply(request: ApplyRequest, options?: ApplyOptions): Promise<TagStateResult<TagApplyReport>>
   /** Writes the old tags of the last write back, the last apply first. A failure leaves the rest undoable. */
-  undo(): Promise<TagStateResult<RestoreReport>>
+  undo(): Promise<TagUndoResult>
   close(): Promise<void>
 }
 
@@ -124,7 +129,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       return pending > 0
     },
     get undoable() {
-      return getLastTagApply()
+      return undoableWrite()
     },
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
@@ -145,14 +150,18 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     async apply(request, options = {}) {
       const res = await track(() => applyTags(sessionId, request))
       if (!res.ok) return res
-      refusal = res.value.undoUnavailable ? { kind: 'undoUnavailable' } : { kind: 'nothingToUndo' }
-      setLastTagApply(nextUndoable(options.continuing === true ? getLastTagApply() : null, res.value))
+      const continuing = options.continuing === true
+      // A write that wrote nothing leaves the last one undoable: there's nothing newer to protect.
+      if (continuing || res.value.written.length > 0) {
+        refusal = res.value.undoUnavailable ? { kind: 'undoUnavailable' } : { kind: 'nothingToUndo' }
+        setLastTagApply(nextUndoable(continuing ? getLastTagApply() : null, res.value))
+      }
       await replaceView(() => openTagEditor(sessionId))
       return res
     },
     async undo() {
-      const last = getLastTagApply()
-      if (last === null) return { ok: false, error: refusal }
+      const last = undoableWrite()
+      if (last === null) return { ok: false, error: refusal, restored: emptyRestore() }
       // Taken first, so a second press doesn't undo the same write twice.
       setLastTagApply(null)
       const res = await undoAll(last, (applyId) => track(() => undoTagApply(applyId)))
@@ -178,36 +187,49 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   }
 }
 
-/** The write Undo reverses after `report`: this apply's id (when it wrote and kept the old tags) after `before`'s. */
+function emptyRestore(): RestoreReport {
+  return { restored: [], missing: [], failed: [] }
+}
+
+/** The write Undo reverses after `report`: this apply (when it wrote and kept the old tags) after `before`'s. */
 function nextUndoable(before: LastTagApply | null, report: TagApplyReport): LastTagApply | null {
-  const added = report.applyId !== null && !report.undoUnavailable && report.written.length > 0 ? [report.applyId] : []
-  const applyIds = [...(before?.applyIds ?? []), ...added]
-  if (applyIds.length === 0) return null
-  return { applyIds, written: (before?.written ?? 0) + report.written.length }
+  const keptOld = report.applyId !== null && !report.undoUnavailable && report.written.length > 0
+  const added: UndoableApply[] =
+    keptOld && report.applyId !== null ? [{ applyId: report.applyId, written: report.written.length }] : []
+  const applies = [...(before?.applies ?? []), ...added]
+  const partial = (before?.partial ?? false) || (report.undoUnavailable && report.written.length > 0)
+  // Kept with no applies when the write can't be undone at all, so a "Write anyway" after it is marked partial.
+  return applies.length === 0 && !partial ? null : { applies, partial }
+}
+
+/** The stored write while Undo has something to reverse. */
+function undoableWrite(): LastTagApply | null {
+  const last = getLastTagApply()
+  return last !== null && last.applies.length > 0 ? last : null
 }
 
 /**
  * Undoes `last`'s applies, the last one first. An apply the backend couldn't undo (an error, or files it couldn't
- * restore, whose record it keeps) stays in the store, so the user can try again.
+ * restore, whose record it keeps) stays in the store with its own count, so a retry says how many files are left.
  */
 async function undoAll(
   last: LastTagApply,
   undoOne: (applyId: string) => Promise<TagEditorResult<RestoreReport>>,
-): Promise<TagStateResult<RestoreReport>> {
-  const merged: RestoreReport = { restored: [], missing: [], failed: [] }
-  const kept: string[] = []
-  const left = [...last.applyIds]
-  for (let applyId = left.pop(); applyId !== undefined; applyId = left.pop()) {
-    const res = await undoOne(applyId)
+): Promise<TagUndoResult> {
+  const merged = emptyRestore()
+  const kept: UndoableApply[] = []
+  const left = [...last.applies]
+  for (let apply = left.pop(); apply !== undefined; apply = left.pop()) {
+    const res = await undoOne(apply.applyId)
     if (!res.ok) {
-      setLastTagApply({ ...last, applyIds: [...left, applyId, ...kept] })
-      return res
+      setLastTagApply({ ...last, applies: [...left, apply, ...kept] })
+      return { ok: false, error: res.error, restored: merged }
     }
     merged.restored.push(...res.value.restored)
     merged.missing.push(...res.value.missing)
     merged.failed.push(...res.value.failed)
-    if (res.value.failed.length > 0) kept.unshift(applyId)
+    if (res.value.failed.length > 0) kept.unshift({ ...apply, written: res.value.failed.length })
   }
-  setLastTagApply(kept.length > 0 ? { ...last, applyIds: kept } : null)
+  setLastTagApply(kept.length > 0 ? { ...last, applies: kept } : null)
   return { ok: true, value: merged }
 }

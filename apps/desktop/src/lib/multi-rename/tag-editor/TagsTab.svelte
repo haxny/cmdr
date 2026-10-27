@@ -38,7 +38,7 @@
                 return 'multiRename.tags.cover.unreadable'
             case 'undo':
             case 'noAppDataDir':
-                return 'multiRename.tags.undoStoreFailed'
+                return 'multiRename.tags.undoStoreUnavailable'
             default:
                 return 'multiRename.tags.editFailed'
         }
@@ -46,6 +46,17 @@
 
     /** The field whose box last had focus, for Case; focus on anything else in the tags clears it. */
     let focusedField = $state<TagField | null>(null)
+    let toolsBar = $state<HTMLElement>()
+
+    /**
+     * Focus anywhere in the tab names the field Case changes: a tag box names its field, anything else (the cover,
+     * the Apply panel, a Clear button) none. Focus moving into the tools bar keeps it, so Case reaches the field
+     * the user just left for the button; focus leaving the tab clears it.
+     */
+    function followFocus(target: EventTarget | null): void {
+        if (target instanceof Node && toolsBar?.contains(target) === true) return
+        focusedField = target instanceof HTMLElement ? focusedFieldOf(target.id) : null
+    }
     let applyPanel = $state<TagsTabApi>()
 
     /** A tool works on what the files hold now, so an edit a blur just sent lands first. */
@@ -65,7 +76,14 @@
     }
 </script>
 
-<div class="tags-tab" id="sheet-panel-tags" role="tabpanel" aria-labelledby="sheet-tab-tags">
+<div
+    class="tags-tab"
+    id="sheet-panel-tags"
+    role="tabpanel"
+    aria-labelledby="sheet-tab-tags"
+    onfocusin={(e) => { followFocus(e.target) }}
+    onfocusout={(e) => { if (e.relatedTarget instanceof Node && !e.currentTarget.contains(e.relatedTarget)) focusedField = null }}
+>
     {#if tags.view === null}
         {#if tags.error !== null}
             <p role="alert">{tString('multiRename.tags.error')}</p>
@@ -80,6 +98,7 @@
         {#if tags.error !== null}
             <p class="notice" role="alert">{tString(editErrorKey(tags.error))}</p>
         {/if}
+        <div bind:this={toolsBar}>
         <TagToolsBar
             trackCount={view.tracks.length}
             extras={view.extras}
@@ -87,7 +106,8 @@
             disabled={!view.editable}
             onTool={(tool: TagTool) => void runTool(tool)}
         />
-        <div class="columns" onfocusin={(e) => { focusedField = e.target instanceof HTMLElement ? focusedFieldOf(e.target.id) : null }}>
+        </div>
+        <div class="columns">
             <div class="main">
                 <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
                 <TrackList tracks={view.tracks} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />

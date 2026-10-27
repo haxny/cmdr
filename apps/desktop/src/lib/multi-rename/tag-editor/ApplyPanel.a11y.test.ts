@@ -21,7 +21,10 @@ async function mountPanel(fake = fakeState()): Promise<HTMLElement> {
 
 describe('ApplyPanel a11y', () => {
   it('at rest with a diacritics warning and Undo has no violations', async () => {
-    const fake = { ...fakeState({ ...PANEL_VIEW, diacritics: ['album'] }), undoable: { applyIds: ['A1'], written: 2 } }
+    const fake = {
+      ...fakeState({ ...PANEL_VIEW, diacritics: ['album'] }),
+      undoable: { applies: [{ applyId: 'A1', written: 2 }], partial: true },
+    }
     await expectNoA11yViolations(await mountPanel(fake))
   })
 

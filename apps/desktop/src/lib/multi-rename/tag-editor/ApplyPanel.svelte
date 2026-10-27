@@ -9,8 +9,9 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import { formatUnitList } from '#lib/intl/list-format.js'
+    import { joinSentences } from '#lib/intl/sentence-join.js'
     import type { ContentKind, TagField } from '#lib/ipc/bindings.js'
-    import type { FileChangeView, RestoreReport, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
+    import type { FileChangeView, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
     import Button from '#lib/ui/Button.svelte'
     import ToggleGroup from '#lib/ui/ToggleGroup.svelte'
     import { confirmDialog } from '#lib/utils/confirm-dialog.js'
@@ -18,7 +19,8 @@
     import WouldDropDialog from './WouldDropDialog.svelte'
     import { outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
     import { FIELD_LABELS } from './field-labels'
-    import type { TagEditorState } from './tag-editor-state.svelte'
+    import { undoableCount } from './last-tag-apply.svelte'
+    import type { TagEditorState, TagUndoResult } from './tag-editor-state.svelte'
 
     interface Props {
         tags: TagEditorState
@@ -32,9 +34,12 @@
         /** The list shown, and the view it was made from: an edit since then lists again before any write. */
         | { step: 'review'; changes: FileChangeView[]; seen: TagEditorView | null }
         | { step: 'writing' }
-        | { step: 'wouldDrop'; first: TagApplyReport; answering: boolean }
+        /** `seen` is the view after the first write: an edit made while the choice shows lists again. */
+        | { step: 'wouldDrop'; first: TagApplyReport; seen: TagEditorView | null; answering: boolean }
         | { step: 'done'; outcome: Outcome }
-        | { step: 'undone'; report: RestoreReport }
+        /** The app refused before writing any file (it couldn't keep the old tags); the tab words why. */
+        | { step: 'refused' }
+        | { step: 'undone'; restored: number; left: number }
 
     let current = $state.raw<Step>({ step: 'idle' })
     let kind = $state<ContentKind>('audiobook')
@@ -46,6 +51,7 @@
         { value: 'audiobook', label: tString('multiRename.tags.kind.audiobook') },
         { value: 'music', label: tString('multiRename.tags.kind.music') },
     ])
+    const kindLabel = $derived(kindOptions.find((option) => option.value === kind)?.label ?? '')
     const fieldNames = (fields: readonly TagField[]): string[] =>
         fields.map((field) => tString(FIELD_LABELS[field]))
 
@@ -64,17 +70,25 @@
         current = res.ok ? { step: 'review', changes: res.value, seen: tags.view } : { step: 'idle' }
     }
 
-    async function write(seen: TagEditorView | null): Promise<void> {
+    /** Writes what `reviewed` listed. A list with nothing in it writes nothing (and so keeps the last Undo). */
+    async function write(reviewed: { changes: FileChangeView[]; seen: TagEditorView | null }): Promise<void> {
+        if (reviewed.changes.length === 0) return
         await tags.settled()
-        if (tags.view !== seen) {
+        if (tags.view !== reviewed.seen) {
             await review()
             return
         }
         current = { step: 'writing' }
         const res = await tags.apply({ kind, allowFrameLoss: false, skip: [] })
-        if (!res.ok) current = { step: 'idle' }
-        else if (res.value.wouldDrop.length > 0) current = { step: 'wouldDrop', first: res.value, answering: false }
-        else current = { step: 'done', outcome: outcomeOf(res.value) }
+        if (!res.ok) current = refusedStep(res.error.kind)
+        else if (res.value.wouldDrop.length > 0) {
+            current = { step: 'wouldDrop', first: res.value, seen: tags.view, answering: false }
+        } else current = { step: 'done', outcome: outcomeOf(res.value) }
+    }
+
+    /** Only these refusals come before any file is touched; another one may come after some were written. */
+    function refusedStep(kind: string): Step {
+        return kind === 'undo' || kind === 'noAppDataDir' ? { step: 'refused' } : { step: 'idle' }
     }
 
     /** Every path the write knows, so "Write anyway" can skip all but the would-drop ones. */
@@ -88,8 +102,14 @@
         ]
     }
 
-    async function writeAnyway(first: TagApplyReport): Promise<void> {
-        current = { step: 'wouldDrop', first, answering: true }
+    async function writeAnyway(first: TagApplyReport, seen: TagEditorView | null): Promise<void> {
+        current = { step: 'wouldDrop', first, seen, answering: true }
+        await tags.settled()
+        if (tags.view !== seen) {
+            // Something was edited while the choice showed: nothing is written that wasn't listed.
+            await review()
+            return
+        }
         const request = writeAnywayRequest(kind, first.wouldDrop, knownPaths(first))
         const res = await tags.apply(request, { continuing: true })
         // A refused second write leaves those files unwritten, as a skip does; the tab words the refusal.
@@ -100,18 +120,40 @@
         current = { step: 'done', outcome: outcomeOf(first, { skipped: true }) }
     }
 
+    /** The undo question: how many files go back, that later changes to them are overwritten, and unwritten edits too. */
+    function undoQuestion(count: number): string {
+        const message = tString('multiRename.tags.undo.message', { count, countText: formatInteger(count) })
+        return tags.view?.dirty === true
+            ? joinSentences([message, tString('multiRename.tags.undo.unwrittenLost')])
+            : message
+    }
+
     async function undo(): Promise<void> {
+        await tags.settled()
         const last = tags.undoable
         if (last === null) return
-        const params = { count: last.written, countText: formatInteger(last.written) }
         const sure = await confirmDialog(
-            tString('multiRename.tags.undo.message', params),
+            undoQuestion(undoableCount(last)),
             tString('multiRename.tags.undo.title'),
             tString('multiRename.tags.undo.confirm'),
         )
         if (!sure) return
-        const res = await tags.undo()
-        if (res.ok) current = { step: 'undone', report: res.value }
+        current = undoneStep(await tags.undo())
+    }
+
+    /** What an undo did: the files back as they were, and those still left (a failure leaves them undoable). */
+    function undoneStep(res: TagUndoResult): Step {
+        if (res.ok) {
+            const left = res.value.missing.length + res.value.failed.length
+            return { step: 'undone', restored: res.value.restored.length, left }
+        }
+        const left = tags.undoable === null ? 0 : undoableCount(tags.undoable)
+        return { step: 'undone', restored: res.restored.restored.length, left }
+    }
+
+    async function removeDiacritics(fields: TagField[]): Promise<void> {
+        await tags.settled()
+        await tags.tool({ kind: 'stripDiacritics', fields })
     }
 
     async function reload(): Promise<void> {
@@ -130,8 +172,8 @@
     /** The sheet's Start: lists the changes, and from the list writes them. */
     export async function start(): Promise<void> {
         if (!canWrite) return
-        if (current.step === 'review') await write(current.seen)
-        else if (current.step === 'idle' || current.step === 'done' || current.step === 'undone') await review()
+        if (current.step === 'review') await write(current)
+        else if (['idle', 'done', 'refused', 'undone'].includes(current.step)) await review()
     }
 
     const undoable = $derived(tags.undoable !== null && current.step !== 'writing' && current.step !== 'wouldDrop')
@@ -144,7 +186,7 @@
             <Button
                 size="mini"
                 disabled={!canWrite}
-                onclick={() => { void tags.tool({ kind: 'stripDiacritics', fields: [...view.diacritics] }) }}
+                onclick={() => { void removeDiacritics([...view.diacritics]) }}
             >
                 {tString('multiRename.tags.diacritics.fix')}
             </Button>
@@ -152,11 +194,18 @@
     {/if}
 
     {#if current.step === 'review'}
-        {@const { changes, seen } = current}
+        {@const reviewed = current}
+        {@const { changes } = reviewed}
         {#if changes.length === 0}
             <p>{tString('multiRename.tags.write.nothing')}</p>
         {:else}
-            <p>{tString('multiRename.tags.write.summary', { count: changes.length, countText: formatInteger(changes.length) })}</p>
+            <p>
+                {tString('multiRename.tags.write.summaryAs', {
+                    kind: kindLabel,
+                    count: changes.length,
+                    countText: formatInteger(changes.length),
+                })}
+            </p>
             <ul class="changes" aria-label={tString('multiRename.tags.write.changeLabel')}>
                 {#each changes as change (change.path)}
                     <li>{changeText(change)}</li>
@@ -164,17 +213,17 @@
             </ul>
         {/if}
         <div class="actions">
-            <Button variant="primary" disabled={!canWrite || changes.length === 0} keyHint={{ commandId: 'multiRename.rename' }} onclick={() => { void write(seen) }}>
+            <Button variant="primary" disabled={!canWrite || changes.length === 0} keyHint={{ commandId: 'multiRename.rename' }} onclick={() => { void write(reviewed) }}>
                 {tString('multiRename.tags.write.confirm')}
             </Button>
             <Button onclick={() => { current = { step: 'idle' } }}>{tString('multiRename.tags.write.back')}</Button>
         </div>
     {:else if current.step === 'wouldDrop'}
-        {@const { first, answering } = current}
+        {@const { first, seen, answering } = current}
         <WouldDropDialog
             rows={first.wouldDrop}
             busy={answering}
-            onWriteAnyway={() => { void writeAnyway(first) }}
+            onWriteAnyway={() => { void writeAnyway(first, seen) }}
             onSkip={() => { skip(first) }}
         />
     {:else}
@@ -183,12 +232,17 @@
         {:else if current.step === 'writing'}
             <p role="status">{tString('multiRename.tags.write.writing')}</p>
         {:else if current.step === 'done'}
-            <ApplyOutcome outcome={current.outcome} onReload={() => { void reload() }} />
+            <ApplyOutcome
+                outcome={current.outcome}
+                someUndoable={tags.undoable !== null}
+                onReload={() => { void reload() }}
+            />
+        {:else if current.step === 'refused'}
+            <p role="status">{tString('multiRename.tags.write.refused')}</p>
         {:else if current.step === 'undone'}
-            {@const { report } = current}
-            {@const left = report.missing.length + report.failed.length}
+            {@const { restored, left } = current}
             <p role="status">
-                {tString('multiRename.tags.undo.done', { count: report.restored.length, countText: formatInteger(report.restored.length) })}
+                {#if restored > 0}{tString('multiRename.tags.undo.done', { count: restored, countText: formatInteger(restored) })}{/if}
                 {#if left > 0}{tString('multiRename.tags.undo.notRestored', { count: left, countText: formatInteger(left) })}{/if}
             </p>
         {/if}

@@ -16,7 +16,7 @@ afterEach(() => {
 const CLEAN: Outcome = { written: 3, failed: [], changedOnDisk: [], skipped: [], undoUnavailable: false }
 
 async function mountOutcome(outcome: Outcome): Promise<HTMLElement> {
-  const mounted = await mountInto(ApplyOutcome, { outcome, onReload: vi.fn() })
+  const mounted = await mountInto(ApplyOutcome, { outcome, someUndoable: false, onReload: vi.fn() })
   cleanup = mounted.cleanup
   return mounted.root
 }

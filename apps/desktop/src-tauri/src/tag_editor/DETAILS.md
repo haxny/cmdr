@@ -50,8 +50,9 @@ file that something else renamed.
    `[=tag.*]` previews show the new values.
 
 `undo(app, apply_id)` (`undo.rs`) restores (`allow_frame_loss: false`), forgets the record when nothing failed (kept
-for a retry otherwise), re-reads the restored files into the tag session named in the id if it's still open, and
-re-reads them in the media cache. It works after the session closed: the record holds paths.
+for a retry otherwise), re-reads the restored files into every open tag session that holds them (the undo can come
+from a later sheet than the one that wrote; each file is read once, outside the tag lock), and re-reads them in the
+media cache. It works after the session closed: the record holds paths.
 
 The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer);
 no app data folder is `TagEditorError::NoAppDataDir`. Tests call `apply_with` / `undo_with` with their own store, and

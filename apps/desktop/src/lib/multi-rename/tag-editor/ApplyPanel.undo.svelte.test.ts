@@ -32,7 +32,10 @@ afterEach(() => {
 
 describe('ApplyPanel undo', () => {
   it('undo_after_write_calls_undo_tag_apply, after a warning that later changes are overwritten', async () => {
-    ipc.openTagEditor.mockResolvedValue({ ok: true, value: PANEL_VIEW })
+    // Dirty until the write; the view each apply reads back holds what's on disk.
+    ipc.openTagEditor
+      .mockResolvedValueOnce({ ok: true, value: PANEL_VIEW })
+      .mockResolvedValue({ ok: true, value: { ...PANEL_VIEW, dirty: false } })
     ipc.getTagChanges.mockResolvedValue({ ok: true, value: CHANGES })
     ipc.applyTags
       .mockResolvedValueOnce({

@@ -1234,10 +1234,6 @@
   "@multiRename.tags.write.writing": {
     "sourceHash": "cb12323"
   },
-  "multiRename.tags.write.summary": "{count, plural, one {{countText} file will change:} other {{countText} files will change:}}",
-  "@multiRename.tags.write.summary": {
-    "sourceHash": "ef919ef"
-  },
   "multiRename.tags.write.changeLabel": "Files that will change",
   "@multiRename.tags.write.changeLabel": {
     "sourceHash": "49b54dc"
@@ -1358,10 +1354,6 @@
   "@multiRename.tags.undo.notRestored": {
     "sourceHash": "97939fa"
   },
-  "multiRename.tags.undoStoreFailed": "Couldn’t use the store that keeps the old tags for Undo, so no file was changed.",
-  "@multiRename.tags.undoStoreFailed": {
-    "sourceHash": "1dab914"
-  },
   "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
   "@multiRename.tags.wouldDrop.title": {
     "sourceHash": "5afab0b"
@@ -1385,5 +1377,25 @@
   "multiRename.tags.wouldDrop.skip": "Skip these files",
   "@multiRename.tags.wouldDrop.skip": {
     "sourceHash": "ddb7a77"
+  },
+  "multiRename.tags.write.summaryAs": "{count, plural, one {Writing as {kind}: {countText} file will change:} other {Writing as {kind}: {countText} files will change:}}",
+  "@multiRename.tags.write.summaryAs": {
+    "sourceHash": "cba70de"
+  },
+  "multiRename.tags.write.refused": "No file was written.",
+  "@multiRename.tags.write.refused": {
+    "sourceHash": "6762f25"
+  },
+  "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
+  "@multiRename.tags.write.noUndoSome": {
+    "sourceHash": "3ae488c"
+  },
+  "multiRename.tags.undoStoreUnavailable": "Couldn’t use the store that keeps the old tags for Undo.",
+  "@multiRename.tags.undoStoreUnavailable": {
+    "sourceHash": "1455c16"
+  },
+  "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
+  "@multiRename.tags.undo.unwrittenLost": {
+    "sourceHash": "2ad42a1"
   }
 }

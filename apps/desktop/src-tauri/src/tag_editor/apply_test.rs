@@ -4,6 +4,7 @@
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use cmdr_local::LocalPosixVolume;
@@ -299,6 +300,39 @@ fn undo_after_session_closed_still_works() {
     assert_eq!(title_of(&dir, "a.mp3"), one("Alpha"));
 }
 
+/// An undo from a later sheet: the session that wrote is gone, another one over the same files is
+/// open, and it holds the restored tags afterwards, not the written ones.
+#[test]
+fn undo_reloads_every_open_session_that_holds_a_restored_file() {
+    let (dir, listing, first) = album("tag-apply-undo-other-sheet");
+    let (_store_dir, store) = store("tag-apply-undo-other-sheet-store");
+    open(&first, false).expect("opens");
+    edit(&first, vec![set_title(&dir, "a.mp3", "Alpha edited")]).expect("edits");
+    let report = apply_with(&store, &first, request()).expect("applies");
+    done(&first);
+    let later = open_rename(listing.id(), true, None, 0)
+        .expect("a later rename session opens")
+        .session_id;
+    let before_undo = open(&later, false).expect("the later sheet opens its tags");
+    assert_eq!(before_undo.tracks[0].title.as_deref(), Some("Alpha edited"));
+
+    undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+
+    let view = open(&later, false).expect("still open");
+    assert_eq!(
+        view.tracks[0].title.as_deref(),
+        Some("Alpha"),
+        "the later sheet reads the restored tags"
+    );
+    assert!(!view.dirty);
+    assert_eq!(
+        unchanged_on_disk(&later, &dir.join("a.mp3")),
+        Ok(true),
+        "re-read after the undo"
+    );
+    done(&later);
+}
+
 #[test]
 fn undo_of_an_unknown_apply_is_typed() {
     let (_store_dir, store) = store("tag-apply-undo-unknown");
@@ -446,13 +480,24 @@ async fn media_read(id: &str) {
     .await;
 }
 
-/// Review focus 5: after a write, the Rename tab's `[=tag.*]` preview shows the new values.
+/// Review focus 5: after a write, and after its undo, the Rename tab's `[=tag.*]` preview shows the
+/// new values, and the read reports its end: the event the sheet re-previews on.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn media_cache_dropped_for_written_rows() {
     ensure_root_volume();
     let (dir, _listing, id) = album("tag-apply-media");
     let (_store_dir, store) = store("tag-apply-media-store");
-    start_media(&id, Arc::new(|_| {})).expect("the read starts");
+    let ends = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::clone(&ends);
+    start_media(
+        &id,
+        Arc::new(move |progress| {
+            if progress.done {
+                counter.fetch_add(1, Ordering::SeqCst);
+            }
+        }),
+    )
+    .expect("the read starts");
     media_read(&id).await;
     assert_eq!(new_name(&id, "a.mp3"), "Book a.mp3");
 
@@ -466,11 +511,30 @@ async fn media_cache_dropped_for_written_rows() {
         }],
     )
     .expect("edits");
-    apply_with(&store, &id, request()).expect("applies");
+    let ends_before_write = ends.load(Ordering::SeqCst);
+    let report = apply_with(&store, &id, request()).expect("applies");
     media_read(&id).await;
 
     assert_eq!(new_name(&id, "a.mp3"), "Kniha a.mp3");
     assert_eq!(new_name(&id, "b.mp3"), "Book b.mp3");
+    wait_until_async(Duration::from_secs(5), "the re-read to report its end", || {
+        ends.load(Ordering::SeqCst) > ends_before_write
+    })
+    .await;
+
+    let ends_before_undo = ends.load(Ordering::SeqCst);
+    undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    media_read(&id).await;
+
+    assert_eq!(
+        new_name(&id, "a.mp3"),
+        "Book a.mp3",
+        "the undo's old album is back in the preview"
+    );
+    wait_until_async(Duration::from_secs(5), "the undo's re-read to report its end", || {
+        ends.load(Ordering::SeqCst) > ends_before_undo
+    })
+    .await;
     done(&id);
 }
 

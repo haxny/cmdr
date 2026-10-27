@@ -515,18 +515,16 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
     }
 }
 
-/// Reads `paths` again (after an undo rewrote them) and puts them in the session in place of
-/// what it held, edits to them dropped. Paths the session doesn't hold are left out. Reads
-/// happen before the lock; a no-op when the session is gone.
-pub(super) fn reload(session_id: &str, paths: &[PathBuf]) {
+/// Reads `paths` again (after an undo rewrote them) and puts them in EVERY open tag session that
+/// holds them, in place of what it held, edits to them dropped: the undo may come from another
+/// sheet than the one that wrote. Paths no session holds are left out. Each file is read once,
+/// outside the lock; only the tag lock is taken, so the rename → tag lock order holds.
+pub(super) fn reload(paths: &[PathBuf]) {
     let held: Vec<PathBuf> = {
         let sessions = SESSIONS.lock_ignore_poison();
-        let Some(session) = sessions.get(session_id) else {
-            return;
-        };
         paths
             .iter()
-            .filter(|path| session.by_path.contains_key(*path))
+            .filter(|path| sessions.values().any(|session| session.by_path.contains_key(*path)))
             .cloned()
             .collect()
     };
@@ -538,10 +536,10 @@ pub(super) fn reload(session_id: &str, paths: &[PathBuf]) {
         })
         .collect();
     let mut sessions = SESSIONS.lock_ignore_poison();
-    if let Some(session) = sessions.get_mut(session_id) {
-        for (path, entry) in fresh {
-            if let Some(slot) = session.by_path.get_mut(&path) {
-                *slot = entry;
+    for session in sessions.values_mut() {
+        for (path, entry) in &fresh {
+            if let Some(slot) = session.by_path.get_mut(path) {
+                *slot = entry.clone();
             }
         }
     }

@@ -12,11 +12,13 @@
 
     interface Props {
         outcome: ApplyOutcome
+        /** Undo can still reverse some files of this write (the ones whose old tags were kept). */
+        someUndoable: boolean
         /** Reads every file again (after "changed on disk"). */
         onReload: () => void
     }
 
-    const { outcome, onReload }: Props = $props()
+    const { outcome, someUndoable, onReload }: Props = $props()
 
     const lists = $derived(
         [
@@ -48,7 +50,9 @@
         </p>
     {/if}
     {#if outcome.undoUnavailable}
-        <p class="note">{tString('multiRename.tags.write.noUndo')}</p>
+        <p class="note">
+            {tString(someUndoable ? 'multiRename.tags.write.noUndoSome' : 'multiRename.tags.write.noUndo')}
+        </p>
     {/if}
     {#each lists as list (list.heading)}
         <p>{tString(list.heading)}</p>

@@ -112,12 +112,40 @@ describe('TagsTab', () => {
     expect(state.tool).toHaveBeenCalledWith({ kind: 'case', case: 'lower', fields: ['album'] })
   })
 
+  it('Case forgets a field once focus moves elsewhere in the tab, but not into the tools bar', async () => {
+    const { root, state } = await mountTab()
+    const buttons = () => [...root.querySelectorAll('button')]
+    const named = (text: string) => {
+      const found = buttons().find((b) => b.textContent.trim() === text)
+      if (!found) throw new Error(`no ${text} button`)
+      return found
+    }
+    const focusIn = (el: Element) => el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    focusIn(byId(root, 'tag-field-album'))
+    focusIn(named('Case'))
+    named('Case').click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(root.textContent).toContain('Changes: Album')
+    // Focus on the Write tags… button: the album box was left, so Case takes the name fields again.
+    const write = buttons().find((b) => b.textContent.includes('Write tags…'))
+    if (!write) throw new Error('no Write tags… button')
+    focusIn(write)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    named('lower case').click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.tool).toHaveBeenCalledWith({
+      kind: 'case',
+      case: 'lower',
+      fields: ['title', 'album', 'artist', 'albumArtist', 'performer'],
+    })
+  })
+
   it.each([[{ kind: 'undo', error: { type: 'notSupported' } }], [{ kind: 'noAppDataDir' }]] as const)(
-    'an undo store refusal (%j) says nothing was changed',
+    'an undo store refusal (%j) is worded as such',
     async (error) => {
       const { root } = await mountTab({ error })
       expect(root.querySelector('[role="alert"]')?.textContent).toBe(
-        'Couldn’t use the store that keeps the old tags for Undo, so no file was changed.',
+        'Couldn’t use the store that keeps the old tags for Undo.',
       )
     },
   )

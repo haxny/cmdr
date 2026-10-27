@@ -1397,13 +1397,6 @@
   "@multiRename.tags.write.writing": {
     "description": "Shown in the Tags tab of Multi-Rename: while tags are written into the files."
   },
-  "multiRename.tags.write.summary": "{count, plural, one {{countText} file will change:} other {{countText} files will change:}}",
-  "@multiRename.tags.write.summary": {
-    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files a write will change, before anything is written.",
-    "placeholders": {
-      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
-    }
-  },
   "multiRename.tags.write.changeLabel": "Files that will change",
   "@multiRename.tags.write.changeLabel": {
     "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the list of files a write will change."
@@ -1547,10 +1540,6 @@
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
   },
-  "multiRename.tags.undoStoreFailed": "Couldn’t use the store that keeps the old tags for Undo, so no file was changed.",
-  "@multiRename.tags.undoStoreFailed": {
-    "description": "Shown in the Tags tab of Multi-Rename: when a write or an undo couldn’t start because the app couldn’t save or read the old tags."
-  },
   "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
   "@multiRename.tags.wouldDrop.title": {
     "description": "Shown in the Tags tab of Multi-Rename: heading of the choice shown when writing some files would drop tag data the editor doesn’t show."
@@ -1581,5 +1570,29 @@
   "multiRename.tags.wouldDrop.skip": "Skip these files",
   "@multiRename.tags.wouldDrop.skip": {
     "description": "Shown in the Tags tab of Multi-Rename: leaves the files that would lose tag data unwritten."
+  },
+  "multiRename.tags.write.summaryAs": "{count, plural, one {Writing as {kind}: {countText} file will change:} other {Writing as {kind}: {countText} files will change:}}",
+  "@multiRename.tags.write.summaryAs": {
+    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files a write will change, before anything is written. It names the chosen content kind.",
+    "placeholders": {
+      "kind": "the content kind the tags are written as: Audiobook or Music",
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.write.refused": "No file was written.",
+  "@multiRename.tags.write.refused": {
+    "description": "Shown in the Tags tab of Multi-Rename: after a write the app refused before touching any file (it couldn’t keep the old tags for Undo)."
+  },
+  "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
+  "@multiRename.tags.write.noUndoSome": {
+    "description": "Shown in the Tags tab of Multi-Rename: after a write where only some files’ old tags could be kept for Undo."
+  },
+  "multiRename.tags.undoStoreUnavailable": "Couldn’t use the store that keeps the old tags for Undo.",
+  "@multiRename.tags.undoStoreUnavailable": {
+    "description": "Shown in the Tags tab of Multi-Rename: when a write or an undo couldn’t go on because the app couldn’t save or read the old tags."
+  },
+  "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
+  "@multiRename.tags.undo.unwrittenLost": {
+    "description": "Second sentence of the question asked in the Tags tab of Multi-Rename before undoing the last tag write, when some tag changes are not written yet."
   }
 }

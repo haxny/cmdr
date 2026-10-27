@@ -42,8 +42,9 @@ fn open_store<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<UndoStore,
 }
 
 /// Writes the old tags of apply `apply_id` back. The files it restored are read again into
-/// their tag session if it's still open, and Multi-Rename's media cache reads them again. A
-/// clean restore forgets the record; one with failures keeps it, so the user can try again.
+/// every open tag session that holds them (another sheet's too), and Multi-Rename's media cache
+/// reads them again. A clean restore forgets the record; one with failures keeps it, so the user
+/// can try again.
 pub fn undo<R: tauri::Runtime>(app: &tauri::AppHandle<R>, apply_id: String) -> Result<RestoreReport, TagEditorError> {
     with_store(app, |store| undo_with(store, &apply_id))
 }
@@ -60,17 +61,7 @@ pub(super) fn undo_with(store: &UndoStore, apply_id: &str) -> Result<RestoreRepo
     {
         log::warn!(target: LOG_TARGET, "Couldn't forget an undone tag write: {error:?}");
     }
-    if let Some(session_id) = session_of(apply_id) {
-        reload(session_id, &report.restored);
-    }
+    reload(&report.restored);
     reread_media(LOCAL_VOLUME_ID, &report.restored);
     Ok(report)
-}
-
-/// The Multi-Rename session an apply id names: `tags-<unix millis>-<session>`.
-fn session_of(apply_id: &str) -> Option<&str> {
-    let mut parts = apply_id.splitn(3, '-');
-    (parts.next()? == "tags").then_some(())?;
-    parts.next()?;
-    parts.next()
 }
