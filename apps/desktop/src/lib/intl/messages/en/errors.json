@@ -3857,9 +3857,9 @@
       "path": "a full file or folder path"
     }
   },
-  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr can’t give each item its own name in {path} yet.",
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr can’t give each item its own name on the way into or out of a zip archive, so nothing went to {path}.",
   "@errors.write.namedLeavesRefused.message.routeCannotName": {
-    "description": "Explanation, when the destination (a zip archive, a phone, or a server) can't take a new name per item yet; {path} is the destination. Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU), so {path} is a literal replacement target, not ICU syntax: keep it spelled exactly and move it freely to suit your grammar.",
+    "description": "Explanation, when the items would move or copy into a zip archive, or move out of one, which can't take a new name per item; {path} is the destination folder. Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU), so {path} is a literal replacement target, not ICU syntax: keep it spelled exactly and move it freely to suit your grammar.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position.",
     "placeholders": {

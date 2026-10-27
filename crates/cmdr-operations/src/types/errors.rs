@@ -157,8 +157,8 @@ pub enum NamedLeavesRefusal {
     /// An item already sits in the destination folder, so naming it there is a
     /// rename, not a transfer. `path` is that item.
     AlreadyInDestination,
-    /// The destination can't take a name per item (a zip, or another volume
-    /// type). `path` is the destination.
+    /// The route can't take a name per item: an archive changeset (copy or move
+    /// into a zip, move out of one). `path` is the destination.
     RouteCannotName,
 }
 

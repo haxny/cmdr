@@ -189,7 +189,7 @@ const cases: Case[] = [
       ],
       [
         'routeCannotName',
-        'Cmdr can’t give each item its own name in /d/ghost.pdf yet.',
+        'Cmdr can’t give each item its own name on the way into or out of a zip archive, so nothing went to /d/ghost.pdf.',
         'Move or copy them under their own names, then rename them there.',
       ],
     ] as const

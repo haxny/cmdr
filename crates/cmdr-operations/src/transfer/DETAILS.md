@@ -605,12 +605,15 @@ only in Rust). The destination argument remains its parent directory. On the wir
     wrong order;
   - any source already in the destination (`alreadyInDestination`, folded or by `dev+ino`): naming it there is a rename,
     and the same-volume identity guard would drop a case-only leaf;
-  - a route that can't name each source (`routeCannotName`): archive changesets for good (copy into, move into, and move
-    out of a zip), and every volume engine, same-volume moves included, until those apply a per-source map
-    (`refuse_per_source_leaves_here`, at the fork in `copy_between_volumes` / `move_between_volumes`).
-  - Two sources sharing an ORIGINAL name still refuse byte-exact in the started operation
-    (`validate_source_names_are_distinct`), map or not: the native engines key their subtree remap on
-    `<destination>/<own name>`, so two such sources can't be told apart there.
+  - a route that can't name each source (`routeCannotName`): an archive changeset (copy into, move into, and move out of
+    a zip), whose plan takes one leaf at most (`refuse_per_source_leaves_here`, in `route_volume_copy` /
+    `route_volume_move`). Every other engine names each source.
+  - On a route whose ends aren't both on this machine, the comparisons are by folded path alone, even across two
+    volumes: the two could be one share under two addresses, and a refusal there costs a retry.
+  - Two sources sharing an ORIGINAL name still refuse byte-exact on the native engines, in the started operation
+    (`validate_source_names_are_distinct`), map or not: they key their subtree remap on `<destination>/<own name>`, so
+    two such sources can't be told apart there. The volume engines key every landing on the source PATH, so there two
+    such sources named apart land apart.
 
 Native Copy seeds the shared `named_destination::initial_remap` before its identity check. The per-file loop and
 empty-directory pass use that map, so staging, journal entries, durability, and rollback refer to the requested paths.
@@ -622,11 +625,16 @@ its staging directory and lands that same leaf at the destination; ordinary stag
 and flushes the named files and directories. Original-source stamps and deletion ledgers continue naming the originals.
 
 Both-local volume facades forward the leaves into the native engines, re-keying a per-source map with `rebased` in the
-same step they re-root the sources (`on_local_root`), so a key can't drift from the path the engine walks. Other volume
-copies and moves apply them in the serial async driver, which names each source's landing path (`DriverConfig::leaves`)
-before the landing probe and conflict resolution. Same-volume Move's no-op guard also checks the requested leaf. Archive
-destinations carry it into the changeset's top-level inner path before conflicts and subtree expansion; archive moves
-remove only originals whose bytes committed. Archive move-out passes the same config to its extraction engine.
+same step they re-root the sources (`on_local_root`), so a key can't drift from the path the engine walks. Every other
+volume copy and move names each source's landing path before anything probes or resolves a clash there: the serial async
+driver (cross-volume copy and move, the same-volume move by rename and by copy) through `DriverConfig::leaves`, the
+concurrent copy driver (three or more sources) in `ConcurrentCopy::prepare_source`, whose destination listing is
+consulted at that name. A clash is therefore asked about, skipped, or overwritten at the RENAMED path, never at a
+bystander holding the source's own name. Same-volume Move's no-op guard also checks the requested leaf. On MTP a
+cross-folder rename is two device calls, and its order keeps a file holding the old name safe
+(`crates/cmdr-mtp/DETAILS.md` § "A move that also renames"). Archive destinations carry it into the changeset's
+top-level inner path before conflicts and subtree expansion; archive moves remove only originals whose bytes committed.
+Archive move-out passes the same config to its extraction engine.
 
 The dialog refuses a complete target equal to its source; directory-targeted Paste/Duplicate callers retain the backend
 self-collision behavior below. Frontend interpretation: `apps/desktop/src/lib/file-operations/transfer/DETAILS.md` §
@@ -635,7 +643,10 @@ journal suite, `volume/named_move_tests.rs`, archive `copy_into_tests.rs`, the r
 `../named_leaf_entry_tests.rs`, the undo of every named route in `../named_leaf_undo_tests.rs`, and the wire shape in
 `../types/transfer_leaves_wire_tests.rs`. Per-source maps: every start's landing and refusal in
 `../named_leaves_tests.rs`, the native engines' clashes at the renamed path and interrupted runs in
-`named_leaves_engine_tests.rs`, and their undo in `../named_leaf_undo_tests.rs` and the move journal suite.
+`named_leaves_engine_tests.rs`, and their undo in `../named_leaf_undo_tests.rs` and the move journal suite. The volume
+engines' landing, clashes, refusals, queued-then-pruned run, and undo, on every route:
+`../named_leaves_volume_tests.rs`. Onto a real SMB share and a virtual phone, through the operation log's undo:
+`apps/desktop/src-tauri/src/operations_host/backend_suites/network_named_leaves_test_support.rs`.
 
 ### Self-collision (duplicating in place)
 

@@ -83,11 +83,12 @@ impl ConcurrentCopy<'_> {
         // fast path, never a wrong branch, so it isn't worth a probe.
         let source_size_hint = source_hint.and_then(|hint| (!hint.is_directory).then_some(hint.size));
 
-        // Resolve destination path + conflict synchronously.
-        let mut dest_item_path = if let Some(name) = source_path.file_name() {
-            self.dest_path.join(name)
-        } else {
-            self.dest_path.to_path_buf()
+        // Resolve destination path + conflict synchronously. The name it lands
+        // as is the caller's choice where there is one (`TransferLeaves`), so
+        // the pre-check and any clash below are at THAT name.
+        let mut dest_item_path = match self.config.leaves.leaf_of(source_path) {
+            Some(leaf) => self.dest_path.join(leaf),
+            None => self.dest_path.to_path_buf(),
         };
         // For a file→file Overwrite, conflict resolution says how the
         // original is replaced (`Replaces`): a swap the write's landing makes
@@ -99,7 +100,7 @@ impl ConcurrentCopy<'_> {
         // one we believe free (`staged_write.rs::LandingName`).
         let mut dest_name_claimed = false;
         let (landing_path, existing_dest) = self
-            .existing_dest_entry(source_index, source_path, &dest_item_path)
+            .existing_dest_entry(source_index, &dest_item_path)
             .await
             .map_err(WriteFailure::from)?
             .into_parts();
@@ -238,7 +239,6 @@ impl ConcurrentCopy<'_> {
     async fn existing_dest_entry(
         &self,
         source_index: usize,
-        source_path: &Path,
         dest_item_path: &Path,
     ) -> Result<Landing, PathedVolumeError> {
         let folder = if self.dest_dir_is_ours {
@@ -250,7 +250,7 @@ impl ConcurrentCopy<'_> {
                 None => DestFolder::Unlisted,
             }
         };
-        let (Some(dest_dir), Some(name)) = (dest_item_path.parent(), source_path.file_name()) else {
+        let (Some(dest_dir), Some(name)) = (dest_item_path.parent(), dest_item_path.file_name()) else {
             // A source with no name of its own lands on the destination folder
             // itself, which no listing describes.
             if matches!(folder, DestFolder::CreatedByUs) {

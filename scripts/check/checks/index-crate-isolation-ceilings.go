@@ -464,7 +464,7 @@ var surfaceGuardedCrates = []struct {
 		Name:       "cmdr-operations",
 		HandleType: "Operations",
 		Ceilings: surfaceCeilings{
-			RootPromises:   87,
+			RootPromises:   88,
 			HandleMethods:  58,
 			PublicModules:  1,
 			SubsystemItems: 25,

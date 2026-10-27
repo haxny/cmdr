@@ -196,7 +196,7 @@ pub use types::{
     LeftoversKeptEvent, LifecycleStatus, LockedSourcesAnswer, LockedSourcesAnswerOutcome, OperationStatus,
     ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals,
-    ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome, TransferActivity, VolumeCopyConfig,
+    ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome, TransferActivity, TransferLeaves, VolumeCopyConfig,
     WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
     WriteLockedSourcesEvent, WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationStartResult,
     WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
@@ -355,6 +355,8 @@ mod named_leaf_entry_tests;
 mod named_leaf_undo_tests;
 #[cfg(test)]
 mod named_leaves_tests;
+#[cfg(test)]
+mod named_leaves_volume_tests;
 // Every write path announces each own write before the syscall that makes it.
 #[cfg(test)]
 mod own_write_announce_tests;

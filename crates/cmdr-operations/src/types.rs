@@ -27,7 +27,7 @@ pub use events::*;
 pub use known_size::KnownSize;
 pub(crate) use leftovers::*;
 pub use queue_row::*;
-pub(crate) use transfer_leaves::TransferLeaves;
+pub use transfer_leaves::TransferLeaves;
 
 /// One original the operation kept under a new name because its old name was
 /// occupied by the replacement. Shared by failure and cancellation payloads so

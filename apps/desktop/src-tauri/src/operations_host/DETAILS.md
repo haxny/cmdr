@@ -217,6 +217,12 @@ room").
     appears (#139). A local destination that edits the server as the first file lands opens the window; the edit
     stays with its new bytes, the rest goes, and `AppearedDuringMove` counts it. The saved-over file changes SIZE,
     since a server's whole-second mtime can't tell a same-size save apart.
+  - `network_named_leaves_test_support.rs`: filing with a name per item (`TransferLeaves::per_source`) through the
+    routed start, then undone through the operation log: a copy and a move from local disk onto the server, and a move
+    within it, each beside a bystander under a source's ORIGINAL name. SMB drives it (`smb_transfer_semantics_test.rs`,
+    Docker) and so does virtual MTP (`mtp_named_leaves_test.rs`, unit lane). It anchors the SMB fixture's
+    share-relative scratch folder under the volume root, the way the dialog addresses one: a same-share move started
+    from relative paths doesn't undo (verified on the SMB fixture, 2026-10-27; the app never sends one).
 - **Which backend drives what.** SFTP, SMB, and WebDAV drive all six; ADB drives `network_transfer_test_support.rs`.
   S3 drives the transfer, semantics, safety, and move-drift scenarios (`s3_transfer_*`), minus the name-taken-mid-upload
   cell, whose guard is a staged landing S3 never makes. Its scenarios take a `cmdr_s3::volume::testing::S3Target`, so

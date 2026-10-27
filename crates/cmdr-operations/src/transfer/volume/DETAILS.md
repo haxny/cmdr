@@ -10,10 +10,11 @@ signal (§ "The stall signal"), per-file retry and its watchdog (§ "Retrying on
 nothing else will"), and cancel/rollback against a parked driver (§ "Cancel and rollback reach a parked driver").
 
 The both-local delegations carry the config's `TransferLeaves` into the native engines, a per-source map re-keyed
-(`rebased`) in the same step the sources are re-rooted (`on_local_root`). The volume engines refuse a per-source map
-typed at the fork, before anything is admitted, until they apply one (`refuse_per_source_leaves_here`). The serial async
-driver names each source's landing path from them (`chosen_for`, ahead of a rename-by-move's target name) before
-`landing.rs::top_level_precheck` probes it. Contract: `../DETAILS.md` § "Named destinations".
+(`rebased`) in the same step the sources are re-rooted (`on_local_root`). Every driver here names each source's landing
+path from them before the pre-check probes it: the serial async driver (`chosen_for`, ahead of a rename-by-move's target
+name, then `landing.rs::top_level_precheck`), and the concurrent copy driver (`leaf_of`, in
+`copy_concurrent_source.rs::prepare_source`, the name its `DestNameIndex` lookup asks about). Contract: `../DETAILS.md`
+§ "Named destinations".
 
 ## Files
 

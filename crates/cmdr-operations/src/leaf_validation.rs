@@ -172,9 +172,9 @@ fn file_id(_path: &Path) -> Option<(u64, u64)> {
     None
 }
 
-/// Refuses per-source names on a route that can't honour them yet: an archive
-/// changeset for good (its plan never takes more than one leaf), and the
-/// volume engines until they apply each source's leaf. A single leaf passes.
+/// Refuses per-source names on a route that can't honour them: an archive
+/// changeset (copy or move into a zip, move out of one), whose plan never takes
+/// more than one leaf. Every other engine names each source. A single leaf passes.
 pub(crate) fn refuse_per_source_leaves_here(
     leaves: &TransferLeaves,
     destination: &Path,

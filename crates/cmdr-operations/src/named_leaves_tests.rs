@@ -604,23 +604,12 @@ async fn a_name_with_a_bidi_override_or_a_zero_width_joiner_refuses() {
     }
 }
 
-/// The volume engines don't name each source yet, and an archive changeset
-/// never will: both refuse the per-source form typed, before anything starts.
-/// A same-local-volume move runs on the volume engine (`Volume::rename`), so it
-/// refuses too.
+/// An archive changeset never names each source: copy into, move into, and
+/// move out of a zip refuse the per-source form typed, before anything starts.
+/// The volume engines name each source (`named_leaves_volume_tests.rs`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn volume_and_archive_routes_refuse_per_source_names() {
+async fn archive_routes_refuse_per_source_names() {
     let engine = engine();
-    let mem = Arc::new(InMemoryVolume::new("Mem").with_space_info(1_000_000, 900_000));
-    mem.create_file(Path::new("/a.txt"), b"a")
-        .await
-        .expect("a remote source");
-    mem.create_directory(Path::new("/dst")).await.expect("a remote folder");
-    engine.volumes().register("mem", Arc::clone(&mem) as Arc<dyn Volume>);
-    let other = Arc::new(InMemoryVolume::new("Other").with_space_info(1_000_000, 900_000));
-    engine
-        .volumes()
-        .register("other", Arc::clone(&other) as Arc<dyn Volume>);
     let zip = Arc::new(InMemoryVolume::new("Zip").with_space_info(1_000_000, 900_000));
     zip.create_file(Path::new("/archive.zip/inner.txt"), b"z")
         .await
@@ -641,48 +630,7 @@ async fn volume_and_archive_routes_refuse_per_source_names() {
         to: &'static str,
         dest: String,
     }
-    let remote_a = PathBuf::from("/a.txt");
     let cases = [
-        Case {
-            what: "copy between remote volumes",
-            moves: false,
-            from: "mem",
-            source: remote_a.clone(),
-            to: "other",
-            dest: "/dst".into(),
-        },
-        Case {
-            what: "move between remote volumes",
-            moves: true,
-            from: "mem",
-            source: remote_a.clone(),
-            to: "other",
-            dest: "/dst".into(),
-        },
-        Case {
-            what: "move within one remote volume",
-            moves: true,
-            from: "mem",
-            source: remote_a.clone(),
-            to: "mem",
-            dest: "/dst".into(),
-        },
-        Case {
-            what: "copy from local to remote",
-            moves: false,
-            from: "root",
-            source: local.clone(),
-            to: "mem",
-            dest: "/dst".into(),
-        },
-        Case {
-            what: "move within the local volume",
-            moves: true,
-            from: "root",
-            source: local.clone(),
-            to: "root",
-            dest: local_dest.display().to_string(),
-        },
         Case {
             what: "copy into a zip",
             moves: false,
@@ -744,8 +692,11 @@ async fn volume_and_archive_routes_refuse_per_source_names() {
         };
         assert_refused(result, NamedLeavesRefusal::RouteCannotName, case.what);
     }
-    assert!(mem.exists(Path::new("/a.txt")).await, "the remote source stays");
-    assert!(!other.exists(Path::new("/renamed.txt")).await);
+    assert!(
+        zip.exists(Path::new("/archive.zip/inner.txt")).await,
+        "the zip entry stays"
+    );
+    assert!(!zip.exists(Path::new("/archive.zip/sub/renamed.txt")).await);
     assert!(local.exists(), "the local source stays");
     assert!(names_in(&local_dest).is_empty());
 }

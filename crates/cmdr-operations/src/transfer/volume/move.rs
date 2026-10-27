@@ -68,9 +68,6 @@ impl crate::Operations {
         // Same volume: use native rename/move (instant for MTP), or copy then
         // delete where the volume's renames copy (`move_same.rs`).
         if Arc::ptr_eq(&source_volume, &dest_volume) {
-            // The volume engines don't name each source yet; refused before
-            // anything is admitted, so nothing lands under its old name.
-            crate::leaf_validation::refuse_per_source_leaves_here(&config.leaves, &dest_path)?;
             return self
                 .move_within_same_volume(
                     events,
@@ -159,8 +156,6 @@ impl crate::Operations {
                 )
                 .await;
         }
-
-        crate::leaf_validation::refuse_per_source_leaves_here(&config.leaves, &dest_path)?;
 
         // Cross-volume: copy each file to destination, then delete source
         log::info!(

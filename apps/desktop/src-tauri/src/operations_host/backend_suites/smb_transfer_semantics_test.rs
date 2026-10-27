@@ -19,6 +19,10 @@ use super::network_dates_test_support::{
 use super::network_move_drift_test_support::{
     a_file_added_mid_move_off_the_server_stays, a_file_saved_over_mid_move_off_the_server_stays,
 };
+use super::network_named_leaves_test_support::{
+    Verb, items_move_named_within_the_server_and_undo_restores_them,
+    local_items_land_named_on_the_server_and_undo_restores_them,
+};
 use super::network_semantics_test_support::{
     a_copy_into_a_missing_nested_destination_makes_every_level,
     a_deep_clash_merge_under_overwrite_replaces_only_the_clash,
@@ -426,4 +430,28 @@ async fn smb_integration_a_copy_off_a_share_keeps_the_creation_dates() {
 async fn smb_integration_a_copy_within_a_share_keeps_the_creation_dates() {
     let (remote, dir) = fixture().await;
     super::network_dates_test_support::a_copy_within_the_server_keeps_the_creation_dates(remote, dir).await;
+}
+
+/// Filing from the local disk onto a share: each item lands under the name it
+/// was given, as one copy, and one undo deletes exactly those copies.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_copy_naming_each_item_lands_named_and_undoes() {
+    let (remote, dir) = fixture().await;
+    local_items_land_named_on_the_server_and_undo_restores_them(remote, dir, Verb::Copy).await;
+}
+
+/// The same as a move: one undo puts every item home under its original name.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_move_naming_each_item_lands_named_and_undoes() {
+    let (remote, dir) = fixture().await;
+    local_items_land_named_on_the_server_and_undo_restores_them(remote, dir, Verb::Move).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_same_share_move_naming_each_item_lands_named_and_undoes() {
+    let (remote, dir) = fixture().await;
+    items_move_named_within_the_server_and_undo_restores_them(remote, dir).await;
 }

@@ -254,10 +254,6 @@ impl crate::Operations {
                 .await;
         }
 
-        // The volume engines don't name each source yet; refused before anything
-        // is admitted, so nothing lands under its old name unannounced.
-        crate::leaf_validation::refuse_per_source_leaves_here(&config.leaves, &dest_path)?;
-
         let operation_id = OperationId::from(cmdr_operation_log::new_operation_id());
         log::info!(
             "copy_between_volumes: operation_id={}, source_volume_id={}, dest_volume_id={}, {} sources, dest={}",

@@ -23,6 +23,9 @@ mod network_archive_test_support;
 mod network_look_alike_test_support;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod network_move_drift_test_support;
+// Filing onto a server or a phone, each item under its own name, then undone.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod network_named_leaves_test_support;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod network_safety_test_support;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -54,6 +57,9 @@ mod mtp_archive_test;
 // "A copy keeps the source's date" onto and off a virtual MTP device.
 #[cfg(all(any(target_os = "macos", target_os = "linux"), feature = "virtual-mtp"))]
 mod mtp_dates_test;
+// Each item under its own name, onto and within a virtual MTP device, then undone.
+#[cfg(all(any(target_os = "macos", target_os = "linux"), feature = "virtual-mtp"))]
+mod mtp_named_leaves_test;
 // Two same-named items in a device folder, copied off: both land.
 #[cfg(all(any(target_os = "macos", target_os = "linux"), feature = "virtual-mtp"))]
 mod mtp_twins_test;
