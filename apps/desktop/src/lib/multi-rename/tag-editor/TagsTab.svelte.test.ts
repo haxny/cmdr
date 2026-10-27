@@ -269,7 +269,8 @@ describe('TagsTab', () => {
 
   it('read-only says why and locks every box and button', async () => {
     const { root } = await mountTab({ view: { ...VIEW, editable: false, readOnlyReason: 'remoteVolume' } })
-    expect(root.textContent).toContain('Tags can only be edited for files on a local disk.')
+    // Once, at the top: it explains every locked box and button, Write tags… included.
+    expect(root.textContent.split('Tags can only be edited for files on a local disk.')).toHaveLength(2)
     for (const box of root.querySelectorAll<HTMLInputElement>('input')) expect(box.disabled).toBe(true)
     // Playing writes nothing, so the play buttons and Open in foobar2000 stay available.
     const writers = [...root.querySelectorAll('button')].filter(

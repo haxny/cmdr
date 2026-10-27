@@ -74,6 +74,19 @@
     let current = $state.raw<Step>({ step: 'idle' })
     /** Why the last press didn't go on, worded next to the buttons; cleared by the next press. */
     let notice = $state<MessageKey | null>(null)
+    /** A press is being answered: set at once, so a second click or ⌘⏎ before any step shows starts nothing. */
+    let pressing = $state(false)
+
+    /** Runs a press unless one is already being answered. */
+    async function oncePressed(run: () => Promise<void>): Promise<void> {
+        if (pressing) return
+        pressing = true
+        try {
+            await run()
+        } finally {
+            pressing = false
+        }
+    }
     let kind = $state<ContentKind>(DEFAULT_WRITE_KIND)
     /** The remembered kind arrives once; a pick, or a list already made, before it lands wins. */
     let kindChosen = false
@@ -290,10 +303,12 @@
 
     /** The sheet's Start: lists the changes, and from the list writes them. */
     export async function start(): Promise<void> {
-        // Read-only: the reason already shows beside the disabled button.
+        // Read-only: the tab says so at its top, and the button is disabled.
         if (!canWrite) return
-        if (current.step === 'review') await write(current)
-        else if (['idle', 'done', 'refused', 'undone'].includes(current.step)) await review()
+        await oncePressed(async () => {
+            if (current.step === 'review') await write(current)
+            else if (['idle', 'done', 'refused', 'undone'].includes(current.step)) await review()
+        })
     }
 
     const undoable = $derived(tags.undoable !== null && current.step !== 'writing' && current.step !== 'wouldDrop')
@@ -340,7 +355,7 @@
             </ul>
         {/if}
         <div class="actions">
-            <Button variant="primary" disabled={!canWrite || changes.length === 0} keyHint={{ commandId: 'multiRename.rename' }} onclick={() => { void write(reviewed) }}>
+            <Button variant="primary" disabled={!canWrite || changes.length === 0} keyHint={{ commandId: 'multiRename.rename' }} onclick={() => { void oncePressed(() => write(reviewed)) }}>
                 {tString('multiRename.tags.write.confirm')}
             </Button>
             <Button onclick={() => { notice = null; current = endedStep(earlier) }}>{tString('multiRename.tags.write.back')}</Button>
@@ -350,7 +365,7 @@
         <WouldDropDialog
             rows={choice.reports.at(-1)?.wouldDrop ?? []}
             busy={choice.answering}
-            onWriteAnyway={() => { void writeAnyway(choice) }}
+            onWriteAnyway={() => { void oncePressed(() => writeAnyway(choice)) }}
             onSkip={() => { current = endedStep(choice.reports) }}
         />
     {:else}
@@ -390,16 +405,13 @@
             />
             <Button
                 variant="primary"
-                disabled={!canWrite || kindLocked}
+                disabled={!canWrite || kindLocked || pressing}
                 keyHint={{ commandId: 'multiRename.rename' }}
                 onclick={() => { void start() }}
             >
                 {tString('multiRename.tags.write.review')}
             </Button>
         </div>
-        {#if view !== null && !view.editable}
-            <p class="notice">{tString('multiRename.tags.readOnly')}</p>
-        {/if}
     {/if}
     {#if notice !== null}
         <p class="notice" role="alert">{tString(notice)}</p>

@@ -213,14 +213,14 @@ describe('createTagEditorState', () => {
     expect(state.error).toBeNull()
   })
 
-  it('changes returns the backend answer and sets the error on failure', async () => {
+  it('changes returns the backend answer; a failure is the Apply panel’s to word, not the tab’s', async () => {
     const state = createTagEditorState('S')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: true, value: [] })
     expect(await state.changes('music')).toEqual({ ok: true, value: [] })
     expect(ipc.getTagChanges).toHaveBeenLastCalledWith('S', 'music')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: false, error: { kind: 'notOpen' } })
-    expect((await state.changes('audiobook')).ok).toBe(false)
-    expect(state.error).toEqual({ kind: 'notOpen' })
+    expect(await state.changes('audiobook')).toEqual({ ok: false, error: { kind: 'notOpen' } })
+    expect(state.error).toBeNull()
   })
 
   it('apply returns the report and reloads the view', async () => {
@@ -234,12 +234,21 @@ describe('createTagEditorState', () => {
     expect(state.view).toBe(VIEW)
   })
 
-  it('apply keeps the typed error', async () => {
+  it('apply hands back the typed error for the Apply panel to word, and leaves the tab’s error alone', async () => {
     ipc.applyTags.mockResolvedValue({ ok: false, error: { kind: 'noAppDataDir' } })
     const state = createTagEditorState('S')
     const res = await state.apply(REQUEST)
-    expect(res.ok).toBe(false)
-    expect(state.error).toEqual({ kind: 'noAppDataDir' })
+    expect(res).toEqual({ ok: false, error: { kind: 'noAppDataDir' } })
+    expect(state.error).toBeNull()
+  })
+
+  it('a change list that succeeds leaves an edit’s error standing', async () => {
+    ipc.editTags.mockResolvedValueOnce({ ok: false, error: { kind: 'unknownTrack' } })
+    ipc.getTagChanges.mockResolvedValueOnce({ ok: true, value: [] })
+    const state = createTagEditorState('S')
+    await state.edit([])
+    await state.changes('audiobook')
+    expect(state.error).toEqual({ kind: 'unknownTrack' })
   })
 
   it('undo reverses the last apply and then has nothing left', async () => {

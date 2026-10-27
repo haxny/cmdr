@@ -139,18 +139,74 @@ describe('ApplyPanel answers every press', () => {
     expect(panelText(root)).toContain('Nothing to write')
   })
 
-  it('a read-only session says why next to its disabled Write tags…', async () => {
-    const { root } = await mountPanel(fakeState({ ...PANEL_VIEW, editable: false }))
+  it('a read-only session disables Write tags…; the tab says why, once, above (TagsTab’s test)', async () => {
+    const { root, fake } = await mountPanel(fakeState({ ...PANEL_VIEW, editable: false }))
 
     expect(buttonNamed(root, 'Write tags…').disabled).toBe(true)
-    expect(panelText(root)).toContain('Tags can only be edited for files on a local disk.')
+    expect(panelText(root)).not.toContain('Tags can only be edited')
+    expect(fake.changes).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [{ kind: 'readOnly' }, 'Tags can only be edited for files on a local disk.'],
+    [
+      { kind: 'undo', error: { type: 'io', data: ['PermissionDenied', 'x'] } },
+      'Couldn’t use the store that keeps the old tags for Undo.',
+    ],
+  ])('a write refused before any file (%j) says no file was written and why', async (error, reason) => {
+    const fake = fakeState()
+    fake.apply.mockResolvedValueOnce({ ok: false, error } as never)
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+
+    await press(root, 'Write tags')
+
+    expect(panelText(root)).toContain('No file was written.')
+    expect(panelText(root)).toContain(reason)
+  })
+
+  it('a write that died partway says it stopped, without claiming no file was written', async () => {
+    const fake = fakeState()
+    fake.apply.mockResolvedValueOnce({ ok: false, error: { kind: 'taskFailed' } } as never)
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+
+    await press(root, 'Write tags')
+
+    expect(panelText(root)).toContain('The write stopped before it finished')
+    expect(panelText(root)).not.toContain('No file was written.')
+  })
+
+  it('a refused Write anyway keeps what the first apply wrote and says the write stopped', async () => {
+    const fake = fakeState(PANEL_VIEW, [
+      applyReport({ written: ['/b/02.mp3'], wouldDrop: [{ path: '/b/01.mp3', items: ['TSOP'] }] }),
+    ])
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    await press(root, 'Write tags')
+    fake.apply.mockResolvedValueOnce({ ok: false, error: { kind: 'notOpen' } } as never)
+
+    await press(root, 'Write anyway')
+
+    expect(panelText(root)).toContain('Tags written to 1 file')
+    expect(panelText(root)).toContain('The write stopped before it finished')
+  })
+
+  it('Write tags pressed twice before the first press settles writes once', async () => {
+    const fake = fakeState()
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+
+    buttonNamed(root, 'Write tags').click()
+    buttonNamed(root, 'Write tags').click()
+    await settle()
+
+    expect(fake.apply).toHaveBeenCalledTimes(1)
   })
 
   it('Back, Write anyway and Skip these files each answer', async () => {
-    const fake = fakeState(PANEL_VIEW, [
-      applyReport({ applyId: null, wouldDrop: [{ path: '/b/01.mp3', items: ['TSOP'] }] }),
-      applyReport({ written: ['/b/01.mp3'] }),
-    ])
+    const wouldDrop = () => applyReport({ applyId: null, wouldDrop: [{ path: '/b/01.mp3', items: ['TSOP'] }] })
+    const fake = fakeState(PANEL_VIEW, [wouldDrop(), applyReport({ written: ['/b/01.mp3'] }), wouldDrop()])
     const { root } = await mountPanel(fake)
     await press(root, 'Write tags…')
     await press(root, 'Back')
@@ -161,5 +217,12 @@ describe('ApplyPanel answers every press', () => {
     expect(panelText(root)).toContain('01.mp3: TSOP')
     await press(root, 'Write anyway')
     expect(panelText(root)).toContain('Tags written to 1 file')
+
+    await press(root, 'Write tags…')
+    await press(root, 'Write tags')
+    await press(root, 'Skip these files')
+    expect(panelText(root)).toContain('Skipped, not written:')
+    expect(root.querySelector('[role="alert"]')).toBeNull()
+    expect(fake.apply).toHaveBeenCalledTimes(3)
   })
 })

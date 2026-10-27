@@ -237,7 +237,7 @@ fn same_cover(a: &Loaded, b: &Loaded) -> bool {
 pub(super) fn cover_key(cover: &Cover) -> u64 {
     use std::hash::{DefaultHasher, Hasher};
     #[cfg(test)]
-    HASHES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    HASHES.with(|count| count.set(count.get() + 1));
     let mut hasher = DefaultHasher::new();
     hasher.write(&cover.data);
     hasher.finish()
@@ -275,13 +275,16 @@ impl CoverKeys {
     }
 }
 
-/// How many covers were hashed so far in this process (nextest runs each test in its own).
+// How many covers this thread hashed so far: per thread, so tests running side by side in one
+// process (plain `cargo test`) don't count each other's.
 #[cfg(test)]
-static HASHES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+thread_local! {
+    static HASHES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 
 #[cfg(test)]
 pub(super) fn cover_hashes() -> usize {
-    HASHES.load(std::sync::atomic::Ordering::Relaxed)
+    HASHES.with(std::cell::Cell::get)
 }
 
 /// The image's size from its header. A decoder that panics on a hostile image costs the

@@ -45,7 +45,10 @@
 
 <div class="outcome">
     {#if outcome.written === 0 && lists.length > 0}
-        <p role="alert">{tString('multiRename.tags.write.refused')}</p>
+        <!-- An alert only when files were refused; files the user chose to skip are no problem to announce. -->
+        <p role={outcome.failed.length + outcome.changedOnDisk.length > 0 ? 'alert' : 'status'}>
+            {tString('multiRename.tags.write.refused')}
+        </p>
     {/if}
     {#if outcome.written > 0}
         <p role="status">

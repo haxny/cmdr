@@ -62,6 +62,7 @@ export interface TagEditorState {
   /** The backend tag session this state talks to (the player mints its audio URLs in it). */
   readonly sessionId: string
   readonly view: TagEditorView | null
+  /** The last failed edit, tool, cover pick or open; a failed change list or write is the Apply panel's to word. */
   readonly error: TagStateError | null
   readonly busy: boolean
   /** The last write Undo can reverse, or `null` when there's none. */
@@ -91,8 +92,9 @@ export interface TagEditorState {
   coverCandidates(): Promise<TagStateResult<CoverCandidate[]>>
   /** Gives every file the folder image `fileName` as its cover. */
   coverFromFile(fileName: string): Promise<void>
-  /** What a write as `kind` would change, with what the kind removes beyond the fields. */
+  /** What a write as `kind` would change, with what the kind removes beyond the fields. A failure leaves `error` alone. */
   changes(kind: ContentKind): Promise<TagStateResult<FileChangeView[]>>
+  /** Writes the edits; a refusal comes back typed and leaves `error` alone. */
   apply(request: ApplyRequest, options?: ApplyOptions): Promise<TagStateResult<TagApplyReport>>
   /** Writes the old tags of the last write back, the last apply first. A failure leaves the rest undoable. */
   undo(): Promise<TagUndoResult>
@@ -120,17 +122,21 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let viewAsked = 0
   let viewShown = 0
 
-  /** Runs one backend call with `busy` on, keeps its error, and hands the result back. */
+  /**
+   * Runs one backend call with `busy` on, keeps its error, and hands the result back. `clears` says whether a success
+   * clears `error` (a call that owns only some errors passes which); `null` leaves `error` alone either way, for a call
+   * whose caller words its own failure (the Apply panel's change list and write).
+   */
   async function track<T>(
     call: () => Promise<TagEditorResult<T>>,
-    /** Whether a success clears `error`; a call that owns only some errors passes which. */
-    clears: (current: TagStateError) => boolean = () => true,
+    clears: ((current: TagStateError) => boolean) | null = () => true,
   ): Promise<TagEditorResult<T>> {
     pending += 1
     const running = call()
     inFlight.add(running)
     try {
       const res = await running
+      if (clears === null) return res
       if (!res.ok) error = res.error
       else if (error !== null && clears(error)) error = null
       return res
@@ -214,9 +220,10 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     coverCandidates: () => track(() => listCoverCandidates(sessionId)),
     coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
-    changes: (kind) => track(() => getTagChanges(sessionId, kind)),
+    // The Apply panel words a failed list or write next to its buttons; the tab's error is for edits.
+    changes: (kind) => track(() => getTagChanges(sessionId, kind), null),
     async apply(request, options = {}) {
-      const res = await track(() => applyTags(sessionId, request))
+      const res = await track(() => applyTags(sessionId, request), null)
       if (!res.ok) return res
       const continuing = (options.after ?? []).some((earlier) => earlier.written.length > 0)
       // A write that wrote nothing leaves the last one undoable: there's nothing newer to protect.
