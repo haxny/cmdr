@@ -1021,6 +1021,7 @@
         const url = new URL(window.location.href)
         url.searchParams.set('path', path)
         url.searchParams.delete('tail')
+        // eslint-disable-next-line svelte/no-navigation-without-resolve -- same-route query update built from the current URL; resolve() takes a route id, not a URL object
         await goto(url, { state: {}, shallow: true, replace: true })
         await tick()
         if (viewMode === 'text') scroll.contentRef?.focus()

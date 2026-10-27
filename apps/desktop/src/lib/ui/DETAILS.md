@@ -1332,8 +1332,9 @@ For a link that switches a view on and off in place, pass `aria-pressed` (button
 button, and pressed it drops the underline for an accent wash that bleeds into the margin, so the text doesn't move.
 Multi-rename's "N problems" in its summary line is the example.
 
-The `href` mode includes a per-line eslint disable for `svelte/no-navigation-without-resolve`. That rule wants
-SvelteKit's `resolve()`, which is for internal routes; we route external URLs through `openExternalUrl()` after
+The `href` mode wraps its `<a>` in an eslint disable/enable block (the rule reports on the `href` attribute's line, so a
+next-line disable above `<a` misses it) for `svelte/no-navigation-without-resolve`. That rule wants SvelteKit's
+`resolve()`, which is for internal routes; we route external URLs through `openExternalUrl()` after
 `event.preventDefault()` in `onclick`. The `<a href>` is decorative: it gives screen readers the right semantics and
 preserves "right-click → Copy link." For SvelteKit-internal navigation, don't use `LinkButton`; use `<a>` with
 `resolve()` directly.
