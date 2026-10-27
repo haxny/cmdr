@@ -466,6 +466,7 @@ pub fn configure_ai<R: Runtime>(
 
     // Single lock: decide, stop, spawn (no race window for orphan processes)
     let spawn_result;
+    let cloud_target_changed;
     {
         let mut manager = MANAGER.lock_ignore_poison();
         let Some(ref mut m) = *manager else {
@@ -490,10 +491,14 @@ pub fn configure_ai<R: Runtime>(
             }
         }
 
+        cloud_target_changed = m.cloud_provider_id != cloud_provider_id
+            || m.cloud_base_url != cloud_base_url
+            || m.cloud_api_key != cloud_api_key;
         m.provider = provider.clone();
         m.context_size = context_size;
+        m.cloud_provider_id = cloud_provider_id.clone();
         m.cloud_api_key = cloud_api_key;
-        m.cloud_base_url = cloud_base_url;
+        m.cloud_base_url = cloud_base_url.clone();
         m.cloud_model = cloud_model;
         m.cloud_requires_api_key = cloud_requires_api_key;
 
@@ -522,6 +527,18 @@ pub fn configure_ai<R: Runtime>(
     // The wake loop gates on whether a provider can answer, and it caches that rather than
     // asking per live batch. This is the one place the answer can move.
     crate::agent::wake::refresh_readiness(&app);
+
+    // A new provider, key, or base URL may mean a different catalog: fetch its windows in the
+    // background (gated on policy and consent there), so the next send sizes from them. A new
+    // key skips the retry wait, since the last attempt may have failed for want of it.
+    if provider == "cloud" {
+        let when = if cloud_target_changed {
+            super::model_capabilities::Refresh::Now
+        } else {
+            super::model_capabilities::Refresh::IfStale
+        };
+        super::model_capabilities::refresh(&app, &cloud_provider_id, &cloud_base_url, when);
+    }
 
     // Health check asynchronously (the slow part, up to 60s)
     if let Some((pid, port, cancel)) = spawn_result {

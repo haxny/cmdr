@@ -2735,14 +2735,14 @@
     "description": "Label for the picker that sets how much of an Ask Cmdr conversation is sent to the model with each message. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
-  "settings.askCmdr.chatMemorySize.description": "How much of the conversation Cmdr sends to the model. Automatic follows your model’s known limit.",
+  "settings.askCmdr.chatMemorySize.description": "How much of the conversation Cmdr sends to the model. Automatic uses your model’s whole context window; a size caps it lower to spend less.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "description": "Help text under the chat memory size picker. Explains what the setting does and that the Automatic option follows the context window Cmdr knows the chosen model to have. \"Automatic\" here refers to the first option in the same picker, so use the same wording as that option. The apostrophe is U+2019.",
+    "description": "Help text under the chat memory size picker. Explains what the setting does, that the Automatic option uses all of the context window Cmdr knows the chosen model to have, and that picking a size sets a lower limit, which costs less per message. \"Automatic\" here refers to the first option in the same picker, so use the same wording as that option. The apostrophe is U+2019.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatic (recommended)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
-    "description": "First option in the chat memory size picker: let Cmdr follow the context window it knows the chosen model to have, instead of a fixed number of tokens. The other options are plain token counts. Sentence case.",
+    "description": "First option in the chat memory size picker: let Cmdr use all of the context window it knows the chosen model to have, instead of a fixed number of tokens. The other options are plain token counts. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.chatMemorySize.overWindow": "Your model may refuse a message this long. Cmdr keeps the value you set.",

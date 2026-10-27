@@ -187,11 +187,10 @@ In `budget.rs` (how many tokens a prompt and a tool result may spend):
 - `CHARS_PER_TOKEN_ESTIMATE = 4` — the ONE size-estimate divisor (elision, the stub hint, every tool's self-cap).
 - `DEFAULT_PROMPT_TOKEN_BUDGET = 16_000` — an unrecognized model's budget. Conservative because guessing high is a hard
   provider rejection mid-turn; still double the 8k that overflowed on a 12-file batch.
-- `PROMPT_BUDGET_60K = 60_000` — the cap on any family's budget, which every ≥100k-window family therefore gets. Far
-  below those windows on purpose: a prompt this size costs real money per call and dilutes attention, while still
-  holding a 200-row listing plus a full `image_facts` batch.
-- `PROMPT_BUDGET_WINDOW_PERCENT = 60` — the share of a window one prompt may claim, cloud and local alike. The rest is
-  the reply's, which comes out of the same window.
+- `ESTIMATE_SAFETY_PERCENT = 15` — what Automatic leaves unclaimed of a window after the reply's room
+  (`AGENT_MAX_OUTPUT_TOKENS`): the margin for `chars/4`'s error on JSON- and path-heavy prompts, which real tokenizers
+  split finer. Cloud and local alike, so 1,000,000 resolves to 839,800, 200,000 to 159,800, and 32,768 to 17,652.
+- `WAKE_DIGEST_MAX_TOKENS = 10_000` — the cap on a wake's digest, whatever the window. See § Sizing a wake's digest.
 - `MIN_LOCAL_CONTEXT_TOKENS = 32_768` — the smallest local window one turn can run in, mirrored by
   `ai.localContextSize`'s default and its smallest option. It tracks the prefix, so it moves when the tool view grows.
   See § A local window too small to use.
@@ -207,27 +206,42 @@ In `budget.rs` (how many tokens a prompt and a tool result may spend):
 Windows and prices both drift: re-verify the families at release time, like `agent::pricing`.
 Bumping any constant is a conscious change (never a silent side effect).
 
-### Resolving one budget: three sources, and the answer says which
+### Resolving one budget: four sources, and the answer says which
 
 `budget::resolve_prompt_budget` takes a `BudgetInputs` (provider, model, the user's `askCmdr.chatMemorySize` choice, the
-local server's window) and answers a `ResolvedBudget` carrying `prompt_tokens`, the `BudgetSource` that decided, the
-window it believes the model has, and whether the user's size exceeds that window. `session.rs` gathers those values
-once per turn and logs the source; the core reads no settings and no app state (invariant 2).
+local server's window, the provider-reported window) and answers a `ResolvedBudget` carrying `prompt_tokens`, the
+`BudgetSource` that decided, the window it believes the model has, and whether the user's size exceeds that window.
+`session.rs` gathers those values once per turn and logs the source; the core reads no settings and no app state
+(invariant 2).
 
-- **`UserSetting`** — an explicit size, used exactly as chosen. It is never clamped down: our table will be wrong
+**Automatic spends the whole window** (`budget_for_window`): the window, less the reply's room
+(`AGENT_MAX_OUTPUT_TOKENS`, which comes out of the same window), less `ESTIMATE_SAFETY_PERCENT` of the rest. There is no
+cap below the window. Decision/Why: a 1M-window user saw "23,648 of 60,000" and most of their model hidden behind a
+60K cap set for cost; David chose the whole window. **Cost is compaction's job, planned and not built**: `/compact`,
+auto-compacting old tool results once the one-hour prompt-cache TTL has lapsed (a re-read then costs full price anyway),
+and a "consider compacting" nudge past roughly 200,000 tokens. Elision (`context.rs`) is the only shrinking today, by
+age and under budget pressure. An explicit "Chat memory size" is the user's lever to spend less meanwhile.
+
+- **`UserSetting`** — an explicit size, used exactly as chosen. It is never clamped down: our knowledge will be wrong
   sometimes and the user may be right about their own model. `over_known_window` rides along, the settings row warns
   ("Your model may refuse a message this long"), and the provider gets the final say.
-- **`LocalServerWindow`** — 60% of `ai.localContextSize`.
-- **`FamilyTable`** — 60% of the family's window, capped at 60,000. A family row carries its WINDOW, not a budget, so no
-  row can claim more than its window holds.
+- **`LocalServerWindow`** — the whole of `ai.localContextSize`, as above.
+- **`ProviderReported`** — the whole window the provider's own model list reports (`ai::model_capabilities`, via
+  `session::reported_window_tokens`). Wins over the table in both directions: the report is today's answer.
+- **`FamilyTable`** — the whole of the family's window. A family row carries its WINDOW, not a budget, so no row can
+  claim more than its window holds.
 - **`Default`** — nothing recognized the model, so `DEFAULT_PROMPT_TOKEN_BUDGET` and no claim about the window (an
   unknown model can't be "over" a window nobody knows).
 
-**There is no provider-reported window.** No API this app talks to reports one, so the table is the only knowledge we
-have, and it will age. Hence the label: a budget that came from a stale table is visible in the log rather than silently
-authoritative. `every_shipped_cloud_preset_is_in_the_family_table` walks the default model of every provider preset
+**The report never blocks a send.** `ai::model_capabilities` answers from an in-memory cache and refreshes in the
+background (at `configure_ai`, on a connection check, and when a lookup finds the catalog over a day old), so the first
+send after launch sizes from the table. OpenAI, DeepSeek, xAI, and Qwen report no window at all, so for them the table
+is all there is, and it will age. Hence the label: a budget that came from a stale table is visible in the log rather
+than silently authoritative. Since the budget is the whole window now, a table row that overclaims is a rejected prompt:
+every row is a floor (`sonar` is 127,072, not a rounded 128,000).
+`every_shipped_cloud_preset_is_in_the_family_table` walks the default model of every provider preset
 `lib/settings/cloud-providers.ts` ships, so a new preset without a row fails a test rather than quietly costing a user
-four fifths of their window; gateway-prefixed ids (`openai/gpt-4.1-mini`, `accounts/fireworks/models/llama-v3p3-…`)
+most of their window; gateway-prefixed ids (`openai/gpt-4.1-mini`, `accounts/fireworks/models/llama-v3p3-…`)
 normalize to the family they name. Ollama, LM Studio, and an unconfigured Custom endpoint stay OUT on purpose: their
 window is whatever the user's own server was started with, and the conservative default is the honest answer.
 
@@ -237,15 +251,15 @@ same shape as the interactive model override.
 
 ### A local window too small to use
 
-A window only 60% of which one prompt may claim has to hold `FIXED_PROMPT_OVERHEAD_TOKENS` (6,263) plus a paged tool
+A window that gives the reply its 12,000 tokens has to hold `FIXED_PROMPT_OVERHEAD_TOKENS` (6,263) plus a paged tool
 result before it holds a single word of the conversation, so the floor is `MIN_LOCAL_CONTEXT_TOKENS = 32_768`, which
-resolves to 19,660. `ai.localContextSize` offers nothing smaller, and a smaller stored size no longer validates (it
+resolves to 17,652. `ai.localContextSize` offers nothing smaller, and a smaller stored size no longer validates (it
 resolves to the 32,768 default on load, migrating an early tester instead of leaving them broken).
 
 **The floor is derived, not chosen**, and `budget.rs`'s `the_floor_leaves_room_for_a_prefix_and_a_paged_result` is what
-holds it: one window down, 16,384 resolves to 9,830 and cannot fit the prefix plus half a paged result. Every tool that
+holds it: one window down, 16,384 resolves to 3,726 and cannot even fit the prefix. Every tool that
 joins the agent view grows the prefix, so that assertion is answered by raising the floor or shrinking the prefix, never
-by lowering its fraction.
+by shrinking the reply's room or the estimator's margin.
 
 A window UNDER the floor is still reachable — a local server Cmdr didn't launch at the current setting — and it is
 refused, not assembled: `BudgetRefusal::LocalWindowBelowFloor` reaches the rail as
@@ -298,7 +312,8 @@ because it moves with the model and the setting and so can't live in the cached 
 `wake_digest_budget(prompt_tokens)` gives a wake's digest a fifth of what is left after the fixed prefix. Derived rather
 than a constant, for the same reason `files_per_batch` is: the digest OPENS the turn, and everything after it (the
 envelope, the tool results the agent pulls once awake, its own reasoning) shares the same window, so a flat number would
-let one digest push a small-local-window user's tool results out of the prompt.
+let one digest push a small-local-window user's tool results out of the prompt. It is capped at `WAKE_DIGEST_MAX_TOKENS` (10,000, what a 60,000-token budget gave it), since a fifth of a 1M window is a digest
+nobody needs and every wake would pay for it.
 
 `0` is a meaningful answer — a budget that cannot hold the prefix cannot hold a digest either, and `prepare_wake` then
 stays quiet rather than opening a thread it can say nothing in.
@@ -328,7 +343,8 @@ the test and this section together.
 - So **60k does 100 files, 16k does roughly 25** (`files_per_batch` says 101 and 25). A model's window must exceed the
   whole turn, not one page of it: every page of facts is evidence the plan cites, so none of it may elide.
 - **Memory is priced as a SHARE, not a block**: `memory_slice_bytes` takes a tenth of what the budget has left after the
-  overhead, so a 16k budget carries ~4 KB of notes and a 60k one ~21 KB. It has to be a share because the system string
+  overhead, so a 16k budget carries ~4 KB of notes and a 60k one ~21 KB. From a budget of about 170,000 up, the share
+  passes the 64 KB disk cap, so on a large window the disk cap binds and the whole folder rides along. It has to be a share because the system string
   is never elided (memory is a permanent tax on every turn) and because the agent writes the file itself — a flat cap
   would let it degrade its own chat with no way back. ❌ Not to be confused with `memory::MEMORY_DIR_MAX_BYTES`, the
   64 KB DISK cap.

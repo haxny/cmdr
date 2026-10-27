@@ -10,7 +10,7 @@ use super::test_support::*;
 use super::*;
 use crate::agent::chat::budget::{
     DEFAULT_PROMPT_TOKEN_BUDGET, FIXED_PROMPT_OVERHEAD_TOKENS, IMAGE_FACTS_TOKENS_PER_FILE, LISTING_TOKENS_PER_FILE,
-    MAX_TOOL_RESULT_TOKENS, PLAN_ROW_TOKENS_PER_FILE, PROMPT_BUDGET_60K, RENAME_TOKENS_PER_FILE, files_per_batch,
+    MAX_TOOL_RESULT_TOKENS, PLAN_ROW_TOKENS_PER_FILE, RENAME_TOKENS_PER_FILE, files_per_batch,
 };
 use crate::agent::llm::types::ToolId;
 
@@ -48,6 +48,11 @@ const LISTING_PER_FILE: usize = LISTING_TOKENS_PER_FILE;
 
 /// The whole 100-file rename turn, prefix included.
 const HUNDRED_FILE_TURN: usize = 42_845;
+
+/// A mid-sized budget, what a 128K window resolved to before Automatic spent the whole window.
+/// Not a production number any more; it pins that a 100-file turn fits a modest window, so a
+/// user who caps "Chat memory size" there can still rename that many.
+const MID_BUDGET: usize = 60_000;
 
 const SHOTS_DIR: &str = "/Users/me/Downloads/shots";
 
@@ -142,7 +147,7 @@ fn a_bulk_rename_pays_about_350_tokens_per_file() {
 /// then the plan call carrying 100 rows of paths, names, and evidence.
 #[test]
 fn a_hundred_file_rename_turn_needs_more_than_the_default_budget() {
-    let (tokens, elided, pages) = assemble_rename_turn(FILES, PROMPT_BUDGET_60K);
+    let (tokens, elided, pages) = assemble_rename_turn(FILES, MID_BUDGET);
 
     assert_near(tokens, HUNDRED_FILE_TURN, "the whole 100-file turn");
     // The per-item costs above have to explain the turn, or one of them is measuring the wrong
@@ -159,8 +164,8 @@ fn a_hundred_file_rename_turn_needs_more_than_the_default_budget() {
          if this ever flips, the numbers below are stale"
     );
     assert!(
-        tokens < PROMPT_BUDGET_60K,
-        "a 100-file rename must fit the 60k budget with room to spare ({tokens} estimated tokens)"
+        tokens < MID_BUDGET,
+        "a 100-file rename must fit a 60k budget with room to spare ({tokens} estimated tokens)"
     );
     // Nothing from this turn may have been dropped to get there: every page of facts is the
     // evidence the plan cites.
@@ -173,7 +178,7 @@ fn a_hundred_file_rename_turn_needs_more_than_the_default_budget() {
 /// take on a batch that overruns the window it was sized for.
 #[test]
 fn a_batch_the_hint_promises_actually_fits_its_budget() {
-    for budget in [DEFAULT_PROMPT_TOKEN_BUDGET, PROMPT_BUDGET_60K] {
+    for budget in [DEFAULT_PROMPT_TOKEN_BUDGET, MID_BUDGET] {
         let files = files_per_batch(budget);
         assert!(files > 0, "a {budget}-token budget has to be able to rename something");
         let (tokens, elided, _) = assemble_rename_turn(files, budget);

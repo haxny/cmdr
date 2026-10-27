@@ -14,7 +14,8 @@ The local-AI lifecycle is split by concern around ONE shared singleton: `state.r
 state. `download.rs` / `extract.rs` / `process.rs` are its stateless leaves.
 
 Cloud-side: `client.rs` is the `genai` chat client (`AiBackend`), tapped for logging into `llm_log/CLAUDE.md`;
-`cloud_consent.rs` ("Allow cloud AI"), `managed.rs` (the MDM policy's AI side), `api_keys.rs`, `suggestions.rs`,
+`cloud_consent.rs` ("Allow cloud AI"), `managed.rs` (the MDM policy's AI side), `model_capabilities.rs` (provider-reported
+model windows; a cache), `api_keys.rs`, `suggestions.rs`,
 `translate_error.rs`, and the test-only `smoke_providers.rs` sit beside it. Per-file detail: DETAILS.md.
 
 ## Must-knows

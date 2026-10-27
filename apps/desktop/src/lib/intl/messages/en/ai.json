@@ -405,6 +405,33 @@
     "screenshot": "settings-ai-provider.png",
     "screenshotNote": "AI feature copy. Cloud-connection states, suggestions, and translate-errors surface around the Settings > AI > Provider subsection pictured here (and inline near AI actions). This shows the AI provider settings for context."
   },
+  "ai.cloud.contextWindow": "Context window: {windowText} {window, plural, one {token} other {tokens}}",
+  "@ai.cloud.contextWindow": {
+    "description": "Note under the cloud AI model picker: how much text the chosen model can read at once, as the AI service itself reports it. Ask Cmdr uses all of it. windowText is a preformatted number with thousands separators. Sentence case.",
+    "placeholders": {
+      "windowText": "the model's context window in tokens, preformatted (for example 1,000,000)",
+      "window": "the same number (drives the singular/plural form of the noun)"
+    },
+    "screenshot": "settings-ai-provider.png"
+  },
+  "ai.cloud.contextWindowEstimate": "Context window: about {windowText} {window, plural, one {token} other {tokens}} (from Cmdr’s built-in list)",
+  "@ai.cloud.contextWindowEstimate": {
+    "description": "Same note as ai.cloud.contextWindow, shown when the AI service doesn't report the window, so the number comes from a list built into Cmdr and may be out of date. “about” and the parenthesis say it's an estimate. windowText is a preformatted number with thousands separators. The apostrophe is U+2019. Sentence case.",
+    "placeholders": {
+      "windowText": "the model's context window in tokens, preformatted (for example 128,000)",
+      "window": "the same number (drives the singular/plural form of the noun)"
+    },
+    "screenshot": "settings-ai-provider.png"
+  },
+  "ai.cloud.maxOutput": "Longest reply: {outputText} {output, plural, one {token} other {tokens}}",
+  "@ai.cloud.maxOutput": {
+    "description": "Second note under the cloud AI model picker, beside the context window: the longest answer the chosen model can write at once, as the AI service reports it. outputText is a preformatted number with thousands separators. Sentence case.",
+    "placeholders": {
+      "outputText": "the model's longest reply in tokens, preformatted (for example 128,000)",
+      "output": "the same number (drives the singular/plural form of the noun)"
+    },
+    "screenshot": "settings-ai-provider.png"
+  },
   "ai.cloud.recheck": "Recheck",
   "@ai.cloud.recheck": {
     "description": "Button that re-runs the cloud AI connection test. Tight mini button.",

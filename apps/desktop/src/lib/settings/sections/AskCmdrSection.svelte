@@ -25,6 +25,7 @@
         askCmdrForgetMemory,
         askCmdrMemoryFolder,
         askCmdrModelWindow,
+        onAiModelCapabilitiesChanged,
         requestRevealPath,
         type CostSummary,
     } from '#lib/tauri-commands/index.js'
@@ -78,8 +79,15 @@
     let chatMemorySize = $state(getSetting('askCmdr.chatMemorySize'))
     $effect(() => onSpecificSettingChange('askCmdr.chatMemorySize', (v) => { chatMemorySize = v }))
     let knownWindowTokens = $state<number | null>(null)
+    // The provider's own report may land after mount (fetched in the background), and it beats
+    // the table, so its arrival re-reads the window too.
+    let capabilitiesVersion = $state(0)
     $effect(() => {
-        dependOn(provider, model) // a provider or model change moves the window this compares against
+        const unlisten = onAiModelCapabilitiesChanged(() => { capabilitiesVersion += 1 })
+        return () => { void unlisten.then((fn) => { fn() }) }
+    })
+    $effect(() => {
+        dependOn(provider, model, capabilitiesVersion) // each one can move the window this compares against
         void askCmdrModelWindow().then(
             (w) => { knownWindowTokens = w.knownWindowTokens },
             (e: unknown) => { log.warn('reading the model window failed: {error}', { error: e }) },

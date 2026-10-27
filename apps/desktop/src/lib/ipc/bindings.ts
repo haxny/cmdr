@@ -2529,6 +2529,13 @@ export const commands = {
   checkAiConnection: (baseUrl: string, providerId: string) =>
     __TAURI_INVOKE<AiConnectionCheckResult>('check_ai_connection', { baseUrl, providerId }),
   /**
+   *  The window and longest reply of `model` on the provider being set up, for Settings › AI.
+   *  Reads the cache, falling back to the budget's family table; a missing or stale catalog
+   *  starts a gated background refresh, and `AiModelCapabilitiesChanged` says when to ask again.
+   */
+  getAiModelLimits: (providerId: string, baseUrl: string, model: string) =>
+    __TAURI_INVOKE<AiModelLimits>('get_ai_model_limits', { providerId, baseUrl, model }),
+  /**
    *  For each base URL, the policy's refusal of cloud AI sending there, or `None` when it may. The
    *  provider picker renders a refused preset disabled with that reason, so the frontend never works
    *  out which rule refused it. A URL, never a key, crosses IPC.
@@ -5488,6 +5495,7 @@ export const events = {
   cloudAiConsentChanged: makeEvent<CloudAiConsentChanged>('cloud-ai-consent-changed'),
   dateSortMenuPick: makeEvent<DateSortMenuPick>('date-sort-menu-pick'),
   directoryDeleted: makeEvent<DirectoryDeletedEvent>('directory-deleted'),
+  aiModelCapabilitiesChanged: makeEvent<AiModelCapabilitiesChanged>('ai-model-capabilities-changed'),
   directoryDiff: makeEvent<DirectoryDiff>('directory-diff'),
   displayAccessibilityChanged: makeEvent<DisplayAccessibilityChanged>('display-accessibility-changed'),
   downloadDetected: makeEvent<DownloadDetectedEvent>('download-detected'),
@@ -5939,6 +5947,9 @@ export type AiModelInfo = {
 }
 
 // How much AI the organization allows.
+// Tells the windows a catalog arrived, so Settings › AI re-reads the window it shows.
+export type AiModelCapabilitiesChanged = null
+
 export type AiPolicy =
   // Any provider, cloud hosts subject to `AllowedCloudAIHosts`.
   | 'allowed'
@@ -5950,6 +5961,22 @@ export type AiPolicy =
 export type AiPolicyView = {
   mode: AiPolicy
   /**
+// What Settings › AI shows under the model picker.
+export type AiModelLimits = {
+  // `None` when nothing knows the window, so the UI shows nothing rather than a guess.
+  contextWindowTokens: number | null
+  // Only ever the provider's figure: the table doesn't guess it.
+  maxOutputTokens: number | null
+  source: AiModelLimitsSource | null
+}
+
+// Where the window Settings › AI shows came from.
+export type AiModelLimitsSource =
+  // The provider's own model list.
+  | 'provider'
+  // Cmdr's built-in table: a verified floor that may have aged.
+  | 'builtInTable'
+
    *  The hosts cloud AI may reach, normalized (`api.openai.com`, `*.openai.azure.com`,
    *  `localhost:11434`). `null` when any host goes, or when cloud AI is off altogether.
    */
@@ -12311,8 +12338,9 @@ export type ModelWindowView = {
   // The model Ask Cmdr would send to right now. Empty when AI is off.
   model: string
   /**
-   *  That model's window in tokens: the local server's configured window, else the family
-   *  table. `None` when nothing here knows it, so the UI stays quiet instead of guessing.
+   *  That model's window in tokens: the local server's configured window, else what the
+   *  provider reports, else the family table. `None` when nothing here knows it, so the UI
+   *  stays quiet instead of guessing.
    */
   knownWindowTokens: number | null
 }

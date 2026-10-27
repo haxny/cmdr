@@ -80,8 +80,13 @@ pub fn ask_cmdr_model_window(app: AppHandle) -> ModelWindowView {
         };
     };
     let (provider, _) = provider_and_model(crate::settings::load_ask_cmdr_interactive_model(&app).as_deref());
-    let known_window_tokens = budget::known_window_tokens(provider, &model, crate::ai::state::get_local_context_size())
-        .map(|tokens| tokens as u32);
+    let known_window_tokens = budget::known_window(
+        provider,
+        &model,
+        crate::ai::state::get_local_context_size(),
+        crate::agent::chat::session::reported_window_tokens(&app, provider, &model),
+    )
+    .map(|window| window.tokens as u32);
     ModelWindowView {
         model,
         known_window_tokens,

@@ -145,10 +145,11 @@ export const aiSettings: SettingDefinitionSource[] = [
     component: 'text-input',
   },
   {
-    // How much of the thread one message may carry. `auto` follows the model's window (the
-    // family table in `agent::chat::budget`); a number overrides it and is used as given,
-    // even above the window we believe the model has — the section warns instead of
-    // clamping, because that table will be wrong sometimes and the user may be right.
+    // How much of the thread one message may carry. `auto` spends the model's whole window
+    // (the provider's report, else the family table in `agent::chat::budget`); a number is
+    // an optional lower limit, to spend less, used as given even above the window we believe
+    // the model has — the section warns instead of clamping, because our knowledge will be
+    // wrong sometimes and the user may be right.
     // Presets rather than a free number field: the bounds are then unmisstateable, so
     // there's no below-minimum case and no validation copy. Read fresh per send by
     // `load_ask_cmdr_chat_memory_size`, so it applies to the next message and never moves a

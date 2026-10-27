@@ -54,6 +54,7 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   askCmdrCostSummary: vi.fn(() => Promise.resolve({ days: [] })),
   askCmdrModelWindow: vi.fn(() => Promise.resolve(modelWindow)),
+  onAiModelCapabilitiesChanged: vi.fn(() => Promise.resolve(() => undefined)),
   askCmdrForgetMemory: vi.fn(() => Promise.resolve(3)),
   // The forget confirmation is a `ModalDialog`, which reports itself open and closed.
   notifyDialogOpened: vi.fn(() => Promise.resolve()),

@@ -310,21 +310,37 @@ pub fn provider_and_model(model_override: Option<&str>) -> (ProviderTag, String)
             ai_model
         }
     };
-    let provider = if model.starts_with("claude-") {
+    (cloud_provider_tag(&model), model)
+}
+
+/// A cloud model's provider tag, by its name prefix, matching `ai::client`'s adapter routing.
+pub fn cloud_provider_tag(model: &str) -> ProviderTag {
+    if model.starts_with("claude-") {
         ProviderTag::Anthropic
     } else if model.starts_with("gemini-") {
         ProviderTag::Gemini
     } else {
         ProviderTag::OpenAi
-    };
-    (provider, model)
+    }
+}
+
+/// The window the configured cloud provider reports for `model`, if a report has arrived.
+/// Never waits for one: a stale or missing catalog starts a background refresh and this answers
+/// `None`, so the send sizes from the family table this once. A local model has no report.
+pub fn reported_window_tokens(app: &AppHandle, provider: ProviderTag, model: &str) -> Option<usize> {
+    if provider == ProviderTag::Local {
+        return None;
+    }
+    crate::ai::model_capabilities::for_configured_cloud_model(app, model)?
+        .context_window_tokens
+        .map(|tokens| tokens as usize)
 }
 
 /// The assembled-prompt token budget for the resolved slot, gathered here and decided in the
-/// pure [`budget`] module. This layer supplies the two values the core may not read itself:
+/// pure [`budget`] module. This layer supplies the three values the core may not read itself:
 /// the user's `askCmdr.chatMemorySize` choice (read fresh per turn, so a change applies to the
-/// NEXT message and never to a turn already in flight) and the local server's configured
-/// window.
+/// NEXT message and never to a turn already in flight), the local server's configured window,
+/// and the window the provider reports ([`reported_window_tokens`]).
 ///
 /// The resolution's source is logged, so a budget that came from a stale family table is
 /// visible in the log rather than silently authoritative.
@@ -346,6 +362,7 @@ pub fn resolve_prompt_budget(
         model,
         user_choice: crate::settings::load_ask_cmdr_chat_memory_size(app),
         local_context_tokens: crate::ai::state::get_local_context_size(),
+        reported_window_tokens: reported_window_tokens(app, provider, model),
     })?;
     log::debug!(
         target: LOG_TARGET,

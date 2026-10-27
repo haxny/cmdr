@@ -39,6 +39,10 @@ pub(super) struct ManagerState {
     pub(super) provider: String,
     /// Context size for local llama-server
     pub(super) context_size: u32,
+    /// The cloud provider preset id (`ai.cloudProvider`, e.g. `anthropic`): what the API key is
+    /// stored under, and which model-list protocol and capability catalog apply
+    /// (`model_capabilities`).
+    pub(super) cloud_provider_id: String,
     /// Cloud-AI provider API key (stored here so suggestions.rs can read without settings files)
     pub(super) cloud_api_key: String,
     /// Cloud-AI provider base URL (e.g. `https://api.openai.com/v1`, `https://api.anthropic.com/v1/`)
@@ -75,6 +79,7 @@ pub(super) fn new_manager_state(ai_dir: PathBuf, state: AiState) -> ManagerState
         start_cancel: None,
         provider: String::from("local"),
         context_size: DEFAULT_CONTEXT_SIZE,
+        cloud_provider_id: String::new(),
         cloud_api_key: String::new(),
         cloud_base_url: String::from("https://api.openai.com/v1"),
         cloud_model: String::from("gpt-4o-mini"),
@@ -111,6 +116,15 @@ pub fn get_cloud_config() -> (String, String, String) {
     manager
         .as_ref()
         .map(|m| (m.cloud_api_key.clone(), m.cloud_base_url.clone(), m.cloud_model.clone()))
+        .unwrap_or_default()
+}
+
+/// The configured cloud provider preset id (`ai.cloudProvider`), empty before `configure_ai`.
+pub fn get_cloud_provider_id() -> String {
+    let manager = MANAGER.lock_ignore_poison();
+    manager
+        .as_ref()
+        .map(|m| m.cloud_provider_id.clone())
         .unwrap_or_default()
 }
 

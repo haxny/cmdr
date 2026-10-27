@@ -1,0 +1,84 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "codestral-2508",
+      "object": "model",
+      "created": 1793129028,
+      "owned_by": "mistralai",
+      "capabilities": {
+        "completion_chat": true,
+        "function_calling": true,
+        "reasoning": false,
+        "completion_fim": true,
+        "fine_tuning": false,
+        "vision": false,
+        "ocr": false,
+        "classification": false,
+        "moderation": false,
+        "audio": false,
+        "audio_transcription": false,
+        "audio_transcription_realtime": false,
+        "audio_speech": false,
+        "unified_resources": false
+      },
+      "name": "codestral-2508",
+      "description": "Our cutting-edge language model for coding released August 2025.",
+      "max_context_length": 256000,
+      "aliases": [
+        "codestral-latest",
+        "mistral-code-latest",
+        "mistral-code-fim-latest"
+      ],
+      "deprecation": null,
+      "deprecation_replacement_model": null,
+      "default_model_temperature": 0.3,
+      "billing_model_name": "codestral-2508",
+      "type": "base",
+      "audio_transcription_capabilities": null,
+      "audio_speech_capabilities": null
+    },
+    {
+      "id": "mistral-medium-latest",
+      "object": "model",
+      "created": 1793129028,
+      "owned_by": "mistralai",
+      "capabilities": {
+        "completion_chat": true,
+        "function_calling": true,
+        "reasoning": true,
+        "completion_fim": false,
+        "fine_tuning": false,
+        "vision": true,
+        "ocr": false,
+        "classification": false,
+        "moderation": false,
+        "audio": false,
+        "audio_transcription": false,
+        "audio_transcription_realtime": false,
+        "audio_speech": false,
+        "unified_resources": false
+      },
+      "name": "mistral-medium-latest",
+      "description": "Official mistral-medium-latest Mistral AI model",
+      "max_context_length": 262144,
+      "aliases": [
+        "mistral-medium",
+        "mistral-medium-3-5",
+        "mistral-medium-3.5",
+        "mistral-medium-3",
+        "mistral-medium-2604",
+        "mistral-vibe-cli-latest",
+        "mistral-vibe-cli-with-tools",
+        "magistral-medium-latest"
+      ],
+      "deprecation": null,
+      "deprecation_replacement_model": null,
+      "default_model_temperature": 1.0,
+      "billing_model_name": "mistral-medium-3-5",
+      "type": "base",
+      "audio_transcription_capabilities": null,
+      "audio_speech_capabilities": null
+    }
+  ]
+}

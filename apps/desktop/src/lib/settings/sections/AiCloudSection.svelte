@@ -17,6 +17,9 @@
     import type { SecretErrorMessage } from './ai-secret-error'
     import { addToast, dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import { getAiModelLimits, onAiModelCapabilitiesChanged, type AiModelLimits } from '#lib/tauri-commands/index.js'
 
     /**
      * Settings › AI › Provider. The service picker, then the SAME numbered setup steps the
@@ -99,6 +102,46 @@
     })
     unlistenFns.push(unsubAskCmdrModel)
 
+    // The chosen model's context window (and longest reply, when the service reports it), read
+    // from the backend's capability cache. A missing catalog starts a background fetch there, and
+    // `onAiModelCapabilitiesChanged` bumps `limitsVersion` so this re-reads when it lands.
+    let modelLimits = $state<AiModelLimits | null>(null)
+    let limitsVersion = $state(0)
+    void onAiModelCapabilitiesChanged(() => {
+        limitsVersion += 1
+    }).then((unlisten) => unlistenFns.push(unlisten))
+    $effect(() => {
+        const providerId = controller.providerId
+        const baseUrl = controller.resolvedBaseUrl
+        const model = controller.model.trim()
+        dependOn(limitsVersion)
+        if (locked || !providerId || !baseUrl || !model) {
+            modelLimits = null
+            return
+        }
+        void getAiModelLimits(providerId, baseUrl, model).then(
+            (limits) => {
+                // A newer pick may have landed while this one was in flight.
+                if (controller.providerId === providerId && controller.model.trim() === model) modelLimits = limits
+            },
+            () => {
+                modelLimits = null
+            },
+        )
+    })
+    const contextWindowText = $derived.by(() => {
+        const window = modelLimits?.contextWindowTokens
+        if (window == null) return ''
+        const params = { windowText: formatInteger(window), window }
+        return modelLimits?.source === 'provider'
+            ? tString('ai.cloud.contextWindow', params)
+            : tString('ai.cloud.contextWindowEstimate', params)
+    })
+    const maxOutputText = $derived.by(() => {
+        const output = modelLimits?.maxOutputTokens
+        return output == null ? '' : tString('ai.cloud.maxOutput', { outputText: formatInteger(output), output })
+    })
+
     onDestroy(() => {
         // Flush in-flight typing before teardown: closing Settings (or moving to another
         // section) shouldn't drop a key the user already typed.
@@ -176,6 +219,15 @@
         <div class="setup-steps-block">
             <ProviderSetupSteps {controller} idPrefix="settings-cloud" />
         </div>
+    {/if}
+
+    {#if contextWindowText}
+        <p class="model-limits" role="note">
+            <span>{contextWindowText}</span>
+            {#if maxOutputText}
+                <span>{maxOutputText}</span>
+            {/if}
+        </p>
     {/if}
 
     {#if askCmdrModelOverride}
@@ -262,6 +314,15 @@
        above and below them. */
     .setup-steps-block {
         margin: var(--spacing-sm) 0 var(--spacing-md);
+    }
+
+    .model-limits {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-xxs) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
+        margin: calc(-1 * var(--spacing-sm)) 0 var(--spacing-md);
     }
 
     .askcmdr-override-hint {

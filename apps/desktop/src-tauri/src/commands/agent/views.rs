@@ -84,8 +84,9 @@ impl AskCmdrSendRefusal {
 pub struct ModelWindowView {
     /// The model Ask Cmdr would send to right now. Empty when AI is off.
     pub model: String,
-    /// That model's window in tokens: the local server's configured window, else the family
-    /// table. `None` when nothing here knows it, so the UI stays quiet instead of guessing.
+    /// That model's window in tokens: the local server's configured window, else what the
+    /// provider reports, else the family table. `None` when nothing here knows it, so the UI
+    /// stays quiet instead of guessing.
     pub known_window_tokens: Option<u32>,
 }
 
