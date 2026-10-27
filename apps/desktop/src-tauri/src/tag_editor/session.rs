@@ -22,9 +22,12 @@ use serde::{Deserialize, Serialize};
 pub(super) use cmdr_tags::Fingerprint;
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, apply_tool};
-use cmdr_tags::{Cover, FileTags, TagError, TagField, format_of, read_duration, read_tags};
+use cmdr_tags::{
+    ContentKind, Cover, FileTags, KindRemoval, TagError, TagField, format_of, read_duration, read_tags, removed_by_kind,
+};
 
 use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build, same_cover};
+use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
@@ -86,6 +89,8 @@ pub struct FileChangeView {
     pub fields: Vec<TagField>,
     pub cover: bool,
     pub extras: bool,
+    /// What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
+    pub removes: Vec<KindRemoval>,
 }
 
 /// A file read from disk.
@@ -188,7 +193,6 @@ fn code_of(error: &TagError) -> ReadErrorCode {
 
 /// Reads one file. Lofty may panic on a hostile file: that is a row with a code, not a crash.
 fn read_entry(path: &Path) -> Entry {
-    use crate::crash_reporter::contain_panics;
     let fingerprint = Fingerprint::of(path);
     match contain_panics(|| read_tags(path)) {
         None => Entry::Unreadable(ReadErrorCode::Unreadable),
@@ -356,9 +360,11 @@ pub fn tool(session_id: &str, tool: TagTool) -> Result<TagEditorView, TagEditorE
     })
 }
 
-/// What a write would change, per file, in current order.
-pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> {
-    with_session(session_id, |layout, session| {
+/// What a write as `kind` would change, per file, in current order: the fields, cover, and
+/// extras the edits change, and what the kind removes beyond them (an MP3's conductor under
+/// an audiobook write), read from each file after the lock, so the list matches the write.
+pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView>, TagEditorError> {
+    let listed: Vec<(PathBuf, FileChangeView)> = with_session(session_id, |layout, session| {
         Ok(layout
             .tracks
             .iter()
@@ -367,7 +373,7 @@ pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> 
                 let change = engine_changes(std::slice::from_ref(&loaded.disk), std::slice::from_ref(&loaded.edited))
                     .into_iter()
                     .next()?;
-                Some(FileChangeView {
+                let view = FileChangeView {
                     path: path.to_string_lossy().into_owned(),
                     file_name: path
                         .file_name()
@@ -376,10 +382,31 @@ pub fn changes(session_id: &str) -> Result<Vec<FileChangeView>, TagEditorError> 
                     fields: change.fields,
                     cover: change.cover,
                     extras: change.extras,
-                })
+                    removes: Vec::new(),
+                };
+                Some((path.clone(), view))
             })
             .collect())
-    })
+    })?;
+    Ok(listed
+        .into_iter()
+        .map(|(path, view)| FileChangeView {
+            removes: kind_removals(&path, kind),
+            ..view
+        })
+        .collect())
+}
+
+/// What writing `path` as `kind` removes beyond its fields. A file that can't be read lists
+/// nothing here; its write fails and says so. Blocking: ❌ not under a lock.
+fn kind_removals(path: &Path, kind: ContentKind) -> Vec<KindRemoval> {
+    match contain_panics(|| removed_by_kind(path, kind)) {
+        Some(Ok(removals)) => removals,
+        Some(Err(_)) | None => {
+            log::warn!(target: "tag_editor::session", "Couldn't read what a write kind would remove from a file");
+            Vec::new()
+        }
+    }
 }
 
 /// Whether the file at `path` is still the one the session read, so a write may go ahead. A

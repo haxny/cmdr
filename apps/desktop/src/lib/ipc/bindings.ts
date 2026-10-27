@@ -1638,9 +1638,9 @@ export const commands = {
   // Runs a clean-up tool over the whole session.
   runTagTool: (sessionId: string, tool: TagTool) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool })),
-  // What a write would change, per file.
-  getTagChanges: (sessionId: string) =>
-    typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId })),
+  // What a write as `kind` would change, per file, including what the kind removes.
+  getTagChanges: (sessionId: string, kind: ContentKind) =>
+    typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
   // Writes the changed files.
   applyTags: (sessionId: string, request: ApplyRequest) =>
     typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request })),
@@ -8998,6 +8998,8 @@ export type FileChangeView = {
   fields: TagField[]
   cover: boolean
   extras: boolean
+  // What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
+  removes: KindRemoval[]
 }
 
 /**
@@ -10399,6 +10401,14 @@ export type KeychainError =
   | { type: 'access_denied'; message: string }
   // Other error
   | { type: 'other'; message: string }
+
+/**
+ *  What a write as a [`ContentKind`] removes that [`FileTags`] doesn't show, named so the app
+ *  can list it before writing ([`crate::removed_by_kind`]).
+ */
+export type KindRemoval =
+  // An MP3's conductor (`TPE3`), which an audiobook write removes.
+  'conductor'
 
 /**
  *  A file the dialog's conflict check found at the destination under a name

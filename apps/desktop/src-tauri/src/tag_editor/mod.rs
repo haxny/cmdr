@@ -12,6 +12,8 @@ mod apply_test;
 #[cfg(test)]
 mod cover_test;
 #[cfg(test)]
+mod kind_test;
+#[cfg(test)]
 mod session_test;
 #[cfg(test)]
 mod view_test;

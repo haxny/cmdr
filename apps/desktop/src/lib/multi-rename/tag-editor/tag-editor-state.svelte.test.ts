@@ -126,9 +126,10 @@ describe('createTagEditorState', () => {
   it('changes returns the backend answer and sets the error on failure', async () => {
     const state = createTagEditorState('S')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: true, value: [] })
-    expect(await state.changes()).toEqual({ ok: true, value: [] })
+    expect(await state.changes('music')).toEqual({ ok: true, value: [] })
+    expect(ipc.getTagChanges).toHaveBeenLastCalledWith('S', 'music')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: false, error: { kind: 'notOpen' } })
-    expect((await state.changes()).ok).toBe(false)
+    expect((await state.changes('audiobook')).ok).toBe(false)
     expect(state.error).toEqual({ kind: 'notOpen' })
   })
 

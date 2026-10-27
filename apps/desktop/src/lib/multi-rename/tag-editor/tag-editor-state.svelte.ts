@@ -5,6 +5,7 @@
  * The write Undo reverses is kept in `last-tag-apply.svelte.ts`, so it outlives the sheet.
  */
 
+import type { ContentKind } from '#lib/ipc/bindings.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import {
   applyTags,
@@ -70,7 +71,8 @@ export interface TagEditorState {
   coverCandidates(): Promise<TagStateResult<CoverCandidate[]>>
   /** Gives every file the folder image `fileName` as its cover. */
   coverFromFile(fileName: string): Promise<void>
-  changes(): Promise<TagStateResult<FileChangeView[]>>
+  /** What a write as `kind` would change, with what the kind removes beyond the fields. */
+  changes(kind: ContentKind): Promise<TagStateResult<FileChangeView[]>>
   apply(request: ApplyRequest, options?: ApplyOptions): Promise<TagStateResult<TagApplyReport>>
   /** Writes the old tags of the last write back, the last apply first. A failure leaves the rest undoable. */
   undo(): Promise<TagUndoResult>
@@ -149,7 +151,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     coverCandidates: () => track(() => listCoverCandidates(sessionId)),
     coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
-    changes: () => track(() => getTagChanges(sessionId)),
+    changes: (kind) => track(() => getTagChanges(sessionId, kind)),
     async apply(request, options = {}) {
       const res = await track(() => applyTags(sessionId, request))
       if (!res.ok) return res

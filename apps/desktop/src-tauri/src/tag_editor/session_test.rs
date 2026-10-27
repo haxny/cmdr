@@ -9,7 +9,7 @@ use cmdr_local::reading::list_directory_core;
 use cmdr_media_meta::test_fixtures::{m4a_file, mp3_frames};
 use cmdr_tags::shared::{CoverEdit, SharedValue};
 use cmdr_tags::tools::TagTool;
-use cmdr_tags::{Cover, FileTags, TagField, WriteOptions, read_tags, write_tags};
+use cmdr_tags::{ContentKind, Cover, FileTags, TagField, WriteOptions, read_tags, write_tags};
 
 use super::session::{
     TagEdit, TagEditorError, changes, close, edit, is_open, open, shared_cover, tool, unchanged_on_disk,
@@ -159,7 +159,7 @@ fn set_all_writes_every_file_in_memory_only() {
         let album = on_disk(&dir, name).fields.get(&TagField::Album).cloned();
         assert_ne!(album, Some(vec!["One book".to_string()]), "{name} is untouched on disk");
     }
-    let listed = changes(&id).expect("changes");
+    let listed = changes(&id, ContentKind::Audiobook).expect("changes");
     assert_eq!(listed.len(), 3);
     assert_eq!(listed[0].file_name, "a.mp3");
     assert_eq!(listed[0].fields, vec![TagField::Album]);
@@ -284,7 +284,7 @@ fn unreadable_file_is_listed_not_written() {
     assert_eq!(view.tracks[2].title.as_deref(), Some("Gamma edited"));
     assert_eq!(view.tracks[1].title, None);
     assert!(!view.tracks[1].changed);
-    let listed = changes(&id).expect("changes");
+    let listed = changes(&id, ContentKind::Audiobook).expect("changes");
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].file_name, "c.mp3");
     close(&id);

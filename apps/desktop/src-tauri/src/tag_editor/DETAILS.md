@@ -37,6 +37,9 @@ file that something else renamed.
   bytes, so the panel fetches again when a cover of the same type and size replaces another.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
+- **`changes(session_id, kind)`** lists, per changed file, the fields, cover, and extras the edits change, plus what the
+  kind removes beyond them (`cmdr_tags::removed_by_kind`: an MP3's `TPE3` under Audiobook), read from the file after the
+  tag lock, so the review list says everything `apply` with that kind will do.
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.
 
 ## Write and undo

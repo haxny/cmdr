@@ -502,7 +502,7 @@ describe('MultiRenameDialog Tags tab', () => {
             new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }),
           )
         await settle()
-        expect(ipc.getTagChanges).toHaveBeenCalledWith('S')
+        expect(ipc.getTagChanges).toHaveBeenCalledWith('S', 'audiobook')
         expect(ipc.applyMultiRename).not.toHaveBeenCalled()
         expect(confirmDialog).not.toHaveBeenCalled()
       } finally {

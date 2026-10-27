@@ -1252,6 +1252,10 @@
   "@multiRename.tags.write.extras": {
     "sourceHash": "c1d0d74"
   },
+  "multiRename.tags.write.removesConductor": "conductor (removed)",
+  "@multiRename.tags.write.removesConductor": {
+    "sourceHash": "af05198"
+  },
   "multiRename.tags.write.nothing": "Nothing to write: the tags are as they are on disk.",
   "@multiRename.tags.write.nothing": {
     "sourceHash": "0457bbd"

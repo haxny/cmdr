@@ -11,7 +11,7 @@
     import { formatInteger } from '#lib/intl/number-format.js'
     import { formatUnitList } from '#lib/intl/list-format.js'
     import { joinSentences } from '#lib/intl/sentence-join.js'
-    import type { ContentKind, TagField } from '#lib/ipc/bindings.js'
+    import type { ContentKind, KindRemoval, TagField } from '#lib/ipc/bindings.js'
     import type { FileChangeView, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
     import Button from '#lib/ui/Button.svelte'
     import ToggleGroup from '#lib/ui/ToggleGroup.svelte'
@@ -21,7 +21,8 @@
     import { outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
     import { FIELD_LABELS } from './field-labels'
     import { undoableCount } from './last-tag-apply.svelte'
-    import type { TagEditorState, TagUndoResult } from './tag-editor-state.svelte'
+    import type { TagEditorState, TagStateError, TagUndoResult } from './tag-editor-state.svelte'
+    import { DEFAULT_WRITE_KIND, WRITE_KINDS, loadWriteKind, saveWriteKind } from './write-kind'
 
     interface Props {
         tags: TagEditorState
@@ -49,11 +50,23 @@
         | { step: 'undone'; restored: number; left: number; changed: number }
 
     let current = $state.raw<Step>({ step: 'idle' })
-    let kind = $state<ContentKind>('audiobook')
+    let kind = $state<ContentKind>(DEFAULT_WRITE_KIND)
+    /** The remembered kind arrives once; a pick made before it lands wins. */
+    let picked = false
+    void loadWriteKind().then((remembered) => {
+        if (!picked) kind = remembered
+    })
+
+    function pickKind(value: string): void {
+        const next = WRITE_KINDS.find((k) => k === value)
+        if (next === undefined) return
+        picked = true
+        kind = next
+        saveWriteKind(next)
+    }
 
     const view = $derived(tags.view)
     const canWrite = $derived(view !== null && view.editable)
-    const KINDS: readonly ContentKind[] = ['audiobook', 'music']
     const kindOptions = $derived([
         { value: 'audiobook', label: tString('multiRename.tags.kind.audiobook') },
         { value: 'music', label: tString('multiRename.tags.kind.music') },
@@ -62,10 +75,16 @@
     const fieldNames = (fields: readonly TagField[]): string[] =>
         fields.map((field) => tString(FIELD_LABELS[field]))
 
+    const REMOVAL_KEYS = { conductor: 'multiRename.tags.write.removesConductor' } as const satisfies Record<
+        KindRemoval,
+        string
+    >
+
     function changeText(change: FileChangeView): string {
         const parts = fieldNames(change.fields)
         if (change.cover) parts.push(tString('multiRename.tags.write.cover'))
         if (change.extras) parts.push(tString('multiRename.tags.write.extras'))
+        for (const removal of change.removes) parts.push(tString(REMOVAL_KEYS[removal]))
         return tString('multiRename.tags.write.fileChanges', { fileName: change.fileName, fields: formatUnitList(parts) })
     }
 
@@ -73,7 +92,7 @@
     async function review(earlier: TagApplyReport[] = []): Promise<void> {
         await tags.settled()
         current = { step: 'checking' }
-        const res = await tags.changes()
+        const res = await tags.changes(kind)
         // A failure is worded by the tab, from the state's error.
         if (res.ok) current = { step: 'review', changes: res.value, seen: tags.view, earlier }
         else current = endedStep(earlier)
@@ -105,8 +124,8 @@
     }
 
     /** Only these refusals come before any file is touched; another one may come after some were written. */
-    function refusedStep(kind: string): Step {
-        return kind === 'undo' || kind === 'noAppDataDir' ? { step: 'refused' } : { step: 'idle' }
+    function refusedStep(why: TagStateError['kind']): Step {
+        return why === 'undo' || why === 'noAppDataDir' ? { step: 'refused' } : { step: 'idle' }
     }
 
     /** Every path the write knows, so "Write anyway" can skip all but the would-drop ones. */
@@ -278,7 +297,7 @@
                 options={kindOptions}
                 ariaLabel={tString('multiRename.tags.kind.label')}
                 disabled={!canWrite}
-                onChange={(value) => { kind = KINDS.find((k) => k === value) ?? kind }}
+                onChange={pickKind}
             />
             <Button
                 variant="primary"

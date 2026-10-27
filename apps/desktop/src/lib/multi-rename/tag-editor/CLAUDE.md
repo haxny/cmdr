@@ -11,8 +11,9 @@ discard guard and the state factory cross that line.
 - **Unwritten edits are never lost silently**: closing, Rename, and switching sessions go through `discard-guard.ts`
   ("Discard tag changes?").
 - **The tag canon is shown, not enforced**: diacritics are allowed only in Comment and Description (a warning with a
-  one-click fix, never a silent strip); a single-file book hides the # column and Renumber; the write kind defaults to
-  Audiobook. Details: `tag-editor/` header comments and the backend `DETAILS.md`.
+  one-click fix, never a silent strip); a single-file book hides the # column and Renumber; the write kind is Audiobook
+  on first run, then the user's last pick (`write-kind.ts`), and the change list names what it removes (an MP3's
+  conductor). Details: `tag-editor/` header comments and the backend `DETAILS.md`.
 - **Writing is safe**: the undo record is saved first, a file changed on disk since the read is listed as
   `changedOnDisk` and not written, "Write anyway" (data loss) is an explicit choice, and Undo asks first and leaves a
   file that changed after the write (another write, a rename onto its name) alone, counted apart.

@@ -19,7 +19,7 @@ use lofty::picture::{Picture, PictureType};
 use serde::{Deserialize, Serialize};
 
 use crate::format::{AudioFormat, format_of};
-use crate::model::{Cover, FileTags, TagError, TagField};
+use crate::model::{ContentKind, Cover, FileTags, KindRemoval, TagError, TagField};
 
 /// The separator the editor joins multiple values with where a format stores one string.
 pub(crate) const JOIN: &str = "; ";
@@ -83,6 +83,19 @@ pub(crate) struct RawTags {
     pub(crate) track_total: Option<u32>,
     pub(crate) disc_total: Option<u32>,
     pub(crate) conductor: Option<String>,
+}
+
+/// What writing the audio file at `path` as `kind` removes beyond the fields it shows: an
+/// MP3's conductor (`TPE3`) under [`ContentKind::Audiobook`], as `write_tags` does. Parses the
+/// file, writes nothing. A music write removes nothing.
+pub fn removed_by_kind(path: &Path, kind: ContentKind) -> Result<Vec<KindRemoval>, TagError> {
+    match kind {
+        ContentKind::Music => Ok(Vec::new()),
+        ContentKind::Audiobook => {
+            let (_, raw) = read_snapshot(path)?;
+            Ok(raw.conductor.map(|_| KindRemoval::Conductor).into_iter().collect())
+        }
+    }
 }
 
 /// Reads the [`RawTags`] of the audio file at `path`, parsing as [`read_tags`] does.

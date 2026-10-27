@@ -3095,6 +3095,7 @@ export type MessageKey =
   | 'multiRename.tags.write.nothing'
   | 'multiRename.tags.write.refused'
   | 'multiRename.tags.write.reload'
+  | 'multiRename.tags.write.removesConductor'
   | 'multiRename.tags.write.review'
   | 'multiRename.tags.write.skippedHeading'
   | 'multiRename.tags.write.summaryAs'

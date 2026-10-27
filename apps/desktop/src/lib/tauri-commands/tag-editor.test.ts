@@ -92,12 +92,13 @@ describe('runTagTool', () => {
 describe('getTagChanges', () => {
   it('passes the changes through', async () => {
     vi.mocked(commands.getTagChanges).mockResolvedValue({ status: 'ok', data: [] } as never)
-    expect(await getTagChanges('s1')).toEqual({ ok: true, value: [] })
+    expect(await getTagChanges('s1', 'music')).toEqual({ ok: true, value: [] })
+    expect(commands.getTagChanges).toHaveBeenCalledWith('s1', 'music')
   })
 
   it('returns the typed error', async () => {
     vi.mocked(commands.getTagChanges).mockResolvedValue(failure)
-    expect(await getTagChanges('s1')).toEqual({ ok: false, error: noSession })
+    expect(await getTagChanges('s1', 'audiobook')).toEqual({ ok: false, error: noSession })
   })
 })
 

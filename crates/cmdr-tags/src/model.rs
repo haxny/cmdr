@@ -142,6 +142,16 @@ pub enum ContentKind {
     Music,
 }
 
+/// What a write as a [`ContentKind`] removes that [`FileTags`] doesn't show, named so the app
+/// can list it before writing ([`crate::removed_by_kind`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+#[serde(rename_all = "camelCase")]
+pub enum KindRemoval {
+    /// An MP3's conductor (`TPE3`), which an audiobook write removes.
+    Conductor,
+}
+
 /// Why a tag read or write didn't happen. Serialized as `{"type": "<variant>", "data": ...}`
 /// (camelCase variant names), an `Io` kind as its `std::io::ErrorKind` name (`"NotFound"`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

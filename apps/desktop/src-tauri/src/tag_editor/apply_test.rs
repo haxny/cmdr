@@ -24,7 +24,7 @@ use crate::multi_rename::transform::CaseChange;
 use crate::test_support::{TestDir, wait_until_async};
 
 /// A fresh undo store in its own scratch dir.
-fn store(tag: &str) -> (TestDir, UndoStore) {
+pub(super) fn store(tag: &str) -> (TestDir, UndoStore) {
     let dir = TestDir::new(tag);
     let store = UndoStore::open(dir.join("tag-undo"), UndoLimits::default()).expect("the store opens");
     (dir, store)
@@ -41,7 +41,7 @@ fn records(store_dir: &TestDir) -> usize {
         .count()
 }
 
-fn request() -> ApplyRequest {
+pub(super) fn request() -> ApplyRequest {
     ApplyRequest {
         kind: ContentKind::Audiobook,
         allow_frame_loss: false,
@@ -170,6 +170,11 @@ fn one_failure_keeps_the_others_and_undo_restores_written() {
 
 /// An MP3 whose ID3v2.4 tag holds a title and a `TSOP` frame, which ID3v2.3 has no place for.
 fn mp3_with_v24_only_frame() -> Vec<u8> {
+    mp3_with_v24_frames(&[(b"TIT2", "Alpha"), (b"TSOP", "Sort name")])
+}
+
+/// An MP3 with an ID3v2.4 tag of these text frames.
+pub(super) fn mp3_with_v24_frames(frames: &[(&[u8; 4], &str)]) -> Vec<u8> {
     fn syncsafe(n: usize) -> [u8; 4] {
         let n = u32::try_from(n).expect("a small tag");
         [
@@ -183,7 +188,7 @@ fn mp3_with_v24_only_frame() -> Vec<u8> {
         let body: Vec<u8> = std::iter::once(3).chain(text.bytes()).collect();
         [id.as_slice(), &syncsafe(body.len()), &[0, 0], &body].concat()
     }
-    let frames = [frame(b"TIT2", "Alpha"), frame(b"TSOP", "Sort name")].concat();
+    let frames: Vec<u8> = frames.iter().flat_map(|(id, text)| frame(id, text)).collect();
     [
         b"ID3".as_slice(),
         &[4, 0, 0],
@@ -382,7 +387,7 @@ fn undo_keeps_another_sessions_unwritten_edits_and_refreshes_its_disk_copy() {
         "the unwritten edit stays"
     );
     assert!(view.dirty);
-    let changes = changes(&other).expect("lists its changes");
+    let changes = changes(&other, ContentKind::Audiobook).expect("lists its changes");
     assert_eq!(changes.len(), 1, "only the edited file differs from the disk");
     assert_eq!(
         changes[0].fields,

@@ -1,9 +1,9 @@
 //! IPC for the Tags tab of the Multi-Rename Tool. Thin: the work is `crate::tag_editor`.
 //! File work runs on the blocking pool, never on the IPC thread.
 
-use cmdr_tags::RestoreReport;
 use cmdr_tags::shared::CoverEdit;
 use cmdr_tags::tools::TagTool;
+use cmdr_tags::{ContentKind, RestoreReport};
 
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
@@ -44,11 +44,11 @@ pub async fn run_tag_tool(session_id: String, tool: TagTool) -> Result<TagEditor
     blocking(move || run_tool(&session_id, tool)).await
 }
 
-/// What a write would change, per file.
+/// What a write as `kind` would change, per file, including what the kind removes.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_tag_changes(session_id: String) -> Result<Vec<FileChangeView>, TagEditorError> {
-    blocking(move || changes(&session_id)).await
+pub async fn get_tag_changes(session_id: String, kind: ContentKind) -> Result<Vec<FileChangeView>, TagEditorError> {
+    blocking(move || changes(&session_id, kind)).await
 }
 
 /// Writes the changed files.

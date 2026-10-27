@@ -515,6 +515,34 @@ export async function saveProgressDialogHeight(height: number): Promise<void> {
 }
 
 // ============================================================================
+// Tag editor write kind (fork: the opt-in Tags tab of Multi-Rename)
+// ============================================================================
+
+const TAG_WRITE_KIND_KEY = 'tagWriteKind'
+
+/** The content kind the user last wrote tags as, unchecked (the Tags tab validates it), or `null` before any. */
+export async function loadTagWriteKind(): Promise<string | null> {
+  try {
+    const store = await getStore()
+    const kind = await store.get(TAG_WRITE_KIND_KEY)
+    return typeof kind === 'string' ? kind : null
+  } catch {
+    return null
+  }
+}
+
+/** Remembers the content kind the user picked in the Tags tab. */
+export async function saveTagWriteKind(kind: string): Promise<void> {
+  try {
+    const store = await getStore()
+    await store.set(TAG_WRITE_KIND_KEY, kind)
+    await store.save()
+  } catch {
+    // Silently fail - persistence is nice-to-have
+  }
+}
+
+// ============================================================================
 // Tab persistence
 // ============================================================================
 

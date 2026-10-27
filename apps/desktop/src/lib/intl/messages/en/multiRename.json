@@ -1421,6 +1421,10 @@
   "@multiRename.tags.write.extras": {
     "description": "Shown in the Tags tab of Multi-Rename: in a row of the list of changes, the words for the extra (unmanaged) tags. Lower case."
   },
+  "multiRename.tags.write.removesConductor": "conductor (removed)",
+  "@multiRename.tags.write.removesConductor": {
+    "description": "Shown in the Tags tab of Multi-Rename, in the list of what a write will change in one file: writing as Audiobook removes the conductor tag of an MP3 (audiobooks keep none). One item of the list of changed fields."
+  },
   "multiRename.tags.write.nothing": "Nothing to write: the tags are as they are on disk.",
   "@multiRename.tags.write.nothing": {
     "description": "Shown in the Tags tab of Multi-Rename: instead of the list of changes when no file would change."

@@ -4,6 +4,7 @@
 import {
   commands,
   type ApplyRequest,
+  type ContentKind,
   type CoverCandidate,
   type FileChangeView,
   type RestoreReport,
@@ -54,9 +55,9 @@ export async function runTagTool(sessionId: string, tool: TagTool): Promise<TagE
   return result(await commands.runTagTool(sessionId, tool))
 }
 
-/** What a write would change, per file, in current order. */
-export async function getTagChanges(sessionId: string): Promise<TagEditorResult<FileChangeView[]>> {
-  return result(await commands.getTagChanges(sessionId))
+/** What a write as `kind` would change, per file, in current order, with what the kind removes. */
+export async function getTagChanges(sessionId: string, kind: ContentKind): Promise<TagEditorResult<FileChangeView[]>> {
+  return result(await commands.getTagChanges(sessionId, kind))
 }
 
 /** Writes the changed files. The report lists what was written, what would drop items, what failed, and what changed on disk. */

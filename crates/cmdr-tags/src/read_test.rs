@@ -10,9 +10,10 @@ use lofty::ogg::tag::VorbisComments;
 use lofty::picture::PictureType;
 use lofty::tag::Accessor;
 
-use crate::model::{FileTags, TagError, TagField};
-use crate::read::read_tags;
+use crate::model::{ContentKind, FileTags, KindRemoval, TagError, TagField};
+use crate::read::{read_raw, read_tags, removed_by_kind};
 use crate::test_files::*;
+use crate::write::{WriteOptions, write_tags};
 
 fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|v| (*v).to_owned()).collect()
@@ -365,4 +366,41 @@ fn read_duration_none_for_garbage() {
     assert_eq!(crate::read::read_duration(&dir.path().join("missing.mp3")), None);
     let unknown = write_bytes(dir.path(), "g.txt", vec![1, 2, 3]);
     assert_eq!(crate::read::read_duration(&unknown), None);
+}
+
+/// What the change list says an audiobook write removes is what `write_tags` removes.
+#[test]
+fn removed_by_kind_names_the_conductor_an_audiobook_write_drops() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut tag = Id3v2Tag::new();
+    text_frame(&mut tag, "TPE3", "Dirigent");
+    let with = write_mp3(dir.path(), "with.mp3", &tag);
+    let without = write_mp3(dir.path(), "without.mp3", &Id3v2Tag::new());
+    let mut comments = VorbisComments::new();
+    comments.push("CONDUCTOR".to_owned(), "Dirigent".to_owned());
+    let flac = write_flac(dir.path(), "c.flac", comments, 0);
+
+    assert_eq!(
+        removed_by_kind(&with, ContentKind::Audiobook).unwrap(),
+        vec![KindRemoval::Conductor]
+    );
+    assert_eq!(removed_by_kind(&with, ContentKind::Music).unwrap(), vec![]);
+    assert_eq!(removed_by_kind(&without, ContentKind::Audiobook).unwrap(), vec![]);
+    assert_eq!(removed_by_kind(&flac, ContentKind::Audiobook).unwrap(), vec![]);
+
+    let opts = WriteOptions {
+        kind: ContentKind::Audiobook,
+        track_total: None,
+        disc_total: None,
+        allow_frame_loss: false,
+    };
+    let mut tags = read(&with);
+    tags.fields.insert(TagField::Title, strings(&["Kapitola"]));
+    write_tags(&with, &tags, &opts).unwrap();
+    assert_eq!(
+        read_raw(&with).unwrap().conductor,
+        None,
+        "the write removed what was listed"
+    );
+    assert_eq!(removed_by_kind(&with, ContentKind::Audiobook).unwrap(), vec![]);
 }

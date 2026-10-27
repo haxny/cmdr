@@ -14,7 +14,10 @@ Setting `multiRename.tagEditor` (boolean, default off). On, `SheetTabs` appears 
 - **Apply / undo**: the old tags are recorded before any write; failures are per file and the rest are written; Undo
   restores exactly the written files after asking, and leaves one that changed since (its fingerprint moved) alone.
   Other open sessions keep their unwritten edits, rebased per field. One Multi-Rename sheet is open at a time.
-- **Tag canon**: no diacritics except Comment and Description; ContentKind defaults to Audiobook; M4A genre is written
-  only as freeform GENRE (the engine does it); a single-file book has no track number.
+- **Tag canon**: no diacritics except Comment and Description; ContentKind is Audiobook on first run, then the last
+  pick, remembered in `app-status.json` (`write-kind.ts`; Ruling 22, decided without the user: per user, not per
+  folder); `getTagChanges` takes the kind and lists what it removes beyond the fields (`removes`, an MP3's `TPE3` under
+  Audiobook), so the list matches the write; M4A genre is written only as freeform GENRE (the engine does it); a
+  single-file book has no track number.
 - **Strings**: `multiRename.tags.*` in `messages/en/multiRename.json`; other locales hold untranslated skeletons (Czech
   comes with the Czech locale port).

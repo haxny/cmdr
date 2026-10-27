@@ -195,6 +195,8 @@ safe path component: not empty, no `/`, `\`, NUL, or `..`, no leading `.`; anyth
   catches lofty's panics as `TagError::Write`, but a caught panic still files a crash report unless the app contains it.
 - **One `UndoStore` writer.** Its calls read and rewrite the store's directories without locking; keep one store behind
   a `Mutex` and never open two on one root.
+- **List what the kind removes before writing.** `removed_by_kind(path, kind)` names what a write as `kind` drops beyond
+  the fields (`KindRemoval::Conductor`: an MP3's `TPE3` under Audiobook), parsing the file without writing.
 - **Show `TagError::WouldDrop` to the user with the option to proceed.** It names what the write would lose (values the
   editor doesn't show, frames ID3v2.3 can't hold); proceeding is the same write with `WriteOptions::allow_frame_loss`.
 - **One dispatcher, one check, file length.** `tools::TagTool` (`{"kind":"renumber","start":1}`, camelCase kinds) with

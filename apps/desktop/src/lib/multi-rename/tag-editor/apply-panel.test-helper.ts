@@ -25,8 +25,8 @@ export const PANEL_VIEW: TagEditorView = {
 }
 
 export const CHANGES: FileChangeView[] = [
-  { path: '/b/01.mp3', fileName: '01.mp3', fields: ['album', 'title'], cover: true, extras: false },
-  { path: '/b/02.mp3', fileName: '02.mp3', fields: ['album'], cover: false, extras: true },
+  { path: '/b/01.mp3', fileName: '01.mp3', fields: ['album', 'title'], cover: true, extras: false, removes: [] },
+  { path: '/b/02.mp3', fileName: '02.mp3', fields: ['album'], cover: false, extras: true, removes: [] },
 ]
 
 export function applyReport(over: Partial<TagApplyReport> = {}): TagApplyReport {
