@@ -211,3 +211,83 @@ fn json_shape_is_flat_and_camel_case() {
     let back: TagTool = serde_json::from_value(json).unwrap();
     assert_eq!(back, TagTool::AutoNumber(options(None)));
 }
+
+#[test]
+fn totals_off_removes_existing_totals() {
+    let mut input = files(&["", ""]);
+    for tags in &mut input {
+        tags.fields.insert(TagField::TrackTotal, vec!["9".into()]);
+        tags.fields.insert(TagField::DiscTotal, vec!["7".into()]);
+    }
+    let out = run(&input, &ctx(&["a", "b"]), options(Some(disc())));
+    assert_eq!(column(&out, TagField::TrackTotal), ["", ""]);
+    assert_eq!(column(&out, TagField::DiscTotal), ["", ""]);
+}
+
+#[test]
+fn track_total_off_without_disc_keeps_disc_total() {
+    let mut input = files(&["", ""]);
+    for tags in &mut input {
+        tags.fields.insert(TagField::TrackTotal, vec!["9".into()]);
+        tags.fields.insert(TagField::DiscTotal, vec!["7".into()]);
+    }
+    let out = run(&input, &ctx(&[]), options(None));
+    assert_eq!(column(&out, TagField::TrackTotal), ["", ""]);
+    assert_eq!(column(&out, TagField::DiscTotal), ["7", "7"]);
+}
+
+#[test]
+fn field_reset_alone_starts_a_new_group_and_restarts_tracks() {
+    // No folder or next-field boundary; only the reset field changes at index 2.
+    let opts = options(Some(DiscOptions {
+        next_on_folder: false,
+        reset_disc_on_field: Some(TagField::Album),
+        ..disc()
+    }));
+    let out = run(&files(&["X", "X", "Y", "Y"]), &ctx(&[]), opts);
+    assert_eq!(column(&out, TagField::Disc), ["1", "1", "1", "1"]);
+    assert_eq!(column(&out, TagField::Track), ["01", "02", "01", "02"]);
+}
+
+#[test]
+fn field_reset_with_tracks_continuing() {
+    let opts = options(Some(DiscOptions {
+        next_on_folder: false,
+        reset_track: false,
+        reset_disc_on_field: Some(TagField::Album),
+        ..disc()
+    }));
+    let out = run(&files(&["X", "X", "Y"]), &ctx(&[]), opts);
+    assert_eq!(column(&out, TagField::Track), ["01", "02", "03"]);
+}
+
+#[test]
+fn folder_and_field_boundaries_together_make_one_new_disc() {
+    let opts = options(Some(DiscOptions {
+        next_on_field: Some(TagField::Album),
+        ..disc()
+    }));
+    // Folder and album both change at index 2: one new disc, not two.
+    let out = run(&files(&["X", "X", "Y", "Y"]), &ctx(&["a", "a", "b", "b"]), opts.clone());
+    assert_eq!(column(&out, TagField::Disc), ["1", "1", "2", "2"]);
+    // Only the album changes at index 1, only the folder at index 3.
+    let out = run(&files(&["X", "Y", "Y", "Y"]), &ctx(&["a", "a", "a", "b"]), opts);
+    assert_eq!(column(&out, TagField::Disc), ["1", "2", "2", "3"]);
+}
+
+#[test]
+fn a_missing_album_next_to_a_present_one_is_a_boundary() {
+    let opts = options(Some(DiscOptions {
+        next_on_folder: false,
+        next_on_field: Some(TagField::Album),
+        ..disc()
+    }));
+    let out = run(&files(&["X", "", "", "X"]), &ctx(&[]), opts);
+    assert_eq!(column(&out, TagField::Disc), ["1", "2", "2", "3"]);
+}
+
+#[test]
+fn empty_input_gives_empty_output() {
+    let out = run(&[], &ctx(&[]), options(Some(disc())));
+    assert!(out.is_empty());
+}

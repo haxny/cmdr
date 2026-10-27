@@ -131,6 +131,8 @@ pub fn auto_number(files: &[FileTags], ctx: &ToolContext, opts: &NumberOptions) 
                 set(tags, TagField::Track, pad_number(next_track, width));
                 if opts.track_total {
                     set(tags, TagField::TrackTotal, counted.to_string());
+                } else {
+                    tags.fields.remove(&TagField::TrackTotal);
                 }
             }
             next_track = next_track.saturating_add(1);
@@ -152,6 +154,8 @@ fn write_discs(out: &mut [FileTags], groups: &[Group], opts: &DiscOptions) {
             set(tags, TagField::Disc, pad_number(group.disc, width));
             if opts.total {
                 set(tags, TagField::DiscTotal, discs.to_string());
+            } else {
+                tags.fields.remove(&TagField::DiscTotal);
             }
         }
     }

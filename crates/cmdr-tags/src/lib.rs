@@ -63,6 +63,7 @@ pub use fingerprint::Fingerprint;
 pub use format::{AudioFormat, format_of};
 pub use model::{ContentKind, Cover, FileTags, KindRemoval, TagError, TagField};
 pub use normalize::normalize_for;
+pub use numbering::{DiscOptions, NumberOptions};
 pub use read::{read_duration, read_tags, removed_by_kind};
 pub use undo::{ApplyId, RestoreReport, UndoLimits, UndoStore};
 pub use write::{WriteOptions, write_tags};
