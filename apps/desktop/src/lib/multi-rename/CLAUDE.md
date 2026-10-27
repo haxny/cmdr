@@ -4,9 +4,8 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
 
 - `MultiRenameDialog.svelte` the sheet; `routes/(main)/+page.svelte` opens the backend session first and closes it with
   the sheet. `PreviewList.svelte` its preview (a `grid` `ColumnList` over the windowed `source`, one cursor).
-- `multi-rename-state.svelte.ts` the spec, the debounced preview (a generation counter drops stale answers), the rows in
-  view, the cursor, presets (`loadedId`, `edited`), the last settings (`persist`), Results' names, Rename and its queue,
-  the media read's progress.
+- `multi-rename-state.svelte.ts` the spec, the debounced preview, the rows in view, the cursor, presets (`loadedId`,
+  `edited`), the last settings (`persist`), Results' names, Rename and its queue, the media read's progress.
 - `results.svelte.ts` Results (⌥⏎): whether a names file is out in the editor; window focus reads it back.
 - `field-history-menu.svelte.ts` the fields' history (↓), one house `Menu`; `FieldHistoryChevron.svelte` its chevron.
 - `PresetsControl.svelte` the Presets button, its house `Menu`, and the name popover. `preset-menu.ts` (rows, name
@@ -20,6 +19,7 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
   `placeholder-help.ts`, `SearchOptionChips.svelte` / `search-option-help.ts`: tooltips and chips; `rename-examples.ts`
   renders the examples.
 - `last-run.svelte.ts` the last run, which Undo rename (⌘⌥Z) rolls back. Outlives the sheet.
+- `tag-editor/` the opt-in Tags tab (setting `multiRename.tagEditor`).
 - `option-keys.ts` the ⌘⌥ option keys (`TOGGLE_COMMANDS`) and the whole-name toggles in pipeline order. Pure.
 
 ## Must-knows
@@ -36,8 +36,8 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
 - **Every sheet key is a fixed registry command** in `Main window/Multi-rename`, read through `eventMatchesCommand` and
   claimed, from a text field too. ❌ No raw key tests. An open Presets menu owns every key (its `onKey` answers F2 and
   ⌘S). ↓ strictly inside a mask token is its editor's, elsewhere the field's history.
-- **F2 is also File > Rename's accelerator**: both roads end in `PresetsControl.pressOpenKey`, one toggle per press
-  (`createKeyRoadEcho`). ❌ Don't call `openMenu` from a key path: the echo would close the menu it opened.
+- **F2 is also File > Rename's accelerator**: both roads end in `PresetsControl.pressOpenKey`, one toggle per press . ❌
+  Don't call `openMenu` from a key path: the echo would close the menu it opened.
 - ⌘⌥ C/A/H/L/O/Q/T/V belong to app commands, D to the Dock, M to macOS. DETAILS § Layout and option keys.
 - **The `*-token.ts` grammars read tokens as `mask.rs` does** (`src-tauri/src/multi_rename/*_token_vectors.json`);
   change one there first.

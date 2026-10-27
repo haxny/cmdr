@@ -1,0 +1,20 @@
+# Tags tab details
+
+Setting `multiRename.tagEditor` (boolean, default off). On, `SheetTabs` appears (Rename | Tags); the Rename tab is
+`RenamePanel`, the Tags tab `TagsTab`. Files in `tag-editor/`:
+
+- **State**: `tag-editor-state.svelte.ts` (the view from the backend's `TagEditorView`, edits sent by path, `busy`,
+  `settled()` so a cell that just lost focus is in before a close/apply, Undo); `last-tag-apply.svelte.ts` (the last
+  write's applies, which "Undo tag changes" reverses; outlives the sheet, not persisted); `discard-guard.ts`.
+- **Parts**: `SharedFieldsTable` (one row per field; a "multiple values" row is untouched until changed), `TrackList`
+  (per-file Title and #; the # column is hidden for a one-file book), `CoverPanel` (+ thumbnail), `EditableCell`,
+  `TagToolsBar` (clean-up tools over the whole session, Case on the focused field), `ApplyPanel` + `ApplyOutcome` (what
+  will change, the per-file result, Undo), `WouldDropDialog` (items a format would lose; Write anyway or Skip).
+- **Why edits are keyed by path**: the user may reorder rows in the Rename tab; every edit stays with its file.
+- **Apply / undo**: the old tags are recorded before any write; failures are per file and the rest are written; Undo
+  restores exactly the written files after asking, and overwrites changes made since. Other open sessions keep their
+  unwritten edits, rebased per field. One Multi-Rename sheet is open at a time.
+- **Tag canon**: no diacritics except Comment and Description; ContentKind defaults to Audiobook; M4A genre is written
+  only as freeform GENRE (the engine does it); a single-file book has no track number.
+- **Strings**: `multiRename.tags.*` in `messages/en/multiRename.json`; other locales hold untranslated skeletons (Czech
+  comes with the Czech locale port).
