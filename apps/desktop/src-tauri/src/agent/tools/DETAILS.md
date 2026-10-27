@@ -172,6 +172,9 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   over the proposal spine: what the agent has already put in front of the user (summaries and counts, never op rows),
   one group's ops paged, and the one tool that stages a sweep or amends a pending group. Access classes, the
   resolve-check-write order, the selector schema, and the last-opened gap: `suggestions/DETAILS.md`.
+- **`propose_server`** (`suggestions/server.rs`, agent-only, `Access::Propose`) — stages a server to save, or a change
+  to a saved one, as a zero-op group on the same spine. No secret, no contact with any server, only on a turn the user
+  started, and an edit can't move a server or change its account. `suggestions/DETAILS.md` § Proposing a server.
 - **`nothing_to_suggest`** (`quiet.rs`) — one argument, a short `reason`, and no effect at all. See § A tool that is
   only a signal.
 - **`memory_write` / `memory_edit`** (`memory.rs`) — the two `Access::Memory` tools. See § The two tools that write.
@@ -240,8 +243,8 @@ delete lives on the wake path, after the turn (`agent/wake/`), and a rail turn c
 auto-dispatched ones the user never previews, and `redact::RedactionContext::redact_line` is path-shaped, so it does
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
-**What it costs everyone else.** The schema is prefix, so all 20 declarations are paid on every rail turn: this one is
-97 tokens of the 6,958 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+**What it costs everyone else.** The schema is prefix, so all 21 declarations are paid on every rail turn: this one is
+97 tokens of the 7,241 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -772,10 +775,11 @@ The refusal SENTENCE matters as much as the shape, and its rules live with the g
 at the top level is a `Misplaced` violation naming the row that takes it, because "propose_rename_plan has no volumeId
 parameter. It takes renames." is a true sentence a model cannot act on — it reads as "your rows were fine".
 
-`dispatch` routes four tools specially rather than through the generic `execute_tool` call: `propose_rename_plan`,
+`dispatch` routes five tools specially rather than through the generic `execute_tool` call: `propose_rename_plan`,
 which needs the evidence scope, `propose_suggestions`, which needs the conversation id so a sweep records the thread it
-came out of (`suggestions/DETAILS.md` § The conversation link), and `list_dir` and `connect_volume`, which take the
-turn's Stop to answer it in their own words. All are gated first, like every other call.
+came out of (`suggestions/DETAILS.md` § The conversation link), `propose_server`, which needs that and the turn's origin
+(it refuses a turn the user didn't start itself, so the gate stays tier-only), and `list_dir` and `connect_volume`,
+which take the turn's Stop to answer it in their own words. All are gated first, like every other call.
 
 `dispatch` also feeds `propose::evidence::ImageFactsLedger` from every non-elided `image_facts` result. That's what makes
 a rename plan's content claim checkable; the guardrail, its refusal shape, and the revocation seam are in

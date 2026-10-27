@@ -9,12 +9,14 @@
 //! - `read.rs`: the two read shapers, and the store reader they lean on.
 //! - `place.rs`: where a proposal may point, over fixture volume facts.
 //! - `names.rs`: names on a move or copy, and every name a proposal refuses.
+//! - `server.rs`: `propose_server`, its checks over fixture saved servers, and its one write.
 
 mod input;
 mod names;
 mod place;
 mod propose;
 mod read;
+mod server;
 
 use rusqlite::Connection;
 use serde_json::{Value, json};

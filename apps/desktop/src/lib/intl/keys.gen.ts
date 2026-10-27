@@ -440,6 +440,8 @@ export type MessageKey =
   | 'askCmdr.tool.proposeRenamePlan.count.done'
   | 'askCmdr.tool.proposeRenamePlan.doing'
   | 'askCmdr.tool.proposeRenamePlan.done'
+  | 'askCmdr.tool.proposeServer.doing'
+  | 'askCmdr.tool.proposeServer.done'
   | 'askCmdr.tool.proposeSuggestions.count.doing'
   | 'askCmdr.tool.proposeSuggestions.count.done'
   | 'askCmdr.tool.proposeSuggestions.doing'

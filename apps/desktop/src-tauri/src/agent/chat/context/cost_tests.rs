@@ -31,10 +31,10 @@ const FILES: usize = 100;
 // them, and divides the reply's own ceiling by the plan row), so they're imported rather than
 // restated: this file is what keeps them honest against the real shapes.
 
-/// Every call: the system prompt plus the 20 tool declarations, before the user has said a word.
+/// Every call: the system prompt plus the 21 tool declarations, before the user has said a word.
 const FIXED_OVERHEAD: usize = FIXED_PROMPT_OVERHEAD_TOKENS;
 const SYSTEM_PROMPT_TOKENS: usize = 2_378;
-const TOOL_DECLARATION_TOKENS: usize = 4_580;
+const TOOL_DECLARATION_TOKENS: usize = 4_863;
 
 /// One `image_facts` row at [`OCR_CHARS`] of recognized text: the dominant per-file cost, and
 /// the reason a window has to be sized for the facts rather than for the plan.
@@ -47,7 +47,7 @@ const PLAN_ROW_PER_FILE: usize = PLAN_ROW_TOKENS_PER_FILE;
 const LISTING_PER_FILE: usize = LISTING_TOKENS_PER_FILE;
 
 /// The whole 100-file rename turn, prefix included.
-const HUNDRED_FILE_TURN: usize = 43_347;
+const HUNDRED_FILE_TURN: usize = 43_823;
 
 /// A mid-sized budget, what a 128K window resolved to before Automatic spent the whole window.
 /// Not a production number any more; it pins that a 100-file turn fits a modest window, so a
@@ -103,13 +103,13 @@ fn assert_near(measured: usize, documented: usize, what: &str) {
 #[test]
 fn every_call_pays_about_3_500_tokens_of_fixed_overhead() {
     let tools = crate::agent::tools::agent_tool_declarations();
-    assert_eq!(tools.len(), 20, "the overhead below is the cost of THESE declarations");
+    assert_eq!(tools.len(), 21, "the overhead below is the cost of THESE declarations");
 
     let system = estimate_prompt_tokens(&crate::agent::chat::system_prompt::system_prompt(), &[], &[]);
     let declarations = estimate_prompt_tokens("", &tools, &[]);
 
     assert_near(system, SYSTEM_PROMPT_TOKENS, "the system prompt");
-    assert_near(declarations, TOOL_DECLARATION_TOKENS, "the 20 tool declarations");
+    assert_near(declarations, TOOL_DECLARATION_TOKENS, "the 21 tool declarations");
     assert_near(system + declarations, FIXED_OVERHEAD, "the fixed per-call overhead");
 }
 

@@ -99,6 +99,22 @@ pub(crate) fn listing(
     servers
 }
 
+/// Every saved server as the hub lists it, plus each SMB host with the store rows
+/// behind it (its address and port live there, not on the row), read from the
+/// stores as they are now. For a caller that CHECKS against what's saved (Ask
+/// Cmdr's server proposals) rather than showing it.
+///
+/// ❗ Cached state only, like [`listing`].
+pub(crate) fn saved_now<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> (Vec<SavedServer>, Vec<super::smb_hosts::SmbHostGroup>) {
+    let manual = manual_servers::all(app);
+    let known = known_shares::get_all_known_shares();
+    let hosts = crate::network::fresh_discovered_hosts();
+    let smb = super::smb_hosts::smb_host_groups(manual.clone(), known.clone(), &hosts);
+    (listing(manual, known, &hosts), smb)
+}
+
 #[cfg(test)]
 #[path = "listing_test.rs"]
 mod listing_test;

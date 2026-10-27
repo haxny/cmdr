@@ -143,6 +143,11 @@ fn success_table() -> Vec<(ToolId, Value, ToolOutcome)> {
             ToolOutcome::Staged { count: 6 },
         ),
         (
+            ToolId::ProposeServer,
+            fixtures::server_staged(),
+            ToolOutcome::Staged { count: 1 },
+        ),
+        (
             ToolId::NothingToSuggest,
             json!({ "acknowledged": true }),
             ToolOutcome::Answered,
@@ -262,9 +267,27 @@ fn a_propose_problem_is_not_staged_with_its_problem_kept_for_the_preview() {
         outcome(ToolId::ProposeRenamePlan, stamped.clone()),
         ToolOutcome::NotStaged
     );
-    assert_eq!(outcome(ToolId::ProposeSuggestions, stamped), ToolOutcome::NotStaged);
+    assert_eq!(
+        outcome(ToolId::ProposeSuggestions, stamped.clone()),
+        ToolOutcome::NotStaged
+    );
+    assert_eq!(outcome(ToolId::ProposeServer, stamped), ToolOutcome::NotStaged);
     let evidence = json!({ "readyForReview": false, "evidenceRejected": [], "guidance": "…" });
     assert_eq!(outcome(ToolId::ProposeRenamePlan, evidence), ToolOutcome::NotStaged);
+}
+
+/// A server card is one suggestion with no ops, so the line counts the card; one the user
+/// answered in the meantime kept its old answer and staged nothing new.
+#[test]
+fn a_server_suggestion_counts_its_card_not_its_ops() {
+    let mut answered = fixtures::server_staged();
+    answered["groups"][0]["outcome"] = json!("alreadyAnswered");
+    assert_eq!(
+        outcome(ToolId::ProposeServer, answered),
+        ToolOutcome::Staged { count: 0 }
+    );
+    let refused = json!({ "readyForReview": false, "refusal": "addressChange", "field": "host", "problem": "…" });
+    assert_eq!(outcome(ToolId::ProposeServer, refused), ToolOutcome::NotStaged);
 }
 
 /// A proposal naming a place that can't run now refuses in the read tools' miss shape, so the

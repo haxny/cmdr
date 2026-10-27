@@ -533,6 +533,13 @@ mcp_tools! {
         access: Access::Propose,
         run: app_params crate::agent::tools::suggestions::execute_propose_suggestions
     },
+    "propose_server" => {
+        desc: "Suggest saving a server, or renaming or refoldering a saved one, for the user to review. It saves nothing and contacts no server; only the user approves. Never send a password: the user types it when connecting. Only when the user asked.",
+        schema: crate::agent::tools::suggestions::propose_server_schema(),
+        consumers: &[Consumer::Agent],
+        access: Access::Propose,
+        run: app_params crate::agent::tools::suggestions::execute_propose_server
+    },
     "nothing_to_suggest" => {
         desc: "Say the activity you were shown is not worth telling the user about, and stop: call it instead of proposing when nothing deserves a person's attention. Changes nothing, shows nothing.",
         schema: crate::agent::tools::quiet::nothing_to_suggest_schema(),

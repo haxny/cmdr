@@ -59,6 +59,7 @@ const TOOL_LABEL_KEYS: Partial<Record<string, PhaseKeys>> = {
     done: 'askCmdr.tool.getSuggestionGroup.done',
   },
   propose_suggestions: { doing: 'askCmdr.tool.proposeSuggestions.doing', done: 'askCmdr.tool.proposeSuggestions.done' },
+  propose_server: { doing: 'askCmdr.tool.proposeServer.doing', done: 'askCmdr.tool.proposeServer.done' },
   nothing_to_suggest: {
     doing: 'askCmdr.tool.nothingToSuggest.doing',
     done: 'askCmdr.tool.nothingToSuggest.done',
@@ -248,6 +249,8 @@ const SUBJECT_WORDS: { [K in ToolSubject['kind']]: (subject: SubjectOf<K>, tool:
   operation: noWords,
   suggestions: noWords,
   suggestionGroup: noWords,
+  // The server's name is the model's text; the card shows it, as a fact Cmdr checked.
+  serverSuggestion: noWords,
   nothingToSuggest: noWords,
   unparsed: noWords,
 }

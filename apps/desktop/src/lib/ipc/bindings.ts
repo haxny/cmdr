@@ -18737,6 +18737,8 @@ export type ToolSubject =
   | { kind: 'suggestionGroup' }
   // `propose_suggestions`: how many groups the sweep carries.
   | { kind: 'suggestionSweep'; count: number }
+  // `propose_server`. No name: the server's name is the model's text, and the card shows it.
+  | { kind: 'serverSuggestion' }
   | { kind: 'nothingToSuggest' }
   /**
    *  `memory_write`, `memory_edit`: `path` is the model's own, RELATIVE to the memory folder.

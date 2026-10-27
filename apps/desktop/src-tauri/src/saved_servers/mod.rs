@@ -18,7 +18,7 @@ mod wire;
 pub(crate) mod test_fixtures;
 
 pub(crate) use dial::{SavedPlaceDial, cancel_connect, connect_saved_place};
-pub(crate) use listing::listing;
+pub(crate) use listing::{listing, saved_now};
 pub use outcome::{SavedPlaceRefusal, ServerConnectOutcome};
 pub(crate) use outcome::{outcome_from_nfs, outcome_from_s3, outcome_from_sftp, outcome_from_webdav};
 pub(crate) use saved::{SavedEntry, saved_by_id, webdav_params};

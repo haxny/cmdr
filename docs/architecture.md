@@ -272,9 +272,10 @@ All under `apps/desktop/src-tauri/src/`.
   `agent/outcomes.rs` closes the loop, recording what the user did with each proposal on the two channels that reach
   them and the agent. Its `agent/tools/` is the in-process toolset the chat dispatches, gated by access tier (`Read`,
   `Propose`, `Memory`, and `Session`, whose one tool, `connect_volume`, connects a saved place only on a turn the user
-  started, in one flight with the pane's own dial (`saved_servers/`); invariant 7 in
-  `apps/desktop/src-tauri/src/agent/DETAILS.md`); `agent/tools/read/inspect/` is the one tool that reads file contents,
-  through `file_viewer`'s headless seam. See its `apps/desktop/src-tauri/src/agent/CLAUDE.md`
+  started, in one flight with the pane's own dial (`saved_servers/`), and `propose_server` stages a server for the user
+  to save, contacting nothing; invariant 7 in `apps/desktop/src-tauri/src/agent/DETAILS.md`);
+  `agent/tools/read/inspect/` is the one tool that reads file contents, through `file_viewer`'s headless seam. See its
+  `apps/desktop/src-tauri/src/agent/CLAUDE.md`
 - `downloads/`: `notify`-based `~/Downloads` watcher, FDA-gated, browser-rename-aware filter, Cmdr-own-write ignore set
 - `search/`: In-memory search index (lazy load, rayon parallel scan, glob/regex) + AI query translation (`search/ai/`)
 - `selection/`: Selection dialog backend: recent-selections store + cloud AI translation (`selection/ai/`); the matcher

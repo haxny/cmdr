@@ -238,6 +238,9 @@ pub enum ToolId {
     /// Stages a sweep of proposed file operations, or amends a pending group of
     /// one. It changes no file and cannot approve anything.
     ProposeSuggestions,
+    /// Stages a server to save, or a change to a saved one, for the user to approve. It saves
+    /// nothing, contacts no server, and refuses on a turn the user didn't start.
+    ProposeServer,
     /// A wake's typed way of saying it looked and found nothing worth raising. A pure
     /// signal: the handler changes nothing, and only the wake path acts on the call.
     NothingToSuggest,
@@ -259,7 +262,7 @@ impl ToolId {
     /// Every known read-only variant, in wire order. Excludes [`ToolId::Unrecognized`]
     /// by design (it's the refusal case, never a view entry). The 1:1 structural test
     /// asserts these map exactly onto `agent_tool_view()`.
-    pub const KNOWN: [ToolId; 20] = [
+    pub const KNOWN: [ToolId; 21] = [
         ToolId::AppState,
         ToolId::ListDir,
         ToolId::ListPaneFiles,
@@ -276,6 +279,7 @@ impl ToolId {
         ToolId::ListSuggestions,
         ToolId::GetSuggestionGroup,
         ToolId::ProposeSuggestions,
+        ToolId::ProposeServer,
         ToolId::NothingToSuggest,
         ToolId::MemoryWrite,
         ToolId::MemoryEdit,
@@ -302,6 +306,7 @@ impl ToolId {
             ToolId::ListSuggestions => "list_suggestions",
             ToolId::GetSuggestionGroup => "get_suggestion_group",
             ToolId::ProposeSuggestions => "propose_suggestions",
+            ToolId::ProposeServer => "propose_server",
             ToolId::NothingToSuggest => "nothing_to_suggest",
             ToolId::MemoryWrite => "memory_write",
             ToolId::MemoryEdit => "memory_edit",
@@ -332,6 +337,7 @@ impl ToolId {
             "list_suggestions" => ToolId::ListSuggestions,
             "get_suggestion_group" => ToolId::GetSuggestionGroup,
             "propose_suggestions" => ToolId::ProposeSuggestions,
+            "propose_server" => ToolId::ProposeServer,
             "nothing_to_suggest" => ToolId::NothingToSuggest,
             "memory_write" => ToolId::MemoryWrite,
             "memory_edit" => ToolId::MemoryEdit,

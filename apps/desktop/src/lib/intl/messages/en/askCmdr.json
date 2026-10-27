@@ -175,6 +175,14 @@
   "@askCmdr.tool.proposeSuggestions.done": {
     "description": "Past-tense label on the same tool line once the assistant finished preparing its suggested file operations. The user still reviews and approves each group separately, so this must not read as if anything ran. Pairs with askCmdr.tool.proposeSuggestions.doing."
   },
+  "askCmdr.tool.proposeServer.doing": "Preparing a server suggestion",
+  "@askCmdr.tool.proposeServer.doing": {
+    "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant prepares a suggestion to save a server (a NAS, an SFTP or WebDAV server, an NFS export, or an S3 bucket), or to change a saved one, for the person to review. Nothing is saved and no server is contacted: the person decides. Pairs with askCmdr.tool.proposeServer.done."
+  },
+  "askCmdr.tool.proposeServer.done": "Prepared a server suggestion",
+  "@askCmdr.tool.proposeServer.done": {
+    "description": "Past-tense label on the same tool line once the server suggestion is ready to review. It must not read as if the server was saved or connected. Pairs with askCmdr.tool.proposeServer.doing."
+  },
   "askCmdr.tool.nothingToSuggest.doing": "Deciding whether it’s worth raising",
   "@askCmdr.tool.nothingToSuggest.doing": {
     "description": "Present-tense label on a tool line in the Ask Cmdr chat rail, shown while the assistant weighs whether the file activity it was shown is worth telling the person about at all. It is allowed to conclude that nothing is. Nothing is read and nothing changes. The apostrophe is U+2019. Pairs with askCmdr.tool.nothingToSuggest.done."

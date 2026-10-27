@@ -100,6 +100,11 @@ fn argument_only_subjects_per_tool() {
             ToolSubject::SuggestionSweep { count: 1 },
         ),
         (
+            ToolId::ProposeServer,
+            json!({ "protocol": "sftp", "host": "build.lan" }),
+            ToolSubject::ServerSuggestion,
+        ),
+        (
             ToolId::NothingToSuggest,
             json!({ "reason": "quiet" }),
             ToolSubject::NothingToSuggest,

@@ -31,6 +31,7 @@ pub fn subject_of(call: &AgentToolCall, result: Option<&Value>, memory_root: Opt
         ToolId::ListSuggestions => Some(ToolSubject::Suggestions),
         ToolId::GetSuggestionGroup => Some(ToolSubject::SuggestionGroup),
         ToolId::ProposeSuggestions => array_len(args, "groups").map(|count| ToolSubject::SuggestionSweep { count }),
+        ToolId::ProposeServer => Some(ToolSubject::ServerSuggestion),
         ToolId::NothingToSuggest => Some(ToolSubject::NothingToSuggest),
         ToolId::MemoryWrite | ToolId::MemoryEdit => str_arg(args, "path").map(|path| memory_file(path, memory_root)),
         ToolId::Unrecognized(name) => Some(ToolSubject::UnknownTool { name: bounded(name) }),

@@ -1,11 +1,12 @@
 //! The suggested-ops tool surface: how the agent proposes file operations, and how it reads
 //! back what it already proposed.
 //!
-//! Three tools, sitting on `agent/suggested_ops/` and `agent/store/proposals/`:
+//! Four tools, sitting on `agent/suggested_ops/` and `agent/store/proposals/`:
 //!
 //! - `list_suggestions` (`Access::Read`) — sweeps and groups as summaries with counts.
 //! - `get_suggestion_group` (`Access::Read`) — one group's ops, paged.
 //! - `propose_suggestions` (`Access::Propose`) — stage a sweep, or amend a pending group.
+//! - `propose_server` (`Access::Propose`) — stage a server to add, or a change to a saved one.
 //!
 //! ## Why amend lives inside propose
 //!
@@ -30,6 +31,9 @@ mod names;
 mod place;
 mod problem;
 mod propose;
+mod server;
+mod server_plan;
+mod server_saved;
 pub(crate) mod snapshot;
 
 #[cfg(test)]
@@ -39,6 +43,8 @@ pub use group::{execute_get_suggestion_group, get_suggestion_group_schema};
 pub use list::{execute_list_suggestions, list_suggestions_schema};
 pub(crate) use propose::propose_in_thread;
 pub use propose::{execute_propose_suggestions, propose_suggestions_schema};
+pub(crate) use server::propose_server_in_thread;
+pub use server::{execute_propose_server, propose_server_schema};
 
 /// Stage `call` into `conn` over `facts`, the handler's own plan-then-write path minus the app,
 /// and answer the first group's id: for tests elsewhere that pin how a staged group reads.

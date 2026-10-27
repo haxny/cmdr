@@ -10,7 +10,7 @@ and typed result shapes colocated here.
   `find.rs`, `pdf.rs`, `archive.rs`, `exif.rs`, `runner.rs` for the timeouts). `operations_*`, `search`,
   `search_photos`, and `image_facts` are shared with the ai-client view and live in `mcp/executor/`.
 - `propose/`: `propose_rename_plan` and the image-facts evidence ledger. `propose/CLAUDE.md`.
-- `suggestions/`: the suggested-ops trio over the proposal spine. `suggestions/CLAUDE.md`.
+- `suggestions/`: the suggested-ops tools over the proposal spine, `propose_server` included. `suggestions/CLAUDE.md`.
 - `memory.rs`: `memory_write` + `memory_edit`, the only tools that write; every rule lives in `../memory/`.
 - `quiet.rs`: `nothing_to_suggest`, a pure SIGNAL: the wake path acts on the call, a rail turn calling it is inert.
 - `connect.rs`: `connect_volume`, the one `Session` tool.

@@ -22,7 +22,8 @@ model read in its own turn.
   they aren't places. ❌ Never hand the raw scope string to navigation.
 - `connect_volume` → `Volume { id }`, the `volumeId` it asked to connect.
 - `search_photos` → `PhotoSearch { query }`; `operations_get` → `Operation { id }`; `propose_rename_plan` →
-  `RenamePlan { count }` (rows in the plan); `propose_suggestions` → `SuggestionSweep { count }` (groups in the sweep).
+  `RenamePlan { count }` (rows in the plan); `propose_suggestions` → `SuggestionSweep { count }` (groups in the sweep);
+  `propose_server` → `ServerSuggestion` (no name: it's the model's text, and the card shows it).
 - `memory_write`, `memory_edit` → `MemoryFile { path, absolute }`. `path` is the model's, relative to the memory
   folder. `absolute` comes from `memory::shown_location`, the jail's LEXICAL checks only (inside, Markdown), joined onto
   `memory_root`: no syscall, no directory created. `None` (an escape, a non-Markdown name, or no root) keeps the path
@@ -72,7 +73,8 @@ Per-tool success shapes:
 - `imageIndexingOff` / `semanticModelNotInstalled` (both photo tools) → `IndexUnavailable { reason }`, which is ok:
   the tool answered honestly that the index can't.
 - `get_suggestion_group` with `found: false` → `NothingFound`.
-- `propose_suggestions` staged → `Staged { count }` summing its groups' `opCount`; the rename plan reads its `count`.
+- `propose_suggestions` staged → `Staged { count }` summing its groups' `opCount`; the rename plan reads its `count`;
+  `propose_server` counts its card (its group has no ops), `0` when the user answered it first.
   So `count` is OPERATIONS staged for both.
 - Memory `saved: true` → `Saved`.
 - `connect_volume` → `Connection { outcome }`, its own `outcome` token (`connect.rs::ConnectOutcome`).

@@ -217,6 +217,15 @@ async fn route_call<R: Runtime>(
     // plain dispatch.
     let outcome = if call.tool == ToolId::ProposeSuggestions {
         crate::agent::tools::suggestions::propose_in_thread(app, scope.conversation_id(), &call.arguments).await
+    } else if call.tool == ToolId::ProposeServer {
+        // It holds the turn's origin itself: a server card only on a turn the user started.
+        crate::agent::tools::suggestions::propose_server_in_thread(
+            app,
+            scope.conversation_id(),
+            &call.arguments,
+            turn.origin,
+        )
+        .await
     } else if call.tool == ToolId::ListDir {
         crate::agent::tools::read::listing::execute_list_dir_cancellable(app, &call.arguments, turn.cancel).await
     } else if call.tool == ToolId::ConnectVolume {
@@ -351,7 +360,11 @@ mod tests {
             json!({ "problem": "…", "repeatedCall": true, "guidance": "…" }),
             json!({ "available": false, "requested": "propose_rename_plan", "reason": "…" }),
         ];
-        for tool in [ToolId::ProposeRenamePlan, ToolId::ProposeSuggestions] {
+        for tool in [
+            ToolId::ProposeRenamePlan,
+            ToolId::ProposeSuggestions,
+            ToolId::ProposeServer,
+        ] {
             for shape in &shapes {
                 let mut answer = result(shape.clone());
                 ensure_review_verdict(&tool, &mut answer);

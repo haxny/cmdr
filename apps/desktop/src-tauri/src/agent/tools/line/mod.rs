@@ -119,6 +119,8 @@ pub enum ToolSubject {
     SuggestionSweep {
         count: u32,
     },
+    /// `propose_server`. No name: the server's name is the model's text, and the card shows it.
+    ServerSuggestion,
     NothingToSuggest,
     /// `memory_write`, `memory_edit`: `path` is the model's own, RELATIVE to the memory folder.
     /// `absolute` is set only when it lands inside the folder (and the bound leaves it whole), and

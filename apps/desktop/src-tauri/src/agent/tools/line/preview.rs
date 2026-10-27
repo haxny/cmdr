@@ -151,6 +151,7 @@ fn rows_of(tool: &ToolId, content: &Value) -> Vec<ToolPreviewRow> {
         | ToolId::OperationsGet
         | ToolId::ProposeRenamePlan
         | ToolId::ProposeSuggestions
+        | ToolId::ProposeServer
         | ToolId::NothingToSuggest
         | ToolId::ConnectVolume
         | ToolId::MemoryWrite

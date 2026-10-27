@@ -109,7 +109,9 @@ fresh one (`tools/propose/DETAILS.md`).
 write, no silent config mutation, no self-approval. Because no structural check can prove a handler doesn't mutate,
 `Propose` tools are an explicit hand-authored allowlist (`EXPECTED_PROPOSE_TOOL_NAMES` in
 `mcp/tests/tool_registry_tests/access.rs`) rather than something inferred — adding one is a deliberate act a human signs off,
-having read the handler. It holds two names: `propose_rename_plan` and `propose_suggestions`.
+having read the handler. It holds three names: `propose_rename_plan`, `propose_suggestions`, and `propose_server`
+(a server to save, or a change to a saved one: no secret in either direction, no contact with any server, and only on a
+turn the user started; `tools/suggestions/DETAILS.md` § Proposing a server).
 
 **Consent is unaffected.** Proposals flow agent → user, never to the provider. `Propose` adds no egress, so the
 provider-egress question and `CLOUD_AI_CONSENT_VERSION` are unchanged by this tier. Don't re-litigate it: only a change to
@@ -146,7 +148,9 @@ Each line is a pointer, not a restatement: the mechanism lives in the doc named 
    stored (`Access::Session`, hand-allowlisted). That session adds or edits no file, server, account, credential, pin,
    or setting; the saved place's own connection bookkeeping moves exactly as it does when the user connects it.
    Because the user started that turn, a system dialog the connect raises (a Keychain access prompt) is acceptable; a
-   missing credential answers `needsCredentials` and raises nothing. `CLAUDE.md`, § The agent can propose above,
+   missing credential answers `needsCredentials` and raises nothing. A proposal may describe a server to save or a
+   change to a saved one; it carries no secret, and only the user's approval saves it. `CLAUDE.md`, § The agent can
+   propose above,
    `memory/DETAILS.md`, `tools/DETAILS.md` § The dispatch gate.
 8. **No new egress category without a `CLOUD_AI_CONSENT_VERSION` bump**, and no bump without revisiting the whole
    disclosure (`ai::cloud_consent`, `../ai/DETAILS.md` § Cloud AI consent). `CLAUDE.md`.

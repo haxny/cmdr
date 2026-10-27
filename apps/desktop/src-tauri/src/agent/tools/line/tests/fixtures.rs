@@ -304,6 +304,15 @@ pub(super) fn sweep_staged() -> Value {
     })
 }
 
+/// `propose_server`'s staged report: `propose_suggestions`' shape, one zero-op group long.
+pub(super) fn server_staged() -> Value {
+    json!({
+        "readyForReview": true,
+        "sweepId": 3,
+        "groups": [{ "groupId": 9, "verb": "addServer", "displayName": "Build box", "opCount": 0, "outcome": "created" }]
+    })
+}
+
 /// `memory_write` / `memory_edit` (`tools/memory.rs::answer`).
 pub(super) fn memory_saved() -> Value {
     json!({ "saved": true, "path": "AGENTS.md", "bytes": 120, "remainingBytes": 50_000 })

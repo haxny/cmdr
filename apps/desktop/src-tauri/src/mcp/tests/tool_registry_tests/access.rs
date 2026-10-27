@@ -39,6 +39,7 @@ const EXPECTED_AGENT_TOOL_NAMES: &[&str] = &[
     "list_suggestions",
     "get_suggestion_group",
     "propose_suggestions",
+    "propose_server",
     "nothing_to_suggest",
     "memory_write",
     "memory_edit",
@@ -68,7 +69,16 @@ fn test_agent_tool_view_is_exactly_expected_set() {
 /// `multi_rename` is the one external-client entry: it stages its ready rows as a rename group
 /// on the same spine, and its handler (`executor/multi_rename.rs`) only reads the pane's cached
 /// listing and writes the proposal rows.
-const EXPECTED_PROPOSE_TOOL_NAMES: &[&str] = &["multi_rename", "propose_rename_plan", "propose_suggestions"];
+///
+/// `propose_server` (`agent/tools/suggestions/server.rs`) stages one zero-op server group: it
+/// reads the saved-server stores in memory, writes the proposal rows, takes no secret, contacts no
+/// server, and refuses on a turn the user didn't start. The user's click is what saves.
+const EXPECTED_PROPOSE_TOOL_NAMES: &[&str] = &[
+    "multi_rename",
+    "propose_rename_plan",
+    "propose_suggestions",
+    "propose_server",
+];
 
 /// The agent's `Memory` tools, authored by hand for the same reason the `Propose` list is.
 ///

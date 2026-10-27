@@ -182,7 +182,7 @@ pub(crate) async fn propose_in_thread<R: Runtime>(
     }
 }
 
-fn now_secs() -> i64 {
+pub(super) fn now_secs() -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -415,7 +415,7 @@ fn location_refusal_content(group: usize, field: PlaceField, miss: &LocationMiss
     content
 }
 
-fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
+pub(super) fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
     match refusal {
         ApplyRefusal::UnknownSweep { sweep_id } => refusal_content(
             "unknownSweep",
@@ -481,10 +481,10 @@ fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
 
 /// One group with its ops resolved: everything needed to write it, and nothing left to
 /// decide.
-struct ResolvedGroup {
-    group_id: Option<i64>,
-    group: NewGroup,
-    via: Option<Via>,
+pub(super) struct ResolvedGroup {
+    pub group_id: Option<i64>,
+    pub group: NewGroup,
+    pub via: Option<Via>,
 }
 
 /// Resolve, check, then write. The order is the contract: a selector is resolved and an
@@ -505,25 +505,7 @@ pub(super) fn apply_planned_sweep(
         }
         resolved.push(resolve_group(index, index_of, group)?);
     }
-    if let Some(sweep_id) = sweep_id
-        && get_sweep(conn, sweep_id).map_err(ApplyRefusal::Store)?.is_none()
-    {
-        return Err(ApplyRefusal::UnknownSweep { sweep_id });
-    }
-
-    let sweep_id = match sweep_id {
-        Some(existing) => existing,
-        None => create_sweep(
-            conn,
-            &NewSweep {
-                conversation_id,
-                created_by_model: None,
-                rationale: planned.rationale,
-            },
-            now,
-        )
-        .map_err(ApplyRefusal::Store)?,
-    };
+    let sweep_id = sweep_for(conn, sweep_id, conversation_id, planned.rationale, now)?;
 
     let mut groups = Vec::with_capacity(resolved.len());
     for entry in resolved {
@@ -536,9 +518,36 @@ pub(super) fn apply_planned_sweep(
     })
 }
 
+/// The sweep a call writes into: the one it named, which must exist, or a fresh one. The last
+/// step before the first write, so an unknown sweep refuses with nothing written.
+pub(super) fn sweep_for(
+    conn: &Connection,
+    sweep_id: Option<i64>,
+    conversation_id: Option<i64>,
+    rationale: Option<String>,
+    now: i64,
+) -> Result<i64, ApplyRefusal> {
+    match sweep_id {
+        Some(sweep_id) => match get_sweep(conn, sweep_id).map_err(ApplyRefusal::Store)? {
+            Some(_) => Ok(sweep_id),
+            None => Err(ApplyRefusal::UnknownSweep { sweep_id }),
+        },
+        None => create_sweep(
+            conn,
+            &NewSweep {
+                conversation_id,
+                created_by_model: None,
+                rationale,
+            },
+            now,
+        )
+        .map_err(ApplyRefusal::Store),
+    }
+}
+
 /// Whether a group may be rewritten: it exists, it belongs to the named sweep, and it is
 /// still `pending`. `approved`, `interrupted`, `completed`, and `rejected` are the user's.
-fn check_amendable(
+pub(super) fn check_amendable(
     conn: &Connection,
     group_index: usize,
     group_id: i64,
@@ -637,7 +646,12 @@ fn new_group(intent: GroupIntent, naming: ExplicitNaming, rationale: Option<Stri
 /// Write one group: a fresh one, or a replacement for a pending one. A group that left
 /// `pending` between the check and this write keeps the answer the user gave it, and the
 /// report says so.
-fn write_group(conn: &Connection, sweep_id: i64, entry: ResolvedGroup, now: i64) -> Result<GroupReport, ApplyRefusal> {
+pub(super) fn write_group(
+    conn: &Connection,
+    sweep_id: i64,
+    entry: ResolvedGroup,
+    now: i64,
+) -> Result<GroupReport, ApplyRefusal> {
     let verb = entry.group.intent.verb();
     let op_count = entry.group.intent.op_count();
     let display_name = entry.group.display_name.clone();

@@ -1,8 +1,8 @@
 # Suggested-ops tools (`agent/tools/suggestions/`)
 
-The agent's three tools over the proposal spine: `list_suggestions` and `get_suggestion_group` (`Access::Read`), and
-`propose_suggestions` (`Access::Propose`). They stage and read; the user approves, and no tool does. Depth:
-`DETAILS.md`.
+The agent's four tools over the proposal spine: `list_suggestions` and `get_suggestion_group` (`Access::Read`), and
+`propose_suggestions` and `propose_server` (`Access::Propose`). They stage and read; the user approves, and no tool
+does. Depth: `DETAILS.md`.
 
 ## Module map
 
@@ -16,6 +16,7 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
 - `propose.rs`: the schema, the handler, and the write path (resolve → check → write). `snapshot.rs`: one bounded
   stat per hand-listed source, frozen as its creation snapshot before the write (also
   `propose_rename_plan`'s).
+- `server.rs` (+ `server_plan.rs`, `server_saved.rs`): `propose_server`, its checks, and the saved servers they read.
 - `list.rs` / `group.rs`: the two reads and their pure shapers.
 - `tests/`: one file per concern (input contract, write path, read shapers), fixtures in `mod.rs`.
 
@@ -37,6 +38,9 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
   from a pattern, can't reach the store. Add a verb by adding a variant.
 - **Amend lives inside `propose_suggestions`** and only touches `pending`. A separate mutating tool would be
   `Access::Write` under the registry's tiebreaker and would fail `test_agent_tool_view_never_writes`.
+- **`propose_server` refuses on a turn the user didn't start, in its own handler** (❌ not in `admit`), and an edit
+  can't change where a server is or which account it signs in as: the app's edit would MOVE the stored password there.
+  `DETAILS.md` § Proposing a server.
 - **A schema here is prefix**: it rides in every cached turn, so keep it terse and say the rest once, in the registry
   line or the system prompt (`agent/chat/DETAILS.md` § What the budgets buy).
 

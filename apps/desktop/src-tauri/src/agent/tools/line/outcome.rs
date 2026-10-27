@@ -70,10 +70,14 @@ fn refused(reason: RefusalReason) -> ToolOutcome {
 }
 
 fn is_propose(tool: &ToolId) -> bool {
-    matches!(tool, ToolId::ProposeRenamePlan | ToolId::ProposeSuggestions)
+    matches!(
+        tool,
+        ToolId::ProposeRenamePlan | ToolId::ProposeSuggestions | ToolId::ProposeServer
+    )
 }
 
-/// A staged plan's op count: the rename plan says `count`; a sweep sums its groups' `opCount`.
+/// A staged plan's count: the rename plan says `count`; a sweep sums its groups' `opCount`; a
+/// server suggestion is one card (its group has no ops), unless the user answered it first.
 fn staged(tool: &ToolId, content: &Value) -> ToolOutcome {
     let count = match tool {
         ToolId::ProposeSuggestions => content.get("groups").and_then(Value::as_array).map(|groups| {
@@ -81,6 +85,14 @@ fn staged(tool: &ToolId, content: &Value) -> ToolOutcome {
                 .iter()
                 .filter_map(|group| group.get("opCount").and_then(Value::as_u64))
                 .fold(0u32, |sum, n| sum.saturating_add(u32::try_from(n).unwrap_or(u32::MAX)))
+        }),
+        ToolId::ProposeServer => content.get("groups").and_then(Value::as_array).map(|groups| {
+            len_u32(
+                groups
+                    .iter()
+                    .filter(|group| group.get("outcome").and_then(Value::as_str) != Some("alreadyAnswered"))
+                    .count(),
+            )
         }),
         _ => count_u32(content.get("count")),
     };
@@ -98,6 +110,7 @@ fn answered(tool: &ToolId, content: &Value) -> Option<ToolOutcome> {
         | ToolId::NothingToSuggest
         | ToolId::ProposeRenamePlan
         | ToolId::ProposeSuggestions
+        | ToolId::ProposeServer
         | ToolId::Unrecognized(_) => Some(ToolOutcome::Answered),
         ToolId::ListDir
         | ToolId::ListPaneFiles

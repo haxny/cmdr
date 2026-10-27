@@ -61,7 +61,7 @@ splits changed no wire bytes — the snapshot passes unmodified.
 
 `validate_params(name, params)` checks a call against the tool's OWN declared schema before a handler reads a field off
 it, at both dispatch entries: `execute_tool` for everything routed through the registry, and `agent/tools/view.rs`
-ahead of its branch, because `propose_rename_plan` and `propose_suggestions` need the thread's scope and never reach
+ahead of its branch, because `propose_rename_plan`, `propose_suggestions`, and `propose_server` need the thread's scope and never reach
 `execute_tool`. Both run for an agent call; one small object checked twice costs nothing against a provider round trip,
 and neither path has to know what the other does.
 
@@ -150,7 +150,8 @@ Three things make it hold rather than merely be intended:
 - **A hand-authored allowlist, not inference.** No structural check can prove a handler doesn't mutate, so
   `EXPECTED_PROPOSE_TOOL_NAMES` (in `tests/tool_registry_tests/access.rs`) lists every `Propose` tool by name, and
   `test_propose_tools_are_an_explicit_allowlist` fails if a registry entry in EITHER view is tagged `Propose` without
-  being listed: the agent's `propose_rename_plan` and `propose_suggestions`, and the ai-client's `multi_rename`.
+  being listed: the agent's `propose_rename_plan`, `propose_suggestions`, and `propose_server`, and the ai-client's
+  `multi_rename`.
   Widening that power remains a deliberate act a human signs off, having read the handler.
 - **No proposal reaches the confirmation bypass.** `autoConfirm` and `queue`'s `rollback` let an external MCP client
   skip the user's confirmation dialog — exactly the approval a proposal must never grant itself.

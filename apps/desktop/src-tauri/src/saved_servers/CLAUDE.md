@@ -8,7 +8,8 @@ them.
 ## Module map
 
 - `listing.rs` (+ `smb_hosts.rs`, `s3_accounts.rs`, `nfs_places.rs`): every saved server as the hub lists it, one row
-  per account or host. `saved.rs`: the saved entry a place's volume id names (`saved_by_id`).
+  per account or host; `saved_now` adds each SMB host's address and rows, for a caller that checks against them.
+  `saved.rs`: the saved entry a place's volume id names (`saved_by_id`).
 - `saves.rs`: an add without a dial (`save_target`) or an edit (`save_edit`: in place, or a move through
   `server_move.rs`). `smb_hosts::edit_host` is an SMB host's edit. `target_ids.rs`: the id a `ServerTarget` names.
 - `dial.rs` + `outcome.rs`: one dial per saved place, and the outcome vocabulary every caller branches on.

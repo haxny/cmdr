@@ -122,6 +122,64 @@ renamed invoices are one approval, one queue row, and one undo, which puts every
 - Each name is bound by the claim's digest with no change (the digest already hashes `destination` per op), so an amend
   that only renames is a new approval.
 
+## Proposing a server
+
+`propose_server` stages one zero-op `SaveServer` group (`../../store/proposals/DETAILS.md` § A server group): a server to
+add, or, with `editing`, a change to a saved one. It saves nothing and contacts nothing; the user's approval saves
+through the servers hub's own cores (`saved_servers/`). It reuses `propose_suggestions`' sweep, amend (`sweepId` plus
+`groupId`, `pending` only), and report shape, one group long. Order: origin, shape, values, saved-server checks, then
+the write; any refusal writes nothing.
+
+- **Only on a turn the user started.** The handler reads the turn's origin (`CallContext`, routed by `view.rs`) and
+  answers `refusedInBackground` on a wake or a follow-up, before it reads a store. ❌ Not a tool-name check in `admit`:
+  the gate stays tier-only and this rule lives with the one tool it belongs to. A badge saying "AI suggestion: add
+  server naspi-backup" arriving unprompted is the social-engineering shape an injection wants. The registry path
+  (`execute_propose_server`) knows no turn, so it refuses the same way.
+- **No secret, ever.** The schema has no field for one and is closed like every agent schema, so the dispatch gate
+  refuses a `password` key by name first; the handler refuses `password`, `secret`, `secretAccessKey`, `keyFile`, and
+  their kin again as `secretRefused` (any path that skips the gate), and a URL carrying a password too. `useAgent`,
+  `autoReconnect`, and a pin aren't fields: an add takes the add form's defaults, an edit keeps the stored values.
+- **The field map** (a field outside its row is `unboundField`; an add without a required one is `missingField`;
+  defaults are the add form's, `apps/desktop/src/lib/servers/server-form.ts`):
+  - `smb`. Add: `host` (required), `port` (445), `username`, `share`, `name` (the HOST's). Edit (`editing` is any of
+    the host's share volume ids): `name` (the host's, ❌ never a share's), `username` (the host's account). The draft
+    records how many saved shares the host has, for the card.
+  - `sftp`. Add: `host`, `username` (both required), `port` (22), `path` (the remote root, `/`), `startFolder`, `name`.
+    Edit: `name`, `path`, `startFolder`.
+  - `webdav`. Add: `url`, `username` (both required), `path` (`/`), `startFolder`, `name`. Edit: `name`, `path`,
+    `startFolder`.
+  - `nfs`. Add: `host`, `export` (both required), `port` (absent asks the portmapper), `uid`, `gid`, `startFolder`,
+    `name`. Edit: `name`, `uid`, `gid`, `startFolder`. An add without `uid` / `gid` stores none: the add form's guess
+    asks the server, which an approval mustn't, so the approval decides.
+  - `s3`. Add: a BUCKET place under a saved account, `account` (its listing id) and `bucket`, plus `name`. Edit: `name`.
+    No account at all is a new account, `protocolNotProposable` (the user adds one in Servers, where the key id comes
+    from).
+  - ❗ An NFS or S3 `name` is the SERVER's or the ACCOUNT's (the stores keep no per-export or per-bucket name), so it
+    renames the row every place under it shares.
+- **Identity fields** (`host`, `port`, `url`, `export`, `account`, `bucket`, the protocol, and the SFTP / WebDAV
+  `username`) are required on an add and immutable in an edit: an edit may restate one in the store's own spelling (a
+  host's case, a URL's trailing slash, an export's `//`), and the draft keeps the SAVED spelling; any other value is
+  `addressChange`. **Why**: the app's edit MOVES the server and its stored password to a new address, and
+  auto-reconnect would then send it there with nobody watching, so one approved click would hand a credential to
+  whatever answers at an address an injected file name chose.
+- **Every value one plain thing.** `name`, `share`, `username`, and `bucket` pass `validate_plain_leaf`; `path`,
+  `export`, and `startFolder` are absolute, each folder a plain leaf; a host is a plain ASCII host name or IP literal
+  (a look-alike of a saved host, `nаspolya` with a Cyrillic `а`, can't stand in for it; an internationalized name goes
+  as `xn--`); a URL is ASCII `http` or `https` with a host and no account in it; every string is capped. A start folder
+  outside the remote root refuses here rather than at the save. One token, `badField`, with the rule's sentence.
+- **Against what's saved** (`server_saved.rs`: one in-memory read per call through `saved_servers::saved_now` and
+  `saved_by_id`, ❌ never the network):
+  - `alreadySaved` (an add): the draft's place id through `target_ids::place_id`, the listing's own id funnel, so a
+    host's case or a URL's path can't dodge it; an SMB host by its address (any case) and port. It carries the id to
+    send as `editing` instead. An add never silently replaces a saved entry's settings.
+  - `nameTaken`: a `name` equal under `fold_name` to ANOTHER saved row's listed name (a stand-in address included), so
+    an attacker host can't wear the NAS's name. The row the draft joins or edits doesn't count.
+  - `unknownServer`: an `editing` id (or an S3 `account`) nothing saved has.
+  - An edit stores `previous`, the saved entry's editable fields AND its address, read here; the approval re-reads the
+    entry and re-runs `alreadySaved` and `nameTaken`, because a server saved since can make either true.
+- **The report** is `propose_suggestions`' `ProposeReport` with one `opCount: 0` group; the rail line counts the card,
+  not its ops (`../line/DETAILS.md`).
+
 ## The selector schema, and the one predicate that isn't there
 
 The model writes predicates in units it states reliably: whole **days ago** (converted to unix seconds against `now`,
