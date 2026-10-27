@@ -16,7 +16,7 @@ afterEach(() => {
 })
 
 const ROWS: SharedRow[] = [
-  { field: 'artist', value: { same: ['Karel Čapek'] }, choices: [] },
+  { field: 'artist', value: { same: ['Karel Čapek'] }, choices: [], choicesMore: 0 },
   {
     field: 'album',
     value: 'multiple',
@@ -24,10 +24,11 @@ const ROWS: SharedRow[] = [
       { values: ['Book one'], files: 2 },
       { values: ['Book two'], files: 1 },
     ],
+    choicesMore: 0,
   },
-  { field: 'genre', value: { same: ['audiokniha', 'detektivka'] }, choices: [] },
-  { field: 'comment', value: 'empty', choices: [] },
-  { field: 'description', value: 'empty', choices: [] },
+  { field: 'genre', value: { same: ['audiokniha', 'detektivka'] }, choices: [], choicesMore: 0 },
+  { field: 'comment', value: 'empty', choices: [], choicesMore: 0 },
+  { field: 'description', value: 'empty', choices: [], choicesMore: 0 },
 ]
 
 async function mountTable(over: { rows?: SharedRow[]; editable?: boolean; badDates?: number } = {}) {
@@ -82,7 +83,7 @@ describe('SharedFieldsTable', () => {
 
   it('a long value stays whole in the box (it is cut with … by the display only)', async () => {
     const long = 'A very long album name '.repeat(20).trim()
-    const rows: SharedRow[] = [{ field: 'album', value: { same: [long] }, choices: [] }]
+    const rows: SharedRow[] = [{ field: 'album', value: { same: [long] }, choices: [], choicesMore: 0 }]
     const { root, onEdit } = await mountTable({ rows })
     const album = byId<HTMLInputElement>(root, 'tag-field-album')
     expect(album.value).toBe(long)
@@ -257,7 +258,7 @@ describe('SharedFieldsTable', () => {
   })
 
   describe('an unwritable date', () => {
-    const DATE_ROWS: SharedRow[] = [{ field: 'date', value: { same: ['2010-20-09'] }, choices: [] }]
+    const DATE_ROWS: SharedRow[] = [{ field: 'date', value: { same: ['2010-20-09'] }, choices: [], choicesMore: 0 }]
 
     it('flags the Date row and says why, as soon as it is shown', async () => {
       const { root } = await mountTable({ rows: DATE_ROWS, badDates: 22 })
@@ -284,7 +285,7 @@ describe('SharedFieldsTable', () => {
       await leave(date)
       expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'date', values: ['2010'] }])
       // The backend's answer: a new view with the date fixed.
-      props.rows = [{ field: 'date', value: { same: ['2010'] }, choices: [] }]
+      props.rows = [{ field: 'date', value: { same: ['2010'] }, choices: [], choicesMore: 0 }]
       props.badDates = 0
       await tick()
       expect(mounted.root.querySelector('#tag-field-date-hint')).toBeNull()

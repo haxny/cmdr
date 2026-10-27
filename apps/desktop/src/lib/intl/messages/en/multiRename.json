@@ -1162,11 +1162,15 @@
   },
   "multiRename.tags.multipleValues": "‹multiple values›",
   "@multiRename.tags.multipleValues": {
-    "description": "Greyed placeholder in a tag box of the Tags tab of Multi-Rename when the selected files have different values for that tag. Leaving the box untouched keeps each file's own value; typing replaces it in every file."
+    "description": "Marker at the start of a tag box of the Tags tab of Multi-Rename when the selected files have different values for that tag; the values follow it in the same box. While the marker stays, each file keeps its own value; deleting it makes the text left the value of every file. Keep the brackets."
   },
-  "multiRename.tags.date.invalid": "This date doesn't exist (month 20). Type the right one, for example 2010, before writing.",
+  "multiRename.tags.date.invalid": "This date doesn't exist. Type the right one, for example 2010, before writing.",
   "@multiRename.tags.date.invalid": {
-    "description": "Hint under the Date row of the Tags tab of Multi-Rename, shown as soon as the book opens when some file carries a date the tag can't hold (an MP3 whose day and month were swapped, so its month reads 20). Writing is refused until the date is corrected."
+    "description": "Hint under the Date row of the Tags tab of Multi-Rename, shown as soon as the book opens when some file carries a date the tag can't hold (for example an MP3 whose day and month were swapped). Writing is refused until the date is corrected."
+  },
+  "multiRename.tags.choicesMore": "…and {countText} more",
+  "@multiRename.tags.choicesMore": {
+    "description": "Last item in the tag box of a «multiple values» row of the Tags tab of Multi-Rename when the files hold more distinct values than the box lists. {countText} is the number of values left out. While it stays in the box, nothing is changed; deleting it makes the text left the value of every file, so the values left out are dropped."
   },
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {

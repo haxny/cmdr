@@ -1,13 +1,13 @@
 /**
  * The pure half of the shared-fields table: text typed into a field ⇄ the values the field holds, and a track's
- * length as text. The «multiple values» rule lives in the components (an untouched row sends nothing); this only
- * says what a row looks like and what typed text means.
+ * length as text, and the «multiple values» box (marker + every value) and what typing in it means.
  *
  * ❗ A multi-value field whose single value contains "; " is split into two values when its row is committed again:
  * the text form can't tell the two apart. That is inherent to showing several values in one box.
  */
 
 import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 import type { SharedValue, TagField, ValueCount } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
 
@@ -44,7 +44,7 @@ export function parseFieldText(field: TagField, text: string): string[] {
     .filter((value) => value !== '')
 }
 
-/** A shared value as text. `multiple` has no text: the row shows its «multiple values» placeholder instead. */
+/** A shared value as text. `multiple` has no text of its own: the row's box holds `multipleText(choices)` instead. */
 export function formatFieldValue(value: SharedValue): { text: string; multiple: boolean } {
   if (value === 'empty') return { text: '', multiple: false }
   if (value === 'multiple') return { text: '', multiple: true }
@@ -53,23 +53,33 @@ export function formatFieldValue(value: SharedValue): { text: string; multiple: 
 
 /**
  * What the box of a «multiple values» row holds, as foobar2000 shows it: the marker, then every value the files
- * carry (flattened, each once, in the order of the counts) joined with "; ". The box keeps all of it; a long line
- * is cut with … by the display (CSS), never in the text.
+ * carry (flattened, each once, in the order of the counts) joined with "; ". `more` is how many values the list was
+ * cut by (the view lists at most 50); a tail says so. The box keeps all of it; a long line is cut with … by the display
+ * (CSS), never in the text.
  */
-export function multipleText(choices: readonly ValueCount[]): string {
+export function multipleText(choices: readonly ValueCount[], more = 0): string {
   const marker = tString('multiRename.tags.multipleValues')
   const values = [...new Set(choices.flatMap((choice) => choice.values))]
-  return values.length === 0 ? marker : `${marker} ${values.join(MULTI_SEPARATOR)}`
+  const parts = more > 0 ? [...values, moreTail(more)] : values
+  return parts.length === 0 ? marker : `${marker} ${parts.join(MULTI_SEPARATOR)}`
+}
+
+/** The tail that says the list was cut: «…and 10 more». While it is in the box the text isn't the whole list. */
+function moreTail(more: number): string {
+  return tString('multiRename.tags.choicesMore', { countText: formatInteger(more) })
 }
 
 /**
  * What the user typed into a shared row's box, as an edit. `null` when nothing is to be sent: the text is as it was
- * (`original`), or the «multiple values» marker is still in it (the per-file values stay). Without the marker, the
+ * (`original`), the «multiple values» marker still starts it, or the «…and N more» tail (`more`) is still in it (the
+ * per-file values stay). Without the marker, the
  * text is what every file gets (`setAll`), and an empty box clears the field, as Clear does.
  */
-export function parseSharedEdit(field: TagField, original: string, typed: string): TagEdit | null {
+export function parseSharedEdit(field: TagField, original: string, typed: string, more = 0): TagEdit | null {
   if (typed === original) return null
-  if (typed.includes(tString('multiRename.tags.multipleValues'))) return null
+  if (typed.startsWith(tString('multiRename.tags.multipleValues'))) return null
+  // The list was cut: with the tail still there, the text isn't every value, so it must not replace them.
+  if (more > 0 && typed.includes(moreTail(more))) return null
   return { kind: 'setAll', field, values: parseFieldText(field, typed) }
 }
 

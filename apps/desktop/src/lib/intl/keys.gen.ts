@@ -2988,6 +2988,7 @@ export type MessageKey =
   | 'multiRename.tags.choices.empty'
   | 'multiRename.tags.choices.item'
   | 'multiRename.tags.choices.label'
+  | 'multiRename.tags.choicesMore'
   | 'multiRename.tags.clearRow'
   | 'multiRename.tags.clearRowLabel'
   | 'multiRename.tags.col.fileName'

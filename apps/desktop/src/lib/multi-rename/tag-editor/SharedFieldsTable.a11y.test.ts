@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 const ROWS: SharedRow[] = [
-  { field: 'artist', value: { same: ['Karel Capek'] }, choices: [] },
+  { field: 'artist', value: { same: ['Karel Capek'] }, choices: [], choicesMore: 0 },
   {
     field: 'album',
     value: 'multiple',
@@ -20,14 +20,17 @@ const ROWS: SharedRow[] = [
       { values: ['Book one'], files: 2 },
       { values: ['Book two'], files: 1 },
     ],
+    choicesMore: 0,
   },
-  { field: 'genre', value: { same: ['audiokniha', 'detektivka'] }, choices: [] },
-  { field: 'comment', value: 'empty', choices: [] },
-  { field: 'description', value: { same: ['Dlouhy popis'] }, choices: [] },
+  { field: 'genre', value: { same: ['audiokniha', 'detektivka'] }, choices: [], choicesMore: 0 },
+  { field: 'comment', value: 'empty', choices: [], choicesMore: 0 },
+  { field: 'description', value: { same: ['Dlouhy popis'] }, choices: [], choicesMore: 0 },
 ]
 
-async function mountTable(editable: boolean): Promise<HTMLElement> {
-  const mounted = await mountInto(SharedFieldsTable, { rows: ROWS, editable, onEdit: () => {} })
+async function mountTable(editable: boolean, badDates = 0): Promise<HTMLElement> {
+  const rows: SharedRow[] =
+    badDates > 0 ? [...ROWS, { field: 'date', value: { same: ['2010-20-09'] }, choices: [], choicesMore: 0 }] : ROWS
+  const mounted = await mountInto(SharedFieldsTable, { rows, editable, badDates, onEdit: () => {} })
   cleanup = mounted.cleanup
   return mounted.root
 }
@@ -39,5 +42,9 @@ describe('SharedFieldsTable a11y', () => {
 
   it('read-only has no violations', async () => {
     await expectNoA11yViolations(await mountTable(false))
+  })
+
+  it('a flagged Date row has no violations', async () => {
+    await expectNoA11yViolations(await mountTable(true, 3))
   })
 })

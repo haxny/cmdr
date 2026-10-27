@@ -482,7 +482,11 @@ describe('MultiRenameDialog Tags tab', () => {
 
     /** A view with one shared row, so a cell can be typed in; the edit's answer is held until `release()`. */
     function holdEdits(): { release: () => void } {
-      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple', choices: [] }] }
+      const base = {
+        ...DIRTY_VIEW,
+        dirty: false,
+        shared: [{ field: 'album', value: 'multiple', choices: [], choicesMore: 0 }],
+      }
       ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
       let release: () => void = () => {}
       ipc.editTags.mockImplementation(
@@ -623,7 +627,11 @@ describe('MultiRenameDialog Tags tab', () => {
     })
 
     it('⌘⇧[ while a Tags box is focused commits its text first', async () => {
-      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'album', value: 'multiple', choices: [] }] }
+      const base = {
+        ...DIRTY_VIEW,
+        dirty: false,
+        shared: [{ field: 'album', value: 'multiple', choices: [], choicesMore: 0 }],
+      }
       ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
       ipc.editTags.mockResolvedValue({ ok: true, value: { ...base, dirty: true } })
       flags.tagEditor = true
@@ -656,7 +664,11 @@ describe('MultiRenameDialog Tags tab', () => {
     })
 
     describe('in a multi-line box (Comment)', () => {
-      const base = { ...DIRTY_VIEW, dirty: false, shared: [{ field: 'comment', value: 'multiple', choices: [] }] }
+      const base = {
+        ...DIRTY_VIEW,
+        dirty: false,
+        shared: [{ field: 'comment', value: 'multiple', choices: [], choicesMore: 0 }],
+      }
 
       async function commentBox(): Promise<HTMLTextAreaElement> {
         ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })

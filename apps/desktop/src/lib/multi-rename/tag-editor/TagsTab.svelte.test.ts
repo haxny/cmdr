@@ -25,6 +25,7 @@ const VIEW: TagEditorView = {
         { values: ['Book one'], files: 2 },
         { values: ['Book two'], files: 1 },
       ],
+      choicesMore: 0,
     },
   ],
   tracks: [
@@ -90,6 +91,17 @@ describe('TagsTab', () => {
       [[{ kind: 'setAll', field: 'album', values: ['Dracula'] }]],
       [[{ kind: 'setOne', path: '/b/02.mp3', field: 'title', values: ['Konec'] }]],
     ])
+  })
+
+  it("passes the view's bad-date count on, so the Date row is flagged on open", async () => {
+    const view: TagEditorView = {
+      ...VIEW,
+      shared: [{ field: 'date', value: { same: ['2010-20-09'] }, choices: [], choicesMore: 0 }],
+      badDates: 3,
+    }
+    const { root } = await mountTab({ view })
+    expect(byId(root, 'tag-field-date').getAttribute('aria-invalid')).toBe('true')
+    expect(root.querySelector('#tag-field-date-hint')).not.toBeNull()
   })
 
   it('the cover picker lists the folder and a pick goes to the state', async () => {

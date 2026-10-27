@@ -1032,6 +1032,10 @@
   "@multiRename.tags.date.invalid": {
     "sourceHash": "04ede92"
   },
+  "multiRename.tags.choicesMore": "…and {countText} more",
+  "@multiRename.tags.choicesMore": {
+    "sourceHash": "a674c4d"
+  },
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
     "sourceHash": "8898015"

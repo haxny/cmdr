@@ -17360,6 +17360,8 @@ export type SharedRow = {
   value: SharedValue
   // For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
   choices: ValueCount[]
+  // How many more distinct values the files hold than `choices` lists (the 50 cut-off); 0 when all are listed.
+  choicesMore: number
 }
 
 // What one field looks like across the selected files.

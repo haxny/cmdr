@@ -1,7 +1,8 @@
 <script lang="ts">
     /**
      * The tag fields the files share, one row each (Title and track number live in the track list). A row whose
-     * files differ shows «multiple values» and sends nothing until the user types; typing sets the field on every file.
+     * files differ holds «multiple values» followed by every value; it sends nothing while the marker (or the «…and N
+     * more» tail of a cut list) is in the box, and once they are deleted the text left is set on every file.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { SharedRow } from '#lib/ipc/bindings.js'
@@ -30,13 +31,14 @@
                 choices: row.choices,
                 empty: row.value === 'empty',
                 multiple,
-                text: multiple ? multipleText(row.choices) : text,
+                more: row.choicesMore,
+                text: multiple ? multipleText(row.choices, row.choicesMore) : text,
             }
         }),
     )
 
     function commit(row: (typeof shown)[number], typed: string): void | Promise<void> {
-        const edit = parseSharedEdit(row.field, row.text, typed)
+        const edit = parseSharedEdit(row.field, row.text, typed, row.more)
         if (edit) return onEdit([edit])
     }
 </script>

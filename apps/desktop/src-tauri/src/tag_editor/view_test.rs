@@ -152,7 +152,24 @@ fn multiple_row_choices_are_capped() {
         .iter()
         .map(|(path, entry)| (Path::new(path.as_str()), entry))
         .collect();
-    assert_eq!(row(&build(OPEN, &tracks), TagField::Album).choices.len(), 50);
+    let album = row(&build(OPEN, &tracks), TagField::Album).clone();
+    assert_eq!(album.choices.len(), 50);
+    // The 10 values the list was cut by are counted, so the UI can say so.
+    assert_eq!(album.choices_more, 10);
+}
+
+#[test]
+fn a_list_that_fits_has_nothing_more() {
+    let a = Path::new("/m/a.mp3");
+    let b = Path::new("/m/b.mp3");
+    let view = build(
+        OPEN,
+        &[
+            (a, &loaded(&[(TagField::Album, "One")], None, &[])),
+            (b, &loaded(&[(TagField::Album, "Two")], None, &[])),
+        ],
+    );
+    assert_eq!(row(&view, TagField::Album).choices_more, 0);
 }
 
 #[test]

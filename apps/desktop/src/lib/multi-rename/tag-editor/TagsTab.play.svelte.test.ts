@@ -64,7 +64,7 @@ function track(n: string, over: Partial<TagEditorView['tracks'][number]> = {}): 
 const VIEW: TagEditorView = {
   editable: true,
   readOnlyReason: null,
-  shared: [{ field: 'album', value: { same: ['Book'] }, choices: [] }],
+  shared: [{ field: 'album', value: { same: ['Book'] }, choices: [], choicesMore: 0 }],
   tracks: [track('01'), track('02'), track('03', { readError: 'unreadable' })],
   cover: { kind: 'empty' },
   extras: [],

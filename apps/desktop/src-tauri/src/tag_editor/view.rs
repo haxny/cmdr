@@ -47,6 +47,8 @@ pub struct SharedRow {
     pub value: SharedValue,
     /// For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
     pub choices: Vec<ValueCount>,
+    /// How many more distinct values the files hold than `choices` lists (the 50 cut-off); 0 when all are listed.
+    pub choices_more: u32,
 }
 
 /// One audio file in the per-track list.
@@ -129,14 +131,7 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .iter()
             .filter(|field| !matches!(field, TagField::Title | TagField::Track))
             .filter_map(|field| shared.get(field).map(|value| (*field, value.clone())))
-            .map(|(field, value)| SharedRow {
-                choices: match value {
-                    SharedValue::Multiple => distinct_values(&edited, field, CHOICE_LIMIT),
-                    SharedValue::Empty | SharedValue::Same(_) => Vec::new(),
-                },
-                field,
-                value,
-            })
+            .map(|(field, value)| shared_row(&edited, field, value))
             .collect(),
         tracks: tracks.iter().map(|(path, entry)| track_row(path, entry)).collect(),
         cover: cover_summary(&loaded),
@@ -157,7 +152,23 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
     }
 }
 
-/// The readable files whose edited Date is one the writer refuses (`cmdr_tags::date_is_writable`).
+/// One shared row; a «multiple values» one lists up to `CHOICE_LIMIT` distinct values and counts the rest.
+fn shared_row(edited: &[FileTags], field: TagField, value: SharedValue) -> SharedRow {
+    let mut choices = match value {
+        SharedValue::Multiple => distinct_values(edited, field, usize::MAX),
+        SharedValue::Empty | SharedValue::Same(_) => Vec::new(),
+    };
+    let choices_more = u32::try_from(choices.len().saturating_sub(CHOICE_LIMIT)).unwrap_or(u32::MAX);
+    choices.truncate(CHOICE_LIMIT);
+    SharedRow {
+        field,
+        value,
+        choices,
+        choices_more,
+    }
+}
+
+/// The readable files whose edited Date is one the writer refuses (`cmdr_tags::date_is_writable`, on the first value, as the writer reads it).
 fn count_bad_dates(tracks: &[(&Path, &Entry)]) -> u32 {
     let bad = tracks
         .iter()
@@ -170,7 +181,8 @@ fn count_bad_dates(tracks: &[(&Path, &Entry)]) -> u32 {
                 .edited
                 .fields
                 .get(&TagField::Date)
-                .is_some_and(|values| values.iter().any(|value| !date_is_writable(format, value)))
+                .and_then(|values| values.first())
+                .is_some_and(|value| !date_is_writable(format, value))
         })
         .count();
     u32::try_from(bad).unwrap_or(u32::MAX)
