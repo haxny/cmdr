@@ -28,7 +28,7 @@ cmdr-fs = { path = "../cmdr-fs" }
 log = "0.4"
 # The journal's store. The features match every other copy in the workspace
 # (`bundled` most of all), so the graph links one SQLite.
-rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
+rusqlite = { version = "0.41", features = ["bundled", "collation", "fallible_uint"] }
 # The read API's rows and the typed tokens derive the IPC wire form; the host
 # decides what crosses to a UI.
 serde = { version = "1", features = ["derive"] }

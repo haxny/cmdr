@@ -105,8 +105,8 @@ fn a_walk_whose_volume_stops_mid_read_leaves_without_reading_the_rest() {
     // 5,102 folders and 30,600 files: tens of stop looks apart, so "stopped at the
     // next look" and "ran to the end" are far apart in the count.
     let home = build_folder_heavy_index(&index_path, 100, 50, 6);
-    let store = IndexStore::open(&index_path).expect("reopen");
-    let conn = store.read_conn();
+    // An owned connection: rusqlite 0.41 takes `&mut` to install a progress handler.
+    let mut conn = IndexStore::open_read_connection(&index_path).expect("read connection");
 
     // How many ticks a whole walk takes.
     let ticks = Arc::new(AtomicUsize::new(0));
@@ -119,7 +119,7 @@ fn a_walk_whose_volume_stops_mid_read_leaves_without_reading_the_rest() {
         }),
     )
     .expect("progress handler");
-    let whole = walk_index_folders(conn, &home, &NEVER_STOPPED).expect("an unstopped walk finishes");
+    let whole = walk_index_folders(&conn, &home, &NEVER_STOPPED).expect("an unstopped walk finishes");
     assert_eq!(whole.len(), 5_102, "the unstopped walk found every folder");
     let whole_walk_ticks = ticks.load(Ordering::Relaxed);
     assert!(
@@ -144,7 +144,7 @@ fn a_walk_whose_volume_stops_mid_read_leaves_without_reading_the_rest() {
     )
     .expect("progress handler");
 
-    let stopped = walk_index_folders(conn, &home, &stop);
+    let stopped = walk_index_folders(&conn, &home, &stop);
     let ticks_run = ticks.load(Ordering::Relaxed);
     conn.progress_handler(0, None::<fn() -> bool>).expect("clear handler");
 

@@ -234,7 +234,7 @@ arc-swap = "1.9.3"
 walkdir = "2"
 # Drive indexing: SQLite store and macOS FSEvents watcher (the parallel directory
 # walker is now the in-tree `indexing::scanner::walker`, not a dependency)
-rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
+rusqlite = { version = "0.41", features = ["bundled", "collation", "fallible_uint"] }
 # Extended attributes: Finder tags, per-path icons, and Google Drive's item ids.
 xattr = "1"
 sysinfo = { version = "0.39.0", default-features = false, features = ["system"] }
