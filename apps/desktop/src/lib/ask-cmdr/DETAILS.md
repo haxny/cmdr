@@ -852,11 +852,14 @@ backend's slot status does that (`ask_cmdr_slot_status` reads `test_mode::ask_cm
   independent of the gates: readiness is setup only, consent stays `cloudOff`'s. The composer's Send is disabled on the
   same gap (`providerGap`), with the reason as a tooltip on a wrapper (a disabled button gets no hover). An unread
   status counts as no gap, so Send never flashes disabled on open; the backend refuses an unset provider on its own.
-  - **When the status is re-read** (`watchSlotStatus`, live while the rail is mounted): on mount, after THIS window's
-    `pushConfigToBackend` lands (`onAiConfigPushed`, so never before the change reaches the backend), on
-    `ai-server-ready` / `ai-install-complete`, on window focus (a change made in the Settings window pushes from there,
-    and the user comes back to the main window), and on a thread switch or a turn's end (memory and budget may have
-    moved). Each read is numbered, so a slow one can't overwrite a newer answer.
+  - **When the status is re-read**, each time on an event (`watchSlotStatus`, live while the rail is mounted): on mount;
+    after ANY window's `pushConfigToBackend` lands (`onAiConfigPushed`, a cross-window `ai-config:pushed` emit, so a key
+    saved in the Settings window reaches the main window's rail, never before the backend has it); after the trigger's
+    `noteSlotSettingChanged` debounce for `askCmdr.interactiveModel` / `askCmdr.chatMemorySize` (1 s, outlasting the
+    settings file flush the backend reads); on `ai-server-ready`, `ai-install-complete`, and
+    `ai-model-capabilities-changed` (Automatic sizes the budget from the catalog); and on a thread switch or a turn's
+    end (memory and budget may have moved). Window focus stays only as the backstop for a local server that stops on its
+    own, which announces nothing. Each read is numbered, so a slow one can't overwrite a newer answer.
 - **Cost footer** (`AskCmdrCostFooter.svelte` + pure `ask-cmdr-cost.ts`): the active thread's cumulative tokens + cost,
   refetched (`ask_cmdr_conversation_cost`) when the thread changes, after each metered call (`costRevision`), and when a
   turn finishes streaming. Honest miss-path (`costReading`): a local-only thread reads "free, on-device", an unpriced

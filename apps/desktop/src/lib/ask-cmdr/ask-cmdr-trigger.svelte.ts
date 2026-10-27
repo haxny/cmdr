@@ -21,6 +21,7 @@ import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
 import { mergeAtSeam } from './ask-cmdr-rounds'
+import { refreshSlotStatus } from './ask-cmdr-slot-status.svelte'
 import { carryGroupStateAcrossSeam, forgetToolDetails } from './ask-cmdr-tool-groups.svelte'
 import { askCmdrState, hasOlderMessages, MESSAGE_PAGE, RAIL_MAX_WIDTH, RAIL_MIN_WIDTH } from './ask-cmdr-state.svelte'
 import {
@@ -310,6 +311,8 @@ export function noteSlotSettingChanged(): void {
   if (slotChangeTimer) clearTimeout(slotChangeTimer)
   slotChangeTimer = setTimeout(() => {
     slotChangeTimer = null
+    // The same move changes the rail's baseline (budget, memory slice) and pricing.
+    void refreshSlotStatus()
     void recordSlotChangeForActiveThread()
   }, SLOT_CHANGE_DEBOUNCE_MS)
 }

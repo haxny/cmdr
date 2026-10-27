@@ -3,11 +3,19 @@
  * provider is set up, how the next call is priced, and the gauge's baseline. Read by the
  * provider notice, the composer's Send gate, and the footer.
  *
- * The backend answers from live state, so this only decides WHEN to ask: on the rail's mount,
- * after this window pushes AI config (`onAiConfigPushed`, so never before the change lands),
- * when the local server comes up or finishes installing, when the window regains focus (a
- * change made in the Settings window, which pushes from there), and when the rail says so
- * (a thread switch, a turn's end: memory and budget may have moved).
+ * The backend answers from live state, so this only decides WHEN to ask, each time on an event:
+ *
+ * - the rail's mount, and the rail's own say-so (a thread switch, a turn's end: memory and
+ *   budget may have moved);
+ * - an AI config push from ANY window (`onAiConfigPushed`, after it lands): the provider, its
+ *   endpoint, a key saved in the Settings window;
+ * - an Ask Cmdr slot setting (`askCmdr.interactiveModel`, `askCmdr.chatMemorySize`), through
+ *   the trigger's `noteSlotSettingChanged` debounce, which outlasts the settings file flush
+ *   the backend reads;
+ * - the local server coming up or finishing its install, and a provider's model catalog
+ *   arriving (`onAiModelCapabilitiesChanged`: Automatic sizes the budget from it);
+ * - window focus, only as the backstop for a local server that stops on its own, which
+ *   announces nothing.
  */
 
 import { onAiConfigPushed } from '#lib/settings/ai-config.js'
@@ -15,6 +23,7 @@ import { getAppLogger } from '#lib/logging/logger.js'
 import {
   askCmdrSlotStatus,
   onAiInstallComplete,
+  onAiModelCapabilitiesChanged,
   onAiServerReady,
   type ProviderReadiness,
   type SlotStatus,
@@ -54,13 +63,14 @@ export function watchSlotStatus(): () => void {
   const refresh = (): void => {
     void refreshSlotStatus()
   }
-  const unsubscribes: (() => void)[] = [onAiConfigPushed(refresh)]
+  const unsubscribes: (() => void)[] = []
+  // The backstop: a local server that stops on its own announces nothing.
   window.addEventListener('focus', refresh)
   unsubscribes.push(() => {
     window.removeEventListener('focus', refresh)
   })
   let disposed = false
-  for (const subscribe of [onAiServerReady, onAiInstallComplete]) {
+  for (const subscribe of [onAiConfigPushed, onAiServerReady, onAiInstallComplete, onAiModelCapabilitiesChanged]) {
     // Outside Tauri (a unit test with no event mock) there's no event bus; the other triggers
     // still refresh.
     try {
@@ -70,11 +80,11 @@ export function watchSlotStatus(): () => void {
           else unsubscribes.push(unlisten)
         },
         (e: unknown) => {
-          log.debug('listening for AI server changes failed: {error}', { error: e })
+          log.debug('listening for AI changes failed: {error}', { error: e })
         },
       )
     } catch (e) {
-      log.debug('listening for AI server changes failed: {error}', { error: e })
+      log.debug('listening for AI changes failed: {error}', { error: e })
     }
   }
   return () => {

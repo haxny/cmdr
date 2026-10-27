@@ -13,6 +13,7 @@ const cancelMock = vi.fn<(id: number) => Promise<CancelOutcomeView>>()
 const listMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 const getMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 const recordMock = vi.fn<(id: number) => Promise<unknown>>()
+const slotStatusMock = vi.fn<() => Promise<unknown>>(() => Promise.resolve(null))
 const saveMock = vi.fn()
 const growWindowMock = vi.fn<(w: number) => Promise<void>>()
 const shrinkWindowMock = vi.fn<(w: number) => Promise<void>>()
@@ -26,6 +27,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   listAskCmdrConversations: (...a: unknown[]) => listMock(...a),
   getAskCmdrConversation: (...a: unknown[]) => getMock(...a),
   recordAskCmdrSlotChange: (id: number) => recordMock(id),
+  askCmdrSlotStatus: () => slotStatusMock(),
   preflightBulkRename: (...args: unknown[]) => preflightRenameMock(...args),
   cancelBulkRenameProposal: vi.fn(() => Promise.resolve()),
   applyBulkRename: (...args: unknown[]) => applyRenameMock(...args),
@@ -391,6 +393,22 @@ describe('slot settings changes', () => {
         { kind: 'modelChange', model: 'model-two' },
         { kind: 'chatMemoryChange', chatMemoryTokens: 16_000 },
       ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('re-reads the slot status once the debounce outlasts the settings flush, even with no thread', async () => {
+    vi.useFakeTimers()
+    try {
+      askCmdrState.conversationId = null
+      slotStatusMock.mockClear()
+      noteSlotSettingChanged()
+      await vi.advanceTimersByTimeAsync(500)
+      // Not yet: the backend reads `settings.json`, which may not hold the change yet.
+      expect(slotStatusMock).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(slotStatusMock).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }
