@@ -13216,6 +13216,36 @@ export type NameFilterResult = {
   sequence: number | null
 }
 
+/**
+ *  Why a transfer that names its items one by one refused to start, for
+ *  [`WriteOperationError::NamedLeavesRefused`]. Every one is checked before the
+ *  operation is admitted, so nothing was written (`transfer/DETAILS.md` §
+ *  "Named destinations").
+ */
+export type NamedLeavesRefusal =
+  // A name was given for an item the transfer doesn't carry. `path` is that item.
+  | 'notASource'
+  /**
+   *  Two items would land under one name, compared ignoring case and Unicode
+   *  form, so on many disks one would replace the other. `path` is where they'd land.
+   */
+  | 'sameName'
+  /**
+   *  An item would land where another item of the same transfer is, replacing
+   *  it before it's read or moved. `path` is where it would land.
+   */
+  | 'ontoASource'
+  /**
+   *  An item already sits in the destination folder, so naming it there is a
+   *  rename, not a transfer. `path` is that item.
+   */
+  | 'alreadyInDestination'
+  /**
+   *  The destination can't take a name per item (a zip, or another volume
+   *  type). `path` is the destination.
+   */
+  | 'routeCannotName'
+
 export type NegotiatedSummaryDto = {
   dialect: string
   max_read_size: number
@@ -20983,6 +21013,13 @@ export type WriteOperationError =
    *  Carries both paths, so the message can show which two clashed.
    */
   | { type: 'duplicate_source_names'; name: string; first: string; second: string }
+  /**
+   *  The names a transfer gave its items one by one can't all be honoured,
+   *  so it refused before anything was admitted or written. `reason` says
+   *  which rule, and `path` is the item, landing path, or destination that
+   *  rule is about.
+   */
+  | { type: 'named_leaves_refused'; path: string; reason: NamedLeavesRefusal }
   /**
    *  The selected items aren't all served by one volume: some sit on the drive
    *  and some inside a read-only view of it (a backup repo's `Browse snapshots`,

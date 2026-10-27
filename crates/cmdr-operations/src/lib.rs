@@ -77,6 +77,7 @@ mod human_wait;
 mod in_flight_temps;
 mod journal;
 mod journal_search;
+mod leaf_validation;
 // The local-filesystem copy, move, delete, and trash starters.
 mod ledger;
 mod local_start;
@@ -352,6 +353,8 @@ mod journal_capture_volume_tests;
 mod named_leaf_entry_tests;
 #[cfg(test)]
 mod named_leaf_undo_tests;
+#[cfg(test)]
+mod named_leaves_tests;
 // Every write path announces each own write before the syscall that makes it.
 #[cfg(test)]
 mod own_write_announce_tests;

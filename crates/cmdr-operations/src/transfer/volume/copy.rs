@@ -193,7 +193,10 @@ impl crate::Operations {
             // joined: the IPC boundary already anchors what the transfer dialog
             // sends, and a raw join would re-root an absolute dest under itself
             // (`/Volumes/USB/sub` → `/Volumes/USB/Volumes/USB/sub`).
-            let absolute_sources: Vec<PathBuf> = source_paths.iter().map(|p| src_root.join(p)).collect();
+            let absolute_sources: Vec<PathBuf> = source_paths
+                .iter()
+                .map(|p| super::on_local_root(&src_root, p))
+                .collect();
             let absolute_dest = cmdr_fs::volume::root_anchored(&dest_root, &dest_path);
 
             // Convert VolumeCopyConfig to WriteOperationConfig, preserving preview_id
@@ -205,7 +208,8 @@ impl crate::Operations {
                 max_conflicts_to_show: config.max_conflicts_to_show,
                 preview_id: config.preview_id,
                 pre_known_conflicts: config.pre_known_conflicts,
-                leaves: config.leaves,
+                // Keyed by the re-rooted paths, in the same step as the sources.
+                leaves: config.leaves.rebased(|p| super::on_local_root(&src_root, p)),
                 space_shortfall: config.space_shortfall,
                 source_kinds: config.source_kinds,
                 ..Default::default()
@@ -249,6 +253,10 @@ impl crate::Operations {
                 )
                 .await;
         }
+
+        // The volume engines don't name each source yet; refused before anything
+        // is admitted, so nothing lands under its old name unannounced.
+        crate::leaf_validation::refuse_per_source_leaves_here(&config.leaves, &dest_path)?;
 
         let operation_id = OperationId::from(cmdr_operation_log::new_operation_id());
         log::info!(

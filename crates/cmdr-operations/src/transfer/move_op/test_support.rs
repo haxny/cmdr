@@ -131,6 +131,25 @@ pub(crate) fn run_cross_fs_move_with(
     Ok(events)
 }
 
+/// Runs one local move engine by name, for a suite outside `move_op`: the
+/// staging engine (`move_with_staging`) when `staged`, else the dispatcher, which
+/// renames within one temp folder's filesystem.
+pub(in crate::transfer) fn run_local_move_engine(
+    staged: bool,
+    events: &dyn OperationEventSink,
+    op_id: &str,
+    state: &Arc<WriteOperationState>,
+    sources: &[PathBuf],
+    dst_dir: &Path,
+    config: &WriteOperationConfig,
+) -> Result<(), WriteOperationError> {
+    if staged {
+        move_with_staging(events, op_id, state, sources, dst_dir, config, 0)
+    } else {
+        move_files_with_progress_inner(events, op_id, state, sources, dst_dir, config)
+    }
+}
+
 /// The outcomes this run reported for `path`, in emit order. The LAST one is the
 /// operation's verdict on that source (`types::SourceItemOutcome`).
 pub(super) fn outcomes_for(events: &CollectorEventSink, path: &Path) -> Vec<SourceItemOutcome> {

@@ -14,6 +14,7 @@ use cmdr_operation_log::types::{Initiator, OperationId};
 
 use super::delete::delete_files_with_progress_inner;
 use super::delete::trash::trash_files_with_progress;
+use super::leaf_validation::{LeafIdentity, validate_transfer_leaves};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::routed_writes::{first_routed, routed_transfer_refusal};
 use super::source_binding::{ExpectedSources, retain_bound_sources, retain_bound_sources_with_sizes};
@@ -26,7 +27,7 @@ use super::types::{
 };
 use super::validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
-    validate_source_names_are_distinct, validate_sources, validate_transfer_leaves,
+    validate_source_names_are_distinct, validate_sources,
 };
 use super::{OperationEventSink, Operations, journal, path_summary, scan_bridge, transfer_sides};
 
@@ -298,7 +299,7 @@ impl Operations {
 
     /// Starts a move operation in the background: the same-`root` start, which
     /// validates the config's leaves before anything is admitted
-    /// (`validation::validate_transfer_leaves`), then [`Self::local_move_start`].
+    /// (`leaf_validation::validate_transfer_leaves`), then [`Self::local_move_start`].
     ///
     /// `expected_sources` is the caller's source binding, or `None` for the ordinary
     /// user-started case. `source_binding.rs`.
@@ -318,7 +319,7 @@ impl Operations {
         expected_sources: Option<ExpectedSources>,
         sides: Option<transfer_sides::TransferSides>,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        validate_transfer_leaves(&config.leaves, &sources, &destination)?;
+        validate_transfer_leaves(&config.leaves, &sources, &destination, LeafIdentity::NamesAndInodes)?;
         self.local_move_start(
             events,
             sources,

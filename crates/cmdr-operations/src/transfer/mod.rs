@@ -65,6 +65,8 @@ mod metadata_matrix_tests;
 #[cfg(test)]
 mod move_integration_test;
 #[cfg(test)]
+mod named_leaves_engine_tests;
+#[cfg(test)]
 pub(crate) mod outage_volume_test_support;
 #[cfg(test)]
 mod self_collision_tests;

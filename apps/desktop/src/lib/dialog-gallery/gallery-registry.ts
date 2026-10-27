@@ -232,6 +232,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'reply_signature_refused', label: 'Server reply refused' },
       { id: 'destination_inside_source', label: 'Destination inside source' },
       { id: 'duplicate_source_names', label: 'Two sources share a name' },
+      { id: 'named_leaves_refused', label: 'Per-item names refused' },
       { id: 'sources_span_volumes', label: 'Sources straddle a view' },
       { id: 'archive_entry_name_refused', label: 'Name a zip can’t hold' },
       { id: 'archive_entry_names_collide', label: 'Two zip entries collide' },

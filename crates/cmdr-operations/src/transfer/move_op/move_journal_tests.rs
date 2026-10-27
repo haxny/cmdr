@@ -641,3 +641,52 @@ async fn named_local_moves_journal_the_final_name_and_reverse_to_the_original() 
         assert_eq!(fixture.read("dst/keep.txt"), "keep");
     }
 }
+
+/// A move naming each item (two renamed, a file and a folder, one keeping its
+/// name) undoes as one operation, every original name back. Bystanders under
+/// the renamed items' ORIGINAL names sit at the destination, so an undo that
+/// read the original names would hit them.
+#[tokio::test]
+async fn a_move_naming_each_item_reverses_every_item_to_its_original_name() {
+    for staged in [false, true] {
+        let fixture = MoveLoop::new(if staged {
+            "per-source-staged-journal"
+        } else {
+            "per-source-rename-journal"
+        });
+        let invoice = fixture.write("src/Invoice-X.pdf", b"invoice");
+        fixture.write("src/scans/page.png", b"page");
+        let kept = fixture.write("src/receipt.pdf", b"receipt");
+        fixture.write("dst/Invoice-X.pdf", b"bystander");
+        fixture.write("dst/scans", b"bystander");
+        let config = WriteOperationConfig {
+            leaves: crate::types::TransferLeaves::per_source([
+                (invoice.clone(), "2026-09-27 invoice.pdf".to_string()),
+                (fixture.path("src/scans"), "2026-09 scans".to_string()),
+            ]),
+            ..Default::default()
+        };
+        let sources = [invoice, fixture.path("src/scans"), kept];
+        if staged {
+            fixture.move_cross_fs(&sources, &fixture.path("dst"), &config);
+        } else {
+            fixture.move_same_fs(&sources, &fixture.path("dst"), &config);
+        }
+        assert_eq!(fixture.read("dst/2026-09-27 invoice.pdf"), "invoice");
+        assert_eq!(fixture.read("dst/2026-09 scans/page.png"), "page");
+        assert_eq!(fixture.read("dst/receipt.pdf"), "receipt");
+
+        let report = fixture.attempt_rollback().await.expect("the named move reverses");
+        assert_eq!(report.skipped, 0, "staged={staged}: nothing skipped, got {report:?}");
+        assert_eq!(fixture.read("src/Invoice-X.pdf"), "invoice");
+        assert_eq!(fixture.read("src/scans/page.png"), "page");
+        assert_eq!(fixture.read("src/receipt.pdf"), "receipt");
+        assert_eq!(
+            fixture.names_in("dst"),
+            vec!["Invoice-X.pdf", "scans"],
+            "staged={staged}: only the bystanders stay"
+        );
+        assert_eq!(fixture.read("dst/Invoice-X.pdf"), "bystander");
+        assert_eq!(fixture.read("dst/scans"), "bystander");
+    }
+}

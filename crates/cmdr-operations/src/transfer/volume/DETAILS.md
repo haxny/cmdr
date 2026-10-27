@@ -9,8 +9,10 @@ The shared scaffolding this engine runs on is documented one level up, next to t
 signal (§ "The stall signal"), per-file retry and its watchdog (§ "Retrying one FILE, and the watchdog that ends a wait
 nothing else will"), and cancel/rollback against a parked driver (§ "Cancel and rollback reach a parked driver").
 
-The both-local delegations carry the config's `TransferLeaves` into the native engines. The serial async driver names
-each source's landing path from them (`chosen_for`, ahead of a rename-by-move's target name) before
+The both-local delegations carry the config's `TransferLeaves` into the native engines, a per-source map re-keyed
+(`rebased`) in the same step the sources are re-rooted (`on_local_root`). The volume engines refuse a per-source map
+typed at the fork, before anything is admitted, until they apply one (`refuse_per_source_leaves_here`). The serial async
+driver names each source's landing path from them (`chosen_for`, ahead of a rename-by-move's target name) before
 `landing.rs::top_level_precheck` probes it. Contract: `../DETAILS.md` § "Named destinations".
 
 ## Files

@@ -24,12 +24,12 @@ use std::sync::Arc;
 
 use super::event_sinks::OperationEventSink;
 use super::host;
+use super::leaf_validation::{LeafIdentity, refuse_per_source_leaves_here, validate_transfer_leaves};
 use super::routed_writes::{first_routed, routed_transfer_refusal};
 use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
-use super::transfer::volume::{PathRole, unregistered_volume_error};
+use super::transfer::volume::{PathRole, on_local_root, unregistered_volume_error};
 use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
-use super::validation::validate_transfer_leaves;
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
@@ -67,6 +67,33 @@ fn landing_parent(dest_volume: &Arc<dyn Volume>, dest_path: String, into_zip: bo
     } else {
         resolve_dest_path(dest_volume, dest_path)
     }
+}
+
+/// The routed start's one check of a transfer's leaves
+/// (`leaf_validation::validate_transfer_leaves`), in the frame the engine that runs
+/// will walk. A both-local transfer runs on the native engines over re-rooted
+/// paths (`transfer::volume::on_local_root`), so its leaves are re-keyed the
+/// same way and checked by `dev+ino` as well as by name; anything else (a zip's
+/// inner path, a remote volume) is checked by name in the paths as given.
+fn validate_leaves_for_route(
+    leaves: &crate::types::TransferLeaves,
+    source_volume: &Arc<dyn Volume>,
+    source_paths: &[PathBuf],
+    dest_volume: &Arc<dyn Volume>,
+    dest_path: &Path,
+    into_zip: bool,
+) -> Result<(), WriteOperationError> {
+    let local_roots = source_volume.local_path().zip(dest_volume.local_path());
+    let (Some((src_root, dest_root)), false) = (local_roots, into_zip) else {
+        return validate_transfer_leaves(leaves, source_paths, dest_path, LeafIdentity::Names);
+    };
+    let sources: Vec<PathBuf> = source_paths.iter().map(|p| on_local_root(&src_root, p)).collect();
+    validate_transfer_leaves(
+        &leaves.clone().rebased(|p| on_local_root(&src_root, p)),
+        &sources,
+        &cmdr_fs::volume::root_anchored(&dest_root, dest_path),
+        LeafIdentity::NamesAndInodes,
+    )
 }
 
 /// Whether transferring `source_path` to `dest_path` would land it on that very
@@ -320,7 +347,17 @@ impl crate::Operations {
             return Err(route_cannot_hold_a_binding("copy into a zip"));
         }
         let dest_path = landing_parent(&dest_volume, dest_path, into_zip);
-        validate_transfer_leaves(&config.leaves, &source_paths, &dest_path)?;
+        if into_zip {
+            refuse_per_source_leaves_here(&config.leaves, &dest_path)?;
+        }
+        validate_leaves_for_route(
+            &config.leaves,
+            &source_volume,
+            &source_paths,
+            &dest_volume,
+            &dest_path,
+            into_zip,
+        )?;
 
         if into_zip {
             return self
@@ -425,7 +462,17 @@ impl crate::Operations {
             return Err(route_cannot_hold_a_binding("move into a zip"));
         }
         let dest_path = landing_parent(&dest_volume, dest_path, into_zip);
-        validate_transfer_leaves(&config.leaves, &source_paths, &dest_path)?;
+        if out_of_zip || into_zip {
+            refuse_per_source_leaves_here(&config.leaves, &dest_path)?;
+        }
+        validate_leaves_for_route(
+            &config.leaves,
+            &source_volume,
+            &source_paths,
+            &dest_volume,
+            &dest_path,
+            into_zip,
+        )?;
 
         if out_of_zip {
             return self

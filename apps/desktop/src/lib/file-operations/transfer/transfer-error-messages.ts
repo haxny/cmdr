@@ -227,6 +227,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   // No Retry: the same selection can only be refused again. The way out is
   // picking one of the two, or transferring them one at a time.
   duplicate_source_names: { category: 'needs_action', retryHint: false },
+  // No Retry: the same names are refused again. The way out is other names, or
+  // another destination, which the suggestion says.
+  named_leaves_refused: { category: 'needs_action', retryHint: false },
   // No Retry: the same selection still straddles the view. The way out is two
   // transfers, which the suggestion says.
   sources_span_volumes: { category: 'needs_action', retryHint: false },
@@ -687,6 +690,15 @@ function operationWordedMessage(
     // eject.
     case 'mounted_volume_inside':
       return mountedVolumeMessage(error.mountPoint, error.action)
+    // Names given per item (an approved suggestion) that can't all be used. One
+    // sentence per rule, since each has its own way out, and none varies by
+    // operation: nothing started.
+    case 'named_leaves_refused':
+      return {
+        title: w('namedLeavesRefused.title'),
+        message: w(`namedLeavesRefused.message.${error.reason}`, { path: escapeHtml(error.path) }),
+        suggestion: w(`namedLeavesRefused.suggestion.${error.reason}`),
+      }
     case 'duplicate_source_names':
       // Two selected items carry one name, so they'd both want
       // `<destination>/<name>`. Refused before anything is written, and the

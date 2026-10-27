@@ -8,36 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::types::{PermissionSide, TransferLeaves, WriteOperationError};
-
-/// An explicit transfer leaf names exactly one source and never escapes its parent.
-///
-/// The ONE check of a transfer's leaves: the routed start runs it before the
-/// operation is admitted (`routing.rs`, `local_start.rs::move_files_start`), and
-/// every engine below trusts it.
-pub(crate) fn validate_transfer_leaves(
-    leaves: &TransferLeaves,
-    sources: &[PathBuf],
-    destination: &Path,
-) -> Result<(), WriteOperationError> {
-    let Some(name) = leaves.single_leaf() else {
-        return Ok(());
-    };
-    let named_path = destination.join(name);
-    if sources.len() != 1
-        || sources[0].file_name().is_none()
-        || name.is_empty()
-        || name.contains(['/', '\0'])
-        || name == "."
-        || name == ".."
-    {
-        return Err(WriteOperationError::InvalidName {
-            path: named_path.display().to_string(),
-            message: "Choose one item and a filename without path separators".into(),
-        });
-    }
-    validate_path_length(&named_path)
-}
+use super::types::{PermissionSide, WriteOperationError};
 
 pub(crate) fn validate_sources(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
     for source in sources {
@@ -64,7 +35,10 @@ pub(crate) fn validate_sources(sources: &[PathBuf]) -> Result<(), WriteOperation
 /// Byte-exact names only. Whether two names differing in case or normalization
 /// are one file is the destination filesystem's call, not ours — the same rule
 /// `DestNameIndex` follows for a fold-only match — and refusing them here would
-/// block a legitimate transfer onto a case-sensitive volume.
+/// block a legitimate transfer onto a case-sensitive volume. Names chosen per
+/// source are a different question, folded at the start
+/// (`leaf_validation::validate_transfer_leaves`); this check still runs under them, because
+/// the native engines key their subtree remap on `<destination>/<own name>`.
 pub(crate) fn validate_source_names_are_distinct(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
     let mut seen: HashMap<&std::ffi::OsStr, &PathBuf> = HashMap::with_capacity(sources.len());
     for source in sources {

@@ -218,24 +218,25 @@ The full top-level inventory is here:
   the one boundary that words a stop; tests in `transfer_sides_tests.rs`), `target_names.rs` (the new NAME a renamed
   source takes in a move, § "Renames that run as moves"), `mutation_error.rs` (the typed refusal an instant mutation
   returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it
-  is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space
-  pre-flight"), `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The scratch dir archive edits stage local bytes
-  in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` + `create.rs`,
-  `rename/` + `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one routing every
-  cross-volume transfer takes: `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is
-  the Retry recipe a copy or move leaves with the manager), `routed_writes.rs` (the refusal every drive-only entry point
-  asks first for an in-zip or `.git/<category>/` path, `host/DETAILS.md`). `source_binding.rs` is the optional set of
-  sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when
-  admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three
-  stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's
-  terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about Locked
-  items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked items").
-  Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
-  `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every backend's
-  cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
-  engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the
-  Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on
-  an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
+  is still running"), `validation.rs`, `leaf_validation.rs` (the one check of a transfer's `TransferLeaves`,
+  `src/transfer/DETAILS.md` § "Named destinations"), `free_space.rs` (the copy's free-space pre-flight, § "The
+  free-space pre-flight"), `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The scratch dir archive edits stage
+  local bytes in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` +
+  `create.rs`, `rename/` + `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one
+  routing every cross-volume transfer takes: `start_volume_{copy,move,compress}`, plus `start_rename_by_move`;
+  `routing/retry.rs` is the Retry recipe a copy or move leaves with the manager), `routed_writes.rs` (the refusal every
+  drive-only entry point asks first for an in-zip or `.git/<category>/` path, `host/DETAILS.md`). `source_binding.rs` is
+  the optional set of sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on
+  its sources when admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering,
+  so the three stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty
+  batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about
+  Locked items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked
+  items"). Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public
+  list) and `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every
+  backend's cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app
+  around the engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is
+  the Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state
+  on an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
   `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager"; the

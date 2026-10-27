@@ -136,6 +136,70 @@ async fn undoing_a_named_local_copy_deletes_exactly_the_named_copy() {
     }
 }
 
+/// A copy naming each item (a renamed file, a renamed folder, one keeping its
+/// name) undoes as one operation, deleting exactly the copies it made, under
+/// whichever name each landed.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn undoing_a_copy_naming_each_item_deletes_exactly_its_copies() {
+    let rig = UndoRig::new();
+    rig.vm.register(
+        "root",
+        Arc::new(LocalPosixVolume::local_folder(
+            "Test root",
+            "/",
+            crate::host::testing::pane_order_host(),
+        )) as Arc<dyn Volume>,
+    );
+    let work = tempfile::tempdir().expect("work dir");
+    let (src, dst) = (work.path().join("src"), work.path().join("dst"));
+    std::fs::create_dir_all(src.join("scans/empty")).expect("source folder");
+    std::fs::write(src.join("scans/page.png"), b"page").expect("child");
+    std::fs::write(src.join("Invoice-X.pdf"), b"invoice").expect("file");
+    std::fs::write(src.join("receipt.pdf"), b"receipt").expect("kept");
+    std::fs::create_dir_all(&dst).expect("dst");
+    std::fs::write(dst.join("Invoice-X.pdf"), b"bystander").expect("bystander");
+    let sources = [src.join("Invoice-X.pdf"), src.join("scans"), src.join("receipt.pdf")];
+
+    let op_id = "per-source-local-copy";
+    let state = Arc::new(rig.engine.new_operation_state(Duration::ZERO));
+    journal::open_local_op(state.scope(), op_id, OpKind::Copy, Initiator::User, 3, Some("root"));
+    let config = WriteOperationConfig {
+        leaves: crate::types::TransferLeaves::per_source([
+            (sources[0].clone(), "2026-09-27 invoice.pdf".to_string()),
+            (sources[1].clone(), "2026-09 scans".to_string()),
+        ]),
+        ..Default::default()
+    };
+    let result = copy_files_with_progress_inner(&CollectorEventSink::new(), op_id, &state, &sources, &dst, &config);
+    journal::finalize_op(
+        state.scope(),
+        OpKind::Copy,
+        journal::execution_status_from_error(result.as_ref().err()),
+    );
+    result.expect("the named copy ran");
+    assert_eq!(
+        std::fs::read(dst.join("2026-09 scans/page.png")).expect("named folder"),
+        b"page"
+    );
+
+    let report = rig.undo(op_id).await;
+    assert_eq!(report.skipped, 0, "nothing skipped, got {report:?}");
+    let mut left: Vec<String> = std::fs::read_dir(&dst)
+        .expect("dst")
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(left, vec!["Invoice-X.pdf"], "only the bystander stays");
+    assert_eq!(
+        std::fs::read(dst.join("Invoice-X.pdf")).expect("bystander"),
+        b"bystander"
+    );
+    for source in &sources {
+        assert!(source.exists(), "undo of a copy never touches its source");
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn undoing_a_named_volume_copy_deletes_exactly_the_named_copy() {
     let rig = UndoRig::new();

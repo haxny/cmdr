@@ -109,6 +109,10 @@
       "lines": 1218,
       "reason": "One table: every `WriteOperationError` variant's en wording per operation, pinned case by case so a copy edit lands in the catalog AND here. It grows by one case per new refusal wording; splitting by variant would scatter the table a reviewer reads top to bottom."
     },
+    "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.ts": {
+      "lines": 809,
+      "reason": "TODO: the refusals raised before an operation starts are one family with their own way out each, and `archive-edit-error-messages.ts` already shows the shape. Move the builders for `destination_inside_source`, `duplicate_source_names`, `named_leaves_refused`, `sources_span_volumes`, and `mounted_volume_inside` (with `mountedVolumeMessage`) into `refusal-error-messages.ts`, dispatched the way `archiveEditMessage` is, about 90 lines out. What stays is the in-flight failures and the category table."
+    },
     "apps/desktop/src/lib/file-operations/transfer/transfer-progress-state.svelte.ts": {
       "lines": 1003,
       "reason": "One closure over shared mutable teardown flags (`operationId`, `backgrounded`, `destroyed`, `closed`, `cancelRequestedBeforeId`, `doneReported`, and the two wind-down timers) that birth, the four outcome effects, the done state's close, and the command handlers all read and write, plus about 100 lines of pass-through getters over `bound.current` that are the dialog's read surface; splitting `beginOperation` out would mean threading eight callbacks back in, and the done state shares the single-shot `closed` latch with every other way out. The plain-`let` staleness hazard and the settle contract that hold the halves together are argued in the module header and in `transfer/CLAUDE.md`."
@@ -288,6 +292,10 @@
     "crates/cmdr-operations/src/transfer/volume/strategy_test_support.rs": {
       "lines": 1245,
       "reason": "TODO: split it, because it is 13 unrelated `Volume` / `VolumeReadStream` doubles serving nine suites and the seams show in who reads what. `RecursiveDeleteVolume` and `UndeletableSource` (lines 371-502, ~130 lines) have no `strategy_*` consumer at all; their readers are `cleanup_tests.rs`, `conflict_tests.rs`, and `move_failure_tests.rs`, so they belong in a `cleanup_test_support.rs`. The auto-yield cluster `ReleasingStream` + `ReleasingSource` + `AutoYieldTuningGuard` + `YieldingSource` + `NeverPendingYieldSource` (lines 765-1129, ~365 lines) is read only by `strategy_yield_tests.rs`, `strategy_dest_yield_tests.rs`, and `copy_wedge_test_support.rs`, and should join the existing `strategy_dest_yield_test_support.rs` or get its own `strategy_yield_test_support.rs`. `FlakyDest` (~125 lines) pairs with `strategy_retry_tests.rs`. That leaves the abort and stale-handle doubles (`SlowChunkedStream`, `SlowSource`, `FailOnceStaleDest`, `WedgedThenWorkingDest`, `WedgedOpenSource`, `TierOneWitnessDest`) at ~500 lines here. The header comment still claims four suites, so the file has outgrown its own description, and note that a `_test_support.rs` name gets the 800-line budget, not the 1,200-line test one."
+    },
+    "crates/cmdr-operations/src/types/errors.rs": {
+      "lines": 819,
+      "reason": "TODO: the typed payloads the variants carry are leaf types with no behavior of their own. Move `ReadOnlySide`, `PermissionSide`, `TransferRole`, `DisconnectedSide`, `PermissionRefusal`, `ArchiveNameRefusal`, `NamedLeavesRefusal`, `MountedVolumeAction`, `TrashRefusalKind`, and `OversizedFile` into a child `errors/payloads.rs` (beside `errors/log_detail.rs`), re-exported with `pub use payloads::*` so every `types::` path holds and `bindings.ts` doesn't move, about 230 lines out. What stays is `WriteOperationError`, its `item_path` macro, and its impls."
     },
     "crates/cmdr-operations/src/types/events.rs": {
       "lines": 1057,
