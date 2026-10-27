@@ -228,6 +228,66 @@ fn the_destination_volume_is_named_even_before_anyone_connects_it() {
     assert_eq!(destination_volume_id_of(&trashing), None);
 }
 
+/// A group the agent named on a share that isn't connected is stored on the live, signed-in
+/// sibling it was re-addressed onto, so the header names the volume the approval will WRITE
+/// to, ❌ never the one the agent asked for.
+#[test]
+fn a_re_addressed_destination_is_named_as_the_volume_written_to() {
+    use crate::location::resolve::{IndexSources, VolumeFact};
+    use crate::location::share_identity::ShareIdentity;
+    use crate::mcp::resources::volumes::VolumeKind;
+    use crate::network::server_guid::GuidProof;
+
+    let nas = |id: &str, root: &str, live: bool| VolumeFact {
+        id: id.to_string(),
+        name: id.to_string(),
+        kind: VolumeKind::Smb,
+        root: root.to_string(),
+        live,
+        connection_state: None,
+        earlier_roots: Vec::new(),
+        index: IndexSources::none(id),
+        share: Some(ShareIdentity::new(
+            Some(("6ba7b810-9dad-11d1-80b4-00c04fd430c8", GuidProof::Authenticated)),
+            "naspi",
+            Some("david"),
+        )),
+    };
+    let facts = crate::location::resolve::VolumeFacts {
+        volumes: vec![
+            VolumeFact {
+                kind: VolumeKind::Local,
+                share: None,
+                ..nas("root", "/", true)
+            },
+            nas("smb-saved", "/Volumes/naspi", false),
+            nas("smb-naspi", "/Volumes/naspi-1", true),
+        ],
+        mount_areas: vec!["/Volumes".to_string()],
+    };
+    let conn = crate::sqlite_util::open_in_memory().expect("in-memory db");
+    crate::agent::store::run_migrations(&conn, crate::agent::store::MIGRATIONS).expect("migrate");
+    let group_id = crate::agent::tools::suggestions::stage_for_test(
+        &conn,
+        &serde_json::json!({ "groups": [{
+            "verb": "move",
+            "sourceVolumeId": "root",
+            "displayName": "One invoice",
+            "destination": { "volumeId": "smb-saved", "path": "/Volumes/naspi/papers" },
+            "paths": ["/Users/someone/Downloads/Invoice-X.pdf"],
+        }] }),
+        &facts,
+    );
+    let group = crate::agent::store::proposals::get_group(&conn, group_id)
+        .expect("read")
+        .expect("exists");
+
+    let read = read_facts(&group, volume_facts(), DestinationState::NotApplicable);
+    assert_eq!(read.destination_volume_name.as_deref(), Some("naspi on 192.168.1.5"));
+    assert_eq!(destination_volume_id_of(&group), Some("smb-naspi"));
+    assert_eq!(group.destination.as_deref(), Some("/Volumes/naspi-1/papers"));
+}
+
 fn sweep(id: i64) -> ProposalSweep {
     ProposalSweep {
         id,

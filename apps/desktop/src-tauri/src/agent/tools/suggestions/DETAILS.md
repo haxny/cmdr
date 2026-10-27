@@ -18,16 +18,19 @@ into `propose_suggestions` is what keeps the surface honest.
 Only `propose_suggestions` joins `EXPECTED_PROPOSE_TOOL_NAMES` (`mcp/tests/tool_registry_tests/access.rs`), a hand-authored
 allowlist by design: no structural check can prove a handler doesn't mutate.
 
-## `propose_suggestions`: resolve, check, then write
+## `propose_suggestions`: place, resolve, check, then write
 
-`apply_planned_sweep` runs in that order, and the order is the contract:
+The handler runs in that order, and the order is the contract:
 
-1. **Resolve** every group's ops — a selector against the drive index, an explicit list as given.
-2. **Check** every amendment's target: the group exists, it belongs to the named sweep, and it is still `pending`.
-3. **Write**: create the sweep (or reuse the named one), then each group through `suggested_ops::add_group` /
+1. **Place** every location every group names (`plan_sweep`, over one `VolumeFacts` snapshot; § Where a proposal may
+   point). Before the snapshot stats a source, so a re-addressed group freezes its facts from the volume it will run on.
+2. **Resolve** every group's ops (`apply_planned_sweep` from here on): a selector against the drive index, an explicit
+   list as given.
+3. **Check** every amendment's target: the group exists, it belongs to the named sweep, and it is still `pending`.
+4. **Write**: create the sweep (or reuse the named one), then each group through `suggested_ops::add_group` /
    `repropose`.
 
-A refusal anywhere in 1–2 leaves the store exactly as it was. The alternative (write what validates, report the rest)
+A refusal anywhere in 1–3 leaves the store exactly as it was. The alternative (write what validates, report the rest)
 was rejected because a sweep is what the user reads in one sitting: a partly-applied amendment shows some groups as the
 agent revised them and some as it left them, with nothing on screen to say which is which.
 
@@ -48,10 +51,43 @@ report names what landed, so a partial application is a stated outcome rather th
 
 ### The refusal vocabulary
 
-Every refusal crosses the wire as `{ readyForReview: false, refusal: <token>, group: <index>, problem: <sentence> }`.
+Every refusal crosses the wire as `{ readyForReview: false, refusal: <token>, group: <index>, problem: <sentence> }`,
+except a location miss, which speaks the read tools' miss shape instead (§ Where a proposal may point).
 The token is the typed classification (nothing downstream matches on the sentence, per the repo's no-error-string-match
 rule); the sentence is what the model relays, and it says what to send instead. The group index is the position in the
 call, because the model's only recovery is to send the whole call again and it needs to know which group to fix.
+
+## Where a proposal may point
+
+A proposal names only places that can run now, so approval never refuses for a reason the model could have been told
+while it was still talking (`place.rs`, over the location resolver: `../DETAILS.md` § The location contract).
+
+- **Every place resolves**: `destination`, `selector.root`, a rename's `parent`, and each hand-listed source in `paths`
+  or `renames`. A source resolves NAMED, with `sourceVolumeId` (one volume per group is the spine's rule, so it stays
+  required): a bare resolve of a path on a sleeping share is `noVolumeAtPath`, which loses `sameShareAs`, and naming the
+  volume is also what catches a hallucinated volume/path pair (`pathOutsideVolume`). `volumeId` is optional in
+  `destination` and `selector.root`: a bare path resolves to the live volume holding it, or misses.
+- **One snapshot per call**: `VolumeFacts::now()` once, in memory, before anything else; 200 pure resolves per group
+  cost nothing. A path under a root the volume held earlier stores the rebased path.
+- **A miss refuses the whole call** in the read tools' shape, flattened beside the envelope:
+  `{ readyForReview: false, refusal: "location", group, field, miss, location, detail, nearby?, sameShareAs?, root? }`.
+  `field` is `destination` / `selector.root` / `paths` / `renames` / `parent`. A place on a volume that isn't live, with
+  no sibling to take it, is `volumeNotConnected` (`location::miss::volume_not_connected`), carrying `nearby` (each with
+  its `candidate`) and `sameShareAs`, which is how the model offers `connect_volume`.
+- **A proven sibling re-addresses instead**: when the named volume isn't live, the first live member `readers` offers
+  (same share, same account, BOTH GUIDs recorded by a sign-in: `location/same_share.rs`) takes the place, and the group
+  is STORED there: its volume id, its rebased paths. The stored group is what runs, and the dead id would only refuse at
+  approval. The report's group entry carries one `via: { volumeId }` naming the volume asked, and the dialog's
+  `destinationVolumeName` derives from the stored destination, so it names the volume written to
+  (`commands/agent/suggested_ops_test.rs` pins that). A probe-filled or guest GUID, or another account, is only a
+  `sameShareAs` hint: re-addressing a WRITE onto whatever answered a probe of a saved address would send the user's
+  files there.
+- **One `via` per group**: a group whose places would re-address onto two members, or re-address one place while
+  another names a member of that share directly, refuses as `mixedReaddress`. Simpler and safer than a `via` per field.
+- **A selector re-addressed** resolves against the sibling's index; `notIndexed` there is the selector's own refusal.
+- **`WritableDestination` applies to the placed path**, where the group will really write.
+- **Amendments place again**: an amend is a fresh proposal of the group.
+- The review's `DestinationState::NotConnected` stays: a volume can leave after the proposal.
 
 ## The selector schema, and the one predicate that isn't there
 
@@ -104,8 +140,9 @@ to has no cap at all, because 60,000 ops in one group is a legitimate group.
 
 ## Testing
 
-`tests/` runs without a Tauri app: the handlers are thin shells over `apply_planned_sweep` (a `Connection` plus a
-`SelectorIndex`), `shape_list`, and `shape_group`. One file per concern (`input`, `propose`, `read`), with the shared
+`tests/` runs without a Tauri app: the handlers are thin shells over `plan_sweep` (fixture `VolumeFacts`),
+`apply_planned_sweep` (a `Connection` plus a `SelectorIndex`), `shape_list`, and `shape_group`. One file per concern
+(`input`, `place`, `propose`, `read`; `place` reuses the conversation-179 facts from `../transcript_179_tests.rs`), with the shared
 fixtures in `tests/mod.rs`. The fake index counts how often it was asked, which is what pins
 "resolved exactly once". The write-path tests run against a real migrated in-memory `main.db`, so the store's own
 guards are in the loop rather than mocked away: removing the pre-check's status guard turns an amendment into

@@ -241,7 +241,7 @@ auto-dispatched ones the user never previews, and `redact::RedactionContext::red
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
 **What it costs everyone else.** The schema is prefix, so all 20 declarations are paid on every rail turn: this one is
-97 tokens of the 6,926 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+97 tokens of the 6,933 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -435,8 +435,10 @@ double-counting its bytes.
 
 Every tool that takes a place speaks one shape, placed by one resolver (`apps/desktop/src-tauri/src/location/resolve.rs`, pure over
 `VolumeFacts`; table tests in `resolve_tests.rs`, the prod story in `transcript_179_tests.rs`). `list_dir`,
-`important_folders`, `folder_importance`, `search`, and `inspect_file` speak it, and `list_pane_files` echoes its folder
-as a `location`.
+`important_folders`, `folder_importance`, `search`, and `inspect_file` speak it, `list_pane_files` echoes its folder
+as a `location`, and `propose_suggestions` places every destination, selector root, and hand-listed source through it,
+refusing the call in the miss shape and re-addressing a write only onto a redirectable sibling
+(`suggestions/DETAILS.md` § Where a proposal may point).
 
 **Shapes.** An INPUT is the flat pair `path` + optional `volumeId` (`LocationInput`): flat so an AI client's schema stays
 two strings, `volumeId` optional so `~/Downloads` or `/Volumes/naspi-1/papers` simply works. An OUTPUT carries

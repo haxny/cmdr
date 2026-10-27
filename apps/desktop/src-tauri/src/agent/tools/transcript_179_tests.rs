@@ -28,22 +28,22 @@ use crate::mcp::resources::volumes::VolumeKind;
 use crate::network::server_guid::GuidProof;
 use crate::test_support::TestDir;
 
-const TAILSCALE: &str = "smb-100-127-48-122-445-naspi-david";
-const LAN: &str = "smb-192-168-1-111-445-naspi-david";
+pub(super) const TAILSCALE: &str = "smb-100-127-48-122-445-naspi-david";
+pub(super) const LAN: &str = "smb-192-168-1-111-445-naspi-david";
 /// The NAS's server GUID, as both share rows record it.
 const NASPOLYA: &str = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 /// When the Tailscale share's on-disk index last finished a walk.
 const TAILSCALE_AS_OF: u64 = 1_761_000_000;
 const NOW: u64 = 1_761_500_000;
-const INVOICES: &str = "papers/Rymdskottkärra AB/invoices paid";
+pub(super) const INVOICES: &str = "papers/Rymdskottkärra AB/invoices paid";
 
-fn conversation_179() -> VolumeFacts {
+pub(super) fn conversation_179() -> VolumeFacts {
     conversation_179_with("/Volumes/naspi-1", ConnectionState::Direct)
 }
 
 /// The facts with the LAN share at `lan_root` (a temp dir standing in for
 /// `/Volumes/naspi-1`, so a live read has a real folder to list) in `lan_state`.
-fn conversation_179_with(lan_root: &str, lan_state: ConnectionState) -> VolumeFacts {
+pub(super) fn conversation_179_with(lan_root: &str, lan_state: ConnectionState) -> VolumeFacts {
     let share = |id: &str, server: &str, root: &str, state: ConnectionState, stored: bool| VolumeFact {
         id: id.to_string(),
         name: format!("naspi on {server}"),

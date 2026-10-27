@@ -218,7 +218,7 @@ In `budget.rs` (how many tokens a prompt and a tool result may spend):
 - `MIN_LOCAL_CONTEXT_TOKENS = 32_768` — the smallest local window one turn can run in, mirrored by
   `ai.localContextSize`'s default and its smallest option. It tracks the prefix, so it moves when the tool view grows.
   See § A local window too small to use.
-- `FIXED_PROMPT_OVERHEAD_TOKENS = 6_926` / `RENAME_TOKENS_PER_FILE = 349` / `BATCH_HINT_HEADROOM_PERCENT = 10` — what
+- `FIXED_PROMPT_OVERHEAD_TOKENS = 6_933` / `RENAME_TOKENS_PER_FILE = 349` / `BATCH_HINT_HEADROOM_PERCENT = 10` — what
   `files_per_batch` divides. See § Sizing a batch from the budget.
 - `MAX_TOOL_RESULT_TOKENS = DEFAULT_PROMPT_TOKEN_BUDGET / 2` — the most ONE tool result may spend. Derived from the
   conservative default, not the resolved budget, because a tool handler doesn't know the model (and may be answering an
@@ -359,7 +359,7 @@ all. A persist problem is logged and dropped — a gauge is worth no turn.
 `files_per_batch(prompt_tokens)` answers how many files one content-based rename batch fits, as the **smaller of two
 limits**:
 
-- what the PROMPT holds: `(budget − 10% headroom − 6,926 of prefix) / 349 per file`. The headroom exists because the
+- what the PROMPT holds: `(budget − 10% headroom − 6,933 of prefix) / 349 per file`. The headroom exists because the
   measured 100-file turn came in ~4% above what the per-file costs account for (the paths the calls name, the envelope,
   the user's sentence, JSON scaffolding).
 - what one REPLY can emit: `AGENT_MAX_OUTPUT_TOKENS` (12,000), less a half-slot reasoning reserve, divided by the plan
@@ -396,7 +396,7 @@ Estimated tokens from the shipped assets and `estimate_prompt_tokens`. Every fig
 `context/cost_tests.rs`, whose constants block is the single copy; a failure there names both numbers and says to update
 the test and this section together.
 
-- **Fixed overhead: 6,926 tokens** on every single call — 2,378 for the system prompt and 4,548 for the 20 tool
+- **Fixed overhead: 6,933 tokens** on every single call — 2,378 for the system prompt and 4,555 for the 20 tool
   declarations. The old flat 8k budget, against a prefix half this size, still left only ~4.9k for the actual work, so
   an 11-file `image_facts` batch fit and a 12-file one did not. **It grows with the tool view**: the suggested-ops trio
   is ~1,000 tokens of schema, which every call pays whether or not it suggests anything, and which costs a 16k budget

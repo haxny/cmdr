@@ -7,17 +7,24 @@
 //! nothing at all (`propose_rename_plan`'s rule, for the same reason: a partial proposal
 //! reads as a whole one).
 //!
+//! Validation also PLACES every location a group names (`place.rs`), so what comes out is
+//! where the group will really run: a re-addressed group already names the sibling it runs on.
+//!
 //! The planned shapes mirror [`GroupIntent`]'s pairing, so once validation is past, a trash
 //! group with a destination or a rename whose names came from a pattern is unrepresentable
 //! rather than checked again downstream.
 
 use serde::Deserialize;
 
+use super::place::{GroupPlacer, PlaceField};
 use crate::agent::store::proposals::{GroupIntent, NewOp, NewRename, WritableDestination};
 use crate::agent::suggested_ops::OpSelector;
 use crate::agent::tools::read::expand_tilde;
 use crate::agent::types::ProposalVerb;
 use crate::location::Location;
+use crate::location::miss::LocationMissResult;
+use crate::location::resolve::{LocationInput, VolumeFacts};
+use crate::location::same_share::Via;
 
 /// How many groups one call may propose: a sweep is what the user reads in one sitting.
 pub(super) const MAX_GROUPS: usize = 16;
@@ -46,8 +53,8 @@ pub(super) struct GroupInput {
     pub group_id: Option<i64>,
     pub verb: ProposalVerb,
     /// The shared destination directory (move / copy / extract), or the archive to write
-    /// (compress).
-    pub destination: Option<Location>,
+    /// (compress). `volumeId` is optional: a bare path resolves to the live volume holding it.
+    pub destination: Option<LocationInput>,
     /// Compress only: whether that archive already exists, which is what decides whether
     /// the group can be taken back.
     pub overwrites_existing: Option<bool>,
@@ -80,7 +87,7 @@ pub(super) struct RenameInput {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct SelectorInput {
-    pub root: Location,
+    pub root: LocationInput,
     pub name_glob: Option<String>,
     pub min_size_bytes: Option<u64>,
     pub max_size_bytes: Option<u64>,
@@ -100,14 +107,18 @@ pub(super) struct PlannedSweep {
     pub groups: Vec<PlannedGroup>,
 }
 
-/// One validated group. Its ops are still a pattern when a selector produced it: resolution
-/// belongs to the write path, which does it once and freezes the result.
+/// One validated, PLACED group: every location in it is where the resolver put it
+/// (`place.rs`), re-addressed onto a live sibling when the volume asked isn't live. Its ops
+/// are still a pattern when a selector produced it: resolution belongs to the write path,
+/// which does it once and freezes the result.
 #[derive(Debug)]
 pub(super) struct PlannedGroup {
     /// The pending group this replaces, when it's an amendment.
     pub group_id: Option<i64>,
     pub rationale: Option<String>,
     pub ops: PlannedOps,
+    /// The volume the model named, when the group was re-addressed onto a live sibling of it.
+    pub via: Option<Via>,
 }
 
 /// The two op shapes, split the way the executors split them: rename carries its own
@@ -135,6 +146,16 @@ pub(super) enum PlannedOps {
 pub(super) struct ExplicitNaming {
     pub source_volume_id: String,
     pub display_name: String,
+}
+
+impl ExplicitNaming {
+    /// The same naming, on the volume its sources were placed on.
+    fn on(self, source_volume_id: String) -> Self {
+        Self {
+            source_volume_id,
+            ..self
+        }
+    }
 }
 
 /// A verb and the target it binds, with its sources still to come. The same pairing
@@ -263,13 +284,26 @@ pub(super) enum GroupProblem {
     },
     /// A size or age window nothing can satisfy.
     ImpossibleWindow,
+    /// A place the resolver couldn't put on a live volume, nor re-address onto a live sibling.
+    Location {
+        field: PlaceField,
+        miss: Box<LocationMissResult>,
+    },
+    /// Re-addressing would take the group onto two members of a share, or re-address one
+    /// place while another names a member of that share directly: one `via` can't say it.
+    MixedReaddress,
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-/// Parse and validate a whole call. `now` is unix seconds, injected so an age predicate is
-/// deterministic in a test.
-pub(super) fn plan_sweep(params: &serde_json::Value, now: i64) -> Result<PlannedSweep, PlanRefusal> {
+/// Parse, validate, and place a whole call. `now` is unix seconds, injected so an age
+/// predicate is deterministic in a test; `facts` is the call's one volume snapshot, which every
+/// place in every group resolves against (`place.rs`).
+pub(super) fn plan_sweep(
+    params: &serde_json::Value,
+    now: i64,
+    facts: &VolumeFacts,
+) -> Result<PlannedSweep, PlanRefusal> {
     let input: SweepInput = serde_json::from_value(params.clone()).map_err(|_| PlanRefusal::Malformed)?;
     if input.groups.is_empty() {
         return Err(PlanRefusal::NoGroups);
@@ -284,7 +318,7 @@ pub(super) fn plan_sweep(params: &serde_json::Value, now: i64) -> Result<Planned
         if group.group_id.is_some() && input.sweep_id.is_none() {
             return Err(PlanRefusal::GroupIdWithoutSweep { group: index });
         }
-        groups.push(plan_group(group, now).map_err(|problem| PlanRefusal::Group { group: index, problem })?);
+        groups.push(plan_group(group, now, facts).map_err(|problem| PlanRefusal::Group { group: index, problem })?);
     }
     Ok(PlannedSweep {
         sweep_id: input.sweep_id,
@@ -293,7 +327,7 @@ pub(super) fn plan_sweep(params: &serde_json::Value, now: i64) -> Result<Planned
     })
 }
 
-fn plan_group(group: GroupInput, now: i64) -> Result<PlannedGroup, GroupProblem> {
+fn plan_group(group: GroupInput, now: i64, facts: &VolumeFacts) -> Result<PlannedGroup, GroupProblem> {
     let is_rename = group.verb == ProposalVerb::Rename;
     let sources_given = [group.paths.is_some(), group.renames.is_some(), group.selector.is_some()]
         .into_iter()
@@ -326,8 +360,7 @@ fn plan_group(group: GroupInput, now: i64) -> Result<PlannedGroup, GroupProblem>
     // A selector names its own volume (its root's) and its own title (its pattern), so
     // either field sent alongside it would be a second, drifting answer to a settled
     // question.
-    let selector = group.selector.map(|input| plan_selector(input, now)).transpose()?;
-    if selector.is_some() {
+    if group.selector.is_some() {
         if group.source_volume_id.is_some() {
             return Err(GroupProblem::SelectorSuppliesField {
                 field: "sourceVolumeId",
@@ -338,23 +371,69 @@ fn plan_group(group: GroupInput, now: i64) -> Result<PlannedGroup, GroupProblem>
         }
     }
 
-    let ops = match (group.renames, group.paths, selector) {
-        (Some(renames), _, _) => PlannedOps::Rename {
-            parent: expand_tilde(&required(group.parent, "parent")?),
-            renames: plan_renames(renames)?,
-            naming: explicit_naming(group.source_volume_id, group.display_name)?,
-        },
-        (None, Some(paths), _) => PlannedOps::Sources {
-            shape: plan_shape(group.verb, group.destination, group.overwrites_existing)?,
-            sources: PlannedSources::Paths {
-                ops: plan_paths(paths)?,
-                naming: explicit_naming(group.source_volume_id, group.display_name)?,
-            },
-        },
-        (None, None, Some(selector)) => PlannedOps::Sources {
-            shape: plan_shape(group.verb, group.destination, group.overwrites_existing)?,
-            sources: PlannedSources::Selector(selector),
-        },
+    // The shape checks come first, so a group that's wrong on its face says so before any
+    // place in it is looked up. Every place then resolves, and what's stored is where it landed.
+    let mut placer = GroupPlacer::new(facts);
+    let ops = match (group.renames, group.paths, group.selector) {
+        (Some(renames), _, _) => {
+            let parent = expand_tilde(&required(group.parent, "parent")?);
+            let mut renames = plan_renames(renames)?;
+            let naming = explicit_naming(group.source_volume_id, group.display_name)?;
+            let parent = placer
+                .place(
+                    PlaceField::Parent,
+                    LocationInput {
+                        volume_id: Some(naming.source_volume_id.clone()),
+                        path: parent,
+                    },
+                )?
+                .path;
+            let on = placer.sources(
+                PlaceField::Renames,
+                &naming.source_volume_id,
+                renames.iter_mut().map(|rename| &mut rename.source_path),
+            )?;
+            PlannedOps::Rename {
+                parent,
+                renames,
+                naming: naming.on(on),
+            }
+        }
+        (None, Some(paths), _) => {
+            let mut ops = plan_paths(paths)?;
+            let naming = explicit_naming(group.source_volume_id, group.display_name)?;
+            let shape = plan_shape(
+                group.verb,
+                group.destination,
+                group.overwrites_existing,
+                |destination| placer.place(PlaceField::Destination, destination),
+            )?;
+            let on = placer.sources(
+                PlaceField::Paths,
+                &naming.source_volume_id,
+                ops.iter_mut().map(|op| &mut op.source_path),
+            )?;
+            PlannedOps::Sources {
+                shape,
+                sources: PlannedSources::Paths {
+                    ops,
+                    naming: naming.on(on),
+                },
+            }
+        }
+        (None, None, Some(selector)) => {
+            let shape = plan_shape(
+                group.verb,
+                group.destination,
+                group.overwrites_existing,
+                |destination| placer.place(PlaceField::Destination, destination),
+            )?;
+            let selector = plan_selector(selector, now, |root| placer.place(PlaceField::SelectorRoot, root))?;
+            PlannedOps::Sources {
+                shape,
+                sources: PlannedSources::Selector(selector),
+            }
+        }
         // The source count above admits exactly one, so this arm is unreachable; it answers
         // with the same typed refusal rather than a panic.
         (None, None, None) => return Err(GroupProblem::NoSources),
@@ -364,6 +443,7 @@ fn plan_group(group: GroupInput, now: i64) -> Result<PlannedGroup, GroupProblem>
         group_id: group.group_id,
         rationale: group.rationale,
         ops,
+        via: placer.finish()?,
     })
 }
 
@@ -379,17 +459,20 @@ fn explicit_naming(
     })
 }
 
-/// A destination a group may be built with, or the refusal that says why not.
+/// A destination a group may be built with, or the refusal that says why not. Asked of the
+/// PLACED path, so a re-addressed destination is checked where it will really write.
 fn writable(location: Location) -> Result<WritableDestination, GroupProblem> {
     WritableDestination::new(location).ok_or(GroupProblem::DestinationTakesNoWrites)
 }
 
 /// Pair a verb with the target its executor binds: the per-verb executor table
-/// (`../../store/proposals/DETAILS.md`), as code.
+/// (`../../store/proposals/DETAILS.md`), as code. `place` resolves the destination, and runs
+/// only for a verb that binds one.
 fn plan_shape(
     verb: ProposalVerb,
-    destination: Option<Location>,
+    destination: Option<LocationInput>,
     overwrites_existing: Option<bool>,
+    place: impl FnOnce(LocationInput) -> Result<Location, GroupProblem>,
 ) -> Result<SourceShape, GroupProblem> {
     match verb {
         ProposalVerb::Move | ProposalVerb::Copy | ProposalVerb::Extract => {
@@ -398,7 +481,7 @@ fn plan_shape(
                     field: "overwritesExisting",
                 });
             }
-            let destination = writable(expanded_location(required(destination, "destination")?))?;
+            let destination = writable(place(required(destination, "destination")?)?)?;
             Ok(match verb {
                 ProposalVerb::Move => SourceShape::Move { destination },
                 ProposalVerb::Copy => SourceShape::Copy { destination },
@@ -408,7 +491,7 @@ fn plan_shape(
         ProposalVerb::Compress => Ok(SourceShape::Compress {
             // The archive being created IS the target and is perfectly legal; only a path
             // continuing inside one is refused.
-            archive: writable(expanded_location(required(destination, "destination")?))?,
+            archive: writable(place(required(destination, "destination")?)?)?,
             overwrites_existing: overwrites_existing.unwrap_or(false),
         }),
         ProposalVerb::Trash | ProposalVerb::Delete => {
@@ -434,13 +517,6 @@ fn plan_shape(
 
 fn required<T>(value: Option<T>, field: &'static str) -> Result<T, GroupProblem> {
     value.ok_or(GroupProblem::MissingField { field })
-}
-
-fn expanded_location(location: Location) -> Location {
-    Location {
-        volume_id: location.volume_id,
-        path: expand_tilde(&location.path),
-    }
 }
 
 fn plan_paths(paths: Vec<String>) -> Result<Vec<NewOp>, GroupProblem> {
@@ -506,7 +582,11 @@ fn absolute_path(path: String) -> Result<String, GroupProblem> {
 /// modification time, and inode but no access time, and `importance.db`'s visit counts are
 /// per-FOLDER. A predicate that silently matched nothing would be worse than its absence,
 /// because the agent would propose over it and the user would review an empty group.
-fn plan_selector(input: SelectorInput, now: i64) -> Result<OpSelector, GroupProblem> {
+fn plan_selector(
+    input: SelectorInput,
+    now: i64,
+    place: impl FnOnce(LocationInput) -> Result<Location, GroupProblem>,
+) -> Result<OpSelector, GroupProblem> {
     if let (Some(min), Some(max)) = (input.min_size_bytes, input.max_size_bytes)
         && min > max
     {
@@ -523,7 +603,8 @@ fn plan_selector(input: SelectorInput, now: i64) -> Result<OpSelector, GroupProb
         return Err(GroupProblem::ImpossibleWindow);
     }
     Ok(OpSelector {
-        root: expanded_location(input.root),
+        // Placed last, once the window is known to be satisfiable.
+        root: place(input.root)?,
         name_glob: input.name_glob,
         min_size: input.min_size_bytes,
         max_size: input.max_size_bytes,

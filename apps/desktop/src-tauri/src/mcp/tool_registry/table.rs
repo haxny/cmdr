@@ -527,7 +527,7 @@ mcp_tools! {
         run: app_params crate::agent::tools::suggestions::execute_get_suggestion_group
     },
     "propose_suggestions" => {
-        desc: "Propose file operations (move, copy, trash, delete, rename, compress, extract) for the user to review, in groups each approved or rejected on its own. It stages a proposal and changes nothing: only the user approves. Name up to 200 paths per group, or describe thousands with a selector, resolved against the drive index once, now. A whole folder is ONE op: give its path. sweepId plus groupId replaces a pending group you proposed earlier.",
+        desc: "Propose file operations (move, copy, trash, delete, rename, compress, extract) for the user to review, in groups each approved or rejected on its own. It stages a proposal and changes nothing: only the user approves. Name up to 200 paths per group, or describe thousands with a selector, resolved against the drive index once, now. A whole folder is ONE op: give its path. A place on a volume that isn't connected refuses. sweepId plus groupId replaces a pending group you proposed earlier.",
         schema: crate::agent::tools::suggestions::propose_suggestions_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Propose,

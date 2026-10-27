@@ -8,8 +8,9 @@
 //!
 //! ## Nothing is staged until everything checks out
 //!
-//! Validation, selector resolution, and the ownership checks on an amendment all run BEFORE
-//! the first write. A call whose second group names an already-approved group stages
+//! Validation and placement (every place resolved over one volume snapshot: `place.rs`),
+//! selector resolution, and the ownership checks on an amendment all run BEFORE the first
+//! write. A call whose second group names an already-approved group stages
 //! nothing, because a half-applied sweep leaves the user reading a mix of what the agent
 //! meant and what it managed.
 //!
@@ -28,6 +29,7 @@ use super::input::{
     ExplicitNaming, GroupProblem, MAX_GROUPS, MAX_PATHS, PlanRefusal, PlannedGroup, PlannedOps, PlannedSources,
     PlannedSweep, plan_sweep,
 };
+use super::place::PlaceField;
 use crate::agent::AgentDb;
 use crate::agent::store::AgentStoreError;
 use crate::agent::store::proposals::{
@@ -37,6 +39,9 @@ use crate::agent::suggested_ops::{
     DriveIndex, OpSelector, SelectorIndex, SelectorRefusal, resolve_selector_ops, selector_group,
 };
 use crate::agent::types::{ProposalStatus, ProposalVerb};
+use crate::location::miss::LocationMissResult;
+use crate::location::resolve::VolumeFacts;
+use crate::location::same_share::Via;
 use crate::mcp::{ToolError, ToolResult};
 
 // ── The tool boundary ─────────────────────────────────────────────────────────
@@ -55,7 +60,7 @@ pub fn propose_suggestions_schema() -> Value {
                 "volumeId": { "type": "string" },
                 "path": { "type": "string" }
             },
-            "required": ["volumeId", "path"],
+            "required": ["path"],
             "additionalProperties": false
         })
     };
@@ -144,7 +149,10 @@ pub(crate) async fn propose_in_thread<R: Runtime>(
     params: &Value,
 ) -> ToolResult {
     let now = now_secs();
-    let mut planned = match plan_sweep(params, now) {
+    // One snapshot per call, in memory only: every place in every group resolves against it,
+    // before the snapshot below stats a single source.
+    let facts = VolumeFacts::now().await;
+    let mut planned = match plan_sweep(params, now, &facts) {
         Ok(planned) => planned,
         Err(refusal) => return Ok(plan_refusal_content(&refusal)),
     };
@@ -205,6 +213,9 @@ pub(super) struct GroupReport {
     pub display_name: String,
     pub op_count: usize,
     pub outcome: GroupOutcome,
+    /// The volume the model named, when the group was stored on a live sibling of it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub via: Option<Via>,
 }
 
 /// A staged sweep, as the model reads it back.
@@ -267,7 +278,7 @@ fn refusal_content(token: &str, group: Option<usize>, problem: String) -> Value 
     content
 }
 
-fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
+pub(super) fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
     match refusal {
         PlanRefusal::Malformed => refusal_content(
             "malformed",
@@ -288,6 +299,10 @@ fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
             Some(*group),
             "Amending a group needs the sweepId it belongs to as well.".into(),
         ),
+        PlanRefusal::Group {
+            group,
+            problem: GroupProblem::Location { field, miss },
+        } => location_refusal_content(*group, *field, miss),
         PlanRefusal::Group { group, problem } => {
             let (token, sentence) = group_problem_content(problem);
             refusal_content(token, Some(*group), sentence)
@@ -351,7 +366,27 @@ fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
             "impossibleWindow",
             "That size or age window can't match anything. Check which bound is which.".into(),
         ),
+        // `plan_refusal_content` answers this one in the read tools' miss shape; the arm
+        // keeps the match total.
+        GroupProblem::Location { miss, .. } => ("location", miss.detail.clone()),
+        GroupProblem::MixedReaddress => (
+            "mixedReaddress",
+            "This group's places would land on two addresses of one share. Name every place in the group on the same \
+             connected volume (list_volumes says which is connected), so it writes through one."
+                .into(),
+        ),
     }
+}
+
+/// A place that couldn't be put on a live volume, in the shape every read tool answers a miss
+/// with, plus which group and field it came from.
+fn location_refusal_content(group: usize, field: PlaceField, miss: &LocationMissResult) -> Value {
+    let mut content = serde_json::to_value(miss).unwrap_or_else(|_| json!({}));
+    content["readyForReview"] = json!(false);
+    content["refusal"] = json!("location");
+    content["group"] = json!(group);
+    content["field"] = json!(field.token());
+    content
 }
 
 fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
@@ -423,6 +458,7 @@ fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
 struct ResolvedGroup {
     group_id: Option<i64>,
     group: NewGroup,
+    via: Option<Via>,
 }
 
 /// Resolve, check, then write. The order is the contract: a selector is resolved and an
@@ -535,6 +571,7 @@ fn resolve_group(
     Ok(ResolvedGroup {
         group_id: planned.group_id,
         group,
+        via: planned.via,
     })
 }
 
@@ -577,6 +614,7 @@ fn write_group(conn: &Connection, sweep_id: i64, entry: ResolvedGroup, now: i64)
     let verb = entry.group.intent.verb();
     let op_count = entry.group.intent.op_count();
     let display_name = entry.group.display_name.clone();
+    let via = entry.via;
     let (group_id, outcome) = match entry.group_id {
         Some(group_id) => {
             let outcome = crate::agent::suggested_ops::repropose(conn, group_id, &entry.group, now)
@@ -598,6 +636,8 @@ fn write_group(conn: &Connection, sweep_id: i64, entry: ResolvedGroup, now: i64)
         verb,
         display_name,
         op_count: op_count_of(&outcome, op_count),
+        // A group the user already answered kept its old rows, wherever those point.
+        via: via.filter(|_| outcome != GroupOutcome::AlreadyAnswered),
         outcome,
     })
 }

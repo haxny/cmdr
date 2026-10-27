@@ -8,6 +8,7 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
 
 - `input.rs`: what `propose_suggestions` accepts, validated into planned shapes that pair each verb with the target its
   executor binds. All the refusal variants.
+- `place.rs`: every place a group names, through the location resolver (and onto a proven live sibling).
 - `propose.rs`: the schema, the handler, and the write path (resolve → check → write). `snapshot.rs`: one bounded
   stat per hand-listed source, frozen as its creation snapshot before the write (also
   `propose_rename_plan`'s).
@@ -18,6 +19,9 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
 
 - **Validation runs to completion before the first write.** One bad group stages none of them, because a half-applied
   sweep leaves the user reading a mix of what the agent meant and what it managed.
+- **A proposal names only places that can run now.** Every place resolves first (`plan_sweep`); a miss refuses the
+  whole call in the read tools' miss shape, and a dead volume's signed-in live sibling takes the group, stored there
+  with one `via`. ❌ Never store the id asked when a sibling took it. `DETAILS.md` § Where a proposal may point.
 - **A selector is resolved once, here, at creation.** Nothing re-resolves it later; the frozen rows are what the user
   reviews and what runs. An empty match is a refusal carrying the pattern, and it stays distinct from
   `SelectorRefusal::NotIndexed` ("I can't see that drive" is not "nothing matched").

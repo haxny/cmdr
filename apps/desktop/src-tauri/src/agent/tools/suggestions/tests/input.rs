@@ -3,10 +3,11 @@
 
 use serde_json::json;
 
-use super::{NOW, selector_call};
+use super::{NOW, local_facts, selector_call};
 use crate::agent::tools::suggestions::input::{
     GroupProblem, PlanRefusal, PlannedOps, PlannedSources, SourceShape, plan_sweep,
 };
+use crate::mcp::resources::volumes::VolumeKind;
 
 // ── The input contract ────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ fn a_group_needs_exactly_one_source_shape() {
     let refusal = plan_sweep(
         &json!({ "groups": [{ "verb": "trash", "sourceVolumeId": "root", "displayName": "x" }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("no sources");
     assert_eq!(
@@ -37,6 +39,7 @@ fn a_group_needs_exactly_one_source_shape() {
             "selector": { "root": { "volumeId": "root", "path": "/" } },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("two source shapes");
     assert_eq!(
@@ -60,6 +63,7 @@ fn a_verb_only_takes_the_target_its_executor_binds() {
             "destination": { "volumeId": "root", "path": "/tmp" },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("trash binds no destination");
     assert_eq!(
@@ -74,6 +78,7 @@ fn a_verb_only_takes_the_target_its_executor_binds() {
     let refusal = plan_sweep(
         &json!({ "groups": [{ "verb": "move", "sourceVolumeId": "root", "displayName": "x", "paths": ["/a"] }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("move needs a destination");
     assert_eq!(
@@ -96,6 +101,7 @@ fn rename_carries_its_own_names_and_refuses_a_pattern() {
             "selector": { "root": { "volumeId": "root", "path": "/" } },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("a rename can't come from a pattern");
     assert_eq!(
@@ -117,6 +123,7 @@ fn rename_carries_its_own_names_and_refuses_a_pattern() {
             "renames": [{ "path": "/Users/someone/Pictures/a.jpg", "newName": "/elsewhere/b.jpg" }],
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("a new name can't be a path");
     assert_eq!(
@@ -139,6 +146,7 @@ fn rename_carries_its_own_names_and_refuses_a_pattern() {
             "renames": [{ "path": "/a.jpg", "newName": "b.jpg" }],
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("only rename takes renames");
     assert_eq!(
@@ -160,7 +168,7 @@ fn a_selector_supplies_the_volume_and_the_title_itself() {
             "selector": { "root": { "volumeId": "root", "path": "/Users/someone/Downloads" } },
         });
         group[field] = json!("something");
-        let refusal = plan_sweep(&json!({ "groups": [group] }), NOW).expect_err("the selector owns it");
+        let refusal = plan_sweep(&json!({ "groups": [group] }), NOW, &local_facts()).expect_err("the selector owns it");
         assert_eq!(
             refusal,
             PlanRefusal::Group {
@@ -174,6 +182,7 @@ fn a_selector_supplies_the_volume_and_the_title_itself() {
     let refusal = plan_sweep(
         &json!({ "groups": [{ "verb": "trash", "paths": ["/a"], "displayName": "x" }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("a listed group needs a volume");
     assert_eq!(
@@ -191,7 +200,7 @@ fn a_selector_supplies_the_volume_and_the_title_itself() {
 fn an_age_predicate_arrives_in_days_and_leaves_in_seconds() {
     // The model states whole days ago; the index compares unix seconds. Converting here is
     // what keeps the model out of epoch arithmetic it does unreliably.
-    let planned = plan_sweep(&selector_call(), NOW).expect("valid");
+    let planned = plan_sweep(&selector_call(), NOW, &local_facts()).expect("valid");
     let PlannedOps::Sources {
         sources: PlannedSources::Selector(selector),
         shape,
@@ -220,6 +229,7 @@ fn a_window_nothing_can_satisfy_is_refused_rather_than_proposed() {
             "selector": { "root": { "volumeId": "root", "path": "/x" }, "olderThanDays": 30, "newerThanDays": 7 },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("empty age window");
     assert_eq!(
@@ -237,6 +247,7 @@ fn a_window_nothing_can_satisfy_is_refused_rather_than_proposed() {
             "selector": { "root": { "volumeId": "root", "path": "/x" }, "minSizeBytes": 1000, "maxSizeBytes": 10 },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("empty size window");
     assert_eq!(
@@ -254,6 +265,7 @@ fn a_window_nothing_can_satisfy_is_refused_rather_than_proposed() {
             "selector": { "root": { "volumeId": "root", "path": "/x" }, "olderThanDays": 7, "newerThanDays": 30 },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect("7 to 30 days old is a real window");
     let PlannedOps::Sources {
@@ -270,9 +282,7 @@ fn a_window_nothing_can_satisfy_is_refused_rather_than_proposed() {
 #[test]
 fn a_relative_path_is_refused_because_nothing_here_has_a_working_directory() {
     let refusal = plan_sweep(
-        &json!({ "groups": [{ "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": ["Downloads/a.dmg"] }] }),
-        NOW,
-    )
+        &json!({ "groups": [{ "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": ["Downloads/a.dmg"] }] }), NOW, &local_facts())
     .expect_err("relative path");
     assert_eq!(
         refusal,
@@ -284,16 +294,21 @@ fn a_relative_path_is_refused_because_nothing_here_has_a_working_directory() {
         }
     );
 
-    // An archive's inside is a `scheme://` path and stays legal.
+    // A phone's folder is a `scheme://` path and stays legal.
+    let mut facts = local_facts();
+    facts
+        .volumes
+        .push(super::volume("mtp-pixel", VolumeKind::Mtp, "mtp://pixel/", true));
     let planned = plan_sweep(
         &json!({ "groups": [{
-            "verb": "extract",
-            "sourceVolumeId": "archive:1",
+            "verb": "copy",
+            "sourceVolumeId": "mtp-pixel",
             "displayName": "x",
             "destination": { "volumeId": "root", "path": "/tmp" },
-            "paths": ["zip:///Users/someone/a.zip!/inner.txt"],
+            "paths": ["mtp://pixel/DCIM/a.jpg"],
         }] }),
         NOW,
+        &facts,
     )
     .expect("a virtual path is a real path here");
     assert_eq!(planned.groups.len(), 1);
@@ -307,6 +322,7 @@ fn an_explicit_list_is_capped_and_the_refusal_names_the_way_out() {
     let refusal = plan_sweep(
         &json!({ "groups": [{ "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": paths }] }),
         NOW,
+        &local_facts(),
     )
     .expect_err("over the cap");
     assert_eq!(
@@ -323,9 +339,7 @@ fn amending_a_group_needs_the_sweep_it_belongs_to() {
     // Without the sweep id there's no way to check the group is one of this sweep's, and an
     // agent that could rewrite any group by number could rewrite one from another thread.
     let refusal = plan_sweep(
-        &json!({ "groups": [{ "groupId": 7, "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": ["/a"] }] }),
-        NOW,
-    )
+        &json!({ "groups": [{ "groupId": 7, "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": ["/a"] }] }), NOW, &local_facts())
     .expect_err("a group id needs a sweep id");
     assert_eq!(refusal, PlanRefusal::GroupIdWithoutSweep { group: 0 });
 }
@@ -335,9 +349,7 @@ fn an_unknown_field_is_refused_rather_than_ignored() {
     // A silently dropped field is how a proposal ends up meaning something other than what
     // the model wrote.
     let refusal = plan_sweep(
-        &json!({ "groups": [{ "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": ["/a"], "lastOpenedDays": 30 }] }),
-        NOW,
-    )
+        &json!({ "groups": [{ "verb": "trash", "sourceVolumeId": "root", "displayName": "x", "paths": ["/a"], "lastOpenedDays": 30 }] }), NOW, &local_facts())
     .expect_err("unknown field");
     assert_eq!(refusal, PlanRefusal::Malformed);
 }
@@ -358,6 +370,7 @@ fn a_group_cannot_be_proposed_to_write_inside_an_archive() {
                 "destination": { "volumeId": "root", "path": "/Users/someone/Desktop/backup.zip/inside" },
             }] }),
             NOW,
+            &local_facts(),
         )
         .expect_err("a destination inside an archive is not proposable");
         assert_eq!(
@@ -384,6 +397,7 @@ fn compressing_into_a_new_archive_is_still_proposable() {
             "destination": { "volumeId": "root", "path": "/Users/someone/Desktop/backup.zip" },
         }] }),
         NOW,
+        &local_facts(),
     )
     .expect("an archive being created is a legal target");
 }
