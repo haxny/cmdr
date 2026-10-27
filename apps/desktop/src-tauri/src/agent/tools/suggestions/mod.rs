@@ -26,6 +26,7 @@
 mod group;
 mod input;
 mod list;
+mod names;
 mod place;
 mod propose;
 pub(crate) mod snapshot;

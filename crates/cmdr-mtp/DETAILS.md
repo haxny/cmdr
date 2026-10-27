@@ -141,6 +141,19 @@ A folder that moves or is renamed also forgets the listings cached under its old
 folder arriving back at that path (an undo) was otherwise answered from them, and the virtual device's handles don't
 survive the move (the folder cell in the same file).
 
+### Names a phone takes
+
+A PTP string's length is one byte counting its terminator, so a name holds at most 254 UTF-16 code units. ⚠️ Nothing on
+this side refuses a longer one: `mtp-rs`'s `pack_string` writes the length as `len as u8`, so a 300-unit name sends a
+length byte of 45 followed by 300 units, and what the device makes of that is the device's (verified on `mtp-rs` 0.35.0,
+source read of `ptp/pack/mod.rs::pack_string`, the call under both `ObjectInfo`'s filename on upload and the rename's
+`SetObjectPropValue`, 2026-10-27). Android's shared storage also refuses FAT's reserved `" * : < > ? \ |` (Android's
+FUSE layer; unverified on a device). No create, rename, or upload call here refuses either rule, and the virtual device
+(a folder on the host) takes whatever the host's disk takes, so both are enforced only where an AI proposal names a
+phone destination (`apps/desktop/src-tauri/src/agent/tools/suggestions/names.rs`). An ADB destination takes the same
+proposal rules; its device answers an over-long name with `ENAMETOOLONG`, which `cmdr-adb` maps to
+`VolumeError::InvalidName`.
+
 ## Dates on copies
 
 Both halves keep the date. (The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the

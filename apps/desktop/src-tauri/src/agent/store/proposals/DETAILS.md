@@ -16,10 +16,16 @@ Two consequences fall out:
 - **`source_volume_id` is a GROUP column, not a sweep column.** A sweep may span volumes; a group may not.
 - **Rename is the documented exception**: its ops carry their own destinations and the group binds a shared _parent_,
   because `start_bulk_rename` refuses a row whose source and destination parents differ.
+- **`proposal_ops.destination` is a per-op NAME, never a path**: always set under rename (the rename review reads it
+  unconditionally), set under move or copy only for an op that lands under a new name (`NULL` keeps its own), and
+  `NULL` under every other verb. The transfer engine takes the move's or copy's names as one per-source map, so the
+  group stays one call. (v4's DDL comment says "rename only"; it describes the shape that shipped then, and a shipped
+  migration is never edited.)
 
 `GroupIntent` encodes exactly that table in the type system. Each variant carries the target its verb binds and the op
-shape it takes (`NewOp` for the shared-target verbs, `NewRename` for rename), so the pairing can't be violated and there
-is no runtime check to keep in sync with the executors. Adding a verb means adding a variant, which makes every `match`
+shape it takes (`TransferOp`, with its optional name, for move and copy; `NewOp` for the other shared-target verbs;
+`NewRename` for rename), so the pairing can't be violated and there is no runtime check to keep in sync with the
+executors. Adding a verb means adding a variant, which makes every `match`
 here a compile error until it's handled.
 
 ## What preflight accepts

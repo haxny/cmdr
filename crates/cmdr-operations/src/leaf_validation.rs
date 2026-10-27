@@ -4,6 +4,7 @@
 //! that can't name each source.
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -40,7 +41,7 @@ pub(crate) fn validate_transfer_leaves(
     identity: LeafIdentity,
 ) -> Result<(), WriteOperationError> {
     if let Some(names) = leaves.per_source_names() {
-        return validate_per_source_leaves(names, leaves, sources, destination, identity);
+        return validate_per_source_leaves(names, sources, destination, identity);
     }
     let Some(name) = leaves.single_leaf() else {
         return Ok(());
@@ -61,9 +62,8 @@ pub(crate) fn validate_transfer_leaves(
     validate_path_length(&named_path)
 }
 
-/// The per-source half of [`validate_transfer_leaves`], in the order a person
-/// would fix them: the names themselves, then how they meet each other and the
-/// sources.
+/// The per-source half of [`validate_transfer_leaves`]: every key a source,
+/// then [`landing_clash`]'s rules, then each landing's path length.
 ///
 /// Folding is always [`fold_name`] (NFC, then lowercase), whatever the
 /// destination's own case rule: a refusal on a case-sensitive disk costs a
@@ -73,7 +73,6 @@ pub(crate) fn validate_transfer_leaves(
 /// engines key their subtree remap on `<destination>/<own name>`.
 fn validate_per_source_leaves(
     names: &HashMap<PathBuf, String>,
-    leaves: &TransferLeaves,
     sources: &[PathBuf],
     destination: &Path,
     identity: LeafIdentity,
@@ -91,27 +90,96 @@ fn validate_per_source_leaves(
         return Err(refused(stray, NamedLeavesRefusal::NotASource));
     }
 
+    let items: Vec<(&Path, Option<&str>)> = sources
+        .iter()
+        .map(|source| (source.as_path(), names.get(source).map(String::as_str)))
+        .collect();
+    landing_clash(&items, destination, identity).map_err(|clash| match clash {
+        LandingClash::NotPlain { leaf, refusal } => WriteOperationError::InvalidName {
+            path: destination.join(leaf).display().to_string(),
+            message: format!("Not a plain file name: {refusal:?}").into(),
+        },
+        LandingClash::SameName { landing } => refused(&landing, NamedLeavesRefusal::SameName),
+        LandingClash::OntoASource { landing } => refused(&landing, NamedLeavesRefusal::OntoASource),
+        LandingClash::AlreadyInDestination { source } => refused(&source, NamedLeavesRefusal::AlreadyInDestination),
+    })?;
     for source in sources {
         let Some(leaf) = names.get(source) else { continue };
-        let landing = destination.join(leaf);
+        validate_path_length(&destination.join(leaf))?;
+    }
+    Ok(())
+}
+
+/// Why items can't land in a folder under the names chosen for them, for
+/// [`TransferLeaves::check_landings`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LandingClash {
+    /// A chosen name isn't one plain, visible leaf.
+    NotPlain {
+        /// The name as chosen (an empty or `..` one has no landing to name it by).
+        leaf: String,
+        /// Which rule the name breaks.
+        refusal: cmdr_fs::validation::PlainLeafRefusal,
+    },
+    /// Two items would land under one name, compared ignoring case and Unicode form.
+    SameName {
+        /// Where the second one would land.
+        landing: PathBuf,
+    },
+    /// An item would land where another item of the same batch is.
+    OntoASource {
+        /// That place.
+        landing: PathBuf,
+    },
+    /// An item already sits in the destination folder, so naming it there is a
+    /// rename, not a transfer.
+    AlreadyInDestination {
+        /// That item.
+        source: PathBuf,
+    },
+}
+
+impl TransferLeaves {
+    /// The per-source landing rules a transfer's start enforces, by name
+    /// alone, for a caller that checks a batch ahead of starting it (an AI
+    /// proposal, so a refusal reaches the model while it can still fix the
+    /// call). Each item is a source and the name chosen for it, `None` to keep
+    /// its own; the start runs these same rules, plus `dev+ino` identity where
+    /// it can stat. `transfer/DETAILS.md` § "Named destinations".
+    pub fn check_landings(items: &[(&Path, Option<&str>)], destination: &Path) -> Result<(), LandingClash> {
+        landing_clash(items, destination, LeafIdentity::Names)
+    }
+}
+
+/// [`TransferLeaves::check_landings`] with the identity the caller can afford, in the
+/// order a person would fix them: the names themselves, then how they meet
+/// each other and the sources.
+fn landing_clash(
+    items: &[(&Path, Option<&str>)],
+    destination: &Path,
+    identity: LeafIdentity,
+) -> Result<(), LandingClash> {
+    for (_, leaf) in items {
+        let Some(leaf) = leaf else { continue };
         if let Err(refusal) = cmdr_fs::validation::validate_plain_leaf(leaf) {
-            return Err(WriteOperationError::InvalidName {
-                path: landing.display().to_string(),
-                message: format!("Not a plain file name: {refusal:?}").into(),
+            return Err(LandingClash::NotPlain {
+                leaf: (*leaf).to_string(),
+                refusal,
             });
         }
-        validate_path_length(&landing)?;
     }
 
     // Where each source lands, its own name included: a renamed item can
     // collide with one that kept its name as easily as with another rename.
-    let mut landings: Vec<(&PathBuf, PathBuf)> = Vec::with_capacity(sources.len());
-    let mut taken: HashSet<String> = HashSet::with_capacity(sources.len());
-    for source in sources {
-        let Some(leaf) = leaves.leaf_of(source) else { continue };
+    let mut landings: Vec<(&Path, PathBuf)> = Vec::with_capacity(items.len());
+    let mut taken: HashSet<String> = HashSet::with_capacity(items.len());
+    for (source, chosen) in items {
+        let Some(leaf) = chosen.map(OsStr::new).or_else(|| source.file_name()) else {
+            continue;
+        };
         let landing = destination.join(leaf);
         if !taken.insert(folded(Path::new(leaf))) {
-            return Err(refused(&landing, NamedLeavesRefusal::SameName));
+            return Err(LandingClash::SameName { landing });
         }
         landings.push((source, landing));
     }
@@ -120,18 +188,18 @@ fn validate_per_source_leaves(
     // turns "a to b, b to c" into a lost file when the order runs wrong (a
     // move). Compared folded, and by `dev+ino` where both exist, which catches
     // the same item reached through another spelling or a symlinked folder.
-    let by_name: HashMap<String, &PathBuf> = sources.iter().map(|s| (folded(s), s)).collect();
-    let by_inode: HashMap<(u64, u64), &PathBuf> = match identity {
-        LeafIdentity::NamesAndInodes => sources.iter().filter_map(|s| Some((file_id(s)?, s))).collect(),
+    let by_name: HashMap<String, &Path> = items.iter().map(|(s, _)| (folded(s), *s)).collect();
+    let by_inode: HashMap<(u64, u64), &Path> = match identity {
+        LeafIdentity::NamesAndInodes => items.iter().filter_map(|(s, _)| Some((file_id(s)?, *s))).collect(),
         LeafIdentity::Names => HashMap::new(),
     };
-    for (source, landing) in &landings {
+    for (source, landing) in landings {
         let onto = by_name
-            .get(&folded(landing))
-            .or_else(|| file_id(landing).and_then(|id| by_inode.get(&id)));
+            .get(&folded(&landing))
+            .or_else(|| file_id(&landing).and_then(|id| by_inode.get(&id)));
         // Landing on ITSELF is the next rule's, not a chain.
-        if onto.is_some_and(|other| other != source) {
-            return Err(refused(landing, NamedLeavesRefusal::OntoASource));
+        if onto.is_some_and(|other| *other != source) {
+            return Err(LandingClash::OntoASource { landing });
         }
     }
 
@@ -141,12 +209,14 @@ fn validate_per_source_leaves(
     let destination_id = (identity == LeafIdentity::NamesAndInodes)
         .then(|| file_id(destination))
         .flatten();
-    for source in sources {
+    for (source, _) in items {
         let Some(parent) = source.parent() else { continue };
         let already_there =
             folded(parent) == destination_key || destination_id.is_some_and(|id| file_id(parent) == Some(id));
         if already_there {
-            return Err(refused(source, NamedLeavesRefusal::AlreadyInDestination));
+            return Err(LandingClash::AlreadyInDestination {
+                source: source.to_path_buf(),
+            });
         }
     }
     Ok(())

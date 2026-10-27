@@ -41,7 +41,8 @@ use crate::operations_host::{operations, refuse_not_installed};
 use cmdr_operation_log::types::Initiator;
 use cmdr_operations::{
     BulkRenameRow, ExpectedSources, OperationEventSink, Operations, RenameStartError, RenamesStarted,
-    SourceFingerprint, VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    SourceFingerprint, TransferLeaves, VolumeCopyConfig, WriteOperationConfig, WriteOperationError,
+    WriteOperationStartResult,
 };
 
 /// A group whose operation is running, and the operation it became.
@@ -307,6 +308,7 @@ async fn start_for(
     match group.verb {
         ProposalVerb::Move => {
             let (path, volume) = target_of(group)?;
+            let config = named_config(ops, &expected);
             engine
                 .start_volume_move(
                     events,
@@ -314,7 +316,7 @@ async fn start_for(
                     sources,
                     volume,
                     path,
-                    VolumeCopyConfig::default(),
+                    config,
                     Initiator::Agent,
                     Some(expected),
                 )
@@ -323,6 +325,9 @@ async fn start_for(
         }
         ProposalVerb::Copy | ProposalVerb::Extract => {
             let (path, volume) = target_of(group)?;
+            // An extract's ops never carry a name (`GroupIntent::Extract` can't hold one), so
+            // this is the default config there.
+            let config = named_config(ops, &expected);
             engine
                 .start_volume_copy(
                     events,
@@ -330,7 +335,7 @@ async fn start_for(
                     sources,
                     volume,
                     path,
-                    VolumeCopyConfig::default(),
+                    config,
                     Initiator::Agent,
                     Some(expected),
                 )
@@ -426,6 +431,29 @@ fn rename_rows(
         });
     }
     Ok(rows)
+}
+
+/// The default config a clicked transfer gets, plus the name each op lands under: the ONE
+/// thing a proposal adds, and the user saw every one in the review. No name means the default.
+fn named_config(ops: &[ProposalOp], expected: &ExpectedSources) -> VolumeCopyConfig {
+    VolumeCopyConfig {
+        leaves: TransferLeaves::per_source(transfer_names(ops, expected)),
+        ..VolumeCopyConfig::default()
+    }
+}
+
+/// The names a move's or copy's ops land under, as the engine's per-source leaves take them:
+/// keyed by EXACTLY the sources the binding keeps, so a source preflight couldn't read (which
+/// the binding drops) takes its name with it. An op keeping its own name sends none.
+fn transfer_names(ops: &[ProposalOp], expected: &ExpectedSources) -> Vec<(PathBuf, String)> {
+    ops.iter()
+        .filter_map(|op| {
+            let name = op.destination.clone()?;
+            let source = PathBuf::from(&op.source_path);
+            expected.fingerprint_of(&source)?;
+            Some((source, name))
+        })
+        .collect()
 }
 
 /// Stat every source as it is RIGHT NOW, and bind the operation to what it finds.

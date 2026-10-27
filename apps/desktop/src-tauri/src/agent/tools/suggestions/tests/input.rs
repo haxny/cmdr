@@ -7,7 +7,9 @@ use super::{NOW, local_facts, selector_call};
 use crate::agent::tools::suggestions::input::{
     GroupProblem, PlanRefusal, PlannedOps, PlannedSources, SourceShape, plan_sweep,
 };
+use crate::agent::tools::suggestions::names::NameRule;
 use crate::mcp::resources::volumes::VolumeKind;
+use cmdr_fs::validation::PlainLeafRefusal;
 
 // ── The input contract ────────────────────────────────────────────────────────
 
@@ -131,24 +133,26 @@ fn rename_carries_its_own_names_and_refuses_a_pattern() {
         PlanRefusal::Group {
             group: 0,
             problem: GroupProblem::NotABareName {
-                name: "/elsewhere/b.jpg".to_string()
+                name: "/elsewhere/b.jpg".to_string(),
+                rule: NameRule::Plain(PlainLeafRefusal::Separator),
             }
         }
     );
 
-    // And renames belong to the rename verb alone.
+    // And renames belong to the verbs that can name a file: rename, move, and copy
+    // (`names.rs`). Extract can't.
     let refusal = plan_sweep(
         &json!({ "groups": [{
-            "verb": "move",
+            "verb": "extract",
             "sourceVolumeId": "root",
             "displayName": "x",
             "destination": { "volumeId": "root", "path": "/tmp" },
-            "renames": [{ "path": "/a.jpg", "newName": "b.jpg" }],
+            "renames": [{ "path": "/a.zip/a.jpg", "newName": "b.jpg" }],
         }] }),
         NOW,
         &local_facts(),
     )
-    .expect_err("only rename takes renames");
+    .expect_err("extract takes no renames");
     assert_eq!(
         refusal,
         PlanRefusal::Group {

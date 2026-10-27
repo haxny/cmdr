@@ -13281,8 +13281,8 @@ export type NamedLeavesRefusal =
    */
   | 'alreadyInDestination'
   /**
-   *  The destination can't take a name per item (a zip, or another volume
-   *  type). `path` is the destination.
+   *  The route can't take a name per item: an archive changeset (copy or move
+   *  into a zip, move out of one). `path` is the destination.
    */
   | 'routeCannotName'
 
@@ -18227,7 +18227,7 @@ export type SuggestedOpPage = {
 export type SuggestedOpView = {
   opId: number
   sourcePath: string
-  // The name this source becomes. `Some` only under a rename group.
+  // The name this source becomes: under a rename, or a move or copy that renames it.
   newName: string | null
   /**
    *  `excluded` when an earlier review turned this op off (an approval the engine then refused to

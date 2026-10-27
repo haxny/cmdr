@@ -61,6 +61,13 @@ pub(super) async fn freeze_named_sources(
                     op.snapshot = snapshot;
                 }
             }
+            PlannedOps::Named { ops, naming, .. } => {
+                let paths = ops.iter().map(|op| op.source_path.clone()).collect();
+                let snapshots = freeze_paths(volume_for(&naming.source_volume_id), paths, &deadline).await;
+                for (op, snapshot) in ops.iter_mut().zip(snapshots) {
+                    op.snapshot = snapshot;
+                }
+            }
             PlannedOps::Rename { renames, naming, .. } => {
                 let paths = renames.iter().map(|op| op.source_path.clone()).collect();
                 let snapshots = freeze_paths(volume_for(&naming.source_volume_id), paths, &deadline).await;

@@ -47,7 +47,8 @@ pub use read::{
 pub use recovery::recover_interrupted_groups;
 pub use thread_line::{RunningLine, ThreadLine, open_running_line, rewrite_line, running_lines, settle_line};
 pub use write::{
-    NewGroup, NewOp, NewRename, NewSweep, OpSnapshot, ReproposeOutcome, create_group, create_sweep, repropose_group,
+    NewGroup, NewOp, NewRename, NewSweep, OpSnapshot, ReproposeOutcome, TransferOp, create_group, create_sweep,
+    repropose_group,
 };
 
 use crate::agent::types::{ProposalStatus, ProposalVerb, Reversibility};
@@ -96,20 +97,23 @@ impl WritableDestination {
 ///
 /// One enum rather than a verb plus loose optional fields, because the pairing is exact:
 /// `trash_files_start` takes raw paths and no target, `move_files_start` takes one shared
-/// destination directory, and `start_bulk_rename` is the one executor whose rows carry their
-/// own destinations (it refuses a row whose source and destination parents differ, so its
-/// group binds the shared PARENT rather than a target).
+/// destination directory (and a name per source, so move and copy ops may carry one), and
+/// `start_bulk_rename`'s rows always carry their own destinations (it refuses a row whose
+/// source and destination parents differ, so its group binds the shared PARENT rather than a
+/// target). Extract, compress, trash, and delete ops can't carry a name at all.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GroupIntent {
-    /// Move every source into one shared destination directory.
+    /// Move every source into one shared destination directory, each under its own name or
+    /// the one its op carries.
     Move {
         destination: WritableDestination,
-        sources: Vec<NewOp>,
+        sources: Vec<TransferOp>,
     },
-    /// Copy every source into one shared destination directory.
+    /// Copy every source into one shared destination directory, each under its own name or
+    /// the one its op carries.
     Copy {
         destination: WritableDestination,
-        sources: Vec<NewOp>,
+        sources: Vec<TransferOp>,
     },
     /// Extract archive-inner sources into one shared destination directory.
     Extract {
@@ -192,9 +196,8 @@ impl GroupIntent {
     /// How many ops this intent carries. `COUNT`-free: it's the in-memory list's length.
     pub fn op_count(&self) -> usize {
         match self {
-            GroupIntent::Move { sources, .. }
-            | GroupIntent::Copy { sources, .. }
-            | GroupIntent::Extract { sources, .. }
+            GroupIntent::Move { sources, .. } | GroupIntent::Copy { sources, .. } => sources.len(),
+            GroupIntent::Extract { sources, .. }
             | GroupIntent::Compress { sources, .. }
             | GroupIntent::Trash { sources }
             | GroupIntent::Delete { sources } => sources.len(),
@@ -202,13 +205,17 @@ impl GroupIntent {
         }
     }
 
-    /// Every op flattened into the row shape: source path, the per-op destination (rename
-    /// only), and the creation snapshot.
+    /// Every op flattened into the row shape: source path, the per-op destination NAME (a
+    /// rename's always, a move or copy op's when it lands under a new one), and the creation
+    /// snapshot.
     pub(super) fn rows(&self) -> Box<dyn Iterator<Item = (&str, Option<&str>, Option<&OpSnapshot>)> + '_> {
         match self {
-            GroupIntent::Move { sources, .. }
-            | GroupIntent::Copy { sources, .. }
-            | GroupIntent::Extract { sources, .. }
+            GroupIntent::Move { sources, .. } | GroupIntent::Copy { sources, .. } => Box::new(
+                sources
+                    .iter()
+                    .map(|op| (op.source_path.as_str(), op.new_name.as_deref(), op.snapshot.as_ref())),
+            ),
+            GroupIntent::Extract { sources, .. }
             | GroupIntent::Compress { sources, .. }
             | GroupIntent::Trash { sources }
             | GroupIntent::Delete { sources } => Box::new(

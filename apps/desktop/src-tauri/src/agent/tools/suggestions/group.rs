@@ -32,7 +32,7 @@ const MAX_LIMIT: u32 = 500;
 pub(super) struct OpOut {
     pub op_id: i64,
     pub path: String,
-    /// The name this source becomes. Present only under a rename group.
+    /// The name this source becomes: under a rename, or a move or copy that renames it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub new_name: Option<String>,
     pub status: OpStatus,

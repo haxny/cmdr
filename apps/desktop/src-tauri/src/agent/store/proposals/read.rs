@@ -24,7 +24,8 @@ pub struct ProposalOp {
     pub group_id: i64,
     pub seq: i64,
     pub source_path: String,
-    /// The name this source becomes. `Some` only under a rename group.
+    /// The name this source becomes: always under a rename group, and under a move or copy
+    /// when it lands under a new one. `None` everywhere else.
     pub destination: Option<String>,
     pub status: OpStatus,
     pub snapshot_size: Option<u64>,

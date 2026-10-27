@@ -9,6 +9,8 @@ The agent's three tools over the proposal spine: `list_suggestions` and `get_sug
 - `input.rs`: what `propose_suggestions` accepts, validated into planned shapes that pair each verb with the target its
   executor binds. All the refusal variants.
 - `place.rs`: every place a group names, through the location resolver (and onto a proven live sibling).
+- `names.rs`: the names a group gives its files (a rename's, a move's or copy's), checked by the engine's own rules on
+  the placed group. ❌ Never a second copy of those rules.
 - `propose.rs`: the schema, the handler, and the write path (resolve → check → write). `snapshot.rs`: one bounded
   stat per hand-listed source, frozen as its creation snapshot before the write (also
   `propose_rename_plan`'s).

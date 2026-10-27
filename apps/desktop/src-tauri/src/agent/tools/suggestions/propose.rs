@@ -98,7 +98,7 @@ pub fn propose_suggestions_schema() -> Value {
                         "renames": {
                             "type": "array",
                             "maxItems": MAX_PATHS,
-                            "description": "rename only: each source and the bare name it becomes.",
+                            "description": "rename, move, copy: each source and the bare name it becomes. Move or copy: list every file; its own name keeps it.",
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -328,7 +328,7 @@ fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
         ),
         GroupProblem::RenamesVerbMismatch => (
             "renamesVerbMismatch",
-            "renames belongs to the rename verb and to no other, and a rename group needs them.".into(),
+            "renames belongs to rename, move, and copy only, and a rename group needs them.".into(),
         ),
         GroupProblem::SelectorCantRename => (
             "selectorCantRename",
@@ -358,9 +358,29 @@ fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
             "relativePath",
             format!("{path} isn't an absolute path, and a proposal has no folder to be relative to."),
         ),
-        GroupProblem::NotABareName { name } => (
+        GroupProblem::NotABareName { name, rule } => (
             "notABareName",
-            format!("{name} has to be a bare file name; a rename can't move a file to another folder."),
+            format!("{name} can't be a new name: {}.", rule.reason()),
+        ),
+        GroupProblem::DuplicateLeaf { name } => (
+            "duplicateLeaf",
+            format!(
+                "Two files would land as {name} (names that differ only in case or accents count as one). Give each \
+                 its own name."
+            ),
+        ),
+        GroupProblem::ChainOverwrite { path } => (
+            "chainOverwrite",
+            format!(
+                "A file would land at {path}, which is another file of this group, and replace it. Pick a name no \
+                 file in the group has."
+            ),
+        ),
+        GroupProblem::UseRename => (
+            "useRename",
+            "That's a rename for the files already in that folder: split the group, renaming those with the rename \
+             verb and moving the rest."
+                .into(),
         ),
         GroupProblem::ImpossibleWindow => (
             "impossibleWindow",
@@ -556,6 +576,7 @@ fn resolve_group(
             renames,
             naming,
         } => new_group(GroupIntent::Rename { parent, renames }, naming, planned.rationale),
+        PlannedOps::Named { shape, ops, naming } => new_group(shape.into_intent(ops), naming, planned.rationale),
         PlannedOps::Sources { shape, sources } => match sources {
             PlannedSources::Paths { ops, naming } => new_group(shape.into_intent(ops), naming, planned.rationale),
             PlannedSources::Selector(selector) => {

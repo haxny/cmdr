@@ -443,6 +443,10 @@ var surfaceGuardedCrates = []struct {
 		// to exactly what the crate exposes, with no headroom (David approved the
 		// rule in the #415 plan).
 		//
+		// Raised to 89 on 2026-10-27 for `LandingClash`, the typed answer of
+		// `TransferLeaves::check_landings`: the agent's proposal asks the start's
+		// per-source name rules ahead of time rather than keeping a second copy.
+		//
 		// Raised to 86 on 2026-10-20 for `move_to_trash_sync`: the open-with reaper
 		// moves a copy an app changed to the Trash, unjournaled (no undo should list
 		// Cmdr's own leftovers), and a second objc trash call in the app would fork
@@ -464,7 +468,7 @@ var surfaceGuardedCrates = []struct {
 		Name:       "cmdr-operations",
 		HandleType: "Operations",
 		Ceilings: surfaceCeilings{
-			RootPromises:   88,
+			RootPromises:   89,
 			HandleMethods:  58,
 			PublicModules:  1,
 			SubsystemItems: 25,

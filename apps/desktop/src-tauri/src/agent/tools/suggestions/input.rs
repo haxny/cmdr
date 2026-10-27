@@ -11,13 +11,15 @@
 //! where the group will really run: a re-addressed group already names the sibling it runs on.
 //!
 //! The planned shapes mirror [`GroupIntent`]'s pairing, so once validation is past, a trash
-//! group with a destination or a rename whose names came from a pattern is unrepresentable
-//! rather than checked again downstream.
+//! group with a destination, a rename whose names came from a pattern, or a name on anything
+//! but a rename, move, or copy is unrepresentable rather than checked again downstream. The
+//! names themselves are checked by `names.rs`, on the placed group.
 
 use serde::Deserialize;
 
+use super::names::{NameRule, check_transfer_names, plain_name};
 use super::place::{GroupPlacer, PlaceField};
-use crate::agent::store::proposals::{GroupIntent, NewOp, NewRename, WritableDestination};
+use crate::agent::store::proposals::{GroupIntent, NewOp, NewRename, TransferOp, WritableDestination};
 use crate::agent::suggested_ops::OpSelector;
 use crate::agent::tools::read::expand_tilde;
 use crate::agent::types::ProposalVerb;
@@ -73,11 +75,14 @@ pub(super) struct GroupInput {
     pub selector: Option<SelectorInput>,
 }
 
+/// A source and the name it becomes: renamed in place under `rename`, landing under it in the
+/// destination under `move` and `copy`.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct RenameInput {
     pub path: String,
-    /// A NAME, never a path: the executor refuses a row that would change the parent.
+    /// A NAME, never a path: a rename can't change the parent, and a move's or copy's
+    /// destination folder is the group's.
     pub new_name: String,
 }
 
@@ -136,6 +141,44 @@ pub(super) enum PlannedOps {
         shape: SourceShape,
         sources: PlannedSources,
     },
+    /// A move or copy whose sources were listed with names, as `renames`. ❌ A selector can't
+    /// produce these either: its ops enter through [`SourceShape::into_intent`], nameless.
+    Named {
+        shape: NamedShape,
+        ops: Vec<TransferOp>,
+        naming: ExplicitNaming,
+    },
+}
+
+/// The two verbs whose sources may land under a new name, with the folder they land in.
+#[derive(Debug, PartialEq, Eq)]
+pub(super) enum NamedShape {
+    Move { destination: WritableDestination },
+    Copy { destination: WritableDestination },
+}
+
+impl NamedShape {
+    /// The named shape of a move or copy, or `None` for a verb that can't carry names.
+    fn of(shape: SourceShape) -> Option<Self> {
+        match shape {
+            SourceShape::Move { destination } => Some(NamedShape::Move { destination }),
+            SourceShape::Copy { destination } => Some(NamedShape::Copy { destination }),
+            _ => None,
+        }
+    }
+
+    fn destination(&self) -> &WritableDestination {
+        match self {
+            NamedShape::Move { destination } | NamedShape::Copy { destination } => destination,
+        }
+    }
+
+    pub(super) fn into_intent(self, sources: Vec<TransferOp>) -> GroupIntent {
+        match self {
+            NamedShape::Move { destination } => GroupIntent::Move { destination, sources },
+            NamedShape::Copy { destination } => GroupIntent::Copy { destination, sources },
+        }
+    }
 }
 
 /// What names a group the model listed by hand: the volume its sources share, and the title
@@ -196,11 +239,18 @@ pub(super) enum PlannedSources {
 impl SourceShape {
     /// Fill in the sources this shape was waiting for. Total: every arm pairs its verb with
     /// the target that verb's executor binds, so there is no wrong combination left to
-    /// reject.
+    /// reject. Every move or copy op keeps its own name: names enter only through
+    /// [`NamedShape`].
     pub(super) fn into_intent(self, sources: Vec<NewOp>) -> GroupIntent {
         match self {
-            SourceShape::Move { destination } => GroupIntent::Move { destination, sources },
-            SourceShape::Copy { destination } => GroupIntent::Copy { destination, sources },
+            SourceShape::Move { destination } => GroupIntent::Move {
+                destination,
+                sources: sources.into_iter().map(TransferOp::from).collect(),
+            },
+            SourceShape::Copy { destination } => GroupIntent::Copy {
+                destination,
+                sources: sources.into_iter().map(TransferOp::from).collect(),
+            },
             SourceShape::Extract { destination } => GroupIntent::Extract { destination, sources },
             SourceShape::Compress {
                 archive,
@@ -246,7 +296,8 @@ pub(super) enum GroupProblem {
     NoSources,
     /// More than one of them: which one the user would be reviewing is a coin toss.
     AmbiguousSources,
-    /// `renames` under a verb that isn't `rename`, or `rename` without them.
+    /// `renames` under a verb that can't take names (extract, compress, trash, delete), or
+    /// `rename` without them.
     RenamesVerbMismatch,
     /// A selector under `rename`.
     SelectorCantRename,
@@ -278,10 +329,22 @@ pub(super) enum GroupProblem {
     RelativePath {
         path: String,
     },
-    /// A rename destination that is a path rather than a bare name.
+    /// A new name that isn't one plain name, and the rule it breaks.
     NotABareName {
         name: String,
+        rule: NameRule,
     },
+    /// Two files of a move or copy would land under one name, ignoring case and Unicode form.
+    DuplicateLeaf {
+        name: String,
+    },
+    /// A file of a move or copy would land where another of its sources is.
+    ChainOverwrite {
+        path: String,
+    },
+    /// A move or copy with names whose destination already holds one of its sources: that's a
+    /// rename for those files.
+    UseRename,
     /// A size or age window nothing can satisfy.
     ImpossibleWindow,
     /// A place the resolver couldn't put on a live volume, nor re-address onto a live sibling.
@@ -338,7 +401,11 @@ fn plan_group(group: GroupInput, now: i64, facts: &VolumeFacts) -> Result<Planne
         1 => {}
         _ => return Err(GroupProblem::AmbiguousSources),
     }
-    if group.renames.is_some() != is_rename {
+    let takes_names = matches!(
+        group.verb,
+        ProposalVerb::Rename | ProposalVerb::Move | ProposalVerb::Copy
+    );
+    if (group.renames.is_some() && !takes_names) || (is_rename && group.renames.is_none()) {
         return Err(GroupProblem::RenamesVerbMismatch);
     }
     if is_rename && group.selector.is_some() {
@@ -375,6 +442,31 @@ fn plan_group(group: GroupInput, now: i64, facts: &VolumeFacts) -> Result<Planne
     // place in it is looked up. Every place then resolves, and what's stored is where it landed.
     let mut placer = GroupPlacer::new(facts);
     let ops = match (group.renames, group.paths, group.selector) {
+        (Some(renames), _, _) if !is_rename => {
+            let mut ops = plan_named(renames)?;
+            let naming = explicit_naming(group.source_volume_id, group.display_name)?;
+            let shape = plan_shape(
+                group.verb,
+                group.destination,
+                group.overwrites_existing,
+                |destination| placer.place(PlaceField::Destination, destination),
+            )?;
+            let shape = NamedShape::of(shape).ok_or(GroupProblem::RenamesVerbMismatch)?;
+            let on = placer.sources(
+                PlaceField::Renames,
+                &naming.source_volume_id,
+                ops.iter_mut().map(|op| &mut op.source_path),
+            )?;
+            // On the PLACED group: names are checked where they will really land.
+            let destination = shape.destination().location();
+            let kind = facts.get(&destination.volume_id).map(|volume| volume.kind);
+            check_transfer_names(&mut ops, &destination.path, kind)?;
+            PlannedOps::Named {
+                shape,
+                ops,
+                naming: naming.on(on),
+            }
+        }
         (Some(renames), _, _) => {
             let parent = expand_tilde(&required(group.parent, "parent")?);
             let mut renames = plan_renames(renames)?;
@@ -547,12 +639,31 @@ fn plan_renames(renames: Vec<RenameInput>) -> Result<Vec<NewRename>, GroupProble
     renames
         .into_iter()
         .map(|rename| {
-            if rename.new_name.is_empty() || rename.new_name.contains('/') {
-                return Err(GroupProblem::NotABareName { name: rename.new_name });
-            }
+            plain_name(&rename.new_name)?;
             Ok(NewRename {
                 source_path: absolute_path(rename.path)?,
                 new_name: rename.new_name,
+                snapshot: None,
+            })
+        })
+        .collect()
+}
+
+/// A move's or copy's sources, each with the name it lands as. The names are checked once
+/// the group is placed (`names.rs`), since whether they collide depends on where they land.
+fn plan_named(renames: Vec<RenameInput>) -> Result<Vec<TransferOp>, GroupProblem> {
+    if renames.is_empty() {
+        return Err(GroupProblem::EmptySources);
+    }
+    if renames.len() > MAX_PATHS {
+        return Err(GroupProblem::TooManyPaths { sent: renames.len() });
+    }
+    renames
+        .into_iter()
+        .map(|rename| {
+            Ok(TransferOp {
+                source_path: absolute_path(rename.path)?,
+                new_name: Some(rename.new_name),
                 snapshot: None,
             })
         })

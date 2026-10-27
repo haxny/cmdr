@@ -32,7 +32,30 @@ pub struct NewOp {
     pub snapshot: Option<OpSnapshot>,
 }
 
-/// One proposed rename. Rename is the ONE verb whose ops carry their own destinations.
+/// One proposed op under move or copy: a source landing in the group's destination folder,
+/// under its own name or the one given here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransferOp {
+    pub source_path: String,
+    /// The name the source lands as, a NAME, never a path. `None` keeps its own, and a
+    /// producer normalizes a name equal to the source's own to `None`, so the review draws an
+    /// arrow only where a name changes.
+    pub new_name: Option<String>,
+    pub snapshot: Option<OpSnapshot>,
+}
+
+impl From<NewOp> for TransferOp {
+    /// An op that keeps its own name: what a selector, which can't decide names, produces.
+    fn from(op: NewOp) -> Self {
+        Self {
+            source_path: op.source_path,
+            new_name: None,
+            snapshot: op.snapshot,
+        }
+    }
+}
+
+/// One proposed rename. Rename's ops ALWAYS carry their own destinations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewRename {
     pub source_path: String,

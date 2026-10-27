@@ -8,8 +8,10 @@
 //! - `propose.rs`: the write path, against a real migrated `main.db`.
 //! - `read.rs`: the two read shapers, and the store reader they lean on.
 //! - `place.rs`: where a proposal may point, over fixture volume facts.
+//! - `names.rs`: names on a move or copy, and every name a proposal refuses.
 
 mod input;
+mod names;
 mod place;
 mod propose;
 mod read;

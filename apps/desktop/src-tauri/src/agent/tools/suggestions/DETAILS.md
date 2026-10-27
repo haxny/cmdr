@@ -89,6 +89,39 @@ while it was still talking (`place.rs`, over the location resolver: `../DETAILS.
 - **Amendments place again**: an amend is a fresh proposal of the group.
 - The review's `DestinationState::NotConnected` stays: a volume can leave after the proposal.
 
+## Moving or copying under a new name
+
+A move or copy names its sources one of two ways: `paths` (every file keeps its name) or `renames`
+(`[{ path, newName }]`, the same list a rename takes). Under move or copy the model lists EVERY file in `renames`, and a
+file given its own name keeps it. That's the shape the model already knows for "this file becomes that name", it costs
+almost no prefix, and `proposal_ops.destination` already means exactly this per op. The group stays ONE operation: the
+bridge hands the engine one per-source name map (§ The approval bridge in `../../suggested_ops/DETAILS.md`), so 12
+renamed invoices are one approval, one queue row, and one undo, which puts every original name back.
+
+- **Shapes**: `renames` under move or copy plans as `PlannedOps::Named` (a `NamedShape` plus `TransferOp`s), the only
+  way a name reaches `GroupIntent::Move` / `Copy`. A selector's ops enter through `SourceShape::into_intent`, nameless,
+  so a pattern can never mint a name. Extract, compress, trash, and delete still refuse `renames`
+  (`renamesVerbMismatch`); their ops have no field to hold one.
+- **Normalization**: under move or copy, a name equal to the source's own is stored as `NULL`, so the dialog draws an
+  arrow only where a name changes. ❌ Never under rename: the rename review reads `op.destination.unwrap_or_default()`,
+  and a `NULL` there renames the file to an empty name. A group whose names all normalize away is a plain move or copy
+  and gets no name checks, the same as one sent as `paths`.
+- **The checks are the engine's, asked early** (`names.rs`), on the PLACED group (§ Where a proposal may point), so they
+  judge where the names really land: `cmdr_operations::TransferLeaves::check_landings`, the rules the transfer start enforces
+  (`crates/cmdr-operations/src/transfer/DETAILS.md` § Named destinations). A plain leaf
+  (`cmdr_fs::validation::validate_plain_leaf`, which a rename's names pass too) is `notABareName` with the rule broken;
+  two landings one under `fold_name` is `duplicateLeaf`; a landing on another source of the group is `chainOverwrite`;
+  any source already in the destination is `useRename` ("split the group"), because the same-volume move's identity
+  guard drops a case-only name there and the rename verb is the one that works. The engine adds `dev+ino` where it can
+  stat; the proposal can't, so the folded comparison is its check.
+- **A phone's names**: onto an MTP or ADB destination a name is also at most 254 UTF-16 code units and holds none of
+  FAT's reserved `" * : < > ? \ |`. Proposal-time only: nothing below refuses them first (`crates/cmdr-mtp/DETAILS.md` §
+  Names a phone takes).
+- **A collision with a file already at the destination that isn't a source is not refused**: it meets the ordinary
+  conflict policy at run time, as a clicked move would.
+- Each name is bound by the claim's digest with no change (the digest already hashes `destination` per op), so an amend
+  that only renames is a new approval.
+
 ## The selector schema, and the one predicate that isn't there
 
 The model writes predicates in units it states reliably: whole **days ago** (converted to unix seconds against `now`,
@@ -142,7 +175,7 @@ to has no cap at all, because 60,000 ops in one group is a legitimate group.
 
 `tests/` runs without a Tauri app: the handlers are thin shells over `plan_sweep` (fixture `VolumeFacts`),
 `apply_planned_sweep` (a `Connection` plus a `SelectorIndex`), `shape_list`, and `shape_group`. One file per concern
-(`input`, `place`, `propose`, `read`; `place` reuses the conversation-179 facts from `../transcript_179_tests.rs`), with the shared
+(`input`, `names`, `place`, `propose`, `read`; `place` reuses the conversation-179 facts from `../transcript_179_tests.rs`), with the shared
 fixtures in `tests/mod.rs`. The fake index counts how often it was asked, which is what pins
 "resolved exactly once". The write-path tests run against a real migrated in-memory `main.db`, so the store's own
 guards are in the loop rather than mocked away: removing the pre-check's status guard turns an amendment into

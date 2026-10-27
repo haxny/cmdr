@@ -664,3 +664,100 @@ async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
         "one line, saying what ran"
     );
 }
+
+/// A move or copy op that lands under a new name carries it into the engine, keyed by exactly
+/// the sources the binding keeps: one preflight couldn't read is dropped from the names too,
+/// and an op keeping its own name sends none.
+#[tokio::test]
+async fn the_names_a_move_carries_are_keyed_by_the_sources_the_binding_keeps() {
+    let dir = TestDir::new("bridge_named_leaves");
+    let renamed = dir.join("Invoice-X.pdf");
+    let kept = dir.join("receipt.pdf");
+    let gone = dir.join("gone.pdf");
+    std::fs::write(&renamed, b"invoice").expect("seed");
+    std::fs::write(&kept, b"receipt").expect("seed");
+
+    let volume = cmdr_local::LocalPosixVolume::local_folder("Root", "/", crate::volume_host::host());
+    let sources = vec![renamed.clone(), kept.clone(), gone.clone()];
+    let expected = super::capture_expected_sources(&volume, &sources).await;
+    let op = |id: i64, path: &std::path::Path, name: Option<&str>| ProposalOp {
+        id,
+        group_id: 1,
+        seq: id,
+        source_path: path.display().to_string(),
+        destination: name.map(str::to_string),
+        status: OpStatus::Pending,
+        snapshot_size: None,
+        snapshot_mtime: None,
+        snapshot_inode: None,
+    };
+    let ops = [
+        op(1, &renamed, Some("2026 OpenAI.pdf")),
+        op(2, &kept, None),
+        op(3, &gone, Some("gone renamed.pdf")),
+    ];
+
+    assert_eq!(
+        super::transfer_names(&ops, &expected),
+        vec![(renamed, "2026 OpenAI.pdf".to_string())]
+    );
+}
+
+/// The whole hand-off for a named move: approved, it lands each file under its name in ONE
+/// operation, and the file that kept its name keeps it.
+#[tokio::test]
+async fn an_approved_named_move_lands_each_file_under_its_name() {
+    ensure_root_volume();
+    let dir = TestDir::new("bridge_named_move_runs");
+    let inbox = dir.join("inbox");
+    let paid = dir.join("paid");
+    std::fs::create_dir_all(&inbox).expect("inbox");
+    std::fs::create_dir_all(&paid).expect("paid");
+    std::fs::write(inbox.join("Invoice-X.pdf"), b"invoice").expect("seed");
+    std::fs::write(inbox.join("receipt.pdf"), b"receipt").expect("seed");
+
+    let db_path = dir.join("main.db");
+    let conn = open_write_connection(&db_path).expect("open");
+    let set_id = create_sweep(&conn, &NewSweep::default(), 100).expect("sweep");
+    let transfer = |file: &str, name: Option<&str>| crate::agent::store::proposals::TransferOp {
+        source_path: inbox.join(file).display().to_string(),
+        new_name: name.map(str::to_string),
+        snapshot: None,
+    };
+    let group_id = create_group(
+        &conn,
+        set_id,
+        &NewGroup {
+            intent: GroupIntent::Move {
+                destination: crate::agent::store::proposals::WritableDestination::new(crate::location::Location {
+                    volume_id: "root".to_string(),
+                    path: paid.display().to_string(),
+                })
+                .expect("an ordinary folder"),
+                sources: vec![
+                    transfer("Invoice-X.pdf", Some("2026-09-27 OpenAI invoice Rymd.pdf")),
+                    transfer("receipt.pdf", None),
+                ],
+            },
+            source_volume_id: "root".to_string(),
+            display_name: "two invoices".to_string(),
+            rationale: None,
+            selector: None,
+        },
+        100,
+    )
+    .expect("group");
+    let reporting = open_write_connection(&db_path).expect("second connection");
+
+    let outcome = approve(&conn, reporting, group_id).await;
+
+    assert!(matches!(outcome, super::ApprovalOutcome::Started(_)), "{outcome:?}");
+    let named = paid.join("2026-09-27 OpenAI invoice Rymd.pdf");
+    let kept = paid.join("receipt.pdf");
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "both files land", || {
+        named.exists() && kept.exists()
+    })
+    .await;
+    assert!(!inbox.join("Invoice-X.pdf").exists(), "moved, not copied");
+    assert!(!paid.join("Invoice-X.pdf").exists(), "landed under its new name only");
+}

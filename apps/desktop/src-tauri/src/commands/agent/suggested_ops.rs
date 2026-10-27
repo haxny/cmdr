@@ -171,7 +171,7 @@ pub enum DestinationState {
 pub struct SuggestedOpView {
     pub op_id: i64,
     pub source_path: String,
-    /// The name this source becomes. `Some` only under a rename group.
+    /// The name this source becomes: under a rename, or a move or copy that renames it.
     pub new_name: Option<String>,
     /// `excluded` when an earlier review turned this op off (an approval the engine then refused to
     /// start leaves it so). Seed the tick from it and approve with `fromStored`, so that "no"
