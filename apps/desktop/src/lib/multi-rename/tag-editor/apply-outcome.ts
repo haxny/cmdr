@@ -30,19 +30,43 @@ export function writeAnywayRequest(
   return { kind, allowFrameLoss: true, skip }
 }
 
-/** The outcome of `first`, plus "Write anyway"'s `second` report or the user's skip of the would-drop files. */
-export function outcomeOf(
-  first: TagApplyReport,
-  after: { second?: TagApplyReport; skipped?: boolean } = {},
-): ApplyOutcome {
-  const { second, skipped = false } = after
-  return {
-    written: first.written.length + (second?.written.length ?? 0),
-    failed: [...first.failed, ...(second?.failed ?? [])],
-    changedOnDisk: [...first.changedOnDisk, ...(second?.changedOnDisk ?? [])],
-    skipped: skipped ? first.wouldDrop : (second?.wouldDrop ?? []),
-    undoUnavailable: first.undoUnavailable || second?.undoUnavailable === true,
+type FileStatus =
+  | { kind: 'written' }
+  | { kind: 'failed'; row: FailedRow }
+  | { kind: 'changedOnDisk' }
+  | { kind: 'wouldDrop'; row: WouldDropRow }
+
+/** Each path's status in one report. */
+function statusesOf(report: TagApplyReport): [string, FileStatus][] {
+  return [
+    ...report.written.map((path): [string, FileStatus] => [path, { kind: 'written' }]),
+    ...report.failed.map((row): [string, FileStatus] => [row.path, { kind: 'failed', row }]),
+    ...report.changedOnDisk.map((path): [string, FileStatus] => [path, { kind: 'changedOnDisk' }]),
+    ...report.wouldDrop.map((row): [string, FileStatus] => [row.path, { kind: 'wouldDrop', row }]),
+  ]
+}
+
+/**
+ * The outcome of one "Write tags" press: every apply it made, in order (the first, then "Write anyway" or a write
+ * after the changes were listed again). Each file counts once, by its latest status; one still left as would-drop
+ * was skipped (by the user, or because "Write anyway" was refused).
+ */
+export function outcomeOf(reports: readonly TagApplyReport[]): ApplyOutcome {
+  const latest = new Map<string, FileStatus>(reports.flatMap(statusesOf))
+  const outcome: ApplyOutcome = {
+    written: 0,
+    failed: [],
+    changedOnDisk: [],
+    skipped: [],
+    undoUnavailable: reports.some((report) => report.undoUnavailable),
   }
+  for (const [path, status] of latest) {
+    if (status.kind === 'written') outcome.written += 1
+    else if (status.kind === 'failed') outcome.failed.push(status.row)
+    else if (status.kind === 'changedOnDisk') outcome.changedOnDisk.push(path)
+    else outcome.skipped.push(status.row)
+  }
+  return outcome
 }
 
 const FAILURE_KEYS: Readonly<Record<TagError['type'], MessageKey>> = {

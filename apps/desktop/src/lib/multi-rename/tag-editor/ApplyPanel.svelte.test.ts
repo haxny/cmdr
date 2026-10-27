@@ -37,7 +37,7 @@ describe('ApplyPanel', () => {
     expect(root.textContent).toContain('Writing as Audiobook: 2 files will change:')
     expect(listed(root, 'Files that will change')).toEqual(['01.mp3: Album, Title, cover', '02.mp3: Album, extra tags'])
     await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] })
+    expect(fake.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] }, { after: [] })
   })
 
   it('a list with nothing in it writes nothing, so ⌘⏎ ⌘⏎ keeps the last Undo', async () => {
@@ -73,7 +73,7 @@ describe('ApplyPanel', () => {
     await press(root, 'Music')
     await press(root, 'Write tags…')
     await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'music', allowFrameLoss: false, skip: [] })
+    expect(fake.apply).toHaveBeenCalledWith({ kind: 'music', allowFrameLoss: false, skip: [] }, { after: [] })
   })
 
   it('diacritics_warning_offers_fix_not_silent', async () => {
@@ -100,7 +100,7 @@ describe('ApplyPanel', () => {
     expect(fake.apply).toHaveBeenCalledTimes(2)
     expect(fake.apply).toHaveBeenLastCalledWith(
       { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/01.mp3', '/b/03.mp3'] },
-      { continuing: true },
+      { after: [expect.objectContaining({ applyId: 'A1', written: ['/b/01.mp3'] })] },
     )
     expect(root.textContent).toContain('Tags written to 2 files')
   })
@@ -181,6 +181,39 @@ describe('ApplyPanel', () => {
     expect(fake.apply).toHaveBeenCalledTimes(1)
     expect(fake.changes).toHaveBeenCalledTimes(2)
     expect(root.textContent).toContain('will change:')
+  })
+
+  it('the re-list keeps the first apply: its outcome shows, and the next write continues it', async () => {
+    const first = applyReport({ written: ['/b/01.mp3'], wouldDrop: [{ path: '/b/02.mp3', items: ['TSOP'] }] })
+    const fake = fakeState(PANEL_VIEW, [first, applyReport({ applyId: 'A2', written: ['/b/02.mp3'] })])
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    await press(root, 'Write tags')
+    fake.view = { ...PANEL_VIEW }
+    await press(root, 'Write anyway')
+    // Re-listed: the first apply's outcome stays on screen above the new list.
+    expect(root.textContent).toContain('Tags written to 1 file')
+    expect(root.textContent).toContain('will change:')
+    await press(root, 'Write tags')
+    expect(fake.apply).toHaveBeenLastCalledWith(
+      { kind: 'audiobook', allowFrameLoss: false, skip: [] },
+      { after: [first] },
+    )
+    expect(root.textContent).toContain('Tags written to 2 files')
+  })
+
+  it('Back from a re-list shows the first apply’s outcome instead of dropping it', async () => {
+    const fake = fakeState(PANEL_VIEW, [
+      applyReport({ written: ['/b/01.mp3'], wouldDrop: [{ path: '/b/02.mp3', items: ['TSOP'] }] }),
+    ])
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    await press(root, 'Write tags')
+    fake.view = { ...PANEL_VIEW }
+    await press(root, 'Write anyway')
+    await press(root, 'Back')
+    expect(root.textContent).toContain('Tags written to 1 file')
+    expect(root.textContent).toContain('Skipped, not written:')
   })
 
   it('Remove diacritics waits for an edit in flight, then runs', async () => {

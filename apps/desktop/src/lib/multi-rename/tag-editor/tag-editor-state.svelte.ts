@@ -45,8 +45,11 @@ export type TagUndoResult =
   | { ok: false; error: TagStateError; restored: RestoreReport }
 
 export interface ApplyOptions {
-  /** This apply finishes the last one ("Write anyway"): Undo reverses both, not just this one. */
-  continuing?: boolean
+  /**
+   * The earlier applies of the same "Write tags" press (before a "Write anyway"). When one of them wrote, Undo
+   * reverses this apply with them; when none did, this apply starts the write Undo reverses on its own.
+   */
+  after?: readonly TagApplyReport[]
 }
 
 export interface TagEditorState {
@@ -150,7 +153,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     async apply(request, options = {}) {
       const res = await track(() => applyTags(sessionId, request))
       if (!res.ok) return res
-      const continuing = options.continuing === true
+      const continuing = (options.after ?? []).some((earlier) => earlier.written.length > 0)
       // A write that wrote nothing leaves the last one undoable: there's nothing newer to protect.
       if (continuing || res.value.written.length > 0) {
         refusal = res.value.undoUnavailable ? { kind: 'undoUnavailable' } : { kind: 'nothingToUndo' }
@@ -164,7 +167,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       if (last === null) return { ok: false, error: refusal, restored: emptyRestore() }
       // Taken first, so a second press doesn't undo the same write twice.
       setLastTagApply(null)
-      const res = await undoAll(last, (applyId) => track(() => undoTagApply(applyId)))
+      const res = await undoAll(last, (applyId) => track(() => undoTagApply(applyId, sessionId)))
       // Even a failed undo may have restored some files: the view reads them again, and the error stays.
       if (started) await replaceView(() => openTagEditor(sessionId))
       if (!res.ok) error = res.error

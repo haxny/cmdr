@@ -19,14 +19,14 @@ describe('apply-outcome', () => {
   })
 
   it('one report is its own outcome', () => {
-    const outcome = outcomeOf(
+    const outcome = outcomeOf([
       report({
         written: ['/a', '/b'],
         failed: [{ path: '/c', error: { type: 'notSupported' } }],
         changedOnDisk: ['/d'],
         undoUnavailable: true,
       }),
-    )
+    ])
     expect(outcome).toEqual({
       written: 2,
       failed: [{ path: '/c', error: { type: 'notSupported' } }],
@@ -39,14 +39,26 @@ describe('apply-outcome', () => {
   it('Write anyway adds its own report; skipped would-drop files are listed as skipped', () => {
     const first = report({ written: ['/a'], wouldDrop: [{ path: '/b', items: ['TSOP'] }], changedOnDisk: ['/d'] })
     const second = report({ written: ['/b'], undoUnavailable: true })
-    expect(outcomeOf(first, { second })).toEqual({
+    expect(outcomeOf([first, second])).toEqual({
       written: 2,
       failed: [],
       changedOnDisk: ['/d'],
       skipped: [],
       undoUnavailable: true,
     })
-    expect(outcomeOf(first, { skipped: true }).skipped).toEqual([{ path: '/b', items: ['TSOP'] }])
+    expect(outcomeOf([first]).skipped).toEqual([{ path: '/b', items: ['TSOP'] }])
+  })
+
+  it('a file listed again after an edit counts once, by its latest status', () => {
+    const first = report({ written: ['/a'], wouldDrop: [{ path: '/b', items: ['TSOP'] }], changedOnDisk: ['/c'] })
+    const relisted = report({ written: ['/c'], failed: [{ path: '/b', error: { type: 'notSupported' } }] })
+    expect(outcomeOf([first, relisted])).toEqual({
+      written: 2,
+      failed: [{ path: '/b', error: { type: 'notSupported' } }],
+      changedOnDisk: [],
+      skipped: [],
+      undoUnavailable: false,
+    })
   })
 
   it.each<[TagError, string]>([

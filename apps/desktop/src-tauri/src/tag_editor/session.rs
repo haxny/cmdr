@@ -13,7 +13,7 @@
 //!
 //! ❌ No file read under `SESSIONS`' lock: reads happen first, the lock only swaps results in.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 use std::time::SystemTime;
@@ -515,11 +515,13 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
     }
 }
 
-/// Reads `paths` again (after an undo rewrote them) and puts them in EVERY open tag session that
-/// holds them, in place of what it held, edits to them dropped: the undo may come from another
-/// sheet than the one that wrote. Paths no session holds are left out. Each file is read once,
-/// outside the lock; only the tag lock is taken, so the rename → tag lock order holds.
-pub(super) fn reload(paths: &[PathBuf]) {
+/// Reads `paths` again (after an undo rewrote them) into every open tag session that holds them:
+/// the undo may come from another sheet than the one that wrote. The `undoing` session (whose
+/// user confirmed losing unwritten edits to those files) takes them as read. Every other session
+/// keeps its unwritten edits: only the parts it never edited follow the disk ([`rebase`]), and
+/// its disk copy and fingerprint become what is on disk now. Each file is read once, outside the
+/// lock; only the tag lock is taken, so the rename → tag lock order holds.
+pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
     let held: Vec<PathBuf> = {
         let sessions = SESSIONS.lock_ignore_poison();
         paths
@@ -536,13 +538,63 @@ pub(super) fn reload(paths: &[PathBuf]) {
         })
         .collect();
     let mut sessions = SESSIONS.lock_ignore_poison();
-    for session in sessions.values_mut() {
+    for (session_id, session) in sessions.iter_mut() {
+        let take_as_read = undoing == Some(session_id.as_str());
         for (path, entry) in &fresh {
             if let Some(slot) = session.by_path.get_mut(path) {
-                *slot = entry.clone();
+                if take_as_read {
+                    *slot = entry.clone();
+                } else {
+                    follow_disk(slot, entry);
+                }
             }
         }
     }
+}
+
+/// `held` takes the file's new disk state `now`, keeping its unwritten edits.
+fn follow_disk(held: &mut Entry, now: &Entry) {
+    match (held, now) {
+        (Entry::Loaded(held), Entry::Loaded(now)) => {
+            held.edited = rebase(&held.disk, &held.edited, &now.disk);
+            held.disk = now.disk.clone();
+            held.fingerprint = now.fingerprint.clone();
+            held.duration_ms = now.duration_ms;
+        }
+        (held, now) => *held = now.clone(),
+    }
+}
+
+/// `edited` moved from `old` onto `now`: each field, the cover, and each extra the user left as
+/// `old` had it takes `now`'s value; one the user changed keeps the edit.
+pub(super) fn rebase(old: &FileTags, edited: &FileTags, now: &FileTags) -> FileTags {
+    FileTags {
+        fields: rebase_map(&old.fields, &edited.fields, &now.fields),
+        cover: if edited.cover == old.cover {
+            now.cover.clone()
+        } else {
+            edited.cover.clone()
+        },
+        extras: rebase_map(&old.extras, &edited.extras, &now.extras),
+    }
+}
+
+fn rebase_map<K: Ord + Clone, V: PartialEq + Clone>(
+    old: &BTreeMap<K, V>,
+    edited: &BTreeMap<K, V>,
+    now: &BTreeMap<K, V>,
+) -> BTreeMap<K, V> {
+    let keys: BTreeSet<&K> = old.keys().chain(edited.keys()).chain(now.keys()).collect();
+    keys.into_iter()
+        .filter_map(|key| {
+            let value = if edited.get(key) == old.get(key) {
+                now.get(key)
+            } else {
+                edited.get(key)
+            };
+            value.map(|value| (key.clone(), value.clone()))
+        })
+        .collect()
 }
 
 /// Ends the tag session, dropping its edits. A no-op when it's already gone.

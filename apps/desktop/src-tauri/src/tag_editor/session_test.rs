@@ -483,3 +483,35 @@ fn a_reachable_non_root_volume_is_listed_but_read_only() {
     assert_eq!(edit(&session.session_id, vec![]), Err(TagEditorError::ReadOnly));
     close_rename(&session.session_id);
 }
+
+/// An undo another sheet asked for: what this session never edited follows the disk, an edit
+/// stays, and a field the disk lost (or gained) follows it too when the session left it alone.
+#[test]
+fn rebase_keeps_edits_and_follows_the_disk_elsewhere() {
+    let old = tags(&[
+        (TagField::Title, "Alpha"),
+        (TagField::Album, "Kniha"),
+        (TagField::Genre, "x"),
+    ]);
+    let edited = tags(&[
+        (TagField::Title, "Alpha mine"),
+        (TagField::Album, "Kniha"),
+        (TagField::Genre, "x"),
+    ]);
+    let now = tags(&[
+        (TagField::Title, "Alpha"),
+        (TagField::Album, "Book"),
+        (TagField::Comment, "c"),
+    ]);
+
+    let rebased = super::session::rebase(&old, &edited, &now);
+
+    assert_eq!(
+        rebased,
+        tags(&[
+            (TagField::Title, "Alpha mine"),
+            (TagField::Album, "Book"),
+            (TagField::Comment, "c")
+        ])
+    );
+}

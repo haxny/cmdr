@@ -1644,9 +1644,13 @@ export const commands = {
   // Writes the changed files.
   applyTags: (sessionId: string, request: ApplyRequest) =>
     typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request })),
-  // Writes the old tags of an apply back.
-  undoTagApply: (applyId: string) =>
-    typedError<RestoreReport, TagEditorError>(__TAURI_INVOKE('undo_tag_apply', { applyId })),
+  /**
+   *  Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
+   *  the restored files as read, edits to them dropped (its user confirmed that); any other keeps
+   *  its unwritten edits.
+   */
+  undoTagApply: (applyId: string, sessionId: string | null) =>
+    typedError<RestoreReport, TagEditorError>(__TAURI_INVOKE('undo_tag_apply', { applyId, sessionId })),
   // Ends the tag session, dropping its edits.
   closeTagEditor: (sessionId: string) => __TAURI_INVOKE<void>('close_tag_editor', { sessionId }),
   // The images of the session's folder that can be a cover.

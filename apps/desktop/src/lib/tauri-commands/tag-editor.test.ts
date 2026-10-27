@@ -126,13 +126,13 @@ describe('undoTagApply', () => {
   it('passes the apply id and the restore report through', async () => {
     const report = { restored: ['/a.mp3'], missing: [], failed: [] }
     vi.mocked(commands.undoTagApply).mockResolvedValue({ status: 'ok', data: report } as never)
-    expect(await undoTagApply('tags-1-s1')).toEqual({ ok: true, value: report })
-    expect(commands.undoTagApply).toHaveBeenCalledWith('tags-1-s1')
+    expect(await undoTagApply('tags-1-s1', 's2')).toEqual({ ok: true, value: report })
+    expect(commands.undoTagApply).toHaveBeenCalledWith('tags-1-s1', 's2')
   })
 
   it('returns the typed error', async () => {
     vi.mocked(commands.undoTagApply).mockResolvedValue(failure as never)
-    expect(await undoTagApply('x')).toEqual({ ok: false, error: noSession })
+    expect(await undoTagApply('x', null)).toEqual({ ok: false, error: noSession })
   })
 })
 

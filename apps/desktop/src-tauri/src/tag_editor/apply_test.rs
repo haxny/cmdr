@@ -12,7 +12,7 @@ use cmdr_media_meta::test_fixtures::mp3_frames;
 use cmdr_tags::{ContentKind, TagError, TagField, UndoLimits, UndoStore};
 
 use super::apply::{ApplyRequest, TagApplyReport, apply_with, apply_with_before_write, narrow_record};
-use super::session::{TagEdit, TagEditorError, close, edit, open, unchanged_on_disk};
+use super::session::{TagEdit, TagEditorError, changes, close, edit, open, unchanged_on_disk};
 use super::session_test::{album, folder, on_disk, path_of, set_title, tag_file};
 use super::undo::undo_with;
 use crate::file_system::volume::manager::get_volume_manager;
@@ -146,7 +146,12 @@ fn one_failure_keeps_the_others_and_undo_restores_written() {
     let view = open(&id, false).expect("still open");
     assert!(view.dirty, "b's edit is still waiting");
 
-    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    let restored = undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
     let restored_names: Vec<String> = restored
         .restored
         .iter()
@@ -268,7 +273,12 @@ fn undo_restores_tags_after_apply() {
     let report = apply_with(&store, &id, request()).expect("applies");
     assert_eq!(report.written.len(), 3);
 
-    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    let restored = undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
 
     assert_eq!(restored.restored.len(), 3);
     let after: Vec<_> = ["a.mp3", "b.mp3", "c.mp3"].map(|name| on_disk(&dir, name)).into();
@@ -294,7 +304,12 @@ fn undo_after_session_closed_still_works() {
     let report = apply_with(&store, &id, request()).expect("applies");
     done(&id);
 
-    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    let restored = undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
 
     assert_eq!(restored.restored.len(), 1);
     assert_eq!(title_of(&dir, "a.mp3"), one("Alpha"));
@@ -316,7 +331,12 @@ fn undo_reloads_every_open_session_that_holds_a_restored_file() {
     let before_undo = open(&later, false).expect("the later sheet opens its tags");
     assert_eq!(before_undo.tracks[0].title.as_deref(), Some("Alpha edited"));
 
-    undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(later.as_str()),
+    )
+    .expect("undoes");
 
     let view = open(&later, false).expect("still open");
     assert_eq!(
@@ -333,11 +353,57 @@ fn undo_reloads_every_open_session_that_holds_a_restored_file() {
     done(&later);
 }
 
+/// Another sheet's tag session keeps its unwritten edits through an undo it didn't ask for: only
+/// what it never edited follows the restored disk, and its disk copy and fingerprint are fresh.
+#[test]
+fn undo_keeps_another_sessions_unwritten_edits_and_refreshes_its_disk_copy() {
+    let (dir, listing, writer) = album("tag-apply-undo-keeps-edits");
+    let (_store_dir, store) = store("tag-apply-undo-keeps-edits-store");
+    open(&writer, false).expect("opens");
+    edit(&writer, vec![set_album("Kniha")]).expect("edits");
+    let report = apply_with(&store, &writer, request()).expect("applies");
+    let other = open_rename(listing.id(), true, None, 0)
+        .expect("another rename session opens")
+        .session_id;
+    open(&other, false).expect("the other session opens its tags");
+    edit(&other, vec![set_title(&dir, "a.mp3", "Alpha by the other")]).expect("edits");
+
+    undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(writer.as_str()),
+    )
+    .expect("undoes");
+
+    let view = open(&other, false).expect("still open");
+    assert_eq!(
+        view.tracks[0].title.as_deref(),
+        Some("Alpha by the other"),
+        "the unwritten edit stays"
+    );
+    assert!(view.dirty);
+    let changes = changes(&other).expect("lists its changes");
+    assert_eq!(changes.len(), 1, "only the edited file differs from the disk");
+    assert_eq!(
+        changes[0].fields,
+        vec![TagField::Title],
+        "the album follows the restored disk"
+    );
+    assert_eq!(
+        unchanged_on_disk(&other, &dir.join("a.mp3")),
+        Ok(true),
+        "its fingerprint is fresh"
+    );
+    assert_eq!(album_of(&dir, "a.mp3"), one("Book"));
+    done(&other);
+    done(&writer);
+}
+
 #[test]
 fn undo_of_an_unknown_apply_is_typed() {
     let (_store_dir, store) = store("tag-apply-undo-unknown");
     assert!(matches!(
-        undo_with(&store, "tags-1-multi-rename-0"),
+        undo_with(&store, "tags-1-multi-rename-0", None),
         Err(TagEditorError::Undo {
             error: TagError::Io(std::io::ErrorKind::NotFound, _)
         })
@@ -523,7 +589,12 @@ async fn media_cache_dropped_for_written_rows() {
     .await;
 
     let ends_before_undo = ends.load(Ordering::SeqCst);
-    undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
     media_read(&id).await;
 
     assert_eq!(
@@ -562,7 +633,12 @@ fn undo_after_write_anyway_restores_the_other_tags() {
         "the session holds what the write left on disk, the dropped frame gone"
     );
 
-    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    let restored = undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
 
     assert!(restored.failed.is_empty(), "{restored:?}");
     assert_eq!(restored.restored.len(), 1);
@@ -602,7 +678,12 @@ fn a_file_changed_right_before_its_write_is_skipped_and_left_out_of_undo() {
 
     assert_eq!(names(&report.written), vec!["a.mp3", "c.mp3"]);
     assert_eq!(names(&report.changed_on_disk), vec!["b.mp3"]);
-    let restored = undo_with(&store, report.apply_id.as_deref().expect("an apply id")).expect("undoes");
+    let restored = undo_with(
+        &store,
+        report.apply_id.as_deref().expect("an apply id"),
+        Some(id.as_str()),
+    )
+    .expect("undoes");
     let restored_names: Vec<String> = restored
         .restored
         .iter()

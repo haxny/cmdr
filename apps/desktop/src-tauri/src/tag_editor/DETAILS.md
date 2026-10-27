@@ -52,7 +52,12 @@ file that something else renamed.
 `undo(app, apply_id)` (`undo.rs`) restores (`allow_frame_loss: false`), forgets the record when nothing failed (kept
 for a retry otherwise), re-reads the restored files into every open tag session that holds them (the undo can come
 from a later sheet than the one that wrote; each file is read once, outside the tag lock), and re-reads them in the
-media cache. It works after the session closed: the record holds paths.
+media cache. It works after the session closed: the record holds paths. The asking sheet's session (`undo_tag_apply`'s
+`session_id`) takes the files as read, its unwritten edits to them dropped: its user confirmed that. Any other session
+keeps its edits: `session::rebase` moves each field, the cover, and each extra it never edited onto the restored disk,
+and its disk copy and fingerprint become the new ones. Today only one Multi-Rename sheet is open at a time (one main
+window, and `openMultiRename` returns while a sheet is up), so "another session" is a defensive case.
+(Verified 2026-10-27 by reading `routes/(main)/+page.svelte` `openMultiRename`.)
 
 The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer);
 no app data folder is `TagEditorError::NoAppDataDir`. Tests call `apply_with` / `undo_with` with their own store, and

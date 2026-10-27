@@ -62,11 +62,17 @@ pub async fn apply_tags(
     blocking(move || crate::tag_editor::apply::apply(&app, &session_id, request)).await
 }
 
-/// Writes the old tags of an apply back.
+/// Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
+/// the restored files as read, edits to them dropped (its user confirmed that); any other keeps
+/// its unwritten edits.
 #[tauri::command]
 #[specta::specta]
-pub async fn undo_tag_apply(app: tauri::AppHandle, apply_id: String) -> Result<RestoreReport, TagEditorError> {
-    blocking(move || crate::tag_editor::undo::undo(&app, apply_id)).await
+pub async fn undo_tag_apply(
+    app: tauri::AppHandle,
+    apply_id: String,
+    session_id: Option<String>,
+) -> Result<RestoreReport, TagEditorError> {
+    blocking(move || crate::tag_editor::undo::undo(&app, apply_id, session_id)).await
 }
 
 /// Ends the tag session, dropping its edits.

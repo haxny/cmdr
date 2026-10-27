@@ -41,16 +41,25 @@ fn open_store<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<UndoStore,
     UndoStore::open(data_dir.join("tag-undo"), UndoLimits::default()).map_err(|error| TagEditorError::Undo { error })
 }
 
-/// Writes the old tags of apply `apply_id` back. The files it restored are read again into
-/// every open tag session that holds them (another sheet's too), and Multi-Rename's media cache
-/// reads them again. A clean restore forgets the record; one with failures keeps it, so the user
+/// Writes the old tags of apply `apply_id` back, for the sheet whose tag session is `undoing`.
+/// The files it restored are read again into every open tag session that holds them (another
+/// sheet's keeps its unwritten edits; see [`reload`]), and Multi-Rename's media cache reads them
+/// again. A clean restore forgets the record; one with failures keeps it, so the user
 /// can try again.
-pub fn undo<R: tauri::Runtime>(app: &tauri::AppHandle<R>, apply_id: String) -> Result<RestoreReport, TagEditorError> {
-    with_store(app, |store| undo_with(store, &apply_id))
+pub fn undo<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    apply_id: String,
+    undoing: Option<String>,
+) -> Result<RestoreReport, TagEditorError> {
+    with_store(app, |store| undo_with(store, &apply_id, undoing.as_deref()))
 }
 
 /// [`undo`] against `store`. The caller holds the store for the whole call.
-pub(super) fn undo_with(store: &UndoStore, apply_id: &str) -> Result<RestoreReport, TagEditorError> {
+pub(super) fn undo_with(
+    store: &UndoStore,
+    apply_id: &str,
+    undoing: Option<&str>,
+) -> Result<RestoreReport, TagEditorError> {
     let id = ApplyId(apply_id.to_owned());
     // Restoring parses and writes each file with lofty.
     let report = contain_panics(|| store.restore(&id, &WriteOptions::default()))
@@ -61,7 +70,7 @@ pub(super) fn undo_with(store: &UndoStore, apply_id: &str) -> Result<RestoreRepo
     {
         log::warn!(target: LOG_TARGET, "Couldn't forget an undone tag write: {error:?}");
     }
-    reload(&report.restored);
+    reload(&report.restored, undoing);
     reread_media(LOCAL_VOLUME_ID, &report.restored);
     Ok(report)
 }

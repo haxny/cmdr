@@ -66,9 +66,12 @@ export async function applyTags(sessionId: string, request: ApplyRequest): Promi
   return result(await commands.applyTags(sessionId, request))
 }
 
-/** Writes the old tags of an apply back (`TagApplyReport.applyId`). */
-export async function undoTagApply(applyId: string): Promise<TagEditorResult<RestoreReport>> {
-  return result(await commands.undoTagApply(applyId))
+/**
+ * Writes the old tags of an apply back (`TagApplyReport.applyId`). `sessionId` is the asking sheet: its tag session
+ * takes the restored files as read, any other open one keeps its unwritten edits to them.
+ */
+export async function undoTagApply(applyId: string, sessionId: string | null): Promise<TagEditorResult<RestoreReport>> {
+  return result(await commands.undoTagApply(applyId, sessionId))
 }
 
 /** Ends the tag session, dropping its edits. */

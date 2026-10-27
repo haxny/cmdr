@@ -66,7 +66,10 @@ describe('ApplyPanel undo', () => {
       'Undo tag changes?',
       'Undo',
     )
-    expect(ipc.undoTagApply.mock.calls).toEqual([['A2'], ['A1']])
+    expect(ipc.undoTagApply.mock.calls).toEqual([
+      ['A2', 'S'],
+      ['A1', 'S'],
+    ])
     expect(root.textContent).toContain('Tags restored in 2 files')
     // Undone: nothing left to undo until the next write.
     expect(() => buttonNamed(root, 'Undo tag changes')).toThrow()
