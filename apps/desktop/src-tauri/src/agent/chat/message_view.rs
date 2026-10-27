@@ -211,7 +211,8 @@ fn project_row(message: StoredMessage, facts: RowFacts) -> MessageView {
                             repeat_of: facts.repeat_of,
                         })
                     }
-                    AgentPart::ToolResult(_) | AgentPart::Reasoning(_) => None,
+                    // The envelope is the model's context, not something the user wrote.
+                    AgentPart::ToolResult(_) | AgentPart::Reasoning(_) | AgentPart::Envelope(_) => None,
                     AgentPart::WakeDigest(digest) => Some(MessageBlock::WakeDigest {
                         folders: digest
                             .folders

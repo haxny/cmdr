@@ -123,9 +123,10 @@ pub(super) fn transcript_roles(messages: &[store::StoredMessage]) -> Vec<AgentRo
         .collect()
 }
 
+/// The text a message opens with: a user turn's envelope (persisted with it), or plain text.
 pub(super) fn leading_text(message: &AgentMessage) -> &str {
     match &message.parts[0] {
-        AgentPart::Text(text) => text,
+        AgentPart::Text(text) | AgentPart::Envelope(text) => text,
         _ => panic!("expected a leading text part"),
     }
 }

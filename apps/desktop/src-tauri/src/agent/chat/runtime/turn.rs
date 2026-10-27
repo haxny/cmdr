@@ -16,7 +16,7 @@ use super::cost::meter_cost;
 use super::dispatch::{ToolDispatcher, dispatch_ok};
 use super::events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall, emit};
 use super::repeats::{FailedCalls, Repeat};
-use super::types::{TurnParams, TurnResult, TurnTally};
+use super::types::{TurnParams, TurnResult, TurnTally, UserTurn};
 use super::{LOG_TARGET, context};
 use crate::agent::chat::context::{ElisionFacts, MAX_TOOL_TURNS, MAX_WALL_TIME, PrefixInputs};
 use crate::agent::chat::message_view::{MessageView, to_message_view};
@@ -156,7 +156,7 @@ async fn drive(
     if let Some(user) = params.user {
         transcript.push(AgentMessage {
             role: AgentRole::User,
-            parts: vec![user.part()],
+            parts: user_parts(&user, params),
             at: params.now_secs,
         });
         user_needs_persist = true;
@@ -267,12 +267,12 @@ async fn drive(
             record_chat_memory_transition(conn, params, sink);
         }
         if user_needs_persist && let Some(user) = params.user {
-            let part = user.part();
+            let parts = user_parts(&user, params);
             match store::append_message(
                 conn,
                 params.conversation_id,
                 AgentRole::User,
-                std::slice::from_ref(&part),
+                &parts,
                 &user.search_text(),
                 None,
                 None,
@@ -280,7 +280,7 @@ async fn drive(
             ) {
                 Ok((message_id, seq)) => {
                     user_needs_persist = false;
-                    let opener = opener_view(message_id, seq, part, params.now_secs);
+                    let opener = opener_view(message_id, seq, parts, params.now_secs);
                     emit(sink, AgentChatEvent::UserPersisted { opener });
                 }
                 Err(e) => return persist_failed(e),
@@ -427,14 +427,25 @@ fn resolve_calls(
         .collect()
 }
 
+/// A new user turn as it is sent AND persisted: the envelope it was sent with, rendered once,
+/// then the opener. Storing the rendered envelope is what lets every later call replay this turn
+/// byte for byte (`context::build_messages`), so the provider's prompt cache holds across turns;
+/// re-rendering it would also move with the clock offset and the envelope's own format.
+fn user_parts(user: &UserTurn<'_>, params: &TurnParams<'_>) -> Vec<AgentPart> {
+    vec![
+        AgentPart::Envelope(context::render_envelope(params.envelope, params.offset)),
+        user.part(),
+    ]
+}
+
 /// The persisted opener as the view history shows, for `UserPersisted`.
-fn opener_view(message_id: i64, seq: i64, part: AgentPart, created_at: i64) -> MessageView {
+fn opener_view(message_id: i64, seq: i64, parts: Vec<AgentPart>, created_at: i64) -> MessageView {
     to_message_view(store::StoredMessage {
         id: message_id,
         seq,
         content: store::StoredContent::Message {
             role: AgentRole::User,
-            parts: vec![part],
+            parts,
         },
         text_for_search: String::new(),
         prompt_tokens: None,

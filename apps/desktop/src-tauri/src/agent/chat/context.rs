@@ -506,6 +506,10 @@ fn build_messages(
         .map(|(index, message)| {
             let turns_back = user_positions.iter().filter(|&&pos| pos > index).count();
             match message.role {
+                // Sent with its envelope (every turn the runtime persists since the envelope
+                // became a part): replay it byte for byte, latest turn or history alike. That's
+                // both snapshot-at-send and what keeps the provider's prompt cache valid.
+                AgentRole::User if carries_envelope(message) => message.clone(),
                 AgentRole::User if Some(index) == latest_user => {
                     prepend_text(message, render_envelope(envelope, offset))
                 }
@@ -519,6 +523,13 @@ fn build_messages(
             }
         })
         .collect()
+}
+
+/// Whether a user message already carries the envelope it was sent with. A row persisted before
+/// envelopes were stored has none: the latest one gets the caller's envelope, an older one a
+/// timestamp marker, as before.
+fn carries_envelope(message: &AgentMessage) -> bool {
+    message.parts.iter().any(|part| matches!(part, AgentPart::Envelope(_)))
 }
 
 /// Return a clone of `message` with a leading text part carrying `text`.
@@ -658,7 +669,7 @@ fn estimate_tokens_of_message(message: &AgentMessage) -> usize {
         .parts
         .iter()
         .map(|part| match part {
-            AgentPart::Text(text) => estimate_tokens_str(text),
+            AgentPart::Text(text) | AgentPart::Envelope(text) => estimate_tokens_str(text),
             // What the provider will actually be handed, so the budget measures the same
             // string the prompt carries.
             AgentPart::WakeDigest(digest) => estimate_tokens_str(&digest.render()),

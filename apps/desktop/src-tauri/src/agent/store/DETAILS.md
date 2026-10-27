@@ -25,7 +25,11 @@ The exact schema is in `migrations.rs`. The non-obvious choices:
   token; v1 never writes a non-null origin.
 - **`messages.content_blocks` is typed JSON**, the serialized `Vec<AgentPart>` from the `AgentLlm` seam. The opaque provider
   reasoning blob rides inside it and is backend-only — it must never reach the frontend. `text_for_search` is the plain
-  user+assistant prose extracted at insert (never tool blobs), the only thing the FTS index sees.
+  user+assistant prose extracted at insert (never tool blobs), the only thing the FTS index sees. A user row opens with
+  an `Envelope` part (the context it was sent with, rendered; `../chat/DETAILS.md` § Anatomy of one call), never
+  indexed or shown. No migration: the column is schemaless JSON. **The downgrade cost** (accepted, as for the event
+  kinds below): `AgentPart` has no tolerant parse, so a build from before the `Envelope` part can't load, or send into,
+  a thread holding one.
 - **`prompt_tokens` / `completion_tokens` are nullable** (assistant turns only).
 - **`messages_fts` is external-content FTS5** (`content='messages'`, `content_rowid='id'`): the index stores the term
   data but not a copy of the text, pointing back at `messages.id`. Three triggers keep it in sync — insert indexes,

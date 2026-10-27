@@ -34,7 +34,7 @@ opaque everywhere else; its whole vocabulary is two keys, owned here: `thought_s
 
 Agent → genai (request / replay), per `agent_part_to_genai`:
 
-- `Text(s)` → `ContentPart::Text(s)`.
+- `Text(s)` and `Envelope(s)` → `ContentPart::Text(s)` (the envelope is a user turn's rendered context, replayed verbatim; `chat/DETAILS.md` § Anatomy of one call).
 - `ToolCall{call_id, tool, arguments, reasoning}` → `ContentPart::ToolCall{call_id, fn_name = tool.as_wire_name(),
   fn_arguments = arguments, thought_signatures = blob.thought_signatures}`, except that a nameless call
   (`ToolId::is_nameless`) maps to nothing, and `fn_arguments` that isn't a JSON object goes out as `{}`. See

@@ -423,6 +423,66 @@ fn history_is_byte_stable_from_turn_to_turn_while_the_budget_has_room() {
     assert_eq!(after.elision.elided_results, 0);
 }
 
+/// A user turn as the runtime persists it: the envelope it was sent with, rendered once, ahead
+/// of what the user wrote.
+fn user_as_sent(text: &str, at: i64) -> AgentMessage {
+    AgentMessage {
+        role: AgentRole::User,
+        parts: vec![
+            AgentPart::Envelope(render_envelope(&envelope_at(at), offset())),
+            AgentPart::Text(text.to_string()),
+        ],
+        at,
+    }
+}
+
+/// Across a turn boundary, the PREVIOUS turn's user message keeps the envelope it was sent
+/// with, so the whole earlier prompt is a byte-identical prefix of the next one and a caching
+/// provider re-reads none of it at full price. Swapping that envelope for a bare timestamp
+/// once a newer turn arrived is what used to break the cache there every turn.
+#[test]
+fn the_whole_previous_prompt_is_a_prefix_of_the_next_turns() {
+    let bulky = json!({ "text": "z".repeat(4_000) });
+    let mut transcript = vec![];
+    for turn in 0..3_i64 {
+        let at = 1_000 * (turn + 1);
+        transcript.push(user_as_sent(&format!("turn {turn}"), at));
+        transcript.push(assistant_tool_call(
+            &format!("c{turn}"),
+            ToolId::ImageFacts,
+            json!({ "paths": ["/a.png"] }),
+            at + 10,
+        ));
+        transcript.push(tool_result(&format!("c{turn}"), bulky.clone(), at + 20));
+        transcript.push(assistant_text(&format!("answer {turn}"), at + 30));
+    }
+    let budget = 1_000_000;
+    let before = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(3_000), offset(), budget);
+    transcript.push(user_as_sent("turn 3", 4_000));
+    let after = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), budget);
+
+    assert_eq!(
+        before.messages[..],
+        after.messages[..before.messages.len()],
+        "the previous call's whole prompt must reach the provider unchanged"
+    );
+    assert_eq!(
+        after.messages.last().map(|m| m.parts[0].clone()),
+        Some(AgentPart::Envelope(render_envelope(&envelope_at(4_000), offset()))),
+        "the new turn opens with its own envelope"
+    );
+}
+
+/// Snapshot-at-send: a turn that carries the envelope it was sent with uses THAT one, even if
+/// the caller hands a newer one (a crash-resumed turn re-captures the envelope, but the turn
+/// was sent with the old one).
+#[test]
+fn a_turn_sent_with_an_envelope_keeps_it() {
+    let transcript = [user_as_sent("what's here?", 1_000)];
+    let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(9_000), offset(), BUDGET);
+    assert_eq!(assembled.messages[0].parts, transcript[0].parts);
+}
+
 /// Under pressure, the OLDEST turn's results go first, and only as many turns as the budget
 /// needs: a newer result the budget can still hold stays.
 #[test]

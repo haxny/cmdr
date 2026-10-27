@@ -18,12 +18,18 @@ Pull-tier docs for `agent/chat/`. Must-knows live in `CLAUDE.md`.
    fabricated names.
 2. **Tool declarations** (`tools` arg): `agent::tools::agent_tool_declarations()`. Stable,
    cached.
-3. **History**: every persisted turn, each user turn prefixed with its own local
-   timestamp marker (`[Fri 2026-07-11 09:15]`). Sent exactly as last call while the budget has
+3. **History**: every persisted turn, each user turn opening with the envelope it was sent with
+   (an `AgentPart::Envelope`, replayed verbatim; a row from before envelopes were stored gets a
+   local timestamp marker, `[Fri 2026-07-11 09:15]`, instead). Sent exactly as last call while the budget has
    room (§ Budget enforcement); under pressure, the oldest turns' tool results collapse to a
    self-describing stub (§ The elision stub). Assistant prose survives verbatim. Eliding prose is never done — that's the soft-cap's job. The
    current turn's results never elide either (see § Budget enforcement).
-4. **The envelope** opens the LATEST user turn only, as a tagged block (§9 field set):
+4. **The envelope** opens each user turn, as a tagged block (§9 field set), rendered ONCE at send
+   (`runtime/turn.rs::user_parts`) and persisted with the user row as `AgentPart::Envelope`. Every later call
+   replays that string, so snapshot-at-send holds across the turn's tool loop, a crash-resume, and every later turn,
+   and the previous call's prompt is a byte-identical prefix of the next
+   (`the_whole_previous_prompt_is_a_prefix_of_the_next_turns`). Only a legacy latest row without one is rendered from
+   the caller's envelope. The rail never shows the part and search never indexes it. Its shape:
    `[Sat 2026-07-12 21:30 · focused: <path> · cursor: <name|—> · <n> selected · volumes: <name> (<freshness>[, <connectivity>]), … · rename batch: up to <n> files]`.
    The batch size is `budget::files_per_batch` for this turn's resolved budget; it rides here
    rather than in the prompt because it moves with the model and the user's setting, and the
@@ -139,11 +145,13 @@ that rewrite made long chats MORE expensive, not less. With the budget now the w
 (§ Resolving one budget), a thread with room sends every earlier message byte-identical to the last call
 (`history_is_byte_stable_from_turn_to_turn_while_the_budget_has_room`). Cost control is compaction's job (planned).
 
-**What still moves earlier bytes between calls** (known, not yet fixed):
+The envelope is the other half: it used to open only the LATEST user turn and re-render as a bare timestamp once a
+newer turn arrived, which broke the cache at the previous user message every turn. Each turn now persists the envelope
+it was sent with and replays it (item 4 of § Anatomy of one call), at the cost of one envelope's tokens per historical turn,
+cached.
 
-- **The envelope swap.** The latest user turn carries the full envelope; once a newer turn arrives it re-renders as a
-  bare timestamp marker. So each new turn breaks the cache at the PREVIOUS user message, and that turn's tool results
-  are billed in full once more. Fixing it means persisting each turn's rendered envelope and replaying it verbatim.
+**What still moves earlier bytes between calls** (known):
+
 - **Memory writes.** Memory leads the system string, so a `memory_write` / `memory_edit` changes the prefix and the
   next call re-reads the whole thread at full price. Inherent to memory living in the prefix.
 - **Budget-pressure elision itself** rewrites the turn it stubs, by design.

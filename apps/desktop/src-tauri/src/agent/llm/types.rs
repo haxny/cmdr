@@ -481,6 +481,11 @@ pub enum AgentPart {
     /// same way a digest opens a wake, and for the same reason: a rendered English sentence
     /// would freeze one locale's copy in `main.db` where no later locale pass can reach it.
     ProposalOutcomes(crate::agent::types::ProposalOutcomes),
+    /// The context envelope a user turn was sent with, rendered once at send
+    /// (`chat::context::render_envelope`) and replayed verbatim on every later call, so the
+    /// thread's earlier messages stay byte-identical and the provider's prompt cache holds.
+    /// The provider reads it as text; the rail never shows it and search never indexes it.
+    Envelope(String),
 }
 
 /// A full message: a role, its ordered typed parts, and its timestamp. Every

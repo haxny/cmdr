@@ -212,7 +212,8 @@ fn tool_names_by_call_id(messages: &[AgentMessage]) -> ToolNames<'_> {
 /// runs those paths reasoning-off, so it does not arise in practice.
 fn agent_part_to_genai(part: &AgentPart, tool_names: &ToolNames<'_>) -> Vec<ContentPart> {
     match part {
-        AgentPart::Text(text) => vec![ContentPart::Text(text.clone())],
+        // The envelope a user turn was sent with is prose to the provider, replayed verbatim.
+        AgentPart::Text(text) | AgentPart::Envelope(text) => vec![ContentPart::Text(text.clone())],
         // The provider reads prose, so the structured digest renders on its way out. This is
         // the ONLY place it becomes English, which is what keeps the persisted row localizable.
         AgentPart::WakeDigest(digest) => vec![ContentPart::Text(digest.render())],

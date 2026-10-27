@@ -208,8 +208,9 @@ async fn a_wakes_first_message_is_persisted_as_structure_not_as_english() {
         .expect("the wake persisted a user-role row");
 
     let parts: Vec<AgentPart> = serde_json::from_str(&blocks).expect("the row decodes");
-    let [AgentPart::WakeDigest(digest)] = parts.as_slice() else {
-        panic!("expected one structured digest part, got {parts:?}");
+    // The envelope the wake was sent with rides ahead of it (replayed verbatim for the prompt cache).
+    let [AgentPart::Envelope(_), AgentPart::WakeDigest(digest)] = parts.as_slice() else {
+        panic!("expected the envelope then one structured digest part, got {parts:?}");
     };
     assert_eq!(digest.folders.len(), 1);
     assert_eq!(digest.folders[0].folder, "/Users/someone/Downloads");

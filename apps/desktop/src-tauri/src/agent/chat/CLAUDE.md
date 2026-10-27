@@ -17,8 +17,9 @@ One message in, an answer out, crash-safe and within budget.
 ## Must-knows
 
 - **The prefix stays byte-identical across a thread's calls** (it buys prompt caching): `system`
-  (fenced memory, the prompt, then `CMDR.md`) and the tool declarations never vary. The envelope
-  rides the latest user turn only, snapshot-at-send, so ground truth can't shift mid-turn.
+  (fenced memory, the prompt, then `CMDR.md`) and the tool declarations never vary. Each user turn
+  carries its envelope as a persisted `AgentPart::Envelope`, rendered once at send and replayed
+  verbatim: ❌ never re-render a stored one (it would bust the cache and move ground truth).
 - **⚠️ Memory LEADS the system string and is fenced; ❌ never append it like `CMDR.md`.** It's the one
   part of the prefix an attacker can reach, so it precedes the rules, fenced, under a line calling it
   data. `DETAILS.md` § The memory block; `../memory/DETAILS.md`.
