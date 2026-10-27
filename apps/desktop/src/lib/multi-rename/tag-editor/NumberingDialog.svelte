@@ -107,12 +107,15 @@
         const options = shown()
         if (options === null || busy) return
         busy = true
-        const ran = await runScoped(async (scope) => {
-            await tags.tool({ kind: 'autoNumber', ...options }, scope)
-            return true
-        })
-        if (ran === true) await saveNumbering(options)
-        busy = false
+        try {
+            const ran = await runScoped(async (scope) => {
+                await tags.tool({ kind: 'autoNumber', ...options }, scope)
+                return tags.error === null
+            })
+            if (ran === true) await saveNumbering(options)
+        } finally {
+            busy = false
+        }
         onClose()
     }
 

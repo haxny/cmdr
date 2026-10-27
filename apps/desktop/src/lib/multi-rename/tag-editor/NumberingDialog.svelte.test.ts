@@ -116,6 +116,27 @@ describe('NumberingDialog', () => {
     expect(sent(tags)).toEqual({ kind: 'autoNumber', ...expected })
   })
 
+  it('sends the fields picked in both selects under their wire names', async () => {
+    const { root, tags } = await mountDialog()
+    await click(boxNamed(root, 'Disc number'))
+    await click(boxNamed(root, 'Next disc on change of'))
+    await click(boxNamed(root, 'Reset disc counter on change of'))
+    const pick = async (index: number, value: string): Promise<void> => {
+      root.querySelectorAll<HTMLButtonElement>('.select-trigger')[index].click()
+      await settle()
+      ;[...document.querySelectorAll<HTMLElement>('[data-part="content"][data-state="open"] [data-part="item"]')]
+        .find((el) => el.getAttribute('data-value') === value)
+        ?.click()
+      await settle()
+    }
+    await pick(0, 'artist')
+    await pick(1, 'genre')
+    await click(buttonNamed(root, 'OK'))
+    const options = sent(tags) as NumberOptions & { kind: string }
+    expect(options.disc?.nextOnField).toBe('artist')
+    expect(options.disc?.resetDiscOnField).toBe('genre')
+  })
+
   it('shows the saved options on the next open', async () => {
     stored.value = { trackStart: 4, trackTotal: false, trackPad: true, disc: { ...DEFAULT_DISC, start: 2 } }
     const { root } = await mountDialog()
@@ -131,6 +152,26 @@ describe('NumberingDialog', () => {
     expect(tags.tool).not.toHaveBeenCalled()
     expect(stored.saved).toEqual([])
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('sends nothing and saves nothing on Escape', async () => {
+    const { root, tags, onClose } = await mountDialog()
+    const dialog = root.querySelector<HTMLElement>('[role="dialog"]') ?? root
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await settle()
+    expect(tags.tool).not.toHaveBeenCalled()
+    expect(stored.saved).toEqual([])
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('saves nothing when the tool failed', async () => {
+    const { root, tags } = await mountDialog()
+    tags.tool.mockImplementation(() => {
+      tags.error = { kind: 'busy' } as never
+      return Promise.resolve()
+    })
+    await click(buttonNamed(root, 'OK'))
+    expect(stored.saved).toEqual([])
   })
 
   it('refuses a begin that is not an integer of at least zero, and says so', async () => {

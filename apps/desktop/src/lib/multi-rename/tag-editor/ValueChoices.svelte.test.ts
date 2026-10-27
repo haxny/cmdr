@@ -69,7 +69,7 @@ describe('ValueChoices', () => {
     const { button, onPick } = await mountChoices()
     button.click()
     await tick()
-    const first = options()[0]
+    const first = options().at(0)
     if (!first) throw new Error('no option')
     await press(first, 'Enter')
     expect(onPick).toHaveBeenCalledWith(['Kniha 1'])
