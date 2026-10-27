@@ -34,6 +34,8 @@ use crate::multi_rename::session::{SessionFiles, files_of};
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
 pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
+const LOG_TARGET: &str = "tag_editor::session";
+
 /// Why a tag-editor call didn't answer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
@@ -403,7 +405,7 @@ fn kind_removals(path: &Path, kind: ContentKind) -> Vec<KindRemoval> {
     match contain_panics(|| removed_by_kind(path, kind)) {
         Some(Ok(removals)) => removals,
         Some(Err(_)) | None => {
-            log::warn!(target: "tag_editor::session", "Couldn't read what a write kind would remove from a file");
+            log::warn!(target: LOG_TARGET, "Couldn't read what a write kind would remove from a file");
             Vec::new()
         }
     }
@@ -496,7 +498,13 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
                 loaded.fingerprint = now.fingerprint;
                 loaded.duration_ms = now.duration_ms;
             }
-            (slot, entry) => *slot = entry,
+            (slot, entry) => {
+                if let Entry::Unreadable(code) = &entry {
+                    // The row's unwritten edits go with it; the code is typed, and no path is logged.
+                    log::warn!(target: LOG_TARGET, "A file couldn't be read after its write, so its row is unreadable now: {code:?}");
+                }
+                *slot = entry;
+            }
         }
     }
 }

@@ -9,13 +9,17 @@ vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
 }))
 
+const ipc = vi.hoisted(() => ({ openTagEditor: vi.fn(), editTags: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
+
 import { createDiscardGuard } from './discard-guard'
+import { SETTLE_LIMIT_MS, createTagEditorState } from './tag-editor-state.svelte'
 
 function tagsWith(
   view: { dirty: boolean } | null,
-  over: { busy?: boolean; settled?: () => Promise<void> } = {},
+  over: { busy?: boolean; settled?: () => Promise<boolean> } = {},
 ): TagEditorState {
-  return { view, busy: false, settled: () => Promise.resolve(), ...over } as unknown as TagEditorState
+  return { view, busy: false, settled: () => Promise.resolve(true), ...over } as unknown as TagEditorState
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -135,5 +139,38 @@ describe('createDiscardGuard', () => {
     await settle()
     expect(confirmDialog).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('an edit that never answers can’t hold the sheet open: after the wait it still asks Discard or Cancel', async () => {
+    vi.useFakeTimers()
+    try {
+      ipc.openTagEditor.mockResolvedValue({ ok: true, value: { tracks: [], dirty: false } })
+      ipc.editTags.mockImplementation(() => new Promise(() => {}))
+      confirmDialog.mockResolvedValue(true)
+      const tags = createTagEditorState('S')
+      await tags.open()
+      void tags.edit([])
+      const onClose = vi.fn()
+      createDiscardGuard(tags, onClose).close()
+      await vi.advanceTimersByTimeAsync(SETTLE_LIMIT_MS - 1)
+      expect(confirmDialog).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+      expect(confirmDialog).toHaveBeenCalledTimes(1)
+      expect(onClose).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a wait that gave up asks even when the view looks clean', async () => {
+    confirmDialog.mockResolvedValue(false)
+    const onClose = vi.fn()
+    createDiscardGuard(
+      tagsWith({ dirty: false }, { busy: true, settled: () => Promise.resolve(false) }),
+      onClose,
+    ).close()
+    await settle()
+    expect(confirmDialog).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

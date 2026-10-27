@@ -68,12 +68,43 @@ describe('createTagEditorState', () => {
     expect(state.error).toEqual({ kind: 'noSession' })
   })
 
-  it('open twice asks the backend once', async () => {
+  it('open twice at once asks the backend once; an open with a view asks again for the current order', async () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
     const state = createTagEditorState('S')
     await Promise.all([state.open(), state.open()])
-    await state.open()
     expect(ipc.openTagEditor).toHaveBeenCalledTimes(1)
+    const reordered = { ...VIEW, tracks: [...VIEW.tracks].reverse() }
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: reordered })
+    await state.open()
+    expect(ipc.openTagEditor.mock.calls).toEqual([['S'], ['S']])
+    expect(state.view).toEqual(reordered)
+  })
+
+  it('an older view answer that lands after a newer one is dropped', async () => {
+    let answerOpen: (res: unknown) => void = () => {}
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: VIEW })
+    const state = createTagEditorState('S')
+    await state.open()
+    ipc.openTagEditor.mockImplementationOnce(() => new Promise((resolve) => (answerOpen = resolve)))
+    const EDITED_VIEW = { ...VIEW, dirty: true }
+    ipc.editTags.mockResolvedValueOnce({ ok: true, value: EDITED_VIEW })
+    const reopening = state.open()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await state.edit([])
+    answerOpen({ ok: true, value: VIEW })
+    await reopening
+    expect(state.view).toEqual(EDITED_VIEW)
+  })
+
+  it('settled() gives up after its limit when a call never answers, and says so', async () => {
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: VIEW })
+    const state = createTagEditorState('S')
+    await state.open()
+    ipc.editTags.mockImplementation(() => new Promise(() => {}))
+    void state.edit([])
+    expect(state.busy).toBe(true)
+    expect(await state.settled(20)).toBe(false)
+    expect(state.busy).toBe(true)
   })
 
   it('open retries after an error', async () => {

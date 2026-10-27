@@ -29,6 +29,7 @@ const ipc = vi.hoisted(() => ({
   undoTagApply: vi.fn(),
   applyMultiRename: vi.fn(),
   rollbackOperation: vi.fn(),
+  moveMultiRenameRow: vi.fn(),
 }))
 const confirmDialog = vi.hoisted(() => vi.fn())
 vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog }))
@@ -149,13 +150,82 @@ describe('MultiRenameDialog Tags tab', () => {
     expect(ipc.openTagEditor).toHaveBeenCalledWith('S')
     expect(document.querySelector('.controls')).toBeNull()
     expect(document.querySelector('#sheet-panel-tags')?.textContent).toContain('3 tracks')
-    // Back and forth does not reopen it.
+    // Back and forth asks for the view again (a reorder may have moved the files), never restarting the session.
     tab('Rename').click()
     await settle()
     tab('Tags').click()
     await settle()
-    expect(ipc.openTagEditor).toHaveBeenCalledTimes(1)
+    expect(ipc.openTagEditor.mock.calls).toEqual([['S'], ['S']])
     expect(document.querySelector('.controls')).toBeNull()
+  })
+
+  it('after a reorder on the Rename tab, the Tags tab lists the files in the new order', async () => {
+    const tracksOf = (names: string[]) =>
+      names.map((n) => ({
+        path: `/m/${n}.mp3`,
+        fileName: `${n}.mp3`,
+        track: null,
+        title: null,
+        durationMs: null,
+        changed: false,
+        readError: null,
+      }))
+    const view = (names: string[]) => ({
+      ok: true,
+      value: {
+        editable: true,
+        readOnlyReason: null,
+        shared: [],
+        tracks: tracksOf(names),
+        cover: { kind: 'empty' },
+        extras: [],
+        dirty: true,
+        diacritics: [],
+      },
+    })
+    const row = (index: number, name: string) => ({
+      row: index,
+      oldName: `${name}.mp3`,
+      newName: `${name}.mp3`,
+      status: { type: 'ready' },
+      iconId: 'ext:mp3',
+      isDirectory: false,
+    })
+    ipc.previewMultiRename.mockResolvedValue({
+      ok: true,
+      value: {
+        previewId: 3,
+        counts: { ready: 3, unchanged: 0, problems: 0, reading: 0 },
+        rows: ['a', 'b', 'c'].map((n, i) => row(i, n)),
+      },
+    })
+    ipc.moveMultiRenameRow.mockResolvedValue({ ok: true, value: 1 })
+    // The backend session answers in its current order: a, b, c, then b, a, c after the move.
+    ipc.openTagEditor.mockResolvedValueOnce(view(['a', 'b', 'c'])).mockResolvedValue(view(['b', 'a', 'c']))
+    const listedNames = () =>
+      [...document.querySelectorAll('#sheet-panel-tags table.tracks td.file')].map((cell) => cell.textContent.trim())
+    flags.tagEditor = true
+    await mountSheet()
+    tab('Tags').click()
+    await settle()
+    expect(listedNames()).toEqual(['a.mp3', 'b.mp3', 'c.mp3'])
+
+    tab('Rename').click()
+    await settle()
+    const grid = document.querySelector<HTMLElement>('[role="grid"]')
+    if (!grid) throw new Error('no grid')
+    grid.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true, cancelable: true }),
+    )
+    await settle()
+    expect(ipc.moveMultiRenameRow).toHaveBeenCalledWith('S', 0, 'down')
+    tab('Tags').click()
+    await settle()
+
+    expect(listedNames()).toEqual(['b.mp3', 'a.mp3', 'c.mp3'])
+    // Unwritten edits live in the backend session: the view comes back with them, never restarted.
+    expect(ipc.openTagEditor).toHaveBeenLastCalledWith('S')
+    expect(ipc.closeTagEditor).not.toHaveBeenCalled()
   })
 
   it('arrow keys, Home/End and the ⌘⇧[/⌘⇧] commands switch tabs', async () => {

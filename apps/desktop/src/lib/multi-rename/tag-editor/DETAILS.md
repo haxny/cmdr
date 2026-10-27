@@ -10,7 +10,13 @@ Setting `multiRename.tagEditor` (boolean, default off). On, `SheetTabs` appears 
   (per-file Title and #; the # column is hidden for a one-file book), `CoverPanel` (+ thumbnail), `EditableCell`,
   `TagToolsBar` (clean-up tools over the whole session, Case on the focused field), `ApplyPanel` + `ApplyOutcome` (what
   will change, the per-file result, Undo), `WouldDropDialog` (items a format would lose; Write anyway or Skip).
-- **Why edits are keyed by path**: the user may reorder rows in the Rename tab; every edit stays with its file.
+- **Why edits are keyed by path**: the user may reorder rows in the Rename tab; every edit stays with its file. Each
+  time the Tags tab shows, `open()` fetches the view again (`openTagEditor(id)`, never a restart), so the list follows
+  the new order; the unwritten edits live in the backend session and come back with it. A view answer older than one
+  already shown is dropped.
+- **`settled()` is bounded** (`SETTLE_LIMIT_MS`, 5 s): a call that never answers (a stalled network mount) can't hold
+  the sheet. It answers `false` then, and the discard guard asks "Discard tag changes?" anyway, so Cancel and Esc always
+  end in a question or a close.
 - **Apply / undo**: the old tags are recorded before any write; failures are per file and the rest are written; Undo
   restores exactly the written files after asking, and leaves one that changed since (its fingerprint moved) alone.
   Other open sessions keep their unwritten edits, rebased per field. One Multi-Rename sheet is open at a time.

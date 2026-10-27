@@ -24,9 +24,10 @@ export function createDiscardGuard(tags: TagEditorState | null, onClose: () => v
   let asking = false
 
   async function confirm(): Promise<boolean> {
-    // A cell that just lost focus has an edit on its way; the question is about what it leaves.
-    await tags?.settled()
-    if (tags?.view?.dirty !== true) return true
+    // A cell that just lost focus has an edit on its way; the question is about what it leaves. A call that never
+    // answers (a stalled mount) can't hold the sheet: after the wait it asks anyway.
+    const answered = (await tags?.settled()) ?? true
+    if (answered && tags?.view?.dirty !== true) return true
     return confirmDialog(
       tString('multiRename.tags.discard.message'),
       tString('multiRename.tags.discard.title'),

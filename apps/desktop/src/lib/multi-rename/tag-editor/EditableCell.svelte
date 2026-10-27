@@ -6,6 +6,7 @@
      * starts blank and stays blank). Enter never reaches the sheet's own Enter, which starts the rename.
      */
     import { untrack } from 'svelte'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import TextArea from '#lib/ui/TextArea.svelte'
@@ -25,6 +26,8 @@
 
     const { id, value, ariaLabel, placeholder, multiline = false, disabled = false, onCommit }: Props = $props()
 
+    const log = getAppLogger('multiRename')
+
     let draft = $state(untrack(() => value))
     /** The text the model holds, or the last text sent: what a commit is compared with. */
     let committed = untrack(() => value)
@@ -43,9 +46,16 @@
         committed = draft
         // Once the model has answered, the box is compared with what it holds: a refused edit leaves the old
         // text there, so retyping the same text sends it again.
-        void Promise.resolve(onCommit(draft)).finally(() => {
-            committed = value
+        // A commit that throws or rejects is logged (by kind, never the text) and the box compares with the model again.
+        void new Promise<void>((resolve) => {
+            resolve(onCommit(draft))
         })
+            .catch((e: unknown) => {
+                log.warn("a tag box's edit didn't go through: {reason}", { reason: e instanceof Error ? e.name : typeof e })
+            })
+            .finally(() => {
+                committed = value
+            })
     }
 
     function onkeydown(e: KeyboardEvent): void {

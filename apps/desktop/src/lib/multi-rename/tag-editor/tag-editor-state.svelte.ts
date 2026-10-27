@@ -1,7 +1,9 @@
 /**
  * The Tags tab's state for one Multi-Rename session: the backend's view of the tab, the last typed error, and the
  * last apply Undo can reverse. The work is the backend's (`tauri-commands/tag-editor.ts`); this holds what it answered.
- * `open()` is lazy: the sheet calls it the first time the Tags tab shows, so a sheet that never shows it asks nothing.
+ * `open()` is lazy: the sheet calls it each time the Tags tab shows, so a sheet that never shows it asks nothing; once a
+ * view is there it asks again for the session's current order (a reorder on the Rename tab), keeping the unwritten
+ * edits, which live in the backend session.
  * The write Undo reverses is kept in `last-tag-apply.svelte.ts`, so it outlives the sheet.
  */
 
@@ -58,13 +60,17 @@ export interface TagEditorState {
   readonly busy: boolean
   /** The last write Undo can reverse, or `null` when there's none. */
   readonly undoable: LastTagApply | null
+  /** Fetches the view; when one is there already, fetches it again in the session's current order. */
   open(): Promise<void>
   /** Reads every file again, dropping every unwritten edit (after "changed on disk since it was read"). */
   reload(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
   tool(tool: TagTool): Promise<void>
-  /** Resolves when every call now out has answered (an edit a blur just started included). */
-  settled(): Promise<void>
+  /**
+   * Resolves `true` when every call now out has answered (an edit a blur just started included), or `false` after
+   * `limitMs` (default `SETTLE_LIMIT_MS`) with one still out, say on a stalled network mount, so a caller can go on.
+   */
+  settled(limitMs?: number): Promise<boolean>
   /** The cover every file shares, as a `data:` URL; `null` when there is none, the files differ, or it can't be read. */
   coverImage(): Promise<string | null>
   /** The images in the session's folder a cover can come from. */
@@ -81,6 +87,9 @@ export interface TagEditorState {
 
 const log = getAppLogger('multiRename')
 
+/** How long `settled()` waits for the calls out before it gives up, so a hung call can't hold the sheet open. */
+export const SETTLE_LIMIT_MS = 5_000
+
 export function createTagEditorState(sessionId: string): TagEditorState {
   let view = $state.raw<TagEditorView | null>(null)
   let error = $state.raw<TagStateError | null>(null)
@@ -93,6 +102,9 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let closed = false
   /** Why Undo has nothing to reverse, when the store holds no write. */
   let refusal: TagUndoRefusal = { kind: 'nothingToUndo' }
+  /** Counts view requests; an answer to an older one than the last that landed is dropped. */
+  let viewAsked = 0
+  let viewShown = 0
 
   /** Runs one backend call with `busy` on, keeps its error, and hands the result back. */
   async function track<T>(call: () => Promise<TagEditorResult<T>>): Promise<TagEditorResult<T>> {
@@ -110,12 +122,38 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   }
 
   async function replaceView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<void> {
+    const asked = ++viewAsked
     const res = await track(call)
-    if (res.ok && !closed) view = res.value
+    if (!res.ok || closed || asked < viewShown) return
+    viewShown = asked
+    view = res.value
+  }
+
+  async function settled(limitMs = SETTLE_LIMIT_MS): Promise<boolean> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const gaveUp = new Promise<false>((resolve) => {
+      timer = setTimeout(() => {
+        resolve(false)
+      }, limitMs)
+    })
+    const drained = (async () => {
+      while (inFlight.size > 0) await Promise.allSettled([...inFlight])
+      return true as const
+    })()
+    try {
+      return await Promise.race([drained, gaveUp])
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   async function open(): Promise<void> {
-    if (view !== null) return
+    if (view !== null) {
+      // The Rename tab may have reordered the files: the session answers in its current order, edits kept.
+      await settled()
+      await replaceView(() => openTagEditor(sessionId))
+      return
+    }
     opening ??= replaceView(() => openTagEditor(sessionId)).finally(() => {
       opening = null
     })
@@ -139,9 +177,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
     tool: (tool) => replaceView(() => runTagTool(sessionId, tool)),
-    settled: async () => {
-      while (inFlight.size > 0) await Promise.allSettled([...inFlight])
-    },
+    settled,
     async coverImage() {
       const res = await getCoverImage(sessionId)
       if (res.ok) return res.value
