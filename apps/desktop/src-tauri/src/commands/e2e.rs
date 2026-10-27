@@ -186,6 +186,26 @@ pub fn stage_agent_rollup(folder: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Stages a suggestion the way the agent's `propose_suggestions` call does, and answers what
+/// the tool would: the report, or the typed refusal.
+///
+/// A spec that reviews a specific group (a move that renames, say) needs THAT group in the
+/// store, and the fake assistant's scripts stage only their own. This runs the real handler
+/// (place, check, freeze, write) over `params`, so what lands is exactly what a model's call
+/// would have staged, and nothing about it is seeded by hand.
+///
+/// Feature-gated to `playwright-e2e`, like every other hook here.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+pub async fn e2e_propose_suggestions(
+    app: tauri::AppHandle,
+    params: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    crate::agent::tools::suggestions::execute_propose_suggestions(&app, &params)
+        .await
+        .map_err(|e| format!("{e:?}"))
+}
+
 /// Hand one folder's activity to the wake loop the way the indexer's tap does: through
 /// `send_rollup`, so the writer thread does the importance lookup and the admit.
 #[cfg(feature = "playwright-e2e")]

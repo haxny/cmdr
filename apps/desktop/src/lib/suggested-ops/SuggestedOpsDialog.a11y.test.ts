@@ -376,6 +376,21 @@ describe('a new name', () => {
     expect(host.textContent).toContain('Invoice 2026-01.pdf')
     expect(host.textContent).toContain('New name')
   })
+
+  // A move that files its sources under new names (the seeded group is a move): only the
+  // renamed row draws the arrow, and a screen reader hears "New name" before the name.
+  it('draws the arrow on a renamed move row only, and reads it as the new name', async () => {
+    ;(store.ops[0] as unknown as { newName: string }).newName = '2026-09-27 OpenAI invoice Rymd.pdf'
+    const host = mountDialog()
+
+    const cells = [...host.querySelectorAll('.name-cell')]
+    const renamed = cells.find((cell) => cell.textContent.includes('2026-09-27 OpenAI invoice Rymd.pdf'))
+    expect(renamed?.textContent).toContain('invoice-jan.pdf')
+    expect(renamed?.querySelector('.arrow')).not.toBeNull()
+    expect(renamed?.querySelector('.sr-only')?.textContent).toBe('New name')
+    expect(cells.filter((cell) => cell.querySelector('.arrow') !== null)).toHaveLength(1)
+    await expectNoA11yViolations(host)
+  })
 })
 
 describe('honest file facts', () => {

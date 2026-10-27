@@ -992,6 +992,8 @@ macro_rules! ipc_command_manifest {
                     // (`test/e2e-playwright/helpers/core.ts`).
                     crate::commands::file_actions::e2e_opened_paths,
                     crate::commands::file_actions::e2e_clear_opened_paths,
+                    // Stages a suggestion through the real `propose_suggestions` handler.
+                    crate::commands::e2e::e2e_propose_suggestions,
                 ]
             }
             // The dialog gallery's fixtures, which outlive `debug_assertions`: an E2E build is a

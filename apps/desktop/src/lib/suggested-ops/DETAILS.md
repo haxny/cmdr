@@ -199,8 +199,9 @@ generic path kept only the variant name; the failure's message carries both.
 
 Debug > Soft dialogs opens the dialog store-seeded (`dialog-gallery/fixtures/store-seeded.ts`, `suggestedOpsFixtures`):
 the patch sets `open`, `sweeps`, and pre-filled `reviews` (windows and live facts), so every row state shows without a
-backend. Seeded live facts are never re-read (`ensureLiveFacts` skips ops it already holds). Approve and Reject reach
-the real store, which has no such group, so the dialog re-reads and shows what's really waiting; the row says so.
+backend. The invoices move files three of its five under new names, so a move's `old → new` rows show beside ones that
+keep their name. Seeded live facts are never re-read (`ensureLiveFacts` skips ops it already holds). Approve and Reject
+reach the real store, which has no such group, so the dialog re-reads and shows what's really waiting; the row says so.
 
 ## What isn't here yet
 

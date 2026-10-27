@@ -145,14 +145,21 @@ const DOWNLOADS_CLEANUP: FixtureGroup[] = [
     groupId: 102,
     verb: 'move',
     displayName: 'Invoices from 2026',
-    rationale: 'They all look like invoices, and you keep the others in your finances folder.',
+    rationale:
+      'They all look like invoices, and you keep the others in your finances folder, named by date and sender.',
     destination: '/papers/finances/2026/invoices',
     destinationVolumeName: 'Naspolya',
     destinationState: 'willBeCreated',
+    // A move that files under new names: the renamed rows draw an arrow, the rest keep theirs.
     files: [
-      { name: 'invoice-2026-07.pdf', size: 184_320, modified: daysAgo(80) },
-      { name: 'invoice-2026-08.pdf', size: 190_112, modified: daysAgo(52) },
-      { name: 'invoice-2026-09.pdf', size: 176_004, modified: daysAgo(22) },
+      { name: 'invoice-2026-07.pdf', newName: '2026-07-31 Telia invoice.pdf', size: 184_320, modified: daysAgo(80) },
+      { name: 'invoice-2026-08.pdf', newName: '2026-08-31 Telia invoice.pdf', size: 190_112, modified: daysAgo(52) },
+      {
+        name: 'invoice-2026-09.pdf',
+        newName: '2026-09-27 OpenAI invoice Rymd.pdf',
+        size: 176_004,
+        modified: daysAgo(22),
+      },
       { name: 'Számla_Rymdskottkärra_AB_2026_10_végleges.pdf', size: 233_871, modified: daysAgo(3) },
       // Nothing recorded when suggested, so a live value has nothing to have changed from.
       {
