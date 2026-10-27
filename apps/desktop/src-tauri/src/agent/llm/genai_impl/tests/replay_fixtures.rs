@@ -400,4 +400,60 @@ async fn a_host_that_rejects_reasoning_content_gets_none_back() {
     assert!(assistant.get("reasoning_content").is_none(), "{assistant}");
 }
 
+/// OpenRouter streams a signed Claude thinking block in pieces sharing `index: 0` (the
+/// signature on a later piece) beside the plaintext `reasoning`, then an encrypted block
+/// whole. The shapes follow OpenRouter's reasoning-tokens guide, "Streaming Response".
+fn openrouter_round_one() -> String {
+    let mut body = sse(&[
+        chat_chunk(
+            json!({"role":"assistant","content":"","reasoning":"Read ","reasoning_details":[
+                {"type":"reasoning.text","text":"Read ","signature":null,"format":"anthropic-claude-v1","index":0}
+            ]}),
+            None,
+        ),
+        chat_chunk(
+            json!({"reasoning":"the panes.","reasoning_details":[
+                {"type":"reasoning.text","text":"the panes.","signature":null,"index":0}
+            ]}),
+            None,
+        ),
+        chat_chunk(
+            json!({"reasoning_details":[
+                {"type":"reasoning.text","signature":"sig-or-1","index":0},
+                {"type":"reasoning.encrypted","data":"opaque-1","format":"anthropic-claude-v1","index":1}
+            ]}),
+            None,
+        ),
+        chat_chunk(
+            json!({"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":WIRE,"arguments":"{}"}}]}),
+            None,
+        ),
+        chat_chunk(json!({}), Some("tool_calls")),
+    ]);
+    body.push_str("data: [DONE]\n\n");
+    body
+}
+
+#[tokio::test]
+async fn openrouter_replays_streamed_reasoning_details_verbatim() {
+    // OpenRouter carries a signed or encrypted model's continuity in `reasoning_details` and
+    // wants the blocks back whole and in order. Upstream genai drops them when streaming; the
+    // vendored patch (`vendor/genai/CMDR-PATCH.md`) merges the pieces into blocks.
+    let (_, body) = two_rounds(
+        "anthropic/claude-sonnet-5.5",
+        "anthropic/claude-sonnet-5.5",
+        [openrouter_round_one(), chat_round_two()],
+    )
+    .await;
+    let assistant = assistant_turn(&body, "messages");
+    assert_eq!(
+        assistant["reasoning_details"],
+        json!([
+            {"type":"reasoning.text","text":"Read the panes.","signature":"sig-or-1","format":"anthropic-claude-v1","index":0},
+            {"type":"reasoning.encrypted","data":"opaque-1","format":"anthropic-claude-v1","index":1}
+        ])
+    );
+    assert_eq!(assistant["reasoning_content"], "Read the panes.");
+}
+
 // endregion: --- Chat completions
