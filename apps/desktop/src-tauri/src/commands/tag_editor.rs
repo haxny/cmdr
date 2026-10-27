@@ -12,6 +12,7 @@ use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open,
     preview_names, shared_cover, tool as run_tool,
 };
+use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 
 /// Runs blocking `work` off the IPC thread.
@@ -46,6 +47,18 @@ pub async fn run_tag_tool(
     scope: Option<Vec<String>>,
 ) -> Result<TagEditorView, TagEditorError> {
     blocking(move || run_tool(&session_id, tool, scope)).await
+}
+
+/// Runs find/replace or a field-from-mask format over the tracks at `scope`, or the whole session
+/// for `None`.
+#[tauri::command]
+#[specta::specta]
+pub async fn run_tag_text_tool(
+    session_id: String,
+    tool: TagTextTool,
+    scope: Option<Vec<String>>,
+) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || run_text_tool(&session_id, tool, scope)).await
 }
 
 /// What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.

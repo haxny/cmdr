@@ -10,6 +10,7 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
   runTagTool: vi.fn(),
+  runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),

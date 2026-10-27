@@ -9,6 +9,7 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
   runTagTool: vi.fn(),
+  runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
@@ -160,6 +161,22 @@ describe('createTagEditorState', () => {
     ipc.runTagTool.mockResolvedValueOnce({ ok: true, value: EDITED })
     await state.tool({ kind: 'renumber', start: 1 }, ['/a.mp3'])
     expect(ipc.runTagTool).toHaveBeenCalledWith('S', { kind: 'renumber', start: 1 }, ['/a.mp3'])
+    expect(state.view).toBe(EDITED)
+  })
+
+  it('textTool replaces the view, passes the scope, and keeps a typed error', async () => {
+    const state = createTagEditorState('S')
+    const tool = { kind: 'format', field: 'title', mask: '[N3-]' } as const
+    ipc.runTagTextTool.mockResolvedValueOnce({ ok: true, value: EDITED })
+    await state.textTool(tool)
+    expect(ipc.runTagTextTool).toHaveBeenCalledWith('S', tool, null)
+    expect(state.view).toBe(EDITED)
+    ipc.runTagTextTool.mockResolvedValueOnce({ ok: true, value: EDITED })
+    await state.textTool(tool, ['/a.mp3'])
+    expect(ipc.runTagTextTool).toHaveBeenLastCalledWith('S', tool, ['/a.mp3'])
+    ipc.runTagTextTool.mockResolvedValueOnce({ ok: false, error: { kind: 'badRegex' } })
+    await state.textTool(tool)
+    expect(state.error).toEqual({ kind: 'badRegex' })
     expect(state.view).toBe(EDITED)
   })
 

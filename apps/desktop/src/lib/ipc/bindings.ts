@@ -1638,6 +1638,12 @@ export const commands = {
   // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
   runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
+  /**
+   *  Runs find/replace or a field-from-mask format over the tracks at `scope`, or the whole session
+   *  for `None`.
+   */
+  runTagTextTool: (sessionId: string, tool: TagTextTool, scope: string[] | null) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_text_tool', { sessionId, tool, scope })),
   // What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
   previewTagsFromNames: (sessionId: string, pattern: NamePattern, scope: string[] | null) =>
     typedError<NamePreviewRow[], TagEditorError>(
@@ -18397,6 +18403,10 @@ export type TagEditorError =
   | { kind: 'taskFailed' }
   // A file-name pattern that can't be used. Nothing was changed.
   | { kind: 'badPattern'; error: PatternError }
+  // A find/replace search that isn't a valid regular expression. Nothing was changed.
+  | { kind: 'badRegex' }
+  // A Format mask that doesn't parse. Nothing was changed.
+  | { kind: 'badMask'; error: MaskError }
 
 // The whole tab.
 export type TagEditorView = {
@@ -18513,6 +18523,31 @@ export type TagRef = {
    */
   color: number
 }
+
+// A text tool over tag fields.
+export type TagTextTool =
+  /**
+   *  Replaces `search` with `replace` in every value of each listed field. Case-insensitive
+   *  unless `case_sensitive`; plain search takes Multi-Rename's wildcards, `regex` a regular
+   *  expression with `$1` groups. A value that becomes empty is dropped, and a field with no
+   *  value left is removed.
+   */
+  | {
+      kind: 'replace'
+      fields: TagField[]
+      search: string
+      replace: string
+      caseSensitive: boolean
+      firstOnly: boolean
+      regex: boolean
+    }
+  /**
+   *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
+   *  multi-value field loses its other values: the whole field becomes the one rendered value),
+   *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
+   *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
+   */
+  | { kind: 'format'; field: TagField; mask: string }
 
 // Every tool as one serializable value, so the app and the MCP server share one tool set.
 export type TagTool =

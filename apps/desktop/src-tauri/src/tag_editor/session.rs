@@ -30,6 +30,7 @@ use cmdr_tags::{
 use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build, same_cover};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
+use crate::multi_rename::mask::MaskError;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
@@ -65,6 +66,10 @@ pub enum TagEditorError {
     TaskFailed,
     /// A file-name pattern that can't be used. Nothing was changed.
     BadPattern { error: PatternError },
+    /// A find/replace search that isn't a valid regular expression. Nothing was changed.
+    BadRegex,
+    /// A Format mask that doesn't parse. Nothing was changed.
+    BadMask { error: MaskError },
 }
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
@@ -443,6 +448,21 @@ pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Resu
     if let TagTool::FromFileName { pattern } = &tool {
         compile_pattern(pattern).map_err(|error| TagEditorError::BadPattern { error })?;
     }
+    edit_scoped(session_id, scope, |paths, before, book| {
+        Ok(apply_tool_in(before, &context_of(paths, book), &tool))
+    })
+}
+
+/// Replaces the tags of the readable tracks at `scope` (every readable track for `None`, in session
+/// order) with what `f` returns for them, parallel to its input. `f` gets the scoped paths, their
+/// edited tags, and the book's size (the readable tracks of the whole session). The others keep
+/// their tags; an unknown path refuses the run (`UnknownTrack`), an empty scope changes nothing
+/// (`f` isn't called), and an error from `f` leaves everything as it was.
+pub(super) fn edit_scoped(
+    session_id: &str,
+    scope: Option<Vec<String>>,
+    f: impl FnOnce(&[PathBuf], &[FileTags], usize) -> Result<Vec<FileTags>, TagEditorError>,
+) -> Result<TagEditorView, TagEditorError> {
     with_session(session_id, |layout, session| {
         require_editable(layout)?;
         let (paths, before) = scoped(layout, session, scope.as_deref())?;
@@ -452,7 +472,7 @@ pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Resu
                 .values()
                 .filter(|entry| entry.loaded().is_some())
                 .count();
-            let after = apply_tool_in(&before, &context_of(&paths, book), &tool);
+            let after = f(&paths, &before, book)?;
             store(session, paths, after);
         }
         Ok(view_of(layout, session))

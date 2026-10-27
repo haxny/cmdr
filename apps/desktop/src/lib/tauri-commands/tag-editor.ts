@@ -14,6 +14,7 @@ import {
   type TagEdit_Deserialize,
   type TagEditorError,
   type TagEditorView,
+  type TagTextTool,
   type TagTool,
 } from '#lib/ipc/bindings.js'
 
@@ -28,6 +29,7 @@ export type {
   TagEdit_Deserialize as TagEdit,
   TagEditorError,
   TagEditorView,
+  TagTextTool,
   TagTool,
 }
 
@@ -64,6 +66,19 @@ export async function runTagTool(
   scope: string[] | null = null,
 ): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.runTagTool(sessionId, tool, scope))
+}
+
+/**
+ * Runs find/replace (`replace`) or rebuilds one field from a Multi-Rename mask (`format`, e.g. `[N3-]` cuts the first
+ * two characters) over the tracks at `scope`, or over all the session's files when `scope` is `null`. A bad search
+ * comes back as `badRegex`, a bad mask as `badMask`, an unknown path as `unknownTrack`; nothing changes then.
+ */
+export async function runTagTextTool(
+  sessionId: string,
+  tool: TagTextTool,
+  scope: string[] | null = null,
+): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.runTagTextTool(sessionId, tool, scope))
 }
 
 /**

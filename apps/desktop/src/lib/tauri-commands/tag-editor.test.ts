@@ -10,6 +10,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     openTagEditor: vi.fn(),
     editTags: vi.fn(),
     runTagTool: vi.fn(),
+    runTagTextTool: vi.fn(),
     getTagChanges: vi.fn(),
     applyTags: vi.fn(),
     undoTagApply: vi.fn(),
@@ -31,6 +32,7 @@ import {
   listCoverCandidates,
   openTagEditor,
   previewTagsFromNames,
+  runTagTextTool,
   runTagTool,
   setCoverFromFile,
   undoTagApply,
@@ -94,6 +96,30 @@ describe('runTagTool', () => {
   it('returns the typed error', async () => {
     vi.mocked(commands.runTagTool).mockResolvedValue({ status: 'error', error: { kind: 'readOnly' } } as never)
     expect(await runTagTool('s1', 'renumber' as never)).toEqual({ ok: false, error: { kind: 'readOnly' } })
+  })
+})
+
+describe('runTagTextTool', () => {
+  const tool = { kind: 'format', field: 'title', mask: '[N3-]' } as const
+
+  it('passes the tool, no scope by default, and the view through', async () => {
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    expect(await runTagTextTool('s1', tool)).toEqual({ ok: true, value: { dirty: true } })
+    expect(commands.runTagTextTool).toHaveBeenCalledWith('s1', tool, null)
+  })
+
+  it('passes the chosen tracks through', async () => {
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    await runTagTextTool('s1', tool, ['/a.mp3'])
+    expect(commands.runTagTextTool).toHaveBeenCalledWith('s1', tool, ['/a.mp3'])
+  })
+
+  it('returns a bad mask and a bad regex as typed errors', async () => {
+    const badMask = { kind: 'badMask', error: { type: 'unclosed', at: 0 } }
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'error', error: badMask } as never)
+    expect(await runTagTextTool('s1', tool)).toEqual({ ok: false, error: badMask })
+    vi.mocked(commands.runTagTextTool).mockResolvedValue({ status: 'error', error: { kind: 'badRegex' } } as never)
+    expect(await runTagTextTool('s1', tool)).toEqual({ ok: false, error: { kind: 'badRegex' } })
   })
 })
 

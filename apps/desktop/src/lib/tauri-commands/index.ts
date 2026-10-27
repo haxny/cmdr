@@ -1173,6 +1173,7 @@ export {
   openTagEditor,
   editTags,
   runTagTool,
+  runTagTextTool,
   previewTagsFromNames,
   getTagChanges,
   applyTags,
@@ -1194,5 +1195,6 @@ export type {
   TagEditorError,
   TagEditorResult,
   TagEditorView,
+  TagTextTool,
   TagTool,
 } from './tag-editor'

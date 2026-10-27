@@ -18,6 +18,7 @@ import {
   listCoverCandidates,
   openTagEditor,
   previewTagsFromNames,
+  runTagTextTool,
   runTagTool,
   setCoverFromFile,
   undoTagApply,
@@ -70,6 +71,11 @@ export interface TagEditorState {
   edit(edits: TagEdit[]): Promise<void>
   /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
   tool(tool: TagTool, scope?: string[] | null): Promise<void>
+  /**
+   * Runs find/replace or a field-from-mask format over the tracks at `scope` (or every track), replacing the view like
+   * `tool`. `format` turns the field's FIRST value into the one rendered value.
+   */
+  textTool(tool: TagTextTool, scope?: string[] | null): Promise<void>
   /** What `pattern` would read from the file names of `scope` (or of every track), changing nothing. */
   previewFromNames(pattern: NamePattern, scope?: string[] | null): Promise<TagStateResult<NamePreviewRow[]>>
   /**
@@ -183,6 +189,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     open,
     edit: (edits) => replaceView(() => editTags(sessionId, edits)),
     tool: (tool, scope = null) => replaceView(() => runTagTool(sessionId, tool, scope)),
+    textTool: (tool, scope = null) => replaceView(() => runTagTextTool(sessionId, tool, scope)),
     previewFromNames: (pattern, scope = null) => track(() => previewTagsFromNames(sessionId, pattern, scope)),
     settled,
     async coverImage() {
