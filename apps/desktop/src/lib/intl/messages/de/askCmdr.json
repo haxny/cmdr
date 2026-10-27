@@ -723,6 +723,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "Richte einen KI-Anbieter ein, um zu senden",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr braucht zum Chatten einen KI-Anbieter. Wähle einen in den Einstellungen.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Dein Cloud-KI-Anbieter braucht einen API-Schlüssel, bevor Ask Cmdr chatten kann. Füge ihn in den Einstellungen hinzu.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Dein Cloud-KI-Anbieter braucht eine Adresse, bevor Ask Cmdr chatten kann. Füge sie in den Einstellungen hinzu.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Die lokale KI ist noch nicht heruntergeladen, deshalb kann Ask Cmdr nicht chatten. Richte sie in den Einstellungen ein.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Die lokale KI läuft nicht, deshalb kann Ask Cmdr nicht chatten. Starte sie in den Einstellungen.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "KI-Einstellungen öffnen",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Anhang entfernen",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -749,7 +777,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "KI-Einstellungen öffnen",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Alles vergessen, was Cmdr sich über dich gemerkt hat?",
   "@askCmdr.forget.title": {
@@ -1050,6 +1078,10 @@
   "askCmdr.context.tooltip": "{usedText} von {budgetText} {budget, plural, one {Token} other {Tokens}} genutzt (geschätzt)",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Jede Nachricht beginnt mit {usedText} von {budgetText} {budget, plural, one {Token} other {Tokens}} (geschätzt) für die Anweisungen und Werkzeuge von Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr schaut sich gerade an, was sich geändert hat. Chat öffnen.",
   "@askCmdr.wake.thinking": {

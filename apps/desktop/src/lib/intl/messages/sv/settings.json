@@ -1222,6 +1222,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Ansträngning",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Hur länge modellen tänker innan den svarar. Mer ansträngning hjälper med kluriga uppgifter, men svaren kommer långsammare och tänkandet debiteras som utdata.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "resonemang, tänka, tänkande, betänketid, djup, hastighet, kostnad, kvalitet",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Kontextfönster",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2287,9 +2299,9 @@
   "@settings.askCmdr.cloudOffHint": {
     "sourceHash": "1d3ec5d"
   },
-  "settings.askCmdr.openAiSettings": "Öppna AI-inställningar",
+  "settings.askCmdr.openAiSettings": "Gå till AI-inställningar",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Leverantör och modell",
   "@settings.askCmdr.provider.title": {
@@ -2323,9 +2335,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Hur mycket av samtalet Cmdr skickar till modellen. Automatiskt följer modellens kända gräns.",
+  "settings.askCmdr.chatMemorySize.description": "Hur mycket av samtalet Cmdr skickar till modellen. Automatiskt använder modellens hela kontextfönster; en storlek sätter en lägre gräns så att det kostar mindre.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatiskt (rekommenderas)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

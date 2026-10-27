@@ -681,11 +681,23 @@
     "forms": "button Verbind; Connect to server → Verbind met server; Connect as guest → Verbind als gast; progress Verbinden met {name}…; status Verbonden; in a sentence verbinding maken; a phone plugged in by cable is aangesloten, not verbonden",
     "sources": "macOS Finder (Connect to server → Verbind met server, Connect As… → Verbind als…), AppKit (Connecting… → Verbinden…, Connected → Verbonden)"
   },
+  "conversation": {
+    "chosen": "gesprek",
+    "confidence": "high",
+    "sources": "MS terminology (gesprek); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["chat"]
+  },
   "learn-more": {
     "chosen": "Meer over",
     "confidence": "high",
     "forms": "More about “X” → Meer over ‘X’",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "niveau",
+    "confidence": "high",
+    "sources": "MS terminology (niveau); shipped settings.archives.compressionLevel.label",
+    "accept": ["niveaus", "zoom"]
   },
   "link": {
     "chosen": "link",
@@ -3344,7 +3356,8 @@
   "thinking": {
     "chosen": "Nadenken…",
     "confidence": "tentative",
-    "sources": "bare infinitive + ellipsis per the progress convention; no AI-assistant precedent in the pile"
+    "sources": "bare infinitive + ellipsis per the progress convention; no AI-assistant precedent in the pile",
+    "proseAccept": ["nadenk"]
   },
   "threshold": {
     "accept": ["drempelwaarde"],

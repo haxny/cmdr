@@ -721,6 +721,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "A küldéshez állíts be egy AI-szolgáltatót",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Az Ask Cmdrnek AI-szolgáltató kell a csevegéshez. Válassz egyet a Beállításokban.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "A felhő-AI-szolgáltatódnak API-kulcs kell, mielőtt az Ask Cmdr cseveghetne. Add meg a Beállításokban.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "A felhő-AI-szolgáltatódnak cím kell, mielőtt az Ask Cmdr cseveghetne. Add meg a Beállításokban.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "A helyi AI még nincs letöltve, ezért az Ask Cmdr nem tud csevegni. Állítsd be a Beállításokban.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "A helyi AI nem fut, ezért az Ask Cmdr nem tud csevegni. Indítsd el a Beállításokban.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "AI-beállítások megnyitása",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Melléklet eltávolítása",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -747,7 +775,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "AI-beállítások megnyitása",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Elfelejtsen a Cmdr mindent, amire rólad emlékszik?",
   "@askCmdr.forget.title": {
@@ -1049,6 +1077,10 @@
   "askCmdr.context.tooltip": "{usedText} / {budgetText} {budget, plural, one {token} other {token}} felhasználva (becsült)",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Minden üzenet eleve {usedText} / {budgetText} {budget, plural, one {tokent} other {tokent}} (becsült) használ a Cmdr utasításaira és eszközeire",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "A Cmdr épp megnézi, mi változott. Nyisd meg a csevegést.",
   "@askCmdr.wake.thinking": {

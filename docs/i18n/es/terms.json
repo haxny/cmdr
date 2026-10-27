@@ -688,6 +688,12 @@
     "sources": "macOS Finder (Conectar, MN1 Conectándose a ^0…, Conectarse a un servidor), NetAuthAgent (Conectando…)",
     "decision": "Servidores"
   },
+  "conversation": {
+    "chosen": "conversación",
+    "confidence": "high",
+    "sources": "MS terminology (conversación); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["conversaciones", "chat"]
+  },
   "key-combination": {
     "chosen": "combinación",
     "accept": ["combinación de teclas", "combinaciones"],
@@ -700,6 +706,12 @@
     "confidence": "high",
     "forms": "More about “X” → Más información sobre “X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "nivel",
+    "confidence": "high",
+    "sources": "MS terminology (nivel); shipped settings.archives.compressionLevel.label",
+    "accept": ["niveles", "zoom"]
   },
   "link": {
     "chosen": "enlace",
@@ -3255,7 +3267,8 @@
   "thinking": {
     "chosen": "Pensando",
     "confidence": "high",
-    "sources": "catalog"
+    "sources": "catalog",
+    "proseAccept": ["piens"]
   },
   "this-computer": {
     "chosen": "ordenador",

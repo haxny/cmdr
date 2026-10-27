@@ -90,7 +90,7 @@
   },
   "queryUi.ai.openSettings": "打开 AI 设置",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "索引就绪 · {countText} {count, plural, other {个条目}}",
   "@queryUi.empty.indexReady": {

@@ -686,11 +686,26 @@
     "forms": "Connecting to X… → 正在连接到 {name}…; Connect to server… → 连接服务器…; Connect as guest → 以来宾身份连接; internet connection → 联网 / 互联网连接",
     "sources": "macOS Finder, NetAuthAgent"
   },
+  "conversation": {
+    "chosen": "对话",
+    "confidence": "high",
+    "accept": ["聊天内容", "聊天"],
+    "sources": "MS terminology (对话); the chat ruling accepts 对话 mid-sentence"
+  },
   "learn-more": {
     "chosen": "进一步了解",
     "confidence": "high",
     "forms": "More about “X” → 进一步了解“X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "级别",
+    "confidence": "high",
+    "sources": "MS terminology (级别); shipped settings.archives.compressionLevel.label",
+    "accept": ["缩放"],
+    "exceptions": {
+      "ai.cloud.effort.levelsUnknown": "The effort levels are named by the picker’s own label 思考强度 (settings.ai.reasoningEfforts.label), so 级别 would add a second name for the same setting."
+    }
   },
   "link": {
     "chosen": "链接",

@@ -613,11 +613,23 @@
     "forms": "connect to a server → kết nối tới (prose) but the label Kết nối với máy chủ… (Finder N84); reconnect → kết nối lại; the connection dropped → Đã mất kết nối",
     "sources": "Xfce Thunar (kết nối mạng), macOS Finder (Kết nối với máy chủ), CFNetwork (Đã mất kết nối mạng)"
   },
+  "conversation": {
+    "chosen": "cuộc trò chuyện",
+    "confidence": "high",
+    "accept": ["trò chuyện"],
+    "sources": "MS terminology (cuộc trò chuyện); shipped settings.askCmdr.chatMemorySize.description"
+  },
   "learn-more": {
     "chosen": "Tìm hiểu thêm về",
     "confidence": "high",
     "forms": "More about “X” → Tìm hiểu thêm về “X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "mức",
+    "confidence": "high",
+    "sources": "MS terminology (mức); shipped settings.archives.compressionLevel.label",
+    "accept": ["thu phóng"]
   },
   "link": {
     "chosen": "liên kết",

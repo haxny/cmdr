@@ -263,6 +263,50 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Fenêtre de contexte : {windowText} {window, plural, one {jeton} many {jetons} other {jetons}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Fenêtre de contexte : environ {windowText} {window, plural, one {jeton} many {jetons} other {jetons}} (d’après la liste intégrée à Cmdr)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Recommandé",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Recommandé ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Désactivé",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Faible",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Moyen",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "Élevé",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Maximum",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.levelsUnknown": "Ce service n’indique pas quels niveaux d’effort ce modèle accepte : c’est donc le service qui décide.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "7bb5384"
+  },
+  "ai.cloud.maxOutput": "Réponse la plus longue : {outputText} {output, plural, one {jeton} many {jetons} other {jetons}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Revérifier",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

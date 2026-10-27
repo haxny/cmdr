@@ -90,7 +90,7 @@
   },
   "queryUi.ai.openSettings": "Abrir ajustes de IA",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "Índice pronto · {countText} {count, plural, one {entrada} many {entradas} other {entradas}}",
   "@queryUi.empty.indexReady": {

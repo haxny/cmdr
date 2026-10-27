@@ -1221,6 +1221,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Esforço",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Quanto tempo o modelo pensa antes de responder. Mais esforço ajuda em tarefas difíceis, mas as respostas demoram mais e o raciocínio é cobrado como saída.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "raciocínio, pensar, pensamento, profundidade, velocidade, custo, qualidade",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Janela de contexto",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2283,7 +2295,7 @@
   },
   "settings.askCmdr.openAiSettings": "Abrir ajustes de IA",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Provedor e modelo",
   "@settings.askCmdr.provider.title": {
@@ -2317,9 +2329,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Quanto da conversa o Cmdr envia ao modelo. Automático segue o limite conhecido do seu modelo.",
+  "settings.askCmdr.chatMemorySize.description": "Quanto da conversa o Cmdr envia ao modelo. Automático usa toda a janela de contexto do seu modelo; um tamanho define um limite menor para gastar menos.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automático (recomendado)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

@@ -643,11 +643,23 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR ConnectToWindow, NetAuthAgent (Conectar)"
   },
+  "conversation": {
+    "chosen": "conversa",
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (conversa); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["conversas", "chat"]
+  },
   "learn-more": {
     "chosen": "Mais sobre",
     "confidence": "high",
     "forms": "More about “X” → Mais sobre “X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "nível",
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (nível); shipped settings.archives.compressionLevel.label",
+    "accept": ["níveis", "zoom"]
   },
   "link": {
     "chosen": "link",
@@ -2881,7 +2893,7 @@
   "slow": {
     "chosen": "lento",
     "accept": ["lenta", "devagar"],
-    "proseAccept": ["demorando"],
+    "proseAccept": ["demorando", "demoram"],
     "forms": "4x mais lenta do que …; a volume slow to answer → o volume está demorando para responder",
     "confidence": "high",
     "sources": "MS terminology pt-BR (conexão mais lenta)"
@@ -3113,7 +3125,8 @@
   "thinking": {
     "chosen": "Pensando",
     "confidence": "high",
-    "sources": "shipped pt catalog"
+    "sources": "shipped pt catalog",
+    "proseAccept": ["pens", "raciocínio"]
   },
   "this-mac": {
     "chosen": "este Mac",

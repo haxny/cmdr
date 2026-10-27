@@ -263,6 +263,50 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Kontextfenster: {windowText} {window, plural, one {Token} other {Tokens}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Kontextfenster: etwa {windowText} {window, plural, one {Token} other {Tokens}} (aus der in Cmdr eingebauten Liste)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Empfohlen",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Empfohlen ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Aus",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Niedrig",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Mittel",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "Hoch",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Maximal",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.levelsUnknown": "Dieser Dienst gibt nicht an, welche Aufwandsstufen dieses Modell unterstützt, also entscheidet er selbst.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "7bb5384"
+  },
+  "ai.cloud.maxOutput": "Längste Antwort: {outputText} {output, plural, one {Token} other {Tokens}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Erneut prüfen",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

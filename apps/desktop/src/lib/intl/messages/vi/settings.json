@@ -1218,6 +1218,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Mức nỗ lực",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Thời gian mô hình suy nghĩ trước khi trả lời. Nỗ lực nhiều hơn giúp ích với các tác vụ khó, nhưng câu trả lời đến chậm hơn và phần suy nghĩ được tính phí như đầu ra.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "nỗ lực, lập luận, suy luận, suy nghĩ, độ sâu, tốc độ, chi phí, chất lượng",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Cửa sổ ngữ cảnh",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2280,7 +2292,7 @@
   },
   "settings.askCmdr.openAiSettings": "Mở cài đặt AI",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Nhà cung cấp và mô hình",
   "@settings.askCmdr.provider.title": {
@@ -2314,9 +2326,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Cmdr gửi bao nhiêu phần của cuộc trò chuyện cho mô hình. Tự động sẽ theo giới hạn đã biết của mô hình.",
+  "settings.askCmdr.chatMemorySize.description": "Cmdr gửi bao nhiêu phần của cuộc trò chuyện cho mô hình. Tự động sẽ dùng toàn bộ cửa sổ ngữ cảnh của mô hình; chọn một kích cỡ sẽ đặt giới hạn thấp hơn để tốn ít chi phí hơn.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Tự động (khuyến nghị)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

@@ -723,6 +723,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "Configurez un fournisseur d’IA pour envoyer",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr a besoin d’un fournisseur d’IA pour discuter. Choisissez-en un dans les Réglages.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Votre fournisseur d’IA dans le cloud a besoin d’une clé d’API pour qu’Ask Cmdr puisse discuter. Ajoutez-la dans les Réglages.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Votre fournisseur d’IA dans le cloud a besoin d’une adresse pour qu’Ask Cmdr puisse discuter. Ajoutez-la dans les Réglages.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "L’IA locale n’est pas encore téléchargée, donc Ask Cmdr ne peut pas discuter. Configurez-la dans les Réglages.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "L’IA locale n’est pas lancée, donc Ask Cmdr ne peut pas discuter. Lancez-la dans les Réglages.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Ouvrir les réglages d’IA",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Retirer la pièce jointe",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -749,7 +777,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "Ouvrir les réglages d’IA",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Oublier tout ce dont Cmdr se souvient à votre sujet ?",
   "@askCmdr.forget.title": {
@@ -1052,6 +1080,10 @@
   "askCmdr.context.tooltip": "{usedText} sur {budgetText} {budget, plural, one {jeton utilisé} many {jetons utilisés} other {jetons utilisés}} (estimation)",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Chaque message commence avec {usedText} sur {budgetText} {budget, plural, one {jeton} many {jetons} other {jetons}} (estimation) pour les instructions et les outils de Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr regarde ce qui a changé. Ouvrir la conversation.",
   "@askCmdr.wake.thinking": {

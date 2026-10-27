@@ -263,6 +263,50 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "上下文窗口：{windowText} {window, plural, other {个 token}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "上下文窗口：约 {windowText} {window, plural, other {个 token}}（来自 Cmdr 的内置列表）",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "推荐",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "推荐（{level}）",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "关闭",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "低",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "中",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "高",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "最高",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.levelsUnknown": "这个服务没有说明此模型支持哪些思考强度，所以由服务自行决定。",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "7bb5384"
+  },
+  "ai.cloud.maxOutput": "最长回复：{outputText} {output, plural, other {个 token}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "重新检查",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

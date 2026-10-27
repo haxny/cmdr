@@ -91,7 +91,7 @@
   },
   "queryUi.ai.openSettings": "AI-beállítások megnyitása",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "Az index kész · {countText} {count, plural, one {bejegyzés} other {bejegyzés}}",
   "@queryUi.empty.indexReady": {

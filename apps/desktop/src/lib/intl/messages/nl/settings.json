@@ -1224,6 +1224,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Inspanning",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Hoelang het model nadenkt voordat het antwoordt. Meer inspanning helpt bij lastige taken, maar antwoorden komen trager en het nadenken wordt gefactureerd als uitvoer.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "redeneren, nadenken, denken, denktijd, diepte, snelheid, kosten, kwaliteit",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Contextvenster",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2287,9 +2299,9 @@
   "@settings.askCmdr.cloudOffHint": {
     "sourceHash": "1d3ec5d"
   },
-  "settings.askCmdr.openAiSettings": "Open AI-instellingen",
+  "settings.askCmdr.openAiSettings": "Ga naar AI-instellingen",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Aanbieder en model",
   "@settings.askCmdr.provider.title": {
@@ -2323,9 +2335,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Hoeveel van het gesprek Cmdr naar het model stuurt. Automatisch volgt de bekende limiet van je model.",
+  "settings.askCmdr.chatMemorySize.description": "Hoeveel van het gesprek Cmdr naar het model stuurt. Automatisch gebruikt het hele contextvenster van je model; een grootte legt een lagere limiet op, zodat je minder uitgeeft.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatisch (aanbevolen)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

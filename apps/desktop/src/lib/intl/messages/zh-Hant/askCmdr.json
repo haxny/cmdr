@@ -720,6 +720,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "設定 AI 提供者後就能傳送",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr 需要一個 AI 提供者才能聊天。請到「設定」選一個。",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "你的雲端 AI 提供者需要 API 金鑰，Ask Cmdr 才能聊天。請到「設定」加入。",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "你的雲端 AI 提供者需要網址，Ask Cmdr 才能聊天。請到「設定」加入。",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "本機 AI 還沒下載，所以 Ask Cmdr 沒辦法聊天。請到「設定」完成設定。",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "本機 AI 沒有在執行，所以 Ask Cmdr 沒辦法聊天。請到「設定」啟動。",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "開啟 AI 設定",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "移除附件",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -746,7 +774,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "開啟 AI 設定",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "要忘記 Cmdr 記住的關於你的一切嗎？",
   "@askCmdr.forget.title": {
@@ -1047,6 +1075,10 @@
   "askCmdr.context.tooltip": "已用 {usedText} / {budgetText} 個 {budget, plural, other {token}}（估算）",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "每則訊息一開始就占用 {usedText} / {budgetText} 個 {budget, plural, other {token}}（估算），用於 Cmdr 的指示和工具",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr 正在看看有什麼變化。開啟對話。",
   "@askCmdr.wake.thinking": {

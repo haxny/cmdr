@@ -263,6 +263,50 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Contextvenster: {windowText} {window, plural, one {token} other {tokens}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Contextvenster: ongeveer {windowText} {window, plural, one {token} other {tokens}} (uit de ingebouwde lijst van Cmdr)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Aanbevolen",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Aanbevolen ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Uit",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Laag",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Gemiddeld",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "Hoog",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Maximaal",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.levelsUnknown": "Deze service geeft niet aan welke inspanningsniveaus dit model aankan, dus de service beslist zelf.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "7bb5384"
+  },
+  "ai.cloud.maxOutput": "Langste antwoord: {outputText} {output, plural, one {token} other {tokens}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Controleer opnieuw",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

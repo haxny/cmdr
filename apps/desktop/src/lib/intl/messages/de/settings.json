@@ -1222,6 +1222,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Aufwand",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Wie lange das Modell nachdenkt, bevor es antwortet. Mehr Aufwand hilft bei kniffligen Aufgaben, aber Antworten kommen langsamer, und das Nachdenken wird als Ausgabe berechnet.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "Denken, Nachdenken, Überlegen, Reasoning, Denkzeit, Tiefe, Geschwindigkeit, Kosten, Qualität",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Kontextfenster",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2289,7 +2301,7 @@
   },
   "settings.askCmdr.openAiSettings": "KI-Einstellungen öffnen",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Anbieter und Modell",
   "@settings.askCmdr.provider.title": {
@@ -2323,9 +2335,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Wie viel der Unterhaltung Cmdr an das Modell sendet. Automatisch richtet sich nach dem bekannten Limit deines Modells.",
+  "settings.askCmdr.chatMemorySize.description": "Wie viel der Unterhaltung Cmdr an das Modell sendet. Automatisch nutzt das ganze Kontextfenster deines Modells; mit einer festen Größe setzt du eine niedrigere Grenze und sparst Kosten.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatisch (empfohlen)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

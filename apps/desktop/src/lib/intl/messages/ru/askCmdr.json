@@ -721,6 +721,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "Настройте поставщика ИИ, чтобы отправить",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Для общения Ask Cmdr нужен поставщик ИИ. Выберите его в настройках.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Облачному поставщику ИИ нужен API-ключ, чтобы Ask Cmdr мог общаться. Добавьте его в настройках.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Облачному поставщику ИИ нужен адрес, чтобы Ask Cmdr мог общаться. Добавьте его в настройках.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Локальный ИИ еще не загружен, поэтому Ask Cmdr не может общаться. Установите его в настройках.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Локальный ИИ не запущен, поэтому Ask Cmdr не может общаться. Запустите его в настройках.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Открыть настройки ИИ",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Удалить вложение",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -747,7 +775,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "Открыть настройки ИИ",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Забыть все, что Cmdr помнит о вас?",
   "@askCmdr.forget.title": {
@@ -1048,6 +1076,10 @@
   "askCmdr.context.tooltip": "Использовано примерно {usedText} из {budgetText} {budget, plural, one {токена} few {токенов} many {токенов} other {токена}}",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Каждое сообщение начинается примерно с {usedText} из {budgetText} {budget, plural, one {токена} few {токенов} many {токенов} other {токена}} на инструкции и инструменты Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr просматривает изменения. Откройте чат.",
   "@askCmdr.wake.thinking": {

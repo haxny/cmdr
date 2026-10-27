@@ -720,6 +720,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "设置 AI 提供方后即可发送",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr 需要一个 AI 提供方才能聊天。请在“设置”中选择一个。",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "你的云端 AI 提供方需要 API 密钥，Ask Cmdr 才能聊天。请在“设置”中添加。",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "你的云端 AI 提供方需要一个地址，Ask Cmdr 才能聊天。请在“设置”中添加。",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "本地 AI 尚未下载，所以 Ask Cmdr 无法聊天。请在“设置”中完成设置。",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "本地 AI 没有运行，所以 Ask Cmdr 无法聊天。请在“设置”中启动。",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "打开 AI 设置",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "移除附件",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -746,7 +774,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "打开 AI 设置",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "忘掉 Cmdr 记住的关于你的一切？",
   "@askCmdr.forget.title": {
@@ -1047,6 +1075,10 @@
   "askCmdr.context.tooltip": "已使用 {usedText} / {budgetText} {budget, plural, other {个 token}}（估算）",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "每条消息一开始就占用 {usedText} / {budgetText} {budget, plural, other {个 token}}（估算），用于 Cmdr 的指令和工具",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr 正在看看有哪些变化。打开聊天。",
   "@askCmdr.wake.thinking": {

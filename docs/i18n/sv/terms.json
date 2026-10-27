@@ -701,11 +701,23 @@
     "forms": "ansluta, Anslut, Ansluter till {name}…, anslutning, ansluten; Connect as guest → Anslut som gäst",
     "sources": "macOS Finder (Anslut till server, Ansluter till ^0…)"
   },
+  "conversation": {
+    "chosen": "samtal",
+    "confidence": "high",
+    "accept": ["konversation", "chatt"],
+    "sources": "shipped settings.askCmdr.chatMemorySize.description and the chat ruling's note (conversation → samtal); MS terminology says konversation"
+  },
   "learn-more": {
     "chosen": "Mer om",
     "confidence": "high",
     "forms": "More about “X” → Mer om ”X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "nivå",
+    "confidence": "high",
+    "sources": "MS terminology (nivå); shipped settings.archives.compressionLevel.label",
+    "accept": ["nivåer", "zoom"]
   },
   "link": {
     "chosen": "länk",
@@ -3235,7 +3247,8 @@
   "thinking": {
     "chosen": "Tänker…",
     "confidence": "high",
-    "sources": "plain Swedish"
+    "sources": "plain Swedish",
+    "proseAccept": ["tänk"]
   },
   "this-mac": {
     "accept": ["den här datorn", "din Mac"],

@@ -1218,6 +1218,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Глубина размышлений",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Сколько модель размышляет перед ответом. Глубокие размышления помогают со сложными задачами, но ответы приходят медленнее, а размышления оплачиваются как вывод модели.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "усилие, рассуждение, размышление, думать, уровень, скорость, стоимость, качество",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Контекстное окно",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2278,7 +2290,7 @@
   },
   "settings.askCmdr.openAiSettings": "Открыть настройки ИИ",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Поставщик и модель",
   "@settings.askCmdr.provider.title": {
@@ -2312,9 +2324,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Какую часть разговора Cmdr отправляет модели. Вариант «Автоматически» учитывает известный лимит вашей модели.",
+  "settings.askCmdr.chatMemorySize.description": "Какую часть разговора Cmdr отправляет модели. Вариант «Автоматически» использует все контекстное окно вашей модели, а заданный размер ограничивает его, чтобы тратить меньше.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Автоматически (рекомендуется)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

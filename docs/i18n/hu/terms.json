@@ -850,6 +850,12 @@
     "forms": "More about “X” → Bővebben: X (a colon, no quotes)",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
+  "level": {
+    "chosen": "szint",
+    "confidence": "high",
+    "sources": "MS terminology (szint); shipped settings.archives.compressionLevel.label",
+    "accept": ["szintek", "nagyítás"]
+  },
   "link": {
     "chosen": "link",
     "confidence": "high",

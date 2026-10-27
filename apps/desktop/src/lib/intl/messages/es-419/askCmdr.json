@@ -390,5 +390,29 @@
   "askCmdr.railBoundary.closedToast": "Ask Cmdr tuvo un problema y se cerró. Vuelve a abrirlo para seguir.",
   "@askCmdr.railBoundary.closedToast": {
     "sourceHash": "017a215"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr necesita un proveedor de IA para chatear. Elige uno en Configuración.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "3bfdf76"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Tu proveedor de IA en la nube necesita una clave de API para que Ask Cmdr pueda chatear. Agrégala en Configuración.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "8ed76f6"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Tu proveedor de IA en la nube necesita una dirección para que Ask Cmdr pueda chatear. Agrégala en Configuración.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "e7bf67b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "La IA local todavía no se descargó, así que Ask Cmdr no puede chatear. Prepárala en Configuración.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "aade8d0"
+  },
+  "askCmdr.providerNotice.localNotRunning": "La IA local no está en marcha, así que Ask Cmdr no puede chatear. Iníciala en Configuración.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "fbd98ad"
+  },
+  "askCmdr.providerNotice.openSettings": "Abrir la configuración de IA",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "1994c72"
   }
 }

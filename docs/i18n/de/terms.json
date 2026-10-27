@@ -312,6 +312,17 @@
     "forms": "pl. Spalten; the Name column → die Spalte Name / Namensspalte; sort column → Sortierspalte; column width → Spaltenbreite",
     "sources": "macOS Finder (FI43 Spalten, SV1 die Spalte „Name“, Spaltendarstellung), AppKit Browser (Breite dieser Spalte anpassen); catalog"
   },
+  "context-window": {
+    "chosen": "Kontextfenster",
+    "confidence": "high",
+    "sources": "shipped settings.ai.localContextSize.label and settings.askCmdr.chatMemorySize.keywords"
+  },
+  "conversation": {
+    "chosen": "Unterhaltung",
+    "confidence": "high",
+    "sources": "MS terminology (Unterhaltung); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["Chat"]
+  },
   "damaged": {
     "chosen": "beschädigt",
     "confidence": "high",
@@ -761,6 +772,12 @@
     "confidence": "high",
     "forms": "More about “X” → Mehr über „X“",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "Stufe",
+    "confidence": "high",
+    "sources": "shipped settings.archives.compressionLevel.label (Komprimierungsstufe) over MS Ebene (a layer)",
+    "accept": ["Stufen", "Zoom"]
   },
   "link": {
     "chosen": "Link",
@@ -1424,6 +1441,12 @@
     "forms": "the whole-run time-left label → Insgesamt: {eta}",
     "sources": "GN insgesamt; DC Gesamt: (the label form, read stiffer before a time phrase)"
   },
+  "recommended": {
+    "chosen": "Empfohlen",
+    "confidence": "high",
+    "accept": ["empfohlen"],
+    "sources": "MS terminology (Empfohlen); shipped onboarding.stepAi.cloud.recommended"
+  },
   "scroll": {
     "accept": ["Scrollen", "scrollt"],
     "avoid": [
@@ -1518,6 +1541,12 @@
     "confidence": "high",
     "forms": "Step 1 of 2: X → Schritt 1 von 2: X (the X keeps its standalone form)",
     "sources": "MS terminology (step → Schritt); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)"
+  },
+  "thinking": {
+    "chosen": "Denkt nach …",
+    "confidence": "tentative",
+    "accept": ["nachdenk", "Nachdenken", "Denkt nach"],
+    "sources": "shipped askCmdr.thinking; no AI-assistant precedent in the pile"
   },
   "web": {
     "accept": ["Web"],

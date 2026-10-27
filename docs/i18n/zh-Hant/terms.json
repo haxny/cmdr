@@ -835,6 +835,12 @@
     "forms": "a button or status → 連線 (已連線, 正在連線⋯); the verb in a sentence or command name → 連接 (連接伺服器⋯); casual → 連上 / 連著 / 連不上; a network connection → 網路連線",
     "sources": "AP-TW = AP-HK (Connect → 連線; Connect to Server… → 連接伺服器⋯), MS"
   },
+  "conversation": {
+    "chosen": "對話",
+    "confidence": "high",
+    "sources": "MS terminology (對話); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["聊"]
+  },
   "link": {
     "chosen": "連結",
     "confidence": "high",
@@ -1970,6 +1976,17 @@
     "confidence": "high",
     "sources": "AP-TW SystemSettings (Install → 安裝), MS (3 entries)"
   },
+  "recommended": {
+    "chosen": "推薦",
+    "confidence": "tentative",
+    "accept": ["建議"],
+    "sources": "MS terminology (推薦項目); shipped onboarding.stepAi.cloud.recommended. 建議 also ships (settings.askCmdr.chatMemorySize.opt.auto, onboarding.stepOptional.recommendedOn)"
+  },
+  "thinking": {
+    "chosen": "思考",
+    "confidence": "high",
+    "sources": "shipped askCmdr.thinking (正在思考⋯), same as zh 思考"
+  },
   "uninstall": {
     "chosen": "解除安裝",
     "confidence": "high",
@@ -2112,7 +2129,10 @@
     "chosen": "層級",
     "confidence": "high",
     "forms": "compression level → 壓縮層級; a log level → debug 層級; reset the zoom level to a percentage → 縮放比例 (reads naturally beside 100%)",
-    "sources": "MS compression level → 壓縮層級; TC WCMD.LNG 5235; AP (75 TW / 47 HK)"
+    "sources": "MS compression level → 壓縮層級; TC WCMD.LNG 5235; AP (75 TW / 47 HK)",
+    "exceptions": {
+      "ai.cloud.effort.levelsUnknown": "The effort levels are named by the picker’s own label 思考強度 (settings.ai.reasoningEfforts.label), so 層級 would add a second name for the same setting."
+    }
   },
   "license": {
     "accept": ["訂閱", "永久", "商業"],

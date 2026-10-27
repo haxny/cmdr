@@ -721,6 +721,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "Thiết lập một nhà cung cấp AI để gửi",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr cần một nhà cung cấp AI để trò chuyện. Hãy chọn một nhà cung cấp trong Cài đặt.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Nhà cung cấp AI đám mây của bạn cần khóa API thì Ask Cmdr mới trò chuyện được. Hãy thêm khóa trong Cài đặt.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Nhà cung cấp AI đám mây của bạn cần một địa chỉ thì Ask Cmdr mới trò chuyện được. Hãy thêm địa chỉ trong Cài đặt.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "AI cục bộ chưa được tải về nên Ask Cmdr chưa thể trò chuyện. Hãy thiết lập trong Cài đặt.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "AI cục bộ chưa chạy nên Ask Cmdr chưa thể trò chuyện. Hãy khởi động trong Cài đặt.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Mở cài đặt AI",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Gỡ bỏ tệp đính kèm",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -747,7 +775,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "Mở cài đặt AI",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Quên mọi thứ Cmdr đang nhớ về bạn?",
   "@askCmdr.forget.title": {
@@ -1049,6 +1077,10 @@
   "askCmdr.context.tooltip": "Đã dùng {usedText} trên {budgetText} {budget, plural, other {token}} (ước tính)",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Mỗi tin nhắn bắt đầu với {usedText} trên {budgetText} {budget, plural, other {token}} (ước tính) dành cho hướng dẫn và công cụ của Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr đang xem qua những gì đã thay đổi. Mở cuộc trò chuyện.",
   "@askCmdr.wake.thinking": {

@@ -1220,6 +1220,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Gondolkodási szint",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "Mennyi ideig gondolkodik a modell, mielőtt válaszol. Több gondolkodás segít a trükkös feladatoknál, de a válaszok lassabban érkeznek, és a gondolkodást kimenetként számlázzák.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "erőfeszítés, érvelés, gondolkodás, gondolkodik, mélység, sebesség, költség, minőség",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Kontextusablak",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2282,7 +2294,7 @@
   },
   "settings.askCmdr.openAiSettings": "AI-beállítások megnyitása",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Szolgáltató és modell",
   "@settings.askCmdr.provider.title": {
@@ -2316,9 +2328,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "A beszélgetésből ennyit küld el a Cmdr a modellnek. Az automatikus a modell ismert korlátját követi.",
+  "settings.askCmdr.chatMemorySize.description": "A beszélgetésből ennyit küld el a Cmdr a modellnek. Az automatikus a modell teljes kontextusablakát használja; egy megadott méret alacsonyabb korlátot szab, így kevesebbet költesz.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatikus (ajánlott)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

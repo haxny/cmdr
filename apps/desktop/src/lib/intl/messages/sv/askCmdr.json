@@ -721,6 +721,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "Ställ in en AI-leverantör för att skicka",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr behöver en AI-leverantör för att chatta. Välj en i Inställningar.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Din moln-AI-leverantör behöver en API-nyckel innan Ask Cmdr kan chatta. Lägg till den i Inställningar.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Din moln-AI-leverantör behöver en adress innan Ask Cmdr kan chatta. Lägg till den i Inställningar.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Lokal AI är inte hämtad än, så Ask Cmdr kan inte chatta. Ställ in den i Inställningar.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Lokal AI körs inte, så Ask Cmdr kan inte chatta. Starta den i Inställningar.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Gå till AI-inställningar",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Ta bort bilaga",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -745,9 +773,9 @@
   "@askCmdr.gate.cloudOff.body": {
     "sourceHash": "d3d3252"
   },
-  "askCmdr.gate.cloudOff.openSettings": "Öppna AI-inställningar",
+  "askCmdr.gate.cloudOff.openSettings": "Gå till AI-inställningar",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Glömma allt som Cmdr minns om dig?",
   "@askCmdr.forget.title": {
@@ -1049,6 +1077,10 @@
   "askCmdr.context.tooltip": "{usedText} av {budgetText} {budget, plural, one {token} other {tokens}} använda (uppskattat)",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Varje meddelande börjar med {usedText} av {budgetText} {budget, plural, one {token} other {tokens}} (uppskattat) för Cmdrs instruktioner och verktyg",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr tar en titt på vad som har ändrats. Öppna chatten.",
   "@askCmdr.wake.thinking": {

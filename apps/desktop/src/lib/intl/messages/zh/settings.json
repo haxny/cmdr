@@ -1220,6 +1220,18 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "思考强度",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.description": "模型在回答前思考多久。强度越高，越能处理棘手的任务，但回复会更慢，思考过程也按输出计费。",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "推理、思考、强度、深度、速度、费用、成本、质量",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "上下文窗口",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2281,7 +2293,7 @@
   },
   "settings.askCmdr.openAiSettings": "打开 AI 设置",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "提供方和模型",
   "@settings.askCmdr.provider.title": {
@@ -2315,9 +2327,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Cmdr 向模型发送多少聊天内容。自动会跟随你的模型的已知上限。",
+  "settings.askCmdr.chatMemorySize.description": "Cmdr 向模型发送多少聊天内容。自动会用满你的模型的整个上下文窗口；选一个大小则会设定更低的上限，花费更少。",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "自动（推荐）",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

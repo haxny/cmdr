@@ -1223,6 +1223,19 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label": "Effort",
+  "@settings.ai.reasoningEfforts.label": {
+    "sourceHash": "4387e5d",
+    "sameAsSourceJustification": "Effort is a native French noun (masc.), the same word MS terminology gives for effort; the picker's options agree with it (Faible, Moyen, Élevé)."
+  },
+  "settings.ai.reasoningEfforts.description": "Durée pendant laquelle le modèle réfléchit avant de répondre. Plus d’effort aide pour les tâches délicates, mais les réponses arrivent plus lentement et la réflexion est facturée comme sortie.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "raisonnement, réfléchir, réflexion, profondeur, vitesse, coût, qualité",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "e543d08"
+  },
   "settings.ai.localContextSize.label": "Fenêtre de contexte",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2293,7 +2306,7 @@
   },
   "settings.askCmdr.openAiSettings": "Ouvrir les réglages d’IA",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Fournisseur et modèle",
   "@settings.askCmdr.provider.title": {
@@ -2327,9 +2340,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Quelle part de la conversation Cmdr envoie au modèle. Automatique suit la limite connue de votre modèle.",
+  "settings.askCmdr.chatMemorySize.description": "Quelle part de la conversation Cmdr envoie au modèle. Automatique utilise toute la fenêtre de contexte de votre modèle ; une taille fixe une limite plus basse pour dépenser moins.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatique (recommandé)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {

@@ -767,11 +767,23 @@
     "note": "`se connecter` is the network action; signing in is `s’identifier`.",
     "sources": "macOS Finder (\"Se connecter comme…\", MenuBar 266.title, MN1 « Connexion à « ^0 »… »)"
   },
+  "conversation": {
+    "chosen": "conversation",
+    "confidence": "high",
+    "sources": "MS terminology (conversation, f.); same word as the chat ruling",
+    "accept": ["conversations", "discut"]
+  },
   "learn-more": {
     "chosen": "En savoir plus sur",
     "confidence": "high",
     "forms": "More about “X” → En savoir plus sur « X »",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "niveau",
+    "confidence": "high",
+    "sources": "MS terminology (niveau); shipped settings.archives.compressionLevel.label",
+    "accept": ["niveaux", "zoom"]
   },
   "link": {
     "chosen": "lien",
@@ -3386,7 +3398,8 @@
     "confidence": "tentative",
     "decision": "Ask Cmdr",
     "forms": "single … character, as the EN source",
-    "sources": "descriptive FR noun-status"
+    "sources": "descriptive FR noun-status",
+    "proseAccept": ["réfléchi", "réflexion"]
   },
   "this-mac": {
     "accept": ["votre Mac"],

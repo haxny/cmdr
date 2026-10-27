@@ -724,6 +724,34 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
+  "askCmdr.composer.sendNeedsProvider": "Stel een AI-aanbieder in om te versturen",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr heeft een AI-aanbieder nodig om te chatten. Kies er een in Instellingen.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Je cloud-AI-aanbieder heeft een API-sleutel nodig voordat Ask Cmdr kan chatten. Voeg die in Instellingen toe.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Je cloud-AI-aanbieder heeft een adres nodig voordat Ask Cmdr kan chatten. Voeg dat in Instellingen toe.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Lokale AI is nog niet gedownload, dus Ask Cmdr kan niet chatten. Stel die in bij Instellingen.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Lokale AI draait niet, dus Ask Cmdr kan niet chatten. Start die in Instellingen.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Ga naar AI-instellingen",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
   "askCmdr.attachment.remove": "Verwijder bijlage",
   "@askCmdr.attachment.remove": {
     "sourceHash": "595b066"
@@ -748,9 +776,9 @@
   "@askCmdr.gate.cloudOff.body": {
     "sourceHash": "d3d3252"
   },
-  "askCmdr.gate.cloudOff.openSettings": "Open AI-instellingen",
+  "askCmdr.gate.cloudOff.openSettings": "Ga naar AI-instellingen",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Alles vergeten wat Cmdr over je onthoudt?",
   "@askCmdr.forget.title": {
@@ -1052,6 +1080,10 @@
   "askCmdr.context.tooltip": "{usedText} van {budgetText} {budget, plural, one {token} other {tokens}} gebruikt (geschat)",
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Elk bericht begint met {usedText} van {budgetText} {budget, plural, one {token} other {tokens}} (geschat) voor de instructies en hulpmiddelen van Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
   },
   "askCmdr.wake.thinking": "Cmdr kijkt even naar wat er is veranderd. Open de chat.",
   "@askCmdr.wake.thinking": {

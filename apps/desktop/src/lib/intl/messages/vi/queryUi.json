@@ -91,7 +91,7 @@
   },
   "queryUi.ai.openSettings": "Mở cài đặt AI",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "Chỉ mục đã sẵn sàng · {countText} {count, plural, other {mục}}",
   "@queryUi.empty.indexReady": {
