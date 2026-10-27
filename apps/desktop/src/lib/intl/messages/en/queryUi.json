@@ -119,7 +119,7 @@
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
   },
-  "queryUi.ai.openSettings": "Open AI settings",
+  "queryUi.ai.openSettings": "Go to AI settings",
   "@queryUi.ai.openSettings": {
     "description": "Button that opens Settings > AI > Provider, where the Allow cloud AI switch is. Shown under queryUi.ai.cloudOff.body, and as the action on the Cloud AI is off toast. Starts with a verb. Sentence case.",
     "screenshot": "search-dialog.png",

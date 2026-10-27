@@ -924,7 +924,7 @@
   "@askCmdr.providerNotice.localNotRunning": {
     "description": "Yellow notice at the top of the Ask Cmdr side panel when local (on-device) AI is picked and downloaded, but its server isn't running. A link that opens Settings > AI > Provider follows. Friendly; avoids the words error and failed. The apostrophes are U+2019."
   },
-  "askCmdr.providerNotice.openSettings": "Open AI settings",
+  "askCmdr.providerNotice.openSettings": "Go to AI settings",
   "@askCmdr.providerNotice.openSettings": {
     "description": "Link under the yellow no-AI-provider notice in the Ask Cmdr side panel. Opens Settings > AI > Provider. Starts with a verb. Sentence case."
   },
@@ -955,7 +955,7 @@
   "@askCmdr.gate.cloudOff.body": {
     "description": "Line under askCmdr.gate.cloudOff.title in the Ask Cmdr side panel. \"Allow cloud AI\" is the switch label (ai.cloudConsent.label); translate it the same way. A button that opens the AI settings follows. The apostrophe is U+2019."
   },
-  "askCmdr.gate.cloudOff.openSettings": "Open AI settings",
+  "askCmdr.gate.cloudOff.openSettings": "Go to AI settings",
   "@askCmdr.gate.cloudOff.openSettings": {
     "description": "Primary button in the Ask Cmdr side panel that opens Settings > AI > Provider, where the Allow cloud AI switch is. Starts with a verb. Sentence case."
   },
