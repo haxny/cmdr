@@ -314,7 +314,9 @@ describe('MultiRenameDialog Tags tab', () => {
       ipc.applyMultiRename.mockResolvedValue({ ok: true, value: { operationId: 'op', renaming: 1 } })
       confirmDialog.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
       await mountDirty()
-      // The footer's Rename button stays live on the Tags tab; it goes through the same guard.
+      // The footer's Rename button is the Rename tab's; with tag edits unwritten it goes through the guard.
+      tab('Rename').click()
+      await settle()
       button('Rename 1').click()
       await settle()
       expect(confirmDialog).toHaveBeenCalledTimes(1)
@@ -426,6 +428,8 @@ describe('MultiRenameDialog Tags tab', () => {
       tab('Tags').click()
       await settle()
       await typeThenBlur()
+      tab('Rename').click()
+      await settle()
       button('Rename 1').click()
       await settle()
       release()
@@ -465,6 +469,31 @@ describe('MultiRenameDialog Tags tab', () => {
       expect(ipc.rollbackOperation).toHaveBeenCalledWith('op9')
       expect(onUndoStarted).toHaveBeenCalledTimes(1)
       setLastMultiRenameRun(null)
+    })
+
+    it('on the Tags tab the sheet has no Rename button, and Start (⌘⏎) lists the tag changes instead of renaming', async () => {
+      ipc.getTagChanges.mockResolvedValue({ ok: true, value: [] })
+      flags.tagEditor = true
+      const spy = vi.spyOn(globalThis, 'navigator', 'get')
+      spy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
+      try {
+        await mountDirty()
+        const renameButtons = [...document.querySelectorAll('button:not([role="tab"])')].filter((b) =>
+          b.textContent.trim().startsWith('Rename'),
+        )
+        expect(renameButtons).toEqual([])
+        document
+          .querySelector('.modal-overlay')
+          ?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }),
+          )
+        await settle()
+        expect(ipc.getTagChanges).toHaveBeenCalledWith('S')
+        expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+        expect(confirmDialog).not.toHaveBeenCalled()
+      } finally {
+        spy.mockRestore()
+      }
     })
 
     it('⌘2 then ⌘1 while a Tags box is focused commits its text first', async () => {

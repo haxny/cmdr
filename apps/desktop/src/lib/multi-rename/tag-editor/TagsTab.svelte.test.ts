@@ -53,6 +53,9 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [{ fileName: 'front.jpg', size: 10 }] })),
     coverFromFile: vi.fn(() => Promise.resolve()),
     coverImage: vi.fn(() => Promise.resolve(null)),
+    undoable: null,
+    settled: vi.fn(() => Promise.resolve()),
+    tool: vi.fn(() => Promise.resolve()),
   }
   const mounted = await mountInto(TagsTab, { state: state as unknown as TagEditorState })
   cleanup = mounted.cleanup
@@ -90,6 +93,34 @@ describe('TagsTab', () => {
     expect(root.querySelector('[role="alert"]')?.textContent).toBe(text)
     expect(root.querySelector('table')).not.toBeNull()
   })
+
+  it('a tool waits for an edit in flight, then runs', async () => {
+    const { root, state } = await mountTab()
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Strip track prefix')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.settled).toHaveBeenCalled()
+    expect(state.tool).toHaveBeenCalledWith({ kind: 'stripTrackPrefix' })
+  })
+
+  it('Case changes the field whose box last had focus', async () => {
+    const { root, state } = await mountTab()
+    byId(root, 'tag-field-album').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'lower case')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.tool).toHaveBeenCalledWith({ kind: 'case', case: 'lower', fields: ['album'] })
+  })
+
+  it.each([[{ kind: 'undo', error: { type: 'notSupported' } }], [{ kind: 'noAppDataDir' }]] as const)(
+    'an undo store refusal (%j) says nothing was changed',
+    async (error) => {
+      const { root } = await mountTab({ error })
+      expect(root.querySelector('[role="alert"]')?.textContent).toBe(
+        'Couldn’t use the store that keeps the old tags for Undo, so no file was changed.',
+      )
+    },
+  )
 
   it('read-only says why and locks every box and button', async () => {
     const { root } = await mountTab({ view: { ...VIEW, editable: false, readOnlyReason: 'remoteVolume' } })

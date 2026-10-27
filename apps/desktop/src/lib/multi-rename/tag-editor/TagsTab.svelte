@@ -1,14 +1,21 @@
 <script lang="ts">
     /**
-     * The Tags tab of the Multi-Rename sheet, foobar2000 Properties style: the tags the files share, the track list
-     * (title and number edit in place) and the cover. It opens the tag session the first time it shows.
+     * The Tags tab of the Multi-Rename sheet, foobar2000 Properties style: the clean-up tools, the tags the files
+     * share, the track list (title and number edit in place), the cover, and the write (`ApplyPanel`). It opens the tag
+     * session the first time it shows. The sheet's Start comes to `start()` while the tab shows.
      */
     import { onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import type { TagField, TagTool } from '#lib/ipc/bindings.js'
+    import type { TagEdit } from '#lib/tauri-commands/index.js'
+    import ApplyPanel from './ApplyPanel.svelte'
     import CoverPanel from './CoverPanel.svelte'
     import SharedFieldsTable from './SharedFieldsTable.svelte'
+    import TagToolsBar from './TagToolsBar.svelte'
     import TrackList from './TrackList.svelte'
+    import { focusedFieldOf } from './tag-tools'
+    import type { TagsTabApi } from './sheet-tab'
     import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
 
     interface Props {
@@ -29,9 +36,27 @@
             case 'badCoverName':
             case 'coverUnreadable':
                 return 'multiRename.tags.cover.unreadable'
+            case 'undo':
+            case 'noAppDataDir':
+                return 'multiRename.tags.undoStoreFailed'
             default:
                 return 'multiRename.tags.editFailed'
         }
+    }
+
+    /** The field whose box last had focus, for Case; focus on anything else in the tags clears it. */
+    let focusedField = $state<TagField | null>(null)
+    let applyPanel = $state<TagsTabApi>()
+
+    /** A tool works on what the files hold now, so an edit a blur just sent lands first. */
+    async function runTool(tool: TagTool): Promise<void> {
+        await tags.settled()
+        await tags.tool(tool)
+    }
+
+    /** The sheet's Start while this tab shows: the Apply panel lists the changes, then writes them. */
+    export async function start(): Promise<void> {
+        await applyPanel?.start()
     }
 
     async function listCandidates() {
@@ -55,10 +80,17 @@
         {#if tags.error !== null}
             <p class="notice" role="alert">{tString(editErrorKey(tags.error))}</p>
         {/if}
-        <div class="columns">
+        <TagToolsBar
+            trackCount={view.tracks.length}
+            extras={view.extras}
+            {focusedField}
+            disabled={!view.editable}
+            onTool={(tool: TagTool) => void runTool(tool)}
+        />
+        <div class="columns" onfocusin={(e) => { focusedField = e.target instanceof HTMLElement ? focusedFieldOf(e.target.id) : null }}>
             <div class="main">
-                <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits) => tags.edit(edits)} />
-                <TrackList tracks={view.tracks} editable={view.editable} onEdit={(edits) => tags.edit(edits)} />
+                <SharedFieldsTable rows={view.shared} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
+                <TrackList tracks={view.tracks} editable={view.editable} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
             </div>
             <aside class="side">
                 <CoverPanel
@@ -66,11 +98,12 @@
                     editable={view.editable}
                     {listCandidates}
                     loadImage={() => tags.coverImage()}
-                    onPick={(fileName) => void tags.coverFromFile(fileName)}
-                    onEdit={(edits) => tags.edit(edits)}
+                    onPick={(fileName: string) => void tags.coverFromFile(fileName)}
+                    onEdit={(edits: TagEdit[]) => tags.edit(edits)}
                 />
             </aside>
         </div>
+        <ApplyPanel bind:this={applyPanel} {tags} />
     {/if}
 </div>
 

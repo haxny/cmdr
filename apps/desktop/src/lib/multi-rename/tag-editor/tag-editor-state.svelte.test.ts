@@ -24,6 +24,7 @@ vi.mock('#lib/logging/logger.js', () => ({
 }))
 
 import { createTagEditorState } from './tag-editor-state.svelte'
+import { getLastTagApply, setLastTagApply } from './last-tag-apply.svelte'
 
 const VIEW = { editable: true, tracks: [{}, {}], dirty: false } as unknown as TagEditorView
 const EDITED = { editable: true, tracks: [{}, {}], dirty: true } as unknown as TagEditorView
@@ -43,6 +44,7 @@ function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  setLastTagApply(null)
   ipc.closeTagEditor.mockResolvedValue(undefined)
 })
 
@@ -192,6 +194,82 @@ describe('createTagEditorState', () => {
     await state.apply(REQUEST)
     expect(await state.undo()).toEqual({ ok: false, error: { kind: 'undoUnavailable' } })
     expect(ipc.undoTagApply).not.toHaveBeenCalled()
+  })
+
+  it('a "Write anyway" apply continues the write: Undo reverses both, the last one first', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.applyTags
+      .mockResolvedValueOnce({ ok: true, value: report({ applyId: 'A1', written: ['/a.mp3', '/b.mp3'] }) })
+      .mockResolvedValueOnce({ ok: true, value: report({ applyId: 'A2', written: ['/c.mp3'] }) })
+    ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: ['/x.mp3'], missing: [], failed: [] } })
+    const state = createTagEditorState('S')
+    await state.apply(REQUEST)
+    await state.apply(REQUEST, { continuing: true })
+    expect(state.undoable).toEqual({ applyIds: ['A1', 'A2'], written: 3 })
+    const res = await state.undo()
+    expect(ipc.undoTagApply.mock.calls).toEqual([['A2'], ['A1']])
+    expect(res).toEqual({ ok: true, value: { restored: ['/x.mp3', '/x.mp3'], missing: [], failed: [] } })
+    expect(state.undoable).toBeNull()
+  })
+
+  it('a new write replaces the last one, so Undo never reaches an older write', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.applyTags
+      .mockResolvedValueOnce({ ok: true, value: report({ applyId: 'A1' }) })
+      .mockResolvedValueOnce({ ok: true, value: report({ applyId: 'A2' }) })
+    const state = createTagEditorState('S')
+    await state.apply(REQUEST)
+    await state.apply(REQUEST)
+    expect(state.undoable).toEqual({ applyIds: ['A2'], written: 1 })
+  })
+
+  it('an undo that fails halfway keeps what is left undoable, and reloads what it restored', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    setLastTagApply({ applyIds: ['A1', 'A2'], written: 2 })
+    ipc.undoTagApply
+      .mockResolvedValueOnce({ ok: true, value: { restored: ['/b.mp3'], missing: [], failed: [] } })
+      .mockResolvedValueOnce({ ok: false, error: { kind: 'taskFailed' } })
+    const state = createTagEditorState('S')
+    await state.open()
+    const res = await state.undo()
+    expect(res.ok).toBe(false)
+    expect(state.error).toEqual({ kind: 'taskFailed' })
+    expect(getLastTagApply()).toEqual({ applyIds: ['A1'], written: 2 })
+    expect(ipc.openTagEditor).toHaveBeenCalledTimes(2)
+  })
+
+  it('an apply whose files could not all be restored stays undoable', async () => {
+    setLastTagApply({ applyIds: ['A1'], written: 2 })
+    ipc.undoTagApply.mockResolvedValue({
+      ok: true,
+      value: { restored: ['/a.mp3'], missing: [], failed: [['/b.mp3', { type: 'notSupported' }]] },
+    })
+    const state = createTagEditorState('S')
+    expect((await state.undo()).ok).toBe(true)
+    expect(getLastTagApply()).toEqual({ applyIds: ['A1'], written: 2 })
+  })
+
+  it('the write outlives the sheet: a new state of a later sheet can undo it', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: report({ applyId: 'A7' }) })
+    ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: [], missing: [], failed: [] } })
+    const first = createTagEditorState('S')
+    await first.apply(REQUEST)
+    await first.close()
+    const later = createTagEditorState('T')
+    expect(later.undoable).toEqual({ applyIds: ['A7'], written: 1 })
+    await later.undo()
+    expect(ipc.undoTagApply).toHaveBeenCalledWith('A7')
+    // The later sheet never showed its Tags tab, so the undo opens no tag session for it.
+    expect(ipc.openTagEditor).not.toHaveBeenCalledWith('T')
+  })
+
+  it('reload reads every file again', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    const state = createTagEditorState('S')
+    await state.reload()
+    expect(ipc.openTagEditor).toHaveBeenCalledWith('S', true)
+    expect(state.view).toBe(VIEW)
   })
 
   it('close ends the backend session and drops the view', async () => {

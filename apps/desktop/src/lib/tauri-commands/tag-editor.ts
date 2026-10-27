@@ -87,6 +87,6 @@ export async function setCoverFromFile(sessionId: string, fileName: string): Pro
 }
 
 /** The cover every file shares, with its bytes (for a thumbnail), or `null` when there is none or the files differ. */
-export async function getCoverImage(sessionId: string): Promise<TagEditorResult<CoverImage | null>> {
+export async function getCoverImage(sessionId: string): Promise<TagEditorResult<Cover_Serialize | null>> {
   return result(await commands.getCoverImage(sessionId))
 }

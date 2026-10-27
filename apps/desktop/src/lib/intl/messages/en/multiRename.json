@@ -1290,5 +1290,296 @@
     "placeholders": {
       "field": "the name of the tag the row edits, like Album or Genre"
     }
+  },
+  "multiRename.tags.tools.label": "Clean-up tools",
+  "@multiRename.tags.tools.label": {
+    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the row of clean-up tool buttons above the tags."
+  },
+  "multiRename.tags.tools.caseButton": "Case",
+  "@multiRename.tags.tools.caseButton": {
+    "description": "Shown in the Tags tab of Multi-Rename: a button in the clean-up tools row that opens the letter-case choices for tags. VERB-like label, short."
+  },
+  "multiRename.tags.tools.caseFields": "Changes: {fields}",
+  "@multiRename.tags.tools.caseFields": {
+    "description": "Shown in the Tags tab of Multi-Rename: under the letter-case choices, which tag fields a choice rewrites.",
+    "placeholders": {
+      "fields": "a list of tag field names, like Title, Album, Artist"
+    }
+  },
+  "multiRename.tags.tools.caseSentence": "Sentence case",
+  "@multiRename.tags.tools.caseSentence": {
+    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. Only the first letter upper case. The label shows its own effect."
+  },
+  "multiRename.tags.tools.caseTitle": "Title Case",
+  "@multiRename.tags.tools.caseTitle": {
+    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. Every word starts upper case. The label shows its own effect."
+  },
+  "multiRename.tags.tools.caseLower": "lower case",
+  "@multiRename.tags.tools.caseLower": {
+    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. All letters lower case. The label shows its own effect."
+  },
+  "multiRename.tags.tools.caseUpper": "UPPER CASE",
+  "@multiRename.tags.tools.caseUpper": {
+    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. All letters upper case. The label shows its own effect."
+  },
+  "multiRename.tags.tools.removeDiacritics": "Remove diacritics",
+  "@multiRename.tags.tools.removeDiacritics": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Removes accents (á→a) from every tag field except Comment and Description."
+  },
+  "multiRename.tags.tools.removeDiacriticsTooltip": "Removes diacritics from every field except Comment and Description.",
+  "@multiRename.tags.tools.removeDiacriticsTooltip": {
+    "description": "Shown in the Tags tab of Multi-Rename: tooltip of the Remove diacritics tool."
+  },
+  "multiRename.tags.tools.stripTrackPrefix": "Strip track prefix",
+  "@multiRename.tags.tools.stripTrackPrefix": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Removes a leading track number like \"01 - \" from every title."
+  },
+  "multiRename.tags.tools.renumber": "Renumber",
+  "@multiRename.tags.tools.renumber": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Numbers the tracks 1, 2, 3… in the list order. Hidden for a single file."
+  },
+  "multiRename.tags.tools.albumArtistFromArtist": "Album artist = Artist",
+  "@multiRename.tags.tools.albumArtistFromArtist": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Copies each file’s Artist into its Album artist. Keep the equals sign."
+  },
+  "multiRename.tags.tools.narratorFromText": "Narrator from text",
+  "@multiRename.tags.tools.narratorFromText": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Finds the narrator’s name in the description or comment and puts it in Performer."
+  },
+  "multiRename.tags.tools.clearRedundantTitles": "Clear title = album",
+  "@multiRename.tags.tools.clearRedundantTitles": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Empties a title that only repeats the album name. Keep the equals sign."
+  },
+  "multiRename.tags.tools.removeExtras": "Remove extras…",
+  "@multiRename.tags.tools.removeExtras": {
+    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button that opens a checklist of the extra (unmanaged) tags the files carry, to pick which to remove."
+  },
+  "multiRename.tags.tools.extrasLabel": "Extra tags to remove",
+  "@multiRename.tags.tools.extrasLabel": {
+    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the checklist of extra tags. Nothing is checked at first."
+  },
+  "multiRename.tags.tools.removeChecked": "{count, plural, one {Remove {countText} extra tag} other {Remove {countText} extra tags}}",
+  "@multiRename.tags.tools.removeChecked": {
+    "description": "Shown in the Tags tab of Multi-Rename: under the extras checklist, the button that removes the checked extra tags from every file.",
+    "placeholders": {
+      "countText": "how many extra tags are checked"
+    }
+  },
+  "multiRename.tags.kind.label": "Content",
+  "@multiRename.tags.kind.label": {
+    "description": "Shown in the Tags tab of Multi-Rename: the label of the Audiobook / Music choice next to Write tags. It decides how tag fields are stored."
+  },
+  "multiRename.tags.kind.audiobook": "Audiobook",
+  "@multiRename.tags.kind.audiobook": {
+    "description": "Shown in the Tags tab of Multi-Rename: one option of the Content choice (spoken-word book)."
+  },
+  "multiRename.tags.kind.music": "Music",
+  "@multiRename.tags.kind.music": {
+    "description": "Shown in the Tags tab of Multi-Rename: one option of the Content choice."
+  },
+  "multiRename.tags.write.review": "Write tags…",
+  "@multiRename.tags.write.review": {
+    "description": "Shown in the Tags tab of Multi-Rename: the button that lists what a write will change, before anything is written."
+  },
+  "multiRename.tags.write.confirm": "Write tags",
+  "@multiRename.tags.write.confirm": {
+    "description": "Shown in the Tags tab of Multi-Rename: under the list of changes, the button that writes the tags into the files."
+  },
+  "multiRename.tags.write.back": "Back",
+  "@multiRename.tags.write.back": {
+    "description": "Shown in the Tags tab of Multi-Rename: under the list of changes, the button that closes the list without writing."
+  },
+  "multiRename.tags.write.checking": "Checking what will change…",
+  "@multiRename.tags.write.checking": {
+    "description": "Shown in the Tags tab of Multi-Rename: while the list of changes is fetched."
+  },
+  "multiRename.tags.write.writing": "Writing tags…",
+  "@multiRename.tags.write.writing": {
+    "description": "Shown in the Tags tab of Multi-Rename: while tags are written into the files."
+  },
+  "multiRename.tags.write.summary": "{count, plural, one {{countText} file will change:} other {{countText} files will change:}}",
+  "@multiRename.tags.write.summary": {
+    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files a write will change, before anything is written.",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.write.changeLabel": "Files that will change",
+  "@multiRename.tags.write.changeLabel": {
+    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the list of files a write will change."
+  },
+  "multiRename.tags.write.fileChanges": "{fileName}: {fields}",
+  "@multiRename.tags.write.fileChanges": {
+    "description": "Shown in the Tags tab of Multi-Rename: one row of the list of changes: a file and what changes in it.",
+    "placeholders": {
+      "fileName": "the audio file’s name",
+      "fields": "a list of tag field names, maybe with the words for cover and extra tags"
+    }
+  },
+  "multiRename.tags.write.cover": "cover",
+  "@multiRename.tags.write.cover": {
+    "description": "Shown in the Tags tab of Multi-Rename: in a row of the list of changes, the word for the cover picture, after the tag field names. Lower case."
+  },
+  "multiRename.tags.write.extras": "extra tags",
+  "@multiRename.tags.write.extras": {
+    "description": "Shown in the Tags tab of Multi-Rename: in a row of the list of changes, the words for the extra (unmanaged) tags. Lower case."
+  },
+  "multiRename.tags.write.nothing": "Nothing to write: the tags are as they are on disk.",
+  "@multiRename.tags.write.nothing": {
+    "description": "Shown in the Tags tab of Multi-Rename: instead of the list of changes when no file would change."
+  },
+  "multiRename.tags.write.done": "{count, plural, one {Tags written to {countText} file} other {Tags written to {countText} files}}",
+  "@multiRename.tags.write.done": {
+    "description": "Shown in the Tags tab of Multi-Rename: after a write, how many files got their new tags.",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.write.noUndo": "This write can’t be undone: the old tags couldn’t be kept.",
+  "@multiRename.tags.write.noUndo": {
+    "description": "Shown in the Tags tab of Multi-Rename: after a write whose old tags the app couldn’t save, so Undo isn’t offered for it."
+  },
+  "multiRename.tags.write.failedHeading": "Not written:",
+  "@multiRename.tags.write.failedHeading": {
+    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files a write failed on, each with why."
+  },
+  "multiRename.tags.write.failedRow": "{fileName}: {reason}",
+  "@multiRename.tags.write.failedRow": {
+    "description": "Shown in the Tags tab of Multi-Rename: one file a write failed on, and why.",
+    "placeholders": {
+      "fileName": "the audio file’s name",
+      "reason": "why it failed, a short phrase like “its tags couldn’t be read”"
+    }
+  },
+  "multiRename.tags.write.error.notSupported": "this file type isn’t supported",
+  "@multiRename.tags.write.error.notSupported": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+  },
+  "multiRename.tags.write.error.io": "the file couldn’t be opened or saved",
+  "@multiRename.tags.write.error.io": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written (a disk or permission problem), after its name. Lower case, no full stop."
+  },
+  "multiRename.tags.write.error.parse": "its tags couldn’t be read",
+  "@multiRename.tags.write.error.parse": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+  },
+  "multiRename.tags.write.error.write": "the tags couldn’t be saved",
+  "@multiRename.tags.write.error.write": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+  },
+  "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
+  "@multiRename.tags.write.error.wouldDrop": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written: writing it would drop tag data the editor doesn’t show. Lower case, no full stop."
+  },
+  "multiRename.tags.write.error.unwritableExtra": "an extra tag can’t be written to it",
+  "@multiRename.tags.write.error.unwritableExtra": {
+    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+  },
+  "multiRename.tags.write.changedOnDiskHeading": "Changed on disk since it was read, not written:",
+  "@multiRename.tags.write.changedOnDiskHeading": {
+    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files another app changed after the Tags tab read them, so they were left alone."
+  },
+  "multiRename.tags.write.skippedHeading": "Skipped, not written:",
+  "@multiRename.tags.write.skippedHeading": {
+    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files the user chose to skip because they would lose tag data."
+  },
+  "multiRename.tags.write.reload": "Read the files again",
+  "@multiRename.tags.write.reload": {
+    "description": "Shown in the Tags tab of Multi-Rename: under the list of files changed on disk, the button that reads every file’s tags again."
+  },
+  "multiRename.tags.reload.title": "Read the files again?",
+  "@multiRename.tags.reload.title": {
+    "description": "Title of the question asked in the Tags tab of Multi-Rename before reading every file’s tags again while some changes are not written."
+  },
+  "multiRename.tags.reload.message": "This reads every file’s tags from disk again. Changes you haven’t written are lost.",
+  "@multiRename.tags.reload.message": {
+    "description": "Body of the question asked in the Tags tab of Multi-Rename before reading every file’s tags again."
+  },
+  "multiRename.tags.reload.confirm": "Read again",
+  "@multiRename.tags.reload.confirm": {
+    "description": "The confirming button of the question asked before reading every file’s tags again. VERB."
+  },
+  "multiRename.tags.diacritics.warning": "Diacritics in: {fields}",
+  "@multiRename.tags.diacritics.warning": {
+    "description": "Shown in the Tags tab of Multi-Rename: a warning before writing that these tag fields still carry diacritics (accents), which they must not.",
+    "placeholders": {
+      "fields": "a list of tag field names, like Album, Title"
+    }
+  },
+  "multiRename.tags.diacritics.fix": "Remove diacritics",
+  "@multiRename.tags.diacritics.fix": {
+    "description": "Shown in the Tags tab of Multi-Rename: beside the diacritics warning, the button that removes them from those fields."
+  },
+  "multiRename.tags.undo.button": "Undo tag changes",
+  "@multiRename.tags.undo.button": {
+    "description": "Shown in the Tags tab of Multi-Rename: the button that puts the files written by the last tag write back as they were."
+  },
+  "multiRename.tags.undo.tooltip": "Puts the files back as they were before the last tag write. Any change made to them since is overwritten.",
+  "@multiRename.tags.undo.tooltip": {
+    "description": "Shown in the Tags tab of Multi-Rename: tooltip of the Undo tag changes button."
+  },
+  "multiRename.tags.undo.title": "Undo tag changes?",
+  "@multiRename.tags.undo.title": {
+    "description": "Title of the question asked in the Tags tab of Multi-Rename before undoing the last tag write."
+  },
+  "multiRename.tags.undo.message": "{count, plural, one {This puts the tags of the {countText} file the last write changed back as they were before it. Any change made to that file since the write is overwritten.} other {This puts the tags of the {countText} files the last write changed back as they were before it. Any change made to those files since the write is overwritten.}}",
+  "@multiRename.tags.undo.message": {
+    "description": "Body of the question asked in the Tags tab of Multi-Rename before undoing the last tag write.",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.undo.confirm": "Undo",
+  "@multiRename.tags.undo.confirm": {
+    "description": "The confirming button of the question asked before undoing the last tag write. VERB."
+  },
+  "multiRename.tags.undo.done": "{count, plural, one {Tags restored in {countText} file} other {Tags restored in {countText} files}}",
+  "@multiRename.tags.undo.done": {
+    "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files got their old tags back.",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.undo.notRestored": "{count, plural, one {{countText} file couldn’t be restored.} other {{countText} files couldn’t be restored.}}",
+  "@multiRename.tags.undo.notRestored": {
+    "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files kept their new tags (gone, or the restore failed).",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.undoStoreFailed": "Couldn’t use the store that keeps the old tags for Undo, so no file was changed.",
+  "@multiRename.tags.undoStoreFailed": {
+    "description": "Shown in the Tags tab of Multi-Rename: when a write or an undo couldn’t start because the app couldn’t save or read the old tags."
+  },
+  "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
+  "@multiRename.tags.wouldDrop.title": {
+    "description": "Shown in the Tags tab of Multi-Rename: heading of the choice shown when writing some files would drop tag data the editor doesn’t show."
+  },
+  "multiRename.tags.wouldDrop.message": "{count, plural, one {Writing {countText} file would drop the tag data listed below, which the editor doesn’t show. It wasn’t written.} other {Writing {countText} files would drop the tag data listed below, which the editor doesn’t show. They weren’t written.}}",
+  "@multiRename.tags.wouldDrop.message": {
+    "description": "Shown in the Tags tab of Multi-Rename: under the would-lose-data heading. The list below names each file and the tag items it would lose.",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.wouldDrop.listLabel": "Files that would lose tag data",
+  "@multiRename.tags.wouldDrop.listLabel": {
+    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the list of files that would lose tag data."
+  },
+  "multiRename.tags.wouldDrop.row": "{fileName}: {items}",
+  "@multiRename.tags.wouldDrop.row": {
+    "description": "Shown in the Tags tab of Multi-Rename: one file that would lose tag data, and the items (technical tag IDs such as TSOP or COMM:ces, do not translate them).",
+    "placeholders": {
+      "fileName": "the audio file’s name",
+      "items": "technical tag IDs, like TSOP, TXXX:Comment"
+    }
+  },
+  "multiRename.tags.wouldDrop.writeAnyway": "Write anyway",
+  "@multiRename.tags.wouldDrop.writeAnyway": {
+    "description": "Shown in the Tags tab of Multi-Rename: writes the files that would lose tag data anyway, dropping the listed items."
+  },
+  "multiRename.tags.wouldDrop.skip": "Skip these files",
+  "@multiRename.tags.wouldDrop.skip": {
+    "description": "Shown in the Tags tab of Multi-Rename: leaves the files that would lose tag data unwritten."
   }
 }

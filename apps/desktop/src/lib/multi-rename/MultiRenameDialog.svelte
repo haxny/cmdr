@@ -61,12 +61,8 @@
     import { createResults } from './results.svelte'
     import { createFieldHistoryMenu } from './field-history-menu.svelte'
     import { getSetting } from '#lib/settings/index.js'
-    import SheetTabs from './tag-editor/SheetTabs.svelte'
-    import TagsTab from './tag-editor/TagsTab.svelte'
-    import RenamePanel from './tag-editor/RenamePanel.svelte'
-    import { createTagEditorState } from './tag-editor/tag-editor-state.svelte'
-    import { createDiscardGuard } from './tag-editor/discard-guard'
-    import type { SheetTab } from './tag-editor/sheet-tab'
+    import { RenamePanel, SheetTabs, TagsTab, createDiscardGuard, createTagEditorState } from './tag-editor/index'
+    import type { SheetTab, TagsTabApi } from './tag-editor/index'
 
     interface Props {
         session: MultiRenameOpened
@@ -111,6 +107,7 @@
     // The opt-in Tags tab (setting off: no tab strip, no tag session, no tag IPC).
     const tags = getSetting('multiRename.tagEditor') ? createTagEditorState(session.sessionId) : null
     let sheetTab = $state<SheetTab>('rename')
+    let tagsTab = $state<TagsTabApi>()
     const guard = createDiscardGuard(tags, onClose)
     onDestroy(() => { void tags?.close() })
     const fieldHistory = createFieldHistoryMenu({
@@ -235,6 +232,7 @@
     }
 
     async function start(): Promise<void> {
+        if (sheetTab === 'tags') return tagsTab?.start()
         if (!canStart || (guard.dirty && !tool.queued && !(await guard.confirm()))) return
         const wasQueued = tool.queued
         const run = tool.apply()
@@ -530,7 +528,7 @@
             onMoveRow={tool.moveCursorRow}
         />
         {/snippet}
-        {#if tags && sheetTab === 'tags'}<TagsTab state={tags} />
+        {#if tags && sheetTab === 'tags'}<TagsTab bind:this={tagsTab} state={tags} />
         {:else if tags}<RenamePanel>{@render renameBody()}</RenamePanel>
         {:else}{@render renameBody()}{/if}
 
@@ -582,6 +580,7 @@
             </Button>
             <Button onclick={guard.close}>{tString('multiRename.cancel')}</Button>
             <!-- "Starting…" while it waits for the tags; its width may change with the words. -->
+            {#if sheetTab === 'rename'}<!-- The Tags tab writes with its own button. -->
             <Button
                 variant="primary"
                 onclick={() => { void start() }}
@@ -591,6 +590,7 @@
             >
                 {tool.queued ? tString('multiRename.starting') : tString('multiRename.rename', { count: tool.counts.ready })}
             </Button>
+            {/if}
         </span>
     {/snippet}
 </ModalDialog>

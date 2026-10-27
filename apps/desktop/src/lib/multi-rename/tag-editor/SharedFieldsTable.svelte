@@ -4,11 +4,11 @@
      * files differ shows «multiple values» and sends nothing until the user types; typing sets the field on every file.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
-    import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import type { SharedRow, TagField } from '#lib/ipc/bindings.js'
+    import type { SharedRow } from '#lib/ipc/bindings.js'
     import type { TagEdit } from '#lib/tauri-commands/index.js'
     import Button from '#lib/ui/Button.svelte'
     import EditableCell from './EditableCell.svelte'
+    import { FIELD_LABELS } from './field-labels'
     import { formatFieldValue, isMultiLineField, parseFieldText } from './shared-field-input'
 
     interface Props {
@@ -19,24 +19,6 @@
 
     const { rows, editable, onEdit }: Props = $props()
 
-    const LABELS: Readonly<Record<TagField, MessageKey>> = {
-        title: 'multiRename.tags.field.title',
-        artist: 'multiRename.tags.field.artist',
-        albumArtist: 'multiRename.tags.field.albumArtist',
-        album: 'multiRename.tags.field.album',
-        performer: 'multiRename.tags.field.performer',
-        composer: 'multiRename.tags.field.composer',
-        date: 'multiRename.tags.field.date',
-        genre: 'multiRename.tags.field.genre',
-        publisher: 'multiRename.tags.field.publisher',
-        translator: 'multiRename.tags.field.translator',
-        track: 'multiRename.tags.field.track',
-        disc: 'multiRename.tags.field.disc',
-        comment: 'multiRename.tags.field.comment',
-        description: 'multiRename.tags.field.description',
-        www: 'multiRename.tags.field.www',
-    }
-
     const shown = $derived(
         rows.map((row) => ({ field: row.field, empty: row.value === 'empty', ...formatFieldValue(row.value) })),
     )
@@ -45,7 +27,7 @@
 <div class="shared" role="group" aria-label={tString('multiRename.tags.shared.label')}>
     {#each shown as row (row.field)}
         <label class="label" class:top={isMultiLineField(row.field)} for="tag-field-{row.field}">
-            {tString(LABELS[row.field])}
+            {tString(FIELD_LABELS[row.field])}
         </label>
         <EditableCell
             id="tag-field-{row.field}"
@@ -53,12 +35,12 @@
             placeholder={row.multiple ? tString('multiRename.tags.multipleValues') : undefined}
             multiline={isMultiLineField(row.field)}
             disabled={!editable}
-            onCommit={(text) => onEdit([{ kind: 'setAll', field: row.field, values: parseFieldText(row.field, text) }])}
+            onCommit={(text: string) => onEdit([{ kind: 'setAll', field: row.field, values: parseFieldText(row.field, text) }])}
         />
         <Button
             size="mini"
             disabled={!editable || row.empty}
-            aria-label={tString('multiRename.tags.clearRowLabel', { field: tString(LABELS[row.field]) })}
+            aria-label={tString('multiRename.tags.clearRowLabel', { field: tString(FIELD_LABELS[row.field]) })}
             onclick={() => { void onEdit([{ kind: 'setAll', field: row.field, values: [] }]) }}
         >
             {tString('multiRename.tags.clearRow')}
