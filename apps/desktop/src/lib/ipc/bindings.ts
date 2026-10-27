@@ -5941,6 +5941,31 @@ export type AiConnectionProblem =
   // Any other refusal. `detail` is the provider's `error.message` (or raw body), key scrubbed.
   | { kind: 'providerRefused'; status: number; detail: string }
 
+// One effort level the picker offers, cheapest first.
+export type AiEffortLevel = 'low' | 'medium' | 'high' | 'max'
+
+/**
+ *  The Effort picker's menu for one model. The UI stores the pick in `ai.reasoningEfforts` as
+ *  `"recommended"`, `"off"`, or a level's camelCase name; the backend maps a pick the model
+ *  can't take to the nearest one it can, so this menu is a courtesy, never the guard.
+ */
+export type AiEffortOptions = {
+  /**
+   *  Whether the model reasons: `false` hides the picker, `None` means nothing knows (the
+   *  picker then offers Recommended alone).
+   */
+  reasons: boolean | null
+  levels: AiEffortLevel[]
+  canTurnOff: boolean
+  /**
+   *  What Recommended amounts to, when anything knows; `None` while the provider decides
+   *  per request.
+   */
+  recommended: AiEffortLevel | null
+  // Where the levels came from: the provider's list, or Cmdr's built-in table.
+  source: AiModelLimitsSource | null
+}
+
 export type AiExtracting = null
 
 export type AiInstallComplete = null
@@ -5968,6 +5993,8 @@ export type AiModelLimits = {
   // Only ever the provider's figure: the table doesn't guess it.
   maxOutputTokens: number | null
   source: AiModelLimitsSource | null
+  // What the Effort picker may offer for this model (`agent::chat::effort::effort_options`).
+  effort: AiEffortOptions
 }
 
 // Where the window Settings › AI shows came from.

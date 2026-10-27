@@ -322,7 +322,7 @@ mod tests {
                 "sys",
                 &[],
                 &[],
-                crate::agent::llm::ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 CancellationToken::new(),
             )
             .await

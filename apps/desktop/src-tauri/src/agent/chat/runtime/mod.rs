@@ -146,6 +146,7 @@ impl ChatRuntime {
         provider: ProviderTag,
         model: String,
         prompt_budget: usize,
+        call: crate::agent::llm::CallSettings,
         conversation_id: Option<i64>,
         text: String,
         envelope: ContextEnvelope,
@@ -177,7 +178,7 @@ impl ChatRuntime {
             provider,
             model,
             prompt_budget,
-            reasoning_effort: crate::agent::llm::ReasoningEffort::ProviderDefault,
+            call,
         };
         run_turn(llm, &dispatcher, &conn, &tools, &params, &sink, &cancel).await;
         Ok(conversation_id)

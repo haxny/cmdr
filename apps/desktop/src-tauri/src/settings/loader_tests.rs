@@ -255,6 +255,16 @@ fn parses_drive_indexing_freshness_keys() {
 }
 
 #[test]
+fn reasoning_efforts_read_as_the_stored_json_string() {
+    assert_eq!(
+        parse_ai_reasoning_efforts(r#"{ "ai.reasoningEfforts": "{\"anthropic/claude-opus-5-5\":\"max\"}" }"#),
+        Some(r#"{"anthropic/claude-opus-5-5":"max"}"#.to_string())
+    );
+    assert_eq!(parse_ai_reasoning_efforts("{}"), None);
+    assert_eq!(parse_ai_reasoning_efforts("not json"), None);
+}
+
+#[test]
 fn chat_memory_size_reads_a_preset_and_treats_everything_else_as_automatic() {
     assert_eq!(
         parse_ask_cmdr_chat_memory_size(r#"{ "askCmdr.chatMemorySize": "32000" }"#),

@@ -79,7 +79,7 @@ pub(super) fn params<'a>(conversation_id: i64, user_text: Option<&'a str>) -> Tu
         provider: ProviderTag::Local,
         model: "fake-model".to_string(),
         prompt_budget: TEST_PROMPT_BUDGET,
-        reasoning_effort: crate::agent::llm::ReasoningEffort::ProviderDefault,
+        call: crate::agent::llm::CallSettings::default(),
     }
 }
 
@@ -179,7 +179,7 @@ impl AgentLlm for ProgrammableLlm {
         _system: &'a str,
         _tools: &'a [ToolDeclaration],
         messages: &'a [AgentMessage],
-        _effort: crate::agent::llm::ReasoningEffort,
+        _call: crate::agent::llm::CallSettings,
         cancel: CancellationToken,
     ) -> BoxFuture<'a, Result<AgentDeltaStream, AgentLlmError>> {
         async move {

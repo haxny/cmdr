@@ -78,7 +78,10 @@ async fn respond(llm: &GenaiAgentLlm, messages: &[AgentMessage]) -> AgentMessage
             "sys",
             &tools(),
             messages,
-            ReasoningEffort::High,
+            crate::agent::llm::CallSettings {
+                effort: ReasoningEffort::High,
+                max_output_tokens: 32_000,
+            },
             CancellationToken::new(),
         )
         .await

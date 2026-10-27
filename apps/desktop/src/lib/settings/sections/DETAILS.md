@@ -118,7 +118,12 @@ sections compose).
   organization's policy). Under the steps, a `.model-limits` note names the chosen model's context window and, when the
   service reports it, its longest reply (`getAiModelLimits`, read from the backend's capability cache and re-read on
   `onAiModelCapabilitiesChanged`). A window from Cmdr's built-in table says "about … (from Cmdr's built-in list)", so a
-  guess never passes for the service's word; an unknown window shows nothing. Not asked while `locked`.
+  guess never passes for the service's word; an unknown window shows nothing. Not asked while `locked`. Beside it, the
+  **Effort** picker (`ai.reasoningEfforts`, a JSON map keyed `"<provider id>/<model>"`; pure half in `ai-effort.ts`)
+  offers what `getAiModelLimits().effort` lists: Recommended (naming its level when anything knows it), Off where the
+  model can stop thinking, then its levels. Hidden for a model known not to reason; Recommended alone, with a note, when
+  nothing knows the levels. A stored pick the model can't take shows as the nearest it can (`effectiveEffortChoice`,
+  mirroring `agent::chat::effort::resolve_effort`, which is the actual guard).
 - **`AiLocalSection.svelte`**: Local llama-server lifecycle, model install with multi-step tracking, context window
   "Apply" (server restart), RAM gauge, delete confirmation. Only the context-window registry-row cluster (`SettingRow`
   - the RAM gauge) is wrapped in an unlabeled `SectionCard`, and that wrapper sits INSIDE the

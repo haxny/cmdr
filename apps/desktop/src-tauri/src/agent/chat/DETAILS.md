@@ -273,6 +273,35 @@ window is whatever the user's own server was started with, and the conservative 
 (`settings::load_ask_cmdr_chat_memory_size`) and the resolved number rides `TurnParams::prompt_budget` as a value, the
 same shape as the interactive model override.
 
+### Reasoning effort and the reply's room (`effort.rs`)
+
+The Effort picker (Settings › AI, `ai.reasoningEfforts`, keyed `"<provider id>/<model>"`) decides how hard the
+interactive slot's model thinks. `session::resolve_call_settings` gathers the pick and what the provider reports
+(`ai::model_capabilities`), and the pure `effort.rs` turns them into `CallSettings { effort, max_output_tokens }`,
+which rides `TurnParams.call` into every `respond` of the turn.
+
+- **`effort_options`**: what the model can take. The provider's report first (Anthropic `capabilities.effort` and
+  `thinking.types`, OpenRouter `reasoning`), then `REASONING_FAMILIES` for providers that report nothing (OpenAI) or
+  say "reasons" without levels (Groq `gpt-oss`, Gemini). Recommended's level: the reported default, else the
+  documented one (Anthropic high, OpenAI Responses medium), else none (Gemini thinks dynamically). A local model, and
+  a model nothing knows, offer Recommended only; a model known not to reason gets no picker.
+- **`resolve_effort`**: Recommended sends `ProviderDefault`, the one value safe everywhere. A pick the model can't take
+  maps to the nearest level it can (ties to the cheaper; Off without an off switch to the cheapest; no known levels to
+  Recommended), and `session.rs` logs the mapping. ❌ Never send an explicit level the options don't list: it's a 400.
+- **`reply_room`**: thinking spends the reply's `max_tokens`, so the ceiling grows with the level: 12,000
+  (`AGENT_MAX_OUTPUT_TOKENS`, Off / Low / unknown), 16,000 Medium, 32,000 High, 64,000 Max, capped at the model's
+  reported `max_output_tokens`. Recommended sizes for what the provider will do (Claude's default is high, so 32,000).
+  Decision/Why: at a flat 12,000, a High or Max think could hit `MaxTokens` before the tool call and end the turn
+  unfinished; a ceiling is not a charge, the provider bills what the model writes.
+- **The budget leaves that room free**: `BudgetInputs::reply_tokens` is the same `max_output_tokens`, and the send path
+  resolves the call settings once and hands both to `resolve_prompt_budget_for`, so prompt and reply can't overlap.
+- **`files_per_batch` stays on the base slot.** A bigger ceiling at a higher effort is room the model spends thinking,
+  not room for more plan rows. The agent path has no exhaustion retry (`ai::client`'s empty-response retry serves the
+  one-shot translate calls, with its own small ceiling).
+- **Wakes run on Recommended** (`CallSettings::default()`): a background sweep shouldn't inherit an expensive pick.
+- **Metering** already counts thinking as output: `completion_tokens` includes reasoning on every provider, and
+  `genai_impl::map_usage` covers Gemini's thoughts-only gap (`../llm/DETAILS.md` § Reasoning effort).
+
 ### A local window too small to use
 
 A window that gives the reply its 12,000 tokens has to hold `FIXED_PROMPT_OVERHEAD_TOKENS` (6,263) plus a paged tool

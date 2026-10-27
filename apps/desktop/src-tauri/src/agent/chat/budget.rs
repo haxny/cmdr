@@ -117,16 +117,20 @@ pub const LISTING_TOKENS_PER_FILE: usize = 21;
 pub const RENAME_TOKENS_PER_FILE: usize =
     IMAGE_FACTS_TOKENS_PER_FILE + PLAN_ROW_TOKENS_PER_FILE + LISTING_TOKENS_PER_FILE;
 
-/// Per-call output room, shared by reasoning tokens, visible text, and tool calls.
+/// The BASE per-call output room, shared by reasoning tokens, visible text, and tool calls: what a
+/// call gets when the model barely thinks. A higher reasoning effort raises the actual ceiling
+/// (`effort::reply_room`), and the prompt budget leaves that much of the window free
+/// ([`BudgetInputs::reply_tokens`]).
 pub const AGENT_MAX_OUTPUT_TOKENS: u32 = 12_000;
 
 /// How much of [`AGENT_MAX_OUTPUT_TOKENS`] a batch hint leaves for the model's reasoning and
 /// its accompanying sentence, rather than for plan rows.
 ///
-/// Half the slot, because we cannot see how much a reasoning model will spend before it starts
-/// emitting: `ai::client` already retries with a raised ceiling when reasoning consumes the
-/// whole budget, so an exhausted slot is an observed failure here, not a hypothetical. Erring
-/// large costs a smaller batch; erring small costs the entire plan, cut off mid-JSON.
+/// Half the BASE slot, because we cannot see how much a reasoning model will spend before it
+/// starts emitting, and an exhausted slot ends the turn unfinished (`UnfinishedReply`; the agent
+/// path has no retry). Erring large costs a smaller batch; erring small costs the entire plan,
+/// cut off mid-JSON. The batch stays sized on the base slot at every effort: a bigger slot at a
+/// higher effort is room the model spends thinking, not room for more rows.
 const REASONING_RESERVE_TOKENS: usize = AGENT_MAX_OUTPUT_TOKENS as usize / 2;
 
 /// The share of a budget [`files_per_batch`] leaves unclaimed. The measured 100-file turn
@@ -225,10 +229,16 @@ struct ModelFamily {
 }
 
 /// What one prompt may claim inside `window_tokens`: all of it, less the reply's room
-/// ([`AGENT_MAX_OUTPUT_TOKENS`], which comes out of the same window) and
-/// [`ESTIMATE_SAFETY_PERCENT`] of the rest for the estimator's error.
+/// (`reply_tokens`, which comes out of the same window) and [`ESTIMATE_SAFETY_PERCENT`] of the
+/// rest for the estimator's error.
+fn budget_for(window_tokens: usize, reply_tokens: usize) -> usize {
+    window_tokens.saturating_sub(reply_tokens) * (100 - ESTIMATE_SAFETY_PERCENT) / 100
+}
+
+/// [`budget_for`] with the base reply slot: what a window gives a model that barely thinks.
+#[cfg(test)]
 fn budget_for_window(window_tokens: usize) -> usize {
-    window_tokens.saturating_sub(AGENT_MAX_OUTPUT_TOKENS as usize) * (100 - ESTIMATE_SAFETY_PERCENT) / 100
+    budget_for(window_tokens, AGENT_MAX_OUTPUT_TOKENS as usize)
 }
 
 /// Claude 4.6 and everything after carry a 1M window; 4.5 and older carry 200,000. Anthropic
@@ -505,6 +515,9 @@ pub struct BudgetInputs<'a> {
     /// (`ai::model_capabilities`). Ignored for [`ProviderTag::Local`], whose window is the
     /// server's own setting.
     pub reported_window_tokens: Option<usize>,
+    /// The reply's ceiling this slot sends (`effort::resolve_effort`): Automatic leaves that much of
+    /// the window free, since thinking, the reply, and its tool calls all come out of it.
+    pub reply_tokens: usize,
 }
 
 /// One resolved budget, plus everything needed to tell the user the truth about it.
@@ -605,7 +618,7 @@ pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget,
 
     let (prompt_tokens, source) = match window {
         Some(KnownWindow { tokens, source }) => (
-            budget_for_window(tokens),
+            budget_for(tokens, inputs.reply_tokens),
             match source {
                 WindowSource::LocalServer => BudgetSource::LocalServerWindow,
                 WindowSource::Provider => BudgetSource::ProviderReported,

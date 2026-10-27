@@ -43,7 +43,8 @@ use crate::agent::chat::budget;
 use crate::agent::chat::cancel;
 use crate::agent::chat::runtime::{AgentChatEvent, ChatRuntime, RecordedSlotEvent};
 use crate::agent::chat::session::{
-    AgentSlot, admit_send, capture_envelope, local_offset, provider_and_model, resolve_agent_llm, resolve_prompt_budget,
+    AgentSlot, admit_send, capture_envelope, local_offset, provider_and_model, resolve_agent_llm,
+    resolve_call_settings, resolve_prompt_budget, resolve_prompt_budget_for,
 };
 use crate::agent::chat::slot_status::{SlotStatus, slot_status};
 use crate::agent::chat::stream::{AgentErrorKindView, AskCmdrStreamEvent, emit_turn_event, forward_to_windows};
@@ -217,8 +218,10 @@ pub async fn ask_cmdr_send_message(
     };
 
     // Resolve the budget before a thread exists, so a local server too small to hold one
-    // prompt is refused honestly instead of assembled against and rejected by the server.
-    let prompt_budget = match resolve_prompt_budget(&app, provider, &model) {
+    // prompt is refused honestly instead of assembled against and rejected by the server. The
+    // effort comes first: the reply's ceiling it sets is room the prompt must leave free.
+    let call = resolve_call_settings(&app, provider, &model);
+    let prompt_budget = match resolve_prompt_budget_for(&app, provider, &model, call) {
         Ok(tokens) => tokens,
         Err(budget::BudgetRefusal::LocalWindowBelowFloor {
             window_tokens,
@@ -284,6 +287,7 @@ pub async fn ask_cmdr_send_message(
             provider,
             model,
             prompt_budget,
+            call,
             conversation_id,
             text,
             attachments,
@@ -334,6 +338,8 @@ async fn drive_turn(
     // Resolved at send (see `resolve_prompt_budget`) and carried in as a value, so a settings
     // change mid-turn can't move the ceiling this turn assembles against.
     prompt_budget: usize,
+    // The same, for how hard the model thinks and the reply's ceiling (`session::resolve_call_settings`).
+    call: crate::agent::llm::CallSettings,
     conversation_id: i64,
     text: String,
     attachments: Vec<AttachmentRef>,
@@ -374,6 +380,7 @@ async fn drive_turn(
         provider,
         model,
         prompt_budget,
+        call,
         Some(conversation_id),
         text,
         envelope,

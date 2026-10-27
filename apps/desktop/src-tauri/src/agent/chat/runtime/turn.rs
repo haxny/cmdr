@@ -211,7 +211,7 @@ async fn drive(
                 &assembled.system,
                 &assembled.tools,
                 &assembled.messages,
-                params.reasoning_effort,
+                params.call,
                 cancel.clone(),
             )
             .await

@@ -674,6 +674,7 @@ export interface SettingsValues {
   'ai.localContextSize': AiLocalContextSize
   'ai.cloudProvider': string
   'ai.cloudProviderConfigs': string // JSON blob
+  'ai.reasoningEfforts': string // JSON blob, keyed "<provider id>/<model>"
   // A "no" to cloud AI the consent store hasn't recorded yet. Every Rust cloud gate reads it fresh
   // from `settings.json`, so the "no" holds before the store catches up (`cloud-consent.svelte.ts`).
   'ai.cloudConsentRevokePending': boolean

@@ -4,8 +4,8 @@ One message in, an answer out, crash-safe and within budget.
 
 ## Module map
 
-- `context.rs` + `budget.rs`: the PURE core — the stable prefix, elide-only compaction, budget
-  resolution, the ONE token estimator.
+- `context.rs` + `budget.rs` + `effort.rs`: the PURE core — the stable prefix, elide-only compaction, budget
+  resolution, reasoning effort and the reply's room, the ONE token estimator.
 - `runtime/`: the I/O-and-time half — `turn.rs` (`run_turn`), `mod.rs` (`ChatRuntime::send_message`
   and `wake`, both single-flight), `events.rs` + `dispatch.rs` (the two seams).
 - Leaves: `system_prompt.rs`, `session.rs`, `slot_status.rs` (what the rail knows before a send:

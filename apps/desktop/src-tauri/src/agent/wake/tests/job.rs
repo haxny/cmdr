@@ -732,7 +732,7 @@ async fn a_rail_turn_calling_nothing_to_suggest_deletes_nothing() {
             provider: ProviderTag::Anthropic,
             model: "test-model".to_string(),
             prompt_budget: 16_000,
-            reasoning_effort: crate::agent::llm::ReasoningEffort::ProviderDefault,
+            call: crate::agent::llm::CallSettings::default(),
         },
         &sink,
         &CancellationToken::new(),

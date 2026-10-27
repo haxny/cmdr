@@ -1454,6 +1454,21 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "description": "Help text for the per-provider AI configurations. \"API\" = application programming interface; keep the term."
   },
+  "settings.ai.reasoningEfforts.label": "Effort",
+  "@settings.ai.reasoningEfforts.label": {
+    "description": "Label for the picker that sets how hard the chosen cloud AI model thinks before it answers (its reasoning effort). Shown under the model in Settings > AI > Provider. A noun. Sentence case.",
+    "screenshot": "settings-ai-provider.png"
+  },
+  "settings.ai.reasoningEfforts.description": "How long the model thinks before it answers. More effort helps with tricky tasks, but replies come slower and the thinking is billed as output.",
+  "@settings.ai.reasoningEfforts.description": {
+    "description": "Help text under the Effort picker in Settings > AI > Provider. Says what effort does, and its cost and speed tradeoff: thinking longer gives better answers on hard tasks, but takes longer, and the AI service charges for the thinking like it charges for the answer (as output). Sentence case.",
+    "screenshot": "settings-ai-provider.png"
+  },
+  "settings.ai.reasoningEfforts.keywords": "effort, reasoning, thinking, think, speed, cost, quality",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "description": "Search keywords for the Effort setting (settings.ai.reasoningEfforts.label) in Settings > AI > Provider. What it does: sets how long the AI model thinks before answering. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-provider.png"
+  },
   "settings.ai.localContextSize.label": "Context window",
   "@settings.ai.localContextSize.label": {
     "description": "Label for the local-model context-window-size picker. Shown when AI provider is Local LLM. \"context window\" is the model's token capacity per request; keep the standard term for it."

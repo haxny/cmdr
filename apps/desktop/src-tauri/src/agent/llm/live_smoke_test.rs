@@ -58,7 +58,7 @@ async fn run_one(backend: AiBackend, prompt: &str) -> String {
             "You are a terse assistant. Answer in one short sentence.",
             &[],
             &messages,
-            ReasoningEffort::ProviderDefault,
+            crate::agent::llm::CallSettings::default(),
             CancellationToken::new(),
         )
         .await
@@ -149,7 +149,10 @@ async fn run_tool_loop(backend: AiBackend, effort: ReasoningEffort) -> LoopOutco
                 "You are a file assistant. Use the tools; never guess folder contents.",
                 &tools,
                 &messages,
-                effort,
+                crate::agent::llm::CallSettings {
+                    effort,
+                    ..crate::agent::llm::CallSettings::default()
+                },
                 CancellationToken::new(),
             )
             .await

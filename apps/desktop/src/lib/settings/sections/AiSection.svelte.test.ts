@@ -7,7 +7,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
-import type { AiModelLimits, ManagedAiRefusal, SettingLock } from '#lib/ipc/bindings.js'
+import type { AiEffortOptions, AiModelLimits, ManagedAiRefusal, SettingLock } from '#lib/ipc/bindings.js'
+
+// A model known not to reason: no Effort picker. Hoisted with the stubs that use it.
+const { NO_EFFORT } = vi.hoisted(() => ({
+  NO_EFFORT: { reasons: false, levels: [], canTurnOff: false, recommended: null, source: null } as AiEffortOptions,
+}))
 
 const stubs = vi.hoisted(() => ({
   settings: Object.create(null) as Record<string, unknown>,
@@ -18,7 +23,7 @@ const stubs = vi.hoisted(() => ({
   managedConsent: null as ManagedAiRefusal | null,
   refusedUrls: new Set<string>(),
   localAiSupported: true,
-  modelLimits: { contextWindowTokens: null, maxOutputTokens: null, source: null } as AiModelLimits,
+  modelLimits: { contextWindowTokens: null, maxOutputTokens: null, source: null, effort: NO_EFFORT } as AiModelLimits,
 }))
 
 vi.mock('#lib/settings/index.js', async (importOriginal) => {
@@ -144,7 +149,7 @@ beforeEach(() => {
   stubs.settings['ai.cloudProvider'] = 'openai'
   stubs.settings['ai.cloudProviderConfigs'] = '{}'
   stubs.settings['askCmdr.interactiveModel'] = ''
-  stubs.modelLimits = { contextWindowTokens: null, maxOutputTokens: null, source: null }
+  stubs.modelLimits = { contextWindowTokens: null, maxOutputTokens: null, source: null, effort: NO_EFFORT }
 })
 
 afterEach(() => {
@@ -290,7 +295,12 @@ describe("the organization's AI policy in Settings > AI > Provider", () => {
 describe('the model’s context window in Settings > AI > Provider', () => {
   it('shows the window and longest reply the service reports', async () => {
     stubs.consent.accepted = true
-    stubs.modelLimits = { contextWindowTokens: 1_000_000, maxOutputTokens: 128_000, source: 'provider' }
+    stubs.modelLimits = {
+      contextWindowTokens: 1_000_000,
+      maxOutputTokens: 128_000,
+      source: 'provider',
+      effort: NO_EFFORT,
+    }
     const target = await mountSection()
 
     const note = target.querySelector('.model-limits')?.textContent ?? ''
@@ -300,7 +310,12 @@ describe('the model’s context window in Settings > AI > Provider', () => {
 
   it('marks a window from the built-in list as an estimate', async () => {
     stubs.consent.accepted = true
-    stubs.modelLimits = { contextWindowTokens: 128_000, maxOutputTokens: null, source: 'builtInTable' }
+    stubs.modelLimits = {
+      contextWindowTokens: 128_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: NO_EFFORT,
+    }
     const target = await mountSection()
 
     const note = target.querySelector('.model-limits')?.textContent ?? ''
@@ -318,5 +333,60 @@ describe('the model’s context window in Settings > AI > Provider', () => {
     const target = await mountSection()
     expect(target.querySelector('.model-limits')).toBeNull()
     expect(getAiModelLimits).not.toHaveBeenCalled()
+  })
+})
+
+describe('the Effort picker in Settings > AI > Provider', () => {
+  const reasoning: AiEffortOptions = {
+    reasons: true,
+    levels: ['low', 'medium', 'high'],
+    canTurnOff: false,
+    recommended: 'medium',
+    source: 'builtInTable',
+  }
+
+  function optionLabels(target: HTMLElement): string[] {
+    const select = target.querySelector('[id="setting-ai.reasoningEfforts"] select')
+    return Array.from(select?.querySelectorAll('option') ?? []).map((o) => o.textContent.trim())
+  }
+
+  it('offers Recommended, naming what it amounts to, then the levels the model takes', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: 400_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: reasoning,
+    }
+    const target = await mountSection()
+
+    expect(optionLabels(target)).toEqual(['Recommended (Medium)', 'Low', 'Medium', 'High'])
+    expect(target.textContent).toContain('the thinking is billed as output')
+  })
+
+  it('offers Recommended alone, and says why, when nothing knows the levels', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: null,
+      maxOutputTokens: null,
+      source: null,
+      effort: { reasons: null, levels: [], canTurnOff: false, recommended: null, source: null },
+    }
+    const target = await mountSection()
+
+    expect(optionLabels(target)).toEqual(['Recommended'])
+    expect(target.textContent).toContain('doesn’t say which effort levels this model takes')
+  })
+
+  it('hides for a model known not to reason', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: 1_000_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: NO_EFFORT,
+    }
+    const target = await mountSection()
+    expect(target.querySelector('[id="setting-ai.reasoningEfforts"]')).toBeNull()
   })
 })

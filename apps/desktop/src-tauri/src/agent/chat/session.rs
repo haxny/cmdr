@@ -13,14 +13,14 @@
 use chrono::{FixedOffset, Local};
 use tauri::{AppHandle, Manager};
 
-use super::budget;
 use super::context::{ContextEnvelope, EnvelopeAttachment, EnvelopeConnectivity, EnvelopeFreshness, EnvelopeVolume};
 use super::runtime::now_secs;
 use super::stream::AgentErrorKindView;
+use super::{budget, effort};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::fake::FakeAgentLlm;
 use crate::agent::llm::genai_impl::GenaiAgentLlm;
-use crate::agent::llm::types::ProviderTag;
+use crate::agent::llm::types::{CallSettings, ProviderTag};
 use crate::ai::client::AiBackend;
 use crate::ai::llm_log::LlmLogContext;
 use crate::mcp::PaneStateStore;
@@ -336,6 +336,32 @@ pub fn reported_window_tokens(app: &AppHandle, provider: ProviderTag, model: &st
         .map(|tokens| tokens as usize)
 }
 
+/// How hard the slot's model thinks and how much room its reply gets, gathered here and decided
+/// in the pure [`effort`](super::effort) module: the user's choice for this provider and model
+/// (`ai.reasoningEfforts`, read fresh per send), and what the provider reports about the
+/// model's reasoning and longest reply. A choice the model can't take is logged with what it
+/// became. A local model and the E2E fake get the default: the provider decides.
+pub fn resolve_call_settings(app: &AppHandle, provider: ProviderTag, model: &str) -> CallSettings {
+    if provider == ProviderTag::Local || crate::test_mode::ask_cmdr_fake_active() {
+        return CallSettings::default();
+    }
+    let provider_id = crate::ai::state::get_cloud_provider_id();
+    let reported = crate::ai::model_capabilities::for_configured_cloud_model(app, model);
+    let options = effort::effort_options(provider, model, reported.as_ref().map(|c| &c.reasoning));
+    let choice = effort::choice_for(&crate::settings::load_ai_reasoning_efforts(app), &provider_id, model);
+    let resolved = effort::resolve_effort(&options, choice, reported.and_then(|c| c.max_output_tokens));
+    if let Some(adjusted_to) = resolved.adjusted_to {
+        log::info!(
+            target: LOG_TARGET,
+            "reasoning effort {choice:?} isn't one {model} takes; sending {adjusted_to:?} instead" // allowed-pluralize-noun: `takes` is a verb here
+        );
+    }
+    CallSettings {
+        effort: resolved.effort,
+        max_output_tokens: resolved.max_output_tokens,
+    }
+}
+
 /// The assembled-prompt token budget for the resolved slot, gathered here and decided in the
 /// pure [`budget`] module. This layer supplies the three values the core may not read itself:
 /// the user's `askCmdr.chatMemorySize` choice (read fresh per turn, so a change applies to the
@@ -348,6 +374,17 @@ pub fn resolve_prompt_budget(
     app: &AppHandle,
     provider: ProviderTag,
     model: &str,
+) -> Result<usize, budget::BudgetRefusal> {
+    resolve_prompt_budget_for(app, provider, model, resolve_call_settings(app, provider, model))
+}
+
+/// [`resolve_prompt_budget`] for a slot whose [`CallSettings`] the caller already resolved, so a
+/// send sizes its prompt against the SAME reply ceiling its calls then ask for.
+pub fn resolve_prompt_budget_for(
+    app: &AppHandle,
+    provider: ProviderTag,
+    model: &str,
+    call: CallSettings,
 ) -> Result<usize, budget::BudgetRefusal> {
     // The E2E fake answers as a LOCAL provider with no local server behind it, so the real
     // resolution would size its budget from `ai.localContextSize` — a setting the harness has no
@@ -363,6 +400,7 @@ pub fn resolve_prompt_budget(
         user_choice: crate::settings::load_ask_cmdr_chat_memory_size(app),
         local_context_tokens: crate::ai::state::get_local_context_size(),
         reported_window_tokens: reported_window_tokens(app, provider, model),
+        reply_tokens: call.max_output_tokens as usize,
     })?;
     log::debug!(
         target: LOG_TARGET,

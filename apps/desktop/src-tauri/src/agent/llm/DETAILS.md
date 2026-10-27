@@ -167,8 +167,11 @@ replay within their `ProviderTag` family, as they always did.
 
 ## Reasoning effort
 
-`ReasoningEffort` (`types.rs`) is a per-call input to `AgentLlm::respond`, carried on `TurnParams.reasoning_effort`
-(every caller passes `ProviderDefault` until a picker sets it). `genai_effort` maps it onto genai's levels, which each
+`ReasoningEffort` (`types.rs`) is a per-call input to `AgentLlm::respond`, inside `CallSettings { effort,
+max_output_tokens }` on `TurnParams.call`. The interactive send resolves both from the Effort picker
+(`../chat/DETAILS.md` § Reasoning effort and the reply's room); wakes and tests pass `CallSettings::default()`
+(`ProviderDefault` in the base 12,000-token slot). `build_options` sets `max_tokens` from the call, never a constant
+here. `genai_effort` maps the effort onto genai's levels, which each
 adapter maps onto its provider's knob:
 
 - `ProviderDefault`: nothing sent, so the provider decides (Claude 5.x adaptive, Gemini dynamic, DeepSeek `high`).
@@ -186,8 +189,8 @@ Caveats for the picker:
 - An explicit level sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is a 400 there. Only
   `ProviderDefault` is safe everywhere, so the picker must know the model reasons (the model-capabilities fetch in
   `ai/`).
-- Reasoning spends the same `AGENT_MAX_OUTPUT_TOKENS` slot as the visible reply and the tool calls. At `High` and `Max`
-  a long think can hit `MaxTokens` before any tool call; that ends the turn as `UnfinishedReply`. genai's legacy
+- Reasoning spends the same `max_tokens` as the visible reply and the tool calls, so the picker raises the ceiling
+  with the level (`chat::effort::reply_room`). A think that still outruns it ends the turn as `UnfinishedReply`. genai's legacy
   Anthropic `budget_tokens` (24,000 at `High`, pre-adaptive Claude only) exceeds the slot outright.
 - Reasoning is billed as output, and genai's `completion_tokens` already counts it (Anthropic `output_tokens`, OpenAI
   `completion_tokens` / `output_tokens`, Gemini candidates plus thoughts), so `pricing.rs` meters it. `map_usage`

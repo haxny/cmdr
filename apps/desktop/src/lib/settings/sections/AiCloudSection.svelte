@@ -20,6 +20,15 @@
     import { formatInteger } from '#lib/intl/number-format.js'
     import { dependOn } from '#lib/utils/reactivity.js'
     import { getAiModelLimits, onAiModelCapabilitiesChanged, type AiModelLimits } from '#lib/tauri-commands/index.js'
+    import type { AiEffortLevel } from '#lib/ipc/bindings.js'
+    import {
+        effectiveEffortChoice,
+        effortChoices,
+        readEffortChoice,
+        showsEffortPicker,
+        writeEffortChoice,
+        type EffortChoice,
+    } from './ai-effort'
 
     /**
      * Settings › AI › Provider. The service picker, then the SAME numbered setup steps the
@@ -142,6 +151,54 @@
         return output == null ? '' : tString('ai.cloud.maxOutput', { outputText: formatInteger(output), output })
     })
 
+    // The Effort picker: its menu comes from the backend (`modelLimits.effort`), its pick lives in
+    // `ai.reasoningEfforts` per provider and model (`./ai-effort.ts`).
+    let reasoningEfforts = $state(getSetting('ai.reasoningEfforts'))
+    unlistenFns.push(
+        onSpecificSettingChange('ai.reasoningEfforts', (newValue) => {
+            reasoningEfforts = newValue
+        }),
+    )
+    const effortOptions = $derived(modelLimits?.effort ?? null)
+    // What the next send will really ask for, so a pick the model can't take shows as what it became.
+    const effortChoice = $derived.by(() => {
+        const stored = readEffortChoice(reasoningEfforts, controller.providerId, controller.model.trim())
+        return effortOptions ? effectiveEffortChoice(effortOptions, stored) : stored
+    })
+    const effortItems = $derived<SelectItem[]>(
+        effortOptions ? effortChoices(effortOptions).map((choice) => ({ value: choice, label: effortLabel(choice) })) : [],
+    )
+
+    /** One literal key per option, so the i18n checks can see every one. */
+    function levelLabel(level: AiEffortLevel): string {
+        switch (level) {
+            case 'low':
+                return tString('ai.cloud.effort.low')
+            case 'medium':
+                return tString('ai.cloud.effort.medium')
+            case 'high':
+                return tString('ai.cloud.effort.high')
+            case 'max':
+                return tString('ai.cloud.effort.max')
+        }
+    }
+
+    function effortLabel(choice: EffortChoice): string {
+        if (choice === 'off') return tString('ai.cloud.effort.off')
+        if (choice !== 'recommended') return levelLabel(choice)
+        const recommended = effortOptions?.recommended
+        return recommended
+            ? tString('ai.cloud.effort.recommendedWithLevel', { level: levelLabel(recommended) })
+            : tString('ai.cloud.effort.recommended')
+    }
+
+    function pickEffort(choice: string): void {
+        setSetting(
+            'ai.reasoningEfforts',
+            writeEffortChoice(reasoningEfforts, controller.providerId, controller.model.trim(), choice as EffortChoice),
+        )
+    }
+
     onDestroy(() => {
         // Flush in-flight typing before teardown: closing Settings (or moving to another
         // section) shouldn't drop a key the user already typed.
@@ -228,6 +285,26 @@
                 <span>{maxOutputText}</span>
             {/if}
         </p>
+    {/if}
+
+    {#if shouldShow('ai.reasoningEfforts') && showsEffortPicker(effortOptions)}
+        <SettingRow
+            id="ai.reasoningEfforts"
+            label={tString('settings.ai.reasoningEfforts.label')}
+            description={tString('settings.ai.reasoningEfforts.description')}
+            split
+            {searchQuery}
+        >
+            <Select
+                items={effortItems}
+                value={effortChoice}
+                onChange={pickEffort}
+                ariaLabel={tString('settings.ai.reasoningEfforts.label')}
+            />
+        </SettingRow>
+        {#if effortOptions && effortOptions.levels.length === 0}
+            <p class="model-limits" role="note">{tString('ai.cloud.effort.levelsUnknown')}</p>
+        {/if}
     {/if}
 
     {#if askCmdrModelOverride}

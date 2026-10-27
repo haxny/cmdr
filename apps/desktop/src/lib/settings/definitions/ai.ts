@@ -85,6 +85,22 @@ export const aiSettings: SettingDefinitionSource[] = [
     component: 'text-input',
   },
   {
+    // How hard each cloud model thinks, per provider and model: a JSON object keyed
+    // `"<provider id>/<model>"` with `"recommended"`, `"off"`, or a level (`"low"` …
+    // `"max"`). Rendered as the Effort picker under the model in `AiCloudSection`, never as a
+    // text field. Read fresh per send by `load_ai_reasoning_efforts`, so no applier case; the
+    // backend maps a pick the model can't take to the nearest it can
+    // (`agent::chat::effort::resolve_effort`).
+    id: 'ai.reasoningEfforts',
+    section: ['AI', 'Provider'],
+    labelKey: 'settings.ai.reasoningEfforts.label',
+    descriptionKey: 'settings.ai.reasoningEfforts.description',
+    keywordsKey: 'settings.ai.reasoningEfforts.keywords',
+    type: 'string',
+    default: '{}',
+    component: 'text-input',
+  },
+  {
     id: 'ai.localContextSize',
     section: ['AI', 'Provider'],
     labelKey: 'settings.ai.localContextSize.label',

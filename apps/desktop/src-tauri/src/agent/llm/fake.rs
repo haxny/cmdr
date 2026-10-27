@@ -17,7 +17,7 @@ use crate::ignore_poison::IgnorePoison;
 
 use super::types::{
     AgentDelta, AgentLlmError, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentUsage,
-    ReasoningEffort, ToolDeclaration, ToolId,
+    ToolDeclaration, ToolId,
 };
 use super::{AgentDeltaStream, AgentLlm};
 
@@ -98,7 +98,7 @@ impl AgentLlm for FakeAgentLlm {
         _system: &'a str,
         _tools: &'a [ToolDeclaration],
         messages: &'a [AgentMessage],
-        _effort: ReasoningEffort,
+        _call: crate::agent::llm::CallSettings,
         cancel: CancellationToken,
     ) -> BoxFuture<'a, Result<AgentDeltaStream, AgentLlmError>> {
         async move {
@@ -246,7 +246,7 @@ mod tests {
                 "sys",
                 &[],
                 &first_prompt,
-                ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 cancel.clone(),
             )
             .await
@@ -265,7 +265,7 @@ mod tests {
                 "sys",
                 &[],
                 &second_prompt,
-                ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 cancel.clone(),
             )
             .await
@@ -296,7 +296,7 @@ mod tests {
                 "sys",
                 &[],
                 &[],
-                ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 CancellationToken::new(),
             )
             .await
@@ -334,7 +334,7 @@ mod tests {
                 "sys",
                 &[],
                 &[],
-                ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 CancellationToken::new(),
             )
             .await
@@ -405,7 +405,7 @@ mod tests {
                 "sys",
                 &[],
                 &prompt,
-                ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 CancellationToken::new(),
             )
             .await
@@ -425,7 +425,7 @@ mod tests {
                 "sys",
                 &[],
                 &[],
-                ReasoningEffort::ProviderDefault,
+                crate::agent::llm::CallSettings::default(),
                 CancellationToken::new(),
             )
             .await;

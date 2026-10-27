@@ -139,6 +139,26 @@ pub enum ReasoningEffort {
     Max,
 }
 
+/// What one [`AgentLlm::respond`](super::AgentLlm::respond) call asks of the model beyond the
+/// prompt: how hard to think, and the output ceiling that thinking shares with the reply and
+/// its tool calls. Resolved per slot by `chat::effort::resolve_effort`, which never pairs a
+/// level with a model that can't take it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CallSettings {
+    pub effort: ReasoningEffort,
+    pub max_output_tokens: u32,
+}
+
+impl Default for CallSettings {
+    /// The provider decides, inside the base reply slot: safe on every model.
+    fn default() -> Self {
+        Self {
+            effort: ReasoningEffort::ProviderDefault,
+            max_output_tokens: crate::agent::chat::budget::AGENT_MAX_OUTPUT_TOKENS,
+        }
+    }
+}
+
 /// Opaque, provider-tagged reasoning state. The `blob` shape is owned solely by
 /// the genai adapter mapping (`genai_impl.rs`); everything else treats it as
 /// opaque and must persist and replay it untouched. Never inspect or reshape it

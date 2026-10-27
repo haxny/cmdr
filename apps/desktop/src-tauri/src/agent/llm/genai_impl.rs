@@ -28,19 +28,11 @@ use crate::ai::client::{AiBackend, AiError, map_genai_error};
 
 use super::types::{
     AgentDelta, AgentLlmError, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentToolResult,
-    AgentUsage, ProviderTag, ReasoningEffort, ReasoningState, ToolDeclaration, ToolId,
+    AgentUsage, CallSettings, ProviderTag, ReasoningEffort, ReasoningState, ToolDeclaration, ToolId,
 };
 use super::{AgentDeltaStream, AgentLlm};
 
 const LOG_TARGET: &str = "agent::llm";
-
-/// Per-call output room for reasoning-heavy OpenAI-compatible models. Reasoning tokens
-/// share this budget with visible text and tool calls.
-///
-/// Defined next to the prompt budget, not here, because `budget::files_per_batch` divides it
-/// to decide how many rename rows one reply can actually emit. Two copies would let a raise
-/// here silently fail to reach the batch hint.
-use crate::agent::chat::budget::AGENT_MAX_OUTPUT_TOKENS;
 
 /// The genai-backed agent LLM. Wraps a configured [`AiBackend`] (the interactive
 /// model slot; the slot is resolved in the command layer) and reuses its adapter routing and
@@ -61,7 +53,7 @@ impl AgentLlm for GenaiAgentLlm {
         system: &'a str,
         tools: &'a [ToolDeclaration],
         messages: &'a [AgentMessage],
-        effort: ReasoningEffort,
+        call: CallSettings,
         cancel: CancellationToken,
     ) -> BoxFuture<'a, Result<AgentDeltaStream, AgentLlmError>> {
         async move {
@@ -70,11 +62,13 @@ impl AgentLlm for GenaiAgentLlm {
             let origin = ReasoningOrigin::of(&model).with_chat_reasoning(self.backend.replays_chat_reasoning());
 
             let request = build_request(system, tools, messages, &origin);
-            let options = build_options(adapter, effort);
+            let options = build_options(adapter, call);
 
             log::debug!(
                 target: LOG_TARGET,
-                "respond: opening stream (adapter={adapter:?}, effort={effort:?}, tools={}, messages={})",
+                "respond: opening stream (adapter={adapter:?}, effort={:?}, max_output={}, tools={}, messages={})",
+                call.effort,
+                call.max_output_tokens,
                 tools.len(),
                 messages.len()
             );
@@ -157,20 +151,20 @@ fn build_request(
 }
 
 /// Capture everything needed to rebuild the final [`AgentMessage`] on stream end, plus the
-/// call's reasoning effort.
+/// call's reasoning effort and its output ceiling (`chat::effort::reply_room`, which thinking shares).
 ///
 /// `capture_reasoning_content` is load-bearing, not just for display: it's genai's opt-in for
 /// Anthropic's thinking-block signatures and the OpenAI Responses `reasoning.encrypted_content`
 /// include, the halves a tool loop has to replay.
-fn build_options(adapter: AdapterKind, effort: ReasoningEffort) -> ChatOptions {
+fn build_options(adapter: AdapterKind, call: CallSettings) -> ChatOptions {
     let options = ChatOptions::default()
-        .with_max_tokens(AGENT_MAX_OUTPUT_TOKENS)
+        .with_max_tokens(call.max_output_tokens)
         .with_capture_content(true)
         .with_capture_tool_calls(true)
         .with_capture_usage(true)
         .with_capture_reasoning_content(true);
 
-    match genai_effort(adapter, effort) {
+    match genai_effort(adapter, call.effort) {
         Some(effort) => options.with_reasoning_effort(effort),
         None => options,
     }

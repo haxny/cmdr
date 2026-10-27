@@ -470,6 +470,36 @@ pub struct AiModelLimits {
     /// Only ever the provider's figure: the table doesn't guess it.
     pub max_output_tokens: Option<u32>,
     pub source: Option<AiModelLimitsSource>,
+    /// What the Effort picker may offer for this model (`agent::chat::effort::effort_options`).
+    pub effort: AiEffortOptions,
+}
+
+/// One effort level the picker offers, cheapest first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum AiEffortLevel {
+    Low,
+    Medium,
+    High,
+    Max,
+}
+
+/// The Effort picker's menu for one model. The UI stores the pick in `ai.reasoningEfforts` as
+/// `"recommended"`, `"off"`, or a level's camelCase name; the backend maps a pick the model
+/// can't take to the nearest one it can, so this menu is a courtesy, never the guard.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AiEffortOptions {
+    /// Whether the model reasons: `false` hides the picker, `None` means nothing knows (the
+    /// picker then offers Recommended alone).
+    pub reasons: Option<bool>,
+    pub levels: Vec<AiEffortLevel>,
+    pub can_turn_off: bool,
+    /// What Recommended amounts to, when anything knows; `None` while the provider decides
+    /// per request.
+    pub recommended: Option<AiEffortLevel>,
+    /// Where the levels came from: the provider's list, or Cmdr's built-in table.
+    pub source: Option<AiModelLimitsSource>,
 }
 
 /// The window and longest reply of `model` on the provider being set up, for Settings › AI.
@@ -494,6 +524,32 @@ fn limits_for(model: &str, reported: Option<&ModelCapabilities>) -> AiModelLimit
         source: window.map(|w| match w.source {
             WindowSource::Provider => AiModelLimitsSource::Provider,
             WindowSource::FamilyTable | WindowSource::LocalServer => AiModelLimitsSource::BuiltInTable,
+        }),
+        effort: effort_view(provider, model, reported),
+    }
+}
+
+fn effort_view(
+    provider: crate::agent::llm::types::ProviderTag,
+    model: &str,
+    reported: Option<&ModelCapabilities>,
+) -> AiEffortOptions {
+    use crate::agent::chat::effort::{EffortLevel, KnowledgeSource, effort_options};
+    let level = |level: EffortLevel| match level {
+        EffortLevel::Low => AiEffortLevel::Low,
+        EffortLevel::Medium => AiEffortLevel::Medium,
+        EffortLevel::High => AiEffortLevel::High,
+        EffortLevel::Max => AiEffortLevel::Max,
+    };
+    let options = effort_options(provider, model, reported.map(|c| &c.reasoning));
+    AiEffortOptions {
+        reasons: options.reasons,
+        levels: options.levels.into_iter().map(level).collect(),
+        can_turn_off: options.can_turn_off,
+        recommended: options.recommended.map(level),
+        source: options.source.map(|source| match source {
+            KnowledgeSource::Provider => AiModelLimitsSource::Provider,
+            KnowledgeSource::BuiltIn => AiModelLimitsSource::BuiltInTable,
         }),
     }
 }

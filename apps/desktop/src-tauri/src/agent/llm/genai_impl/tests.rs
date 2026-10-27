@@ -173,7 +173,13 @@ fn effort_maps_to_genai_and_provider_default_sends_nothing() {
         keyword(genai_effort(AdapterKind::Anthropic, ReasoningEffort::Max)),
         Some("max")
     );
-    let options = build_options(AdapterKind::Anthropic, ReasoningEffort::High);
+    let options = build_options(
+        AdapterKind::Anthropic,
+        CallSettings {
+            effort: ReasoningEffort::High,
+            max_output_tokens: 32_000,
+        },
+    );
     assert_eq!(keyword(options.reasoning_effort), Some("high"));
     assert_eq!(options.capture_reasoning_content, Some(true));
 }
@@ -367,8 +373,15 @@ async fn a_tool_call_streamed_in_fragments_starts_once() {
 
 #[test]
 fn agent_calls_leave_room_for_reasoning_and_a_tool_call() {
-    let options = build_options(AdapterKind::OpenAI, ReasoningEffort::ProviderDefault);
-    assert_eq!(options.max_tokens, Some(AGENT_MAX_OUTPUT_TOKENS));
+    // The ceiling is the call's own (`chat::effort::reply_room`), never a constant here.
+    let options = build_options(
+        AdapterKind::OpenAI,
+        CallSettings {
+            effort: ReasoningEffort::ProviderDefault,
+            max_output_tokens: 32_000,
+        },
+    );
+    assert_eq!(options.max_tokens, Some(32_000));
 }
 
 #[test]

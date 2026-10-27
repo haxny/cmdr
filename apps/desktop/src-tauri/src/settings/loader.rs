@@ -578,6 +578,26 @@ fn parse_ask_cmdr_chat_memory_size(contents: &str) -> Option<usize> {
         .filter(|tokens| *tokens > 0)
 }
 
+/// The per-model reasoning-effort choices (`ai.reasoningEfforts`), read fresh from
+/// `settings.json` per send: the stored JSON object, or `"{}"` when absent. Parsing and the
+/// key shape live with the resolution (`agent::chat::effort::choice_for`), which reads anything
+/// unreadable as Recommended.
+pub fn load_ai_reasoning_efforts<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> String {
+    let contents = crate::config::resolved_app_data_dir(app)
+        .ok()
+        .and_then(|dir| fs::read_to_string(dir.join("settings.json")).ok());
+    contents
+        .as_deref()
+        .and_then(parse_ai_reasoning_efforts)
+        .unwrap_or_else(|| "{}".to_string())
+}
+
+/// The parsing half of [`load_ai_reasoning_efforts`], pure so it can be tested without an app.
+fn parse_ai_reasoning_efforts(contents: &str) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_str(contents).ok()?;
+    json.get("ai.reasoningEfforts")?.as_str().map(str::to_string)
+}
+
 /// Whether the user let Ask Cmdr start conversations on its own (`askCmdr.proactive`), read
 /// fresh from `settings.json` so a change applies with no restart.
 ///

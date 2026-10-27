@@ -8,6 +8,7 @@ fn automatic(provider: ProviderTag, model: &str) -> ResolvedBudget {
         user_choice: None,
         local_context_tokens: MIN_LOCAL_CONTEXT_TOKENS,
         reported_window_tokens: None,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
     })
     .expect("a cloud slot is never refused")
 }
@@ -20,6 +21,22 @@ fn automatic_spends_the_whole_window() {
     assert_eq!(budget_for_window(MIN_LOCAL_CONTEXT_TOKENS as usize), 17_652);
     // A window smaller than the reply's room leaves nothing, rather than wrapping around.
     assert_eq!(budget_for_window(4_096), 0);
+}
+
+/// A higher reasoning effort raises the reply's ceiling, and Automatic leaves exactly that much
+/// of the window free, since thinking comes out of the same window as the prompt.
+#[test]
+fn automatic_leaves_the_slots_reply_room_free() {
+    let resolved = resolve_prompt_budget(BudgetInputs {
+        provider: ProviderTag::Anthropic,
+        model: "claude-opus-5-5",
+        user_choice: None,
+        local_context_tokens: 0,
+        reported_window_tokens: Some(1_000_000),
+        reply_tokens: 64_000,
+    })
+    .expect("a cloud slot is never refused");
+    assert_eq!(resolved.prompt_tokens, (1_000_000 - 64_000) * 85 / 100);
 }
 
 #[test]
@@ -62,6 +79,7 @@ fn a_provider_reported_window_wins_over_the_table() {
             user_choice: None,
             local_context_tokens: 0,
             reported_window_tokens: Some(reported),
+            reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
         })
         .expect("a cloud slot is never refused");
         assert_eq!(
@@ -175,6 +193,7 @@ fn an_explicit_size_is_honoured_and_labelled() {
         user_choice: Some(32_000),
         local_context_tokens: 0,
         reported_window_tokens: None,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
     })
     .expect("a cloud slot is never refused");
     assert_eq!(
@@ -193,6 +212,7 @@ fn a_size_above_the_known_window_warns_and_is_still_used() {
         user_choice: Some(200_000),
         local_context_tokens: 0,
         reported_window_tokens: None,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
     })
     .expect("a cloud slot is never refused");
     // Never blocked: our table will be wrong sometimes and the user may be right about
@@ -213,6 +233,7 @@ fn an_unknown_model_cannot_be_over_its_window() {
         user_choice: Some(200_000),
         local_context_tokens: 0,
         reported_window_tokens: None,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
     })
     .expect("a cloud slot is never refused");
     assert!(!resolved.over_known_window);
@@ -227,6 +248,7 @@ fn a_local_budget_tracks_the_configured_context_window() {
         user_choice: None,
         local_context_tokens: 32_768,
         reported_window_tokens: None,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
     })
     .expect("a window at or above the floor resolves");
     assert_eq!(
@@ -252,6 +274,7 @@ fn a_local_window_under_the_floor_is_refused_honestly() {
         user_choice: None,
         local_context_tokens: 4_096,
         reported_window_tokens: None,
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
     })
     .expect_err("a window under the floor cannot hold one turn");
     assert_eq!(
@@ -269,6 +292,7 @@ fn a_local_window_under_the_floor_is_refused_honestly() {
             user_choice: Some(60_000),
             local_context_tokens: 4_096,
             reported_window_tokens: None,
+            reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
         })
         .is_err(),
         "the window is the server's, not the setting's, so the refusal stands"
