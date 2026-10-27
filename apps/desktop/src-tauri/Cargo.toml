@@ -262,7 +262,8 @@ rand = "0.10"
 # minors, so pin exact to avoid surprise breakage on `cargo update`. 0.7 is what lets reasoning
 # survive a tool loop: Anthropic signed and redacted thinking blocks, OpenAI Responses encrypted
 # reasoning items, Gemini per-part thought signatures, and Mistral `thinking` chunks round-trip
-# (`src/agent/llm/DETAILS.md` § Reasoning round-trip). Solo maintainer; MIT/Apache-2.0; ~25k LOC
+# (`src/agent/llm/DETAILS.md` § Reasoning round-trip). Patched through `vendor/genai/CMDR-PATCH.md` (OpenRouter's streamed
+# `reasoning_details`). Solo maintainer; MIT/Apache-2.0; ~25k LOC
 # if we ever need to fork.
 genai = "=0.7.1"
 # Type-safe IPC: typed Rust↔TS bindings for tauri commands and events.

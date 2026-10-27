@@ -60,9 +60,14 @@ pub(super) fn chat_dialect_for_host(host: &str) -> Option<&'static str> {
 /// loop that DOESN'T send it, and Groq 400s one that DOES ("property 'reasoning_content' is
 /// unsupported", verified on `openai/gpt-oss-120b`, live tool loop, 2026-10-27). Every other
 /// host keeps what it always got, no reasoning, which costs continuity, never the loop.
+/// OpenRouter documents both `reasoning_content` and its `reasoning_details` blocks as accepted
+/// back, and needs the blocks for a signed or encrypted model's continuity.
 /// Evidence per host: `agent/llm/DETAILS.md` § Reasoning round-trip.
 pub(super) fn replays_chat_reasoning_for_host(host: &str) -> bool {
-    matches!(host, "api.deepseek.com" | "api.mistral.ai" | "api.fireworks.ai")
+    matches!(
+        host,
+        "api.deepseek.com" | "api.mistral.ai" | "api.fireworks.ai" | "openrouter.ai"
+    )
 }
 
 /// Per-model option fixup: reasoning-class models reject `temperature`. Returns a

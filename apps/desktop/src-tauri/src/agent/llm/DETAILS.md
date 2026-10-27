@@ -146,15 +146,17 @@ runs below, 2026-10-27):
   out of the replay.
 - **Fireworks**: takes `reasoning_content` back (verified on `deepseek-v4p1-flash`, live tool loop, 2026-10-27), so
   DeepSeek and Kimi there keep their continuity.
-- **OpenRouter**: continuity rides `reasoning_details` (signed, encrypted, and summary blocks). genai 0.7.1 captures
-  them on the non-streaming path only, and the agent streams, so they're lost; OpenRouter then drops the provider's
-  thinking for the next call. Unverified live (the key has no credits).
+- **OpenRouter**: continuity rides `reasoning_details` (signed, encrypted, and summary blocks), wanted back verbatim
+  and in order; `reasoning_content` is accepted beside them (OpenRouter's reasoning-tokens guide, "Preserving
+  Reasoning", checked 2026-10-27). Upstream genai 0.7.1 captures the blocks on the non-streaming path only, so Cmdr
+  vendors a patch that merges the streamed pieces too (`vendor/genai/CMDR-PATCH.md`); they arrive as `Custom`
+  parts and go back as `reasoning_details`. Unverified live (the key has no credits).
 - **Everything else on chat-completions** (Together, xAI, Qwen/DashScope, Perplexity, Ollama, LM Studio, custom, and
   Cmdr's own llama-server): unverified, so they keep what they always got, no reasoning back. Wrongly sending it is a
   400 that wedges the loop (Groq); wrongly withholding it costs continuity, except on a provider that requires it.
 
 Which chat-completions endpoints get reasoning back is ONE allowlist by host, `ai::client::
-replays_chat_reasoning_for_host` (DeepSeek, Mistral, Fireworks), carried as `AiBackend::replays_chat_reasoning` into
+replays_chat_reasoning_for_host` (DeepSeek, Mistral, Fireworks, OpenRouter), carried as `AiBackend::replays_chat_reasoning` into
 `ReasoningOrigin::takes_reasoning`. Off means the agent neither persists nor replays chat reasoning for that endpoint.
 To add a host, run its live tool loop (`live_smoke_test.rs`) and anchor the result here.
 

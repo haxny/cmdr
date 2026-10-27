@@ -77,10 +77,15 @@ fn deepseek_and_mistral_hosts_route_to_their_own_chat_dialects() {
 /// the field, and an unknown host keeps the no-reasoning replay it always had.
 #[test]
 fn only_verified_hosts_take_chat_reasoning_back() {
-    for host in ["api.deepseek.com", "api.mistral.ai", "api.fireworks.ai"] {
+    for host in [
+        "api.deepseek.com",
+        "api.mistral.ai",
+        "api.fireworks.ai",
+        "openrouter.ai",
+    ] {
         assert!(replays_chat_reasoning_for_host(host), "{host}");
     }
-    for host in ["api.groq.com", "api.together.xyz", "openrouter.ai", "127.0.0.1"] {
+    for host in ["api.groq.com", "api.together.xyz", "127.0.0.1"] {
         assert!(!replays_chat_reasoning_for_host(host), "{host}");
     }
 }
