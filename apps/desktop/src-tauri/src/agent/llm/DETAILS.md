@@ -136,7 +136,8 @@ runs below, 2026-10-27):
   `reasoning_content` must come back, or the API 400s (verified on DeepSeek's thinking-mode guide,
   api-docs.deepseek.com/guides/thinking_mode, 2026-10-27). genai's chat-completions streamer keeps that text out of
   the captured content, so `build_agent_message_from_stream_end` rejoins it. The host routes to genai's DeepSeek
-  dialect (`ai::client::chat_dialect_for_host`), which also sends `thinking: {type}` for the effort.
+  dialect (`ai::client::routing::chat_dialect_for_host`), which also sends `thinking: {type}` for the effort. Not yet run
+  live (no DeepSeek key); Fireworks' DeepSeek V4.1 below speaks the same format.
 - **Mistral** (`magistral-*`): reasoning streams as `thinking` content chunks and must go back as a leading `thinking`
   chunk; a `reasoning_content` field 422s (extra fields forbidden). The host routes to genai's Mistral dialect, which
   does both. Not yet run live (the key was rate-limited on every call, 2026-10-27): `smoke_mistral_tool_loop`.
