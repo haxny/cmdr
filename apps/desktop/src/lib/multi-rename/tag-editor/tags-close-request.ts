@@ -7,12 +7,15 @@
  * listener that throws or vetoes without asking strands the window alive (hidden, once Rust has hidden it). The
  * body is `null` once Svelte has unmounted it (`bind:this`), `undefined` before it mounts. With no body nothing can
  * ask, so a red button in that gap closes unasked; the gap is short, since the error boundary remounts the body on
- * the next tick (`closeAfterBodyFailed` keeps the window for it).
+ * the next tick (`closeAfterBodyFailed` keeps the window for it). A body that throws on every remount ends the
+ * reloads: the window then shows a worded fallback whose Close, and the red button, go through `closeBrokenWindow`.
  * Escape/⌘W never reach here: `closeSelfWindow` destroys the window outright (`commands/child_window_state.rs`).
  */
 import { getAppLogger } from '#lib/logging/logger.js'
 import { closeSelfWindow } from '#lib/child-window-close.js'
-import { tagsWindowMayClose } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { confirmDialog } from '#lib/utils/confirm-dialog.js'
+import { closeMultiRename, closeTagEditor, releaseTagsSession, tagsWindowMayClose } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('tagEditor')
 
@@ -62,4 +65,37 @@ export async function closeAfterBodyFailed(sessionId: string): Promise<void> {
     return
   }
   await closeSelfWindow()
+}
+
+/**
+ * Closes a Tags window whose body stopped reloading (its fallback's Close, and the red button then): with unwritten
+ * edits or a write running (or when the backend can't say) it asks the discard question ⌘W asks, then releases the
+ * hold, ends the tag and Multi-Rename sessions, and closes the window. A write still running finishes in the backend,
+ * which records its undo; only the unwritten edits go. Resolves whether the window is closing.
+ */
+export async function closeBrokenWindow(sessionId: string): Promise<boolean> {
+  let mayClose = false
+  try {
+    mayClose = await tagsWindowMayClose(sessionId)
+  } catch (error) {
+    log.warn('Tags window: no answer on unwritten edits, so it asks first: {error}', { error })
+  }
+  if (!mayClose) {
+    const discard = await confirmDialog(
+      tString('multiRename.tags.discard.message'),
+      tString('multiRename.tags.discard.title'),
+      tString('multiRename.tags.discard.confirm'),
+    )
+    if (!discard) return false
+  }
+  try {
+    await releaseTagsSession(sessionId)
+    await closeTagEditor(sessionId)
+    await closeMultiRename(sessionId)
+  } catch (error) {
+    log.warn("Tags window: couldn't end its session before closing: {error}", { error })
+  } finally {
+    await closeSelfWindow()
+  }
+  return true
 }

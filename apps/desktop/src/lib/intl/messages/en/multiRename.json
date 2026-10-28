@@ -2097,9 +2097,17 @@
   "@multiRename.tags.window.bodyReloaded": {
     "description": "Toast in the tag editor window when its content broke unexpectedly and was reloaded in place. The window stays open and the person's edits that aren't written to the files yet are kept, so they can carry on. If nothing was unwritten, the window closes instead."
   },
+  "multiRename.tags.window.bodyStopped": "The Tags window keeps running into a problem, so Cmdr stopped reloading it.",
+  "@multiRename.tags.window.bodyStopped": {
+    "description": "Toast in the tag editor window when its content broke again right after being reloaded several times, so Cmdr gave up reloading it. The window now shows multiRename.tags.window.broken with a Close button."
+  },
+  "multiRename.tags.window.broken": "This Tags window can’t show its tags. Close it; if tag changes aren’t written to the files yet, Cmdr asks first.",
+  "@multiRename.tags.window.broken": {
+    "description": "Shown in the tag editor window, beside a Close button, when its content kept breaking and Cmdr stopped reloading it. Closing asks before discarding changes not yet written to the audio files."
+  },
   "multiRename.tags.window.close": "Close",
   "@multiRename.tags.window.close": {
-    "description": "Button in the tag editor window that couldn't start: closes the window."
+    "description": "Button in the tag editor window that couldn't start, or whose content kept breaking: closes the window (asking first when tag changes aren't written yet)."
   },
   "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
   "@multiRename.tags.window.noTracks": {

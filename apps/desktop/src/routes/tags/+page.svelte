@@ -24,6 +24,7 @@
     import { TAGS_WINDOW_RECT_KEY } from '#lib/multi-rename/tag-editor/tags-window.js'
     import {
         closeAfterBodyFailed,
+        closeBrokenWindow,
         onTagsCloseRequested,
         type ClosableBody,
     } from '#lib/multi-rename/tag-editor/tags-close-request.js'
@@ -38,6 +39,25 @@
     /** The shell couldn't start: the page says so and offers a way out, since Escape lives in the body. */
     let failed = $state(false)
     let body = $state<ClosableBody | null>()
+    /** The body threw on every reload, so the boundary stopped: the fallback shows, and closing asks through it. */
+    let broken = $state(false)
+    let closingBroken = false
+    /** The broken window's stand-in body: the red button asks as ⌘W would (`closeBrokenWindow`). */
+    const brokenBody: ClosableBody = {
+        isEnding: () => closingBroken,
+        requestClose: () => void closeBroken(),
+    }
+
+    async function closeBroken(): Promise<void> {
+        if (closingBroken) return
+        closingBroken = true
+        try {
+            closingBroken = await closeBrokenWindow(sessionId)
+        } catch (error) {
+            closingBroken = false
+            log.warn('Tags window: the broken window could not close: {error}', { error })
+        }
+    }
     const unlisten: UnlistenFn[] = []
     let unsubscribeLanguage: (() => void) | undefined
 
@@ -66,7 +86,7 @@
             // The red button asks about unwritten edits first, as Escape does (`tags-close-request.ts`).
             unlisten.push(
                 await win.onCloseRequested((event) => {
-                    onTagsCloseRequested(body, event)
+                    onTagsCloseRequested(broken ? brokenBody : body, event)
                 }),
             )
             // macOS shares one menu bar: this window gets the main menu with the file items greyed.
@@ -99,6 +119,8 @@
         name="tagsWindow"
         onClose={() => void closeAfterBodyFailed(sessionId)}
         closedMessage={tString('multiRename.tags.window.bodyReloaded')}
+        gaveUpMessage={tString('multiRename.tags.window.bodyStopped')}
+        onGaveUp={() => { broken = true }}
     >
         {#if failed || (initialized && sessionId === '')}
             <div class="failed">
@@ -108,6 +130,12 @@
         {:else if initialized}
             <TagsWindow bind:this={body} {sessionId} />
         {/if}
+        {#snippet gaveUp()}
+            <div class="failed">
+                <p role="alert">{tString('multiRename.tags.window.broken')}</p>
+                <Button onclick={() => void closeBroken()}>{tString('multiRename.tags.window.close')}</Button>
+            </div>
+        {/snippet}
     </DialogBoundary>
 </main>
 

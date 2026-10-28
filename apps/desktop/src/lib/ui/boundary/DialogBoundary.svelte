@@ -34,10 +34,19 @@
          * names itself.
          */
         closedMessage?: string
+        /**
+         * What shows once the boundary stops re-arming (a body that throws on every render), for a host whose
+         * content can't just vanish (a window's whole body). Omitted, the boundary stays empty, as a closed dialog is.
+         */
+        gaveUp?: Snippet
+        /** The toast for the failure the boundary stops at, already translated; `closedMessage` otherwise. */
+        gaveUpMessage?: string
+        /** Called once the boundary stops re-arming, after `onClose`. */
+        onGaveUp?: () => void
         children: Snippet
     }
 
-    const { name, onClose, closedMessage, children }: Props = $props()
+    const { name, onClose, closedMessage, gaveUp, gaveUpMessage, onGaveUp, children }: Props = $props()
 
     const log = getAppLogger('dialogBoundary')
 
@@ -52,6 +61,8 @@
     const FAILURE_WINDOW_MS = 5000
     let consecutiveFailures = 0
     let lastFailureAt = 0
+    /** The boundary stopped re-arming: the host's `gaveUp` fallback shows. */
+    let stopped = $state(false)
 
     /**
      * Closes the broken dialog, tells the user, reports, then re-arms.
@@ -63,15 +74,19 @@
      */
     function handleError(error: unknown, reset: () => void): void {
         log.error('The {name} dialog threw; closing it and handing focus back: {error}', { name, error })
-        addToast(closedMessage ?? tString('ui.dialogBoundary.closedToast'), { level: 'error' })
+        const now = Date.now()
+        consecutiveFailures = now - lastFailureAt > FAILURE_WINDOW_MS ? 1 : consecutiveFailures + 1
+        lastFailureAt = now
+        const givingUp = consecutiveFailures > MAX_CONSECUTIVE_RESETS
+        stopped = givingUp
+        const toast = givingUp && gaveUpMessage !== undefined ? gaveUpMessage : closedMessage
+        addToast(toast ?? tString('ui.dialogBoundary.closedToast'), { level: 'error' })
         try {
             onClose?.()
         } catch (closeError) {
             log.error("The {name} dialog's close threw too: {error}", { name, error: closeError })
         }
-        const now = Date.now()
-        consecutiveFailures = now - lastFailureAt > FAILURE_WINDOW_MS ? 1 : consecutiveFailures + 1
-        lastFailureAt = now
+        if (givingUp) onGaveUp?.()
         setTimeout(() => {
             focusHome()
             if (consecutiveFailures <= MAX_CONSECUTIVE_RESETS) reset()
@@ -83,6 +98,10 @@
     {@render children()}
 
     {#snippet failed()}
-        <!-- Deliberately empty: the dialog is closed and focus is on its way home. -->
+        <!-- Empty unless the host gave a fallback for when it stops re-arming: the dialog is closed and focus is on its
+             way home. -->
+        {#if gaveUp !== undefined && stopped}
+            {@render gaveUp()}
+        {/if}
     {/snippet}
 </svelte:boundary>
