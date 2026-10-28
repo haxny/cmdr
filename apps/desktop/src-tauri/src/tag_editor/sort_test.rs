@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 use cmdr_media_meta::test_fixtures::mp3_frames;
 use cmdr_tags::{FileTags, TagField};
 
-use super::session::{Loaded, close, edit, open, unchanged_on_disk};
+use super::error::TagEditorError;
+use super::session::{Loaded, SESSIONS, close, edit, open, unchanged_on_disk};
 use super::session_test::{album, folder, path_of, set_title, tag_file};
 use super::sort::{SortItem, TrackSort, TrackSortKey, reorder_with, sort_tracks, sorted_names};
 use super::view::TagEditorView;
@@ -359,14 +360,33 @@ fn a_failed_set_order_leaves_the_sort_unset_so_the_default_is_retried() {
             ("c.mp3", &[(TagField::Track, "1")]),
         ],
     );
-    // The first open's default sort fails at the order step.
-    let failed = reorder_with(&id, sort(TrackSortKey::DiscTrack, ASC), |_, _| {
+    // Open the tag session, then put it back as it is before its first sort.
+    open(&id, false).expect("opens");
+    {
+        let mut sessions = SESSIONS.lock().expect("lock");
+        let session = sessions.get_mut(&id).expect("the tag session is open");
+        session.sort = None;
+        session.ordered = false;
+        session.sorted_tracks.clear();
+    }
+
+    // The first sort fails at the order step.
+    let ran = std::cell::Cell::new(false);
+    let failed = reorder_with(&id, sort(TrackSortKey::FileName, true), |_, _| {
+        ran.set(true);
         Err(MultiRenameError::NotAPermutation)
     });
-    assert!(failed.is_err());
+    assert!(ran.get(), "the order step ran");
+    assert!(matches!(failed, Err(TagEditorError::TaskFailed)), "got {failed:?}");
+    {
+        let sessions = SESSIONS.lock().expect("lock");
+        let session = sessions.get(&id).expect("the tag session is open");
+        assert_eq!(session.sort, None);
+        assert!(!session.ordered);
+    }
 
-    // Nothing was recorded: the next open sorts by default again.
-    let view = open(&id, false).expect("opens");
+    // Nothing was recorded: the next (re)read of the session applies the default sort.
+    let view = open(&id, true).expect("opens");
     assert_eq!(view.sort, Some(sort(TrackSortKey::DiscTrack, ASC)));
     assert_eq!(names(&view), vec!["c.mp3", "b.mp3", "a.mp3"]);
     close(&id);

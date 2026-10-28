@@ -18,6 +18,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - **Edits are keyed by PATH.** The view walks the rename session's CURRENT names, so a reorder never moves an edit. An
   unknown or unreadable path refuses the batch (`UnknownTrack`). A file whose fingerprint moved since the read is never
   written.
+- **Tools run on a scope** (selected tracks, else all), in session order; an unknown path refuses.
+- **The no-track rule is about the BOOK**: only a one-track book loses its track number, counting all its audio tracks.
 - **Only the `root` volume is editable**; other volumes are `editable: false` and `edit` / `tool` / `apply` refuse with
   `ReadOnly`.
 - **Every lofty call goes through `contain_panics`**; a panic is a `readError` or `failed` row, never a crash.
