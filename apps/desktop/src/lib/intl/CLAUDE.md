@@ -4,7 +4,7 @@ Two locale sources: the UI LANGUAGE for catalog text and numbers, the OS REGION 
 
 ## Module map
 
-- `locale.ts`: `getUiLocale()` (what we speak), `getNumberLocale()` (its resolved catalog tag, for numbers),
+- `locale.ts`: `getUiLocale()` (what we speak), `getCatalogLocale()` (its resolved catalog tag: numbers, joins),
   `getFormatLocale()` (always the OS), `setOsFormatLocale()` (the OS's tag arriving). Tests: `_setLocaleForTests` pins
   both, `_setFormatLocaleForTests` splits them.
 - `os-locales.ts`: the OS's two answers. `loadSystemLocales()` fetches the Rust pair per window, `pickUiLocale(setting)`
@@ -50,8 +50,8 @@ Two locale sources: the UI LANGUAGE for catalog text and numbers, the OS REGION 
   enforces pairing).
 - **Only the runtime writes `<html lang>`** (`setLocale()` and the startup catalog), with the RESOLVED catalog tag
   (`ja-JP` → `en`). ❌ No per-window write.
-- **Copy reads `getUiLocale()`, numbers `getNumberLocale()`, dates `getFormatLocale()`; nothing else resolves a
-  locale.** Numbers follow the language (English UI, Swedish Mac: `612.00 MB`); dates keep the region. Month NAMES are
+- **Copy reads `getUiLocale()`, numbers and joins `getCatalogLocale()`, dates `getFormatLocale()`; nothing else resolves
+  a locale.** Numbers follow the language (English UI, Swedish Mac: `612.00 MB`); dates keep the region. Month NAMES are
   language, the week start beside them region.
 - **Format ONLY through this layer + `#lib/settings/format-utils`** (`formatInteger`/`formatNumber`,
   `formatSizeForDisplay`, `formatDateForDisplay`). ❌ Never hardcode a locale or build an `Intl` formatter in feature

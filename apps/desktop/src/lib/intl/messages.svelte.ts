@@ -28,7 +28,7 @@
  */
 
 import { IntlMessageFormat, type PrimitiveType, type FormatXMLElementFn } from 'intl-messageformat'
-import { defaultUiLocale, getUiLocale, setNumberLocaleResolver, setUiLocaleOverride } from './locale'
+import { defaultUiLocale, getUiLocale, setCatalogLocaleResolver, setUiLocaleOverride } from './locale'
 import { inheritableAncestors } from './locale-inheritance'
 import { setDocumentLanguage } from './document-language'
 import { rememberedStartupCatalog, rememberStartupCatalog } from './startup-catalog'
@@ -193,11 +193,11 @@ export function resolvedCatalogLocale(locale: string): string {
 // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state; a pure resolve-once perf cache, cleared by `_setCatalogForTests`. Reactivity comes from the `localeVersion` rune.
 const resolvedCache = new Map<string, string>()
 
-// The number locale (`locale.ts::getNumberLocale`) is the resolved catalog tag, read through
+// The number locale (`locale.ts::getCatalogLocale`) is the resolved catalog tag, read through
 // the rune: markup or a `$derived` that formats a number re-runs on a language switch even when
 // no message is involved. Installed here, not imported there, so `locale.ts` stays a leaf and a
 // test that mocks this module away still formats numbers.
-setNumberLocaleResolver(() => {
+setCatalogLocaleResolver(() => {
   // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- load-bearing rune read: tracks the reactive dependency; see header.
   localeVersion
   return resolvedCatalogLocale(getUiLocale())
@@ -475,7 +475,7 @@ export function tStringIn(locale: string, key: MessageKey, params?: TranslationP
  * to revert to the OS default. Clears the compiled cache so a re-resolve picks
  * up the new locale.
  *
- * Moves copy and numbers (`getNumberLocale()` reads the same tag). Dates keep
+ * Moves copy and numbers (`getCatalogLocale()` reads the same tag). Dates keep
  * following the OS through `getFormatLocale()`, so a Hungarian speaker in
  * Sweden keeps their Swedish dates (`locale.ts`).
  *

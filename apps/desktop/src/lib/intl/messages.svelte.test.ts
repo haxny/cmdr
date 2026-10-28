@@ -276,7 +276,7 @@ describe('reactivity in markup (read-rune-before-cache invariant)', () => {
   })
 
   it('re-renders a markup number on a language switch, with no message involved', () => {
-    // Numbers follow the app language (`locale.ts::getNumberLocale`), so a switch must reach
+    // Numbers follow the app language (`locale.ts::getCatalogLocale`), so a switch must reach
     // a `{formatInteger(n)}` in markup the way it reaches a `{t()}`.
     void setLocale('en')
     const target = document.createElement('div')

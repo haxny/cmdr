@@ -186,7 +186,7 @@ Numbers/sizes/dates format through `#lib/intl` + `format-utils` (the formatting 
 `filesText`), keeping formatting single-sourced. The raw integer is passed alongside ONLY to drive ICU `plural`
 selection (noun + was/were agreement), never for display. Don't reformat inside messages with ICU `{n, number}`.
 `IntlMessageFormat` is constructed with the RESOLVED catalog tag (`resolvedCatalogLocale`, the same answer as
-`getNumberLocale()`), so a `#` or a stray `{n, number}` still writes the same digits as the layer, and plural rules
+`getCatalogLocale()`), so a `#` or a stray `{n, number}` still writes the same digits as the layer, and plural rules
 match the text actually on screen (a `ja-JP` Mac reading English gets English plurals).
 
 ### Generated keys, codegen, checks
@@ -211,7 +211,7 @@ message-key construction. New English keys require translated catalog entries an
 
 ## What this layer owns vs. doesn't
 
-Owns: the locale decision (`getUiLocale` / `getNumberLocale` / `getFormatLocale`), and number/size grouping + decimals
+Owns: the locale decision (`getUiLocale` / `getCatalogLocale` / `getFormatLocale`), and number/size grouping + decimals
 (`number-format.ts`). The DATE formatter lives in `#lib/settings/format-utils.ts` (`formatDateForDisplay` + the cached
 `getSystemLocaleFormatter`) because dates carry per-component age-tier coloring that belongs with the date-color
 settings; it reads `getFormatLocale()` from here, so the locale source is still single per job.
@@ -243,8 +243,8 @@ the column-measurement fold, so a per-call construction is what regresses scroll
 the caches below.
 
 `getNumberFormatter(options)` caches by `${locale} ${JSON.stringify(options)}` and rebuilds only when
-`getNumberLocale()` changes. Words around a number (a narrow unit, a currency symbol) come from the same formatter, so
-they and the digits always agree. `getNumberLocale()` itself is per-entry hot, so `resolvedCatalogLocale` memoizes its
+`getCatalogLocale()` changes. Words around a number (a narrow unit, a currency symbol) come from the same formatter, so
+they and the digits always agree. `getCatalogLocale()` itself is per-entry hot, so `resolvedCatalogLocale` memoizes its
 answer per tag (cleared with the chain cache). `getGroupSeparator()` caches the group character per locale (derived from
 `Intl.NumberFormat(locale).formatToParts(11111)`). Both mirror the lazy-singleton `getSystemLocaleFormatter()` in
 `format-utils.ts`, which keys its single cached `Intl.DateTimeFormat` on `getFormatLocale()`.
@@ -484,17 +484,19 @@ the region.
 
 - **`getUiLocale()`** follows `appearance.language`. Catalog text reads it: `t()`, `getMessage()`, `<Trans>`, and the
   weekday/month NAMES in `query-ui/filter-chips/filter-popover-helpers.ts` (they're words inside translated sentences).
-- **`getNumberLocale()`** is that language's RESOLVED catalog tag (`resolvedCatalogLocale(getUiLocale())`, so `en-GB`
+- **`getCatalogLocale()`** is that language's RESOLVED catalog tag (`resolvedCatalogLocale(getUiLocale())`, so `en-GB`
   stays `en-GB` and a `ja-JP` Mac with no `ja` catalog gets `en`). Every number reads it: counts, sizes, rates,
   durations, money, the Ask Cmdr cost and token counts, the low-space percent, and ICU `#` (the engine gets the same
-  tag). `messages.svelte.ts` installs it through `setNumberLocaleResolver()` at module load, reading the version rune,
-  so a markup or `$derived` number re-renders on a language switch with no message involved; before that (or in a test
-  that mocks the runtime) it falls back to `getUiLocale()`.
+  tag). The list joins (`list-format.ts`) read it too, so a list in an English sentence on a Mac with no catalog for its
+  language joins with "and". `messages.svelte.ts` installs it through `setCatalogLocaleResolver()` at module load,
+  reading the version rune, so a markup or `$derived` number re-renders on a language switch with no message involved;
+  before that (or in a test that mocks the runtime) it falls back to `getUiLocale()`.
 - **`getFormatLocale()`** always follows the OS. The `'system'` date (`format-utils.ts::getSystemLocaleFormatter`), the
-  time of day, and calendar facts read it: `resolveFirstDayOfWeek` is in the SAME function as those month names and
-  takes the other locale, because which day the week starts on is a region decision. No setting can move it: the only
-  production writer is `setOsFormatLocale()`, which carries the OS's own answer, and `_setFormatLocaleForTests` is the
-  test seam.
+  time of day, the worded license dates (`formatLongDate`), and calendar facts read it: `resolveFirstDayOfWeek` is in
+  the SAME function as those month names and takes the other locale, because which day the week starts on is a region
+  decision. No setting can move it: the only production writer is `setOsFormatLocale()`, which carries the OS's own
+  answer, and `_setFormatLocaleForTests` is the test seam. ❌ No `toLocaleDateString` / `toLocaleTimeString`: they read
+  the webview's tag, which drops the region (`cmdr/no-raw-locale-format`).
 
 **Why numbers follow the language.** Digits sit inside translated sentences, and a number in another locale's convention
 reads as a typo there: an English UI on a Swedish Mac showed `612,00 MB`, `0,83 US$`-style money, and `54,5s`, where an

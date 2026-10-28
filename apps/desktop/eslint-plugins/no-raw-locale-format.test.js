@@ -48,6 +48,17 @@ ruleTester.run('no-raw-locale-format', rule, {
       filename: 'src/lib/query-ui/QueryResults.svelte',
       errors: [{ messageId: 'rawToLocaleString' }],
     },
+    // The date-only and time-only variants drop the region the same way.
+    {
+      code: `const s = date.toLocaleDateString(undefined, { month: 'long' })`,
+      filename: 'src/lib/licensing/AboutWindow.svelte',
+      errors: [{ messageId: 'rawToLocaleString' }],
+    },
+    {
+      code: `const s = date.toLocaleTimeString('en-US')`,
+      filename: 'src/lib/foo/bar.ts',
+      errors: [{ messageId: 'rawToLocaleString' }],
+    },
     {
       code: `const f = new Intl.NumberFormat('en-US')`,
       filename: 'src/lib/foo/bar.ts',

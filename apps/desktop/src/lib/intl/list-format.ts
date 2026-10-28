@@ -10,10 +10,10 @@
  * tool line listing the folders a search looked in, as links
  * (`conjunctionListParts`).
  *
- * The locale is {@link getUiLocale}, not the OS formatting one: this is a
+ * The locale is {@link getCatalogLocale}, the RESOLVED catalog tag: this is a
  * conjunction inside catalog copy, so it has to speak the language the sentence
- * around it speaks. That's the split `./locale.ts` draws, and it's why sizes and
- * dates resolve the other way.
+ * around it is actually written in (a `ja-JP` Mac with no `ja` catalog reads
+ * English, so it joins with "and"). Dates resolve the other way (`./locale.ts`).
  *
  * Memoized per locale for the same reason `number-format.ts` is: constructing an
  * `Intl` formatter costs far more than formatting with one.
@@ -24,7 +24,7 @@
  * engine lacks it: `DETAILS.md` § Catalina has no Intl.ListFormat.
  */
 
-import { getUiLocale } from './locale'
+import { getCatalogLocale } from './locale'
 
 interface ListJoiner {
   /** `undefined` on an engine without `Intl.ListFormat`. */
@@ -51,7 +51,7 @@ const listFormatterCache = new Map<string, ListJoiner>()
 
 /** A memoized `Intl.ListFormat` of `type` for the active UI locale. */
 function getJoiner(type: ListType): ListJoiner {
-  const locale = getUiLocale()
+  const locale = getCatalogLocale()
   const cacheKey = `${type}:${locale}`
   let joiner = listFormatterCache.get(cacheKey)
   if (joiner === undefined) {
@@ -134,7 +134,7 @@ const separatorCache = new Map<string, string>()
 
 /** The literal CLDR puts between the first two of three conjunction items: `, ` or `、`. */
 function enumerationSeparator(): string {
-  const locale = getUiLocale()
+  const locale = getCatalogLocale()
   let separator = separatorCache.get(locale)
   if (separator === undefined) {
     const parts = createListFormat(locale, { style: 'long', type: 'conjunction' })?.formatToParts(['a', 'b', 'c'])

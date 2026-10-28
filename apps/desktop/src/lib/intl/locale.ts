@@ -9,7 +9,7 @@
  *
  *  - {@link getUiLocale} follows the `appearance.language` setting (`'system'`
  *    resolves through `os-locales.ts`). Catalog text reads this, and so do
- *    numbers and sizes, through {@link getNumberLocale} (its resolved catalog
+ *    numbers and sizes, through {@link getCatalogLocale} (its resolved catalog
  *    tag): digits inside an English sentence read as English.
  *  - {@link getFormatLocale} always follows the OS, whatever the setting says.
  *    Dates, times, and calendar conventions read this.
@@ -75,7 +75,7 @@ export function defaultUiLocale(): string {
 /**
  * The locale whose DATE conventions the user formats in, as a BCP 47 tag.
  * Dates, times, and calendar facts (which day the week starts on) read this;
- * numbers don't ({@link getNumberLocale}). It follows the OS and ❌ never the `appearance.language` setting.
+ * numbers don't ({@link getCatalogLocale}). It follows the OS and ❌ never the `appearance.language` setting.
  *
  * Prefers the tag Rust composed from the OS's language and REGION, because the
  * webview's own locale silently drops the region override. Falls back to that
@@ -98,26 +98,26 @@ export function getFormatLocale(): string {
  * Until the message runtime installs its resolver, a number reads the raw UI tag: the right
  * language, without the catalog resolution (and in a test that mocks the runtime away).
  */
-let numberLocaleResolver: () => string = getUiLocale
+let catalogLocaleResolver: () => string = getUiLocale
 
 /**
- * The locale every NUMBER is written in: the catalog tag the UI speaks (`en`, `en-GB`, `hu`),
+ * The locale every NUMBER and list join is written in: the catalog tag the UI speaks (`en`, `en-GB`, `hu`),
  * so digits inside an English sentence read as English (`612.00 MB`, `$0.83`, `54.5s`) on any
  * Mac. Dates, times, and calendar facts stay on {@link getFormatLocale}; the split and its why
  * are `DETAILS.md` § "Language and region are two settings".
  *
- * The answer comes from `messages.svelte.ts` (installed through {@link setNumberLocaleResolver}),
+ * The answer comes from `messages.svelte.ts` (installed through {@link setCatalogLocaleResolver}),
  * which owns the catalog resolution and the version rune: it answers the RESOLVED catalog tag
  * (a Japanese Mac with no `ja` catalog reads English text, so English numbers) and reads the
  * rune, so markup that formats a number re-runs on a language switch.
  */
-export function getNumberLocale(): string {
-  return numberLocaleResolver()
+export function getCatalogLocale(): string {
+  return catalogLocaleResolver()
 }
 
-/** Installs the message runtime's answer for {@link getNumberLocale}. Called once, at its load. */
-export function setNumberLocaleResolver(resolver: () => string): void {
-  numberLocaleResolver = resolver
+/** Installs the message runtime's answer for {@link getCatalogLocale}. Called once, at its load. */
+export function setCatalogLocaleResolver(resolver: () => string): void {
+  catalogLocaleResolver = resolver
 }
 
 /**

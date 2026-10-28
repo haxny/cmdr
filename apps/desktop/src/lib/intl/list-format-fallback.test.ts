@@ -38,11 +38,11 @@ describe('without Intl.ListFormat (Catalina WebKit)', () => {
     expect(formatDisjunctionList(['dates', 'tags'])).toBe('dates, tags')
   })
 
-  it('uses the full-width enumeration comma in Chinese and Japanese', () => {
+  it('uses the full-width enumeration comma in Chinese', () => {
     _setLocaleForTests('zh-Hant')
     expect(formatConjunctionList(['Preview', 'Warp'])).toBe('Preview、Warp')
-    _setLocaleForTests('ja')
-    expect(formatUnitList(['写真', 'コピー中'])).toBe('写真、コピー中')
+    _setLocaleForTests('zh')
+    expect(formatUnitList(['照片', '正在复制'])).toBe('照片、正在复制')
   })
 
   it('splits a list into its items and enumeration commas', () => {

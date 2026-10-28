@@ -6,6 +6,7 @@
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import Trans from '#lib/intl/Trans.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatLicenseDate } from '#lib/settings/sections/license-section-utils.js'
     import { GITHUB_ISSUES_URL } from '#lib/beta-links.js'
 
     interface Props {
@@ -29,19 +30,6 @@
         }
     })
 
-    // Format expiration date nicely
-    function formatDate(dateStr: string | null | undefined): string {
-        if (!dateStr) return ''
-        try {
-            return new Date(dateStr).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-            })
-        } catch {
-            return dateStr
-        }
-    }
 
     // Get descriptive license text
     function getLicenseDescription(): string {
@@ -54,7 +42,7 @@
                 if (status.licenseType === 'commercial_perpetual') {
                     return tString('licensing.about.perpetual', { org })
                 }
-                const expiresAt = formatDate(status.expiresAt)
+                const expiresAt = formatLicenseDate(status.expiresAt)
                 return expiresAt
                     ? tString('licensing.about.commercialUntil', { org, date: expiresAt })
                     : tString('licensing.about.commercial', { org })

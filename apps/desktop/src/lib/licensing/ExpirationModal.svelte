@@ -4,6 +4,7 @@
     import Button from '#lib/ui/Button.svelte'
     import Trans from '#lib/intl/Trans.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatLicenseDate } from '#lib/settings/sections/license-section-utils.js'
 
     interface Props {
         organizationName: string | null
@@ -13,14 +14,6 @@
 
     const { organizationName, expiredAt, onClose }: Props = $props()
 
-    function formatDate(isoString: string): string {
-        try {
-            const date = new Date(isoString)
-            return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
-        } catch {
-            return expiredAt
-        }
-    }
 
     async function handleDismiss() {
         await markExpirationModalShown()
@@ -53,7 +46,7 @@
         {/if}
 
         <p class="message">
-            <Trans key="licensing.expiration.message" params={{ date: formatDate(expiredAt) }} snippets={{ strong }} />
+            <Trans key="licensing.expiration.message" params={{ date: formatLicenseDate(expiredAt) }} snippets={{ strong }} />
         </p>
 
         <p class="info">{tString('licensing.expiration.info')}</p>

@@ -9,13 +9,13 @@
  * target, macOS 10.15). The two pieces used here are what the standard composes
  * internally, and `duration.test.ts` pins the result against it.
  *
- * The locale is {@link getNumberLocale}, the catalog tag the UI speaks: "min"
+ * The locale is {@link getCatalogLocale}, the catalog tag the UI speaks: "min"
  * and "Sek." are words in the sentence around them, and the digits are
  * numbers, which follow the UI language too.
  */
 
 import { createListFormat } from './list-format'
-import { getNumberLocale } from './locale'
+import { getCatalogLocale } from './locale'
 import { getNumberFormatter } from './number-format'
 
 /** The units a compact duration can name. */
@@ -53,7 +53,7 @@ function getJoiner(locale: string): Intl.ListFormat | undefined {
  * space, CLDR's narrow pattern for English.
  */
 export function formatNarrowDuration(parts: readonly DurationPart[]): string {
-  const locale = getNumberLocale()
+  const locale = getCatalogLocale()
   const worded = parts.map(({ unit, value }) => getUnitFormatter(locale, unit).format(value))
   return getJoiner(locale)?.format(worded) ?? worded.join(' ')
 }

@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { _setLocaleForTests } from './locale'
+import { _setCatalogForTests } from './messages.svelte'
 import {
   _clearListFormatCacheForTests,
   conjunctionListParts,
@@ -8,6 +9,16 @@ import {
   formatDisjunctionList,
   formatUnitList,
 } from './list-format'
+
+// Joins follow the resolved CATALOG tag, and Cmdr ships no Japanese, so `ja` would read
+// English. A synthetic catalog keeps the Japanese rules (tight joins, `、`) covered for the
+// day one ships.
+beforeAll(() => {
+  _setCatalogForTests('ja', {})
+})
+afterAll(() => {
+  _setCatalogForTests('ja', null)
+})
 
 describe('conjunctionListParts', () => {
   afterEach(() => {
@@ -71,6 +82,13 @@ describe('formatConjunctionList', () => {
     expect(formatConjunctionList(['Preview'])).toBe('Preview')
     expect(formatConjunctionList(['Preview', 'Warp'])).toBe('Preview and Warp')
     expect(formatConjunctionList(['Preview', 'Warp', 'Photos'])).toBe('Preview, Warp, and Photos')
+  })
+
+  it('joins in the language the sentence is written in, not the raw UI tag', () => {
+    // A Korean Mac with no `ko` catalog reads English text, so the list joins in English.
+    _setLocaleForTests('ko-KR')
+    expect(formatConjunctionList(['Preview', 'Warp', 'Photos'])).toBe('Preview, Warp, and Photos')
+    expect(formatDisjunctionList(['Preview', 'Warp'])).toBe('Preview or Warp')
   })
 
   it('joins in the UI language, so a German toast never reads an English "and"', () => {
@@ -146,10 +164,10 @@ describe('formatConjunctionList (memoization)', () => {
 
     _setLocaleForTests('en-US')
     for (let i = 0; i < 20; i++) formatConjunctionList(['Preview', 'Warp'])
-    expect(builtFor).toEqual(['en-US'])
+    expect(builtFor).toEqual(['en'])
 
     _setLocaleForTests('de-DE')
     formatConjunctionList(['Preview', 'Warp'])
-    expect(builtFor).toEqual(['en-US', 'de-DE'])
+    expect(builtFor).toEqual(['en', 'de'])
   })
 })

@@ -261,6 +261,25 @@ function systemLocaleSegments(date: Date, tiers: ComponentTiers): DateSegment[] 
   return segments
 }
 
+let longDateFormatter: Intl.DateTimeFormat | null = null
+let longDateFormatterLocale: string | null = null
+
+/**
+ * A calendar date in words ("15 June 2025" on an English Mac set to the Swedish region, "June
+ * 15, 2025" on a US one), in the OS's formatting locale like every date. For a date read in a
+ * sentence (a license's expiry); a file's date goes through {@link formatDateForDisplay}.
+ * `null` for an unparseable date, so the caller decides what to show. Cached per locale.
+ */
+export function formatLongDate(date: Date): string | null {
+  if (Number.isNaN(date.getTime())) return null
+  const locale = getFormatLocale()
+  if (longDateFormatter === null || longDateFormatterLocale !== locale) {
+    longDateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric' })
+    longDateFormatterLocale = locale
+  }
+  return longDateFormatter.format(date)
+}
+
 let timeOfDayFormatter: Intl.DateTimeFormat | null = null
 let timeOfDayFormatterLocale: string | null = null
 

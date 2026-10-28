@@ -4,7 +4,7 @@
  * `Intl` formatter in feature code.
  *
  * Rationale: the app resolves each formatting locale in ONE place (numbers:
- * `getNumberLocale()` in `#lib/intl/messages.svelte.ts`, the UI language;
+ * `getCatalogLocale()` in `#lib/intl/messages.svelte.ts`, the UI language;
  * dates: `getFormatLocale()` in `#lib/intl/locale.ts`, the OS region) feeding
  * ONE formatting layer
  * (`#lib/intl/number-format.ts` for numbers/sizes, and the
@@ -16,7 +16,8 @@
  * exact drift this layer removes. See `docs/specs/i18n-formatter-layer-plan.md`.
  *
  * What it flags:
- *   - any `<expr>.toLocaleString(...)` call (numbers AND dates), and
+ *   - any `<expr>.toLocaleString(...)`, `.toLocaleDateString(...)`, or
+ *     `.toLocaleTimeString(...)` call (numbers AND dates), and
  *   - `new Intl.NumberFormat(...)` / `new Intl.DateTimeFormat(...)`.
  * `Intl.Segmenter` / `Intl.Locale` are not formatters and are NOT flagged.
  *
@@ -34,6 +35,9 @@ const allowedPathFragments = [
   '/lib/query-ui/filter-chips/filter-popover-helpers.ts',
 ]
 
+/** Each resolves the webview's own locale, which drops the macOS region override. */
+const rawLocaleMethods = new Set(['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'])
+
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
   meta: {
@@ -45,12 +49,13 @@ export default {
     },
     messages: {
       rawToLocaleString:
-        "Don't call `.toLocaleString(...)` in feature code. Route counts through `formatInteger`/`formatNumber` " +
-        '(`#lib/intl/number-format`), sizes through `formatSizeForDisplay`, and dates through `formatDateForDisplay`. ' +
+        "Don't call `.toLocaleString(...)` / `.toLocaleDateString(...)` / `.toLocaleTimeString(...)` in feature code. " +
+        'Route counts through `formatInteger`/`formatNumber` (`#lib/intl/number-format`), sizes through ' +
+        '`formatSizeForDisplay`, and dates through `formatDateForDisplay` / `formatLongDate` / `formatTimeOfDay`. ' +
         'See `docs/specs/i18n-formatter-layer-plan.md`.',
       rawIntlFormatter:
         "Don't construct `new Intl.{{ ctor }}(...)` in feature code. Use the memoized factory in `#lib/intl/number-format` " +
-        'or the date formatter in `#lib/settings/format-utils`, each keyed on its single locale source (`getNumberLocale()` / `getFormatLocale()`).',
+        'or the date formatter in `#lib/settings/format-utils`, each keyed on its single locale source (`getCatalogLocale()` / `getFormatLocale()`).',
     },
     schema: [],
   },
@@ -67,7 +72,7 @@ export default {
           callee.type === 'MemberExpression' &&
           !callee.computed &&
           callee.property.type === 'Identifier' &&
-          callee.property.name === 'toLocaleString'
+          rawLocaleMethods.has(callee.property.name)
         ) {
           context.report({ node: callee.property, messageId: 'rawToLocaleString' })
         }

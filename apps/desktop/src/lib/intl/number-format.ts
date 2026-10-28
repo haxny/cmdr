@@ -9,7 +9,7 @@
  * locale changes. Mirrors the lazy-singleton shape of
  * `getSystemLocaleFormatter()` in `#lib/settings/format-utils`.
  *
- * Every number here is written in {@link getNumberLocale}: the catalog tag the
+ * Every number here is written in {@link getCatalogLocale}: the catalog tag the
  * UI speaks, so digits, the decimal mark, grouping, and the words around a
  * number (a unit, a currency symbol) all match the sentence they sit in. Dates
  * stay on the OS region (`getFormatLocale()`); the why is `DETAILS.md` §
@@ -17,7 +17,7 @@
  * itself.
  */
 
-import { getNumberLocale } from './locale'
+import { getCatalogLocale } from './locale'
 
 /** Cache keyed by `${locale} ${JSON.stringify(options)}`. */
 const formatterCache = new Map<string, Intl.NumberFormat>()
@@ -29,7 +29,7 @@ const formatterCache = new Map<string, Intl.NumberFormat>()
  * instance.
  */
 export function getNumberFormatter(options: Intl.NumberFormatOptions): Intl.NumberFormat {
-  const locale = getNumberLocale()
+  const locale = getCatalogLocale()
   const key = `${locale} ${JSON.stringify(options)}`
   let formatter = formatterCache.get(key)
   if (formatter === undefined) {
@@ -78,7 +78,7 @@ const groupSeparatorCache = new Map<string, string>()
  * counts. Memoized per locale.
  */
 export function getGroupSeparator(): string {
-  const locale = getNumberLocale()
+  const locale = getCatalogLocale()
   let separator = groupSeparatorCache.get(locale)
   if (separator === undefined) {
     // 11111 is large enough to force one group boundary in every locale.

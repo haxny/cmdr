@@ -17,7 +17,7 @@ import {
   _setFormatLocaleForTests,
   _setLocaleForTests,
   getFormatLocale,
-  getNumberLocale,
+  getCatalogLocale,
   getUiLocale,
   setOsFormatLocale,
 } from './locale'
@@ -50,7 +50,7 @@ describe('a Hungarian speaker on a Swedish Mac', () => {
 
   it('reads three locales apart', () => {
     expect(getUiLocale()).toBe('hu')
-    expect(getNumberLocale()).toBe('hu')
+    expect(getCatalogLocale()).toBe('hu')
     expect(getFormatLocale()).toBe('sv-SE')
   })
 
@@ -86,7 +86,7 @@ describe('a US-English Mac with a Swedish region', () => {
   it('writes English numbers inside English copy', () => {
     void setLocale('en')
     expect(getFormatLocale()).toBe('en-SE')
-    expect(getNumberLocale()).toBe('en')
+    expect(getCatalogLocale()).toBe('en')
     expect(formatNumber(1234567)).toBe('1,234,567')
     expect(formatFileSizeWithFormat(612_000_000, 'si')).toBe('612.00 MB')
   })
@@ -100,7 +100,7 @@ describe('a US-English Mac with a Swedish region', () => {
     void setLocale('hu')
 
     expect(tString('fileExplorer.columns.size')).toBe('Méret')
-    expect(getNumberLocale()).toBe('hu')
+    expect(getCatalogLocale()).toBe('hu')
     expect(formatNumber(1234567)).toBe(new Intl.NumberFormat('hu').format(1234567))
     const ts = new Date(2024, 2, 15, 14, 30, 45).getTime() / 1000
     expect(formatDateForDisplay(ts, 'system', '').text).toBe('2024-03-15, 14:30')
@@ -123,13 +123,13 @@ describe('the number locale is the resolved CATALOG tag', () => {
 
   it('keeps a regional overlay', () => {
     void setLocale('en-GB')
-    expect(getNumberLocale()).toBe('en-GB')
+    expect(getCatalogLocale()).toBe('en-GB')
   })
 
   it('writes English numbers where no catalog covers the language', () => {
     // A Japanese Mac reads English text (no `ja` catalog), so its numbers are English too.
     void setLocale('ja-JP')
-    expect(getNumberLocale()).toBe('en')
+    expect(getCatalogLocale()).toBe('en')
   })
 })
 
