@@ -366,7 +366,8 @@ pub enum TurnOrigin {
     Wake,
     /// The follow-up turn the app opens after the user turned a sweep down.
     Outcomes,
-    /// A persisted thread driven again from its transcript at the user's request (a retry).
+    /// RESERVED, set by no production caller: a persisted thread driven again from its
+    /// transcript at the user's request. A rail retry is a fresh send, so it runs as `Text`.
     /// ⚠️ A replay the app starts on its own isn't this, and needs an origin of its own.
     Resume,
 }

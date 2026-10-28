@@ -93,7 +93,8 @@ before the rules without reading it.
 **`Access::Session`: the second widening, and what holds it.** "It writes only into its memory folder" gains "and it
 may connect a place you saved, when you ask". A connect touches no file and no config, but it reaches past the app: a
 sleeping NAS spins up its disks, and a server logs a login. So it is held by three things. First, the gate admits it
-only on a turn the user started (`text` or `resume`); a wake or a follow-up gets a typed `refusedInBackground`
+only on a turn the user started (`text`, a retry included, which is a fresh send; `resume` is reserved and no
+production caller sets it); a wake or a follow-up gets a typed `refusedInBackground`
 (`tools/view.rs`), reading the turn's own origin, never the opener's shape. Second, a hand-authored allowlist
 (`EXPECTED_SESSION_TOOL_NAMES`), for the reason the other two have one. Third, what a `Session` tool may dial: a SAVED
 place, by volume id, with STORED credentials only. It can't add a host, type a password, or approve a key, which is

@@ -522,13 +522,14 @@ refuses with it before a turn, and the LLM client's per-request policy backstop 
 (`AgentLlmError::Managed`; `../../ai/DETAILS.md` § Managed policy). A wake logs that end at info.
 
 `origin` splits the surfaces: `text` (the rail), `wake` (the proactive loop), `outcomes` (the
-follow-up turn a rejection opens), `resume` (a post-crash replay, which has no opener and
-would otherwise inflate whichever it was folded into). It is `TurnParams::origin`
+follow-up turn a rejection opens), and `resume`, RESERVED: no production caller sets it. A user's
+retry in the rail is a fresh send, so it runs and counts as `text`. It is `TurnParams::origin`
 (`agent::types::TurnOrigin`), stated by each caller rather than read off the opener, because the
-dispatch gate reads the same value per call: `Access::Session` tools run only on `text` and
-`resume` (`agent/tools/DETAILS.md` § The dispatch gate). No production caller resumes today; a
-resume is a user's retry, which is why it counts as user-started. ⚠️ A replay the APP starts on
-its own (say, after a crash, or of a wake thread) is not that, and needs an origin of its own. A refusal is always `text`; a wake never
+dispatch gate reads the same value per call: `Access::Session` tools run only on a user-started
+origin (`agent/tools/DETAILS.md` § The dispatch gate). `resume` is kept for a replay the USER asks
+for from a stored transcript (no opener, so it would otherwise inflate whichever origin it was
+folded into), which is why it counts as user-started. ⚠️ A replay the APP starts on its own (say,
+after a crash, or of a wake thread) is not that, and needs an origin of its own. A refusal is always `text`; a wake never
 reaches that path. `provider` reads `unresolved` on a refusal, since every gate but the local
 window fires before the slot resolves and naming the settings value would claim a provider was chosen
 for a send that never chose one. ⚠️ **`origin: "wake"` is not the same
