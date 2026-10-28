@@ -1712,10 +1712,11 @@ export const commands = {
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('use_cover_for_all', { sessionId, key })),
   /**
    *  Gives every file a pasted picture as its cover, in memory. The bytes come as base64 (a JSON
-   *  number array would make a large TIFF several times its size on both sides). A JPEG, PNG, or
-   *  WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted
-   *  to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else, bad base64
-   *  included, is `PastedNotAnImage`.
+   *  number array would make a large TIFF several times its size on both sides), refused unread
+   *  when longer than the largest paste taken could encode to, and decoded off the IPC thread. A
+   *  JPEG, PNG, or WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF
+   *  is converted to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else,
+   *  bad base64 included, is `PastedNotAnImage`.
    */
   setCoverFromBytes: (sessionId: string, data: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
@@ -14725,6 +14726,11 @@ export type QuitRequested = {
   countdownMs: number
   // The Tags windows' share: unwritten tag edits, and a tag write the quit waits for.
   tags: TagsAtQuit
+  /**
+   *  Whether the gate quits on its own when `countdown_ms` runs out. `false` when only
+   *  unwritten tag edits hold the quit ([`counts_down`]): the prompt waits for an answer.
+   */
+  countsDown: boolean
 }
 
 /**

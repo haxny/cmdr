@@ -261,20 +261,21 @@ pub async fn set_from_path_within(
     edit_off_thread(session_id, cover).await
 }
 
-/// Gives every readable file a pasted picture, in memory. The bytes become a cover within
+/// Gives every readable file a pasted picture (its base64 text, decoded here, off the IPC
+/// thread, and only when no longer than the largest paste taken), in memory. It becomes a cover within
 /// `limit` (a TIFF is decoded and re-encoded, which grows with the picture); past it the answer is
 /// `PasteTimedOut`, and the conversion finishing later changes nothing: as for a drop, the edit
 /// is made only from the awaited answer.
 pub async fn set_from_bytes_within(
     session_id: String,
-    data: Vec<u8>,
+    data: String,
     limit: Duration,
 ) -> Result<TagEditorView, TagEditorError> {
     let cover = blocking_typed_result_with_timeout(
         limit,
         || TagEditorError::PasteTimedOut,
         |_| TagEditorError::TaskFailed,
-        move || cover_from_bytes(data),
+        move || cover_from_bytes(super::cover::decode_pasted(&data)?),
     )
     .await?;
     edit_off_thread(session_id, cover).await

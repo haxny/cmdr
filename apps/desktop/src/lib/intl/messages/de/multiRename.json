@@ -1911,5 +1911,9 @@
   "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
   "@multiRename.tags.quit.writing": {
     "sourceHash": "fb2d5ce"
+  },
+  "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
+  "@multiRename.tags.quit.waits": {
+    "sourceHash": "ed6de29"
   }
 }

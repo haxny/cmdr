@@ -2168,5 +2168,9 @@
   "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
   "@multiRename.tags.quit.writing": {
     "description": "A line in the quit dialog: a tag editor window is writing tags into audio files right now. Cmdr waits for that write to end before quitting (up to a short limit), rather than stopping between files. \"Book\" means an audiobook, a folder of audio files."
+  },
+  "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
+  "@multiRename.tags.quit.waits": {
+    "description": "A line at the foot of the quit dialog, in place of its usual countdown, when the only thing holding the quit is tag changes not yet written in tag editor windows. Cmdr doesn't quit on its own then: it waits until the user picks Quit now or Keep working."
   }
 }

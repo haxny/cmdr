@@ -62,6 +62,9 @@ pub struct QuitRequested {
     pub countdown_ms: u32,
     /// The Tags windows' share: unwritten tag edits, and a tag write the quit waits for.
     pub tags: TagsAtQuit,
+    /// Whether the gate quits on its own when `countdown_ms` runs out. `false` when only
+    /// unwritten tag edits hold the quit ([`counts_down`]): the prompt waits for an answer.
+    pub counts_down: bool,
 }
 
 /// Emitted when a held quit is called off, so every window takes its prompt down.
@@ -148,6 +151,9 @@ pub(crate) trait QuitHost: Send + Sync + 'static {
     }
     /// Tell the windows a quit is pending.
     fn announce(&self, event: QuitRequested);
+    /// Bring the prompt's window (main) forward, so it never sits behind another window, a
+    /// Tags window included (fork). Nothing by default: a recorder has no windows.
+    fn raise_prompt(&self) {}
     /// Tell the windows the pending quit is off, so no prompt is left counting.
     fn announce_called_off(&self);
     /// Tier 1: cooperative cancel of every live operation, keep-partials.
@@ -192,6 +198,14 @@ pub(crate) fn holds_quit(blocking: &[OperationSnapshot], tags: TagsAtQuit) -> bo
     !blocking.is_empty() || tags.holds_quit()
 }
 
+/// Whether a held quit counts down to quitting on its own (fork). Not when only unwritten tag
+/// edits hold it: nothing would stop safely, the user's own work would just be gone, so the
+/// prompt waits for an answer as a document app with unsaved changes does (a logout then
+/// reports Cmdr interrupted it). File operations or a running tag write keep the countdown.
+pub(crate) fn counts_down(blocking: &[OperationSnapshot], tags: TagsAtQuit) -> bool {
+    !blocking.is_empty() || tags.writing
+}
+
 /// The decision, on its way from an IPC command to the deadline thread.
 enum Decision {
     Quit,
@@ -208,8 +222,9 @@ enum Phase {
         /// thread down.
         decisions: mpsc::Sender<Decision>,
         /// When the gate quits on its own, so a second request is told what's
-        /// left of the clock rather than a fresh countdown.
-        deadline: Instant,
+        /// left of the clock rather than a fresh countdown. `None`: it waits for
+        /// an answer ([`counts_down`]).
+        deadline: Option<Instant>,
         /// Kept because [`QuitGate::cancel`] has to reach the windows and
         /// `request_quit` is the only place a host is handed in.
         host: Arc<dyn QuitHost>,
@@ -254,7 +269,7 @@ impl QuitGate {
                 drop(phase);
                 return QuitOutcome::Held {
                     operations: host.operations().into_iter().filter(blocks_quit).collect(),
-                    countdown_ms: remaining_ms(deadline),
+                    countdown_ms: deadline.map_or(0, remaining_ms),
                 };
             }
             Phase::Idle => {}
@@ -267,32 +282,39 @@ impl QuitGate {
             return QuitOutcome::Proceed;
         }
 
+        let counts = counts_down(&operations, tags);
         let countdown = self.timings.countdown;
         let drain = self.timings.drain;
         let tag_write_wait = self.timings.tag_write_wait;
-        let countdown_ms = u32::try_from(countdown.as_millis()).unwrap_or(u32::MAX);
+        let countdown_ms = if counts {
+            u32::try_from(countdown.as_millis()).unwrap_or(u32::MAX)
+        } else {
+            0
+        };
 
         let (decisions, answers) = mpsc::channel();
         *phase = Phase::Waiting {
             decisions,
-            deadline: Instant::now() + countdown,
+            deadline: counts.then(|| Instant::now() + countdown),
             host: Arc::clone(&host),
         };
         drop(phase);
 
         log::info!(
             target: "quit",
-            "holding the quit: {} operation(s) still running, {} Tags window(s) unwritten, tag write running: {}, {}s on the clock",
+            "holding the quit: {} operation(s) still running, {} Tags window(s) unwritten, tag write running: {}, {}s on the clock (0: waits for an answer)",
             operations.len(),
             tags.unwritten,
             tags.writing,
-            countdown.as_secs()
+            countdown_ms / 1_000
         );
         host.announce(QuitRequested {
             operations: operations.clone(),
             countdown_ms,
             tags,
+            counts_down: counts,
         });
+        host.raise_prompt();
 
         // A dedicated OS thread, not a tokio task: the deadline must not be
         // schedulable behind whatever the runtime is already busy with, and the
@@ -300,7 +322,11 @@ impl QuitGate {
         let name = format!("cmdr-quit-deadline-{}", self.countdowns.fetch_add(1, Ordering::SeqCst));
         let gate = Arc::clone(self);
         let spawned = std::thread::Builder::new().name(name).spawn(move || {
-            let answer = answers.recv_timeout(countdown);
+            let answer = if counts {
+                answers.recv_timeout(countdown)
+            } else {
+                answers.recv().map_err(|_| RecvTimeoutError::Disconnected)
+            };
             match answer {
                 Ok(Decision::Cancel) | Err(RecvTimeoutError::Disconnected) => {
                     log::info!(target: "quit", "the quit was called off; the countdown is gone");
@@ -369,6 +395,15 @@ impl QuitGate {
                 QuitAnswer::NoQuitPending
             }
         }
+    }
+
+    /// Whether a held quit is counting down to quitting on its own.
+    #[cfg(test)]
+    pub(crate) fn is_counting_down(&self) -> bool {
+        matches!(
+            &*self.phase.lock_ignore_poison(),
+            Phase::Waiting { deadline: Some(_), .. }
+        )
     }
 
     /// Moves `Waiting` → `Quitting` for the deadline thread. `false` means an
@@ -472,6 +507,20 @@ impl<R: tauri::Runtime> QuitHost for TauriQuitHost<R> {
             // The dialog is the only thing lost; the deadline still fires, so the
             // app still quits. That's the whole point of owning the timer here.
             log::warn!(target: "quit", "couldn't tell the windows about the pending quit: {e}");
+        }
+    }
+
+    // The same three calls as the reveal's and the Dock menu's `raise_main_window` (both
+    // private there, and the reveal's macOS-only).
+    fn raise_prompt(&self) {
+        use tauri::Manager as _;
+        let Some(window) = self.app.get_webview_window("main") else {
+            return;
+        };
+        let _ = window.unminimize();
+        let _ = window.show();
+        if let Err(e) = window.set_focus() {
+            log::warn!(target: "quit", "couldn't bring the main window forward for the quit prompt: {e}");
         }
     }
 

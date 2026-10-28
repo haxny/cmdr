@@ -5,7 +5,8 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use super::cover::{
-    MAX_COVER_BYTES, candidates_in, cover_from_bytes, read_capped, read_cover, read_dropped, thumbnail_url,
+    MAX_COVER_BYTES, MAX_PASTED_TIFF_BYTES, candidates_in, cover_from_bytes, decode_pasted, read_capped, read_cover,
+    read_dropped, thumbnail_url,
 };
 use super::session::TagEditorError;
 use crate::test_support::TestDir;
@@ -277,4 +278,17 @@ fn a_broken_tiff_is_refused() {
     let mut broken = tiff_of(noise(8, 8));
     broken.truncate(16);
     assert_eq!(cover_from_bytes(broken), Err(TagEditorError::PastedNotAnImage));
+}
+
+/// A paste crosses IPC as base64: decoded back exactly, refused as too large BEFORE decoding when
+/// the text alone is longer than the largest paste taken could encode to, and bad text is no image.
+#[test]
+fn a_pasted_picture_is_decoded_from_base64_and_an_oversized_one_is_refused_unread() {
+    use base64::Engine as _;
+    let text = base64::prelude::BASE64_STANDARD.encode(JPEG);
+    assert_eq!(decode_pasted(&text), Ok(JPEG.to_vec()));
+    assert_eq!(decode_pasted("not base64!"), Err(TagEditorError::PastedNotAnImage));
+    let cap = usize::try_from(MAX_PASTED_TIFF_BYTES).expect("fits");
+    let too_long = "A".repeat(base64::encoded_len(cap, true).expect("fits") + 4);
+    assert_eq!(decode_pasted(&too_long), Err(TagEditorError::CoverTooLarge));
 }

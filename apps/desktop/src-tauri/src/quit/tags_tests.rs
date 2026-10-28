@@ -10,6 +10,7 @@ use super::*;
 use crate::ignore_poison::IgnorePoison;
 use crate::tag_editor::at_quit::TagsAtQuit;
 use crate::test_support::wait_until;
+use cmdr_operations::{LifecycleStatus, WriteOperationType};
 
 /// A host with no file operations, only the Tags windows' share, and a record of whether it
 /// exited, and whether a tag write was still running when it did.
@@ -20,6 +21,8 @@ struct TagsHost {
     exited_mid_write: AtomicBool,
     /// Bumped by `tags`, so a test can see the teardown checking on the write.
     asked: AtomicUsize,
+    /// How many times the gate brought the prompt's window forward.
+    raised: AtomicUsize,
 }
 
 impl TagsHost {
@@ -30,6 +33,7 @@ impl TagsHost {
             exited: AtomicBool::new(false),
             exited_mid_write: AtomicBool::new(false),
             asked: AtomicUsize::new(0),
+            raised: AtomicUsize::new(0),
         })
     }
 
@@ -50,6 +54,10 @@ impl QuitHost for TagsHost {
 
     fn announce(&self, event: QuitRequested) {
         self.announced.lock_ignore_poison().push(event);
+    }
+
+    fn raise_prompt(&self) {
+        self.raised.fetch_add(1, Ordering::SeqCst);
     }
 
     fn announce_called_off(&self) {}
@@ -135,4 +143,79 @@ fn a_tag_write_that_never_ends_is_waited_for_only_so_long() {
     wait_until(Duration::from_secs(5), "the bounded wait to give up and quit", || {
         host.exited.load(Ordering::SeqCst)
     });
+}
+
+#[test]
+fn only_unwritten_tag_edits_wait_for_an_answer_with_no_countdown() {
+    assert!(
+        !counts_down(&[], UNWRITTEN),
+        "nothing would stop safely: the user's edits would be lost"
+    );
+    assert!(
+        counts_down(&[], WRITING),
+        "a write ends on its own, and the teardown waits for it"
+    );
+    let copy = OperationSnapshot {
+        operation_id: "copy".to_string(),
+        operation_type: WriteOperationType::Copy,
+        status: LifecycleStatus::Running,
+        source: None,
+        destination: None,
+        rollback_support: cmdr_operations::testing::RollbackSupport::Supported,
+        reverses: None,
+        error: None,
+        can_retry: false,
+        items: None,
+        conflict_policy: None,
+        started_at: None,
+    };
+    assert!(
+        counts_down(&[copy], UNWRITTEN),
+        "file operations keep the logout-safe countdown"
+    );
+}
+
+#[test]
+fn a_tags_only_hold_announces_no_countdown_and_still_answers() {
+    let host = TagsHost::with(UNWRITTEN);
+    let gate = gate(Duration::from_secs(5));
+    let held = gate.request_quit(Arc::clone(&host));
+    assert!(matches!(held, QuitOutcome::Held { countdown_ms: 0, .. }));
+    let announced = host.announced.lock_ignore_poison().clone();
+    assert!(!announced[0].counts_down);
+    assert_eq!(announced[0].countdown_ms, 0);
+    assert!(!gate.is_counting_down());
+    // Asking again doesn't start one either.
+    assert!(matches!(
+        gate.request_quit(Arc::clone(&host)),
+        QuitOutcome::Held { countdown_ms: 0, .. }
+    ));
+    assert_eq!(gate.confirm(), QuitAnswer::Answered);
+    wait_until(Duration::from_secs(5), "the confirmed quit to exit", || {
+        host.exited.load(Ordering::SeqCst)
+    });
+}
+
+#[test]
+fn a_mixed_hold_keeps_the_countdown() {
+    let host = TagsHost::with(WRITING);
+    let gate = gate(Duration::from_secs(5));
+    assert!(gate.request_quit(Arc::clone(&host)).is_held());
+    assert!(host.announced.lock_ignore_poison()[0].counts_down);
+    assert!(gate.is_counting_down());
+}
+
+#[test]
+fn the_prompt_s_window_is_brought_forward_when_the_quit_is_held() {
+    let host = TagsHost::with(UNWRITTEN);
+    assert!(gate(Duration::from_secs(5)).request_quit(Arc::clone(&host)).is_held());
+    assert_eq!(host.raised.load(Ordering::SeqCst), 1);
+
+    let nothing = TagsHost::with(TagsAtQuit::default());
+    assert!(
+        !gate(Duration::from_secs(5))
+            .request_quit(Arc::clone(&nothing))
+            .is_held()
+    );
+    assert_eq!(nothing.raised.load(Ordering::SeqCst), 0);
 }

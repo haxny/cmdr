@@ -136,3 +136,37 @@ fn every_session_over_the_same_folder_shares_one_key() {
     close_rename(&second);
     assert!(key_of(&first).is_err());
 }
+
+/// The undo store pruned the record (past its 50 applies): the undo that found it gone takes the
+/// apply out, so ⌘Z isn't offered for it again.
+#[test]
+fn an_apply_whose_record_is_gone_is_forgotten() {
+    let mut last = LastApplies::default();
+    last.after_apply(key("/book"), &wrote("a1", 3), false);
+    last.forget("a1");
+    assert_eq!(last.get(&key("/book")), None);
+}
+
+/// The map never holds more folders than the store keeps applies: past that, the folder written
+/// longest ago goes first (its record is the store's next to prune anyway).
+#[test]
+fn no_more_folders_are_kept_than_the_store_keeps_applies() {
+    let mut last = LastApplies::with_cap(2);
+    last.after_apply(key("/one"), &wrote("a1", 1), false);
+    last.after_apply(key("/two"), &wrote("a2", 1), false);
+    // Written again: now the newest.
+    last.after_apply(key("/one"), &wrote("a3", 1), false);
+    last.after_apply(key("/three"), &wrote("a4", 1), false);
+    assert_eq!(last.get(&key("/two")), None);
+    assert!(last.get(&key("/one")).is_some());
+    assert!(last.get(&key("/three")).is_some());
+}
+
+/// What an undo of a pruned record answers is what `undo` takes as "gone"; any other refusal isn't.
+#[test]
+fn an_undo_of_a_pruned_record_reads_as_gone() {
+    let (_dir, store) = super::apply_test::store("tag-last-apply-gone");
+    let refused = super::undo::undo_with(&store, "tags-1-gone", None).expect_err("no such record");
+    assert!(super::undo::record_gone(&refused));
+    assert!(!super::undo::record_gone(&super::session::TagEditorError::TaskFailed));
+}

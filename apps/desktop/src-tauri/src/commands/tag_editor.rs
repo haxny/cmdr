@@ -8,8 +8,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD;
 use cmdr_fs::deadline::{SESSION_IO_TIMEOUT, StallWatch, blocking_typed_result_until_stalled};
 
 use crate::multi_rename::error::MultiRenameError;
@@ -325,18 +323,16 @@ pub async fn use_cover_for_all(session_id: String, key: String) -> Result<TagEdi
 }
 
 /// Gives every file a pasted picture as its cover, in memory. The bytes come as base64 (a JSON
-/// number array would make a large TIFF several times its size on both sides). A JPEG, PNG, or
-/// WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted
-/// to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else, bad base64
-/// included, is `PastedNotAnImage`.
+/// number array would make a large TIFF several times its size on both sides), refused unread
+/// when longer than the largest paste taken could encode to, and decoded off the IPC thread. A
+/// JPEG, PNG, or WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF
+/// is converted to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else,
+/// bad base64 included, is `PastedNotAnImage`.
 #[tauri::command]
 #[specta::specta]
 pub async fn set_cover_from_bytes(session_id: String, data: String) -> Result<TagEditorView, TagEditorError> {
     let started = Instant::now();
-    let result = match BASE64_STANDARD.decode(data) {
-        Ok(bytes) => set_from_bytes_within(session_id, bytes, PASTE_CONVERT_TIMEOUT).await,
-        Err(_) => Err(TagEditorError::PastedNotAnImage),
-    };
+    let result = set_from_bytes_within(session_id, data, PASTE_CONVERT_TIMEOUT).await;
     activity::edited("cover from paste", &result, started);
     result
 }

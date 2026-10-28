@@ -67,21 +67,38 @@ describe('the quit prompt', () => {
   })
 
   it('opens with the operations and the deadline the backend set', () => {
-    requested?.({ operations: [operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
     expect(quitPrompt.open).toBe(true)
     expect(quitPrompt.operations).toHaveLength(1)
     expect(quitPrompt.secondsLeft).toBe(15)
   })
 
   it('carries what the Tags windows would lose, and forgets it on close', () => {
-    requested?.({ operations: [], countdownMs: 15_000, tags: { unwritten: 1, writing: true } })
+    requested?.({ operations: [], countdownMs: 15_000, tags: { unwritten: 1, writing: true }, countsDown: true })
     expect(quitPrompt.tags).toEqual({ unwritten: 1, writing: true })
     quitPrompt.keepWorking()
     expect(quitPrompt.tags).toEqual({ unwritten: 0, writing: false })
   })
 
+  it('carries whether the backend counts down: not for unwritten tag edits alone', () => {
+    requested?.({ operations: [], countdownMs: 0, tags: { unwritten: 2, writing: false }, countsDown: false })
+    expect(quitPrompt.countsDown).toBe(false)
+    quitPrompt.keepWorking()
+    expect(quitPrompt.countsDown).toBe(true)
+  })
+
   it('counts down against the wall clock, so a stalled webview never shows a stale number', () => {
-    requested?.({ operations: [operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
 
     vi.advanceTimersByTime(1_000)
     expect(quitPrompt.secondsLeft).toBe(14)
@@ -93,13 +110,23 @@ describe('the quit prompt', () => {
   })
 
   it('never counts past zero', () => {
-    requested?.({ operations: [operation()], countdownMs: 2_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 2_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
     vi.advanceTimersByTime(30_000)
     expect(quitPrompt.secondsLeft).toBe(0)
   })
 
   it('"keep working" closes the prompt and tells the backend to drop the countdown', () => {
-    requested?.({ operations: [operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
     quitPrompt.keepWorking()
 
     expect(quitPrompt.open).toBe(false)
@@ -113,7 +140,12 @@ describe('the quit prompt', () => {
   })
 
   it('confirming asks the backend to quit and leaves the prompt up', () => {
-    requested?.({ operations: [operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
     quitPrompt.confirm()
 
     expect(quitConfirm).toHaveBeenCalledOnce()
@@ -127,7 +159,12 @@ describe('the quit prompt', () => {
     // An agent can answer the confirmation over MCP, and the gate answers there.
     // Nothing else closes this prompt, and one left counting toward a quit that
     // will never come is a lie.
-    requested?.({ operations: [operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
     calledOff?.()
 
     expect(quitPrompt.open).toBe(false)
@@ -141,9 +178,19 @@ describe('the quit prompt', () => {
   })
 
   it('a second hold re-arms the countdown from the new deadline', () => {
-    requested?.({ operations: [operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
     quitPrompt.keepWorking()
-    requested?.({ operations: [operation(), operation()], countdownMs: 15_000, tags: { unwritten: 0, writing: false } })
+    requested?.({
+      operations: [operation(), operation()],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    })
 
     expect(quitPrompt.open).toBe(true)
     expect(quitPrompt.operations).toHaveLength(2)

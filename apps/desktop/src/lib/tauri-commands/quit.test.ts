@@ -49,7 +49,12 @@ describe('onQuitRequested', () => {
     const seen: QuitRequested[] = []
     const stop = await onQuitRequested((event) => seen.push(event))
 
-    const payload: QuitRequested = { operations: [], countdownMs: 15_000, tags: { unwritten: 0, writing: false } }
+    const payload: QuitRequested = {
+      operations: [],
+      countdownMs: 15_000,
+      tags: { unwritten: 0, writing: false },
+      countsDown: true,
+    }
     deliver?.({ payload })
     expect(seen).toEqual([payload])
 

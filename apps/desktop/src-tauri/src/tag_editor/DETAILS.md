@@ -179,7 +179,12 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
 - **Quitting** (`at_quit.rs`): `apply_tags` and `undo_tag_apply` count themselves (`writing()`, inside the blocking
   work) and `unwritten_sessions` counts tag sessions holding edits. The quit gate (`quit/mod.rs`, `holds_quit`) asks
   when either is non-zero, and its teardown waits for a running write up to `TAG_WRITE_WAIT` (10 s) before exiting:
-  each file is written whole anyway, but a cut between files leaves a book half written. The gate's countdown (15 s)
-  still applies, as for file operations: a logout must never wait on Cmdr.
+  each file is written whole anyway, but a cut between files leaves a book half written. When only unwritten edits
+  hold the quit there is no countdown (`counts_down`): the prompt waits for an answer, as a document app with unsaved
+  changes does, and a logout reports that Cmdr interrupted it. File operations or a running write keep the 15 s
+  countdown (a write ends on its own). The prompt lives in main, so a held quit raises and focuses main
+  (`QuitHost::raise_prompt`), or ⌘Q in a Tags window could put it behind that window.
+- **The map is capped** at the store's 50 applies (the folder written longest ago goes first), and an undo that finds
+  its record gone (pruned: `Io(NotFound)`) takes the apply out, so ⌘Z isn't offered for a record the store dropped.
 - **A second open over the same files** raises the window already showing them: `hold` answers `already_open`
   (`held_twin`: another held session with the same volume, folder, and names in any order).

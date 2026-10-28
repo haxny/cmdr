@@ -3128,6 +3128,7 @@ export type MessageKey =
   | 'multiRename.tags.play.playerUnavailable'
   | 'multiRename.tags.quit.title'
   | 'multiRename.tags.quit.unwritten'
+  | 'multiRename.tags.quit.waits'
   | 'multiRename.tags.quit.writing'
   | 'multiRename.tags.quit.writingTitle'
   | 'multiRename.tags.readOnly'

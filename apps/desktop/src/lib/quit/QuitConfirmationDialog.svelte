@@ -23,6 +23,8 @@
         operations: OperationSnapshot[]
         /** What the Tags windows would lose, or are writing (fork). */
         tags?: TagsAtQuit
+        /** Whether the backend quits on its own when the seconds run out; not for unwritten tag edits alone (fork). */
+        countsDown?: boolean
         /** Seconds left on the backend's clock. Display only. */
         secondsLeft: number
         /** Quit now, skipping the rest of the countdown. */
@@ -31,7 +33,14 @@
         onKeepWorking: () => void
     }
 
-    const { operations, tags = { unwritten: 0, writing: false }, secondsLeft, onQuit, onKeepWorking }: Props = $props()
+    const {
+        operations,
+        tags = { unwritten: 0, writing: false },
+        countsDown = true,
+        secondsLeft,
+        onQuit,
+        onKeepWorking,
+    }: Props = $props()
 
     const titleText = $derived.by(() => {
         if (operations.length > 0) {
@@ -115,7 +124,11 @@
 
     <!-- `polite`, not `assertive`: a screen reader shouldn't interrupt the user
          once a second. The label names what the number measures. -->
-    <p class="countdown" aria-live="polite" aria-label={tString('main.quit.countdownAria')}>{countdown}</p>
+    {#if countsDown}
+        <p class="countdown" aria-live="polite" aria-label={tString('main.quit.countdownAria')}>{countdown}</p>
+    {:else}
+        <p class="countdown">{tString('multiRename.tags.quit.waits')}</p>
+    {/if}
 
     {#snippet footer()}
         <Button variant="secondary" autoFocus onclick={onKeepWorking}>{tString('main.quit.keepWorking')}</Button>

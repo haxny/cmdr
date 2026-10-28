@@ -35,7 +35,7 @@ function operation(operationId: string, operationType: OperationSnapshot['operat
 async function renderDialog(
   operations: OperationSnapshot[],
   secondsLeft: number,
-  handlers: { onQuit?: () => void; onKeepWorking?: () => void; tags?: TagsAtQuit } = {},
+  handlers: { onQuit?: () => void; onKeepWorking?: () => void; tags?: TagsAtQuit; countsDown?: boolean } = {},
 ): Promise<HTMLElement> {
   const target = document.createElement('div')
   document.body.appendChild(target)
@@ -45,6 +45,7 @@ async function renderDialog(
       operations,
       secondsLeft,
       ...(handlers.tags ? { tags: handlers.tags } : {}),
+      ...(handlers.countsDown === undefined ? {} : { countsDown: handlers.countsDown }),
       onQuit: handlers.onQuit ?? (() => {}),
       onKeepWorking: handlers.onKeepWorking ?? (() => {}),
     },
@@ -59,6 +60,12 @@ describe('QuitConfirmationDialog', () => {
     expect(shown.textContent).toContain('Quit with tag changes not written in 2 windows?')
     expect(shown.textContent).toContain('2 Tags windows have changes that haven’t been written.')
     expect(shown.textContent).not.toContain('Still running')
+  })
+
+  it('with only unwritten tag edits it shows no countdown: it waits for an answer', async () => {
+    const shown = await renderDialog([], 0, { tags: { unwritten: 1, writing: false }, countsDown: false })
+    expect(shown.textContent).toContain('Cmdr waits for your answer')
+    expect(shown.textContent).not.toContain('Quitting in')
   })
 
   it('a tag write running says Cmdr finishes it before it quits', async () => {

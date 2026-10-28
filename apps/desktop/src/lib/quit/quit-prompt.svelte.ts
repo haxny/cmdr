@@ -40,6 +40,8 @@ class QuitPrompt {
   open = $state(false)
   /** What the Tags windows would lose or are writing (fork). */
   tags = $state<TagsAtQuit>(NO_TAGS)
+  /** Whether the backend quits on its own at the deadline; not when only unwritten tag edits hold it (fork). */
+  countsDown = $state(true)
   /** Seconds left, floored, never below zero. Display only. */
   secondsLeft = $state(0)
 
@@ -48,9 +50,10 @@ class QuitPrompt {
   #ticker: ReturnType<typeof setInterval> | null = null
 
   /** Opens the prompt for a fresh `quit-requested`. */
-  show(operations: OperationSnapshot[], countdownMs: number, tags: TagsAtQuit = NO_TAGS) {
+  show(operations: OperationSnapshot[], countdownMs: number, tags: TagsAtQuit = NO_TAGS, countsDown = true) {
     this.operations = operations
     this.tags = tags
+    this.countsDown = countsDown
     this.#deadlineAt = Date.now() + countdownMs
     this.open = true
     this.#retick()
@@ -93,6 +96,7 @@ class QuitPrompt {
     this.open = false
     this.operations = []
     this.tags = NO_TAGS
+    this.countsDown = true
     if (this.#ticker !== null) {
       clearInterval(this.#ticker)
       this.#ticker = null
@@ -109,7 +113,7 @@ let unlistenCalledOff: Promise<UnlistenFn> | undefined
  *  off. Main window only: it's the window that owns the app's dialogs. */
 export function initQuitPrompt() {
   unlistenRequested ??= onQuitRequested((event) => {
-    quitPrompt.show(event.operations, event.countdownMs, event.tags)
+    quitPrompt.show(event.operations, event.countdownMs, event.tags, event.countsDown)
   })
   unlistenCalledOff ??= onQuitCalledOff(() => {
     quitPrompt.dismiss()

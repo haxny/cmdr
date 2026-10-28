@@ -30,8 +30,9 @@ stops everything and exits inside a hard budget.
   `ExitRequested`; without the phase the gate would prompt again over the operations it just aborted, forever.
 - **A restart (`RESTART_EXIT_CODE`) never reaches the gate**: Tauri ignores `prevent_exit` there, so asking would show
   a dialog nobody could answer.
-- **Fork: Tags windows hold the quit too** (`QuitHost::tags`, `holds_quit`): unwritten tag edits ask, and the teardown
-  waits up to `TAG_WRITE_WAIT` for a tag write before exiting. `../tag_editor/at_quit.rs`.
+- **Fork: Tags windows hold the quit too** (`QuitHost::tags`, `holds_quit`): unwritten tag edits ask WITHOUT a
+  countdown when nothing else holds the quit (`counts_down`: the user's own work, nothing stops safely), the teardown
+  waits up to `TAG_WRITE_WAIT` for a tag write, and a held quit raises main (`raise_prompt`). `../tag_editor/at_quit.rs`.
 - **Classify by TYPED variant, never a string**. Both matches in `blocks_quit`
   are exhaustive so a new operation type or lifecycle status has to declare its side.
 - **"Don't quit" deletes the countdown, it doesn't defer it.** A snooze would still kill the transfer seconds later,

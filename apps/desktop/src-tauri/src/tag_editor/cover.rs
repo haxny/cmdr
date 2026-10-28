@@ -149,6 +149,22 @@ pub(crate) fn read_dropped_counted(path: &Path, progress: &AtomicU64) -> Result<
 /// clipboard TIFF of a photo is far bigger than the cover it becomes.
 pub(crate) const MAX_PASTED_TIFF_BYTES: u64 = 40 * 1024 * 1024;
 
+/// A pasted picture's base64 text as bytes. A text longer than the largest paste taken
+/// ([`MAX_PASTED_TIFF_BYTES`], the TIFF cap, above the 10 MiB cover cap) could encode to is
+/// `CoverTooLarge` before any decoding; text that isn't base64 is `PastedNotAnImage`. Blocking
+/// work for a large paste: call it off the IPC thread.
+pub(crate) fn decode_pasted(text: &str) -> Result<Vec<u8>, TagEditorError> {
+    use base64::Engine as _;
+    let cap = usize::try_from(MAX_PASTED_TIFF_BYTES.max(MAX_COVER_BYTES)).unwrap_or(usize::MAX);
+    let longest = base64::encoded_len(cap, true).unwrap_or(usize::MAX);
+    if text.len() > longest {
+        return Err(TagEditorError::CoverTooLarge);
+    }
+    base64::prelude::BASE64_STANDARD
+        .decode(text)
+        .map_err(|_| TagEditorError::PastedNotAnImage)
+}
+
 /// A pasted picture as a cover. A JPEG, PNG, or WebP by its first bytes is taken as it is, at most 10 MiB
 /// (`CoverTooLarge`); a TIFF (at most 40 MiB) becomes a PNG, or a JPEG when the PNG is over 10 MiB; anything else is
 /// `PastedNotAnImage` (a paste has no file name to blame).

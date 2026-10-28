@@ -54,13 +54,32 @@ impl FolderKey {
     }
 }
 
-/// The last write of every folder written this run.
-#[derive(Debug, Default)]
+/// The last write of every folder written this run, at most `cap` folders: the undo store keeps
+/// no more applies than that (`UndoLimits::max_applies`), so a folder written longer ago than
+/// the last `cap` writes has had its record pruned anyway.
+#[derive(Debug)]
 pub(crate) struct LastApplies {
-    by_folder: HashMap<FolderKey, LastTagApply>,
+    /// Each folder's last write, with when it was written (a sequence number).
+    by_folder: HashMap<FolderKey, (u64, LastTagApply)>,
+    written: u64,
+    cap: usize,
+}
+
+impl Default for LastApplies {
+    fn default() -> Self {
+        Self::with_cap(cmdr_tags::UndoLimits::default().max_applies)
+    }
 }
 
 impl LastApplies {
+    pub(crate) fn with_cap(cap: usize) -> Self {
+        Self {
+            by_folder: HashMap::new(),
+            written: 0,
+            cap: cap.max(1),
+        }
+    }
+
     /// Takes in an apply's report. A write that wrote nothing leaves the last one (there's
     /// nothing newer to protect); `continues` (a "Write anyway" after a press that wrote) adds
     /// to it, anything else replaces it.
@@ -68,20 +87,51 @@ impl LastApplies {
         if !continues && report.written.is_empty() {
             return;
         }
-        let before = if continues { self.by_folder.remove(&key) } else { None };
-        match next_last(before, report) {
-            Some(next) => self.by_folder.insert(key, next),
-            None => self.by_folder.remove(&key),
+        let before = if continues {
+            self.by_folder.remove(&key).map(|(_, last)| last)
+        } else {
+            None
         };
+        match next_last(before, report) {
+            Some(next) => {
+                self.written += 1;
+                self.by_folder.insert(key, (self.written, next));
+                self.keep_cap();
+            }
+            None => {
+                self.by_folder.remove(&key);
+            }
+        }
+    }
+
+    /// Drops the folders written longest ago past `cap`.
+    fn keep_cap(&mut self) {
+        while self.by_folder.len() > self.cap {
+            let oldest = self
+                .by_folder
+                .iter()
+                .min_by_key(|(_, (written, _))| *written)
+                .map(|(key, _)| key.clone());
+            match oldest {
+                Some(key) => self.by_folder.remove(&key),
+                None => return,
+            };
+        }
+    }
+
+    /// Takes `apply_id` out: its undo record is gone (the store pruned it), so ⌘Z mustn't offer
+    /// it again. A folder whose last apply went is forgotten.
+    pub(crate) fn forget(&mut self, apply_id: &str) {
+        self.after_undo(apply_id, 0);
     }
 
     /// Takes in an undo of `apply_id`: gone when it put every file back, else kept with the
     /// files it left (it stays undoable). A folder whose last apply went is forgotten.
     pub(crate) fn after_undo(&mut self, apply_id: &str, left: usize) {
-        let Some((key, last)) = self
+        let Some((key, (_, last))) = self
             .by_folder
             .iter_mut()
-            .find(|(_, last)| last.applies.iter().any(|apply| apply.apply_id == apply_id))
+            .find(|(_, (_, last))| last.applies.iter().any(|apply| apply.apply_id == apply_id))
         else {
             return;
         };
@@ -97,7 +147,7 @@ impl LastApplies {
     }
 
     pub(crate) fn get(&self, key: &FolderKey) -> Option<LastTagApply> {
-        self.by_folder.get(key).cloned()
+        self.by_folder.get(key).map(|(_, last)| last.clone())
     }
 }
 
@@ -138,6 +188,11 @@ pub(crate) fn record(key: FolderKey, report: &TagApplyReport, continues: bool) {
 /// Records an undo of `apply_id` that left `left` files unrestored. Call it under the undo store.
 pub(crate) fn undone(apply_id: &str, left: usize) {
     LAST.lock_ignore_poison().after_undo(apply_id, left);
+}
+
+/// Forgets `apply_id`, whose undo record is gone. Call it under the undo store.
+pub(crate) fn forget(apply_id: &str) {
+    LAST.lock_ignore_poison().forget(apply_id);
 }
 
 /// The last write of session `session_id`'s folder, if there is one.

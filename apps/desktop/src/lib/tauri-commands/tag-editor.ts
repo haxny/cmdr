@@ -185,8 +185,9 @@ export async function useCoverForAll(sessionId: string, key: string): Promise<Ta
 }
 
 /**
- * Gives every file a pasted picture as its cover, in memory. The backend sniffs the bytes (`coverNotAnImage`) and caps
- * them at 10 MiB (`coverTooLarge`). The IPC carries them as a plain number array.
+ * Gives every file a pasted picture as its cover, in memory. The bytes cross IPC as base64 (a number array would be
+ * several times their size); the backend refuses an oversized one before decoding it (`coverTooLarge`), then sniffs
+ * the bytes (`pastedNotAnImage`) and caps a cover at 10 MiB (a TIFF is converted).
  */
 export async function setCoverFromBytes(sessionId: string, data: Uint8Array): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.setCoverFromBytes(sessionId, toBase64(data)))
