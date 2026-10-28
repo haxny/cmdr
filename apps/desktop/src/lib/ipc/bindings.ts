@@ -1651,6 +1651,12 @@ export const commands = {
   // Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
   sortTagTracks: (sessionId: string, sort: TrackSort) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('sort_tag_tracks', { sessionId, sort })),
+  /**
+   *  Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every
+   *  track for `None`. Not an edit: nothing joins the undo history.
+   */
+  setTagViewScope: (sessionId: string, paths: string[] | null) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_tag_view_scope', { sessionId, paths })),
   // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
   runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
@@ -1668,6 +1674,12 @@ export const commands = {
   // What a write as `kind` would change, per file, including what the kind removes.
   getTagChanges: (sessionId: string, kind: ContentKind) =>
     typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
+  /**
+   *  What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): the
+   *  frontend asks only with `multiRename.tagEditor.absSideFiles` on. None for a read-only session.
+   */
+  getSideFileChanges: (sessionId: string) =>
+    typedError<SideFileChange[], TagEditorError>(__TAURI_INVOKE('get_side_file_changes', { sessionId })),
   /**
    *  Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
    *  Undo reverses both; otherwise a write that writes something is the folder's new last write.
@@ -1764,10 +1776,17 @@ export const commands = {
   /**
    *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
    *  many of its files are tracks and what its folder is called. The main window calls it right
-   *  after opening the session; the window's close (or its `Destroyed`) releases it.
+   *  after opening the session; the window's close (or its `Destroyed`) releases it. It also takes
+   *  down any Tags window left behind with its session no longer held (`window::close_orphans`).
    */
   holdTagsSession: (sessionId: string) =>
     typedError<TagsSessionInfo, MultiRenameError>(__TAURI_INVOKE('hold_tags_session', { sessionId })),
+  /**
+   *  Whether the Tags window of `session_id` may close without the discard question: no unwritten
+   *  edit in its session and no tag write running. Its error boundary asks before it closes the
+   *  window, since the edits live here and a closed window takes them along.
+   */
+  tagsWindowMayClose: (sessionId: string) => __TAURI_INVOKE<boolean>('tags_window_may_close', { sessionId }),
   // Lets eviction take the session again. No-op when it's already gone.
   releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
   /**
@@ -1839,8 +1858,9 @@ export const commands = {
    *  windows need no `core:window:allow-hide` in their capabilities, since nothing calls `hide` from
    *  JavaScript.
    *
-   *  The destroy is unconditional once scheduled: an early return between the hide and the close
-   *  would leak exactly the invisible-but-alive window this is meant to prevent.
+   *  The destroy is unconditional once scheduled: an early return between the hide and the destroy
+   *  (or a close the page could veto) would leak exactly the invisible-but-alive window this is
+   *  meant to prevent.
    */
   closeChildWindow: (label: string) => __TAURI_INVOKE<void>('close_child_window', { label }),
   /**
@@ -6287,6 +6307,16 @@ export type ApplyRequest = {
    *  confirmed: only these may lose a field the kind removes. Absent means none.
    */
   allowRemovals?: string[]
+  /**
+   *  Write Audiobookshelf's `reader.txt` and `desc.txt` beside the book too (`side_files.rs`;
+   *  the `multiRename.tagEditor.absSideFiles` setting). Absent means no.
+   */
+  sideFiles?: boolean
+  /**
+   *  The side-file replacements the change list showed, each with the old text it showed: only
+   *  these may replace a side file that says something else. Absent means none.
+   */
+  allowSideFiles?: SideFileSeen[]
 }
 
 /**
@@ -17539,6 +17569,43 @@ export type ShowSearchResultInFolder = {
   path: string
 }
 
+// Which side file.
+export type SideFile =
+  // `reader.txt`: the narrator.
+  | 'reader'
+  // `desc.txt`: the description.
+  | 'desc'
+
+// What a write would do with one side file. A file that already says the same isn't listed.
+export type SideFileChange =
+  | { kind: 'create'; file: SideFile; path: string; text: string }
+  /**
+   *  `old` is the file's text now (read as UTF-8, lossy); the write replaces it only when the
+   *  request names this path with this `old` (`ApplyRequest::allow_side_files`).
+   */
+  | { kind: 'replace'; file: SideFile; path: string; old: string; text: string }
+  | { kind: 'withheld'; file: SideFile; reason: SideFileWithheld }
+
+// A replacement the change list showed: the path and the old text it showed.
+export type SideFileSeen = {
+  path: string
+  old: string
+  text: string
+}
+
+// Why a side file isn't written.
+export type SideFileWithheld =
+  // The tracks don't all name the same narrators (or share one description).
+  | 'tracksDisagree'
+  // The text is longer than a side file may be.
+  | 'tooLong'
+  // Something other than a regular file has the name (a link, a folder).
+  | 'notAFile'
+  // The file there is too large or can't be read, so its content couldn't be kept for undo.
+  | 'unreadable'
+  // The tracks come from more than one book folder, so no folder is the book's.
+  | 'notOneBook'
+
 /**
  *  What a "Sign in" affordance on a volume asks a person for: the FORM the sheet
  *  renders, decided by the backend rather than by the sheet's mode or the
@@ -18517,6 +18584,15 @@ export type TagApplyReport = {
   changedOnDisk: string[]
   // Files were written, but the undo store couldn't keep their old tags: no undo.
   undoUnavailable: boolean
+  // Side files written beside the book (`reader.txt`, `desc.txt`), by path.
+  sideFilesWritten: string[]
+  /**
+   *  Side files not replaced: they say something else, and the request didn't name that
+   *  replacement. The UI lists them.
+   */
+  sideFilesHeld: string[]
+  // Side files that couldn't be written.
+  sideFilesFailed: string[]
 }
 
 /**
@@ -18629,6 +18705,13 @@ export type TagEditorView = {
   canUndoEdit: boolean
   // An undone edit step can be redone (⇧⌘Z); set by the session.
   canRedoEdit: boolean
+  // How many tracks `shared` covers (the Tracks pane's selection, readable or not); `None` for every track.
+  scopeCount: number | null
+  /**
+   *  When the session built this view, under its lock: a later view has a higher number, so the UI keeps the
+   *  newest by the backend's order, never by the order it asked in. Set by the session; 0 straight out of `build`.
+   */
+  viewSeq: number
 }
 
 /**
@@ -18758,6 +18841,13 @@ export type TagTextTool =
    *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
    */
   | { kind: 'format'; field: TagField; mask: string }
+  /**
+   *  Runs the ticked Multi-Rename text options over every value of each listed field, in
+   *  Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
+   *  results match file renames. Fields not listed (Comment and Description by default in the
+   *  UI) are untouched.
+   */
+  | { kind: 'text'; fields: TagField[]; greekToLatin: boolean; removeDiacritics: boolean; normalizeUnicode: boolean }
 
 // Every tool as one serializable value, so the app and the MCP server share one tool set.
 export type TagTool =

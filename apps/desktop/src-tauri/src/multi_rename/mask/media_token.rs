@@ -6,8 +6,8 @@ use chrono::NaiveDateTime;
 use cmdr_media_meta::{FieldKind, MediaFacts, MediaField, MediaValue};
 
 use super::{
-    DatePart, FieldGap, MAX_COUNTER_DIGITS, Range, RowFacts, RowMedia, Token, date, date_parts, pad, placeholder,
-    range, slice,
+    DatePart, FieldGap, MAX_COUNTER_DIGITS, NumberWidth, Range, RowFacts, RowMedia, Token, date, date_parts, pad,
+    placeholder, range, slice,
 };
 
 /// The fallback a date field may name after its `|`.
@@ -83,7 +83,7 @@ impl MediaToken {
     pub fn resolve(&self, row: &RowFacts<'_>) -> Result<FieldText, FieldGap> {
         let field = self.field;
         if let RowMedia::Read(facts) = row.media
-            && let Some(text) = self.value_text(facts)
+            && let Some(text) = self.value_text(facts, row.number_width)
         {
             return Ok(FieldText::Value(text));
         }
@@ -99,11 +99,14 @@ impl MediaToken {
     }
 
     /// The field's text in `facts`, formatted; `None` when the file has none.
-    pub fn value_text(&self, facts: &MediaFacts) -> Option<String> {
+    pub fn value_text(&self, facts: &MediaFacts, number_width: NumberWidth) -> Option<String> {
         Some(match facts.get(self.field)? {
             MediaValue::Date(when) => self.date_text(&when),
-            MediaValue::Number(value) => match self.format {
-                MediaFormat::Digits(digits) => pad(value, digits),
+            MediaValue::Number(value) => match (&self.format, self.field) {
+                (MediaFormat::Digits(digits), _) => pad(value, *digits),
+                // A track or disc keeps its zeros, to the width of the run's largest.
+                (_, MediaField::TagTrack) => pad(value, number_width.track),
+                (_, MediaField::TagDisc) => pad(value, number_width.disc),
                 _ => value.to_string(),
             },
             MediaValue::Text(text) => match self.format {
@@ -149,12 +152,7 @@ pub(super) fn media(text: &str) -> Option<MediaToken> {
         Some("") => return None,
         Some(format) => match kind {
             FieldKind::Date => MediaFormat::Date(date_parts(format)?),
-            FieldKind::Number => MediaFormat::Digits(
-                format
-                    .parse()
-                    .ok()
-                    .filter(|digits| (1..=MAX_COUNTER_DIGITS).contains(digits))?,
-            ),
+            FieldKind::Number => MediaFormat::Digits(digits(format)?),
             FieldKind::Text => MediaFormat::Range(range(format)?),
         },
     };
@@ -163,6 +161,16 @@ pub(super) fn media(text: &str) -> Option<MediaToken> {
         fallback,
         format,
     })
+}
+
+/// A digit count: `2`, or zeros to count, `00` (`0` alone is no count). 1 to `MAX_COUNTER_DIGITS`.
+fn digits(format: &str) -> Option<u32> {
+    let count = if format.len() > 1 && format.bytes().all(|b| b == b'0') {
+        u32::try_from(format.len()).ok()?
+    } else {
+        format.parse().ok()?
+    };
+    (1..=MAX_COUNTER_DIGITS).contains(&count).then_some(count)
 }
 
 /// What a whole media token (`[=tag.track:2]`) spells, as the shared vectors

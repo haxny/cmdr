@@ -2,8 +2,9 @@
 //! Multi-Rename session's CURRENT order, and the cover, extras, and diacritics summaries.
 //! Pure: built from the session's entries, never reads a file.
 
-use std::collections::BTreeSet;
-use std::path::Path;
+use std::borrow::Cow;
+use std::collections::{BTreeSet, HashSet};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use serde::Serialize;
@@ -115,6 +116,11 @@ pub struct TagEditorView {
     pub can_undo_edit: bool,
     /// An undone edit step can be redone (⇧⌘Z); set by the session.
     pub can_redo_edit: bool,
+    /// How many tracks `shared` covers (the Tracks pane's selection, readable or not); `None` for every track.
+    pub scope_count: Option<u32>,
+    /// When the session built this view, under its lock: a later view has a higher number, so the UI keeps the
+    /// newest by the backend's order, never by the order it asked in. Set by the session; 0 straight out of `build`.
+    pub view_seq: u64,
 }
 
 /// What the session's rules say about the window, apart from the files.
@@ -126,10 +132,19 @@ pub(super) struct Access {
 
 /// The view for `tracks` (path and entry, in the session's current order). Unreadable files
 /// are listed but count in no summary. Hashes no cover: each file's key comes from its read.
-pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView {
+/// `scope` (some of `tracks`) narrows the shared rows and their choices alone; `None` is every track.
+pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)], scope: Option<&[(&Path, &Entry)]>) -> TagEditorView {
     let loaded: Vec<&Loaded> = tracks.iter().filter_map(|(_, entry)| entry.loaded()).collect();
     let edited: Vec<FileTags> = loaded.iter().map(|file| file.edited.clone()).collect();
-    let shared = shared_view(&edited);
+    let in_scope: Cow<'_, [FileTags]> = match scope {
+        None => Cow::Borrowed(&edited),
+        Some(scoped) => scoped
+            .iter()
+            .filter_map(|(_, entry)| entry.loaded())
+            .map(|file| file.edited.clone())
+            .collect(),
+    };
+    let shared = shared_view(&in_scope);
     let dirty = loaded.iter().any(|file| file.changed());
     TagEditorView {
         editable: access.editable,
@@ -138,7 +153,7 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .iter()
             .filter(|field| !matches!(field, TagField::Title | TagField::Track))
             .filter_map(|field| shared.get(field).map(|value| (*field, value.clone())))
-            .map(|(field, value)| shared_row(&edited, field, value))
+            .map(|(field, value)| shared_row(&in_scope, field, value))
             .collect(),
         tracks: tracks.iter().map(|(path, entry)| track_row(path, entry)).collect(),
         cover: cover_summary(&loaded),
@@ -159,7 +174,24 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
         sort: None,
         can_undo_edit: false,
         can_redo_edit: false,
+        scope_count: scope.map(|scoped| u32::try_from(scoped.len()).unwrap_or(u32::MAX)),
+        view_seq: 0,
     }
+}
+
+/// The `tracks` at `scope` (the Album pane's, `TagSession::view_scope`), in their order; `None` for every track,
+/// and so is a scope none of whose tracks is still listed (a reload dropped them).
+pub(super) fn scoped_tracks<'a>(
+    tracks: &[(&'a Path, &'a Entry)],
+    scope: Option<&HashSet<PathBuf>>,
+) -> Option<Vec<(&'a Path, &'a Entry)>> {
+    let scope = scope?;
+    let scoped: Vec<_> = tracks
+        .iter()
+        .copied()
+        .filter(|(path, _)| scope.contains(*path))
+        .collect();
+    (!scoped.is_empty()).then_some(scoped)
 }
 
 /// One shared row; a «multiple values» one lists up to `CHOICE_LIMIT` distinct values and counts the rest.

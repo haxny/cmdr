@@ -1,7 +1,7 @@
 /** A fake Tags window state and a view for the Apply panel's tests. */
 
 import { vi } from 'vitest'
-import type { FileChangeView, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
+import type { FileChangeView, SideFileChange, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
 import type { TagEditorState } from './tag-editor-state.svelte'
 import type { LastTagApply } from './last-tag-apply'
 
@@ -25,6 +25,8 @@ export const PANEL_VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
+  viewSeq: 0,
   sort: null,
 }
 
@@ -58,6 +60,9 @@ export function applyReport(over: Partial<TagApplyReport> = {}): TagApplyReport 
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
+    sideFilesWritten: [],
+    sideFilesHeld: [],
+    sideFilesFailed: [],
     ...over,
   }
 }
@@ -74,6 +79,7 @@ export function fakeState(view: TagEditorView = PANEL_VIEW, reports: TagApplyRep
     undoable: null as LastTagApply | null,
     settled: vi.fn(() => Promise.resolve(true)),
     changes: vi.fn(() => Promise.resolve({ ok: true as const, value: CHANGES })),
+    sideFileChanges: vi.fn(() => Promise.resolve({ ok: true as const, value: [] as SideFileChange[] })),
     apply: vi.fn(() => Promise.resolve({ ok: true as const, value: queue.shift() ?? applyReport() })),
     tool: vi.fn(() => Promise.resolve()),
     reload: vi.fn(() => Promise.resolve()),

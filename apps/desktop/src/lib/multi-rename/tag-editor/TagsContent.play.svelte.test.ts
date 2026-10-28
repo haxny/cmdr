@@ -77,6 +77,8 @@ const VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
+  viewSeq: 0,
   sort: null,
 }
 

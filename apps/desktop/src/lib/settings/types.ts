@@ -736,8 +736,17 @@ export interface SettingsValues {
    */
   'advanced.oldMacosNoticeShown': boolean
   'fileExplorer.tabs.closedTabHistorySize': number
-  /** Adds the opt-in Tags tab to Multi-Rename. Off by default: off, the sheet is exactly upstream's. */
+  /**
+   * Turns on the Tags window (File > Edit tags…, the sheet's "Tags…"). Off by default: off, the sheet is upstream's but
+   * for one fork difference that applies regardless, a plain `[=tag.track]` / `[=tag.disc]` padding to the run's width
+   * (`src-tauri/src/multi_rename/DETAILS.md`).
+   */
   'multiRename.tagEditor': boolean
+  /**
+   * The Tags window's writes also write Audiobookshelf's `reader.txt` (the narrator) and `desc.txt` (the description)
+   * into the book folder. Off by default: off, a write touches only the audio files.
+   */
+  'multiRename.tagEditor.absSideFiles': boolean
 
   // Search
   'search.autoApply': boolean

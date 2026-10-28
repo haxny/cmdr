@@ -16,6 +16,7 @@ import {
   editTags,
   getCoverImage,
   getCoverThumbnail,
+  getSideFileChanges,
   getTagChanges,
   lastTagApply,
   listCoverCandidates,
@@ -28,6 +29,7 @@ import {
   setCoverFromFile,
   setCoverFromPath,
   sortTagTracks,
+  setTagViewScope,
   undoTagApply,
   undoTagEdit,
   redoTagEdit,
@@ -39,6 +41,7 @@ import {
   type NamePattern,
   type NamePreviewRow,
   type RestoreReport,
+  type SideFileChange,
   type TagApplyReport,
   type TagEdit,
   type TagEditorError,
@@ -49,6 +52,7 @@ import {
 } from '#lib/tauri-commands/index.js'
 import { outcomeOf } from './apply-outcome'
 import type { LastTagApply } from './last-tag-apply'
+import { replacing, sideFilesOn } from './side-files'
 import { loadWriteKind } from './write-kind'
 import { WRITE_WAIT_LIMIT_MS } from './write-wait'
 
@@ -79,17 +83,18 @@ export interface ApplyOptions {
  * the write was refused, typed; `listFailed`: the change list before it couldn't be made, so nothing was written.
  * `reviewFirst`: writing as the kind would remove a field from `removing` files (an MP3's conductor for an audiobook),
  * or may (a file it couldn't check), so those files weren't written: a removal is only ever written from the list
- * that names it. Caught before the write, `after` is empty; caught by the backend's guard at the write (a file read
+ * that names it. `replacing` counts the side files (`reader.txt`, `desc.txt`) that say something else, which are
+ * replaced only from the list that shows them, likewise. Caught before the write, `after` is empty; caught by the backend's guard at the write (a file read
  * differently then), `after` holds that apply, which the list's write continues. `changed`: an edit landed between the
  * list and the write, so nothing was written: the caller lists again. `nothing`: no file would change. `stillBusy`: an edit was still out after
  * the wait, so nothing was listed or written.
  */
 export type WriteNowResult =
   | { kind: 'done'; written: number; failed: number; changedOnDisk: number }
-  | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind }
+  | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind; sideFiles: boolean }
   | { kind: 'refused'; error: TagStateError }
   | { kind: 'listFailed'; error: TagStateError }
-  | { kind: 'reviewFirst'; removing: number; writtenAs: ContentKind; after: TagApplyReport[] }
+  | { kind: 'reviewFirst'; removing: number; replacing: number; writtenAs: ContentKind; after: TagApplyReport[] }
   | { kind: 'changed' }
   | { kind: 'nothing' }
   | { kind: 'stillBusy' }
@@ -130,6 +135,12 @@ export interface TagEditorState {
    * reorders only the session's names: no edit and no file changes, and the next `[C]` or Renumber counts in this order.
    */
   sortTracks(sort: TrackSort): Promise<void>
+  /**
+   * Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every track for
+   * `null`, and takes the view it answers with (`view.scopeCount`). Not an edit: no undo step, `editing` stays off.
+   * Resolves whether the backend took it.
+   */
+  setViewScope(paths: string[] | null): Promise<boolean>
   /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
   tool(tool: TagTool, scope?: string[] | null): Promise<void>
   /**
@@ -165,7 +176,13 @@ export interface TagEditorState {
   coverFromFile(fileName: string): Promise<void>
   /** What a write as `kind` would change, with what the kind removes beyond the fields. A failure leaves `error` alone. */
   changes(kind: ContentKind): Promise<TagStateResult<FileChangeView[]>>
-  /** Writes the edits; a refusal comes back typed and leaves `error` alone. */
+  /**
+   * What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`). The caller asks only
+   * with `multiRename.tagEditor.absSideFiles` on (`sideFilesOn`), and sends the same answer as `sideFiles`. A failure
+   * leaves `error` alone.
+   */
+  sideFileChanges(): Promise<TagStateResult<SideFileChange[]>>
+  /** Writes the edits (and the side files when `request.sideFiles`); a refusal comes back typed and leaves `error` alone. */
   apply(request: ApplyRequest, options?: ApplyOptions): Promise<TagStateResult<TagApplyReport>>
   /**
    * ⌘⏎ / ⌘S: writes the edits at once, without the change list. The same write as the Write dialog's: it waits for the
@@ -200,9 +217,6 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let started = false
   /** Set by `close()`: a reply that lands after it is dropped. */
   let closed = false
-  /** Counts view requests; an answer to an older one than the last that landed is dropped. */
-  let viewAsked = 0
-  let viewShown = 0
 
   /**
    * Runs one backend call with `busy` on, keeps its error, and hands the result back. `clears` says whether a success
@@ -228,12 +242,17 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     }
   }
 
-  async function replaceView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<void> {
-    const asked = ++viewAsked
+  /**
+   * Runs a view-returning call and keeps its answer unless the view shown is newer by the backend's order
+   * (`viewSeq`, stamped under the session lock): answers may land in any order, and the newest one holds every change
+   * made before it, a scope set or an edit alike.
+   */
+  async function replaceView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<boolean> {
     const res = await track(call)
-    if (!res.ok || closed || asked < viewShown) return
-    viewShown = asked
-    view = res.value
+    if (!res.ok || closed) return false
+    const older = view !== null && res.value.viewSeq < view.viewSeq
+    if (!older) view = res.value
+    return true
   }
 
   /** Runs an edit-like call (it changes the edits): `editing` is on meanwhile. */
@@ -322,31 +341,49 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     return res
   }
 
+  async function sideFileChanges(): Promise<TagStateResult<SideFileChange[]>> {
+    return await track(() => getSideFileChanges(sessionId), null)
+  }
+
   async function writeNow(options: WriteNowOptions = {}): Promise<WriteNowResult> {
     if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
     const seen = editsMade
+    // Read once: the side files listed are the ones the write may write, even if the setting flips meanwhile.
+    const sideFiles = sideFilesOn()
     const kind = await loadWriteKind()
     const listed = await track(() => getTagChanges(sessionId, kind), null)
     if (!listed.ok) return { kind: 'listFailed', error: listed.error }
+    // Side files ride along with a tag write, never alone.
     if (listed.value.length === 0) return { kind: 'nothing' }
+    const side = sideFiles ? await sideFileChanges() : { ok: true as const, value: [] }
+    if (!side.ok) return { kind: 'listFailed', error: side.error }
     const removing = listed.value.filter((change) => change.removes.length > 0 || change.removesUnknown).length
-    if (removing > 0) return { kind: 'reviewFirst', removing, writtenAs: kind, after: [] }
+    const replaces = replacing(side.value)
+    if (removing + replaces > 0)
+      return { kind: 'reviewFirst', removing, replacing: replaces, writtenAs: kind, after: [] }
     // An edit that landed while the list was made would be written unlisted: list again instead.
     if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
     if (editsMade !== seen) return { kind: 'changed' }
     options.onWriting?.()
-    // No removal allowed: the backend holds back any file the kind would take a field from (`wouldRemove`).
-    const res = await apply({ kind, allowFrameLoss: false, skip: [], allowRemovals: [] })
+    // No removal or side-file replacement allowed: the backend holds back any (`wouldRemove`; a side file that
+    // appeared since the list is `sideFilesHeld`, counted as not written).
+    const res = await apply({ kind, allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles })
     if (!res.ok) return { kind: 'refused', error: res.error }
     if (res.value.wouldRemove.length > 0) {
-      return { kind: 'reviewFirst', removing: res.value.wouldRemove.length, writtenAs: kind, after: [res.value] }
+      return {
+        kind: 'reviewFirst',
+        removing: res.value.wouldRemove.length,
+        replacing: 0,
+        writtenAs: kind,
+        after: [res.value],
+      }
     }
-    if (res.value.wouldDrop.length > 0) return { kind: 'wouldDrop', report: res.value, writtenAs: kind }
+    if (res.value.wouldDrop.length > 0) return { kind: 'wouldDrop', report: res.value, writtenAs: kind, sideFiles }
     const outcome = outcomeOf([res.value])
     return {
       kind: 'done',
-      written: outcome.written,
-      failed: outcome.failed.length,
+      written: outcome.written + outcome.sideFilesWritten.length,
+      failed: outcome.failed.length + outcome.sideFilesNotWritten.length,
       changedOnDisk: outcome.changedOnDisk.length,
     }
   }
@@ -396,7 +433,11 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       return await stepEdit(() => redoTagEdit(sessionId))
     },
     // Not an edit: it changes the order only, so `editing` stays off.
-    sortTracks: (sort) => replaceView(() => sortTagTracks(sessionId, sort)),
+    sortTracks: async (sort) => {
+      await replaceView(() => sortTagTracks(sessionId, sort))
+    },
+    // Not an edit either: it changes which tracks the Album pane sums up.
+    setViewScope: (paths) => replaceView(() => setTagViewScope(sessionId, paths)),
     tool: (tool, scope = null) => editView(() => runTagTool(sessionId, tool, scope)),
     textTool: (tool, scope = null) => editView(() => runTagTextTool(sessionId, tool, scope)),
     // A preview owns only a bad pattern: a good one leaves any other notice (a failed edit, a cover) standing.
@@ -438,6 +479,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     coverFromFile: (fileName) => editView(() => setCoverFromFile(sessionId, fileName)),
     // The Apply panel words a failed list or write next to its buttons; the window's error is for edits.
     changes: (kind) => track(() => getTagChanges(sessionId, kind), null),
+    sideFileChanges,
     apply,
     writeNow,
     async undo() {
@@ -455,9 +497,9 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       if (!res.ok) error = res.error
       return res
     },
-    reload: () => {
+    reload: async () => {
       editsMade += 1
-      return replaceView(() => openTagEditor(sessionId, true))
+      await replaceView(() => openTagEditor(sessionId, true))
     },
     async close() {
       if (!started) return

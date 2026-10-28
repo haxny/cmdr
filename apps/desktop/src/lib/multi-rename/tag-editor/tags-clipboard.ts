@@ -3,7 +3,8 @@
  * focused text box, and the cover section (its picture paste, `CoverPanel`), get the native action back, so they keep
  * their own. Under a dialog nothing else happens. Otherwise: Copy puts the cursor field's text on the clipboard, Cut
  * copies it and then empties the field as Delete does, Paste sets the clipboard's plain text (unless it's blank or over
- * the field's limit, `pasteRefusal`). Each edit is a pending edit, so ⌘Z takes it back. What can't be done is worded
+ * the field's limit, `pasteRefusal`). On a Tracks row Cut and Paste, like Delete, set every selected row when the
+ * cursor row is one of them (`cursorTracks`). Each edit is a pending edit, so ⌘Z takes it back. What can't be done is worded
  * through `say`, for the status line.
  */
 import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -45,7 +46,7 @@ export interface TagsClipboardDeps {
   }
   /** Sets `field` on the selected tracks, or every file when none is selected (Clear's scope). */
   setFieldScoped: (field: TagField, values: string[]) => Promise<void>
-  /** Empties the target's field, as Delete does. */
+  /** Empties the target's field, as Delete does (on a Tracks row, `cursorTracks`'s rows). */
   clearTarget: (target: { field: TagField; path: string | null }) => Promise<void>
   /** A dialog is open over the panes. */
   hasDialog: () => boolean
@@ -56,6 +57,23 @@ export interface TagsClipboardDeps {
 /** The paths of the tracks whose tags were read: an edit can name only these. */
 export function readablePathsOf(view: TagEditorView | null): Set<string> {
   return new Set(view?.tracks.filter((track) => track.readError === null).map((track) => track.path))
+}
+
+/**
+ * The tracks an edit on the Tracks pane's cursor row sets (⌘V, ⌘X, Delete): that row, or, when several tracks are
+ * selected and the row is one of them, every selected one (as a spreadsheet fills a selection). Readable tracks only.
+ */
+export function cursorTracks(
+  selection: TagsClipboardDeps['selection'],
+  view: TagEditorView | null,
+  target: { path: string; index: number },
+): string[] {
+  const readable = readablePathsOf(view)
+  const scope = selection.scope()
+  if (selection.count > 1 && selection.has(target.index) && scope.kind === 'some') {
+    return scope.paths.filter((path) => readable.has(path))
+  }
+  return readable.has(target.path) ? [target.path] : []
 }
 
 /** The window's ⌘X / ⌘C / ⌘V handler. */
@@ -89,19 +107,6 @@ export function createTagsClipboard(deps: TagsClipboardDeps): (action: TagsClipb
     }
   }
 
-  /**
-   * The tracks a paste on the Tracks pane's cursor row sets: that row, or, when several tracks are selected and the
-   * row is one of them, every selected one (as a spreadsheet fills a selection). Readable tracks only.
-   */
-  function pasteTracks(target: { path: string; index: number }): string[] {
-    const readable = readablePathsOf(tags.view)
-    const scope = selection.scope()
-    if (selection.count > 1 && selection.has(target.index) && scope.kind === 'some') {
-      return scope.paths.filter((path) => readable.has(path))
-    }
-    return readable.has(target.path) ? [target.path] : []
-  }
-
   /** The clipboard's plain text, or `null` after wording why there is none to paste. */
   async function clipboardText(): Promise<string | null> {
     let text: string | null
@@ -133,7 +138,7 @@ export function createTagsClipboard(deps: TagsClipboardDeps): (action: TagsClipb
       await deps.setFieldScoped(field, values)
       return
     }
-    const paths = pasteTracks({ path, index: target.index })
+    const paths = cursorTracks(selection, tags.view, { path, index: target.index })
     if (paths.length > 0) await tags.edit(paths.map((one) => ({ kind: 'setOne', path: one, field, values })))
   }
 

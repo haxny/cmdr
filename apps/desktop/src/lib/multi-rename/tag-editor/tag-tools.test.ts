@@ -1,7 +1,14 @@
 /** Which clean-up tools apply to which selection, and the exact tool each button sends. */
 import { describe, expect, it } from 'vitest'
 import { TAG_FIELDS } from './field-labels'
-import { DEFAULT_CASE_FIELDS, DIACRITICS_FIELDS, caseTool, removeExtrasTool, showsRenumber } from './tag-tools'
+import {
+  DEFAULT_CASE_FIELDS,
+  DIACRITICS_FIELDS,
+  caseTool,
+  removeExtrasTool,
+  showsRenumber,
+  textTool,
+} from './tag-tools'
 
 describe('tag-tools', () => {
   it.each([
@@ -22,6 +29,18 @@ describe('tag-tools', () => {
     expect(DIACRITICS_FIELDS).not.toContain('comment')
     expect(DIACRITICS_FIELDS).not.toContain('description')
     expect(DIACRITICS_FIELDS).toHaveLength(15)
+  })
+
+  it('the Text tool sends the ticked options on the chosen fields, and nothing while none is ticked', () => {
+    const off = { greekToLatin: false, removeDiacritics: false, normalizeUnicode: false }
+    expect(textTool(off, ['title'])).toBeNull()
+    expect(textTool({ ...off, normalizeUnicode: true }, ['title', 'album'])).toEqual({
+      kind: 'text',
+      fields: ['title', 'album'],
+      greekToLatin: false,
+      removeDiacritics: false,
+      normalizeUnicode: true,
+    })
   })
 
   it.each([

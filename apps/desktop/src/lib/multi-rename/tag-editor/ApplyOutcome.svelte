@@ -2,11 +2,13 @@
     /**
      * What a tag write did: how many files got their tags, and every file it left alone, each in its own list:
      * failed (with why, by the error's kind), changed on disk since it was read (with a way to read the files again),
-     * and skipped by the user; when no file was written, it says that first. A write whose old tags couldn't be kept says it can't be undone. Nothing is left out.
+     * and skipped by the user; the side files beside the book (`reader.txt`, `desc.txt`) it wrote, and those it
+     * left as they were; when no file was written, it says that first. A write whose old tags couldn't be kept says it can't be undone. Nothing is left out.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatUnitList } from '#lib/intl/list-format.js'
     import Button from '#lib/ui/Button.svelte'
     import { failureKey, failureParams, fileNameOf, type ApplyOutcome } from './apply-outcome'
 
@@ -41,12 +43,16 @@
                 heading: 'multiRename.tags.write.skippedHeading' as MessageKey,
                 rows: outcome.skipped.map((row) => nameOf(row.path)),
             },
+            {
+                heading: 'multiRename.tags.write.sideNotWrittenHeading' as MessageKey,
+                rows: outcome.sideFilesNotWritten.map(fileNameOf),
+            },
         ].filter((list) => list.rows.length > 0),
     )
 </script>
 
 <div class="outcome">
-    {#if outcome.written === 0 && lists.length > 0}
+    {#if outcome.written + outcome.sideFilesWritten.length === 0 && lists.length > 0}
         <!-- An alert only when files were refused; files the user chose to skip are no problem to announce. -->
         <p role={outcome.failed.length + outcome.changedOnDisk.length > 0 ? 'alert' : 'status'}>
             {tString('multiRename.tags.write.refused')}
@@ -55,6 +61,11 @@
     {#if outcome.written > 0}
         <p role="status">
             {tString('multiRename.tags.write.done', { count: outcome.written, countText: formatInteger(outcome.written) })}
+        </p>
+    {/if}
+    {#if outcome.sideFilesWritten.length > 0}
+        <p role="status">
+            {tString('multiRename.tags.write.sideWritten', { files: formatUnitList(outcome.sideFilesWritten.map(fileNameOf)) })}
         </p>
     {/if}
     {#if outcome.undoUnavailable}

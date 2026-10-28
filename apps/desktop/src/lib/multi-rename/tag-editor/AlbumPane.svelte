@@ -5,11 +5,14 @@
      * like a file pane. The cursor moves with the list keys; F2 or Enter (`tags.edit`) edits the cursor row's value
      * in place (`TagValueEditor`), and Tab (`tags.switchPane`) goes to the Tracks pane. A row whose files differ
      * holds «multiple values» followed by every value; it sends nothing while the marker (or the «…and N more» tail)
-     * is in the text, and once they are deleted the text left is set on every file (`parseSharedEdit`). The cursor
-     * row's Clear and Values… sit under the list; the cover is the last group, inside the list's scroll after the rows.
+     * is in the text, and once they are deleted the text left is set on every file (`parseSharedEdit`), or on the
+     * selected tracks alone while the Tracks pane has a selection (`scope`: the rows then sum up those tracks, the
+     * header says "5 of 42 tracks", and so does the editor's name). The cursor row's Clear and Values… sit under the
+     * list; the cover is the last group, inside the list's scroll after the rows.
      */
     import type { Snippet } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import type { SharedRow, TagField } from '#lib/ipc/bindings.js'
     import { getRowHeight, getStripedRows } from '#lib/settings/reactive-settings.svelte.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
@@ -32,6 +35,8 @@
         editable: boolean
         /** How many files carry a Date the writer would refuse; the Date row is red while it is above 0. */
         badDates?: number
+        /** The tracks the rows sum up when the Tracks pane has a selection (`count` of `total`); `null` for all. */
+        scope?: { count: number; total: number } | null
         /** This pane has focus: its cursor shows as the active one (`.is-focused`). */
         focused: boolean
         cursor: number
@@ -46,12 +51,35 @@
         cover?: Snippet
     }
 
-    const { rows, editable, badDates = 0, focused, cursor, onCursorChange, onEdit, onClear, onSwitchPane, isEcho, cover }: Props =
-        $props()
+    const {
+        rows,
+        editable,
+        badDates = 0,
+        scope = null,
+        focused,
+        cursor,
+        onCursorChange,
+        onEdit,
+        onClear,
+        onSwitchPane,
+        isEcho,
+        cover,
+    }: Props = $props()
 
     /** Fixed name column, flexing value: the pane never scrolls sideways. */
     const GRID = 'calc(110px * var(--font-scale)) minmax(0, 1fr)'
     const DATE_HINT_ID = 'tag-album-date-hint'
+    const SCOPE_ID = 'tag-album-scope'
+
+    /** The scope's words for a label ("5 of 42 tracks"), or `null` while the rows cover every file. */
+    const scopeParams = $derived(
+        scope === null
+            ? null
+            : { total: scope.total, countText: formatInteger(scope.count), totalText: formatInteger(scope.total) },
+    )
+
+    /** "5 of 42 tracks" while a selection narrows the rows; nothing while they cover every track. */
+    const scopeText = $derived(scopeParams === null ? null : tString('multiRename.tags.album.scope', scopeParams))
 
     const rowHeight = $derived(getRowHeight())
     const striped = $derived(getStripedRows())
@@ -71,6 +99,19 @@
             }
         }),
     )
+
+    /** The editor's name: what the typed value goes to, every file or the selected tracks. */
+    function editLabel(field: string): string {
+        if (scopeParams === null) return tString('multiRename.tags.album.editLabel', { field })
+        return tString('multiRename.tags.album.editLabelScoped', { field, ...scopeParams })
+    }
+
+    /** The Clear button's name, in the same scope. */
+    function clearLabel(field: string): string {
+        if (scopeParams === null) return tString('multiRename.tags.clearRowLabel', { field })
+        return tString('multiRename.tags.clearRowLabelScoped', { field, ...scopeParams })
+    }
+
     const at = $derived(Math.max(0, Math.min(cursor, shown.length - 1)))
     const current = $derived(shown.at(at))
 
@@ -194,7 +235,13 @@
         aria-hidden="true"
     >
         <span class="cut">{tString('multiRename.tags.album.colName')}</span>
-        <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
+        <span class="value-head">
+            <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
+            {#if scopeText !== null}
+                <!-- Read out as the list's description: the header itself is hidden from screen readers. -->
+                <span class="scope cut" id={SCOPE_ID}>{scopeText}</span>
+            {/if}
+        </span>
     </div>
     <!-- `data-cover-clip`: the cover section cuts its drop area to this scroller (`CoverPanel`). -->
     <div class="full-list" bind:this={scroller} use:useScrollBoxSize={{ onResize: measureScroller }} data-cover-clip>
@@ -204,6 +251,7 @@
             role="listbox"
             tabindex="0"
             aria-label={tString('multiRename.tags.album.label')}
+            aria-describedby={scopeText === null ? undefined : SCOPE_ID}
             aria-activedescendant={current ? `tag-album-row-${current.field}` : undefined}
             {onkeydown}
         >
@@ -237,7 +285,7 @@
                 bind:this={editor}
                 value={row.text}
                 seed={editing.seed}
-                ariaLabel={tString('multiRename.tags.album.editLabel', { field: row.label })}
+                ariaLabel={editLabel(row.label)}
                 multiline={isMultiLineField(row.field)}
                 invalid={row.invalid}
                 describedBy={row.invalid ? DATE_HINT_ID : undefined}
@@ -270,7 +318,7 @@
             <Button
                 size="mini"
                 disabled={!editable || row.empty}
-                aria-label={tString('multiRename.tags.clearRowLabel', { field: row.label })}
+                aria-label={clearLabel(row.label)}
                 onclick={() => { void onEdit([{ kind: 'setAll', field: row.field, values: [] }]) }}
             >
                 {tString('multiRename.tags.clearRow')}
@@ -301,6 +349,18 @@
         margin: 0;
         padding: var(--spacing-xxs) var(--spacing-md);
         font-size: var(--font-size-sm);
+    }
+
+    /* The Value header, and "5 of 42 tracks" at its right while a selection narrows the rows. */
+    .value-head {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--spacing-sm);
+        min-width: 0;
+    }
+
+    .scope {
+        flex-shrink: 0;
     }
 
     .row-actions {

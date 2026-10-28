@@ -26,8 +26,9 @@ use crate::tag_editor::last_apply::{LastTagApply, last_of};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
-    preview_names, tool as run_tool,
+    preview_names, set_view_scope, tool as run_tool,
 };
+use crate::tag_editor::side_files::{SideFileChange, side_file_changes};
 use crate::tag_editor::sort::{TrackSort, sort_tracks};
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
@@ -160,6 +161,17 @@ pub async fn sort_tag_tracks(session_id: String, sort: TrackSort) -> Result<TagE
     .await
 }
 
+/// Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every
+/// track for `None`. Not an edit: nothing joins the undo history.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_tag_view_scope(
+    session_id: String,
+    paths: Option<Vec<String>>,
+) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || set_view_scope(&session_id, paths)).await
+}
+
 /// Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
 #[tauri::command]
 #[specta::specta]
@@ -217,6 +229,14 @@ pub async fn get_tag_changes(session_id: String, kind: ContentKind) -> Result<Ve
         result
     })
     .await
+}
+
+/// What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): the
+/// frontend asks only with `multiRename.tagEditor.absSideFiles` on. None for a read-only session.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_side_file_changes(session_id: String) -> Result<Vec<SideFileChange>, TagEditorError> {
+    blocking(move || side_file_changes(&session_id)).await
 }
 
 /// Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
@@ -417,11 +437,23 @@ pub async fn get_cover_thumbnail(session_id: String, key: String) -> Result<Opti
 
 /// Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
 /// many of its files are tracks and what its folder is called. The main window calls it right
-/// after opening the session; the window's close (or its `Destroyed`) releases it.
+/// after opening the session; the window's close (or its `Destroyed`) releases it. It also takes
+/// down any Tags window left behind with its session no longer held (`window::close_orphans`).
 #[tauri::command]
 #[specta::specta]
-pub async fn hold_tags_session(session_id: String) -> Result<TagsSessionInfo, MultiRenameError> {
-    crate::tag_editor::window::hold(&session_id)
+pub async fn hold_tags_session(app: tauri::AppHandle, session_id: String) -> Result<TagsSessionInfo, MultiRenameError> {
+    let held = crate::tag_editor::window::hold(&session_id);
+    crate::tag_editor::window::close_orphans(&app);
+    held
+}
+
+/// Whether the Tags window of `session_id` may close without the discard question: no unwritten
+/// edit in its session and no tag write running. Its error boundary asks before it closes the
+/// window, since the edits live here and a closed window takes them along.
+#[tauri::command]
+#[specta::specta]
+pub async fn tags_window_may_close(session_id: String) -> bool {
+    crate::tag_editor::window::may_close_unasked(&session_id)
 }
 
 /// Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action

@@ -14,8 +14,6 @@ use tauri::{
 use crate::intl::menu_t;
 
 #[cfg(target_os = "macos")]
-use super::HELP_MENU_ID;
-#[cfg(target_os = "macos")]
 use super::menu_items::APP_MENU_TITLE;
 use super::menu_items::{DetachWord, detach_label, pin_tab_label};
 use super::{
@@ -25,6 +23,8 @@ use super::{
     VIEWER_EDIT_COPY_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID, VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID,
     ViewerMenuItems,
 };
+#[cfg(target_os = "macos")]
+use super::{HELP_MENU_ID, WINDOW_MENU_ID};
 #[cfg(target_os = "macos")]
 use super::{VIEWER_EDIT_CUT_ID, VIEWER_EDIT_PASTE_ID};
 use super::{frontend_shortcut_to_menu_text, menu_id_to_command};
@@ -330,9 +330,10 @@ pub fn build_viewer_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Viewer
 
     #[cfg(target_os = "macos")]
     {
-        // --- Window menu ---
-        let window_menu = Submenu::with_items(
+        // --- Window menu --- (by id: `cleanup_macos_menus` hands it to AppKit to list the open windows)
+        let window_menu = Submenu::with_id_and_items(
             app,
+            WINDOW_MENU_ID,
             menu_t("menu.bar.window"),
             true,
             &[

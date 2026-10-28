@@ -43,10 +43,15 @@ pub(crate) fn writing() -> Writing {
     Writing(())
 }
 
+/// Whether a tag write or undo is running now, for any session.
+pub(crate) fn is_writing() -> bool {
+    WRITING.load(Ordering::SeqCst) > 0
+}
+
 /// The Tags windows' share of a quit, now. Cheap: one lock over the tag sessions, no file work.
 pub(crate) fn now() -> TagsAtQuit {
     TagsAtQuit {
         unwritten: u32::try_from(super::session::unwritten_sessions()).unwrap_or(u32::MAX),
-        writing: WRITING.load(Ordering::SeqCst) > 0,
+        writing: is_writing(),
     }
 }

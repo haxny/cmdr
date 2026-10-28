@@ -13,27 +13,25 @@
     import { onDestroy, onMount, untrack } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import type { ContentKind, TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
+    import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
     import {
         openTagsInPlayer,
         type TagApplyReport,
         type TagEdit,
-        type TagEditorView,
+        type TagsClipboardAction,
     } from '#lib/tauri-commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
-    import { getFirstShiftShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
     import { joinSentences } from '#lib/intl/sentence-join.js'
-    import { formatInteger } from '#lib/intl/number-format.js'
     import AlbumPane from './AlbumPane.svelte'
-    import { fileNameOf, outcomeOf, refusalOf } from './apply-outcome'
-    import { answerWriteAnyway } from './write-anyway'
-    import { KIND_LABELS } from './write-kind'
+    import { followViewScope, scopedAlbumEdits } from './album-scope.svelte'
+    import { fileNameOf } from './apply-outcome'
+    import { createWriteNowStatus } from './write-now-status.svelte'
     import CoverPanel from './CoverPanel.svelte'
     import CoverViewer from './CoverViewer.svelte'
     import { COVER_ERROR_KEYS, type CoverShown } from './cover-choices'
-    import { createTagsClipboard, readablePathsOf } from './tags-clipboard'
+    import { createTagsClipboard, cursorTracks, readablePathsOf } from './tags-clipboard'
     import TagsFunctionKeyBar from './TagsFunctionKeyBar.svelte'
     import TagToolDialogs from './TagToolDialogs.svelte'
     import TracksPane from './TracksPane.svelte'
@@ -48,9 +46,10 @@
         type TagsKeyRoad,
     } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
-    import { createTrackSelection } from './track-selection.svelte'
+    import { dialogIsOpen } from './typed-key'
+    import { createTrackSelection, type ToolScope } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
-    import type { TagEditorState, TagStateError, WriteNowResult } from './tag-editor-state.svelte'
+    import { SETTLE_LIMIT_MS, type TagEditorState, type TagStateError } from './tag-editor-state.svelte'
 
     interface Props {
         state: TagEditorState
@@ -69,6 +68,14 @@
     // Converges: `sync` writes only when the list of paths changed.
     $effect(() => {
         selection.sync(allPaths)
+    })
+
+    // The Album pane sums up the selected tracks (every track while none is).
+    const viewScope = followViewScope({
+        selected: () => selection.selected,
+        shownCount: () => tags.view?.scopeCount,
+        settled: () => tags.settled(),
+        setViewScope: (paths) => tags.setViewScope(paths),
     })
 
     // Selecting again answers the "no longer here" notice.
@@ -176,12 +183,12 @@
     }
 
     /**
-     * The field the user is on: the Album pane's cursor row while that pane is active, Title while the Tracks pane
-     * is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
+     * The field the user is on: the Album pane's cursor row while that pane is active, the Tracks pane's active cell
+     * (# or Title) while that one is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
      * Clear); the bar never takes focus, so a press on it keeps the pane.
      */
     const focusedField = $derived.by((): TagField | null => {
-        if (panes.active === 'tracks') return 'title'
+        if (panes.active === 'tracks') return tracksPane?.activeField() ?? 'title'
         if (panes.active !== 'album') return null
         const shared = tags.view?.shared ?? []
         return shared.at(Math.max(0, Math.min(panes.albumCursor, shared.length - 1)))?.field ?? null
@@ -198,9 +205,20 @@
      * A tool works on what the files hold now, so an edit a box just sent lands first, and on the selected tracks
      * alone (`null` for all). Resolves `undefined` without calling when the selected tracks are gone.
      */
-    const runScoped: RunScoped = async (call) => {
+    const runScoped: RunScoped = (call) => runScopedFrom(undefined, call)
+
+    /**
+     * [`runScoped`] on `taken`, the scope read when the edit started (an Album box's commit), so a click that blurs
+     * the box and changes the selection in the same event never redirects the value; `undefined` reads it now. A
+     * selection that vanished meanwhile still refuses.
+     */
+    async function runScopedFrom<T>(
+        taken: ToolScope | undefined,
+        call: (scope: string[] | null) => Promise<T>,
+    ): Promise<T | undefined> {
         await tags.settled()
-        const scope = selection.scope()
+        const live = selection.scope()
+        const scope = taken === undefined || live.kind === 'gone' ? live : taken
         if (scope.kind === 'gone') {
             // The selected tracks are gone: never widen to every track. The next run takes them all.
             selection.clearGone()
@@ -218,16 +236,22 @@
     /** The paths of the tracks whose tags were read: an edit can name only these. */
     const readablePaths = (): Set<string> => readablePathsOf(tags.view)
 
+    /** An Album pane edit (typing, a pick, Clear, Delete, paste, cut): on the selected readable tracks, else all. */
+    function editAlbum(edits: TagEdit[]): Promise<void> {
+        return editComing(editAlbumNow(edits))
+    }
+
+    async function editAlbumNow(edits: TagEdit[]): Promise<void> {
+        // Read before any await: the scope the pane showed when the edit started, not one a click changes after.
+        const taken = selection.scope()
+        const flushing = viewScope.flush() // The pane shows the scope an edit goes to before it goes.
+        if (flushing !== null) await flushing
+        await runScopedFrom(taken, (scope) => tags.edit(scopedAlbumEdits(edits, scope, readablePaths())))
+    }
+
     /** Sets `field` to `values` on the selected tracks (the readable ones), or on every file when none is selected. */
     async function setFieldScoped(field: TagField, values: string[]): Promise<void> {
-        const readable = readablePaths()
-        await runScoped((scope) =>
-            tags.edit(
-                scope === null
-                    ? [{ kind: 'setAll', field, values }]
-                    : scope.filter((path) => readable.has(path)).map((path) => ({ kind: 'setOne', path, field, values })),
-            ),
-        )
+        await editAlbum([{ kind: 'setAll', field, values }])
     }
 
     /** Empties `field` on the selected tracks (the readable ones), or on every file when none is selected. */
@@ -237,15 +261,20 @@
 
     /**
      * Delete / Backspace in a pane, with no confirmation: the Album pane (`path` null) empties the field in Clear's
-     * scope; the Tracks pane empties it on the one track.
+     * scope; the Tracks pane empties it on the cursor row, or on every selected row when it is one (`cursorTracks`).
      */
     async function clearTarget(target: { field: TagField; path: string | null }): Promise<void> {
-        if (target.path === null) await clearField(target.field)
-        else await tags.edit([{ kind: 'setOne', path: target.path, field: target.field, values: [] }])
+        if (target.path === null) {
+            await clearField(target.field)
+            return
+        }
+        const { field, path } = target
+        const paths = cursorTracks(selection, tags.view, { path, index: allPaths.indexOf(path) })
+        if (paths.length > 0) await tags.edit(paths.map((one) => ({ kind: 'setOne', path: one, field, values: [] })))
     }
 
     /** ⌘X / ⌘C / ⌘V from the native menu (`TagsWindow`): the field under the cursor (`tags-clipboard.ts`). */
-    export const clipboard = createTagsClipboard({
+    const clipboardNow = createTagsClipboard({
         tags,
         panes,
         activeTrackField: () => tracksPane?.activeField() ?? 'title',
@@ -257,29 +286,75 @@
             notice = key
         },
     })
+    export function clipboard(action: TagsClipboardAction): Promise<void> {
+        return editComing(clipboardNow(action))
+    }
 
     /** The tool dialog showing, with the field the user was on when it opened. */
     let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
     /** The Write dialog showing: listing and writing (⌘⇧S), or undoing the last write (⌘Z). */
     let writeMode = $state<'write' | 'undo' | null>(null)
-    /** Files a write at once would make lose tag data ask first, over the panes (`WouldDropDialog`). */
-    let dropChoice = $state.raw<{
-        reports: TagApplyReport[]
-        kind: ContentKind
-        /** The view the choice was asked for: an edit since then lists again. */
-        seen: TagEditorView | null
-        answering: boolean
-    } | null>(null)
     /** The ⌘⏎ applies the Write dialog's list continues (`openReview`). */
     let reviewContinues: TagApplyReport[] = []
     /** The window was asked to close while a write ran: the Write dialog says to wait until it's done. */
     let closeWaits = $state(false)
     /** The cover opened large (`CoverViewer`), from a click on its thumbnail. */
     let viewing = $state<CoverShown | null>(null)
-    /** A dialog is over the panes: the cover section takes no paste or drop meanwhile. */
-    const dialogOpen = $derived(tool !== null || writeMode !== null || viewing !== null || dropChoice !== null)
     /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
     let notice = $state<MessageKey | null>(null)
+
+    /**
+     * Album and clipboard edits started but not yet handed to the state (a paste reading the clipboard, a commit
+     * waiting for the pane's scope): ⌘⏎ and ⌘Z wait for them (`editsSent`), so the edit just made is the one they see.
+     */
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping of pending promises, nothing renders from it
+    const coming = new Set<Promise<unknown>>()
+    function editComing<T>(run: Promise<T>): Promise<T> {
+        coming.add(run)
+        void run.then(
+            () => coming.delete(run),
+            () => coming.delete(run),
+        )
+        return run
+    }
+    async function editsSent(): Promise<boolean> {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const gaveUp = new Promise<false>((resolve) => {
+            timer = setTimeout(() => {
+                resolve(false)
+            }, SETTLE_LIMIT_MS)
+        })
+        const sent = (async () => {
+            while (coming.size > 0) await Promise.allSettled([...coming])
+            return true as const
+        })()
+        try {
+            return await Promise.race([sent, gaveUp])
+        } finally {
+            clearTimeout(timer)
+        }
+    }
+
+    /** ⌘⏎ / ⌘S: the write at once and what the status line says of it (`write-now-status.svelte.ts`). */
+    const writeNow = createWriteNowStatus({
+        tags,
+        stopPlayer: () => {
+            player.stop()
+        },
+        openReview: (continuing) => {
+            openReview(continuing)
+        },
+        say: (key) => {
+            notice = key
+        },
+        editsSent,
+    })
+    onDestroy(() => {
+        writeNow.destroy()
+    })
+
+    /** A dialog is over the panes: the cover section takes no paste or drop meanwhile. */
+    const dialogOpen = $derived(tool !== null || writeMode !== null || viewing !== null || writeNow.dropChoice !== null)
 
     /** The bar's commands that can act now (`enabledTagsCommands`). */
     const enabledCommands = $derived(enabledTagsCommands(tags.view))
@@ -293,6 +368,7 @@
      * out, so a Delete just pressed is the edit ⌘Z takes back, never the write.
      */
     async function undoLast(): Promise<void> {
+        if (!(await editsSent())) return
         await tags.settled()
         if (tags.view?.canUndoEdit === true) {
             if (await tags.undoEdit()) notice = 'multiRename.tags.undo.editUndone'
@@ -302,164 +378,10 @@
 
     /** ⇧⌘Z: the last undone edit again. Nothing to redo says nothing. */
     async function redoLast(): Promise<void> {
+        if (!(await editsSent())) return
         await tags.settled()
         if (tags.view?.canRedoEdit !== true) return
         if (await tags.redoEdit()) notice = 'multiRename.tags.undo.editRedone'
-    }
-
-    /** How long the status line keeps a write's summary, unless an edit comes first. */
-    const SUMMARY_SHOWN_MS = 10_000
-
-    /** One sentence of a write's summary in the status line. */
-    interface SummaryPart {
-        key: MessageKey
-        params?: Record<string, string | number>
-    }
-
-    /**
-     * What the last write at once (⌘⏎, ⌘S) did, and the view it left: the next edit (a new view) or 10 s ends it,
-     * whichever comes first.
-     */
-    let summary = $state.raw<{ parts: SummaryPart[]; role: 'status' | 'alert'; view: TagEditorView | null } | null>(null)
-    let summaryTimer: ReturnType<typeof setTimeout> | undefined
-    const shownSummary = $derived(summary !== null && summary.view === tags.view ? summary : null)
-    onDestroy(() => {
-        clearTimeout(summaryTimer)
-    })
-
-    function showSummary(parts: SummaryPart[], role: 'status' | 'alert' = 'status'): void {
-        clearTimeout(summaryTimer)
-        summary = { parts, role, view: tags.view }
-        summaryTimer = setTimeout(() => {
-            summary = null
-        }, SUMMARY_SHOWN_MS)
-    }
-
-    /** A write at once is on its way: a second press does nothing (no queue), and the status line says so. */
-    let writingNow = $state(false)
-
-    /**
-     * ⌘⏎ / ⌘S: writes at once (`writeNow`, the Write dialog's own write without its list) and says in the status line
-     * how many files it wrote. The player stops first, as before the dialog's write.
-     */
-    async function writeAtOnce(): Promise<void> {
-        if (writingNow || tags.writing) return
-        writingNow = true
-        summary = null
-        try {
-            const res = await tags.writeNow({
-                onWriting: () => {
-                    player.stop()
-                },
-            })
-            answerWrite(res)
-        } finally {
-            writingNow = false
-        }
-    }
-
-    function answerWrite(res: WriteNowResult): void {
-        switch (res.kind) {
-            case 'done':
-                showDone(res.written, res.failed + res.changedOnDisk)
-                break
-            case 'wouldDrop':
-                dropChoice = { reports: [res.report], kind: res.writtenAs, seen: tags.view, answering: false }
-                break
-            case 'refused': {
-                const { noneWritten, reason } = refusalOf(res.error.kind)
-                const parts: SummaryPart[] = [{ key: reason }]
-                showSummary(noneWritten ? [{ key: 'multiRename.tags.write.refused' }, ...parts] : parts, 'alert')
-                break
-            }
-            case 'listFailed':
-                showSummary([{ key: 'multiRename.tags.write.listFailed' }], 'alert')
-                break
-            case 'reviewFirst':
-                // A removal is written only from the list that names it; the list continues any apply already made.
-                openReview(res.after)
-                showSummary([
-                    {
-                        key: 'multiRename.tags.write.reviewRemovals',
-                        params: {
-                            count: res.removing,
-                            countText: formatInteger(res.removing),
-                            kind: tString(KIND_LABELS[res.writtenAs]),
-                        },
-                    },
-                ])
-                break
-            case 'changed':
-                // An edit landed between the list and the write: nothing unlisted is written.
-                openReview()
-                showSummary([{ key: 'multiRename.tags.write.listedAgain' }])
-                break
-            case 'nothing':
-                showSummary([{ key: 'multiRename.tags.write.nothingToWrite' }])
-                break
-            case 'stillBusy':
-                showSummary([{ key: 'multiRename.tags.write.stillBusy' }], 'alert')
-                break
-        }
-    }
-
-    /** How many files were written, and how many weren't (pointing at Review, which lists them). */
-    function showDone(written: number, notWritten: number, after: SummaryPart[] = []): void {
-        const count = { count: written, countText: formatInteger(written) }
-        const done: SummaryPart =
-            notWritten === 0
-                ? { key: 'multiRename.tags.write.doneSummary', params: count }
-                : {
-                      key: 'multiRename.tags.write.doneWithProblems',
-                      params: {
-                          ...count,
-                          notWritten,
-                          notWrittenText: formatInteger(notWritten),
-                          shortcut: getFirstShiftShortcutReactive('tags.review') ?? '',
-                      },
-                  }
-        showSummary([done, ...after], after.length > 0 ? 'alert' : 'status')
-    }
-
-    /** The summary of every apply of one press (the first, and a "Write anyway"), each file once. */
-    function showOutcome(reports: TagApplyReport[], after: SummaryPart[] = []): void {
-        const outcome = outcomeOf(reports)
-        showDone(outcome.written, outcome.failed.length + outcome.changedOnDisk.length + outcome.skipped.length, after)
-    }
-
-    /** "Skip these files": the would-drop files stay as they are, counted as not written. */
-    function skipDropped(choice: NonNullable<typeof dropChoice>): void {
-        dropChoice = null
-        showOutcome(choice.reports)
-    }
-
-    /** "Write anyway" (`answerWriteAnyway`, shared with the Write dialog, so both write and re-list alike). */
-    async function writeAnyway(choice: NonNullable<typeof dropChoice>): Promise<void> {
-        if (choice.answering) return
-        dropChoice = { ...choice, answering: true }
-        const answer = await answerWriteAnyway(tags, choice, () => {
-            player.stop()
-        })
-        switch (answer.kind) {
-            case 'stillBusy':
-                dropChoice = { ...choice, answering: false }
-                notice = 'multiRename.tags.write.stillBusy'
-                break
-            case 'changed':
-                // An edit landed while the choice showed: nothing unlisted is written. The list opens, continuing this
-                // press, so its write's Undo reverses the first apply too.
-                dropChoice = null
-                openReview(choice.reports)
-                break
-            case 'written':
-                dropChoice = null
-                showOutcome(answer.reports)
-                break
-            case 'refused':
-                dropChoice = null
-                showOutcome(choice.reports, [{ key: 'multiRename.tags.write.stopped' }])
-                break
-        }
     }
 
     /** ⌘⇧S: the Write dialog, the change list first; `continuing`: the applies of a ⌘⏎ press it continues. */
@@ -484,7 +406,7 @@
         'tags.number': () => { openTool('number') },
         'tags.clearField': () => { openTool('clearField') },
         'tags.removeExtras': () => { openTool('extras') },
-        'tags.write': () => void writeAtOnce(),
+        'tags.write': () => void writeNow.writeAtOnce(),
         'tags.review': () => { openReview() },
         'tags.undo': () => void undoLast(),
         'tags.redo': () => void redoLast(),
@@ -492,6 +414,8 @@
 
     /** Whether `id` can act on the tags as they are now. */
     function canRun(id: TagsCommandId): boolean {
+        // A write on its way (seconds on a share): its answer may open a dialog, so nothing else opens one meanwhile.
+        if (writeNow.writingNow || tags.writing) return id === 'tags.play'
         if (id === 'tags.undo' || id === 'tags.redo') return tags.view?.editable === true
         return enabledCommands.has(id)
     }
@@ -514,9 +438,12 @@
         return true
     }
 
-    /** A tool or the Write dialog is open: it owns the keys, and Escape closes it, never the window. */
+    /**
+     * A tool, the Write dialog, or any popover (the Values… list) is open: it owns the keys, and Escape closes it, never
+     * the window. One check for every road (keys, menu keys, ⌘A, ⌘X/⌘C/⌘V), the one the panes use too (`dialogIsOpen`).
+     */
     export function hasDialog(): boolean {
-        return dialogOpen
+        return dialogOpen || dialogIsOpen()
     }
 
     /**
@@ -537,11 +464,6 @@
     export function waitForWrite(): void {
         closeWaits = true
         if (writeMode === null) notice = 'multiRename.tags.window.closeWaits'
-    }
-
-    /** Writes at once (⌘⏎, ⌘S). */
-    export function start(): void {
-        runCommand('tags.write')
     }
 
     async function listCandidates() {
@@ -572,10 +494,11 @@
                     rows={view.shared}
                     editable={view.editable}
                     badDates={view.badDates}
+                    scope={view.scopeCount === null ? null : { count: view.scopeCount, total: view.tracks.length }}
                     focused={inPanes && panes.active === 'album'}
                     cursor={panes.albumCursor}
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
-                    onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+                    onEdit={(edits: TagEdit[]) => editAlbum(edits)}
                     onClear={(target) => void clearTarget(target)}
                     onSwitchPane={() => { panes.switchPane() }}
                     isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
@@ -626,10 +549,11 @@
             {#if notice !== null}
                 {@render line(notice, 'status')}
             {/if}
-            {#if writingNow}
+            {#if writeNow.writingNow}
                 {@render line('multiRename.tags.write.writing', 'status')}
-            {:else if shownSummary !== null}
-                {@render textLine(joinSentences(shownSummary.parts.map((part) => tString(part.key, part.params))), shownSummary.role)}
+            {:else if writeNow.shownSummary !== null}
+                {@const shown = writeNow.shownSummary}
+                {@render textLine(joinSentences(shown.parts.map((part) => tString(part.key, part.params))), shown.role)}
             {/if}
             <!-- eslint-enable @typescript-eslint/no-confusing-void-expression -->
         </div>
@@ -670,21 +594,21 @@
     <WriteDialog {tags} mode={writeMode} {closeWaits} continuing={reviewContinues} onWriting={() => { player.stop() }} onClose={closeWrite} />
 {/if}
 
-{#if dropChoice !== null}
-    {@const choice = dropChoice}
+{#if writeNow.dropChoice !== null}
+    {@const choice = writeNow.dropChoice}
     <ModalDialog
         titleId="tag-write-now-title"
         containerStyle="width: 520px; max-width: 90vw"
         growDownward
-        onclose={choice.answering ? undefined : () => { skipDropped(choice) }}
+        onclose={choice.answering ? undefined : () => { writeNow.skipDropped(choice) }}
     >
         {#snippet title()}{tString('multiRename.tags.dialog.write')}{/snippet}
         <WouldDropDialog
             rows={choice.reports.at(-1)?.wouldDrop ?? []}
             nameOf={(path: string) => tags.view?.tracks.find((track) => track.path === path)?.fileName ?? fileNameOf(path)}
             busy={choice.answering}
-            onWriteAnyway={() => void writeAnyway(choice)}
-            onSkip={() => { skipDropped(choice) }}
+            onWriteAnyway={() => void writeNow.writeAnyway(choice)}
+            onSkip={() => { writeNow.skipDropped(choice) }}
         />
     </ModalDialog>
 {/if}

@@ -42,6 +42,7 @@ interface Over {
   rows?: SharedRow[]
   editable?: boolean
   badDates?: number
+  scope?: { count: number; total: number } | null
   cursor?: number
   focused?: boolean
 }
@@ -55,6 +56,7 @@ async function mountPane(over: Over = {}) {
     rows: over.rows ?? ROWS,
     editable: over.editable ?? true,
     badDates: over.badDates ?? 0,
+    scope: over.scope ?? null,
     focused: over.focused ?? true,
     cursor: over.cursor ?? 0,
     onCursorChange,
@@ -107,6 +109,28 @@ describe('AlbumPane look', () => {
     expect(date.classList.contains('is-invalid')).toBe(true)
     expect(date.getAttribute('aria-describedby')).toBe('tag-album-date-hint')
     expect(root.querySelector('#tag-album-date-hint')?.textContent).toContain('This date doesn')
+  })
+})
+
+describe('AlbumPane scope heading', () => {
+  it('says how many of the tracks the rows cover while some are selected, as the list’s description', async () => {
+    const { root, list } = await mountPane({ scope: { count: 5, total: 42 } })
+    const heading = root.querySelector('.tag-pane-header .scope')
+    expect(heading?.textContent).toBe('5 of 42 tracks')
+    expect(list.getAttribute('aria-describedby')).toBe(heading?.id)
+  })
+
+  it('names the editor and Clear for the selected tracks they set, not for all files', async () => {
+    const { root, list } = await mountPane({ scope: { count: 5, total: 42 } })
+    expect(root.querySelector('button[aria-label="Clear Artist for 5 of 42 tracks"]')).not.toBeNull()
+    await press(list, 'F2')
+    expect(editorOf(root)?.getAttribute('aria-label')).toBe('Artist for 5 of 42 tracks')
+  })
+
+  it('says nothing while the rows cover every track', async () => {
+    const { root, list } = await mountPane()
+    expect(root.querySelector('.tag-pane-header .scope')).toBeNull()
+    expect(list.hasAttribute('aria-describedby')).toBe(false)
   })
 })
 

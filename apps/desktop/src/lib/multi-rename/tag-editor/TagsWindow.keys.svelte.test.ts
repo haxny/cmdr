@@ -16,6 +16,7 @@ import type { TagEditorView } from '#lib/tauri-commands/index.js'
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  setTagViewScope: vi.fn(),
   undoTagEdit: vi.fn(),
   redoTagEdit: vi.fn(),
   getTagChanges: vi.fn(),
@@ -106,12 +107,15 @@ const VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
+  viewSeq: 0,
   sort: null,
 }
 
 let cleanup: (() => void) | undefined
 beforeEach(() => {
   vi.clearAllMocks()
+  ipc.setTagViewScope.mockResolvedValue({ ok: true, value: VIEW })
   ipc.lastTagApply.mockImplementation(replayLastApply(ipc))
   document.body.innerHTML = ''
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
@@ -144,6 +148,9 @@ beforeEach(() => {
       failed: [],
       changedOnDisk: [],
       undoUnavailable: false,
+      sideFilesWritten: [],
+      sideFilesHeld: [],
+      sideFilesFailed: [],
     },
   })
 })
@@ -253,6 +260,46 @@ describe('the Tags window’s function keys', () => {
       { kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] },
       { kind: 'setOne', path: '/b/03.mp3', field: 'title', values: [] },
     ])
+  })
+
+  it('a tool takes the Tracks pane’s active cell: F8 on # clears the track number', async () => {
+    const root = await mountWindow()
+    await key('Tab')
+    await key('ArrowLeft')
+    await toggleTrack(root, '/b/02.mp3')
+    await key('F8')
+    buttonNamed(dialog() as HTMLElement, 'Clear').click()
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setOne', path: '/b/02.mp3', field: 'track', values: [] }])
+  })
+
+  it('while a write at once runs, a command that opens a dialog does nothing', async () => {
+    let finish: (value: unknown) => void = () => {}
+    ipc.applyTags.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(statusLine()).toContain('Writing tags…')
+    await key('F4')
+    await review()
+    expect(dialog()).toBeNull()
+    finish({
+      ok: true,
+      value: {
+        applyId: 'A1',
+        written: ['/b/01.mp3'],
+        wouldDrop: [],
+        wouldRemove: [],
+        failed: [],
+        changedOnDisk: [],
+        undoUnavailable: false,
+        sideFilesWritten: [],
+        sideFilesHeld: [],
+        sideFilesFailed: [],
+      },
+    })
+    await settle()
+    await key('F4')
+    expect(dialogTitle()).toBe('Find and replace')
   })
 
   it('⌘A and ⌘⇧A from the menu leave the selection alone while a tool dialog shows its scope', async () => {
@@ -468,6 +515,48 @@ describe('the Tags window’s function keys', () => {
     expect(document.activeElement).toBe(box)
   })
 
+  it('an open Values… list is a dialog to every road: F4, ⌘Z, ⌘⏎, ⌘A and a menu key do nothing behind it', async () => {
+    const multiple: TagEditorView = {
+      ...VIEW,
+      canUndoEdit: true,
+      shared: [
+        {
+          field: 'album',
+          value: 'multiple',
+          choices: [
+            { values: ['Kniha'], files: 2 },
+            { values: ['Jina'], files: 1 },
+          ],
+          choicesMore: 0,
+        },
+      ],
+    }
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: multiple })
+    const root = await mountWindow()
+    root.querySelector<HTMLButtonElement>('button[aria-label="Album values"]')?.click()
+    await settle()
+    expect(document.querySelector('[role="dialog"] [role="option"]')).not.toBeNull()
+    // Each road on its own first, the ones that open a dialog last.
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    menuSelect.all?.()
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    expect(ipc.editTags).not.toHaveBeenCalled()
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    expect(ipc.setTagViewScope).not.toHaveBeenCalled()
+    menuKey.callback?.({ commandId: 'tags.replace', menuCommandId: 'file.edit' })
+    await settle()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+    await key('F4')
+    expect(document.querySelector('[role="dialog"] [role="option"]')).not.toBeNull()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(ipc.setTagViewScope).not.toHaveBeenCalled()
+  })
+
   it('Tab is never taken from the menu: it stays the panes’ and the page’s', async () => {
     const root = await mountWindow()
     menuKey.callback?.({ commandId: 'tags.switchPane', menuCommandId: 'pane.switch' })
@@ -567,6 +656,9 @@ describe('the Tags window’s function keys', () => {
         failed: [{ path: '/b/01.mp3', error: { type: 'notSupported' } }],
         changedOnDisk: [],
         undoUnavailable: false,
+        sideFilesWritten: [],
+        sideFilesHeld: [],
+        sideFilesFailed: [],
       },
     })
     const root = await mountWindow()
@@ -630,6 +722,9 @@ describe('closing the Tags window during a write', () => {
         failed: [],
         changedOnDisk: [],
         undoUnavailable: false,
+        sideFilesWritten: [],
+        sideFilesHeld: [],
+        sideFilesFailed: [],
       },
     })
     await settle()
@@ -653,6 +748,9 @@ describe('⌘⏎ and ⌘S write at once', () => {
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
+    sideFilesWritten: [],
+    sideFilesHeld: [],
+    sideFilesFailed: [],
   }
 
   it.each([
@@ -664,7 +762,7 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(ipc.applyTags).toHaveBeenCalledTimes(1)
     expect(ipc.applyTags).toHaveBeenCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       false,
     )
     expect(dialog()).toBeNull()
@@ -706,7 +804,12 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(ipc.applyTags).toHaveBeenCalledTimes(2)
     expect(ipc.applyTags).toHaveBeenLastCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'], allowRemovals: [] },
+      {
+        kind: 'audiobook',
+        allowFrameLoss: true,
+        skip: ['/b/02.mp3', '/b/03.mp3'],
+        allowRemovals: [],
+      },
       false,
     )
     expect(dialog()).toBeNull()
@@ -812,7 +915,14 @@ describe('⌘⏎ and ⌘S write at once', () => {
     await settle()
     expect(ipc.applyTags).toHaveBeenLastCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: ['/b/01.mp3'] },
+      {
+        kind: 'audiobook',
+        allowFrameLoss: false,
+        skip: [],
+        allowRemovals: ['/b/01.mp3'],
+        allowSideFiles: [],
+        sideFiles: false,
+      },
       false,
     )
   })

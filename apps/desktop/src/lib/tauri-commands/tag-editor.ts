@@ -14,6 +14,8 @@ import {
   type NamePattern,
   type NamePreviewRow,
   type RestoreReport,
+  type SideFileChange,
+  type SideFileSeen,
   type TagApplyReport,
   type TagEdit_Deserialize,
   type TagEditorError,
@@ -39,6 +41,8 @@ export type {
   NamePattern,
   NamePreviewRow,
   RestoreReport,
+  SideFileChange,
+  SideFileSeen,
   TagApplyReport,
   TagEdit_Deserialize as TagEdit,
   TagEditorError,
@@ -98,6 +102,18 @@ export async function sortTagTracks(sessionId: string, sort: TrackSort): Promise
 }
 
 /**
+ * Narrows the Album pane's shared rows to the tracks at `paths` (the Tracks pane's selection), or widens them to every
+ * track for `null`. Paths the session doesn't have are dropped; none left is every track (`scopeCount` is `null`). Not
+ * an edit: nothing joins the undo history.
+ */
+export async function setTagViewScope(
+  sessionId: string,
+  paths: string[] | null,
+): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.setTagViewScope(sessionId, paths))
+}
+
+/**
  * Runs a tool over the tracks at `scope` (paths as `TrackRow.path` gives them, in session order), or over all the
  * session's files when `scope` is `null`. A path the session doesn't have (`unknownTrack`) refuses the run.
  */
@@ -137,6 +153,14 @@ export async function previewTagsFromNames(
 /** What a write as `kind` would change, per file, in current order, with what the kind removes. */
 export async function getTagChanges(sessionId: string, kind: ContentKind): Promise<TagEditorResult<FileChangeView[]>> {
   return result(await commands.getTagChanges(sessionId, kind))
+}
+
+/**
+ * What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): create, replace (with the
+ * old text), or why not. Asked only with `multiRename.tagEditor.absSideFiles` on.
+ */
+export async function getSideFileChanges(sessionId: string): Promise<TagEditorResult<SideFileChange[]>> {
+  return result(await commands.getSideFileChanges(sessionId))
 }
 
 /** Writes the changed files. The report lists what was written, what would drop items, what failed, and what changed on disk. */
@@ -262,6 +286,11 @@ function sessionResult<T>(
 /** Holds a Multi-Rename session for a Tags window (no eviction takes it), and says its track count and folder. */
 export async function holdTagsSession(sessionId: string): Promise<SessionResult<TagsSessionInfo>> {
   return sessionResult(await commands.holdTagsSession(sessionId))
+}
+
+/** Whether the Tags window may close without asking: no unwritten edit in its session and no tag write running. */
+export function tagsWindowMayClose(sessionId: string): Promise<boolean> {
+  return commands.tagsWindowMayClose(sessionId)
 }
 
 /** Lets eviction take the session again. */

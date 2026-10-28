@@ -1,7 +1,7 @@
 //! The two macOS passes that reach past Tauri into AppKit, after the menu bar is built.
 //!
-//! `cleanup_macos_menus` strips the items AppKit injects into our Edit menu and registers the Help
-//! menu; `set_macos_menu_icons` puts SF Symbols on the items worth spotting at a glance. Neither is
+//! `cleanup_macos_menus` strips the items AppKit injects into our Edit menu and registers the Window
+//! and Help menus; `set_macos_menu_icons` puts SF Symbols on the items worth spotting at a glance. Neither is
 //! expressible through Tauri's menu API, and both have to re-run after every `app.set_menu()`.
 //!
 //! Both work on `NSMenu` objects, and AppKit offers no way to find one by a Tauri menu ID. So
@@ -36,7 +36,7 @@ use super::{
     QUICK_LOOK_ID, RENAME_ID, SEARCH_FILES_ID, SELECT_ALL_ID, SELECT_FILES_ID, SELECT_MENU_ID, SERVERS_CONNECT_ID,
     SERVERS_SHOW_ID, SETTINGS_ID, SHOW_IN_FINDER_ID, SORT_ASCENDING_ID, SORT_BY_ADDED_ID, SORT_BY_CREATED_ID,
     SORT_BY_EXTENSION_ID, SORT_BY_MENU_ID, SORT_BY_MODIFIED_ID, SORT_BY_NAME_ID, SORT_BY_SIZE_ID, SORT_DESCENDING_ID,
-    SWAP_PANES_ID, SWITCH_PANE_ID, TAB_MENU_ID, VIEW_MENU_ID,
+    SWAP_PANES_ID, SWITCH_PANE_ID, TAB_MENU_ID, VIEW_MENU_ID, WINDOW_MENU_ID,
 };
 
 pub(crate) fn cleanup_macos_menus<R: Runtime>(app: &AppHandle<R>) {
@@ -64,6 +64,15 @@ fn cleanup_macos_menus_inner<R: Runtime>(app: &AppHandle<R>) {
         && let Err(e) = help_menu.set_as_help_menu_for_nsapp()
     {
         log::warn!(target: "menu", "Failed to register the Help menu with AppKit: {e}");
+    }
+
+    // The Window menu AppKit fills: every open window gets a row there (and in the Dock menu), so
+    // a Tags, viewer, or Settings window behind main or on another Space can be picked back.
+    // Tauri only registers a menu whose id is its own `__tauri_window_menu__`, and ours isn't.
+    if let Some(window_menu) = submenu_by_id(&menu, WINDOW_MENU_ID)
+        && let Err(e) = window_menu.set_as_windows_menu_for_nsapp()
+    {
+        log::warn!(target: "menu", "Failed to register the Window menu with AppKit: {e}");
     }
 
     // In its own `catch`: re-parenting an `NSMenu` is the one step here that can raise, and an
@@ -685,9 +694,10 @@ mod tests {
         }
     }
 
-    /// `cleanup_macos_menus` finds the Edit and Help menus by ID among the installed bar's top-level
-    /// menus, and it runs against both menu bars. A bar missing either ID silently keeps AppKit's
-    /// injected Writing Tools / AutoFill / Dictation items, or loses the Help menu's search field.
+    /// `cleanup_macos_menus` finds the Edit, Window and Help menus by ID among the installed bar's
+    /// top-level menus, and it runs against both menu bars. A bar missing one of them silently keeps
+    /// AppKit's injected Writing Tools / AutoFill / Dictation items, lists no open windows in its
+    /// Window menu, or loses the Help menu's search field.
     #[test]
     fn both_menu_bars_carry_the_ids_cleanup_needs() {
         let main_bar: HashSet<&str> = macos_menu_bar()
@@ -695,7 +705,7 @@ mod tests {
             .filter_map(|menu| menu.id.on(Platform::MacOs))
             .collect();
         let viewer_bar = menu_ids_built_by(&VIEWER_MENU_SOURCES);
-        for id in [EDIT_MENU_ID, HELP_MENU_ID] {
+        for id in [EDIT_MENU_ID, WINDOW_MENU_ID, HELP_MENU_ID] {
             assert!(
                 main_bar.contains(id),
                 "the macOS menu bar has no top-level menu with id `{id}`, so `cleanup_macos_menus` can't find it"

@@ -108,6 +108,30 @@ describe('TracksPane look', () => {
     expect(rowsOf(root)[0].querySelector('[data-col="file"]')?.classList.contains('cut')).toBe(true)
   })
 
+  it('each header cell sits over its column: one grid cell per column, in the rows’ order, aligned as the cells', async () => {
+    for (const tracks of [TRACKS, TRACKS.slice(0, 1)]) {
+      const { root } = await mountPane({ tracks })
+      const header = root.querySelector<HTMLElement>('.tag-pane-header')
+      const row = rowsOf(root)[0]
+      if (!header) throw new Error('no header')
+      // Only cells in the grid's flow take a column: an `.sr-only` (absolute) child takes none.
+      const inFlow = (el: HTMLElement) =>
+        [...el.children].filter(
+          (child): child is HTMLElement => child instanceof HTMLElement && !child.classList.contains('sr-only'),
+        )
+      const cols = (el: HTMLElement) => inFlow(el).map((child) => child.dataset.col)
+      expect(cols(header)).toEqual(cols(row))
+      expect(header.style.gridTemplateColumns).toBe(row.style.gridTemplateColumns)
+      // A right-aligned column is right-aligned in both, so the label ends where the numbers end.
+      inFlow(header).forEach((cell, index) => {
+        const rowCell = inFlow(row)[index]
+        expect(cell.classList.contains('align-right'), cell.dataset.col).toBe(rowCell.classList.contains('end'))
+      })
+      cleanup?.()
+      cleanup = undefined
+    }
+  })
+
   it('a single-file book has no # column', async () => {
     const { root } = await mountPane({ tracks: [track('01')] })
     expect(rowsOf(root)[0].querySelector('[data-col="number"]')).toBeNull()

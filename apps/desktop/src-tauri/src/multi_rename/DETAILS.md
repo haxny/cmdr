@@ -53,10 +53,20 @@ from PR #386 (Jiri Slovacek): a plain table reads `ευ` as `eu`, which no Greek
   letters, `range`, `slice`, and `pad`): the file's EXIF or tag value, named by `MediaField::name` (`exif.taken`,
   `tag.albumartist`; exact, case matters). The format follows the field's kind: a date takes `date_parts`
   (`[=exif.taken:Y-M-D]`, `:d`, `:t`; none reads as `[d] [t]`), a number a digit count 1–`MAX_COUNTER_DIGITS`, padded
-  like the counter and never cut (`[=tag.track:2]` is `03`), text a range (`[=tag.artist:1-10]`). `|modified` (dates
+  like the counter and never cut (`[=tag.track:2]` is `03`), written as a number or as that many zeros (`:00` is `:2`;
+  `:0` stays invalid), text a range (`[=tag.artist:1-10]`). `|modified` (dates
   only) comes before the format. An empty suffix, a suffix out of order, or a format the kind doesn't take is
   `MaskError::Unknown`. **Decision/Why:** `=` is TC's content-plugin shape (`[=plugin.field]`), and no other
   placeholder starts with it, so no mask that parsed before changes meaning.
+  - **Fork: a plain `[=tag.track]` / `[=tag.disc]` pads to the run's width, for every user** (`NumberWidth`): a track
+    to the digits of the run's largest track, at least two (`07` of 42, `007` of 120), a disc to its largest disc's
+    (`1`, or `01` with twelve discs), worked out once over every row of a preview, the picker's example, and the field
+    samples; `:N` wins. **Decision/Why:** the user asked for it on everywhere, tag editor or not (2026-10-28, confirmed
+    2026-10-29): an audiobook's files sort and read right only with the zeros (`07 - Kapitola`). It departs from
+    upstream twice, deliberately: upstream renders the plain number (a saved `[=tag.track] - [=tag.title]` gave
+    `3 - x`, now `03 - x`), and David's `[C]` call above (a bare counter never pads to the batch size). It is the one
+    Multi-Rename difference that applies with `multiRename.tagEditor` off. The Digits hint says the track pads by
+    itself.
   - **A field with no text is a `FieldGap`, never an empty string**: `Mask::render` answers `Result<String, FieldGap>`.
     No value (or a file we don't read, folders included) is `NoValue { field }`, a failed read `Unreadable { field }`,
     a file still being read `Reading`. The first gap wins, except `Reading` wins over any other, in either mask
@@ -111,6 +121,9 @@ it today), "next step" chaining, and editing names in an editor.
   preview: its rows no longer say what the session renames, and apply must never start from an order nobody saw. The
   sheet sends the cursor's INDEX, which with every row listed is the place, so a second move before the new preview
   lands still names the moved file; it refuses moves while listing the problems alone (an index there isn't a place).
+  Fork: `set_order(session, names)` (`session_tags.rs`, the tag editor's track sort its only caller) replaces the whole
+  order at once; `names` must be the session's own files, each exactly once, else `NotAPermutation` and nothing
+  changes; like a move, it retires the latest preview.
 - **Decision: names stay in the backend.** A preview answers `previewId`, the counts, and the first `FIRST_PAGE` rows;
   `get_multi_rename_preview_rows` serves the rest of the stored preview a page (≤ `MAX_PAGE`) at a time, so a
   200,000-file folder never ships its names to the frontend and back. Only the latest preview is stored (ids are

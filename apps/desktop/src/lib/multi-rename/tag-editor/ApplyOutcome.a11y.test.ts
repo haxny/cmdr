@@ -13,7 +13,15 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-const CLEAN: Outcome = { written: 3, failed: [], changedOnDisk: [], skipped: [], undoUnavailable: false }
+const CLEAN: Outcome = {
+  written: 3,
+  failed: [],
+  changedOnDisk: [],
+  skipped: [],
+  undoUnavailable: false,
+  sideFilesWritten: [],
+  sideFilesNotWritten: [],
+}
 
 async function mountOutcome(outcome: Outcome): Promise<HTMLElement> {
   const mounted = await mountInto(ApplyOutcome, { outcome, someUndoable: false, onReload: vi.fn() })
@@ -34,6 +42,8 @@ describe('ApplyOutcome a11y', () => {
         changedOnDisk: ['/b/03.mp3'],
         skipped: [{ path: '/b/04.mp3', items: ['TSOP'] }],
         undoUnavailable: true,
+        sideFilesWritten: ['/b/desc.txt'],
+        sideFilesNotWritten: ['/b/reader.txt'],
       }),
     )
   })

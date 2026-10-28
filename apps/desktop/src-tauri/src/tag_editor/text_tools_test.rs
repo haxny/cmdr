@@ -4,7 +4,7 @@ use cmdr_tags::TagField;
 use cmdr_tags::shared::SharedValue;
 
 use super::session::{TagEdit, TagEditorError, close, edit, open};
-use super::session_test::{album, path_of, set_title};
+use super::session_test::{album, content, path_of, set_title};
 use super::text_tools::{TagTextTool, run};
 use super::view::TagEditorView;
 use crate::multi_rename::mask::MaskError;
@@ -202,7 +202,11 @@ fn format_bad_mask_is_typed() {
             error: MaskError::Unclosed { at: 0 }
         })
     );
-    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    assert_eq!(
+        content(&open(&id, false).expect("a refresh")),
+        content(&before),
+        "nothing changed"
+    );
     close(&id);
     close_rename(&id);
 }
@@ -220,7 +224,11 @@ fn bad_regex_is_typed() {
         regex: true,
     };
     assert_eq!(run(&id, tool, None), Err(TagEditorError::BadRegex));
-    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    assert_eq!(
+        content(&open(&id, false).expect("a refresh")),
+        content(&before),
+        "nothing changed"
+    );
     close(&id);
     close_rename(&id);
 }
@@ -251,6 +259,117 @@ fn diacritics_reported() {
     let view = run(&id, replace(&[TagField::Title], "Alpha", "Čas"), None).expect("replaces");
     assert_eq!(view.diacritics, vec![TagField::Title]);
     assert_eq!(titles(&view)[0], Some("Čas"), "not stripped silently");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn format_reads_n_of_m_track_and_disc_as_n() {
+    let (_dir, _listing, id) = album("tag-text-nofm");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_all(TagField::Track, &["3/12"])]).expect("sets the track");
+    edit(&id, vec![set_all(TagField::Disc, &["1/2"])]).expect("sets the disc");
+    let view = run(&id, format(TagField::Title, "[=tag.disc]-[=tag.track]"), None).expect("formats");
+    assert_eq!(titles(&view), vec![Some("1-03"), Some("1-03"), Some("1-03")]);
+    close(&id);
+    close_rename(&id);
+}
+
+fn text(fields: &[TagField], greek: bool, diacritics: bool, nfc: bool) -> TagTextTool {
+    TagTextTool::Text {
+        fields: fields.to_vec(),
+        greek_to_latin: greek,
+        remove_diacritics: diacritics,
+        normalize_unicode: nfc,
+    }
+}
+
+#[test]
+fn text_greek_to_latin() {
+    let (dir, _listing, id) = album("tag-text-greek");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_title(&dir, "a.mp3", "Αθήνα")]).expect("edits");
+    let view = run(&id, text(&[TagField::Title], true, false, false), None).expect("runs");
+    assert_eq!(titles(&view), vec![Some("Athina"), Some("Beta"), Some("Gamma")]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn text_remove_diacritics_on_title_leaves_comment() {
+    let (dir, _listing, id) = album("tag-text-diacritics-field");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Žluťoučký"),
+            set_all(TagField::Comment, &["Žluťoučký"]),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, text(&[TagField::Title], false, true, false), None).expect("runs");
+    assert_eq!(titles(&view)[0], Some("Zlutoucky"));
+    assert_eq!(
+        shared(&view, TagField::Comment),
+        &SharedValue::Same(vec!["Žluťoučký".to_string()]),
+        "Comment untouched"
+    );
+    let view = run(
+        &id,
+        text(&[TagField::Title, TagField::Comment], false, true, false),
+        None,
+    )
+    .expect("runs");
+    assert_eq!(
+        shared(&view, TagField::Comment),
+        &SharedValue::Same(vec!["Zlutoucky".to_string()]),
+        "picking Comment explicitly strips it"
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn text_normalize_unicode_composes() {
+    let (dir, _listing, id) = album("tag-text-nfc");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_title(&dir, "a.mp3", "Cafe\u{301}")]).expect("edits");
+    let view = run(&id, text(&[TagField::Title], false, false, true), None).expect("runs");
+    assert_eq!(titles(&view)[0], Some("Caf\u{e9}"));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn text_runs_in_multi_renames_order_and_stays_on_the_selected_tracks() {
+    let (dir, _listing, id) = album("tag-text-scope-order");
+    open(&id, false).expect("opens");
+    // Greek first, then diacritics: the tonos mark left on the Latin `f` is the one the
+    // other order (diacritics first, then Greek) never produces, so a swapped order fails here.
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Ευ\u{301}"),
+            set_title(&dir, "b.mp3", "Ευ\u{301}"),
+        ],
+    )
+    .expect("edits");
+    let scope = Some(vec![path_of(&dir, "b.mp3")]);
+    let view = run(&id, text(&[TagField::Title], true, true, true), scope).expect("runs");
+    assert_eq!(titles(&view), vec![Some("Ευ\u{301}"), Some("Ef\u{301}"), Some("Gamma")]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn text_is_one_undo_step() {
+    let (dir, _listing, id) = album("tag-text-undo");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_title(&dir, "a.mp3", "Čas")]).expect("edits");
+    let ran = run(&id, text(&[TagField::Title, TagField::Album], false, true, false), None).expect("runs");
+    assert_eq!(titles(&ran)[0], Some("Cas"));
+    let undone = super::history::undo_edit(&id).expect("undoes the run");
+    assert_eq!(titles(&undone)[0], Some("Čas"), "one undo reverts the whole run");
     close(&id);
     close_rename(&id);
 }

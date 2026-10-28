@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TagError } from '#lib/ipc/bindings.js'
 import type { TagApplyReport } from '#lib/tauri-commands/index.js'
-import { failureKey, fileNameOf, outcomeOf, writeAnywayRequest } from './apply-outcome'
+import { countsOf, failureKey, reviewFirstPart, fileNameOf, outcomeOf, writeAnywayRequest } from './apply-outcome'
 
 function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
   return {
@@ -13,6 +13,9 @@ function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
+    sideFilesWritten: [],
+    sideFilesHeld: [],
+    sideFilesFailed: [],
     ...over,
   }
 }
@@ -42,6 +45,8 @@ describe('apply-outcome', () => {
       changedOnDisk: ['/d'],
       skipped: [],
       undoUnavailable: true,
+      sideFilesWritten: [],
+      sideFilesNotWritten: [],
     })
   })
 
@@ -54,6 +59,8 @@ describe('apply-outcome', () => {
       changedOnDisk: ['/d'],
       skipped: [],
       undoUnavailable: true,
+      sideFilesWritten: [],
+      sideFilesNotWritten: [],
     })
     expect(outcomeOf([first]).skipped).toEqual([{ path: '/b', items: ['TSOP'] }])
   })
@@ -67,6 +74,34 @@ describe('apply-outcome', () => {
       changedOnDisk: [],
       skipped: [],
       undoUnavailable: false,
+      sideFilesWritten: [],
+      sideFilesNotWritten: [],
+    })
+  })
+
+  it('side files written count with the tracks, and one held back or not written is listed by its latest status', () => {
+    const first = report({
+      written: ['/b/01.mp3'],
+      sideFilesWritten: ['/b/desc.txt'],
+      sideFilesHeld: ['/b/reader.txt'],
+    })
+    const relisted = report({ written: [], sideFilesWritten: ['/b/reader.txt'] })
+    expect(outcomeOf([first]).sideFilesNotWritten).toEqual(['/b/reader.txt'])
+    const outcome = outcomeOf([first, relisted])
+    expect(outcome.sideFilesWritten).toEqual(['/b/desc.txt', '/b/reader.txt'])
+    expect(outcome.sideFilesNotWritten).toEqual([])
+    expect(countsOf(outcome)).toEqual({ written: 3, notWritten: 0 })
+    expect(countsOf(outcomeOf([report({ sideFilesFailed: ['/b/desc.txt'] })]))).toEqual({ written: 0, notWritten: 1 })
+  })
+
+  it('⌘⏎’s list-first words name a removal first, else the side files', () => {
+    expect(reviewFirstPart({ removing: 2, replacing: 1 }, 'Audiobook')).toEqual({
+      key: 'multiRename.tags.write.reviewRemovals',
+      params: { count: 2, countText: '2', kind: 'Audiobook' },
+    })
+    expect(reviewFirstPart({ removing: 0, replacing: 1 }, 'Audiobook')).toEqual({
+      key: 'multiRename.tags.write.reviewSideFiles',
+      params: { count: 1, countText: '1' },
     })
   })
 

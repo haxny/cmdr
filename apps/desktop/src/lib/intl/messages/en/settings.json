@@ -4123,5 +4123,17 @@
   "settings.multiRename.tagEditor.keywords": "tags, id3, mp3, m4b, audiobook, music, metadata, artist, album",
   "@settings.multiRename.tagEditor.keywords": {
     "description": "Search keywords for the “Tag editor in Multi-Rename” setting (settings.multiRename.tagEditor.label) in Settings > Advanced. What it does: adds a tab to the batch-rename sheet for editing the tags inside music and audiobook files. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.multiRename.tagEditor.absSideFiles.label": "Write reader.txt and desc.txt for Audiobookshelf",
+  "@settings.multiRename.tagEditor.absSideFiles.label": {
+    "description": "Advanced-section label for the switch that makes the Tags window also write two small text files beside an audiobook. \"reader.txt\" and \"desc.txt\" are file names and \"Audiobookshelf\" is an app name: keep all three as they are."
+  },
+  "settings.multiRename.tagEditor.absSideFiles.description": "Audiobookshelf takes the narrator only from Composer or from reader.txt, never from Performer. With this on, writing tags also writes the narrator (Performer) into reader.txt and the description into desc.txt in the book folder. A file that says something else is replaced only after you've seen it in the list of changes.",
+  "@settings.multiRename.tagEditor.absSideFiles.description": {
+    "description": "Help text for the Audiobookshelf side-files switch in Settings > Advanced. \"Audiobookshelf\" is an app name; \"reader.txt\" and \"desc.txt\" are file names; \"Composer\" and \"Performer\" are names of tag fields as the Tags window shows them. The narrator is the person reading an audiobook aloud."
+  },
+  "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
+  "@settings.multiRename.tagEditor.absSideFiles.keywords": {
+    "description": "Search keywords for the “Write reader.txt and desc.txt for Audiobookshelf” setting (settings.multiRename.tagEditor.absSideFiles.label) in Settings > Advanced. What it does: writing audiobook tags also writes the narrator and the description into two small text files beside the book, for the Audiobookshelf server app. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
   }
 }

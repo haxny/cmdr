@@ -15,7 +15,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,8 @@ use super::history::{EditHistory, capture, clear, record};
 use super::removals::{Removals, removals_of};
 use super::sort::{TrackSort, reorder};
 use super::view::{
-    Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, stem_of,
+    Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, scoped_tracks,
+    stem_of,
 };
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
@@ -141,9 +142,15 @@ pub(super) struct TagSession {
     pub(super) ordered: bool, // A sort has run: a restart keeps the order, even one moved by hand.
     /// The pending edits' undo and redo steps.
     pub(super) history: EditHistory,
+    /// The tracks the Album pane's shared rows cover (the Tracks pane's selection); `None` for every track.
+    /// Not an edit: no history step.
+    pub(super) view_scope: Option<HashSet<PathBuf>>,
 }
 
 pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// The last `TagEditorView::view_seq` handed out, taken under `SESSIONS`' lock: it follows the order sessions change in.
+static VIEW_SEQ: AtomicU64 = AtomicU64::new(0);
 
 /// The session's audio files in its current order, where they are, and what the window may do
 /// with them.
@@ -308,7 +315,8 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         .iter()
         .filter_map(|path| session.by_path.get(path).map(|entry| (path.as_path(), entry)))
         .collect();
-    let mut view = build(layout.access, &tracks);
+    let scoped = scoped_tracks(&tracks, session.view_scope.as_ref());
+    let mut view = build(layout.access, &tracks, scoped.as_deref());
     for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
         row.file_name = file_name_of(&layout.dir, path);
     }
@@ -316,8 +324,26 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         sort: session.sort,
         can_undo_edit: session.history.can_undo(),
         can_redo_edit: session.history.can_redo(),
+        view_seq: VIEW_SEQ.fetch_add(1, Ordering::Relaxed) + 1,
         ..view
     }
+}
+
+/// Narrows the shared rows to the tracks at `paths` (`TrackRow::path`); `None`, or none the session has, is
+/// every track. Not an edit: the history and the edits stay as they are.
+pub fn set_view_scope(session_id: &str, paths: Option<Vec<String>>) -> Result<TagEditorView, TagEditorError> {
+    with_session(session_id, |layout, session| {
+        let known = |paths: Vec<String>| {
+            paths
+                .into_iter()
+                .map(PathBuf::from)
+                .filter(|path| session.by_path.contains_key(path))
+        };
+        session.view_scope = paths
+            .map(|paths| known(paths).collect::<HashSet<_>>())
+            .filter(|scope| !scope.is_empty());
+        Ok(view_of(layout, session))
+    })
 }
 
 /// Runs `f` on the open session, after dropping entries that left the layout.
@@ -737,16 +763,23 @@ pub(super) fn loaded_tracks(session_id: &str) -> Result<Vec<PathBuf>, TagEditorE
 
 /// How many tag sessions hold edits not yet written: a quit asks about them (`at_quit.rs`).
 pub(crate) fn unwritten_sessions() -> usize {
+    let sessions = SESSIONS.lock_ignore_poison();
+    sessions.values().filter(|s| holds_unwritten(s)).count()
+}
+
+/// Whether `session_id`'s tag session holds unwritten edits (`false` if gone): `window::may_close_unasked`.
+pub(crate) fn has_unwritten(session_id: &str) -> bool {
     SESSIONS
         .lock_ignore_poison()
+        .get(session_id)
+        .is_some_and(holds_unwritten)
+}
+
+fn holds_unwritten(session: &TagSession) -> bool {
+    session
+        .by_path
         .values()
-        .filter(|session| {
-            session
-                .by_path
-                .values()
-                .any(|entry| entry.loaded().is_some_and(Loaded::changed))
-        })
-        .count()
+        .any(|entry| entry.loaded().is_some_and(Loaded::changed))
 }
 
 /// Whether a tag session exists for `session_id`.

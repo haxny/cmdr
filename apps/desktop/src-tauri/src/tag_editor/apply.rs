@@ -11,6 +11,9 @@
 //! `failed`. The record is sealed to the files written, each with its fingerprint right after
 //! its write (an undo leaves a file alone once that moves), or forgotten when none was; written
 //! files become the session's disk copy, and Multi-Rename's media cache reads them again.
+//! With `side_files`, Audiobookshelf's `reader.txt` / `desc.txt` follow a tag write (never alone),
+//! from what the files say after it (`side_files.rs`); a different one is replaced only as
+//! `allow_side_files` names it, and only when the write keeps an undo.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -25,6 +28,7 @@ use cmdr_tags::{
 
 use super::removals::{Removals, removals_of};
 use super::session::{Pending, TagEditorError, mark_written, pending};
+use super::side_files::{self, BookTags, SideFileSeen, book_of};
 use crate::crash_reporter::contain_panics;
 use crate::multi_rename::session::media_over;
 
@@ -43,6 +47,14 @@ pub struct ApplyRequest {
     /// confirmed: only these may lose a field the kind removes. Absent means none.
     #[serde(default)]
     pub allow_removals: Vec<String>,
+    /// Write Audiobookshelf's `reader.txt` and `desc.txt` beside the book too (`side_files.rs`;
+    /// the `multiRename.tagEditor.absSideFiles` setting). Absent means no.
+    #[serde(default)]
+    pub side_files: bool,
+    /// The side-file replacements the change list showed, each with the old text it showed: only
+    /// these may replace a side file that says something else. Absent means none.
+    #[serde(default)]
+    pub allow_side_files: Vec<SideFileSeen>,
 }
 
 /// What a write did, per file. Paths are as the view shows them.
@@ -62,6 +74,13 @@ pub struct TagApplyReport {
     pub changed_on_disk: Vec<String>,
     /// Files were written, but the undo store couldn't keep their old tags: no undo.
     pub undo_unavailable: bool,
+    /// Side files written beside the book (`reader.txt`, `desc.txt`), by path.
+    pub side_files_written: Vec<String>,
+    /// Side files not replaced: they say something else, and the request didn't name that
+    /// replacement. The UI lists them.
+    pub side_files_held: Vec<String>,
+    /// Side files that couldn't be written.
+    pub side_files_failed: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -141,9 +160,52 @@ pub(super) fn apply_with_before_write(
     }
 
     let id = ApplyId(format!("tags-{}-{session_id}", unix_millis()));
+    let written = write_tracks(store, &id, ready, &req, before_write, &mut report)?;
+    let written_paths: Vec<PathBuf> = written.iter().map(|(path, _)| path.clone()).collect();
+    mark_written(session_id, written);
+    reread_media(&target.volume_id, &written_paths);
+    // Side files ride along with a tag write, never alone, and say what the files on disk say now.
+    if req.side_files && !report.written.is_empty() {
+        write_side_files(session_id, &req.allow_side_files, &mut report);
+    }
+    Ok(report)
+}
+
+/// Writes the book's side files after a tag write, from the tracks as they are on disk now (the
+/// written ones read again by `mark_written`), so a skipped or held track's edits never reach them.
+/// A replacement needs this write's undo (`apply_id`): without one it is held back. The tracks
+/// stand whatever happens here.
+fn write_side_files(session_id: &str, allowed: &[SideFileSeen], report: &mut TagApplyReport) {
+    let book = match book_of(session_id, BookTags::OnDisk) {
+        Ok(Some(book)) => book,
+        Ok(None) => return,
+        Err(error) => {
+            log::warn!(target: LOG_TARGET, "Couldn't read the book for its side files after a write: {error:?}");
+            return;
+        }
+    };
+    // More than one book: no folder is the book's, so nothing is written (the list said why).
+    let Some(folder) = book.folder else { return };
+    let side = side_files::write(&folder, &book.tracks, allowed, report.apply_id.is_some());
+    report.side_files_written.clone_from(&side.written);
+    report.side_files_held.clone_from(&side.held);
+    report.side_files_failed.clone_from(&side.failed);
+    side.keep_undo(report.apply_id.as_deref());
+}
+
+/// Records `ready`'s old tags under `id`, writes each, and seals the record to the files written
+/// (`apply_id`, or `undo_unavailable`). Answers the files written with the tags asked for.
+fn write_tracks(
+    store: &UndoStore,
+    id: &ApplyId,
+    ready: Vec<Pending>,
+    req: &ApplyRequest,
+    before_write: &dyn Fn(&Path),
+    report: &mut TagApplyReport,
+) -> Result<Vec<(PathBuf, FileTags)>, TagEditorError> {
     let paths: Vec<PathBuf> = ready.iter().map(|file| file.path.clone()).collect();
     // `record` parses each file with lofty.
-    contain_panics(|| store.record(&id, &paths))
+    contain_panics(|| store.record(id, &paths))
         .unwrap_or_else(|| Err(panicked()))
         .map_err(|error| TagEditorError::Undo { error })?;
 
@@ -155,9 +217,8 @@ pub(super) fn apply_with_before_write(
         allow_frame_loss: req.allow_frame_loss,
     };
     let allowed = |path: &Path| req.allow_removals.iter().any(|allowed| *allowed == shown(path));
-    let written = write_each(ready, &opts, &allowed, before_write, &mut report);
+    let written = write_each(ready, &opts, &allowed, before_write, report);
     report.written = written.iter().map(|file| shown(&file.path)).collect();
-    let written_paths: Vec<PathBuf> = written.iter().map(|file| file.path.clone()).collect();
     let sealed: Vec<(PathBuf, Fingerprint)> = written
         .iter()
         .filter_map(|file| Some((file.path.clone(), file.fingerprint.clone()?)))
@@ -166,17 +227,12 @@ pub(super) fn apply_with_before_write(
         // Gone or unreachable right after its write: an undo couldn't tell it's still ours.
         log::warn!(target: LOG_TARGET, "A written file couldn't be stat'ed after its write, so its undo is unavailable");
     }
-    if narrow_record(store, &id, &sealed) {
-        report.apply_id = Some(id.0);
+    if narrow_record(store, id, &sealed) {
+        report.apply_id = Some(id.0.clone());
     } else {
-        report.undo_unavailable = !written_paths.is_empty();
+        report.undo_unavailable = !written.is_empty();
     }
-    mark_written(
-        session_id,
-        written.into_iter().map(|file| (file.path, file.tags)).collect(),
-    );
-    reread_media(&target.volume_id, &written_paths);
-    Ok(report)
+    Ok(written.into_iter().map(|file| (file.path, file.tags)).collect())
 }
 
 /// A file written: its path, the tags asked for, and its fingerprint right after the write

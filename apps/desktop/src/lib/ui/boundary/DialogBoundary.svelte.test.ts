@@ -53,12 +53,13 @@ describe('DialogBoundary', () => {
   })
 
   /** Mounts the host with `dialog` open; `onClose` closes it unless `keepOpen`. */
-  function render(dialog: Component, options: { open?: boolean; keepOpen?: boolean } = {}) {
+  function render(dialog: Component, options: { open?: boolean; keepOpen?: boolean; withGaveUp?: boolean } = {}) {
     const view = $state({ open: options.open ?? true, dialog })
     const onClose = vi.fn(() => {
       if (!options.keepOpen) view.open = false
     })
-    component = mount(Host, { target, props: { view, onClose } }) as Record<string, unknown>
+    const withGaveUp = options.withGaveUp ?? false
+    component = mount(Host, { target, props: { view, onClose, withGaveUp } }) as Record<string, unknown>
     flushSync()
     return { view, onClose }
   }
@@ -135,6 +136,21 @@ describe('DialogBoundary', () => {
     // The first failure plus three re-armed retries, then it stays down.
     expect(onClose).toHaveBeenCalledTimes(4)
     expect(query('window-alive')).not.toBeNull()
+  })
+
+  it('once it stops re-arming, a host’s `gaveUp` fallback shows, and the last toast says it stopped', () => {
+    render(ThrowsOnRender, { keepOpen: true, withGaveUp: true })
+    expect(query('gave-up')).toBeNull()
+
+    for (let i = 0; i < 10; i++) {
+      vi.advanceTimersByTime(0)
+      flushSync()
+    }
+
+    expect(query('gave-up')).not.toBeNull()
+    expect(addToast).toHaveBeenCalledTimes(4)
+    expect(addToast.mock.calls[2][0]).not.toBe('It stopped reloading')
+    expect(addToast.mock.calls[3][0]).toBe('It stopped reloading')
   })
 
   it('stays out of the way while nothing throws', () => {

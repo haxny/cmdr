@@ -73,6 +73,14 @@ re-reads or follows a file that something else renamed.
   kind removes beyond them (`removals.rs` over `cmdr_tags::removed_by_kind`: an MP3's `TPE3` under Audiobook), read
   from the file after the tag lock, so the review list says everything `apply` with that kind will do. A file that
   can't be read for it is `removesUnknown` (typed `Removals::Unknown`), ❌ never an empty "removes nothing".
+- **The view takes a scope too.** `set_view_scope(session_id, paths)` (`set_tag_view_scope`) stores the Tracks pane's
+  selection in `TagSession::view_scope`; `view_of` then builds `shared` and its choices over those tracks alone (an
+  unreadable one counts in `scope_count` but holds no value) and everything else (tracks, cover, extras, dirty,
+  diacritics, bad dates) over every track. Paths the session doesn't have are dropped; a scope with none left, now or
+  after a reload, is every track (`scope_count: None`). Not an edit: no history step.
+- **Every view is stamped** (`TagEditorView::view_seq`, one counter taken in `view_of` under `SESSIONS`' lock), so
+  the UI keeps the newest view by the order the session changed in: answers from the blocking pool land in any order.
+  Tests compare views without it (`session_test::content`).
 - **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
@@ -165,6 +173,34 @@ Undo after "Write anyway" (verified on lofty via `undo_after_write_anyway_restor
 snapshot doesn't carry the dropped ID3v2.4-only frame (ID3 extras are `TXXX` items only, `read::id3_items`), so the
 restore (`allow_frame_loss: false`) writes every other old tag back cleanly; the dropped frame stays gone.
 
+**Audiobookshelf side files** (`side_files.rs`, `ApplyRequest.sideFiles`, the `multiRename.tagEditor.absSideFiles`
+setting, off by default). Audiobookshelf takes the narrator only from Composer or `reader.txt`'s first line, never from
+Performer (its `server/utils/prober.js` and `scanner/AudioFileScanner.js` map `tagComposer` to narrators;
+`scanner/BookScanner.js` reads `reader.txt` and `desc.txt` from the book folder; read 2026-10-28). The user's canon keeps
+the narrator in Performer, so a write also writes `reader.txt` (the tracks' Performer values, distinct, `, `-joined, only
+when every track names the same ones, in any order) and `desc.txt` (the Description every track shares) into
+the book folder (`side_files::book_folder`), from the session's tracks as edited (`side_files::book_of`). Decision: the
+book folder is the one folder the session was opened on (a name's first part), or the files' folder for plain files;
+a disc folder (`CD 1`, `CD1`, `Disc 2`, `disk 3`, any case) gives its parent, since Audiobookshelf reads the book
+folder, not a disc's. Why: the tracks' deepest common folder (`cover::tracks_folder`, still the covers' folder) is the
+library root when two books are opened, and a disc folder when one disc is. Tracks from more than one book (two folders,
+or a folder and loose files) get no side file: `SideFileWithheld::NotOneBook`, listed with its reason, nothing written. Decision: what the tracks don't agree
+on writes nothing, and the list says why (`SideFileChange::Withheld`), rather than guessing a majority. The list is
+`get_side_file_changes` (create / replace with the old text / withheld; one that already says the same, first line for
+`reader.txt`, is not listed and never touched). Safety: a replacement is written only when `allowSideFiles` names its
+path with the old and the new text the list showed (else `sideFilesHeld`), so ⌘⏎ never replaces one, and only when
+the apply keeps an undo (`undoUnavailable` holds it: a user's file is never replaced for good); a create is a
+same-folder temp file hard-linked to the name, so a file that appeared meanwhile is never replaced; a replacement
+re-reads the old bytes right before its rename and keeps the old permissions; a symlink or non-file at the name is
+never read, followed, or replaced; 64 KiB cap both ways; only an editable (local) session gets any. Decision: side
+files ride along with a tag write, never alone (written only when the apply wrote a track), and say what the files on
+disk say right after it (`BookTags::OnDisk`, read after `mark_written`), so a skipped, held, failed, or changed-on-disk
+track's edits never reach them; the list (`BookTags::Edited`) shows the intent. Undo: the old bytes (or "none") are kept in memory per
+apply id (as many applies as the store keeps); `undo_with` restores them, or removes a created file, only while the file
+still holds exactly what was written (else `changed`), and they count in the `RestoreReport` and in
+`UndoableApply.written`. The store's record is forgotten only when the tracks and the side files all came back: a
+side file that couldn't be put back (a read-only folder) keeps the record, so the next ⌘Z retries it (`undo_with`).
+
 **Non-UTF-8 paths.** Paths cross IPC as lossy strings (`TrackRow::path`). Such a file is listed and written like any
 other, but `TagEdit::SetOne` can't name it (`UnknownTrack`, its `SetAll` edits still apply), and `skip` compares the
 lossy form, so a skip may cover two files whose names differ only in invalid bytes (the safe direction).
@@ -203,13 +239,19 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,
   the in-memory "use for all", and a drop read under a deadline; `cover_image.rs` decodes (pasted TIFF → PNG/JPEG,
   cached tile thumbnails) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
-- `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
+- `apply.rs` the write (`apply`, `TagApplyReport`); `side_files.rs` Audiobookshelf's `reader.txt` / `desc.txt` beside
+  the book, written and undone with the tags; `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
   folder's last write (⌘Z), kept for the app's lifetime; `at_quit.rs` what a quit would cut short, for `quit/`;
   `activity.rs` log lines (counts and durations, never paths or values).
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
   Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
 - `window.rs` the Tags window's hold on its Multi-Rename session (`hold` counts tracks, names the folder; `end` on
-  close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`). It also
+  close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`).
+  `close_orphans` (run by `hold_tags_session`, so on every open) destroys, through the child-window hide-and-wait,
+  each `tags-*` window whose session is no longer held: one closed but still there would sit hidden for the life of
+  the process, holding its web content process. `may_close_unasked` (IPC `tags_window_may_close`) tells the window's
+  error boundary whether closing would lose anything: unwritten edits in the session (`session::has_unwritten`) or a
+  tag write running (`at_quit::is_writing`). It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A and ⌘X / ⌘C / ⌘V, `menu_key_command_of`
   for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
   `tags_native_edit` hands back for a text box or the cover section.

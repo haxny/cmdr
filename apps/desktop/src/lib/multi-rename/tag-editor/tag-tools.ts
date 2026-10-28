@@ -3,7 +3,7 @@
  * the backend over the whole session's files (`cmdr_tags::tools`).
  */
 
-import type { CaseTool, TagField, TagTool } from '#lib/ipc/bindings.js'
+import type { CaseTool, TagField, TagTextTool, TagTool } from '#lib/ipc/bindings.js'
 import { TAG_FIELDS } from './field-labels'
 
 /** What Case changes with no field focused: the names a person reads. */
@@ -13,6 +13,19 @@ export const DEFAULT_CASE_FIELDS: readonly TagField[] = ['title', 'album', 'arti
 export const DIACRITICS_FIELDS: readonly TagField[] = TAG_FIELDS.filter(
   (field) => field !== 'comment' && field !== 'description',
 )
+
+/** Which text options (Multi-Rename's own three) the Clean up dialog's Text group has ticked. */
+export interface TextOptions {
+  greekToLatin: boolean
+  removeDiacritics: boolean
+  normalizeUnicode: boolean
+}
+
+/** What one Run of the Text group sends; `null` while nothing is ticked, so Run stays disabled. */
+export function textTool(options: TextOptions, fields: readonly TagField[]): TagTextTool | null {
+  if (!options.greekToLatin && !options.removeDiacritics && !options.normalizeUnicode) return null
+  return { kind: 'text', fields: [...fields], ...options }
+}
 
 /** The fields Case changes: the focused one, or with none the default set. */
 export function caseFields(focused: TagField | null): readonly TagField[] {

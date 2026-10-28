@@ -16,9 +16,11 @@
         onClick: (key: TrackSortKey) => void
         /** 'right' for numeric columns: the caret then sits left of the label, so the numbers' edge stays clean. */
         align?: 'left' | 'right'
+        /** The column's `data-col`, the one its row cells carry, so the header cell and its column are paired. */
+        col?: string
     }
 
-    const { sortKey, label, current, onClick, align = 'left' }: Props = $props()
+    const { sortKey, label, current, onClick, align = 'left', col }: Props = $props()
 
     const isActive = $derived(current?.key === sortKey)
     const order = $derived(!isActive ? 'none' : current?.descending === true ? 'descending' : 'ascending')
@@ -30,6 +32,7 @@
     class="sortable-header"
     class:is-active={isActive}
     class:align-right={align === 'right'}
+    data-col={col}
     onclick={() => { onClick(sortKey) }}
     type="button"
     aria-label={ariaLabel}

@@ -11,7 +11,8 @@ sheet is `src/lib/multi-rename/`.
 - `transliterate.rs` Greek to Latin (ELOT 743). Pure.
 - `plan.rs` the preview over a folder's entries: each row's new name and status; `render_examples` renders the sheet's
   tooltip examples with the same `Compiled::render`. Pure.
-- `session.rs` one sheet's files in rename order (`move_row`), its latest preview, paging, and Results names.
+- `session.rs` one sheet's files in rename order (`move_row`), its latest preview, paging, and Results names;
+  `session_tags.rs` the fork's Tags-window side (`set_order` too).
 - `names_file.rs` Results (⌥⏎): the preview as `old<TAB>new` lines; edits merge back by old name.
 - `run.rs` apply: proves the ready rows against the preview shown, then runs `start_renames`.
 - `media.rs` each file's EXIF and tags, cached per session and read in the background (`crates/cmdr-media-meta`).

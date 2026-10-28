@@ -4,6 +4,7 @@
  */
 
 import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 import type { ContentKind, FailedRow, TagError, WouldDropRow } from '#lib/ipc/bindings.js'
 import type { ApplyRequest, FileChangeView, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
 import type { TagStateError } from './tag-editor-state.svelte'
@@ -18,6 +19,22 @@ export interface ApplyOutcome {
   skipped: WouldDropRow[]
   /** Some files were written without their old tags kept: that part can't be undone. */
   undoUnavailable: boolean
+  /** Side files written beside the book (`reader.txt`, `desc.txt`), by path. */
+  sideFilesWritten: string[]
+  /** Side files left as they were: one that says something else the list didn't show, or one that couldn't be written. */
+  sideFilesNotWritten: string[]
+}
+
+/** How many files a press wrote, side files too, and how many it left unwritten (skips included). */
+export function countsOf(outcome: ApplyOutcome): { written: number; notWritten: number } {
+  return {
+    written: outcome.written + outcome.sideFilesWritten.length,
+    notWritten:
+      outcome.failed.length +
+      outcome.changedOnDisk.length +
+      outcome.skipped.length +
+      outcome.sideFilesNotWritten.length,
+  }
 }
 
 /** "Write anyway": frame loss allowed for the would-drop files, every other path skipped so nothing else is written. */
@@ -62,6 +79,25 @@ export function writeAnywayAfter(
 }
 
 /**
+ * The status line's words when ⌘⏎ opened the list first: the kind would remove a tag (named with `kindLabel`), else a
+ * side file beside the book says something else.
+ */
+export function reviewFirstPart(
+  res: { removing: number; replacing: number },
+  kindLabel: string,
+): { key: MessageKey; params: Record<string, string | number> } {
+  return res.removing > 0
+    ? {
+        key: 'multiRename.tags.write.reviewRemovals',
+        params: { count: res.removing, countText: formatInteger(res.removing), kind: kindLabel },
+      }
+    : {
+        key: 'multiRename.tags.write.reviewSideFiles',
+        params: { count: res.replacing, countText: formatInteger(res.replacing) },
+      }
+}
+
+/**
  * Why a write (or its change list) was refused, worded, when no earlier apply of the press wrote: `noneWritten` when
  * the refusal came before any file was touched; another (a task that died) may come after some were.
  */
@@ -85,6 +121,8 @@ type FileStatus =
   | { kind: 'failed'; row: FailedRow }
   | { kind: 'changedOnDisk' }
   | { kind: 'wouldDrop'; row: WouldDropRow }
+  | { kind: 'sideWritten' }
+  | { kind: 'sideNotWritten' }
 
 /** Each path's status in one report. */
 function statusesOf(report: TagApplyReport): [string, FileStatus][] {
@@ -93,6 +131,11 @@ function statusesOf(report: TagApplyReport): [string, FileStatus][] {
     ...report.failed.map((row): [string, FileStatus] => [row.path, { kind: 'failed', row }]),
     ...report.changedOnDisk.map((path): [string, FileStatus] => [path, { kind: 'changedOnDisk' }]),
     ...report.wouldDrop.map((row): [string, FileStatus] => [row.path, { kind: 'wouldDrop', row }]),
+    ...report.sideFilesWritten.map((path): [string, FileStatus] => [path, { kind: 'sideWritten' }]),
+    ...[...report.sideFilesHeld, ...report.sideFilesFailed].map((path): [string, FileStatus] => [
+      path,
+      { kind: 'sideNotWritten' },
+    ]),
   ]
 }
 
@@ -109,11 +152,15 @@ export function outcomeOf(reports: readonly TagApplyReport[]): ApplyOutcome {
     changedOnDisk: [],
     skipped: [],
     undoUnavailable: reports.some((report) => report.undoUnavailable),
+    sideFilesWritten: [],
+    sideFilesNotWritten: [],
   }
   for (const [path, status] of latest) {
     if (status.kind === 'written') outcome.written += 1
     else if (status.kind === 'failed') outcome.failed.push(status.row)
     else if (status.kind === 'changedOnDisk') outcome.changedOnDisk.push(path)
+    else if (status.kind === 'sideWritten') outcome.sideFilesWritten.push(path)
+    else if (status.kind === 'sideNotWritten') outcome.sideFilesNotWritten.push(path)
     else outcome.skipped.push(status.row)
   }
   return outcome

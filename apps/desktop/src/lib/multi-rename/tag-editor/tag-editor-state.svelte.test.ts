@@ -9,11 +9,13 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
   sortTagTracks: vi.fn(),
+  setTagViewScope: vi.fn(),
   undoTagEdit: vi.fn(),
   redoTagEdit: vi.fn(),
   runTagTool: vi.fn(),
   runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
+  getSideFileChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
   lastTagApply: vi.fn(),
@@ -32,6 +34,12 @@ vi.mock('#lib/tauri-commands/index.js', () => ipc)
 const warn = vi.hoisted(() => vi.fn())
 vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
+}))
+
+const settings = vi.hoisted(() => ({ absSideFiles: false }))
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getSetting: (id: string) => (id === 'multiRename.tagEditor.absSideFiles' ? settings.absSideFiles : false),
 }))
 
 const writeKind = vi.hoisted(() => ({ stored: 'music' as string | null }))
@@ -57,12 +65,16 @@ function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
+    sideFilesWritten: [],
+    sideFilesHeld: [],
+    sideFilesFailed: [],
     ...over,
   }
 }
 
 beforeEach(() => {
   vi.resetAllMocks()
+  settings.absSideFiles = false
   ipc.lastTagApply.mockImplementation(replayLastApply(ipc))
   ipc.closeTagEditor.mockResolvedValue(undefined)
 })
@@ -99,20 +111,36 @@ describe('createTagEditorState', () => {
     expect(state.view).toEqual(reordered)
   })
 
-  it('an older view answer that lands after a newer one is dropped', async () => {
+  it('a view the backend built earlier that lands after a later one is dropped', async () => {
     let answerOpen: (res: unknown) => void = () => {}
-    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: VIEW })
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: { ...VIEW, viewSeq: 1 } })
     const state = createTagEditorState('S')
     await state.open()
     ipc.openTagEditor.mockImplementationOnce(() => new Promise((resolve) => (answerOpen = resolve)))
-    const EDITED_VIEW = { ...VIEW, dirty: true }
+    const EDITED_VIEW = { ...VIEW, dirty: true, viewSeq: 3 }
     ipc.editTags.mockResolvedValueOnce({ ok: true, value: EDITED_VIEW })
     const reopening = state.open()
     await new Promise((resolve) => setTimeout(resolve, 0))
     await state.edit([])
-    answerOpen({ ok: true, value: VIEW })
+    answerOpen({ ok: true, value: { ...VIEW, viewSeq: 2 } })
     await reopening
     expect(state.view).toEqual(EDITED_VIEW)
+  })
+
+  it('an edit answer landing before the scope answer the backend built after it keeps the scope', async () => {
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: { ...VIEW, viewSeq: 1 } })
+    const state = createTagEditorState('S')
+    await state.open()
+    let answerScope: (res: unknown) => void = () => {}
+    ipc.setTagViewScope.mockImplementationOnce(() => new Promise((resolve) => (answerScope = resolve)))
+    // Asked first, built last: the backend ran the edit (seq 2, old scope) before the scope (seq 3, with the edit).
+    const scoping = state.setViewScope(['/a.mp3'])
+    ipc.editTags.mockResolvedValueOnce({ ok: true, value: { ...VIEW, dirty: true, scopeCount: null, viewSeq: 2 } })
+    await state.edit([])
+    const SCOPED = { ...VIEW, dirty: true, scopeCount: 1, viewSeq: 3 }
+    answerScope({ ok: true, value: SCOPED })
+    expect(await scoping).toBe(true)
+    expect(state.view).toEqual(SCOPED)
   })
 
   it('settled() gives up after its limit when a call never answers, and says so', async () => {
@@ -210,6 +238,17 @@ describe('createTagEditorState', () => {
     await state.sortTracks({ key: 'fileName', descending: false })
     expect(state.error).toEqual({ kind: 'noSession' })
     expect(state.view).toBe(SORTED)
+  })
+
+  it('setViewScope narrows the view to the paths, as no edit', async () => {
+    const state = createTagEditorState('S')
+    const SCOPED = { editable: true, tracks: [{}, {}], dirty: false, scopeCount: 1 } as unknown as TagEditorView
+    ipc.setTagViewScope.mockResolvedValueOnce({ ok: true, value: SCOPED })
+    const asked = state.setViewScope(['/a.mp3'])
+    expect(state.editing).toBe(false)
+    await asked
+    expect(ipc.setTagViewScope).toHaveBeenCalledWith('S', ['/a.mp3'])
+    expect(state.view).toBe(SCOPED)
   })
 
   it('undoEdit and redoEdit swap in the view the backend answers with, after the edits still out have landed', async () => {
@@ -750,7 +789,7 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     expect(ipc.getTagChanges).toHaveBeenCalledWith('S', 'music')
     expect(ipc.applyTags).toHaveBeenCalledWith(
       'S',
-      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       false,
     )
     expect(onWriting).toHaveBeenCalledTimes(1)
@@ -768,12 +807,13 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     expect(await state.writeNow()).toEqual({
       kind: 'reviewFirst',
       removing: 1,
+      replacing: 0,
       writtenAs: 'audiobook',
       after: [heldBack],
     })
     expect(ipc.applyTags).toHaveBeenCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       false,
     )
   })
@@ -781,7 +821,13 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
   it('a file the list couldn’t check for removals asks for the list first', async () => {
     ipc.getTagChanges.mockResolvedValue({ ok: true, value: [{ ...CHANGED[0], removesUnknown: true }] })
     const state = createTagEditorState('S')
-    expect(await state.writeNow()).toEqual({ kind: 'reviewFirst', removing: 1, writtenAs: 'music', after: [] })
+    expect(await state.writeNow()).toEqual({
+      kind: 'reviewFirst',
+      removing: 1,
+      replacing: 0,
+      writtenAs: 'music',
+      after: [],
+    })
     expect(ipc.applyTags).not.toHaveBeenCalled()
   })
 
@@ -824,6 +870,7 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     expect(await state.writeNow({ onWriting })).toEqual({
       kind: 'reviewFirst',
       removing: 1,
+      replacing: 0,
       writtenAs: 'music',
       after: [],
     })
@@ -835,7 +882,7 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     const asks = report({ written: [], wouldDrop: [{ path: '/a.mp3', items: ['TSOP'] }] })
     ipc.applyTags.mockResolvedValue({ ok: true, value: asks })
     const state = createTagEditorState('S')
-    expect(await state.writeNow()).toEqual({ kind: 'wouldDrop', report: asks, writtenAs: 'music' })
+    expect(await state.writeNow()).toEqual({ kind: 'wouldDrop', report: asks, writtenAs: 'music', sideFiles: false })
   })
 
   it('a refused list or write comes back typed, and leaves the window’s error alone', async () => {
@@ -861,5 +908,96 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('Audiobookshelf side files (reader.txt, desc.txt) behind the setting', () => {
+  const CHANGED = [
+    {
+      path: '/a.mp3',
+      fileName: 'a.mp3',
+      fields: ['performer'],
+      cover: false,
+      extras: false,
+      removes: [],
+      removesUnknown: false,
+    },
+  ]
+  const READER_CREATE = { kind: 'create', file: 'reader', path: '/b/reader.txt', text: 'Vladimir Kudla' }
+  const READER_REPLACE = {
+    kind: 'replace',
+    file: 'reader',
+    path: '/b/reader.txt',
+    old: 'Someone\n',
+    text: 'Vladimir Kudla',
+  }
+  const request = (sideFiles: boolean) => ({
+    kind: 'audiobook',
+    allowFrameLoss: false,
+    skip: [],
+    allowRemovals: [],
+    allowSideFiles: [],
+    sideFiles,
+  })
+
+  beforeEach(() => {
+    writeKind.stored = 'audiobook'
+    settings.absSideFiles = true
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.getTagChanges.mockResolvedValue({ ok: true, value: CHANGED })
+  })
+
+  it('off, ⌘⏎ asks nothing about them and its write sends none', async () => {
+    settings.absSideFiles = false
+    ipc.applyTags.mockResolvedValue({ ok: true, value: report() })
+    const state = createTagEditorState('S')
+    await state.writeNow()
+    expect(ipc.getSideFileChanges).not.toHaveBeenCalled()
+    expect(ipc.applyTags).toHaveBeenCalledWith('S', request(false), false)
+  })
+
+  it('on, a side file to create rides along with ⌘⏎’s tag write', async () => {
+    ipc.getSideFileChanges.mockResolvedValue({ ok: true, value: [READER_CREATE] })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: report({ sideFilesWritten: ['/b/reader.txt'] }) })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({ kind: 'done', written: 2, failed: 0, changedOnDisk: 0 })
+    expect(ipc.applyTags).toHaveBeenCalledWith('S', request(true), false)
+  })
+
+  it('side files never go alone: with no tag to write, ⌘⏎ writes nothing', async () => {
+    ipc.getTagChanges.mockResolvedValue({ ok: true, value: [] })
+    ipc.getSideFileChanges.mockResolvedValue({ ok: true, value: [READER_CREATE] })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({ kind: 'nothing' })
+    expect(ipc.getSideFileChanges).not.toHaveBeenCalled()
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+  })
+
+  it('a side file that says something else is never replaced by ⌘⏎: the list shows it first', async () => {
+    ipc.getSideFileChanges.mockResolvedValue({ ok: true, value: [READER_REPLACE] })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({
+      kind: 'reviewFirst',
+      removing: 0,
+      replacing: 1,
+      writtenAs: 'audiobook',
+      after: [],
+    })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+  })
+
+  it('one the backend held back at the write (it appeared since the list) counts as not written', async () => {
+    ipc.getSideFileChanges.mockResolvedValue({ ok: true, value: [READER_CREATE] })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: report({ sideFilesHeld: ['/b/reader.txt'] }) })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({ kind: 'done', written: 1, failed: 1, changedOnDisk: 0 })
+  })
+
+  it('a would-drop choice carries whether the press writes side files', async () => {
+    const asks = report({ written: [], wouldDrop: [{ path: '/a.mp3', items: ['TSOP'] }] })
+    ipc.getSideFileChanges.mockResolvedValue({ ok: true, value: [] })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: asks })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({ kind: 'wouldDrop', report: asks, writtenAs: 'audiobook', sideFiles: true })
   })
 })

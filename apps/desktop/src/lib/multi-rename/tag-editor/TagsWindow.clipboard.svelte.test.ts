@@ -18,6 +18,7 @@ const menu = vi.hoisted(() => ({ clipboard: undefined as ((action: TagsClipboard
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  setTagViewScope: vi.fn(),
   undoTagEdit: vi.fn(),
   redoTagEdit: vi.fn(),
   lastTagApply: vi.fn(() => Promise.resolve({ ok: true, value: null })),
@@ -37,6 +38,7 @@ const ipc = vi.hoisted(() => ({
   tagsNativeEdit: vi.fn(() => Promise.resolve()),
   copyToClipboard: vi.fn(() => Promise.resolve()),
   readClipboardText: vi.fn(),
+  getTagChanges: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
@@ -97,12 +99,15 @@ const VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
+  viewSeq: 0,
   sort: null,
 }
 
 let cleanup: (() => void) | undefined
 beforeEach(() => {
   vi.clearAllMocks()
+  ipc.setTagViewScope.mockResolvedValue({ ok: true, value: VIEW })
   menu.clipboard = undefined
   document.body.innerHTML = ''
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
@@ -171,6 +176,78 @@ describe('⌘C on a field', () => {
 })
 
 describe('⌘V on a field', () => {
+  /** A paste whose clipboard read answers only when the test says. */
+  function slowClipboard(): () => void {
+    let answer: (text: string) => void = () => {}
+    ipc.readClipboardText.mockReturnValueOnce(new Promise<string>((resolve) => (answer = resolve)))
+    return () => {
+      answer('Pasted')
+    }
+  }
+
+  it('⌘⏎ right after a paste still reading the clipboard waits for its edit, then lists and writes', async () => {
+    await mountWindow()
+    const answer = slowClipboard()
+    menu.clipboard?.('paste')
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    answer()
+    await settle()
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Pasted'] }])
+    expect(ipc.getTagChanges).toHaveBeenCalledTimes(1)
+    expect(ipc.editTags.mock.invocationCallOrder[0]).toBeLessThan(ipc.getTagChanges.mock.invocationCallOrder[0])
+  })
+
+  it('⌘Z right after a paste still reading the clipboard takes that paste back', async () => {
+    await mountWindow()
+    const answer = slowClipboard()
+    menu.clipboard?.('paste')
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    answer()
+    await settle()
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledTimes(1)
+    expect(ipc.undoTagEdit).toHaveBeenCalledTimes(1)
+  })
+
+  it('Delete and ⌘X on a selected cursor row act on every selected row, as ⌘V does; else on the cursor row', async () => {
+    const root = await mountWindow()
+    await key('Tab')
+    await toggleTrack(root, '/b/01.mp3')
+    await toggleTrack(root, '/b/03.mp3')
+    await key('Delete')
+    expect(ipc.editTags).toHaveBeenLastCalledWith('S', [
+      { kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] },
+      { kind: 'setOne', path: '/b/03.mp3', field: 'title', values: [] },
+    ])
+    await fromMenu('cut')
+    expect(ipc.copyToClipboard).toHaveBeenLastCalledWith('Prvni')
+    expect(ipc.editTags).toHaveBeenLastCalledWith('S', [
+      { kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] },
+      { kind: 'setOne', path: '/b/03.mp3', field: 'title', values: [] },
+    ])
+    // The cursor off the selection: that row alone.
+    await key('ArrowDown')
+    await key('Delete')
+    expect(ipc.editTags).toHaveBeenLastCalledWith('S', [
+      { kind: 'setOne', path: '/b/02.mp3', field: 'title', values: [] },
+    ])
+  })
+
+  it('does nothing behind an open Values… list: it is a dialog to the clipboard too', async () => {
+    const root = await mountWindow()
+    await key('ArrowDown')
+    root.querySelector<HTMLButtonElement>('button[aria-label="Artist values"]')?.click()
+    await settle()
+    expect(document.querySelector('[role="dialog"] [role="option"]')).not.toBeNull()
+    await fromMenu('paste')
+    await fromMenu('cut')
+    expect(ipc.readClipboardText).not.toHaveBeenCalled()
+    expect(ipc.copyToClipboard).not.toHaveBeenCalled()
+    expect(ipc.editTags).not.toHaveBeenCalled()
+  })
+
   it('sets the Album row on every file with no track selected, and on the selected tracks alone otherwise', async () => {
     const root = await mountWindow()
     await fromMenu('paste')

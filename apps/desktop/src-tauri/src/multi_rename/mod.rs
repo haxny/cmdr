@@ -11,7 +11,7 @@ pub(crate) mod presets;
 pub(crate) mod run;
 pub(crate) mod session;
 pub(crate) mod transform;
-mod transliterate;
+pub(crate) mod transliterate;
 
 #[cfg(test)]
 mod history_test;

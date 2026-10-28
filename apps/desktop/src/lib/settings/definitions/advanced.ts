@@ -538,4 +538,15 @@ export const advancedSettings: SettingDefinitionSource[] = [
     default: false,
     component: 'switch',
   },
+  {
+    id: 'multiRename.tagEditor.absSideFiles',
+    section: ['Advanced'],
+    cardKey: 'settings.advanced.card.multiRename',
+    labelKey: 'settings.multiRename.tagEditor.absSideFiles.label',
+    descriptionKey: 'settings.multiRename.tagEditor.absSideFiles.description',
+    keywordsKey: 'settings.multiRename.tagEditor.absSideFiles.keywords',
+    type: 'boolean',
+    default: false,
+    component: 'switch',
+  },
 ]

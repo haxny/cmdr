@@ -46,8 +46,8 @@ fn open_store<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<UndoStore,
 /// The files it restored are read again into every open tag session that holds them (another
 /// sheet's keeps its unwritten edits; see [`reload`]), and Multi-Rename's media cache reads them
 /// again. A file changed since the write (a later write, or another file renamed onto its path)
-/// is left alone and reported as `changed`. A restore without failures forgets the record; one
-/// with failures keeps it, so the user can try again.
+/// is left alone and reported as `changed`. A restore without failures (tracks and side files)
+/// forgets the record; one with failures keeps it, so the user can try again.
 pub fn undo<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     apply_id: String,
@@ -88,15 +88,20 @@ pub(super) fn undo_with(
 ) -> Result<RestoreReport, TagEditorError> {
     let id = ApplyId(apply_id.to_owned());
     // Restoring parses and writes each file with lofty.
-    let report = contain_panics(|| store.restore(&id, &WriteOptions::default()))
+    let mut report = contain_panics(|| store.restore(&id, &WriteOptions::default()))
         .unwrap_or_else(|| Err(panicked()))
         .map_err(|error| TagEditorError::Undo { error })?;
+    let tracks = report.restored.clone();
+    // The side files the write wrote beside the book (`side_files.rs`), counted with the tracks.
+    super::side_files::undo(apply_id, &mut report);
+    // Forgotten only once the tracks and the side files are all back: a failure anywhere keeps the
+    // record, so the next ⌘Z reaches the side files again instead of finding no record.
     if report.failed.is_empty()
         && let Err(error) = store.forget(&id)
     {
         log::warn!(target: LOG_TARGET, "Couldn't forget an undone tag write: {error:?}");
     }
-    reload(&report.restored, undoing);
-    reread_media(LOCAL_VOLUME_ID, &report.restored);
+    reload(&tracks, undoing);
+    reread_media(LOCAL_VOLUME_ID, &tracks);
     Ok(report)
 }
