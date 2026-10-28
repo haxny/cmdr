@@ -127,6 +127,11 @@
         openEditor(at, target)
     }
 
+    /** The cursor row's cell that typing, Delete, F2 and ⌘C / ⌘X / ⌘V act on: # or Title. */
+    export function activeField(): EditedField {
+        return activeCell
+    }
+
     /** F3 from the window's bar or with focus outside the pane: plays or stops the cursor row. */
     export function playAtCursor(): void {
         play(at)

@@ -9,7 +9,9 @@
      * session too when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A and ⌘⇧A reach it from the
      * native menu (`onTagsSelectAll`, `onTagsDeselectAll`): ⌘A selects the text of the box being typed in, else every
      * track; ⌘⇧A clears the track selection. Under a dialog neither touches the tracks: the dialog's tool would run on
-     * a selection it didn't show. The rest of the `Tags window` keys (`tags-function-keys.ts`) go to the content's
+     * a selection it didn't show. ⌘X, ⌘C and ⌘V arrive the same way
+     * (`onTagsClipboard`) and go to the content's `clipboard`: the field under the cursor, or the native action back
+     * for a text box. The rest of the `Tags window` keys (`tags-function-keys.ts`) go to the content's
      * `runCommand`, except while a value is typed (only ⌘S, which the box has already committed, and the close keys get
      * through; the value editor claims its own Esc), while a dialog is open (it owns its keys, Escape included), and
      * Enter on a focused control (a button presses). On macOS the main menu this window installs holds F2–F8, ⇧F2,
@@ -22,10 +24,12 @@
     import { closeSelfWindow } from '#lib/child-window-close.js'
     import {
         closeMultiRename,
+        onTagsClipboard,
         onTagsDeselectAll,
         onTagsMenuKey,
         onTagsSelectAll,
         releaseTagsSession,
+        type TagsClipboardAction,
         type TagsMenuKey,
     } from '#lib/tauri-commands/index.js'
     import { getEffectiveShortcuts } from '#lib/shortcuts/shortcuts-store.js'
@@ -65,6 +69,7 @@
         runCommand: (id: TagsCommandId, road?: TagsKeyRoad) => boolean
         hasDialog: () => boolean
         waitForWrite: () => void
+        clipboard: (action: TagsClipboardAction) => Promise<void>
     }>()
 
     /** ⌘A: the text of the box being typed in, as in any text field, else every track, as in a file pane. */
@@ -102,6 +107,7 @@
             listenWhileMounted(() => onTagsSelectAll(selectAll), 'Select all'),
             listenWhileMounted(() => onTagsDeselectAll(deselectAll), 'Deselect all'),
             listenWhileMounted(() => onTagsMenuKey(onMenuKey), 'A function key'),
+            listenWhileMounted(() => onTagsClipboard((action) => void content?.clipboard(action)), 'Cut, copy or paste'),
         ]
         return () => {
             for (const stop of stops) stop()

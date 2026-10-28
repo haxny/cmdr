@@ -144,6 +144,19 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   page sees the key, so `menu_handlers.rs` sends `tags-select-all` / `tags-deselect-all` to the focused `tags-*` window
   (`focused_tags_window`); `TagsWindow` selects the text of a text box with focus (never a checkbox), else every track,
   and clears the track selection.
+- **⌘X / ⌘C / ⌘V on a field**: Edit > Cut, Copy and Paste go to the focused `tags-*` window as `tags-clipboard`
+  (`TagsContent.clipboard`). A focused text box, or focus in the cover section, gets the same action back as the native
+  `cut:` / `copy:` / `paste:` (`tagsNativeEdit`), so the box's own clipboard and its typing undo, and the cover's
+  picture paste (`beforepaste` / `paste`, below), work as before; under a dialog nothing else happens. Otherwise Copy
+  puts the cursor field's text on the clipboard (Album: the row, a «multiple values» row as its distinct values joined
+  by "; " without the marker; Tracks: the active cell, # or Title; an empty field copies ""), Cut copies then empties it
+  as Delete does (not when the copy didn't go through), and Paste sets the clipboard's plain text (`field-clipboard.ts`:
+  one trailing line break dropped; a one-line field takes the first line, a multi-value field joins the lines with "; ";
+  Comment and Description keep them) on the Album row in Clear's scope, or on the Tracks cursor row, or on every
+  selected row when several are and the cursor is on one. Each is a pending edit (⌘Z). The clipboard goes through the
+  backend (`copyToClipboard`, `readClipboardText`), ❌ not `navigator.clipboard`: the menu's action is no user gesture
+  in the page, so WebKit would refuse the read or show its Paste callout. A read that fails, or a clipboard with no
+  text, says so in the status line.
 - **Why edits are keyed by path**: the session's order can change under the view; every edit stays with its file.
   `open()` fetches the view again (`openTagEditor(id)`, never a restart) when asked, so the list follows the order; the
   unwritten edits live in the backend session and come back with it. A view answer older than one already shown is

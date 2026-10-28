@@ -5,10 +5,11 @@ use super::session::{is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
 use super::window::{
     TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, menu_key_command_of, menu_selection_of,
-    session_of_label,
+    native_edit_id_of, session_of_label,
 };
-use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, SELECT_ALL_ID};
+use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, SELECT_ALL_ID};
 use crate::multi_rename::session::{close as close_rename, is_held, open as open_rename};
+use crate::window_events::TagsClipboardAction;
 
 #[test]
 fn a_window_label_names_its_session_and_no_other_window_does() {
@@ -34,13 +35,43 @@ fn select_all_goes_to_the_focused_tags_window_only() {
 }
 
 /// The menu branch (`menu_handlers.rs`) sends a Tags window exactly what was picked: Select all
-/// selects, Deselect all clears, and no other Edit item is taken from the native text lane.
+/// selects, Deselect all clears, and no item the window doesn't know is taken from its own road.
 #[test]
 fn select_all_and_deselect_all_each_reach_a_tags_window_as_themselves() {
     assert_eq!(menu_selection_of(SELECT_ALL_ID), Some(TagsMenuSelection::SelectAll));
     assert_eq!(menu_selection_of(DESELECT_ALL_ID), Some(TagsMenuSelection::DeselectAll));
-    assert_eq!(menu_selection_of(EDIT_COPY_ID), None);
     assert_eq!(menu_selection_of("close_tab"), None);
+}
+
+/// Edit > Cut, Copy and Paste reach a focused Tags window as themselves, so ⌘X/⌘C/⌘V act on the
+/// field under the cursor; the window hands each back as the same native action for a text box.
+#[test]
+fn cut_copy_and_paste_reach_a_focused_tags_window_as_themselves() {
+    let expected = [
+        (EDIT_CUT_ID, TagsClipboardAction::Cut),
+        (EDIT_COPY_ID, TagsClipboardAction::Copy),
+        (EDIT_PASTE_ID, TagsClipboardAction::Paste),
+    ];
+    let focused = focused_tags_window([("main", false), ("tags-multi-rename-4", true)]);
+    for (id, action) in expected {
+        assert_eq!(
+            (menu_selection_of(id), focused),
+            (Some(TagsMenuSelection::Clipboard(action)), Some("tags-multi-rename-4")),
+            "{id}"
+        );
+        assert_eq!(native_edit_id_of(action), id);
+    }
+}
+
+/// Main in front: no Tags window is focused, so the route takes none of the three and main's own
+/// Cut / Copy / Paste (`edit.cut`, `edit.copy`, `edit.paste`) run as before.
+#[test]
+fn cut_copy_and_paste_stay_main_windows_while_main_is_focused() {
+    let windows = [("main", true), ("tags-multi-rename-4", false)];
+    for id in [EDIT_CUT_ID, EDIT_COPY_ID, EDIT_PASTE_ID] {
+        assert!(menu_selection_of(id).is_some(), "{id}");
+        assert_eq!(focused_tags_window(windows), None, "{id}");
+    }
 }
 
 #[test]

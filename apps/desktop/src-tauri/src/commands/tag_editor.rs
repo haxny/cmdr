@@ -32,6 +32,7 @@ use crate::tag_editor::sort::{TrackSort, sort_tracks};
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 use crate::tag_editor::window::TagsSessionInfo;
+use crate::window_events::TagsClipboardAction;
 
 /// How long a dropped picture's read may stand still before it's given up: a whole-file read off a
 /// NAS has no honest ceiling, only a silence one (`SESSION_IO_TIMEOUT`'s scale), so it may take as
@@ -421,6 +422,24 @@ pub async fn get_cover_thumbnail(session_id: String, key: String) -> Result<Opti
 #[specta::specta]
 pub async fn hold_tags_session(session_id: String) -> Result<TagsSessionInfo, MultiRenameError> {
     crate::tag_editor::window::hold(&session_id)
+}
+
+/// Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
+/// (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
+/// (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
+/// the window sends them here, and the box (or the section's picture paste) keeps its own.
+#[tauri::command]
+#[specta::specta]
+pub async fn tags_native_edit(app: tauri::AppHandle, action: TagsClipboardAction) {
+    #[cfg(target_os = "macos")]
+    {
+        let id = crate::tag_editor::window::native_edit_id_of(action);
+        if let Err(e) = app.run_on_main_thread(move || crate::menu::send_native_edit_action(id)) {
+            log::warn!("couldn't hand an edit action back to a Tags window: {e}");
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, action);
 }
 
 /// Lets eviction take the session again. No-op when it's already gone.

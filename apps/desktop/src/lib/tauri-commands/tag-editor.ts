@@ -22,6 +22,7 @@ import {
   type TagTool,
   type TrackSort,
   type TrackSortKey,
+  type TagsClipboardAction,
   type TagsMenuKey,
   type TagsOpened,
   type TagsSessionInfo,
@@ -46,6 +47,7 @@ export type {
   TagTool,
   TrackSort,
   TrackSortKey,
+  TagsClipboardAction,
   TagsMenuKey,
   TagsOpened,
   TagsSessionInfo,
@@ -305,6 +307,22 @@ export async function onTagsMenuKey(callback: (key: TagsMenuKey) => void): Promi
   return events.tagsMenuKey.listen((event) => {
     callback(event.payload)
   })
+}
+
+/**
+ * Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) while this Tags window is focused: the accelerators fire before the page
+ * sees the keys, so `menu_handlers.rs` sends the action here instead of the native `cut:`/`copy:`/`paste:`. Returns
+ * an `UnlistenFn`.
+ */
+export async function onTagsClipboard(callback: (action: TagsClipboardAction) => void): Promise<UnlistenFn> {
+  return events.tagsClipboard.listen((event) => {
+    callback(event.payload.action)
+  })
+}
+
+/** Hands a routed Cut, Copy or Paste back as the native action, for the text box (or cover section) with focus. */
+export async function tagsNativeEdit(action: TagsClipboardAction): Promise<void> {
+  await commands.tagsNativeEdit(action)
 }
 
 /** Select > Deselect all (⌘⇧A) while this Tags window is focused; routed as `onTagsSelectAll`. */

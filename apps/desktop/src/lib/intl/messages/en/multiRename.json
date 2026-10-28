@@ -2168,6 +2168,18 @@
   "@multiRename.tags.clearField.run": {
     "description": "Button in the Clear a field dialog that empties the field. Nothing is written into the files until Write."
   },
+  "multiRename.tags.clipboard.readFailed": "Couldn’t read the clipboard. Try ⌘V again.",
+  "@multiRename.tags.clipboard.readFailed": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+V on a tag field couldn't read the clipboard, so nothing was pasted."
+  },
+  "multiRename.tags.clipboard.noText": "The clipboard holds no text to paste.",
+  "@multiRename.tags.clipboard.noText": {
+    "description": "Status line in the tag editor window when Command+V on a tag field found no plain text on the clipboard (for example, only a picture), so nothing was pasted."
+  },
+  "multiRename.tags.clipboard.writeFailed": "Couldn’t copy to the clipboard. Try again.",
+  "@multiRename.tags.clipboard.writeFailed": {
+    "description": "Status line in the tag editor window when Command+C or Command+X on a tag field couldn't put the field's text on the clipboard. After Command+X the field is left as it was."
+  },
   "multiRename.tags.undo.editUndone": "Undone",
   "@multiRename.tags.undo.editUndone": {
     "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) after Command+Z took back the last unwritten tag edit. One word, no detail."

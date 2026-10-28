@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::session::{self as rename_session, files_of};
+use crate::window_events::TagsClipboardAction;
 
 /// The label prefix of a Tags window; the rest of the label is its session's id.
 const LABEL_PREFIX: &str = "tags-";
@@ -38,22 +39,45 @@ pub(crate) fn focused_tags_window<'a>(windows: impl IntoIterator<Item = (&'a str
         .map(|(label, _)| label)
 }
 
-/// What a native Select-menu item asks of a focused Tags window (`menu_handlers.rs`).
+/// What a native Edit / Select-menu item asks of a focused Tags window (`menu_handlers.rs`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TagsMenuSelection {
     /// Edit > Select all (⌘A): every track, or the text of the box being typed in.
     SelectAll,
     /// Select > Deselect all (⌘⇧A): no track selected.
     DeselectAll,
+    /// Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V): the field under the cursor, or the text box's own.
+    Clipboard(TagsClipboardAction),
 }
 
-/// The Tags window's answer to menu item `id`, or `None` for an item it doesn't take. Both
+/// The Tags window's answer to menu item `id`, or `None` for an item it doesn't take. Their
 /// accelerators fire before the page sees the key, so this is the keys' only road there.
 pub(crate) fn menu_selection_of(id: &str) -> Option<TagsMenuSelection> {
+    use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, SELECT_ALL_ID};
     match id {
-        crate::menu::SELECT_ALL_ID => Some(TagsMenuSelection::SelectAll),
-        crate::menu::DESELECT_ALL_ID => Some(TagsMenuSelection::DeselectAll),
+        SELECT_ALL_ID => Some(TagsMenuSelection::SelectAll),
+        DESELECT_ALL_ID => Some(TagsMenuSelection::DeselectAll),
+        EDIT_CUT_ID => Some(TagsMenuSelection::Clipboard(TagsClipboardAction::Cut)),
+        EDIT_COPY_ID => Some(TagsMenuSelection::Clipboard(TagsClipboardAction::Copy)),
+        EDIT_PASTE_ID => Some(TagsMenuSelection::Clipboard(TagsClipboardAction::Paste)),
         _ => None,
+    }
+}
+
+/// The Edit item whose native action (`cut:`, `copy:`, `paste:`) `action` hands back to the
+/// window's first responder, for a text box or the cover section (`tags_native_edit`).
+#[cfg_attr(
+    not(target_os = "macos"),
+    allow(
+        dead_code,
+        reason = "the responder chain is macOS-only; the mapping is still pinned by tests"
+    )
+)]
+pub(crate) fn native_edit_id_of(action: TagsClipboardAction) -> &'static str {
+    match action {
+        TagsClipboardAction::Cut => crate::menu::EDIT_CUT_ID,
+        TagsClipboardAction::Copy => crate::menu::EDIT_COPY_ID,
+        TagsClipboardAction::Paste => crate::menu::EDIT_PASTE_ID,
     }
 }
 

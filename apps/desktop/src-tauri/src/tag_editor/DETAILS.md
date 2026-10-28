@@ -205,8 +205,9 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
 - `window.rs` the Tags window's hold on its Multi-Rename session (`hold` counts tracks, names the folder; `end` on
   close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`). It also
-  names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A, `menu_key_command_of`
-  for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping.
+  names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A and ⌘X / ⌘C / ⌘V, `menu_key_command_of`
+  for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
+  `tags_native_edit` hands back for a text box or the cover section.
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the
   viewer's choke point) and "open in foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread,
   never awaited).

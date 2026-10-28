@@ -1202,6 +1202,8 @@ export {
   onTagsSelectAll,
   onTagsDeselectAll,
   onTagsMenuKey,
+  onTagsClipboard,
+  tagsNativeEdit,
 } from './tag-editor'
 export type {
   ApplyRequest,
@@ -1220,6 +1222,7 @@ export type {
   TagsOpened,
   TagTextTool,
   TagTool,
+  TagsClipboardAction,
   TagsMenuKey,
   TagsSessionInfo,
   TrackSort,

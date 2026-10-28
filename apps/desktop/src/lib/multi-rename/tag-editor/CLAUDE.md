@@ -15,8 +15,8 @@ sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted;
   classes, `getRowHeight()`, the list font; fixed columns with one flexing, so nothing scrolls sideways. Keys are
   `Tags window` registry commands answered by the focused pane's listbox (Tab, F2/Enter, ⇧F2, F3/⌥Space), plus the file
   panes' own selection commands (`classifySelectionKey`) and `list-cursor.ts`. ❌ Rows never take focus (no `tabindex`;
-  mousedown keeps it on the list), or the keys die after a click. ⌘A / ⌘⇧A arrive from the native menu
-  (`onTagsSelectAll` / `onTagsDeselectAll`), never as a keydown.
+  mousedown keeps it on the list), or the keys die after a click. ⌘A, ⌘⇧A, ⌘X, ⌘C, ⌘V come from the native menu
+  (`onTags*`), never as a keydown.
 - **The function-key bar and the dialogs**: `TagsFunctionKeyBar` at the foot runs the tools (F4–F8, ⇧F3–⇧F8) and ⌘S
   Write; each opens a `ModalDialog` beside the content (`TagToolDialogs`, `WriteDialog`). ❌ Nothing goes in the
   window's flow above or below the panes but the one fixed status line: the panes never move. DETAILS § Layout and keys.

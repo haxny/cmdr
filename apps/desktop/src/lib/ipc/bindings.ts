@@ -1771,6 +1771,13 @@ export const commands = {
   // Lets eviction take the session again. No-op when it's already gone.
   releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
   /**
+   *  Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
+   *  (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
+   *  (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
+   *  the window sends them here, and the box (or the section's picture paste) keeps its own.
+   */
+  tagsNativeEdit: (action: TagsClipboardAction) => __TAURI_INVOKE<void>('tags_native_edit', { action }),
+  /**
    *  A new Multi-Rename session over the files of `session_id` (an open sheet's), in their current
    *  order, for a Tags window: the sheet closing never ends the window's session.
    */
@@ -5732,6 +5739,7 @@ export const events = {
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
+  tagsClipboard: makeEvent<TagsClipboard>('tags-clipboard'),
   tagsDeselectAll: makeEvent<TagsDeselectAll>('tags-deselect-all'),
   tagsMenuKey: makeEvent<TagsMenuKey>('tags-menu-key'),
   tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
@@ -18793,6 +18801,20 @@ export type TagsAtQuit = {
   // A tag write or undo is running.
   writing: boolean
 }
+
+/**
+ *  `tags-clipboard`: Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) while a Tags window is focused. The
+ *  accelerators fire before the page sees the keys, and the native `cut:`/`copy:`/`paste:` would
+ *  reach only a text box, so the window gets the action and decides: the field under the cursor,
+ *  or the same native action handed back (`tags_native_edit`) for a text box or the cover section.
+ *  Emitted to that window only.
+ */
+export type TagsClipboard = {
+  action: TagsClipboardAction
+}
+
+// Which of Edit > Cut, Copy and Paste a focused Tags window was asked for (`TagsClipboard`).
+export type TagsClipboardAction = 'cut' | 'copy' | 'paste'
 
 /**
  *  `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window

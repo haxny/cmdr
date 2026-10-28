@@ -5,19 +5,29 @@
      * function-key bar (`TagsFunctionKeyBar`). Every tool and the write open in a dialog over the panes
      * (`TagToolDialogs`, `WriteDialog`), so nothing ever pushes or resizes the panes. `runCommand` runs a `Tags window`
      * command, from the bar or from the window's keydown (`TagsWindow.svelte`). Tab switches the panes
-     * (`tags-panes.svelte.ts`). It opens the tag session when it mounts.
+     * (`tags-panes.svelte.ts`). ⌘X / ⌘C / ⌘V from the native menu act on the field under the cursor (`clipboard`).
+     * It opens the tag session when it mounts.
      */
     import { onDestroy, onMount, untrack } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
-    import { openTagsInPlayer, type TagEdit } from '#lib/tauri-commands/index.js'
+    import {
+        copyToClipboard,
+        openTagsInPlayer,
+        readClipboardText,
+        tagsNativeEdit,
+        type TagEdit,
+        type TagsClipboardAction,
+    } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
     import AlbumPane from './AlbumPane.svelte'
     import CoverPanel from './CoverPanel.svelte'
     import CoverViewer from './CoverViewer.svelte'
     import { COVER_ERROR_KEYS, type CoverShown } from './cover-choices'
+    import { pastedValues, sharedCopyText } from './field-clipboard'
     import TagsFunctionKeyBar from './TagsFunctionKeyBar.svelte'
     import TagToolDialogs from './TagToolDialogs.svelte'
     import TracksPane from './TracksPane.svelte'
@@ -29,6 +39,7 @@
         type TagsBarCommandId,
         type TagsCommandId,
         type TagsKeyRoad,
+        textBoxOf,
     } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
     import { createTrackSelection } from './track-selection.svelte'
@@ -40,6 +51,8 @@
     }
 
     const { state: tags }: Props = $props()
+
+    const log = getAppLogger('tagEditor')
 
     /** The selected tracks; the tools work on these alone. Created once per mount, synced on every view change. */
     const selection = createTrackSelection()
@@ -64,6 +77,7 @@
         focus: () => void
         editAtCursor: (field?: 'title' | 'track') => void
         playAtCursor: () => void
+        activeField: () => 'title' | 'track'
         settleEditor: () => boolean
     }>()
     /** One key press by both roads (keydown and the native menu's accelerator) acts once. */
@@ -197,16 +211,26 @@
         await runScoped((scope) => tags.tool(tool, scope))
     }
 
-    /** Empties `field` on the selected tracks (the readable ones), or on every file when none is selected. */
-    async function clearField(field: TagField): Promise<void> {
-        const readable = new Set(tags.view?.tracks.filter((track) => track.readError === null).map((track) => track.path))
+    /** The paths of the tracks whose tags were read: an edit can name only these. */
+    function readablePaths(): Set<string> {
+        return new Set(tags.view?.tracks.filter((track) => track.readError === null).map((track) => track.path))
+    }
+
+    /** Sets `field` to `values` on the selected tracks (the readable ones), or on every file when none is selected. */
+    async function setFieldScoped(field: TagField, values: string[]): Promise<void> {
+        const readable = readablePaths()
         await runScoped((scope) =>
             tags.edit(
                 scope === null
-                    ? [{ kind: 'setAll', field, values: [] }]
-                    : scope.filter((path) => readable.has(path)).map((path) => ({ kind: 'setOne', path, field, values: [] })),
+                    ? [{ kind: 'setAll', field, values }]
+                    : scope.filter((path) => readable.has(path)).map((path) => ({ kind: 'setOne', path, field, values })),
             ),
         )
+    }
+
+    /** Empties `field` on the selected tracks (the readable ones), or on every file when none is selected. */
+    async function clearField(field: TagField): Promise<void> {
+        await setFieldScoped(field, [])
     }
 
     /**
@@ -216,6 +240,102 @@
     async function clearTarget(target: { field: TagField; path: string | null }): Promise<void> {
         if (target.path === null) await clearField(target.field)
         else await tags.edit([{ kind: 'setOne', path: target.path, field: target.field, values: [] }])
+    }
+
+    /**
+     * What ⌘X / ⌘C / ⌘V act on: the Album pane's cursor row (`path` null), or the Tracks pane's cursor row's active
+     * cell (# or Title). `text` is what it copies. `null` with no pane active (focus on the cover, out of the window).
+     */
+    function clipboardTarget(): { field: TagField; text: string; path: string | null; index: number } | null {
+        const view = tags.view
+        if (view === null) return null
+        if (panes.active === 'album') {
+            const index = Math.max(0, Math.min(panes.albumCursor, view.shared.length - 1))
+            const row = view.shared.at(index)
+            return row === undefined ? null : { field: row.field, text: sharedCopyText(row), path: null, index }
+        }
+        if (panes.active !== 'tracks') return null
+        const index = Math.max(0, Math.min(panes.tracksCursor, view.tracks.length - 1))
+        const track = view.tracks.at(index)
+        if (track === undefined) return null
+        const field = tracksPane?.activeField() ?? 'title'
+        return { field, text: (field === 'title' ? track.title : track.track) ?? '', path: track.path, index }
+    }
+
+    /** Puts `text` on the clipboard; says so in the status line when it can't. */
+    async function copyText(text: string): Promise<boolean> {
+        try {
+            await copyToClipboard(text)
+            return true
+        } catch (e) {
+            log.warn("couldn't copy a field to the clipboard: {reason}", { reason: e instanceof Error ? e.name : typeof e })
+            notice = 'multiRename.tags.clipboard.writeFailed'
+            return false
+        }
+    }
+
+    /**
+     * The tracks a paste on the Tracks pane's cursor row sets: that row, or, when several tracks are selected and the
+     * row is one of them, every selected one (as a spreadsheet fills a selection). Readable tracks only.
+     */
+    function pasteTracks(target: { path: string; index: number }): string[] {
+        const readable = readablePaths()
+        const scope = selection.scope()
+        if (selection.count > 1 && selection.has(target.index) && scope.kind === 'some') {
+            return scope.paths.filter((path) => readable.has(path))
+        }
+        return readable.has(target.path) ? [target.path] : []
+    }
+
+    /** ⌘V: the clipboard's plain text into the target field (Album: in Clear's scope; Tracks: `pasteTracks`). */
+    async function paste(target: { field: TagField; path: string | null; index: number }): Promise<void> {
+        let text: string | null
+        try {
+            text = await readClipboardText()
+        } catch (e) {
+            log.warn("couldn't read the clipboard: {reason}", { reason: e instanceof Error ? e.name : typeof e })
+            notice = 'multiRename.tags.clipboard.readFailed'
+            return
+        }
+        if (text === null) {
+            notice = 'multiRename.tags.clipboard.noText'
+            return
+        }
+        const values = pastedValues(target.field, text)
+        const { field, path } = target
+        if (path === null) {
+            await setFieldScoped(field, values)
+            return
+        }
+        const paths = pasteTracks({ path, index: target.index })
+        if (paths.length > 0) await tags.edit(paths.map((one) => ({ kind: 'setOne', path: one, field, values })))
+    }
+
+    /**
+     * Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) from the native menu (`TagsWindow`). A focused text box, and the cover
+     * section (its picture paste, `CoverPanel`), get the native action back, so they keep their own. Under a dialog
+     * nothing else happens. Otherwise: Copy puts the cursor field's text on the clipboard, Cut copies it and then
+     * empties the field as Delete does, Paste sets the clipboard's plain text. Each edit is a pending edit, so ⌘Z takes
+     * it back.
+     */
+    export async function clipboard(action: TagsClipboardAction): Promise<void> {
+        const focus = document.activeElement
+        if (textBoxOf(focus) !== null || (focus !== null && focus.closest('.cover-group') !== null)) {
+            await tagsNativeEdit(action)
+            return
+        }
+        if (hasDialog()) return
+        const target = clipboardTarget()
+        if (target === null) return
+        const editable = tags.view?.editable === true
+        notice = null
+        if (action === 'paste') {
+            if (editable) await paste(target)
+            return
+        }
+        if (!(await copyText(target.text)) || action === 'copy' || !editable || target.text === '') return
+        if (target.path !== null && !readablePaths().has(target.path)) return
+        await clearTarget({ field: target.field, path: target.path })
     }
 
     /** The tool dialog showing, with the field the user was on when it opened. */
