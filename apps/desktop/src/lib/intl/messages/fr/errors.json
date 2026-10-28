@@ -2445,47 +2445,47 @@
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
   },
-  "errors.write.namedLeavesRefused.title": "These new names can’t be used",
+  "errors.write.namedLeavesRefused.title": "Ces nouveaux noms ne peuvent pas être utilisés",
   "@errors.write.namedLeavesRefused.title": {
     "sourceHash": "08c8600"
   },
-  "errors.write.namedLeavesRefused.message.notASource": "One of the new names is for {path}, which isn’t part of this suggestion, so nothing started.",
+  "errors.write.namedLeavesRefused.message.notASource": "L’un des nouveaux noms concerne {path}, qui ne fait pas partie de cette suggestion, rien n’a donc démarré.",
   "@errors.write.namedLeavesRefused.message.notASource": {
     "sourceHash": "12b2cb4"
   },
-  "errors.write.namedLeavesRefused.message.sameName": "Two items would end up as {path}. Many disks treat those as one name, so one would replace the other.",
+  "errors.write.namedLeavesRefused.message.sameName": "Deux éléments se retrouveraient à l’emplacement {path}. Beaucoup de disques considèrent ces deux noms comme un seul, donc l’un remplacerait l’autre.",
   "@errors.write.namedLeavesRefused.message.sameName": {
     "sourceHash": "95e02b9"
   },
-  "errors.write.namedLeavesRefused.message.ontoASource": "An item would land as {path}, which is another item in this same suggestion, and replace it.",
+  "errors.write.namedLeavesRefused.message.ontoASource": "Un élément arriverait à l’emplacement {path}, qui est un autre élément de cette même suggestion, et le remplacerait.",
   "@errors.write.namedLeavesRefused.message.ontoASource": {
     "sourceHash": "724f9c3"
   },
-  "errors.write.namedLeavesRefused.message.alreadyInDestination": "{path} is already in the destination folder, so giving it a new name there is a rename.",
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "L’élément {path} est déjà dans le dossier de destination : lui donner un nouveau nom à cet endroit revient à le renommer.",
   "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
     "sourceHash": "06a0593"
   },
-  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr can’t give each item its own name on the way into or out of a zip archive, so nothing went to {path}.",
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr ne peut pas donner à chaque élément son propre nom à l’entrée ou à la sortie d’une archive zip, rien n’a donc été envoyé vers {path}.",
   "@errors.write.namedLeavesRefused.message.routeCannotName": {
     "sourceHash": "f2e48ca"
   },
-  "errors.write.namedLeavesRefused.suggestion.notASource": "Ask Cmdr to suggest it again.",
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Demandez à Cmdr de suggérer à nouveau cette opération.",
   "@errors.write.namedLeavesRefused.suggestion.notASource": {
     "sourceHash": "c1dbe85"
   },
-  "errors.write.namedLeavesRefused.suggestion.sameName": "Ask Cmdr for a different name for each item.",
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Demandez à Cmdr un nom différent pour chaque élément.",
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Ask Cmdr for names that don’t match the items being moved.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Demandez à Cmdr des noms différents de ceux des éléments déplacés.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
     "sourceHash": "45cc752"
   },
-  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Rename the items already in that folder, then move or copy the rest.",
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Renommez les éléments déjà présents dans ce dossier, puis déplacez ou copiez le reste.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
     "sourceHash": "8917a8e"
   },
-  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Move or copy them under their own names, then rename them there.",
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Déplacez-les ou copiez-les sous leurs propres noms, puis renommez-les à cet endroit.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
   }

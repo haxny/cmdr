@@ -245,6 +245,7 @@
     "sources": "catalog; macOS pattern"
   },
   "ask-cmdr": {
+    "accept": ["Demandez à Cmdr"],
     "chosen": "Ask Cmdr",
     "confidence": "high",
     "forms": "names only the chat panel (its title, menu item, command, Settings section, the switch); a sentence about what the product does says Cmdr or l’IA. `Ask Cmdr to prepare it again` → Demandez à Cmdr de …",
@@ -3192,6 +3193,16 @@
     "forms": "says the code can be read without claiming open source",
     "sources": "descriptive FR (no settled term)"
   },
+  "start": {
+    "accept": ["démarre", "démarré", "lancer", "lancé", "lance"],
+    "chosen": "démarrer",
+    "confidence": "high",
+    "exceptions": {
+      "indexing.step.statusPending": "a step status beside Terminé / En cours; Not started reads as the waiting state (En attente)."
+    },
+    "forms": "a task starting, with nothing as subject → rien n’a (donc) démarré (suggestedOps.refusal.label); Cmdr as subject starting an operation → lancer (Cmdr n’a donc rien lancé); macOS service → Lancer le service",
+    "sources": "catalog (suggestedOps.refusal.label, suggestedOps.refusal.*.message); macOS fr (Démarrer Dictée, Lancer le service)"
+  },
   "start-up": {
     "accept": ["démarre", "démarré"],
     "chosen": "démarrage",
@@ -3793,6 +3804,13 @@
     "confidence": "high",
     "forms": "partly written → partiellement écrit; written so far → écrits jusqu’à présent; half-written → à moitié écrit",
     "sources": "catalog; macOS (partiellement disponible)"
+  },
+  "zip": {
+    "accept": ["zip", "ZIP"],
+    "chosen": "archive zip",
+    "confidence": "high",
+    "forms": "prose → archive zip or the short masculine le zip / un zip / du zip (errors.write.archiveEntryNameRefused.title); the format NAME → Archive ZIP (Finder)",
+    "sources": "macOS fr (Archive ZIP, Fichier ZIP, Format d’archive ZIP); catalog (le zip, un zip, du zip)"
   },
   "zoom": {
     "chosen": "Zoom",

@@ -147,3 +147,11 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on the retired
   "undo by deleting what it writes" pill key). (fr)
 - The AI suggestions dialog keys ship without screenshots; the pills and fact lines need them most. (fr, hu)
+- `askCmdr.tool.outcome.connection.alreadyConnected` ("it was already connected") and the `miss.*` outcomes point "it"
+  at a server, a share, or the assistant; gendered locales dropped the pronoun. Prefer pronoun-free English ("already
+  connected"). (fr)
+- `askCmdr.decision.verbAddServer` / `verbEditServer` say "the form the sentences need" but give only the -ing English;
+  French needed a noun phrase (`l’ajout d’un serveur`) while the file-op `verb*` keys are infinitives. Say explicitly
+  that the server pair may take a different form from the file-op `verb*` keys. (fr)
+- `suggestedOps.server.field.share` ("Share") collides with the Share-menu verb in term-consistency in every locale that
+  splits verb and noun; consider "Shared folder" or a note pointing at `network-share`. (fr)
