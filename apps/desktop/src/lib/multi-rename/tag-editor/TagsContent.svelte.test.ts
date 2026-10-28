@@ -148,6 +148,36 @@ describe('TagsContent', () => {
     expect(state.sortTracks).toHaveBeenLastCalledWith({ key: 'length', descending: false })
   })
 
+  it('the Tracks cursor follows its track when the order changes', async () => {
+    const state = $state({
+      view: VIEW,
+      error: null,
+      busy: false,
+      open: vi.fn(() => Promise.resolve()),
+      edit: vi.fn(() => Promise.resolve()),
+      coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
+      coverImage: vi.fn(() => Promise.resolve(null)),
+      coverChoices: vi.fn(() => Promise.resolve([])),
+      coverThumbnail: vi.fn(() => Promise.resolve(null)),
+      undoable: null,
+      settled: vi.fn(() => Promise.resolve()),
+      tool: vi.fn(() => Promise.resolve()),
+    })
+    const mounted = await mountInto(TagsContent, { state: asTagState(state) })
+    cleanup = mounted.cleanup
+    const cursorPath = () =>
+      mounted.root.querySelector<HTMLElement>('[role="option"].is-under-cursor[data-track-path]')?.dataset.trackPath
+    mounted.root
+      .querySelector('[data-track-path="/b/02.mp3"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+    await tick()
+    expect(cursorPath()).toBe('/b/02.mp3')
+
+    state.view = { ...VIEW, tracks: [...VIEW.tracks].reverse() }
+    await tick()
+    expect(cursorPath()).toBe('/b/02.mp3')
+  })
+
   it("passes the view's bad-date count on, so the Date row is flagged on open", async () => {
     const view: TagEditorView = {
       ...VIEW,
@@ -238,7 +268,7 @@ describe('TagsContent', () => {
       expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
     })
 
-    it('is reachable by keyboard: ⇧Tab from the Tracks pane walks back into it before the Album rows', async () => {
+    it('is reachable by keyboard: ⇧Tab from the Tracks pane passes the Tracks sort headers, then reaches it before the Album rows', async () => {
       const { root } = await mountTab({ choices: [FRONT, NONE] })
       await settle()
       await tick()

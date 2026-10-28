@@ -10,6 +10,7 @@
 //!   relative path such as `Disc 1/01.mp3`).
 
 use std::cmp::Ordering;
+use std::path::PathBuf;
 
 use cmdr_collation::NameCollator;
 use cmdr_tags::{TagField, format_of};
@@ -173,6 +174,15 @@ pub(crate) fn sort_tracks(session_id: &str, sort: TrackSort) -> Result<TagEditor
 }
 
 pub(super) fn reorder(session_id: &str, sort: TrackSort) -> Result<TagEditorView, TagEditorError> {
+    reorder_with(session_id, sort, set_order)
+}
+
+/// `reorder` with the order-setting step passed in, so a test can make it fail.
+pub(super) fn reorder_with(
+    session_id: &str,
+    sort: TrackSort,
+    set: impl FnOnce(&str, Vec<String>) -> Result<(), MultiRenameError>,
+) -> Result<TagEditorView, TagEditorError> {
     let files = files_of(session_id).map_err(|_| {
         close(session_id);
         TagEditorError::NoSession
@@ -184,7 +194,12 @@ pub(super) fn reorder(session_id: &str, sort: TrackSort) -> Result<TagEditorView
         prune(session, &layout);
         ordered_names(&files, &layout, session, sort)
     };
-    set_order(session_id, new_names).map_err(|error| match error {
+    let expected: Vec<PathBuf> = new_names
+        .iter()
+        .filter(|name| format_of(name).is_some())
+        .map(|name| files.dir.join(name))
+        .collect();
+    set(session_id, new_names).map_err(|error| match error {
         MultiRenameError::SessionClosed => {
             close(session_id);
             TagEditorError::NoSession
@@ -193,10 +208,13 @@ pub(super) fn reorder(session_id: &str, sort: TrackSort) -> Result<TagEditorView
     })?;
     log::debug!(target: LOG_TARGET, "sorted {} tracks", layout.tracks.len());
     with_session(session_id, |layout, session| {
-        // Only now that the order is set: a failed sort leaves the session to be sorted again.
-        session.sort = Some(sort);
-        session.sorted_tracks = layout.tracks.clone();
+        // Only now that the order is set: a failed sort leaves the session to be sorted again. And only while the
+        // tracks still stand in the order just set: a move in between leaves no sort to claim.
         session.ordered = true;
+        if layout.tracks == expected {
+            session.sort = Some(sort);
+            session.sorted_tracks = layout.tracks.clone();
+        }
         Ok(view_of(layout, session))
     })
 }

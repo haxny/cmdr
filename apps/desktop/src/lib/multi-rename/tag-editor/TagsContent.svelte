@@ -7,7 +7,7 @@
      * command, from the bar or from the window's keydown (`TagsWindow.svelte`). Tab switches the panes
      * (`tags-panes.svelte.ts`). It opens the tag session when it mounts.
      */
-    import { onDestroy, onMount } from 'svelte'
+    import { onDestroy, onMount, untrack } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
@@ -72,6 +72,16 @@
         focus: (pane) => {
             ;(pane === 'album' ? albumPane : tracksPane)?.focus()
         },
+    })
+
+    // The cursor stays on its track when a sort (or any reorder) moves it, instead of on the same row number.
+    let listedPaths: string[] = []
+    $effect(() => {
+        const paths = allPaths
+        const cursorPath = listedPaths.at(untrack(() => panes.tracksCursor))
+        listedPaths = paths
+        const moved = cursorPath === undefined ? -1 : paths.indexOf(cursorPath)
+        if (moved >= 0 && moved !== untrack(() => panes.tracksCursor)) panes.tracksCursor = moved
     })
 
     // The window opens with the Album pane focused, as the main window opens with a file pane focused.

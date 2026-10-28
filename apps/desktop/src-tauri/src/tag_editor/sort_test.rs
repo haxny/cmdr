@@ -8,8 +8,9 @@ use cmdr_tags::{FileTags, TagField};
 
 use super::session::{Loaded, close, edit, open, unchanged_on_disk};
 use super::session_test::{album, folder, path_of, set_title, tag_file};
-use super::sort::{SortItem, TrackSort, TrackSortKey, sort_tracks, sorted_names};
+use super::sort::{SortItem, TrackSort, TrackSortKey, reorder_with, sort_tracks, sorted_names};
 use super::view::TagEditorView;
+use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::session::{RowMove, close as close_rename, files_of, move_row, open as open_rename};
 
 const ASC: bool = false;
@@ -344,6 +345,51 @@ fn a_row_moved_by_another_road_clears_the_stored_sort() {
     // A fresh sort sets it again.
     let view = sort_tracks(&id, sort(TrackSortKey::FileName, ASC)).expect("sorts");
     assert_eq!(view.sort, Some(sort(TrackSortKey::FileName, ASC)));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_failed_set_order_leaves_the_sort_unset_so_the_default_is_retried() {
+    let (_dir, id, _listing) = session_of(
+        "tag-sort-set-order-fails",
+        &[
+            ("a.mp3", &[(TagField::Title, "no number")]),
+            ("b.mp3", &[(TagField::Track, "2")]),
+            ("c.mp3", &[(TagField::Track, "1")]),
+        ],
+    );
+    // The first open's default sort fails at the order step.
+    let failed = reorder_with(&id, sort(TrackSortKey::DiscTrack, ASC), |_, _| {
+        Err(MultiRenameError::NotAPermutation)
+    });
+    assert!(failed.is_err());
+
+    // Nothing was recorded: the next open sorts by default again.
+    let view = open(&id, false).expect("opens");
+    assert_eq!(view.sort, Some(sort(TrackSortKey::DiscTrack, ASC)));
+    assert_eq!(names(&view), vec!["c.mp3", "b.mp3", "a.mp3"]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_move_between_set_order_and_the_read_leaves_no_sort_claimed() {
+    let (_dir, id, _listing) = session_of(
+        "tag-sort-race",
+        &[
+            ("a.mp3", &[(TagField::Track, "1")]),
+            ("b.mp3", &[(TagField::Track, "2")]),
+            ("c.mp3", &[(TagField::Track, "3")]),
+        ],
+    );
+    open(&id, false).expect("opens");
+    let view = reorder_with(&id, sort(TrackSortKey::DiscTrack, true), |session_id, names| {
+        crate::multi_rename::session::set_order(session_id, names)?;
+        move_row(session_id, 0, RowMove::Down).map(|_| ())
+    })
+    .expect("the view answers");
+    assert_eq!(view.sort, None);
     close(&id);
     close_rename(&id);
 }
