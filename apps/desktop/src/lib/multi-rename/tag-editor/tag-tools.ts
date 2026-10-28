@@ -40,6 +40,6 @@ export type TagToolId = 'replace' | 'format' | 'fromName' | 'number' | 'case' | 
 /**
  * Runs a backend call over the tracks the Tags window's tools work on: waits for pending edits, then hands the call the
  * checked tracks' paths (`null` for every track). Resolves `undefined` without calling when the checked tracks are
- * gone (the tab says so). The panels under the tools bar call their tools through it.
+ * gone (the window says so). The panels under the tools bar call their tools through it.
  */
 export type RunScoped = <T>(call: (scope: string[] | null) => Promise<T>) => Promise<T | undefined>

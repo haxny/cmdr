@@ -260,7 +260,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     coverFromPath: (path) => replaceView(() => setCoverFromPath(sessionId, path)),
     coverCandidates: () => track(() => listCoverCandidates(sessionId)),
     coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
-    // The Apply panel words a failed list or write next to its buttons; the tab's error is for edits.
+    // The Apply panel words a failed list or write next to its buttons; the window's error is for edits.
     changes: (kind) => track(() => getTagChanges(sessionId, kind), null),
     async apply(request, options = {}) {
       const res = await track(() => applyTags(sessionId, request), null)

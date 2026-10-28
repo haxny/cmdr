@@ -106,6 +106,15 @@ re-reads or follows a file that something else renamed.
   cover from file, changes, apply, undo: counts and milliseconds), and the apply's failures by kind at `debug`. No paths
   or values, and errors by kind only.
 
+## Invalid dates
+
+`TagEditorView::bad_dates` (`view.rs`, `count_bad_dates`) counts the readable files whose edited Date, first value, is
+one the writer refuses. The test is `cmdr_tags::date_is_writable(format, value)`, the same function the write uses, so
+the editor flags exactly what Write would refuse (today only an MP3's ID3v2.3 date is checked; other formats always
+pass). The Album pane shows the Date row red with a hint when the count is above zero. Writing the raw value stays
+refused: the write answers with the typed `BadDate` per file. Why: real files carried a month 20 (`2010-20-09`) and
+every write failed with nothing to point at (regression anchor, 2026-10-27).
+
 ## Write and undo
 
 `apply(app, session_id, ApplyRequest { kind, allowFrameLoss, skip })` (`apply.rs`):
@@ -133,15 +142,15 @@ re-reads or follows a file that something else renamed.
 write left; the others are `RestoreReport::changed` and untouched. Why: the record is keyed by path, and a Multi-Rename
 after the write can give a path to another file (renumbering `01…10` after a reorder swaps names), so a path-only
 restore would write one chapter's old tags into another. The fingerprint is in the record, so this holds after an app
-restart. The undo forgets the record when nothing failed (kept
-for a retry otherwise), re-reads the restored files into every open tag session that holds them (the undo can come
-from a later sheet than the one that wrote; each file is read once, outside the tag lock), and re-reads them in the
-media cache. It works after the session closed: the record holds paths. The asking sheet's session (`undo_tag_apply`'s
-`session_id`) takes the files as read, its unwritten edits to them dropped: its user confirmed that. Any other session
-keeps its edits: `session::rebase` moves each field, the cover, and each extra it never edited onto the restored disk,
-and its disk copy and fingerprint become the new ones. Today only one Multi-Rename sheet is open at a time (one main
-window, and `openMultiRename` returns while a sheet is up), so "another session" is a defensive case.
-(Verified 2026-10-27 by reading `routes/(main)/+page.svelte` `openMultiRename`.)
+restart. The undo forgets the record when nothing failed (kept for a retry otherwise), re-reads the restored files into
+every open tag session that holds them (the undo can come from a later sheet than the one that wrote; each file is read
+once, outside the tag lock), and re-reads them in the media cache. It works after the session closed: the record holds
+paths. The asking sheet's session (`undo_tag_apply`'s `session_id`) takes the files as read, its unwritten edits to them
+dropped: its user confirmed that. Any other session keeps its edits: `session::rebase` moves each field, the cover, and
+each extra it never edited onto the restored disk, and its disk copy and fingerprint become the new ones. Several Tags
+windows can be open at once, each holding its own Multi-Rename session and so its own tag session over possibly the same
+files (held sessions don't count against `MAX_SESSIONS` and are released when their window closes), so "another session"
+with unwritten edits is a normal case and `rebase` is what keeps those edits.
 
 The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer);
 no app data folder is `TagEditorError::NoAppDataDir`. Tests call `apply_with` / `undo_with` with their own store, and

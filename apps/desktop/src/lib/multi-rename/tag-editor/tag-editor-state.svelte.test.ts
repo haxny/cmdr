@@ -1,5 +1,5 @@
 /**
- * The Tags tab's state: each call keeps the view the backend answered with, a typed error stays as it came,
+ * The Tags window's state: each call keeps the view the backend answered with, a typed error stays as it came,
  * `busy` brackets every call, and Undo reverses exactly the last apply that can be reversed.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -442,7 +442,7 @@ describe('createTagEditorState', () => {
     expect(later.undoable).toEqual({ applies: [{ applyId: 'A7', written: 1 }], partial: false })
     await later.undo()
     expect(ipc.undoTagApply).toHaveBeenCalledWith('A7', 'T')
-    // The later sheet never showed its Tags tab, so the undo opens no tag session for it.
+    // The later sheet never opened its Tags window, so the undo opens no tag session for it.
     expect(ipc.openTagEditor).not.toHaveBeenCalledWith('T')
   })
 

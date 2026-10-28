@@ -1,4 +1,4 @@
-//! The tab's pure view: summaries over entries, unreadable rows left out of them.
+//! The Tags window's pure view: summaries over entries, unreadable rows left out of them.
 
 use std::path::{Path, PathBuf};
 

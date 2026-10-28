@@ -307,7 +307,7 @@
 
     /** The sheet's Start: lists the changes, and from the list writes them. */
     export async function start(): Promise<void> {
-        // Read-only: the tab says so at its top, and the button is disabled.
+        // Read-only: the window says so at its top, and the button is disabled.
         if (!canWrite) return
         await oncePressed(async () => {
             if (current.step === 'review') await write(current)

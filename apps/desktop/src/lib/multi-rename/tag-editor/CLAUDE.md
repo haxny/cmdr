@@ -31,6 +31,7 @@ sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted;
   own engine, not `cmdr-tags`; file name → tags stays the engine's `TagTool::FromFileName`.
 - **Unwritten edits are never lost silently**: closing the window goes through `discard-guard.ts` ("Discard tag
   changes?").
+- **A Date the writer would refuse** (`badDates`) turns the Album pane's Date row red before any write.
 - **The tag canon is shown, not enforced**: diacritics are allowed only in Comment and Description (a warning with a
   one-click fix, never a silent strip); a single-file book hides the # column and Renumber; the write kind is Audiobook
   on first run, then the user's last pick (`write-kind.ts`), and the change list names what it removes (an MP3's

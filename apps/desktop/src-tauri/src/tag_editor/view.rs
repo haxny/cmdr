@@ -110,7 +110,7 @@ pub struct TagEditorView {
     pub bad_dates: u32,
 }
 
-/// What the session's rules say about the tab, apart from the files.
+/// What the session's rules say about the window, apart from the files.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Access {
     pub editable: bool,

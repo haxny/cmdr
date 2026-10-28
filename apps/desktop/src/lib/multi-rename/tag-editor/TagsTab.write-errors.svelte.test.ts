@@ -1,7 +1,7 @@
 /**
  * A list or a write the backend refuses is worded once, by the Apply panel next to its buttons, never a second time
- * at the top of the tab ("Couldn't apply that change." was wrong for a write and stayed until a later success).
- * The real state over mocked IPC, so the shared `error` is the one the tab reads.
+ * at the top of the window ("Couldn't apply that change." was wrong for a write and stayed until a later success).
+ * The real state over mocked IPC, so the shared `error` is the one the window reads.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TagEditorView } from '#lib/tauri-commands/index.js'

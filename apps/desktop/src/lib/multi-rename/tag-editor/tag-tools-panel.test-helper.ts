@@ -1,4 +1,4 @@
-/** A fake Tags tab state and scope runner for the three tool panels' tests. */
+/** A fake Tags window state and scope runner for the three tool panels' tests. */
 
 import { vi } from 'vitest'
 import type { NamePreviewRow } from '#lib/tauri-commands/index.js'
@@ -22,7 +22,7 @@ export function fakeTags(rows: NamePreviewRow[] = []) {
 
 export const asTags = (fake: ReturnType<typeof fakeTags>): TagEditorState => fake as unknown as TagEditorState
 
-/** Runs the call with the scope `scope` (the checked tracks), the way the Tags tab does. */
+/** Runs the call with the scope `scope` (the checked tracks), the way the Tags window does. */
 export type FakeRunScoped = RunScoped & { mockImplementation: (impl: () => Promise<undefined>) => unknown }
 
 export function fakeRunScoped(scope: string[] | null = SCOPE): FakeRunScoped {

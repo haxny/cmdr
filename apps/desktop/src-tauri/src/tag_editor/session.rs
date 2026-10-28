@@ -38,7 +38,7 @@ pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
 const LOG_TARGET: &str = "tag_editor::session";
 
-/// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+/// One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
 /// PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
 /// the edit to another file.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, specta::Type)]

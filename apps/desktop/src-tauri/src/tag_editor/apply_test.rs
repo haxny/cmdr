@@ -551,7 +551,7 @@ async fn media_read(id: &str) {
     .await;
 }
 
-/// Review focus 5: after a write, and after its undo, the Rename tab's `[=tag.*]` preview shows the
+/// Review focus 5: after a write, and after its undo, Multi-Rename's `[=tag.*]` preview shows the
 /// new values, and the read reports its end: the event the sheet re-previews on.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn media_cache_dropped_for_written_rows() {

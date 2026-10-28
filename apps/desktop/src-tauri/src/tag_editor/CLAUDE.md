@@ -43,6 +43,6 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - **Record before write**: `apply` records the old tags first, then seals the record to the files written with their
   post-write `Fingerprint`, so undo touches exactly those, and only while unchanged (never a file renamed onto the
   path). `WouldDrop` is never auto-accepted. Lock order: the store is outermost (`undo.rs`).
-- `diacritics` only reports, it never strips.
+- `diacritics` only reports, it never strips; `bad_dates` flags a Date the writer would refuse (`date_is_writable`).
 
 Details: `DETAILS.md`.

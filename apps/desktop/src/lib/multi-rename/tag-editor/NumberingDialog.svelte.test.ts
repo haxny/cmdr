@@ -204,7 +204,7 @@ describe('NumberingDialog', () => {
   it('does nothing when the checked tracks are gone', async () => {
     const tags = fakeTags()
     const gone = fakeRunScoped()
-    // The runner resolves undefined without calling, as the tab does for the "gone" case.
+    // The runner resolves undefined without calling, as the window does for the "gone" case.
     gone.mockImplementation(() => Promise.resolve(undefined))
     const mounted = await mountInto(NumberingDialog, {
       trackCount: 3,

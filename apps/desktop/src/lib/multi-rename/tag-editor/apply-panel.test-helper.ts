@@ -1,4 +1,4 @@
-/** A fake Tags tab state and a view for the Apply panel's tests. */
+/** A fake Tags window state and a view for the Apply panel's tests. */
 
 import { vi } from 'vitest'
 import type { FileChangeView, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'

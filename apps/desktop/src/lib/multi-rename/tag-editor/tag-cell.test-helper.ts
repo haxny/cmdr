@@ -1,4 +1,4 @@
-/** DOM helpers shared by the Tags tab's component tests. */
+/** DOM helpers shared by the Tags window's component tests. */
 
 import { mount, tick, unmount } from 'svelte'
 import type { Component } from 'svelte'

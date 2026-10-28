@@ -63,7 +63,7 @@ const VIEW: TagEditorView = {
   badDates: 0,
 }
 
-/** The mock stands in for the state; only what the tab reads is there. */
+/** The mock stands in for the state; only what the window reads is there. */
 function asTagState(mock: object): TagEditorState {
   return mock as TagEditorState
 }

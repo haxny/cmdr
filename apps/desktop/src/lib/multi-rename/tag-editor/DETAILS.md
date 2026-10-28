@@ -101,6 +101,11 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   `every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window`. ❗ Not yet checked by hand in a built app:
   F2–F8, ⇧F2–⇧F5, ⇧F8, Tab (panes, a tool dialog, the value box), ⌘S, ⌘Z (in and out of a box), ⌘W, Esc (Plan 2c Task 4b
   fix rounds 1–2, 2026-10-28).
+- **Invalid date flag**: `AlbumPane` takes the view's `badDates` and marks the Date row `invalid` (red row, the
+  `multiRename.tags.date.invalid` hint under the list, `aria-describedby` on the row and its editor) while it is above
+  zero. It is on open and follows every edit, so correcting the Date clears it. Why: an existing date such as
+  `2010-20-09` made every write fail; the user now sees the cause before writing. The write's own per-file refusal is
+  `multiRename.tags.write.error.badDate`. Backend side: `tag_editor/DETAILS.md` § Invalid dates.
 - **A value box with text in it settles before any other command** (`runCommand` → each pane's `settleEditor` →
   `TagValueEditor.commit()`): sendable text is sent, as a click away does; refused text («multiple values» marker left
   in) keeps the box open with its hint and the command doesn't run. A click away from refused text takes focus back,
