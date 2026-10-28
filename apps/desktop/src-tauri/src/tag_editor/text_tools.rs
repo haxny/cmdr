@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use cmdr_media_meta::MediaFacts;
 use cmdr_tags::{FileTags, TagField};
 use serde::Deserialize;
+use unicode_normalization::UnicodeNormalization;
 
 use super::session::{TagEditorError, edit_scoped};
 use super::view::TagEditorView;
@@ -37,6 +38,16 @@ pub enum TagTextTool {
     /// `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
     /// for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
     Format { field: TagField, mask: String },
+    /// Runs the ticked Multi-Rename text options over every value of each listed field, in
+    /// Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
+    /// results match file renames. Fields not listed (Comment and Description by default in the
+    /// UI) are untouched.
+    Text {
+        fields: Vec<TagField>,
+        greek_to_latin: bool,
+        remove_diacritics: bool,
+        normalize_unicode: bool,
+    },
 }
 
 /// Runs `tool` over the readable tracks at `scope` (every one for `None`).
@@ -74,7 +85,44 @@ pub fn run(session_id: &str, tool: TagTextTool, scope: Option<Vec<String>>) -> R
                 Ok(format_field(paths, before, field, &mask))
             })
         }
+        TagTextTool::Text {
+            fields,
+            greek_to_latin,
+            remove_diacritics,
+            normalize_unicode,
+        } => edit_scoped(session_id, scope, move |_, before, _| {
+            let clean = |value: &str| {
+                let mut text = value.to_string();
+                if greek_to_latin {
+                    text = crate::multi_rename::transliterate::greek_to_latin(&text);
+                }
+                if remove_diacritics {
+                    text = cmdr_tags::text::remove_diacritics(&text);
+                }
+                if normalize_unicode {
+                    text = text.nfc().collect();
+                }
+                text
+            };
+            Ok(map_values(before, &fields, clean))
+        }),
     }
+}
+
+/// `files` with `clean` applied to each value of `fields`.
+fn map_values(files: &[FileTags], fields: &[TagField], clean: impl Fn(&str) -> String) -> Vec<FileTags> {
+    files
+        .iter()
+        .map(|file| {
+            let mut out = file.clone();
+            for field in fields {
+                if let Some(values) = out.fields.get_mut(field) {
+                    *values = values.iter().map(|value| clean(value)).collect();
+                }
+            }
+            out
+        })
+        .collect()
 }
 
 /// `files` with the search run over each value of `fields`, dropping values that end up empty.

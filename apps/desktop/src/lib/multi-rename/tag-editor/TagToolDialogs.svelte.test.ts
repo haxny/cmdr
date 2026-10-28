@@ -9,7 +9,7 @@ import TagToolDialogs from './TagToolDialogs.svelte'
 import type { TagToolId } from './tag-tools'
 import { DIACRITICS_FIELDS } from './tag-tools'
 import { mountInto } from './tag-cell.test-helper'
-import { asTags, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
+import { SCOPE, asTags, boxNamed, buttonNamed, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
 
 vi.mock('#lib/app-status-store.js', () => ({
   TAG_NAME_PATTERNS_MAX: 10,
@@ -39,13 +39,14 @@ async function mountTool(
   const onClear = vi.fn()
   const onClose = vi.fn()
   const runScoped = fakeRunScoped()
+  const fake = fakeTags()
   const mounted = await mountInto(TagToolDialogs, {
     open,
     field: over.field ?? null,
     trackCount: over.trackCount ?? 3,
     selectedCount: over.selectedCount ?? 0,
     extras: over.extras ?? [],
-    state: asTags(fakeTags()),
+    state: asTags(fake),
     runScoped,
     scopeKey: 'k',
     onTool,
@@ -53,7 +54,7 @@ async function mountTool(
     onClose,
   })
   cleanup = mounted.cleanup
-  return { onTool, onClear, onClose, runScoped }
+  return { onTool, onClear, onClose, runScoped, fake }
 }
 
 function button(text: string): HTMLButtonElement | undefined {
@@ -85,7 +86,6 @@ describe('TagToolDialogs', () => {
   })
 
   it.each([
-    ['Remove diacritics', { kind: 'stripDiacritics', fields: [...DIACRITICS_FIELDS] }],
     ['Strip track prefix', { kind: 'stripTrackPrefix' }],
     ['Renumber', { kind: 'renumber', start: 1 }],
     ['Album artist = Artist', { kind: 'albumArtistFromArtist' }],
@@ -96,6 +96,61 @@ describe('TagToolDialogs', () => {
     await click(text)
     expect(onTool).toHaveBeenCalledWith(tool)
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('Clean up’s Text group defaults to Remove diacritics on all fields but Comment and Description, so one Run is the old button', async () => {
+    const { fake, onClose, onTool } = await mountTool('cleanUp')
+    expect(boxNamed(document.body, 'Remove diacritics').checked).toBe(true)
+    expect(boxNamed(document.body, 'Greek to Latin').checked).toBe(false)
+    expect(boxNamed(document.body, 'Normalize Unicode').checked).toBe(false)
+    await click('Run')
+    expect(fake.textTool).toHaveBeenCalledWith(
+      {
+        kind: 'text',
+        fields: [...DIACRITICS_FIELDS],
+        greekToLatin: false,
+        removeDiacritics: true,
+        normalizeUnicode: false,
+      },
+      SCOPE,
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onTool).not.toHaveBeenCalled()
+  })
+
+  it('Clean up’s Text group sends all three options in one run on the selected tracks', async () => {
+    const { fake } = await mountTool('cleanUp')
+    boxNamed(document.body, 'Greek to Latin').click()
+    boxNamed(document.body, 'Normalize Unicode').click()
+    await tick()
+    await click('Run')
+    expect(fake.textTool).toHaveBeenCalledWith(
+      {
+        kind: 'text',
+        fields: [...DIACRITICS_FIELDS],
+        greekToLatin: true,
+        removeDiacritics: true,
+        normalizeUnicode: true,
+      },
+      SCOPE,
+    )
+  })
+
+  it('Clean up’s Text group offers the field the dialog opened on beside All fields, and Run stays enabled', async () => {
+    const { fake } = await mountTool('cleanUp', { field: 'comment' })
+    const select = document.querySelector<HTMLElement>('[aria-label="Fields"]')
+    expect(select).not.toBeNull()
+    expect(document.body.textContent).toContain('All fields except Comment and Description')
+    expect(buttonNamed(document.body, 'Run').disabled).toBe(false)
+    expect(fake.textTool).not.toHaveBeenCalled()
+  })
+
+  it('Run is disabled with nothing ticked', async () => {
+    const { fake } = await mountTool('cleanUp')
+    boxNamed(document.body, 'Remove diacritics').click()
+    await tick()
+    expect(buttonNamed(document.body, 'Run').disabled).toBe(true)
+    expect(fake.textTool).not.toHaveBeenCalled()
   })
 
   it('renumber_hidden_for_single_file', async () => {

@@ -18771,6 +18771,13 @@ export type TagTextTool =
    *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
    */
   | { kind: 'format'; field: TagField; mask: string }
+  /**
+   *  Runs the ticked Multi-Rename text options over every value of each listed field, in
+   *  Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
+   *  results match file renames. Fields not listed (Comment and Description by default in the
+   *  UI) are untouched.
+   */
+  | { kind: 'text'; fields: TagField[]; greekToLatin: boolean; removeDiacritics: boolean; normalizeUnicode: boolean }
 
 // Every tool as one serializable value, so the app and the MCP server share one tool set.
 export type TagTool =

@@ -1511,13 +1511,21 @@
   "@multiRename.tags.tools.caseUpper": {
     "description": "Shown in the tag editor window: a letter-case choice. All letters upper case. The label shows its own effect."
   },
-  "multiRename.tags.tools.removeDiacritics": "Remove diacritics",
-  "@multiRename.tags.tools.removeDiacritics": {
-    "description": "Shown in the tag editor window: a clean-up tool button. Removes accents (á→a) from every tag field except Comment and Description."
+  "multiRename.tags.tools.text.group": "Text",
+  "@multiRename.tags.tools.text.group": {
+    "description": "Shown in the tag editor's Clean up dialog: the heading of the group that runs the Greek to Latin, Remove diacritics and Normalize Unicode options over tag values."
   },
-  "multiRename.tags.tools.removeDiacriticsTooltip": "Removes diacritics from every field except Comment and Description.",
-  "@multiRename.tags.tools.removeDiacriticsTooltip": {
-    "description": "Shown in the tag editor window: tooltip of the Remove diacritics tool."
+  "multiRename.tags.tools.text.fieldsLabel": "Fields",
+  "@multiRename.tags.tools.text.fieldsLabel": {
+    "description": "Shown in the tag editor's Clean up dialog: accessible label of the choice of which tag fields the text options change."
+  },
+  "multiRename.tags.tools.text.allFields": "All fields except Comment and Description",
+  "@multiRename.tags.tools.text.allFields": {
+    "description": "Shown in the tag editor's Clean up dialog: a choice of fields for the text options. Every tag field but Comment and Description, which keep their diacritics on purpose."
+  },
+  "multiRename.tags.tools.text.run": "Run",
+  "@multiRename.tags.tools.text.run": {
+    "description": "Shown in the tag editor's Clean up dialog: the button that runs the ticked text options (Greek to Latin, Remove diacritics, Normalize Unicode) on the chosen fields."
   },
   "multiRename.tags.tools.stripTrackPrefix": "Strip track prefix",
   "@multiRename.tags.tools.stripTrackPrefix": {

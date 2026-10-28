@@ -29,7 +29,9 @@
         caseTool,
         removeExtrasTool,
         showsRenumber,
+        textTool,
         type RunScoped,
+        type TextOptions,
         type TagToolId,
     } from './tag-tools'
 
@@ -93,6 +95,25 @@
     const fieldItems = $derived(TAG_FIELDS.map((value) => ({ value, label: tString(FIELD_LABELS[value]) })))
     const clearingName = $derived(tString(FIELD_LABELS[clearing]))
 
+    /** The Clean up dialog's Text group: Remove diacritics on all fields but Comment and Description is the default. */
+    const ALL_FIELDS = 'all'
+    let textOptions = $state<TextOptions>({ greekToLatin: false, removeDiacritics: true, normalizeUnicode: false })
+    let textChoice = $state(ALL_FIELDS)
+    const textFieldItems = $derived([
+        { value: ALL_FIELDS, label: tString('multiRename.tags.tools.text.allFields') },
+        ...(field === null ? [] : [{ value: field, label: tString(FIELD_LABELS[field]) }]),
+    ])
+    const textToRun = $derived(
+        textTool(textOptions, textChoice === ALL_FIELDS || field === null ? DIACRITICS_FIELDS : [field]),
+    )
+
+    async function runText(): Promise<void> {
+        const tool = textToRun
+        if (tool === null) return
+        await runScoped((scope) => tags.textTool(tool, scope))
+        onClose()
+    }
+
     function setChecked(key: string, on: boolean): void {
         checked = on ? [...checked, key] : checked.filter((k) => k !== key)
     }
@@ -131,18 +152,35 @@
             {:else if open === 'cleanUp'}
                 <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each button is a tool that runs and closes, a choice list like Case's, not the dialog's own actions (those are in the footer). -->
                 <div class="choices">
-                    <Button
-                        tooltipContent={{ text: tString('multiRename.tags.tools.removeDiacriticsTooltip') }}
-                        onclick={() => { run({ kind: 'stripDiacritics', fields: [...DIACRITICS_FIELDS] }) }}
-                    >
-                        {tString('multiRename.tags.tools.removeDiacritics')}
-                    </Button>
                     {#if showsRenumber(trackCount)}
                         <Button onclick={() => { run({ kind: 'renumber', start: 1 }) }}>{tString('multiRename.tags.tools.renumber')}</Button>
                     {/if}
                     {#each PLAIN as plain (plain.label)}
                         <Button onclick={() => { run(plain.tool) }}>{tString(plain.label)}</Button>
                     {/each}
+                </div>
+                <div class="text" role="group" aria-label={tString('multiRename.tags.tools.text.group')}>
+                    <h3>{tString('multiRename.tags.tools.text.group')}</h3>
+                    <Checkbox checked={textOptions.greekToLatin} onCheckedChange={(on: boolean) => { textOptions = { ...textOptions, greekToLatin: on } }}>
+                        {tString('multiRename.greekToLatin')}
+                    </Checkbox>
+                    <Checkbox checked={textOptions.removeDiacritics} onCheckedChange={(on: boolean) => { textOptions = { ...textOptions, removeDiacritics: on } }}>
+                        {tString('multiRename.removeDiacritics')}
+                    </Checkbox>
+                    <Checkbox checked={textOptions.normalizeUnicode} onCheckedChange={(on: boolean) => { textOptions = { ...textOptions, normalizeUnicode: on } }}>
+                        {tString('multiRename.normalizeUnicode')}
+                    </Checkbox>
+                    <div class="line">
+                        <Select
+                            items={textFieldItems}
+                            value={textChoice}
+                            ariaLabel={tString('multiRename.tags.tools.text.fieldsLabel')}
+                            onChange={(value: string) => { textChoice = value }}
+                        />
+                        <Button size="mini" variant="primary" disabled={textToRun === null} onclick={() => void runText()}>
+                            {tString('multiRename.tags.tools.text.run')}
+                        </Button>
+                    </div>
                 </div>
             {:else if open === 'extras'}
                 <ul aria-label={tString('multiRename.tags.tools.extrasLabel')}>
@@ -206,6 +244,19 @@
     .hint {
         margin: 0;
         color: var(--color-text-secondary);
+    }
+
+    .text {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        margin-top: var(--spacing-xs);
+    }
+
+    h3 {
+        margin: 0;
+        font-size: inherit;
+        font-weight: 600;
     }
 
     ul {
