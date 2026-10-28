@@ -157,8 +157,11 @@ like an image's. `MediaMarkdownView` asks `viewerRenderMarkdown(sessionId)` for 
 The placeholder is a `span[data-md-placeholder]` after the hidden `img`, naming it by its `alt`. Styles reach the
 injected HTML through `:global`, and the renderer's own classes (alerts, footnotes) are matched as `[class~='…']`, which
 keeps them out of `css-unused`'s sight (no markup carries them). The document scrolls natively in a focused container
-(arrows, Space, Page keys); it's `user-select: text`, and Edit > Copy / Select all act on the browser selection
-(`selectAll()` on the component). A link click never navigates the webview: § "Links and history".
+(arrows, Space, Page keys); the view focuses it itself after each render, quietly (`focusQuietly`: the `quiet-focus`
+class until blur, plus `focusVisible: false`), because WebKit matches `:focus-visible` on a programmatic focus that
+follows a key press and the `0` switch painted a window-sized ring (#761). Tab focus still shows the ring; it's
+`user-select: text`, and Edit > Copy / Select all act on the browser selection (`selectAll()` on the component). A link
+click never navigates the webview: § "Links and history".
 
 ### Links and history
 

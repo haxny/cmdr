@@ -46,6 +46,12 @@
     let remoteImagesLoaded = $state(false)
     let scrollRef: HTMLDivElement | undefined = $state()
     let articleRef: HTMLElement | undefined = $state()
+    /**
+     * True from the view focusing its own scroll container until that focus leaves. WebKit
+     * matches `:focus-visible` for a programmatic `focus()` that follows a key press (the `0`
+     * that switched here), which painted a window-sized ring (#761). Tab focus still rings.
+     */
+    let quietFocus = $state(false)
 
     function placeholderLabels(): PlaceholderLabels {
         return {
@@ -68,7 +74,7 @@
                 await tick()
                 if (articleRef) wireImages(articleRef, placeholderLabels())
                 land(landing)
-                scrollRef?.focus()
+                focusQuietly()
             })
             .catch((e: unknown) => {
                 if (id !== sessionId) return
@@ -98,6 +104,13 @@
         } else {
             scrollToElement(target?.elementId ?? null)
         }
+    }
+
+    /** Focuses the document for the scroll keys, without the keyboard-focus ring. */
+    function focusQuietly(): void {
+        if (!scrollRef) return
+        quietFocus = true
+        scrollRef.focus({ focusVisible: false })
     }
 
     /** A click on a link never navigates the webview: the page decides where it goes. */
@@ -146,7 +159,13 @@
             </div>
         {/if}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-        <div class="markdown-scroll" bind:this={scrollRef} tabindex="0" role="document" aria-label={fileName} onclick={handleClick}>
+        <div class="markdown-scroll" bind:this={scrollRef} tabindex="0"
+            role="document"
+            aria-label={fileName}
+            class:quiet-focus={quietFocus}
+            onblur={() => (quietFocus = false)}
+            onclick={handleClick}
+        >
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by the backend's ammonia allowlist (`markdown_render.rs`): no script, handler, form, frame, or style survives -->
             <article class="markdown-body" bind:this={articleRef}>{@html html}</article>
         </div>
@@ -205,7 +224,7 @@
         outline: none;
     }
 
-    .markdown-scroll:focus-visible {
+    .markdown-scroll:focus-visible:not(.quiet-focus) {
         outline: 2px solid var(--color-accent);
         outline-offset: -2px;
     }
