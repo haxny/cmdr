@@ -98,9 +98,12 @@ pub(super) fn cover_from_tiff(data: &[u8]) -> Result<Cover, TagEditorError> {
 static THUMBNAILS: LazyLock<Mutex<HashMap<String, Option<String>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// A small PNG `data:` URL of `cover` (longest side [`THUMBNAIL_SIDE`], aspect kept), cached by `key`; `None` when
-/// the cover doesn't decode. Decoding happens outside the cache's lock.
+/// the cover doesn't decode. The cache key is `key` and the byte length. Decoding happens outside
+/// the cache's lock.
 pub(super) fn thumbnail_of(cover: &Cover, key: &str) -> Option<String> {
-    if let Some(cached) = THUMBNAILS.lock_ignore_poison().get(key) {
+    // The byte length beside the hash, as the grouping uses it: a hash collision needs equal sizes too.
+    let key = format!("{key}:{}", cover.data.len());
+    if let Some(cached) = THUMBNAILS.lock_ignore_poison().get(&key) {
         return cached.clone();
     }
     let made = make_thumbnail(cover);
@@ -108,7 +111,7 @@ pub(super) fn thumbnail_of(cover: &Cover, key: &str) -> Option<String> {
     if cache.len() >= THUMBNAIL_CACHE_LIMIT {
         cache.clear();
     }
-    cache.insert(key.to_owned(), made.clone());
+    cache.insert(key, made.clone());
     made
 }
 

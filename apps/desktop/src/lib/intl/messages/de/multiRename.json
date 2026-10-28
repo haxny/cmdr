@@ -1204,9 +1204,17 @@
   "@multiRename.tags.cover.pasteNotAnImage": {
     "sourceHash": "291f4a5"
   },
-  "multiRename.tags.cover.timedOut": "Reading that picture took too long, so the cover is unchanged. Copy it to this Mac first, then drop it again.",
+  "multiRename.tags.cover.timedOut": "The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.",
   "@multiRename.tags.cover.timedOut": {
-    "sourceHash": "1cf00df"
+    "sourceHash": "ec1b3bb"
+  },
+  "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
+  "@multiRename.tags.cover.pasteTimedOut": {
+    "sourceHash": "9e24fa9"
+  },
+  "multiRename.tags.cover.noPreview": "No preview",
+  "@multiRename.tags.cover.noPreview": {
+    "sourceHash": "4b8bacd"
   },
   "multiRename.tags.cover.pasteButton": "Paste picture",
   "@multiRename.tags.cover.pasteButton": {

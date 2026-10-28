@@ -35,9 +35,10 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   anyway or Skip).
 - **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a tile with how
   many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new view; a new
-  view also clears the section's notice). Tiles show `getCoverThumbnail` (a small PNG the backend makes once per cover
-  key); a click opens the cover large in `CoverViewer` (a `ModalDialog` owned by `TagsTab`, so `hasDialog()` keeps the
-  window keys out), which fetches the full picture; "Use for all files" there is `useCoverForAll`.
+  view also clears the section's notice). Tiles show `getCoverThumbnail` (asked once more when none came, then "No
+  preview"; a small PNG the backend makes once per cover key); a click opens the cover large in `CoverViewer` (a
+  `ModalDialog` owned by `TagsTab`, so `hasDialog()` keeps the window keys out), which fetches the full picture; "Use
+  for all files" there is `useCoverForAll`.
 - **Paste**: ⌘V is the native Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box
   only when the page `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are
   listened to on the document and taken only while focus is in the section (which is focusable and takes focus on a
@@ -51,8 +52,8 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
 - **Drop**: Tauri's `dragDropEnabled` turns file drags into the webview's `onDragDropEvent` (never an HTML5 `drop`),
   hit-tested as Ask Cmdr does, against the section's rect cut to the Album scroller (`data-cover-clip`), so a drop on
   what shows where the section is scrolled out of view (the rows' strip, the status line, the bar) is never the cover's.
-  One path goes to `setCoverFromPath` (read under a deadline in the backend), two or more ask for one. While a dialog is
-  open the section takes no paste or drop.
+  One path goes to `setCoverFromPath` (the backend waits as long as the read moves, and gives up on a stalled drive),
+  two or more ask for one. While a dialog is open the section takes no paste or drop.
 - **Decision**: the section sits inside the Album list's scroll after the rows, so its tiles can grow without pushing or
   resizing the panes. Not yet checked in a built app: that ⌘V reaches a focused section; which image type a copied
   picture arrives as (Preview ⌘C, Safari Copy Image, Finder ⌘C on a .jpg, a real .tiff); and that drop positions match

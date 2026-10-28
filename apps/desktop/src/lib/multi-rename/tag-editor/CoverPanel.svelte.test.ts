@@ -97,6 +97,19 @@ describe('CoverPanel', () => {
     expect(loadThumbnail).not.toHaveBeenCalledWith('none')
   })
 
+  it('a tile whose picture didn’t come is asked once more, then says there is no preview', async () => {
+    const answers: Partial<Record<string, (string | null)[]>> = { k1: [null, URLS.k1], k2: [null, null] }
+    const { root, loadThumbnail } = await mountPanel({
+      loadThumbnail: vi.fn((key: string) => Promise.resolve(answers[key]?.shift() ?? null)),
+    })
+    await settle()
+    const shown = tiles(root)
+    expect(shown[0].querySelector('img')?.getAttribute('src')).toBe(URLS.k1)
+    expect(shown[1].querySelector('img')).toBeNull()
+    expect(shown[1].querySelector('.frame')?.textContent.trim()).toBe('No preview')
+    expect(loadThumbnail).toHaveBeenCalledTimes(4)
+  })
+
   it('names each cover for a screen reader', async () => {
     const { root } = await mountPanel()
     expect(tiles(root)[0].getAttribute('aria-label')).toBe(

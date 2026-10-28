@@ -9,12 +9,16 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use cmdr_fs::deadline::blocking_typed_result_with_timeout;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock};
+
+use cmdr_fs::deadline::{StallWatch, blocking_typed_result_until_stalled, blocking_typed_result_with_timeout};
 use cmdr_tags::Cover;
 use cmdr_tags::shared::CoverEdit;
 use serde::Serialize;
+use tokio::sync::Semaphore;
 
-use super::cover::thumbnail_url;
+use super::cover::{cover_from_bytes, thumbnail_url};
 use super::cover_image::thumbnail_of;
 use super::session::{Loaded, TagEdit, TagEditorError, edit, with_loaded};
 use super::view::{TagEditorView, common_cover, cover_key, pixel_size};
@@ -178,23 +182,105 @@ pub fn set_for_all(session_id: &str, cover: Cover) -> Result<TagEditorView, TagE
     )
 }
 
+/// How many dropped-file reads may run at once. A read given up on a dead mount stays parked on
+/// a blocking thread until the mount answers; past this many, a new drop is refused at once
+/// (`CoverTimedOut`) instead of parking another thread.
+pub const DROP_READS_AT_ONCE: usize = 2;
+/// The app's permits for dropped-file reads ([`DROP_READS_AT_ONCE`]); tests pass their own.
+pub static DROP_READS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(DROP_READS_AT_ONCE)));
+
+/// How far a dropped file's read got: bytes read, and whether it ended.
+#[derive(Default)]
+struct DropProgress {
+    bytes: AtomicU64,
+    done: AtomicBool,
+}
+
+/// Watches a dropped file's read by its bytes: idle is the time since the count last moved.
+struct ProgressWatch {
+    progress: Arc<DropProgress>,
+    seen: u64,
+    moved: tokio::time::Instant,
+}
+
+impl StallWatch<TagEditorError> for ProgressWatch {
+    fn idle_for(&self) -> Duration {
+        self.moved.elapsed()
+    }
+
+    fn on_poll(&mut self) {
+        let now = self.progress.bytes.load(Ordering::Relaxed);
+        if now != self.seen {
+            self.seen = now;
+            self.moved = tokio::time::Instant::now();
+        }
+    }
+
+    fn give_up(&mut self) -> Option<TagEditorError> {
+        // A read that ended a moment ago has its answer on the way: take it.
+        (!self.progress.done.load(Ordering::Acquire)).then_some(TagEditorError::CoverTimedOut)
+    }
+}
+
 /// Gives every readable file the picture file at `path` (a drop), in memory, read by `read`
-/// (`cover::read_dropped`) within `limit`. A drop can come from a network mount that hangs, so
-/// the read runs under the deadline and the edit is made only once it came back in time: past
-/// the deadline the answer is `CoverTimedOut`, and the read finishing later changes nothing.
+/// (`cover::read_dropped_counted`, which counts its bytes into the second argument). A drop can
+/// come from a NAS that is slow, or one that stopped answering: the read may take as long as it
+/// keeps moving, and is given up once its byte count stood still for `stall_limit`
+/// (`CoverTimedOut`). The edit is made only from the awaited answer, so a read given up on and
+/// finishing later changes nothing. Each read holds a permit of `reads` (the app's is
+/// [`DROP_READS`]) until it ends; with none free a drop is refused as stalled too (the reads
+/// before it are stuck), without reading.
 pub async fn set_from_path_within(
     session_id: String,
     path: PathBuf,
+    stall_limit: Duration,
+    reads: Arc<Semaphore>,
+    read: impl FnOnce(&Path, &AtomicU64) -> Result<Cover, TagEditorError> + Send + 'static,
+) -> Result<TagEditorView, TagEditorError> {
+    let permit = reads.try_acquire_owned().map_err(|_| TagEditorError::CoverTimedOut)?;
+    let progress = Arc::new(DropProgress::default());
+    let reading = Arc::clone(&progress);
+    let mut watch = ProgressWatch {
+        progress,
+        seen: 0,
+        moved: tokio::time::Instant::now(),
+    };
+    let cover = blocking_typed_result_until_stalled(
+        stall_limit,
+        &mut watch,
+        |_| TagEditorError::TaskFailed,
+        move || {
+            // Held until the read itself ends, given up on or not.
+            let _permit = permit;
+            let result = read(&path, &reading.bytes);
+            reading.done.store(true, Ordering::Release);
+            result
+        },
+    )
+    .await?;
+    edit_off_thread(session_id, cover).await
+}
+
+/// Gives every readable file a pasted picture, in memory. The bytes become a cover within
+/// `limit` (a TIFF is decoded and re-encoded, which grows with the picture); past it the answer is
+/// `PasteTimedOut`, and the conversion finishing later changes nothing: as for a drop, the edit
+/// is made only from the awaited answer.
+pub async fn set_from_bytes_within(
+    session_id: String,
+    data: Vec<u8>,
     limit: Duration,
-    read: impl FnOnce(&Path) -> Result<Cover, TagEditorError> + Send + 'static,
 ) -> Result<TagEditorView, TagEditorError> {
     let cover = blocking_typed_result_with_timeout(
         limit,
-        || TagEditorError::CoverTimedOut,
+        || TagEditorError::PasteTimedOut,
         |_| TagEditorError::TaskFailed,
-        move || read(&path),
+        move || cover_from_bytes(data),
     )
     .await?;
+    edit_off_thread(session_id, cover).await
+}
+
+async fn edit_off_thread(session_id: String, cover: Cover) -> Result<TagEditorView, TagEditorError> {
     tokio::task::spawn_blocking(move || set_for_all(&session_id, cover))
         .await
         .map_err(|_| TagEditorError::TaskFailed)?

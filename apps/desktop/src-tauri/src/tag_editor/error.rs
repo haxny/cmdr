@@ -33,9 +33,11 @@ pub enum TagEditorError {
     CoverNotAnImage,
     /// Pasted bytes aren't a JPEG, PNG, WebP, or TIFF image (a TIFF is converted). Nothing was changed.
     PastedNotAnImage,
-    /// Reading a dropped picture didn't finish in time (a slow or hung network mount). Nothing was changed, and
-    /// the read finishing later changes nothing either.
+    /// Reading a dropped picture stalled (its drive stopped answering), or earlier drops' reads are still stuck.
+    /// Nothing was changed, and the read finishing later changes nothing either.
     CoverTimedOut,
+    /// Converting a pasted picture took too long. Nothing was changed, then or later.
+    PasteTimedOut,
     /// A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
     CoverNotAFile,
     /// No readable file carries the cover the key names (any more). Nothing was changed.

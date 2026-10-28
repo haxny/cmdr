@@ -150,6 +150,8 @@
                 return 'multiRename.tags.cover.pasteNotAnImage'
             case 'coverTimedOut':
                 return 'multiRename.tags.cover.timedOut'
+            case 'pasteTimedOut':
+                return 'multiRename.tags.cover.pasteTimedOut'
             case 'coverNotAFile':
                 return 'multiRename.tags.cover.notAFile'
             case 'unknownCover':

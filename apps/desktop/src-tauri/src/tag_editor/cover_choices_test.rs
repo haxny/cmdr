@@ -1,6 +1,8 @@
 //! Every cover of the book: grouped by key with how many files carry it, "none" counted, one
 //! used for every file as an in-memory change (nothing written), and a new one set from bytes.
 
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use cmdr_tags::{ContentKind, Cover, FileTags, TagField, WriteOptions, write_tags};
 
 use super::cover_choices::{
@@ -155,49 +157,126 @@ fn a_new_cover_goes_to_every_file_in_memory_and_a_closed_session_is_typed() {
     close_rename(&id);
 }
 
-/// A dropped file read past its deadline (a hung network mount) refuses, and the read finishing later changes
-/// nothing: the edit is applied only when the read came back in time.
-#[tokio::test]
-async fn a_dropped_file_read_past_the_deadline_changes_nothing_ever() {
-    let (_dir, _listing, id) = album("tag-editor-cover-drop-late");
+/// A read off a slow NAS that keeps delivering bytes is never cut off, however long it takes in
+/// all: here 40 chunks at 60 ms apart, 2.4 s against a 1 s stall limit (the old fixed 2 s tier
+/// refused it).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_dropped_file_read_that_keeps_moving_is_taken_however_long() {
+    let (_dir, _listing, id) = album("tag-editor-cover-drop-slow");
     open(&id, false).expect("opens");
-    // The read is held until the deadline has passed, then let go: a hung mount that answers late.
+    let steady = |_: &std::path::Path, progress: &AtomicU64| {
+        for _ in 0..40 {
+            // allowed-test-sleep: the pace of a slow NAS is the subject; each chunk lands well inside the stall limit.
+            std::thread::sleep(std::time::Duration::from_millis(60));
+            progress.fetch_add(64 * 1024, Ordering::Relaxed);
+        }
+        Ok(png(6, 40))
+    };
+    let view = set_from_path_within(
+        id.clone(),
+        "/Volumes/nas/front.png".into(),
+        std::time::Duration::from_secs(1),
+        reads(),
+        steady,
+    )
+    .await
+    .expect("a moving read is taken");
+    assert!(matches!(view.cover, CoverSummary::Same { bytes: 40, .. }));
+    close(&id);
+    close_rename(&id);
+}
+
+/// A read whose bytes stopped coming (a hung mount) is refused once it stood still for the stall
+/// limit, and the read finishing later changes nothing: the edit is made only from the awaited
+/// answer, which already gave up.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stalled_dropped_file_read_changes_nothing_ever() {
+    let (_dir, _listing, id) = album("tag-editor-cover-drop-stalled");
+    open(&id, false).expect("opens");
     let (gate_send, gate) = std::sync::mpsc::channel::<()>();
     let (done_send, done) = std::sync::mpsc::channel();
-    let slow = move |_: &std::path::Path| {
+    let stalled = move |_: &std::path::Path, progress: &AtomicU64| {
+        progress.fetch_add(64 * 1024, Ordering::Relaxed);
         let _ = gate.recv();
         let _ = done_send.send(());
         Ok(png(5, 40))
     };
     let result = set_from_path_within(
         id.clone(),
-        "/Volumes/slow/front.png".into(),
-        std::time::Duration::from_millis(50),
-        slow,
+        "/Volumes/hung/front.png".into(),
+        std::time::Duration::from_millis(300),
+        reads(),
+        stalled,
     )
     .await;
     assert_eq!(result, Err(TagEditorError::CoverTimedOut));
     gate_send.send(()).expect("the read still waits");
     done.recv_timeout(std::time::Duration::from_secs(5))
         .expect("the late read ends");
-    // Its cover went to nobody: the edit is made only by the awaited answer, which already gave up.
     assert!(
         changes(&id, ContentKind::Audiobook).expect("changes").is_empty(),
         "the late read set no cover"
     );
-
-    let quick = |_: &std::path::Path| Ok(png(6, 40));
-    let view = set_from_path_within(
-        id.clone(),
-        "/pics/front.png".into(),
-        std::time::Duration::from_secs(5),
-        quick,
-    )
-    .await
-    .expect("sets");
-    assert!(matches!(view.cover, CoverSummary::Same { bytes: 40, .. }));
     close(&id);
     close_rename(&id);
+}
+
+/// Reads stuck on a dead mount stay parked on blocking threads; past two at once a new drop is
+/// refused at once (as stalled) instead of parking another, and doesn't read at all.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_third_drop_while_two_reads_are_stuck_is_refused_without_reading() {
+    let (_dir, _listing, id) = album("tag-editor-cover-drop-budget");
+    open(&id, false).expect("opens");
+    let pool = reads();
+    let (started_send, started) = std::sync::mpsc::channel::<()>();
+    let mut gates = Vec::new();
+    let mut stuck = Vec::new();
+    for _ in 0..2 {
+        let (gate_send, gate) = std::sync::mpsc::channel::<()>();
+        gates.push(gate_send);
+        let started_send = started_send.clone();
+        let reader = move |_: &std::path::Path, _: &AtomicU64| {
+            let _ = started_send.send(());
+            let _ = gate.recv();
+            Ok(png(7, 40))
+        };
+        stuck.push(tokio::spawn(set_from_path_within(
+            id.clone(),
+            "/Volumes/dead/a.png".into(),
+            std::time::Duration::from_secs(60),
+            pool.clone(),
+            reader,
+        )));
+    }
+    for _ in 0..2 {
+        started
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("each read starts");
+    }
+    let never =
+        |_: &std::path::Path, _: &AtomicU64| -> Result<Cover, TagEditorError> { panic!("a third read must not start") };
+    let third = set_from_path_within(
+        id.clone(),
+        "/Volumes/dead/b.png".into(),
+        std::time::Duration::from_secs(60),
+        pool,
+        never,
+    )
+    .await;
+    assert_eq!(third, Err(TagEditorError::CoverTimedOut));
+    for gate in gates {
+        gate.send(()).expect("the read waits");
+    }
+    for read in stuck {
+        assert!(read.await.expect("joins").is_ok());
+    }
+    close(&id);
+    close_rename(&id);
+}
+
+/// A fresh permit pool for one test, so tests side by side in one process don't share the app's.
+fn reads() -> std::sync::Arc<tokio::sync::Semaphore> {
+    std::sync::Arc::new(tokio::sync::Semaphore::new(super::cover_choices::DROP_READS_AT_ONCE))
 }
 
 fn real_png(width: u32, height: u32) -> Cover {

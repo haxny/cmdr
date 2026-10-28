@@ -1388,9 +1388,17 @@
   "@multiRename.tags.cover.pasteNotAnImage": {
     "description": "Shown in the tag editor window when what the user pasted on the cover section isn't a usable picture. Nothing is changed."
   },
-  "multiRename.tags.cover.timedOut": "Reading that picture took too long, so the cover is unchanged. Copy it to this Mac first, then drop it again.",
+  "multiRename.tags.cover.timedOut": "The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.",
   "@multiRename.tags.cover.timedOut": {
-    "description": "Shown in the tag editor window when a picture file dropped on the cover section, for example from a slow network drive, couldn't be read in time. Nothing is changed."
+    "description": "Shown in the tag editor window when the drive of a picture file dropped on the cover section (for example a network drive) stopped sending it. A slow drive is waited for; only one that stopped is given up on. Nothing is changed."
+  },
+  "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
+  "@multiRename.tags.cover.pasteTimedOut": {
+    "description": "Shown in the tag editor window when a pasted picture (a TIFF, which is converted first) took too long to convert. Nothing is changed."
+  },
+  "multiRename.tags.cover.noPreview": "No preview",
+  "@multiRename.tags.cover.noPreview": {
+    "description": "Shown in a cover tile of the tag editor window when the small picture of that cover couldn't be made. The cover itself is unaffected."
   },
   "multiRename.tags.cover.pasteButton": "Paste picture",
   "@multiRename.tags.cover.pasteButton": {

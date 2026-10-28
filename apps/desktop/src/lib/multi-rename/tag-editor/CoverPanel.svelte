@@ -92,10 +92,15 @@
         requested = Object.fromEntries(keys.filter((key) => key in requested).map((key) => [key, true as const]))
         for (const key of keys.filter((key) => !(key in requested))) {
             requested[key] = true
-            void loadThumbnail(key).then((url) => {
+            void fetchThumbnail(key).then((url) => {
                 if (key in requested) images = { ...images, [key]: url }
             })
         }
+    }
+
+    /** A tile's picture, asked again once when the first answer is none (a timeout under load); `null` after both. */
+    async function fetchThumbnail(key: string): Promise<string | null> {
+        return (await loadThumbnail(key)) ?? (await loadThumbnail(key))
     }
 
     /** A paste or drop's answer here: no picture, too large, several files. The next one clears it. */
@@ -278,8 +283,12 @@
                             })}
                             onclick={() => { view(choice) }}
                         >
-                            <span class="frame">
-                                {#if image}<img src={image} alt="" />{/if}
+                            <span class="frame" class:empty={image === null}>
+                                {#if image}
+                                    <img src={image} alt="" />
+                                {:else if image === null}
+                                    {tString('multiRename.tags.cover.noPreview')}
+                                {/if}
                             </span>
                             <span class="caption">{caption}</span>
                         </button>

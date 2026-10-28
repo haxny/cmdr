@@ -166,7 +166,11 @@ describe('TagsTab', () => {
     ],
     [
       { kind: 'coverTimedOut' },
-      'Reading that picture took too long, so the cover is unchanged. Copy it to this Mac first, then drop it again.',
+      'The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.',
+    ],
+    [
+      { kind: 'pasteTimedOut' },
+      'Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.',
     ],
     [{ kind: 'coverNotAFile' }, 'Only a picture file can become the cover, not a folder or a link.'],
     [{ kind: 'unknownCover' }, 'That cover isn’t in the files any more. Pick another one.'],

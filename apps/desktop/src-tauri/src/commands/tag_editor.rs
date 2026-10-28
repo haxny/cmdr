@@ -4,6 +4,7 @@
 use cmdr_tags::tools::TagTool;
 use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::multi_rename::error::MultiRenameError;
@@ -11,9 +12,10 @@ use crate::multi_rename::session::MultiRenameOpened;
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
-use crate::tag_editor::cover::{CoverCandidate, candidates_in, cover_from_bytes, read_cover, read_dropped};
+use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover, read_dropped_counted};
 use crate::tag_editor::cover_choices::{
-    CoverChoice, image_of, list as list_covers, set_for_all, set_from_path_within, thumbnail, use_for_all,
+    CoverChoice, DROP_READS, image_of, list as list_covers, set_for_all, set_from_bytes_within, set_from_path_within,
+    thumbnail, use_for_all,
 };
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
@@ -24,8 +26,12 @@ use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 use crate::tag_editor::window::TagsSessionInfo;
 
-/// How long a dropped picture's read may take: the read tier of `commands/CLAUDE.md` (2 s).
-const COVER_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+/// How long a dropped picture's read may stand still before it's given up: a whole-file read off a
+/// NAS has no honest ceiling, only a silence one (`SESSION_IO_TIMEOUT`'s scale), so it may take as
+/// long as its bytes keep coming.
+const COVER_READ_STALL_LIMIT: std::time::Duration = std::time::Duration::from_secs(10);
+/// How long converting a pasted picture (a TIFF decode and re-encode, CPU) may take.
+const PASTE_CONVERT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
 /// How long a thumbnail's decode and resize may take (CPU, growing with the picture).
 const THUMBNAIL_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
@@ -255,29 +261,34 @@ pub async fn use_cover_for_all(session_id: String, key: String) -> Result<TagEdi
     .await
 }
 
-/// Gives every file a pasted picture as its cover, in memory. The bytes must be a JPEG, PNG, or
-/// WebP image by their first bytes (`CoverNotAnImage`) of at most 10 MiB (`CoverTooLarge`).
+/// Gives every file a pasted picture as its cover, in memory. A JPEG, PNG, or WebP image by its
+/// first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted to PNG or JPEG
+/// within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else is `PastedNotAnImage`.
 #[tauri::command]
 #[specta::specta]
 pub async fn set_cover_from_bytes(session_id: String, data: Vec<u8>) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || {
-        let started = Instant::now();
-        let result = cover_from_bytes(data).and_then(|cover| set_for_all(&session_id, cover));
-        activity::edited("cover from paste", &result, started);
-        result
-    })
-    .await
+    let started = Instant::now();
+    let result = set_from_bytes_within(session_id, data, PASTE_CONVERT_TIMEOUT).await;
+    activity::edited("cover from paste", &result, started);
+    result
 }
 
 /// Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
 /// (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap. A drop
-/// can come from a network mount: the read gets the read tier's deadline (`COVER_READ_TIMEOUT`),
-/// past it the answer is `CoverTimedOut` and nothing changes, then or later.
+/// can come from a NAS: the read may take as long as its bytes keep coming, and is given up once
+/// they stood still for `COVER_READ_STALL_LIMIT` (`CoverTimedOut`); nothing changes then or later.
 #[tauri::command]
 #[specta::specta]
 pub async fn set_cover_from_path(session_id: String, path: String) -> Result<TagEditorView, TagEditorError> {
     let started = Instant::now();
-    let result = set_from_path_within(session_id, path.into(), COVER_READ_TIMEOUT, read_dropped).await;
+    let result = set_from_path_within(
+        session_id,
+        path.into(),
+        COVER_READ_STALL_LIMIT,
+        Arc::clone(&DROP_READS),
+        read_dropped_counted,
+    )
+    .await;
     activity::edited("cover from drop", &result, started);
     result
 }

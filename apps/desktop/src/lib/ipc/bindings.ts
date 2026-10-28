@@ -1688,16 +1688,17 @@ export const commands = {
   useCoverForAll: (sessionId: string, key: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('use_cover_for_all', { sessionId, key })),
   /**
-   *  Gives every file a pasted picture as its cover, in memory. The bytes must be a JPEG, PNG, or
-   *  WebP image by their first bytes (`CoverNotAnImage`) of at most 10 MiB (`CoverTooLarge`).
+   *  Gives every file a pasted picture as its cover, in memory. A JPEG, PNG, or WebP image by its
+   *  first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted to PNG or JPEG
+   *  within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else is `PastedNotAnImage`.
    */
   setCoverFromBytes: (sessionId: string, data: number[]) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
   /**
    *  Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
    *  (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap. A drop
-   *  can come from a network mount: the read gets the read tier's deadline (`COVER_READ_TIMEOUT`),
-   *  past it the answer is `CoverTimedOut` and nothing changes, then or later.
+   *  can come from a NAS: the read may take as long as its bytes keep coming, and is given up once
+   *  they stood still for `COVER_READ_STALL_LIMIT` (`CoverTimedOut`); nothing changes then or later.
    */
   setCoverFromPath: (sessionId: string, path: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_path', { sessionId, path })),
@@ -18498,10 +18499,12 @@ export type TagEditorError =
   // Pasted bytes aren't a JPEG, PNG, WebP, or TIFF image (a TIFF is converted). Nothing was changed.
   | { kind: 'pastedNotAnImage' }
   /**
-   *  Reading a dropped picture didn't finish in time (a slow or hung network mount). Nothing was changed, and
-   *  the read finishing later changes nothing either.
+   *  Reading a dropped picture stalled (its drive stopped answering), or earlier drops' reads are still stuck.
+   *  Nothing was changed, and the read finishing later changes nothing either.
    */
   | { kind: 'coverTimedOut' }
+  // Converting a pasted picture took too long. Nothing was changed, then or later.
+  | { kind: 'pasteTimedOut' }
   // A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
   | { kind: 'coverNotAFile' }
   // No readable file carries the cover the key names (any more). Nothing was changed.

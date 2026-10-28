@@ -46,16 +46,25 @@ file that something else renamed.
   the same cap and sniff. Each is an in-memory `CoverEdit::Set` / `Remove` through `edit`: listed by `changes`,
   written only by Write, undone like any write. A dropped path can be anywhere: the user dragged it; it only ever
   becomes an image by its bytes.
-- **A drop's read runs under the read tier's deadline** (2 s, `COVER_READ_TIMEOUT`, `cmdr_fs::deadline`), because a
-  dropped file can sit on a network mount whose syscalls block for minutes. `set_from_path_within` awaits the read and
-  only then edits: past the deadline it answers `CoverTimedOut`, and the read that finishes later returns its cover to
-  nobody, so no cover appears unbidden after the user moved on or wrote. Tested with an injected slow reader.
+- **A drop's read waits as long as it moves.** A dropped file can sit on a NAS: a 3–10 MiB cover over SMB may take
+  seconds, and a hung mount blocks for minutes. Decision: `set_from_path_within` reads through
+  `cmdr_fs::deadline::blocking_typed_result_until_stalled` with a `ProgressWatch` fed by `read_counted`'s byte count
+  (64 KiB chunks), and gives up only once the count stood still for `COVER_READ_STALL_LIMIT` (10 s,
+  `SESSION_IO_TIMEOUT`'s scale), as the viewer's pulling open does. Why: the fixed 2 s read tier refused a slow but
+  healthy share. The edit is made only from the awaited answer, so a read given up on (`CoverTimedOut`, worded as
+  "the drive stopped answering") and finishing later changes nothing. Each read holds a permit of `DROP_READS`
+  (two at once) until it ends, given up on or not; with none free a drop is refused the same way without reading, so
+  repeated drops onto a dead mount never stack blocking threads. Tested: a read moving for 2.4 s against a 1 s stall
+  limit is taken; a stalled one is refused and its late end changes nothing; a third drop with two stuck is refused
+  unread.
 - **A paste** has no file name, so its refusal is `PastedNotAnImage`, worded apart from a file's `CoverNotAnImage`.
   A TIFF (magic `II*\0` / `MM\0*`, at most 40 MiB: an uncompressed clipboard photo is big) is decoded
   (`cover_image.rs`, `contain_panics`, `image::Limits`: 20,000 px a side, 256 MiB) and re-encoded as PNG; when that PNG
-  is over 10 MiB, as JPEG at quality 90; still over is `CoverTooLarge`.
+  is over 10 MiB, as JPEG at quality 90; still over is `CoverTooLarge`. The conversion runs under a 15 s deadline
+  (`set_from_bytes_within`, `PasteTimedOut`), with the same read-then-edit split as a drop: the edit follows only an
+  in-time answer.
 - **Thumbnails** (`get_cover_thumbnail`): a tile shows a PNG of at most 176 px a side (twice the 88 px tile), made once
-  per cover key and cached process-wide (64 entries, then it starts over), under a 5 s deadline. Only the large view
+  per cover key and byte length and cached process-wide (64 entries, then it starts over), under a 5 s deadline. Only the large view
   (`get_cover_image`) ships the full picture, so per-chapter art never puts N full bitmaps in the section.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
