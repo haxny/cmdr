@@ -11,6 +11,7 @@ const ipc = vi.hoisted(() => ({
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   getCoverImage: vi.fn(),
+  listTagCovers: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   closeTagEditor: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', async (original) => ({ ...(await original<object>()), ...ipc }))
@@ -56,6 +57,7 @@ beforeEach(() => {
   setLastTagApply(null)
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
   ipc.getCoverImage.mockResolvedValue({ ok: true, value: null })
+  ipc.listTagCovers.mockResolvedValue({ ok: true, value: [] })
   ipc.closeTagEditor.mockResolvedValue(undefined)
   ipc.getTagChanges.mockResolvedValue({
     ok: true,

@@ -1,7 +1,6 @@
 //! IPC for the Tags tab of the Multi-Rename Tool. Thin: the work is `crate::tag_editor`.
 //! File work runs on the blocking pool, never on the IPC thread.
 
-use cmdr_tags::shared::CoverEdit;
 use cmdr_tags::tools::TagTool;
 use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
@@ -12,11 +11,12 @@ use crate::multi_rename::session::MultiRenameOpened;
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
-use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover, thumbnail_url};
+use crate::tag_editor::cover::{CoverCandidate, candidates_in, cover_from_bytes, read_cover, read_dropped};
+use crate::tag_editor::cover_choices::{CoverChoice, image_of, list as list_covers, set_for_all, use_for_all};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open,
-    preview_names, shared_cover, tool as run_tool,
+    preview_names, tool as run_tool,
 };
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
@@ -209,26 +209,71 @@ pub async fn list_cover_candidates(session_id: String) -> Result<Vec<CoverCandid
 pub async fn set_cover_from_file(session_id: String, file_name: String) -> Result<TagEditorView, TagEditorError> {
     blocking(move || {
         let started = Instant::now();
-        let result = read_cover(&local_folder(&session_id)?, &file_name).and_then(|cover| {
-            edit(
-                &session_id,
-                vec![TagEdit::Cover {
-                    edit: CoverEdit::Set(cover),
-                }],
-            )
-        });
+        let result =
+            read_cover(&local_folder(&session_id)?, &file_name).and_then(|cover| set_for_all(&session_id, cover));
         activity::edited("cover from file", &result, started);
         result
     })
     .await
 }
 
-/// The cover every file shares, as a `data:` URL for the thumbnail, or `None` when there is none,
-/// the files differ, or it isn't a JPEG, PNG, or WebP image.
+/// A cover of the files as a `data:` URL for a thumbnail or the large view: the one named by
+/// `key` (a `CoverChoice::key`; `"none"` has no image), or for `None` the cover every file
+/// shares. `None` comes back when there is none, the files differ, or it isn't a JPEG, PNG, or
+/// WebP image; a key no file carries any more is `UnknownCover`.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_cover_image(session_id: String) -> Result<Option<String>, TagEditorError> {
-    blocking(move || Ok(shared_cover(&session_id)?.and_then(|cover| thumbnail_url(&cover.data)))).await
+pub async fn get_cover_image(session_id: String, key: Option<String>) -> Result<Option<String>, TagEditorError> {
+    blocking(move || image_of(&session_id, key.as_deref())).await
+}
+
+/// Every distinct cover of the session's readable files with how many carry it, the most common
+/// first, and the files without one last (`key: "none"`).
+#[tauri::command]
+#[specta::specta]
+pub async fn list_tag_covers(session_id: String) -> Result<Vec<CoverChoice>, TagEditorError> {
+    blocking(move || list_covers(&session_id)).await
+}
+
+/// Gives every file the cover `key` names, in memory: a change listed for Write, nothing written.
+#[tauri::command]
+#[specta::specta]
+pub async fn use_cover_for_all(session_id: String, key: String) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = use_for_all(&session_id, &key);
+        activity::edited("cover for all", &result, started);
+        result
+    })
+    .await
+}
+
+/// Gives every file a pasted picture as its cover, in memory. The bytes must be a JPEG, PNG, or
+/// WebP image by their first bytes (`CoverNotAnImage`) of at most 10 MiB (`CoverTooLarge`).
+#[tauri::command]
+#[specta::specta]
+pub async fn set_cover_from_bytes(session_id: String, data: Vec<u8>) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = cover_from_bytes(data).and_then(|cover| set_for_all(&session_id, cover));
+        activity::edited("cover from paste", &result, started);
+        result
+    })
+    .await
+}
+
+/// Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
+/// (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_cover_from_path(session_id: String, path: String) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = read_dropped(std::path::Path::new(&path)).and_then(|cover| set_for_all(&session_id, cover));
+        activity::edited("cover from drop", &result, started);
+        result
+    })
+    .await
 }
 
 /// Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how

@@ -115,6 +115,8 @@ fn error_kind(error: &TagEditorError) -> &'static str {
         TagEditorError::CoverTooLarge => "coverTooLarge",
         TagEditorError::CoverUnreadable => "coverUnreadable",
         TagEditorError::CoverNotAnImage => "coverNotAnImage",
+        TagEditorError::CoverNotAFile => "coverNotAFile",
+        TagEditorError::UnknownCover => "unknownCover",
         TagEditorError::TaskFailed => "taskFailed",
         TagEditorError::BadPattern { .. } => "badPattern",
         TagEditorError::BadRegex => "badRegex",

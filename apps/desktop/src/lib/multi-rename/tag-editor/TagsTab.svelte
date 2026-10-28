@@ -16,6 +16,8 @@
     import Button from '#lib/ui/Button.svelte'
     import AlbumPane from './AlbumPane.svelte'
     import CoverPanel from './CoverPanel.svelte'
+    import CoverViewer from './CoverViewer.svelte'
+    import type { CoverShown } from './cover-choices'
     import TagsFunctionKeyBar from './TagsFunctionKeyBar.svelte'
     import TagToolDialogs from './TagToolDialogs.svelte'
     import TracksPane from './TracksPane.svelte'
@@ -144,6 +146,10 @@
                 return 'multiRename.tags.cover.unreadable'
             case 'coverNotAnImage':
                 return 'multiRename.tags.cover.notAnImage'
+            case 'coverNotAFile':
+                return 'multiRename.tags.cover.notAFile'
+            case 'unknownCover':
+                return 'multiRename.tags.cover.gone'
             case 'undo':
             case 'noAppDataDir':
                 return 'multiRename.tags.undoStoreUnavailable'
@@ -208,6 +214,10 @@
     let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
     /** The Write dialog showing: listing and writing (⌘S), or undoing the last write (⌘Z). */
     let writeMode = $state<'write' | 'undo' | null>(null)
+    /** The cover opened large (`CoverViewer`), from a click on its thumbnail. */
+    let viewing = $state<CoverShown | null>(null)
+    /** A dialog is over the panes: the cover section takes no paste or drop meanwhile. */
+    const dialogOpen = $derived(tool !== null || writeMode !== null || viewing !== null)
     /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
     let notice = $state<MessageKey | null>(null)
 
@@ -269,7 +279,7 @@
 
     /** A tool or the Write dialog is open: it owns the keys, and Escape closes it, never the window. */
     export function hasDialog(): boolean {
-        return tool !== null || writeMode !== null
+        return dialogOpen
     }
 
     /**
@@ -384,6 +394,19 @@
         onClose={() => { tool = null }}
     />
 {/if}
+{#if viewing !== null && tags.view !== null}
+    <CoverViewer
+        choice={viewing.choice}
+        total={viewing.total}
+        image={viewing.image}
+        editable={tags.view.editable}
+        onUseForAll={(key: string) => {
+            viewing = null
+            void tags.useCoverForAll(key)
+        }}
+        onClose={() => { viewing = null }}
+    />
+{/if}
 {#if writeMode !== null}
     <WriteDialog {tags} mode={writeMode} onWriting={() => { player.stop() }} onClose={closeWrite} />
 {/if}
@@ -396,11 +419,16 @@
     {#if tags.view !== null}
         <CoverPanel
             cover={tags.view.cover}
-            editable={tags.view.editable}
+            editable={tags.view.editable && !dialogOpen}
+            revision={tags.view}
+            listChoices={() => tags.coverChoices()}
+            loadImage={(key: string) => tags.coverImage(key)}
             {listCandidates}
-            loadImage={() => tags.coverImage()}
+            onView={(shown: CoverShown) => { viewing = shown }}
             onPick={(fileName: string) => void tags.coverFromFile(fileName)}
             onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+            onPaste={(data: Uint8Array) => void tags.coverFromBytes(data)}
+            onDrop={(path: string) => void tags.coverFromPath(path)}
         />
     {/if}
 {/snippet}

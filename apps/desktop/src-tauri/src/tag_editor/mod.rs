@@ -4,6 +4,7 @@
 pub(crate) mod activity;
 pub(crate) mod apply;
 pub(crate) mod cover;
+pub(crate) mod cover_choices;
 pub(crate) mod playback;
 pub(crate) mod session;
 pub(crate) mod text_tools;
@@ -15,6 +16,8 @@ pub(crate) mod window;
 mod apply_test;
 #[cfg(test)]
 mod big_book_test;
+#[cfg(test)]
+mod cover_choices_test;
 #[cfg(test)]
 mod cover_test;
 #[cfg(test)]

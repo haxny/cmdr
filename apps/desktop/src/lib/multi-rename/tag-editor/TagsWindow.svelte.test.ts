@@ -28,6 +28,7 @@ const ipc = vi.hoisted(() => ({
   }),
   tagTrackAudioUrl: vi.fn(() => Promise.resolve({ ok: false, error: { kind: 'unknownTrack' } })),
   releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
+  listTagCovers: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
   onTagsSelectAll: vi.fn((callback: () => void) => {
     menuSelectAll.callback = callback

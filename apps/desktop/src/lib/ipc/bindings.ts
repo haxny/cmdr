@@ -1671,11 +1671,34 @@ export const commands = {
   setCoverFromFile: (sessionId: string, fileName: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_file', { sessionId, fileName })),
   /**
-   *  The cover every file shares, as a `data:` URL for the thumbnail, or `None` when there is none,
-   *  the files differ, or it isn't a JPEG, PNG, or WebP image.
+   *  A cover of the files as a `data:` URL for a thumbnail or the large view: the one named by
+   *  `key` (a `CoverChoice::key`; `"none"` has no image), or for `None` the cover every file
+   *  shares. `None` comes back when there is none, the files differ, or it isn't a JPEG, PNG, or
+   *  WebP image; a key no file carries any more is `UnknownCover`.
    */
-  getCoverImage: (sessionId: string) =>
-    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId })),
+  getCoverImage: (sessionId: string, key: string | null) =>
+    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId, key })),
+  /**
+   *  Every distinct cover of the session's readable files with how many carry it, the most common
+   *  first, and the files without one last (`key: "none"`).
+   */
+  listTagCovers: (sessionId: string) =>
+    typedError<CoverChoice[], TagEditorError>(__TAURI_INVOKE('list_tag_covers', { sessionId })),
+  // Gives every file the cover `key` names, in memory: a change listed for Write, nothing written.
+  useCoverForAll: (sessionId: string, key: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('use_cover_for_all', { sessionId, key })),
+  /**
+   *  Gives every file a pasted picture as its cover, in memory. The bytes must be a JPEG, PNG, or
+   *  WebP image by their first bytes (`CoverNotAnImage`) of at most 10 MiB (`CoverTooLarge`).
+   */
+  setCoverFromBytes: (sessionId: string, data: number[]) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
+  /**
+   *  Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
+   *  (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap.
+   */
+  setCoverFromPath: (sessionId: string, path: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_path', { sessionId, path })),
   /**
    *  A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
    *  Only a readable track of the session gets one (`UnknownTrack` otherwise).
@@ -7609,6 +7632,22 @@ export type Cover = Cover_Serialize | Cover_Deserialize
 export type CoverCandidate = {
   fileName: string
   size: number
+}
+
+/**
+ *  One distinct cover across the readable files, or (`key: "none"`, empty `mime`, 0 bytes) the
+ *  files that have none.
+ */
+export type CoverChoice = {
+  // Names the cover in `get_cover_image` and `use_cover_for_all`: a hash of its bytes.
+  key: string
+  mime: string
+  bytes: number
+  // Pixel size, when the image header could be read.
+  width: number | null
+  height: number | null
+  // How many readable files carry it.
+  files: number
 }
 
 // What to do with the front cover of every file.
@@ -18447,6 +18486,10 @@ export type TagEditorError =
   | { kind: 'coverUnreadable' }
   // The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
   | { kind: 'coverNotAnImage' }
+  // A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
+  | { kind: 'coverNotAFile' }
+  // No readable file carries the cover the key names (any more). Nothing was changed.
+  | { kind: 'unknownCover' }
   // The background task running the call failed.
   | { kind: 'taskFailed' }
   // A file-name pattern that can't be used. Nothing was changed.

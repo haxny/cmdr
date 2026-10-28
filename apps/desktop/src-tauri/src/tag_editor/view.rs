@@ -324,7 +324,7 @@ pub(super) fn cover_hashes() -> usize {
 
 /// The image's size from its header. A decoder that panics on a hostile image costs the
 /// size, not the app.
-fn pixel_size(cover: &Cover) -> Option<(u32, u32)> {
+pub(super) fn pixel_size(cover: &Cover) -> Option<(u32, u32)> {
     crate::crash_reporter::contain_panics(|| {
         image::ImageReader::new(std::io::Cursor::new(&cover.data[..]))
             .with_guessed_format()

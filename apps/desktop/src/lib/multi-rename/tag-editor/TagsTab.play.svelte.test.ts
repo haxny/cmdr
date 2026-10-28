@@ -95,6 +95,7 @@ async function mountTab() {
     edit: vi.fn(() => Promise.resolve()),
     coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
     coverImage: vi.fn(() => Promise.resolve(null)),
+    coverChoices: vi.fn(() => Promise.resolve([])),
     undoable: null,
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),

@@ -1088,10 +1088,6 @@
   "@multiRename.tags.cover.none": {
     "sourceHash": "b2ec318"
   },
-  "multiRename.tags.cover.multiple": "Multiple covers",
-  "@multiRename.tags.cover.multiple": {
-    "sourceHash": "ea5c728"
-  },
   "multiRename.tags.cover.details": "{mime}, {sizeText}",
   "@multiRename.tags.cover.details": {
     "sourceHash": "1d0fb10"
@@ -1135,6 +1131,70 @@
   "multiRename.tags.cover.notAnImage": "That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.",
   "@multiRename.tags.cover.notAnImage": {
     "sourceHash": "bef4ab5"
+  },
+  "multiRename.tags.cover.choicesLabel": "Covers in the files",
+  "@multiRename.tags.cover.choicesLabel": {
+    "sourceHash": "4efc84c"
+  },
+  "multiRename.tags.cover.files": "{count, plural, one {{countText} file} many {{countText} files} other {{countText} files}}",
+  "@multiRename.tags.cover.files": {
+    "sourceHash": "3c08428"
+  },
+  "multiRename.tags.cover.caption": "{filesText} · {sizeText}",
+  "@multiRename.tags.cover.caption": {
+    "sourceHash": "fdfd95d"
+  },
+  "multiRename.tags.cover.openLabel": "{caption}: open the cover ({details})",
+  "@multiRename.tags.cover.openLabel": {
+    "sourceHash": "196a95b"
+  },
+  "multiRename.tags.cover.choicesFailed": "Couldn’t read the covers of these files.",
+  "@multiRename.tags.cover.choicesFailed": {
+    "sourceHash": "298b99c"
+  },
+  "multiRename.tags.cover.pasteHint": "Paste a picture (⌘V) or drop one here to make it the cover of every file.",
+  "@multiRename.tags.cover.pasteHint": {
+    "sourceHash": "62469e3"
+  },
+  "multiRename.tags.cover.pasteNoImage": "There’s no picture on the clipboard. Copy a JPEG, PNG, or WebP picture, then paste again.",
+  "@multiRename.tags.cover.pasteNoImage": {
+    "sourceHash": "9cabc76"
+  },
+  "multiRename.tags.cover.dropOne": "Drop one picture at a time.",
+  "@multiRename.tags.cover.dropOne": {
+    "sourceHash": "c4173a9"
+  },
+  "multiRename.tags.cover.dropHere": "Drop to make this picture the cover of every file",
+  "@multiRename.tags.cover.dropHere": {
+    "sourceHash": "0e7e2ce"
+  },
+  "multiRename.tags.cover.notAFile": "Only a picture file can become the cover, not a folder or a link.",
+  "@multiRename.tags.cover.notAFile": {
+    "sourceHash": "5c848ab"
+  },
+  "multiRename.tags.cover.gone": "That cover isn’t in the files any more. Pick another one.",
+  "@multiRename.tags.cover.gone": {
+    "sourceHash": "074721e"
+  },
+  "multiRename.tags.cover.viewerTitle": "Cover",
+  "@multiRename.tags.cover.viewerTitle": {
+    "sourceHash": "fa8d845"
+  },
+  "multiRename.tags.cover.viewerAlt": "Cover picture: {details}",
+  "@multiRename.tags.cover.viewerAlt": {
+    "sourceHash": "80794e7"
+  },
+  "multiRename.tags.cover.onFiles": "On {countText} of {totalText} files",
+  "@multiRename.tags.cover.onFiles": {
+    "sourceHash": "aa5c3a4"
+  },
+  "multiRename.tags.cover.cantShow": "Can’t show this picture.",
+  "@multiRename.tags.cover.cantShow": {
+    "sourceHash": "ee506dd"
+  },
+  "multiRename.tags.cover.useForAll": "Use for all files",
+  "@multiRename.tags.cover.useForAll": {
+    "sourceHash": "723f22c"
   },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {

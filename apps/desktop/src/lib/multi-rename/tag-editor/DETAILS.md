@@ -28,10 +28,25 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   `settled()` so a cell that just lost focus is in before a close/apply, Undo); `last-tag-apply.svelte.ts` (the last
   write's applies, which "Undo tag changes" reverses; lives as long as its window, not persisted); `discard-guard.ts`.
 - **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
-  the cursor row's Values… and Clear under the list; `CoverPanel` as the last group), `TracksPane` (☐ ▶ # Title Length
-  File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays over a row), `TagsFunctionKeyBar`
-  (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` + `ApplyOutcome`: what will change, the
-  per-file result, Undo; `WouldDropDialog`: items a format would lose, Write anyway or Skip).
+  the cursor row's Values… and Clear under the list; `CoverPanel` as the last group, inside the list's scroll),
+  `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays
+  over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` +
+  `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a format would lose, Write
+  anyway or Skip).
+- **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a thumbnail
+  with how many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new
+  view; each image fetched once per key). A click opens it large in `CoverViewer` (a `ModalDialog` owned by `TagsTab`,
+  so `hasDialog()` keeps the window keys out); "Use for all files" there is `useCoverForAll`. Paste: ⌘V is the native
+  Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box only when the page
+  `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are listened to on the
+  document and taken only while focus is in the section (which is focusable and takes focus on a click). No registry key
+  is added, and ⌘V in a text box stays its own. The picture's bytes go as a number array (capped at 10 MiB here first).
+  Drop: Tauri's `dragDropEnabled` turns file drags into the webview's `onDragDropEvent` (never an HTML5 `drop`),
+  hit-tested against the section's rect as Ask Cmdr does; one path goes to `setCoverFromPath`, two or more ask for one.
+  While a dialog is open the section takes no paste or drop. Decision: the section sits inside the Album list's scroll
+  after the rows, so its thumbnails can grow without pushing or resizing the panes. Not yet checked in a built app: that
+  ⌘V reaches a focused section, and which image type a copied picture arrives as (TIFF would be refused as not a JPEG,
+  PNG, or WebP).
 - **Layout and keys**: panes | a one-line status | the function-key bar, top to bottom; only the panes flex. The status
   line is always there (empty or not) and its notices cut with a tooltip, so a notice never moves the panes; every tool
   and the write open in a `ModalDialog` rendered beside the content, never in its flow. Decision/Why: the tools bar

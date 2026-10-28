@@ -23,11 +23,11 @@ pub(super) use cmdr_tags::Fingerprint;
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
-    ContentKind, Cover, FileTags, KindRemoval, NamePattern, PatternError, TagError, TagField, compile_pattern,
-    format_of, normalize_for, read_duration, read_tags, removed_by_kind,
+    ContentKind, FileTags, KindRemoval, NamePattern, PatternError, TagError, TagField, compile_pattern, format_of,
+    normalize_for, read_duration, read_tags, removed_by_kind,
 };
 
-use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, common_cover, cover_key};
+use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::mask::MaskError;
@@ -62,6 +62,10 @@ pub enum TagEditorError {
     CoverUnreadable,
     /// The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
     CoverNotAnImage,
+    /// A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
+    CoverNotAFile,
+    /// No readable file carries the cover the key names (any more). Nothing was changed.
+    UnknownCover,
     /// The background task running the call failed.
     TaskFailed,
     /// A file-name pattern that can't be used. Nothing was changed.
@@ -282,16 +286,15 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
     Ok(view)
 }
 
-/// The cover every readable file shares (its edited tags), or `None` when no file has one,
-/// there are no readable files, or the files' covers differ. Needs an open session.
-pub fn shared_cover(session_id: &str) -> Result<Option<Cover>, TagEditorError> {
+/// Runs `f` on the open session's readable files in current order (their edited tags and cover keys).
+pub(super) fn with_loaded<R>(session_id: &str, f: impl FnOnce(&[&Loaded]) -> R) -> Result<R, TagEditorError> {
     with_session(session_id, |layout, session| {
         let loaded: Vec<&Loaded> = layout
             .tracks
             .iter()
             .filter_map(|path| session.by_path.get(path)?.loaded())
             .collect();
-        Ok(common_cover(&loaded).cloned())
+        Ok(f(&loaded))
     })
 }
 

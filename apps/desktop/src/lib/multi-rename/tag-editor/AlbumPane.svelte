@@ -6,7 +6,7 @@
      * in place (`TagValueEditor`), and Tab (`tags.switchPane`) goes to the Tracks pane. A row whose files differ
      * holds «multiple values» followed by every value; it sends nothing while the marker (or the «…and N more» tail)
      * is in the text, and once they are deleted the text left is set on every file (`parseSharedEdit`). The cursor
-     * row's Clear and Values… sit under the list; the cover is the last group.
+     * row's Clear and Values… sit under the list; the cover is the last group, inside the list's scroll after the rows.
      */
     import type { Snippet } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -38,7 +38,7 @@
         onSwitchPane: () => void
         /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
         isEcho?: (id: TagsCommandId) => boolean
-        /** The cover group, last in the pane. */
+        /** The cover group, last in the pane's scroll. */
         cover?: Snippet
     }
 
@@ -213,6 +213,11 @@
                 onClose={closeEditor}
             />
         {/if}
+        {#if cover}
+            <!-- The cover is the pane's last group, in its scroll after the rows, so it never pushes or resizes the
+                 list; `CoverPanel` carries its own heading. -->
+            <div class="cover-group">{@render cover()}</div>
+        {/if}
     </div>
     {#if shown.some((row) => row.invalid)}
         <p class="hint" id={DATE_HINT_ID}>{tString('multiRename.tags.date.invalid')}</p>
@@ -237,10 +242,6 @@
                 {tString('multiRename.tags.clearRow')}
             </Button>
         </div>
-    {/if}
-    {#if cover}
-        <!-- The cover is the pane's last group; `CoverPanel` carries its own heading. -->
-        <div class="cover-group">{@render cover()}</div>
     {/if}
 </div>
 

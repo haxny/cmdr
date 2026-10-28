@@ -4,7 +4,9 @@
 use std::sync::mpsc;
 use std::time::Duration;
 
-use super::cover::{MAX_COVER_BYTES, candidates_in, read_capped, read_cover, thumbnail_url};
+use super::cover::{
+    MAX_COVER_BYTES, candidates_in, cover_from_bytes, read_capped, read_cover, read_dropped, thumbnail_url,
+};
 use super::session::TagEditorError;
 use crate::test_support::TestDir;
 
@@ -148,4 +150,82 @@ fn the_thumbnail_is_a_data_url_typed_by_the_bytes() {
     );
     assert!(thumbnail_url(WEBP).is_some_and(|url| url.starts_with("data:image/webp;base64,")));
     assert_eq!(thumbnail_url(b"<html>"), None);
+}
+
+/// A paste: the bytes are a picture by their first bytes, at most 10 MiB, or refused by kind.
+#[test]
+fn pasted_bytes_are_sniffed_and_capped() {
+    let cover = cover_from_bytes(PNG.to_vec()).expect("a PNG");
+    assert_eq!((cover.mime.as_str(), &*cover.data), ("image/png", PNG));
+    assert_eq!(cover_from_bytes(WEBP.to_vec()).expect("a WebP").mime, "image/webp");
+    for refused in [
+        Vec::new(),
+        b"<html>".to_vec(),
+        b"GIF89a".to_vec(),
+        b"RIFF\0\0\0\0WAVE".to_vec(),
+    ] {
+        assert_eq!(cover_from_bytes(refused), Err(TagEditorError::CoverNotAnImage));
+    }
+    let limit = usize::try_from(MAX_COVER_BYTES).expect("fits");
+    let mut at_limit = JPEG.to_vec();
+    at_limit.resize(limit, 0);
+    assert!(cover_from_bytes(at_limit.clone()).is_ok(), "exactly 10 MiB is taken");
+    at_limit.push(0);
+    assert_eq!(cover_from_bytes(at_limit), Err(TagEditorError::CoverTooLarge));
+}
+
+/// A drop: a regular picture file anywhere reads; its size cap and type sniff are the same.
+#[test]
+fn a_dropped_picture_file_reads_by_its_bytes() {
+    let dir = TestDir::new("cover-drop");
+    std::fs::write(dir.join("front.jpg"), PNG).expect("writes");
+    let cover = read_dropped(&dir.join("front.jpg")).expect("reads");
+    assert_eq!((cover.mime.as_str(), &*cover.data), ("image/png", PNG));
+    std::fs::write(dir.join("page.jpg"), b"<html>").expect("writes");
+    assert_eq!(
+        read_dropped(&dir.join("page.jpg")),
+        Err(TagEditorError::CoverNotAnImage)
+    );
+    let big = vec![0xFFu8; usize::try_from(MAX_COVER_BYTES).expect("fits") + 1];
+    std::fs::write(dir.join("big.jpg"), big).expect("writes");
+    assert_eq!(read_dropped(&dir.join("big.jpg")), Err(TagEditorError::CoverTooLarge));
+    assert_eq!(
+        read_dropped(&dir.join("missing.jpg")),
+        Err(TagEditorError::CoverUnreadable)
+    );
+    assert_eq!(
+        read_dropped(std::path::Path::new("front.jpg")),
+        Err(TagEditorError::CoverUnreadable),
+        "a relative path"
+    );
+}
+
+/// A dropped folder, FIFO or symlink is refused as not a picture file, and the FIFO without blocking.
+#[test]
+fn a_dropped_folder_fifo_or_symlink_is_refused() {
+    let dir = TestDir::new("cover-drop-refused");
+    std::fs::create_dir(dir.join("folder.jpg")).expect("creates");
+    assert_eq!(
+        read_dropped(&dir.join("folder.jpg")),
+        Err(TagEditorError::CoverNotAFile)
+    );
+
+    std::fs::write(dir.join("real.png"), PNG).expect("writes");
+    std::os::unix::fs::symlink(dir.join("real.png"), dir.join("link.png")).expect("links");
+    assert_eq!(read_dropped(&dir.join("link.png")), Err(TagEditorError::CoverNotAFile));
+
+    let fifo = dir.join("pipe.jpg");
+    let status = std::process::Command::new("mkfifo")
+        .arg(&fifo)
+        .status()
+        .expect("mkfifo runs");
+    assert!(status.success());
+    let (send, answer) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = send.send(read_dropped(&fifo));
+    });
+    let result = answer
+        .recv_timeout(Duration::from_secs(5))
+        .expect("read_dropped answers instead of blocking on the FIFO");
+    assert_eq!(result, Err(TagEditorError::CoverNotAFile));
 }

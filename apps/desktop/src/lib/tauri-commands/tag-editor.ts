@@ -8,6 +8,7 @@ import {
   type ApplyRequest,
   type ContentKind,
   type CoverCandidate,
+  type CoverChoice,
   type FileChangeView,
   type NamePattern,
   type NamePreviewRow,
@@ -27,6 +28,7 @@ import {
 export type {
   ApplyRequest,
   CoverCandidate,
+  CoverChoice,
   FileChangeView,
   NamePattern,
   NamePreviewRow,
@@ -134,10 +136,39 @@ export async function setCoverFromFile(sessionId: string, fileName: string): Pro
   return result(await commands.setCoverFromFile(sessionId, fileName))
 }
 
-/** The cover every file shares, with its bytes (for a thumbnail), or `null` when there is none or the files differ. */
-/** The shared cover as a `data:` URL for the thumbnail, or `null` when there is none or it isn't a known image. */
-export async function getCoverImage(sessionId: string): Promise<TagEditorResult<string | null>> {
-  return result(await commands.getCoverImage(sessionId))
+/**
+ * A cover as a `data:` URL: the one `key` names (a `CoverChoice.key`; `'none'` has no image), or for `null` the cover
+ * every file shares. `null` comes back when there is none, the files differ, or it isn't a known image; a key no file
+ * carries any more is `unknownCover`.
+ */
+export async function getCoverImage(
+  sessionId: string,
+  key: string | null = null,
+): Promise<TagEditorResult<string | null>> {
+  return result(await commands.getCoverImage(sessionId, key))
+}
+
+/** Every distinct cover of the readable files with how many carry it, most common first, the files without one last. */
+export async function listTagCovers(sessionId: string): Promise<TagEditorResult<CoverChoice[]>> {
+  return result(await commands.listTagCovers(sessionId))
+}
+
+/** Gives every file the cover `key` names, in memory (listed for Write, nothing written). */
+export async function useCoverForAll(sessionId: string, key: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.useCoverForAll(sessionId, key))
+}
+
+/**
+ * Gives every file a pasted picture as its cover, in memory. The backend sniffs the bytes (`coverNotAnImage`) and caps
+ * them at 10 MiB (`coverTooLarge`). The IPC carries them as a plain number array.
+ */
+export async function setCoverFromBytes(sessionId: string, data: Uint8Array): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.setCoverFromBytes(sessionId, Array.from(data)))
+}
+
+/** Gives every file a dropped picture file as its cover, in memory; a folder, FIFO, or symlink is `coverNotAFile`. */
+export async function setCoverFromPath(sessionId: string, path: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.setCoverFromPath(sessionId, path))
 }
 
 /**

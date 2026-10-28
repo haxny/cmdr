@@ -4,6 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tick } from 'svelte'
+import type { CoverChoice } from '#lib/ipc/bindings.js'
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
 import TagsTab from './TagsTab.svelte'
 import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
@@ -67,7 +68,7 @@ function asTagState(mock: object): TagEditorState {
   return mock as TagEditorState
 }
 
-async function mountTab(over: { view?: TagEditorView; error?: TagStateError | null } = {}) {
+async function mountTab(over: { view?: TagEditorView; error?: TagStateError | null; choices?: CoverChoice[] } = {}) {
   const state = {
     view: over.view ?? VIEW,
     error: over.error ?? null,
@@ -76,7 +77,13 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     edit: vi.fn(() => Promise.resolve()),
     coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [{ fileName: 'front.jpg', size: 10 }] })),
     coverFromFile: vi.fn(() => Promise.resolve()),
-    coverImage: vi.fn(() => Promise.resolve(null)),
+    coverImage: vi.fn((key?: string | null) =>
+      Promise.resolve(key === 'k1' ? 'data:image/png;base64,iVBORw0KGgo=' : null),
+    ),
+    coverChoices: vi.fn(() => Promise.resolve(over.choices ?? [])),
+    useCoverForAll: vi.fn(() => Promise.resolve()),
+    coverFromBytes: vi.fn(() => Promise.resolve()),
+    coverFromPath: vi.fn(() => Promise.resolve()),
     undoable: null,
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
@@ -152,11 +159,63 @@ describe('TagsTab', () => {
     [{ kind: 'coverUnreadable' }, 'Couldn’t read that picture, or it isn’t a supported image.'],
     [{ kind: 'badCoverName' }, 'Couldn’t read that picture, or it isn’t a supported image.'],
     [{ kind: 'coverNotAnImage' }, 'That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.'],
+    [{ kind: 'coverNotAFile' }, 'Only a picture file can become the cover, not a folder or a link.'],
+    [{ kind: 'unknownCover' }, 'That cover isn’t in the files any more. Pick another one.'],
     [{ kind: 'unknownTrack' }, 'Couldn’t apply that change.'],
   ] as const)('a failed edit (%j) over the tags says %j', async (error, text) => {
     const { root } = await mountTab({ error })
     expect(root.querySelector('[role="alert"]')?.textContent).toBe(text)
     expect(root.querySelector('[role="listbox"]')).not.toBeNull()
+  })
+
+  describe('the cover section', () => {
+    const FRONT: CoverChoice = { key: 'k1', mime: 'image/png', bytes: 40, width: null, height: null, files: 1 }
+    const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 1 }
+
+    it('sits in the Album pane’s scroll, after the rows', async () => {
+      const { root } = await mountTab({ choices: [FRONT, NONE] })
+      const scroller = root.querySelector('[data-pane="album"] .full-list')
+      expect(scroller?.querySelector('.cover-group section.cover')).not.toBeNull()
+    })
+
+    it('a click on a cover opens it large; "Use for all files" sends its key and closes the view', async () => {
+      const { root, state } = await mountTab({ choices: [FRONT, NONE] })
+      await settle()
+      await tick()
+      root.querySelector<HTMLButtonElement>('.choice')?.click()
+      await tick()
+      expect(document.querySelector('[role="dialog"] img')?.getAttribute('src')).toBe(
+        'data:image/png;base64,iVBORw0KGgo=',
+      )
+      inDialog('Use for all files').click()
+      await settle()
+      expect(state.useCoverForAll).toHaveBeenCalledWith('k1')
+      expect(document.querySelector('[role="dialog"]')).toBeNull()
+    })
+
+    it('while the cover is open large, the window keys stay out (it is a dialog)', async () => {
+      const { root } = await mountTab({ choices: [FRONT, NONE] })
+      await settle()
+      await tick()
+      root.querySelector<HTMLButtonElement>('.choice')?.click()
+      await tick()
+      expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+      await bar(root, 'Replace')
+      expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+    })
+
+    it('a pasted picture goes to the state as bytes', async () => {
+      const { root, state } = await mountTab({ choices: [NONE] })
+      root.querySelector<HTMLElement>('section.cover')?.focus()
+      const event = new Event('paste', { bubbles: true, cancelable: true })
+      const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'p.jpg', { type: 'image/jpeg' })
+      Object.defineProperty(event, 'clipboardData', {
+        value: { items: [{ kind: 'file', type: 'image/jpeg', getAsFile: () => file }] },
+      })
+      document.activeElement?.dispatchEvent(event)
+      await settle()
+      expect(state.coverFromBytes).toHaveBeenCalledWith(new Uint8Array([0xff, 0xd8, 0xff]))
+    })
   })
 
   it('opens with the Album pane focused, and Tab moves focus to the Tracks pane and back', async () => {
@@ -214,6 +273,7 @@ describe('TagsTab', () => {
       edit: vi.fn(() => Promise.resolve()),
       coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
       coverImage: vi.fn(() => Promise.resolve(null)),
+      coverChoices: vi.fn(() => Promise.resolve([])),
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
@@ -242,6 +302,7 @@ describe('TagsTab', () => {
       edit: vi.fn(() => Promise.resolve()),
       coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
       coverImage: vi.fn(() => Promise.resolve(null)),
+      coverChoices: vi.fn(() => Promise.resolve([])),
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),

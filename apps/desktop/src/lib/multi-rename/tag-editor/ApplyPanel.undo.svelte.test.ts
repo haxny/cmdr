@@ -18,6 +18,7 @@ const ipc = vi.hoisted(() => ({
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
   getCoverImage: vi.fn(),
+  listTagCovers: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
 const confirm = vi.hoisted(() => vi.fn((_message: string, _title?: string, _label?: string) => Promise.resolve(true)))

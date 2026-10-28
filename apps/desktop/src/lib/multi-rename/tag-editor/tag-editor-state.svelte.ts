@@ -16,14 +16,19 @@ import {
   getCoverImage,
   getTagChanges,
   listCoverCandidates,
+  listTagCovers,
   openTagEditor,
   previewTagsFromNames,
   runTagTextTool,
   runTagTool,
+  setCoverFromBytes,
   setCoverFromFile,
+  setCoverFromPath,
   undoTagApply,
+  useCoverForAll,
   type ApplyRequest,
   type CoverCandidate,
+  type CoverChoice,
   type FileChangeView,
   type NamePattern,
   type NamePreviewRow,
@@ -86,8 +91,19 @@ export interface TagEditorState {
    * `limitMs` (default `SETTLE_LIMIT_MS`) with one still out, say on a stalled network mount, so a caller can go on.
    */
   settled(limitMs?: number): Promise<boolean>
-  /** The cover every file shares, as a `data:` URL; `null` when there is none, the files differ, or it can't be read. */
-  coverImage(): Promise<string | null>
+  /**
+   * A cover as a `data:` URL: the one `key` names (a `CoverChoice.key`), or without one the cover every file shares;
+   * `null` when there is none, the files differ, or it can't be read.
+   */
+  coverImage(key?: string | null): Promise<string | null>
+  /** Every distinct cover with how many files carry it (the files without one last), or `null` when that failed. */
+  coverChoices(): Promise<CoverChoice[] | null>
+  /** Gives every file the cover `key` names, in memory: a change Write lists. */
+  useCoverForAll(key: string): Promise<void>
+  /** Gives every file a pasted picture (its bytes) as its cover, in memory. */
+  coverFromBytes(data: Uint8Array): Promise<void>
+  /** Gives every file a dropped picture file as its cover, in memory. */
+  coverFromPath(path: string): Promise<void>
   /** The images in the session's folder a cover can come from. */
   coverCandidates(): Promise<TagStateResult<CoverCandidate[]>>
   /** Gives every file the folder image `fileName` as its cover. */
@@ -211,13 +227,27 @@ export function createTagEditorState(sessionId: string): TagEditorState {
         (current) => current.kind === 'badPattern',
       ),
     settled,
-    async coverImage() {
-      const res = await getCoverImage(sessionId)
+    async coverImage(key = null) {
+      const res = await getCoverImage(sessionId, key)
       if (res.ok) return res.value
       // Only the thumbnail is missing; the kind is no path or value.
       log.warn("couldn't read the cover image: {kind}", { kind: res.error.kind })
       return null
     },
+    async coverChoices() {
+      try {
+        const res = await listTagCovers(sessionId)
+        if (res.ok) return res.value
+        // The section words it; the kind is no path or value.
+        log.warn("couldn't list the covers: {kind}", { kind: res.error.kind })
+      } catch (e) {
+        log.warn("couldn't list the covers: {reason}", { reason: e })
+      }
+      return null
+    },
+    useCoverForAll: (key) => replaceView(() => useCoverForAll(sessionId, key)),
+    coverFromBytes: (data) => replaceView(() => setCoverFromBytes(sessionId, data)),
+    coverFromPath: (path) => replaceView(() => setCoverFromPath(sessionId, path)),
     coverCandidates: () => track(() => listCoverCandidates(sessionId)),
     coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
     // The Apply panel words a failed list or write next to its buttons; the tab's error is for edits.

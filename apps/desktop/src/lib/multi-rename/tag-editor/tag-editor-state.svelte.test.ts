@@ -17,6 +17,10 @@ const ipc = vi.hoisted(() => ({
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
   getCoverImage: vi.fn(),
+  listTagCovers: vi.fn(),
+  useCoverForAll: vi.fn(),
+  setCoverFromBytes: vi.fn(),
+  setCoverFromPath: vi.fn(),
   previewTagsFromNames: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
@@ -542,5 +546,48 @@ describe('createTagEditorState', () => {
     expect(await state.coverImage()).toBeNull()
     expect(state.error).toBeNull()
     expect(warn).toHaveBeenCalled()
+  })
+
+  it('coverImage asks for the cover a choice names', async () => {
+    const state = createTagEditorState('S')
+    ipc.getCoverImage.mockResolvedValue({ ok: true, value: null })
+    await state.coverImage('00ff')
+    expect(ipc.getCoverImage).toHaveBeenCalledWith('S', '00ff')
+    await state.coverImage()
+    expect(ipc.getCoverImage).toHaveBeenLastCalledWith('S', null)
+  })
+
+  it('coverChoices lists every cover; a failure is null and leaves the error alone', async () => {
+    const choices = [{ key: 'k', mime: 'image/png', bytes: 3, width: null, height: null, files: 2 }]
+    ipc.listTagCovers.mockResolvedValue({ ok: true, value: choices })
+    const state = createTagEditorState('S')
+    expect(await state.coverChoices()).toEqual(choices)
+    expect(ipc.listTagCovers).toHaveBeenCalledWith('S')
+    ipc.listTagCovers.mockResolvedValue({ ok: false, error: { kind: 'noSession' } })
+    expect(await state.coverChoices()).toBeNull()
+    expect(state.error).toBeNull()
+  })
+
+  it('useCoverForAll, coverFromBytes and coverFromPath replace the view; a refusal keeps it and is the error', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.useCoverForAll.mockResolvedValue({ ok: true, value: EDITED })
+    const state = createTagEditorState('S')
+    await state.open()
+    await state.useCoverForAll('k')
+    expect(ipc.useCoverForAll).toHaveBeenCalledWith('S', 'k')
+    expect(state.view).toBe(EDITED)
+
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.setCoverFromBytes.mockResolvedValue({ ok: false, error: { kind: 'coverNotAnImage' } })
+    await state.coverFromBytes(new Uint8Array([1, 2]))
+    expect(ipc.setCoverFromBytes).toHaveBeenCalledWith('S', new Uint8Array([1, 2]))
+    expect(state.view).toBe(EDITED)
+    expect(state.error).toEqual({ kind: 'coverNotAnImage' })
+
+    ipc.setCoverFromPath.mockResolvedValue({ ok: true, value: VIEW })
+    await state.coverFromPath('/d/front.png')
+    expect(ipc.setCoverFromPath).toHaveBeenCalledWith('S', '/d/front.png')
+    expect(state.view).toBe(VIEW)
+    expect(state.error).toBeNull()
   })
 })

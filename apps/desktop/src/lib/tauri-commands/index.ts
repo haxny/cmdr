@@ -1183,6 +1183,10 @@ export {
   listCoverCandidates,
   setCoverFromFile,
   getCoverImage,
+  listTagCovers,
+  useCoverForAll,
+  setCoverFromBytes,
+  setCoverFromPath,
   tagTrackAudioUrl,
   releaseTagTrackAudio,
   openTagsInPlayer,
@@ -1197,6 +1201,7 @@ export {
 export type {
   ApplyRequest,
   CoverCandidate,
+  CoverChoice,
   FileChangeView,
   NamePattern,
   NamePreviewRow,

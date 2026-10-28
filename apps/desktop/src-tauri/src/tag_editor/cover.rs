@@ -116,19 +116,50 @@ pub(crate) fn read_cover(dir: &Path, file_name: &str) -> Result<Cover, TagEditor
         return Err(TagEditorError::CoverUnreadable);
     }
     let file = open_no_follow(&resolved).map_err(|_| TagEditorError::CoverUnreadable)?;
-    let meta = file.metadata().map_err(|_| TagEditorError::CoverUnreadable)?;
-    if !meta.is_file() {
+    read_open(file, TagEditorError::CoverUnreadable)
+}
+
+/// Reads a dropped picture file as a cover (from anywhere: the user dragged it here). Blocking
+/// file work. Only a regular file at an absolute path: a folder, FIFO, symlink, or device is
+/// `CoverNotAFile`. It is opened with `O_NOFOLLOW | O_NONBLOCK` and checked again on the open
+/// file, so one swapped in after the check fails instead of being followed or blocking. Then the
+/// same size cap and type sniff as a folder cover.
+pub(crate) fn read_dropped(path: &Path) -> Result<Cover, TagEditorError> {
+    if !path.is_absolute() {
         return Err(TagEditorError::CoverUnreadable);
     }
-    if meta.len() > MAX_COVER_BYTES {
+    let meta = std::fs::symlink_metadata(path).map_err(|_| TagEditorError::CoverUnreadable)?;
+    if !meta.file_type().is_file() {
+        return Err(TagEditorError::CoverNotAFile);
+    }
+    let file = open_no_follow(path).map_err(|_| TagEditorError::CoverUnreadable)?;
+    read_open(file, TagEditorError::CoverNotAFile)
+}
+
+/// A pasted picture as a cover: at most 10 MiB (`CoverTooLarge`), and a JPEG, PNG, or WebP image
+/// by its first bytes (`CoverNotAnImage`), whatever the clipboard called it.
+pub(crate) fn cover_from_bytes(data: Vec<u8>) -> Result<Cover, TagEditorError> {
+    if u64::try_from(data.len()).unwrap_or(u64::MAX) > MAX_COVER_BYTES {
         return Err(TagEditorError::CoverTooLarge);
     }
-    let data = read_capped(file, MAX_COVER_BYTES)?;
     let mime = image_mime(&data).ok_or(TagEditorError::CoverNotAnImage)?;
     Ok(Cover {
         mime: mime.to_owned(),
         data: data.into(),
     })
+}
+
+/// The cover in an opened file: `not_regular` when it isn't a regular file after all, then the
+/// size cap (on the stat and on the read) and the type sniff.
+fn read_open(file: std::fs::File, not_regular: TagEditorError) -> Result<Cover, TagEditorError> {
+    let meta = file.metadata().map_err(|_| TagEditorError::CoverUnreadable)?;
+    if !meta.is_file() {
+        return Err(not_regular);
+    }
+    if meta.len() > MAX_COVER_BYTES {
+        return Err(TagEditorError::CoverTooLarge);
+    }
+    cover_from_bytes(read_capped(file, MAX_COVER_BYTES)?)
 }
 
 /// Opens `path` for reading without following a symlink at its last component and without

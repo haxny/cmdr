@@ -25,6 +25,7 @@ const ipc = vi.hoisted(() => ({
   runTagTextTool: vi.fn(),
   previewTagsFromNames: vi.fn(),
   getCoverImage: vi.fn(),
+  listTagCovers: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   listCoverCandidates: vi.fn(),
   closeTagEditor: vi.fn(() => Promise.resolve()),
   releaseTagsSession: vi.fn(() => Promise.resolve()),
@@ -102,6 +103,7 @@ beforeEach(() => {
   ipc.runTagTool.mockResolvedValue({ ok: true, value: VIEW })
   ipc.runTagTextTool.mockResolvedValue({ ok: true, value: VIEW })
   ipc.getCoverImage.mockResolvedValue({ ok: true, value: null })
+  ipc.listTagCovers.mockResolvedValue({ ok: true, value: [] })
   ipc.getTagChanges.mockResolvedValue({
     ok: true,
     value: [{ path: '/b/01.mp3', fileName: '01.mp3', fields: ['album'], cover: false, extras: false, removes: [] }],
