@@ -89,7 +89,7 @@ use crate::window_events::{
     CloseAbout, CloseAllFileViewers, CloseConfirmation, CloseFileViewer, ExecuteCommand, FocusAbout, FocusConfirmation,
     FocusFileViewer, ForegroundOperation, FunctionKeyBarHideRequested, McpSettingsClose, MouseNav, OpenErrorReport,
     OpenFavorite, OpenFileViewer, OpenSettings, PersistRestrictedSetting, QueueRowContextAction, QueueSelectAll,
-    RevealPath, ShowSearchResultInFolder, TabContextAction, TagsDeselectAll, TagsSelectAll, TagsSkipped,
+    RevealPath, ShowSearchResultInFolder, TabContextAction, TagsDeselectAll, TagsMenuKey, TagsSelectAll, TagsSkipped,
     ViewerContextMenuAction, ViewerEditAction, ViewerHistoryAction, ViewerWordWrapToggled,
 };
 // AI + system/misc events.
@@ -1302,6 +1302,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             QueueSelectAll,
             TagsSelectAll,
             TagsDeselectAll,
+            TagsMenuKey,
             ShowSearchResultInFolder,
             OpenSettings,
             OpenFileViewer,

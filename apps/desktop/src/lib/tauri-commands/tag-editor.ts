@@ -18,6 +18,7 @@ import {
   type TagEditorView,
   type TagTextTool,
   type TagTool,
+  type TagsMenuKey,
   type TagsSessionInfo,
   type MultiRenameError,
   type MultiRenameOpened,
@@ -36,6 +37,7 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TagsMenuKey,
   TagsSessionInfo,
 }
 
@@ -206,6 +208,17 @@ export async function openTagsSession(
 export async function onTagsSelectAll(callback: () => void): Promise<UnlistenFn> {
   return events.tagsSelectAll.listen(() => {
     callback()
+  })
+}
+
+/**
+ * A File / Select / View menu key (F2–F8, ⇧F2, ⇧F4, ⇧F8, Tab) pressed while this Tags window is focused. Those
+ * accelerators fire before the page's keydown, so `menu_handlers.rs` sends the press here (`TagsMenuKey`: the Tags
+ * command the item's key runs, and the item's own main-window command). Returns an `UnlistenFn`.
+ */
+export async function onTagsMenuKey(callback: (key: TagsMenuKey) => void): Promise<UnlistenFn> {
+  return events.tagsMenuKey.listen((event) => {
+    callback(event.payload)
   })
 }
 

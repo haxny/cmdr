@@ -6,6 +6,8 @@
  */
 import type { CommandId } from '#lib/commands/index.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { TagEditorView } from '#lib/tauri-commands/index.js'
+import { createKeyRoadEcho } from '../preset-keys'
 
 /** The commands the bar offers, in the order their slots read. */
 export const TAGS_BAR_COMMANDS = [
@@ -26,8 +28,8 @@ export const TAGS_BAR_COMMANDS = [
 
 export type TagsBarCommandId = (typeof TAGS_BAR_COMMANDS)[number]
 
-/** Every command the window runs: the bar's, plus ⌘Z. */
-export type TagsCommandId = TagsBarCommandId | 'tags.undo'
+/** Every command the window runs: the bar's, plus ⌘Z and Tab (Tab only by the menu road; the panes answer it). */
+export type TagsCommandId = TagsBarCommandId | 'tags.undo' | 'tags.switchPane'
 
 export interface TagsBarSlot {
   id: TagsBarCommandId
@@ -85,6 +87,81 @@ export const TAGS_WINDOW_KEYS: readonly TagsCommandId[] = [
  * focused control, which is that control's (a button presses).
  */
 export const PANE_KEYS: ReadonlySet<TagsCommandId> = new Set(['tags.edit', 'tags.editNumber', 'tags.play'])
+
+/** The bar's commands that need the tags to be editable. */
+const EDITING_COMMANDS: readonly TagsBarCommandId[] = [
+  'tags.edit',
+  'tags.replace',
+  'tags.case',
+  'tags.format',
+  'tags.cleanUp',
+  'tags.fromName',
+  'tags.number',
+  'tags.clearField',
+  'tags.write',
+]
+
+/** The bar's commands that can act on `view`: nothing before the tags are read; read-only leaves Play and the player. */
+export function enabledTagsCommands(view: TagEditorView | null): ReadonlySet<TagsBarCommandId> {
+  if (view === null) return new Set()
+  const on: TagsBarCommandId[] = ['tags.openInPlayer']
+  if (view.tracks.some((track) => track.readError === null)) on.push('tags.play')
+  if (view.editable) {
+    on.push(...EDITING_COMMANDS)
+    if (view.tracks.length > 1) on.push('tags.editNumber')
+    if (view.extras.length > 0) on.push('tags.removeExtras')
+  }
+  return new Set(on)
+}
+
+/** The commands a main-menu key may run in the window (`TagsMenuKey`, `tag_editor::window::menu_key_command_of`). */
+const MENU_KEY_COMMANDS: ReadonlySet<string> = new Set<TagsCommandId>([
+  'tags.edit',
+  'tags.editNumber',
+  'tags.play',
+  'tags.replace',
+  'tags.case',
+  'tags.format',
+  'tags.fromName',
+  'tags.number',
+  'tags.clearField',
+  'tags.removeExtras',
+  'tags.switchPane',
+])
+
+/**
+ * The Tags command a main-menu key press means, or `null`. The menu item runs `menuCommandId` in the main window; its
+ * first key is what the item's accelerator holds. It means `commandId` only while that key is one of `commandId`'s, so
+ * a file command rebound to another key never runs a tag tool. `shortcutsOf` is the shortcuts store's lookup.
+ */
+export function menuKeyCommand(
+  key: { commandId: string; menuCommandId: string },
+  shortcutsOf: (id: CommandId) => readonly string[],
+): TagsCommandId | null {
+  if (!MENU_KEY_COMMANDS.has(key.commandId)) return null
+  const commandId = key.commandId as TagsCommandId
+  const itemKey = shortcutsOf(key.menuCommandId as CommandId).at(0)
+  return itemKey !== undefined && shortcutsOf(commandId).includes(itemKey) ? commandId : null
+}
+
+/** How a key press reached the window: its keydown, or the native menu's accelerator. */
+export type TagsKeyRoad = 'keyboard' | 'menu'
+
+/**
+ * Tells one key press that arrived by both roads (AppKit may fire the menu accelerator AND let the page see the key)
+ * from two presses, per command: the other road within the echo window is the echo. A repeat on the same road counts.
+ */
+export function createTagsKeyEcho(now: () => number = Date.now): (id: TagsCommandId, road: TagsKeyRoad) => boolean {
+  const roads = new Map<TagsCommandId, ReturnType<typeof createKeyRoadEcho>>()
+  return (id, road) => {
+    let echo = roads.get(id)
+    if (echo === undefined) {
+      echo = createKeyRoadEcho(now)
+      roads.set(id, echo)
+    }
+    return echo(road)
+  }
+}
 
 /** A box that holds typed text (a checkbox or a button doesn't: its `selectionStart` is `null`). */
 export function textBoxOf(el: Element | null): HTMLInputElement | HTMLTextAreaElement | null {

@@ -315,6 +315,13 @@
         })
     }
 
+    /** How many files the write it shows left unwritten (failed, changed on disk, skipped); 0 when it shows none. */
+    export function notWritten(): number {
+        if (current.step !== 'done') return 0
+        const { failed, changedOnDisk, skipped } = current.outcome
+        return failed.length + changedOnDisk.length + skipped.length
+    }
+
     $effect(() => {
         onBusy?.(current.step === 'writing' || (current.step === 'wouldDrop' && current.answering))
     })

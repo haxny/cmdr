@@ -4,7 +4,8 @@
 use super::session::{is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
 use super::window::{
-    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, menu_selection_of, session_of_label,
+    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, menu_key_command_of, menu_selection_of,
+    session_of_label,
 };
 use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, SELECT_ALL_ID};
 use crate::multi_rename::session::{close as close_rename, is_held};
@@ -54,6 +55,48 @@ fn deselect_all_goes_to_the_focused_tags_window_only() {
         focused_tags_window([("main", true), ("tags-multi-rename-3", false)]),
         None
     );
+}
+
+/// Each File / Select F-key item names the Tags command holding the same default key, so the
+/// press runs what the bar says the key does (`TagsFunctionKeyBar`, `sources/tags-window.ts`).
+#[test]
+fn the_file_and_select_f_keys_name_the_tag_command_with_the_same_key() {
+    use crate::menu::{
+        COMPARE_DIRECTORIES_ID, EDIT_ID, FILE_COPY_ID, FILE_DELETE_ID, FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID,
+        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID, SWITCH_PANE_ID,
+    };
+    let expected = [
+        (RENAME_ID, "tags.edit"),                          // F2
+        (COMPARE_DIRECTORIES_ID, "tags.editNumber"),       // ⇧F2
+        (FILE_VIEW_ID, "tags.play"),                       // F3
+        (EDIT_ID, "tags.replace"),                         // F4
+        (FILE_NEW_FILE_ID, "tags.case"),                   // ⇧F4
+        (FILE_COPY_ID, "tags.format"),                     // F5
+        (FILE_MOVE_ID, "tags.fromName"),                   // F6
+        (FILE_NEW_FOLDER_ID, "tags.number"),               // F7
+        (FILE_DELETE_ID, "tags.clearField"),               // F8
+        (FILE_DELETE_PERMANENTLY_ID, "tags.removeExtras"), // ⇧F8
+        (SWITCH_PANE_ID, "tags.switchPane"),               // Tab
+    ];
+    for (id, command) in expected {
+        assert_eq!(menu_key_command_of(id), Some(command), "{id}");
+    }
+}
+
+/// Items whose keys the Tags window has no command for stay on their own road (greyed there).
+#[test]
+fn other_menu_items_are_not_tag_keys() {
+    use crate::menu::{CLOSE_TAB_ID, FILE_COMPRESS_ID, FILE_DUPLICATE_ID, OPEN_TERMINAL_HERE_ID, SELECT_ALL_ID};
+    for id in [
+        FILE_COMPRESS_ID,
+        FILE_DUPLICATE_ID,
+        OPEN_TERMINAL_HERE_ID,
+        SELECT_ALL_ID,
+        CLOSE_TAB_ID,
+        "unknown",
+    ] {
+        assert_eq!(menu_key_command_of(id), None, "{id}");
+    }
 }
 
 #[test]

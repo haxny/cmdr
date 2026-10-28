@@ -3207,6 +3207,7 @@ export type MessageKey =
   | 'multiRename.tags.write.review'
   | 'multiRename.tags.write.sessionGone'
   | 'multiRename.tags.write.skippedHeading'
+  | 'multiRename.tags.write.someLeft'
   | 'multiRename.tags.write.stillBusy'
   | 'multiRename.tags.write.stopped'
   | 'multiRename.tags.write.summaryAs'

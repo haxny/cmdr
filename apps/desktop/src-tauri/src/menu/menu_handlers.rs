@@ -181,6 +181,17 @@ fn send_native_edit_action(menu_id: &str) {
     }
 }
 
+/// The label of the Tags window that has focus, if one does (`focused_tags_window`).
+fn focused_tags_label(app: &AppHandle<tauri::Wry>) -> Option<String> {
+    let windows = app.webview_windows();
+    crate::tag_editor::window::focused_tags_window(
+        windows
+            .iter()
+            .map(|(label, window)| (label.as_str(), window.is_focused().unwrap_or(false))),
+    )
+    .map(str::to_string)
+}
+
 /// The label of the viewer window that currently has focus, if one does.
 ///
 /// The viewer bar is app-level on macOS and shared by every open viewer, so an item in it names
@@ -605,25 +616,39 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
     // === Select all / Deselect all in a Tags window: its tracks (or the text being typed) ===
     // Same reason as the queue's: the accelerators fire before the page's keydown sees ⌘A / ⌘⇧A
     // (and Deselect all, file-scoped, would otherwise be dropped by the focus guard below).
-    if let Some(selection) = crate::tag_editor::window::menu_selection_of(id) {
-        let windows = app.webview_windows();
-        let focused = crate::tag_editor::window::focused_tags_window(
-            windows
-                .iter()
-                .map(|(label, window)| (label.as_str(), window.is_focused().unwrap_or(false))),
-        );
-        if let Some(label) = focused {
-            use crate::tag_editor::window::TagsMenuSelection;
-            use tauri_specta::Event as _;
-            let sent = match selection {
-                TagsMenuSelection::SelectAll => crate::window_events::TagsSelectAll.emit_to(app, label),
-                TagsMenuSelection::DeselectAll => crate::window_events::TagsDeselectAll.emit_to(app, label),
-            };
-            if let Err(e) = sent {
-                log::warn!(target: "menu", "failed to emit a Tags window's select or deselect all: {e}");
-            }
-            return;
+    if let Some(selection) = crate::tag_editor::window::menu_selection_of(id)
+        && let Some(label) = focused_tags_label(app)
+    {
+        let label = label.as_str();
+        use crate::tag_editor::window::TagsMenuSelection;
+        use tauri_specta::Event as _;
+        let sent = match selection {
+            TagsMenuSelection::SelectAll => crate::window_events::TagsSelectAll.emit_to(app, label),
+            TagsMenuSelection::DeselectAll => crate::window_events::TagsDeselectAll.emit_to(app, label),
+        };
+        if let Err(e) = sent {
+            log::warn!(target: "menu", "failed to emit a Tags window's select or deselect all: {e}");
         }
+        return;
+    }
+
+    // === The File / Select F-keys (and View's Tab) in a Tags window: its tag tools ===
+    // F2–F8, ⇧F2, ⇧F4, ⇧F8 and Tab are this bar's accelerators, which fire ahead of the page; greyed
+    // in a Tags window, they'd reach the FileScoped guard below and be dropped. Main focused: no
+    // Tags window is, and they run as before.
+    if let Some(command_id) = crate::tag_editor::window::menu_key_command_of(id)
+        && let Some(label) = focused_tags_label(app)
+    {
+        use tauri_specta::Event as _;
+        let menu_command_id = menu_id_to_command(id).map(|(command, _)| command).unwrap_or_default();
+        let key = crate::window_events::TagsMenuKey {
+            command_id: command_id.to_string(),
+            menu_command_id: menu_command_id.to_string(),
+        };
+        if let Err(e) = key.emit_to(app, label.as_str()) {
+            log::warn!(target: "menu", "failed to emit a Tags window's menu key: {e}");
+        }
+        return;
     }
 
     // === Edit-action exception: file semantics in main window, native text semantics elsewhere ===

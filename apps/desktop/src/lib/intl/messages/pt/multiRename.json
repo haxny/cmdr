@@ -1784,5 +1784,9 @@
   "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
   "@multiRename.tags.undo.nothing": {
     "sourceHash": "6324c69"
+  },
+  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "@multiRename.tags.write.someLeft": {
+    "sourceHash": "b999e17"
   }
 }

@@ -50,6 +50,19 @@ pub struct TagsSelectAll;
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
 pub struct TagsDeselectAll;
 
+/// `tags-menu-key`: a File / Select / View menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8, Tab) pressed while a Tags
+/// window is focused. Those accelerators fire before the page's keydown, so this is how the
+/// window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct TagsMenuKey {
+    /// The `Tags window` command the item's default key runs there (`tags.replace` for File > Edit's F4).
+    pub command_id: String,
+    /// The main-window command the item runs. The window acts only while this command's first key is
+    /// still one of `command_id`'s keys: a rebound item no longer means the tag tool.
+    pub menu_command_id: String,
+}
+
 /// `show-search-result-in-folder`: a snapshot context-menu click. The primary
 /// right-clicked path travels with the event so the frontend never rereads a
 /// potentially different cursor or selection after the native popup closes.

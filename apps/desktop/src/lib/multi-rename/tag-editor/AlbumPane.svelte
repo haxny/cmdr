@@ -22,6 +22,7 @@
     import './tag-pane.css'
     import { formatFieldValue, isMultiLineField, multipleText, parseSharedEdit, sharedEditHint } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
+    import type { TagsCommandId } from './tags-function-keys'
     import ValueChoices from './ValueChoices.svelte'
 
     interface Props {
@@ -35,11 +36,14 @@
         onCursorChange: (index: number) => void
         onEdit: (edits: TagEdit[]) => void | Promise<void>
         onSwitchPane: () => void
+        /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
+        isEcho?: (id: TagsCommandId) => boolean
         /** The cover group, last in the pane. */
         cover?: Snippet
     }
 
-    const { rows, editable, badDates = 0, focused, cursor, onCursorChange, onEdit, onSwitchPane, cover }: Props = $props()
+    const { rows, editable, badDates = 0, focused, cursor, onCursorChange, onEdit, onSwitchPane, isEcho, cover }: Props =
+        $props()
 
     /** Fixed name column, flexing value: the pane never scrolls sideways. */
     const GRID = 'calc(110px * var(--font-scale)) minmax(0, 1fr)'
@@ -74,6 +78,16 @@
     /** Gives the pane focus (Tab from the other pane). */
     export function focus(): void {
         list?.focus()
+    }
+
+    let editor = $state<{ commit: () => boolean }>()
+
+    /**
+     * Before another command acts: sends the open box's text and closes it. `false` when the text can't be sent; the
+     * box then stays open with its hint, and the caller doesn't act.
+     */
+    export function settleEditor(): boolean {
+        return editing === null || (editor?.commit() ?? true)
     }
 
     /** F2 from the window's bar or with focus outside the pane: edits the cursor row's value. */
@@ -128,12 +142,13 @@
         if (e.isComposing || e.target !== list) return
         if (eventMatchesCommand(e, 'tags.switchPane')) {
             claimKey(e)
-            onSwitchPane()
+            if (isEcho?.('tags.switchPane') !== true) onSwitchPane()
             return
         }
         if (eventMatchesCommand(e, 'tags.edit')) {
             claimKey(e)
-            openEditor(at)
+            // Enter is no menu key, so only F2 can have arrived by the menu too.
+            if (e.key === 'Enter' || isEcho?.('tags.edit') !== true) openEditor(at)
             return
         }
         const move = paneCursorMove(e, { count: shown.length, from: at, visibleRows: visibleRowCount(scroller, rowHeight) })
@@ -186,6 +201,7 @@
         {#if editing !== null && edited !== undefined}
             {@const row = edited}
             <TagValueEditor
+                bind:this={editor}
                 value={row.text}
                 ariaLabel={tString('multiRename.tags.album.editLabel', { field: row.label })}
                 multiline={isMultiLineField(row.field)}

@@ -54,6 +54,35 @@ pub(crate) fn menu_selection_of(id: &str) -> Option<TagsMenuSelection> {
     }
 }
 
+/// The `Tags window` command a main-menu item's key runs while a Tags window is focused, or `None`
+/// for an item the window doesn't take.
+///
+/// The Tags window installs the main menu (greyed), whose File / Select items register F2–F8,
+/// ⇧F2, ⇧F4 and ⇧F8, and View's Switch pane holds Tab. On macOS a bare-key accelerator fires ahead of the page, and the file-scoped
+/// focus guard would drop it, so `menu_handlers.rs` sends the press here instead (`TagsMenuKey`).
+/// Each item maps to the Tags command holding the same default key; the window checks the item
+/// still has that key before acting, so a rebound file command never runs a tag tool.
+pub(crate) fn menu_key_command_of(id: &str) -> Option<&'static str> {
+    use crate::menu::{
+        COMPARE_DIRECTORIES_ID, EDIT_ID, FILE_COPY_ID, FILE_DELETE_ID, FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID,
+        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID, SWITCH_PANE_ID,
+    };
+    match id {
+        RENAME_ID => Some("tags.edit"),
+        COMPARE_DIRECTORIES_ID => Some("tags.editNumber"),
+        FILE_VIEW_ID => Some("tags.play"),
+        EDIT_ID => Some("tags.replace"),
+        FILE_NEW_FILE_ID => Some("tags.case"),
+        FILE_COPY_ID => Some("tags.format"),
+        FILE_MOVE_ID => Some("tags.fromName"),
+        FILE_NEW_FOLDER_ID => Some("tags.number"),
+        FILE_DELETE_ID => Some("tags.clearField"),
+        FILE_DELETE_PERMANENTLY_ID => Some("tags.removeExtras"),
+        SWITCH_PANE_ID => Some("tags.switchPane"),
+        _ => None,
+    }
+}
+
 /// Holds `session_id` for its window and says what it holds.
 pub(crate) fn hold(session_id: &str) -> Result<TagsSessionInfo, MultiRenameError> {
     rename_session::hold(session_id)?;

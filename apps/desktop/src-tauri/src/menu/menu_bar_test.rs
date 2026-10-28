@@ -425,6 +425,52 @@ fn no_two_items_share_an_accelerator() {
     }
 }
 
+/// The Tags window installs this bar too, and an accelerator fires ahead of its page. So every
+/// item registering a key that a `Tags window` command also holds (`sources/tags-window.ts`) must
+/// be routed to the window (`menu_key_command_of`, to the command with that key), or be Close tab,
+/// which closes the focused child window through the same discard guard as Esc. Edit > Undo (⌘Z)
+/// is a predefined item, absent here: its `undo:` goes to the page, whose keydown sees ⌘Z.
+#[test]
+fn every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window() {
+    use crate::tag_editor::window::menu_key_command_of;
+    let tags_keys = [
+        ("F2", "tags.edit"),
+        ("Enter", "tags.edit"),
+        ("Shift+F2", "tags.editNumber"),
+        ("F3", "tags.play"),
+        ("Alt+Space", "tags.play"),
+        ("Shift+F3", "tags.openInPlayer"),
+        ("F4", "tags.replace"),
+        ("Shift+F4", "tags.case"),
+        ("F5", "tags.format"),
+        ("Shift+F5", "tags.cleanUp"),
+        ("F6", "tags.fromName"),
+        ("F7", "tags.number"),
+        ("F8", "tags.clearField"),
+        ("Shift+F8", "tags.removeExtras"),
+        ("Cmd+S", "tags.write"),
+        ("Cmd+Z", "tags.undo"),
+        ("Escape", "tags.close"),
+        ("Cmd+W", "tags.close"),
+        ("Tab", "tags.switchPane"),
+    ];
+    let parsed = |key: &str| -> muda::accelerator::Accelerator { key.parse().expect("a muda accelerator") };
+    let mut routed = 0;
+    for (id, accelerator) in registered_accelerators(Platform::MacOs) {
+        let on_item = parsed(accelerator);
+        let Some((_, command)) = tags_keys.iter().find(|(key, _)| parsed(key) == on_item) else {
+            continue;
+        };
+        if id == crate::menu::CLOSE_TAB_ID {
+            assert_eq!(*command, "tags.close");
+            continue;
+        }
+        assert_eq!(menu_key_command_of(id), Some(*command), "`{id}` holds `{accelerator}`");
+        routed += 1;
+    }
+    assert_eq!(routed, 11, "F2–F8, ⇧F2, ⇧F4, ⇧F8, Tab");
+}
+
 /// `MenuState.items` is keyed by ID, so a second item with an ID already taken would silently
 /// replace the first one's registration.
 #[test]

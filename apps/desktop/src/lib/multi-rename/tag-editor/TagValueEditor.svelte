@@ -148,7 +148,16 @@
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) hint = refusal(target.value)
     }
 
-    /** A click away commits; a text that can't be sent keeps the box (focus comes back to it) with the hint. */
+    /** A dialog is up (or focus went into one): it owns focus, and taking it back would fight its focus trap. */
+    function dialogHasFocus(to: EventTarget | null): boolean {
+        if (to instanceof Element && to.closest('[role="dialog"], [role="alertdialog"]') !== null) return true
+        return document.querySelector('[role="dialog"], [role="alertdialog"]') !== null
+    }
+
+    /**
+     * A click away commits; a text that can't be sent keeps the box with the hint and takes focus back, unless a
+     * dialog took it (the box stays open with its text and hint behind the dialog).
+     */
     function onblur(e: FocusEvent): void {
         if (done) return
         const why = refusal(draft)
@@ -157,9 +166,19 @@
             return
         }
         hint = why
+        if (dialogHasFocus(e.relatedTarget)) return
         setTimeout(() => {
-            if (!done && box?.isConnected === true) box.focus()
+            if (!done && box?.isConnected === true && !dialogHasFocus(null)) box.focus()
         }, 0)
+    }
+
+    /**
+     * Something else is about to act (a key of the bar, a tool): sends the text as Enter does and closes the box, or,
+     * when the text can't be sent, keeps it open with the hint and answers `false`, so the caller doesn't act.
+     */
+    export function commit(): boolean {
+        if (done) return true
+        return tryCommit()
     }
 </script>
 

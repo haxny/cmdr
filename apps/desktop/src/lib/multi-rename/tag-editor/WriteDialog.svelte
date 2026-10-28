@@ -18,22 +18,31 @@
         tags: TagEditorState
         mode: 'write' | 'undo'
         onWriting?: () => void
-        onClose: () => void
+        /** The dialog closed; `notWritten`: how many files the write it showed left unwritten. */
+        onClose: (notWritten: number) => void
     }
 
     const { tags, mode, onWriting, onClose }: Props = $props()
 
-    let panel = $state<{ start: () => Promise<void>; undo: () => Promise<boolean> }>()
+    let panel = $state<{ start: () => Promise<void>; undo: () => Promise<boolean>; notWritten: () => number }>()
     let busy = $state(false)
 
     onMount(() => {
         if (mode === 'undo') {
             void panel?.undo().then((undid) => {
-                if (!undid) onClose()
+                if (!undid) onClose(0)
             })
         } else void panel?.start()
     })
 
+    function close(): void {
+        onClose(panel?.notWritten() ?? 0)
+    }
+
+    /**
+     * ⌘⏎ presses the primary button. It reads `multiRename.rename` on purpose: the Apply panel's buttons show that
+     * command's key (`keyHint`), the same Start key as in the Multi-Rename sheet, so the hint and the key stay one.
+     */
     function onkeydown(e: KeyboardEvent): void {
         // Only while writing does Escape get here (no `onclose`): it waits, and never reaches macOS's full screen.
         if (e.key === 'Escape') e.preventDefault()
@@ -47,7 +56,7 @@
     titleId="tag-write-title"
     containerStyle="width: 520px; max-width: 90vw"
     growDownward
-    onclose={busy ? undefined : onClose}
+    onclose={busy ? undefined : close}
     {onkeydown}
 >
     {#snippet title()}{tString('multiRename.tags.dialog.write')}{/snippet}

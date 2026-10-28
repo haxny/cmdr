@@ -8,7 +8,6 @@
      * (`tags-panes.svelte.ts`). It opens the tag session when it mounts.
      */
     import { onDestroy, onMount } from 'svelte'
-    import { SvelteSet } from 'svelte/reactivity'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool } from '#lib/ipc/bindings.js'
@@ -22,7 +21,13 @@
     import TracksPane from './TracksPane.svelte'
     import WriteDialog from './WriteDialog.svelte'
     import type { RunScoped, TagToolId } from './tag-tools'
-    import type { TagsBarCommandId, TagsCommandId } from './tags-function-keys'
+    import {
+        createTagsKeyEcho,
+        enabledTagsCommands,
+        type TagsBarCommandId,
+        type TagsCommandId,
+        type TagsKeyRoad,
+    } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
     import { createTrackSelection } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
@@ -52,12 +57,15 @@
         if (selection.count > 0) selectionGone = false
     })
 
-    let albumPane = $state<{ focus: () => void; editAtCursor: () => void }>()
+    let albumPane = $state<{ focus: () => void; editAtCursor: () => void; settleEditor: () => boolean }>()
     let tracksPane = $state<{
         focus: () => void
         editAtCursor: (field: 'title' | 'track') => void
         playAtCursor: () => void
+        settleEditor: () => boolean
     }>()
+    /** One key press by both roads (keydown and the native menu's accelerator) acts once. */
+    const isEcho = createTagsKeyEcho()
     const panes = createTagsPanes({
         focus: (pane) => {
             ;(pane === 'album' ? albumPane : tracksPane)?.focus()
@@ -203,31 +211,8 @@
     /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
     let notice = $state<MessageKey | null>(null)
 
-    const EDITING_COMMANDS = [
-        'tags.edit',
-        'tags.replace',
-        'tags.case',
-        'tags.format',
-        'tags.cleanUp',
-        'tags.fromName',
-        'tags.number',
-        'tags.clearField',
-        'tags.write',
-    ] as const satisfies readonly TagsBarCommandId[]
-
-    /** The bar's commands that can act now: everything waits for the tags; read-only leaves Play and the player. */
-    const enabledCommands = $derived.by((): ReadonlySet<TagsBarCommandId> => {
-        const view = tags.view
-        const on = new SvelteSet<TagsBarCommandId>()
-        if (view === null) return on
-        on.add('tags.openInPlayer')
-        if (view.tracks.some((track) => track.readError === null)) on.add('tags.play')
-        if (!view.editable) return on
-        for (const id of EDITING_COMMANDS) on.add(id)
-        if (view.tracks.length > 1) on.add('tags.editNumber')
-        if (view.extras.length > 0) on.add('tags.removeExtras')
-        return on
-    })
+    /** The bar's commands that can act now (`enabledTagsCommands`). */
+    const enabledCommands = $derived(enabledTagsCommands(tags.view))
 
     function openTool(id: TagToolId): void {
         tool = { id, field: focusedField }
@@ -256,15 +241,29 @@
         'tags.removeExtras': () => { openTool('extras') },
         'tags.write': () => { writeMode = 'write' },
         'tags.undo': undoLast,
+        'tags.switchPane': () => { panes.switchPane() },
+    }
+
+    /** Whether `id` can act on the tags as they are now. */
+    function canRun(id: TagsCommandId): boolean {
+        if (id === 'tags.switchPane') return tags.view !== null
+        if (id === 'tags.undo') return tags.view?.editable === true
+        return enabledCommands.has(id)
     }
 
     /**
-     * Runs a `Tags window` command (the bar, or the window's keydown). Returns whether it acted: a command that can't
-     * act now (read-only, no extras, a dialog already open) does nothing.
+     * Runs a `Tags window` command: from the bar (no `road`), or from a key (`road`: the window's keydown, or the
+     * native menu's accelerator, `TagsMenuKey`). A key that is the echo of the same press by the other road does
+     * nothing. An open value box is settled first (its text sent, as a click away does); when its text can't be sent
+     * the box keeps it with its hint and the command doesn't run. Returns whether it acted; a command that can't act
+     * now (tags still being read, read-only, no extras, a dialog open) does nothing, and the status line or the
+     * reading notice already says why.
      */
-    export function runCommand(id: TagsCommandId): boolean {
-        if (hasDialog()) return false
-        if (id === 'tags.undo' ? tags.view?.editable !== true : !enabledCommands.has(id)) return false
+    export function runCommand(id: TagsCommandId, road?: TagsKeyRoad): boolean {
+        if (hasDialog() || !canRun(id)) return false
+        if (road !== undefined && isEcho(id, road)) return false
+        const settled = (albumPane?.settleEditor() ?? true) && (tracksPane?.settleEditor() ?? true)
+        if (!settled) return false
         notice = null
         COMMANDS[id]()
         return true
@@ -273,6 +272,15 @@
     /** A tool or the Write dialog is open: it owns the keys, and Escape closes it, never the window. */
     export function hasDialog(): boolean {
         return tool !== null || writeMode !== null
+    }
+
+    /**
+     * The Write dialog closed. Its per-file report goes with it, so when files were left unwritten the status line
+     * keeps saying so; Write lists their changes again.
+     */
+    function closeWrite(notWritten: number): void {
+        writeMode = null
+        if (notWritten > 0) notice = 'multiRename.tags.write.someLeft'
     }
 
     /** Lists the changes, then writes them (⌘S). */
@@ -312,6 +320,7 @@
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
                     onSwitchPane={() => { panes.switchPane() }}
+                    isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
                     cover={coverGroup}
                 />
             </div>
@@ -329,6 +338,7 @@
                     onPlay={(path: string) => void player.toggle(path)}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
                     onSwitchPane={() => { panes.switchPane() }}
+                    isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
                     footer={tracksFooter}
                 />
             </div>
@@ -377,7 +387,7 @@
     />
 {/if}
 {#if writeMode !== null}
-    <WriteDialog {tags} mode={writeMode} onWriting={() => { player.stop() }} onClose={() => { writeMode = null }} />
+    <WriteDialog {tags} mode={writeMode} onWriting={() => { player.stop() }} onClose={closeWrite} />
 {/if}
 
 {#snippet line(key: MessageKey, role: 'status' | 'alert')}

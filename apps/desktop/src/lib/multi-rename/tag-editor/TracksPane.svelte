@@ -23,6 +23,7 @@
     import './tag-pane.css'
     import { formatTrackLength, parseFieldText } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
+    import type { TagsCommandId } from './tags-function-keys'
     import type { TrackSelection } from './track-selection.svelte'
 
     interface Props {
@@ -40,10 +41,24 @@
         onSwitchPane: () => void
         /** Under the count, at the pane's foot (Open in foobar2000). */
         footer?: Snippet
+        /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
+        isEcho?: (id: TagsCommandId) => boolean
     }
 
-    const { tracks, editable, focused, cursor, onCursorChange, selection, playing, onPlay, onEdit, onSwitchPane, footer }: Props =
-        $props()
+    const {
+        tracks,
+        editable,
+        focused,
+        cursor,
+        onCursorChange,
+        selection,
+        playing,
+        onPlay,
+        onEdit,
+        onSwitchPane,
+        footer,
+        isEcho,
+    }: Props = $props()
 
     type EditedField = 'title' | 'track'
 
@@ -73,6 +88,16 @@
     /** Gives the pane focus (Tab from the other pane). */
     export function focus(): void {
         list?.focus()
+    }
+
+    let editor = $state<{ commit: () => boolean }>()
+
+    /**
+     * Before another command acts: sends the open box's text and closes it. `false` when the text can't be sent; the
+     * box then stays open with its hint, and the caller doesn't act.
+     */
+    export function settleEditor(): boolean {
+        return editing === null || (editor?.commit() ?? true)
     }
 
     /** F2 / ⇧F2 from the window's bar or with focus outside the pane: the cursor row's Title or #. */
@@ -150,22 +175,27 @@
         return true
     }
 
-    /** The pane's own commands: Tab, F3 / ⌥Space, F2, ⇧F2. Returns whether the key was one of them. */
+    /** The command a pane key means: Tab, F3 / ⌥Space, F2 / Enter, ⇧F2. */
+    function paneCommandOf(e: KeyboardEvent): TagsCommandId | null {
+        const ids = ['tags.switchPane', 'tags.play', 'tags.edit', 'tags.editNumber'] as const
+        return ids.find((id) => eventMatchesCommand(e, id)) ?? null
+    }
+
+    /**
+     * The pane's own commands. Returns whether the key was one of them. Claimed even when it does nothing (⌥Space on
+     * an unreadable row: macOS would type a non-breaking space), and dropped when it's the echo of a menu key.
+     */
     function answerPaneKey(e: KeyboardEvent): boolean {
-        if (eventMatchesCommand(e, 'tags.switchPane')) {
-            claimKey(e)
-            onSwitchPane()
-        } else if (eventMatchesCommand(e, 'tags.play')) {
-            // Claimed even on an unreadable row: macOS would type a non-breaking space.
-            claimKey(e)
-            play(at)
-        } else if (eventMatchesCommand(e, 'tags.edit')) {
-            claimKey(e)
-            openEditor(at, 'title')
-        } else if (eventMatchesCommand(e, 'tags.editNumber')) {
-            claimKey(e)
-            if (showNumber) openEditor(at, 'track')
-        } else return false
+        const id = paneCommandOf(e)
+        if (id === null) return false
+        claimKey(e)
+        // Enter and ⌥Space are no menu keys, so only F2, F3, ⇧F2 and Tab can have arrived by the menu too.
+        const viaMenuToo = e.key !== 'Enter' && e.code !== 'Space'
+        if (viaMenuToo && isEcho?.(id) === true) return true
+        if (id === 'tags.switchPane') onSwitchPane()
+        else if (id === 'tags.play') play(at)
+        else if (id === 'tags.edit') openEditor(at, 'title')
+        else if (showNumber) openEditor(at, 'track')
         return true
     }
 
@@ -262,6 +292,7 @@
             {@const track = edited}
             {@const field = editing.field}
             <TagValueEditor
+                bind:this={editor}
                 value={(field === 'title' ? track.title : track.track) ?? ''}
                 ariaLabel={tString(field === 'title' ? 'multiRename.tags.track.titleLabel' : 'multiRename.tags.track.numberLabel', { fileName: track.fileName })}
                 place={editing.place}

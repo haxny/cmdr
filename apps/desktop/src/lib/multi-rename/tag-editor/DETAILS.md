@@ -51,9 +51,29 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   and Clear close once run. ⌘S opens `WriteDialog` listing the changes (`ApplyPanel.start()`), ⌘⏎ or Write tags writes;
   it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question (`ApplyPanel.undo()`; a
   "no" closes it), and without one says so in the status line. ⌘W reaches the window as the native Close tab item, which
-  closes a focused child window through its close request, so it meets the same discard guard as Esc. ❗ On macOS the
-  main menu's File items hold F2–F8 as registered accelerators, greyed in this window; whether AppKit then hands the
-  F-keys to the page is not verified in a running app (Plan 2c Task 4b).
+  closes a focused child window through its close request, so it meets the same discard guard as Esc. A text tool runs
+  again on each press while its dialog stays open (a second Format re-applies the mask to the value the first one made),
+  as the in-flow panels did. A command that can't act (tags still being read, read-only, no extras, a dialog open) does
+  nothing: the reading notice or the status line already says why. Closing the Write dialog on a write that left files
+  unwritten keeps "Some files weren't written" in the status line.
+- **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select / View
+  items register F2–F8, ⇧F2, ⇧F4, ⇧F8 and Tab. Those accelerators fire ahead of the page and the file-scoped guard would
+  drop them, so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
+  (`tag_editor::window::menu_key_command_of`: the item's Tags command, plus the item's own command). `menuKeyCommand`
+  acts only while that item's first key is still one of the Tags command's keys (a rebound file command never runs a tag
+  tool), under the keydown's rules (no dialog open, no value being typed). If the page sees the key too, the press acts
+  once: `TagsTab`'s `createTagsKeyEcho` (per command, `createKeyRoadEcho`'s 300 ms) drops the other road's twin; the
+  panes ask it for F2, ⇧F2, F3 and Tab (never Enter or ⌥Space, which no menu item holds). Main focused: no Tags window
+  is, and the items run as before. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key reaches the
+  page's keydown (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` outside a text box and
+  leaves ⌘Z to the box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S, ⇧F3,
+  ⇧F5, ⌥Space and Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
+  `every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window`. ❗ Not yet checked by hand in a built app:
+  F2–F8, ⇧F2–⇧F5, ⇧F8, Tab, ⌘S, ⌘Z (in and out of a box), ⌘W, Esc (Plan 2c Task 4b fix round 1, 2026-10-28).
+- **A value box with text in it settles before any other command** (`runCommand` → each pane's `settleEditor` →
+  `TagValueEditor.commit()`): sendable text is sent, as a click away does; refused text («multiple values» marker left
+  in) keeps the box open with its hint and the command doesn't run. A click away from refused text takes focus back,
+  except into a dialog (its focus trap would fight it, a loop the round-1 review found).
 - **Panes** (`tags-panes.svelte.ts`: the active pane, each pane's cursor, Tab's switch). Decision: the rows use the file
   panes' classes directly (`.full-list-container` › `.file-entry` with `.is-striped` / `.is-selected` /
   `.is-under-cursor`, `.is-focused` on the container) rather than `ColumnList`. Why: `ColumnList` draws its own cursor
@@ -119,4 +139,6 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   reusing Multi-Rename's `Transform`/`Replace`/`Mask`, so the wildcard, case and regex rules match Multi-Rename's; the
   pure tag tools (file name → tags, `cmdr_tags::TagTool::FromFileName`, among them) stay in `cmdr-tags`.
 - **Strings**: `multiRename.tags.*` in `messages/en/multiRename.json`; other locales hold untranslated skeletons (Czech
-  comes with the Czech locale port).
+  comes with the Czech locale port). `sync-locale-keys.ts` copies a plural message's English branches only, so the extra
+  CLDR categories i18n-plural asks for (`many` in es, fr, pt; `few` and `many` in ru, for
+  `multiRename.tags.clearField.some`) are English copies added by hand: deliberate, not stale.

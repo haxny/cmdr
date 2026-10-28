@@ -5661,6 +5661,7 @@ export const events = {
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
   tagsDeselectAll: makeEvent<TagsDeselectAll>('tags-deselect-all'),
+  tagsMenuKey: makeEvent<TagsMenuKey>('tags-menu-key'),
   tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
   tagsSkipped: makeEvent<TagsSkipped>('tags-skipped'),
   viewModeChanged: makeEvent<ViewModeChanged>('view-mode-changed'),
@@ -18658,6 +18659,21 @@ export type TagTool =
  *  clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
  */
 export type TagsDeselectAll = null
+
+/**
+ *  `tags-menu-key`: a File / Select / View menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8, Tab) pressed while a Tags
+ *  window is focused. Those accelerators fire before the page's keydown, so this is how the
+ *  window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
+ */
+export type TagsMenuKey = {
+  // The `Tags window` command the item's default key runs there (`tags.replace` for File > Edit's F4).
+  commandId: string
+  /**
+   *  The main-window command the item runs. The window acts only while this command's first key is
+   *  still one of `command_id`'s keys: a rebound item no longer means the tag tool.
+   */
+  menuCommandId: string
+}
 
 /**
  *  `tags-select-all`: Edit > Select all (⌘A) while a Tags window (`tags-<id>`) is focused. As

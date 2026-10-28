@@ -2017,5 +2017,9 @@
   "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
   "@multiRename.tags.undo.nothing": {
     "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+Z is pressed but no tag write can be undone."
+  },
+  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "@multiRename.tags.write.someLeft": {
+    "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Write” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.write)."
   }
 }

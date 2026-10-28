@@ -1192,6 +1192,7 @@ export {
   openTagsSession,
   onTagsSelectAll,
   onTagsDeselectAll,
+  onTagsMenuKey,
 } from './tag-editor'
 export type {
   ApplyRequest,
@@ -1207,5 +1208,6 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TagsMenuKey,
   TagsSessionInfo,
 } from './tag-editor'

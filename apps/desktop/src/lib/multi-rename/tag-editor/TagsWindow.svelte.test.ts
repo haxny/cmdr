@@ -33,6 +33,7 @@ const ipc = vi.hoisted(() => ({
     menuSelectAll.callback = callback
     return Promise.resolve(() => {})
   }),
+  onTagsMenuKey: vi.fn(() => Promise.resolve(() => {})),
   onTagsDeselectAll: vi.fn((callback: () => void) => {
     menuDeselectAll.callback = callback
     return Promise.resolve(() => {})

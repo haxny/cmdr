@@ -34,8 +34,15 @@ const ipc = vi.hoisted(() => ({
   openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
   onTagsSelectAll: vi.fn(() => Promise.resolve(() => {})),
   onTagsDeselectAll: vi.fn(() => Promise.resolve(() => {})),
+  onTagsMenuKey: vi.fn((callback: (key: { commandId: string; menuCommandId: string }) => void) => {
+    menuKey.callback = callback
+    return Promise.resolve(() => {})
+  }),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
+}))
+const menuKey = vi.hoisted(() => ({
+  callback: undefined as ((key: { commandId: string; menuCommandId: string }) => void) | undefined,
 }))
 const closeSelfWindow = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 const confirmDialog = vi.hoisted(() => vi.fn())
@@ -323,6 +330,116 @@ describe('the Tags window’s function keys', () => {
     await key('w', { metaKey: true, code: 'KeyW' })
     expect(confirmDialog).toHaveBeenCalledTimes(1)
     expect(closeSelfWindow).not.toHaveBeenCalled()
+  })
+
+  it('a key the native menu delivers runs its Tags command (F4 as File > Edit opens Replace)', async () => {
+    await mountWindow()
+    menuKey.callback?.({ commandId: 'tags.replace', menuCommandId: 'file.edit' })
+    await settle()
+    expect(dialogTitle()).toBe('Find and replace')
+  })
+
+  it('one press seen by both roads (the menu, then the page) acts once', async () => {
+    await mountWindow()
+    menuKey.callback?.({ commandId: 'tags.play', menuCommandId: 'file.view' })
+    await key('F3')
+    expect(ipc.tagTrackAudioUrl).toHaveBeenCalledTimes(1)
+    // Seen by the page first, then the menu: once too.
+    await new Promise((resolve) => setTimeout(resolve, 350))
+    await key('F2')
+    menuKey.callback?.({ commandId: 'tags.edit', menuCommandId: 'file.rename' })
+    await settle()
+    expect(document.querySelectorAll('.tag-value-editor')).toHaveLength(1)
+  })
+
+  it('a menu key does nothing while a value is typed or a dialog is open', async () => {
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    menuKey.callback?.({ commandId: 'tags.replace', menuCommandId: 'file.edit' })
+    await settle()
+    expect(dialog()).toBeNull()
+    expect(document.activeElement).toBe(box)
+  })
+
+  it('Tab by the menu switches the panes', async () => {
+    const root = await mountWindow()
+    menuKey.callback?.({ commandId: 'tags.switchPane', menuCommandId: 'pane.switch' })
+    await settle()
+    expect(document.activeElement).toBe(paneList(root, 'Tracks'))
+  })
+
+  it('refused text in the value box: a click on Write acts on nothing, and focus settles in the box with no loop', async () => {
+    const view = {
+      ...VIEW,
+      shared: [
+        {
+          field: 'artist',
+          value: 'multiple',
+          choices: [
+            { values: ['A'], files: 2 },
+            { values: ['B'], files: 1 },
+          ],
+          choicesMore: 0,
+        },
+      ],
+    }
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: view })
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, `${box.value} C`)
+    const typed = box.value
+    let focusIns = 0
+    box.addEventListener('focus', () => {
+      focusIns += 1
+    })
+    const write = [...root.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find((b) =>
+      b.textContent.includes('Write'),
+    )
+    write?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+    write?.click()
+    for (let i = 0; i < 10; i++) await settle()
+    expect(dialog()).toBeNull()
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    expect(box.isConnected).toBe(true)
+    expect(box.value).toBe(typed)
+    expect(root.querySelector('.tag-value-hint')).not.toBeNull()
+    expect(document.activeElement).toBe(box)
+    expect(focusIns).toBeLessThan(2)
+  })
+
+  it('a value box with sendable text is sent before a bar command runs', async () => {
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    const replace = [...root.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find((b) =>
+      b.textContent.includes('Replace'),
+    )
+    replace?.click()
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
+    expect(dialogTitle()).toBe('Find and replace')
+  })
+
+  it('closing the Write dialog on a write that left files unwritten keeps saying so in the status line', async () => {
+    ipc.applyTags.mockResolvedValue({
+      ok: true,
+      value: {
+        applyId: 'A1',
+        written: [],
+        wouldDrop: [],
+        failed: [{ path: '/b/01.mp3', error: { type: 'notSupported' } }],
+        changedOnDisk: [],
+        undoUnavailable: false,
+      },
+    })
+    const root = await mountWindow()
+    await key('s', { metaKey: true, code: 'KeyS' })
+    buttonNamed(dialog() as HTMLElement, 'Write tags').click()
+    await settle()
+    await key('Escape')
+    expect(dialog()).toBeNull()
+    expect(root.querySelector('.status')?.textContent).toContain('Some files weren’t written.')
   })
 
   it('the bar at the foot runs the same commands', async () => {

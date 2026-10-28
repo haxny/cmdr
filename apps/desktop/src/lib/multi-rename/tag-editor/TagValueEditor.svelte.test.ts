@@ -102,4 +102,24 @@ describe('TagValueEditor', () => {
       else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView
     }
   })
+
+  it('refused text never takes focus back from a dialog (its focus trap would fight it)', async () => {
+    const { input, onClose } = await mountEditor('BLOCK a; b')
+    await typeInto(input, 'BLOCK a')
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    const field = document.createElement('button')
+    dialog.appendChild(field)
+    document.body.appendChild(dialog)
+    try {
+      field.focus()
+      input.dispatchEvent(new FocusEvent('blur', { relatedTarget: field }))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(document.activeElement).toBe(field)
+      expect(onClose).not.toHaveBeenCalled()
+      expect(input.value).toBe('BLOCK a')
+    } finally {
+      dialog.remove()
+    }
+  })
 })
