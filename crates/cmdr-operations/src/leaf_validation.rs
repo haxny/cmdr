@@ -287,7 +287,7 @@ fn folded(path: &Path) -> String {
     fold_name(&normal.to_string_lossy()).into_owned()
 }
 
-/// `path`'s `(dev, ino)`, following symlinks the way [`is_same_file`] does;
+/// `path`'s `(dev, ino)`, following symlinks the way [`crate::validation::is_same_file`] does;
 /// `None` when it doesn't exist (or off unix).
 #[cfg(unix)]
 fn file_id(path: &Path) -> Option<(u64, u64)> {

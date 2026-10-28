@@ -116,11 +116,11 @@ impl PlaceField {
 /// Which rule a proposed name breaks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum NameRule {
-    /// One of [`validate_plain_leaf`]'s.
+    /// One of [`cmdr_fs::validation::validate_plain_leaf`]'s.
     Plain(PlainLeafRefusal),
     /// Past [`PHONE_NAME_UNITS`] on a phone.
     PhoneTooLong,
-    /// One of [`PHONE_RESERVED`] on a phone.
+    /// One of the characters a phone reserves (`names.rs`'s `PHONE_RESERVED`).
     PhoneReserved(char),
 }
 

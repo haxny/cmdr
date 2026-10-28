@@ -165,7 +165,7 @@ fn rewrite(conn: &Connection, message_id: i64, decision: ProposalDecision) -> Re
 /// went, plus, for a server group, the protocol its draft names.
 ///
 /// The protocol is read best-effort: a draft that won't read (every reader fails it closed)
-/// still leaves the line saying "the server <name>", because a lost word costs the agent less
+/// still leaves the line saying "the server `<name>`", because a lost word costs the agent less
 /// than a lost lesson.
 pub fn decision_of(
     conn: &Connection,
