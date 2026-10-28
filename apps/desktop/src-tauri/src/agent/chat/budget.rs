@@ -95,9 +95,9 @@ const _: () = assert!(MAX_TOOL_RESULT_TOKENS < DEFAULT_PROMPT_TOKEN_BUDGET);
 /// prompt is 2,378 of it, the 21 tool declarations the rest.
 ///
 /// It grows whenever a tool joins the view, and every call pays it whether or not it uses
-/// that tool: the suggested-ops trio cost about 1,100 tokens of schema between them, which
-/// is roughly four files off a 16,000-token rename batch, and `search`, the most expensive
-/// single declaration, costs 602 even trimmed. Keep a new schema terse.
+/// that tool: the four suggested-ops tools cost about 1,300 tokens of schema between them,
+/// which is roughly four files off a 16,000-token rename batch, and `propose_suggestions`,
+/// the most expensive single declaration, costs 759 even trimmed. Keep a new schema terse.
 pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 7_107;
 
 /// What one `image_facts` row costs at the corpus' average OCR length.

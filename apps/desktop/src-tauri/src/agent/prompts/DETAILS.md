@@ -34,7 +34,7 @@
   a softer "Before a batch of tool calls, say in one short sentence what you are checking." still got none; the current
   "Every time you call tools, first write one short sentence…" narrated every round ("I'll check the biggest folders on
   your Desktop first.", "Next, the contents of vo-test."). Cost: about 31 tokens of prefix. The fixed overhead
-  re-measured at 2,114 (system) + 4,275 (declarations) = 6,389 against the pinned 6,263, inside `cost_tests.rs`'s ±10%.
+  re-measured at 2,114 (system) + 4,275 (declarations) = 6,389 against the then-pinned 6,263, inside `cost_tests.rs`'s ±10%.
 
 ## Not here
 
