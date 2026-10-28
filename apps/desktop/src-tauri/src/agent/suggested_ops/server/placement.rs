@@ -33,7 +33,7 @@ pub(crate) struct PlacedAdd {
     /// The row it joins (an S3 account, an NFS server), whose name it may share.
     pub own_row: Option<String>,
     /// The store entry an add saves, with the add form's defaults for every switch the draft
-    /// can't carry. `None` for SMB, which saves a host (`manual_servers`), not a target.
+    /// can't carry, the SSH agent's aside ([`target_of`]). `None` for SMB, which saves a host (`manual_servers`), not a target.
     pub target: Option<ServerTarget>,
     /// The id the saved place will have; `None` for SMB, whose share learns one at its first
     /// mount.
@@ -146,9 +146,11 @@ fn text(value: &Option<String>) -> String {
 }
 
 /// The store entry an SFTP, WebDAV, or NFS add saves: the draft, plus the add form's defaults
-/// for the switches it can't carry (the SSH agent and "Reconnect automatically" on, no key
-/// file). `None` for an NFS draft with no identity, which the form never saves, and for the
-/// two protocols keyed elsewhere (SMB by host, S3 by account).
+/// for the switches it can't carry ("Reconnect automatically" on, no key file), except the SSH
+/// agent, which stays OFF: on, the first connect would offer every key in the user's agent to
+/// a host the AI picked. The user turns it on in the hub. `None` for an NFS draft with no
+/// identity, which the form never saves, and for the two protocols keyed elsewhere (SMB by
+/// host, S3 by account).
 fn target_of(draft: &ServerDraft) -> Option<ServerTarget> {
     let target = match draft.protocol {
         DraftProtocol::Sftp => ServerTarget::Sftp {
@@ -159,7 +161,7 @@ fn target_of(draft: &ServerDraft) -> Option<ServerTarget> {
             remote_root: text(&draft.remote_root),
             start_folder: draft.start_folder.clone(),
             key_file: None,
-            use_agent: true,
+            use_agent: false,
             auto_reconnect: true,
         },
         DraftProtocol::Webdav => ServerTarget::Webdav {

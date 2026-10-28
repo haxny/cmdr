@@ -159,8 +159,9 @@ still stores one (`mark_server_group_completed`), ready for a core that grows a 
 
 **What each save is, and why it can't contact or move anything:**
 
-- An SFTP, WebDAV, NFS, or S3 add: `save_target` with the draft plus the add form's defaults (SSH agent and
-  "Reconnect automatically" on, no key file), which dials nothing for a place nobody connected.
+- An SFTP, WebDAV, NFS, or S3 add: `save_target` with the draft plus the add form's defaults ("Reconnect
+  automatically" on, no key file), which dials nothing for a place nobody connected. The SSH agent is the one
+  exception, saved OFF (`placement::target_of`): `../tools/suggestions/DETAILS.md` § Proposing a server says why.
 - An SMB add: `manual_servers::save_manual_server_without_contact` on `smb://host:port[/share]`, ❌ never
   `add_manual_server` (it joins discovery at once) and ❌ never `Reachability::Check`.
 - An edit of a place: `saved_servers::save_place_edit`, the STORED entry with only the editable fields set, so the

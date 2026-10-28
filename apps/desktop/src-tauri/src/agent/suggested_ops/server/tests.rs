@@ -157,9 +157,10 @@ async fn an_approved_add_saves_through_its_core_and_completes_with_its_line_and_
             username: "dana".into(),
             remote_root: "/".into(),
             start_folder: None,
-            // The add form's defaults, ❌ never anything the draft could carry.
+            // The add form's defaults, ❌ never anything the draft could carry, except the SSH
+            // agent: off, so the first connect offers no key to a host the agent picked.
             key_file: None,
-            use_agent: true,
+            use_agent: false,
             auto_reconnect: true,
         })]
     );
