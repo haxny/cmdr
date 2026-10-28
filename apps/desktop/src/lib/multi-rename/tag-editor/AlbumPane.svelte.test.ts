@@ -325,8 +325,6 @@ describe('AlbumPane type-to-edit and Delete', () => {
     await press(list, 'a', { metaKey: true })
     await press(list, 'a', { altKey: true })
     await press(list, 'a', { isComposing: true })
-    await press(list, 'Process')
-    await press(list, 'Dead')
     expect(editorOf(root)).toBeNull()
     const dialog = document.createElement('div')
     dialog.setAttribute('role', 'dialog')
@@ -357,5 +355,40 @@ describe('AlbumPane type-to-edit and Delete', () => {
     const empty = await mountPane({ cursor: 3 })
     await press(empty.list, 'Delete')
     expect(empty.onClear).not.toHaveBeenCalled()
+  })
+})
+
+describe('AlbumPane composition, Shift and multiple values', () => {
+  it('a dead key opens an empty editor without claiming the key; Shift characters seed it', async () => {
+    const { root, list, onEdit } = await mountPane()
+    const dead = await press(list, 'Dead')
+    expect(dead.defaultPrevented).toBe(false)
+    const box = editorOf(root)
+    expect(box?.value).toBe('')
+    if (box) await press(box, 'Enter')
+    expect(onEdit).not.toHaveBeenCalled()
+    await press(list, 'Q', { shiftKey: true })
+    expect(editorOf(root)?.value).toBe('Q')
+  })
+
+  it('typing on a «multiple values» row then Enter sets that value on the scope', async () => {
+    const { root, list, onEdit } = await mountPane({ cursor: 1 })
+    await press(list, 'X')
+    const box = editorOf(root)
+    expect(box?.value).toBe('X')
+    if (box) await press(box, 'Enter')
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: ['X'] }])
+  })
+
+  it('Delete and Backspace inside the open editor stay text editing', async () => {
+    const { root, list, onClear } = await mountPane()
+    await press(list, 'H')
+    const box = editorOf(root)
+    if (box) {
+      await press(box, 'Backspace')
+      await press(box, 'Delete')
+    }
+    expect(editorOf(root)).toBe(box)
+    expect(onClear).not.toHaveBeenCalled()
   })
 })

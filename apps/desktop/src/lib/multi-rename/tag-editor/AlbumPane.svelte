@@ -24,7 +24,7 @@
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import TagValueEditor from './TagValueEditor.svelte'
     import type { TagsCommandId } from './tags-function-keys'
-    import { dialogIsOpen, isClearKey, typedSeed } from './typed-key'
+    import { dialogIsOpen, isClearKey, startsComposition, typedSeed } from './typed-key'
     import ValueChoices from './ValueChoices.svelte'
 
     interface Props {
@@ -150,6 +150,11 @@
     /** Typing on the cursor row opens its value holding the character; Delete / Backspace empty it. */
     function answerTypedKey(e: KeyboardEvent): boolean {
         if (dialogIsOpen() || !editable || current === undefined) return false
+        if (startsComposition(e)) {
+            // Not claimed: the OS composes the accented letter into the box that opens.
+            openEditor(at, '')
+            return true
+        }
         const seed = typedSeed(e)
         const clear = seed === null && isClearKey(e)
         if (seed === null && !clear) return false

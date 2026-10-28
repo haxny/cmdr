@@ -24,3 +24,11 @@ export function isClearKey(e: KeyboardEvent): boolean {
   if (e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return false
   return e.key === 'Delete' || e.key === 'Backspace'
 }
+
+/**
+ * A dead key (ˇ or ´ on a Czech layout, Option-e on a US one) or an IME's first key: the next key composes with it
+ * (ˇ + d = ď), so the pane opens an empty editor and leaves the key alone for the OS to compose into it.
+ */
+export function startsComposition(e: KeyboardEvent): boolean {
+  return (e.key === 'Dead' || e.key === 'Process') && !e.metaKey && !e.ctrlKey
+}

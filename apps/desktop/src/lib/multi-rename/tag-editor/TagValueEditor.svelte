@@ -68,6 +68,8 @@
     let frame = $state<HTMLElement>()
     let hint = $state<string | null>(null)
     let done = false
+    /** The box opened empty for a dead key and nothing was typed: closing it sends nothing (it never clears the row). */
+    let untouched = untrack(() => seed === '')
 
     const describedByAll = $derived([describedBy, hint === null ? undefined : hintId].filter(Boolean).join(' ') || undefined)
 
@@ -97,7 +99,7 @@
     function finish(commit: boolean, refocus = true): void {
         if (done) return
         done = true
-        if (commit && draft !== value) {
+        if (commit && draft !== value && !(untouched && draft === '')) {
             // A refused edit is the state's to word; here it is only logged, by kind, never the text.
             void new Promise<void>((resolve) => {
                 resolve(onCommit(draft))
@@ -150,6 +152,7 @@
 
     /** Typing: a shown hint follows the text, and goes once the text can be sent. */
     function oninput(e: Event): void {
+        untouched = false
         if (hint === null) return
         const target = e.currentTarget
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) hint = refusal(target.value)

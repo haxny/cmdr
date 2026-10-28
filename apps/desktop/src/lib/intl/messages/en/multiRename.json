@@ -1220,6 +1220,14 @@
       "fileName": "the name of the audio file the title belongs to"
     }
   },
+  "multiRename.tags.track.cellNumber": "Track number column",
+  "@multiRename.tags.track.cellNumber": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the left arrow moves the active cell to the track number column; typing and Delete then act on the track number."
+  },
+  "multiRename.tags.track.cellTitle": "Title column",
+  "@multiRename.tags.track.cellTitle": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the right arrow moves the active cell to the title column; typing and Delete then act on the title."
+  },
   "multiRename.tags.track.numberLabel": "Track number of {fileName}",
   "@multiRename.tags.track.numberLabel": {
     "description": "Accessible name of the box that edits one file's track number in the track list of the tag editor window. Only read aloud by screen readers.",

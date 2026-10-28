@@ -245,7 +245,7 @@
 
     const COMMANDS: Record<TagsCommandId, () => void> = {
         'tags.edit': () => {
-            if (panes.active === 'tracks') tracksPane?.editAtCursor('title')
+            if (panes.active === 'tracks') tracksPane?.editAtCursor()
             else albumPane?.editAtCursor()
         },
         'tags.editNumber': () => tracksPane?.editAtCursor('track'),
