@@ -128,6 +128,14 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
+  "commands.askCmdrNewChat.label": "Nuevo chat de Ask Cmdr",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "Inicia un chat nuevo en Ask Cmdr y ábrelo si está cerrado",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
   "commands.feedbackSend.label": "Enviar comentarios",
   "@commands.feedbackSend.label": {
     "sourceHash": "8235980"

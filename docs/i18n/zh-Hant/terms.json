@@ -122,6 +122,11 @@
     "confidence": "high",
     "sources": "MS"
   },
+  "ai-context": {
+    "chosen": "上下文",
+    "confidence": "tentative",
+    "sources": "The zh-TW MS terminology file returns 上下文; 脈絡 is the general sense; askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "chosen": "AI",
     "confidence": "high",

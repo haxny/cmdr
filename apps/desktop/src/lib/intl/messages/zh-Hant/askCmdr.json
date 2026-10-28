@@ -900,6 +900,23 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "不到 {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "金額以 USD 計算，而且沒有算進你的提供者那邊的快取。你實際的帳單很可能只有這個數字的一小部分，因為我們每次呼叫之間共用的上下文會被快取。",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount}K",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount}M",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011",
+    "sameAsSourceJustification": "Latin M after a number is how Chinese AI pricing and context sizes write millions of tokens (1M, 128K); the CLDR 萬 form needs a count in ten-thousands, which this key doesn’t get."
+  },
   "askCmdr.cost.unknown": "費用未知",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

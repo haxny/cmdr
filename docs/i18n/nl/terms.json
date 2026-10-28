@@ -74,6 +74,11 @@
     "forms": "Cmdr Settings section → Geavanceerd; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "context",
+    "confidence": "high",
+    "sources": "MS terminology (context → context); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "accept": ["de AI", "AI-"],
     "chosen": "AI-functies",

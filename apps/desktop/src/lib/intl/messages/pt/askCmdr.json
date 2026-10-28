@@ -904,6 +904,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "menos de {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "O valor está em USD e não considera o cache do seu provedor. Sua conta real provavelmente é uma fração disso, porque o contexto compartilhado entre nossas chamadas fica em cache.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} mil",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} mi",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "custo desconhecido",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

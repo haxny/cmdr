@@ -904,6 +904,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "menos de {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "El importe está en USD y no tiene en cuenta la caché de tu proveedor. Lo más probable es que tu factura real sea una fracción de esto, porque el contexto que comparten nuestras llamadas se guarda en caché.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} mil",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} M",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "coste desconocido",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

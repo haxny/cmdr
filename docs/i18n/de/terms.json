@@ -70,6 +70,11 @@
     "forms": "the Settings section and the sheet's group → Erweitert; in prose → in den erweiterten Einstellungen",
     "sources": "AppKit AccessibilityImageDescriptions (NSAdvanced); catalog (settings.section.advanced)"
   },
+  "ai-context": {
+    "chosen": "Kontext",
+    "confidence": "high",
+    "sources": "MS terminology (context → Kontext); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "chosen": "KI",
     "confidence": "high",

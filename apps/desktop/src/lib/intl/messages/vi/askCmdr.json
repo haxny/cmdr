@@ -902,6 +902,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "dưới {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Số tiền tính bằng USD và chưa tính đến việc lưu vào bộ đệm ở phía nhà cung cấp của bạn. Hóa đơn thực tế của bạn có lẽ chỉ bằng một phần nhỏ con số này, vì ngữ cảnh dùng chung giữa các lệnh gọi của Cmdr được lưu vào bộ đệm.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} N",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} Tr",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "chi phí không rõ",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

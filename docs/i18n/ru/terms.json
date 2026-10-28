@@ -154,6 +154,11 @@
     "confidence": "high",
     "sources": "MS (client → клиент, 'a program that connects to another entity over a network'; AI → ИИ)"
   },
+  "ai-context": {
+    "chosen": "контекст",
+    "confidence": "high",
+    "sources": "MS terminology (context → контекст); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "chosen": "функции ИИ",
     "accept": ["функци", "ИИ"],

@@ -60,6 +60,11 @@
     "forms": "Cmdr Settings section → Nâng cao; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "ngữ cảnh",
+    "confidence": "high",
+    "sources": "MS terminology (context → ngữ cảnh); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "accept": ["tính năng AI"],
     "chosen": "AI",

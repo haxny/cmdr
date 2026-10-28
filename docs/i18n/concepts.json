@@ -91,6 +91,13 @@
     "match": ["ai client", "ai clients"],
     "sense": "An outside AI app driving Cmdr over its automation interface, named as the source of an operation."
   },
+  "ai-context": {
+    "distinct": ["context-window", "context-menu"],
+    "en": "context",
+    "match": ["context"],
+    "notMatch": ["context menu", "context menus", "context window", "model context protocol"],
+    "sense": "The conversation so far that Cmdr sends the AI model with each call, which providers cache between calls."
+  },
   "ai-feature": {
     "distinct": ["ask-cmdr", "cloud-ai"],
     "en": "AI features",

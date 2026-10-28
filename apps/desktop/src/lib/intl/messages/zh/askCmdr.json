@@ -900,6 +900,23 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "不到 {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "金额以 USD 计，且没有算上你的提供方那边的缓存。你实际的账单很可能只是这个数的一小部分，因为我们各次调用之间共享的上下文会被缓存。",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount}K",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount}M",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011",
+    "sameAsSourceJustification": "Latin M after a number is how Chinese AI pricing and context sizes write millions of tokens (1M, 128K); the CLDR 万 form needs a count in ten-thousands, which this key doesn’t get."
+  },
   "askCmdr.cost.unknown": "费用未知",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

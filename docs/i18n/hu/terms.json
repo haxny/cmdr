@@ -109,6 +109,12 @@
     "confidence": "high",
     "sources": "ms (client: an entity that connects to another over a network → kliens)"
   },
+  "ai-context": {
+    "avoid": [{ "form": "környezet", "why": "reads as environment, the MS execution-context sense" }],
+    "chosen": "kontextus",
+    "confidence": "tentative",
+    "sources": "MS terminology has only környezet (the execution-environment sense); kontextus is the AI-context word; askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "chosen": "AI-funkciók",
     "accept": ["az AI", "AI-"],

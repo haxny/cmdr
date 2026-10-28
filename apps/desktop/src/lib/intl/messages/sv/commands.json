@@ -128,6 +128,14 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
+  "commands.askCmdrNewChat.label": "Ny Ask Cmdr-chatt",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "Starta en ny chatt i Ask Cmdr och öppna panelen om den är stängd",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
   "commands.feedbackSend.label": "Skicka återkoppling",
   "@commands.feedbackSend.label": {
     "sourceHash": "8235980"

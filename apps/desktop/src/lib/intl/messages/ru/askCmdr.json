@@ -901,6 +901,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "меньше {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Сумма указана в USD и не учитывает кэширование у вашего поставщика. Реальный счет, скорее всего, составит лишь долю этой суммы, потому что общий контекст наших вызовов кэшируется.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} тыс.",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} млн",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "стоимость неизвестна",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

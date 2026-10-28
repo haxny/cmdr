@@ -903,6 +903,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "unter {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Der Betrag ist in USD und lässt das Zwischenspeichern bei deinem Anbieter außer Acht. Deine echte Rechnung ist wahrscheinlich nur ein Bruchteil davon, weil der Kontext, den unsere Aufrufe gemeinsam nutzen, zwischengespeichert wird.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} Tsd.",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} Mio.",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "Kosten unbekannt",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

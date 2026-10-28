@@ -128,6 +128,14 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
+  "commands.askCmdrNewChat.label": "Új Ask Cmdr-csevegés",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "Kezdj új csevegést az Ask Cmdrben, és nyisd meg, ha be van zárva",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
   "commands.feedbackSend.label": "Visszajelzés küldése",
   "@commands.feedbackSend.label": {
     "sourceHash": "8235980"

@@ -64,6 +64,11 @@
     "forms": "Cmdr Settings section → Avancé; quote settings.section.advanced exactly in navigation paths; the shipped section name stays distinct from Apple’s generic Advanced label",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "contexte",
+    "confidence": "high",
+    "sources": "MS terminology (context → contexte); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "accept": ["l’IA", "d’IA", "une IA"],
     "chosen": "fonctionnalités d’IA",

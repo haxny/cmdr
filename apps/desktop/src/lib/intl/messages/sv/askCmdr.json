@@ -902,6 +902,23 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "under {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57",
+    "sameAsSourceJustification": "Swedish shares the preposition: “under” is the everyday word for below a price (under 10 kr), so the frame is correctly identical."
+  },
+  "askCmdr.cost.estimateTooltip": "Beloppet är i USD och räknar inte med cachelagring hos din leverantör. Din faktiska faktura är troligen bara en bråkdel av det här, eftersom kontexten som våra anrop delar cachelagras.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} tn",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} mn",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "kostnad okänd",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

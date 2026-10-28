@@ -902,6 +902,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "{amount} alatt",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Az összeg USD-ben van, és nem számol a szolgáltatódnál történő gyorsítótárazással. A valódi számlád valószínűleg csak a töredéke ennek, mert a hívásaink közös kontextusa gyorsítótárba kerül.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount} E",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} M",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "költség ismeretlen",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

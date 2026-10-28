@@ -128,6 +128,14 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
+  "commands.askCmdrNewChat.label": "新的 Ask Cmdr 對話",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "在 Ask Cmdr 開始新的對話，如果已關閉就先開啟",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
   "commands.feedbackSend.label": "傳送意見反應",
   "@commands.feedbackSend.label": {
     "sourceHash": "8235980"

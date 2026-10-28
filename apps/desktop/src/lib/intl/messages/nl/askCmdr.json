@@ -905,6 +905,22 @@
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
   },
+  "askCmdr.cost.underAmount": "minder dan {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Het bedrag is in USD en houdt geen rekening met het cachen bij je aanbieder. Je echte rekening is waarschijnlijk maar een fractie hiervan, omdat de context die onze aanroepen delen in de cache staat.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.tokens.thousands": "{amount}K",
+  "@askCmdr.tokens.thousands": {
+    "sourceHash": "392e439"
+  },
+  "askCmdr.tokens.millions": "{amount} mln.",
+  "@askCmdr.tokens.millions": {
+    "sourceHash": "4427011"
+  },
   "askCmdr.cost.unknown": "kosten onbekend",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

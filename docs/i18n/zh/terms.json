@@ -84,6 +84,11 @@
     "forms": "operation-log initiator 代理; `ssh-agent` stays verbatim",
     "sources": "catalog"
   },
+  "ai-context": {
+    "chosen": "上下文",
+    "confidence": "high",
+    "sources": "MS terminology (context → 上下文); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "accept": ["AI"],
     "chosen": "AI 功能",
