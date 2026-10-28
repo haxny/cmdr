@@ -806,7 +806,7 @@
       "callsText": "How many tool requests, as a formatted number.",
       "calls": "The same count as a number, to pick the plural form.",
       "duration": "How long the answer took, already formatted, for example 4.2s or 1m 5s.",
-      "tokensText": "How many tokens, as a formatted number.",
+      "tokensText": "How many tokens, already formatted: exact below 2,000 (like 1,234), compact above (like 194.8k or 1.3M).",
       "tokens": "The same count as a number, to pick the plural form."
     }
   },
@@ -816,7 +816,7 @@
     "placeholders": {
       "callsText": "How many tool requests, as a formatted number.",
       "calls": "The same count as a number, to pick the plural form.",
-      "tokensText": "How many tokens, as a formatted number.",
+      "tokensText": "How many tokens, already formatted: exact below 2,000 (like 1,234), compact above (like 194.8k or 1.3M).",
       "tokens": "The same count as a number, to pick the plural form."
     }
   },
@@ -1076,7 +1076,7 @@
   "@askCmdr.cost.tokens": {
     "description": "The token count in the chat's cost footer. countText is the preformatted number (with thousands separators); count is the raw integer that selects singular or plural.",
     "placeholders": {
-      "countText": "The token count, already formatted with thousands separators, like 1,234.",
+      "countText": "The token count, already formatted: exact below 2,000 (like 1,234), compact above (like 194.8k or 1.3M). The tooltip on it shows the exact count.",
       "count": "The raw token count as an integer, used only to pick the singular or plural word."
     },
     "screenshot": "settings-ai-ask-cmdr.png"
@@ -1088,9 +1088,34 @@
   },
   "askCmdr.cost.estimate": "about {amount}",
   "@askCmdr.cost.estimate": {
-    "description": "Estimated cost of a chat with a known cloud model. amount is a preformatted currency string like $0.0023. Lowercase 'about' signals it's an estimate, not an exact bill.",
+    "description": "Estimated cost of a chat with a known cloud model. amount is a preformatted currency string like $0.83. Lowercase 'about' signals it's an estimate, not an exact bill.",
     "placeholders": {
-      "amount": "The estimated cost, already formatted as a currency amount, like $0.0023."
+      "amount": "The estimated cost, already formatted as a US dollar amount rounded to cents, like $0.83."
+    }
+  },
+  "askCmdr.cost.underAmount": "under {amount}",
+  "@askCmdr.cost.underAmount": {
+    "description": "Estimated cost of a chat that cost something, but less than one cent, so it can't show in cents without reading as free. Shown after the token count in the chat's cost footer and in the AI settings' daily spend. Lowercase.",
+    "placeholders": {
+      "amount": "The smallest amount shown, already formatted: one US cent, like $0.01."
+    }
+  },
+  "askCmdr.cost.estimateTooltip": "The amount is in USD, and it doesn’t count caching on your provider’s side. Your real bill is probably a fraction of this, because the context shared between our calls is cached.",
+  "@askCmdr.cost.estimateTooltip": {
+    "description": "Tooltip on the estimated cost in the Ask Cmdr chat's footer. It explains the amount is in US dollars, and that the estimate ignores the provider's prompt caching (the AI service reuses the repeated parts of a conversation more cheaply), so the real bill is usually much lower. “USD” is the currency code; keep it. “Provider” is the AI service the person set up."
+  },
+  "askCmdr.tokens.thousands": "{amount}k",
+  "@askCmdr.tokens.thousands": {
+    "description": "A large token count shown compactly, in thousands: 2k, 2.2k, 194.8k. Shown in the Ask Cmdr chat's cost footer and in the quiet line under each answer, followed by the word for tokens. Use your language's usual short form for thousands; keep it as short as possible.",
+    "placeholders": {
+      "amount": "The count in thousands, already formatted with at most one decimal, like 2.2."
+    }
+  },
+  "askCmdr.tokens.millions": "{amount}M",
+  "@askCmdr.tokens.millions": {
+    "description": "A very large token count shown compactly, in millions: 1M, 1.3M. Shown in the Ask Cmdr chat's cost footer and in the quiet line under each answer, followed by the word for tokens. Use your language's usual short form for millions; keep it as short as possible.",
+    "placeholders": {
+      "amount": "The count in millions, already formatted with at most one decimal, like 1.3."
     }
   },
   "askCmdr.cost.unknown": "cost unknown",

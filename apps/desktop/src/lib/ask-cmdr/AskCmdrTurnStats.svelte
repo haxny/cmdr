@@ -6,7 +6,8 @@
 -->
 <script lang="ts">
     import type { TurnStats } from '#lib/ipc/bindings.js'
-    import { turnStatsText } from './ask-cmdr-labels'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { turnStatsText, turnStatsTokensTooltip } from './ask-cmdr-labels'
 
     interface Props {
         stats: TurnStats | null
@@ -14,14 +15,17 @@
     const { stats }: Props = $props()
 
     const text = $derived(turnStatsText(stats))
+    const exactTokens = $derived(turnStatsTokensTooltip(stats))
 </script>
 
 {#if text !== null}
-    <div class="turn-stats">{text}</div>
+    <div class="turn-stats" use:tooltip={exactTokens}>{text}</div>
 {/if}
 
 <style>
     .turn-stats {
+        /* Hugs its text, so the exact-tokens tooltip anchors on the line, not the bubble's width. */
+        width: fit-content;
         padding: 0 var(--spacing-xs);
         font-size: var(--font-size-xs);
         color: var(--color-text-tertiary);

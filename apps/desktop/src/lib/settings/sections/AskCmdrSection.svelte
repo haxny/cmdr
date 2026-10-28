@@ -31,7 +31,7 @@
     } from '#lib/tauri-commands/index.js'
     import { cloudAiBlocked, openCloudConsentSettings, refreshCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
     import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
-    import { formatUsdMicros } from '#lib/ask-cmdr/ask-cmdr-cost.js'
+    import { costEstimateText } from '#lib/ask-cmdr/ask-cmdr-cost.js'
     import ForgetMemoryDialog from './ForgetMemoryDialog.svelte'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { dependOn } from '#lib/utils/reactivity.js'
@@ -190,7 +190,7 @@
     // fully-priced day is local/on-device).
     function dayCostText(day: CostSummary['days'][number]): string {
         if (!day.fullyPriced) return tString('askCmdr.cost.unknown')
-        if (day.costMicros > 0) return tString('askCmdr.cost.estimate', { amount: formatUsdMicros(day.costMicros) })
+        if (day.costMicros > 0) return costEstimateText(day.costMicros)
         return tString('askCmdr.cost.free')
     }
 

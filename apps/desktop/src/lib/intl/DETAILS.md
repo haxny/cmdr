@@ -243,7 +243,11 @@ the column-measurement fold, so a per-call construction is what regresses scroll
 the caches below.
 
 `getNumberFormatter(options)` caches by `${locale} ${JSON.stringify(options)}` and rebuilds only when
-`getFormatLocale()` changes. `getGroupSeparator()` caches the group character per locale (derived from
+`getFormatLocale()` changes. `formatWorded(options, value)` shares that cache for its UI-language half: it formats the
+words around a number (a narrow unit, a currency symbol) and their placement in `getUiLocale()`, then splices in the
+digits from `getNumberFormatter`, so an English app on a Swedish-formatted Mac reads "$0,83" and "54,5s" where the
+formatting locale alone writes "0,83 US$". Durations (`duration-format.ts`) and Ask Cmdr's cost go through it.
+`getGroupSeparator()` caches the group character per locale (derived from
 `Intl.NumberFormat(locale).formatToParts(11111)`). Both mirror the lazy-singleton `getSystemLocaleFormatter()` in
 `format-utils.ts`, which now also keys its single cached `Intl.DateTimeFormat` on the active locale.
 

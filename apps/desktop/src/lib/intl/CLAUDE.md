@@ -11,10 +11,10 @@ for numbers, sizes, dates.
   maps the language half (`null` = no override), `watchSystemLocales()` follows a live change.
 - `language-analytics.ts`: language events (shipped tags only), fired off the PICK, never a subscription
   (`src-tauri/src/analytics/DETAILS.md`).
-- `number-format.ts`: memoized `Intl.NumberFormat` factory (`getNumberFormatter`), `formatInteger`, `formatMoney`, and
-  `getGroupSeparator`. `list-format.ts`: joins (and, or, unit); `createListFormat`, the sole `Intl.ListFormat` door
-  (Catalina lacks it). `sentence-join.ts`: `joinSentences()` (❌ never `.join(' ')`: no space in Chinese).
-  `duration-format.ts`: narrow durations, no `Intl.DurationFormat`.
+- `number-format.ts`: the memoized `getNumberFormatter`, `formatInteger`, `formatMoney`, `getGroupSeparator`,
+  `formatWorded` (UI-language words, OS digits). `list-format.ts`: joins (and, or, unit); `createListFormat`, the sole
+  `Intl.ListFormat` door (Catalina lacks it). `sentence-join.ts`: `joinSentences()` (❌ never `.join(' ')`: no space in
+  Chinese). `duration-format.ts`: narrow durations, no `Intl.DurationFormat`.
 - `locale-inheritance.ts`: which catalog a locale may inherit from (same language AND same script), shared with the i18n
   checks and Rust.
 - `messages.svelte.ts`: the runtime: `t()` (catalog + ICU), `getMessage()` (raw), `setLocale()`, `availableLocales()`,

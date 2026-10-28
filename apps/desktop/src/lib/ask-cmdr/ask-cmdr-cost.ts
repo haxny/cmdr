@@ -7,7 +7,8 @@
  * unknown", and only a fully-priced thread shows an estimated amount — never a silent $0.
  */
 
-import { getNumberFormatter } from '#lib/intl/number-format.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger, formatWorded, getNumberFormatter } from '#lib/intl/number-format.js'
 import type { ConversationCost, NextCallPricing } from '#lib/tauri-commands/index.js'
 
 /** Total tokens (prompt + completion) for a metered record. */
@@ -15,15 +16,52 @@ export function totalTokens(cost: { promptTokens: number; completionTokens: numb
   return cost.promptTokens + cost.completionTokens
 }
 
+/** From here up, a token count reads compact ("2k", "1.3M"); below it, exact. */
+const COMPACT_TOKENS_FROM = 2_000
+
 /**
- * Format an integer micro-USD estimate as a locale-aware USD amount. A sub-dollar amount
- * keeps up to four fraction digits (a chat often costs a few tenths of a cent, and rounding
- * that to `$0.00` would read as free); a dollar or more rounds to cents.
+ * A token count as the rail shows it: exact below 2,000, then thousands ("2k", "2.2k") and
+ * millions ("1M", "1.3M") with one decimal at most. Rounding picks the unit, so 999,950 reads
+ * "1M", never "1,000k". The decimal mark follows the formatting locale like every number; the
+ * "k" / "M" suffix is the UI language's (a catalog string). Exact counts belong in a tooltip.
+ */
+export function formatTokenCount(tokens: number): string {
+  if (tokens < COMPACT_TOKENS_FROM) return formatInteger(tokens)
+  const oneDecimal = getNumberFormatter({ maximumFractionDigits: 1 })
+  const thousands = Math.round(tokens / 100) / 10
+  if (thousands < 1_000) return tString('askCmdr.tokens.thousands', { amount: oneDecimal.format(thousands) })
+  const millions = Math.round(tokens / 100_000) / 10
+  return tString('askCmdr.tokens.millions', { amount: oneDecimal.format(millions) })
+}
+
+/**
+ * Format an integer micro-USD estimate as a USD amount rounded to cents ("$0.83"): the narrow
+ * symbol and its place from the UI language, the digits from the formatting locale
+ * (`formatWorded`). The tooltip beside it says it's USD, so the symbol stays narrow.
  */
 export function formatUsdMicros(micros: number): string {
-  const dollars = micros / 1_000_000
-  const maximumFractionDigits = Math.abs(dollars) >= 1 ? 2 : 4
-  return getNumberFormatter({ style: 'currency', currency: 'USD', maximumFractionDigits }).format(dollars)
+  const options = {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  } as const
+  return formatWorded(options, micros / 1_000_000)
+}
+
+/** Half a cent in micro-USD: anything below it would round to `$0.00`. */
+const HALF_CENT_MICROS = 5_000
+
+/**
+ * The estimate as a phrase: "about $0.83", or "under $0.01" for a real cost too small to show
+ * in cents (a short chat often costs a fraction of a cent, and "$0.00" would read as free).
+ */
+export function costEstimateText(micros: number): string {
+  if (micros > 0 && micros < HALF_CENT_MICROS) {
+    return tString('askCmdr.cost.underAmount', { amount: formatUsdMicros(10_000) })
+  }
+  return tString('askCmdr.cost.estimate', { amount: formatUsdMicros(micros) })
 }
 
 /** True when every metered turn used a local/on-device model (so the thread is free). */

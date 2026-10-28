@@ -15,7 +15,7 @@
 
 import { createListFormat } from './list-format'
 import { getUiLocale } from './locale'
-import { getNumberFormatter } from './number-format'
+import { formatWorded } from './number-format'
 
 /** The units a compact duration can name. */
 export type DurationUnit = 'hour' | 'minute' | 'second'
@@ -60,45 +60,23 @@ export function formatNarrowDuration(parts: readonly DurationPart[]): string {
 /** The units a single measured timing can be worded in. */
 export type MeasureUnit = 'millisecond' | 'second'
 
-const measureFormatterCache = new Map<string, Intl.NumberFormat>()
-
-/** `formatToParts` types that make up the number itself, as opposed to the unit around it. */
-const NUMBER_PART_TYPES = new Set(['integer', 'group', 'decimal', 'fraction', 'minusSign'])
-
 /**
  * Words one timing ("847ms", "1.4s", "1,4 Sek.") in the UI language's narrow
  * style, with `fractionDigits` digits after the decimal mark.
  *
  * The unit and its placement come from the UI language, the digits from the
- * formatting locale (`#lib/intl/number-format`), the same split a size makes:
+ * formatting locale ({@link formatWorded}), the same split a size makes:
  * a French speaker on a US-formatted Mac reads "1.4 s".
  */
 export function formatNarrowMeasure(unit: MeasureUnit, value: number, fractionDigits: number): string {
-  const locale = getUiLocale()
-  const key = `${locale} ${unit} ${String(fractionDigits)}`
-  let formatter = measureFormatterCache.get(key)
-  if (formatter === undefined) {
-    formatter = new Intl.NumberFormat(locale, {
+  return formatWorded(
+    {
       style: 'unit',
       unit,
       unitDisplay: 'narrow',
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-    })
-    measureFormatterCache.set(key, formatter)
-  }
-  const digits = getNumberFormatter({
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value)
-  let numberWritten = false
-  return formatter
-    .formatToParts(value)
-    .map((part) => {
-      if (!NUMBER_PART_TYPES.has(part.type)) return part.value
-      if (numberWritten) return ''
-      numberWritten = true
-      return digits
-    })
-    .join('')
+    },
+    value,
+  )
 }

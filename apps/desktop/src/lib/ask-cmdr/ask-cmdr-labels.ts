@@ -23,7 +23,7 @@ import type {
   TurnStats,
 } from '#lib/ipc/bindings.js'
 import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
-import { totalTokens } from './ask-cmdr-cost'
+import { formatTokenCount, totalTokens } from './ask-cmdr-cost'
 import type { RailToolCall } from './ask-cmdr-messages'
 import { outcomeOk, placeName, type PathTarget } from './ask-cmdr-tool-line'
 
@@ -412,7 +412,8 @@ function outcomeText(outcome: ToolOutcome): string | null {
  * What a turn spent, as the quiet line under its bubble: tool calls, wall time, and tokens. The
  * tokens are the cost meter's (prompt plus completion per row), so a thread's turns add up to its
  * cost footer. `null` for a turn with no stats or no tool call; a turn recorded before wall time
- * was measured leaves the time out, and a stopped turn leads with saying so.
+ * was measured leaves the time out, and a stopped turn leads with saying so. The token count is
+ * compact from 2,000 up ("194.8k"); {@link turnStatsTokensTooltip} carries the exact one.
  */
 export function turnStatsText(stats: TurnStats | null): string | null {
   if (stats === null || stats.toolCalls === 0) return null
@@ -421,13 +422,22 @@ export function turnStatsText(stats: TurnStats | null): string | null {
     calls: stats.toolCalls,
     callsText: formatInteger(stats.toolCalls),
     tokens,
-    tokensText: formatInteger(tokens),
+    tokensText: formatTokenCount(tokens),
   }
   const summary =
     stats.wallMs === null
       ? tString('askCmdr.turnStats.summaryNoDuration', params)
       : tString('askCmdr.turnStats.summary', { ...params, duration: formatMilliseconds(stats.wallMs) })
   return stats.stopped === true ? tString('askCmdr.turnStats.stopped', { summary }) : summary
+}
+
+/** The exact token count behind a stats line's compact one ("194,776 tokens"), or `undefined`
+ * when the line already shows it exactly. */
+export function turnStatsTokensTooltip(stats: TurnStats | null): string | undefined {
+  if (stats === null || stats.toolCalls === 0) return undefined
+  const tokens = totalTokens(stats)
+  if (formatTokenCount(tokens) === formatInteger(tokens)) return undefined
+  return tString('askCmdr.cost.tokens', { count: tokens, countText: formatInteger(tokens) })
 }
 
 const ERROR_KEYS: Record<AskCmdrErrorKind, MessageKey> = {

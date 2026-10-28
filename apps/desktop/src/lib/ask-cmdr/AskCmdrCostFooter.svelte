@@ -21,7 +21,8 @@
     import { dependOn } from '#lib/utils/reactivity.js'
     import AskCmdrContextGauge from './AskCmdrContextGauge.svelte'
     import { gaugeReading } from './ask-cmdr-context-usage'
-    import { costReading, formatUsdMicros } from './ask-cmdr-cost'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { costEstimateText, costReading, formatTokenCount } from './ask-cmdr-cost'
     import { slotStatusState } from './ask-cmdr-slot-status.svelte'
     import { askCmdrState } from './ask-cmdr-trigger.svelte'
 
@@ -66,16 +67,26 @@
         if (!price) return ''
         if (price.kind === 'free') return tString('askCmdr.cost.free')
         if (price.kind === 'unknown') return tString('askCmdr.cost.unknown')
-        return tString('askCmdr.cost.estimate', { amount: formatUsdMicros(price.micros) })
+        return costEstimateText(price.micros)
     })
+    // Only an estimate carries the "USD, before caching" caveat; free and unknown say it all.
+    const priceTooltip = $derived(reading.price?.kind === 'estimate' ? tString('askCmdr.cost.estimateTooltip') : undefined)
+
+    // Compact from 2,000 up ("194.8k tokens"); the exact count waits in the tooltip.
+    const tokensText = $derived(
+        tString('askCmdr.cost.tokens', { count: reading.tokens, countText: formatTokenCount(reading.tokens) }),
+    )
+    const exactTokensText = $derived(
+        tString('askCmdr.cost.tokens', { count: reading.tokens, countText: formatInteger(reading.tokens) }),
+    )
 </script>
 
 <div class="cost-footer">
     <span class="cost" aria-label={tString('askCmdr.cost.label')}>
-        <span>{tString('askCmdr.cost.tokens', { count: reading.tokens, countText: formatInteger(reading.tokens) })}</span>
+        <span use:tooltip={exactTokensText !== tokensText ? exactTokensText : undefined}>{tokensText}</span>
         {#if priceText}
             <span class="dot" aria-hidden="true">·</span>
-            <span>{priceText}</span>
+            <span use:tooltip={priceTooltip}>{priceText}</span>
         {/if}
     </span>
     {#if gauge}
