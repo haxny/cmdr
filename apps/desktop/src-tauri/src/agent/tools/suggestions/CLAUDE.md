@@ -16,7 +16,8 @@ does. Depth: `DETAILS.md`.
 - `propose.rs`: the schema, the handler, and the write path (resolve → check → write). `snapshot.rs`: one bounded
   stat per hand-listed source, frozen as its creation snapshot before the write (also
   `propose_rename_plan`'s).
-- `server.rs` (+ `server_plan.rs`, `server_saved.rs`): `propose_server`, its checks, and the saved servers they read.
+- `server.rs` (+ `server_plan.rs`): `propose_server` and its checks. The saved servers they read, and the checks the
+  approval re-runs, are `../../suggested_ops/server/`'s.
 - `list.rs` / `group.rs`: the two reads and their pure shapers.
 - `tests/`: one file per concern (input contract, write path, read shapers), fixtures in `mod.rs`.
 

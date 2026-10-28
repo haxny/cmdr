@@ -122,6 +122,58 @@ where the user typed the name themselves (invariant 10) and the row would otherw
 
 Either change makes the binding load-bearing for this verb, and the cheapest honest fix is the same one the transfer routes took: teach the archive driver a per-source pre-flight, or refuse a bound compress the way `route_cannot_hold_a_binding` refuses the other changeset routes. ❌ Don't add either capability while compress still passes no `ExpectedSources`.
 
+## Approving a server
+
+`server/` is a server card's approval: `approve_server` claims the card, checks it again against what's saved NOW, runs
+one save through a `ServerSaver`, and ends the group by what the save wrote. `HubSaver` (`server/hub.rs`) is the real
+saver, one arm per servers-hub core; tests hand in fakes. The command is `../../commands/agent/suggested_ops_server.rs`, a
+pass-through that words the answer (`ServerApprovalResultView`) and emits `volumes-changed` on a save, as
+`update_saved_server` does.
+
+**The order.** The claim (`claim_server_group`, its revision the binding) commits first and announces `Approved`; then
+the checks; then the save, ❌ never inside the `main.db` write transaction; then `mark_server_group_completed`, the
+approval metric (counted on a SAVE, never the claim: a refused save gives the card back), and `record_completion`, which
+writes the thread line and the memory-ring lesson.
+
+**Decision: the anti-spoofing checks run again at the click, through the SAME code `propose_server` ran.**
+`server/saved.rs` (`SavedServers`) and `server/placement.rs` (`place_add`, `name_holder`) sit here, below both, so the
+two can't disagree. **Why**: a server saved between proposal and click (by the user, or another approved card) can make
+an add one of a saved server (`alreadySaved`, which `remember` would then silently REPLACE by id) or make its name
+another server's (`nameTaken`). An edit re-reads the saved place and refuses `serverChanged` when its address or any
+editable field no longer matches the card's `previous`; the SMB host's share count is the card's description, not the
+host, so it never reads as drift, and nothing a reconnect writes is in a draft. A place forgotten since answers the
+core's own `Unreachable`, unasked. Each of these gives the card back: nothing was written.
+
+**Decision: a claim goes back only when nothing was written.** `SaveResult` is `Saved` or `Refused`: every
+`SavedServerOutcome` refusal and both `AddServerError`s are made BEFORE the core writes (checked against `saves.rs`, the
+wirings' `save_without_connecting`, `live_server_edit.rs`, `smb_hosts.rs`, and `server_move.rs`), pinned per variant by
+`server/tests.rs::every_core_refusal_classifies_as_written_nothing_and_only_saved_as_saved`, with no `_` arm so a new
+variant forces the call. A save that doesn't answer within `SAVE_DEADLINE`, or whose task dies, may have written: the
+group stays `approved` (the save runs on, detached, through `timeout_detached_typed`), the dialog hears
+`ApprovalDidntFinish` and re-reads, and the next launch's recovery calls it `interrupted`. ❌ Nothing that may have
+written goes back to `pending`: a second click would write twice.
+
+**There is no "partial" save.** The contact-free SMB add writes the host and then its share row with no failure point it
+reports between them (both stores' file writes log rather than answer), so `ServerSaveNote` has no producer. The spine
+still stores one (`mark_server_group_completed`), ready for a core that grows a real partial outcome.
+
+**What each save is, and why it can't contact or move anything:**
+
+- An SFTP, WebDAV, NFS, or S3 add: `save_target` with the draft plus the add form's defaults (SSH agent and
+  "Reconnect automatically" on, no key file), which dials nothing for a place nobody connected.
+- An SMB add: `manual_servers::save_manual_server_without_contact` on `smb://host:port[/share]`, ❌ never
+  `add_manual_server` (it joins discovery at once) and ❌ never `Reachability::Check`.
+- An edit of a place: `saved_servers::save_place_edit`, the STORED entry with only the editable fields set, so the
+  address, the account, the key file, and every switch stay exactly as saved. A connected place's edit rides the
+  session the user opened (`live_server_edit.rs`); an NFS identity change dials its own, as the user's own edit does.
+- An SMB host's edit: `smb_hosts::edit_host` with NO address, so it saves in place and never moves the host or its
+  passwords.
+
+**The card** (`server/card.rs::server_card`, `SuggestedGroupView.server`): the fields the click saves in a fixed order,
+an edit's old value beside each changed one, `addressIsNew` (no saved server of any protocol is at that host), and an
+SMB edit's `sharesAffected`, counted LIVE from the host's group. All read at list time from cached state, ❌ never the
+network.
+
 ## What the user's answer teaches the agent
 
 An approval or a rejection the agent never hears about is a lesson it cannot learn, so every answered group is recorded

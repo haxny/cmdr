@@ -24,6 +24,7 @@ import type { MessageKey } from '#lib/intl/keys.gen.js'
 import {
   type OpSelection as WireOpSelection,
   approveSuggestedGroup,
+  approveSuggestedServer,
   listSuggestedOps,
   onSuggestionsChanged,
   pageSuggestedOps,
@@ -240,7 +241,9 @@ export function approvableCount(groupId: number): number {
 /** Whether Approve may run: not while the group changed under the review, since the version
  *  on screen isn't the one that would run until the user reads the new one. */
 export function canApprove(groupId: number): boolean {
-  return reviewOf(groupId)?.changedUnderReview !== true && approvableCount(groupId) > 0
+  if (reviewOf(groupId)?.changedUnderReview === true) return false
+  // A server card has no ops to count: the card itself is what the click saves.
+  return Boolean(groupById(groupId)?.server) || approvableCount(groupId) > 0
 }
 
 /** Whether one op is ticked. Under the stored base, an op an earlier review excluded starts off. */
@@ -586,32 +589,55 @@ export async function approveGroup(groupId: number): Promise<void> {
   suggestedOpsState.decisionNotice = null
   suggestedOpsState.refusals.delete(groupId)
   try {
-    const review = reviewOf(groupId)
-    const selection = review?.selection ?? storedSelection()
     // The revision the user read, never the one the store holds now: an amendment that landed
     // since refuses as `listChanged` instead of running rows nobody saw.
-    const revision = review?.seenRevision ?? groupById(groupId)?.revision ?? 0
-    const result = await approveSuggestedGroup(groupId, revision, selectionWire(selection))
-    if (isRefusalToStart(result)) suggestedOpsState.refusals.set(groupId, result)
-    if (result.kind === 'started') {
-      await refreshSuggestions()
-      // Nothing waiting means nothing left to decide, so the dialog closes itself rather than
-      // sitting there empty over the queue that just took over.
-      if (suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
-      return
+    const revision = reviewOf(groupId)?.seenRevision ?? groupById(groupId)?.revision ?? 0
+    // A server card has no ops to select: it saves through its own command.
+    if (groupById(groupId)?.server) {
+      await approveServerGroup(groupId, revision)
+    } else {
+      await approveFileGroup(groupId, revision)
     }
-    log.info('A suggestion group was not approved: {kind}', { kind: result.kind })
-    if (result.kind === 'listChanged') {
-      const review = reviewOf(groupId)
-      if (review) review.changedUnderReview = true
-    }
-    await refreshSuggestions()
   } catch (e) {
     log.warn("Couldn't approve the group: {error}", { error: e })
     await answerFailedDecision(e)
   } finally {
     suggestedOpsState.busyGroupId = null
   }
+}
+
+/** Approve a file group with the user's selection, then re-read. */
+async function approveFileGroup(groupId: number, revision: number): Promise<void> {
+  const selection = reviewOf(groupId)?.selection ?? storedSelection()
+  const result = await approveSuggestedGroup(groupId, revision, selectionWire(selection))
+  if (isRefusalToStart(result)) suggestedOpsState.refusals.set(groupId, result)
+  if (result.kind !== 'started') {
+    log.info('A suggestion group was not approved: {kind}', { kind: result.kind })
+  }
+  if (result.kind === 'listChanged') markChangedUnderReview(groupId)
+  await refreshSuggestions()
+  // Nothing waiting means nothing left to decide, so the dialog closes itself rather than
+  // sitting there empty over the queue that just took over.
+  if (result.kind === 'started' && suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
+}
+
+/**
+ * Approve a server card: save it, then re-read. A refusal gives the card back pending, so the
+ * re-read shows it again; `listChanged` marks it changed under the review, as for a file group.
+ */
+async function approveServerGroup(groupId: number, revision: number): Promise<void> {
+  const result = await approveSuggestedServer(groupId, revision)
+  if (result.kind !== 'saved') {
+    log.info('A server suggestion was not saved: {kind}', { kind: result.kind })
+  }
+  if (result.kind === 'listChanged') markChangedUnderReview(groupId)
+  await refreshSuggestions()
+  if (result.kind === 'saved' && suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
+}
+
+function markChangedUnderReview(groupId: number): void {
+  const review = reviewOf(groupId)
+  if (review) review.changedUnderReview = true
 }
 
 /** The answers that give a group back with a reason, as opposed to closing it or re-reading. */

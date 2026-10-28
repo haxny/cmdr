@@ -106,6 +106,15 @@ pub(super) fn nfs_place(target: ServerTarget) -> Option<(KnownNfsPlace, String)>
     Some((place, display_name))
 }
 
+/// This process's own uid and gid: the identity the add form falls back to when it can't read
+/// who owns an export, and the one an NFS server saved without contact takes.
+pub(crate) fn this_mac_identity() -> cmdr_nfs::NfsIdentity {
+    // SAFETY: `getuid` and `getgid` take no arguments, can't fail, and touch no
+    // memory of ours.
+    let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
+    cmdr_nfs::NfsIdentity { uid, gid }
+}
+
 /// Dials an NFS target the user just typed (`connect_server`'s NFS arm).
 pub(crate) async fn connect(target: ServerTarget, attempt_id: &str) -> ServerConnectOutcome {
     let Some((place, server_name)) = nfs_place(target) else {

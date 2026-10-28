@@ -1,8 +1,12 @@
-//! The saved servers a server proposal is checked against, as plain facts: read once per call
+//! The saved servers a server proposal is checked against, as plain facts: read once per check
 //! through `saved_servers` (the hub's own listing and lookups), in memory, ❌ never the network.
 //!
 //! Each saved place becomes a [`ServerDraft`], the spine's own shape, so what a proposal stores
 //! as an edit's `previous` is exactly what this read, and the checks compare like with like.
+//!
+//! Here, below both, because the same checks run twice: when `propose_server` stages a card, and
+//! again when the user approves it (`DETAILS.md` § Approving a server). One copy, so the two can't
+//! disagree about what "saved already" or "that name is taken" means.
 
 use crate::agent::store::proposals::ServerDraft;
 use crate::agent::types::DraftProtocol;
@@ -14,12 +18,12 @@ use crate::saved_servers::{SavedEntry, SavedServer, ServerNameSource, ServerProt
 /// Every saved server, one per hub row.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct SavedServers {
-    pub(super) rows: Vec<SavedRow>,
+    pub(crate) rows: Vec<SavedRow>,
 }
 
 /// One hub row: an SFTP or WebDAV account, an S3 account, an NFS server, or an SMB host.
 #[derive(Debug, Clone)]
-pub(super) struct SavedRow {
+pub(crate) struct SavedRow {
     /// The row's id in the servers listing.
     pub id: String,
     /// What the hub calls it, a stand-in (an address) included: what a new name mustn't wear.
@@ -35,7 +39,7 @@ pub(super) struct SavedRow {
 
 /// One saved place, as a draft of its editable fields and its address.
 #[derive(Debug, Clone)]
-pub(super) struct SavedPlaceDraft {
+pub(crate) struct SavedPlaceDraft {
     pub volume_id: String,
     pub draft: ServerDraft,
 }
@@ -49,7 +53,7 @@ impl SavedServers {
 
     /// The facts over a listing, its SMB host groups, and a lookup of the saved entry behind a
     /// place id (`saved_by_id` in the app; a fixture in tests).
-    pub(super) fn from_listing(
+    pub(crate) fn from_listing(
         rows: Vec<SavedServer>,
         smb_hosts: Vec<SmbHostGroup>,
         entry_of: impl Fn(&str) -> Option<SavedEntry>,
@@ -84,7 +88,7 @@ impl SavedServers {
     }
 
     /// The row and place a saved place's id names.
-    pub(super) fn place(&self, volume_id: &str) -> Option<(&SavedRow, &SavedPlaceDraft)> {
+    pub(crate) fn place(&self, volume_id: &str) -> Option<(&SavedRow, &SavedPlaceDraft)> {
         self.rows.iter().find_map(|row| {
             row.places
                 .iter()
@@ -94,7 +98,7 @@ impl SavedServers {
     }
 
     /// The row with this id.
-    pub(super) fn row(&self, id: &str) -> Option<&SavedRow> {
+    pub(crate) fn row(&self, id: &str) -> Option<&SavedRow> {
         self.rows.iter().find(|row| row.id == id)
     }
 }

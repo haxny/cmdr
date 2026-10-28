@@ -312,6 +312,7 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
             destination_volume_name: Some("Macintosh HD".into()),
             run_blocker: Some(RunBlocker::NoTrash),
         },
+        None,
     );
 
     assert_eq!(view.group_id, 7);
@@ -349,7 +350,7 @@ fn a_selector_built_group_reports_its_provenance() {
     let mut summary = group(1, 1, ProposalVerb::Trash);
     summary.group.selector = Some("{\"root\":\"~/Downloads\"}".into());
 
-    assert!(to_group_view(summary, facts(DestinationState::NotApplicable)).from_selector);
+    assert!(to_group_view(summary, facts(DestinationState::NotApplicable), None).from_selector);
 }
 
 /// An index that held nothing must stay absent all the way to the row. A zero would render
@@ -484,13 +485,14 @@ async fn a_destination_whose_volume_refuses_the_check_is_unknown() {
 fn groups_fold_under_the_sweep_that_produced_them() {
     let rows = vec![
         (
-            to_group_view(group(1, 10, ProposalVerb::Move), facts(DestinationState::Exists)),
+            to_group_view(group(1, 10, ProposalVerb::Move), facts(DestinationState::Exists), None),
             Some(sweep(10)),
         ),
         (
             to_group_view(
                 group(2, 10, ProposalVerb::Trash),
                 facts(DestinationState::NotApplicable),
+                None,
             ),
             Some(sweep(10)),
         ),
@@ -498,6 +500,7 @@ fn groups_fold_under_the_sweep_that_produced_them() {
             to_group_view(
                 group(3, 11, ProposalVerb::Delete),
                 facts(DestinationState::NotApplicable),
+                None,
             ),
             Some(sweep(11)),
         ),
@@ -519,7 +522,7 @@ fn groups_fold_under_the_sweep_that_produced_them() {
 #[test]
 fn groups_whose_sweep_row_is_missing_are_still_shown() {
     let rows = vec![(
-        to_group_view(group(1, 42, ProposalVerb::Move), facts(DestinationState::Exists)),
+        to_group_view(group(1, 42, ProposalVerb::Move), facts(DestinationState::Exists), None),
         None,
     )];
 

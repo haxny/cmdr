@@ -80,6 +80,7 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     liveOpCount: total - group.files.filter((file) => file.excluded).length,
     totalOpCount: total,
     fromSelector: group.fromSelector ?? false,
+    server: null,
   }
 }
 

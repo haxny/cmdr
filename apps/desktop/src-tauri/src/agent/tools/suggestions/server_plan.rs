@@ -10,17 +10,11 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use super::problem::NameRule;
-use super::server_saved::{SavedRow, SavedServers};
 use crate::agent::store::proposals::{ServerDraft, ServerEdit};
+use crate::agent::suggested_ops::server::{AddClash, SFTP_PORT, SMB_PORT, SavedServers};
 use crate::agent::types::DraftProtocol;
 use crate::network::saved_server_fields;
-use crate::saved_servers::ServerTarget;
-use crate::saved_servers::target_ids::place_id;
 
-/// SMB's port, the add form's default.
-const SMB_PORT: u16 = 445;
-/// SFTP's port, the add form's default.
-const SFTP_PORT: u16 = 22;
 /// The remote root the add form saves when its folder field stays empty (`normalizeRoot`).
 const DEFAULT_ROOT: &str = "/";
 
@@ -502,98 +496,25 @@ fn plan_add(
         DraftProtocol::Webdav => {
             draft.remote_root = Some(draft.remote_root.unwrap_or_else(|| DEFAULT_ROOT.to_string()));
         }
-        DraftProtocol::Nfs | DraftProtocol::S3 => {}
+        DraftProtocol::Nfs => {
+            // The add form's own fallback when it can't read who owns the export, and the only
+            // one that asks the server nothing: this Mac's ids, on the card for the user to see.
+            let this_mac = crate::saved_servers::nfs_places::this_mac_identity();
+            draft.uid = Some(draft.uid.unwrap_or(this_mac.uid));
+            draft.gid = Some(draft.gid.unwrap_or(this_mac.gid));
+        }
+        DraftProtocol::S3 => {}
     }
     check_start_folder(&draft)?;
-
-    if protocol == DraftProtocol::Smb {
-        let (host, port) = (
-            draft.host.as_deref().unwrap_or_default(),
-            draft.port.unwrap_or(SMB_PORT),
-        );
-        if let Some(row) = saved.rows.iter().find(|row| {
-            row.smb_host
-                .as_ref()
-                .is_some_and(|(saved_host, saved_port)| saved_host.eq_ignore_ascii_case(host) && *saved_port == port)
-        }) {
-            return Err(ServerProblem::AlreadySaved {
-                server_id: row
-                    .places
-                    .first()
-                    .map_or_else(|| row.id.clone(), |place| place.volume_id.clone()),
-            });
-        }
-        return Ok((draft, None, None));
-    }
-
-    let (target, own_row) = match protocol {
-        DraftProtocol::S3 => {
-            let account = ask.account.clone().unwrap_or_default();
-            let Some((provider, access_key_id)) = saved.row(&account).and_then(|row| row.s3_account.clone()) else {
-                return Err(ServerProblem::UnknownServer { id: account });
-            };
-            let target = ServerTarget::S3 {
-                display_name: String::new(),
-                provider,
-                access_key_id,
-                bucket: draft.bucket.clone(),
-                auto_reconnect: true,
-            };
-            (target, Some(account))
-        }
-        DraftProtocol::Nfs => {
-            let server = cmdr_nfs::NfsServer::new(draft.host.as_deref().unwrap_or_default(), draft.port);
-            let own_row = crate::network::nfs_known_places::server_id(&server);
-            (target_of(&draft), Some(own_row))
-        }
-        _ => (target_of(&draft), None),
-    };
-    let id = place_id(target).ok_or(ServerProblem::BadField {
-        field: Field::Url.key(),
-        rule: FieldRule::NotHttp,
+    let placed = saved.place_add(&draft).map_err(|clash| match clash {
+        AddClash::UnknownAccount { id } => ServerProblem::UnknownServer { id },
+        AddClash::AlreadySaved { server_id } => ServerProblem::AlreadySaved { server_id },
+        AddClash::Unkeyable => ServerProblem::BadField {
+            field: Field::Url.key(),
+            rule: FieldRule::NotHttp,
+        },
     })?;
-    if saved.place(&id).is_some() {
-        return Err(ServerProblem::AlreadySaved { server_id: id });
-    }
-    Ok((draft, None, own_row))
-}
-
-/// The saved-store target a non-SMB, non-S3 draft describes, for its place id. Switches the
-/// add form saves (agent, auto-reconnect) are its defaults; no id reads them.
-fn target_of(draft: &ServerDraft) -> ServerTarget {
-    let text = |value: &Option<String>| value.clone().unwrap_or_default();
-    match draft.protocol {
-        DraftProtocol::Sftp => ServerTarget::Sftp {
-            display_name: text(&draft.display_name),
-            host: text(&draft.host),
-            port: draft.port.unwrap_or(SFTP_PORT),
-            username: text(&draft.username),
-            remote_root: text(&draft.remote_root),
-            start_folder: draft.start_folder.clone(),
-            key_file: None,
-            use_agent: true,
-            auto_reconnect: true,
-        },
-        DraftProtocol::Webdav => ServerTarget::Webdav {
-            display_name: text(&draft.display_name),
-            url: text(&draft.url),
-            username: text(&draft.username),
-            remote_root: text(&draft.remote_root),
-            start_folder: draft.start_folder.clone(),
-            auto_reconnect: true,
-        },
-        // SMB and S3 never get here: `plan_add` keys them by host and by account.
-        DraftProtocol::Nfs | DraftProtocol::Smb | DraftProtocol::S3 => ServerTarget::Nfs {
-            display_name: text(&draft.display_name),
-            host: text(&draft.host),
-            port: draft.port,
-            export: text(&draft.export),
-            uid: draft.uid.unwrap_or_default(),
-            gid: draft.gid.unwrap_or_default(),
-            start_folder: draft.start_folder.clone(),
-            auto_reconnect: true,
-        },
-    }
+    Ok((draft, None, placed.own_row))
 }
 
 /// A change to a saved place: its address and account stay exactly as saved, and only the
@@ -696,14 +617,9 @@ fn check_start_folder(draft: &ServerDraft) -> Result<(), ServerProblem> {
         })
 }
 
-/// No other saved server wears this name, folded the way every name check folds
-/// (`fold_name`), so an attacker host can't be called what the NAS is called.
+/// No other saved server wears this name (`SavedServers::name_holder`).
 fn check_name_free(name: &str, own_row: Option<&str>, saved: &SavedServers) -> Result<(), ServerProblem> {
-    let folded = cmdr_fs::name_fold::fold_name(name.trim());
-    let taken = saved.rows.iter().find(|row: &&SavedRow| {
-        Some(row.id.as_str()) != own_row && cmdr_fs::name_fold::fold_name(row.name.trim()) == folded
-    });
-    match taken {
+    match saved.name_holder(name, own_row) {
         Some(row) => Err(ServerProblem::NameTaken { name: row.name.clone() }),
         None => Ok(()),
     }

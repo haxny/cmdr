@@ -11,6 +11,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     suggestedOpsPage: vi.fn(),
     suggestedOpsReject: vi.fn(),
     suggestedOpsApprove: vi.fn(),
+    suggestedOpsApproveServer: vi.fn(),
     suggestedOpsLiveFacts: vi.fn(),
   },
   events: {
@@ -21,6 +22,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
 import { commands, events } from '#lib/ipc/bindings.js'
 import {
   approveSuggestedGroup,
+  approveSuggestedServer,
   listSuggestedOps,
   liveSuggestedOpFacts,
   onSuggestionsChanged,
@@ -115,6 +117,27 @@ describe('approveSuggestedGroup', () => {
     } as never)
 
     await expect(approveSuggestedGroup(7, 3, { mode: 'allExcept', opIds: [] })).rejects.toThrow()
+  })
+})
+
+describe('approveSuggestedServer', () => {
+  it('sends the revision the user read and answers what happened, a refusal included', async () => {
+    vi.mocked(commands.suggestedOpsApproveServer).mockResolvedValueOnce({
+      status: 'ok',
+      data: { kind: 'alreadySaved', serverId: 'sftp-1' },
+    } as never)
+
+    await expect(approveSuggestedServer(9, 2)).resolves.toEqual({ kind: 'alreadySaved', serverId: 'sftp-1' })
+    expect(commands.suggestedOpsApproveServer).toHaveBeenCalledWith(9, 2)
+  })
+
+  it('throws when the save never answered, so the card is re-read rather than offered again', async () => {
+    vi.mocked(commands.suggestedOpsApproveServer).mockResolvedValueOnce({
+      status: 'error',
+      error: { type: 'approvalDidntFinish' },
+    } as never)
+
+    await expect(approveSuggestedServer(9, 2)).rejects.toThrow()
   })
 })
 

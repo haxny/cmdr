@@ -167,8 +167,8 @@ the write; any refusal writes nothing.
   (a look-alike of a saved host, `nаspolya` with a Cyrillic `а`, can't stand in for it; an internationalized name goes
   as `xn--`); a URL is ASCII `http` or `https` with a host and no account in it; every string is capped. A start folder
   outside the remote root refuses here rather than at the save. One token, `badField`, with the rule's sentence.
-- **Against what's saved** (`server_saved.rs`: one in-memory read per call through `saved_servers::saved_now` and
-  `saved_by_id`, ❌ never the network):
+- **Against what's saved** (`SavedServers` and its checks, in `../../suggested_ops/server/` so the approval runs the
+  same ones: one in-memory read per call through `saved_servers::saved_now` and `saved_by_id`, ❌ never the network):
   - `alreadySaved` (an add): the draft's place id through `target_ids::place_id`, the listing's own id funnel, so a
     host's case or a URL's path can't dodge it; an SMB host by its address (any case) and port. It carries the id to
     send as `editing` instead. An add never silently replaces a saved entry's settings.
@@ -176,7 +176,10 @@ the write; any refusal writes nothing.
     an attacker host can't wear the NAS's name. The row the draft joins or edits doesn't count.
   - `unknownServer`: an `editing` id (or an S3 `account`) nothing saved has.
   - An edit stores `previous`, the saved entry's editable fields AND its address, read here; the approval re-reads the
-    entry and re-runs `alreadySaved` and `nameTaken`, because a server saved since can make either true.
+    entry and re-runs `alreadySaved` and `nameTaken`, because a server saved since can make either true
+    (`../../suggested_ops/DETAILS.md` § Approving a server).
+  - An NFS add that names no `uid` / `gid` takes this Mac's (`saved_servers::nfs_places::this_mac_identity`), the add
+    form's own no-contact fallback, so the card shows the identity the click saves.
 - **The report** is `propose_suggestions`' `ProposeReport` with one `opCount: 0` group; the rail line counts the card,
   not its ops (`../line/DETAILS.md`).
 

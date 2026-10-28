@@ -22,5 +22,5 @@ pub(crate) use listing::{listing, saved_now};
 pub use outcome::{SavedPlaceRefusal, ServerConnectOutcome};
 pub(crate) use outcome::{outcome_from_nfs, outcome_from_s3, outcome_from_sftp, outcome_from_webdav};
 pub(crate) use saved::{SavedEntry, saved_by_id, webdav_params};
-pub(crate) use saves::{save_edit, save_target};
+pub(crate) use saves::{PlaceEdit, save_edit, save_place_edit, save_target};
 pub use wire::{SavedPlace, SavedServer, ServerNameSource, ServerProtocol, ServerTarget};

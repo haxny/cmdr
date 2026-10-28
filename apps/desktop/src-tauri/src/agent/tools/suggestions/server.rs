@@ -3,11 +3,12 @@
 //!
 //! `Access::Propose`. It stages one zero-op `SaveServer` group on the proposal spine and
 //! nothing else: it saves no server, contacts no host, and takes no secret. The user's click
-//! is what saves (`suggested_ops`), through the servers hub's own cores.
+//! is what saves (`suggested_ops::server`), through the servers hub's own cores.
 //!
 //! Only on a turn the user started: its handler reads the turn's origin and refuses a wake or a
-//! follow-up itself, so the dispatch gate stays tier-only (`DETAILS.md` § Proposing a server). The checks: `server_plan.rs`. The facts they read:
-//! `server_saved.rs`.
+//! follow-up itself, so the dispatch gate stays tier-only (`DETAILS.md` § Proposing a server).
+//! The checks: `server_plan.rs`. The saved servers they read, and the checks the approval runs
+//! again: `suggested_ops::server`.
 
 use rusqlite::Connection;
 use serde_json::{Value, json};
@@ -18,9 +19,9 @@ use super::propose::{
     write_group,
 };
 use super::server_plan::{ServerProblem, plan_server};
-use super::server_saved::SavedServers;
 use crate::agent::AgentDb;
 use crate::agent::store::proposals::{GroupIntent, NewGroup};
+use crate::agent::suggested_ops::server::SavedServers;
 use crate::agent::types::TurnOrigin;
 use crate::mcp::{ToolError, ToolResult};
 

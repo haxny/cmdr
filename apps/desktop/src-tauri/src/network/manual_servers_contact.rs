@@ -23,10 +23,6 @@ use crate::network::server_identity::SmbServer;
 /// ❗ The save behind an approved Ask Cmdr suggestion: a host the user hasn't
 /// connected to yet isn't dialed on the agent's say-so. The add sheet's "Add anyway"
 /// is `add_manual_server` with `Reachability::Skip`, which does join the list.
-#[expect(
-    dead_code,
-    reason = "approving an Ask Cmdr server proposal calls it; that approval is next in #749"
-)]
 pub fn save_manual_server_without_contact<R: Runtime>(
     input: &str,
     details: &HostEdit,

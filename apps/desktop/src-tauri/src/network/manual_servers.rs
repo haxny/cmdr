@@ -765,10 +765,6 @@ pub use relocate::relocate_manual_server;
 mod contact;
 use contact::discoverable;
 pub use contact::note_first_connect;
-#[expect(
-    unused_imports,
-    reason = "approving an Ask Cmdr server proposal calls it; that approval is next in #749"
-)]
 pub use contact::save_manual_server_without_contact;
 
 #[path = "manual_servers_reachability.rs"]

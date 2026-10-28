@@ -3704,6 +3704,21 @@ export const commands = {
       __TAURI_INVOKE('suggested_ops_approve', { groupId, revision, selection }),
     ),
   /**
+   *  Approve a server card the user read at `revision`: save it, with no password and no contact
+   *  with the server (an edit of a connected place rides the session the user opened).
+   *
+   *  **On a blocking thread, driving the app's runtime.** `approve_server` holds a `Connection`
+   *  across an await, which a command's future can't (it must be `Send`), and the save it starts
+   *  must run on the app's runtime: a save past its deadline finishes there, detached.
+   *
+   *  ❗ Emits `volumes-changed` on a save, as `update_saved_server` does: the servers hub and the
+   *  switcher re-read the saved list on it.
+   */
+  suggestedOpsApproveServer: (groupId: number, revision: number) =>
+    typedError<ServerApprovalResultView, SuggestedOpsError>(
+      __TAURI_INVOKE('suggested_ops_approve_server', { groupId, revision }),
+    ),
+  /**
    *  A settings change may have moved an open thread's slot — the model it sends to, the chat
    *  memory each message carries, or both: record what actually moved as conversation events
    *  once any in-flight turn finishes (that turn keeps what it already resolved; the rows mark
@@ -16911,6 +16926,38 @@ export type SendResult = {
 }
 
 /**
+ *  What approving a server card did, in the terms the dialog acts on.
+ *
+ *  Every refusal but `alreadyAnswered` and `unknown` gives the card back: nothing was written,
+ *  and it's `pending` again with the reason under it.
+ */
+export type ServerApprovalResultView =
+  /**
+   *  Saved, and in the servers list now, not connected. `volumeId` is the saved place's
+   *  (`None` for an SMB host, whose share learns one at its first mount).
+   */
+  | { kind: 'saved'; volumeId: string | null }
+  // The AI changed the card since the user read it. Nothing was saved; re-read it.
+  | { kind: 'listChanged' }
+  // The card left `pending` before this arrived.
+  | { kind: 'alreadyAnswered' }
+  // No card with that id.
+  | { kind: 'unknown' }
+  // The save refused, with the same outcome the servers sheet words.
+  | { kind: 'refused'; outcome: SavedServerOutcome }
+  // The SMB add refused the address, with the same error the add sheet words.
+  | { kind: 'addServer'; error: AddServerError }
+  /**
+   *  The server the card edits changed since the AI suggested this (its address or a field
+   *  the card shows), so saving would overwrite a change the card didn't show.
+   */
+  | { kind: 'serverChanged' }
+  // That server was saved since the AI suggested adding it, as the place with this id.
+  | { kind: 'alreadySaved'; serverId: string }
+  // Another saved server took this name since the AI suggested it.
+  | { kind: 'nameTaken'; name: string }
+
+/**
  *  What a connect attempt produced, across every protocol this family speaks.
  *
  *  ❗ The superset of the two per-protocol enums, so a sign-in UI branches once.
@@ -17034,6 +17081,40 @@ export type ServerConnectOutcome =
   // The user called it off. ❗ Nothing was registered, remembered, or stored.
   | { outcome: 'cancelled' }
 
+// One field a server card shows.
+export type ServerField =
+  // The name the servers list shows (an SMB host's, an S3 account's, an NFS server's).
+  | 'name'
+  // The host, or WebDAV's URL.
+  | 'address'
+  | 'port'
+  // The account it signs in as: SFTP, WebDAV, or SMB's username, or the S3 account's name.
+  | 'account'
+  // SMB: the share saved under the host.
+  | 'share'
+  // SFTP and WebDAV: the remote root.
+  | 'folder'
+  // NFS: the export.
+  | 'export'
+  // S3: the bucket.
+  | 'bucket'
+  // Where a pane opens once connected.
+  | 'startFolder'
+  // NFS: the user and group ids every request acts as.
+  | 'uid'
+  | 'gid'
+
+// One field's row on the card.
+export type ServerFieldView = {
+  field: ServerField
+  // What the click saves. `None` when an edit clears it (a start folder back to the root).
+  value: string | null
+  // Whether an edit changes this field. Always `false` on an add.
+  changed: boolean
+  // The saved value an edit replaces, when it changes one that had a value.
+  previous: string | null
+}
+
 /**
  *  Whether a person NAMED this server, or the label is a stand-in.
  *
@@ -17079,6 +17160,24 @@ export type ServerPlaceMoved = {
   newPrefix: string
   // Every place that moved: one for SFTP and WebDAV, each of an account's for S3.
   places: MovedPlace[]
+}
+
+// A server card's whole content, beside the group's own header and rationale.
+export type ServerProposalView = {
+  protocol: DraftProtocol
+  // In the order the card lists them. A field neither side has is left out.
+  fields: ServerFieldView[]
+  /**
+   *  An add at a host no saved server of any protocol is at. ❗ A fact Cmdr read now, so an
+   *  address the AI calls "your NAS" that Cmdr has never saved says so.
+   */
+  addressIsNew: boolean
+  /**
+   *  An SMB edit: how many saved shares on that host it changes, counted NOW (what the click
+   *  changes, not what the AI counted). `None` for every other card, and for a host that's
+   *  gone (approving it then refuses).
+   */
+  sharesAffected: number | null
 }
 
 // Which protocol an account speaks.
@@ -18243,6 +18342,11 @@ export type SuggestedGroupView = {
    *  provenance of a list the user didn't watch being built.
    */
   fromSelector: boolean
+  /**
+   *  What a server card saves, present exactly for `addServer` and `editServer`, which have
+   *  no ops: approve those with `suggested_ops_approve_server`.
+   */
+  server: ServerProposalView | null
 }
 
 // What one op's source is like on disk right now, beside its creation snapshot.

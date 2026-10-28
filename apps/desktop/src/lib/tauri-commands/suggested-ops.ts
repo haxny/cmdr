@@ -13,6 +13,7 @@ import {
   type ApprovalResultView,
   type OpSelection,
   type RejectResultView,
+  type ServerApprovalResultView,
   type SuggestedOpLiveFact,
   type SuggestedOpPage,
   type SuggestedOpsLiveFactsError,
@@ -77,6 +78,17 @@ export async function approveSuggestedGroup(
   return res.data
 }
 
+/** Approve a server card (`addServer` / `editServer`, which have no ops): save it through the
+ *  servers hub's own code, with no password and no contact with the server. `revision` is the one
+ *  the review showed, as for a file group. Every refusal but `alreadyAnswered` and `unknown` gives
+ *  the card back; a save that never answered throws `approvalDidntFinish`, and the card stays
+ *  approved because it may have saved. */
+export async function approveSuggestedServer(groupId: number, revision: number): Promise<ServerApprovalResultView> {
+  const res = await commands.suggestedOpsApproveServer(groupId, revision)
+  if (res.status === 'error') throwSuggestedOpsError(res.error)
+  return res.data
+}
+
 /** Fires whenever the pending suggestion set changes: a sweep landed, a group was amended, or
  *  somebody approved or rejected one. Carries the counts an indicator renders from, so nothing
  *  has to query after being told. */
@@ -95,6 +107,7 @@ export type {
   SuggestionsChanged,
   RejectResultView,
   RunBlocker,
+  ServerApprovalResultView,
   SuggestedGroupView,
   SuggestedOpLiveFact,
   SuggestedOpPage,

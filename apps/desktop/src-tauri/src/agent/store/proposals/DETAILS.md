@@ -178,7 +178,8 @@ intent and deletes it for a file one, in the same transaction.
 **Completion and give-back.** `mark_server_group_completed` is the file group's conditional `approved → completed` plus
 the `ServerSaveNote` (a save that wrote the host but not its share) in the same transaction. `release_claim` gives a
 server claim back unchanged (zero ops, so its no-outcome guard holds trivially); WHEN it may is the approval service's
-call: only a save that wrote nothing. A completed group never goes back. `recover_interrupted_groups` freezes an
+call: only a save that wrote nothing (`../../suggested_ops/DETAILS.md` § Approving a server, which also says why no save
+writes a note today). A completed group never goes back. `recover_interrupted_groups` freezes an
 `approved` server group as `interrupted`: the app died mid-save, and nothing knows whether it landed.
 
 **`source_volume_id` (NOT NULL) of a server group** holds the edited place's id for an edit and `""` for an add

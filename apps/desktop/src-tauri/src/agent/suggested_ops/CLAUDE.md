@@ -6,8 +6,8 @@ the lifecycle machine, and the claim transaction are `../store/proposals/CLAUDE.
 ## Module map
 
 - `mod.rs` — `propose` / `approve` / `started` / `reject` (thin over the store, plus the metric) and selectors.
-- `bridge/` — approval to running operation: the claim, the executor call, and the sink decorator that writes
-  outcomes back.
+- `bridge/` — a file group's approval: the claim, the executor call, and the decorator writing outcomes back.
+- `server/` — a server card's approval (`DETAILS.md` § Approving a server).
 - `selector.rs` — `OpSelector`, the `SelectorIndex` seam, and `DriveIndex`, the drive-index resolver.
 - `analytics.rs` — the three analytics events. `changed.rs` — the pending set moved. `facts.rs` — the review's facts.
 
@@ -17,10 +17,9 @@ the lifecycle machine, and the claim transaction are `../store/proposals/CLAUDE.
   which, so the job is to lay it all out for the user to decide. ❌ Never add an agent-specific safety behaviour to the
   execution path (no auto-skip on collision, no refusing an overwrite or an irreversible group): once the user
   approves, it is as if they started the action. Put the effort into disclosure.
-- **A selector resolves ONCE, at creation, against the drive INDEX.** Never at approval, which needs no rule:
-  `tests.rs::a_selector_freezes_at_creation_and_is_never_resolved_again` counts the calls. Freezing is what makes "what
-  the user saw is what runs" true. ❌ Never resolve by walking the filesystem, though: nothing catches that, and a walk
-  blocks on a dead mount and reads ground the user never consented to index.
+- **A selector resolves ONCE, at creation, against the drive INDEX**, never at approval (a test counts the calls):
+  that's what makes "what the user saw is what runs" true. ❌ Never by walking the filesystem: a walk blocks on a dead
+  mount and reads ground the user never consented to index.
 - **The matcher is `search::matcher::CompiledQuery`.** ❌ Never re-derive glob translation or case folding here: that
   fork is how a selector and the search box would disagree about the same `*.dmg`.
 - **A refusal is not an empty list.** `SelectorRefusal::NotIndexed` says "I can't see that drive", a different answer

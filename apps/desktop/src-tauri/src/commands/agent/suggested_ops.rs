@@ -33,6 +33,7 @@ use crate::agent::store::proposals::{
 };
 use crate::agent::suggested_ops::bridge::{ApprovalOutcome, ApprovalRefusal};
 use crate::agent::suggested_ops::facts::{RunBlocker, run_blocker};
+use crate::agent::suggested_ops::server::{SavedServers, ServerProposalView, server_card};
 use crate::agent::types::{OpStatus, ProposalStatus, ProposalVerb, Reversibility};
 use crate::file_system::volume::{Volume, VolumeError};
 use cmdr_operations::{RenameStartError, WriteOperationError};
@@ -143,6 +144,9 @@ pub struct SuggestedGroupView {
     /// True when a pattern produced this group, so the dialog can show the pattern as the
     /// provenance of a list the user didn't watch being built.
     pub from_selector: bool,
+    /// What a server card saves, present exactly for `addServer` and `editServer`, which have
+    /// no ops: approve those with `suggested_ops_approve_server`.
+    pub server: Option<ServerProposalView>,
 }
 
 /// Whether approving a group would create its target folder.
@@ -220,6 +224,11 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
     let states =
         futures_util::future::join_all(summaries.iter().map(|(summary, _)| destination_state(&summary.group))).await;
     let manager = crate::file_system::volume::manager::get_volume_manager();
+    // In memory, ❌ never the network, and only when a server card is there to describe.
+    let saved = summaries
+        .iter()
+        .any(|(summary, _)| summary.server.is_some())
+        .then(|| SavedServers::now(&app));
     let rows = summaries
         .into_iter()
         .zip(states)
@@ -232,7 +241,12 @@ pub async fn suggested_ops_list(app: AppHandle) -> Result<Vec<SuggestedSweepView
                 },
                 destination_state,
             );
-            (to_group_view(summary, facts), sweep)
+            let server = summary
+                .server
+                .as_ref()
+                .zip(saved.as_ref())
+                .map(|(proposal, saved)| server_card(proposal, saved));
+            (to_group_view(summary, facts, server), sweep)
         })
         .collect();
     Ok(group_into_sweeps(rows))
@@ -404,7 +418,11 @@ fn destination_check_applies(verb: ProposalVerb) -> bool {
     matches!(verb, ProposalVerb::Move | ProposalVerb::Copy | ProposalVerb::Extract)
 }
 
-fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroupView {
+fn to_group_view(
+    summary: GroupSummary,
+    facts: GroupReadFacts,
+    server: Option<ServerProposalView>,
+) -> SuggestedGroupView {
     let group = summary.group;
     let destination_volume_id = destination_volume_id_of(&group).map(str::to_string);
     SuggestedGroupView {
@@ -427,6 +445,7 @@ fn to_group_view(summary: GroupSummary, facts: GroupReadFacts) -> SuggestedGroup
         live_op_count: summary.live_op_count,
         total_op_count: summary.total_op_count,
         from_selector: group.selector.is_some(),
+        server,
     }
 }
 

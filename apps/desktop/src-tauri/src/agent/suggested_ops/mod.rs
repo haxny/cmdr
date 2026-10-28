@@ -27,6 +27,7 @@ pub mod bridge;
 mod changed;
 pub mod facts;
 pub mod selector;
+pub mod server;
 
 #[cfg(test)]
 mod tests;

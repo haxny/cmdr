@@ -45,11 +45,15 @@
   server (`server_move.rs`). An S3 place or NFS export naming another place answers `AccountChanged`, since its address
   IS the place. A place nobody saved any more answers `Unreachable`, ❌ never a quiet re-save.
 - A connected place's edit applies live over its session (`network/live_server_edit.rs`).
+- `save_place_edit` is the edit an approved Ask Cmdr card saves: the STORED entry with only `PlaceEdit`'s fields (name,
+  root, start folder, NFS uid and gid) set, through `save_edit`. **Why not a `ServerTarget` built from the card**: a
+  card carries no key file, SSH-agent switch, or "Reconnect automatically", and a target that defaulted them would
+  quietly reset the user's own choices. An SMB share answers `AccountChanged`: its edit is the host's (`edit_host`).
 
 ## Saving without contact
 
 An approved Ask Cmdr suggestion to add a server saves it the way "Add anyway" does, and contacts nothing until the user
-first connects it.
+first connects it (the approval: `agent/suggested_ops/DETAILS.md` § Approving a server).
 
 - **SFTP, WebDAV, S3, NFS**: `save_target` already contacts nothing for a place that isn't connected: each wiring's
   `save_without_connecting` writes the store, and only a CONNECTED place's edit talks to the server, over the session

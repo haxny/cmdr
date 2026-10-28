@@ -68,6 +68,84 @@ pub(crate) async fn save_edit(id: &str, server: ServerTarget) -> SavedServerOutc
     }
 }
 
+/// What an edit of one saved place sets, each as its NEW value. Nothing else is
+/// here on purpose: the address, the account, and every switch (key file, SSH
+/// agent, "Reconnect automatically") stay as stored.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct PlaceEdit {
+    /// The name the servers list shows; `None` keeps the stored one. For S3 and
+    /// NFS it is the account's or server's name, as their targets carry it.
+    pub display_name: Option<String>,
+    /// SFTP and WebDAV's root; `None` keeps the stored one.
+    pub remote_root: Option<String>,
+    /// Where a pane opens; `None` opens at the root.
+    pub start_folder: Option<String>,
+    /// NFS's identity; `None` keeps the stored one.
+    pub uid: Option<u32>,
+    pub gid: Option<u32>,
+}
+
+/// Saves an edit of the saved place `id` that changes only `edit`'s fields: the
+/// stored entry with those set, through [`save_edit`], so nothing the edit
+/// doesn't name can move. The edit an approved Ask Cmdr suggestion saves.
+///
+/// ❗ An SMB share answers `AccountChanged`: its edit is the HOST's
+/// (`smb_hosts::edit_host`). A place nobody saved any more answers
+/// `Unreachable`, as [`save_edit`] does.
+pub(crate) async fn save_place_edit(id: &str, edit: PlaceEdit) -> SavedServerOutcome {
+    let Some(saved) = saved_by_id(id) else {
+        return SavedServerOutcome::Unreachable;
+    };
+    let PlaceEdit {
+        display_name,
+        remote_root,
+        start_folder,
+        uid,
+        gid,
+    } = edit;
+    let target = match saved {
+        SavedEntry::Sftp(entry) => ServerTarget::Sftp {
+            display_name: display_name.unwrap_or(entry.display_name),
+            host: entry.host,
+            port: entry.port,
+            username: entry.username,
+            remote_root: remote_root.unwrap_or(entry.remote_root),
+            start_folder,
+            key_file: entry.key_file,
+            use_agent: entry.use_agent,
+            auto_reconnect: entry.auto_reconnect,
+        },
+        SavedEntry::Webdav(entry) => ServerTarget::Webdav {
+            display_name: display_name.unwrap_or(entry.display_name),
+            url: entry.url,
+            username: entry.username,
+            remote_root: remote_root.unwrap_or(entry.remote_root),
+            start_folder,
+            auto_reconnect: entry.auto_reconnect,
+        },
+        // A blank name leaves the account's alone (`s3_known_places::adopt_typed_name`).
+        SavedEntry::S3(place) => ServerTarget::S3 {
+            display_name: display_name.unwrap_or_default(),
+            provider: place.provider,
+            access_key_id: place.access_key_id,
+            bucket: place.bucket,
+            auto_reconnect: place.auto_reconnect,
+        },
+        SavedEntry::Nfs(place) => ServerTarget::Nfs {
+            display_name: display_name.unwrap_or_default(),
+            host: place.host,
+            port: place.port,
+            export: place.export,
+            uid: uid.unwrap_or(place.uid),
+            gid: gid.unwrap_or(place.gid),
+            start_folder,
+            auto_reconnect: place.auto_reconnect,
+        },
+        SavedEntry::Smb(_) => return SavedServerOutcome::AccountChanged,
+    };
+    save_edit(id, target).await
+}
+
 /// The saved entry a target describes.
 enum Entry {
     Sftp(KnownSftpServer),

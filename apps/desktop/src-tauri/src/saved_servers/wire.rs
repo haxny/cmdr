@@ -145,7 +145,7 @@ pub struct SavedServer {
 /// other protocol, and a shape carrying both would have every call site guessing
 /// which half applies. SMB stays on its own commands, because its connect is a
 /// share mount rather than a session.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case", tag = "protocol", rename_all_fields = "camelCase")]
 pub enum ServerTarget {
     /// An SFTP account: display name, host, port, account, remote root, an

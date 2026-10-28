@@ -33,7 +33,6 @@ mod problem;
 mod propose;
 mod server;
 mod server_plan;
-mod server_saved;
 pub(crate) mod snapshot;
 
 #[cfg(test)]

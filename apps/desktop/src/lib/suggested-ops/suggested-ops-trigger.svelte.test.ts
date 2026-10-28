@@ -6,7 +6,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SuggestedOpPage, SuggestedSweepView, SuggestionsChanged } from '#lib/tauri-commands/index.js'
+import type {
+  ServerApprovalResultView,
+  SuggestedOpPage,
+  SuggestedSweepView,
+  SuggestionsChanged,
+} from '#lib/tauri-commands/index.js'
 
 const listMock = vi.fn<() => Promise<SuggestedSweepView[]>>()
 const pageMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<SuggestedOpPage>>()
@@ -16,6 +21,7 @@ const approveMock =
     (payload: { groupId: number; revision: number; selection: Record<string, unknown> }) => Promise<{ kind: string }>
   >()
 const factsMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<unknown>>()
+const approveServerMock = vi.fn<(payload: { groupId: number; revision: number }) => Promise<ServerApprovalResultView>>()
 
 /** The subscriber the store installs while the dialog is open. */
 let emit: ((payload: SuggestionsChanged) => void) | null = null
@@ -26,6 +32,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   rejectSuggestedGroup: (g: number) => rejectMock(g),
   approveSuggestedGroup: (g: number, revision: number, selection: Record<string, unknown>) =>
     approveMock({ groupId: g, revision, selection }),
+  approveSuggestedServer: (g: number, revision: number) => approveServerMock({ groupId: g, revision }),
   liveSuggestedOpFacts: (g: number, o: number, l: number) => factsMock({ groupId: g, offset: o, limit: l }),
   onSuggestionsChanged: (cb: (p: SuggestionsChanged) => void) => {
     emit = cb
@@ -96,6 +103,7 @@ function group(groupId: number, liveOpCount: number, overrides: Record<string, u
     liveOpCount,
     totalOpCount: liveOpCount,
     fromSelector: false,
+    server: null,
     revision: 1,
     ...overrides,
   } as unknown as SuggestedSweepView['groups'][number]
@@ -139,6 +147,7 @@ beforeEach(() => {
   )
   rejectMock.mockResolvedValue({ kind: 'rejected' })
   approveMock.mockResolvedValue({ kind: 'started' })
+  approveServerMock.mockResolvedValue({ kind: 'saved', volumeId: null })
 })
 
 describe('opening and reading', () => {
@@ -387,6 +396,56 @@ describe('approving', () => {
 
     expect(suggestedOpsState.open).toBe(false)
     expect(suggestedOpsState.reviews.size).toBe(0)
+  })
+
+  describe('a server card', () => {
+    const SERVER = 9
+    const card = { protocol: 'sftp', fields: [], addressIsNew: true, sharesAffected: null }
+
+    beforeEach(() => {
+      listMock.mockResolvedValue([
+        sweep([group(SERVER, 0, { verb: 'addServer', destination: null, server: card, revision: 2 })]),
+      ])
+    })
+
+    it('saves through its own command with the revision the user read, and selects no ops', async () => {
+      await openSuggestedOps()
+      expect(canApprove(SERVER)).toBe(true)
+
+      await approveGroup(SERVER)
+
+      expect(approveServerMock).toHaveBeenCalledWith({ groupId: SERVER, revision: 2 })
+      expect(approveMock).not.toHaveBeenCalled()
+    })
+
+    it('closes the dialog once a save leaves nothing to decide', async () => {
+      await openSuggestedOps()
+      listMock.mockResolvedValue([])
+
+      await approveGroup(SERVER)
+
+      expect(suggestedOpsState.open).toBe(false)
+    })
+
+    it('raises the changed notice when the card was amended since it was read', async () => {
+      approveServerMock.mockResolvedValueOnce({ kind: 'listChanged' })
+      await openSuggestedOps()
+
+      await approveGroup(SERVER)
+
+      expect(reviewOf(SERVER)?.changedUnderReview).toBe(true)
+      expect(canApprove(SERVER)).toBe(false)
+    })
+
+    it('stays on the list when the save is refused', async () => {
+      approveServerMock.mockResolvedValueOnce({ kind: 'nameTaken', name: 'Naspolya' })
+      await openSuggestedOps()
+
+      await approveGroup(SERVER)
+
+      expect(suggestedOpsState.open).toBe(true)
+      expect(listMock).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('stays open when other suggestions are still waiting', async () => {

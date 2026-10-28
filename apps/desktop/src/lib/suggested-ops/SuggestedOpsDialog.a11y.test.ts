@@ -125,6 +125,7 @@ function group(overrides: Record<string, unknown> = {}) {
     liveOpCount: 3,
     totalOpCount: 3,
     fromSelector: false,
+    server: null,
     ...overrides,
   }
 }

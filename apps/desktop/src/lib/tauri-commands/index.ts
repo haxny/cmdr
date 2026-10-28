@@ -543,6 +543,7 @@ export type {
 // Suggested ops (the review dialog's reads, and the rejection it records)
 export {
   approveSuggestedGroup,
+  approveSuggestedServer,
   listSuggestedOps,
   liveSuggestedOpFacts,
   onSuggestionsChanged,
@@ -556,6 +557,7 @@ export type {
   OpSelection,
   RejectResultView,
   RunBlocker,
+  ServerApprovalResultView,
   SuggestionChange,
   SuggestionsChanged,
   SuggestedGroupView,

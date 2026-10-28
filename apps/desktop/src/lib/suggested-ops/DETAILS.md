@@ -205,6 +205,10 @@ reach the real store, which has no such group, so the dialog re-reads and shows 
 
 ## What isn't here yet
 
+- **The server card's own layout and refusal copy**: a group carrying `server` (`addServer` / `editServer`) is
+  approvable with no ops (`canApprove`) and saves through `approveSuggestedServer`, which `approveGroup` routes it to; a
+  refusal gives it back and the re-read shows it pending, without a reason under it yet. The backend:
+  `apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § Approving a server.
 - **`interrupted` groups**: re-approving one mints a NEW group with a fresh preflight, which is spine machinery rather
   than dialog work. Deliberate, not missing.
 - **The degraded-state actions**: `WakeReadiness` types Ask Cmdr off / AI off / cloud AI not allowed / Full Disk Access
