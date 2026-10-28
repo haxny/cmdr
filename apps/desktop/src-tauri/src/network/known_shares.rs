@@ -565,15 +565,30 @@ pub fn share_by_volume_id(volume_id: &str) -> Option<KnownNetworkShare> {
     saved_shares().into_iter().find(|row| place_id(row) == volume_id)
 }
 
-/// Records `guid` on the share row whose place is `volume_id`, by `proof`'s rule:
-/// an unauthenticated GUID only fills a missing one; an authenticated one
+/// Records `guid` on the share row whose place is `volume_id`. `signed_in_as` is the
+/// account of the session that answered it: `None` for a guest session or the
+/// probe. ❗ The proof is decided HERE, from the row's own account, never handed in:
+/// `Authenticated` only when the session signed in as the account the row opens the
+/// share as ([`share_account`]), so proof earned as one person never vouches for
+/// another. An unauthenticated GUID only fills a missing one; an authenticated one
 /// overwrites, and proves the GUID a probe filled. The proof that won is recorded
 /// with it. Touches no other field. Answers `None` when no share row has that
 /// place, else whether the row's GUID or its proof changed.
-fn record_guid_in(rows: &mut [KnownNetworkShare], volume_id: &str, guid: &str, proof: GuidProof) -> Option<bool> {
+fn record_guid_in(
+    rows: &mut [KnownNetworkShare],
+    volume_id: &str,
+    guid: &str,
+    signed_in_as: Option<&str>,
+) -> Option<bool> {
     let row = rows
         .iter_mut()
         .find(|row| row.is_share() && place_id(row) == volume_id)?;
+    let session_account = share_account(signed_in_as);
+    let proof = if session_account.is_some() && session_account == share_account(row.username.as_deref()) {
+        GuidProof::Authenticated
+    } else {
+        GuidProof::Unauthenticated
+    };
     let holds_one = row
         .server_guid
         .as_deref()
@@ -589,13 +604,17 @@ fn record_guid_in(rows: &mut [KnownNetworkShare], volume_id: &str, guid: &str, p
 }
 
 /// Records the server GUID of the saved share whose place is `volume_id`
-/// ([`record_guid_in`]), persisting only on a change. Answers `false` when no share
-/// row has that place: a live share Cmdr never saved keeps its GUID in memory
-/// (`smb_server_guid`).
-pub fn record_server_guid(volume_id: &str, guid: &crate::network::server_guid::ServerGuid, proof: GuidProof) -> bool {
+/// ([`record_guid_in`], which decides the proof from `signed_in_as`), persisting only
+/// on a change. Answers `false` when no share row has that place: a live share Cmdr
+/// never saved keeps its GUID in memory (`smb_server_guid`).
+pub fn record_server_guid(
+    volume_id: &str,
+    guid: &crate::network::server_guid::ServerGuid,
+    signed_in_as: Option<&str>,
+) -> bool {
     let recorded = {
         let mut store = get_known_shares_mutex().lock_ignore_poison();
-        record_guid_in(&mut store.known_network_shares, volume_id, guid.as_str(), proof)
+        record_guid_in(&mut store.known_network_shares, volume_id, guid.as_str(), signed_in_as)
     };
     if recorded == Some(true) {
         save_known_shares();

@@ -23,15 +23,12 @@ fn lan_row() -> Vec<KnownNetworkShare> {
 fn an_unauthenticated_guid_fills_a_missing_one_and_never_overwrites() {
     let mut rows = lan_row();
 
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Unauthenticated),
-        Some(true)
-    );
+    assert_eq!(record_guid_in(&mut rows, "smb-lan", BOX, None), Some(true));
     assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
     assert_eq!(rows[0].server_guid_proof, GuidProof::Unauthenticated);
 
     assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, GuidProof::Unauthenticated),
+        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, None),
         Some(false),
         "a probe finding a row that holds a GUID writes nothing"
     );
@@ -46,16 +43,13 @@ fn an_authenticated_guid_overwrites_the_stored_one() {
     rows[0].server_guid = Some(BOX.to_string());
 
     assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, GuidProof::Authenticated),
+        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, Some("david")),
         Some(true)
     );
     assert_eq!(rows[0].server_guid.as_deref(), Some(OTHER_BOX));
     assert_eq!(rows[0].server_guid_proof, GuidProof::Authenticated);
     assert_eq!(rows[0].username.as_deref(), Some("david"), "no other field moves");
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-nope", BOX, GuidProof::Authenticated),
-        None
-    );
+    assert_eq!(record_guid_in(&mut rows, "smb-nope", BOX, Some("david")), None);
 }
 
 /// A signed-in session answering the GUID a probe filled proves it: the row's
@@ -63,24 +57,61 @@ fn an_authenticated_guid_overwrites_the_stored_one() {
 #[test]
 fn an_authenticated_session_upgrades_a_probed_guids_proof() {
     let mut rows = lan_row();
-    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Unauthenticated);
+    record_guid_in(&mut rows, "smb-lan", BOX, None);
 
     assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated),
+        record_guid_in(&mut rows, "smb-lan", BOX, Some("david")),
         Some(true),
         "the proof changed, so the row is written"
     );
     assert_eq!(rows[0].server_guid_proof, GuidProof::Authenticated);
 
+    assert_eq!(record_guid_in(&mut rows, "smb-lan", BOX, Some("david")), Some(false));
+    assert_eq!(record_guid_in(&mut rows, "smb-lan", BOX, None), Some(false));
+    assert_eq!(rows[0].server_guid_proof, GuidProof::Authenticated);
+}
+
+/// ❗ **`Authenticated` only from a session signed in as the row's OWN account**,
+/// decided here from the row, never handed in: every writer (a session, a live
+/// session adopted, the probe) passes who signed in, so none can vouch for
+/// another person's row.
+#[test]
+fn only_a_session_signed_in_as_the_rows_account_proves_its_guid() {
+    let mut rows = lan_row();
     assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated),
-        Some(false)
+        record_guid_in(&mut rows, "smb-lan", BOX, Some("dori")),
+        Some(true),
+        "another account still fills a missing GUID"
     );
+    assert_eq!(rows[0].server_guid_proof, GuidProof::Unauthenticated);
     assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Unauthenticated),
-        Some(false)
+        record_guid_in(&mut rows, "smb-lan", OTHER_BOX, Some("dori")),
+        Some(false),
+        "and never overwrites one"
+    );
+    assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
+
+    assert_eq!(
+        record_guid_in(&mut rows, "smb-lan", BOX, Some("Guest")),
+        Some(false),
+        "a guest session is no account"
+    );
+    assert_eq!(rows[0].server_guid_proof, GuidProof::Unauthenticated);
+
+    assert_eq!(
+        record_guid_in(&mut rows, "smb-lan", BOX, Some("DAVID")),
+        Some(true),
+        "the row's own account, folded"
     );
     assert_eq!(rows[0].server_guid_proof, GuidProof::Authenticated);
+
+    let mut guest_row = vec![mounted("192.168.1.111", "192.168.1.111", "naspi", None, "smb-lan")];
+    record_guid_in(&mut guest_row, "smb-lan", BOX, Some("david"));
+    assert_eq!(
+        guest_row[0].server_guid_proof,
+        GuidProof::Unauthenticated,
+        "a guest row has no account a session could match"
+    );
 }
 
 /// A stored all-zero GUID is no GUID, so a probe may fill it.
@@ -89,10 +120,7 @@ fn a_stored_zero_guid_counts_as_missing() {
     let mut rows = vec![mounted("192.168.1.111", "192.168.1.111", "naspi", None, "smb-lan")];
     rows[0].server_guid = Some("00000000-0000-0000-0000-000000000000".to_string());
 
-    assert_eq!(
-        record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Unauthenticated),
-        Some(true)
-    );
+    assert_eq!(record_guid_in(&mut rows, "smb-lan", BOX, None), Some(true));
     assert_eq!(rows[0].server_guid.as_deref(), Some(BOX));
 }
 
@@ -101,7 +129,7 @@ fn a_stored_zero_guid_counts_as_missing() {
 #[test]
 fn a_remount_keeps_the_recorded_guid_and_its_proof() {
     let mut rows = lan_row();
-    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+    record_guid_in(&mut rows, "smb-lan", BOX, Some("david"));
 
     upsert_share_row(
         &mut rows,
@@ -125,7 +153,7 @@ fn a_remount_keeps_the_recorded_guid_and_its_proof() {
 #[test]
 fn a_save_under_another_account_demotes_the_guids_proof() {
     let mut rows = lan_row();
-    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+    record_guid_in(&mut rows, "smb-lan", BOX, Some("david"));
 
     upsert_share_row(
         &mut rows,
@@ -136,7 +164,7 @@ fn a_save_under_another_account_demotes_the_guids_proof() {
     assert_eq!(rows[0].server_guid_proof, GuidProof::Unauthenticated);
 
     let mut rows = lan_row();
-    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+    record_guid_in(&mut rows, "smb-lan", BOX, Some("david"));
     upsert_share_row(
         &mut rows,
         mounted("192.168.1.111", "192.168.1.111", "naspi", None, "smb-lan"),
@@ -154,7 +182,7 @@ fn a_save_under_another_account_demotes_the_guids_proof() {
 #[test]
 fn a_save_under_the_same_account_keeps_the_proof() {
     let mut rows = lan_row();
-    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+    record_guid_in(&mut rows, "smb-lan", BOX, Some("david"));
 
     upsert_share_row(
         &mut rows,

@@ -72,16 +72,23 @@ pub(crate) async fn record_session_guid(
     let Some(server_guid) = negotiated.and_then(|n| ServerGuid::from_negotiated(n.server_guid)) else {
         return;
     };
+    record_negotiated_guid(volume_id, share_name, server_guid, username);
+}
+
+/// [`record_session_guid`] once the session's GUID is read: onto the saved row, whose
+/// own account decides the proof (`known_shares::record_server_guid`), and into
+/// [`LIVE`], where the session vouches for itself.
+fn record_negotiated_guid(volume_id: &str, share_name: &str, server_guid: ServerGuid, username: Option<&str>) {
     let username = username.filter(|name| !name.is_empty() && !name.eq_ignore_ascii_case("guest"));
     let proof = if username.is_some() {
         GuidProof::Authenticated
     } else {
         GuidProof::Unauthenticated
     };
-    let saved = known_shares::record_server_guid(volume_id, &server_guid, proof);
+    let saved = known_shares::record_server_guid(volume_id, &server_guid, username);
     log::debug!(
         target: "smb_server_guid",
-        "{volume_id}: session answered server GUID {} ({proof:?}, saved row: {saved})",
+        "{volume_id}: session answered server GUID {} (session {proof:?}, saved row: {saved})",
         server_guid.as_str()
     );
     LIVE.lock_ignore_poison().insert(
@@ -100,25 +107,12 @@ pub(crate) async fn record_session_guid(
 /// probe whatever rows still lack one.
 pub(crate) fn adopt_live_guid(volume_id: &str) {
     if let Some(live) = live_share(volume_id) {
-        let row_username = known_shares::share_by_volume_id(volume_id).and_then(|row| row.username);
-        let proof = adopted_proof(&live, row_username.as_deref());
-        let saved = known_shares::record_server_guid(volume_id, &live.server_guid, proof);
-        log::debug!(target: "smb_server_guid", "{volume_id}: adopted its live session's GUID ({proof:?}, saved row: {saved})");
+        // The row's own account decides the proof: a session signed in as someone
+        // else, or a guest, only fills.
+        let saved = known_shares::record_server_guid(volume_id, &live.server_guid, live.username.as_deref());
+        log::debug!(target: "smb_server_guid", "{volume_id}: adopted its live session's GUID (saved row: {saved})");
     }
     schedule_probe(Duration::ZERO);
-}
-
-/// The proof a saved row may adopt from `live`: `Authenticated` only when the session
-/// signed in as the row's own account (`known_shares::share_account`), else
-/// `Unauthenticated`, which only fills a missing GUID. Proof earned as one account
-/// never vouches for another. Pure.
-fn adopted_proof(live: &LiveShare, row_username: Option<&str>) -> GuidProof {
-    let same_account =
-        known_shares::share_account(live.username.as_deref()) == known_shares::share_account(row_username);
-    match live.proof {
-        GuidProof::Authenticated if same_account => GuidProof::Authenticated,
-        _ => GuidProof::Unauthenticated,
-    }
 }
 
 /// The saved shares a probe pass dials: rows with no GUID whose share name another
@@ -174,6 +168,11 @@ pub(crate) fn schedule_startup_probe() {
     schedule_probe(STARTUP_SETTLE);
 }
 
+/// A probe's answer, onto the saved row: no session signed in, so it only fills.
+fn record_probed_guid(place: &str, guid: &ServerGuid) -> bool {
+    known_shares::record_server_guid(place, guid, None)
+}
+
 async fn probe_pass() {
     let rows: Vec<KnownNetworkShare> = rows_to_probe(&known_shares::saved_shares())
         .into_iter()
@@ -186,7 +185,7 @@ async fn probe_pass() {
         let probed = cmdr_smb::connection::probe_server_guid(host, port, PROBE_TIMEOUT).await;
         match probed.map(ServerGuid::from_negotiated) {
             Ok(Some(guid)) => {
-                let saved = known_shares::record_server_guid(&place, &guid, GuidProof::Unauthenticated);
+                let saved = record_probed_guid(&place, &guid);
                 log::debug!(
                     target: "smb_server_guid",
                     "{place}: probe read server GUID {} (saved row: {saved})",

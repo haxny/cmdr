@@ -142,37 +142,74 @@ fn no_tool_handler_reaches_the_probe() {
     assert!(offenders.is_empty(), "these reach the GUID probe: {offenders:?}");
 }
 
-fn live(proof: GuidProof, username: Option<&str>) -> LiveShare {
-    LiveShare {
-        server_guid: ServerGuid::parse(BOX).expect("a GUID"),
-        proof,
-        share_name: "naspi".to_string(),
-        username: username.map(str::to_string),
-    }
+// -- Every writer onto a saved row: the row's own account decides the proof --
+//
+// Each test files one saved row (signed in as `david`) in the process's share
+// store under an address of its own, so tests sharing a process never meet.
+
+/// Files a saved `david` row at `address` and answers its place.
+fn saved_row(address: &str) -> String {
+    let row = row(address, "naspi", None);
+    let place = known_shares::place_id(&row);
+    known_shares::update_known_share(row);
+    place
 }
 
-/// ❗ **A row adopts a live session's proof only for its own account.** The session
-/// may have signed in as someone else than the row a later mount saved (or as a
-/// guest): its GUID still fills, as a hint, but vouches for nothing.
+fn proof_of(place: &str) -> GuidProof {
+    known_shares::share_by_volume_id(place)
+        .expect("the saved row")
+        .server_guid_proof
+}
+
+fn guid() -> ServerGuid {
+    ServerGuid::parse(BOX).expect("a GUID")
+}
+
+/// A direct session coming up: signed in as the row's account it proves the GUID;
+/// as another account, or a guest, it only fills.
 #[test]
-fn an_adopted_guid_is_authenticated_only_for_the_rows_own_account() {
+fn a_session_proves_a_rows_guid_only_signed_in_as_its_account() {
+    let place = saved_row("10.9.0.1");
+    record_negotiated_guid(&place, "naspi", guid(), Some("dori"));
+    assert_eq!(proof_of(&place), GuidProof::Unauthenticated, "another account");
+    record_negotiated_guid(&place, "naspi", guid(), None);
+    assert_eq!(proof_of(&place), GuidProof::Unauthenticated, "a guest");
+    record_negotiated_guid(&place, "naspi", guid(), Some("david"));
+    assert_eq!(proof_of(&place), GuidProof::Authenticated);
     assert_eq!(
-        adopted_proof(&live(GuidProof::Authenticated, Some("David")), Some("david")),
-        GuidProof::Authenticated,
-        "the same account, folded"
+        live_share(&place).map(|live| live.proof),
+        Some(GuidProof::Authenticated),
+        "the live entry is the session's own, so it vouches for itself"
     );
-    assert_eq!(
-        adopted_proof(&live(GuidProof::Authenticated, Some("dori")), Some("david")),
-        GuidProof::Unauthenticated
-    );
-    assert_eq!(
-        adopted_proof(&live(GuidProof::Authenticated, Some("david")), None),
-        GuidProof::Unauthenticated,
-        "a guest row"
-    );
-    assert_eq!(
-        adopted_proof(&live(GuidProof::Unauthenticated, None), Some("david")),
-        GuidProof::Unauthenticated,
-        "a guest session"
-    );
+}
+
+/// ❗ A row saved after its live session came up adopts the session's GUID, proven
+/// only when that session signed in as the row's account.
+#[test]
+fn an_adopted_guid_is_proven_only_for_the_rows_own_account() {
+    let place = saved_row("10.9.0.2");
+    let live = |username: &str| LiveShare {
+        server_guid: guid(),
+        proof: GuidProof::Authenticated,
+        share_name: "naspi".to_string(),
+        username: Some(username.to_string()),
+    };
+
+    LIVE.lock_ignore_poison().insert(place.clone(), live("dori"));
+    adopt_live_guid(&place);
+    assert_eq!(proof_of(&place), GuidProof::Unauthenticated);
+
+    LIVE.lock_ignore_poison().insert(place.clone(), live("David"));
+    adopt_live_guid(&place);
+    assert_eq!(proof_of(&place), GuidProof::Authenticated, "the same account, folded");
+}
+
+/// The probe signs in as nobody: it fills a missing GUID and proves nothing.
+#[test]
+fn a_probed_guid_is_never_proven() {
+    let place = saved_row("10.9.0.3");
+    assert!(record_probed_guid(&place, &guid()));
+    let saved = known_shares::share_by_volume_id(&place).expect("the saved row");
+    assert_eq!(saved.server_guid.as_deref(), Some(BOX));
+    assert_eq!(saved.server_guid_proof, GuidProof::Unauthenticated);
 }

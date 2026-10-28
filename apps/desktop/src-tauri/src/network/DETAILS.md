@@ -787,8 +787,11 @@ tools read both to treat the two ids as one (`../location/same_share.rs`): any G
 an `authenticated` one on BOTH rows lets one id answer for the other.
 
 - **The proof that won is the one recorded** (`known_shares::record_guid_in`): a fill by the probe or a guest session
-  records `unauthenticated`; a signed-in session records `authenticated`, whether it overwrote the GUID or confirmed the
-  one a probe filled. A row saved before the field reads `unauthenticated` until a signed-in session records its GUID
+  records `unauthenticated`; a session signed in as the ROW'S OWN account records `authenticated`, whether it
+  overwrote the GUID or confirmed the one a probe filled. ❗ `record_guid_in` decides the proof itself, from the row's
+  account and the session's (`signed_in_as`), so no writer can hand one in: a session signed in as someone else only
+  fills. Its three callers are `record_negotiated_guid` (a session), `adopt_live_guid`, and `record_probed_guid`, one
+  test each in `smb_server_guid_test.rs`. A row saved before the field reads `unauthenticated` until a signed-in session records its GUID
   again, and every refresh of a row (a remount, a share-list reconnect) keeps the GUID and its proof together
   (`keep_recorded_guid`).
 - ❗ **Except across accounts: the one thing that moves a proof down.** A save that changes the share's account
@@ -798,10 +801,10 @@ an `authenticated` one on BOTH rows lets one id answer for the other.
 
 - **A direct session coming up records its GUID** (`record_session_guid`, from both `smb_upgrade` install paths, read
   off `SmbVolume::diagnostics` with no I/O). Signed in as an account it OVERWRITES the row's (a NAS restored or
-  replaced mints a new one, and the latest authenticated answer is the truth); as a guest it only fills. A live share
-  with no saved row keeps it in memory (`live_share`), and the row a mount saves later adopts it (`adopt_live_guid`): the
-  upgrade can land before `remember_mount`'s row does. It adopts `authenticated` only when the session signed in as
-  the row's own account (`adopted_proof`); a guest session or another account only fills.
+  replaced mints a new one, and the latest authenticated answer is the truth), when that account is the row's; as a
+  guest or another account it only fills. A live share with no saved row keeps it in memory (`live_share`, where the
+  session vouches for itself), and the row a mount saves later adopts it (`adopt_live_guid`) under the same rule: the
+  upgrade can land before `remember_mount`'s row does.
 - **The probe fills the rest**: a NEGOTIATE-only dial of the saved address (`cmdr_smb::connection::probe_server_guid`,
   no session, no credentials, 3 s per step), only for rows with no GUID whose share name another row shares, one pass
   at a time, 20 s after startup and whenever a mount saves a share row. ❗ It only ever FILLS: whatever answers on a
