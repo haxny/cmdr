@@ -70,7 +70,7 @@ describe('WriteDialog', () => {
     buttonNamed(document.body, 'Write tags').click()
     await settle()
     expect(state.apply).toHaveBeenCalledWith(
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
       { after: earlier },
     )
   })

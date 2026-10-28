@@ -28,7 +28,7 @@
     import { formatInteger } from '#lib/intl/number-format.js'
     import AlbumPane from './AlbumPane.svelte'
     import { followViewScope, scopedAlbumEdits } from './album-scope.svelte'
-    import { fileNameOf, outcomeOf, refusalOf } from './apply-outcome'
+    import { countsOf, fileNameOf, outcomeOf, refusalOf, reviewFirstPart } from './apply-outcome'
     import { answerWriteAnyway } from './write-anyway'
     import { KIND_LABELS } from './write-kind'
     import CoverPanel from './CoverPanel.svelte'
@@ -385,18 +385,9 @@
                 showSummary([{ key: 'multiRename.tags.write.listFailed' }], 'alert')
                 break
             case 'reviewFirst':
-                // A removal is written only from the list that names it; the list continues any apply already made.
+                // A removal or a side-file replacement is written only from the list that names it; it continues any apply.
                 openReview(res.after)
-                showSummary([
-                    {
-                        key: 'multiRename.tags.write.reviewRemovals',
-                        params: {
-                            count: res.removing,
-                            countText: formatInteger(res.removing),
-                            kind: tString(KIND_LABELS[res.writtenAs]),
-                        },
-                    },
-                ])
+                showSummary([reviewFirstPart(res, tString(KIND_LABELS[res.writtenAs]))])
                 break
             case 'changed':
                 // An edit landed between the list and the write: nothing unlisted is written.
@@ -432,8 +423,8 @@
 
     /** The summary of every apply of one press (the first, and a "Write anyway"), each file once. */
     function showOutcome(reports: TagApplyReport[], after: SummaryPart[] = []): void {
-        const outcome = outcomeOf(reports)
-        showDone(outcome.written, outcome.failed.length + outcome.changedOnDisk.length + outcome.skipped.length, after)
+        const { written, notWritten } = countsOf(outcomeOf(reports))
+        showDone(written, notWritten, after)
     }
 
     /** "Skip these files": the would-drop files stay as they are, counted as not written. */

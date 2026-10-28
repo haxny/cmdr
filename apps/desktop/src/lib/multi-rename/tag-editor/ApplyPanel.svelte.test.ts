@@ -38,7 +38,7 @@ describe('ApplyPanel', () => {
     expect(listed(root, 'Files that will change')).toEqual(['01.mp3: Album, Title, cover', '02.mp3: Album, extra tags'])
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenCalledWith(
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
       { after: [] },
     )
   })
@@ -70,7 +70,13 @@ describe('ApplyPanel', () => {
     ])
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenCalledWith(
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: ['/b/01.mp3', '/b/02.mp3'] },
+      {
+        kind: 'audiobook',
+        allowFrameLoss: false,
+        skip: [],
+        allowRemovals: ['/b/01.mp3', '/b/02.mp3'],
+        allowSideFiles: [],
+      },
       { after: [] },
     )
   })
@@ -138,7 +144,7 @@ describe('ApplyPanel', () => {
     await press(root, 'Write tags…')
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenCalledWith(
-      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
       { after: [] },
     )
   })
@@ -263,7 +269,7 @@ describe('ApplyPanel', () => {
     expect(root.textContent).toContain('will change:')
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenLastCalledWith(
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
       { after: [first] },
     )
     expect(root.textContent).toContain('Tags written to 2 files')

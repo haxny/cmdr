@@ -10,7 +10,15 @@ afterEach(() => {
   cleanup = undefined
 })
 
-const NO_UNDO: Outcome = { written: 2, failed: [], changedOnDisk: [], skipped: [], undoUnavailable: true }
+const NO_UNDO: Outcome = {
+  written: 2,
+  failed: [],
+  changedOnDisk: [],
+  skipped: [],
+  undoUnavailable: true,
+  sideFilesWritten: [],
+  sideFilesNotWritten: [],
+}
 
 async function textOf(someUndoable: boolean): Promise<string> {
   const mounted = await mountInto(ApplyOutcome, { outcome: NO_UNDO, someUndoable, onReload: vi.fn() })

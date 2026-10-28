@@ -738,6 +738,11 @@ export interface SettingsValues {
   'fileExplorer.tabs.closedTabHistorySize': number
   /** Adds the opt-in Tags tab to Multi-Rename. Off by default: off, the sheet is exactly upstream's. */
   'multiRename.tagEditor': boolean
+  /**
+   * The Tags window's writes also write Audiobookshelf's `reader.txt` (the narrator) and `desc.txt` (the description)
+   * into the book folder. Off by default: off, a write touches only the audio files.
+   */
+  'multiRename.tagEditor.absSideFiles': boolean
 
   // Search
   'search.autoApply': boolean

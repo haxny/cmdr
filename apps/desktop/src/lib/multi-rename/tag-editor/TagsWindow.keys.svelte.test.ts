@@ -148,6 +148,9 @@ beforeEach(() => {
       failed: [],
       changedOnDisk: [],
       undoUnavailable: false,
+      sideFilesWritten: [],
+      sideFilesHeld: [],
+      sideFilesFailed: [],
     },
   })
 })
@@ -571,6 +574,9 @@ describe('the Tags window’s function keys', () => {
         failed: [{ path: '/b/01.mp3', error: { type: 'notSupported' } }],
         changedOnDisk: [],
         undoUnavailable: false,
+        sideFilesWritten: [],
+        sideFilesHeld: [],
+        sideFilesFailed: [],
       },
     })
     const root = await mountWindow()
@@ -634,6 +640,9 @@ describe('closing the Tags window during a write', () => {
         failed: [],
         changedOnDisk: [],
         undoUnavailable: false,
+        sideFilesWritten: [],
+        sideFilesHeld: [],
+        sideFilesFailed: [],
       },
     })
     await settle()
@@ -657,6 +666,9 @@ describe('⌘⏎ and ⌘S write at once', () => {
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
+    sideFilesWritten: [],
+    sideFilesHeld: [],
+    sideFilesFailed: [],
   }
 
   it.each([
@@ -668,7 +680,7 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(ipc.applyTags).toHaveBeenCalledTimes(1)
     expect(ipc.applyTags).toHaveBeenCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       false,
     )
     expect(dialog()).toBeNull()
@@ -710,7 +722,13 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(ipc.applyTags).toHaveBeenCalledTimes(2)
     expect(ipc.applyTags).toHaveBeenLastCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'], allowRemovals: [] },
+      {
+        kind: 'audiobook',
+        allowFrameLoss: true,
+        skip: ['/b/02.mp3', '/b/03.mp3'],
+        allowRemovals: [],
+        sideFiles: false,
+      },
       false,
     )
     expect(dialog()).toBeNull()
@@ -816,7 +834,14 @@ describe('⌘⏎ and ⌘S write at once', () => {
     await settle()
     expect(ipc.applyTags).toHaveBeenLastCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: ['/b/01.mp3'] },
+      {
+        kind: 'audiobook',
+        allowFrameLoss: false,
+        skip: [],
+        allowRemovals: ['/b/01.mp3'],
+        allowSideFiles: [],
+        sideFiles: false,
+      },
       false,
     )
   })

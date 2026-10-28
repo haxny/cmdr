@@ -1675,6 +1675,12 @@ export const commands = {
   getTagChanges: (sessionId: string, kind: ContentKind) =>
     typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
   /**
+   *  What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): the
+   *  frontend asks only with `multiRename.tagEditor.absSideFiles` on. None for a read-only session.
+   */
+  getSideFileChanges: (sessionId: string) =>
+    typedError<SideFileChange[], TagEditorError>(__TAURI_INVOKE('get_side_file_changes', { sessionId })),
+  /**
    *  Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
    *  Undo reverses both; otherwise a write that writes something is the folder's new last write.
    *  No deadline on purpose: the files are local (a remote session is refused), and a write cut
@@ -6293,6 +6299,16 @@ export type ApplyRequest = {
    *  confirmed: only these may lose a field the kind removes. Absent means none.
    */
   allowRemovals?: string[]
+  /**
+   *  Write Audiobookshelf's `reader.txt` and `desc.txt` beside the book too (`side_files.rs`;
+   *  the `multiRename.tagEditor.absSideFiles` setting). Absent means no.
+   */
+  sideFiles?: boolean
+  /**
+   *  The side-file replacements the change list showed, each with the old text it showed: only
+   *  these may replace a side file that says something else. Absent means none.
+   */
+  allowSideFiles?: SideFileSeen[]
 }
 
 /**
@@ -17545,6 +17561,40 @@ export type ShowSearchResultInFolder = {
   path: string
 }
 
+// Which side file.
+export type SideFile =
+  // `reader.txt`: the narrator.
+  | 'reader'
+  // `desc.txt`: the description.
+  | 'desc'
+
+// What a write would do with one side file. A file that already says the same isn't listed.
+export type SideFileChange =
+  | { kind: 'create'; file: SideFile; path: string; text: string }
+  /**
+   *  `old` is the file's text now (read as UTF-8, lossy); the write replaces it only when the
+   *  request names this path with this `old` (`ApplyRequest::allow_side_files`).
+   */
+  | { kind: 'replace'; file: SideFile; path: string; old: string; text: string }
+  | { kind: 'withheld'; file: SideFile; reason: SideFileWithheld }
+
+// A replacement the change list showed: the path and the old text it showed.
+export type SideFileSeen = {
+  path: string
+  old: string
+}
+
+// Why a side file isn't written.
+export type SideFileWithheld =
+  // The tracks don't all name the same narrators (or share one description).
+  | 'tracksDisagree'
+  // The text is longer than a side file may be.
+  | 'tooLong'
+  // Something other than a regular file has the name (a link, a folder).
+  | 'notAFile'
+  // The file there is too large or can't be read, so its content couldn't be kept for undo.
+  | 'unreadable'
+
 /**
  *  What a "Sign in" affordance on a volume asks a person for: the FORM the sheet
  *  renders, decided by the backend rather than by the sheet's mode or the
@@ -18523,6 +18573,15 @@ export type TagApplyReport = {
   changedOnDisk: string[]
   // Files were written, but the undo store couldn't keep their old tags: no undo.
   undoUnavailable: boolean
+  // Side files written beside the book (`reader.txt`, `desc.txt`), by path.
+  sideFilesWritten: string[]
+  /**
+   *  Side files not replaced: they say something else, and the request didn't name that
+   *  replacement. The UI lists them.
+   */
+  sideFilesHeld: string[]
+  // Side files that couldn't be written.
+  sideFilesFailed: string[]
 }
 
 /**

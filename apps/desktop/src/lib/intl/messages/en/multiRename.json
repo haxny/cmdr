@@ -2328,5 +2328,72 @@
   "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
   "@multiRename.tags.quit.waits": {
     "description": "A line at the foot of the quit dialog, in place of its usual countdown, when the only thing holding the quit is tag changes not yet written in tag editor windows. Cmdr doesn't quit on its own then: it waits until the user picks Quit now or Keep working."
+  },
+  "multiRename.tags.write.sideHeading": "Beside the book:",
+  "@multiRename.tags.write.sideHeading": {
+    "description": "Shown in the tag editor window: heading of the part of the list of changes about the small text files Cmdr writes into the book folder for the Audiobookshelf app (reader.txt, desc.txt)."
+  },
+  "multiRename.tags.write.sideCreate": "Create {fileName}: {text}",
+  "@multiRename.tags.write.sideCreate": {
+    "description": "Shown in the tag editor window's list of changes, under the files: a text file that doesn't exist yet will be created with this text. {fileName} is reader.txt or desc.txt.",
+    "placeholders": {
+      "fileName": "the side file’s name, reader.txt or desc.txt",
+      "text": "what the file will say (a narrator’s name, or the book’s description)"
+    }
+  },
+  "multiRename.tags.write.sideReplace": "Replace {fileName}: “{old}” becomes “{text}”",
+  "@multiRename.tags.write.sideReplace": {
+    "description": "Shown in the tag editor window's list of changes, under the files: a text file there says something else and will be replaced. {old} is what it says now, {text} what it will say.",
+    "placeholders": {
+      "fileName": "the side file’s name, reader.txt or desc.txt",
+      "old": "what the file says now",
+      "text": "what it will say"
+    }
+  },
+  "multiRename.tags.write.sideWithheld": "{fileName} isn’t written: {reason}",
+  "@multiRename.tags.write.sideWithheld": {
+    "description": "Shown in the tag editor window's list of changes, under the files: a text file Cmdr won't write, and why ({reason} is one of the multiRename.tags.write.sideWhy.* texts).",
+    "placeholders": {
+      "fileName": "the side file’s name, reader.txt or desc.txt",
+      "reason": "why, one of the multiRename.tags.write.sideWhy.* texts"
+    }
+  },
+  "multiRename.tags.write.sideWhy.readerDisagree": "the tracks name different narrators",
+  "@multiRename.tags.write.sideWhy.readerDisagree": {
+    "description": "Why reader.txt isn't written: the tracks' Performer (narrator) values differ. Completes multiRename.tags.write.sideWithheld."
+  },
+  "multiRename.tags.write.sideWhy.descDisagree": "the tracks have different descriptions",
+  "@multiRename.tags.write.sideWhy.descDisagree": {
+    "description": "Why desc.txt isn't written: the tracks' Description values differ. Completes multiRename.tags.write.sideWithheld."
+  },
+  "multiRename.tags.write.sideWhy.tooLong": "its text is longer than 64 KB",
+  "@multiRename.tags.write.sideWhy.tooLong": {
+    "description": "Why a side text file isn't written: the text is too long. Completes multiRename.tags.write.sideWithheld."
+  },
+  "multiRename.tags.write.sideWhy.notAFile": "something other than a plain file has that name",
+  "@multiRename.tags.write.sideWhy.notAFile": {
+    "description": "Why a side text file isn't written: a link or a folder has its name, and Cmdr never writes through it. Completes multiRename.tags.write.sideWithheld."
+  },
+  "multiRename.tags.write.sideWhy.unreadable": "the file there can’t be read, so it couldn’t be put back",
+  "@multiRename.tags.write.sideWhy.unreadable": {
+    "description": "Why a side text file isn't written: the existing one is too large or unreadable, so Undo couldn't restore it. Completes multiRename.tags.write.sideWithheld."
+  },
+  "multiRename.tags.write.sideWritten": "Also written beside the book: {files}",
+  "@multiRename.tags.write.sideWritten": {
+    "description": "Shown in the tag editor window after a write: the small text files (reader.txt, desc.txt) it also wrote into the book folder. {files} is a list of file names.",
+    "placeholders": {
+      "files": "the file names, as a list (for example reader.txt and desc.txt)"
+    }
+  },
+  "multiRename.tags.write.sideNotWrittenHeading": "Not written beside the book:",
+  "@multiRename.tags.write.sideNotWrittenHeading": {
+    "description": "Shown in the tag editor window after a write: heading of the list of side text files (reader.txt, desc.txt) it didn't write: one that says something else and wasn't shown in the list of changes, or one that couldn't be written."
+  },
+  "multiRename.tags.write.reviewSideFiles": "{count, plural, one {A file beside the book says something else, so the list shows its replacement first.} other {Files beside the book say something else, so the list shows their replacement first.}}",
+  "@multiRename.tags.write.reviewSideFiles": {
+    "description": "Status line at the foot of the tag editor window after Command+Return or Command+S: reader.txt or desc.txt in the book folder already says something else, so it wasn't replaced and the list of changes opened instead, showing the old and the new text. The user confirms there.",
+    "placeholders": {
+      "countText": "how many files, ready to drop into the sentence"
+    }
   }
 }

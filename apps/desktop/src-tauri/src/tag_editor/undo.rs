@@ -88,15 +88,25 @@ pub(super) fn undo_with(
 ) -> Result<RestoreReport, TagEditorError> {
     let id = ApplyId(apply_id.to_owned());
     // Restoring parses and writes each file with lofty.
-    let report = contain_panics(|| store.restore(&id, &WriteOptions::default()))
+    let restored = contain_panics(|| store.restore(&id, &WriteOptions::default()))
         .unwrap_or_else(|| Err(panicked()))
-        .map_err(|error| TagEditorError::Undo { error })?;
-    if report.failed.is_empty()
-        && let Err(error) = store.forget(&id)
-    {
-        log::warn!(target: LOG_TARGET, "Couldn't forget an undone tag write: {error:?}");
-    }
-    reload(&report.restored, undoing);
-    reread_media(LOCAL_VOLUME_ID, &report.restored);
+        .map_err(|error| TagEditorError::Undo { error });
+    let mut report = match restored {
+        Ok(report) => {
+            if report.failed.is_empty()
+                && let Err(error) = store.forget(&id)
+            {
+                log::warn!(target: LOG_TARGET, "Couldn't forget an undone tag write: {error:?}");
+            }
+            report
+        }
+        // A write of side files alone has no track record.
+        Err(error) if record_gone(&error) && super::side_files::has_undo(apply_id) => RestoreReport::default(),
+        Err(error) => return Err(error),
+    };
+    let tracks = report.restored.clone();
+    super::side_files::undo(apply_id, &mut report);
+    reload(&tracks, undoing);
+    reread_media(LOCAL_VOLUME_ID, &tracks);
     Ok(report)
 }

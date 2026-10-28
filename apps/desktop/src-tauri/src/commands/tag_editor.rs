@@ -28,6 +28,7 @@ use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
     preview_names, set_view_scope, tool as run_tool,
 };
+use crate::tag_editor::side_files::{SideFileChange, side_file_changes};
 use crate::tag_editor::sort::{TrackSort, sort_tracks};
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
@@ -228,6 +229,14 @@ pub async fn get_tag_changes(session_id: String, kind: ContentKind) -> Result<Ve
         result
     })
     .await
+}
+
+/// What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): the
+/// frontend asks only with `multiRename.tagEditor.absSideFiles` on. None for a read-only session.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_side_file_changes(session_id: String) -> Result<Vec<SideFileChange>, TagEditorError> {
+    blocking(move || side_file_changes(&session_id)).await
 }
 
 /// Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so

@@ -173,6 +173,25 @@ Undo after "Write anyway" (verified on lofty via `undo_after_write_anyway_restor
 snapshot doesn't carry the dropped ID3v2.4-only frame (ID3 extras are `TXXX` items only, `read::id3_items`), so the
 restore (`allow_frame_loss: false`) writes every other old tag back cleanly; the dropped frame stays gone.
 
+**Audiobookshelf side files** (`side_files.rs`, `ApplyRequest.sideFiles`, the `multiRename.tagEditor.absSideFiles`
+setting, off by default). Audiobookshelf takes the narrator only from Composer or `reader.txt`'s first line, never from
+Performer (its `server/utils/prober.js` and `scanner/AudioFileScanner.js` map `tagComposer` to narrators;
+`scanner/BookScanner.js` reads `reader.txt` and `desc.txt` from the book folder; read 2026-10-28). The user's canon keeps
+the narrator in Performer, so a write also writes `reader.txt` (the tracks' Performer values, distinct, `, `-joined, only
+when every track names the same ones, in any order) and `desc.txt` (the Description every track shares) into
+`cover::tracks_folder`, from the session's tracks as edited (`session::book_of`). Decision: what the tracks don't agree
+on writes nothing, and the list says why (`SideFileChange::Withheld`), rather than guessing a majority. The list is
+`get_side_file_changes` (create / replace with the old text / withheld; one that already says the same, first line for
+`reader.txt`, is not listed and never touched). Safety: a replacement is written only when `allowSideFiles` names its
+path with the old text the list showed (else `sideFilesHeld`), so ⌘⏎ never replaces one; writes go to a same-folder
+temp file renamed over the name; a symlink or non-file at the name is never read, followed, or replaced; 64 KiB cap
+both ways; only an editable (local) session gets any. Side files are written in every apply that asks, after the
+tracks, even when none of them was written (they're idempotent: a second apply finds them saying the same), so side
+files alone are a write too, with the apply's id minted for them. Undo: the old bytes (or "none") are kept in memory per
+apply id (as many applies as the store keeps); `undo_with` restores them, or removes a created file, only while the file
+still holds exactly what was written (else `changed`), and they count in the `RestoreReport` and in
+`UndoableApply.written`. A side-file-only apply has no track record: its `NotFound` restore is taken as empty.
+
 **Non-UTF-8 paths.** Paths cross IPC as lossy strings (`TrackRow::path`). Such a file is listed and written like any
 other, but `TagEdit::SetOne` can't name it (`UnknownTrack`, its `SetAll` edits still apply), and `skip` compares the
 lossy form, so a skip may cover two files whose names differ only in invalid bytes (the safe direction).
@@ -211,7 +230,8 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,
   the in-memory "use for all", and a drop read under a deadline; `cover_image.rs` decodes (pasted TIFF → PNG/JPEG,
   cached tile thumbnails) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
-- `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
+- `apply.rs` the write (`apply`, `TagApplyReport`); `side_files.rs` Audiobookshelf's `reader.txt` / `desc.txt` beside
+  the book, written and undone with the tags; `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
   folder's last write (⌘Z), kept for the app's lifetime; `at_quit.rs` what a quit would cut short, for `quit/`;
   `activity.rs` log lines (counts and durations, never paths or values).
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse

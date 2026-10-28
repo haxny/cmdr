@@ -14,6 +14,8 @@ import {
   type NamePattern,
   type NamePreviewRow,
   type RestoreReport,
+  type SideFileChange,
+  type SideFileSeen,
   type TagApplyReport,
   type TagEdit_Deserialize,
   type TagEditorError,
@@ -39,6 +41,8 @@ export type {
   NamePattern,
   NamePreviewRow,
   RestoreReport,
+  SideFileChange,
+  SideFileSeen,
   TagApplyReport,
   TagEdit_Deserialize as TagEdit,
   TagEditorError,
@@ -149,6 +153,14 @@ export async function previewTagsFromNames(
 /** What a write as `kind` would change, per file, in current order, with what the kind removes. */
 export async function getTagChanges(sessionId: string, kind: ContentKind): Promise<TagEditorResult<FileChangeView[]>> {
   return result(await commands.getTagChanges(sessionId, kind))
+}
+
+/**
+ * What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): create, replace (with the
+ * old text), or why not. Asked only with `multiRename.tagEditor.absSideFiles` on.
+ */
+export async function getSideFileChanges(sessionId: string): Promise<TagEditorResult<SideFileChange[]>> {
+  return result(await commands.getSideFileChanges(sessionId))
 }
 
 /** Writes the changed files. The report lists what was written, what would drop items, what failed, and what changed on disk. */

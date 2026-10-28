@@ -47,6 +47,8 @@ pub(super) fn request() -> ApplyRequest {
         allow_frame_loss: false,
         skip: Vec::new(),
         allow_removals: Vec::new(),
+        side_files: false,
+        allow_side_files: Vec::new(),
     }
 }
 

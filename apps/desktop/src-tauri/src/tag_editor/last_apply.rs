@@ -84,7 +84,7 @@ impl LastApplies {
     /// nothing newer to protect); `continues` (a "Write anyway" after a press that wrote) adds
     /// to it, anything else replaces it.
     pub(crate) fn after_apply(&mut self, key: FolderKey, report: &TagApplyReport, continues: bool) {
-        if !continues && report.written.is_empty() {
+        if !continues && files_written(report) == 0 {
             return;
         }
         let before = if continues {
@@ -154,7 +154,7 @@ impl LastApplies {
 /// The last write after `report`: this apply (when it wrote and kept the old tags) after
 /// `before`'s. `None` when nothing is left to undo or to warn about.
 fn next_last(before: Option<LastTagApply>, report: &TagApplyReport) -> Option<LastTagApply> {
-    let wrote = !report.written.is_empty();
+    let wrote = files_written(report) > 0;
     let mut next = before.unwrap_or(LastTagApply {
         applies: Vec::new(),
         partial: false,
@@ -162,7 +162,7 @@ fn next_last(before: Option<LastTagApply>, report: &TagApplyReport) -> Option<La
     match &report.apply_id {
         Some(apply_id) if wrote && !report.undo_unavailable => next.applies.push(UndoableApply {
             apply_id: apply_id.clone(),
-            written: u32::try_from(report.written.len()).unwrap_or(u32::MAX),
+            written: u32::try_from(files_written(report)).unwrap_or(u32::MAX),
         }),
         _ => {}
     }
@@ -170,6 +170,11 @@ fn next_last(before: Option<LastTagApply>, report: &TagApplyReport) -> Option<La
     // Kept with no applies when the write can't be undone at all, so a "Write anyway" after it is
     // marked partial.
     (!next.applies.is_empty() || next.partial).then_some(next)
+}
+
+/// The files an apply wrote: its tracks and its side files beside the book.
+fn files_written(report: &TagApplyReport) -> usize {
+    report.written.len() + report.side_files_written.len()
 }
 
 static LAST: LazyLock<Mutex<LastApplies>> = LazyLock::new(|| Mutex::new(LastApplies::default()));
