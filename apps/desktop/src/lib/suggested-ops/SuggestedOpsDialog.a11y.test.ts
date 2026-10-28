@@ -75,9 +75,12 @@ vi.mock('./suggested-ops-trigger.svelte', () => ({
   suggestedOpsState: store.state,
   approvableCount: (id: number) => store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0,
   approveGroup: actions.approve,
-  canApprove: (id: number) =>
-    !store.review.changedUnderReview &&
-    (store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0) > 0,
+  canApprove: (id: number) => {
+    const found = store.state.sweeps[0]?.groups.find((g) => g.groupId === id) as
+      | { liveOpCount: number; server?: unknown }
+      | undefined
+    return !store.review.changedUnderReview && (Boolean(found?.server) || (found?.liveOpCount ?? 0) > 0)
+  },
   closeSuggestedOps: actions.close,
   ensureOpWindow: (groupId: number, startIndex: number) => actions.ensure({ groupId, startIndex }),
   isOpSelected: (_groupId: number, opId: number) => !store.review.deselected.has(opId),
@@ -506,6 +509,137 @@ describe('honest absence', () => {
     const host = mountDialog()
 
     expect(host.querySelector('.refusal')).toBeNull()
+  })
+})
+
+/**
+ * A server card: what the click saves, laid out like every other suggestion, with no files, no
+ * selection, and nothing to type into. The fields are Cmdr's facts; only the reason is the AI's.
+ */
+describe('a server card', () => {
+  const addCard = {
+    verb: 'addServer',
+    displayName: 'Build box',
+    rationale: 'You SSH into this box every day.',
+    reversible: 'serverSettings',
+    destination: null,
+    destinationVolumeName: null,
+    destinationState: 'notApplicable',
+    sourceFolder: null,
+    liveOpCount: 0,
+    totalOpCount: 0,
+    server: {
+      protocol: 'sftp',
+      fields: [
+        { field: 'name', value: 'Build box', changed: false, previous: null },
+        { field: 'address', value: 'build.local', changed: false, previous: null },
+        { field: 'port', value: '22', changed: false, previous: null },
+        { field: 'account', value: 'ada', changed: false, previous: null },
+        { field: 'folder', value: '/srv/builds', changed: false, previous: null },
+      ],
+      addressIsNew: true,
+      sharesAffected: null,
+    },
+  }
+  const editCard = {
+    ...addCard,
+    verb: 'editServer',
+    displayName: 'Naspolya',
+    server: {
+      protocol: 'smb',
+      fields: [
+        { field: 'name', value: 'Naspolya', changed: true, previous: 'naspi' },
+        { field: 'address', value: 'naspi.local', changed: false, previous: null },
+        { field: 'account', value: 'david', changed: true, previous: null },
+      ],
+      addressIsNew: false,
+      sharesAffected: 3,
+    },
+  }
+
+  it('shows the protocol and every field it saves, and the new address it points at', async () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    const facts = host.querySelector('.facts')?.textContent ?? ''
+    for (const text of ['Type', 'SFTP', 'Address', 'build.local', 'Port', '22', 'Account', 'ada', '/srv/builds']) {
+      expect(facts).toContain(text)
+    }
+    expect(facts).toContain('A new address')
+    expect(host.querySelector('.group-head')?.textContent).toContain('Add a server')
+    expect(host.querySelector('.group-title')?.textContent).toBe('Build box')
+    expect(host.textContent).toContain('You can forget it later in Servers')
+    await expectNoA11yViolations(host)
+  })
+
+  it('takes no input of any kind, and lists no files', () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    const group = host.querySelector('.group')
+    expect(group?.querySelectorAll('input, textarea, select, [contenteditable]')).toHaveLength(0)
+    expect(group?.querySelector('.op-row')).toBeNull()
+    expect(group?.textContent).not.toContain('Password')
+  })
+
+  it('labels the AI’s reason as the AI’s, and nothing else', () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    expect(host.querySelector('.group .agent-reason')?.textContent).toContain('You SSH into this box every day.')
+    expect(host.querySelector('.facts')?.textContent).not.toContain('You SSH into this box')
+  })
+
+  it('approves through the group with the add button', () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add server')
+    expect(button?.disabled).toBe(false)
+    button?.click()
+    expect(actions.approve).toHaveBeenCalledWith(7)
+  })
+
+  it('shows old → new on the rows an edit changes, plain on the rest, and the shares it reaches', async () => {
+    seed(editCard)
+    const host = mountDialog()
+
+    const rows = [...host.querySelectorAll('.facts dd')].map((dd) => ({
+      text: dd.textContent.replace(/\s+/g, ' ').trim(),
+      arrow: dd.querySelector('.arrow') !== null,
+    }))
+    expect(rows).toContainEqual({ text: 'naspi changes to Naspolya', arrow: true })
+    expect(rows).toContainEqual({ text: 'Not set changes to david', arrow: true })
+    expect(rows).toContainEqual({ text: 'naspi.local', arrow: false })
+    expect(host.textContent).not.toContain('A new address')
+    expect(host.querySelector('.shares')?.textContent).toContain('This changes 3 saved shares on this server.')
+    expect(host.querySelector('.group-head')?.textContent).toContain('Change a server')
+    const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Save changes')
+    await expectNoA11yViolations(host)
+  })
+
+  it('shows why a save gave the card back, under the card', async () => {
+    seed(addCard)
+    store.state.refusals = new Map([[7, { kind: 'server', answer: { kind: 'nameTaken', name: 'Naspolya' } }]])
+    const host = mountDialog()
+
+    const refusal = host.querySelector('.group .refusal')
+    expect(refusal?.getAttribute('role')).toBe('alert')
+    expect(refusal?.textContent).toContain('Why this wasn’t saved')
+    expect(refusal?.textContent).toContain('Another saved server is already called Naspolya')
+    await expectNoA11yViolations(host)
+  })
+
+  it('words a refused save in the servers sheet’s own sentence, with no second line', () => {
+    seed(addCard)
+    store.state.refusals = new Map([
+      [7, { kind: 'server', answer: { kind: 'refused', outcome: { outcome: 'start_folder_outside_root' } } }],
+    ])
+    const host = mountDialog()
+
+    expect(host.querySelector('.refusal-message')?.textContent).toContain('The start folder has to be the root folder')
+    expect(host.querySelector('.refusal-suggestion')).toBeNull()
   })
 })
 

@@ -451,6 +451,16 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
         note: 'A permanent delete, a compress that overwrites an archive, and a 60,000-op group.',
       },
       {
+        id: 'servers',
+        label: 'Server cards',
+        note: 'An SFTP server to add, at an address Cmdr has never saved, and a NAS whose name and account would change, with the shares the change reaches. No password field on either.',
+      },
+      {
+        id: 'server-refused',
+        label: 'Server cards given back',
+        note: 'The same two cards after their saves were refused: a name another server took meanwhile, and a saved server that changed under the edit.',
+      },
+      {
         id: 'changed-and-refused',
         label: 'Changed, refused, and unsure',
         note: 'The AI changed one group under the review (its Approve waits for the reload), another’s approval didn’t start and reopens with the file it unticked still off, and the last approval’s outcome is unknown.',

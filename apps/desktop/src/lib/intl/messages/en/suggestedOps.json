@@ -327,6 +327,84 @@
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "description": "What to do next, under suggestedOps.refusal.couldNotStart.message. \"It\" is the suggestion; Reject is the button on it, and \"the AI\" is Ask Cmdr, as elsewhere in this dialog."
   },
+  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "@suggestedOps.refusal.serverLabel": {
+    "description": "Small label above the reason shown under a suggestion to add or change a server, when pressing its button saved nothing. The suggestion is back on the list as waiting, and the person can approve or reject it again. The reason itself sits below this label. Counterpart of suggestedOps.refusal.label for file suggestions."
+  },
+  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "description": "Reason shown under a suggestion to change a saved server's settings, when the saved server itself was changed (by the person, or by another approved suggestion) after the AI suggested this. Saving would overwrite a change the suggestion doesn't show, so nothing was saved. Followed by suggestedOps.refusal.serverChanged.suggestion."
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "description": "What to do next, under suggestedOps.refusal.serverChanged.message. \"The AI\" is Ask Cmdr, as elsewhere in this dialog; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
+  },
+  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "description": "Reason shown under a suggestion to add a server, when a server at the same address was saved after the AI suggested this (by the person, or by another approved suggestion). Adding it again would replace that one's settings, so nothing was saved. Followed by suggestedOps.refusal.alreadySaved.suggestion."
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "description": "What to do next, under suggestedOps.refusal.alreadySaved.message. \"It\" is the server already saved; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
+  },
+  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "description": "Reason shown under a suggestion to add or rename a server, when another saved server took the same name after the AI suggested this. Two servers with one name could be mistaken for each other, so nothing was saved. Followed by suggestedOps.refusal.nameTaken.suggestion.",
+    "placeholders": {
+      "name": "the name the other saved server already has, like Naspolya; never translated"
+    }
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "description": "What to do next, under suggestedOps.refusal.nameTaken.message. \"The AI\" is Ask Cmdr, as elsewhere in this dialog."
+  },
+  "suggestedOps.server.add": "Add a server",
+  "@suggestedOps.server.add": {
+    "description": "Beside the title of a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. The title is the server's name. Says what kind of suggestion this is, where a file suggestion shows its file count."
+  },
+  "suggestedOps.server.change": "Change a server",
+  "@suggestedOps.server.change": {
+    "description": "Beside the title of a suggestion to change the settings of a server already saved in Cmdr's server list. The title is the server's name. Says what kind of suggestion this is, where a file suggestion shows its file count."
+  },
+  "suggestedOps.server.field.port": "Port",
+  "@suggestedOps.server.field.port": {
+    "description": "Label of a row on a suggestion to add or change a server: the network port number Cmdr connects to. One word, NOUN."
+  },
+  "suggestedOps.server.field.account": "Account",
+  "@suggestedOps.server.field.account": {
+    "description": "Label of a row on a suggestion to add or change a server: the account (username) Cmdr signs in as, or for an S3 server, the saved S3 account it belongs to. One word, NOUN."
+  },
+  "suggestedOps.server.field.share": "Share",
+  "@suggestedOps.server.field.share": {
+    "description": "Label of a row on a suggestion to add an SMB server (a NAS, a Windows PC): the shared folder on it that Cmdr saves. One word, NOUN; use the term Finder and Windows use for a network share."
+  },
+  "suggestedOps.server.field.bucket": "Bucket",
+  "@suggestedOps.server.field.bucket": {
+    "description": "Label of a row on a suggestion to add an S3 server: the S3 bucket Cmdr saves. One word, NOUN; \"bucket\" is the S3 term, keep the one S3 providers use in your language."
+  },
+  "suggestedOps.server.notSet": "Not set",
+  "@suggestedOps.server.notSet": {
+    "description": "Shown in place of a value on a suggestion to change a server, when a setting had no value before, or the change clears it (a start folder back to the default). Two words."
+  },
+  "suggestedOps.server.changesTo": "changes to",
+  "@suggestedOps.server.changesTo": {
+    "description": "Read by screen readers only, between a server setting's old value and its new one on a suggestion to change a server (\"/srv, changes to, /srv/backups\"). Sighted people see an arrow instead. Lowercase, VERB phrase."
+  },
+  "suggestedOps.server.newAddress": "A new address",
+  "@suggestedOps.server.newAddress": {
+    "description": "Small tag beside the address on a suggestion to add a server, when no server Cmdr has saved is at that address. It warns that the AI is pointing at a place the person hasn't used in Cmdr before. Three words, NOUN phrase. The tooltip is suggestedOps.server.newAddressTooltip."
+  },
+  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "description": "Tooltip on the \"A new address\" tag (suggestedOps.server.newAddress) beside a suggested server's address."
+  },
+  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "@suggestedOps.server.sharesAffected": {
+    "description": "Line on a suggestion to change an SMB server (a NAS, a Windows PC), under its settings: the change applies to the whole server, so it reaches every shared folder saved under it. Counted when the dialog opened.",
+    "placeholders": {
+      "countText": "the number of shares, already formatted for the locale"
+    }
+  },
   "suggestedOps.indicatorTooltip": "AI suggestions are waiting. Click to review them.",
   "@suggestedOps.indicatorTooltip": {
     "description": "Tooltip and screen-reader text for the status-corner indicator that opens the AI suggestions dialog. The number itself is in the badge beside it, so the sentence doesn't repeat it. A screen reader reads this sentence, then the number (\"AI suggestions are waiting. Click to review them. 3\")."

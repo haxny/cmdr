@@ -206,6 +206,27 @@ pub async fn e2e_propose_suggestions(
         .map_err(|e| format!("{e:?}"))
 }
 
+/// Stages a server suggestion the way the agent's `propose_server` call does on a turn the user
+/// started, and answers what the tool would: the report, or the typed refusal.
+///
+/// The fake assistant's scripts don't propose servers, so a spec reviewing a server card stages
+/// it here, through the real handler and its every check: what lands is exactly what a model's
+/// call would have staged.
+///
+/// Feature-gated to `playwright-e2e`, like every other hook here.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+pub async fn e2e_propose_server(app: tauri::AppHandle, params: serde_json::Value) -> Result<serde_json::Value, String> {
+    crate::agent::tools::suggestions::propose_server_in_thread(
+        &app,
+        None,
+        &params,
+        crate::agent::types::TurnOrigin::Text,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))
+}
+
 /// Hand one folder's activity to the wake loop the way the indexer's tap does: through
 /// `send_rollup`, so the writer thread does the importance lookup and the admit.
 #[cfg(feature = "playwright-e2e")]

@@ -5,9 +5,11 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { WriteOperationError } from '#lib/ipc/bindings.js'
+import type { ServerProposalView, WriteOperationError } from '#lib/ipc/bindings.js'
 import { getUserFriendlyMessage } from '#lib/file-operations/transfer/transfer-error-messages.js'
+import { wordConnectRefusal } from '#lib/servers/connect-refusals.js'
 import { refusalReason } from './suggested-ops-refusal'
+import type { ServerRefusal } from './suggested-ops-trigger.svelte'
 
 const sourceGone: WriteOperationError = { type: 'source_not_found', path: '/Users/someone/Downloads/one.dmg' }
 
@@ -38,5 +40,54 @@ describe('refusalReason', () => {
     expect(refusalReason({ kind: 'nothingToRun' }, 'trash').message).toContain('nothing ran')
     expect(refusalReason({ kind: 'nothingSelected' }, 'move').message).toContain('nothing ran')
     expect(refusalReason({ kind: 'couldNotStart' }, 'move').message).toContain('nothing ran')
+  })
+})
+
+describe('a server card’s refusal', () => {
+  const card: ServerProposalView = {
+    protocol: 'sftp',
+    fields: [
+      { field: 'address', value: 'build.local', changed: false, previous: null },
+      { field: 'account', value: 'ada', changed: false, previous: null },
+    ],
+    addressIsNew: true,
+    sharesAffected: null,
+  }
+  const reason = (answer: ServerRefusal) => refusalReason({ kind: 'server', answer }, 'addServer', card)
+
+  it('words a refused save exactly as the servers sheet would', () => {
+    const subject = { host: 'build.local', username: 'ada', protocol: 'sftp' as const }
+
+    expect(reason({ kind: 'refused', outcome: { outcome: 'unreachable' } }).message).toBe(
+      wordConnectRefusal('save_unconfirmed', subject),
+    )
+    expect(reason({ kind: 'refused', outcome: { outcome: 'address_taken', name: 'Build box' } }).message).toBe(
+      wordConnectRefusal('address_taken', { ...subject, takenBy: 'Build box' }),
+    )
+  })
+
+  it('words an SMB add the address refused as the add sheet does', () => {
+    expect(reason({ kind: 'addServer', error: { type: 'invalid_address', message: 'x' } }).message).toBe(
+      wordConnectRefusal('invalid_url', { host: 'build.local', username: 'ada' }),
+    )
+  })
+
+  it('has its own words for what only a suggested server meets', () => {
+    expect(reason({ kind: 'serverChanged' }).message).toContain('changed since the AI suggested')
+    expect(reason({ kind: 'alreadySaved', serverId: 'sftp-1' }).message).toContain('already in your servers')
+    expect(reason({ kind: 'nameTaken', name: 'Naspolya' }).message).toContain('Naspolya')
+  })
+
+  // The message renders as HTML, the boundary the file refusals share: a name is text.
+  it('escapes a name it says', () => {
+    expect(reason({ kind: 'nameTaken', name: '<b>NAS</b>' }).message).toContain('&lt;b&gt;NAS&lt;/b&gt;')
+    expect(reason({ kind: 'refused', outcome: { outcome: 'share_mounted', name: '<i>x</i>' } }).message).toContain(
+      '&lt;i&gt;x&lt;/i&gt;',
+    )
+  })
+
+  it('says what to do next only where the sentence itself doesn’t', () => {
+    expect(reason({ kind: 'serverChanged' }).suggestion).not.toBeNull()
+    expect(reason({ kind: 'refused', outcome: { outcome: 'start_folder_outside_root' } }).suggestion).toBeNull()
   })
 })

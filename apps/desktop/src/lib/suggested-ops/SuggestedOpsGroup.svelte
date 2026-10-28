@@ -2,7 +2,8 @@
     // One suggested group, top to bottom in the order a decision is made: what it is (title,
     // count, and the pills that change the answer), the facts Cmdr holds by itself (where the
     // files are and where they'd go), the AI's reason (labelled as its words), the files, and
-    // the button that names the action.
+    // the button that names the action. A server card is the same order with no files: its
+    // facts are what the click saves.
     import Button from '#lib/ui/Button.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -21,6 +22,7 @@
     import { approveKey, reversibilityKey, runBlockerKeys } from './suggested-ops-copy'
     import AgentReason from './AgentReason.svelte'
     import SuggestedOpFiles from './SuggestedOpFiles.svelte'
+    import SuggestedServerFacts from './SuggestedServerFacts.svelte'
     import VolumePill from './VolumePill.svelte'
 
     interface Props {
@@ -37,7 +39,7 @@
     /** The reason under a group whose last approval didn't start, or `null`. */
     const refusal = $derived.by(() => {
         const answer = suggestedOpsState.refusals.get(group.groupId)
-        return answer ? refusalReason(answer, group.verb) : null
+        return answer ? refusalReason(answer, group.verb, group.server) : null
     })
     const irreversible = $derived(group.reversible === 'irreversible')
     /** The engine would refuse this group outright, so the pill says so and the button can't run it. */
@@ -49,7 +51,14 @@
     <header class="group-head">
         <h3 class="group-title" id={titleId}>{group.displayName}</h3>
         <span class="count">
-            {tString('suggestedOps.fileCount', { countText: formatInteger(group.totalOpCount), count: group.totalOpCount })}
+            {#if group.server}
+                {tString(group.verb === 'editServer' ? 'suggestedOps.server.change' : 'suggestedOps.server.add')}
+            {:else}
+                {tString('suggestedOps.fileCount', {
+                    countText: formatInteger(group.totalOpCount),
+                    count: group.totalOpCount,
+                })}
+            {/if}
         </span>
         <ul class="pills">
             {#if blocker}
@@ -79,22 +88,36 @@
     <!-- Facts Cmdr holds by itself, unlabelled as anyone's words: they're the check the AI's
          reason below can be read against. -->
     <dl class="facts selectable">
-        <dt>{tString(group.verb === 'rename' ? 'suggestedOps.facts.folder' : 'suggestedOps.facts.from')}</dt>
-        <dd>
-            <VolumePill volumeId={group.sourceVolumeId} name={group.sourceVolumeName} />
-            <span class="path">{group.sourceFolder ?? tString('suggestedOps.facts.severalFolders')}</span>
-        </dd>
-        {#if group.verb === 'trash'}
-            <dt>{tString('suggestedOps.facts.to')}</dt>
-            <dd>{tString('suggestedOps.facts.trash')}</dd>
-        {:else if group.destination !== null && group.verb !== 'rename' && group.verb !== 'delete'}
-            <dt>{tString(group.verb === 'compress' ? 'suggestedOps.facts.archive' : 'suggestedOps.facts.to')}</dt>
+        {#if group.server}
+            <SuggestedServerFacts server={group.server} />
+        {:else}
+            <dt>{tString(group.verb === 'rename' ? 'suggestedOps.facts.folder' : 'suggestedOps.facts.from')}</dt>
             <dd>
-                <VolumePill volumeId={group.destinationVolumeId} name={group.destinationVolumeName} />
-                <span class="path">{group.destination}</span>
+                <VolumePill volumeId={group.sourceVolumeId} name={group.sourceVolumeName} />
+                <span class="path">{group.sourceFolder ?? tString('suggestedOps.facts.severalFolders')}</span>
             </dd>
+            {#if group.verb === 'trash'}
+                <dt>{tString('suggestedOps.facts.to')}</dt>
+                <dd>{tString('suggestedOps.facts.trash')}</dd>
+            {:else if group.destination !== null && group.verb !== 'rename' && group.verb !== 'delete'}
+                <dt>{tString(group.verb === 'compress' ? 'suggestedOps.facts.archive' : 'suggestedOps.facts.to')}</dt>
+                <dd>
+                    <VolumePill volumeId={group.destinationVolumeId} name={group.destinationVolumeName} />
+                    <span class="path">{group.destination}</span>
+                </dd>
+            {/if}
         {/if}
     </dl>
+
+    {#if group.server && group.server.sharesAffected !== null}
+        <!-- An SMB edit applies to the host, so it reaches every share saved under it. -->
+        <p class="shares">
+            {tString('suggestedOps.server.sharesAffected', {
+                countText: formatInteger(group.server.sharesAffected),
+                count: group.server.sharesAffected,
+            })}
+        </p>
+    {/if}
 
     {#if group.rationale}
         <AgentReason text={group.rationale} />
@@ -111,7 +134,12 @@
         </div>
     {/if}
 
-    <SuggestedOpFiles {group} {actions} />
+    {#if group.server}
+        <!-- No files, no selection, no window: the card above is the whole of what runs. -->
+        <div class="footer">{@render actions()}</div>
+    {:else}
+        <SuggestedOpFiles {group} {actions} />
+    {/if}
 
     {#snippet actions()}
         <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each suggestion's own Reject / approve pair, one per group in the list; the dialog has no footer actions of its own -->
@@ -138,10 +166,14 @@
         <!-- An approval that didn't start gave the group back: it's pending again and nothing
              ran, so the reason sits right under the button the user just pressed. -->
         <div class="refusal" role="alert">
-            <span class="refusal-label">{tString('suggestedOps.refusal.label')}</span>
+            <span class="refusal-label"
+                >{tString(group.server ? 'suggestedOps.refusal.serverLabel' : 'suggestedOps.refusal.label')}</span
+            >
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- markup from the typed error via `refusalReason`: the write-error pipeline escapes every name and path. Same boundary as the queue's failed row. -->
             <p class="refusal-message selectable">{@html refusal.message}</p>
-            <p class="refusal-suggestion selectable">{refusal.suggestion}</p>
+            {#if refusal.suggestion}
+                <p class="refusal-suggestion selectable">{refusal.suggestion}</p>
+            {/if}
         </div>
     {/if}
 </article>
@@ -181,7 +213,8 @@
         list-style: none;
     }
 
-    .pill {
+    /* Global inside the group, so a server card's "A new address" tag in its facts is the same pill. */
+    .group :global(.pill) {
         padding: var(--spacing-xxs) var(--spacing-sm);
         border: 1px solid var(--color-border-subtle);
         border-radius: var(--radius-full);
@@ -196,7 +229,7 @@
 
     /* "Can't be undone" has to look different from the neutral pills beside it: it's the one
        that decides whether the user approves the group. */
-    .pill.danger {
+    .group :global(.pill.danger) {
         border-color: var(--color-error-border);
         background: var(--color-error-bg);
         color: var(--color-error-text);
@@ -213,12 +246,23 @@
         font-size: var(--font-size-sm);
     }
 
-    .facts dt {
+    /* Global inside the list, so a server card's rows (`SuggestedServerFacts`) read the same. */
+    .facts :global(dt) {
         color: var(--color-text-tertiary);
     }
 
-    .facts dd {
+    .facts :global(dd) {
         color: var(--color-text-primary);
+    }
+
+    .shares {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    .footer {
+        display: flex;
     }
 
     .path {

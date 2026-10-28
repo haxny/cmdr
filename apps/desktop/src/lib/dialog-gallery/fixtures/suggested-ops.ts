@@ -56,6 +56,8 @@ interface FixtureGroup {
   files: FixtureFile[]
   /** The group's real size when it's bigger than the files listed (the 60,000-op case). */
   total?: number
+  /** A server card: no files, and this is what the click saves. */
+  server?: SuggestedGroupView['server']
 }
 
 function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
@@ -80,13 +82,15 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     liveOpCount: total - group.files.filter((file) => file.excluded).length,
     totalOpCount: total,
     fromSelector: group.fromSelector ?? false,
-    server: null,
+    server: group.server ?? null,
   }
 }
 
 function review(group: FixtureGroup): GroupReview {
   const fresh = newGroupReview()
   fresh.seenRevision = 1
+  // A server card has no files, so no window: the trigger never pages one either.
+  if (group.server) return fresh
   const ops: SuggestedOpView[] = group.files.map((file, index) => ({
     opId: index + 1,
     sourcePath: `${file.folder ?? group.sourceFolder ?? DOWNLOADS}/${file.name}`,
@@ -280,6 +284,50 @@ const HARD_CASES: FixtureGroup[] = [
   },
 ]
 
+/** Server cards: an SFTP add at an address Cmdr has never saved, and a NAS host's edit. */
+const SERVER_CARDS: FixtureGroup[] = [
+  {
+    groupId: 301,
+    verb: 'addServer',
+    displayName: 'Build box',
+    rationale: 'You open sftp://ada@build.example.com in the terminal every day, and it isn’t in your servers yet.',
+    reversible: 'serverSettings',
+    sourceFolder: null,
+    files: [],
+    server: {
+      protocol: 'sftp',
+      fields: [
+        { field: 'name', value: 'Build box', changed: false, previous: null },
+        { field: 'address', value: 'build.example.com', changed: false, previous: null },
+        { field: 'port', value: '22', changed: false, previous: null },
+        { field: 'account', value: 'ada', changed: false, previous: null },
+        { field: 'folder', value: '/srv/builds', changed: false, previous: null },
+      ],
+      addressIsNew: true,
+      sharesAffected: null,
+    },
+  },
+  {
+    groupId: 302,
+    verb: 'editServer',
+    displayName: 'Naspolya',
+    rationale: 'Your NAS shows as “naspi.local” in Servers. You call it Naspolya everywhere else.',
+    reversible: 'serverSettings',
+    sourceFolder: null,
+    files: [],
+    server: {
+      protocol: 'smb',
+      fields: [
+        { field: 'name', value: 'Naspolya', changed: true, previous: 'naspi.local' },
+        { field: 'address', value: 'naspi.local', changed: false, previous: null },
+        { field: 'account', value: 'sam', changed: true, previous: null },
+      ],
+      addressIsNew: false,
+      sharesAffected: 3,
+    },
+  },
+]
+
 export const suggestedOpsFixtures: Record<string, () => Patch> = {
   'downloads-cleanup': () =>
     patch([
@@ -292,6 +340,14 @@ export const suggestedOpsFixtures: Record<string, () => Patch> = {
       },
     ]),
   'hard-cases': () => patch([{ sweepId: 2, createdAt: daysAgo(3), groups: HARD_CASES }]),
+  servers: () => patch([{ sweepId: 3, createdAt: hoursAgo(1), groups: SERVER_CARDS }]),
+  'server-refused': () => ({
+    ...patch([{ sweepId: 3, createdAt: hoursAgo(1), groups: SERVER_CARDS }]),
+    refusals: new SvelteMap([
+      [301, { kind: 'server', answer: { kind: 'nameTaken', name: 'Build box' } }],
+      [302, { kind: 'server', answer: { kind: 'serverChanged' } }],
+    ]),
+  }),
   'changed-and-refused': () => {
     // The refused group's receipt was unticked before that approval, so it reopens unticked.
     const [installers, invoices] = DOWNLOADS_CLEANUP

@@ -32,6 +32,7 @@ import {
   liveSuggestedOpFacts,
   type ApprovalResultView,
   type LiveFileState,
+  type ServerApprovalResultView,
   type SuggestedGroupView,
   type SuggestedOpLiveFactsAnswer,
   type SuggestedOpView,
@@ -119,11 +120,24 @@ function selectionWire(selection: OpSelection): WireOpSelection {
 /** Why the last Approve or Reject didn't happen, as the notice the dialog shows. */
 export type DecisionNotice = Extract<MessageKey, 'suggestedOps.decisionNotRecorded' | 'suggestedOps.approvalUnsure'>
 
-/** Why an approval didn't start. The group is pending again, and the dialog shows this under it. */
-export type GroupRefusal = Extract<
+/** Why a file group's approval didn't start. */
+export type FileGroupRefusal = Extract<
   ApprovalResultView,
   { kind: 'refused' | 'nothingToRun' | 'nothingSelected' | 'couldNotStart' }
 >
+
+/** Why a server card's save gave it back: nothing was written. */
+export type ServerRefusal = Extract<
+  ServerApprovalResultView,
+  { kind: 'refused' | 'addServer' | 'serverChanged' | 'alreadySaved' | 'nameTaken' }
+>
+
+/**
+ * Why an approval didn't start. The group is pending again, and the dialog shows this under it.
+ * A server card's answer rides under its own `kind`: its `refused` carries a saved-server
+ * outcome, not a write error.
+ */
+export type GroupRefusal = FileGroupRefusal | { kind: 'server'; answer: ServerRefusal }
 
 interface SuggestedOpsState {
   open: boolean
@@ -433,7 +447,8 @@ export async function showRange(groupId: number, start: number, end: number): Pr
  */
 export async function ensureOpWindow(groupId: number, startIndex: number): Promise<void> {
   const review = reviewOf(groupId)
-  if (!review) return
+  // A server card has no ops: nothing to page, and with no window, nothing to check on disk.
+  if (!review || groupById(groupId)?.server) return
   if (windowHolds(review.window, startIndex)) return
   if (review.windowLoading) return
 
@@ -622,14 +637,16 @@ async function approveFileGroup(groupId: number, revision: number): Promise<void
 }
 
 /**
- * Approve a server card: save it, then re-read. A refusal gives the card back pending, so the
- * re-read shows it again; `listChanged` marks it changed under the review, as for a file group.
+ * Approve a server card: save it, then re-read. A refusal gives the card back pending with its
+ * reason under it, so the re-read shows it again; `listChanged` marks it changed under the
+ * review, as for a file group.
  */
 async function approveServerGroup(groupId: number, revision: number): Promise<void> {
   const result = await approveSuggestedServer(groupId, revision)
   if (result.kind !== 'saved') {
     log.info('A server suggestion was not saved: {kind}', { kind: result.kind })
   }
+  if (isServerRefusal(result)) suggestedOpsState.refusals.set(groupId, { kind: 'server', answer: result })
   if (result.kind === 'listChanged') markChangedUnderReview(groupId)
   await refreshSuggestions()
   if (result.kind === 'saved' && suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
@@ -640,8 +657,25 @@ function markChangedUnderReview(groupId: number): void {
   if (review) review.changedUnderReview = true
 }
 
+/** The answers that give a server card back with a reason: the save wrote nothing. */
+function isServerRefusal(result: ServerApprovalResultView): result is ServerRefusal {
+  switch (result.kind) {
+    case 'refused':
+    case 'addServer':
+    case 'serverChanged':
+    case 'alreadySaved':
+    case 'nameTaken':
+      return true
+    case 'saved':
+    case 'listChanged':
+    case 'alreadyAnswered':
+    case 'unknown':
+      return false
+  }
+}
+
 /** The answers that give a group back with a reason, as opposed to closing it or re-reading. */
-function isRefusalToStart(result: ApprovalResultView): result is GroupRefusal {
+function isRefusalToStart(result: ApprovalResultView): result is FileGroupRefusal {
   switch (result.kind) {
     case 'refused':
     case 'nothingToRun':

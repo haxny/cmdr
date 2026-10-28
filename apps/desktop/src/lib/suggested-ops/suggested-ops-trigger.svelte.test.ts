@@ -446,6 +446,63 @@ describe('approving', () => {
       expect(suggestedOpsState.open).toBe(true)
       expect(listMock).toHaveBeenCalledTimes(2)
     })
+
+    // Zero ops: nothing to page, nothing to check on disk, so nothing asks.
+    it('reads no op page for a card, on opening or on a reload', async () => {
+      await openSuggestedOps()
+      await reloadGroup(SERVER)
+
+      expect(pageMock).not.toHaveBeenCalled()
+      expect(factsMock).not.toHaveBeenCalled()
+      expect(reviewOf(SERVER)?.window).toBeNull()
+    })
+
+    it('keeps every refusal that gave the card back under it, with its reason', async () => {
+      const givenBack: ServerApprovalResultView[] = [
+        { kind: 'refused', outcome: { outcome: 'address_taken', name: 'Naspolya' } },
+        { kind: 'addServer', error: { type: 'invalid_address', message: 'no host' } },
+        { kind: 'serverChanged' },
+        { kind: 'alreadySaved', serverId: 'sftp-build-22-ada' },
+        { kind: 'nameTaken', name: 'Naspolya' },
+      ]
+      for (const answer of givenBack) {
+        approveServerMock.mockResolvedValueOnce(answer)
+        await openSuggestedOps()
+
+        await approveGroup(SERVER)
+
+        expect(suggestedOpsState.refusals.get(SERVER)).toEqual({ kind: 'server', answer })
+        closeSuggestedOps()
+      }
+    })
+
+    it('says nothing under a card that saved, was answered elsewhere, or changed', async () => {
+      const quiet: ServerApprovalResultView[] = [
+        { kind: 'saved', volumeId: 'sftp-build-22-ada' },
+        { kind: 'alreadyAnswered' },
+        { kind: 'unknown' },
+        { kind: 'listChanged' },
+      ]
+      for (const answer of quiet) {
+        approveServerMock.mockResolvedValueOnce(answer)
+        await openSuggestedOps()
+
+        await approveGroup(SERVER)
+
+        expect(suggestedOpsState.refusals.has(SERVER)).toBe(false)
+        closeSuggestedOps()
+      }
+    })
+
+    // The saved server moved under the card: the re-read shows the card as it is now.
+    it('re-reads the card after the server changed under it', async () => {
+      approveServerMock.mockResolvedValueOnce({ kind: 'serverChanged' })
+      await openSuggestedOps()
+
+      await approveGroup(SERVER)
+
+      expect(listMock).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('stays open when other suggestions are still waiting', async () => {

@@ -431,7 +431,8 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   staging without the wake, so a spec can prove the force reports on its own folder). Both are in
   `agent/wake/DETAILS.md` § Forcing a wake. `e2e_propose_suggestions` (dispatch-only) runs the real
   `propose_suggestions` handler over a spec's own call, so a spec reviews exactly the group a model would have staged
-  (`suggested-ops-named-move.spec.ts`).
+  (`suggested-ops-named-move.spec.ts`). `e2e_propose_server` (dispatch-only) does the same for `propose_server`, as on
+  a turn the user started (`suggested-ops-server-card.spec.ts`).
 
 ## Decisions
 

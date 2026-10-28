@@ -995,6 +995,8 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_actions::e2e_clear_opened_paths,
                     // Stages a suggestion through the real `propose_suggestions` handler.
                     crate::commands::e2e::e2e_propose_suggestions,
+                    // Stages a server card through the real `propose_server` handler.
+                    crate::commands::e2e::e2e_propose_server,
                 ]
             }
             // The dialog gallery's fixtures, which outlive `debug_assertions`: an E2E build is a

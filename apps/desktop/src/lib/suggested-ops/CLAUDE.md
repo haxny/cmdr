@@ -10,8 +10,8 @@ and per-op selection. Backend: `apps/desktop/src-tauri/src/commands/agent/sugges
 - `suggested-ops-trigger.svelte.ts`: the state: sweeps, one `GroupReview` per group (window, shown rows, selection, live
   facts, change notice), approve, reject.
 - `SuggestedOpsDialog.svelte` → `SuggestedOpsGroup.svelte` (header, pills, facts, reason, actions) →
-  `SuggestedOpFiles.svelte` (the `ColumnList`, Show more / Show all). `AgentReason`: the labelled AI words;
-  `VolumePill`: a volume with the picker's icon.
+  `SuggestedOpFiles.svelte` (the `ColumnList`, Show more / Show all), or for a server card `SuggestedServerFacts.svelte`
+  (what the click saves, no files). `AgentReason`: the labelled AI words; `VolumePill`: a volume with the picker's icon.
 - `suggested-ops-copy.ts`: pure verb → button / undo-reason keys, a row's live-vs-snapshot facts, a sweep's age.
 - `suggested-ops-badge.svelte.ts` / `SuggestedOpsIndicator.svelte`: the status-corner count and its subscription.
 - `suggested-ops-failure.ts` / `suggested-ops-refusal.ts`: the typed failure, and a refused approval's reason.
@@ -39,5 +39,7 @@ and per-op selection. Backend: `apps/desktop/src-tauri/src/commands/agent/sugges
 - **The badge is its own module, seeded once AND subscribed, never polled.** ❌ Don't drop the seed: suggestions never
   expire.
 - **A refused approval gives the group back with its reason under it.** ❌ Never word an engine refusal with new copy.
+- **A server card takes no input and pages nothing.** ❌ No field that types, least of all a password; no `GroupReview`
+  window (`ensureOpWindow` skips it). Its refusals read through the servers sheet's own sentences.
 
 Flows, decisions, and the gallery preview: `DETAILS.md`.

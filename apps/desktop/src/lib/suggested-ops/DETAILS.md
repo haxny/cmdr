@@ -200,15 +200,43 @@ generic path kept only the variant name; the failure's message carries both.
 Debug > Soft dialogs opens the dialog store-seeded (`dialog-gallery/fixtures/store-seeded.ts`, `suggestedOpsFixtures`):
 the patch sets `open`, `sweeps`, and pre-filled `reviews` (windows and live facts), so every row state shows without a
 backend. The invoices move files three of its five under new names, so a move's `old → new` rows show beside ones that
-keep their name. Seeded live facts are never re-read (`ensureLiveFacts` skips ops it already holds). Approve and Reject
-reach the real store, which has no such group, so the dialog re-reads and shows what's really waiting; the row says so.
+keep their name. "Server cards" shows an SFTP add at a new address and a NAS host's edit with its shares line; "Server
+cards given back" shows the same two refused. Seeded live facts are never re-read (`ensureLiveFacts` skips ops it
+already holds). Approve and Reject reach the real store, which has no such group, so the dialog re-reads and shows
+what's really waiting; the row says so.
+
+## A server card
+
+A group carrying `server` (`addServer` / `editServer`, zero ops) is the same header → facts → reason → actions, with no
+file list. The backend: `apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § Approving a server.
+
+- **The header** keeps the server's name as the title, and where a file group shows its count it says "Add a server" or
+  "Change a server". The reversibility pill reads from `serverSettings` (`reversibilityKey`).
+- **The facts are what the click saves** (`SuggestedServerFacts.svelte`, rows inside the group's own `<dl>`, so they
+  read like From / To): Type (the hub's protocol label), then each `fields` row under the servers sheet's own label
+  where it has one. An edit's changed rows show `old → new` (a screen reader hears "changes to"), unchanged rows plain,
+  and an absent value says "Not set". `addressIsNew` puts an "A new address" pill beside the address: a fact Cmdr read
+  now, beside an AI that may call it "your NAS". An SMB edit says under the facts how many saved shares on that host it
+  changes (`sharesAffected`, counted when the card was read). Unlabelled, like every Cmdr fact; only the rationale goes
+  through `AgentReason`.
+- **❌ No input of any kind.** The card is read-only by design, so a password field can't appear, and none of the
+  draft's fields could hold one (`agent/store/proposals/DETAILS.md`).
+- **Nothing pages.** The review exists for `seenRevision` and the change notice only; `ensureOpWindow` returns at once
+  for a server card, so no window, no live facts, no selection. `canApprove` is true while it hasn't changed under the
+  review, so Approve stays enabled (there's nothing to load).
+- **The button** is "Add server" or "Save changes" (`approveKey`), and `approveGroup` routes it to
+  `approveSuggestedServer` with the revision the user read.
+- **A refusal gives the card back** under "Why this wasn't saved". It sits in `refusals` as `{ kind: 'server', answer }`
+  (its `refused` carries a `SavedServerOutcome`, not a write error, so it can't share the file kinds). A refused save
+  and an SMB add's `AddServerError` read through the servers sheet (`readSavedServerOutcome`, `wordConnectRefusal`), one
+  sentence carrying its own fix; `serverChanged`, `alreadySaved`, and `nameTaken` have their own two-line copy. The
+  message is escaped whole: it renders through the same `{@html}` boundary as a write error. `listChanged` raises the
+  change notice, as for a file group.
+- **No "partial" note yet**: the backend's `saved` answer carries no note (`ServerSaveNote` has no producer), so the
+  card has nothing to show after a save; the group leaves the list.
 
 ## What isn't here yet
 
-- **The server card's own layout and refusal copy**: a group carrying `server` (`addServer` / `editServer`) is
-  approvable with no ops (`canApprove`) and saves through `approveSuggestedServer`, which `approveGroup` routes it to; a
-  refusal gives it back and the re-read shows it pending, without a reason under it yet. The backend:
-  `apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § Approving a server.
 - **`interrupted` groups**: re-approving one mints a NEW group with a fresh preflight, which is spine machinery rather
   than dialog work. Deliberate, not missing.
 - **The degraded-state actions**: `WakeReadiness` types Ask Cmdr off / AI off / cloud AI not allowed / Full Disk Access
