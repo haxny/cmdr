@@ -148,6 +148,14 @@
   "@commands.askCmdrToggle.description": {
     "description": "Longer help text for the \"Ask Cmdr\" command, shown as a secondary line in the command palette."
   },
+  "commands.askCmdrNewChat.label": "New Ask Cmdr chat",
+  "@commands.askCmdrNewChat.label": {
+    "description": "Command name that starts a fresh conversation in Ask Cmdr, the chat rail where the user chats with an AI about their files. Opens the rail first if it's closed. Appears in the command palette and the keyboard shortcuts settings. \"Ask Cmdr\" is the product name; keep it as-is."
+  },
+  "commands.askCmdrNewChat.description": "Start a fresh chat with Ask Cmdr, opening it if it’s closed",
+  "@commands.askCmdrNewChat.description": {
+    "description": "Longer help text for the \"New Ask Cmdr chat\" command, shown as a secondary line in the command palette."
+  },
   "commands.feedbackSend.label": "Send feedback",
   "@commands.feedbackSend.label": {
     "description": "Command name that opens a form to send feedback to the app's maker. Appears in the command palette and the Help menu.",

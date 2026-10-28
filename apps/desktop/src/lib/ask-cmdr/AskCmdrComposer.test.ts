@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 
 const { state, spies } = vi.hoisted(() => ({
-  state: { streaming: false, attachments: [] as unknown[] },
+  state: { streaming: false, attachments: [] as unknown[], composerFocusRequest: 0 },
   spies: {
     sendMessage: vi.fn(),
     stopStreaming: vi.fn(),
@@ -119,6 +119,31 @@ describe('AskCmdrComposer', () => {
     if (stop === null) throw new Error('expected a stop button while streaming')
     stop.click()
     expect(spies.stopStreaming).toHaveBeenCalled()
+  })
+
+  // Send and Stop swap as a turn starts and ends: a focused one leaving the page would drop
+  // focus to <body> (the focus watchdog's "activeElement=body" lines).
+  it('Stop hands focus back to the prompt box', async () => {
+    state.streaming = true
+    const target = mountComposer()
+    await tick()
+    const stop = target.querySelector<HTMLButtonElement>('.composer-button.stop')
+    if (stop === null) throw new Error('expected a stop button while streaming')
+    stop.focus()
+    stop.click()
+    expect(document.activeElement).toBe(textareaOf(target))
+  })
+
+  it('a send from the Send button hands focus back to the prompt box', async () => {
+    const target = mountComposer()
+    await tick()
+    const ta = textareaOf(target)
+    await typeInto(ta, 'hello')
+    const send = sendButtonOf(target)
+    send.focus()
+    send.click()
+    expect(spies.sendMessage).toHaveBeenCalledWith('hello')
+    expect(document.activeElement).toBe(ta)
   })
 
   describe('Ask about selection', () => {

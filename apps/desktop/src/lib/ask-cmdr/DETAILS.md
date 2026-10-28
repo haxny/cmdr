@@ -509,6 +509,22 @@ registry lives below `commands/` rather than inside the chat command.
   above the `{#if}`, and the lint rule (`cmdr/dialog-inside-boundary` covers `*Rail`): `apps/desktop/src/DETAILS.md` §
   Error boundaries. Regression anchor: cmdr-reports#78 (`each_key_duplicate` in the rail blanked the main window). Test:
   `rail-boundary.svelte.test.ts`.
+- **Focus never falls to `<body>` from the rail** (what the focus watchdog's `activeElement=body` lines were). Four ways
+  it did, each closed where it happens:
+  - A click on rail text or a button: WebKit doesn't focus a clicked button, and with no focusable ancestor it CLEARS
+    focus. The `<aside>` is `tabindex="-1"` (out of the tab order, no ring), so a click lands focus on the rail, and its
+    `focusin` sets the rail-focused flag.
+  - Send and Stop swap as a turn starts and ends, so a focused one leaves the page: both hand focus to the prompt box.
+  - The sessions panel unmounts with its focused control: `closeSessions` asks for the composer; a keyboard rename hands
+    focus to its row.
+  - "Load earlier" vanishes with the last page: the rail takes focus back. A turn that ends on its own while Stop holds
+    keyboard focus still drops it (nothing to hook without a focus event); the watchdog's log now names the cause ("…
+    left the page while it had focus"), so a new leak points at its component.
+- **New chat** (`openNewChat`: the header button, the getting-long nudge, the sessions panel, and `askCmdr.newChat`,
+  default ⌘N) resets the thread, opens a closed rail on the FRESH chat (`openRail({ freshChat: true })` skips the
+  last-thread bootstrap), and bumps `composerFocusRequest`, which the composer's focus effect follows. ⌘N was free: Cmdr
+  has one main window (macOS's "New window" meaning has nothing to claim), tabs are ⌘T, and the search dialog's own ⌘N
+  runs only while that dialog is up. Not a menu item, so it lives in the registry and handlers only.
 
 ## The toggle wiring
 
@@ -889,9 +905,9 @@ Copy lives in `intl/messages/en/askCmdr.json` (`askCmdr.*`, including the `askCm
 `askCmdr.wakeDigest.*`, `askCmdr.gate.*`, `askCmdr.providerNotice.*`, and `askCmdr.cost.*` keys; the "what Ask Cmdr
 sends" list moved to `ai.cloudConsent.askCmdr.*` in `ai.json`), the settings copy in `settings.json`
 (`settings.askCmdr.*`, `settings.section.askCmdr`), and the command label in `commands.json`
-(`commands.askCmdrToggle.*`), each with an `@key` translator description. The name, the gate, and the provider-notice
-copy are the re-translation surface if David adjusts the product calls. Tool + error labels are literal-keyed records in
-`ask-cmdr-labels.ts` (a computed prefix would trip the unused-key check).
+(`commands.askCmdrToggle.*`, `commands.askCmdrNewChat.*`), each with an `@key` translator description. The name, the
+gate, and the provider-notice copy are the re-translation surface if David adjusts the product calls. Tool + error
+labels are literal-keyed records in `ask-cmdr-labels.ts` (a computed prefix would trip the unused-key check).
 
 ## Decisions
 

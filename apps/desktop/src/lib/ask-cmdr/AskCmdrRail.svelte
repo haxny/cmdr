@@ -24,7 +24,9 @@
         hasOlderMessages,
         isOverSoftCap,
         loadOlderMessages,
-        newChat,
+        markRailFocused,
+        newChatShortcutText,
+        openNewChat,
         setRailWidth,
     } from './ask-cmdr-trigger.svelte'
     import { railGate } from './ask-cmdr-gate.svelte'
@@ -104,14 +106,23 @@
         })
     })
 
-    // Prepend older history, holding the user's scroll position steady across the growth.
+    // Prepend older history, holding the user's scroll position steady across the growth. The
+    // last page takes the button away, so focus on it would fall to `<body>`: the rail keeps it.
     async function onLoadEarlier(): Promise<void> {
         const el = listElement
         const before = el ? el.scrollHeight : 0
         await loadOlderMessages()
         await tick()
         if (el) el.scrollTop += el.scrollHeight - before
+        if (document.activeElement === document.body) railElement?.focus()
     }
+
+    // The rail is focusable (tabindex -1, out of the tab order) so a click on its text or on a
+    // button keeps focus in the rail: WebKit doesn't focus a clicked button, and with no
+    // focusable ancestor it drops focus to `<body>`, where the keyboard reaches nothing.
+    let railElement = $state<HTMLElement | null>(null)
+
+    const newChatShortcut = $derived(newChatShortcutText())
 
     // Left-edge resize: dragging left widens (the rail hugs the right edge).
     let dragStartX = 0
@@ -131,7 +142,14 @@
     }
 </script>
 
-<aside class="ask-cmdr-rail" style="width: {askCmdrState.width}px" aria-label={tString('askCmdr.title')}>
+<aside
+    class="ask-cmdr-rail"
+    style="width: {askCmdrState.width}px"
+    aria-label={tString('askCmdr.title')}
+    tabindex="-1"
+    bind:this={railElement}
+    onfocusin={markRailFocused}
+>
     <div
         class="resize-handle"
         role="separator"
@@ -154,7 +172,13 @@
                 <button type="button" class="icon-button" onclick={openSessions} aria-label={tString('askCmdr.threads.open')} use:tooltip={tString('askCmdr.threads.open')}>
                     <Icon name="messages-square" size={16} aria-hidden="true" />
                 </button>
-                <button type="button" class="icon-button" onclick={newChat} aria-label={tString('askCmdr.newChat')}>
+                <button
+                    type="button"
+                    class="icon-button"
+                    onclick={openNewChat}
+                    aria-label={tString('askCmdr.newChat')}
+                    use:tooltip={{ text: tString('askCmdr.newChat'), shortcut: newChatShortcut }}
+                >
                     <Icon name="file-plus" size={16} aria-hidden="true" />
                 </button>
             {/if}
@@ -191,7 +215,7 @@
                 {#if isOverSoftCap()}
                     <div class="soft-cap">
                         <span>{tString('askCmdr.softCap.message')}</span>
-                        <button type="button" class="soft-cap-action" onclick={newChat}>
+                        <button type="button" class="soft-cap-action" onclick={openNewChat}>
                             {tString('askCmdr.softCap.action')}
                         </button>
                     </div>
@@ -218,6 +242,12 @@
         min-height: 0;
         background: var(--color-bg-secondary);
         border-left: 1px solid var(--color-border);
+    }
+
+    /* Focus lands on the rail itself only from a click (it's out of the tab order), so it draws
+       no ring: the region it marks is already the whole panel. */
+    .ask-cmdr-rail:focus {
+        outline: none;
     }
 
     .resize-handle {

@@ -18,7 +18,7 @@ import {
   type ConversationRow,
   type ConversationSearchHit,
 } from '#lib/tauri-commands/index.js'
-import { newChat, switchToThread } from './ask-cmdr-trigger.svelte'
+import { openNewChat, requestComposerFocus, switchToThread } from './ask-cmdr-trigger.svelte'
 
 const log = getAppLogger('askCmdr')
 
@@ -73,9 +73,11 @@ export function openSessions(): void {
   void loadSessions()
 }
 
-/** Close the sessions panel (leaves the loaded list in place for a quick reopen). */
+/** Close the sessions panel (leaves the loaded list in place for a quick reopen). The panel's
+ * focused control leaves the page with it, so focus goes to the prompt box, never `<body>`. */
 export function closeSessions(): void {
   sessionsState.open = false
+  requestComposerFocus()
 }
 
 // ── Listing + paging ─────────────────────────────────────────────────────────
@@ -175,7 +177,7 @@ export async function chooseThread(id: number): Promise<void> {
 
 /** Start a fresh chat and close the panel. */
 export function startNewChat(): void {
-  newChat()
+  openNewChat()
   closeSessions()
 }
 

@@ -84,6 +84,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'tab.moveLeft',
   'tab.moveRight',
   'tab.moveToOtherPane',
+  'askCmdr.newChat',
   'nav.open',
   'nav.parent',
   'nav.home',

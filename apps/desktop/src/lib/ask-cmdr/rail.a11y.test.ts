@@ -58,6 +58,8 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
   openRail: vi.fn(() => Promise.resolve()),
   ensureThreadLoaded: vi.fn(() => Promise.resolve()),
   newChat: vi.fn(),
+  openNewChat: vi.fn(),
+  newChatShortcutText: () => '⌘N',
   setRailWidth: vi.fn(),
   sendMessage: vi.fn(),
   stopStreaming: vi.fn(),

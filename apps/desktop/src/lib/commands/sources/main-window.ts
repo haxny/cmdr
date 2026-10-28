@@ -501,4 +501,22 @@ export const mainWindowCommands: CommandSource[] = [
     shortcuts: [],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
+
+  // ============================================================================
+  // Main window - Ask Cmdr
+  // ============================================================================
+  {
+    // ⌘N, the chat apps' "New chat". Free here: Cmdr has one main window, so macOS's "New
+    // window" meaning has nothing to claim, and new tabs are ⌘T. The search dialog's own ⌘N
+    // ("start fresh") only runs while that dialog is up, and this one is blocked by dialogs.
+    // Opens the rail when it's closed; `openNewChat` puts the cursor in the prompt box.
+    id: 'askCmdr.newChat',
+    nameKey: 'commands.askCmdrNewChat.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: ['⌘N'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.askCmdrNewChat.description',
+    status: getBadgeStatus('ask-cmdr'),
+  },
 ]

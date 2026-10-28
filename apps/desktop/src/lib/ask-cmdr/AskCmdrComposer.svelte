@@ -16,6 +16,7 @@
     import { getAppLogger } from '#lib/logging/logger.js'
     import { addToast } from '#lib/ui/toast/index.js'
     import { formatInteger } from '#lib/intl/number-format.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type { SelectionAttachmentsRead } from '#lib/file-explorer/pane/selection-attachments-read.js'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import { installComposerDrop } from './ask-cmdr-drop'
@@ -45,8 +46,10 @@
     let composing = $state(false)
     let dragOver = $state(false)
 
-    // Focus the composer when it mounts (the rail mounts on open, so opening focuses here).
+    // Focus the composer when it mounts (the rail mounts on open, so opening focuses here), and
+    // again on each `requestComposerFocus()` (New chat, the sessions panel closing).
     $effect(() => {
+        dependOn(askCmdrState.composerFocusRequest)
         textarea?.focus()
     })
 
@@ -71,10 +74,18 @@
     const canSend = $derived(text.trim().length > 0 && !providerBlocked)
     const attachments = $derived(askCmdrState.attachments)
 
+    // Send and Stop swap places as a turn starts and ends, so a focused one leaves the page under
+    // the cursor and focus would fall to `<body>`. Both hand it back to the prompt box.
     function submit(): void {
         if (askCmdrState.streaming || !canSend) return
         sendMessage(text)
         text = ''
+        textarea?.focus()
+    }
+
+    function stop(): void {
+        stopStreaming()
+        textarea?.focus()
     }
 
     async function attachSelection(): Promise<void> {
@@ -143,7 +154,7 @@
             oncompositionend={() => (composing = false)}
         />
         {#if streaming}
-            <button type="button" class="composer-button stop" onclick={stopStreaming} aria-label={tString('askCmdr.composer.stop')}>
+            <button type="button" class="composer-button stop" onclick={stop} aria-label={tString('askCmdr.composer.stop')}>
                 <Icon name="square" size={16} aria-hidden="true" />
             </button>
         {:else}

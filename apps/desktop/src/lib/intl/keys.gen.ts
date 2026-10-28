@@ -522,6 +522,8 @@ export type MessageKey =
   | 'commands.appToggleCliCommand.homebrew.label'
   | 'commands.appToggleCliCommand.install.label'
   | 'commands.appToggleCliCommand.uninstall.label'
+  | 'commands.askCmdrNewChat.description'
+  | 'commands.askCmdrNewChat.label'
   | 'commands.askCmdrToggle.description'
   | 'commands.askCmdrToggle.label'
   | 'commands.cloudAskGemini.description'

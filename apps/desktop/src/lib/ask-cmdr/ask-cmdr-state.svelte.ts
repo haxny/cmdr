@@ -105,6 +105,9 @@ interface AskCmdrState {
    * the NEXT send so a retry doesn't propose the same style again. Cleared once sent: they're
    * feedback on one decision, not a permanent denylist. */
   deniedNames: string[]
+  /** Bumped to ask the composer to take focus (a new chat, the sessions panel closing). A
+   * counter so the same request twice still lands; the composer also focuses on mount. */
+  composerFocusRequest: number
 }
 
 export const RAIL_MIN_WIDTH = 280
@@ -126,6 +129,7 @@ export const askCmdrState = $state<AskCmdrState>({
   contextUsage: null,
   costRevision: 0,
   deniedNames: [],
+  composerFocusRequest: 0,
 })
 
 /** True once the thread grows past the soft cap (drives the "start a fresh one?" nudge). Each

@@ -65,7 +65,9 @@ import {
   MESSAGE_PAGE,
   closeRail,
   newChat,
+  newChatShortcutText,
   noteSlotSettingChanged,
+  openNewChat,
   openRail,
   ensureThreadLoaded,
   RAIL_MAX_WIDTH,
@@ -80,6 +82,8 @@ import {
   type RailToolCall,
 } from './ask-cmdr-trigger.svelte'
 import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
+import { toDisplayShortcut } from '#lib/shortcuts/index.js'
+import { toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
@@ -617,6 +621,39 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     newChat()
     expect(askCmdrState.conversationId).toBeNull()
     expect(askCmdrState.messages).toHaveLength(0)
+  })
+
+  it('openNewChat on a closed rail opens it on a fresh chat, not the last thread, and asks for the composer', async () => {
+    askCmdrState.conversationId = 5
+    askCmdrState.messages.push({ kind: 'user', id: null, text: 'x', attachments: [] })
+    listMock.mockResolvedValue([conversationRow(9)])
+    const focusBefore = askCmdrState.composerFocusRequest
+    openNewChat()
+    await vi.waitFor(() => {
+      expect(askCmdrState.open).toBe(true)
+    })
+    await Promise.resolve()
+    expect(askCmdrState.conversationId).toBeNull()
+    expect(askCmdrState.messages).toHaveLength(0)
+    // The most recent thread is NOT bootstrapped over the fresh chat.
+    expect(listMock).not.toHaveBeenCalled()
+    expect(askCmdrState.composerFocusRequest).toBe(focusBefore + 1)
+  })
+
+  it('openNewChat on an open rail clears the thread and asks for the composer again', async () => {
+    await openRail()
+    askCmdrState.conversationId = 5
+    growWindowMock.mockClear()
+    const focusBefore = askCmdrState.composerFocusRequest
+    openNewChat()
+    expect(askCmdrState.conversationId).toBeNull()
+    expect(askCmdrState.composerFocusRequest).toBe(focusBefore + 1)
+    expect(growWindowMock).not.toHaveBeenCalled()
+  })
+
+  it('names the New chat shortcut for its tooltip, in the platform display form', () => {
+    // ⌘N on macOS; this suite's navigator isn't a Mac, so the platform form is Ctrl+N.
+    expect(newChatShortcutText()).toBe(toDisplayShortcut(toPlatformShortcut('⌘N')))
   })
 
   it('hydrateRail applies a persisted width and opens when the flag is set', () => {

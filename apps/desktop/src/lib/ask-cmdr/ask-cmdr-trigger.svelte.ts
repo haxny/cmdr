@@ -16,6 +16,7 @@
 import { saveAppStatus } from '#lib/app-status-store.js'
 import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
 import { getAppLogger } from '#lib/logging/logger.js'
+import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
 import { focusHome } from '#lib/ui/focus-restore.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
@@ -77,8 +78,9 @@ export function hydrateRail(open: boolean, width: number): void {
  * main window so the panes keep their size (see `rail-window.ts`), except at startup hydration.
  * Also refreshes the rail's gate (`ask-cmdr-gate.svelte.ts`): while Ask Cmdr is off, or Cloud
  * waits for "Allow cloud AI", the rail shows the gate and loads no history. When the gate later
- * opens, the rail calls {@link ensureThreadLoaded} itself. */
-export async function openRail(opts: { resizeWindow?: boolean } = {}): Promise<void> {
+ * opens, the rail calls {@link ensureThreadLoaded} itself. `freshChat` skips that bootstrap: the
+ * caller just cleared the thread for a new chat ({@link openNewChat}). */
+export async function openRail(opts: { resizeWindow?: boolean; freshChat?: boolean } = {}): Promise<void> {
   const wasOpen = askCmdrState.open
   askCmdrState.open = true
   explorerState.setRailFocused(true)
@@ -87,7 +89,30 @@ export async function openRail(opts: { resizeWindow?: boolean } = {}): Promise<v
   // startup hydration must not.
   if (!wasOpen && opts.resizeWindow !== false) void growMainWindowForRail(askCmdrState.width)
   if ((await refreshRailGate()) !== 'chat') return
-  if (!wasOpen) await ensureThreadLoaded()
+  if (!wasOpen && opts.freshChat !== true) await ensureThreadLoaded()
+}
+
+/** Ask the composer to take focus (it listens on `composerFocusRequest`). A no-op while no
+ * composer is mounted: the rail is closed or behind a gate. */
+export function requestComposerFocus(): void {
+  askCmdrState.composerFocusRequest++
+}
+
+/**
+ * The New chat action (the header button, the getting-long nudge, and ⌘N): start a fresh chat,
+ * open the rail if it's closed, and put the cursor in the prompt box so typing starts at once.
+ */
+export function openNewChat(): void {
+  newChat()
+  if (!askCmdrState.open) void openRail({ freshChat: true })
+  requestComposerFocus()
+}
+
+/** The New chat shortcut as the tooltip shows it (`⌘N` by default, or the user's rebind), or
+ * `undefined` when it's unbound. Read at render, so a rebind shows on the next one. */
+export function newChatShortcutText(): string | undefined {
+  const shortcut = getEffectiveShortcuts('askCmdr.newChat')[0]
+  return shortcut === undefined ? undefined : toDisplayShortcut(shortcut)
 }
 
 /** Load the most recent thread into an empty rail. A no-op once a thread (or a fresh chat's
