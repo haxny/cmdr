@@ -1140,20 +1140,6 @@
   "@askCmdr.cost.estimateTooltip": {
     "description": "Tooltip on the estimated cost in the Ask Cmdr chat's footer. It explains the amount is in US dollars, and that the estimate ignores the provider's prompt caching (the AI service reuses the repeated parts of a conversation more cheaply), so the real bill is usually much lower. “USD” is the currency code; keep it. “Provider” is the AI service the person set up."
   },
-  "askCmdr.tokens.thousands": "{amount}k",
-  "@askCmdr.tokens.thousands": {
-    "description": "A large token count shown compactly, in thousands: 2k, 2.2k, 194.8k. Shown in the Ask Cmdr chat's cost footer and in the quiet line under each answer, followed by the word for tokens. Use your language's usual short form for thousands; keep it as short as possible.",
-    "placeholders": {
-      "amount": "The count in thousands, already formatted with at most one decimal, like 2.2."
-    }
-  },
-  "askCmdr.tokens.millions": "{amount}M",
-  "@askCmdr.tokens.millions": {
-    "description": "A very large token count shown compactly, in millions: 1M, 1.3M. Shown in the Ask Cmdr chat's cost footer and in the quiet line under each answer, followed by the word for tokens. Use your language's usual short form for millions; keep it as short as possible.",
-    "placeholders": {
-      "amount": "The count in millions, already formatted with at most one decimal, like 1.3."
-    }
-  },
   "askCmdr.cost.unknown": "cost unknown",
   "@askCmdr.cost.unknown": {
     "description": "Cost readout when the chat used a model that isn't in the price table: the tokens are known but the price isn't, so the cost is honestly unknown (never shown as free). Lowercase, shown after the token count."

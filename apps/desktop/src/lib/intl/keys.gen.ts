@@ -330,8 +330,6 @@ export type MessageKey =
   | 'askCmdr.thinking'
   | 'askCmdr.threads.open'
   | 'askCmdr.title'
-  | 'askCmdr.tokens.millions'
-  | 'askCmdr.tokens.thousands'
   | 'askCmdr.tool.appState.doing'
   | 'askCmdr.tool.appState.done'
   | 'askCmdr.tool.connectVolume.doing'

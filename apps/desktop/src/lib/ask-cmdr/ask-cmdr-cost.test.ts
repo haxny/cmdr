@@ -71,10 +71,10 @@ describe('formatTokenCount', () => {
   })
 
   it('shows thousands with one decimal at most', () => {
-    expect(formatTokenCount(2_000)).toBe('2k')
-    expect(formatTokenCount(2_240)).toBe('2.2k')
-    expect(formatTokenCount(194_776)).toBe('194.8k')
-    expect(formatTokenCount(999_949)).toBe('999.9k')
+    expect(formatTokenCount(2_000)).toBe('2K')
+    expect(formatTokenCount(2_240)).toBe('2.2K')
+    expect(formatTokenCount(194_776)).toBe('194.8K')
+    expect(formatTokenCount(999_949)).toBe('999.9K')
   })
 
   it('switches to millions where thousands would round to 1,000', () => {
@@ -86,9 +86,17 @@ describe('formatTokenCount', () => {
   it('takes its decimal mark from the app language, not the OS region', () => {
     _setLocaleForTests('en')
     _setFormatLocaleForTests('en-SE')
-    expect(formatTokenCount(2_240)).toBe('2.2k')
+    expect(formatTokenCount(2_240)).toBe('2.2K')
     _setLocaleForTests('de')
-    expect(formatTokenCount(2_240).replace(/\s/g, ' ')).toBe('2,2 Tsd.')
+    expect(formatTokenCount(2_240)).toBe('2240') // CLDR German has no short thousands
+    _setLocaleForTests('en-US')
+  })
+
+  it("writes each language's own compact form", () => {
+    _setLocaleForTests('en-GB')
+    expect(formatTokenCount(1_340_000)).toBe('1.3m')
+    _setLocaleForTests('zh')
+    expect(formatTokenCount(22_400)).toBe('2.2万')
     _setLocaleForTests('en-US')
   })
 })

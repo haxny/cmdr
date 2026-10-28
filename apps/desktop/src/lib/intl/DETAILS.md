@@ -486,11 +486,12 @@ the region.
   weekday/month NAMES in `query-ui/filter-chips/filter-popover-helpers.ts` (they're words inside translated sentences).
 - **`getCatalogLocale()`** is that language's RESOLVED catalog tag (`resolvedCatalogLocale(getUiLocale())`, so `en-GB`
   stays `en-GB` and a `ja-JP` Mac with no `ja` catalog gets `en`). Every number reads it: counts, sizes, rates,
-  durations, money, the Ask Cmdr cost and token counts, the low-space percent, and ICU `#` (the engine gets the same
-  tag). The list joins (`list-format.ts`) read it too, so a list in an English sentence on a Mac with no catalog for its
-  language joins with "and". `messages.svelte.ts` installs it through `setCatalogLocaleResolver()` at module load,
-  reading the version rune, so a markup or `$derived` number re-renders on a language switch with no message involved;
-  before that (or in a test that mocks the runtime) it falls back to `getUiLocale()`.
+  durations, money, the Ask Cmdr cost and token counts (CLDR compact notation, so zh counts in 万), the low-space
+  percent, and ICU `#` (the engine gets the same tag). The list joins (`list-format.ts`) read it too, so a list in an
+  English sentence on a Mac with no catalog for its language joins with "and". `messages.svelte.ts` installs it through
+  `setCatalogLocaleResolver()` at module load, reading the version rune, so a markup or `$derived` number re-renders on
+  a language switch with no message involved; before that (or in a test that mocks the runtime) it falls back to
+  `getUiLocale()`.
 - **`getFormatLocale()`** always follows the OS. The `'system'` date (`format-utils.ts::getSystemLocaleFormatter`), the
   time of day, the worded license dates (`formatLongDate`), and calendar facts read it: `resolveFirstDayOfWeek` is in
   the SAME function as those month names and takes the other locale, because which day the week starts on is a region

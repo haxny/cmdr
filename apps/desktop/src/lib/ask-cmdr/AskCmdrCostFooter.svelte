@@ -72,7 +72,7 @@
     // Only an estimate carries the "USD, before caching" caveat; free and unknown say it all.
     const priceTooltip = $derived(reading.price?.kind === 'estimate' ? tString('askCmdr.cost.estimateTooltip') : undefined)
 
-    // Compact from 2,000 up ("194.8k tokens"); the exact count waits in the tooltip.
+    // Compact from 2,000 up ("194.8K tokens"); the exact count waits in the tooltip.
     const tokensText = $derived(
         tString('askCmdr.cost.tokens', { count: reading.tokens, countText: formatTokenCount(reading.tokens) }),
     )

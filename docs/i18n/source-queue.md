@@ -147,10 +147,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on the retired
   "undo by deleting what it writes" pill key). (fr)
 - The AI suggestions dialog keys ship without screenshots; the pills and fact lines need them most. (fr, hu)
-- `askCmdr.tokens.thousands` / `.millions`: `formatTokenCount` pre-divides by 1,000 and 1,000,000, which can't express
-  Chinese 万 (10⁴), so zh and zh-Hant fall back to Latin K/M. Consider `Intl` compact notation instead. (zh, zh-Hant)
-- Proposed rule: a compact count suffix follows the CLDR short compact form, joined with a no-break space where CLDR
-  spaces it (de `Tsd.`/`Mio.`, ru `тыс.`/`млн`, sv `tn`/`mn`, vi `N`/`Tr`). (all)
 - `suggestedOps.action.*`: the label renders in its own span before the AI's title, so verb-final languages can't
   reorder (`Bewegen Alte Installer`). Add a `{action} {title}` frame key, or call it a chip label. (de, hu, nl)
 - `suggestedOps.newNameTaken` ("Name already taken") and `multiRename.status.targetExists` ("Name is taken") say one

@@ -934,14 +934,6 @@
   "@askCmdr.cost.estimateTooltip": {
     "sourceHash": "200cd80"
   },
-  "askCmdr.tokens.thousands": "{amount} N",
-  "@askCmdr.tokens.thousands": {
-    "sourceHash": "392e439"
-  },
-  "askCmdr.tokens.millions": "{amount} Tr",
-  "@askCmdr.tokens.millions": {
-    "sourceHash": "4427011"
-  },
   "askCmdr.cost.unknown": "chi phí không rõ",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

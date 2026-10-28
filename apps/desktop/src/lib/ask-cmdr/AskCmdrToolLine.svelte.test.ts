@@ -188,12 +188,12 @@ describe('AskCmdrTurnStats', () => {
 
   it('words an answered or stopped turn’s spend, with its time', () => {
     const target = renderStats({ toolCalls: 4, wallMs: 12_300, promptTokens: 2000, completionTokens: 345 })
-    expect(target.textContent.trim()).toBe('4 tool calls · 12.3s · 2.3k tokens')
+    expect(target.textContent.trim()).toBe('4 tool calls · 12.3s · 2.3K tokens')
   })
 
   it('keeps the exact count of a compact token figure for its tooltip', () => {
     const stats = { toolCalls: 14, wallMs: 54_500, promptTokens: 190_000, completionTokens: 4_776 }
-    expect(renderStats(stats).textContent.trim()).toBe('14 tool calls · 54.5s · 194.8k tokens')
+    expect(renderStats(stats).textContent.trim()).toBe('14 tool calls · 54.5s · 194.8K tokens')
     expect(turnStatsTokensTooltip(stats)).toBe('194,776 tokens')
     // Below 2,000 the line is already exact, so there's nothing to add.
     expect(turnStatsTokensTooltip({ toolCalls: 1, wallMs: 1, promptTokens: 9, completionTokens: 1 })).toBeUndefined()

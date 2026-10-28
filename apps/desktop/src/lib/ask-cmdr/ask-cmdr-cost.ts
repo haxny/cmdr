@@ -8,7 +8,7 @@
  */
 
 import { tString } from '#lib/intl/messages.svelte.js'
-import { formatInteger, getNumberFormatter } from '#lib/intl/number-format.js'
+import { formatCompactCount, formatInteger, getNumberFormatter } from '#lib/intl/number-format.js'
 import type { ConversationCost, NextCallPricing } from '#lib/tauri-commands/index.js'
 
 /** Total tokens (prompt + completion) for a metered record. */
@@ -20,18 +20,14 @@ export function totalTokens(cost: { promptTokens: number; completionTokens: numb
 const COMPACT_TOKENS_FROM = 2_000
 
 /**
- * A token count as the rail shows it: exact below 2,000, then thousands ("2k", "2.2k") and
- * millions ("1M", "1.3M") with one decimal at most. Rounding picks the unit, so 999,950 reads
- * "1M", never "1,000k". The decimal mark and the "k" / "M" suffix (a catalog string) are both
- * the UI language's. Exact counts belong in a tooltip.
+ * A token count as the rail shows it: exact below 2,000, then the UI language's own compact
+ * form with one decimal at most ("2.2K", "1.3M"; en-GB "1.3m", Chinese "2.2万", German writes
+ * thousands in full). CLDR picks the unit, so 999,950 reads "1M", never "1,000K", and a
+ * language counting in 10⁴ gets it. Exact counts belong in a tooltip.
  */
 export function formatTokenCount(tokens: number): string {
   if (tokens < COMPACT_TOKENS_FROM) return formatInteger(tokens)
-  const oneDecimal = getNumberFormatter({ maximumFractionDigits: 1 })
-  const thousands = Math.round(tokens / 100) / 10
-  if (thousands < 1_000) return tString('askCmdr.tokens.thousands', { amount: oneDecimal.format(thousands) })
-  const millions = Math.round(tokens / 100_000) / 10
-  return tString('askCmdr.tokens.millions', { amount: oneDecimal.format(millions) })
+  return formatCompactCount(tokens)
 }
 
 /**

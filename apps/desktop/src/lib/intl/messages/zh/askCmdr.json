@@ -932,15 +932,6 @@
   "@askCmdr.cost.estimateTooltip": {
     "sourceHash": "200cd80"
   },
-  "askCmdr.tokens.thousands": "{amount}K",
-  "@askCmdr.tokens.thousands": {
-    "sourceHash": "392e439"
-  },
-  "askCmdr.tokens.millions": "{amount}M",
-  "@askCmdr.tokens.millions": {
-    "sourceHash": "4427011",
-    "sameAsSourceJustification": "Latin M after a number is how Chinese AI pricing and context sizes write millions of tokens (1M, 128K); the CLDR 万 form needs a count in ten-thousands, which this key doesn’t get."
-  },
   "askCmdr.cost.unknown": "费用未知",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"

@@ -935,14 +935,6 @@
   "@askCmdr.cost.estimateTooltip": {
     "sourceHash": "200cd80"
   },
-  "askCmdr.tokens.thousands": "{amount} tn",
-  "@askCmdr.tokens.thousands": {
-    "sourceHash": "392e439"
-  },
-  "askCmdr.tokens.millions": "{amount} mn",
-  "@askCmdr.tokens.millions": {
-    "sourceHash": "4427011"
-  },
   "askCmdr.cost.unknown": "kostnad okänd",
   "@askCmdr.cost.unknown": {
     "sourceHash": "d05144e"
