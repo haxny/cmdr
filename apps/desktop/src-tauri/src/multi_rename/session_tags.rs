@@ -396,3 +396,21 @@ pub(crate) fn reopen(session_id: &str) -> Result<MultiRenameOpened, MultiRenameE
 pub(crate) fn is_held(session_id: &str) -> bool {
     SESSIONS.lock_ignore_poison().get(session_id).is_some_and(|s| s.held)
 }
+
+/// Replaces the rename order with `names`, which must be the session's own files, each
+/// exactly once (anything else is `NotAPermutation`, nothing changed). Like [`super::move_row`] it
+/// retires the latest preview.
+pub(crate) fn set_order(session_id: &str, names: Vec<String>) -> Result<(), MultiRenameError> {
+    with_session(session_id, |s| {
+        let mut wanted: Vec<&String> = names.iter().collect();
+        let mut current: Vec<&String> = s.names.iter().collect();
+        wanted.sort_unstable();
+        current.sort_unstable();
+        if wanted != current {
+            return Err(MultiRenameError::NotAPermutation);
+        }
+        s.names = names.into();
+        s.latest = None;
+        Ok(())
+    })?
+}

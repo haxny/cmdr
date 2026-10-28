@@ -156,28 +156,6 @@ pub(crate) fn open(
     selected: Option<&[usize]>,
     expected_sequence: u64,
 ) -> Result<MultiRenameOpened, MultiRenameError> {
-    open_seeded(
-        listing_id,
-        include_hidden,
-        selected,
-        expected_sequence,
-        MediaSeed::Listing,
-    )
-}
-
-/// What a new session's media cache starts from.
-enum MediaSeed {
-    /// The listing's entries: every media file is queued for the background read.
-    Listing,
-}
-
-fn open_seeded(
-    listing_id: &str,
-    include_hidden: bool,
-    selected: Option<&[usize]>,
-    expected_sequence: u64,
-    seed: MediaSeed,
-) -> Result<MultiRenameOpened, MultiRenameError> {
     let listings = crate::listing_host::listings();
     let id = ListingId::new(listing_id);
     let gone = || MultiRenameError::Gone {
@@ -192,9 +170,7 @@ fn open_seeded(
             },
         })?;
     let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
-    let entries = match seed {
-        MediaSeed::Listing => listings.entries(&id).map_err(|_| gone())?,
-    };
+    let entries = listings.entries(&id).map_err(|_| gone())?;
     Ok(insert_new(
         listing_id.to_string(),
         volume_id,
@@ -497,24 +473,6 @@ pub(crate) fn move_row(session_id: &str, row: usize, direction: RowMove) -> Resu
     })?
 }
 
-/// Replaces the rename order with `names`, which must be the session's own files, each
-/// exactly once (anything else is `NotAPermutation`, nothing changed). Like [`move_row`] it
-/// retires the latest preview.
-pub(crate) fn set_order(session_id: &str, names: Vec<String>) -> Result<(), MultiRenameError> {
-    with_session(session_id, |s| {
-        let mut wanted: Vec<&String> = names.iter().collect();
-        let mut current: Vec<&String> = s.names.iter().collect();
-        wanted.sort_unstable();
-        current.sort_unstable();
-        if wanted != current {
-            return Err(MultiRenameError::NotAPermutation);
-        }
-        s.names = names.into();
-        s.latest = None;
-        Ok(())
-    })?
-}
-
 /// The most rows one range-samples request answers: the editor shows five.
 pub(crate) const MAX_RANGE_SAMPLES: usize = 16;
 
@@ -690,13 +648,13 @@ pub(super) fn is_open(session_id: &str) -> bool {
 }
 
 // Fork: what the tag editor's Tags window needs of a session (`hold`, `release`, `reopen`,
-// `open_for_tags`), kept apart so this upstream file stays upstream's.
+// `open_for_tags`, `set_order`), kept apart so this upstream file stays upstream's.
 #[path = "session_tags.rs"]
 mod tags;
 pub(crate) use tags::is_held;
 #[cfg(test)]
 pub(crate) use tags::open_for_tags;
-pub(crate) use tags::{OpenHandshake, TagsOpened, held_twin, hold, plan_for_tags, release, reopen};
+pub(crate) use tags::{OpenHandshake, TagsOpened, held_twin, hold, plan_for_tags, release, reopen, set_order};
 
 #[cfg(test)]
 #[path = "session_hold_test.rs"]
