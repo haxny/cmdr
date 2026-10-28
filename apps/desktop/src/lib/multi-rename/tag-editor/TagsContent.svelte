@@ -62,7 +62,7 @@
     let albumPane = $state<{ focus: () => void; editAtCursor: () => void; settleEditor: () => boolean }>()
     let tracksPane = $state<{
         focus: () => void
-        editAtCursor: (field: 'title' | 'track') => void
+        editAtCursor: (field?: 'title' | 'track') => void
         playAtCursor: () => void
         settleEditor: () => boolean
     }>()
@@ -238,22 +238,23 @@
         tool = { id, field: focusedField }
     }
 
-    /** ⌘Z: the last pending edit at once; with none, the last write (asks first). */
-    function undoLast(): void {
+    /**
+     * ⌘Z: the last pending edit at once; with none, the last write (asks first). The choice waits for the edits still
+     * out, so a Delete just pressed is the edit ⌘Z takes back, never the write.
+     */
+    async function undoLast(): Promise<void> {
+        await tags.settled()
         if (tags.view?.canUndoEdit === true) {
-            void tags.undoEdit().then(() => {
-                notice = 'multiRename.tags.undo.editUndone'
-            })
+            if (await tags.undoEdit()) notice = 'multiRename.tags.undo.editUndone'
         } else if (tags.undoable === null) notice = 'multiRename.tags.undo.nothing'
         else writeMode = 'undo'
     }
 
     /** ⇧⌘Z: the last undone edit again. Nothing to redo says nothing. */
-    function redoLast(): void {
+    async function redoLast(): Promise<void> {
+        await tags.settled()
         if (tags.view?.canRedoEdit !== true) return
-        void tags.redoEdit().then(() => {
-            notice = 'multiRename.tags.undo.editRedone'
-        })
+        if (await tags.redoEdit()) notice = 'multiRename.tags.undo.editRedone'
     }
 
     const COMMANDS: Record<TagsCommandId, () => void> = {
@@ -273,8 +274,8 @@
         'tags.clearField': () => { openTool('clearField') },
         'tags.removeExtras': () => { openTool('extras') },
         'tags.write': () => { writeMode = 'write' },
-        'tags.undo': undoLast,
-        'tags.redo': redoLast,
+        'tags.undo': () => void undoLast(),
+        'tags.redo': () => void redoLast(),
     }
 
     /** Whether `id` can act on the tags as they are now. */

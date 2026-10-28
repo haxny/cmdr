@@ -25,7 +25,7 @@ function readOnlyText(place: Extract<MultiRenameError, { type: 'readOnly' }>['pl
 }
 
 /** The refusals worded by one fixed message. */
-const PLAIN_TEXT: Record<Exclude<MultiRenameError['type'], 'spec' | 'readOnly'>, MessageKey> = {
+const PLAIN_TEXT: Record<Exclude<MultiRenameError['type'], 'spec' | 'readOnly' | 'tooManyTracks'>, MessageKey> = {
   gone: 'multiRename.error.gone',
   sessionClosed: 'multiRename.error.gone',
   selectionChanged: 'multiRename.selectionChanged',
@@ -41,10 +41,12 @@ const PLAIN_TEXT: Record<Exclude<MultiRenameError['type'], 'spec' | 'readOnly'>,
   notAPermutation: 'multiRename.error.couldntStart',
   couldntStart: 'multiRename.error.couldntStart',
   internal: 'multiRename.error.couldntStart',
+  foldersNeedLocalDisk: 'multiRename.tags.window.foldersNeedLocalDisk',
 }
 
 export function errorText(error: MultiRenameError): string {
   if (error.type === 'spec') return specErrorText(error.error)
   if (error.type === 'readOnly') return readOnlyText(error.place)
+  if (error.type === 'tooManyTracks') return tString('multiRename.tags.window.tooManyTracks', { limit: error.limit })
   return tString(PLAIN_TEXT[error.type])
 }

@@ -47,6 +47,7 @@ export type {
   TrackSort,
   TrackSortKey,
   TagsMenuKey,
+  TagsOpened,
   TagsSessionInfo,
 }
 

@@ -258,6 +258,7 @@ describe('AlbumPane date flag', () => {
       cursor: 0,
       onCursorChange: () => {},
       onEdit: () => {},
+      onClear: () => {},
       onSwitchPane: () => {},
     })
     const mounted = await mountInto(AlbumPane, props)

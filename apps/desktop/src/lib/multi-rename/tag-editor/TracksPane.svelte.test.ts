@@ -231,6 +231,7 @@ describe('TracksPane order and edits', () => {
       playing: null,
       onPlay: () => {},
       onEdit,
+      onClear: () => {},
       onSwitchPane: () => {},
       sort: null,
       onSort: () => {},

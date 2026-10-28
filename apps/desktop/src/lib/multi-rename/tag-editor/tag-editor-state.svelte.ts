@@ -91,10 +91,11 @@ export interface TagEditorState {
   /**
    * Reverses the last pending edit (one edit call: a batch, a tool run, a cover change) and takes the view it answers
    * with. Waits for the edits still out first. Not the write undo (`undo`); `view.canUndoEdit` says whether there is one.
+   * Resolves whether the view changed.
    */
-  undoEdit(): Promise<void>
+  undoEdit(): Promise<boolean>
   /** Re-applies the last undone edit (`view.canRedoEdit`). */
-  redoEdit(): Promise<void>
+  redoEdit(): Promise<boolean>
   /**
    * Puts the tracks in `sort` order and takes the view it answers with (`view.sort` is the order now). The backend
    * reorders only the session's names: no edit and no file changes, and the next `[C]` or Renumber counts in this order.
@@ -259,6 +260,17 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     }
   }
 
+  /**
+   * Runs an undo or redo of an edit once the edits still out have landed. `false` when it didn't run (an edit stayed
+   * out past the limit: a late one would land after it) or the call failed.
+   */
+  async function stepEdit(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<boolean> {
+    if (!(await settled())) return false
+    const before = view
+    await editView(call)
+    return view !== before && error === null
+  }
+
   async function open(): Promise<void> {
     if (view !== null) {
       // The session's order may have changed the files: the session answers in its current order, edits kept.
@@ -298,12 +310,10 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     open,
     edit: (batch) => editView(() => editTags(sessionId, batch)),
     async undoEdit() {
-      await settled()
-      await editView(() => undoTagEdit(sessionId))
+      return await stepEdit(() => undoTagEdit(sessionId))
     },
     async redoEdit() {
-      await settled()
-      await editView(() => redoTagEdit(sessionId))
+      return await stepEdit(() => redoTagEdit(sessionId))
     },
     // Not an edit: it changes the order only, so `editing` stays off.
     sortTracks: (sort) => replaceView(() => sortTagTracks(sessionId, sort)),

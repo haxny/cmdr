@@ -365,6 +365,26 @@ describe('the Tags window’s function keys', () => {
     expect(root.textContent).toContain('Redone')
   })
 
+  it('⌘Z right after a Delete, with a write behind, takes the Delete back: no write-undo question', async () => {
+    await mountWindow()
+    await key('s', { metaKey: true, code: 'KeyS' })
+    buttonNamed(dialog() as HTMLElement, 'Write tags').click()
+    await settle()
+    await key('Escape')
+    let landed: (res: unknown) => void = () => {}
+    ipc.editTags.mockReturnValueOnce(new Promise((resolve) => (landed = resolve)))
+    ipc.undoTagEdit.mockResolvedValue({ ok: true, value: VIEW })
+    await key('Delete')
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    landed({ ok: true, value: { ...VIEW, dirty: true, canUndoEdit: true } })
+    await settle()
+    expect(ipc.undoTagEdit).toHaveBeenCalledWith('S')
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(ipc.undoTagApply).not.toHaveBeenCalled()
+    expect(dialog()).toBeNull()
+  })
+
   it('⇧⌘Z with nothing to redo does nothing, and in a value box both stay the box’s own', async () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: { ...VIEW, canUndoEdit: true } })
     const root = await mountWindow()

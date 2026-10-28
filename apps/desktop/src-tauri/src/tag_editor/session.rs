@@ -639,6 +639,10 @@ pub(super) fn pending(
 /// shows as a change. A file that no longer reads becomes an unreadable row. A no-op for a
 /// session or file that's gone.
 pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) {
+    if written.is_empty() {
+        // Nothing moved on disk: every edit is still pending, and so is its undo.
+        return;
+    }
     let fresh: Vec<(PathBuf, FileTags, Entry)> = written
         .into_iter()
         .map(|(path, requested)| {
@@ -679,7 +683,7 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
 /// Reads `paths` again (after an undo rewrote them) into every open tag session that holds them:
 /// the undo may come from another sheet than the one that wrote. The `undoing` session (whose
 /// user confirmed losing unwritten edits to those files) takes them as read. Every other session
-/// keeps its unwritten edits: only the parts it never edited follow the disk ([`rebase`]), and
+/// keeps its unwritten edits: only the parts it never edited follow the disk ([`super::follow::rebase`]), and
 /// its disk copy and fingerprint become what is on disk now. Each file is read once, outside the
 /// lock; only the tag lock is taken, so the rename → tag lock order holds.
 pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {

@@ -8,7 +8,7 @@ use cmdr_tags::{Cover, TagField};
 
 use super::history::{EDIT_HISTORY_LIMIT, redo_edit, undo_edit};
 use super::session::{TagEdit, close, edit, mark_written, open, tool};
-use super::session_test::{album, path_of, set_title};
+use super::session_test::{album, path_of, set_title, tags};
 use super::sort::{TrackSort, TrackSortKey, sort_tracks};
 use super::view::TagEditorView;
 use crate::multi_rename::session::close as close_rename;
@@ -170,7 +170,7 @@ fn a_write_clears_both_stacks() {
     edit(&id, vec![set_title(&dir, "a.mp3", "One")]).expect("1");
     edit(&id, vec![set_title(&dir, "b.mp3", "Two")]).expect("2");
     undo_edit(&id).expect("undoes");
-    mark_written(&id, vec![]);
+    mark_written(&id, vec![(dir.join("a.mp3"), tags(&[]))]);
     let view = undo_edit(&id).expect("nothing to undo");
     assert!(!view.can_undo_edit && !view.can_redo_edit);
     close(&id);
