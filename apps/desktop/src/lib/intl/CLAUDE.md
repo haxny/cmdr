@@ -1,20 +1,20 @@
 # Locale-aware formatting and message runtime
 
-Two locale sources, each read from one place: the UI LANGUAGE for catalog text (via ICU), and the OS's FORMATTING locale
-for numbers, sizes, dates.
+Two locale sources: the UI LANGUAGE for catalog text and numbers, the OS REGION for dates.
 
 ## Module map
 
-- `locale.ts`: `getUiLocale()` (what we speak), `getFormatLocale()` (always the OS), `setOsFormatLocale()` (the OS's tag
-  arriving). Tests: `_setLocaleForTests` pins both, `_setFormatLocaleForTests` splits them.
+- `locale.ts`: `getUiLocale()` (what we speak), `getNumberLocale()` (its resolved catalog tag, for numbers),
+  `getFormatLocale()` (always the OS), `setOsFormatLocale()` (the OS's tag arriving). Tests: `_setLocaleForTests` pins
+  both, `_setFormatLocaleForTests` splits them.
 - `os-locales.ts`: the OS's two answers. `loadSystemLocales()` fetches the Rust pair per window, `pickUiLocale(setting)`
   maps the language half (`null` = no override), `watchSystemLocales()` follows a live change.
 - `language-analytics.ts`: language events (shipped tags only), fired off the PICK, never a subscription
   (`src-tauri/src/analytics/DETAILS.md`).
-- `number-format.ts`: the memoized `getNumberFormatter`, `formatInteger`, `formatMoney`, `getGroupSeparator`,
-  `formatWorded` (UI-language words, OS digits). `list-format.ts`: joins (and, or, unit); `createListFormat`, the sole
-  `Intl.ListFormat` door (Catalina lacks it). `sentence-join.ts`: `joinSentences()` (❌ never `.join(' ')`: no space in
-  Chinese). `duration-format.ts`: narrow durations, no `Intl.DurationFormat`.
+- `number-format.ts`: the memoized `getNumberFormatter`, `formatInteger`, `formatCompactCount`, `formatMoney`,
+  `getGroupSeparator`. `list-format.ts`: joins (and, or, unit); `createListFormat`, the sole `Intl.ListFormat` door
+  (Catalina lacks it). `sentence-join.ts`: `joinSentences()` (❌ never `.join(' ')`: no space in Chinese).
+  `duration-format.ts`: narrow durations, no `Intl.DurationFormat`.
 - `locale-inheritance.ts`: which catalog a locale may inherit from (same language AND same script), shared with the i18n
   checks and Rust.
 - `messages.svelte.ts`: the runtime: `t()` (catalog + ICU), `getMessage()` (raw), `setLocale()`, `availableLocales()`,
@@ -50,9 +50,9 @@ for numbers, sizes, dates.
   enforces pairing).
 - **Only the runtime writes `<html lang>`** (`setLocale()` and the startup catalog), with the RESOLVED catalog tag
   (`ja-JP` → `en`). ❌ No per-window write.
-- **UI copy reads `getUiLocale()`, formatters read `getFormatLocale()`, nothing else resolves a locale.** `setLocale()`
-  writes the UI half only: a `hu` pick must NOT move dates or grouping off the OS. Month NAMES are UI language, the
-  first-day-of-week beside them formatting.
+- **Copy reads `getUiLocale()`, numbers `getNumberLocale()`, dates `getFormatLocale()`; nothing else resolves a
+  locale.** Numbers follow the language (English UI, Swedish Mac: `612.00 MB`); dates keep the region. Month NAMES are
+  language, the week start beside them region.
 - **Format ONLY through this layer + `#lib/settings/format-utils`** (`formatInteger`/`formatNumber`,
   `formatSizeForDisplay`, `formatDateForDisplay`). ❌ Never hardcode a locale or build an `Intl` formatter in feature
   code (`cmdr/no-raw-locale-format`).

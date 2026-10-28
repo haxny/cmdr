@@ -2,8 +2,8 @@
 
 Depth behind `CLAUDE.md`. Two efforts live here: the locale-aware FORMATTING layer (below) and the message RUNTIME
 (next). Together they make the app translation-ready: copy resolves from a JSON catalog through one typed `t()`
-formatted with a real ICU engine, and numbers/sizes/dates format per the OS region the way a native macOS app does. The
-earlier error-text-to-frontend work shipped before these.
+formatted with a real ICU engine, numbers and sizes format in the app language, and dates per the OS region. The earlier
+error-text-to-frontend work shipped before these.
 
 ## The message runtime
 
@@ -184,10 +184,10 @@ localStorage read is wrapped for an environment without it.
 Numbers/sizes/dates format through `#lib/intl` + `format-utils` (the formatting layer, below), NOT through ICU
 `number`/`date` skeletons. `t()` embeds ALREADY-formatted count STRINGS as `*Text` params (e.g. `transfer.movedPhrase`'s
 `filesText`), keeping formatting single-sourced. The raw integer is passed alongside ONLY to drive ICU `plural`
-selection (noun + was/were agreement), never for display. Don't reformat inside messages with ICU `{n, number}`. A
-second reason to keep that line: `IntlMessageFormat` is constructed with the UI language (plural rules have to match the
-words around them), so a number formatted INSIDE a message would group by language while every number outside it groups
-by region.
+selection (noun + was/were agreement), never for display. Don't reformat inside messages with ICU `{n, number}`.
+`IntlMessageFormat` is constructed with the RESOLVED catalog tag (`resolvedCatalogLocale`, the same answer as
+`getNumberLocale()`), so a `#` or a stray `{n, number}` still writes the same digits as the layer, and plural rules
+match the text actually on screen (a `ja-JP` Mac reading English gets English plurals).
 
 ### Generated keys, codegen, checks
 
@@ -211,8 +211,8 @@ message-key construction. New English keys require translated catalog entries an
 
 ## What this layer owns vs. doesn't
 
-Owns: the locale decision (`getUiLocale` / `getFormatLocale`), and number/size grouping + decimals (`number-format.ts`).
-The DATE formatter lives in `#lib/settings/format-utils.ts` (`formatDateForDisplay` + the cached
+Owns: the locale decision (`getUiLocale` / `getNumberLocale` / `getFormatLocale`), and number/size grouping + decimals
+(`number-format.ts`). The DATE formatter lives in `#lib/settings/format-utils.ts` (`formatDateForDisplay` + the cached
 `getSystemLocaleFormatter`) because dates carry per-component age-tier coloring that belongs with the date-color
 settings; it reads `getFormatLocale()` from here, so the locale source is still single per job.
 
@@ -243,13 +243,11 @@ the column-measurement fold, so a per-call construction is what regresses scroll
 the caches below.
 
 `getNumberFormatter(options)` caches by `${locale} ${JSON.stringify(options)}` and rebuilds only when
-`getFormatLocale()` changes. `formatWorded(options, value)` shares that cache for its UI-language half: it formats the
-words around a number (a narrow unit, a currency symbol) and their placement in `getUiLocale()`, then splices in the
-digits from `getNumberFormatter`, so an English app on a Swedish-formatted Mac reads "$0,83" and "54,5s" where the
-formatting locale alone writes "0,83 US$". Durations (`duration-format.ts`) and Ask Cmdr's cost go through it.
-`getGroupSeparator()` caches the group character per locale (derived from
+`getNumberLocale()` changes. Words around a number (a narrow unit, a currency symbol) come from the same formatter, so
+they and the digits always agree. `getNumberLocale()` itself is per-entry hot, so `resolvedCatalogLocale` memoizes its
+answer per tag (cleared with the chain cache). `getGroupSeparator()` caches the group character per locale (derived from
 `Intl.NumberFormat(locale).formatToParts(11111)`). Both mirror the lazy-singleton `getSystemLocaleFormatter()` in
-`format-utils.ts`, which now also keys its single cached `Intl.DateTimeFormat` on the active locale.
+`format-utils.ts`, which keys its single cached `Intl.DateTimeFormat` on `getFormatLocale()`.
 
 ## The en-US triad change (Decision 4, reviewable)
 
@@ -481,18 +479,33 @@ though, which is the whole reason the real resolver reads the list in Rust.
 ## Language and region are two settings
 
 macOS keeps them apart (System Settings > General > Language & Region), and so does `locale.ts`. A person can read
-Hungarian and live in Sweden, and picking a UI language is not permission to overwrite the conventions they chose:
+Hungarian and live in Sweden. **Decision** (David, 2026-10-28): numbers follow the app language; dates and times follow
+the region.
 
 - **`getUiLocale()`** follows `appearance.language`. Catalog text reads it: `t()`, `getMessage()`, `<Trans>`, and the
   weekday/month NAMES in `query-ui/filter-chips/filter-popover-helpers.ts` (they're words inside translated sentences).
-- **`getFormatLocale()`** always follows the OS. Numbers and sizes (`number-format.ts`), the `'system'` date
-  (`format-utils.ts::getSystemLocaleFormatter`), and calendar facts read it: `resolveFirstDayOfWeek` is in the SAME
-  function as those month names and takes the other locale, because which day the week starts on is a region decision.
-  No setting can move it: the only production writer is `setOsFormatLocale()`, which carries the OS's own answer, and
-  `_setFormatLocaleForTests` is the test seam.
+- **`getNumberLocale()`** is that language's RESOLVED catalog tag (`resolvedCatalogLocale(getUiLocale())`, so `en-GB`
+  stays `en-GB` and a `ja-JP` Mac with no `ja` catalog gets `en`). Every number reads it: counts, sizes, rates,
+  durations, money, the Ask Cmdr cost and token counts, the low-space percent, and ICU `#` (the engine gets the same
+  tag). `messages.svelte.ts` installs it through `setNumberLocaleResolver()` at module load, reading the version rune,
+  so a markup or `$derived` number re-renders on a language switch with no message involved; before that (or in a test
+  that mocks the runtime) it falls back to `getUiLocale()`.
+- **`getFormatLocale()`** always follows the OS. The `'system'` date (`format-utils.ts::getSystemLocaleFormatter`), the
+  time of day, and calendar facts read it: `resolveFirstDayOfWeek` is in the SAME function as those month names and
+  takes the other locale, because which day the week starts on is a region decision. No setting can move it: the only
+  production writer is `setOsFormatLocale()`, which carries the OS's own answer, and `_setFormatLocaleForTests` is the
+  test seam.
 
-`setLocale()` therefore reaches the UI half only. Without the split, a Hungarian pick would rewrite Swedish dates and
-number grouping, and an English pick on a Swedish Mac would impose US conventions.
+**Why numbers follow the language.** Digits sit inside translated sentences, and a number in another locale's convention
+reads as a typo there: an English UI on a Swedish Mac showed `612,00 MB`, `0,83 US$`-style money, and `54,5s`, where an
+English sentence wants `612.00 MB`, `$0.83`, `54.5s`. **Why dates keep the region.** Those are the conventions people
+actually pick and notice (ISO-like dates, a 24-hour clock, Monday week start); a language pick must not take them away.
+`language-vs-region.test.ts` pins both halves, `en-us-parity.test.ts` pins that an English UI writes US digits on any
+region.
+
+`setLocale()` therefore moves copy and numbers, never dates. A macOS region change still re-renders dates the way it
+always did: `watchSystemLocales()` adopts the new tag and re-applies `appearance.language`, whose rune bump re-runs open
+markup.
 
 **The UI answer is a language, never a region.** The tag the catalog resolver picks is a catalog's, so `'system'` mode
 never carries the user's regional variant into the copy. The region lives entirely in the formatting half, below.
@@ -515,9 +528,8 @@ with a Swedish region (`AppleLocale = en_US@rg=sezzzz`), the two sides disagreed
 (Verified on macOS 26.5.2 / Safari 26.5.2 (21624.2.5.11.8), 2026-08-19, by reading `Intl` in a bare `WKWebView` and
 Foundation's `Locale` / `DateFormatter` in the same process.)
 
-So this user now sees Swedish conventions under English copy, which is what System Settings says they asked for, and a
-machine with no region override composes the tag it already had (`en-US` stays `en-US`; `en-us-parity.test.ts` is the
-net). ❌ Don't try to re-derive any of this from Cmdr's own date column: `appearance.dateTimeFormat: 'iso'` makes it
-prove nothing about the locale. Read `resolvedOptions()` directly, or the Rust side's tests. The Rust half (which
-`NSLocale` fields, why the autoupdating locale, what makes a part unusable) is canonical in
-`apps/desktop/src-tauri/src/intl/DETAILS.md`.
+So this user now sees Swedish dates under English copy (and English numbers, per the decision above), and a machine with
+no region override composes the tag it already had (`en-US` stays `en-US`; `en-us-parity.test.ts` is the net). ❌ Don't
+try to re-derive any of this from Cmdr's own date column: `appearance.dateTimeFormat: 'iso'` makes it prove nothing
+about the locale. Read `resolvedOptions()` directly, or the Rust side's tests. The Rust half (which `NSLocale` fields,
+why the autoupdating locale, what makes a part unusable) is canonical in `apps/desktop/src-tauri/src/intl/DETAILS.md`.

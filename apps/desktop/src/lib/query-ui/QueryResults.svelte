@@ -18,7 +18,7 @@
     import { getCachedIcon, iconCacheVersion } from '#lib/icon-cache.js'
     import { dependOn } from '#lib/utils/reactivity.js'
     import Icon from '#lib/ui/Icon.svelte'
-    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatCompactCount, formatInteger } from '#lib/intl/number-format.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import Trans from '#lib/intl/Trans.svelte'
     import Button from '#lib/ui/Button.svelte'
@@ -174,10 +174,9 @@
         return getCachedIcon(iconId)
     }
 
+    /** An approximate scan or index count ("12.3K"), in the UI language's own compact form. */
     function formatEntryCount(count: number): string {
-        if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
-        if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`
-        return String(count)
+        return formatCompactCount(count)
     }
 
     /**

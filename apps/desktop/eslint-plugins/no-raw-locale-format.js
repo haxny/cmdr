@@ -3,8 +3,10 @@
  * locale-aware formatter layer; don't hardcode a locale or build a one-off
  * `Intl` formatter in feature code.
  *
- * Rationale: the app resolves the FORMATTING locale in ONE place
- * (`getFormatLocale()` in `#lib/intl/locale.ts`) feeding ONE formatting layer
+ * Rationale: the app resolves each formatting locale in ONE place (numbers:
+ * `getNumberLocale()` in `#lib/intl/messages.svelte.ts`, the UI language;
+ * dates: `getFormatLocale()` in `#lib/intl/locale.ts`, the OS region) feeding
+ * ONE formatting layer
  * (`#lib/intl/number-format.ts` for numbers/sizes, and the
  * `#lib/settings/format-utils.ts` date formatter). Counts go through
  * `formatInteger`/`formatNumber`, sizes through `formatFileSizeWithFormat`/
@@ -48,7 +50,7 @@ export default {
         'See `docs/specs/i18n-formatter-layer-plan.md`.',
       rawIntlFormatter:
         "Don't construct `new Intl.{{ ctor }}(...)` in feature code. Use the memoized factory in `#lib/intl/number-format` " +
-        'or the date formatter in `#lib/settings/format-utils`, both keyed on the single `getFormatLocale()` source.',
+        'or the date formatter in `#lib/settings/format-utils`, each keyed on its single locale source (`getNumberLocale()` / `getFormatLocale()`).',
     },
     schema: [],
   },

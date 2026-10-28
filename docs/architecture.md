@@ -63,10 +63,10 @@ All under `apps/desktop/src/lib/`.
   `crates/cmdr-operations/src/transfer_tree/`. See `apps/desktop/src/lib/file-operations/transfer-tree/CLAUDE.md`
 - `file-viewer/`: Read-only file viewer (separate window, virtual scrolling)
 - `settings/`: Settings UI + registry-based architecture, reactive state
-- `intl/`: The two locale sources (`getUiLocale` for catalog text, `getFormatLocale` for the OS's number/date
-  conventions) + memoized locale-aware number/size formatters; counts, file sizes, and the `'system'` date read the
-  formatting one (dates formatted in `settings/format-utils.ts`). `os-locales.ts` fetches both from the backend: the
-  `'system'` UI language and the composed formatting tag
+- `intl/`: The two locale sources (`getUiLocale` for catalog text and, via `getNumberLocale`, every number;
+  `getFormatLocale` for the OS's date conventions) + memoized locale-aware number/size formatters; the `'system'` date
+  reads the formatting one (dates formatted in `settings/format-utils.ts`). `os-locales.ts` fetches both from the
+  backend: the `'system'` UI language and the composed formatting tag
 - `shortcuts/`: Keyboard shortcut customization, scope hierarchy, conflict detection, plus the read-only Help > Keyboard
   shortcuts window (`shortcuts-window.ts` + `ShortcutsList.svelte` + pure `shortcut-diff.ts`, route at
   `routes/shortcuts/`)

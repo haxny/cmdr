@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { _setLocaleForTests } from './locale'
 import {
   _clearCachesForTests,
+  formatCompactCount,
   formatInteger,
   formatMoney,
   getGroupSeparator,
@@ -20,10 +21,26 @@ describe('formatMoney', () => {
     expect(formatMoney(1234.5, 'USD')).toBe('$1,234.50')
   })
 
-  it('follows the formatting locale, not the currency', () => {
+  it('follows the app language, not the currency', () => {
     _setLocaleForTests('de-DE')
     // German puts the symbol last, after a no-break space, with a decimal comma.
     expect(formatMoney(0.5, 'EUR')).toBe('0,50 €')
+  })
+})
+
+describe('formatCompactCount', () => {
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  it("writes the UI language's own short form", () => {
+    _setLocaleForTests('en')
+    expect(formatCompactCount(999)).toBe('999')
+    expect(formatCompactCount(12_345)).toBe('12.3K')
+    expect(formatCompactCount(1_250_000)).toBe('1.3M')
+    // Chinese counts in 10⁴, which a thousands/millions split can't express.
+    _setLocaleForTests('zh')
+    expect(formatCompactCount(22_000)).toBe('2.2万')
   })
 })
 

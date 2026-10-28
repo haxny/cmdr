@@ -895,13 +895,13 @@ backend's slot status does that (`ask_cmdr_slot_status` reads `test_mode::ask_cm
   turn finishes streaming. Honest miss-path (`costReading`): a local-only thread reads "free, on-device", an unpriced
   model reads "cost unknown", a priced thread shows "about {amount}" — never a silent $0. The amount rounds to cents
   ("about $0.83", `costEstimateText`), and a real cost below half a cent reads "under $0.01" so it never looks free. The
-  money goes through `formatWorded` (symbol and placement from the UI language, digits from the OS region, so an English
-  app on a Swedish-formatted Mac reads "$0,83"; `#lib/intl/number-format.ts`). Its tooltip says it's USD and ignores
-  provider-side prompt caching (the meter prices every prompt token at the full rate, `src-tauri/src/agent/pricing.rs`).
-  Token counts (here and in the per-turn stats line) go compact from 2,000 up through `formatTokenCount` ("2.2k",
-  "1.3M", one decimal at most), with the exact count in a tooltip. Always shown with the chat; a thread with nothing
-  metered reads zero (§ The context gauge). A fetched total is keyed by the thread it was read for: a thread switch
-  drops it at once, and a slow read for a thread the user already left is dropped.
+  money is written wholly in the UI language (`getNumberFormatter`, so an English app on a Swedish-formatted Mac reads
+  "$0.83"; `#lib/intl/number-format.ts`). Its tooltip says it's USD and ignores provider-side prompt caching (the meter
+  prices every prompt token at the full rate, `src-tauri/src/agent/pricing.rs`). Token counts (here and in the per-turn
+  stats line) go compact from 2,000 up through `formatTokenCount` ("2.2k", "1.3M", one decimal at most), with the exact
+  count in a tooltip. Always shown with the chat; a thread with nothing metered reads zero (§ The context gauge). A
+  fetched total is keyed by the thread it was read for: a thread switch drops it at once, and a slow read for a thread
+  the user already left is dropped.
 - **Settings section** (`settings/sections/AskCmdrSection.svelte`, top-level `Ask Cmdr`): the `askCmdr.enabled` switch,
   a "cloud AI is off" hint plus an "Open AI settings" button when it's on over Cloud without consent, the provider hint
   (reads `ai.provider`) + the interactive-model row (`askCmdr.interactiveModel`), the two memory controls, and the

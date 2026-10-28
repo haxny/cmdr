@@ -9,6 +9,7 @@
      */
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { getNumberFormatter } from '#lib/intl/number-format.js'
     import { describeUsbSpeed, type UsbSpeed } from '../types'
 
     interface Props {
@@ -24,7 +25,11 @@
     /** "USB 3.2 Gen 1 (Max. 625 MB/s)", then the line saying what that number is about. */
     const hint = $derived.by(() => {
         const { label, maxMBps } = described
-        const mbps = maxMBps >= 10 ? String(Math.round(maxMBps)) : maxMBps.toFixed(1)
+        const fractionDigits = maxMBps >= 10 ? 0 : 1
+        const mbps = getNumberFormatter({
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits,
+        }).format(maxMBps)
         // The global tooltip CSS is `white-space: pre-line`, so `\n` becomes a real break.
         return `${tString('fileExplorer.navigation.usbSpeed', { label, mbps })}\n${tString('fileExplorer.navigation.usbSpeedNegotiated')}`
     })

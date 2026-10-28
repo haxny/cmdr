@@ -9,13 +9,14 @@
  * target, macOS 10.15). The two pieces used here are what the standard composes
  * internally, and `duration.test.ts` pins the result against it.
  *
- * The locale is {@link getUiLocale}: "min" and "Sek." are words in the
- * sentence around them, the same reasoning `list-format.ts` follows.
+ * The locale is {@link getNumberLocale}, the catalog tag the UI speaks: "min"
+ * and "Sek." are words in the sentence around them, and the digits are
+ * numbers, which follow the UI language too.
  */
 
 import { createListFormat } from './list-format'
-import { getUiLocale } from './locale'
-import { formatWorded } from './number-format'
+import { getNumberLocale } from './locale'
+import { getNumberFormatter } from './number-format'
 
 /** The units a compact duration can name. */
 export type DurationUnit = 'hour' | 'minute' | 'second'
@@ -52,7 +53,7 @@ function getJoiner(locale: string): Intl.ListFormat | undefined {
  * space, CLDR's narrow pattern for English.
  */
 export function formatNarrowDuration(parts: readonly DurationPart[]): string {
-  const locale = getUiLocale()
+  const locale = getNumberLocale()
   const worded = parts.map(({ unit, value }) => getUnitFormatter(locale, unit).format(value))
   return getJoiner(locale)?.format(worded) ?? worded.join(' ')
 }
@@ -63,20 +64,13 @@ export type MeasureUnit = 'millisecond' | 'second'
 /**
  * Words one timing ("847ms", "1.4s", "1,4 Sek.") in the UI language's narrow
  * style, with `fractionDigits` digits after the decimal mark.
- *
- * The unit and its placement come from the UI language, the digits from the
- * formatting locale ({@link formatWorded}), the same split a size makes:
- * a French speaker on a US-formatted Mac reads "1.4 s".
  */
 export function formatNarrowMeasure(unit: MeasureUnit, value: number, fractionDigits: number): string {
-  return formatWorded(
-    {
-      style: 'unit',
-      unit,
-      unitDisplay: 'narrow',
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    },
-    value,
-  )
+  return getNumberFormatter({
+    style: 'unit',
+    unit,
+    unitDisplay: 'narrow',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value)
 }

@@ -28,7 +28,7 @@
  */
 
 import { IntlMessageFormat, type PrimitiveType, type FormatXMLElementFn } from 'intl-messageformat'
-import { defaultUiLocale, getUiLocale, setUiLocaleOverride } from './locale'
+import { defaultUiLocale, getUiLocale, setNumberLocaleResolver, setUiLocaleOverride } from './locale'
 import { inheritableAncestors } from './locale-inheritance'
 import { setDocumentLanguage } from './document-language'
 import { rememberedStartupCatalog, rememberStartupCatalog } from './startup-catalog'
@@ -177,11 +177,31 @@ function fallbackChain(locale: string): string[] {
  * for the window as a whole.
  */
 export function resolvedCatalogLocale(locale: string): string {
-  for (const tag of fallbackChain(locale)) {
-    if (knownTags().includes(tag)) return tag
-  }
-  return BASE_LOCALE
+  const cached = resolvedCache.get(locale)
+  if (cached !== undefined) return cached
+  const tags = knownTags()
+  const resolved = fallbackChain(locale).find((tag) => tags.includes(tag)) ?? BASE_LOCALE
+  resolvedCache.set(locale, resolved)
+  return resolved
 }
+
+/**
+ * Per-locale {@link resolvedCatalogLocale} answers. The number formatters ask it per visible
+ * file-list entry, so it can't walk the chain each time; like the chain, the answer moves
+ * only when the set of known tags does, and `_setCatalogForTests` clears both.
+ */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state; a pure resolve-once perf cache, cleared by `_setCatalogForTests`. Reactivity comes from the `localeVersion` rune.
+const resolvedCache = new Map<string, string>()
+
+// The number locale (`locale.ts::getNumberLocale`) is the resolved catalog tag, read through
+// the rune: markup or a `$derived` that formats a number re-runs on a language switch even when
+// no message is involved. Installed here, not imported there, so `locale.ts` stays a leaf and a
+// test that mocks this module away still formats numbers.
+setNumberLocaleResolver(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- load-bearing rune read: tracks the reactive dependency; see header.
+  localeVersion
+  return resolvedCatalogLocale(getUiLocale())
+})
 
 /**
  * `resolvedCatalogLocale(getUiLocale())`, read reactively: a `$derived` or markup that calls it
@@ -371,12 +391,17 @@ export type TranslationParams = Record<string, PrimitiveType | Date | FormatXMLE
  */
 export type TranslationResult = ReturnType<IntlMessageFormat['format']>
 
-/** A compiled `IntlMessageFormat` for `(locale, key)`, memoized. */
+/**
+ * A compiled `IntlMessageFormat` for `(locale, key)`, memoized. The engine gets the RESOLVED
+ * catalog tag (the number locale's answer), because it picks plural categories and
+ * writes `#` and `{n, number}` digits with it: both have to match the text on screen, so a
+ * `ja-JP` Mac reading English gets English plurals and English digits.
+ */
 function getCompiled(locale: string, key: string): IntlMessageFormat {
   const cacheKey = `${locale}\u0000${key}`
   let compiled = compiledCache.get(cacheKey)
   if (compiled === undefined) {
-    compiled = new IntlMessageFormat(resolveRaw(locale, key), locale)
+    compiled = new IntlMessageFormat(resolveRaw(locale, key), resolvedCatalogLocale(locale))
     compiledCache.set(cacheKey, compiled)
   }
   return compiled
@@ -450,9 +475,9 @@ export function tStringIn(locale: string, key: MessageKey, params?: TranslationP
  * to revert to the OS default. Clears the compiled cache so a re-resolve picks
  * up the new locale.
  *
- * Reaches the UI half ONLY. Numbers, sizes, and dates keep following the OS
- * through `getFormatLocale()`, so a Hungarian speaker in Sweden keeps their
- * Swedish dates (`locale.ts`).
+ * Moves copy and numbers (`getNumberLocale()` reads the same tag). Dates keep
+ * following the OS through `getFormatLocale()`, so a Hungarian speaker in
+ * Sweden keeps their Swedish dates (`locale.ts`).
  *
  * Also announces the language to the DOM (`document-language.ts`). This is the
  * seam every window and every live change funnels through, which is what makes
@@ -572,6 +597,7 @@ export function _setCatalogForTests(locale: string, catalog: Catalog | null): vo
   }
   compiledCache.clear()
   chainCache.clear()
+  resolvedCache.clear()
 }
 
 /** Test seam: the tags whose catalog this window holds right now, sorted. */

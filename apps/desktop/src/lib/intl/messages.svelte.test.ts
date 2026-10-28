@@ -275,6 +275,25 @@ describe('reactivity in markup (read-rune-before-cache invariant)', () => {
     void unmount(component)
   })
 
+  it('re-renders a markup number on a language switch, with no message involved', () => {
+    // Numbers follow the app language (`locale.ts::getNumberLocale`), so a switch must reach
+    // a `{formatInteger(n)}` in markup the way it reaches a `{t()}`.
+    void setLocale('en')
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const component = mount(Fixture, { target, props: { messageKey: 'transfer.trash' } })
+    flushSync()
+    const span = target.querySelector('[data-test="number-text"]')
+    expect(span?.textContent).toBe('1,234,567')
+
+    void setLocale('de')
+    flushSync()
+    expect(span?.textContent).toBe('1.234.567')
+
+    void unmount(component)
+    void setLocale(null)
+  })
+
   it('does NOT re-render when only the value changes without a rune bump (seam distinction)', () => {
     _setCatalogForTests(TEST_LANG, { 'transfer.trash': 'SWITCHED {countText}' })
 

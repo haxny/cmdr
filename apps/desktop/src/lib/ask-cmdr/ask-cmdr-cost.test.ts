@@ -41,11 +41,13 @@ describe('formatUsdMicros', () => {
     expect(formatUsdMicros(0)).toBe('$0.00')
   })
 
-  it('takes the symbol and its place from the app language, the digits from the OS region', () => {
-    // English app on a Swedish-formatted Mac: the formatting locale alone would write "0,83 US$".
+  it('reads entirely in the app language, whatever the OS region', () => {
+    // English app on a Swedish-formatted Mac: the region alone would write "0,83 US$".
     _setLocaleForTests('en')
     _setFormatLocaleForTests('en-SE')
-    expect(formatUsdMicros(825_600)).toBe('$0,83')
+    expect(formatUsdMicros(825_600)).toBe('$0.83')
+    _setLocaleForTests('de')
+    expect(formatUsdMicros(825_600).replace(/\s/g, ' ')).toBe('0,83 $')
   })
 })
 
@@ -81,10 +83,12 @@ describe('formatTokenCount', () => {
     expect(formatTokenCount(1_340_000)).toBe('1.3M')
   })
 
-  it('takes its decimal mark from the OS region', () => {
+  it('takes its decimal mark from the app language, not the OS region', () => {
     _setLocaleForTests('en')
     _setFormatLocaleForTests('en-SE')
-    expect(formatTokenCount(2_240)).toBe('2,2k')
+    expect(formatTokenCount(2_240)).toBe('2.2k')
+    _setLocaleForTests('de')
+    expect(formatTokenCount(2_240).replace(/\s/g, ' ')).toBe('2,2 Tsd.')
     _setLocaleForTests('en-US')
   })
 })

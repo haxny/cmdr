@@ -9,19 +9,27 @@
  * locale changes. Mirrors the lazy-singleton shape of
  * `getSystemLocaleFormatter()` in `#lib/settings/format-utils`.
  *
- * The digits always come from {@link getFormatLocale}, which follows the OS
- * rather than the UI-language setting; this module never resolves a locale
- * itself. {@link formatWorded} is the one place the UI language joins in: it
- * takes the words around the number (a unit, a currency symbol) and their
- * placement from the UI language, and the digits from the OS.
+ * Every number here is written in {@link getNumberLocale}: the catalog tag the
+ * UI speaks, so digits, the decimal mark, grouping, and the words around a
+ * number (a unit, a currency symbol) all match the sentence they sit in. Dates
+ * stay on the OS region (`getFormatLocale()`); the why is `DETAILS.md` §
+ * "Language and region are two settings". This module never resolves a locale
+ * itself.
  */
 
-import { getFormatLocale, getUiLocale } from './locale'
+import { getNumberLocale } from './locale'
 
 /** Cache keyed by `${locale} ${JSON.stringify(options)}`. */
 const formatterCache = new Map<string, Intl.NumberFormat>()
 
-function cachedFormatter(locale: string, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+/**
+ * A memoized `Intl.NumberFormat` for the active number locale and the given
+ * options. Callers pass the options they need (fraction digits, grouping, a
+ * `unit` or `currency` style); identical (locale, options) pairs share one
+ * instance.
+ */
+export function getNumberFormatter(options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const locale = getNumberLocale()
   const key = `${locale} ${JSON.stringify(options)}`
   let formatter = formatterCache.get(key)
   if (formatter === undefined) {
@@ -32,47 +40,8 @@ function cachedFormatter(locale: string, options: Intl.NumberFormatOptions): Int
 }
 
 /**
- * A memoized `Intl.NumberFormat` for the active locale and the given options.
- * Callers pass the options they need (fraction digits, grouping); identical
- * (locale, options) pairs share one instance.
- */
-export function getNumberFormatter(options: Intl.NumberFormatOptions): Intl.NumberFormat {
-  return cachedFormatter(getFormatLocale(), options)
-}
-
-/** `formatToParts` types that make up the number itself, as opposed to the words around it. */
-const NUMBER_PART_TYPES = new Set(['integer', 'group', 'decimal', 'fraction', 'minusSign'])
-
-/**
- * Formats a number with words around it (`style: 'unit'` or `'currency'`), splitting the job
- * the way a size does: the words and where they sit come from the UI language, the digits
- * (decimal mark, grouping) from the formatting locale. A French speaker on a US-formatted Mac
- * reads "1.4 s"; an English speaker on a Swedish-formatted Mac reads "$0,83", where the
- * formatting locale alone would write "0,83 US$".
- *
- * Pass explicit `minimumFractionDigits` / `maximumFractionDigits`: the digits formatter sees
- * only those, not the style's defaults.
- */
-export function formatWorded(options: Intl.NumberFormatOptions, value: number): string {
-  const digits = getNumberFormatter({
-    minimumFractionDigits: options.minimumFractionDigits,
-    maximumFractionDigits: options.maximumFractionDigits,
-  }).format(value)
-  let numberWritten = false
-  return cachedFormatter(getUiLocale(), options)
-    .formatToParts(value)
-    .map((part) => {
-      if (!NUMBER_PART_TYPES.has(part.type)) return part.value
-      if (numberWritten) return ''
-      numberWritten = true
-      return digits
-    })
-    .join('')
-}
-
-/**
  * Format an integer count with locale-aware thousands grouping (e.g. `1,234`
- * in en-US, `1.234` in de-DE). The single helper behind `formatNumber` and
+ * in English, `1.234` in German). The single helper behind `formatNumber` and
  * every other user-facing count readout.
  */
 export function formatInteger(n: number): string {
@@ -80,10 +49,20 @@ export function formatInteger(n: number): string {
 }
 
 /**
+ * A count as a short approximate figure in the UI language's own compact form
+ * (`12.3K`, `1.2M`, Chinese `2.2万`), for a readout that only needs the order of
+ * magnitude. CLDR picks the unit, so a language counting in 10⁴ (zh, ja) gets
+ * it, and one with no short thousands (de) writes the full count.
+ */
+export function formatCompactCount(n: number): string {
+  return getNumberFormatter({ notation: 'compact', maximumFractionDigits: 1 }).format(n)
+}
+
+/**
  * Format a money amount in its own ISO 4217 currency (`USD`, `EUR`), rounded to
- * that currency's minor unit, in the formatting locale (`$0.02` in en-US,
- * `0,02 $` in de-DE). Its formatter's `resolvedOptions().maximumFractionDigits`
- * is that minor unit, for a caller deciding whether an amount shows as zero.
+ * that currency's minor unit (`$0.02` in English, `0,02 $` in German). Its
+ * formatter's `resolvedOptions().maximumFractionDigits` is that minor unit, for
+ * a caller deciding whether an amount shows as zero.
  */
 export function formatMoney(amount: number, currency: string): string {
   return getNumberFormatter({ style: 'currency', currency }).format(amount)
@@ -93,13 +72,13 @@ export function formatMoney(amount: number, currency: string): string {
 const groupSeparatorCache = new Map<string, string>()
 
 /**
- * The active locale's thousands-group separator (e.g. `,` in en-US, `.` in
- * de-DE, a thin/narrow no-break space in fr-FR). Derived from the same
+ * The number locale's thousands-group separator (e.g. `,` in English, `.` in
+ * German, a narrow no-break space in French). Derived from the same
  * `Intl.NumberFormat` the counts use, so byte-triad grouping agrees with
  * counts. Memoized per locale.
  */
 export function getGroupSeparator(): string {
-  const locale = getFormatLocale()
+  const locale = getNumberLocale()
   let separator = groupSeparatorCache.get(locale)
   if (separator === undefined) {
     // 11111 is large enough to force one group boundary in every locale.

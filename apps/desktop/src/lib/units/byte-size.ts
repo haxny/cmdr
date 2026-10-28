@@ -8,7 +8,7 @@
  *
  * The unit words ("MiB", "MB", "Mo", "bytes") are catalog copy in the UI
  * language (`common.sizeUnit.*`), so a translator owns them; the digits follow
- * the formatting locale like every other number. Each base has its own symbols:
+ * the app language like every other number. Each base has its own symbols:
  * base 1024 is IEC binary (KiB, MiB, GiB, TiB, PiB), base 1000 is SI decimal
  * (kB, MB, GB, TB, PB), so the symbol always names the divisor behind the digits.
  */
