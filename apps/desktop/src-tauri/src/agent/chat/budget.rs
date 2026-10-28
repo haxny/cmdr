@@ -97,8 +97,8 @@ const _: () = assert!(MAX_TOOL_RESULT_TOKENS < DEFAULT_PROMPT_TOKEN_BUDGET);
 /// It grows whenever a tool joins the view, and every call pays it whether or not it uses
 /// that tool: the suggested-ops trio cost about 1,100 tokens of schema between them, which
 /// is roughly four files off a 16,000-token rename batch, and `search`, the most expensive
-/// single declaration, costs 609 even trimmed. Keep a new schema terse.
-pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 7_241;
+/// single declaration, costs 602 even trimmed. Keep a new schema terse.
+pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 7_107;
 
 /// What one `image_facts` row costs at the corpus' average OCR length.
 pub const IMAGE_FACTS_TOKENS_PER_FILE: usize = 269;
@@ -197,7 +197,7 @@ pub fn wake_digest_budget(prompt_tokens: usize) -> usize {
 /// system string is never elided (`context::assemble_prompt` tightens tool results only), so
 /// every byte of memory is a permanent tax on every turn of every thread. Run the numbers a
 /// flat 8 KB would give at the smallest window the app supports: [`MIN_LOCAL_CONTEXT_TOKENS`]
-/// resolves to a 17,652-token budget, the fixed overhead takes 7,241 of it, and 8 KB of memory
+/// resolves to a 17,652-token budget, the fixed overhead takes 7,107 of it, and 8 KB of memory
 /// at [`CHARS_PER_TOKEN_ESTIMATE`] takes 2,048 more, so memory alone would claim about a fifth
 /// of what is left for the digest, the envelope, the history, and every tool result, and it would
 /// claim the same 2,048 on a window a tenth the size. **And the agent writes this file itself**,

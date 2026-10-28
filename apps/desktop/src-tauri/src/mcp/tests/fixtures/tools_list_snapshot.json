@@ -855,7 +855,7 @@
           },
           "volumeId": {
             "type": "string",
-            "description": "The volume to search, from list_volumes: its whole root, or the scope's paths on it. Reaches a volume that isn't connected, from its index."
+            "description": "From list_volumes: search its whole root, or the scope's paths on it. Works when not connected, from its index."
           },
           "caseSensitive": {
             "type": "boolean",
@@ -1464,7 +1464,7 @@
     },
     {
       "name": "list_dir",
-      "description": "List a folder's children and recursive size from the drive index; an unindexed folder is read live, without folder sizes, and a volume that isn't connected answers from its last index, dated. Sort by name, size, or modified; page with limit/offset. sortBy size ranks files and folders together by space used, to find where space goes inside ONE folder; search ranks a whole drive.",
+      "description": "List a folder's children and recursive size from the drive index. An unindexed folder is read live, without folder sizes; a volume that isn't connected answers from its last index, dated. sortBy size finds where space goes inside ONE folder; search ranks a whole drive.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1474,7 +1474,7 @@
           },
           "volumeId": {
             "type": "string",
-            "description": "The volume the path is on, from list_volumes or a result's location. Omit for a path on a connected volume."
+            "description": "From list_volumes or a result's location; omit for a path on a connected volume."
           },
           "sortBy": {
             "type": "string",

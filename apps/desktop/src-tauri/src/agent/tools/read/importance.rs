@@ -290,8 +290,8 @@ pub fn important_folders_schema() -> Value {
         "properties": {
             "top": { "type": "integer", "description": "Default 20; ignored when threshold is set." },
             "threshold": { "type": "number", "description": "Every folder scoring at or above this (0-1) instead of a top-N." },
-            "volumeId": { "type": "string", "description": "One volume, from list_volumes or a row's location; omit for all scored volumes." },
-            "under": { "type": "string", "description": "Only folders at or below this folder (on volumeId when given); ~ expands." }
+            "volumeId": { "type": "string", "description": "From list_volumes or a row's location; omit for every scored volume." },
+            "under": { "type": "string", "description": "Only folders at or below this one (on volumeId when given); ~ ok." }
         },
         "additionalProperties": false
     })
@@ -475,7 +475,7 @@ pub fn folder_importance_schema() -> Value {
         "type": "object",
         "properties": {
             "path": { "type": "string", "description": "Absolute or ~-relative folder to explain." },
-            "volumeId": { "type": "string", "description": "The volume the path is on, from list_volumes or a result's location. Omit for a path on a connected volume." }
+            "volumeId": { "type": "string", "description": "From list_volumes or a result's location; omit for a path on a connected volume." }
         },
         "required": ["path"],
         "additionalProperties": false

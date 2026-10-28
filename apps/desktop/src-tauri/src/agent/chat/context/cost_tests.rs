@@ -34,7 +34,7 @@ const FILES: usize = 100;
 /// Every call: the system prompt plus the 21 tool declarations, before the user has said a word.
 const FIXED_OVERHEAD: usize = FIXED_PROMPT_OVERHEAD_TOKENS;
 const SYSTEM_PROMPT_TOKENS: usize = 2_378;
-const TOOL_DECLARATION_TOKENS: usize = 4_863;
+const TOOL_DECLARATION_TOKENS: usize = 4_729;
 
 /// One `image_facts` row at [`OCR_CHARS`] of recognized text: the dominant per-file cost, and
 /// the reason a window has to be sized for the facts rather than for the plan.
@@ -47,7 +47,7 @@ const PLAN_ROW_PER_FILE: usize = PLAN_ROW_TOKENS_PER_FILE;
 const LISTING_PER_FILE: usize = LISTING_TOKENS_PER_FILE;
 
 /// The whole 100-file rename turn, prefix included.
-const HUNDRED_FILE_TURN: usize = 43_823;
+const HUNDRED_FILE_TURN: usize = 43_689;
 
 /// A mid-sized budget, what a 128K window resolved to before Automatic spent the whole window.
 /// Not a production number any more; it pins that a 100-file turn fits a modest window, so a

@@ -513,7 +513,7 @@ pub fn list_dir_schema() -> Value {
         "type": "object",
         "properties": {
             "path": { "type": "string", "description": "Absolute or ~-relative folder to list. Relay the coverage block and any lower-bound size rather than a total the index can't back." },
-            "volumeId": { "type": "string", "description": "The volume the path is on, from list_volumes or a result's location. Omit for a path on a connected volume." },
+            "volumeId": { "type": "string", "description": "From list_volumes or a result's location; omit for a path on a connected volume." },
             "sortBy": {
                 "type": "string",
                 "enum": ["name", "size", "modified"],

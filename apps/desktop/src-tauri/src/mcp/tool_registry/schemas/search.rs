@@ -49,7 +49,7 @@ pub fn search_schema() -> Value {
             },
             "volumeId": {
                 "type": "string",
-                "description": "The volume to search, from list_volumes: its whole root, or the scope's paths on it. Reaches a volume that isn't connected, from its index."
+                "description": "From list_volumes: search its whole root, or the scope's paths on it. Works when not connected, from its index."
             },
             "caseSensitive": {
                 "type": "boolean",

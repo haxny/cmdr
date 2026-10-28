@@ -98,7 +98,7 @@ pub fn propose_suggestions_schema() -> Value {
                         "renames": {
                             "type": "array",
                             "maxItems": MAX_PATHS,
-                            "description": "rename, move, copy: each source and the bare name it becomes. Move or copy: list every file; its own name keeps it.",
+                            "description": "rename, move, copy: each source and its new bare name. Move or copy: list every file; its current name keeps it.",
                             "items": {
                                 "type": "object",
                                 "properties": {

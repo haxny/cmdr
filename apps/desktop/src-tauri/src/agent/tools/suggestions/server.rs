@@ -35,7 +35,7 @@ pub fn propose_server_schema() -> Value {
         "properties": {
             "sweepId": { "type": "integer" },
             "groupId": { "type": "integer", "description": "A pending suggestion of sweepId to rewrite." },
-            "editing": text("A saved place's volumeId: change that server instead of adding one."),
+            "editing": text("A saved server's volumeId, to change it instead of adding one."),
             "rationale": text("Why, shown as your words."),
             "protocol": { "type": "string", "enum": ["smb", "sftp", "webdav", "nfs", "s3"] },
             "name": { "type": "string" },
