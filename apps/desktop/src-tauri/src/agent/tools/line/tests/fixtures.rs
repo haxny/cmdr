@@ -138,6 +138,7 @@ pub(super) fn important_folders(paths: &[&str], truncated: bool) -> Value {
             .collect(),
         truncated,
         volumes: Vec::new(),
+        empty: None,
     })
 }
 

@@ -25,8 +25,10 @@ use crate::mcp::resources::importance::{
     PathImportance, RankedFolder, RankedScope, VolumeOverview, snapshot_overview, snapshot_path_on, snapshot_threshold,
     snapshot_top,
 };
+use crate::mcp::resources::volumes::VolumeKind;
 use crate::mcp::{ToolError, ToolResult};
-use cmdr_index::importance::{Explanation, FloorReason, ImportanceIndex, SignalSet};
+use cmdr_index::IndexVolumeKind;
+use cmdr_index::importance::{Explanation, FloorReason, ImportanceIndex, SignalSet, is_background_scored};
 
 const DEFAULT_TOP_N: usize = 20;
 
@@ -99,6 +101,33 @@ pub struct ImportantFoldersResult {
     pub truncated: bool,
     /// The scored volumes and their current generations, so staleness is visible.
     pub volumes: Vec<VolumeOverviewOut>,
+    /// Why `folders` is empty; absent when it isn't.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub empty: Option<EmptyReason>,
+}
+
+/// Why a ranking came back with no rows, so the model can tell "nothing matters
+/// here" from "not scored yet" and act on it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EmptyReason {
+    /// No volume in scope has an importance store, and none was named.
+    NoScoredVolume,
+    /// The named volume's kind is never scored (a phone, SFTP, WebDAV, S3, ...).
+    KindNotScored,
+    /// The named volume would be scored, but it has no drive index: indexing is
+    /// off for it or never ran.
+    NotIndexed,
+    /// The store is still on its first pass: no rows yet at generation 0. Keyed on
+    /// the row count, since an incremental-only store holds rows at generation 0.
+    StillScoring,
+    /// `under` floors by design (a cache, system, hidden, or build folder), and so
+    /// does everything below it.
+    UnderFloored,
+    /// Folders are scored here, but none reach `threshold`.
+    BelowThreshold,
+    /// Scored, and nothing at or below `under` (or on the volume) earned a row.
+    NothingScored,
 }
 
 /// Shape a ranked list plus the volume overview, placing each row on a volume's
@@ -141,6 +170,7 @@ pub(crate) fn build_important_folders(
     }
     ImportantFoldersResult {
         under,
+        empty: None,
         folders: placed,
         truncated,
         volumes: overview
@@ -160,6 +190,8 @@ pub(crate) fn build_important_folders(
 /// A ranked read's scope, placed: one volume (and maybe a folder on it), or every
 /// volume the facts can place.
 struct PlacedScope {
+    /// The volume the call asked about, by `volumeId` or by where `under` resolved.
+    named: Option<String>,
     volume_id: Option<String>,
     /// The `under` folder as an app location, echoed in the result.
     under: Option<Location>,
@@ -169,6 +201,14 @@ struct PlacedScope {
 }
 
 impl PlacedScope {
+    /// Whether the read covers `volume_id`'s store.
+    fn reads(&self, volume_id: &str) -> bool {
+        match &self.volume_id {
+            Some(id) => id == volume_id,
+            None => self.placed.iter().any(|id| id == volume_id),
+        }
+    }
+
     fn ranked(&self) -> RankedScope<'_> {
         RankedScope {
             volume: self.volume_id.as_deref(),
@@ -225,15 +265,18 @@ fn scope_on(
     placed: Vec<String>,
 ) -> PlacedScope {
     let group = volume_id.map(|id| facts.redirect_group_ids(id)).unwrap_or_default();
+    let named = volume_id.map(str::to_string);
     match (volume_id, group.len() > 1) {
         (Some(_), true) => PlacedScope {
+            named,
             volume_id: None,
             under,
             under_in_store,
             placed: group,
         },
         _ => PlacedScope {
-            volume_id: volume_id.map(str::to_string),
+            volume_id: named.clone(),
+            named,
             under,
             under_in_store,
             placed,
@@ -268,8 +311,15 @@ pub(crate) fn important_folders_on(data_dir: &Path, facts: &VolumeFacts, params:
         Err(miss) => return to_value(&LocationMissResult::from(miss)),
     };
     let overview = snapshot_overview(data_dir);
+    let stores: Vec<VolumeOverview> = overview.iter().filter(|v| scope.reads(&v.volume_id)).cloned().collect();
+    let threshold = params.get("threshold").and_then(Value::as_f64);
+    if stores.is_empty() {
+        let mut result = build_important_folders(Vec::new(), false, overview, facts, scope.under);
+        result.empty = Some(unscored_reason(facts, scope.named.as_deref()));
+        return to_value(&result);
+    }
 
-    let (folders, truncated) = if let Some(threshold) = params.get("threshold").and_then(Value::as_f64) {
+    let (folders, truncated) = if let Some(threshold) = threshold {
         snapshot_threshold(data_dir, threshold, scope.ranked(), now).map_err(ToolError::invalid_params)?
     } else {
         let n = params
@@ -280,13 +330,69 @@ pub(crate) fn important_folders_on(data_dir: &Path, facts: &VolumeFacts, params:
         let folders = snapshot_top(data_dir, n, scope.ranked(), now).map_err(ToolError::invalid_params)?;
         (folders, false)
     };
-    to_value(&build_important_folders(
-        folders,
-        truncated,
-        overview,
-        facts,
-        scope.under,
-    ))
+    let mut result = build_important_folders(folders, truncated, overview, facts, scope.under.clone());
+    if result.folders.is_empty() {
+        result.empty = Some(empty_reason(data_dir, &scope, &stores, threshold, now)?);
+    }
+    to_value(&result)
+}
+
+/// Why a scope with no store in it is empty: the named volume's kind is never
+/// scored, it has no drive index, or it does and its first pass hasn't written yet.
+fn unscored_reason(facts: &VolumeFacts, named: Option<&str>) -> EmptyReason {
+    let Some(fact) = named.and_then(|id| facts.get(id)) else {
+        return EmptyReason::NoScoredVolume;
+    };
+    if !index_kind(fact.kind).is_some_and(is_background_scored) {
+        EmptyReason::KindNotScored
+    } else if !(fact.index.stored || fact.index.live) {
+        EmptyReason::NotIndexed
+    } else {
+        EmptyReason::StillScoring
+    }
+}
+
+/// The drive-index kind a volume kind scans as, `None` for a kind with no drive
+/// index at all. A local external drive scores like the boot disk, so `Local`
+/// stands for both.
+fn index_kind(kind: VolumeKind) -> Option<IndexVolumeKind> {
+    match kind {
+        VolumeKind::Local => Some(IndexVolumeKind::Local),
+        VolumeKind::Smb => Some(IndexVolumeKind::Smb),
+        VolumeKind::Mtp => Some(IndexVolumeKind::Mtp),
+        VolumeKind::Adb => Some(IndexVolumeKind::Adb),
+        VolumeKind::Sftp | VolumeKind::Webdav | VolumeKind::S3 | VolumeKind::Network | VolumeKind::Virtual => None,
+    }
+}
+
+/// Why a scope whose `stores` exist ranked nothing.
+fn empty_reason(
+    data_dir: &Path,
+    scope: &PlacedScope,
+    stores: &[VolumeOverview],
+    threshold: Option<f64>,
+    now: u64,
+) -> Result<EmptyReason, ToolError> {
+    if let (Some(under), Some(store)) = (&scope.under_in_store, stores.first())
+        && matches!(
+            snapshot_path_on(data_dir, &store.volume_id, under, now),
+            PathImportance::Floored { .. }
+        )
+    {
+        return Ok(EmptyReason::UnderFloored);
+    }
+    // Generation 0 alone isn't "unscored": only a full pass stamps it.
+    if stores.iter().all(|v| v.folder_count == 0 && v.generation == 0) {
+        return Ok(EmptyReason::StillScoring);
+    }
+    if threshold.is_some()
+        && !snapshot_top(data_dir, 1, scope.ranked(), now)
+            .map_err(ToolError::invalid_params)?
+            .is_empty()
+    {
+        return Ok(EmptyReason::BelowThreshold);
+    }
+    Ok(EmptyReason::NothingScored)
 }
 
 // ── folder_importance ─────────────────────────────────────────────────────────

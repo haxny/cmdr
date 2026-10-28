@@ -399,6 +399,87 @@ fn a_share_opened_as_another_account_keeps_its_own_rows() {
     assert!(result["folders"][0].get("via").is_none());
 }
 
+/// An importance store with no rows and no full pass yet: the scheduler opened it
+/// and is still scoring.
+fn write_empty_db(dir: &Path, volume_id: &str) {
+    use cmdr_index::importance::testing::{ImportanceWriter, importance_db_path};
+    let writer = ImportanceWriter::spawn(&importance_db_path(dir, volume_id)).expect("spawn writer");
+    writer.flush_blocking().expect("flush");
+    writer.shutdown();
+}
+
+fn empty_reason(dir: &Path, facts: &VolumeFacts, params: Value) -> Value {
+    let result = important_folders_on(dir, facts, &params, NOW).expect("answers");
+    assert_eq!(result["folders"], json!([]), "{params}");
+    result["empty"].clone()
+}
+
+/// An empty ranking says why in a typed field the model can act on, ❌ never a bare `[]`.
+#[test]
+fn an_empty_ranking_says_why() {
+    const PHONE: &str = "mtp-1-65537";
+    const STICK: &str = "usb-stick";
+    let mut facts = facts();
+    facts.volumes.push(volume(PHONE, VolumeKind::Mtp, "/mtp/phone", true));
+    facts
+        .volumes
+        .push(volume(STICK, VolumeKind::Local, "/Volumes/stick", true));
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    assert_eq!(empty_reason(dir.path(), &facts, json!({})), "noScoredVolume");
+    assert_eq!(
+        empty_reason(dir.path(), &facts, json!({ "volumeId": PHONE })),
+        "kindNotScored",
+        "a phone is never scored"
+    );
+    assert_eq!(
+        empty_reason(dir.path(), &facts, json!({ "volumeId": STICK })),
+        "notIndexed",
+        "a scorable volume with no drive index: indexing is off or never ran"
+    );
+
+    let mut indexed = facts.clone();
+    for v in &mut indexed.volumes {
+        v.index.stored = true;
+    }
+    assert_eq!(
+        empty_reason(dir.path(), &indexed, json!({ "volumeId": STICK })),
+        "stillScoring",
+        "indexed but no store yet"
+    );
+    write_empty_db(dir.path(), STICK);
+    assert_eq!(
+        empty_reason(dir.path(), &indexed, json!({ "volumeId": STICK })),
+        "stillScoring",
+        "a store with no rows at generation 0 hasn't finished its first pass"
+    );
+
+    write_db(dir.path(), LAN, &[("/papers", low_score_signals())], NOW);
+    assert_eq!(
+        empty_reason(
+            dir.path(),
+            &facts,
+            json!({ "volumeId": LAN, "under": "/Volumes/naspi-1/papers/node_modules" })
+        ),
+        "underFloored"
+    );
+    assert_eq!(
+        empty_reason(
+            dir.path(),
+            &facts,
+            json!({ "volumeId": LAN, "under": "/Volumes/naspi-1/photos" })
+        ),
+        "nothingScored"
+    );
+    assert_eq!(
+        empty_reason(dir.path(), &facts, json!({ "volumeId": LAN, "threshold": 0.99 })),
+        "belowThreshold"
+    );
+
+    let found = important(dir.path(), json!({ "volumeId": LAN }));
+    assert!(found.get("empty").is_none(), "a ranking with rows carries no reason");
+}
+
 #[test]
 fn floored_and_unscored_carry_honest_reasons() {
     let at = |path: &str| Location {

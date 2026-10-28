@@ -87,7 +87,10 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   and echoes back as `under`. The overview carries each volume's current generation for staleness, and `unplaced: true`
   for a store scored under an id no volume carries (the Bonjour-addressed share): its rows have no root to stand on, so
   the read skips that store (`RankedScope.among`), ❌ never a row with an invented root. Folding, `why`, and `under` live
-  in the snapshot layer: `mcp/resources/DETAILS.md` § `cmdr://importance`.
+  in the snapshot layer: `mcp/resources/DETAILS.md` § `cmdr://importance`. An empty ranking carries `empty`
+  (`EmptyReason`): no scored volume, a kind never scored (MTP, SFTP, ...), no drive index, still on its first pass (no
+  rows AND generation 0; generation alone lies, since only a full pass stamps it), `under` floors, nothing reaches
+  `threshold`, or nothing scored there. A named volume with no store answers this way too, ❌ never an `invalid_params`.
 - **`folder_importance`** (`read/importance.rs`) — `path` + optional `volumeId`; the resolver picks ONE volume and only
   its store answers (`snapshot_path_on`), so `/papers` on one share never answers for another's. Scored (score +
   `Explanation` breakdown + `stale` from asOf vs the volume's current `recompute_generation`), Floored (with reason), or
