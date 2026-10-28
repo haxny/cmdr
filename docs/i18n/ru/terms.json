@@ -4517,7 +4517,7 @@
     ],
     "confidence": "high",
     "sources": "Finder LocalizableMerged: Send → Отправить, Sending… → Отправка…; MS: send → отправить / отправлять",
-    "proseAccept": ["направ"],
+    "proseAccept": ["направ", "присыл"],
     "exceptions": {
       "settings.advanced.maxLogStorageMb.description": "Says reports are «недоступны» without logs; the sending is implicit."
     }

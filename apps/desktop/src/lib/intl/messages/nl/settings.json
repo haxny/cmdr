@@ -2355,6 +2355,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Vragen als een antwoord meer kost dan",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Eén antwoord kan veel opzoekingen doen. Boven deze geschatte kosten pauzeert Cmdr het antwoord en vraagt je of het verder mag voordat er meer wordt uitgegeven. Schattingen gebruiken lijstprijzen, dus door het cachen vallen de echte kosten meestal lager uit.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Nooit",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "geld, uitgaven, prijs, budget, limiet, grens, pauze, dollar, euro, duur, rekening",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "chat, geheugen, context, contextvenster, venster, tokens, grootte, budget, geschiedenis",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

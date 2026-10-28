@@ -721,6 +721,42 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "fc47e07"
   },
+  "askCmdr.limit.repeatedCall.answered": "Svaret upprepade samma sökning om och om igen, så Cmdr fick det att sluta söka och svara med det som hade hittats.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Svaret upprepade samma sökning om och om igen, så Cmdr stoppade det innan det blev klart.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "Svarets senaste {maxText} {max, plural, one {sökomgång} other {sökomgångar}} hittade inget nytt, så Cmdr fick det att sluta söka och svara med det som hade hittats.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "Svarets senaste {maxText} {max, plural, one {sökomgång} other {sökomgångar}} hittade inget nytt, så Cmdr stoppade det innan det blev klart.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "AI-leverantören skickade ingenting på {maxText} {max, plural, one {sekund} other {sekunder}}, så Cmdr avslutade svaret.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Svaret har hittills kostat cirka {cost}. Vill du fortsätta?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "En uppskattning efter listpris. Med cachelagring hos din leverantör blir den verkliga kostnaden oftast lägre.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Fortsätt",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Stoppa",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
   "askCmdr.limit.fixed": "Det är en fast gräns som inte går att ändra i inställningarna. Om den är i vägen, <feedback>berätta det för oss</feedback>.",
   "@askCmdr.limit.fixed": {
     "sourceHash": "d0c4bc7"

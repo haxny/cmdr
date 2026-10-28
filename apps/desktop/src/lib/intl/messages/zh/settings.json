@@ -2347,6 +2347,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "单次回答费用超过以下金额时询问",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "一次回答可能会进行很多次查询。预计费用超过这个金额时，Cmdr 会暂停回答，先问你再继续花费。估算按标价计算，缓存通常会让实际费用更低。",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "从不",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "费用、花费、钱、价格、预算、限额、暂停、美元、贵、账单",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "聊天、记忆、上下文、窗口、令牌、大小、预算、历史、历史记录",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

@@ -2347,6 +2347,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "單次回答費用超過以下金額時詢問",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "一次回答可能會進行很多次查詢。預估費用超過這個金額時，Cmdr 會暫停回答，先問你再繼續花費。估算依定價計算，快取通常會讓實際費用更低。",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "從不",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "費用, 花費, 錢, 價格, 預算, 限額, 暫停, 美元, 貴, 帳單",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "聊天, 記憶, 上下文, 視窗, 詞元, 大小, 預算, 歷史記錄",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

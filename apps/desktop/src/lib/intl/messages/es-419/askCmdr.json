@@ -255,6 +255,30 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "a3ae695"
   },
+  "askCmdr.limit.repeatedCall.answered": "Esta respuesta repetía una y otra vez la misma consulta, así que Cmdr le hizo dejar de buscar y responder con lo que encontró.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "939e7e4"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Esta respuesta repetía una y otra vez la misma consulta, así que Cmdr la detuvo antes de que pudiera terminar.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "52ac0d4"
+  },
+  "askCmdr.limit.noProgress.answered": "En {max, plural, one {la última ronda} many {las últimas {maxText} rondas} other {las últimas {maxText} rondas}} de consultas, esta respuesta no encontró nada nuevo, así que Cmdr le hizo dejar de buscar y responder con lo que encontró.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "1c5d3f5"
+  },
+  "askCmdr.limit.noProgress.unfinished": "En {max, plural, one {la última ronda} many {las últimas {maxText} rondas} other {las últimas {maxText} rondas}} de consultas, esta respuesta no encontró nada nuevo, así que Cmdr la detuvo antes de que pudiera terminar.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "cf0ba62"
+  },
+  "askCmdr.limit.stalled": "El proveedor de IA no envió nada durante {maxText} {max, plural, one {segundo} many {segundos} other {segundos}}, así que Cmdr terminó esta respuesta.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "e382c98"
+  },
+  "askCmdr.spendPause.estimateNote": "Es una estimación con precios de lista. La caché de tu proveedor suele hacer que el costo real sea menor.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "6e64f0a"
+  },
   "askCmdr.limit.fixed": "Es un límite fijo y no hay ninguna opción para cambiarlo. Si te estorba, <feedback>cuéntanoslo</feedback>.",
   "@askCmdr.limit.fixed": {
     "sourceHash": "77becec"

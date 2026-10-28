@@ -2355,6 +2355,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Fråga när ett svar kostar mer än",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Ett svar kan göra många sökningar. Över den här uppskattade kostnaden pausar Cmdr svaret och frågar innan mer pengar går åt. Uppskattningarna bygger på listpriser, så med cachelagring blir den verkliga kostnaden oftast lägre.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Aldrig",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "pengar, utgift, pris, budget, gräns, paus, dollar, kronor, dyrt, spendera",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "chatt, minne, kontext, kontextfönster, fönster, token, storlek, budget, historik",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

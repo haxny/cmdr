@@ -721,6 +721,42 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "fc47e07"
   },
+  "askCmdr.limit.repeatedCall.answered": "Ez a válasz újra meg újra ugyanazt a keresést futtatta, ezért a Cmdr leállította a keresést, és a válasz abból készült, amit addig talált.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Ez a válasz újra meg újra ugyanazt a keresést futtatta, ezért a Cmdr leállította, mielőtt befejezhette volna.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "Ez a válasz az utolsó {maxText} {max, plural, one {keresési körben} other {keresési körben}} semmi újat nem talált, ezért a Cmdr leállította a keresést, és a válasz abból készült, amit addig talált.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "Ez a válasz az utolsó {maxText} {max, plural, one {keresési körben} other {keresési körben}} semmi újat nem talált, ezért a Cmdr leállította, mielőtt befejezhette volna.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "Az AI-szolgáltató {maxText} {max, plural, one {másodpercig} other {másodpercig}} semmit nem küldött, ezért a Cmdr leállította ezt a választ.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Ennek a válasznak az eddigi költsége kb. {cost}. Folytatod?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Listaárakkal számolt becslés. A szolgáltatódnál történő gyorsítótárazás miatt a valódi költség általában alacsonyabb.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Folytatás",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Leállítás",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
   "askCmdr.limit.fixed": "Ez egy rögzített korlát, nincs olyan beállítás, amivel módosíthatnád. Ha útban van, <feedback>szólj nekünk</feedback>.",
   "@askCmdr.limit.fixed": {
     "sourceHash": "d0c4bc7"

@@ -3449,7 +3449,7 @@
     "sources": "AP-TW (已選取^0個項目（共^1個）), MS"
   },
   "send": {
-    "accept": ["送", "傳給", "寄"],
+    "accept": ["送", "傳給", "寄", "傳來"],
     "chosen": "傳送",
     "confidence": "high",
     "forms": "button Send report → 傳送報告; what Cmdr sends to a provider → 送出 / 送到 (Cmdr 絕不會送出…, Cmdr 會送出什麼); sent to a model → 傳給; whoever sent you a file → 寄給你的人",

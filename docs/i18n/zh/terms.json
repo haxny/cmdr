@@ -3013,7 +3013,7 @@
     "sources": "macOS Finder"
   },
   "send": {
-    "accept": ["发给", "发出", "再发"],
+    "accept": ["发给", "发出", "再发", "发来"],
     "chosen": "发送",
     "confidence": "high",
     "exceptions": {

@@ -2344,6 +2344,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Спрашивать, если стоимость ответа выше",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Один ответ может выполнять поиск много раз. Если примерная стоимость превысит это значение, Cmdr приостановит ответ и спросит, прежде чем тратить больше. Оценка идет по базовым тарифам, поэтому из-за кэширования реальная стоимость обычно ниже.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Никогда",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "цена, деньги, расходы, траты, бюджет, лимит, пауза, доллары, дорого, счет",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "чат, память, контекст, окно контекста, токены, размер, лимит, бюджет, история",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

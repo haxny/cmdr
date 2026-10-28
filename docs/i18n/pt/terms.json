@@ -2991,7 +2991,7 @@
   },
   "stop": {
     "chosen": "Parar",
-    "accept": ["parou", "pare", "param", "interromp", "para de", "parando", "parado"],
+    "accept": ["parou", "pare", "param", "interromp", "para de", "parando", "parado", "parass"],
     "forms": "The transfer has stopped moving → A transferência parou de avançar",
     "avoid": [
       {

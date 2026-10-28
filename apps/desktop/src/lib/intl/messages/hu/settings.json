@@ -2348,6 +2348,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Rákérdezés, ha egy válasz többe kerül, mint",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Egy válasz sok keresést futtathat. Ha átlépi ezt a becsült költséget, a Cmdr szünetelteti, és megkérdez, mielőtt többet költene. A becslés listaárakkal számol, így a gyorsítótárazás miatt a valódi költség általában alacsonyabb.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Soha",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "ár, pénz, költés, kiadás, keret, limit, szünet, dollár, drága, számla",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "csevegés, memória, kontextus, ablak, token, méret, keret, előzmények",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

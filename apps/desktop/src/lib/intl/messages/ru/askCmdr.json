@@ -721,6 +721,42 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "fc47e07"
   },
+  "askCmdr.limit.repeatedCall.answered": "Этот ответ раз за разом повторял один и тот же поиск, поэтому Cmdr остановил поиск, а ответ собран из того, что удалось найти.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Этот ответ раз за разом повторял один и тот же поиск, поэтому Cmdr остановил его, и он не успел завершиться.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "За последние {maxText} {max, plural, one {раунд} few {раунда} many {раундов} other {раунда}} поиска этот ответ не нашел ничего нового, поэтому Cmdr остановил поиск, а ответ собран из того, что удалось найти.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "За последние {maxText} {max, plural, one {раунд} few {раунда} many {раундов} other {раунда}} поиска этот ответ не нашел ничего нового, поэтому Cmdr остановил его, и он не успел завершиться.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "Поставщик ИИ ничего не присылал {maxText} {max, plural, one {секунду} few {секунды} many {секунд} other {секунды}}, поэтому Cmdr завершил этот ответ.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Пока этот ответ обошелся примерно в {cost}. Продолжить?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Это примерная стоимость по базовым тарифам. Из-за кэширования у вашего поставщика реальная стоимость обычно ниже.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Продолжить",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Остановить",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
   "askCmdr.limit.fixed": "Это фиксированный лимит, и в настройках его не изменить. Если он мешает, <feedback>напишите нам</feedback>.",
   "@askCmdr.limit.fixed": {
     "sourceHash": "d0c4bc7"

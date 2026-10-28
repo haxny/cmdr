@@ -723,6 +723,42 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "fc47e07"
   },
+  "askCmdr.limit.repeatedCall.answered": "Cette réponse répétait sans cesse la même consultation. Cmdr lui a donc fait arrêter de chercher et répondre avec ce qu’elle avait trouvé.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Cette réponse répétait sans cesse la même consultation. Cmdr l’a donc arrêtée avant qu’elle puisse se terminer.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "Au cours de {max, plural, one {sa dernière série} many {ses {maxText} dernières séries} other {ses {maxText} dernières séries}} de consultations, cette réponse n’a rien trouvé de nouveau. Cmdr lui a donc fait arrêter de chercher et répondre avec ce qu’elle avait trouvé.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "Au cours de {max, plural, one {sa dernière série} many {ses {maxText} dernières séries} other {ses {maxText} dernières séries}} de consultations, cette réponse n’a rien trouvé de nouveau. Cmdr l’a donc arrêtée avant qu’elle puisse se terminer.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "Le fournisseur d’IA n’a rien envoyé pendant {maxText} {max, plural, one {seconde} many {secondes} other {secondes}}. Cmdr a donc mis fin à cette réponse.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Cette réponse a coûté environ {cost} jusqu’ici. Continuer ?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Estimation au prix catalogue. Grâce à la mise en cache chez votre fournisseur, le coût réel est généralement plus bas.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Continuer",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Arrêter",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
   "askCmdr.limit.fixed": "Cette limite est fixe et aucun réglage ne permet de la modifier. Si elle vous gêne, <feedback>dites-le-nous</feedback>.",
   "@askCmdr.limit.fixed": {
     "sourceHash": "d0c4bc7"

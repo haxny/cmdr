@@ -2360,6 +2360,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Demander quand une réponse coûte plus de",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Une réponse peut lancer de nombreuses consultations. Au-delà de ce coût estimé, Cmdr la met en pause et vous demande avant de dépenser plus. Les estimations se basent sur le prix catalogue : la mise en cache rend généralement le coût réel plus bas.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Jamais",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "dépense, argent, prix, budget, limite, pause, dollars, euros, cher, facture",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "conversation, mémoire, contexte, fenêtre de contexte, jetons, taille, budget, historique",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

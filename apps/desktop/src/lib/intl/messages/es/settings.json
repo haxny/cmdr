@@ -2349,6 +2349,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Preguntar cuando una respuesta cueste más de",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Una respuesta puede hacer muchas consultas. Cuando supera este coste estimado, Cmdr la pausa y te pregunta antes de gastar más. Las estimaciones usan precios de tarifa, así que la caché suele hacer que el coste real sea menor.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Nunca",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "gasto, dinero, precio, presupuesto, límite, pausa, dólares, euros, caro, factura",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "chat, memoria, contexto, ventana de contexto, tokens, tamaño, presupuesto, historial",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

@@ -722,6 +722,43 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "fc47e07"
   },
+  "askCmdr.limit.repeatedCall.answered": "Dit antwoord bleef dezelfde opzoeking herhalen, dus Cmdr liet het stoppen met zoeken en antwoorden met wat het had gevonden.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Dit antwoord bleef dezelfde opzoeking herhalen, dus Cmdr heeft het gestopt voordat het klaar was.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "In de laatste {maxText} {max, plural, one {opzoekronde} other {opzoekrondes}} vond dit antwoord niets nieuws, dus Cmdr liet het stoppen met zoeken en antwoorden met wat het had gevonden.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "In de laatste {maxText} {max, plural, one {opzoekronde} other {opzoekrondes}} vond dit antwoord niets nieuws, dus Cmdr heeft het gestopt voordat het klaar was.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "De AI-aanbieder heeft {maxText} {max, plural, one {seconde} other {seconden}} niets verstuurd, dus Cmdr heeft dit antwoord beëindigd.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Dit antwoord heeft tot nu toe ongeveer {cost} gekost. Doorgaan?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Een schatting op basis van lijstprijzen. Door het cachen bij je aanbieder vallen de echte kosten meestal lager uit.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Ga door",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Stop",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57",
+    "sameAsSourceJustification": "Native Dutch imperative of 'stoppen', identical to English; the `stop` ruling's button form, byte-identical to `askCmdr.composer.stop` in the same panel."
+  },
   "askCmdr.limit.fixed": "Het is een vaste limiet, er is geen instelling om hem te wijzigen. Zit hij je in de weg, <feedback>laat het ons weten</feedback>.",
   "@askCmdr.limit.fixed": {
     "sourceHash": "d0c4bc7"

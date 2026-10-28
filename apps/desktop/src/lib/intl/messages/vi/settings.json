@@ -2346,6 +2346,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Hỏi khi chi phí một câu trả lời vượt quá",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Một câu trả lời có thể chạy nhiều lần tra cứu. Khi vượt quá chi phí ước tính này, Cmdr sẽ tạm dừng và hỏi bạn trước khi tốn thêm. Ước tính dùng giá niêm yết, nên nhờ bộ đệm, chi phí thực tế thường thấp hơn.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Không bao giờ",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "tiền, chi tiêu, giá, ngân sách, giới hạn, tạm dừng, đô la, đắt, hóa đơn",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "trò chuyện, bộ nhớ, ngữ cảnh, cửa sổ ngữ cảnh, token, kích cỡ, ngân sách, lịch sử",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

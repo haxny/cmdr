@@ -2355,6 +2355,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Nachfragen, wenn eine Antwort mehr kostet als",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Eine Antwort kann viele Abfragen ausführen. Sobald die geschätzten Kosten diesen Betrag übersteigen, hält Cmdr sie an und fragt nach, bevor mehr ausgegeben wird. Schätzungen beruhen auf Listenpreisen, durch Zwischenspeichern sind die echten Kosten meist niedriger.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Nie",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "Geld, Ausgaben, Preis, Budget, Limit, Grenze, teuer, Dollar, Euro, Rückfrage, Pause, Rechnung",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "Chat, Gedächtnis, Speicher, Kontext, Kontextfenster, Token, Größe, Budget, Verlauf",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"

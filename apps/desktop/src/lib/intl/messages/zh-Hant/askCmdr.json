@@ -720,6 +720,42 @@
   "@askCmdr.limit.wallTime": {
     "sourceHash": "fc47e07"
   },
+  "askCmdr.limit.repeatedCall.answered": "這次回答一再重複同一次查詢，所以 Cmdr 讓它停止查找，用已經找到的內容作答。",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "這次回答一再重複同一次查詢，所以 Cmdr 在它完成前就停止了它。",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "這次回答最近 {maxText} {max, plural, other {輪查詢}}都沒有找到新內容，所以 Cmdr 讓它停止查找，用已經找到的內容作答。",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "這次回答最近 {maxText} {max, plural, other {輪查詢}}都沒有找到新內容，所以 Cmdr 在它完成前就停止了它。",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "AI 提供者 {maxText} {max, plural, other {秒}}內都沒有傳來任何內容，所以 Cmdr 結束了這次回答。",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "這次回答到目前為止大約花了 {cost}。要繼續嗎？",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "這是依定價估算的金額。提供者那邊的快取通常會讓實際費用更低。",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "繼續",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "停止",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
   "askCmdr.limit.fixed": "這是固定的上限，沒有設定可以更改。如果它礙到你，<feedback>跟我們說一聲</feedback>。",
   "@askCmdr.limit.fixed": {
     "sourceHash": "d0c4bc7"
