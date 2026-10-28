@@ -1,26 +1,37 @@
-# Tags tab of Multi-Rename (fork, opt-in)
+# Tag editor (fork, opt-in): the Tags window
 
-The Tags tab lives in `tag-editor/` (its own pieces, backend: `src-tauri/src/tag_editor/CLAUDE.md`), behind the
-`multiRename.tagEditor` setting, **off by default**: off, the sheet is upstream's (no tab strip, no extra IPC).
-`MultiRenameDialog.svelte` carries one import (`tag-editor/index.ts`). Only `RenamePanel` / `SheetTabs` / `TagsTab`, the
-discard guard and the state factory cross that line.
+Behind the `multiRename.tagEditor` setting, **off by default**: off, nothing here is reachable and the Multi-Rename
+sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted; no tag IPC). Backend:
+`src-tauri/src/tag_editor/CLAUDE.md`.
 
-- **⌘⇧[ / ⌘⇧]** pick Rename / Tags: registry commands `multiRename.tabRename` / `tabTags`. ❌ Never a combo another
-  command holds in an overlapping scope: the Keyboard shortcuts settings would show a conflict to every user, setting
-  off too (⌘1/⌘2 hit `view.*Mode`, ⌃Tab `tab.next`).
-- **⌥Space** is `multiRename.playTrack`: plays or stops the track whose row holds focus (a cell or the checkbox). Plain
-  Space types a space in a cell, so the key is ⌥Space; ⌘⌥P is `multiRename.normalizeUnicode`'s. It acts only inside the
-  track list, and claims the key when it acts (macOS types a non-breaking space for ⌥Space, and `key-capture.ts` reads
-  that NBSP as `Space` only with ⌥ held). Playback stops on unmount (the Rename tab shows, or the sheet closes), on
-  another play, on `ended`, and when a write starts (`ApplyPanel`'s `onWriting`); each stop releases the URL.
-- **Scope**: the tag tools work on the checked tracks (`all` / `some` / `gone`, `track-selection.svelte.ts`) through
-  `TagsTab`'s `runScoped`; a vanished selection never widens to every track. "Open in foobar2000" follows the same
-  scope.
+- **A window per session**, `tags-<sessionId>` on `/tags`, opened only by the main window (`open-tags.ts`): File > Edit
+  tags… (`file.editTags`, ⌘⇧E) from the selection, or the sheet's "Tags…". Each open makes a NEW Multi-Rename session
+  and HOLDS it (`holdTagsSession`), so eviction never takes it. ❌ Never hand the window the sheet's own session: the
+  sheet closing would end it (`reopenForTags` copies it).
+- **Closing** goes through the discard guard (Escape = `tags.close`, the red button via `onCloseRequested`), then
+  releases, `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`. ❌ Never `getCurrentWindow().close()` from a key
+  handler. The backend ends the session on the window's `Destroyed` too.
+- **Two panes like the file panes**, Album | Tracks (`AlbumPane`, `TracksPane`): the global `app-file-list.css` row
+  classes, `getRowHeight()`, the list font; fixed columns with one flexing, so nothing scrolls sideways. Keys are
+  `Tags window` registry commands answered by the focused pane's listbox (Tab, F2/Enter, ⇧F2, F3/⌥Space), plus the file
+  panes' own selection commands (`classifySelectionKey`) and `list-cursor.ts`. ❌ Rows never take focus (no `tabindex`;
+  mousedown keeps it on the list), or the keys die after a click. ⌘A / ⌘⇧A arrive from the native menu
+  (`onTagsSelectAll` / `onTagsDeselectAll`), never as a keydown.
+- **The function-key bar and the dialogs**: `TagsFunctionKeyBar` at the foot runs the tools (F4–F8, ⇧F3–⇧F8) and ⌘S
+  Write; each opens a `ModalDialog` beside the content (`TagToolDialogs`, `WriteDialog`). ❌ Nothing goes in the
+  window's flow above or below the panes but the one fixed status line: the panes never move. DETAILS § Layout and keys.
+- **F3 / ⌥Space** is `tags.play`: plays or stops the Tracks pane's cursor row; plain Space selects, as on files. ⌥Space
+  is claimed (macOS types a non-breaking space for it). Playback stops on unmount, on another play, on `ended`, and when
+  a write starts (`ApplyPanel`'s `onWriting`); each stop releases the URL.
+- **Scope**: the tag tools work on the Tracks pane's selection, ONE selection model (`track-selection.svelte.ts` over
+  the file panes' `createSelectionState`; the ☐ column draws it): `all` / `some` / `gone` through `TagsContent`'s
+  `runScoped`; a vanished selection never widens to every track. "Open in foobar2000" follows the same scope.
 - **Totals are fields** (TrackTotal, DiscTotal), and `store` normalizes every edit for its format (an M4A's `01` shows
   as `1`). Find/replace and format run in the app's Rust (`tag_editor/text_tools.rs`) because they reuse Multi-Rename's
   own engine, not `cmdr-tags`; file name → tags stays the engine's `TagTool::FromFileName`.
-- **Unwritten edits are never lost silently**: closing the sheet (Cancel, Esc), Rename, and Undo rename go through
-  `discard-guard.ts` ("Discard tag changes?"). One sheet is open at a time, so there is no session to switch to.
+- **No silent loss**: closing asks (`discard-guard.ts`), so does quitting; ❌ no close or Discard while `tags.writing`.
+  ⌘Z's last write is the backend's.
+- **A Date the writer would refuse** (`badDates`) turns the Album pane's Date row red before any write.
 - **The tag canon is shown, not enforced**: diacritics are allowed only in Comment and Description (a warning with a
   one-click fix, never a silent strip); a single-file book hides the # column and Renumber; the write kind is Audiobook
   on first run, then the user's last pick (`write-kind.ts`), and the change list names what it removes (an MP3's

@@ -28,6 +28,7 @@ import { mcpCommands } from './sources/mcp'
 import { aboutWindowCommands } from './sources/about-window'
 import { queueWindowCommands } from './sources/queue-window'
 import { viewerWindowCommands } from './sources/viewer-window'
+import { tagsWindowCommands } from './sources/tags-window'
 import { commandPaletteCommands } from './sources/command-palette'
 
 /**
@@ -86,9 +87,6 @@ export const FIXED_KEY_COMMAND_IDS = [
   'multiRename.fieldHistory',
   'multiRename.moveRowUp',
   'multiRename.moveRowDown',
-  'multiRename.tabRename',
-  'multiRename.tabTags',
-  'multiRename.playTrack',
   'multiRename.rename',
   'network.selectHost',
   'share.back',
@@ -112,6 +110,22 @@ export const FIXED_KEY_COMMAND_IDS = [
   'queue.nextControl',
   'queue.previousControl',
   'queue.close',
+  'tags.close',
+  'tags.switchPane',
+  'tags.edit',
+  'tags.editNumber',
+  'tags.play',
+  'tags.openInPlayer',
+  'tags.replace',
+  'tags.case',
+  'tags.format',
+  'tags.cleanUp',
+  'tags.fromName',
+  'tags.number',
+  'tags.clearField',
+  'tags.removeExtras',
+  'tags.write',
+  'tags.undo',
   // Family 4 — deliberate override. ErrorPane claims ⌘D through a CAPTURE-phase
   // document listener that runs ahead of the dispatch spine, so it wins over
   // whatever the user bound ⌘D to. Fixed because releasing the key would falsify
@@ -136,6 +150,7 @@ const commandSources: CommandSource[] = [
   ...aboutWindowCommands,
   ...queueWindowCommands,
   ...viewerWindowCommands,
+  ...tagsWindowCommands,
   ...commandPaletteCommands,
 ]
 

@@ -7,11 +7,11 @@ store's lock. Without `restart` an existing tag session comes back with its edit
 Every other call runs under the lock on in-memory tags and first drops entries that left the layout.
 
 Guaranteed: the file set is the one at `open` (Multi-Rename's names are fixed per session, a reorder only changes the
-order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and (in tests) `unchanged_on_disk` tells
-whether it still holds (stat'ed outside the lock); after the app's own write `mark_written` makes the written tags the
-disk copy and takes a fresh fingerprint; closing or evicting the rename session closes the tag session (hooks in
-`multi_rename/session.rs`), and a `NoSession` answer removes a leftover one. Not done: nothing re-reads or follows a
-file that something else renamed.
+order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and (in tests)
+`unchanged_on_disk` tells whether it still holds (stat'ed outside the lock); after the app's own write `mark_written`
+makes the written tags the disk copy and takes a fresh fingerprint; closing or evicting the rename session closes the
+tag session (hooks in `multi_rename/session.rs`), and a `NoSession` answer removes a leftover one. Not done: nothing
+re-reads or follows a file that something else renamed.
 
 ## Decisions
 
@@ -25,16 +25,48 @@ file that something else renamed.
   inserted if the rename session is gone.
 - **Cover size** comes from the image header (`image`), under `contain_panics`; `None` when unreadable.
 - A failed read of one file is a row with a `readError`, never a `TagEditorError`. Cover-file errors (`BadCoverName`,
-  `CoverTooLarge`, `CoverUnreadable`, `CoverNotAnImage`) come from `cover.rs`: a name must be one plain file name that
-  resolves directly inside the session's folder (no separators, `..`, or symlink out; a symlink to a file in the folder
-  reads that file), it must be a regular file (checked before the open, so a FIFO named `x.jpg` can't block a pool
-  thread), it is opened at the resolved path with `O_NOFOLLOW | O_NONBLOCK` (a symlink or FIFO swapped in after the
-  check fails), and it is at most 10 MiB, enforced on the read too. Its MIME type comes from the magic bytes (JPEG
-  `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF????WEBP`), never the name: a WebP saved as `.jpg` is written as
-  `image/webp`, anything else is `CoverNotAnImage`. `TaskFailed` is a blocking task that didn't finish.
-- **Thumbnail.** `get_cover_image` answers the shared cover as a `data:` URL (base64, typed by the bytes), because the
-  app's CSP (`tauri.conf.json` `img-src`) allows `data:` but not `blob:`. `CoverSummary::Same::key` is a hash of the
-  bytes, so the panel fetches again when a cover of the same type and size replaces another.
+  `CoverTooLarge`, `CoverUnreadable`, `CoverNotAnImage`, `CoverNotAFile`) come from `cover.rs`: a name must be one plain
+  file name that resolves directly inside the session's folder (no separators, `..`, or symlink out; a symlink to a file
+  in the folder reads that file), it must be a regular file (checked before the open, so a FIFO named `x.jpg` can't
+  block a pool thread), it is opened at the resolved path with `O_NOFOLLOW | O_NONBLOCK` (a symlink or FIFO swapped in
+  after the check fails), and it is at most 10 MiB, enforced on the read too. Its MIME type comes from the magic bytes
+  (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF????WEBP`), never the name: a WebP saved as `.jpg` is
+  written as `image/webp`, anything else is `CoverNotAnImage`. `TaskFailed` is a blocking task that didn't finish.
+- **Thumbnail.** `get_cover_image(session, key)` answers a cover as a `data:` URL (base64, typed by the bytes), because
+  the app's CSP (`tauri.conf.json` `img-src`) allows `data:` but not `blob:`: the one a `CoverChoice::key` names, or for
+  no key the shared one. `CoverSummary::Same::key` is a hash of the bytes, so the panel fetches again when a cover of
+  the same type and size replaces another.
+- **Every cover of the book** (`cover_choices.rs`): `list_tag_covers` groups the readable files' edited covers by MIME,
+  size, and the cached `Loaded::cover_key` (no hashing), most carried first (ties in file order), the files without a
+  cover last as `key: "none"`. The covers are copied out under the lock (shared buffers) and their pixel sizes read
+  after it. `use_cover_for_all(key)` gives every readable file that cover (`"none"` removes them), a key no file
+  carries any more is `UnknownCover`. `set_cover_from_bytes` (a paste) takes at most 10 MiB sniffed by the magic bytes;
+  `set_cover_from_path` (a drop) reads only a regular file at an absolute path: `symlink_metadata` refuses a folder,
+  FIFO, or symlink (`CoverNotAFile`), the open is `O_NOFOLLOW | O_NONBLOCK`, and the open file is checked again, then
+  the same cap and sniff. Each is an in-memory `CoverEdit::Set` / `Remove` through `edit`: listed by `changes`,
+  written only by Write, undone like any write. A dropped path can be anywhere: the user dragged it; it only ever
+  becomes an image by its bytes.
+- **A drop's read waits as long as it moves.** A dropped file can sit on a NAS: a 3–10 MiB cover over SMB may take
+  seconds, and a hung mount blocks for minutes. Decision: `set_from_path_within` reads through
+  `cmdr_fs::deadline::blocking_typed_result_until_stalled` with a `ProgressWatch` fed by `read_counted`'s byte count (64
+  KiB chunks), and gives up only once the count stood still for `COVER_READ_STALL_LIMIT` (10 s, `SESSION_IO_TIMEOUT`'s
+  scale), as the viewer's pulling open does. Why: the fixed 2 s read tier refused a slow but healthy share. The edit is
+  made only from the awaited answer, so a read given up on (`CoverTimedOut`, worded as "the drive stopped answering")
+  and finishing later changes nothing. Each read holds a permit of `DROP_READS` (two at once) until it ends, given up on
+  or not; with none free a drop is refused as `CoverBusy` (worded apart from the stall: earlier reads are still stuck)
+  without reading, so repeated drops onto a dead mount never stack blocking threads. Tested: a read moving for 2.4 s
+  against a 1 s stall limit is taken; a stalled one is refused and its late end changes nothing; a third drop with two
+  stuck is refused unread.
+- **A paste** has no file name, so its refusal is `PastedNotAnImage`, worded apart from a file's `CoverNotAnImage`.
+  A TIFF (magic `II*\0` / `MM\0*`, at most 40 MiB: an uncompressed clipboard photo is big) is decoded
+  (`cover_image.rs`, `contain_panics`, `image::Limits`: 20,000 px a side, 256 MiB) and re-encoded as PNG; when that PNG
+  is over 10 MiB, as JPEG at quality 90; still over is `CoverTooLarge`. The conversion runs under a 15 s deadline
+  (`set_from_bytes_within`, `PasteTimedOut`), with the same read-then-edit split as a drop: the edit follows only an
+  in-time answer.
+- **Thumbnails** (`get_cover_thumbnail`): a tile shows a PNG of at most 176 px a side (twice the 88 px tile), made once
+  per cover key and byte length and cached process-wide (64 entries, then it starts over), under a 5 s deadline. Only
+  the large view (`get_cover_image`) ships the full picture, so per-chapter art never puts N full bitmaps in the
+  section.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`changes(session_id, kind)`** lists, per changed file, the fields, cover, and extras the edits change, plus what the
@@ -43,14 +75,15 @@ file that something else renamed.
 - **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
-  out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent folder
-  and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also carries the session's readable track count
-  (`session_files`): the numbering tools drop the track number only for a one-file BOOK, so a one-track scope of a
-  bigger book is numbered; with a partial scope TrackTotal counts the files numbered (as Mp3tag does). A bad file-name pattern is
-  `BadPattern` before anything is touched; `preview_names` shows what a pattern reads per file (`fields: None` when the
-  name doesn't match), matching outside the lock and changing nothing.
+  out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent
+  folder and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also
+  carries the session's listed track count (readable or not) (`session_files`): the numbering tools drop the track
+  number only for a one-file BOOK, so a one-track scope of a bigger book is numbered; with a partial scope TrackTotal
+  counts the files numbered (as Mp3tag does). A bad file-name pattern is `BadPattern` before anything is touched;
+  `preview_names` shows what a pattern reads per file (`fields: None` when the name doesn't match), matching outside the
+  lock and changing nothing.
 - **Every stored edit is normalized for its format** (`store` → `cmdr_tags::normalize_for`): an M4A holds track and disc
-  numbers as integers, so a padded `01` is kept as `1`, and the tab shows what the write will leave. A name with no
+  numbers as integers, so a padded `01` is kept as `1`, and the window shows what the write will leave. A name with no
   supported extension is stored as given.
 - **«Multiple values» rows carry their values.** `SharedRow::choices` is `cmdr_tags::shared::distinct_values` (most
   common first, at most 50) for a `Multiple` row, empty for every other.
@@ -64,6 +97,23 @@ file that something else renamed.
   `Replace`), which `cmdr-tags` can't depend on; they validate first, change nothing on a bad pattern, never strip
   diacritics, and take a scope like every other tool.
 - **`Cover.data` is `Arc<[u8]>`** so the on-disk and edited tags and every file given one cover share the bytes.
+- **Covers are hashed once per read, never per view.** `Loaded::cover_key` is taken in `read_entry` and, for a cover new
+  to the session, in `store` (once per shared buffer, however many files get it); `view::build` and `same_cover` compare
+  keys and sizes, never bytes. Every edit rebuilds the view, and 22 tracks with a 2 MiB cover each are 44 MiB to hash.
+  `big_book_test.rs` counts the hashes and, ignored, times an audiobook (debug build, 2026-10-27: an edit
+  ~6.6 ms before, ~0.35 ms after; open ~22 ms before, ~120 ms after, the hashing moved there; the change list ~10 ms).
+- **The log**: `activity.rs` writes one `info` line per action under target `tag_editor` (open, edit, tool, text tool,
+  cover from file, changes, apply, undo: counts and milliseconds), and the apply's failures by kind at `debug`. No paths
+  or values, and errors by kind only.
+
+## Invalid dates
+
+`TagEditorView::bad_dates` (`view.rs`, `count_bad_dates`) counts the readable files whose edited Date, first value, is
+one the writer refuses. The test is `cmdr_tags::date_is_writable(format, value)`, the same function the write uses, so
+the editor flags exactly what Write would refuse (today only an MP3's ID3v2.3 date is checked; other formats always
+pass). The Album pane shows the Date row red with a hint when the count is above zero. Writing the raw value stays
+refused: the write answers with the typed `BadDate` per file. Why: real files carried a month 20 (`2010-20-09`) and
+every write failed with nothing to point at (regression anchor, 2026-10-27).
 
 ## Write and undo
 
@@ -92,15 +142,15 @@ file that something else renamed.
 write left; the others are `RestoreReport::changed` and untouched. Why: the record is keyed by path, and a Multi-Rename
 after the write can give a path to another file (renumbering `01…10` after a reorder swaps names), so a path-only
 restore would write one chapter's old tags into another. The fingerprint is in the record, so this holds after an app
-restart. The undo forgets the record when nothing failed (kept
-for a retry otherwise), re-reads the restored files into every open tag session that holds them (the undo can come
-from a later sheet than the one that wrote; each file is read once, outside the tag lock), and re-reads them in the
-media cache. It works after the session closed: the record holds paths. The asking sheet's session (`undo_tag_apply`'s
-`session_id`) takes the files as read, its unwritten edits to them dropped: its user confirmed that. Any other session
-keeps its edits: `session::rebase` moves each field, the cover, and each extra it never edited onto the restored disk,
-and its disk copy and fingerprint become the new ones. Today only one Multi-Rename sheet is open at a time (one main
-window, and `openMultiRename` returns while a sheet is up), so "another session" is a defensive case.
-(Verified 2026-10-27 by reading `routes/(main)/+page.svelte` `openMultiRename`.)
+restart. The undo forgets the record when nothing failed (kept for a retry otherwise), re-reads the restored files into
+every open tag session that holds them (the undo can come from a later sheet than the one that wrote; each file is read
+once, outside the tag lock), and re-reads them in the media cache. It works after the session closed: the record holds
+paths. The asking sheet's session (`undo_tag_apply`'s `session_id`) takes the files as read, its unwritten edits to them
+dropped: its user confirmed that. Any other session keeps its edits: `session::rebase` moves each field, the cover, and
+each extra it never edited onto the restored disk, and its disk copy and fingerprint become the new ones. Several Tags
+windows can be open at once, each holding its own Multi-Rename session and so its own tag session over possibly the same
+files (held sessions don't count against `MAX_SESSIONS` and are released when their window closes), so "another session"
+with unwritten edits is a normal case and `rebase` is what keeps those edits.
 
 The store is one `UndoStore` at `<app data>/tag-undo` behind a `Mutex` held for a whole apply or undo (one writer);
 no app data folder is `TagEditorError::NoAppDataDir`. Tests call `apply_with` / `undo_with` with their own store, and
@@ -116,3 +166,25 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
 
 **Known gap.** A media read already in flight when the write lands may store the old facts; the next listing change
 (the write moves the file's mtime) queues it again.
+
+## The last write, and quitting
+
+- **The last write per folder** (`last_apply.rs`): `apply` records each report into the folder's last write under the
+  undo store (lock order: store, then this leaf). `continues` (a "Write anyway" after a press that wrote) adds to it;
+  any other apply that wrote replaces it; one that wrote nothing leaves it. An undo takes its apply out, or keeps it
+  with the files it couldn't restore. Kept in memory for the app's lifetime, keyed by `(volume_id, dir)`: a Tags window
+  opened later over the same folder, with any selection, offers ⌘Z for it (`last_tag_apply`). It isn't persisted: the
+  undo store's records outlive a restart, but which of them was "the last write" doesn't. Undo still refuses a file
+  changed since (the sealed fingerprint), whoever asks.
+- **Quitting** (`at_quit.rs`): `apply_tags` and `undo_tag_apply` count themselves (`writing()`, inside the blocking
+  work) and `unwritten_sessions` counts tag sessions holding edits. The quit gate (`quit/mod.rs`, `holds_quit`) asks
+  when either is non-zero, and its teardown waits for a running write up to `TAG_WRITE_WAIT` (10 s) before exiting:
+  each file is written whole anyway, but a cut between files leaves a book half written. When only unwritten edits
+  hold the quit there is no countdown (`counts_down`): the prompt waits for an answer, as a document app with unsaved
+  changes does, and a logout reports that Cmdr interrupted it. File operations or a running write keep the 15 s
+  countdown (a write ends on its own). The prompt lives in main, so a held quit raises and focuses main
+  (`QuitHost::raise_prompt`), or ⌘Q in a Tags window could put it behind that window.
+- **The map is capped** at the store's 50 applies (the folder written longest ago goes first), and an undo that finds
+  its record gone (pruned: `Io(NotFound)`) takes the apply out, so ⌘Z isn't offered for a record the store dropped.
+- **A second open over the same files** raises the window already showing them: `hold` answers `already_open`
+  (`held_twin`: another held session with the same volume, folder, and names in any order).

@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager, Runtime};
 use crate::ignore_poison::IgnorePoison;
 
 use super::{
-    CLOSE_TAB_ID, CommandScope, EDIT_PASTE_MOVE_ID, FILE_COMPRESS_ID, FILE_COPY_ID, FILE_DELETE_ID,
+    CLOSE_TAB_ID, CommandScope, EDIT_PASTE_MOVE_ID, EDIT_TAGS_ID, FILE_COMPRESS_ID, FILE_COPY_ID, FILE_DELETE_ID,
     FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID, FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, MenuState, OPEN_TERMINAL_HERE_ID,
     PIN_TAB_MENU_ID, RENAME_ID, REOPEN_CLOSED_TAB_ID, UNDO_TRASH_ID, VIEW_SET_MODE_COMMAND_ID,
     VIEW_SHOW_HIDDEN_COMMAND_ID, cloned_handle, menu_id_to_command,
@@ -113,6 +113,8 @@ struct MenuItemInputs<'a> {
     open_terminal_here_enabled: bool,
     /// The focused pane's closed-tab stack has entries (`set_reopen_closed_tab_enabled`).
     reopen_closed_tab_enabled: bool,
+    /// The tag editor setting is on (`set_edit_tags_enabled`).
+    edit_tags_enabled: bool,
     /// A trash this session waits to be undone (`update_undo_trash_menu`).
     undo_trash_available: bool,
     /// The commands the main window's dialog gate refuses right now (`set_commands_refused_over_dialog`).
@@ -132,6 +134,7 @@ fn menu_item_enabled(id: &str, inputs: &MenuItemInputs) -> bool {
     let in_scope = matches!(command, Some((_, CommandScope::App))) || inputs.explorer_menu_active;
     let own_verdict = match id {
         REOPEN_CLOSED_TAB_ID => inputs.reopen_closed_tab_enabled,
+        EDIT_TAGS_ID => inputs.edit_tags_enabled,
         UNDO_TRASH_ID => inputs.undo_trash_available,
         OPEN_TERMINAL_HERE_ID => inputs.open_terminal_here_enabled,
         _ if OPERATION_START_ITEM_IDS.contains(&id) => !inputs.file_operations_blocked,
@@ -196,6 +199,7 @@ pub(crate) fn apply_menu_item_states<R: Runtime>(menu_state: &MenuState<R>) {
         file_operations_blocked: menu_state.file_operations_blocked.load(Ordering::Relaxed),
         open_terminal_here_enabled: menu_state.open_terminal_here_enabled.load(Ordering::Relaxed),
         reopen_closed_tab_enabled: menu_state.reopen_closed_tab_enabled.load(Ordering::Relaxed),
+        edit_tags_enabled: menu_state.edit_tags_enabled.load(Ordering::Relaxed),
         undo_trash_available: menu_state.undo_trash_available.load(Ordering::Relaxed),
         refused: &refused,
     };

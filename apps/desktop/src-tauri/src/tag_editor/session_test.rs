@@ -13,9 +13,10 @@ use cmdr_tags::{
     ContentKind, Cover, FileTags, NamePattern, PatternError, TagField, WriteOptions, read_tags, write_tags,
 };
 
+use super::cover_choices::shared_cover;
 use super::session::{
-    NamePreviewRow, NameValue, TagEdit, TagEditorError, changes, close, edit, is_open, open, preview_names,
-    shared_cover, tool, unchanged_on_disk,
+    NamePreviewRow, NameValue, TagEdit, TagEditorError, changes, close, edit, is_open, open, preview_names, tool,
+    unchanged_on_disk,
 };
 use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
 use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};

@@ -1,9 +1,9 @@
-/** A fake Tags tab state and a view for the Apply panel's tests. */
+/** A fake Tags window state and a view for the Apply panel's tests. */
 
 import { vi } from 'vitest'
 import type { FileChangeView, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
 import type { TagEditorState } from './tag-editor-state.svelte'
-import type { LastTagApply } from './last-tag-apply.svelte'
+import type { LastTagApply } from './last-tag-apply'
 
 export const PANEL_VIEW: TagEditorView = {
   editable: true,
@@ -22,6 +22,7 @@ export const PANEL_VIEW: TagEditorView = {
   extras: [],
   dirty: true,
   diacritics: [],
+  badDates: 0,
 }
 
 export const CHANGES: FileChangeView[] = [
@@ -40,6 +41,8 @@ export function fakeState(view: TagEditorView = PANEL_VIEW, reports: TagApplyRep
     view,
     error: null,
     busy: false,
+    writing: false,
+    editing: false,
     undoable: null as LastTagApply | null,
     settled: vi.fn(() => Promise.resolve(true)),
     changes: vi.fn(() => Promise.resolve({ ok: true as const, value: CHANGES })),

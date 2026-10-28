@@ -1,0 +1,23 @@
+{
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "tags",
+    "description": "Capability for the tag editor's Tags windows (fork, opt-in). Mirrors the Keyboard shortcuts window (whose store:default also serves the remembered write kind and numbering options in app-status-store), plus: dialog:allow-ask for 'Discard tag changes?' and the Write anyway / Undo questions; core:window:allow-destroy because onCloseRequested destroys the window from JS once the close is let through (the red button, after closeSelfWindow's Rust close re-raises the request). No window creation: the main window opens Tags windows. The tag-editor commands go through the tauri_specta invoke handler, not the capability ACL.",
+    "windows": [
+        "tags-*"
+    ],
+    "permissions": [
+        "core:window:allow-destroy",
+        "core:window:allow-set-focus",
+        "core:window:allow-set-title",
+        "core:window:allow-start-dragging",
+        "core:window:allow-internal-toggle-maximize",
+        "core:window:allow-outer-position",
+        "core:window:allow-outer-size",
+        "core:window:allow-scale-factor",
+        "core:event:default",
+        "core:app:allow-set-app-theme",
+        "core:webview:allow-internal-toggle-devtools",
+        "store:default",
+        "dialog:allow-ask"
+    ]
+}

@@ -46,6 +46,7 @@ export const WINDOW_SETTINGS_ACCESS = {
   '/queue': 'restricted',
   '/settings': 'full',
   '/shortcuts': 'full',
+  '/tags': 'full',
   '/viewer': 'restricted',
 } as const satisfies Record<string, 'full' | 'restricted'>
 

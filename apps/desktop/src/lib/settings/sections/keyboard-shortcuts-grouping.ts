@@ -52,6 +52,7 @@ const scopeOrder: readonly { scope: CommandScope; titleKey: MessageKey }[] = [
   { scope: 'Command palette', titleKey: 'shortcuts.scope.commandPalette' },
   { scope: 'Operation queue window', titleKey: 'shortcuts.scope.queueWindow' },
   { scope: 'Viewer window', titleKey: 'shortcuts.scope.viewerWindow' },
+  { scope: 'Tags window', titleKey: 'shortcuts.scope.tagsWindow' },
   { scope: 'About window', titleKey: 'shortcuts.scope.aboutWindow' },
   { scope: 'Onboarding', titleKey: 'shortcuts.scope.onboarding' },
 ]

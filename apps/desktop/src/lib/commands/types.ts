@@ -27,6 +27,7 @@ export type CommandScope =
   | 'About window' // About window commands
   | 'Operation queue window' // The operation queue window's own keys
   | 'Viewer window' // The file viewer window's single keys
+  | 'Tags window' // The tag editor's window (fork, opt-in)
   | 'Onboarding' // FDA prompt
   | 'Command palette' // Command palette modal
 
@@ -229,7 +230,7 @@ export interface Command {
 }
 
 /** What a palette row's `paletteCondition` can ask. One member per question. */
-export type PaletteCondition = 'focusedPaneSharesLinks' | 'trashUndoAvailable'
+export type PaletteCondition = 'focusedPaneSharesLinks' | 'trashUndoAvailable' | 'tagEditorOn'
 
 /**
  * Authored form of a command, as written in `command-registry.ts`. Holds i18n

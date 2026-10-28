@@ -74,6 +74,7 @@ const FAILURE_KEYS: Readonly<Record<TagError['type'], MessageKey>> = {
   io: 'multiRename.tags.write.error.io',
   parse: 'multiRename.tags.write.error.parse',
   write: 'multiRename.tags.write.error.write',
+  badDate: 'multiRename.tags.write.error.badDate',
   wouldDrop: 'multiRename.tags.write.error.wouldDrop',
   unwritableExtra: 'multiRename.tags.write.error.unwritableExtra',
 }
@@ -81,6 +82,11 @@ const FAILURE_KEYS: Readonly<Record<TagError['type'], MessageKey>> = {
 /** Why a file wasn't written, by the error's kind (its OS message stays out of the UI). */
 export function failureKey(error: TagError): MessageKey {
   return FAILURE_KEYS[error.type]
+}
+
+/** What `failureKey`'s message names: a bad date shows the date, so the user knows what to correct. */
+export function failureParams(error: TagError): Record<string, string> {
+  return error.type === 'badDate' ? { date: error.data } : {}
 }
 
 export function fileNameOf(path: string): string {

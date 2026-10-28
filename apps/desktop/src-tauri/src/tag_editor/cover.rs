@@ -7,6 +7,7 @@
 
 use std::io::Read;
 use std::path::{Component, Path};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use cmdr_tags::Cover;
 use serde::Serialize;
@@ -116,19 +117,95 @@ pub(crate) fn read_cover(dir: &Path, file_name: &str) -> Result<Cover, TagEditor
         return Err(TagEditorError::CoverUnreadable);
     }
     let file = open_no_follow(&resolved).map_err(|_| TagEditorError::CoverUnreadable)?;
-    let meta = file.metadata().map_err(|_| TagEditorError::CoverUnreadable)?;
-    if !meta.is_file() {
+    read_open(file, TagEditorError::CoverUnreadable, &AtomicU64::new(0))
+}
+
+/// [`read_dropped_counted`] with no one watching its progress.
+#[cfg(test)]
+pub(crate) fn read_dropped(path: &Path) -> Result<Cover, TagEditorError> {
+    read_dropped_counted(path, &AtomicU64::new(0))
+}
+
+/// Reads a dropped picture file as a cover (from anywhere: the user dragged it here), adding every
+/// byte read to `progress`, so a waiter can tell a slow read from a stalled one
+/// (`cover_choices::set_from_path_within`). Blocking file work. Only a regular file at an absolute
+/// path: a folder, FIFO, symlink, or device is `CoverNotAFile`. It is opened with
+/// `O_NOFOLLOW | O_NONBLOCK` and checked again on the open file, so one swapped in after the check
+/// fails instead of being followed or blocking. Then the same size cap and type sniff as a folder
+/// cover.
+pub(crate) fn read_dropped_counted(path: &Path, progress: &AtomicU64) -> Result<Cover, TagEditorError> {
+    if !path.is_absolute() {
         return Err(TagEditorError::CoverUnreadable);
     }
-    if meta.len() > MAX_COVER_BYTES {
+    let meta = std::fs::symlink_metadata(path).map_err(|_| TagEditorError::CoverUnreadable)?;
+    if !meta.file_type().is_file() {
+        return Err(TagEditorError::CoverNotAFile);
+    }
+    let file = open_no_follow(path).map_err(|_| TagEditorError::CoverUnreadable)?;
+    read_open(file, TagEditorError::CoverNotAFile, progress)
+}
+
+/// The largest pasted TIFF taken: it is converted ([`super::cover_image::cover_from_tiff`]), and an uncompressed
+/// clipboard TIFF of a photo is far bigger than the cover it becomes.
+pub(crate) const MAX_PASTED_TIFF_BYTES: u64 = 40 * 1024 * 1024;
+
+/// A pasted picture's base64 text as bytes. A text longer than the largest paste taken
+/// ([`MAX_PASTED_TIFF_BYTES`], the TIFF cap, above the 10 MiB cover cap) could encode to is
+/// `CoverTooLarge` before any decoding; text that isn't base64 is `PastedNotAnImage`. Blocking
+/// work for a large paste: call it off the IPC thread.
+pub(crate) fn decode_pasted(text: &str) -> Result<Vec<u8>, TagEditorError> {
+    use base64::Engine as _;
+    let cap = usize::try_from(MAX_PASTED_TIFF_BYTES.max(MAX_COVER_BYTES)).unwrap_or(usize::MAX);
+    let longest = base64::encoded_len(cap, true).unwrap_or(usize::MAX);
+    if text.len() > longest {
         return Err(TagEditorError::CoverTooLarge);
     }
-    let data = read_capped(file, MAX_COVER_BYTES)?;
+    base64::prelude::BASE64_STANDARD
+        .decode(text)
+        .map_err(|_| TagEditorError::PastedNotAnImage)
+}
+
+/// A pasted picture as a cover. A JPEG, PNG, or WebP by its first bytes is taken as it is, at most 10 MiB
+/// (`CoverTooLarge`); a TIFF (at most 40 MiB) becomes a PNG, or a JPEG when the PNG is over 10 MiB; anything else is
+/// `PastedNotAnImage` (a paste has no file name to blame).
+pub(crate) fn cover_from_bytes(data: Vec<u8>) -> Result<Cover, TagEditorError> {
+    let len = u64::try_from(data.len()).unwrap_or(u64::MAX);
+    if super::cover_image::is_tiff(&data) {
+        if len > MAX_PASTED_TIFF_BYTES {
+            return Err(TagEditorError::CoverTooLarge);
+        }
+        return super::cover_image::cover_from_tiff(&data);
+    }
+    sniffed(data).map_err(|error| match error {
+        TagEditorError::CoverNotAnImage => TagEditorError::PastedNotAnImage,
+        other => other,
+    })
+}
+
+/// `data` as a cover: at most 10 MiB (`CoverTooLarge`), and a JPEG, PNG, or WebP image by its first bytes
+/// (`CoverNotAnImage`), whatever it was called.
+fn sniffed(data: Vec<u8>) -> Result<Cover, TagEditorError> {
+    if u64::try_from(data.len()).unwrap_or(u64::MAX) > MAX_COVER_BYTES {
+        return Err(TagEditorError::CoverTooLarge);
+    }
     let mime = image_mime(&data).ok_or(TagEditorError::CoverNotAnImage)?;
     Ok(Cover {
         mime: mime.to_owned(),
         data: data.into(),
     })
+}
+
+/// The cover in an opened file: `not_regular` when it isn't a regular file after all, then the
+/// size cap (on the stat and on the read) and the type sniff.
+fn read_open(file: std::fs::File, not_regular: TagEditorError, progress: &AtomicU64) -> Result<Cover, TagEditorError> {
+    let meta = file.metadata().map_err(|_| TagEditorError::CoverUnreadable)?;
+    if !meta.is_file() {
+        return Err(not_regular);
+    }
+    if meta.len() > MAX_COVER_BYTES {
+        return Err(TagEditorError::CoverTooLarge);
+    }
+    sniffed(read_counted(file, MAX_COVER_BYTES, progress)?)
 }
 
 /// Opens `path` for reading without following a symlink at its last component and without
@@ -141,14 +218,32 @@ fn open_no_follow(path: &Path) -> std::io::Result<std::fs::File> {
         .open(path)
 }
 
-/// Reads at most `limit` bytes; more is `CoverTooLarge` (the file grew since the stat).
+/// [`read_counted`] with no one watching its progress.
+#[cfg(test)]
 pub(crate) fn read_capped(file: impl Read, limit: u64) -> Result<Vec<u8>, TagEditorError> {
+    read_counted(file, limit, &AtomicU64::new(0))
+}
+
+/// The chunk a cover is read in: each one moves `progress`.
+const READ_CHUNK: usize = 64 * 1024;
+
+/// Reads at most `limit` bytes (more is `CoverTooLarge`: the file grew since the stat), in chunks,
+/// adding each chunk's length to `progress` as it lands.
+pub(crate) fn read_counted(mut file: impl Read, limit: u64, progress: &AtomicU64) -> Result<Vec<u8>, TagEditorError> {
     let mut data = Vec::new();
-    file.take(limit + 1)
-        .read_to_end(&mut data)
-        .map_err(|_| TagEditorError::CoverUnreadable)?;
-    if u64::try_from(data.len()).unwrap_or(u64::MAX) > limit {
-        return Err(TagEditorError::CoverTooLarge);
+    let mut chunk = vec![0u8; READ_CHUNK];
+    loop {
+        let read = match file.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read) => read,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(_) => return Err(TagEditorError::CoverUnreadable),
+        };
+        data.extend_from_slice(&chunk[..read]);
+        progress.fetch_add(u64::try_from(read).unwrap_or(u64::MAX), Ordering::Relaxed);
+        if u64::try_from(data.len()).unwrap_or(u64::MAX) > limit {
+            return Err(TagEditorError::CoverTooLarge);
+        }
     }
     Ok(data)
 }

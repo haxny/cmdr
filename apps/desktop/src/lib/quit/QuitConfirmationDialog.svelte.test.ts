@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import QuitConfirmationDialog from './QuitConfirmationDialog.svelte'
-import type { OperationSnapshot } from '#lib/ipc/bindings.js'
+import type { OperationSnapshot, TagsAtQuit } from '#lib/ipc/bindings.js'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
@@ -35,7 +35,7 @@ function operation(operationId: string, operationType: OperationSnapshot['operat
 async function renderDialog(
   operations: OperationSnapshot[],
   secondsLeft: number,
-  handlers: { onQuit?: () => void; onKeepWorking?: () => void } = {},
+  handlers: { onQuit?: () => void; onKeepWorking?: () => void; tags?: TagsAtQuit; countsDown?: boolean } = {},
 ): Promise<HTMLElement> {
   const target = document.createElement('div')
   document.body.appendChild(target)
@@ -44,6 +44,8 @@ async function renderDialog(
     props: {
       operations,
       secondsLeft,
+      ...(handlers.tags ? { tags: handlers.tags } : {}),
+      ...(handlers.countsDown === undefined ? {} : { countsDown: handlers.countsDown }),
       onQuit: handlers.onQuit ?? (() => {}),
       onKeepWorking: handlers.onKeepWorking ?? (() => {}),
     },
@@ -53,6 +55,31 @@ async function renderDialog(
 }
 
 describe('QuitConfirmationDialog', () => {
+  it('a Tags window with unwritten changes asks about them, with no operations listed', async () => {
+    const shown = await renderDialog([], 15, { tags: { unwritten: 2, writing: false } })
+    expect(shown.textContent).toContain('Quit with tag changes not written in 2 windows?')
+    expect(shown.textContent).toContain('2 Tags windows have changes that haven’t been written.')
+    expect(shown.textContent).not.toContain('Still running')
+  })
+
+  it('with only unwritten tag edits it shows no countdown: it waits for an answer', async () => {
+    const shown = await renderDialog([], 0, { tags: { unwritten: 1, writing: false }, countsDown: false })
+    expect(shown.textContent).toContain('Cmdr waits for your answer')
+    expect(shown.textContent).not.toContain('Quitting in')
+  })
+
+  it('a tag write running says Cmdr finishes it before it quits', async () => {
+    const shown = await renderDialog([], 15, { tags: { unwritten: 1, writing: true } })
+    expect(shown.textContent).toContain('Quit while tags are being written?')
+    expect(shown.textContent).toContain('Cmdr finishes writing them before it quits')
+  })
+
+  it('operations keep their title when a Tags window is unwritten too', async () => {
+    const shown = await renderDialog([operation('op-1', 'copy')], 15, { tags: { unwritten: 1, writing: false } })
+    expect(shown.textContent).toContain('Quit while an operation is running?')
+    expect(shown.textContent).toContain('A Tags window has changes that haven’t been written.')
+  })
+
   it('names how many operations are running, in the plural the count needs', async () => {
     const one = await renderDialog([operation('op-1', 'copy')], 15)
     expect(one.textContent).toContain('Quit while an operation is running?')

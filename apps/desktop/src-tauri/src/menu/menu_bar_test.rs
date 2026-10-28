@@ -57,11 +57,12 @@ menu menu.bar.file id=menu_file
   12 separator
   13 item rename menu.file.rename [F2] tracked
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
-  15 separator
-  16 item show_in_finder menu.file.showInFinder [Alt+Cmd+O] tracked
-  17 item open_terminal_here menu.file.openTerminalHere [F9] tracked
-  18 item get_info menu.file.getInfo [Cmd+I] tracked
-  19 item quick_look menu.file.quickLook [Shift+Space] tracked
+  15 item edit_tags menu.file.editTags [Cmd+Shift+E] disabled tracked
+  16 separator
+  17 item show_in_finder menu.file.showInFinder [Alt+Cmd+O] tracked
+  18 item open_terminal_here menu.file.openTerminalHere [F9] tracked
+  19 item get_info menu.file.getInfo [Cmd+I] tracked
+  20 item quick_look menu.file.quickLook [Shift+Space] tracked
 menu menu.bar.edit id=menu_edit
   0 predefined undo menu.edit.undo
   1 predefined redo menu.edit.redo
@@ -180,10 +181,11 @@ menu menu.bar.file
   12 separator
   13 item rename menu.file.rename tracked
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
-  15 separator
-  16 item show_in_finder menu.file.showInFileManager [Alt+Ctrl+O] tracked
-  17 item get_info menu.file.getInfo [Ctrl+I] tracked
-  18 item quick_look menu.file.quickLook tracked
+  15 item edit_tags menu.file.editTags disabled tracked
+  16 separator
+  17 item show_in_finder menu.file.showInFileManager [Alt+Ctrl+O] tracked
+  18 item get_info menu.file.getInfo [Ctrl+I] tracked
+  19 item quick_look menu.file.quickLook tracked
 menu menu.bar.edit
   0 item undo_trash menu.edit.undoTrash disabled tracked
   1 separator
@@ -421,6 +423,58 @@ fn no_two_items_share_an_accelerator() {
             seen.push((parsed, id));
         }
     }
+}
+
+/// The Tags window installs this bar too, and an accelerator fires ahead of its page. So every
+/// item registering a key that a `Tags window` command also holds (`sources/tags-window.ts`) must
+/// be routed to the window (`menu_key_command_of`, to the command with that key), or be Close tab,
+/// which closes the focused child window through the same discard guard as Esc, or be Switch pane:
+/// Tab reaches the page anyway (main's dialogs move focus with it behind this same accelerator), where
+/// it must move focus in dialogs and fields, so it's never routed. Edit > Undo (⌘Z)
+/// is a predefined item, absent here: its `undo:` goes to the page, whose keydown sees ⌘Z.
+#[test]
+fn every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window() {
+    use crate::tag_editor::window::menu_key_command_of;
+    let tags_keys = [
+        ("F2", "tags.edit"),
+        ("Enter", "tags.edit"),
+        ("Shift+F2", "tags.editNumber"),
+        ("F3", "tags.play"),
+        ("Alt+Space", "tags.play"),
+        ("Shift+F3", "tags.openInPlayer"),
+        ("F4", "tags.replace"),
+        ("Shift+F4", "tags.case"),
+        ("F5", "tags.format"),
+        ("Shift+F5", "tags.cleanUp"),
+        ("F6", "tags.fromName"),
+        ("F7", "tags.number"),
+        ("F8", "tags.clearField"),
+        ("Shift+F8", "tags.removeExtras"),
+        ("Cmd+S", "tags.write"),
+        ("Cmd+Z", "tags.undo"),
+        ("Escape", "tags.close"),
+        ("Cmd+W", "tags.close"),
+        ("Tab", "tags.switchPane"),
+    ];
+    let parsed = |key: &str| -> muda::accelerator::Accelerator { key.parse().expect("a muda accelerator") };
+    let mut routed = 0;
+    for (id, accelerator) in registered_accelerators(Platform::MacOs) {
+        let on_item = parsed(accelerator);
+        let Some((_, command)) = tags_keys.iter().find(|(key, _)| parsed(key) == on_item) else {
+            continue;
+        };
+        if id == crate::menu::CLOSE_TAB_ID {
+            assert_eq!(*command, "tags.close");
+            continue;
+        }
+        if id == crate::menu::SWITCH_PANE_ID {
+            assert_eq!(menu_key_command_of(id), None, "Tab stays the page's");
+            continue;
+        }
+        assert_eq!(menu_key_command_of(id), Some(*command), "`{id}` holds `{accelerator}`");
+        routed += 1;
+    }
+    assert_eq!(routed, 10, "F2–F8, ⇧F2, ⇧F4, ⇧F8");
 }
 
 /// `MenuState.items` is keyed by ID, so a second item with an ID already taken would silently

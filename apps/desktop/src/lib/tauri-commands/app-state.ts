@@ -127,6 +127,12 @@ export async function setOpenTerminalHereEnabled(enabled: boolean): Promise<void
   await invoke('set_open_terminal_here_enabled', { enabled })
 }
 
+/** Greys out (or restores) File > "Edit tags…", following the opt-in tag editor setting (fork). Chrome only. */
+export async function setEditTagsEnabled(enabled: boolean): Promise<void> {
+  // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic over Runtime; not in typed bindings
+  await invoke('set_edit_tags_enabled', { enabled })
+}
+
 // ============================================================================
 // Dialog tracking
 // ============================================================================

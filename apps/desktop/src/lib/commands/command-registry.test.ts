@@ -96,6 +96,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'nav.goHome',
   'file.rename',
   'file.multiRename',
+  'file.editTags',
   'file.view',
   'file.edit',
   'file.copy',
@@ -491,9 +492,11 @@ describe('go-to-path shortcut binding', () => {
 describe('delete shortcut pairs', () => {
   // Total Commander users press Shift with the key that moves to the trash to delete
   // permanently instead; Finder's ⌥⌘⌫ is "Delete Immediately".
-  it('deletes permanently on ⇧F8, ⇧Delete, and ⌥⌘⌫, and nothing else claims them', () => {
+  it('deletes permanently on ⇧F8, ⇧Delete, and ⌥⌘⌫, and nothing else in the main window claims them', () => {
+    // The Tags window is a window of its own (its ⇧F8 removes extra tags), so its keys never meet the file list's.
+    const inMainWindow = (id: CommandId) => commands.find((c) => c.id === id)?.scope !== 'Tags window'
     for (const shortcut of ['⇧F8', '⇧Delete', '⌘⌥Backspace']) {
-      expect(claimants(shortcut), shortcut).toEqual(['file.deletePermanently'])
+      expect(claimants(shortcut).filter(inMainWindow), shortcut).toEqual(['file.deletePermanently'])
     }
   })
 })

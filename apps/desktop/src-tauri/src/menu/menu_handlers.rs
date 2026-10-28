@@ -602,6 +602,11 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         return;
     }
 
+    // === A focused Tags window's ⌘A, ⌘⇧A and F-keys (`tag_editor/menu_route.rs`) ===
+    if crate::tag_editor::menu_route::route_menu_event(app, id) {
+        return;
+    }
+
     // === Edit-action exception: file semantics in main window, native text semantics elsewhere ===
     // Custom MenuItems for Cut/Copy/Paste/Select all route through execute-command in the main
     // window so the frontend can decide between file and text semantics. In non-main windows

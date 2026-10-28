@@ -931,18 +931,6 @@
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
   },
-  "multiRename.tabs.label": "Multi-Rename sections",
-  "@multiRename.tabs.label": {
-    "sourceHash": "f66219f"
-  },
-  "multiRename.tabs.rename": "Rename",
-  "@multiRename.tabs.rename": {
-    "sourceHash": "3064d79"
-  },
-  "multiRename.tabs.tags": "Tags",
-  "@multiRename.tabs.tags": {
-    "sourceHash": "1331275"
-  },
   "multiRename.tags.reading": "Reading tags…",
   "@multiRename.tags.reading": {
     "sourceHash": "c4a8191"
@@ -1023,17 +1011,49 @@
   "@multiRename.tags.field.www": {
     "sourceHash": "45099c5"
   },
-  "multiRename.tags.shared.label": "Tags shared by the files",
-  "@multiRename.tags.shared.label": {
-    "sourceHash": "41d61a3"
-  },
   "multiRename.tags.multipleValues": "‹multiple values›",
   "@multiRename.tags.multipleValues": {
     "sourceHash": "39e9850"
   },
+  "multiRename.tags.multipleValues.keepHint": "Delete {marker} to set what’s left on every file. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.keepHint": {
+    "sourceHash": "a1204ff"
+  },
+  "multiRename.tags.multipleValues.tailHint": "Delete “{tail}” too: with it, the text isn’t every value. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.tailHint": {
+    "sourceHash": "b38728d"
+  },
+  "multiRename.tags.date.invalid": "This date doesn't exist (month 20). Type the right one, for example 2010, before writing.",
+  "@multiRename.tags.date.invalid": {
+    "sourceHash": "04ede92"
+  },
+  "multiRename.tags.choicesMore": "…and {countText} more",
+  "@multiRename.tags.choicesMore": {
+    "sourceHash": "a674c4d"
+  },
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
     "sourceHash": "8898015"
+  },
+  "multiRename.tags.album.label": "Album tags",
+  "@multiRename.tags.album.label": {
+    "sourceHash": "41747f9"
+  },
+  "multiRename.tags.album.colName": "Name",
+  "@multiRename.tags.album.colName": {
+    "sourceHash": "dcd1d52"
+  },
+  "multiRename.tags.album.colValue": "Value",
+  "@multiRename.tags.album.colValue": {
+    "sourceHash": "8e37953"
+  },
+  "multiRename.tags.album.editLabel": "{field} for all files",
+  "@multiRename.tags.album.editLabel": {
+    "sourceHash": "980b039"
+  },
+  "multiRename.tags.track.playing": "Playing",
+  "@multiRename.tags.track.playing": {
+    "sourceHash": "deaf6f9"
   },
   "multiRename.tags.col.number": "#",
   "@multiRename.tags.col.number": {
@@ -1074,10 +1094,6 @@
   "multiRename.tags.cover.none": "No cover",
   "@multiRename.tags.cover.none": {
     "sourceHash": "b2ec318"
-  },
-  "multiRename.tags.cover.multiple": "Multiple covers",
-  "@multiRename.tags.cover.multiple": {
-    "sourceHash": "ea5c728"
   },
   "multiRename.tags.cover.details": "{mime}, {sizeText}",
   "@multiRename.tags.cover.details": {
@@ -1123,6 +1139,102 @@
   "@multiRename.tags.cover.notAnImage": {
     "sourceHash": "bef4ab5"
   },
+  "multiRename.tags.cover.choicesLabel": "Covers in the files",
+  "@multiRename.tags.cover.choicesLabel": {
+    "sourceHash": "4efc84c"
+  },
+  "multiRename.tags.cover.files": "{count, plural, one {{countText} file} many {{countText} files} other {{countText} files}}",
+  "@multiRename.tags.cover.files": {
+    "sourceHash": "3c08428"
+  },
+  "multiRename.tags.cover.caption": "{filesText} · {sizeText}",
+  "@multiRename.tags.cover.caption": {
+    "sourceHash": "fdfd95d"
+  },
+  "multiRename.tags.cover.openLabel": "{caption}: open the cover ({details})",
+  "@multiRename.tags.cover.openLabel": {
+    "sourceHash": "196a95b"
+  },
+  "multiRename.tags.cover.choicesFailed": "Couldn’t read the covers of these files.",
+  "@multiRename.tags.cover.choicesFailed": {
+    "sourceHash": "298b99c"
+  },
+  "multiRename.tags.cover.pasteHint": "Paste a picture (⌘V) or drop one here to make it the cover of every file.",
+  "@multiRename.tags.cover.pasteHint": {
+    "sourceHash": "62469e3"
+  },
+  "multiRename.tags.cover.pasteNoImage": "There’s no picture on the clipboard. Copy a JPEG, PNG, or WebP picture, then paste again.",
+  "@multiRename.tags.cover.pasteNoImage": {
+    "sourceHash": "9cabc76"
+  },
+  "multiRename.tags.cover.dropOne": "Drop one picture at a time.",
+  "@multiRename.tags.cover.dropOne": {
+    "sourceHash": "c4173a9"
+  },
+  "multiRename.tags.cover.dropHere": "Drop to make this picture the cover of every file",
+  "@multiRename.tags.cover.dropHere": {
+    "sourceHash": "0e7e2ce"
+  },
+  "multiRename.tags.cover.notAFile": "Only a picture file can become the cover, not a folder or a link.",
+  "@multiRename.tags.cover.notAFile": {
+    "sourceHash": "5c848ab"
+  },
+  "multiRename.tags.cover.gone": "That cover isn’t in the files any more. Pick another one.",
+  "@multiRename.tags.cover.gone": {
+    "sourceHash": "074721e"
+  },
+  "multiRename.tags.cover.viewerTitle": "Cover",
+  "@multiRename.tags.cover.viewerTitle": {
+    "sourceHash": "fa8d845"
+  },
+  "multiRename.tags.cover.viewerAlt": "Cover picture: {details}",
+  "@multiRename.tags.cover.viewerAlt": {
+    "sourceHash": "80794e7"
+  },
+  "multiRename.tags.cover.onFiles": "On {countText} of {totalText} files",
+  "@multiRename.tags.cover.onFiles": {
+    "sourceHash": "aa5c3a4"
+  },
+  "multiRename.tags.cover.cantShow": "Can’t show this picture.",
+  "@multiRename.tags.cover.cantShow": {
+    "sourceHash": "ee506dd"
+  },
+  "multiRename.tags.cover.useForAll": "Use for all files",
+  "@multiRename.tags.cover.useForAll": {
+    "sourceHash": "723f22c"
+  },
+  "multiRename.tags.cover.pasteNotAnImage": "That isn’t a picture Cmdr can use as a cover. Copy a JPEG, PNG, WebP, or TIFF picture, then paste again.",
+  "@multiRename.tags.cover.pasteNotAnImage": {
+    "sourceHash": "291f4a5"
+  },
+  "multiRename.tags.cover.timedOut": "The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.timedOut": {
+    "sourceHash": "ec1b3bb"
+  },
+  "multiRename.tags.cover.busy": "Earlier pictures from a drive that stopped answering are still being read. Wait a moment, or copy the picture to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.busy": {
+    "sourceHash": "f10fab5"
+  },
+  "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
+  "@multiRename.tags.cover.pasteTimedOut": {
+    "sourceHash": "9e24fa9"
+  },
+  "multiRename.tags.cover.noPreview": "No preview",
+  "@multiRename.tags.cover.noPreview": {
+    "sourceHash": "4b8bacd"
+  },
+  "multiRename.tags.cover.pasteButton": "Paste picture",
+  "@multiRename.tags.cover.pasteButton": {
+    "sourceHash": "fa34bdb"
+  },
+  "multiRename.tags.cover.pasteUnavailable": "Couldn’t read the clipboard. Select the cover section and press ⌘V instead.",
+  "@multiRename.tags.cover.pasteUnavailable": {
+    "sourceHash": "e7a30af"
+  },
+  "multiRename.tags.cover.loading": "Loading the picture…",
+  "@multiRename.tags.cover.loading": {
+    "sourceHash": "a47d42d"
+  },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {
     "sourceHash": "9747a7c"
@@ -1146,14 +1258,6 @@
   "multiRename.tags.clearRowLabel": "Clear {field} for all files",
   "@multiRename.tags.clearRowLabel": {
     "sourceHash": "ac716fc"
-  },
-  "multiRename.tags.tools.label": "Clean-up tools",
-  "@multiRename.tags.tools.label": {
-    "sourceHash": "2e5d3d6"
-  },
-  "multiRename.tags.tools.caseButton": "Case",
-  "@multiRename.tags.tools.caseButton": {
-    "sourceHash": "15f86e2"
   },
   "multiRename.tags.tools.caseFields": "Changes: {fields}",
   "@multiRename.tags.tools.caseFields": {
@@ -1202,10 +1306,6 @@
   "multiRename.tags.tools.clearRedundantTitles": "Clear title = album",
   "@multiRename.tags.tools.clearRedundantTitles": {
     "sourceHash": "135f3e7"
-  },
-  "multiRename.tags.tools.removeExtras": "Remove extras…",
-  "@multiRename.tags.tools.removeExtras": {
-    "sourceHash": "e56d9d0"
   },
   "multiRename.tags.tools.extrasLabel": "Extra tags to remove",
   "@multiRename.tags.tools.extrasLabel": {
@@ -1302,6 +1402,10 @@
   "multiRename.tags.write.error.write": "the tags couldn’t be saved",
   "@multiRename.tags.write.error.write": {
     "sourceHash": "99f4775"
+  },
+  "multiRename.tags.write.error.badDate": "its date “{date}” isn’t a real date; correct it in the Date row",
+  "@multiRename.tags.write.error.badDate": {
+    "sourceHash": "55698d1"
   },
   "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
   "@multiRename.tags.write.error.wouldDrop": {
@@ -1407,6 +1511,26 @@
   "@multiRename.tags.write.refused": {
     "sourceHash": "6762f25"
   },
+  "multiRename.tags.write.waiting": "Finishing the last change…",
+  "@multiRename.tags.write.waiting": {
+    "sourceHash": "e49e983"
+  },
+  "multiRename.tags.write.stillBusy": "Cmdr is still reading the files. Try again in a moment.",
+  "@multiRename.tags.write.stillBusy": {
+    "sourceHash": "f9beee0"
+  },
+  "multiRename.tags.write.listFailed": "Cmdr couldn’t check what will change. Try again in a moment.",
+  "@multiRename.tags.write.listFailed": {
+    "sourceHash": "74dd272"
+  },
+  "multiRename.tags.write.sessionGone": "The tags aren’t open any more. Close Multi-Rename and open it again.",
+  "@multiRename.tags.write.sessionGone": {
+    "sourceHash": "00fb6eb"
+  },
+  "multiRename.tags.write.stopped": "The write stopped before it finished, so some files may not have their new tags.",
+  "@multiRename.tags.write.stopped": {
+    "sourceHash": "05bfca4"
+  },
   "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
   "@multiRename.tags.write.noUndoSome": {
     "sourceHash": "3ae488c"
@@ -1422,10 +1546,6 @@
   "multiRename.tags.select.all": "Select all tracks",
   "@multiRename.tags.select.all": {
     "sourceHash": "9320e48"
-  },
-  "multiRename.tags.select.track": "Select {fileName}",
-  "@multiRename.tags.select.track": {
-    "sourceHash": "e7e5769"
   },
   "multiRename.tags.choices.button": "Values…",
   "@multiRename.tags.choices.button": {
@@ -1447,10 +1567,6 @@
   "@multiRename.tags.selectionGone": {
     "sourceHash": "17373af"
   },
-  "multiRename.tags.tools.moreLabel": "More tag tools",
-  "@multiRename.tags.tools.moreLabel": {
-    "sourceHash": "2b47838"
-  },
   "multiRename.tags.tools.replace.button": "Find and replace",
   "@multiRename.tags.tools.replace.button": {
     "sourceHash": "9898ad0"
@@ -1458,10 +1574,6 @@
   "multiRename.tags.tools.format.button": "Format a field",
   "@multiRename.tags.tools.format.button": {
     "sourceHash": "ece9485"
-  },
-  "multiRename.tags.tools.name.button": "From file name",
-  "@multiRename.tags.tools.name.button": {
-    "sourceHash": "79a196a"
   },
   "multiRename.tags.tools.replace.fieldsLabel": "Fields to search",
   "@multiRename.tags.tools.replace.fieldsLabel": {
@@ -1563,10 +1675,6 @@
   "@multiRename.tags.tools.name.noFields": {
     "sourceHash": "4be905c"
   },
-  "multiRename.tags.numbering.button": "Auto-number…",
-  "@multiRename.tags.numbering.button": {
-    "sourceHash": "0981989"
-  },
   "multiRename.tags.numbering.title": "Auto-numbering wizard",
   "@multiRename.tags.numbering.title": {
     "sourceHash": "fee1ba8"
@@ -1627,14 +1735,6 @@
   "@multiRename.tags.col.play": {
     "sourceHash": "436e610"
   },
-  "multiRename.tags.play.play": "Play {fileName}",
-  "@multiRename.tags.play.play": {
-    "sourceHash": "d684027"
-  },
-  "multiRename.tags.play.stop": "Stop {fileName}",
-  "@multiRename.tags.play.stop": {
-    "sourceHash": "a116eda"
-  },
   "multiRename.tags.play.failed": "Couldn’t play that track.",
   "@multiRename.tags.play.failed": {
     "sourceHash": "0b91294"
@@ -1654,5 +1754,169 @@
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
     "sourceHash": "d8d01f0"
+  },
+  "multiRename.tags.openWindow": "Tags…",
+  "@multiRename.tags.openWindow": {
+    "sourceHash": "449cf54"
+  },
+  "multiRename.tags.window.title": "Tags: {folder}",
+  "@multiRename.tags.window.title": {
+    "sourceHash": "9708a4d"
+  },
+  "multiRename.tags.window.nothingSelected": "Select the audio files to tag first.",
+  "@multiRename.tags.window.nothingSelected": {
+    "sourceHash": "1fbb8f5"
+  },
+  "multiRename.tags.window.openFailed": "Cmdr couldn’t open these tags. Close the window and try again.",
+  "@multiRename.tags.window.openFailed": {
+    "sourceHash": "ad77a4c"
+  },
+  "multiRename.tags.window.close": "Close",
+  "@multiRename.tags.window.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
+  "@multiRename.tags.window.noTracks": {
+    "sourceHash": "5765e14"
+  },
+  "multiRename.tags.keys.label": "Tag tools",
+  "@multiRename.tags.keys.label": {
+    "sourceHash": "75ff93d"
+  },
+  "multiRename.tags.keys.edit": "Edit",
+  "@multiRename.tags.keys.edit": {
+    "sourceHash": "464c4ff"
+  },
+  "multiRename.tags.keys.play": "Play",
+  "@multiRename.tags.keys.play": {
+    "sourceHash": "436e610"
+  },
+  "multiRename.tags.keys.replace": "Replace",
+  "@multiRename.tags.keys.replace": {
+    "sourceHash": "95e1543"
+  },
+  "multiRename.tags.keys.format": "Format",
+  "@multiRename.tags.keys.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.tags.keys.fromName": "From name",
+  "@multiRename.tags.keys.fromName": {
+    "sourceHash": "b28f93e"
+  },
+  "multiRename.tags.keys.number": "Number",
+  "@multiRename.tags.keys.number": {
+    "sourceHash": "bd82cf1"
+  },
+  "multiRename.tags.keys.clearField": "Clear",
+  "@multiRename.tags.keys.clearField": {
+    "sourceHash": "83b12c2"
+  },
+  "multiRename.tags.keys.editNumber": "Edit #",
+  "@multiRename.tags.keys.editNumber": {
+    "sourceHash": "3e37820"
+  },
+  "multiRename.tags.keys.openInPlayer": "Open in player",
+  "@multiRename.tags.keys.openInPlayer": {
+    "sourceHash": "bbd20b9"
+  },
+  "multiRename.tags.keys.case": "Case",
+  "@multiRename.tags.keys.case": {
+    "sourceHash": "15f86e2"
+  },
+  "multiRename.tags.keys.cleanUp": "Clean up",
+  "@multiRename.tags.keys.cleanUp": {
+    "sourceHash": "f938c32"
+  },
+  "multiRename.tags.keys.removeExtras": "Remove extras",
+  "@multiRename.tags.keys.removeExtras": {
+    "sourceHash": "b737aae"
+  },
+  "multiRename.tags.keys.write": "Write",
+  "@multiRename.tags.keys.write": {
+    "sourceHash": "3f00927"
+  },
+  "multiRename.tags.dialog.fromName": "Tags from file names",
+  "@multiRename.tags.dialog.fromName": {
+    "sourceHash": "bb61563"
+  },
+  "multiRename.tags.dialog.case": "Change case",
+  "@multiRename.tags.dialog.case": {
+    "sourceHash": "f97fe58"
+  },
+  "multiRename.tags.dialog.cleanUp": "Clean up",
+  "@multiRename.tags.dialog.cleanUp": {
+    "sourceHash": "f938c32"
+  },
+  "multiRename.tags.dialog.extras": "Remove extra tags",
+  "@multiRename.tags.dialog.extras": {
+    "sourceHash": "122f0a2"
+  },
+  "multiRename.tags.dialog.clearField": "Clear a field",
+  "@multiRename.tags.dialog.clearField": {
+    "sourceHash": "5b0b05c"
+  },
+  "multiRename.tags.dialog.write": "Write tags",
+  "@multiRename.tags.dialog.write": {
+    "sourceHash": "975c614"
+  },
+  "multiRename.tags.dialog.close": "Close",
+  "@multiRename.tags.dialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "multiRename.tags.clearField.field": "Field",
+  "@multiRename.tags.clearField.field": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.tags.clearField.all": "Empties {field} on every file.",
+  "@multiRename.tags.clearField.all": {
+    "sourceHash": "4b4481f"
+  },
+  "multiRename.tags.clearField.some": "{count, plural, one {Empties {field} on the selected track.} many {Empties {field} on the {countText} selected tracks.} other {Empties {field} on the {countText} selected tracks.}}",
+  "@multiRename.tags.clearField.some": {
+    "sourceHash": "f33d90f"
+  },
+  "multiRename.tags.clearField.run": "Clear",
+  "@multiRename.tags.clearField.run": {
+    "sourceHash": "83b12c2"
+  },
+  "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
+  "@multiRename.tags.undo.nothing": {
+    "sourceHash": "6324c69"
+  },
+  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "@multiRename.tags.write.someLeft": {
+    "sourceHash": "b999e17"
+  },
+  "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.write.closeWaits": {
+    "sourceHash": "82e021e"
+  },
+  "multiRename.tags.window.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.window.closeWaits": {
+    "sourceHash": "82e021e"
+  },
+  "multiRename.tags.readTimedOut": "The drive stopped answering while the tags were read. Close the window and try again.",
+  "@multiRename.tags.readTimedOut": {
+    "sourceHash": "257c44c"
+  },
+  "multiRename.tags.quit.title": "{count, plural, one {Quit with tag changes not written?} many {Quit with tag changes not written in {countText} windows?} other {Quit with tag changes not written in {countText} windows?}}",
+  "@multiRename.tags.quit.title": {
+    "sourceHash": "548be20"
+  },
+  "multiRename.tags.quit.writingTitle": "Quit while tags are being written?",
+  "@multiRename.tags.quit.writingTitle": {
+    "sourceHash": "3e1038f"
+  },
+  "multiRename.tags.quit.unwritten": "{count, plural, one {A Tags window has changes that haven’t been written. Quitting discards them.} many {{countText} Tags windows have changes that haven’t been written. Quitting discards them.} other {{countText} Tags windows have changes that haven’t been written. Quitting discards them.}}",
+  "@multiRename.tags.quit.unwritten": {
+    "sourceHash": "78c6748"
+  },
+  "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
+  "@multiRename.tags.quit.writing": {
+    "sourceHash": "fb2d5ce"
+  },
+  "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
+  "@multiRename.tags.quit.waits": {
+    "sourceHash": "ed6de29"
   }
 }

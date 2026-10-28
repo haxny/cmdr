@@ -14,10 +14,16 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     getTagChanges: vi.fn(),
     applyTags: vi.fn(),
     undoTagApply: vi.fn(),
+    lastTagApply: vi.fn(),
     closeTagEditor: vi.fn(),
     listCoverCandidates: vi.fn(),
     setCoverFromFile: vi.fn(),
     getCoverImage: vi.fn(),
+    listTagCovers: vi.fn(),
+    getCoverThumbnail: vi.fn(),
+    useCoverForAll: vi.fn(),
+    setCoverFromBytes: vi.fn(),
+    setCoverFromPath: vi.fn(),
     previewTagsFromNames: vi.fn(),
     tagTrackAudioUrl: vi.fn(),
     releaseTagTrackAudio: vi.fn(),
@@ -31,17 +37,23 @@ import {
   closeTagEditor,
   editTags,
   getCoverImage,
+  getCoverThumbnail,
   getTagChanges,
   listCoverCandidates,
+  listTagCovers,
   openTagEditor,
   openTagsInPlayer,
   previewTagsFromNames,
   releaseTagTrackAudio,
   runTagTextTool,
   runTagTool,
+  setCoverFromBytes,
   setCoverFromFile,
+  setCoverFromPath,
   tagTrackAudioUrl,
   undoTagApply,
+  lastTagApply,
+  useCoverForAll,
 } from './tag-editor'
 
 const noSession: TagEditorError = { kind: 'noSession' }
@@ -159,6 +171,15 @@ describe('getTagChanges', () => {
   })
 })
 
+describe('lastTagApply', () => {
+  it('asks for the folder’s last write, which outlives any window', async () => {
+    const last = { applies: [{ applyId: 'a1', written: 3 }], partial: false }
+    vi.mocked(commands.lastTagApply).mockResolvedValue({ status: 'ok', data: last } as never)
+    expect(await lastTagApply('s1')).toEqual({ ok: true, value: last })
+    expect(commands.lastTagApply).toHaveBeenCalledWith('s1')
+  })
+})
+
 describe('applyTags', () => {
   it('passes the request and the whole report through, undo flags included', async () => {
     const report = {
@@ -171,7 +192,7 @@ describe('applyTags', () => {
     }
     vi.mocked(commands.applyTags).mockResolvedValue({ status: 'ok', data: report } as never)
     expect(await applyTags('s1', request)).toEqual({ ok: true, value: report })
-    expect(commands.applyTags).toHaveBeenCalledWith('s1', request)
+    expect(commands.applyTags).toHaveBeenCalledWith('s1', request, false)
   })
 
   it('returns the typed error', async () => {
@@ -236,7 +257,13 @@ describe('getCoverImage', () => {
     const cover = 'data:image/png;base64,iVBORw0KGgo='
     vi.mocked(commands.getCoverImage).mockResolvedValue({ status: 'ok', data: cover } as never)
     expect(await getCoverImage('s1')).toEqual({ ok: true, value: cover })
-    expect(commands.getCoverImage).toHaveBeenCalledWith('s1')
+    expect(commands.getCoverImage).toHaveBeenCalledWith('s1', null)
+  })
+
+  it('asks for the cover a choice names', async () => {
+    vi.mocked(commands.getCoverImage).mockResolvedValue({ status: 'ok', data: null } as never)
+    await getCoverImage('s1', '00ff')
+    expect(commands.getCoverImage).toHaveBeenCalledWith('s1', '00ff')
   })
 
   it('passes "no shared cover" through as null', async () => {
@@ -247,6 +274,50 @@ describe('getCoverImage', () => {
   it('returns the typed error', async () => {
     vi.mocked(commands.getCoverImage).mockResolvedValue(failure)
     expect(await getCoverImage('s1')).toEqual({ ok: false, error: noSession })
+  })
+})
+
+describe('getCoverThumbnail', () => {
+  it('asks for the small picture of a cover', async () => {
+    vi.mocked(commands.getCoverThumbnail).mockResolvedValue({ status: 'ok', data: 'data:image/png;base64,x' } as never)
+    expect(await getCoverThumbnail('s1', '00ff')).toEqual({ ok: true, value: 'data:image/png;base64,x' })
+    expect(commands.getCoverThumbnail).toHaveBeenCalledWith('s1', '00ff')
+  })
+})
+
+describe('the cover choices', () => {
+  it('lists every cover with its count', async () => {
+    const choices = [{ key: 'none', mime: '', bytes: 0, width: null, height: null, files: 2 }]
+    vi.mocked(commands.listTagCovers).mockResolvedValue({ status: 'ok', data: choices } as never)
+    expect(await listTagCovers('s1')).toEqual({ ok: true, value: choices })
+    expect(commands.listTagCovers).toHaveBeenCalledWith('s1')
+  })
+
+  it('uses one for every file, and an unknown key comes back typed', async () => {
+    vi.mocked(commands.useCoverForAll).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    expect(await useCoverForAll('s1', '00ff')).toEqual({ ok: true, value: { dirty: true } })
+    expect(commands.useCoverForAll).toHaveBeenCalledWith('s1', '00ff')
+    vi.mocked(commands.useCoverForAll).mockResolvedValue({ status: 'error', error: { kind: 'unknownCover' } } as never)
+    expect(await useCoverForAll('s1', 'gone')).toEqual({ ok: false, error: { kind: 'unknownCover' } })
+  })
+
+  it('sends pasted bytes as a plain number array', async () => {
+    vi.mocked(commands.setCoverFromBytes).mockResolvedValue({ status: 'ok', data: { dirty: true } } as never)
+    expect(await setCoverFromBytes('s1', new Uint8Array([0xff, 0xd8, 0xff]))).toEqual({
+      ok: true,
+      value: { dirty: true },
+    })
+    // Base64, not a JSON number array: a large TIFF would cross IPC several times its size.
+    expect(commands.setCoverFromBytes).toHaveBeenCalledWith('s1', '/9j/')
+  })
+
+  it('sends a dropped path, and a folder comes back typed', async () => {
+    vi.mocked(commands.setCoverFromPath).mockResolvedValue({
+      status: 'error',
+      error: { kind: 'coverNotAFile' },
+    } as never)
+    expect(await setCoverFromPath('s1', '/x/folder')).toEqual({ ok: false, error: { kind: 'coverNotAFile' } })
+    expect(commands.setCoverFromPath).toHaveBeenCalledWith('s1', '/x/folder')
   })
 })
 

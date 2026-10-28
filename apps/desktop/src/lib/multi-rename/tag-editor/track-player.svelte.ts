@@ -1,5 +1,5 @@
 /**
- * The Tags tab's player: one `<audio>` element and one `cmdr-media://` URL at a time. A URL is minted per play
+ * The Tags window's player: one `<audio>` element and one `cmdr-media://` URL at a time. A URL is minted per play
  * (`tagTrackAudioUrl`) and released on every way playback ends: another track, the same track again, `stop()`, the
  * track running out, a decode error. A URL that arrives after playback was already stopped is released unused.
  */
@@ -9,7 +9,7 @@ import { releaseTagTrackAudio, tagTrackAudioUrl, type TagEditorResult } from '#l
 const log = getAppLogger('multiRename')
 
 export interface TrackPlayerDeps {
-  requestUrl?: (sessionId: string, path: string) => Promise<TagEditorResult<string>>
+  requestUrl?: (args: { sessionId: string; path: string }) => Promise<TagEditorResult<string>>
   releaseUrl?: (url: string) => Promise<void>
   createAudio?: () => HTMLAudioElement
 }
@@ -25,7 +25,7 @@ export interface TrackPlayer {
 }
 
 export function createTrackPlayer(sessionId: string, deps: TrackPlayerDeps = {}): TrackPlayer {
-  const requestUrl = deps.requestUrl ?? tagTrackAudioUrl
+  const requestUrl = deps.requestUrl ?? (({ sessionId: id, path }) => tagTrackAudioUrl(id, path))
   const releaseUrl = deps.releaseUrl ?? releaseTagTrackAudio
   const createAudio = deps.createAudio ?? (() => new Audio())
 
@@ -67,7 +67,7 @@ export function createTrackPlayer(sessionId: string, deps: TrackPlayerDeps = {})
   async function play(path: string, mine: number): Promise<void> {
     let res: TagEditorResult<string>
     try {
-      res = await requestUrl(sessionId, path)
+      res = await requestUrl({ sessionId, path })
     } catch (e) {
       log.warn("couldn't get a track's audio URL: {error}", { error: e })
       fail(mine)

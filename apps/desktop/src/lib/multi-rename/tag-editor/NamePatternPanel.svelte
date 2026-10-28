@@ -53,7 +53,7 @@
         })
     })
 
-    /** The worded error when it's the pattern's, else nothing (the tab words the rest). */
+    /** The worded error when it's the pattern's, else nothing (the window words the rest). */
     function failureOf(error: TagStateError | null): string | null {
         return error?.kind === 'badPattern' ? patternErrorText(error.error) : null
     }

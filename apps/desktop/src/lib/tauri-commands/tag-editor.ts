@@ -1,12 +1,16 @@
-// The Tags tab of Multi-Rename: a tag session per Multi-Rename session, edited in memory, then written. The work
+// The Tags window: a tag session per Multi-Rename session, edited in memory, then written. The work
 // is the backend's (`src-tauri/src/tag_editor/`); these are pass-throughs.
 
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
   commands,
+  events,
   type ApplyRequest,
   type ContentKind,
   type CoverCandidate,
+  type CoverChoice,
   type FileChangeView,
+  type LastTagApply,
   type NamePattern,
   type NamePreviewRow,
   type RestoreReport,
@@ -16,11 +20,17 @@ import {
   type TagEditorView,
   type TagTextTool,
   type TagTool,
+  type TagsMenuKey,
+  type TagsSessionInfo,
+  type MultiRenameError,
+  type MultiRenameOpened,
 } from '#lib/ipc/bindings.js'
 
 export type {
   ApplyRequest,
+  LastTagApply,
   CoverCandidate,
+  CoverChoice,
   FileChangeView,
   NamePattern,
   NamePreviewRow,
@@ -31,6 +41,8 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TagsMenuKey,
+  TagsSessionInfo,
 }
 
 /** A typed answer the tab words itself: the value, or why there is none. */
@@ -99,8 +111,24 @@ export async function getTagChanges(sessionId: string, kind: ContentKind): Promi
 }
 
 /** Writes the changed files. The report lists what was written, what would drop items, what failed, and what changed on disk. */
-export async function applyTags(sessionId: string, request: ApplyRequest): Promise<TagEditorResult<TagApplyReport>> {
-  return result(await commands.applyTags(sessionId, request))
+/**
+ * Writes the edits. `continues`: a "Write anyway" after a press that wrote, so Undo reverses both; otherwise a write
+ * that writes something becomes the folder's last write (`lastTagApply`).
+ */
+export async function applyTags(
+  sessionId: string,
+  request: ApplyRequest,
+  continues = false,
+): Promise<TagEditorResult<TagApplyReport>> {
+  return result(await commands.applyTags(sessionId, request, continues))
+}
+
+/**
+ * The last tag write of the session's folder, which ⌘Z undoes, or `null`. The backend keeps it for the app's lifetime,
+ * so a Tags window opened later over the same folder still offers it.
+ */
+export async function lastTagApply(sessionId: string): Promise<TagEditorResult<LastTagApply | null>> {
+  return result(await commands.lastTagApply(sessionId))
 }
 
 /**
@@ -126,10 +154,48 @@ export async function setCoverFromFile(sessionId: string, fileName: string): Pro
   return result(await commands.setCoverFromFile(sessionId, fileName))
 }
 
-/** The cover every file shares, with its bytes (for a thumbnail), or `null` when there is none or the files differ. */
-/** The shared cover as a `data:` URL for the thumbnail, or `null` when there is none or it isn't a known image. */
-export async function getCoverImage(sessionId: string): Promise<TagEditorResult<string | null>> {
-  return result(await commands.getCoverImage(sessionId))
+/**
+ * A cover as a `data:` URL: the one `key` names (a `CoverChoice.key`; `'none'` has no image), or for `null` the cover
+ * every file shares. `null` comes back when there is none, the files differ, or it isn't a known image; a key no file
+ * carries any more is `unknownCover`.
+ */
+export async function getCoverImage(
+  sessionId: string,
+  key: string | null = null,
+): Promise<TagEditorResult<string | null>> {
+  return result(await commands.getCoverImage(sessionId, key))
+}
+
+/**
+ * A small PNG `data:` URL of the cover `key` names, for a tile (about twice its size, cached by key in the backend);
+ * `null` for `'none'` or a cover that doesn't decode. The large view takes the full image (`getCoverImage`).
+ */
+export async function getCoverThumbnail(sessionId: string, key: string): Promise<TagEditorResult<string | null>> {
+  return result(await commands.getCoverThumbnail(sessionId, key))
+}
+
+/** Every distinct cover of the readable files with how many carry it, most common first, the files without one last. */
+export async function listTagCovers(sessionId: string): Promise<TagEditorResult<CoverChoice[]>> {
+  return result(await commands.listTagCovers(sessionId))
+}
+
+/** Gives every file the cover `key` names, in memory (listed for Write, nothing written). */
+export async function useCoverForAll(sessionId: string, key: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.useCoverForAll(sessionId, key))
+}
+
+/**
+ * Gives every file a pasted picture as its cover, in memory. The bytes cross IPC as base64 (a number array would be
+ * several times their size); the backend refuses an oversized one before decoding it (`coverTooLarge`), then sniffs
+ * the bytes (`pastedNotAnImage`) and caps a cover at 10 MiB (a TIFF is converted).
+ */
+export async function setCoverFromBytes(sessionId: string, data: Uint8Array): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.setCoverFromBytes(sessionId, toBase64(data)))
+}
+
+/** Gives every file a dropped picture file as its cover, in memory; a folder, FIFO, or symlink is `coverNotAFile`. */
+export async function setCoverFromPath(sessionId: string, path: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.setCoverFromPath(sessionId, path))
 }
 
 /**
@@ -153,4 +219,80 @@ export async function releaseTagTrackAudio(url: string): Promise<void> {
  */
 export async function openTagsInPlayer(sessionId: string, paths: string[]): Promise<TagEditorResult<null>> {
   return result(await commands.openTagsInPlayer(sessionId, paths))
+}
+
+/** A Multi-Rename answer for the Tags window's session calls. */
+type SessionResult<T> = { ok: true; value: T } | { ok: false; error: MultiRenameError }
+
+function sessionResult<T>(
+  res: { status: 'ok'; data: T } | { status: 'error'; error: MultiRenameError },
+): SessionResult<T> {
+  return res.status === 'ok' ? { ok: true, value: res.data } : { ok: false, error: res.error }
+}
+
+/** Holds a Multi-Rename session for a Tags window (no eviction takes it), and says its track count and folder. */
+export async function holdTagsSession(sessionId: string): Promise<SessionResult<TagsSessionInfo>> {
+  return sessionResult(await commands.holdTagsSession(sessionId))
+}
+
+/** Lets eviction take the session again. */
+export async function releaseTagsSession(sessionId: string): Promise<void> {
+  await commands.releaseTagsSession(sessionId)
+}
+
+/** A new session over an open sheet's files, in their current order, for a Tags window of its own. */
+export async function reopenForTags(sessionId: string): Promise<SessionResult<MultiRenameOpened>> {
+  return sessionResult(await commands.reopenForTags(sessionId))
+}
+
+/**
+ * Opens a Multi-Rename session over a pane's selection for a Tags window, as `openMultiRename` does, but with an
+ * empty media cache: no EXIF or tag read runs for it. `selectionChanged` when the rows are stale.
+ */
+export async function openTagsSession(
+  listingId: string,
+  includeHidden: boolean,
+  selectedIndices: number[] | null,
+  expectedSequence: number,
+): Promise<SessionResult<MultiRenameOpened>> {
+  return sessionResult(await commands.openTagsSession(listingId, includeHidden, selectedIndices, expectedSequence))
+}
+
+/**
+ * Edit > Select all (⌘A) while this Tags window is focused. The menu accelerator fires before the page's keydown
+ * sees ⌘A, so this is how the window learns of it (`menu_handlers.rs` routes it here instead of the native
+ * `selectAll:`). Returns an `UnlistenFn`.
+ */
+export async function onTagsSelectAll(callback: () => void): Promise<UnlistenFn> {
+  return events.tagsSelectAll.listen(() => {
+    callback()
+  })
+}
+
+/**
+ * A File / Select menu key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while this Tags window is focused. Those
+ * accelerators fire before the page's keydown, so `menu_handlers.rs` sends the press here (`TagsMenuKey`: the Tags
+ * command the item's key runs, and the item's own main-window command). Returns an `UnlistenFn`.
+ */
+export async function onTagsMenuKey(callback: (key: TagsMenuKey) => void): Promise<UnlistenFn> {
+  return events.tagsMenuKey.listen((event) => {
+    callback(event.payload)
+  })
+}
+
+/** Select > Deselect all (⌘⇧A) while this Tags window is focused; routed as `onTagsSelectAll`. */
+export async function onTagsDeselectAll(callback: () => void): Promise<UnlistenFn> {
+  return events.tagsDeselectAll.listen(() => {
+    callback()
+  })
+}
+
+/** Bytes as base64, in chunks so a large picture never overflows the call stack. */
+function toBase64(data: Uint8Array): string {
+  const CHUNK = 0x8000
+  let binary = ''
+  for (let start = 0; start < data.length; start += CHUNK) {
+    binary += String.fromCharCode(...data.subarray(start, start + CHUNK))
+  }
+  return btoa(binary)
 }

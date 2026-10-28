@@ -205,6 +205,7 @@ export const COMMAND_IDS = [
   // File action commands
   'file.rename',
   'file.multiRename',
+  'file.editTags',
   // Keys the Multi-rename sheet answers itself
   'multiRename.openPresets',
   'multiRename.savePreset',
@@ -223,9 +224,6 @@ export const COMMAND_IDS = [
   'multiRename.fieldHistory',
   'multiRename.moveRowUp',
   'multiRename.moveRowDown',
-  'multiRename.tabRename',
-  'multiRename.tabTags',
-  'multiRename.playTrack',
   'multiRename.rename',
   'file.view',
   'file.edit',
@@ -332,6 +330,23 @@ export const COMMAND_IDS = [
   'palette.down',
   'palette.execute',
   'palette.close',
+  // The Tags window's own keys (fork, `multiRename.tagEditor`).
+  'tags.close',
+  'tags.switchPane',
+  'tags.edit',
+  'tags.editNumber',
+  'tags.play',
+  'tags.openInPlayer',
+  'tags.replace',
+  'tags.case',
+  'tags.format',
+  'tags.cleanUp',
+  'tags.fromName',
+  'tags.number',
+  'tags.clearField',
+  'tags.removeExtras',
+  'tags.write',
+  'tags.undo',
 ] as const
 
 /** Closed union of every command id (invariant A3). */

@@ -2,7 +2,7 @@
     /**
      * The choice a write asks for when some files would lose tag data the editor doesn't show (`TagError::WouldDrop`):
      * each file and its items, then "Write anyway" or "Skip these files". Never answered for the user. It sits in the
-     * Tags tab, under the write's report; focus starts on the safe choice.
+     * Tags window, under the write's report; focus starts on the safe choice.
      */
     import { onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'

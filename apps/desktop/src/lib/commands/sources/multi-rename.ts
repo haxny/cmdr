@@ -183,37 +183,4 @@ export const multiRenameCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     fixedKey: true,
   },
-  {
-    // The Tags tab's strip (only mounted with the `multiRename.tagEditor` setting). ⌘⇧[ / ⌘⇧] are macOS's
-    // previous / next tab, and no other command claims them in an overlapping scope, so Settings shows no conflict
-    // (⌘1/⌘2 clashed with the main window's view modes; ⌃Tab with `tab.next`).
-    id: 'multiRename.tabRename',
-    nameKey: 'commands.multiRenameTabRename.label',
-    scope: 'Main window/Multi-rename',
-    showInPalette: false,
-    shortcuts: ['⌘⇧['],
-    whileDialogOpen: BLOCKED_BY_DIALOGS,
-    fixedKey: true,
-  },
-  {
-    id: 'multiRename.tabTags',
-    nameKey: 'commands.multiRenameTabTags.label',
-    scope: 'Main window/Multi-rename',
-    showInPalette: false,
-    shortcuts: ['⌘⇧]'],
-    whileDialogOpen: BLOCKED_BY_DIALOGS,
-    fixedKey: true,
-  },
-  {
-    // Plays or stops the track whose row holds focus in the Tags tab. Plain Space types a space in a track cell,
-    // so the key is ⌥Space (macOS types a non-breaking space there, which the tab prevents when it acts). ⌘⌥P is
-    // taken (`multiRename.normalizeUnicode`), so it is no fallback. Answered by the tab's own keydown.
-    id: 'multiRename.playTrack',
-    nameKey: 'commands.multiRenamePlayTrack.label',
-    scope: 'Main window/Multi-rename',
-    showInPalette: false,
-    shortcuts: ['⌥Space'],
-    whileDialogOpen: BLOCKED_BY_DIALOGS,
-    fixedKey: true,
-  },
 ]

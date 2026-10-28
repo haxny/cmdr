@@ -91,6 +91,11 @@ pub fn on_window_event(window: &Window, event: &tauri::WindowEvent) {
     {
         file_viewer::close_session_for_window(window.label());
     }
+    // A Tags window owns its Multi-Rename session: however it goes (Escape, the red button, its
+    // webview dying), the session is released and closed. Idempotent after the window's own close.
+    if let tauri::WindowEvent::Destroyed = event {
+        crate::tag_editor::window::end(window.label());
+    }
 }
 
 /// Process-level signals: the first webview being ready, a reveal arriving from another

@@ -53,7 +53,31 @@ pub fn undo<R: tauri::Runtime>(
     apply_id: String,
     undoing: Option<String>,
 ) -> Result<RestoreReport, TagEditorError> {
-    with_store(app, |store| undo_with(store, &apply_id, undoing.as_deref()))
+    with_store(app, |store| match undo_with(store, &apply_id, undoing.as_deref()) {
+        Ok(report) => {
+            // The folder's last write loses this apply, or keeps it with the files still to restore.
+            super::last_apply::undone(&apply_id, report.failed.len());
+            Ok(report)
+        }
+        Err(error) => {
+            // No record (the store pruned it): ⌘Z mustn't offer it again.
+            if record_gone(&error) {
+                super::last_apply::forget(&apply_id);
+            }
+            Err(error)
+        }
+    })
+}
+
+/// The store has no record of the apply: `restore` reads its manifest first, and a missing one
+/// is `Io(NotFound)` (the record was pruned, or already undone).
+pub(super) fn record_gone(error: &TagEditorError) -> bool {
+    matches!(
+        error,
+        TagEditorError::Undo {
+            error: cmdr_tags::TagError::Io(std::io::ErrorKind::NotFound, _)
+        }
+    )
 }
 
 /// [`undo`] against `store`. The caller holds the store for the whole call.

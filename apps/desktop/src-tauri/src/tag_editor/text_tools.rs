@@ -1,6 +1,6 @@
 //! Find/replace and "format a field from a Multi-Rename mask", run over the tag session by
 //! Multi-Rename's own engine (`Transform`/`Replace` for the search, `Mask` for the mask), so the
-//! wildcard, case and regex rules and the `[N3-]`-style ranges are the ones the Rename tab has.
+//! wildcard, case and regex rules and the `[N3-]`-style ranges are the ones Multi-Rename has.
 //!
 //! Both validate (compile the search, parse the mask) before anything is touched. Neither strips
 //! diacritics: a result that brings them in shows in `view.diacritics` like a typed edit does.

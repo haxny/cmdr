@@ -208,6 +208,7 @@ export {
   updateUndoTrashMenu,
   setReopenClosedTabEnabled,
   setOpenTerminalHereEnabled,
+  setEditTagsEnabled,
   getChildWindowRect,
   setChildWindowRect,
   closeChildWindow,
@@ -402,7 +403,7 @@ export type {
 // The quit gate: the backend holding an exit while operations run, and the
 // dialog's two answers.
 export { quitConfirm, quitCancel, onQuitRequested, onQuitCalledOff } from './quit'
-export type { QuitAnswer, QuitRequested } from './quit'
+export type { QuitAnswer, QuitRequested, TagsAtQuit } from './quit'
 
 // Network types
 export type { ManualConnectResult } from './networking'
@@ -1168,7 +1169,7 @@ export type {
   RenameExample,
 } from './multi-rename'
 
-// Tags tab of Multi-Rename
+// The Tags window
 export {
   openTagEditor,
   editTags,
@@ -1178,18 +1179,33 @@ export {
   getTagChanges,
   applyTags,
   undoTagApply,
+  lastTagApply,
   closeTagEditor,
   listCoverCandidates,
   setCoverFromFile,
   getCoverImage,
+  getCoverThumbnail,
+  listTagCovers,
+  useCoverForAll,
+  setCoverFromBytes,
+  setCoverFromPath,
   tagTrackAudioUrl,
   releaseTagTrackAudio,
   openTagsInPlayer,
+  holdTagsSession,
+  releaseTagsSession,
+  reopenForTags,
+  openTagsSession,
+  onTagsSelectAll,
+  onTagsDeselectAll,
+  onTagsMenuKey,
 } from './tag-editor'
 export type {
   ApplyRequest,
   CoverCandidate,
+  CoverChoice,
   FileChangeView,
+  LastTagApply,
   NamePattern,
   NamePreviewRow,
   RestoreReport,
@@ -1200,4 +1216,6 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TagsMenuKey,
+  TagsSessionInfo,
 } from './tag-editor'

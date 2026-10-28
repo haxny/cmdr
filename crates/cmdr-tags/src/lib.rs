@@ -52,6 +52,8 @@ mod undo_test;
 #[cfg(test)]
 mod write_cover_test;
 #[cfg(test)]
+mod write_date_test;
+#[cfg(test)]
 mod write_extras_test;
 #[cfg(test)]
 mod write_hidden_test;
@@ -70,4 +72,4 @@ pub use normalize::normalize_for;
 pub use numbering::{DiscOptions, NumberOptions};
 pub use read::{read_duration, read_tags, removed_by_kind};
 pub use undo::{ApplyId, RestoreReport, UndoLimits, UndoStore};
-pub use write::{WriteOptions, write_tags};
+pub use write::{WriteOptions, date_is_writable, write_tags};

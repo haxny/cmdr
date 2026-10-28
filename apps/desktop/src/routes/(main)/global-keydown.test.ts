@@ -454,7 +454,14 @@ describe('resolveGlobalKeyAction', () => {
         .filter((command) => command.shortcuts.includes('Escape'))
         .map((command) => command.id)
         .sort()
-      expect(escapeBound).toEqual(['about.close', 'palette.close', 'queue.close', 'share.back', 'volume.close'])
+      expect(escapeBound).toEqual([
+        'about.close',
+        'palette.close',
+        'queue.close',
+        'share.back',
+        'tags.close',
+        'volume.close',
+      ])
     })
   })
 })

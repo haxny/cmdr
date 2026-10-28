@@ -5,9 +5,9 @@
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { commands, events } from '#lib/ipc/bindings.js'
-import type { QuitAnswer, QuitRequested } from '#lib/ipc/bindings.js'
+import type { QuitAnswer, QuitRequested, TagsAtQuit } from '#lib/ipc/bindings.js'
 
-export type { QuitAnswer, QuitRequested }
+export type { QuitAnswer, QuitRequested, TagsAtQuit }
 
 /** The user pressed Quit. The backend stops every operation and exits.
  *  `noQuitPending` means the answer changed nothing: the countdown had already

@@ -1,12 +1,12 @@
-//! The tab's pure view: summaries over entries, unreadable rows left out of them.
+//! The Tags window's pure view: summaries over entries, unreadable rows left out of them.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cmdr_tags::shared::{SharedValue, ValueCount};
 use cmdr_tags::{Cover, FileTags, TagField};
 
 use super::session::{Entry, Loaded};
-use super::view::{Access, CoverSummary, ReadErrorCode, build};
+use super::view::{Access, CoverSummary, ReadErrorCode, build, cover_hashes, cover_key};
 
 fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> Entry {
     let mut tags = FileTags::default();
@@ -21,6 +21,7 @@ fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> 
         tags.extras.insert((*key).to_string(), vec!["x".to_string()]);
     }
     Entry::Loaded(Box::new(Loaded {
+        cover_key: tags.cover.as_ref().map(cover_key),
         disk: tags.clone(),
         edited: tags,
         duration_ms: Some(1500),
@@ -151,7 +152,24 @@ fn multiple_row_choices_are_capped() {
         .iter()
         .map(|(path, entry)| (Path::new(path.as_str()), entry))
         .collect();
-    assert_eq!(row(&build(OPEN, &tracks), TagField::Album).choices.len(), 50);
+    let album = row(&build(OPEN, &tracks), TagField::Album).clone();
+    assert_eq!(album.choices.len(), 50);
+    // The 10 values the list was cut by are counted, so the UI can say so.
+    assert_eq!(album.choices_more, 10);
+}
+
+#[test]
+fn a_list_that_fits_has_nothing_more() {
+    let a = Path::new("/m/a.mp3");
+    let b = Path::new("/m/b.mp3");
+    let view = build(
+        OPEN,
+        &[
+            (a, &loaded(&[(TagField::Album, "One")], None, &[])),
+            (b, &loaded(&[(TagField::Album, "Two")], None, &[])),
+        ],
+    );
+    assert_eq!(row(&view, TagField::Album).choices_more, 0);
 }
 
 #[test]
@@ -165,4 +183,50 @@ fn same_row_has_no_choices() {
         SharedValue::Same(vec!["Book".to_string()])
     );
     assert!(view.shared.iter().all(|row| row.choices.is_empty()));
+}
+
+/// An audiobook's 22 tracks with a 2 MiB cover each: building the view (which every edit does)
+/// hashes no cover, the keys come from the read.
+#[test]
+fn a_view_build_hashes_no_cover() {
+    let cover = vec![7_u8; 2 * 1024 * 1024];
+    let entries: Vec<(PathBuf, Entry)> = (1..=22)
+        .map(|index| {
+            (
+                PathBuf::from(format!("/m/{index:02}.mp3")),
+                loaded(&[], Some(&cover), &[]),
+            )
+        })
+        .collect();
+    let tracks: Vec<(&Path, &Entry)> = entries.iter().map(|(path, entry)| (path.as_path(), entry)).collect();
+
+    let before = cover_hashes();
+    let view = build(OPEN, &tracks);
+
+    assert_eq!(cover_hashes(), before);
+    assert!(matches!(view.cover, CoverSummary::Same { bytes, .. } if bytes == cover.len()));
+}
+
+#[test]
+fn files_with_a_date_the_writer_refuses_are_counted_on_open() {
+    let a = Path::new("/m/a.mp3");
+    let b = Path::new("/m/b.mp3");
+    let m4a = Path::new("/m/c.m4a");
+    let ok = loaded(&[(TagField::Date, "2010")], None, &[]);
+    let bad = loaded(&[(TagField::Date, "2010-20-09")], None, &[]);
+    let view = build(OPEN, &[(a, &bad), (b, &ok), (m4a, &bad)]);
+    // The M4A keeps its date as text, so only the MP3 is unwritable.
+    assert_eq!(view.bad_dates, 1);
+    assert_eq!(build(OPEN, &[(a, &ok), (b, &loaded(&[], None, &[]))]).bad_dates, 0);
+}
+
+#[test]
+fn the_date_flag_clears_once_the_date_is_edited() {
+    let a = Path::new("/m/a.mp3");
+    let Entry::Loaded(mut file) = loaded(&[(TagField::Date, "2010-20-09")], None, &[]) else {
+        unreachable!()
+    };
+    assert_eq!(build(OPEN, &[(a, &Entry::Loaded(file.clone()))]).bad_dates, 1);
+    file.edited.fields.insert(TagField::Date, vec!["2010".to_string()]);
+    assert_eq!(build(OPEN, &[(a, &Entry::Loaded(file))]).bad_dates, 0);
 }

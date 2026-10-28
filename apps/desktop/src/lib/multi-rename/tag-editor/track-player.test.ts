@@ -34,12 +34,12 @@ class FakeAudio {
   }
 }
 
-function setup(over: { requestUrl?: (sessionId: string, path: string) => Promise<unknown> } = {}) {
+function setup(over: { requestUrl?: (args: { sessionId: string; path: string }) => Promise<unknown> } = {}) {
   const audios: FakeAudio[] = []
   let n = 0
   const requestUrl = vi.fn(
     over.requestUrl ??
-      ((_session: string, path: string) =>
+      (({ path }: { sessionId: string; path: string }) =>
         Promise.resolve({ ok: true, value: `cmdr-media://localhost/${path}-${String(++n)}` })),
   )
   const releaseUrl = vi.fn(() => Promise.resolve())
@@ -59,7 +59,7 @@ describe('createTrackPlayer', () => {
   it('plays a track from the URL the session minted', async () => {
     const { player, audios, requestUrl } = setup()
     await player.toggle('/b/a.mp3')
-    expect(requestUrl).toHaveBeenCalledWith('s1', '/b/a.mp3')
+    expect(requestUrl).toHaveBeenCalledWith({ sessionId: 's1', path: '/b/a.mp3' })
     expect(player.playing).toBe('/b/a.mp3')
     expect(audios).toHaveLength(1)
     expect(audios[0].src).toBe('cmdr-media://localhost//b/a.mp3-1')

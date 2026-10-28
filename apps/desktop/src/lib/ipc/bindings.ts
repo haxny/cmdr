@@ -1629,7 +1629,11 @@ export const commands = {
    */
   saveMultiRenameLastSettings: (spec: MultiRenameSpec, presetId: string | null) =>
     __TAURI_INVOKE<void>('save_multi_rename_last_settings', { spec, presetId }),
-  // Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session.
+  /**
+   *  Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session. The
+   *  read may take as long as files keep being read; once none was for `SESSION_IO_TIMEOUT` (a
+   *  stalled share) it's given up as `ReadTimedOut`.
+   */
   openTagEditor: (sessionId: string, restart: boolean) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('open_tag_editor', { sessionId, restart })),
   // Applies edits in memory; an unknown track refuses the whole batch.
@@ -1652,9 +1656,14 @@ export const commands = {
   // What a write as `kind` would change, per file, including what the kind removes.
   getTagChanges: (sessionId: string, kind: ContentKind) =>
     typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
-  // Writes the changed files.
-  applyTags: (sessionId: string, request: ApplyRequest) =>
-    typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request })),
+  /**
+   *  Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
+   *  Undo reverses both; otherwise a write that writes something is the folder's new last write.
+   *  No deadline on purpose: the files are local (a remote session is refused), and a write cut
+   *  short would leave the book half written; a quit waits for it (`tag_editor/at_quit.rs`).
+   */
+  applyTags: (sessionId: string, request: ApplyRequest, continues: boolean) =>
+    typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request, continues })),
   /**
    *  Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
    *  the restored files as read, edits to them dropped (its user confirmed that); any other keeps
@@ -1662,6 +1671,20 @@ export const commands = {
    */
   undoTagApply: (applyId: string, sessionId: string | null) =>
     typedError<RestoreReport, TagEditorError>(__TAURI_INVOKE('undo_tag_apply', { applyId, sessionId })),
+  /**
+   *  The last tag write of the session's folder, which ⌘Z undoes: kept for the app's lifetime, so a
+   *  Tags window opened later over the same folder still offers it. `None` when there's none.
+   */
+  lastTagApply: (sessionId: string) =>
+    typedError<
+      {
+        // In the order they were written; empty when none kept its old tags.
+        applies: UndoableApply[]
+        // Some files of this write were written without their old tags kept: Undo can't reach them.
+        partial: boolean
+      } | null,
+      TagEditorError
+    >(__TAURI_INVOKE('last_tag_apply', { sessionId })),
   // Ends the tag session, dropping its edits.
   closeTagEditor: (sessionId: string) => __TAURI_INVOKE<void>('close_tag_editor', { sessionId }),
   // The images of the session's folder that can be a cover.
@@ -1671,11 +1694,47 @@ export const commands = {
   setCoverFromFile: (sessionId: string, fileName: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_file', { sessionId, fileName })),
   /**
-   *  The cover every file shares, as a `data:` URL for the thumbnail, or `None` when there is none,
-   *  the files differ, or it isn't a JPEG, PNG, or WebP image.
+   *  A cover of the files as a `data:` URL for a thumbnail or the large view: the one named by
+   *  `key` (a `CoverChoice::key`; `"none"` has no image), or for `None` the cover every file
+   *  shares. `None` comes back when there is none, the files differ, or it isn't a JPEG, PNG, or
+   *  WebP image; a key no file carries any more is `UnknownCover`.
    */
-  getCoverImage: (sessionId: string) =>
-    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId })),
+  getCoverImage: (sessionId: string, key: string | null) =>
+    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId, key })),
+  /**
+   *  Every distinct cover of the session's readable files with how many carry it, the most common
+   *  first, and the files without one last (`key: "none"`).
+   */
+  listTagCovers: (sessionId: string) =>
+    typedError<CoverChoice[], TagEditorError>(__TAURI_INVOKE('list_tag_covers', { sessionId })),
+  // Gives every file the cover `key` names, in memory: a change listed for Write, nothing written.
+  useCoverForAll: (sessionId: string, key: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('use_cover_for_all', { sessionId, key })),
+  /**
+   *  Gives every file a pasted picture as its cover, in memory. The bytes come as base64 (a JSON
+   *  number array would make a large TIFF several times its size on both sides), refused unread
+   *  when longer than the largest paste taken could encode to, and decoded off the IPC thread. A
+   *  JPEG, PNG, or WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF
+   *  is converted to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else,
+   *  bad base64 included, is `PastedNotAnImage`.
+   */
+  setCoverFromBytes: (sessionId: string, data: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
+  /**
+   *  Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
+   *  (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap. A drop
+   *  can come from a NAS: the read may take as long as its bytes keep coming, and is given up once
+   *  they stood still for `COVER_READ_STALL_LIMIT` (`CoverTimedOut`); nothing changes then or later.
+   */
+  setCoverFromPath: (sessionId: string, path: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_path', { sessionId, path })),
+  /**
+   *  A small PNG `data:` URL of the cover `key` names, for a tile (about twice its size, cached by
+   *  key); `None` for "none" or a cover that doesn't decode. The viewer keeps the full image
+   *  (`get_cover_image`).
+   */
+  getCoverThumbnail: (sessionId: string, key: string) =>
+    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_thumbnail', { sessionId, key })),
   /**
    *  A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
    *  Only a readable track of the session gets one (`UnknownTrack` otherwise).
@@ -1690,6 +1749,35 @@ export const commands = {
    */
   openTagsInPlayer: (sessionId: string, paths: string[]) =>
     typedError<null, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths })),
+  /**
+   *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
+   *  many of its files are tracks and what its folder is called. The main window calls it right
+   *  after opening the session; the window's close (or its `Destroyed`) releases it.
+   */
+  holdTagsSession: (sessionId: string) =>
+    typedError<TagsSessionInfo, MultiRenameError>(__TAURI_INVOKE('hold_tags_session', { sessionId })),
+  // Lets eviction take the session again. No-op when it's already gone.
+  releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
+  /**
+   *  A new Multi-Rename session over the files of `session_id` (an open sheet's), in their current
+   *  order, for a Tags window: the sheet closing never ends the window's session.
+   */
+  reopenForTags: (sessionId: string) =>
+    typedError<MultiRenameOpened, MultiRenameError>(__TAURI_INVOKE('reopen_for_tags', { sessionId })),
+  /**
+   *  Opens a Multi-Rename session over the pane's selection for a Tags window, as
+   *  `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
+   *  the window reads the tags itself.
+   */
+  openTagsSession: (
+    listingId: string,
+    includeHidden: boolean,
+    selectedIndices: number[] | null,
+    expectedSequence: number,
+  ) =>
+    typedError<MultiRenameOpened, MultiRenameError>(
+      __TAURI_INVOKE('open_tags_session', { listingId, includeHidden, selectedIndices, expectedSequence }),
+    ),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -5631,6 +5719,9 @@ export const events = {
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
+  tagsDeselectAll: makeEvent<TagsDeselectAll>('tags-deselect-all'),
+  tagsMenuKey: makeEvent<TagsMenuKey>('tags-menu-key'),
+  tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
   tagsSkipped: makeEvent<TagsSkipped>('tags-skipped'),
   viewModeChanged: makeEvent<ViewModeChanged>('view-mode-changed'),
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
@@ -7577,6 +7668,22 @@ export type Cover = Cover_Serialize | Cover_Deserialize
 export type CoverCandidate = {
   fileName: string
   size: number
+}
+
+/**
+ *  One distinct cover across the readable files, or (`key: "none"`, empty `mime`, 0 bytes) the
+ *  files that have none.
+ */
+export type CoverChoice = {
+  // Names the cover in `get_cover_image` and `use_cover_for_all`: a hash of its bytes.
+  key: string
+  mime: string
+  bytes: number
+  // Pixel size, when the image header could be read.
+  width: number | null
+  height: number | null
+  // How many readable files carry it.
+  files: number
 }
 
 // What to do with the front cover of every file.
@@ -10717,6 +10824,14 @@ export type KnownWebdavServer = {
    *  recency.
    */
   lastConnectedAt: string
+}
+
+// The last write of a folder.
+export type LastTagApply = {
+  // In the order they were written; empty when none kept its old tags.
+  applies: UndoableApply[]
+  // Some files of this write were written without their old tags kept: Undo can't reach them.
+  partial: boolean
 }
 
 /**
@@ -14609,6 +14724,13 @@ export type QuitRequested = {
   operations: OperationSnapshot[]
   // Milliseconds from this event to the automatic quit.
   countdownMs: number
+  // The Tags windows' share: unwritten tag edits, and a tag write the quit waits for.
+  tags: TagsAtQuit
+  /**
+   *  Whether the gate quits on its own when `countdown_ms` runs out. `false` when only
+   *  unwritten tag edits hold the quit ([`counts_down`]): the prompt waits for an answer.
+   */
+  countsDown: boolean
 }
 
 /**
@@ -14657,7 +14779,7 @@ export type ReadOnlyPlace =
   // A restic repo's `Browse snapshots` row, or anything inside its snapshots.
   | 'resticSnapshots'
 
-// Why the tab can't write. A stable code, worded by the UI.
+// Why the window can't write. A stable code, worded by the UI.
 export type ReadOnlyReason =
   // The session's folder isn't on the local disk; v1 writes local files only.
   'remoteVolume'
@@ -17360,6 +17482,8 @@ export type SharedRow = {
   value: SharedValue
   // For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
   choices: ValueCount[]
+  // How many more distinct values the files hold than `choices` lists (the 50 cut-off); 0 when all are listed.
+  choicesMore: number
 }
 
 // What one field looks like across the selected files.
@@ -18359,14 +18483,14 @@ export type TagApplyReport = {
 }
 
 /**
- *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
  *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
  *  the edit to another file.
  */
 export type TagEdit = TagEdit_Serialize | TagEdit_Deserialize
 
 /**
- *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
  *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
  *  the edit to another file.
  */
@@ -18379,7 +18503,7 @@ export type TagEdit_Deserialize =
   | { kind: 'cover'; edit: CoverEdit_Deserialize }
 
 /**
- *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
  *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
  *  the edit to another file.
  */
@@ -18413,6 +18537,23 @@ export type TagEditorError =
   | { kind: 'coverUnreadable' }
   // The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
   | { kind: 'coverNotAnImage' }
+  // Pasted bytes aren't a JPEG, PNG, WebP, or TIFF image (a TIFF is converted). Nothing was changed.
+  | { kind: 'pastedNotAnImage' }
+  /**
+   *  Reading a dropped picture stalled (its drive stopped answering). Nothing was changed, and the read
+   *  finishing later changes nothing either.
+   */
+  | { kind: 'coverTimedOut' }
+  // Earlier drops' reads are still stuck, so this one wasn't started. Nothing was changed.
+  | { kind: 'coverBusy' }
+  // Converting a pasted picture took too long. Nothing was changed, then or later.
+  | { kind: 'pasteTimedOut' }
+  // A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
+  | { kind: 'coverNotAFile' }
+  // No readable file carries the cover the key names (any more). Nothing was changed.
+  | { kind: 'unknownCover' }
+  // Reading the files' tags stood still (their drive stopped answering). Nothing was changed.
+  | { kind: 'readTimedOut' }
   // The background task running the call failed.
   | { kind: 'taskFailed' }
   // A file-name pattern that can't be used. Nothing was changed.
@@ -18440,6 +18581,11 @@ export type TagEditorView = {
   dirty: boolean
   // The fields whose edited values still carry diacritics they must not.
   diacritics: TagField[]
+  /**
+   *  How many files carry a Date the writer would refuse (an MP3 whose TDAT reads as month 20):
+   *  flagged on open, so the user corrects it before writing.
+   */
+  badDates: number
 }
 
 /**
@@ -18455,6 +18601,11 @@ export type TagError =
   | { type: 'parse'; data: string }
   // The tags couldn't be written.
   | { type: 'write'; data: string }
+  /**
+   *  The Date to write (this value) isn't a date the format can hold: not a date at all, or
+   *  out of range (month 20). The user corrects it in the Date row. Nothing was written.
+   */
+  | { type: 'badDate'; data: string }
   /**
    *  The write would lose these items (sorted IDs such as `TSOP`, `TXXX:Comment`, `COMM:ces`,
    *  `TITLE#2`): values the reader doesn't show that differ from what it shows (a second value
@@ -18609,6 +18760,55 @@ export type TagTool =
       // How to read the file names.
       pattern: NamePattern
     }
+
+// The Tags windows' share of a quit.
+export type TagsAtQuit = {
+  // Tag sessions (one per Tags window) holding edits not yet written.
+  unwritten: number
+  // A tag write or undo is running.
+  writing: boolean
+}
+
+/**
+ *  `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window
+ *  clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
+ */
+export type TagsDeselectAll = null
+
+/**
+ *  `tags-menu-key`: a File / Select menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while a Tags
+ *  window is focused. Those accelerators fire before the page's keydown, so this is how the
+ *  window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
+ */
+export type TagsMenuKey = {
+  // The `Tags window` command the item's default key runs there (`tags.replace` for File > Edit's F4).
+  commandId: string
+  /**
+   *  The main-window command the item runs. The window acts only while this command's first key is
+   *  still one of `command_id`'s keys: a rebound item no longer means the tag tool.
+   */
+  menuCommandId: string
+}
+
+/**
+ *  `tags-select-all`: Edit > Select all (⌘A) while a Tags window (`tags-<id>`) is focused. As
+ *  for the queue, the accelerator fires before the page sees ⌘A; the window selects every track,
+ *  or the text of the box being typed in. Payloadless, emitted to that window only.
+ */
+export type TagsSelectAll = null
+
+// What the main window needs to open a held session's window.
+export type TagsSessionInfo = {
+  // How many of the session's files are audio the engine can tag (by name; none means no window).
+  tracks: number
+  // The session's folder, for the window's title.
+  folderName: string
+  /**
+   *  The session of a Tags window already showing the same files: the main window raises it
+   *  and gives this session back, so one book never has two windows.
+   */
+  alreadyOpen: string | null
+}
 
 /**
  *  `tags-skipped`: a color-tag toggle (keyboard command or context-menu circle) left
@@ -19215,6 +19415,12 @@ export type UndoReport = {
   operations: OperationUndoOutcome[]
   restored: number
   skipped: number
+}
+
+// One apply Undo can reverse, and how many files it wrote (or still has to put back).
+export type UndoableApply = {
+  applyId: string
+  written: number
 }
 
 /**

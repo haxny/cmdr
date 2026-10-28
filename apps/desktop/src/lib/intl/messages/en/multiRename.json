@@ -1061,166 +1061,191 @@
   "@multiRename.placeholderHelp.rangeEditHint": {
     "description": "In the Multi-rename sheet, a tooltip on a placeholder button (such as [N], [E], or [C]) explains what that placeholder puts in the new name, lists a few of its other forms, and shows each with an example on a made-up file (Beach day.jpg, in the folder Trips/Lisbon 2026, last changed 2026-07-14 09:05:30). Last line of the [N], [E], and [P] tooltips: with the text cursor in such a placeholder in the mask, the down arrow key opens a small editor to pick which characters it takes. Keep [N] and ↓ as they are."
   },
-  "multiRename.tabs.label": "Multi-Rename sections",
-  "@multiRename.tabs.label": {
-    "description": "Accessible name of the tab strip at the top of the Multi-Rename sheet, which switches between the Rename and Tags tabs. Only read aloud by screen readers."
-  },
-  "multiRename.tabs.rename": "Rename",
-  "@multiRename.tabs.rename": {
-    "description": "Label of the tab that shows the usual Multi-Rename sheet (masks, search and replace, preview). Shown in a tab strip beside \"Tags\"."
-  },
-  "multiRename.tabs.tags": "Tags",
-  "@multiRename.tabs.tags": {
-    "description": "Label of the tab that edits the tags inside music and audiobook files (artist, album, title). Shown in a tab strip beside \"Rename\"."
-  },
   "multiRename.tags.reading": "Reading tags…",
   "@multiRename.tags.reading": {
-    "description": "Shown in the Tags tab of Multi-Rename while Cmdr reads the tags of the selected music files."
+    "description": "Shown in the tag editor window while Cmdr reads the tags of the selected music files."
   },
   "multiRename.tags.trackCount": "{count, plural, one {{countText} track} other {{countText} tracks}}",
   "@multiRename.tags.trackCount": {
-    "description": "Shown in the Tags tab of Multi-Rename once the tags are read: how many audio files (tracks) it found. Counts files.",
+    "description": "Shown in the tag editor window once the tags are read: how many audio files (tracks) it found. Counts files.",
     "placeholders": {
-      "countText": "how many audio files the Tags tab found, ready to drop into the sentence (for example 1,234)"
+      "countText": "how many audio files the tag editor window found, ready to drop into the sentence (for example 1,234)"
     }
   },
   "multiRename.tags.error": "Couldn’t read the tags.",
   "@multiRename.tags.error": {
-    "description": "Shown in the Tags tab of Multi-Rename when reading the tags of the selected files failed."
+    "description": "Shown in the tag editor window when reading the tags of the selected files failed."
   },
   "multiRename.tags.field.title": "Title",
   "@multiRename.tags.field.title": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the title of a track or book of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the title of a track or book of the selected music files."
   },
   "multiRename.tags.field.artist": "Artist",
   "@multiRename.tags.field.artist": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the artist (for an audiobook, the author) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the artist (for an audiobook, the author) of the selected music files."
   },
   "multiRename.tags.field.albumArtist": "Album artist",
   "@multiRename.tags.field.albumArtist": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the album artist (for an audiobook, the author as well) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the album artist (for an audiobook, the author as well) of the selected music files."
   },
   "multiRename.tags.field.album": "Album",
   "@multiRename.tags.field.album": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the album (for an audiobook, the book) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the album (for an audiobook, the book) of the selected music files."
   },
   "multiRename.tags.field.performer": "Performer",
   "@multiRename.tags.field.performer": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the performer (for an audiobook, the narrator) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the performer (for an audiobook, the narrator) of the selected music files."
   },
   "multiRename.tags.field.composer": "Composer",
   "@multiRename.tags.field.composer": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the composer (for an audiobook, the author of the music) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the composer (for an audiobook, the author of the music) of the selected music files."
   },
   "multiRename.tags.field.date": "Date",
   "@multiRename.tags.field.date": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the release date or year of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the release date or year of the selected music files."
   },
   "multiRename.tags.field.genre": "Genre",
   "@multiRename.tags.field.genre": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the genre of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the genre of the selected music files."
   },
   "multiRename.tags.field.publisher": "Publisher",
   "@multiRename.tags.field.publisher": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the publisher of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the publisher of the selected music files."
   },
   "multiRename.tags.field.translator": "Translator",
   "@multiRename.tags.field.translator": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the translator of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the translator of the selected music files."
   },
   "multiRename.tags.field.track": "Track",
   "@multiRename.tags.field.track": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the track number of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the track number of the selected music files."
   },
   "multiRename.tags.field.trackTotal": "Total tracks",
   "@multiRename.tags.field.trackTotal": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the total number of tracks (the 12 in track 3 of 12) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the total number of tracks (the 12 in track 3 of 12) of the selected music files."
   },
   "multiRename.tags.field.disc": "Disc",
   "@multiRename.tags.field.disc": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the disc number of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the disc number of the selected music files."
   },
   "multiRename.tags.field.discTotal": "Total discs",
   "@multiRename.tags.field.discTotal": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits the total number of discs (the 2 in disc 1 of 2) of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits the total number of discs (the 2 in disc 1 of 2) of the selected music files."
   },
   "multiRename.tags.field.comment": "Comment",
   "@multiRename.tags.field.comment": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits a free-form comment of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits a free-form comment of the selected music files."
   },
   "multiRename.tags.field.description": "Description",
   "@multiRename.tags.field.description": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits a longer description of the selected music files."
+    "description": "Label of a row in the tag editor window, beside the box that edits a longer description of the selected music files."
   },
   "multiRename.tags.field.www": "Web address",
   "@multiRename.tags.field.www": {
-    "description": "Label of a row in the Tags tab of Multi-Rename, beside the box that edits a web address of the selected music files."
-  },
-  "multiRename.tags.shared.label": "Tags shared by the files",
-  "@multiRename.tags.shared.label": {
-    "description": "Accessible name of the table of tag fields (artist, album, genre…) in the Tags tab of Multi-Rename. Typing in a row sets that tag on every selected file. Only read aloud by screen readers."
+    "description": "Label of a row in the tag editor window, beside the box that edits a web address of the selected music files."
   },
   "multiRename.tags.multipleValues": "‹multiple values›",
   "@multiRename.tags.multipleValues": {
-    "description": "Greyed placeholder in a tag box of the Tags tab of Multi-Rename when the selected files have different values for that tag. Leaving the box untouched keeps each file's own value; typing replaces it in every file."
+    "description": "Marker at the start of a tag box of the tag editor window when the selected files have different values for that tag; the values follow it in the same box. While the marker stays, each file keeps its own value; deleting it makes the text left the value of every file. Keep the brackets."
+  },
+  "multiRename.tags.multipleValues.keepHint": "Delete {marker} to set what’s left on every file. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.keepHint": {
+    "description": "Hint under the editing box of a tag row in the tag editor window, shown when the user pressed Return but the row’s text still starts with the «multiple values» marker (the files hold different values). Nothing was changed; the box stays open.",
+    "placeholders": {
+      "marker": "the marker text itself, multiRename.tags.multipleValues, like ‹multiple values›"
+    }
+  },
+  "multiRename.tags.multipleValues.tailHint": "Delete “{tail}” too: with it, the text isn’t every value. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.tailHint": {
+    "description": "Hint under the editing box of a tag row in the tag editor window, shown when the user pressed Return but the text still ends with the note that the list of values was cut (like “…and 10 more”). Nothing was changed; the box stays open.",
+    "placeholders": {
+      "tail": "that note, multiRename.tags.choicesMore, like …and 10 more"
+    }
+  },
+  "multiRename.tags.date.invalid": "This date doesn't exist. Type the right one, for example 2010, before writing.",
+  "@multiRename.tags.date.invalid": {
+    "description": "Hint under the Date row of the tag editor window, shown as soon as the book opens when some file carries a date the tag can't hold (for example an MP3 whose day and month were swapped). Writing is refused until the date is corrected."
+  },
+  "multiRename.tags.choicesMore": "…and {countText} more",
+  "@multiRename.tags.choicesMore": {
+    "description": "Last item in the tag box of a «multiple values» row of the tag editor window when the files hold more distinct values than the box lists. {countText} is the number of values left out. While it stays in the box, nothing is changed; deleting it makes the text left the value of every file, so the values left out are dropped."
   },
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
-    "description": "Accessible name of the list of audio files in the Tags tab of Multi-Rename, where each file's title and track number can be edited."
+    "description": "Accessible name of the list of audio files in the tag editor window, where each file's title and track number can be edited."
+  },
+  "multiRename.tags.album.label": "Album tags",
+  "@multiRename.tags.album.label": {
+    "description": "Accessible name of the left pane of the tag editor window: a list of the tags the audio files share (Artist, Album, Date…), one row per tag, laid out like Cmdr’s file panes. Only read aloud by screen readers."
+  },
+  "multiRename.tags.album.colName": "Name",
+  "@multiRename.tags.album.colName": {
+    "description": "Column header in the album pane of the tag editor window, above the tag names (Artist, Album, Date…)."
+  },
+  "multiRename.tags.album.colValue": "Value",
+  "@multiRename.tags.album.colValue": {
+    "description": "Column header in the album pane of the tag editor window, above the tag values the files share."
+  },
+  "multiRename.tags.album.editLabel": "{field} for all files",
+  "@multiRename.tags.album.editLabel": {
+    "description": "Accessible name of the editing box that F2 opens over a row of the album pane in the tag editor window. What is typed there is set on every file. Only read aloud by screen readers.",
+    "placeholders": {
+      "field": "the tag’s name, like Album or Artist (multiRename.tags.field.*)"
+    }
+  },
+  "multiRename.tags.track.playing": "Playing",
+  "@multiRename.tags.track.playing": {
+    "description": "Read by screen readers at the end of a row in the tracks pane of the tag editor window while that track’s audio plays (⌥Space plays or stops it)."
   },
   "multiRename.tags.col.number": "#",
   "@multiRename.tags.col.number": {
-    "description": "Column heading in the track list of the Tags tab of Multi-Rename: the track number."
+    "description": "Column heading in the track list of the tag editor window: the track number."
   },
   "multiRename.tags.col.title": "Title",
   "@multiRename.tags.col.title": {
-    "description": "Column heading in the track list of the Tags tab of Multi-Rename: the title tag of each file."
+    "description": "Column heading in the track list of the tag editor window: the title tag of each file."
   },
   "multiRename.tags.col.length": "Length",
   "@multiRename.tags.col.length": {
-    "description": "Column heading in the track list of the Tags tab of Multi-Rename: how long each audio file plays, like 3:07."
+    "description": "Column heading in the track list of the tag editor window: how long each audio file plays, like 3:07."
   },
   "multiRename.tags.col.fileName": "File name",
   "@multiRename.tags.col.fileName": {
-    "description": "Column heading in the track list of the Tags tab of Multi-Rename: the name of each file on disk."
+    "description": "Column heading in the track list of the tag editor window: the name of each file on disk."
   },
   "multiRename.tags.track.titleLabel": "Title of {fileName}",
   "@multiRename.tags.track.titleLabel": {
-    "description": "Accessible name of the box that edits one file's title in the track list of the Tags tab of Multi-Rename. Only read aloud by screen readers.",
+    "description": "Accessible name of the box that edits one file's title in the track list of the tag editor window. Only read aloud by screen readers.",
     "placeholders": {
       "fileName": "the name of the audio file the title belongs to"
     }
   },
   "multiRename.tags.track.numberLabel": "Track number of {fileName}",
   "@multiRename.tags.track.numberLabel": {
-    "description": "Accessible name of the box that edits one file's track number in the track list of the Tags tab of Multi-Rename. Only read aloud by screen readers.",
+    "description": "Accessible name of the box that edits one file's track number in the track list of the tag editor window. Only read aloud by screen readers.",
     "placeholders": {
       "fileName": "the name of the audio file the track number belongs to"
     }
   },
   "multiRename.tags.track.unreadable": "Can’t read the tags of this file",
   "@multiRename.tags.track.unreadable": {
-    "description": "Shown in a row of the track list in the Tags tab of Multi-Rename for a file whose tags couldn't be read. The file is greyed out and is never changed."
+    "description": "Shown in a row of the track list in the tag editor window for a file whose tags couldn't be read. The file is greyed out and is never changed."
   },
   "multiRename.tags.readOnly": "Tags can only be edited for files on a local disk.",
   "@multiRename.tags.readOnly": {
-    "description": "Shown at the top of the Tags tab of Multi-Rename when the selected files are on a server or another non-local location, so the tag boxes are locked."
+    "description": "Shown at the top of the tag editor window when the selected files are on a server or another non-local location, so the tag boxes are locked."
   },
   "multiRename.tags.cover.label": "Cover",
   "@multiRename.tags.cover.label": {
-    "description": "Heading of the cover picture panel in the Tags tab of Multi-Rename (the album art embedded in the audio files)."
+    "description": "Heading of the cover picture panel in the tag editor window (the album art embedded in the audio files)."
   },
   "multiRename.tags.cover.none": "No cover",
   "@multiRename.tags.cover.none": {
-    "description": "Shown in the cover panel of the Tags tab of Multi-Rename when none of the selected files has an embedded cover picture."
-  },
-  "multiRename.tags.cover.multiple": "Multiple covers",
-  "@multiRename.tags.cover.multiple": {
-    "description": "Shown in the cover panel of the Tags tab of Multi-Rename when the selected files have different embedded cover pictures, or only some of them have one."
+    "description": "Shown in the cover panel of the tag editor window when none of the selected files has an embedded cover picture."
   },
   "multiRename.tags.cover.details": "{mime}, {sizeText}",
   "@multiRename.tags.cover.details": {
-    "description": "In the cover panel of the Tags tab of Multi-Rename: the image type and file size of the cover all files share.",
+    "description": "In the cover panel of the tag editor window: the image type and file size of the cover all files share.",
     "placeholders": {
       "mime": "the image type, like image/jpeg",
       "sizeText": "the size of the image, like 245 KB"
@@ -1228,7 +1253,7 @@
   },
   "multiRename.tags.cover.detailsPixels": "{mime}, {width}×{height} px, {sizeText}",
   "@multiRename.tags.cover.detailsPixels": {
-    "description": "In the cover panel of the Tags tab of Multi-Rename: the image type, size in pixels and file size of the cover all files share.",
+    "description": "In the cover panel of the tag editor window: the image type, size in pixels and file size of the cover all files share.",
     "placeholders": {
       "mime": "the image type, like image/jpeg",
       "width": "the width in pixels",
@@ -1238,19 +1263,19 @@
   },
   "multiRename.tags.cover.fromFolder": "From folder…",
   "@multiRename.tags.cover.fromFolder": {
-    "description": "Button in the cover panel of the Tags tab of Multi-Rename: lists the pictures in the files' folder so one can become the cover of every selected file."
+    "description": "Button in the cover panel of the tag editor window: lists the pictures in the files' folder so one can become the cover of every selected file."
   },
   "multiRename.tags.cover.remove": "Remove",
   "@multiRename.tags.cover.remove": {
-    "description": "Button in the cover panel of the Tags tab of Multi-Rename: takes the cover picture out of every selected file."
+    "description": "Button in the cover panel of the tag editor window: takes the cover picture out of every selected file."
   },
   "multiRename.tags.cover.pickerLabel": "Pictures in the folder",
   "@multiRename.tags.cover.pickerLabel": {
-    "description": "Accessible name of the list of pictures offered as a cover in the Tags tab of Multi-Rename. Only read aloud by screen readers."
+    "description": "Accessible name of the list of pictures offered as a cover in the tag editor window. Only read aloud by screen readers."
   },
   "multiRename.tags.cover.candidate": "{fileName} ({sizeText})",
   "@multiRename.tags.cover.candidate": {
-    "description": "One picture offered as a cover in the Tags tab of Multi-Rename: its file name and size.",
+    "description": "One picture offered as a cover in the tag editor window: its file name and size.",
     "placeholders": {
       "fileName": "the name of the picture file",
       "sizeText": "the size of the picture, like 245 KB"
@@ -1258,35 +1283,150 @@
   },
   "multiRename.tags.cover.noImages": "No pictures (jpg, png, webp) in this folder.",
   "@multiRename.tags.cover.noImages": {
-    "description": "Shown in the Tags tab of Multi-Rename when the folder of the selected files has no picture that could become the cover."
+    "description": "Shown in the tag editor window when the folder of the selected files has no picture that could become the cover."
   },
   "multiRename.tags.cover.listFailed": "Couldn’t list the pictures in this folder.",
   "@multiRename.tags.cover.listFailed": {
-    "description": "Shown in the cover panel of the Tags tab of Multi-Rename when looking for pictures in the files' folder failed."
+    "description": "Shown in the cover panel of the tag editor window when looking for pictures in the files' folder failed."
   },
   "multiRename.tags.cover.tooLarge": "That picture is too large (over 10 MB).",
   "@multiRename.tags.cover.tooLarge": {
-    "description": "Shown in the Tags tab of Multi-Rename when the chosen picture is too big to be embedded as a cover."
+    "description": "Shown in the tag editor window when the chosen picture is too big to be embedded as a cover."
   },
   "multiRename.tags.cover.unreadable": "Couldn’t read that picture, or it isn’t a supported image.",
   "@multiRename.tags.cover.unreadable": {
-    "description": "Shown in the Tags tab of Multi-Rename when the chosen cover picture couldn't be read or isn't a jpg, png or webp image."
+    "description": "Shown in the tag editor window when the chosen cover picture couldn't be read or isn't a jpg, png or webp image."
   },
   "multiRename.tags.cover.notAnImage": "That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.",
   "@multiRename.tags.cover.notAnImage": {
-    "description": "Shown in the Tags tab of Multi-Rename when the picked cover file’s content is not a JPEG, PNG, or WebP image, for example a web page saved with a .jpg name. Nothing is changed."
+    "description": "Shown in the tag editor window when the picked cover file’s content is not a JPEG, PNG, or WebP image, for example a web page saved with a .jpg name. Nothing is changed."
+  },
+  "multiRename.tags.cover.choicesLabel": "Covers in the files",
+  "@multiRename.tags.cover.choicesLabel": {
+    "description": "Accessible name of the list of the different cover pictures the files carry, in the cover section of the tag editor window. Only read aloud by screen readers."
+  },
+  "multiRename.tags.cover.files": "{count, plural, one {{countText} file} other {{countText} files}}",
+  "@multiRename.tags.cover.files": {
+    "description": "In the cover section of the tag editor window, under a cover picture: how many of the files carry that cover. {countText} is the formatted number.",
+    "placeholders": {
+      "count": "the number of files, which picks the plural form",
+      "countText": "the formatted number of files, like 12"
+    }
+  },
+  "multiRename.tags.cover.caption": "{filesText} · {sizeText}",
+  "@multiRename.tags.cover.caption": {
+    "description": "In the cover section of the tag editor window, under a cover picture: how many files carry it, then its size.",
+    "placeholders": {
+      "filesText": "how many files carry the cover, like 12 files",
+      "sizeText": "the size of the picture, like 245 KB"
+    }
+  },
+  "multiRename.tags.cover.openLabel": "{caption}: open the cover ({details})",
+  "@multiRename.tags.cover.openLabel": {
+    "description": "Accessible name of one cover picture in the cover section of the tag editor window; pressing it shows the picture large. It starts with the visible caption under the picture. Only read aloud by screen readers.",
+    "placeholders": {
+      "caption": "the visible caption: how many files carry the cover and its size, like 12 files · 245 KB",
+      "details": "the image type, pixel size and file size, like image/jpeg, 600×600 px, 245 KB"
+    }
+  },
+  "multiRename.tags.cover.choicesFailed": "Couldn’t read the covers of these files.",
+  "@multiRename.tags.cover.choicesFailed": {
+    "description": "Shown in the cover section of the tag editor window when the list of the files' cover pictures couldn't be had."
+  },
+  "multiRename.tags.cover.pasteHint": "Paste a picture (⌘V) or drop one here to make it the cover of every file.",
+  "@multiRename.tags.cover.pasteHint": {
+    "description": "Hint in the cover section of the tag editor window: how to give every file a new cover picture. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.cover.pasteNoImage": "There’s no picture on the clipboard. Copy a JPEG, PNG, or WebP picture, then paste again.",
+  "@multiRename.tags.cover.pasteNoImage": {
+    "description": "Shown in the cover section of the tag editor window when the user pasted while the clipboard held no picture."
+  },
+  "multiRename.tags.cover.dropOne": "Drop one picture at a time.",
+  "@multiRename.tags.cover.dropOne": {
+    "description": "Shown in the cover section of the tag editor window when several files were dropped on it; only one can become the cover."
+  },
+  "multiRename.tags.cover.dropHere": "Drop to make this picture the cover of every file",
+  "@multiRename.tags.cover.dropHere": {
+    "description": "Shown over the cover section of the tag editor window while a file is dragged over it."
+  },
+  "multiRename.tags.cover.notAFile": "Only a picture file can become the cover, not a folder or a link.",
+  "@multiRename.tags.cover.notAFile": {
+    "description": "Shown in the tag editor window when a folder, a symbolic link or another kind of item that isn't a plain file was dropped on the cover section. Nothing is changed."
+  },
+  "multiRename.tags.cover.gone": "That cover isn’t in the files any more. Pick another one.",
+  "@multiRename.tags.cover.gone": {
+    "description": "Shown in the tag editor window when the cover the user chose was meanwhile replaced in every file. Nothing is changed."
+  },
+  "multiRename.tags.cover.viewerTitle": "Cover",
+  "@multiRename.tags.cover.viewerTitle": {
+    "description": "Title of the dialog of the tag editor window that shows one cover picture large."
+  },
+  "multiRename.tags.cover.viewerAlt": "Cover picture: {details}",
+  "@multiRename.tags.cover.viewerAlt": {
+    "description": "Accessible description of the large cover picture in the tag editor window. Only read aloud by screen readers.",
+    "placeholders": {
+      "details": "the image type, pixel size and file size, like image/jpeg, 600×600 px, 245 KB"
+    }
+  },
+  "multiRename.tags.cover.onFiles": "On {countText} of {totalText} files",
+  "@multiRename.tags.cover.onFiles": {
+    "description": "In the dialog showing one cover large, in the tag editor window: how many of the files carry this cover, out of all of them.",
+    "placeholders": {
+      "countText": "the formatted number of files with this cover",
+      "totalText": "the formatted number of all the files"
+    }
+  },
+  "multiRename.tags.cover.cantShow": "Can’t show this picture.",
+  "@multiRename.tags.cover.cantShow": {
+    "description": "Shown in the dialog showing one cover large, in the tag editor window, when the picture's data can't be displayed."
+  },
+  "multiRename.tags.cover.useForAll": "Use for all files",
+  "@multiRename.tags.cover.useForAll": {
+    "description": "Button in the dialog showing one cover large, in the tag editor window: makes this picture the cover of every file. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.cover.pasteNotAnImage": "That isn’t a picture Cmdr can use as a cover. Copy a JPEG, PNG, WebP, or TIFF picture, then paste again.",
+  "@multiRename.tags.cover.pasteNotAnImage": {
+    "description": "Shown in the tag editor window when what the user pasted on the cover section isn't a usable picture. Nothing is changed."
+  },
+  "multiRename.tags.cover.timedOut": "The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.timedOut": {
+    "description": "Shown in the tag editor window when the drive of a picture file dropped on the cover section (for example a network drive) stopped sending it. A slow drive is waited for; only one that stopped is given up on. Nothing is changed."
+  },
+  "multiRename.tags.cover.busy": "Earlier pictures from a drive that stopped answering are still being read. Wait a moment, or copy the picture to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.busy": {
+    "description": "Shown in the tag editor window when a picture file is dropped on the cover section while two earlier drops are still being read from a drive that stopped answering. The new drop isn't started. Nothing is changed."
+  },
+  "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
+  "@multiRename.tags.cover.pasteTimedOut": {
+    "description": "Shown in the tag editor window when a pasted picture (a TIFF, which is converted first) took too long to convert. Nothing is changed."
+  },
+  "multiRename.tags.cover.noPreview": "No preview",
+  "@multiRename.tags.cover.noPreview": {
+    "description": "Shown in a cover tile of the tag editor window when the small picture of that cover couldn't be made. The cover itself is unaffected."
+  },
+  "multiRename.tags.cover.pasteButton": "Paste picture",
+  "@multiRename.tags.cover.pasteButton": {
+    "description": "Button in the cover section of the tag editor window: makes the picture on the clipboard the cover of every file. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.cover.pasteUnavailable": "Couldn’t read the clipboard. Select the cover section and press ⌘V instead.",
+  "@multiRename.tags.cover.pasteUnavailable": {
+    "description": "Shown in the cover section of the tag editor window when the Paste picture button couldn't read the clipboard."
+  },
+  "multiRename.tags.cover.loading": "Loading the picture…",
+  "@multiRename.tags.cover.loading": {
+    "description": "Shown in the dialog showing one cover large, in the tag editor window, while the picture is on its way."
   },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {
-    "description": "Shown in the Tags tab of Multi-Rename when an edit to a tag couldn't be applied. Nothing was changed."
+    "description": "Shown in the tag editor window when an edit to a tag couldn't be applied. Nothing was changed."
   },
   "multiRename.tags.discard.title": "Discard tag changes?",
   "@multiRename.tags.discard.title": {
-    "description": "Title of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the Tags tab have not been written to the files yet."
+    "description": "Title of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the tag editor window have not been written to the files yet."
   },
   "multiRename.tags.discard.message": "You changed tags that haven’t been written to the files yet. Closing now loses those changes. Cancel keeps editing.",
   "@multiRename.tags.discard.message": {
-    "description": "Body of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the Tags tab have not been written to the files yet. The Cancel button keeps the sheet open."
+    "description": "Body of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the tag editor window have not been written to the files yet. The Cancel button keeps the sheet open."
   },
   "multiRename.tags.discard.confirm": "Discard",
   "@multiRename.tags.discard.confirm": {
@@ -1294,128 +1434,116 @@
   },
   "multiRename.tags.clearRow": "Clear",
   "@multiRename.tags.clearRow": {
-    "description": "Small button at the end of a row of the shared tags table in the Tags tab of Multi-Rename: removes that tag from every selected file."
+    "description": "Small button at the end of a row of the shared tags table in the tag editor window: removes that tag from every selected file."
   },
   "multiRename.tags.clearRowLabel": "Clear {field} for all files",
   "@multiRename.tags.clearRowLabel": {
-    "description": "Accessible name of the Clear button of a row in the Tags tab of Multi-Rename. Only read aloud by screen readers.",
+    "description": "Accessible name of the Clear button of a row in the tag editor window. Only read aloud by screen readers.",
     "placeholders": {
       "field": "the name of the tag the row edits, like Album or Genre"
     }
   },
-  "multiRename.tags.tools.label": "Clean-up tools",
-  "@multiRename.tags.tools.label": {
-    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the row of clean-up tool buttons above the tags."
-  },
-  "multiRename.tags.tools.caseButton": "Case",
-  "@multiRename.tags.tools.caseButton": {
-    "description": "Shown in the Tags tab of Multi-Rename: a button in the clean-up tools row that opens the letter-case choices for tags. VERB-like label, short."
-  },
   "multiRename.tags.tools.caseFields": "Changes: {fields}",
   "@multiRename.tags.tools.caseFields": {
-    "description": "Shown in the Tags tab of Multi-Rename: under the letter-case choices, which tag fields a choice rewrites.",
+    "description": "Shown in the tag editor window: under the letter-case choices, which tag fields a choice rewrites.",
     "placeholders": {
       "fields": "a list of tag field names, like Title, Album, Artist"
     }
   },
   "multiRename.tags.tools.caseSentence": "Sentence case",
   "@multiRename.tags.tools.caseSentence": {
-    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. Only the first letter upper case. The label shows its own effect."
+    "description": "Shown in the tag editor window: a letter-case choice. Only the first letter upper case. The label shows its own effect."
   },
   "multiRename.tags.tools.caseTitle": "Title Case",
   "@multiRename.tags.tools.caseTitle": {
-    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. Every word starts upper case. The label shows its own effect."
+    "description": "Shown in the tag editor window: a letter-case choice. Every word starts upper case. The label shows its own effect."
   },
   "multiRename.tags.tools.caseLower": "lower case",
   "@multiRename.tags.tools.caseLower": {
-    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. All letters lower case. The label shows its own effect."
+    "description": "Shown in the tag editor window: a letter-case choice. All letters lower case. The label shows its own effect."
   },
   "multiRename.tags.tools.caseUpper": "UPPER CASE",
   "@multiRename.tags.tools.caseUpper": {
-    "description": "Shown in the Tags tab of Multi-Rename: a letter-case choice. All letters upper case. The label shows its own effect."
+    "description": "Shown in the tag editor window: a letter-case choice. All letters upper case. The label shows its own effect."
   },
   "multiRename.tags.tools.removeDiacritics": "Remove diacritics",
   "@multiRename.tags.tools.removeDiacritics": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Removes accents (á→a) from every tag field except Comment and Description."
+    "description": "Shown in the tag editor window: a clean-up tool button. Removes accents (á→a) from every tag field except Comment and Description."
   },
   "multiRename.tags.tools.removeDiacriticsTooltip": "Removes diacritics from every field except Comment and Description.",
   "@multiRename.tags.tools.removeDiacriticsTooltip": {
-    "description": "Shown in the Tags tab of Multi-Rename: tooltip of the Remove diacritics tool."
+    "description": "Shown in the tag editor window: tooltip of the Remove diacritics tool."
   },
   "multiRename.tags.tools.stripTrackPrefix": "Strip track prefix",
   "@multiRename.tags.tools.stripTrackPrefix": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Removes a leading track number like \"01 - \" from every title."
+    "description": "Shown in the tag editor window: a clean-up tool button. Removes a leading track number like \"01 - \" from every title."
   },
   "multiRename.tags.tools.renumber": "Renumber",
   "@multiRename.tags.tools.renumber": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Numbers the tracks 1, 2, 3… in the list order. Hidden for a single file."
+    "description": "Shown in the tag editor window: a clean-up tool button. Numbers the tracks 1, 2, 3… in the list order. Hidden for a single file."
   },
   "multiRename.tags.tools.albumArtistFromArtist": "Album artist = Artist",
   "@multiRename.tags.tools.albumArtistFromArtist": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Copies each file’s Artist into its Album artist. Keep the equals sign."
+    "description": "Shown in the tag editor window: a clean-up tool button. Copies each file’s Artist into its Album artist. Keep the equals sign."
   },
   "multiRename.tags.tools.narratorFromText": "Narrator from text",
   "@multiRename.tags.tools.narratorFromText": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Finds the narrator’s name in the description or comment and puts it in Performer."
+    "description": "Shown in the tag editor window: a clean-up tool button. Finds the narrator’s name in the description or comment and puts it in Performer."
   },
   "multiRename.tags.tools.clearRedundantTitles": "Clear title = album",
   "@multiRename.tags.tools.clearRedundantTitles": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button. Empties a title that only repeats the album name. Keep the equals sign."
-  },
-  "multiRename.tags.tools.removeExtras": "Remove extras…",
-  "@multiRename.tags.tools.removeExtras": {
-    "description": "Shown in the Tags tab of Multi-Rename: a clean-up tool button that opens a checklist of the extra (unmanaged) tags the files carry, to pick which to remove."
+    "description": "Shown in the tag editor window: a clean-up tool button. Empties a title that only repeats the album name. Keep the equals sign."
   },
   "multiRename.tags.tools.extrasLabel": "Extra tags to remove",
   "@multiRename.tags.tools.extrasLabel": {
-    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the checklist of extra tags. Nothing is checked at first."
+    "description": "Shown in the tag editor window: the accessible name of the checklist of extra tags. Nothing is checked at first."
   },
   "multiRename.tags.tools.removeChecked": "{count, plural, one {Remove {countText} extra tag} other {Remove {countText} extra tags}}",
   "@multiRename.tags.tools.removeChecked": {
-    "description": "Shown in the Tags tab of Multi-Rename: under the extras checklist, the button that removes the checked extra tags from every file.",
+    "description": "Shown in the tag editor window: under the extras checklist, the button that removes the checked extra tags from every file.",
     "placeholders": {
       "countText": "how many extra tags are checked"
     }
   },
   "multiRename.tags.kind.label": "Content",
   "@multiRename.tags.kind.label": {
-    "description": "Shown in the Tags tab of Multi-Rename: the label of the Audiobook / Music choice next to Write tags. It decides how tag fields are stored."
+    "description": "Shown in the tag editor window: the label of the Audiobook / Music choice next to Write tags. It decides how tag fields are stored."
   },
   "multiRename.tags.kind.audiobook": "Audiobook",
   "@multiRename.tags.kind.audiobook": {
-    "description": "Shown in the Tags tab of Multi-Rename: one option of the Content choice (spoken-word book)."
+    "description": "Shown in the tag editor window: one option of the Content choice (spoken-word book)."
   },
   "multiRename.tags.kind.music": "Music",
   "@multiRename.tags.kind.music": {
-    "description": "Shown in the Tags tab of Multi-Rename: one option of the Content choice."
+    "description": "Shown in the tag editor window: one option of the Content choice."
   },
   "multiRename.tags.write.review": "Write tags…",
   "@multiRename.tags.write.review": {
-    "description": "Shown in the Tags tab of Multi-Rename: the button that lists what a write will change, before anything is written."
+    "description": "Shown in the tag editor window: the button that lists what a write will change, before anything is written."
   },
   "multiRename.tags.write.confirm": "Write tags",
   "@multiRename.tags.write.confirm": {
-    "description": "Shown in the Tags tab of Multi-Rename: under the list of changes, the button that writes the tags into the files."
+    "description": "Shown in the tag editor window: under the list of changes, the button that writes the tags into the files."
   },
   "multiRename.tags.write.back": "Back",
   "@multiRename.tags.write.back": {
-    "description": "Shown in the Tags tab of Multi-Rename: under the list of changes, the button that closes the list without writing."
+    "description": "Shown in the tag editor window: under the list of changes, the button that closes the list without writing."
   },
   "multiRename.tags.write.checking": "Checking what will change…",
   "@multiRename.tags.write.checking": {
-    "description": "Shown in the Tags tab of Multi-Rename: while the list of changes is fetched."
+    "description": "Shown in the tag editor window: while the list of changes is fetched."
   },
   "multiRename.tags.write.writing": "Writing tags…",
   "@multiRename.tags.write.writing": {
-    "description": "Shown in the Tags tab of Multi-Rename: while tags are written into the files."
+    "description": "Shown in the tag editor window: while tags are written into the files."
   },
   "multiRename.tags.write.changeLabel": "Files that will change",
   "@multiRename.tags.write.changeLabel": {
-    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the list of files a write will change."
+    "description": "Shown in the tag editor window: the accessible name of the list of files a write will change."
   },
   "multiRename.tags.write.fileChanges": "{fileName}: {fields}",
   "@multiRename.tags.write.fileChanges": {
-    "description": "Shown in the Tags tab of Multi-Rename: one row of the list of changes: a file and what changes in it.",
+    "description": "Shown in the tag editor window: one row of the list of changes: a file and what changes in it.",
     "placeholders": {
       "fileName": "the audio file’s name",
       "fields": "a list of tag field names, maybe with the words for cover and extra tags"
@@ -1423,38 +1551,38 @@
   },
   "multiRename.tags.write.cover": "cover",
   "@multiRename.tags.write.cover": {
-    "description": "Shown in the Tags tab of Multi-Rename: in a row of the list of changes, the word for the cover picture, after the tag field names. Lower case."
+    "description": "Shown in the tag editor window: in a row of the list of changes, the word for the cover picture, after the tag field names. Lower case."
   },
   "multiRename.tags.write.extras": "extra tags",
   "@multiRename.tags.write.extras": {
-    "description": "Shown in the Tags tab of Multi-Rename: in a row of the list of changes, the words for the extra (unmanaged) tags. Lower case."
+    "description": "Shown in the tag editor window: in a row of the list of changes, the words for the extra (unmanaged) tags. Lower case."
   },
   "multiRename.tags.write.removesConductor": "conductor (removed)",
   "@multiRename.tags.write.removesConductor": {
-    "description": "Shown in the Tags tab of Multi-Rename, in the list of what a write will change in one file: writing as Audiobook removes the conductor tag of an MP3 (audiobooks keep none). One item of the list of changed fields."
+    "description": "Shown in the tag editor window, in the list of what a write will change in one file: writing as Audiobook removes the conductor tag of an MP3 (audiobooks keep none). One item of the list of changed fields."
   },
   "multiRename.tags.write.nothing": "Nothing to write: the tags are as they are on disk.",
   "@multiRename.tags.write.nothing": {
-    "description": "Shown in the Tags tab of Multi-Rename: instead of the list of changes when no file would change."
+    "description": "Shown in the tag editor window: instead of the list of changes when no file would change."
   },
   "multiRename.tags.write.done": "{count, plural, one {Tags written to {countText} file} other {Tags written to {countText} files}}",
   "@multiRename.tags.write.done": {
-    "description": "Shown in the Tags tab of Multi-Rename: after a write, how many files got their new tags.",
+    "description": "Shown in the tag editor window: after a write, how many files got their new tags.",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
   },
   "multiRename.tags.write.noUndo": "This write can’t be undone: the old tags couldn’t be kept.",
   "@multiRename.tags.write.noUndo": {
-    "description": "Shown in the Tags tab of Multi-Rename: after a write whose old tags the app couldn’t save, so Undo isn’t offered for it."
+    "description": "Shown in the tag editor window: after a write whose old tags the app couldn’t save, so Undo isn’t offered for it."
   },
   "multiRename.tags.write.failedHeading": "Not written:",
   "@multiRename.tags.write.failedHeading": {
-    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files a write failed on, each with why."
+    "description": "Shown in the tag editor window: heading of the list of files a write failed on, each with why."
   },
   "multiRename.tags.write.failedRow": "{fileName}: {reason}",
   "@multiRename.tags.write.failedRow": {
-    "description": "Shown in the Tags tab of Multi-Rename: one file a write failed on, and why.",
+    "description": "Shown in the tag editor window: one file a write failed on, and why.",
     "placeholders": {
       "fileName": "the audio file’s name",
       "reason": "why it failed, a short phrase like “its tags couldn’t be read”"
@@ -1462,47 +1590,54 @@
   },
   "multiRename.tags.write.error.notSupported": "this file type isn’t supported",
   "@multiRename.tags.write.error.notSupported": {
-    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+    "description": "Shown in the tag editor window: why a file wasn’t written, after its name. Lower case, no full stop."
   },
   "multiRename.tags.write.error.io": "the file couldn’t be opened or saved",
   "@multiRename.tags.write.error.io": {
-    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written (a disk or permission problem), after its name. Lower case, no full stop."
+    "description": "Shown in the tag editor window: why a file wasn’t written (a disk or permission problem), after its name. Lower case, no full stop."
   },
   "multiRename.tags.write.error.parse": "its tags couldn’t be read",
   "@multiRename.tags.write.error.parse": {
-    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+    "description": "Shown in the tag editor window: why a file wasn’t written, after its name. Lower case, no full stop."
   },
   "multiRename.tags.write.error.write": "the tags couldn’t be saved",
   "@multiRename.tags.write.error.write": {
-    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+    "description": "Shown in the tag editor window: why a file wasn’t written, after its name. Lower case, no full stop."
+  },
+  "multiRename.tags.write.error.badDate": "its date “{date}” isn’t a real date; correct it in the Date row",
+  "@multiRename.tags.write.error.badDate": {
+    "description": "Shown in the tag editor window: why a file wasn’t written, after its name: its Date tag can’t be saved as a date (for example month 20). Date is the field’s label in the tag table. Lower case, no full stop.",
+    "placeholders": {
+      "date": "the file’s Date tag as it reads, for example 2010-20-09"
+    }
   },
   "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
   "@multiRename.tags.write.error.wouldDrop": {
-    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written: writing it would drop tag data the editor doesn’t show. Lower case, no full stop."
+    "description": "Shown in the tag editor window: why a file wasn’t written: writing it would drop tag data the editor doesn’t show. Lower case, no full stop."
   },
   "multiRename.tags.write.error.unwritableExtra": "an extra tag can’t be written to it",
   "@multiRename.tags.write.error.unwritableExtra": {
-    "description": "Shown in the Tags tab of Multi-Rename: why a file wasn’t written, after its name. Lower case, no full stop."
+    "description": "Shown in the tag editor window: why a file wasn’t written, after its name. Lower case, no full stop."
   },
   "multiRename.tags.write.changedOnDiskHeading": "Changed on disk since it was read, not written:",
   "@multiRename.tags.write.changedOnDiskHeading": {
-    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files another app changed after the Tags tab read them, so they were left alone."
+    "description": "Shown in the tag editor window: heading of the list of files another app changed after the tag editor window read them, so they were left alone."
   },
   "multiRename.tags.write.skippedHeading": "Skipped, not written:",
   "@multiRename.tags.write.skippedHeading": {
-    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files the user chose to skip because they would lose tag data."
+    "description": "Shown in the tag editor window: heading of the list of files the user chose to skip because they would lose tag data."
   },
   "multiRename.tags.write.reload": "Read the files again",
   "@multiRename.tags.write.reload": {
-    "description": "Shown in the Tags tab of Multi-Rename: under the list of files changed on disk, the button that reads every file’s tags again."
+    "description": "Shown in the tag editor window: under the list of files changed on disk, the button that reads every file’s tags again."
   },
   "multiRename.tags.reload.title": "Read the files again?",
   "@multiRename.tags.reload.title": {
-    "description": "Title of the question asked in the Tags tab of Multi-Rename before reading every file’s tags again while some changes are not written."
+    "description": "Title of the question asked in the tag editor window before reading every file’s tags again while some changes are not written."
   },
   "multiRename.tags.reload.message": "This reads every file’s tags from disk again. Changes you haven’t written are lost.",
   "@multiRename.tags.reload.message": {
-    "description": "Body of the question asked in the Tags tab of Multi-Rename before reading every file’s tags again."
+    "description": "Body of the question asked in the tag editor window before reading every file’s tags again."
   },
   "multiRename.tags.reload.confirm": "Read again",
   "@multiRename.tags.reload.confirm": {
@@ -1510,30 +1645,30 @@
   },
   "multiRename.tags.diacritics.warning": "Diacritics in: {fields}",
   "@multiRename.tags.diacritics.warning": {
-    "description": "Shown in the Tags tab of Multi-Rename: a warning before writing that these tag fields still carry diacritics (accents), which they must not.",
+    "description": "Shown in the tag editor window: a warning before writing that these tag fields still carry diacritics (accents), which they must not.",
     "placeholders": {
       "fields": "a list of tag field names, like Album, Title"
     }
   },
   "multiRename.tags.diacritics.fix": "Remove diacritics",
   "@multiRename.tags.diacritics.fix": {
-    "description": "Shown in the Tags tab of Multi-Rename: beside the diacritics warning, the button that removes them from those fields."
+    "description": "Shown in the tag editor window: beside the diacritics warning, the button that removes them from those fields."
   },
   "multiRename.tags.undo.button": "Undo tag changes",
   "@multiRename.tags.undo.button": {
-    "description": "Shown in the Tags tab of Multi-Rename: the button that puts the files written by the last tag write back as they were."
+    "description": "Shown in the tag editor window: the button that puts the files written by the last tag write back as they were."
   },
   "multiRename.tags.undo.tooltip": "Puts the files back as they were before the last tag write. A file changed since then is left as it is.",
   "@multiRename.tags.undo.tooltip": {
-    "description": "Shown in the Tags tab of Multi-Rename: tooltip of the Undo tag changes button."
+    "description": "Shown in the tag editor window: tooltip of the Undo tag changes button."
   },
   "multiRename.tags.undo.title": "Undo tag changes?",
   "@multiRename.tags.undo.title": {
-    "description": "Title of the question asked in the Tags tab of Multi-Rename before undoing the last tag write."
+    "description": "Title of the question asked in the tag editor window before undoing the last tag write."
   },
   "multiRename.tags.undo.message": "{count, plural, one {This puts the tags of the {countText} file the last write changed back as they were before it. If that file changed since the write, it’s left as it is.} other {This puts the tags of the {countText} files the last write changed back as they were before it. A file that changed since the write is left as it is.}}",
   "@multiRename.tags.undo.message": {
-    "description": "Body of the question asked in the Tags tab of Multi-Rename before undoing the last tag write.",
+    "description": "Body of the question asked in the tag editor window before undoing the last tag write.",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
@@ -1544,43 +1679,43 @@
   },
   "multiRename.tags.undo.done": "{count, plural, one {Tags restored in {countText} file} other {Tags restored in {countText} files}}",
   "@multiRename.tags.undo.done": {
-    "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files got their old tags back.",
+    "description": "Shown in the tag editor window: after Undo tag changes, how many files got their old tags back.",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
   },
   "multiRename.tags.undo.notRestored": "{count, plural, one {{countText} file couldn’t be restored.} other {{countText} files couldn’t be restored.}}",
   "@multiRename.tags.undo.notRestored": {
-    "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files kept their new tags (gone, or the restore failed).",
+    "description": "Shown in the tag editor window: after Undo tag changes, how many files kept their new tags (gone, or the restore failed).",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
   },
   "multiRename.tags.undo.changedSince": "{count, plural, one {{countText} file changed after the write, for example by a rename, so it was left as it is.} other {{countText} files changed after the write, for example by a rename, so they were left as they are.}}",
   "@multiRename.tags.undo.changedSince": {
-    "description": "Shown in the Tags tab of Multi-Rename: after Undo tag changes, how many files were not touched because they changed since the write, for example a rename gave another file their name. Undo never writes old tags into a different file.",
+    "description": "Shown in the tag editor window: after Undo tag changes, how many files were not touched because they changed since the write, for example a rename gave another file their name. Undo never writes old tags into a different file.",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
   },
   "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
   "@multiRename.tags.wouldDrop.title": {
-    "description": "Shown in the Tags tab of Multi-Rename: heading of the choice shown when writing some files would drop tag data the editor doesn’t show."
+    "description": "Shown in the tag editor window: heading of the choice shown when writing some files would drop tag data the editor doesn’t show."
   },
   "multiRename.tags.wouldDrop.message": "{count, plural, one {Writing {countText} file would drop the tag data listed below, which the editor doesn’t show. It wasn’t written.} other {Writing {countText} files would drop the tag data listed below, which the editor doesn’t show. They weren’t written.}}",
   "@multiRename.tags.wouldDrop.message": {
-    "description": "Shown in the Tags tab of Multi-Rename: under the would-lose-data heading. The list below names each file and the tag items it would lose.",
+    "description": "Shown in the tag editor window: under the would-lose-data heading. The list below names each file and the tag items it would lose.",
     "placeholders": {
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
     }
   },
   "multiRename.tags.wouldDrop.listLabel": "Files that would lose tag data",
   "@multiRename.tags.wouldDrop.listLabel": {
-    "description": "Shown in the Tags tab of Multi-Rename: the accessible name of the list of files that would lose tag data."
+    "description": "Shown in the tag editor window: the accessible name of the list of files that would lose tag data."
   },
   "multiRename.tags.wouldDrop.row": "{fileName}: {items}",
   "@multiRename.tags.wouldDrop.row": {
-    "description": "Shown in the Tags tab of Multi-Rename: one file that would lose tag data, and the items (technical tag IDs such as TSOP or COMM:ces, do not translate them).",
+    "description": "Shown in the tag editor window: one file that would lose tag data, and the items (technical tag IDs such as TSOP or COMM:ces, do not translate them).",
     "placeholders": {
       "fileName": "the audio file’s name",
       "items": "technical tag IDs, like TSOP, TXXX:Comment"
@@ -1588,15 +1723,15 @@
   },
   "multiRename.tags.wouldDrop.writeAnyway": "Write anyway",
   "@multiRename.tags.wouldDrop.writeAnyway": {
-    "description": "Shown in the Tags tab of Multi-Rename: writes the files that would lose tag data anyway, dropping the listed items."
+    "description": "Shown in the tag editor window: writes the files that would lose tag data anyway, dropping the listed items."
   },
   "multiRename.tags.wouldDrop.skip": "Skip these files",
   "@multiRename.tags.wouldDrop.skip": {
-    "description": "Shown in the Tags tab of Multi-Rename: leaves the files that would lose tag data unwritten."
+    "description": "Shown in the tag editor window: leaves the files that would lose tag data unwritten."
   },
   "multiRename.tags.write.summaryAs": "{count, plural, one {Writing as {kind}: {countText} file will change:} other {Writing as {kind}: {countText} files will change:}}",
   "@multiRename.tags.write.summaryAs": {
-    "description": "Shown in the Tags tab of Multi-Rename: heading of the list of files a write will change, before anything is written. It names the chosen content kind.",
+    "description": "Shown in the tag editor window: heading of the list of files a write will change, before anything is written. It names the chosen content kind.",
     "placeholders": {
       "kind": "the content kind the tags are written as: Audiobook or Music",
       "countText": "how many files, ready to drop into the sentence (for example 1,234)"
@@ -1604,45 +1739,58 @@
   },
   "multiRename.tags.write.refused": "No file was written.",
   "@multiRename.tags.write.refused": {
-    "description": "Shown in the Tags tab of Multi-Rename: after a write the app refused before touching any file (it couldn’t keep the old tags for Undo)."
+    "description": "Shown in the tag editor window: after a write that wrote no file at all (refused before touching any file, or every file was left unwritten). A reason follows."
+  },
+  "multiRename.tags.write.waiting": "Finishing the last change…",
+  "@multiRename.tags.write.waiting": {
+    "description": "Shown in the tag editor window, beside a spinner, after the user pressed Write: the app waits for the last tag edit to land before it lists or writes the changes."
+  },
+  "multiRename.tags.write.stillBusy": "Cmdr is still reading the files. Try again in a moment.",
+  "@multiRename.tags.write.stillBusy": {
+    "description": "Shown in the tag editor window, next to the Write buttons: the app waited for an earlier tag call to finish and gave up, so nothing was listed or written. The user can press again."
+  },
+  "multiRename.tags.write.listFailed": "Cmdr couldn’t check what will change. Try again in a moment.",
+  "@multiRename.tags.write.listFailed": {
+    "description": "Shown in the tag editor window, next to the Write buttons: the list of what a write will change couldn’t be made, so nothing was written."
+  },
+  "multiRename.tags.write.sessionGone": "The tags aren’t open any more. Close Multi-Rename and open it again.",
+  "@multiRename.tags.write.sessionGone": {
+    "description": "Shown in the tag editor window after “No file was written.”: the app’s session for these files ended, so the write was refused."
+  },
+  "multiRename.tags.write.stopped": "The write stopped before it finished, so some files may not have their new tags.",
+  "@multiRename.tags.write.stopped": {
+    "description": "Shown in the tag editor window: a write ended unexpectedly, possibly after writing some files."
   },
   "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
   "@multiRename.tags.write.noUndoSome": {
-    "description": "Shown in the Tags tab of Multi-Rename: after a write where only some files’ old tags could be kept for Undo."
+    "description": "Shown in the tag editor window: after a write where only some files’ old tags could be kept for Undo."
   },
   "multiRename.tags.undoStoreUnavailable": "Couldn’t use the store that keeps the old tags for Undo.",
   "@multiRename.tags.undoStoreUnavailable": {
-    "description": "Shown in the Tags tab of Multi-Rename: when a write or an undo couldn’t go on because the app couldn’t save or read the old tags."
+    "description": "Shown in the tag editor window: when a write or an undo couldn’t go on because the app couldn’t save or read the old tags."
   },
   "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
   "@multiRename.tags.undo.unwrittenLost": {
-    "description": "Second sentence of the question asked in the Tags tab of Multi-Rename before undoing the last tag write, when some tag changes are not written yet."
+    "description": "Second sentence of the question asked in the tag editor window before undoing the last tag write, when some tag changes are not written yet."
   },
   "multiRename.tags.select.all": "Select all tracks",
   "@multiRename.tags.select.all": {
-    "description": "Accessible name of the checkbox in the header of the track list of the Tags tab of Multi-Rename. It checks or unchecks every track; the tag tools then work on the checked tracks only (all tracks when none is checked). Only read aloud by screen readers."
-  },
-  "multiRename.tags.select.track": "Select {fileName}",
-  "@multiRename.tags.select.track": {
-    "description": "Accessible name of the checkbox at the start of a track row in the Tags tab of Multi-Rename. Checked tracks are the only ones the tag tools work on. Only read aloud by screen readers.",
-    "placeholders": {
-      "fileName": "the file name of the track, like 01.mp3"
-    }
+    "description": "Accessible name of the checkbox in the header of the tracks pane of the tag editor window. It selects or deselects every track; the tag tools then work on the selected tracks only (all tracks when none is selected). Only read aloud by screen readers."
   },
   "multiRename.tags.choices.button": "Values…",
   "@multiRename.tags.choices.button": {
-    "description": "Small button at the end of a «multiple values» row of the shared tags table in the Tags tab of Multi-Rename. It opens a list of the distinct values the files hold, to pick one for every file."
+    "description": "Small button at the end of a «multiple values» row of the shared tags table in the tag editor window. It opens a list of the distinct values the files hold, to pick one for every file."
   },
   "multiRename.tags.choices.label": "{field} values",
   "@multiRename.tags.choices.label": {
-    "description": "Accessible name of the Values button of a row in the Tags tab of Multi-Rename, and of the list it opens. Only read aloud by screen readers.",
+    "description": "Accessible name of the Values button of a row in the tag editor window, and of the list it opens. Only read aloud by screen readers.",
     "placeholders": {
       "field": "the name of the tag the row edits, like Album or Genre"
     }
   },
   "multiRename.tags.choices.item": "{value} ({countText})",
   "@multiRename.tags.choices.item": {
-    "description": "One entry in the list of values of a «multiple values» row in the Tags tab of Multi-Rename: a value the files hold and, in brackets, how many files have exactly it. Picking it sets it on every file.",
+    "description": "One entry in the list of values of a «multiple values» row in the tag editor window: a value the files hold and, in brackets, how many files have exactly it. Picking it sets it on every file.",
     "placeholders": {
       "value": "the tag value, like an album title; several values of a multi-value tag are already joined with semicolons",
       "countText": "how many files have exactly this value, ready to drop into the text (for example 1,234)"
@@ -1650,144 +1798,132 @@
   },
   "multiRename.tags.choices.empty": "‹empty›",
   "@multiRename.tags.choices.empty": {
-    "description": "Greyed text for a value in the list of a «multiple values» row in the Tags tab of Multi-Rename when some files have no value for that tag at all."
+    "description": "Greyed text for a value in the list of a «multiple values» row in the tag editor window when some files have no value for that tag at all."
   },
-  "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
+  "multiRename.tags.selectionGone": "The selected tracks are no longer here, so nothing was changed. Select tracks again, or run the tool with none selected for all tracks.",
   "@multiRename.tags.selectionGone": {
-    "description": "Notice in the Tags tab of Multi-Rename: the user checked some tracks, then they disappeared (for example renamed on the Rename tab), and a tag tool was pressed. The tool did not run, so it can’t change every track by surprise."
-  },
-  "multiRename.tags.tools.moreLabel": "More tag tools",
-  "@multiRename.tags.tools.moreLabel": {
-    "description": "Accessible name of the second row of tool buttons in the Tags tab of Multi-Rename, which holds Find and replace, Format a field and From file name."
+    "description": "Notice in the tag editor window: the user selected some tracks in the tracks pane, then they disappeared (for example renamed elsewhere), and a tag tool was pressed. The tool did not run, so it can’t change every track by surprise."
   },
   "multiRename.tags.tools.replace.button": "Find and replace",
   "@multiRename.tags.tools.replace.button": {
-    "description": "Button in the Tags tab of Multi-Rename that opens the panel for replacing text inside tag values (not in file names)."
+    "description": "Button in the tag editor window that opens the panel for replacing text inside tag values (not in file names)."
   },
   "multiRename.tags.tools.format.button": "Format a field",
   "@multiRename.tags.tools.format.button": {
-    "description": "Button in the Tags tab of Multi-Rename that opens the panel which rebuilds one tag from a Multi-rename mask such as [N3-]."
-  },
-  "multiRename.tags.tools.name.button": "From file name",
-  "@multiRename.tags.tools.name.button": {
-    "description": "Button in the Tags tab of Multi-Rename that opens the panel which reads tags out of the file names, with a preview before anything is taken."
+    "description": "Button in the tag editor window that opens the panel which rebuilds one tag from a Multi-rename mask such as [N3-]."
   },
   "multiRename.tags.tools.replace.fieldsLabel": "Fields to search",
   "@multiRename.tags.tools.replace.fieldsLabel": {
-    "description": "Accessible name of the group of checkboxes choosing which tag fields the Find and replace panel changes in the Tags tab of Multi-Rename."
+    "description": "Accessible name of the group of checkboxes choosing which tag fields the Find and replace panel changes in the tag editor window."
   },
   "multiRename.tags.tools.replace.allFields": "All fields",
   "@multiRename.tags.tools.replace.allFields": {
-    "description": "Checkbox in the Find and replace panel of the Tags tab of Multi-Rename: change every tag field instead of the checked ones."
+    "description": "Checkbox in the Find and replace panel of the tag editor window: change every tag field instead of the checked ones."
   },
   "multiRename.tags.tools.replace.search": "Find",
   "@multiRename.tags.tools.replace.search": {
-    "description": "Label of the text box with the text to find in the Find and replace panel of the Tags tab of Multi-Rename."
+    "description": "Label of the text box with the text to find in the Find and replace panel of the tag editor window."
   },
   "multiRename.tags.tools.replace.replaceWith": "Replace with",
   "@multiRename.tags.tools.replace.replaceWith": {
-    "description": "Label of the text box with the replacement text in the Find and replace panel of the Tags tab of Multi-Rename."
+    "description": "Label of the text box with the replacement text in the Find and replace panel of the tag editor window."
   },
   "multiRename.tags.tools.replace.run": "Replace",
   "@multiRename.tags.tools.replace.run": {
-    "description": "Button that runs Find and replace on the tag values of the files in the Tags tab of Multi-Rename. Disabled while the Find box is empty."
+    "description": "Button that runs Find and replace on the tag values of the files in the tag editor window. Disabled while the Find box is empty."
   },
   "multiRename.tags.tools.format.field": "Field",
   "@multiRename.tags.tools.format.field": {
-    "description": "Label of the tag field picker in the Format a field panel of the Tags tab of Multi-Rename."
+    "description": "Label of the tag field picker in the Format a field panel of the tag editor window."
   },
   "multiRename.tags.tools.format.mask": "Mask",
   "@multiRename.tags.tools.format.mask": {
-    "description": "Label of the mask text box in the Format a field panel of the Tags tab of Multi-Rename. The mask is a Multi-rename mask where [N] stands for the field’s current value."
+    "description": "Label of the mask text box in the Format a field panel of the tag editor window. The mask is a Multi-rename mask where [N] stands for the field’s current value."
   },
   "multiRename.tags.tools.format.hint": "Format keeps only the first value of a field that holds several, such as Artist or Genre.",
   "@multiRename.tags.tools.format.hint": {
-    "description": "Hint under the Format a field panel in the Tags tab of Multi-Rename: a field with several values (Artist, Genre) ends with just one value, built from the first."
+    "description": "Hint under the Format a field panel in the tag editor window: a field with several values (Artist, Genre) ends with just one value, built from the first."
   },
   "multiRename.tags.tools.format.run": "Format",
   "@multiRename.tags.tools.format.run": {
-    "description": "Button that rebuilds the chosen tag field from the mask in the Tags tab of Multi-Rename."
+    "description": "Button that rebuilds the chosen tag field from the mask in the tag editor window."
   },
   "multiRename.tags.tools.name.mode": "How to read the file names",
   "@multiRename.tags.tools.name.mode": {
-    "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the Tags tab of Multi-Rename."
+    "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the tag editor window."
   },
   "multiRename.tags.tools.name.modePattern": "Pattern",
   "@multiRename.tags.tools.name.modePattern": {
-    "description": "Option in the From file name panel of the Tags tab of Multi-Rename: read file names with a simple pattern such as %track% - %title%."
+    "description": "Option in the From file name panel of the tag editor window: read file names with a simple pattern such as %track% - %title%."
   },
   "multiRename.tags.tools.name.modeRegex": "Regular expression",
   "@multiRename.tags.tools.name.modeRegex": {
-    "description": "Option in the From file name panel of the Tags tab of Multi-Rename: read file names with a regular expression whose named groups are tag fields."
+    "description": "Option in the From file name panel of the tag editor window: read file names with a regular expression whose named groups are tag fields."
   },
   "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
   "@multiRename.tags.tools.name.patternPattern": {
-    "description": "Label of the pattern text box in the From file name panel of the Tags tab of Multi-Rename while the Pattern mode is on. The percent signs wrap tag field names and must stay as they are."
+    "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Pattern mode is on. The percent signs wrap tag field names and must stay as they are."
   },
   "multiRename.tags.tools.name.patternRegex": "Regular expression, like {example}",
   "@multiRename.tags.tools.name.patternRegex": {
-    "description": "Label of the pattern text box in the From file name panel of the Tags tab of Multi-Rename while the Regular expression mode is on. Named groups are tag field names.",
+    "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Regular expression mode is on. Named groups are tag field names.",
     "placeholders": {
       "example": "a sample regular expression with named groups, like (?<track>\\d+)_(?<title>.+); never translate it"
     }
   },
   "multiRename.tags.tools.name.recent": "Recent patterns",
   "@multiRename.tags.tools.name.recent": {
-    "description": "Accessible name of the list of the patterns used last in the From file name panel of the Tags tab of Multi-Rename. Picking one fills the pattern box."
+    "description": "Accessible name of the list of the patterns used last in the From file name panel of the tag editor window. Picking one fills the pattern box."
   },
   "multiRename.tags.tools.name.preview": "Preview",
   "@multiRename.tags.tools.name.preview": {
-    "description": "Button in the From file name panel of the Tags tab of Multi-Rename: shows what the pattern reads from each file name without changing any tag."
+    "description": "Button in the From file name panel of the tag editor window: shows what the pattern reads from each file name without changing any tag."
   },
   "multiRename.tags.tools.name.take": "Take",
   "@multiRename.tags.tools.name.take": {
-    "description": "Button in the From file name panel of the Tags tab of Multi-Rename: puts the values read from the file names into the tags. Disabled until the current pattern was previewed."
+    "description": "Button in the From file name panel of the tag editor window: puts the values read from the file names into the tags. Disabled until the current pattern was previewed."
   },
   "multiRename.tags.tools.name.stale": "Preview again to take this pattern.",
   "@multiRename.tags.tools.name.stale": {
-    "description": "Hint in the From file name panel of the Tags tab of Multi-Rename, shown after the pattern was edited since the last preview, because Take works only on a pattern that was previewed."
+    "description": "Hint in the From file name panel of the tag editor window, shown after the pattern was edited since the last preview, because Take works only on a pattern that was previewed."
   },
   "multiRename.tags.tools.name.previewLabel": "What the pattern reads from each file name",
   "@multiRename.tags.tools.name.previewLabel": {
-    "description": "Accessible name of the preview table in the From file name panel of the Tags tab of Multi-Rename."
+    "description": "Accessible name of the preview table in the From file name panel of the tag editor window."
   },
   "multiRename.tags.tools.name.columnFile": "File name",
   "@multiRename.tags.tools.name.columnFile": {
-    "description": "Column heading of the preview table in the From file name panel of the Tags tab of Multi-Rename: the file’s name."
+    "description": "Column heading of the preview table in the From file name panel of the tag editor window: the file’s name."
   },
   "multiRename.tags.tools.name.columnFields": "Read from it",
   "@multiRename.tags.tools.name.columnFields": {
-    "description": "Column heading of the preview table in the From file name panel of the Tags tab of Multi-Rename: the tag values the pattern reads from that file name."
+    "description": "Column heading of the preview table in the From file name panel of the tag editor window: the tag values the pattern reads from that file name."
   },
   "multiRename.tags.tools.name.noMatch": "Doesn’t match",
   "@multiRename.tags.tools.name.noMatch": {
-    "description": "Cell of the preview table in the From file name panel of the Tags tab of Multi-Rename: the pattern doesn’t fit this file name, so nothing would be taken from it."
+    "description": "Cell of the preview table in the From file name panel of the tag editor window: the pattern doesn’t fit this file name, so nothing would be taken from it."
   },
   "multiRename.tags.tools.name.badRegex": "The pattern isn’t a valid regular expression.",
   "@multiRename.tags.tools.name.badRegex": {
-    "description": "Error in the From file name panel of the Tags tab of Multi-Rename: the regular expression doesn’t compile. Nothing was changed."
+    "description": "Error in the From file name panel of the tag editor window: the regular expression doesn’t compile. Nothing was changed."
   },
   "multiRename.tags.tools.name.unknownField": "“{name}” isn’t a tag field.",
   "@multiRename.tags.tools.name.unknownField": {
-    "description": "Error in the From file name panel of the Tags tab of Multi-Rename: the pattern names a tag field Cmdr doesn’t know. Nothing was changed.",
+    "description": "Error in the From file name panel of the tag editor window: the pattern names a tag field Cmdr doesn’t know. Nothing was changed.",
     "placeholders": {
       "name": "the unknown field name exactly as the user wrote it, like titel"
     }
   },
   "multiRename.tags.tools.name.noFields": "The pattern reads no tag field. Use a field like %title% or a named group like {example}.",
   "@multiRename.tags.tools.name.noFields": {
-    "description": "Error in the From file name panel of the Tags tab of Multi-Rename: the pattern has no placeholder or named group, so there is nothing to read. The percent signs must stay as they are.",
+    "description": "Error in the From file name panel of the tag editor window: the pattern has no placeholder or named group, so there is nothing to read. The percent signs must stay as they are.",
     "placeholders": {
       "example": "a sample named group, like (?<title>.+); never translate it"
     }
   },
-  "multiRename.tags.numbering.button": "Auto-number…",
-  "@multiRename.tags.numbering.button": {
-    "description": "The button in the Tags tab's tools that opens the auto-numbering dialog (numbers tracks and discs with totals and leading zeros)."
-  },
   "multiRename.tags.numbering.title": "Auto-numbering wizard",
   "@multiRename.tags.numbering.title": {
-    "description": "Title of the auto-numbering dialog of the Tags tab in Multi-Rename."
+    "description": "Title of the auto-numbering dialog of the tag editor window in Multi-Rename."
   },
   "multiRename.tags.numbering.track": "Track number",
   "@multiRename.tags.numbering.track": {
@@ -1843,40 +1979,198 @@
   },
   "multiRename.tags.col.play": "Play",
   "@multiRename.tags.col.play": {
-    "description": "Column header (read only by screen readers) above the play buttons in the track list of the Tags tab of Multi-Rename."
-  },
-  "multiRename.tags.play.play": "Play {fileName}",
-  "@multiRename.tags.play.play": {
-    "description": "Accessible name and tooltip of the play button at the end of a track row in the Tags tab of Multi-Rename. It plays the track so you can hear which one you are naming.",
-    "placeholders": {
-      "fileName": "the file name of the track, like 01.mp3"
-    }
-  },
-  "multiRename.tags.play.stop": "Stop {fileName}",
-  "@multiRename.tags.play.stop": {
-    "description": "Accessible name and tooltip of the play button of a track that is playing in the Tags tab of Multi-Rename. It stops the track.",
-    "placeholders": {
-      "fileName": "the file name of the track, like 01.mp3"
-    }
+    "description": "Column header (read only by screen readers) above the play buttons in the track list of the tag editor window."
   },
   "multiRename.tags.play.failed": "Couldn’t play that track.",
   "@multiRename.tags.play.failed": {
-    "description": "Notice in the Tags tab of Multi-Rename when a track could not be played: the file is gone, unreadable, or its format can't be played here."
+    "description": "Notice in the tag editor window when a track could not be played: the file is gone, unreadable, or its format can't be played here."
   },
   "multiRename.tags.play.openInPlayer": "Open in foobar2000",
   "@multiRename.tags.play.openInPlayer": {
-    "description": "Button in the Tags tab of Multi-Rename. It opens the checked tracks (or all of them when none is checked) in the foobar2000 music player when it is installed, otherwise in each file's default app."
+    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the foobar2000 music player when it is installed, otherwise in each file's default app."
   },
   "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
   "@multiRename.tags.play.playerUnavailable": {
-    "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 found neither foobar2000 nor any other app that could open the tracks."
+    "description": "Notice in the tag editor window when Open in foobar2000 found neither foobar2000 nor any other app that could open the tracks."
   },
   "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
   "@multiRename.tags.play.nothingReadable": {
-    "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 was pressed with only unreadable tracks checked; nothing was opened."
+    "description": "Notice in the tag editor window when Open in foobar2000 was pressed with only unreadable tracks checked; nothing was opened."
   },
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
-    "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 failed for a reason other than a missing player, for example a track that is no longer in the list."
+    "description": "Notice in the tag editor window when Open in foobar2000 failed for a reason other than a missing player, for example a track that is no longer in the list."
+  },
+  "multiRename.tags.openWindow": "Tags…",
+  "@multiRename.tags.openWindow": {
+    "description": "Button at the top of the Multi-Rename sheet (only with the opt-in tag editor setting on): opens the sheet's audio files in the Tags window, where their tags are edited. The ellipsis says it opens a window."
+  },
+  "multiRename.tags.window.title": "Tags: {folder}",
+  "@multiRename.tags.window.title": {
+    "description": "Title of the tag editor window. {folder} is the name of the folder the audio files are in, like \"Dracula\". Keep the colon between the word and the folder name."
+  },
+  "multiRename.tags.window.nothingSelected": "Select the audio files to tag first.",
+  "@multiRename.tags.window.nothingSelected": {
+    "description": "Notification when the user chooses Edit tags with no file selected in the file list. Nothing opens; they select the audio files, then try again."
+  },
+  "multiRename.tags.window.openFailed": "Cmdr couldn’t open these tags. Close the window and try again.",
+  "@multiRename.tags.window.openFailed": {
+    "description": "Shown in the tag editor window when it couldn't start (its settings didn't load). Beside a Close button."
+  },
+  "multiRename.tags.window.close": "Close",
+  "@multiRename.tags.window.close": {
+    "description": "Button in the tag editor window that couldn't start: closes the window."
+  },
+  "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
+  "@multiRename.tags.window.noTracks": {
+    "description": "Notification when the user asks to edit tags but nothing selected is an audio file the tag editor supports (MP3, M4A, M4B, MP4, FLAC, OGG, Opus). No window opens."
+  },
+  "multiRename.tags.keys.label": "Tag tools",
+  "@multiRename.tags.keys.label": {
+    "description": "Accessible name of the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags): a row of buttons, one per key (F2, F3, …), that run the tag tools."
+  },
+  "multiRename.tags.keys.edit": "Edit",
+  "@multiRename.tags.keys.edit": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Edits the value under the cursor in place."
+  },
+  "multiRename.tags.keys.play": "Play",
+  "@multiRename.tags.keys.play": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Plays or stops the track under the cursor."
+  },
+  "multiRename.tags.keys.replace": "Replace",
+  "@multiRename.tags.keys.replace": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Opens Find and replace for tag values."
+  },
+  "multiRename.tags.keys.format": "Format",
+  "@multiRename.tags.keys.format": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Opens Format a field, which rebuilds a tag field from a pattern."
+  },
+  "multiRename.tags.keys.fromName": "From name",
+  "@multiRename.tags.keys.fromName": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Opens the dialog that reads tags out of the file names."
+  },
+  "multiRename.tags.keys.number": "Number",
+  "@multiRename.tags.keys.number": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Opens the auto-numbering wizard for track numbers."
+  },
+  "multiRename.tags.keys.clearField": "Clear",
+  "@multiRename.tags.keys.clearField": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Opens a small dialog that empties one tag field."
+  },
+  "multiRename.tags.keys.editNumber": "Edit #",
+  "@multiRename.tags.keys.editNumber": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Edits the track number under the cursor. # stands for the track number."
+  },
+  "multiRename.tags.keys.openInPlayer": "Open in player",
+  "@multiRename.tags.keys.openInPlayer": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the foobar2000 music player."
+  },
+  "multiRename.tags.keys.case": "Case",
+  "@multiRename.tags.keys.case": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the dialog that changes a tag’s letter case."
+  },
+  "multiRename.tags.keys.cleanUp": "Clean up",
+  "@multiRename.tags.keys.cleanUp": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens a dialog of one-press clean-up tools."
+  },
+  "multiRename.tags.keys.removeExtras": "Remove extras",
+  "@multiRename.tags.keys.removeExtras": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the dialog that removes the files’ extra tags."
+  },
+  "multiRename.tags.keys.write": "Write",
+  "@multiRename.tags.keys.write": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Lists what will change, then writes the new tags into the files."
+  },
+  "multiRename.tags.dialog.fromName": "Tags from file names",
+  "@multiRename.tags.dialog.fromName": {
+    "description": "Title of the dialog in the tag editor window (the separate window that edits audio files’ tags) that reads tag values (title, track number, and so on) out of the files’ names."
+  },
+  "multiRename.tags.dialog.case": "Change case",
+  "@multiRename.tags.dialog.case": {
+    "description": "Title of the small dialog in the tag editor window (the separate window that edits audio files’ tags) that changes a tag’s letter case."
+  },
+  "multiRename.tags.dialog.cleanUp": "Clean up",
+  "@multiRename.tags.dialog.cleanUp": {
+    "description": "Title of the dialog in the tag editor window (the separate window that edits audio files’ tags) holding one-press clean-up tools (remove diacritics, strip a track-number prefix, and similar)."
+  },
+  "multiRename.tags.dialog.extras": "Remove extra tags",
+  "@multiRename.tags.dialog.extras": {
+    "description": "Title of the dialog in the tag editor window (the separate window that edits audio files’ tags) that lists the files’ extra tags (ones not shown as fields) to pick which to remove."
+  },
+  "multiRename.tags.dialog.clearField": "Clear a field",
+  "@multiRename.tags.dialog.clearField": {
+    "description": "Title of the small dialog in the tag editor window (the separate window that edits audio files’ tags) that empties one tag field."
+  },
+  "multiRename.tags.dialog.write": "Write tags",
+  "@multiRename.tags.dialog.write": {
+    "description": "Title of the dialog in the tag editor window (the separate window that edits audio files’ tags) that lists what will change in each file, then writes the new tags into the files."
+  },
+  "multiRename.tags.dialog.close": "Close",
+  "@multiRename.tags.dialog.close": {
+    "description": "Button that closes a tool dialog in the tag editor window (the separate window that edits audio files’ tags). The tool’s own button has already applied its change; this only closes the dialog."
+  },
+  "multiRename.tags.clearField.field": "Field",
+  "@multiRename.tags.clearField.field": {
+    "description": "Label of the drop-down that picks which tag field to empty, in the Clear a field dialog."
+  },
+  "multiRename.tags.clearField.all": "Empties {field} on every file.",
+  "@multiRename.tags.clearField.all": {
+    "description": "What the Clear a field dialog will do when no track is selected. {field} is a tag field’s name, like Title or Album."
+  },
+  "multiRename.tags.clearField.some": "{count, plural, one {Empties {field} on the selected track.} other {Empties {field} on the {countText} selected tracks.}}",
+  "@multiRename.tags.clearField.some": {
+    "description": "What the Clear a field dialog will do when some tracks are selected. {field} is a tag field’s name, like Title; {countText} is the formatted number of selected tracks."
+  },
+  "multiRename.tags.clearField.run": "Clear",
+  "@multiRename.tags.clearField.run": {
+    "description": "Button in the Clear a field dialog that empties the field. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
+  "@multiRename.tags.undo.nothing": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+Z is pressed but no tag write can be undone."
+  },
+  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "@multiRename.tags.write.someLeft": {
+    "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Write” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.write)."
+  },
+  "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.write.closeWaits": {
+    "description": "Shown in the tag editor window's Write dialog when the user tries to close the window (Escape, ⌘W, or the red close button) while tags are being written or undone. The window stays open so no file is left half written; once the write ends, the dialog shows what it did and the window can be closed."
+  },
+  "multiRename.tags.window.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.window.closeWaits": {
+    "description": "Shown in the tag editor window's status line when the user tries to close the window while tags are being written or undone. Same meaning as the Write dialog's line: the window stays open until the write ends."
+  },
+  "multiRename.tags.readTimedOut": "The drive stopped answering while the tags were read. Close the window and try again.",
+  "@multiRename.tags.readTimedOut": {
+    "description": "Shown in the tag editor window instead of the tracks when reading the files' tags stood still for a while, usually because a network drive stopped answering. Nothing was changed."
+  },
+  "multiRename.tags.quit.title": "{count, plural, one {Quit with tag changes not written?} other {Quit with tag changes not written in {countText} windows?}}",
+  "@multiRename.tags.quit.title": {
+    "description": "Title of the quit dialog when the only thing holding the quit is one or more tag editor windows (Edit tags) whose changes haven't been written into the files yet. Quitting discards those changes.",
+    "placeholders": {
+      "count": "how many tag editor windows hold unwritten changes (drives the singular/plural form)",
+      "countText": "the same count, already formatted with the locale’s digit grouping"
+    }
+  },
+  "multiRename.tags.quit.writingTitle": "Quit while tags are being written?",
+  "@multiRename.tags.quit.writingTitle": {
+    "description": "Title of the quit dialog when the only thing holding the quit is a tag editor window writing tags into files right now."
+  },
+  "multiRename.tags.quit.unwritten": "{count, plural, one {A Tags window has changes that haven’t been written. Quitting discards them.} other {{countText} Tags windows have changes that haven’t been written. Quitting discards them.}}",
+  "@multiRename.tags.quit.unwritten": {
+    "description": "A line in the quit dialog: tag editor windows (titled \"Tags\") hold tag changes not yet written into the files, and quitting loses them. Choosing \"Keep working\" keeps them.",
+    "placeholders": {
+      "count": "how many tag editor windows hold unwritten changes (drives the singular/plural form)",
+      "countText": "the same count, already formatted with the locale’s digit grouping"
+    }
+  },
+  "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
+  "@multiRename.tags.quit.writing": {
+    "description": "A line in the quit dialog: a tag editor window is writing tags into audio files right now. Cmdr waits for that write to end before quitting (up to a short limit), rather than stopping between files. \"Book\" means an audiobook, a folder of audio files."
+  },
+  "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
+  "@multiRename.tags.quit.waits": {
+    "description": "A line at the foot of the quit dialog, in place of its usual countdown, when the only thing holding the quit is tag changes not yet written in tag editor windows. Cmdr doesn't quit on its own then: it waits until the user picks Quit now or Keep working."
   }
 }

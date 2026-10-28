@@ -20,6 +20,7 @@ import {
   quitCancel,
   quitConfirm,
   type OperationSnapshot,
+  type TagsAtQuit,
 } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 
@@ -30,10 +31,17 @@ const log = getAppLogger('quit')
  *  without a per-frame loop. */
 const TICK_MS = 250
 
+/** No Tags window holds anything (fork: the tag editor's windows). */
+const NO_TAGS: TagsAtQuit = { unwritten: 0, writing: false }
+
 class QuitPrompt {
   /** The operations the backend is holding the quit for. Empty means closed. */
   operations = $state<OperationSnapshot[]>([])
   open = $state(false)
+  /** What the Tags windows would lose or are writing (fork). */
+  tags = $state<TagsAtQuit>(NO_TAGS)
+  /** Whether the backend quits on its own at the deadline; not when only unwritten tag edits hold it (fork). */
+  countsDown = $state(true)
   /** Seconds left, floored, never below zero. Display only. */
   secondsLeft = $state(0)
 
@@ -42,8 +50,10 @@ class QuitPrompt {
   #ticker: ReturnType<typeof setInterval> | null = null
 
   /** Opens the prompt for a fresh `quit-requested`. */
-  show(operations: OperationSnapshot[], countdownMs: number) {
+  show(operations: OperationSnapshot[], countdownMs: number, tags: TagsAtQuit = NO_TAGS, countsDown = true) {
     this.operations = operations
+    this.tags = tags
+    this.countsDown = countsDown
     this.#deadlineAt = Date.now() + countdownMs
     this.open = true
     this.#retick()
@@ -85,6 +95,8 @@ class QuitPrompt {
   #close() {
     this.open = false
     this.operations = []
+    this.tags = NO_TAGS
+    this.countsDown = true
     if (this.#ticker !== null) {
       clearInterval(this.#ticker)
       this.#ticker = null
@@ -101,7 +113,7 @@ let unlistenCalledOff: Promise<UnlistenFn> | undefined
  *  off. Main window only: it's the window that owns the app's dialogs. */
 export function initQuitPrompt() {
   unlistenRequested ??= onQuitRequested((event) => {
-    quitPrompt.show(event.operations, event.countdownMs)
+    quitPrompt.show(event.operations, event.countdownMs, event.tags, event.countsDown)
   })
   unlistenCalledOff ??= onQuitCalledOff(() => {
     quitPrompt.dismiss()

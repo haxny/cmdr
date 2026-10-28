@@ -66,6 +66,7 @@ describe('apply-outcome', () => {
     [{ type: 'io', data: ['PermissionDenied', 'denied'] }, 'multiRename.tags.write.error.io'],
     [{ type: 'parse', data: 'x' }, 'multiRename.tags.write.error.parse'],
     [{ type: 'write', data: 'x' }, 'multiRename.tags.write.error.write'],
+    [{ type: 'badDate', data: '2010-20-09' }, 'multiRename.tags.write.error.badDate'],
     [{ type: 'wouldDrop', data: ['TSOP'] }, 'multiRename.tags.write.error.wouldDrop'],
     [{ type: 'unwritableExtra', data: 'K' }, 'multiRename.tags.write.error.unwritableExtra'],
   ])('a failed file (%j) is worded by its kind', (error, key) => {

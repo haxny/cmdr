@@ -443,7 +443,25 @@ fn unparseable_mp3_date_is_an_error_and_changes_nothing() {
         &MUSIC,
     );
 
-    assert!(matches!(result, Err(TagError::Write(_))), "{result:?}");
+    assert_eq!(result, Err(TagError::BadDate("kolem roku".to_owned())));
+    assert_eq!(fs::read(&path).unwrap(), before);
+}
+
+/// A date with month 20 (a day and month swapped by some tagger) fails as a bad date the
+/// user can correct, not as an anonymous write failure. Seen on a real audiobook, 2026-10-27.
+#[test]
+fn out_of_range_mp3_date_is_a_bad_date_and_changes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = write_untagged_mp3(dir.path(), "a.mp3");
+    let before = fs::read(&path).unwrap();
+
+    let result = write_tags(
+        &path,
+        &with(FileTags::default(), TagField::Date, &["2010-20-09"]),
+        &MUSIC,
+    );
+
+    assert_eq!(result, Err(TagError::BadDate("2010-20-09".to_owned())));
     assert_eq!(fs::read(&path).unwrap(), before);
 }
 

@@ -131,6 +131,8 @@ it today), "next step" chaining, and editing names in an editor.
   as the preview renders them. A token that isn't a range is a `Spec` error.
 - Sessions live in a process-wide map, at most `MAX_SESSIONS`; opening one drops sessions idle past `IDLE_LIMIT`,
   then the least recently used. The sheet closes its session (`close_multi_rename`) when it closes.
+  A session a Tags window holds (`hold`, fork: `tag_editor/window.rs`) is never evicted until `release`, and never
+  counts against the cap. `reopen` and `open_for_tags` make that window's session with an empty media cache.
 - **Results (⌥⏎, TC's "edit names", `names_file.rs`)**: `write_multi_rename_names(session, previewId)` writes that
   preview's rows (a `Missing` one gets no line) as `old<TAB>new` lines to
   `<app cache dir>/multi-rename/<pid>-<session>.txt`; the sheet opens it in the user's editor and calls `read_multi_rename_names` when its window gets focus again. A line

@@ -15,22 +15,23 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 use serde::{Deserialize, Serialize};
 
+pub use super::error::TagEditorError;
 pub(super) use cmdr_tags::Fingerprint;
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
-    ContentKind, Cover, FileTags, KindRemoval, NamePattern, PatternError, TagError, TagField, compile_pattern,
-    format_of, normalize_for, read_duration, read_tags, removed_by_kind,
+    ContentKind, FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for,
+    read_duration, read_tags, removed_by_kind,
 };
 
-use super::view::{Access, ReadErrorCode, ReadOnlyReason, TagEditorView, build, same_cover};
+use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
-use crate::multi_rename::mask::MaskError;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
@@ -38,43 +39,7 @@ pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
 const LOG_TARGET: &str = "tag_editor::session";
 
-/// Why a tag-editor call didn't answer.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
-pub enum TagEditorError {
-    /// The Multi-Rename session is gone.
-    NoSession,
-    /// `open` wasn't called for this session.
-    NotOpen,
-    /// The session's volume is read-only for the tag editor.
-    ReadOnly,
-    /// An edit names a path that isn't a readable track of the session. Nothing was applied.
-    UnknownTrack,
-    /// The undo store refused: recording before a write (nothing was written), or an undo.
-    Undo { error: TagError },
-    /// The app's data folder, which holds the undo store, isn't available. Nothing was written.
-    NoAppDataDir,
-    /// A cover file name that isn't a plain file name inside the session's folder.
-    BadCoverName,
-    /// The cover file is over the size limit (10 MiB).
-    CoverTooLarge,
-    /// The cover file couldn't be read (or isn't a regular file, or has an unsupported name).
-    CoverUnreadable,
-    /// The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
-    CoverNotAnImage,
-    /// The background task running the call failed.
-    TaskFailed,
-    /// A file-name pattern that can't be used. Nothing was changed.
-    BadPattern { error: PatternError },
-    /// A find/replace search that isn't a valid regular expression. Nothing was changed.
-    BadRegex,
-    /// A Format mask that doesn't parse. Nothing was changed.
-    BadMask { error: MaskError },
-    /// Neither foobar2000 nor the files' default app could be launched.
-    PlayerUnavailable,
-}
-
-/// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+/// One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
 /// PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
 /// the edit to another file.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, specta::Type)]
@@ -129,6 +94,8 @@ pub(super) struct Loaded {
     pub disk: FileTags,
     pub edited: FileTags,
     pub duration_ms: Option<u64>,
+    /// The key of `edited`'s cover ([`cover_key`]), so a view build never hashes a cover.
+    pub cover_key: Option<u64>,
     /// Taken just BEFORE the read, so a change during the read shows as a change. `None` when
     /// the file couldn't be stat'ed, which counts as changed.
     pub fingerprint: Option<Fingerprint>,
@@ -163,7 +130,7 @@ struct TagSession {
 
 static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// The session's audio files in its current order, where they are, and what the tab may do
+/// The session's audio files in its current order, where they are, and what the window may do
 /// with them.
 struct Layout {
     access: Access,
@@ -217,7 +184,9 @@ fn code_of(error: &TagError) -> ReadErrorCode {
         TagError::NotSupported => ReadErrorCode::Unsupported,
         TagError::Io(..) => ReadErrorCode::Io,
         TagError::Parse(_) => ReadErrorCode::Parse,
-        TagError::Write(_) | TagError::WouldDrop(_) | TagError::UnwritableExtra(_) => ReadErrorCode::Unreadable,
+        TagError::Write(_) | TagError::BadDate(_) | TagError::WouldDrop(_) | TagError::UnwritableExtra(_) => {
+            ReadErrorCode::Unreadable
+        }
     }
 }
 
@@ -232,6 +201,7 @@ fn read_entry(path: &Path) -> Entry {
                 .flatten()
                 .map(|duration| u64::try_from(duration.as_millis()).unwrap_or(u64::MAX));
             Entry::Loaded(Box::new(Loaded {
+                cover_key: tags.cover.as_ref().map(cover_key),
                 disk: tags.clone(),
                 edited: tags,
                 duration_ms,
@@ -247,7 +217,17 @@ fn read_entry(path: &Path) -> Entry {
 /// With `restart: false` an existing tag session is returned as it is, edits kept; with
 /// `restart: true` (or none yet) every file is read again and the edits are dropped.
 /// Blocking file work: call it off the IPC thread.
+#[cfg(test)]
 pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorError> {
+    open_counting(session_id, restart, &AtomicUsize::new(0))
+}
+
+/// Opens as `open` does (tests), counting each file read in `read`, so a caller can tell a slow read from a stalled one.
+pub(crate) fn open_counting(
+    session_id: &str,
+    restart: bool,
+    read: &AtomicUsize,
+) -> Result<TagEditorView, TagEditorError> {
     let layout = layout(session_id)?;
     if !restart {
         let mut sessions = SESSIONS.lock_ignore_poison();
@@ -259,7 +239,11 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
     let by_path: HashMap<PathBuf, Entry> = layout
         .tracks
         .iter()
-        .map(|path| (path.clone(), read_entry(path)))
+        .map(|path| {
+            let entry = read_entry(path);
+            read.fetch_add(1, Ordering::Relaxed);
+            (path.clone(), entry)
+        })
         .collect();
     let view = {
         let mut sessions = SESSIONS.lock_ignore_poison();
@@ -277,18 +261,15 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
     Ok(view)
 }
 
-/// The cover every readable file shares (its edited tags), or `None` when no file has one,
-/// there are no readable files, or the files' covers differ. Needs an open session.
-pub fn shared_cover(session_id: &str) -> Result<Option<Cover>, TagEditorError> {
+/// Runs `f` on the open session's readable files in current order (their edited tags and cover keys).
+pub(super) fn with_loaded<R>(session_id: &str, f: impl FnOnce(&[&Loaded]) -> R) -> Result<R, TagEditorError> {
     with_session(session_id, |layout, session| {
-        let (_, edited) = readable(layout, session);
-        let Some((first, rest)) = edited.split_first() else {
-            return Ok(None);
-        };
-        if rest.iter().any(|file| !same_cover(&file.cover, &first.cover)) {
-            return Ok(None);
-        }
-        Ok(first.cover.clone())
+        let loaded: Vec<&Loaded> = layout
+            .tracks
+            .iter()
+            .filter_map(|path| session.by_path.get(path)?.loaded())
+            .collect();
+        Ok(f(&loaded))
     })
 }
 
@@ -366,7 +347,7 @@ fn stem_of(path: &Path) -> String {
         .unwrap_or_default()
 }
 
-/// What the tools know about `paths`, a selection of a book of `session_files` readable tracks:
+/// What the tools know about `paths`, a selection of a book of `session_files` listed tracks (readable or not):
 /// each one's folder and stem, and the book's size (for the one-file-book rule).
 fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
     ToolContext {
@@ -413,10 +394,14 @@ fn drop_orphan_totals(mut tags: FileTags) -> FileTags {
 /// Stores `edited` (parallel to `paths`) as the files' edited tags, as each file's format holds
 /// them, so every edit path (edits, tools) shows what a write will leave. A total whose number is
 /// absent is dropped the same way: it wouldn't be written.
+/// Each cover keeps its key ([`CoverKeys`]).
 fn store(session: &mut TagSession, paths: Vec<PathBuf>, edited: Vec<FileTags>) {
+    let mut keys = CoverKeys::default();
     for (path, tags) in paths.into_iter().zip(edited) {
         if let Some(Entry::Loaded(loaded)) = session.by_path.get_mut(&path) {
+            keys.remember(&loaded.edited.cover, loaded.cover_key);
             loaded.edited = as_format_holds(&path, tags);
+            loaded.cover_key = keys.key_of(&loaded.edited.cover);
         }
     }
 }
@@ -650,6 +635,7 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
             (Entry::Loaded(loaded), Entry::Loaded(now)) => {
                 if loaded.edited == requested {
                     loaded.edited = now.disk.clone();
+                    loaded.cover_key = now.cover_key;
                 }
                 loaded.disk = now.disk;
                 loaded.fingerprint = now.fingerprint;
@@ -707,7 +693,11 @@ pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
 fn follow_disk(held: &mut Entry, now: &Entry) {
     match (held, now) {
         (Entry::Loaded(held), Entry::Loaded(now)) => {
+            let mut keys = CoverKeys::default();
+            keys.remember(&held.edited.cover, held.cover_key);
+            keys.remember(&now.edited.cover, now.cover_key);
             held.edited = rebase(&held.disk, &held.edited, &now.disk);
+            held.cover_key = keys.key_of(&held.edited.cover);
             held.disk = now.disk.clone();
             held.fingerprint = now.fingerprint.clone();
             held.duration_ms = now.duration_ms;
@@ -765,6 +755,20 @@ pub(super) fn loaded_tracks(session_id: &str) -> Result<Vec<PathBuf>, TagEditorE
             .cloned()
             .collect())
     })
+}
+
+/// How many tag sessions hold edits not yet written: a quit asks about them (`at_quit.rs`).
+pub(crate) fn unwritten_sessions() -> usize {
+    SESSIONS
+        .lock_ignore_poison()
+        .values()
+        .filter(|session| {
+            session
+                .by_path
+                .values()
+                .any(|entry| entry.loaded().is_some_and(Loaded::changed))
+        })
+        .count()
 }
 
 /// Whether a tag session exists for `session_id`.

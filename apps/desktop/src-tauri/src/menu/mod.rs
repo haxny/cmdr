@@ -459,6 +459,10 @@ pub struct MenuState<R: Runtime> {
     /// item's enabled state is recomputed from all its inputs at once. Starts `false`, matching the item as
     /// it's built.
     pub reopen_closed_tab_enabled: AtomicBool,
+    /// Whether File > "Edit tags…" is live: the opt-in tag editor setting (fork) is on. Pushed by
+    /// `set_edit_tags_enabled`, stored like `reopen_closed_tab_enabled`. Starts `false`, matching the
+    /// item as it's built, so the setting off leaves it greyed.
+    pub edit_tags_enabled: AtomicBool,
     /// Whether a trash this session waits to be undone, deciding Edit > "Undo move to trash". Pushed by
     /// `update_undo_trash_menu` (which also relabels the item), and stored for the same reason as
     /// `reopen_closed_tab_enabled`. Starts `false`, matching the item as it's built.
@@ -572,6 +576,7 @@ impl<R: Runtime> Default for MenuState<R> {
             view_mode_brief_accel: Mutex::new(menu_bar::spec_accelerator(VIEW_MODE_BRIEF_LEFT_ID).map(String::from)),
             pin_tab: Mutex::new(None),
             reopen_closed_tab_enabled: AtomicBool::new(false),
+            edit_tags_enabled: AtomicBool::new(false),
             undo_trash_available: AtomicBool::new(false),
             commands_refused_over_dialog: Mutex::new(HashSet::new()),
             items: Mutex::new(HashMap::new()),

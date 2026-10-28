@@ -1,30 +1,9 @@
 /** Which clean-up tools apply to which selection, and the exact tool each button sends. */
 import { describe, expect, it } from 'vitest'
 import { TAG_FIELDS } from './field-labels'
-import {
-  DEFAULT_CASE_FIELDS,
-  DIACRITICS_FIELDS,
-  caseTool,
-  focusedFieldOf,
-  removeExtrasTool,
-  showsRenumber,
-} from './tag-tools'
+import { DEFAULT_CASE_FIELDS, DIACRITICS_FIELDS, caseTool, removeExtrasTool, showsRenumber } from './tag-tools'
 
 describe('tag-tools', () => {
-  it.each([
-    ['tag-field-album', 'album'],
-    ['tag-field-albumArtist', 'albumArtist'],
-    ['tag-field-comment', 'comment'],
-    ['tag-track-title-0', 'title'],
-    ['tag-track-title-12', 'title'],
-    ['tag-track-number-3', 'track'],
-    ['tag-field-nonsense', null],
-    ['multi-rename-name-mask', null],
-    ['', null],
-  ] as const)('the box %j is the field %j', (id, field) => {
-    expect(focusedFieldOf(id)).toBe(field)
-  })
-
   it.each([
     [null, DEFAULT_CASE_FIELDS],
     ['album', ['album']],

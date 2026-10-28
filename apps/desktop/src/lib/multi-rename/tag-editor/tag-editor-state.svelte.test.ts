@@ -1,5 +1,5 @@
 /**
- * The Tags tab's state: each call keeps the view the backend answered with, a typed error stays as it came,
+ * The Tags window's state: each call keeps the view the backend answered with, a typed error stays as it came,
  * `busy` brackets every call, and Undo reverses exactly the last apply that can be reversed.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -13,10 +13,16 @@ const ipc = vi.hoisted(() => ({
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
+  lastTagApply: vi.fn(),
   closeTagEditor: vi.fn(),
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
   getCoverImage: vi.fn(),
+  listTagCovers: vi.fn(),
+  getCoverThumbnail: vi.fn(),
+  useCoverForAll: vi.fn(),
+  setCoverFromBytes: vi.fn(),
+  setCoverFromPath: vi.fn(),
   previewTagsFromNames: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
@@ -26,7 +32,7 @@ vi.mock('#lib/logging/logger.js', () => ({
 }))
 
 import { createTagEditorState } from './tag-editor-state.svelte'
-import { getLastTagApply, setLastTagApply } from './last-tag-apply.svelte'
+import { replayLastApply } from './last-apply.test-helper'
 
 const VIEW = { editable: true, tracks: [{}, {}], dirty: false } as unknown as TagEditorView
 const EDITED = { editable: true, tracks: [{}, {}], dirty: true } as unknown as TagEditorView
@@ -46,7 +52,7 @@ function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
 
 beforeEach(() => {
   vi.resetAllMocks()
-  setLastTagApply(null)
+  ipc.lastTagApply.mockImplementation(replayLastApply(ipc))
   ipc.closeTagEditor.mockResolvedValue(undefined)
 })
 
@@ -213,14 +219,14 @@ describe('createTagEditorState', () => {
     expect(state.error).toBeNull()
   })
 
-  it('changes returns the backend answer and sets the error on failure', async () => {
+  it('changes returns the backend answer; a failure is the Apply panel’s to word, not the tab’s', async () => {
     const state = createTagEditorState('S')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: true, value: [] })
     expect(await state.changes('music')).toEqual({ ok: true, value: [] })
     expect(ipc.getTagChanges).toHaveBeenLastCalledWith('S', 'music')
     ipc.getTagChanges.mockResolvedValueOnce({ ok: false, error: { kind: 'notOpen' } })
-    expect((await state.changes('audiobook')).ok).toBe(false)
-    expect(state.error).toEqual({ kind: 'notOpen' })
+    expect(await state.changes('audiobook')).toEqual({ ok: false, error: { kind: 'notOpen' } })
+    expect(state.error).toBeNull()
   })
 
   it('apply returns the report and reloads the view', async () => {
@@ -228,18 +234,27 @@ describe('createTagEditorState', () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
     const state = createTagEditorState('S')
     const res = await state.apply(REQUEST)
-    expect(ipc.applyTags).toHaveBeenCalledWith('S', REQUEST)
+    expect(ipc.applyTags).toHaveBeenCalledWith('S', REQUEST, false)
     expect(res).toEqual({ ok: true, value: report() })
     expect(ipc.openTagEditor).toHaveBeenCalledWith('S')
     expect(state.view).toBe(VIEW)
   })
 
-  it('apply keeps the typed error', async () => {
+  it('apply hands back the typed error for the Apply panel to word, and leaves the tab’s error alone', async () => {
     ipc.applyTags.mockResolvedValue({ ok: false, error: { kind: 'noAppDataDir' } })
     const state = createTagEditorState('S')
     const res = await state.apply(REQUEST)
-    expect(res.ok).toBe(false)
-    expect(state.error).toEqual({ kind: 'noAppDataDir' })
+    expect(res).toEqual({ ok: false, error: { kind: 'noAppDataDir' } })
+    expect(state.error).toBeNull()
+  })
+
+  it('a change list that succeeds leaves an edit’s error standing', async () => {
+    ipc.editTags.mockResolvedValueOnce({ ok: false, error: { kind: 'unknownTrack' } })
+    ipc.getTagChanges.mockResolvedValueOnce({ ok: true, value: [] })
+    const state = createTagEditorState('S')
+    await state.edit([])
+    await state.changes('audiobook')
+    expect(state.error).toEqual({ kind: 'unknownTrack' })
   })
 
   it('undo reverses the last apply and then has nothing left', async () => {
@@ -332,13 +347,19 @@ describe('createTagEditorState', () => {
 
   it('an undo that fails halfway keeps what is left undoable, and reloads what it restored', async () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
-    setLastTagApply({
-      applies: [
-        { applyId: 'A1', written: 3 },
-        { applyId: 'A2', written: 1 },
-      ],
-      partial: false,
-    })
+    // The backend holds a two-part write; after the undo of A2 (A1's failed) it holds A1 alone.
+    ipc.lastTagApply
+      .mockResolvedValueOnce({
+        ok: true,
+        value: {
+          applies: [
+            { applyId: 'A1', written: 3 },
+            { applyId: 'A2', written: 1 },
+          ],
+          partial: false,
+        },
+      })
+      .mockResolvedValue({ ok: true, value: { applies: [{ applyId: 'A1', written: 3 }], partial: false } })
     ipc.undoTagApply
       .mockResolvedValueOnce({ ok: true, value: { restored: ['/b.mp3'], missing: [], changed: [], failed: [] } })
       .mockResolvedValueOnce({ ok: false, error: { kind: 'taskFailed' } })
@@ -352,20 +373,22 @@ describe('createTagEditorState', () => {
       restored: { restored: ['/b.mp3'], missing: [], changed: [], failed: [] },
     })
     expect(state.error).toEqual({ kind: 'taskFailed' })
-    expect(getLastTagApply()).toEqual({ applies: [{ applyId: 'A1', written: 3 }], partial: false })
+    expect(state.undoable).toEqual({ applies: [{ applyId: 'A1', written: 3 }], partial: false })
     expect(ipc.openTagEditor).toHaveBeenCalledTimes(2)
   })
 
   it('an apply whose files could not all be restored stays undoable', async () => {
-    setLastTagApply({ applies: [{ applyId: 'A1', written: 2 }], partial: false })
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: report({ applyId: 'A1', written: ['/a.mp3', '/b.mp3'] }) })
     ipc.undoTagApply.mockResolvedValue({
       ok: true,
       value: { restored: ['/a.mp3'], missing: [], changed: [], failed: [['/b.mp3', { type: 'notSupported' }]] },
     })
     const state = createTagEditorState('S')
+    await state.apply(REQUEST)
     expect((await state.undo()).ok).toBe(true)
     // Only the file it couldn't restore is left for a retry.
-    expect(getLastTagApply()).toEqual({ applies: [{ applyId: 'A1', written: 1 }], partial: false })
+    expect(state.undoable).toEqual({ applies: [{ applyId: 'A1', written: 1 }], partial: false })
   })
 
   it('a write that wrote nothing keeps the last write undoable', async () => {
@@ -417,19 +440,57 @@ describe('createTagEditorState', () => {
     expect(state.undoable).toEqual({ applies: [{ applyId: 'A2', written: 1 }], partial: false })
   })
 
-  it('the write outlives the sheet: a new state of a later sheet can undo it', async () => {
+  it('the write outlives its window: a window opened later over the same folder can undo it (⌘Z)', async () => {
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
     ipc.applyTags.mockResolvedValue({ ok: true, value: report({ applyId: 'A7' }) })
     ipc.undoTagApply.mockResolvedValue({ ok: true, value: { restored: [], missing: [], changed: [], failed: [] } })
     const first = createTagEditorState('S')
+    await first.open()
     await first.apply(REQUEST)
     await first.close()
+    expect(first.undoable).toBeNull()
+
     const later = createTagEditorState('T')
+    expect(later.undoable).toBeNull()
+    await later.open()
+    // The window mirrors what the backend keeps for the folder; it asked with its own session.
+    expect(ipc.lastTagApply).toHaveBeenLastCalledWith('T')
     expect(later.undoable).toEqual({ applies: [{ applyId: 'A7', written: 1 }], partial: false })
-    await later.undo()
+    expect((await later.undo()).ok).toBe(true)
     expect(ipc.undoTagApply).toHaveBeenCalledWith('A7', 'T')
-    // The later sheet never showed its Tags tab, so the undo opens no tag session for it.
-    expect(ipc.openTagEditor).not.toHaveBeenCalledWith('T')
+    expect(later.undoable).toBeNull()
+  })
+
+  it('a backend that can’t say what the last write was leaves Undo with nothing, and is logged', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.lastTagApply.mockResolvedValue({ ok: false, error: { kind: 'noSession' } })
+    const state = createTagEditorState('S')
+    await state.open()
+    expect(state.undoable).toBeNull()
+    expect(warn).toHaveBeenCalledWith("couldn't ask for the last tag write: {kind}", { kind: 'noSession' })
+  })
+
+  it('writing is on while a write or an undo is out, and editing only while an edit is', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    let finish: (value: unknown) => void = () => {}
+    ipc.applyTags.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const state = createTagEditorState('S')
+    await state.open()
+    expect(state.writing).toBe(false)
+    const applying = state.apply(REQUEST)
+    expect(state.writing).toBe(true)
+    expect(state.editing).toBe(false)
+    finish({ ok: true, value: report() })
+    await applying
+    expect(state.writing).toBe(false)
+    ipc.editTags.mockReturnValue(new Promise(() => {}))
+    void state.edit([])
+    expect(state.editing).toBe(true)
+    expect(state.writing).toBe(false)
   })
 
   it('reload reads every file again', async () => {
@@ -533,5 +594,58 @@ describe('createTagEditorState', () => {
     expect(await state.coverImage()).toBeNull()
     expect(state.error).toBeNull()
     expect(warn).toHaveBeenCalled()
+  })
+
+  it('coverImage asks for the cover a choice names', async () => {
+    const state = createTagEditorState('S')
+    ipc.getCoverImage.mockResolvedValue({ ok: true, value: null })
+    await state.coverImage('00ff')
+    expect(ipc.getCoverImage).toHaveBeenCalledWith('S', '00ff')
+    await state.coverImage()
+    expect(ipc.getCoverImage).toHaveBeenLastCalledWith('S', null)
+  })
+
+  it('coverThumbnail asks for the small picture; a failure is null and leaves the error alone', async () => {
+    const state = createTagEditorState('S')
+    ipc.getCoverThumbnail.mockResolvedValue({ ok: true, value: 'data:image/png;base64,x' })
+    expect(await state.coverThumbnail('k')).toBe('data:image/png;base64,x')
+    expect(ipc.getCoverThumbnail).toHaveBeenCalledWith('S', 'k')
+    ipc.getCoverThumbnail.mockResolvedValue({ ok: false, error: { kind: 'coverTimedOut' } })
+    expect(await state.coverThumbnail('k')).toBeNull()
+    expect(state.error).toBeNull()
+  })
+
+  it('coverChoices lists every cover; a failure is null and leaves the error alone', async () => {
+    const choices = [{ key: 'k', mime: 'image/png', bytes: 3, width: null, height: null, files: 2 }]
+    ipc.listTagCovers.mockResolvedValue({ ok: true, value: choices })
+    const state = createTagEditorState('S')
+    expect(await state.coverChoices()).toEqual(choices)
+    expect(ipc.listTagCovers).toHaveBeenCalledWith('S')
+    ipc.listTagCovers.mockResolvedValue({ ok: false, error: { kind: 'noSession' } })
+    expect(await state.coverChoices()).toBeNull()
+    expect(state.error).toBeNull()
+  })
+
+  it('useCoverForAll, coverFromBytes and coverFromPath replace the view; a refusal keeps it and is the error', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.useCoverForAll.mockResolvedValue({ ok: true, value: EDITED })
+    const state = createTagEditorState('S')
+    await state.open()
+    await state.useCoverForAll('k')
+    expect(ipc.useCoverForAll).toHaveBeenCalledWith('S', 'k')
+    expect(state.view).toBe(EDITED)
+
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.setCoverFromBytes.mockResolvedValue({ ok: false, error: { kind: 'coverNotAnImage' } })
+    await state.coverFromBytes(new Uint8Array([1, 2]))
+    expect(ipc.setCoverFromBytes).toHaveBeenCalledWith('S', new Uint8Array([1, 2]))
+    expect(state.view).toBe(EDITED)
+    expect(state.error).toEqual({ kind: 'coverNotAnImage' })
+
+    ipc.setCoverFromPath.mockResolvedValue({ ok: true, value: VIEW })
+    await state.coverFromPath('/d/front.png')
+    expect(ipc.setCoverFromPath).toHaveBeenCalledWith('S', '/d/front.png')
+    expect(state.view).toBe(VIEW)
+    expect(state.error).toBeNull()
   })
 })

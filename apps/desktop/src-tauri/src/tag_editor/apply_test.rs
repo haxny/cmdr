@@ -49,7 +49,7 @@ pub(super) fn request() -> ApplyRequest {
     }
 }
 
-fn set_album(album: &str) -> TagEdit {
+pub(super) fn set_album(album: &str) -> TagEdit {
     TagEdit::SetAll {
         field: TagField::Album,
         values: vec![album.to_string()],
@@ -60,15 +60,15 @@ fn title_of(dir: &Path, name: &str) -> Option<Vec<String>> {
     on_disk(dir, name).fields.get(&TagField::Title).cloned()
 }
 
-fn album_of(dir: &Path, name: &str) -> Option<Vec<String>> {
+pub(super) fn album_of(dir: &Path, name: &str) -> Option<Vec<String>> {
     on_disk(dir, name).fields.get(&TagField::Album).cloned()
 }
 
-fn one(value: &str) -> Option<Vec<String>> {
+pub(super) fn one(value: &str) -> Option<Vec<String>> {
     Some(vec![value.to_string()])
 }
 
-fn names(paths: &[String]) -> Vec<String> {
+pub(super) fn names(paths: &[String]) -> Vec<String> {
     paths
         .iter()
         .map(|path| {
@@ -85,7 +85,7 @@ fn set_mode(path: &Path, mode: u32) {
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).expect("the mode changes");
 }
 
-fn done(id: &str) {
+pub(super) fn done(id: &str) {
     close(id);
     close_rename(id);
 }
@@ -551,7 +551,7 @@ async fn media_read(id: &str) {
     .await;
 }
 
-/// Review focus 5: after a write, and after its undo, the Rename tab's `[=tag.*]` preview shows the
+/// Review focus 5: after a write, and after its undo, Multi-Rename's `[=tag.*]` preview shows the
 /// new values, and the read reports its end: the event the sheet re-previews on.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn media_cache_dropped_for_written_rows() {

@@ -1,13 +1,15 @@
 /**
  * The pure half of the shared-fields table: text typed into a field ⇄ the values the field holds, and a track's
- * length as text. The «multiple values» rule lives in the components (an untouched row sends nothing); this only
- * says what a row looks like and what typed text means.
+ * length as text, and the «multiple values» box (marker + every value) and what typing in it means.
  *
  * ❗ A multi-value field whose single value contains "; " is split into two values when its row is committed again:
  * the text form can't tell the two apart. That is inherent to showing several values in one box.
  */
 
-import type { SharedValue, TagField } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { SharedValue, TagField, ValueCount } from '#lib/ipc/bindings.js'
+import type { TagEdit } from '#lib/tauri-commands/index.js'
 
 /** What joins the values of a multi-value field in its text. */
 export const MULTI_SEPARATOR = '; '
@@ -42,11 +44,63 @@ export function parseFieldText(field: TagField, text: string): string[] {
     .filter((value) => value !== '')
 }
 
-/** A shared value as text. `multiple` has no text: the row shows its «multiple values» placeholder instead. */
+/** A shared value as text. `multiple` has no text of its own: the row's box holds `multipleText(choices)` instead. */
 export function formatFieldValue(value: SharedValue): { text: string; multiple: boolean } {
   if (value === 'empty') return { text: '', multiple: false }
   if (value === 'multiple') return { text: '', multiple: true }
   return { text: value.same.join(MULTI_SEPARATOR), multiple: false }
+}
+
+/**
+ * What the box of a «multiple values» row holds, as foobar2000 shows it: the marker, then every value the files
+ * carry (flattened, each once, in the order of the counts) joined with "; ". `more` is how many values the list was
+ * cut by (the view lists at most 50); a tail says so. The box keeps all of it; a long line is cut with … by the display
+ * (CSS), never in the text.
+ */
+export function multipleText(choices: readonly ValueCount[], more = 0): string {
+  const marker = tString('multiRename.tags.multipleValues')
+  const values = [...new Set(choices.flatMap((choice) => choice.values))]
+  const parts = more > 0 ? [...values, moreTail(more)] : values
+  return parts.length === 0 ? marker : `${marker} ${parts.join(MULTI_SEPARATOR)}`
+}
+
+/** The tail that says the list was cut: «…and 10 more». While it is in the box the text isn't the whole list. */
+function moreTail(more: number): string {
+  return tString('multiRename.tags.choicesMore', { countText: formatInteger(more) })
+}
+
+/**
+ * What the user typed into a shared row's box, as an edit. `null` when nothing is to be sent: the text is as it was
+ * (`original`), the «multiple values» marker still starts it, or the «…and N more» tail (`more`) is still in it (the
+ * per-file values stay). Without the marker, the
+ * text is what every file gets (`setAll`), and an empty box clears the field, as Clear does.
+ */
+export function parseSharedEdit(field: TagField, original: string, typed: string, more = 0): TagEdit | null {
+  if (typed === original || sharedEditBlock(typed, more) !== null) return null
+  return { kind: 'setAll', field, values: parseFieldText(field, typed) }
+}
+
+/**
+ * What keeps a typed shared row from being sent: the «multiple values» marker still starts it (`marker`), or the
+ * «…and N more» tail of a cut list is still in it (`tail`; the text isn't every value, so it must not replace them).
+ * `null` when nothing does.
+ */
+export function sharedEditBlock(typed: string, more = 0): 'marker' | 'tail' | null {
+  if (typed.startsWith(tString('multiRename.tags.multipleValues'))) return 'marker'
+  if (more > 0 && typed.includes(moreTail(more))) return 'tail'
+  return null
+}
+
+/** What the editor says when Enter can't send the text (`sharedEditBlock`), or `null` when it can. */
+export function sharedEditHint(typed: string, more = 0): string | null {
+  switch (sharedEditBlock(typed, more)) {
+    case 'marker':
+      return tString('multiRename.tags.multipleValues.keepHint', { marker: tString('multiRename.tags.multipleValues') })
+    case 'tail':
+      return tString('multiRename.tags.multipleValues.tailHint', { tail: moreTail(more) })
+    case null:
+      return null
+  }
 }
 
 /** A track length as `m:ss`, or `h:mm:ss` from an hour on; blank when the file has none. */

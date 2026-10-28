@@ -56,6 +56,7 @@ describe('windowSettingsAccess', () => {
       '/queue': 'queue.json',
       '/settings': 'settings.json',
       '/shortcuts': 'shortcuts.json',
+      '/tags': 'tags.json',
       '/viewer': 'viewer.json',
     }
 

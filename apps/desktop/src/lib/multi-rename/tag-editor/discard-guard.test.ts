@@ -17,9 +17,16 @@ import { SETTLE_LIMIT_MS, createTagEditorState } from './tag-editor-state.svelte
 
 function tagsWith(
   view: { dirty: boolean } | null,
-  over: { busy?: boolean; settled?: () => Promise<boolean> } = {},
+  over: { editing?: boolean; writing?: boolean; settled?: () => Promise<boolean> } = {},
 ): TagEditorState {
-  return { view, busy: false, settled: () => Promise.resolve(true), ...over } as unknown as TagEditorState
+  return {
+    view,
+    busy: false,
+    editing: false,
+    writing: false,
+    settled: () => Promise.resolve(true),
+    ...over,
+  } as unknown as TagEditorState
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -110,6 +117,8 @@ describe('createDiscardGuard', () => {
     const tags = {
       view: { dirty: false } as { dirty: boolean },
       busy: true,
+      editing: true,
+      writing: false,
       settled: () =>
         new Promise<void>((resolve) => {
           finish = resolve
@@ -133,7 +142,7 @@ describe('createDiscardGuard', () => {
   })
 
   it('an edit on its way that leaves nothing unwritten closes without a question', async () => {
-    const tags = tagsWith({ dirty: false }, { busy: true })
+    const tags = tagsWith({ dirty: false }, { editing: true })
     const onClose = vi.fn()
     createDiscardGuard(tags, onClose).close()
     await settle()
@@ -162,15 +171,64 @@ describe('createDiscardGuard', () => {
     }
   })
 
-  it('a wait that gave up asks even when the view looks clean', async () => {
+  it('an edit still out after the wait asks even when the view looks clean', async () => {
     confirmDialog.mockResolvedValue(false)
     const onClose = vi.fn()
     createDiscardGuard(
-      tagsWith({ dirty: false }, { busy: true, settled: () => Promise.resolve(false) }),
+      tagsWith({ dirty: false }, { editing: true, settled: () => Promise.resolve(false) }),
       onClose,
     ).close()
     await settle()
     expect(confirmDialog).toHaveBeenCalledTimes(1)
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('a read stuck on a stalled share is no edit: closing asks nothing', async () => {
+    const tags = {
+      view: null,
+      busy: true,
+      editing: false,
+      writing: false,
+      settled: () => Promise.resolve(false),
+    } as unknown as TagEditorState
+    const onClose = vi.fn()
+    const guard = createDiscardGuard(tags, onClose)
+    expect(guard.dirty).toBe(false)
+    guard.close()
+    await settle()
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('a write on its way is never offered to discard: closing says to wait, and nothing closes', async () => {
+    const onClose = vi.fn()
+    const onWriteRunning = vi.fn()
+    const guard = createDiscardGuard(tagsWith({ dirty: true }, { writing: true }), onClose, onWriteRunning)
+    expect(guard.dirty).toBe(true)
+    guard.close()
+    await settle()
+    expect(onWriteRunning).toHaveBeenCalledTimes(1)
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('a write that started while the question showed wins over its Discard', async () => {
+    const tags = tagsWith({ dirty: true })
+    let answer: (discard: boolean) => void = () => {}
+    confirmDialog.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          answer = resolve
+        }),
+    )
+    const onClose = vi.fn()
+    const onWriteRunning = vi.fn()
+    createDiscardGuard(tags, onClose, onWriteRunning).close()
+    await settle()
+    ;(tags as { writing: boolean }).writing = true
+    answer(true)
+    await settle()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(onWriteRunning).toHaveBeenCalledTimes(1)
   })
 })
