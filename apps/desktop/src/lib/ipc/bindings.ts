@@ -3621,6 +3621,12 @@ export const commands = {
    */
   askCmdrCancel: (conversationId: number) => __TAURI_INVOKE<CancelOutcomeView>('ask_cmdr_cancel', { conversationId }),
   /**
+   *  Answer a thread's spend pause with Keep going: the paused turn runs on. Answers whether a turn
+   *  was waiting, `false` for a stale click (it already went on, stopped, or never paused). Stop on
+   *  a paused turn is [`ask_cmdr_cancel`], the same as any other.
+   */
+  askCmdrKeepGoing: (conversationId: number) => __TAURI_INVOKE<boolean>('ask_cmdr_keep_going', { conversationId }),
+  /**
    *  Revalidates the user-selected subset of a server-owned rename proposal. The
    *  frontend supplies opaque ids only, never source paths or destination names.
    */
@@ -3771,6 +3777,11 @@ export const commands = {
          *  (every other result-less call is settled). `None` when nothing runs.
          */
         turnInFlightSinceSeq: number | null
+        /**
+         *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
+         *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
+         */
+        spendPausedMicros: number | null
       } | null,
       string
     >(__TAURI_INVOKE('ask_cmdr_get_conversation', { id, msgLimit, msgOffset })),
@@ -6508,6 +6519,15 @@ export type AskCmdrStreamEvent =
    */
   | { type: 'costMetered' }
   /**
+   *  The turn's estimated spend passed the user's threshold (Settings › AI), so it waits
+   *  between rounds for Keep going (`ask_cmdr_keep_going`) or Stop. `cost_micros` is what the
+   *  turn has spent so far, estimated at list prices (prompt caching usually makes it less). A
+   *  reloaded rail reads the same question off `ConversationDetailView::spend_paused_micros`.
+   */
+  | { type: 'spendPaused'; costMicros: number }
+  // Keep going was pressed: the turn runs on, and the question leaves the screen.
+  | { type: 'spendResumed' }
+  /**
    *  The user answered a suggestion this thread made, and the line saying so just landed in
    *  its timeline. The persisted event row's identity rides along, so a subscriber that also
    *  loaded the row shows it once.
@@ -7602,6 +7622,11 @@ export type ConversationDetailView = {
    *  (every other result-less call is settled). `None` when nothing runs.
    */
   turnInFlightSinceSeq: number | null
+  /**
+   *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
+   *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
+   */
+  spendPausedMicros: number | null
 }
 
 /**
@@ -19399,31 +19424,48 @@ export type TrustedHostKey = {
 }
 
 /**
- *  A ceiling a turn reached, with the value that applied to it. The value is stored rather
+ *  A limit a turn reached, with the value that applied to it. The value is stored rather
  *  than read from the constant at render time, so a reloaded thread names the limit that
  *  stopped THAT turn even after a build moves it.
  */
 export type TurnLimit = {
   kind: TurnLimitKind
-  // Rounds for [`TurnLimitKind::ToolRounds`], seconds for [`TurnLimitKind::WallTime`].
+  /**
+   *  Rounds for [`TurnLimitKind::ToolRounds`] and [`TurnLimitKind::NoProgress`], how many
+   *  times the call was sent for [`TurnLimitKind::RepeatedCall`], seconds for
+   *  [`TurnLimitKind::WallTime`] and [`TurnLimitKind::Stalled`].
+   */
   max: number
   /**
-   *  The model answered with what it had: past the round cap the turn makes ONE more call
-   *  with no tool allowed to run. `false` when that call still reached for a tool, and
-   *  always for wall time, which makes no further call.
+   *  The model answered with what it had: past the round cap or the loop guard the turn makes
+   *  ONE more call with no tool allowed to run. `false` when that call still reached for a
+   *  tool, and always for wall time and a stall, which make no further call.
    */
   answered: boolean
 }
 
 /**
- *  Which per-answer ceiling a turn reached (`chat::context::MAX_TOOL_TURNS` /
- *  `MAX_WALL_TIME`). Both are fixed in Cmdr: no setting moves them.
+ *  Which per-answer limit ended a turn's tool loop (`chat::context` § the per-answer limits).
+ *  All are fixed in Cmdr: no setting moves them. The spend pause is not one of these: it asks,
+ *  and the turn goes on or stops on the user's word.
  */
 export type TurnLimitKind =
-  // The rounds of tool calls one answer may run.
+  /**
+   *  The rounds of tool calls one BACKGROUND answer (a wake, a follow-up) may run. A turn the
+   *  user started has no round cap.
+   */
   | 'toolRounds'
-  // The wall-clock time one answer may take.
+  /**
+   *  The wall-clock time one answer could take. No build sets it any more; it stays so a
+   *  turn recorded under it still reads after a reload.
+   */
   | 'wallTime'
+  // The loop guard: the model sent the same tool call again and again.
+  | 'repeatedCall'
+  // The loop guard: several rounds in a row found nothing the turn hadn't already seen.
+  | 'noProgress'
+  // The provider sent nothing at all for the stall window, so the call was ended.
+  | 'stalled'
 
 /**
  *  What one turn spent, summed across its rounds: the turn line's footer. Numbers only, so the

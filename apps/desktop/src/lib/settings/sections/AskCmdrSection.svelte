@@ -109,6 +109,10 @@
             Number(chatMemorySize) + replyTokens > knownWindowTokens,
     )
 
+    // Where one answer pauses on its estimated spend. Read fresh by the backend per send, so the
+    // row only renders the registry's presets.
+    const spendPauseDef = getSettingDefinition('askCmdr.spendPause') ?? { label: '', description: '' }
+
     // The "On its own" group: whether Ask Cmdr may start conversations, how soon it looks, and
     // whether a staged suggestion raises a notice. All three drive a SLEEPING timer in Rust, so
     // each change is pushed to the backend by `settings-applier.ts`; this section only reads.
@@ -265,6 +269,18 @@
         {#if overKnownWindow}
             <p class="memory-warning" role="status">{tString('settings.askCmdr.chatMemorySize.overWindow')}</p>
         {/if}
+    {/if}
+
+    {#if shouldShow('askCmdr.spendPause')}
+        <SettingRow
+            id="askCmdr.spendPause"
+            label={spendPauseDef.label}
+            description={spendPauseDef.description}
+            split
+            {searchQuery}
+        >
+            <SettingSelect id="askCmdr.spendPause" />
+        </SettingRow>
     {/if}
 
     <!-- On its own: the proactive loop's three knobs -->

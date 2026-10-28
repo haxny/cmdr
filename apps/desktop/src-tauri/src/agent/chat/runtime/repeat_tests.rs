@@ -6,7 +6,6 @@
 
 use super::test_support::*;
 use super::*;
-use crate::agent::chat::context::MAX_TOOL_TURNS;
 
 /// Script `count` assistant turns, each emitting the same one tool call.
 fn repeating_llm(count: usize, tool: ToolId, arguments: Value) -> ProgrammableLlm {
@@ -22,13 +21,15 @@ fn repeating_llm(count: usize, tool: ToolId, arguments: Value) -> ProgrammableLl
 
 /// From a live transcript: a `propose_rename_plan` call missing `volumeId` was refused, and
 /// the model re-sent the byte-identical call eight times, each one a full provider round
-/// trip, until `MAX_TOOL_TURNS` ended the turn. About 90 seconds spent re-sending one broken
-/// payload, and from the user's side the agent simply stopped answering.
+/// trip, until the round cap ended the turn. About 90 seconds spent re-sending one broken
+/// payload, and from the user's side the agent simply stopped answering. Now the third
+/// sending trips the loop guard, whose wrap-up call asks for an answer; a model that STILL
+/// reaches for the tool ends the turn as stuck.
 #[tokio::test]
 async fn an_identical_call_that_already_failed_is_never_dispatched_a_third_time() {
     let conn = migrated_conn();
     let id = conversation(&conn);
-    let llm = repeating_llm(MAX_TOOL_TURNS + 4, ToolId::ListDir, json!({ "limit": 10 }));
+    let llm = repeating_llm(8, ToolId::ListDir, json!({ "limit": 10 }));
     let dispatcher = FailingDispatcher::default();
     let (tx, mut rx) = unbounded_channel();
 
@@ -51,8 +52,8 @@ async fn an_identical_call_that_already_failed_is_never_dispatched_a_third_time(
     );
     assert_eq!(
         llm.calls_seen().len(),
-        3,
-        "three round trips, not eight: run it, tell the model repeating won't work, then stop"
+        4,
+        "four round trips, not eight: run it, say repeating won't work, the third sending, then the wrap-up"
     );
     assert!(
         drain(&mut rx).iter().any(|e| matches!(

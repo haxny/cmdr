@@ -105,6 +105,10 @@ interface AskCmdrState {
   /** Bumped on each `costMetered` event (one per completed model call), so the footer re-reads
    * the meter mid-turn. A counter, never a total: the meter stays the one source of the cost. */
   costRevision: number
+  /** The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or Stop
+   * (`AskCmdrSpendPause`), or `null` while no turn is paused. Set by `spendPaused` and by a thread
+   * load that finds its turn paused, cleared by Keep going, `spendResumed`, and the turn ending. */
+  spendPausedMicros: number | null
   /** Destination names the user turned down in the last review, newest first, waiting to ride
    * the NEXT send so a retry doesn't propose the same style again. Cleared once sent: they're
    * feedback on one decision, not a permanent denylist. */
@@ -133,6 +137,7 @@ export const askCmdrState = $state<AskCmdrState>({
   renameReview: null,
   contextUsage: null,
   costRevision: 0,
+  spendPausedMicros: null,
   deniedNames: [],
   composerFocusRequest: 0,
 })

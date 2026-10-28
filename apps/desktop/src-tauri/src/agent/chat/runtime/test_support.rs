@@ -95,6 +95,7 @@ pub(super) fn params<'a>(conversation_id: i64, user_text: Option<&'a str>) -> Tu
         prompt_budget: TEST_PROMPT_BUDGET,
         chat_memory_tokens: TEST_PROMPT_BUDGET,
         call: crate::agent::llm::CallSettings::default(),
+        spend_pause: None,
     }
 }
 
@@ -168,6 +169,13 @@ pub(super) enum Program {
     DropAfterText { chunks: Vec<String> },
     /// Stream text chunks then yield a typed stream error (a mid-stream provider problem).
     ErrorAfterText { chunks: Vec<String>, error: AgentLlmError },
+    /// Open the stream, then never send another item: a provider that went quiet for good.
+    Silent,
+    /// Never even open the stream: a request stuck before the provider answered.
+    NeverOpens,
+    /// Send `beats` keep-alives `every` apart (virtual time, under `start_paused`), then answer:
+    /// a model thinking quietly while its provider pings.
+    KeepAliveThenAnswer { beats: u32, every: Duration },
 }
 
 pub(super) struct ProgrammableLlm {
@@ -217,12 +225,27 @@ impl AgentLlm for ProgrammableLlm {
                 .expect("lock")
                 .pop_front()
                 .ok_or_else(|| AgentLlmError::Provider("programmable: script exhausted".to_string()))?;
-            let deltas = program_to_deltas(program);
             let cancel_signal = cancel.clone();
-            let stream: AgentDeltaStream = stream::iter(deltas)
+            let stream: AgentDeltaStream = match program {
+                Program::NeverOpens => return std::future::pending().await,
+                Program::Silent => stream::pending().boxed(),
+                Program::KeepAliveThenAnswer { beats, every } => {
+                    let answer = program_to_deltas(Program::Answer {
+                        chunks: vec!["thought it through".to_string()],
+                        usage: AgentUsage::default(),
+                    });
+                    let beats = stream::iter(0..beats).then(move |_| async move {
+                        // allowed-test-sleep: virtual time under `start_paused`; the gaps are the point
+                        tokio::time::sleep(every).await;
+                        Ok(AgentDelta::KeepAlive)
+                    });
+                    beats.chain(stream::iter(answer)).boxed()
+                }
+                program => stream::iter(program_to_deltas(program)).boxed(),
+            };
+            Ok(stream
                 .take_until(async move { cancel_signal.cancelled().await })
-                .boxed();
-            Ok(stream)
+                .boxed())
         }
         .boxed()
     }
@@ -291,6 +314,9 @@ fn program_to_deltas(program: Program) -> Vec<Result<AgentDelta, AgentLlmError>>
                 chunks.into_iter().map(|c| Ok(AgentDelta::Text(c))).collect();
             deltas.push(Err(error));
             deltas
+        }
+        Program::Silent | Program::NeverOpens | Program::KeepAliveThenAnswer { .. } => {
+            unreachable!("respond streams these itself, with time in them")
         }
     }
 }

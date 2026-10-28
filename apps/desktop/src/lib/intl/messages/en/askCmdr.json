@@ -895,6 +895,57 @@
       "minutes": "The same number, to pick the plural form."
     }
   },
+  "askCmdr.limit.repeatedCall.answered": "This answer kept repeating the same lookup, so Cmdr stopped it looking and it answered with what it found.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "description": "First line of a notice under an Ask Cmdr answer. The assistant sent the very same lookup (a tool call such as listing one folder) several times in one answer, which can't tell it anything new, so Cmdr stopped it from looking further and asked it to answer from what it had found, and it did. The answer above may be incomplete. \"Lookup\" is the word the rail already uses for a tool call. Avoids the words error and failed."
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "This answer kept repeating the same lookup, so Cmdr stopped it before it could finish.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "description": "First line of a notice under an Ask Cmdr answer that stopped without a final reply: the assistant sent the very same lookup (a tool call such as listing one folder) several times, and even when asked to answer it still wanted to look again. What it said along the way stays visible above. \"Lookup\" is the word the rail already uses for a tool call. Avoids the words error and failed."
+  },
+  "askCmdr.limit.noProgress.answered": "This answer’s last {maxText} {max, plural, one {round} other {rounds}} of lookups found nothing new, so Cmdr stopped it looking and it answered with what it found.",
+  "@askCmdr.limit.noProgress.answered": {
+    "description": "First line of a notice under an Ask Cmdr answer. The assistant looks things up in rounds (each round runs one or more lookups such as listing a folder). Several rounds in a row only repeated earlier lookups or came back with problems, so Cmdr stopped it from looking further and asked it to answer from what it had found, and it did. The answer above may be incomplete. \"Lookup\" is the word the rail already uses for a tool call. Avoids the words error and failed.",
+    "placeholders": {
+      "maxText": "How many rounds in a row found nothing new, already formatted for the locale (for example 3).",
+      "max": "The same number, to pick the plural form."
+    }
+  },
+  "askCmdr.limit.noProgress.unfinished": "This answer’s last {maxText} {max, plural, one {round} other {rounds}} of lookups found nothing new, so Cmdr stopped it before it could finish.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "description": "First line of a notice under an Ask Cmdr answer that stopped without a final reply: several rounds of lookups in a row (each round runs one or more lookups such as listing a folder) found nothing new, and even when asked to answer it still wanted to look further. What it said along the way stays visible above. Avoids the words error and failed.",
+    "placeholders": {
+      "maxText": "How many rounds in a row found nothing new, already formatted for the locale (for example 3).",
+      "max": "The same number, to pick the plural form."
+    }
+  },
+  "askCmdr.limit.stalled": "The AI provider sent nothing for {maxText} {max, plural, one {second} other {seconds}}, so Cmdr ended this answer.",
+  "@askCmdr.limit.stalled": {
+    "description": "First line of a notice under an Ask Cmdr answer that ended because the AI service (the provider the user set up, like Anthropic or OpenAI) went silent mid-answer: not a single word or sign of life for this long. What the answer said before that stays visible above. A Keep going button may follow. Avoids the words error and failed.",
+    "placeholders": {
+      "maxText": "How many seconds of silence ended the answer, already formatted for the locale (for example 120).",
+      "max": "The same number, to pick the plural form."
+    }
+  },
+  "askCmdr.spendPause.question": "This answer has used about {cost} so far. Keep going?",
+  "@askCmdr.spendPause.question": {
+    "description": "A card in the Ask Cmdr chat while an answer is still running: its estimated cost passed the amount the user chose in Settings, so the assistant paused and waits for the user to press Keep going or Stop. Nothing more is spent while it waits.",
+    "placeholders": {
+      "cost": "The estimated cost so far, already formatted as money for the locale (for example $2.14)."
+    }
+  },
+  "askCmdr.spendPause.estimateNote": "An estimate at list prices. Your provider’s caching usually makes the real cost lower.",
+  "@askCmdr.spendPause.estimateNote": {
+    "description": "Small second line on the card that pauses an Ask Cmdr answer over its cost. Says the amount is an estimate from the provider's published prices, and that the AI provider's prompt caching (reusing the parts of the chat it already read) usually makes the actual bill smaller."
+  },
+  "askCmdr.spendPause.keepGoing": "Keep going",
+  "@askCmdr.spendPause.keepGoing": {
+    "description": "Button on the card that pauses an Ask Cmdr answer over its cost: the answer continues where it paused. A short verb phrase."
+  },
+  "askCmdr.spendPause.stop": "Stop",
+  "@askCmdr.spendPause.stop": {
+    "description": "Button on the card that pauses an Ask Cmdr answer over its cost: ends the answer here, keeping what it said so far. A short verb."
+  },
   "askCmdr.limit.fixed": "It’s a fixed limit, with no setting to change it. If it gets in your way, <feedback>tell us about it</feedback>.",
   "@askCmdr.limit.fixed": {
     "description": "Second line of the notice under an Ask Cmdr answer that reached a per-answer limit (rounds of lookups, or time). Says the user can't raise the limit themselves. The tagged part is a link that opens the app's Send feedback dialog; keep the tags around the words that invite the user to tell the developers."

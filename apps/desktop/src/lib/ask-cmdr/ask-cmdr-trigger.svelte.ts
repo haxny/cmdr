@@ -48,7 +48,7 @@ export {
   RAIL_MIN_WIDTH,
   THREAD_SOFT_CAP_MESSAGES,
 } from './ask-cmdr-state.svelte'
-export { sendMessage, stopStreaming } from './ask-cmdr-stream.svelte'
+export { keepGoingPastSpend, sendMessage, stopStreaming } from './ask-cmdr-stream.svelte'
 export {
   allowAllRenameRows,
   applyRenameReview,
@@ -260,7 +260,7 @@ async function loadConversation(id: number): Promise<void> {
     askCmdrState.messageTotal = detail.totalMessages
     askCmdrState.historyCount = detail.messages.length
     askCmdrState.messages = buildRailMessages(detail)
-    resumeThread(id, detail.turnInFlightSinceSeq !== null)
+    resumeThread(id, detail.turnInFlightSinceSeq !== null, detail.spendPausedMicros)
     // The gauge shows the thread's last measured turn, so reopening a chat reports what it
     // really cost instead of an empty bar. `elidedResults` is 0 here on purpose: whether THAT
     // turn set anything aside isn't persisted, and inventing a count would be a false claim.

@@ -1,16 +1,15 @@
-//! Runtime tests: single-flight, the per-message budgets, cancellation at a tool
-//! boundary, the crash-safe persistence model, cost metering, an end-to-end fake-driven
-//! multi-tool turn, and the typed error surface plus the two gates on what reaches the
-//! LLM (the envelope's attachments, and the send gate).
+//! Runtime tests: single-flight, cancellation at a tool boundary, the crash-safe
+//! persistence model, cost metering, an end-to-end fake-driven multi-tool turn, and the
+//! typed error surface plus the two gates on what reaches the LLM (the envelope's
+//! attachments, and the send gate).
 //!
-//! Four sibling files hold the rest, all borrowing the fixtures in `test_support.rs`:
-//! `repeat_tests.rs` (the repeat breaker), `context_budget_tests.rs` (context drops and
-//! the fullness gauge), `model_change_tests.rs` (which model a thread is on), and
-//! `wake_tests.rs` (the wake path).
+//! Sibling files hold the rest, all borrowing the fixtures in `test_support.rs`:
+//! `limit_tests.rs` (the per-answer limits and the spend pause), `repeat_tests.rs` (the
+//! repeat breaker), `context_budget_tests.rs` (context drops and the fullness gauge),
+//! `slot_change_tests.rs` (which model a thread is on), and `wake_tests.rs` (the wake path).
 
 use super::test_support::*;
 use super::*;
-use crate::agent::chat::context::{MAX_TOOL_TURNS, MAX_WALL_TIME, tool_round_wrap_up_note};
 use crate::test_support::wait_until_async;
 
 // ── Single-flight ─────────────────────────────────────────────────────────────
@@ -41,239 +40,6 @@ async fn a_second_send_queues_and_emits_queued() {
 
     drop(first);
     waiter.await.expect("the queued send proceeds once released");
-}
-
-// ── Budgets ───────────────────────────────────────────────────────────────────
-
-fn tool_rounds(count: usize) -> Vec<Program> {
-    (0..count)
-        .map(|_| Program::Tools {
-            calls: vec![(ToolId::ListDir, json!({ "path": "/" }))],
-            usage: AgentUsage::default(),
-        })
-        .collect()
-}
-
-/// The stats the turn's one terminal event carried.
-fn terminal_stats(events: &[AgentChatEvent]) -> Option<store::TurnStats> {
-    events.iter().find_map(|event| match event {
-        AgentChatEvent::Done { turn, .. } | AgentChatEvent::Failed { turn, .. } | AgentChatEvent::Stopped { turn } => {
-            Some(*turn)
-        }
-        _ => None,
-    })?
-}
-
-fn carries_wrap_up_note(message: &AgentMessage) -> bool {
-    message.role == AgentRole::User
-        && message
-            .parts
-            .iter()
-            .any(|part| matches!(part, AgentPart::Text(text) if *text == tool_round_wrap_up_note()))
-}
-
-/// Past the cap on tool rounds the turn asks for an answer instead of dropping it: ONE more
-/// call goes out carrying the wrap-up note, and its answer ends the turn. Regression anchor: an
-/// eight-round Downloads cleanup (14 calls, 54 s, a tenth of its window used) ended on "hit its
-/// limit" with nothing answered, because the cap cut the turn before the call that would have
-/// read its last results.
-#[tokio::test]
-async fn past_the_round_cap_one_more_call_asks_for_an_answer_with_what_it_found() {
-    let conn = migrated_conn();
-    let id = conversation(&conn);
-    let mut programs = tool_rounds(MAX_TOOL_TURNS);
-    programs.push(Program::Answer {
-        chunks: vec!["Here's what I found so far.".to_string()],
-        usage: AgentUsage::default(),
-    });
-    let llm = ProgrammableLlm::new(programs);
-    let (tx, mut rx) = unbounded_channel();
-
-    let result = run_turn(
-        &llm,
-        &OkDispatcher,
-        &conn,
-        &[],
-        &params(id, Some("sort my downloads")),
-        &tx,
-        &CancellationToken::new(),
-    )
-    .await;
-
-    assert!(matches!(result, TurnResult::Answered { .. }), "got {result:?}");
-    let calls = llm.calls_seen();
-    assert_eq!(calls.len(), MAX_TOOL_TURNS + 1, "one call past the cap, and only one");
-    let last = calls.last().expect("calls");
-    assert!(
-        last.last().is_some_and(carries_wrap_up_note),
-        "the wrap-up call ends on the note"
-    );
-    assert!(
-        calls[..MAX_TOOL_TURNS]
-            .iter()
-            .flatten()
-            .all(|m| !carries_wrap_up_note(m)),
-        "no call before the cap carries it"
-    );
-    let stored = store::list_messages(&conn, id, 1_000, 0).expect("list");
-    let persisted_note = stored.iter().any(|row| match &row.content {
-        store::StoredContent::Message { role, parts } => carries_wrap_up_note(&AgentMessage {
-            role: *role,
-            parts: parts.clone(),
-            at: 0,
-        }),
-        store::StoredContent::Event(_) => false,
-    });
-    assert!(
-        !persisted_note,
-        "the note is never persisted: it's this call's, not the thread's"
-    );
-    assert_eq!(
-        terminal_stats(&drain(&mut rx)).and_then(|stats| stats.limit),
-        Some(store::TurnLimit {
-            kind: store::TurnLimitKind::ToolRounds,
-            max: MAX_TOOL_TURNS as u32,
-            answered: true,
-        }),
-        "the stats name the limit and its value, so the rail can"
-    );
-}
-
-/// The wrap-up call is bounded too: a reply that still reaches for a tool ends the turn on the
-/// limit, no tool runs, and no tool call is persisted without a result.
-#[tokio::test]
-async fn a_wrap_up_reply_that_still_calls_a_tool_ends_on_the_limit_without_running_it() {
-    let conn = migrated_conn();
-    let id = conversation(&conn);
-    let llm = ProgrammableLlm::new(tool_rounds(MAX_TOOL_TURNS + 4));
-    let dispatcher = CountingOkDispatcher::default();
-    let (tx, mut rx) = unbounded_channel();
-
-    let result = run_turn(
-        &llm,
-        &dispatcher,
-        &conn,
-        &[],
-        &params(id, Some("keep going")),
-        &tx,
-        &CancellationToken::new(),
-    )
-    .await;
-
-    assert_eq!(result, TurnResult::Failed(AgentErrorKind::BudgetExhausted));
-    assert_eq!(llm.calls_seen().len(), MAX_TOOL_TURNS + 1);
-    assert_eq!(
-        dispatcher.dispatched().len(),
-        MAX_TOOL_TURNS,
-        "the wrap-up's call never runs"
-    );
-    let stored = store::list_messages(&conn, id, 1_000, 0).expect("list");
-    let last_message = stored
-        .iter()
-        .rev()
-        .find_map(|row| match &row.content {
-            store::StoredContent::Message { role, .. } => Some(*role),
-            store::StoredContent::Event(_) => None,
-        })
-        .expect("a message");
-    assert_eq!(
-        last_message,
-        AgentRole::Tool,
-        "no dangling tool call for the next turn to load"
-    );
-    assert_eq!(
-        terminal_stats(&drain(&mut rx)).and_then(|stats| stats.limit),
-        Some(store::TurnLimit {
-            kind: store::TurnLimitKind::ToolRounds,
-            max: MAX_TOOL_TURNS as u32,
-            answered: false,
-        })
-    );
-}
-
-/// What a turn spends across its rounds never ends it: only the context window bounds one call,
-/// and only the round and time caps bound the loop. Regression anchor: a footer reading 194,776
-/// tokens beside a gauge at 2% looked like a token budget had fired.
-#[tokio::test]
-async fn tokens_summed_across_rounds_never_end_a_turn() {
-    let conn = migrated_conn();
-    let id = conversation(&conn);
-    let heavy = AgentUsage {
-        prompt_tokens: 900_000,
-        completion_tokens: 20_000,
-    };
-    let mut programs: Vec<Program> = (0..3)
-        .map(|_| Program::Tools {
-            calls: vec![(ToolId::ListDir, json!({ "path": "/" }))],
-            usage: heavy,
-        })
-        .collect();
-    programs.push(Program::Answer {
-        chunks: vec!["done".to_string()],
-        usage: heavy,
-    });
-    let llm = ProgrammableLlm::new(programs);
-    let (tx, mut rx) = unbounded_channel();
-
-    let result = run_turn(
-        &llm,
-        &OkDispatcher,
-        &conn,
-        &[],
-        &params(id, Some("look around")),
-        &tx,
-        &CancellationToken::new(),
-    )
-    .await;
-
-    assert!(matches!(result, TurnResult::Answered { .. }), "got {result:?}");
-    let stats = terminal_stats(&drain(&mut rx)).expect("stats");
-    assert_eq!(stats.prompt_tokens, 3_600_000);
-    assert_eq!(stats.limit, None);
-}
-
-#[tokio::test(start_paused = true)]
-async fn max_wall_time_halts_the_loop() {
-    let conn = migrated_conn();
-    let id = conversation(&conn);
-    let programs = (0..5)
-        .map(|_| Program::Tools {
-            calls: vec![(ToolId::ListDir, json!({ "path": "/" }))],
-            usage: AgentUsage::default(),
-        })
-        .collect();
-    let llm = ProgrammableLlm::new(programs);
-    let (tx, mut rx) = unbounded_channel();
-
-    // One dispatch crosses the configured wall-time ceiling, so it trips after one tool round.
-    let result = run_turn(
-        &llm,
-        &SleepingDispatcher {
-            secs: MAX_WALL_TIME.as_secs() + 1,
-        },
-        &conn,
-        &[],
-        &params(id, Some("slow please")),
-        &tx,
-        &CancellationToken::new(),
-    )
-    .await;
-
-    assert_eq!(result, TurnResult::Failed(AgentErrorKind::BudgetExhausted));
-    assert_eq!(
-        llm.calls_seen().len(),
-        1,
-        "the wall clock halts the loop after one round"
-    );
-    assert_eq!(
-        terminal_stats(&drain(&mut rx)).and_then(|stats| stats.limit),
-        Some(store::TurnLimit {
-            kind: store::TurnLimitKind::WallTime,
-            max: MAX_WALL_TIME.as_secs() as u32,
-            answered: false,
-        }),
-        "wall time makes no further call, and says which limit it was"
-    );
 }
 
 // ── Cancellation ──────────────────────────────────────────────────────────────
@@ -926,6 +692,7 @@ async fn attachments_reach_the_llm_in_the_envelope_and_nothing_more() {
         prompt_budget: TEST_PROMPT_BUDGET,
         chat_memory_tokens: TEST_PROMPT_BUDGET,
         call: crate::agent::llm::CallSettings::default(),
+        spend_pause: None,
     };
 
     let result = run_turn(&llm, &OkDispatcher, &conn, &[], &params, &tx, &CancellationToken::new()).await;

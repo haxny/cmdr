@@ -444,7 +444,9 @@ fn map_stream_event(
     origin: &ReasoningOrigin,
 ) -> Option<Result<AgentDelta, AgentLlmError>> {
     match item {
-        Ok(ChatStreamEvent::Start | ChatStreamEvent::Heartbeat) => None,
+        // Shown as nothing, but passed on: they are what tells the stall check the provider is
+        // alive while a model thinks without streaming its thoughts.
+        Ok(ChatStreamEvent::Start | ChatStreamEvent::Heartbeat) => Some(Ok(AgentDelta::KeepAlive)),
         Ok(ChatStreamEvent::Chunk(chunk)) => (!chunk.content.is_empty()).then_some(Ok(AgentDelta::Text(chunk.content))),
         Ok(ChatStreamEvent::ReasoningChunk(_) | ChatStreamEvent::ThoughtSignatureChunk(_)) => {
             Some(Ok(AgentDelta::ReasoningTick))

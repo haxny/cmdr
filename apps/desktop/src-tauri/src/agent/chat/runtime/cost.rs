@@ -14,7 +14,9 @@ use crate::agent::store::{self, CostRecord};
 /// per-model table ([`crate::agent::pricing`]): a local/on-device model is free and priced, a
 /// known cloud model gets an honest estimate, and an unknown cloud model records its tokens
 /// with cost 0 but `priced = false` — shown "unknown", never a silent $0 (spec §2.4 honesty).
-pub(super) fn meter_cost(conn: &rusqlite::Connection, params: &TurnParams<'_>, usage: AgentUsage) {
+///
+/// Answers the estimate it metered, so the turn can add it up for the spend pause.
+pub(super) fn meter_cost(conn: &rusqlite::Connection, params: &TurnParams<'_>, usage: AgentUsage) -> i64 {
     let prompt_tokens = usage.prompt_tokens as u64;
     let completion_tokens = usage.completion_tokens as u64;
     let priced = crate::agent::pricing::price_call(params.provider, &params.model, prompt_tokens, completion_tokens);
@@ -31,6 +33,7 @@ pub(super) fn meter_cost(conn: &rusqlite::Connection, params: &TurnParams<'_>, u
     if let Err(e) = store::record_cost(conn, &record) {
         log::warn!(target: LOG_TARGET, "metering chat cost failed: {e}");
     }
+    priced.cost_micros
 }
 
 /// The local-day `YYYY-MM-DD` for the cost meter, from the send clock and the captured

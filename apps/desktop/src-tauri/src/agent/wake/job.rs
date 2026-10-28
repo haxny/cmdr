@@ -267,6 +267,8 @@ pub fn turn_params<'a>(
         prompt_budget: params.prompt_budget,
         chat_memory_tokens: params.chat_memory_tokens,
         call: params.call,
+        // A background turn has nobody to answer the question: its round cap bounds it instead.
+        spend_pause: None,
     }
 }
 

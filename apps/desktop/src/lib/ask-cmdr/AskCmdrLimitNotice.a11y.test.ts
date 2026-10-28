@@ -19,6 +19,9 @@ const LIMITS: TurnLimit[] = [
   { kind: 'toolRounds', max: 25, answered: true },
   { kind: 'toolRounds', max: 25, answered: false },
   { kind: 'wallTime', max: 600, answered: false },
+  { kind: 'repeatedCall', max: 3, answered: true },
+  { kind: 'noProgress', max: 3, answered: false },
+  { kind: 'stalled', max: 120, answered: false },
 ]
 
 beforeEach(() => {

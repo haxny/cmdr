@@ -74,29 +74,40 @@ pub struct TurnStats {
     pub limit: Option<TurnLimit>,
 }
 
-/// Which per-answer ceiling a turn reached (`chat::context::MAX_TOOL_TURNS` /
-/// `MAX_WALL_TIME`). Both are fixed in Cmdr: no setting moves them.
+/// Which per-answer limit ended a turn's tool loop (`chat::context` § the per-answer limits).
+/// All are fixed in Cmdr: no setting moves them. The spend pause is not one of these: it asks,
+/// and the turn goes on or stops on the user's word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum TurnLimitKind {
-    /// The rounds of tool calls one answer may run.
+    /// The rounds of tool calls one BACKGROUND answer (a wake, a follow-up) may run. A turn the
+    /// user started has no round cap.
     ToolRounds,
-    /// The wall-clock time one answer may take.
+    /// The wall-clock time one answer could take. No build sets it any more; it stays so a
+    /// turn recorded under it still reads after a reload.
     WallTime,
+    /// The loop guard: the model sent the same tool call again and again.
+    RepeatedCall,
+    /// The loop guard: several rounds in a row found nothing the turn hadn't already seen.
+    NoProgress,
+    /// The provider sent nothing at all for the stall window, so the call was ended.
+    Stalled,
 }
 
-/// A ceiling a turn reached, with the value that applied to it. The value is stored rather
+/// A limit a turn reached, with the value that applied to it. The value is stored rather
 /// than read from the constant at render time, so a reloaded thread names the limit that
 /// stopped THAT turn even after a build moves it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnLimit {
     pub kind: TurnLimitKind,
-    /// Rounds for [`TurnLimitKind::ToolRounds`], seconds for [`TurnLimitKind::WallTime`].
+    /// Rounds for [`TurnLimitKind::ToolRounds`] and [`TurnLimitKind::NoProgress`], how many
+    /// times the call was sent for [`TurnLimitKind::RepeatedCall`], seconds for
+    /// [`TurnLimitKind::WallTime`] and [`TurnLimitKind::Stalled`].
     pub max: u32,
-    /// The model answered with what it had: past the round cap the turn makes ONE more call
-    /// with no tool allowed to run. `false` when that call still reached for a tool, and
-    /// always for wall time, which makes no further call.
+    /// The model answered with what it had: past the round cap or the loop guard the turn makes
+    /// ONE more call with no tool allowed to run. `false` when that call still reached for a
+    /// tool, and always for wall time and a stall, which make no further call.
     pub answered: bool,
 }
 

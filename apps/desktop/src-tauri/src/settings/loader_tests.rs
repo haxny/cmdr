@@ -5,6 +5,7 @@
 //! rather than through a public seam that only exists for them.
 
 use super::*;
+use crate::settings::ask_cmdr::*;
 
 /// The launch that performs the frontend's schema-4 migration reads `settings.json`
 /// before the frontend runs, so it still sees the pre-migration key. Missing this
@@ -285,6 +286,38 @@ fn chat_memory_size_reads_a_preset_and_treats_everything_else_as_automatic() {
             parse_ask_cmdr_chat_memory_size(contents),
             None,
             "{contents} must read as Automatic"
+        );
+    }
+}
+
+#[test]
+fn spend_pause_reads_never_and_dollars_and_falls_back_to_the_default() {
+    assert_eq!(
+        parse_ask_cmdr_spend_pause_micros(Some(r#"{ "askCmdr.spendPause": "never" }"#)),
+        None
+    );
+    assert_eq!(
+        parse_ask_cmdr_spend_pause_micros(Some(r#"{ "askCmdr.spendPause": "0.5" }"#)),
+        Some(500_000)
+    );
+    assert_eq!(
+        parse_ask_cmdr_spend_pause_micros(Some(r#"{ "askCmdr.spendPause": "10" }"#)),
+        Some(10_000_000)
+    );
+    // The store is sparse, so an untouched row is an absent key: that's the default, and so is
+    // anything a hand edit left unreadable. Dropping the pause takes the user's own "Never".
+    for contents in [
+        None,
+        Some("{}"),
+        Some("not json at all"),
+        Some(r#"{ "askCmdr.spendPause": "0" }"#),
+        Some(r#"{ "askCmdr.spendPause": "lots" }"#),
+        Some(r#"{ "askCmdr.spendPause": 2 }"#),
+    ] {
+        assert_eq!(
+            parse_ask_cmdr_spend_pause_micros(contents),
+            Some(DEFAULT_ASK_CMDR_SPEND_PAUSE_MICROS),
+            "{contents:?} reads as the default"
         );
     }
 }

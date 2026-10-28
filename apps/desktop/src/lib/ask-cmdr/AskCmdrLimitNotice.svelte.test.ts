@@ -14,11 +14,14 @@ import AskCmdrLimitNotice from './AskCmdrLimitNotice.svelte'
 
 const ROUNDS: TurnLimit = { kind: 'toolRounds', max: 25, answered: true }
 
-function render(canContinue: boolean): { target: HTMLElement; onContinue: ReturnType<typeof vi.fn> } {
+function render(
+  canContinue: boolean,
+  limit: TurnLimit = ROUNDS,
+): { target: HTMLElement; onContinue: ReturnType<typeof vi.fn> } {
   const target = document.createElement('div')
   document.body.appendChild(target)
   const onContinue = vi.fn()
-  mount(AskCmdrLimitNotice, { target, props: { limit: ROUNDS, canContinue, onContinue } })
+  mount(AskCmdrLimitNotice, { target, props: { limit, canContinue, onContinue } })
   flushSync()
   return { target, onContinue }
 }
@@ -31,6 +34,13 @@ describe('AskCmdrLimitNotice', () => {
     expect(link).not.toBeNull()
     link?.click()
     expect(openFeedbackDialog).toHaveBeenCalledOnce()
+  })
+
+  it('says the loop guard went in circles with no "fixed limit" line, and still offers Keep going', () => {
+    const { target } = render(true, { kind: 'noProgress', max: 3, answered: true })
+    expect(target.textContent).toContain('found nothing new')
+    expect(target.querySelector('button.link-button')).toBeNull()
+    expect(target.querySelectorAll('button').length).toBe(1)
   })
 
   it('offers Keep going only where continuing makes sense', () => {

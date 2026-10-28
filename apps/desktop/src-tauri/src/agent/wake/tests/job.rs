@@ -739,6 +739,7 @@ async fn a_rail_turn_calling_nothing_to_suggest_deletes_nothing() {
             prompt_budget: 16_000,
             chat_memory_tokens: 16_000,
             call: crate::agent::llm::CallSettings::default(),
+            spend_pause: None,
         },
         &sink,
         &CancellationToken::new(),

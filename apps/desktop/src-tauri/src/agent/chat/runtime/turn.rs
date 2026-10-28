@@ -7,24 +7,27 @@
 
 use std::path::Path;
 
-use futures_util::StreamExt;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 use super::analytics;
+use super::consume::{StreamOutcome, consume_stream};
 use super::cost::meter_cost;
 use super::dispatch::{CallContext, ToolDispatcher, dispatch_ok, dispatch_until_stopped};
 use super::events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall, emit};
+use super::limits::{LoopGuard, RoundJudgement, unanswered_wrap_up, wrap_up_limit};
 use super::repeats::{FailedCalls, Repeat};
 use super::types::{TurnParams, TurnResult, TurnTally, UserTurn};
 use super::{LOG_TARGET, context};
-use crate::agent::chat::context::{ElisionFacts, MAX_TOOL_TURNS, MAX_WALL_TIME, PrefixInputs, tool_round_wrap_up_note};
+use crate::agent::chat::context::{
+    BACKGROUND_MAX_TOOL_TURNS, ElisionFacts, PrefixInputs, STREAM_STALL_TIMEOUT, WrapUp, wrap_up_note,
+};
 use crate::agent::chat::message_view::{MessageView, to_message_view};
+use crate::agent::chat::spend_pause::{PauseOutcome, next_pause_at};
 use crate::agent::chat::system_prompt::system_prompt;
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::{
-    AgentDelta, AgentLlmError, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentToolResult,
-    AgentUsage, ToolDeclaration,
+    AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolCall, AgentToolResult, AgentUsage, ToolDeclaration,
 };
 use crate::agent::store::{self, AgentStoreError, TurnLimit, TurnLimitKind, TurnStats};
 use crate::agent::tools::line::{LineRef, outcome_of, repeat_marks, subject_of};
@@ -164,7 +167,6 @@ async fn drive(
         });
     }
 
-    let started = Instant::now();
     let mut slot_recorded = false;
     let mut trim_announced = false;
     // What already came back with a problem this turn, so an identical retry doesn't cost
@@ -173,36 +175,57 @@ async fn drive(
     // Every call of this turn so far, with the row that made it, for the repeat marks: the same
     // function the reload projection runs over the stored rows, so the two can't disagree.
     let mut turn_calls: Vec<(i64, AgentToolCall)> = Vec::new();
+    // A background turn has a round cap; one the user started has none (they watch it, Stop
+    // ends it, and the loop guard and the spend pause bound it).
+    let round_cap = (!params.origin.user_started()).then_some(BACKGROUND_MAX_TOOL_TURNS);
+    // The loop guard's memory: how often each call was sent, and how many rounds in a row found
+    // nothing new. Set when it fires, so the NEXT call is the wrap-up.
+    let mut guard = LoopGuard::default();
+    let mut guard_fired: Option<WrapUp> = None;
+    // Where the spend pause next asks, `None` when this turn never pauses.
+    let mut next_pause = params
+        .spend_pause
+        .as_ref()
+        .map(|pause| next_pause_at(0, pause.threshold_micros));
     let memory_root = dispatcher.memory_root();
     // Read once per turn: a dev build reads the prompt file on each call, and every model call
     // of one turn must send the same prefix bytes.
     let system_prompt = system_prompt();
 
     loop {
-        // Cancellation and both budgets are checked at the top, so no `respond` fires
-        // once the user cancelled or the time is spent, and past the round cap only the
-        // one wrap-up call does — a runaway loop is impossible.
+        // Cancellation and every per-answer limit are checked at the top, so no `respond`
+        // fires once the user cancelled, and past the round cap or the loop guard only the one
+        // wrap-up call does: a runaway loop is impossible.
         if cancel.is_cancelled() {
             return TurnEnd::Cancelled;
         }
-        if started.elapsed() >= MAX_WALL_TIME {
-            tally.limit = Some(TurnLimit {
-                kind: TurnLimitKind::WallTime,
-                max: u32::try_from(MAX_WALL_TIME.as_secs()).unwrap_or(u32::MAX),
-                answered: false,
-            });
-            return TurnEnd::failed(AgentErrorKind::BudgetExhausted);
-        }
-        // Past the round cap: ONE more call, carrying the wrap-up note, whose reply ends the
-        // turn whatever it holds. Every round's results were paid for, so the user gets an
-        // answer from them rather than a notice over unread results.
-        let wrap_up = tally.tool_turns >= MAX_TOOL_TURNS;
-        if wrap_up {
-            tally.limit = Some(TurnLimit {
-                kind: TurnLimitKind::ToolRounds,
-                max: u32::try_from(MAX_TOOL_TURNS).unwrap_or(u32::MAX),
-                answered: false,
-            });
+        // Past a limit: ONE more call, carrying the wrap-up note, whose reply ends the turn
+        // whatever it holds. Every round's results were paid for, so the user gets an answer
+        // from them rather than a notice over unread results.
+        let wrap_up = guard_fired.or_else(|| {
+            round_cap
+                .filter(|cap| tally.tool_turns >= *cap)
+                .map(|_| WrapUp::RoundCap)
+        });
+        if let Some(reason) = wrap_up {
+            tally.limit = Some(wrap_up_limit(reason));
+        } else if let (Some(pause), Some(at)) = (params.spend_pause.as_ref(), next_pause)
+            && tally.cost_micros >= at
+        {
+            // Between rounds, where nothing runs: the paused turn spends nothing while it asks.
+            emit(
+                sink,
+                AgentChatEvent::SpendPaused {
+                    cost_micros: tally.cost_micros,
+                },
+            );
+            match pause.slot.pause(tally.cost_micros, cancel).await {
+                PauseOutcome::KeepGoing => {
+                    emit(sink, AgentChatEvent::SpendResumed);
+                    next_pause = Some(next_pause_at(tally.cost_micros, pause.threshold_micros));
+                }
+                PauseOutcome::Stopped => return TurnEnd::Cancelled,
+            }
         }
 
         let prefix = PrefixInputs {
@@ -219,10 +242,10 @@ async fn drive(
         );
         // The note rides this call only, after everything (so the cached prefix holds), and
         // never joins the transcript: the thread's history stays what was actually said.
-        if wrap_up {
+        if let Some(reason) = wrap_up {
             assembled.messages.push(AgentMessage {
                 role: AgentRole::User,
-                parts: vec![AgentPart::Text(tool_round_wrap_up_note())],
+                parts: vec![AgentPart::Text(wrap_up_note(reason))],
                 at: params.now_secs,
             });
         }
@@ -234,17 +257,22 @@ async fn drive(
         }
 
         // Raced against Stop: a provider slow to answer (a long queue) would otherwise hold the
-        // turn, and its spend, until it did. Dropping the call drops the request.
+        // turn, and its spend, until it did. Dropping the call drops the request. And bounded by
+        // the stall window, so a call that never opens can't hold the turn forever either.
         let opened = tokio::select! {
             biased;
             () = cancel.cancelled() => return TurnEnd::Cancelled,
-            opened = llm.respond(
+            opened = tokio::time::timeout(STREAM_STALL_TIMEOUT, llm.respond(
                 &assembled.system,
                 &assembled.tools,
                 &assembled.messages,
                 params.call,
                 cancel.clone(),
-            ) => opened,
+            )) => opened,
+        };
+        let Ok(opened) = opened else {
+            log::warn!(target: LOG_TARGET, "the model call didn't open within the stall window; ending it as stalled");
+            return stalled(tally);
         };
         let stream = match opened {
             Ok(stream) => stream,
@@ -266,6 +294,7 @@ async fn drive(
             stop,
             usage,
             stream_error,
+            stalled: went_quiet,
         } = consume_stream(stream, sink, cancel).await;
 
         let mut message = match final_message {
@@ -275,6 +304,10 @@ async fn drive(
                 // (crash case a). A user cancel is a clean stop, not a failure.
                 if cancel.is_cancelled() {
                     return TurnEnd::Cancelled;
+                }
+                if went_quiet {
+                    log::warn!(target: LOG_TARGET, "the model stream went quiet for the stall window; ending it as stalled");
+                    return stalled(tally);
                 }
                 let detail = stream_error.as_ref().and_then(|e| e.detail().map(str::to_string));
                 let kind = stream_error
@@ -297,12 +330,12 @@ async fn drive(
         // The wrap-up reply's tool calls never run, so they're never persisted either (a call
         // with no result row would break the next turn's replay). What prose it wrote stays;
         // with no prose left there's nothing to keep, and the turn ends on the limit.
-        let wanted_more = wrap_up && message.parts.iter().any(|part| matches!(part, AgentPart::ToolCall(_)));
-        if wrap_up {
+        let wanted_more = wrap_up.is_some() && message.parts.iter().any(|part| matches!(part, AgentPart::ToolCall(_)));
+        if let Some(reason) = wrap_up {
             message.parts.retain(|part| !matches!(part, AgentPart::ToolCall(_)));
             if !message.parts.iter().any(|part| matches!(part, AgentPart::Text(_))) {
-                log::info!(target: LOG_TARGET, "the wrap-up reply past the round cap still wanted a tool; ending on the limit");
-                return TurnEnd::failed(AgentErrorKind::BudgetExhausted);
+                log::info!(target: LOG_TARGET, "the wrap-up reply still wanted a tool; ending on the limit");
+                return TurnEnd::failed(unanswered_wrap_up(reason));
             }
         }
 
@@ -353,7 +386,7 @@ async fn drive(
         tally.prompt_tokens = tally.prompt_tokens.saturating_add(usage.prompt_tokens);
         tally.completion_tokens = tally.completion_tokens.saturating_add(usage.completion_tokens);
         transcript.push(message.clone());
-        meter_cost(conn, params, usage);
+        tally.cost_micros = tally.cost_micros.saturating_add(meter_cost(conn, params, usage));
         emit(sink, AgentChatEvent::CostMetered);
         report_context_usage(conn, params.conversation_id, &assembled.elision, sink);
 
@@ -366,8 +399,8 @@ async fn drive(
                 _ => None,
             })
             .collect();
-        if wanted_more {
-            return TurnEnd::failed(AgentErrorKind::BudgetExhausted);
+        if wanted_more && let Some(reason) = wrap_up {
+            return TurnEnd::failed(unanswered_wrap_up(reason));
         }
         if calls.is_empty() {
             if let Some(limit) = tally.limit.as_mut() {
@@ -391,11 +424,11 @@ async fn drive(
                 calls: resolve_calls(assistant_id, &calls, &turn_calls, memory_root.as_deref()),
             },
         );
-        // Set when a call the model was already warned about came back again. The turn ends
-        // AFTER this message's calls are all answered, so no tool call is left without a
-        // result row for the next turn to load.
-        let mut stuck = false;
+        // The loop guard judges the round once all its calls are answered, so no tool call is
+        // left without a result row for the next turn to load.
+        let mut round = RoundJudgement::default();
         for call in calls {
+            let sent = guard.sent(call);
             let (result, proposal) = match failed_calls.judge(call) {
                 Repeat::Fresh => {
                     let turn = CallContext {
@@ -403,14 +436,15 @@ async fn drive(
                         cancel,
                     };
                     let dispatch = dispatch_until_stopped(dispatcher, call, turn).await;
-                    if !dispatch_ok(&dispatch.result) {
+                    let ok = dispatch_ok(&dispatch.result);
+                    if !ok {
                         failed_calls.record_failure(call, &dispatch.result.content);
                     }
+                    round.note(sent, ok);
                     (dispatch.result, dispatch.proposal)
                 }
-                Repeat::Refuse(content) => (repeat_result(call, content), None),
-                Repeat::Stuck(content) => {
-                    stuck = true;
+                Repeat::Refuse(content) | Repeat::Stuck(content) => {
+                    round.note(sent, false);
                     (repeat_result(call, content), None)
                 }
             };
@@ -451,13 +485,21 @@ async fn drive(
             transcript.push(tool_message);
         }
 
-        // The model sent a call it had already been told repeating wouldn't change, so it
-        // isn't going to get past this on its own. End here, with a reason that says what
-        // actually happened instead of leaving the user with "it hit its limit".
-        if stuck {
-            return TurnEnd::failed(AgentErrorKind::RepeatedToolCall);
-        }
+        // Going in circles, the model won't get past this on its own: the next call answers from
+        // what it has, and the notice says why.
+        guard_fired = guard.judge_round(round);
     }
+}
+
+/// End a call the provider went quiet on: the turn ends timed out, and its stats name the stall
+/// window, so the rail says what happened and offers Keep going.
+fn stalled(tally: &mut TurnTally) -> TurnEnd {
+    tally.limit = Some(TurnLimit {
+        kind: TurnLimitKind::Stalled,
+        max: u32::try_from(STREAM_STALL_TIMEOUT.as_secs()).unwrap_or(u32::MAX),
+        answered: false,
+    });
+    TurnEnd::failed(AgentErrorKind::Timeout)
 }
 
 /// One round's calls as `ToolCallsResolved` lists them: what each looks at from its arguments,
@@ -534,66 +576,6 @@ fn repeat_result(call: &AgentToolCall, content: serde_json::Value) -> AgentToolR
         call_id: call.call_id.clone(),
         content,
         elided: false,
-    }
-}
-
-struct StreamOutcome {
-    final_message: Option<AgentMessage>,
-    stop: AgentStopReason,
-    usage: AgentUsage,
-    stream_error: Option<AgentLlmError>,
-}
-
-/// Consume one `respond` stream, emitting display events and capturing the final
-/// message plus its stop reason and usage (present only on a clean `End`). A stream
-/// error or a drop leaves `final_message` `None` so the caller applies the
-/// crash-case-a discard.
-///
-/// Stop ends the stream here, at once, whatever the `AgentLlm` does with its own copy of the
-/// token: a model thinking before its next chunk would otherwise keep the turn (and the bill)
-/// running until it spoke. Dropping the stream drops the response body, which ends the spend.
-async fn consume_stream(
-    mut stream: crate::agent::llm::AgentDeltaStream,
-    sink: &ChatEventSink,
-    cancel: &CancellationToken,
-) -> StreamOutcome {
-    let mut final_message = None;
-    let mut stop = AgentStopReason::Completed;
-    let mut usage = AgentUsage::default();
-    let mut stream_error = None;
-    loop {
-        let next = tokio::select! {
-            biased;
-            () = cancel.cancelled() => None,
-            next = stream.next() => next,
-        };
-        let Some(item) = next else { break };
-        match item {
-            Ok(AgentDelta::Text(text)) => emit(sink, AgentChatEvent::TextDelta { text }),
-            Ok(AgentDelta::ReasoningTick) => emit(sink, AgentChatEvent::ReasoningTick),
-            Ok(AgentDelta::ToolCallStarted { call_id, tool }) => {
-                emit(sink, AgentChatEvent::ToolCallStarted { call_id, tool })
-            }
-            Ok(AgentDelta::End {
-                message,
-                stop: end_stop,
-                usage: end_usage,
-            }) => {
-                stop = end_stop;
-                usage = end_usage;
-                final_message = Some(message);
-            }
-            Err(error) => {
-                stream_error = Some(error);
-                break;
-            }
-        }
-    }
-    StreamOutcome {
-        final_message,
-        stop,
-        usage,
-        stream_error,
     }
 }
 

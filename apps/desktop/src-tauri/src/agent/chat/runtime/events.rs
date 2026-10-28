@@ -125,6 +125,12 @@ pub enum AgentChatEvent {
     /// purpose: the meter stays the one source of the thread's total, so the rail re-reads it
     /// (`ask_cmdr_conversation_cost`) rather than adding up figures of its own.
     CostMetered,
+    /// The turn's estimated spend passed the user's threshold, so it stopped between rounds and
+    /// waits for Keep going or Stop (`chat::spend_pause`). `cost_micros` is what the turn has
+    /// spent so far, by the same estimate as the cost footer.
+    SpendPaused { cost_micros: i64 },
+    /// The user pressed Keep going on the spend pause, and the turn runs on.
+    SpendResumed,
 }
 
 /// One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: which tool, what it
@@ -156,7 +162,7 @@ pub enum AgentErrorKind {
     AuthFailed,
     /// The provider is rate-limiting or out of quota.
     RateLimited,
-    /// A per-message budget (tool turns or wall time) was exhausted before an answer.
+    /// A per-answer limit (a background round cap, or the loop guard) ended the tool loop before an answer.
     BudgetExhausted,
     /// The model kept re-sending a tool call that had already come back with a problem, after
     /// being told plainly that repeating it changes nothing (`repeats.rs`). Distinct from

@@ -693,6 +693,25 @@ describe('askCmdr.chatMemorySize (how much of a chat one message carries)', () =
   })
 })
 
+describe('askCmdr.spendPause (where one answer stops to ask about its cost)', () => {
+  it('registers a select in AI > Ask Cmdr that defaults to $2, which the Rust loader mirrors', () => {
+    const def = getSettingDefinition('askCmdr.spendPause')
+    expect(def?.component).toBe('select')
+    expect(def?.section).toEqual(['AI', 'Ask Cmdr'])
+    // `settings::DEFAULT_ASK_CMDR_SPEND_PAUSE_MICROS` is 2,000,000: change the two together.
+    expect(getDefaultValue('askCmdr.spendPause')).toBe('2')
+  })
+
+  it('offers dollar amounts as money, smallest first, then Never', () => {
+    const options = getSettingDefinition('askCmdr.spendPause')?.constraints?.options ?? []
+    expect(options.map((o) => o.value)).toEqual(['0.5', '1', '2', '5', '10', 'never'])
+    expect(options.slice(0, 3).map((o) => o.label)).toEqual(['$0.50', '$1.00', '$2.00'])
+    expect(() => {
+      validateSettingValue('askCmdr.spendPause', '3')
+    }).toThrow()
+  })
+})
+
 describe('ai.localContextSize (the local model’s window)', () => {
   it('starts at the 32,768 floor and defaults to it', () => {
     // Below 32,768 an Ask Cmdr turn cannot fit its own prefix plus a paged tool result, so

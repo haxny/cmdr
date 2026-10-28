@@ -156,6 +156,13 @@ pub enum AskCmdrStreamEvent {
     /// A completed model call was just metered; the rail re-reads the thread's cost so the
     /// footer moves during the turn. No figures ride along: the meter is the one source.
     CostMetered,
+    /// The turn's estimated spend passed the user's threshold (Settings › AI), so it waits
+    /// between rounds for Keep going (`ask_cmdr_keep_going`) or Stop. `cost_micros` is what the
+    /// turn has spent so far, estimated at list prices (prompt caching usually makes it less). A
+    /// reloaded rail reads the same question off `ConversationDetailView::spend_paused_micros`.
+    SpendPaused { cost_micros: i64 },
+    /// Keep going was pressed: the turn runs on, and the question leaves the screen.
+    SpendResumed,
     /// The user answered a suggestion this thread made, and the line saying so just landed in
     /// its timeline. The persisted event row's identity rides along, so a subscriber that also
     /// loaded the row shows it once.
@@ -382,6 +389,8 @@ pub fn to_wire_event(event: AgentChatEvent) -> AskCmdrStreamEvent {
             elided_results,
         },
         AgentChatEvent::CostMetered => AskCmdrStreamEvent::CostMetered,
+        AgentChatEvent::SpendPaused { cost_micros } => AskCmdrStreamEvent::SpendPaused { cost_micros },
+        AgentChatEvent::SpendResumed => AskCmdrStreamEvent::SpendResumed,
     }
 }
 

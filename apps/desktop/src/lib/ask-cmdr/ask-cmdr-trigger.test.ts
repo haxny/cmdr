@@ -495,6 +495,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       conversation: conversationRow(9),
       totalMessages: 3,
       turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
       messages: [
         {
           id: 1,
@@ -566,6 +567,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       conversation: conversationRow(9),
       totalMessages: 2,
       turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
       messages: [
         {
           id: 1,
@@ -617,6 +619,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       totalMessages: 0,
       messages: [],
       turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
     })
     try {
       await openRail()
@@ -685,6 +688,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       totalMessages: 0,
       messages: [],
       turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
     })
     await switchToThread(9)
     expect(askCmdrState.freshChat).toBe(false)
@@ -811,7 +815,13 @@ function detailPage(total: number, limit: number, offset: number) {
   const upper = Math.min(offset + limit, total)
   const messages = []
   for (let seq = offset; seq < upper; seq++) messages.push(userMessage(seq + 1, seq))
-  return { conversation: conversationRow(9), totalMessages: total, messages, turnInFlightSinceSeq: null }
+  return {
+    conversation: conversationRow(9),
+    totalMessages: total,
+    messages,
+    turnInFlightSinceSeq: null,
+    spendPausedMicros: null,
+  }
 }
 
 describe('message paging (tail-first, load older)', () => {
@@ -888,6 +898,7 @@ describe('message paging (tail-first, load older)', () => {
         conversation: conversationRow(9),
         totalMessages: total,
         turnInFlightSinceSeq: null,
+        spendPausedMicros: null,
         messages: rows.slice(offset, offset + limit),
       })
     })
@@ -917,6 +928,7 @@ describe('message paging (tail-first, load older)', () => {
         conversation: conversationRow(9),
         totalMessages: total,
         turnInFlightSinceSeq: 0,
+        spendPausedMicros: null,
         messages: rows.slice(offset, offset + limit),
       })
     })

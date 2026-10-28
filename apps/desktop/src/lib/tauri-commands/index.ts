@@ -481,6 +481,7 @@ export {
   sendAskCmdrMessage,
   onAskCmdrTurn,
   cancelAskCmdr,
+  keepGoingAskCmdr,
   applyBulkRename,
   preflightBulkRename,
   cancelBulkRenameProposal,

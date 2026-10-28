@@ -633,6 +633,11 @@ pub enum AgentDelta {
     Text(String),
     /// Opaque reasoning progressed; the UI shows "thinking…", content never surfaced.
     ReasoningTick,
+    /// The provider said it's still working without saying anything yet (Anthropic's `ping`, a
+    /// Gemini status update, the stream opening). Never shown; it only proves the call isn't
+    /// stalled (`chat::context::STREAM_STALL_TIMEOUT`), so a model thinking quietly between its
+    /// provider's keep-alives isn't ended as one.
+    KeepAlive,
     ToolCallStarted {
         call_id: String,
         tool: ToolId,

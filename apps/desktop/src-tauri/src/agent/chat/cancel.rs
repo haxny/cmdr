@@ -15,10 +15,11 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use tokio_util::sync::CancellationToken;
 
+use super::spend_pause::PauseSlot;
 use crate::ignore_poison::IgnorePoison;
 use crate::settings::AskCmdrSwitch;
 
@@ -30,8 +31,15 @@ const LOG_TARGET: &str = "agent::chat";
 /// the one it is showing now. `i64` because it crosses to TypeScript as a `number`.
 pub type TurnRun = i64;
 
+/// One turn's entry: its Stop and its spend pause.
+struct Entry {
+    generation: TurnRun,
+    token: CancellationToken,
+    pause: Arc<PauseSlot>,
+}
+
 /// One thread's live registrations, each tagged with the generation that owns it.
-type Registrations = Vec<(TurnRun, CancellationToken)>;
+type Registrations = Vec<Entry>;
 
 /// Every live registration, by conversation.
 static CANCELS: LazyLock<Mutex<HashMap<i64, Registrations>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -50,6 +58,7 @@ pub struct CancelRegistration {
     conversation_id: i64,
     generation: TurnRun,
     token: CancellationToken,
+    pause: Arc<PauseSlot>,
 }
 
 impl CancelRegistration {
@@ -62,13 +71,18 @@ impl CancelRegistration {
     pub fn run(&self) -> TurnRun {
         self.generation
     }
+
+    /// The slot the turn waits on when it pauses on spend, which [`keep_going`] answers.
+    pub fn pause_slot(&self) -> Arc<PauseSlot> {
+        self.pause.clone()
+    }
 }
 
 impl Drop for CancelRegistration {
     fn drop(&mut self) {
         let mut cancels = CANCELS.lock_ignore_poison();
         if let Some(entries) = cancels.get_mut(&self.conversation_id) {
-            entries.retain(|(generation, _)| *generation != self.generation);
+            entries.retain(|entry| entry.generation != self.generation);
             if entries.is_empty() {
                 cancels.remove(&self.conversation_id);
             }
@@ -83,15 +97,21 @@ impl Drop for CancelRegistration {
 pub fn register_cancel(conversation_id: i64) -> CancelRegistration {
     let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
     let token = CancellationToken::new();
+    let pause = Arc::new(PauseSlot::default());
     CANCELS
         .lock_ignore_poison()
         .entry(conversation_id)
         .or_default()
-        .push((generation, token.clone()));
+        .push(Entry {
+            generation,
+            token: token.clone(),
+            pause: pause.clone(),
+        });
     CancelRegistration {
         conversation_id,
         generation,
         token,
+        pause,
     }
 }
 
@@ -115,7 +135,7 @@ pub fn cancel_turn(conversation_id: i64) -> CancelOutcome {
         return CancelOutcome { tripped: 0, live: 0 };
     };
     let mut tripped = 0;
-    for (_, token) in entries {
+    for Entry { token, .. } in entries {
         if !token.is_cancelled() {
             token.cancel();
             tripped += 1;
@@ -127,13 +147,35 @@ pub fn cancel_turn(conversation_id: i64) -> CancelOutcome {
     }
 }
 
+/// Answer a thread's spend pause with Keep going. `true` when a turn was waiting on one; `false`
+/// for a stale click (the turn went on, stopped, or never paused). Single-flight means at most one
+/// of a thread's registrations runs, so at most one can be paused.
+pub fn keep_going(conversation_id: i64) -> bool {
+    let slots: Vec<Arc<PauseSlot>> = CANCELS
+        .lock_ignore_poison()
+        .get(&conversation_id)
+        .map(|entries| entries.iter().map(|entry| entry.pause.clone()).collect())
+        .unwrap_or_default();
+    slots.iter().any(|slot| slot.keep_going())
+}
+
+/// The estimated spend a thread's running turn is paused at, or `None` when none is paused. A
+/// reloaded rail reads it to put the question back on screen.
+pub fn paused_spend(conversation_id: i64) -> Option<i64> {
+    CANCELS
+        .lock_ignore_poison()
+        .get(&conversation_id)?
+        .iter()
+        .find_map(|entry| entry.pause.paused_at())
+}
+
 /// Trip every in-flight turn, rail and wake alike: cloud AI was just turned off. Returns how
 /// many were tripped. Entries stay registered; each turn's registration removes itself as it
 /// winds down.
 pub fn cancel_all() -> usize {
     let cancels = CANCELS.lock_ignore_poison();
     let mut tripped = 0;
-    for (_, token) in cancels.values().flatten() {
+    for Entry { token, .. } in cancels.values().flatten() {
         token.cancel();
         tripped += 1;
     }

@@ -45,26 +45,63 @@ pub use memory_notes::memory_notes_for_turn;
 
 // ── Named constants (§10). Initial values; tune with use. ─────────────────────
 
-/// Per user message: the rounds of tool calls one answer may run. Past it, ONE more
-/// call goes out carrying [`tool_round_wrap_up_note`] and no tool it asks for runs, so
-/// the user gets an answer from what was found; a reply that still wants a tool ends
-/// the turn on the limit. Makes a runaway loop impossible by construction. Why 25:
+/// Per BACKGROUND answer (a wake, a follow-up: nobody is watching): the rounds of tool calls
+/// it may run. Past it, ONE more call goes out carrying [`wrap_up_note`] and no tool it asks
+/// for runs, so the thread gets an answer from what was found; a reply that still wants a tool
+/// ends the turn on the limit. A turn the user started has no round cap: the user watches it,
+/// Stop ends it, and the loop guard and the spend pause bound it. Why 25 and why no cap:
 /// `DETAILS.md` § Constants table.
-pub const MAX_TOOL_TURNS: usize = 25;
+pub const BACKGROUND_MAX_TOOL_TURNS: usize = 25;
 
-/// Per user message wall-clock ceiling across the whole tool loop: a hang guard, not a
-/// spend guard (Stop is the user's own). Why 10 minutes: `DETAILS.md` § Constants table.
-pub const MAX_WALL_TIME: Duration = Duration::from_secs(600);
+/// The loop guard's repeat half: a tool call identical to two earlier ones of the same turn
+/// (its third sending) wraps the turn up. Why 3: `DETAILS.md` § Constants table.
+pub const LOOP_GUARD_REPEATS: usize = 3;
 
-/// What the wrap-up call past [`MAX_TOOL_TURNS`] tells the model, as the call's last
-/// user message. Sent on that one call only and never persisted, so the thread's history
-/// stays what was said.
-pub fn tool_round_wrap_up_note() -> String {
-    let rounds = MAX_TOOL_TURNS;
-    // allowed-pluralize-noun: the cap is a constant far above one
-    let used = format!("this answer has used all {rounds} rounds of tool calls it gets");
+/// The loop guard's progress half: this many rounds in a row that found nothing new (every
+/// call a repeat of one the turn already made, or one that came back with a problem) wrap the
+/// turn up. Why 3: `DETAILS.md` § Constants table.
+pub const LOOP_GUARD_STALE_ROUNDS: usize = 3;
+
+/// How long one model call may go without a single stream item (text, reasoning, a tool call,
+/// or the provider's own keep-alive) before it's ended as stalled. Also bounds the wait for the
+/// call to open. Not a ceiling on a turn's length: an answer that keeps streaming runs as long
+/// as it needs. Why 120 seconds: `DETAILS.md` § Constants table.
+pub const STREAM_STALL_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// Why a turn's tool loop is being wrapped up: the ONE extra call that answers from what was
+/// found, with no tool allowed to run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WrapUp {
+    /// A background turn used all [`BACKGROUND_MAX_TOOL_TURNS`].
+    RoundCap,
+    /// The loop guard: the model sent one call [`LOOP_GUARD_REPEATS`] times.
+    RepeatedCall,
+    /// The loop guard: [`LOOP_GUARD_STALE_ROUNDS`] rounds in a row found nothing new.
+    NoProgress,
+}
+
+/// What the wrap-up call tells the model, as the call's last user message. Sent on that one
+/// call only and never persisted, so the thread's history stays what was said.
+pub fn wrap_up_note(reason: WrapUp) -> String {
+    let why = match reason {
+        WrapUp::RoundCap => {
+            let rounds = BACKGROUND_MAX_TOOL_TURNS;
+            // allowed-pluralize-noun: the cap is a constant far above one
+            format!("this answer has used all {rounds} rounds of tool calls it gets")
+        }
+        WrapUp::RepeatedCall => {
+            let times = LOOP_GUARD_REPEATS;
+            // allowed-pluralize-noun: the guard is a constant far above one
+            format!("you've now sent the same tool call {times} times, and it can't tell you anything new")
+        }
+        WrapUp::NoProgress => {
+            let rounds = LOOP_GUARD_STALE_ROUNDS;
+            // allowed-pluralize-noun: the guard is a constant far above one
+            format!("your last {rounds} rounds of tool calls found nothing new")
+        }
+    };
     format!(
-        "[Cmdr: {used}, so no further tool call will run. Answer now from what you've found. Say plainly which \
+        "[Cmdr: {why}, so no further tool call will run. Answer now from what you've found. Say plainly which \
          parts you didn't get to, and that the user can send \"continue\" to pick up from here.]"
     )
 }

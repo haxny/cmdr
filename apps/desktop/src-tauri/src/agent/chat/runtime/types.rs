@@ -11,6 +11,7 @@ use chrono::FixedOffset;
 
 use super::events::AgentErrorKind;
 use crate::agent::chat::context::ContextEnvelope;
+use crate::agent::chat::spend_pause::SpendPause;
 use crate::agent::llm::types::{AgentPart, CallSettings, MemoryNote, ProviderTag, WakeDigest};
 use crate::agent::store::{TurnLimit, TurnStats};
 use crate::agent::types::{ProposalOutcomes, TurnOrigin};
@@ -87,6 +88,9 @@ pub struct TurnParams<'a> {
     /// thinking shares with the reply (`chat::effort`). Rides each call rather than the slot so
     /// the picker can change it between turns without rebuilding the LLM.
     pub call: CallSettings,
+    /// Where the turn pauses on spend and asks to keep going (`chat::spend_pause`). `None` for a
+    /// background turn (nobody is there to answer) and for the user's "Never".
+    pub spend_pause: Option<SpendPause>,
 }
 
 /// How a turn ended, for the caller's bookkeeping. The events already told the
@@ -118,9 +122,12 @@ pub struct TurnTally {
     /// `suggestion_group_proposed`: turns with proposals but no proposal events downstream
     /// would be a real instrumentation bug, and nothing else could tell us.
     pub proposals: usize,
-    /// The per-answer ceiling the turn reached, if any. It rides the stats, so the rail names
+    /// The per-answer limit the turn reached, if any. It rides the stats, so the rail names
     /// the limit and its value live and after a reload.
     pub limit: Option<TurnLimit>,
+    /// What the turn's completed calls cost, estimated by `agent::pricing` (micro-USD; an
+    /// unpriced call adds nothing). What the spend pause compares against its threshold.
+    pub cost_micros: i64,
 }
 
 impl TurnTally {

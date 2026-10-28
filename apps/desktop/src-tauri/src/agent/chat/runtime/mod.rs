@@ -56,9 +56,11 @@ use cmdr_md::read_cmdr_md;
 
 mod analytics;
 mod cmdr_md;
+mod consume;
 mod cost;
 mod dispatch;
 mod events;
+mod limits;
 mod repeats;
 mod turn;
 mod types;
@@ -149,6 +151,8 @@ impl ChatRuntime {
         prompt_budget: usize,
         chat_memory_tokens: usize,
         call: crate::agent::llm::CallSettings,
+        // Where this turn pauses on spend, `None` for "Never" (resolved at send, like the budget).
+        spend_pause: Option<crate::agent::chat::spend_pause::SpendPause>,
         conversation_id: Option<i64>,
         text: String,
         envelope: ContextEnvelope,
@@ -183,6 +187,7 @@ impl ChatRuntime {
             prompt_budget,
             chat_memory_tokens,
             call,
+            spend_pause,
         };
         run_turn(llm, &dispatcher, &conn, &tools, &params, &sink, &cancel).await;
         Ok(conversation_id)
@@ -393,6 +398,8 @@ mod test_support;
 
 #[cfg(test)]
 mod context_budget_tests;
+#[cfg(test)]
+mod limit_tests;
 #[cfg(test)]
 mod line_events_tests;
 #[cfg(test)]

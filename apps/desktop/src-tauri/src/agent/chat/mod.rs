@@ -14,6 +14,8 @@
 //!   slot, the prompt budget, the context envelope). Shared by the rail and by a wake.
 //! - [`slot_status`]: what the rail knows before a send — is a provider set up, and what
 //!   every call of a new chat costs at minimum (the gauge's baseline).
+//! - [`spend_pause`]: the pause a user-started turn takes once its estimated spend passes the
+//!   user's threshold, answered by Keep going or Stop.
 //! - [`message_view`]: one stored row's display projection (`MessageView`), shared by the
 //!   history commands and the live stream (a persisted user row rides `UserPersisted`).
 //! - [`stream`]: the one conversation-keyed transport every turn's progress streams over,
@@ -35,5 +37,6 @@ pub mod message_view;
 pub mod runtime;
 pub mod session;
 pub mod slot_status;
+pub mod spend_pause;
 pub mod stream;
 pub mod system_prompt;

@@ -442,19 +442,39 @@ export function turnStatsTokensTooltip(stats: TurnStats | null): string | undefi
 }
 
 /**
- * Which per-answer ceiling a turn reached, and its value, as the first line of its limit notice.
+ * Which per-answer limit a turn reached, and its value, as the first line of its limit notice.
  * The value is the one stored with the turn, so a reloaded thread names the limit that applied
- * then. Wall time is stored in seconds and said in whole minutes (the ceiling is minutes long).
+ * then. Wall time (only on turns recorded before the stall check replaced it) is stored in seconds
+ * and said in whole minutes; a stall in seconds.
  */
 export function limitNoticeText(limit: TurnLimit): string {
-  if (limit.kind === 'wallTime') {
-    const minutes = Math.max(1, Math.round(limit.max / 60))
-    return tString('askCmdr.limit.wallTime', { minutes, minutesText: formatInteger(minutes) })
-  }
   const params = { max: limit.max, maxText: formatInteger(limit.max) }
-  return limit.answered
-    ? tString('askCmdr.limit.toolRounds.answered', params)
-    : tString('askCmdr.limit.toolRounds.unfinished', params)
+  switch (limit.kind) {
+    case 'wallTime': {
+      const minutes = Math.max(1, Math.round(limit.max / 60))
+      return tString('askCmdr.limit.wallTime', { minutes, minutesText: formatInteger(minutes) })
+    }
+    case 'stalled':
+      return tString('askCmdr.limit.stalled', params)
+    case 'repeatedCall':
+      return limit.answered
+        ? tString('askCmdr.limit.repeatedCall.answered')
+        : tString('askCmdr.limit.repeatedCall.unfinished')
+    case 'noProgress':
+      return limit.answered
+        ? tString('askCmdr.limit.noProgress.answered', params)
+        : tString('askCmdr.limit.noProgress.unfinished', params)
+    case 'toolRounds':
+      return limit.answered
+        ? tString('askCmdr.limit.toolRounds.answered', params)
+        : tString('askCmdr.limit.toolRounds.unfinished', params)
+  }
+}
+
+/** Whether a limit is a fixed ceiling the notice says no setting moves (with a Send feedback
+ * link), rather than the loop guard or a stall, which say what happened and need no excuse. */
+export function limitIsFixedCeiling(limit: TurnLimit): boolean {
+  return limit.kind === 'toolRounds' || limit.kind === 'wallTime'
 }
 
 const ERROR_KEYS: Record<AskCmdrErrorKind, MessageKey> = {

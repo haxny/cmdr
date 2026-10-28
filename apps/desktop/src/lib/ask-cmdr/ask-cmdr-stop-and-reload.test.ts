@@ -372,7 +372,7 @@ describe('stopStreaming', () => {
     try {
       streamPastOneRound()
 
-      await vi.advanceTimersByTimeAsync(90_000)
+      await vi.advanceTimersByTimeAsync(150_000)
 
       expect(assistantAt(1)).toMatchObject({ thinking: false, stalled: false, streaming: false })
       expect(askCmdrState.messages.at(-1)).toEqual({ kind: 'error', errorKind: 'timeout' })
@@ -403,7 +403,7 @@ describe('stopStreaming', () => {
       expect(askCmdrState.messages).toHaveLength(1)
       expect(assistantAt(0)).toMatchObject({ id: 5, streaming: false, stats: STATS })
       expect(askCmdrState.renameReview?.proposals.map((p) => p.proposalId)).toEqual(['p1'])
-      await vi.advanceTimersByTimeAsync(90_000)
+      await vi.advanceTimersByTimeAsync(150_000)
       expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['assistant'])
     } finally {
       vi.useRealTimers()
@@ -441,6 +441,7 @@ describe('a reload mid-turn', () => {
       messages: rows,
       lastContextUsage: null,
       turnInFlightSinceSeq: since,
+      spendPausedMicros: null,
     }
   }
 

@@ -5,7 +5,7 @@ use tauri::AppHandle;
 use super::{
     AskCmdrToolResultError, ConversationDetailView, ToolResultDetailView, with_read_connection, with_write_connection,
 };
-use crate::agent::chat::cancel::turn_in_flight_since_seq;
+use crate::agent::chat::cancel::{paused_spend, turn_in_flight_since_seq};
 use crate::agent::chat::message_view::thread::{PageContext, project_page, tool_result_detail};
 use crate::agent::store::{self, ConversationRow, ConversationSearchHit, TurnContext};
 
@@ -57,6 +57,7 @@ pub async fn ask_cmdr_get_conversation(
             total_messages: detail.total_messages,
             last_context_usage,
             turn_in_flight_since_seq,
+            spend_paused_micros: paused_spend(id),
         }))
     })
     .await

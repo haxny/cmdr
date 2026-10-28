@@ -2,7 +2,7 @@
 //! retry doesn't buy the same answer at the price of a full provider round trip.
 //!
 //! A `propose_rename_plan` call missing `volumeId` was refused, and the model re-sent the
-//! byte-identical call eight times until `MAX_TOOL_TURNS` ended the turn: about 90 seconds
+//! byte-identical call eight times until the round cap ended the turn: about 90 seconds
 //! and eight round trips spent on one broken payload, and from the user's side the agent just
 //! stopped answering.
 //!
@@ -83,7 +83,8 @@ impl FailedCalls {
 const REFUSED: &str = "This exact call already came back with this, and it answers the same way every time. Change the arguments \
      or tell the user what you couldn't do; sending it again does nothing.";
 
-const STUCK: &str = "This exact call has now been sent three times with nothing changed, so the turn ends here.";
+const STUCK: &str =
+    "This exact call has now been sent three times with nothing changed, so no further tool call will run this turn.";
 
 /// The failed result plus the two keys that make it a repeat notice. The original content is
 /// kept whole, so `dispatch_ok` still reads it as a problem and the model still reads what to

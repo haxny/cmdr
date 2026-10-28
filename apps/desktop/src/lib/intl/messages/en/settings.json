@@ -2771,6 +2771,22 @@
     "screenshot": "settings-ai-ask-cmdr.png",
     "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
+  "settings.askCmdr.spendPause.label": "Check in when an answer costs over",
+  "@settings.askCmdr.spendPause.label": {
+    "description": "Label for the picker in Settings > AI > Ask Cmdr that sets an amount of money: once one answer's estimated cost passes it, the assistant pauses and asks whether to keep going. The options are money amounts (like $2.00) plus Never. Sentence case."
+  },
+  "settings.askCmdr.spendPause.description": "One answer can run many lookups. Past this estimated cost, Cmdr pauses it and asks before it spends more. Estimates use list prices, so caching usually makes the real cost lower.",
+  "@settings.askCmdr.spendPause.description": {
+    "description": "Help text under the picker that sets when a running Ask Cmdr answer pauses over its cost. Explains that a single answer may look things up many times, that once its estimated cost passes the chosen amount the assistant stops and asks the user whether to continue, and that the estimate uses the AI provider's published prices, while the provider's prompt caching (reusing parts of the chat it already read) usually makes the actual bill smaller. \"Lookup\" is the word the chat already uses for a tool call."
+  },
+  "settings.askCmdr.spendPause.opt.never": "Never",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "description": "Last option in the picker that sets when a running Ask Cmdr answer pauses over its cost: never pause, however much one answer costs. The other options are money amounts. Sentence case."
+  },
+  "settings.askCmdr.spendPause.keywords": "cost, spend, money, price, budget, limit, pause, dollars, expensive",
+  "@settings.askCmdr.spendPause.keywords": {
+    "description": "Search keywords for the “Check in when an answer costs over” setting (settings.askCmdr.spendPause.label) in Settings > AI > Ask Cmdr. What it does: sets how much one answer may cost before the assistant pauses and asks to keep going. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
   "settings.askCmdr.chatMemorySize.keywords": "chat, memory, context, window, tokens, size, budget, history",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "description": "Search keywords for the “Chat memory size” setting (settings.askCmdr.chatMemorySize.label) in Settings > AI > Ask Cmdr. What it does: sets how much of the conversation Cmdr sends to the AI model each time. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",

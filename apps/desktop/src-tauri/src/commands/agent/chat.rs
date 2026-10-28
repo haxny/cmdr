@@ -48,6 +48,7 @@ use crate::agent::chat::session::{
     resolve_call_settings, resolve_prompt_budget_for,
 };
 use crate::agent::chat::slot_status::{SlotStatus, slot_status};
+use crate::agent::chat::spend_pause::SpendPause;
 use crate::agent::chat::stream::{AgentErrorKindView, AskCmdrStreamEvent, emit_turn_event, forward_to_windows};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::ProviderTag;
@@ -271,6 +272,12 @@ pub async fn ask_cmdr_send_message(
     // turn's thread and unregisters when it drops there, on every exit.
     let cancel = cancel::register_cancel(conversation_id);
     let run = cancel.run();
+    // Read at send like the budget, so a settings change applies from the next message and never
+    // moves a turn in flight. The slot is the registration's, which `ask_cmdr_keep_going` answers.
+    let spend_pause = crate::settings::load_ask_cmdr_spend_pause_micros(&app).map(|threshold_micros| SpendPause {
+        threshold_micros,
+        slot: cancel.pause_slot(),
+    });
     emit_turn_event(conversation_id, Some(run), AskCmdrStreamEvent::Started);
 
     // Now that the conversation id is known, build the LLM so the real backend logs under
@@ -307,6 +314,7 @@ pub async fn ask_cmdr_send_message(
             prompt_budget,
             chat_memory_tokens.unwrap_or(prompt_budget),
             call,
+            spend_pause,
             conversation_id,
             run,
             text,
@@ -364,6 +372,8 @@ async fn drive_turn(
     chat_memory_tokens: usize,
     // The same, for how hard the model thinks and the reply's ceiling (`session::resolve_call_settings`).
     call: crate::agent::llm::CallSettings,
+    // Where the turn pauses on spend (`agent::chat::spend_pause`), `None` for "Never".
+    spend_pause: Option<SpendPause>,
     conversation_id: i64,
     run: TurnRun,
     text: String,
@@ -408,6 +418,7 @@ async fn drive_turn(
         prompt_budget,
         chat_memory_tokens,
         call,
+        spend_pause,
         Some(conversation_id),
         text,
         envelope,
@@ -456,4 +467,13 @@ fn create_conversation_now(db_path: &Path, text: &str) -> Result<i64, store::Age
 #[specta::specta]
 pub fn ask_cmdr_cancel(conversation_id: i64) -> CancelOutcomeView {
     cancel::cancel_turn(conversation_id).into()
+}
+
+/// Answer a thread's spend pause with Keep going: the paused turn runs on. Answers whether a turn
+/// was waiting, `false` for a stale click (it already went on, stopped, or never paused). Stop on
+/// a paused turn is [`ask_cmdr_cancel`], the same as any other.
+#[tauri::command]
+#[specta::specta]
+pub fn ask_cmdr_keep_going(conversation_id: i64) -> bool {
+    cancel::keep_going(conversation_id)
 }

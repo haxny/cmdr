@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { errorMessage, limitNoticeText } from './ask-cmdr-labels'
+import { errorMessage, limitIsFixedCeiling, limitNoticeText } from './ask-cmdr-labels'
 import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
 
 describe('limitNoticeText', () => {
@@ -14,6 +14,27 @@ describe('limitNoticeText', () => {
   it('says wall time in whole minutes', () => {
     expect(limitNoticeText({ kind: 'wallTime', max: 600, answered: false })).toContain('10 minutes')
     expect(limitNoticeText({ kind: 'wallTime', max: 60, answered: false })).toContain('1 minute ')
+  })
+
+  it('names each loop-guard reason and a stall in its own words', () => {
+    const texts = [
+      limitNoticeText({ kind: 'repeatedCall', max: 3, answered: true }),
+      limitNoticeText({ kind: 'repeatedCall', max: 3, answered: false }),
+      limitNoticeText({ kind: 'noProgress', max: 3, answered: true }),
+      limitNoticeText({ kind: 'noProgress', max: 3, answered: false }),
+      limitNoticeText({ kind: 'stalled', max: 120, answered: false }),
+    ]
+    expect(new Set(texts).size).toBe(texts.length)
+    expect(texts[2]).toContain('3 rounds')
+    expect(texts[4]).toContain('120 seconds')
+  })
+
+  it('calls only the fixed ceilings fixed', () => {
+    expect(limitIsFixedCeiling({ kind: 'toolRounds', max: 25, answered: true })).toBe(true)
+    expect(limitIsFixedCeiling({ kind: 'wallTime', max: 600, answered: false })).toBe(true)
+    expect(limitIsFixedCeiling({ kind: 'repeatedCall', max: 3, answered: true })).toBe(false)
+    expect(limitIsFixedCeiling({ kind: 'noProgress', max: 3, answered: true })).toBe(false)
+    expect(limitIsFixedCeiling({ kind: 'stalled', max: 120, answered: false })).toBe(false)
   })
 })
 

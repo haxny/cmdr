@@ -23,12 +23,15 @@
         ensureThreadLoaded,
         hasOlderMessages,
         isOverSoftCap,
+        keepGoingPastSpend,
         loadOlderMessages,
         markRailFocused,
         newChatShortcutText,
         openNewChat,
         setRailWidth,
+        stopStreaming,
     } from './ask-cmdr-trigger.svelte'
+    import AskCmdrSpendPause from './AskCmdrSpendPause.svelte'
     import { railGate } from './ask-cmdr-gate.svelte'
     import AskCmdrProviderNotice from './AskCmdrProviderNotice.svelte'
     import { providerGap, refreshSlotStatus, slotStatusState, watchSlotStatus } from './ask-cmdr-slot-status.svelte'
@@ -212,6 +215,13 @@
                 {#each askCmdrState.messages as message, index (index)}
                     <AskCmdrMessage {message} {revealPath} />
                 {/each}
+                {#if askCmdrState.streaming && askCmdrState.spendPausedMicros !== null}
+                    <AskCmdrSpendPause
+                        costMicros={askCmdrState.spendPausedMicros}
+                        onKeepGoing={keepGoingPastSpend}
+                        onStop={stopStreaming}
+                    />
+                {/if}
                 {#if isOverSoftCap()}
                     <div class="soft-cap">
                         <span>{tString('askCmdr.softCap.message')}</span>

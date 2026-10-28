@@ -1,8 +1,9 @@
 <!--
-  The note under an assistant turn that reached one of Cmdr's per-answer ceilings: which one,
-  its value, that it's fixed (no setting moves it), a way to say so through Send feedback, and,
-  on the thread's latest turn, a button that sends "keep going" so the next turn picks up from
-  the history this one left. Read from the turn's stats, so it says the same after a reload.
+  The note under an assistant turn that reached one of Cmdr's per-answer limits: which one and
+  its value. For a fixed ceiling (a background turn's round cap) it also says no setting moves it,
+  with a way to say so through Send feedback; the loop guard and a stall only say what happened.
+  On the thread's latest turn, a button sends "keep going" so the next turn picks up from the
+  history this one left. Read from the turn's stats, so it says the same after a reload.
 -->
 <script lang="ts">
     import type { Snippet } from 'svelte'
@@ -13,7 +14,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { openFeedbackDialog } from '#lib/feedback/feedback-flow.svelte.js'
     import type { TurnLimit } from '#lib/ipc/bindings.js'
-    import { limitNoticeText } from './ask-cmdr-labels'
+    import { limitIsFixedCeiling, limitNoticeText } from './ask-cmdr-labels'
 
     interface Props {
         limit: TurnLimit
@@ -34,7 +35,9 @@
     <Icon name="triangle-alert" size={14} aria-hidden="true" />
     <div class="stack">
         <span>{text}</span>
-        <span class="fixed"><Trans key="askCmdr.limit.fixed" snippets={{ feedback }} /></span>
+        {#if limitIsFixedCeiling(limit)}
+            <span class="fixed"><Trans key="askCmdr.limit.fixed" snippets={{ feedback }} /></span>
+        {/if}
         {#if canContinue}
             <div class="actions">
                 <Button size="mini" variant="secondary" onclick={onContinue}>{tString('askCmdr.limit.continue')}</Button>

@@ -5,7 +5,7 @@
 
 import type { EnumOption, SettingDefinitionSource } from '../types'
 import { cloudProviderPresets } from '../cloud-providers'
-import { formatInteger } from '#lib/intl/number-format.js'
+import { formatInteger, formatMoney } from '#lib/intl/number-format.js'
 
 /**
  * A token-count option whose label is the number itself, grouped for the reader's locale
@@ -18,6 +18,18 @@ function tokenOption(tokens: number): EnumOption {
     value: String(tokens),
     get label() {
       return formatInteger(tokens)
+    },
+  }
+}
+
+/** A dollar-amount option whose label is the amount as money in the reader's locale ($2.00). A
+ * getter for the same reason as {@link tokenOption}. The value is the amount in dollars, which
+ * the backend reads as is (`settings::load_ask_cmdr_spend_pause_micros`). */
+function dollarOption(dollars: number): EnumOption {
+  return {
+    value: String(dollars),
+    get label() {
+      return formatMoney(dollars, 'USD')
     },
   }
 }
@@ -190,6 +202,32 @@ export const aiSettings: SettingDefinitionSource[] = [
         tokenOption(60000),
         tokenOption(128000),
         tokenOption(200000),
+      ],
+    },
+  },
+  {
+    // Where one answer the user started pauses on its estimated spend and asks to keep going.
+    // Read fresh per send by `load_ask_cmdr_spend_pause_micros`, so like the two above it applies
+    // to the next message, never moves a turn in flight, and needs no `settings-applier` case.
+    // The Rust loader mirrors the default ($2; why: `agent/chat/DETAILS.md` § Constants table),
+    // since the store is sparse and an untouched row arrives as an absent key.
+    id: 'askCmdr.spendPause',
+    section: ['AI', 'Ask Cmdr'],
+    labelKey: 'settings.askCmdr.spendPause.label',
+    descriptionKey: 'settings.askCmdr.spendPause.description',
+    keywordsKey: 'settings.askCmdr.spendPause.keywords',
+    terms: ['ask cmdr'],
+    type: 'enum',
+    default: '2',
+    component: 'select',
+    constraints: {
+      options: [
+        dollarOption(0.5),
+        dollarOption(1),
+        dollarOption(2),
+        dollarOption(5),
+        dollarOption(10),
+        { value: 'never', labelKey: 'settings.askCmdr.spendPause.opt.never' },
       ],
     },
   },

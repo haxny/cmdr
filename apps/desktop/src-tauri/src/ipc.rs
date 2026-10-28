@@ -481,6 +481,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::operation_log::undo_operations,
                     crate::commands::agent::ask_cmdr_send_message,
                     crate::commands::agent::ask_cmdr_cancel,
+                    crate::commands::agent::ask_cmdr_keep_going,
                     crate::commands::agent::preflight_bulk_rename,
                     crate::commands::agent::apply_bulk_rename,
                     crate::commands::agent::revise_bulk_rename_row,

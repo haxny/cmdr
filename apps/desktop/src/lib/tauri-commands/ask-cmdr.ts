@@ -157,6 +157,12 @@ export async function cancelAskCmdr(conversationId: number): Promise<CancelOutco
   return commands.askCmdrCancel(conversationId)
 }
 
+/** Answer a thread's spend pause with Keep going. Answers whether a turn was waiting on it; a
+ * stale click (the turn already went on or ended) answers `false` and changes nothing. */
+export async function keepGoingAskCmdr(conversationId: number): Promise<boolean> {
+  return commands.askCmdrKeepGoing(conversationId)
+}
+
 /** Rechecks the user-selected rows of a server-owned rename proposal. Only opaque ids
  * cross the IPC boundary: source paths and destination names stay in the backend. `revision` is the
  * one the review showed (`RenameProposalSnapshot.revision`); an agent amend since answers status

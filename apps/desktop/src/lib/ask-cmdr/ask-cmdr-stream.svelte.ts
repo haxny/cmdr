@@ -43,6 +43,7 @@ import { askCmdrState, insertAboveBubble, settleAssistant, streamingAssistant } 
 import { holdTurnGroupsOpen, settleTurnGroups } from './ask-cmdr-tool-groups.svelte'
 import {
   cancelAskCmdr,
+  keepGoingAskCmdr,
   sendAskCmdrMessage,
   type AskCmdrErrorKind,
   type AskCmdrStreamEvent,
@@ -56,9 +57,12 @@ const log = getAppLogger('askCmdr')
 type TurnEvent = Exclude<AskCmdrStreamEvent, { type: 'proposalDecided' }>
 
 /** How long a turn may go without any event before its bubble says so, and before the rail
- * gives up on it entirely. */
+ * gives up on it entirely. The give-up is a backstop for a backend that went away: it sits past
+ * the backend's own stall window (`STREAM_STALL_TIMEOUT`, 120 s, which also counts the provider's
+ * keep-alives the rail never sees), so a live turn always ends with the backend's terminal first.
+ * A turn paused on spend has no watchdog at all: it waits on the user. */
 const STALL_AFTER_MS = 30_000
-const STOP_AFTER_MS = 90_000
+const STOP_AFTER_MS = 150_000
 let stallTimer: ReturnType<typeof setTimeout> | null = null
 let stopTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -165,10 +169,41 @@ export function leaveChat(): void {
  * `assistantStarted`, and the turn may stay quiet for a while (a long tool call), so waiting for
  * its next event to adopt it would leave a running turn looking idle.
  */
-export function resumeThread(conversationId: number, turnRunning: boolean): void {
+export function resumeThread(conversationId: number, turnRunning: boolean, spendPausedMicros: number | null): void {
   pendingStops = pendingStops.filter((stop) => stop.conversationId !== conversationId)
   liveRun = null
+  askCmdrState.spendPausedMicros = null
   if (turnRunning) adoptLiveTurn()
+  // A turn paused on spend emits nothing until the user answers, so the load is the only way the
+  // question gets back on screen after a reload.
+  if (turnRunning && spendPausedMicros !== null) applySpendPaused(spendPausedMicros)
+}
+
+/**
+ * Answer the spend pause with Keep going. The question leaves the screen now and the watchdog
+ * resumes; the backend runs the turn on. A click the backend finds stale (the turn already went on
+ * or ended) changes nothing there, and the turn's own events say where it stands.
+ */
+export function keepGoingPastSpend(): void {
+  const conversationId = askCmdrState.conversationId
+  if (conversationId === null || askCmdrState.spendPausedMicros === null) return
+  askCmdrState.spendPausedMicros = null
+  resetProgressWatchdog()
+  void keepGoingAskCmdr(conversationId).catch((e: unknown) => {
+    log.warn('Keep going in thread {conversationId} broke: {error}', { conversationId, error: e })
+  })
+}
+
+/** The running turn waits on the user's word, so it's quiet on purpose: no stall label, no
+ * watchdog timeout over a question the user hasn't answered yet. */
+function applySpendPaused(costMicros: number): void {
+  askCmdrState.spendPausedMicros = costMicros
+  const assistant = streamingAssistant()
+  if (assistant) {
+    assistant.thinking = false
+    assistant.stalled = false
+  }
+  clearProgressWatchdog()
 }
 
 /**
@@ -294,6 +329,7 @@ export function stopStreaming(): void {
   }
   typedOpener = null
   liveRun = null
+  askCmdrState.spendPausedMicros = null
   if (bubble) {
     bubble.streaming = false
     bubble.thinking = false
@@ -492,14 +528,15 @@ function applyStreamEvent(event: TurnEvent): void {
       applyDiscarded()
       return
     default:
-      handleLineOrContextEvent(event)
+      handleLineContextOrSpendEvent(event)
   }
 }
 
 /** The events about a round's tool lines, the two that report on the CONTEXT (what the
- * assembly set aside, and what it cost), and the meter's per-call nudge. Split out so
- * `applyStreamEvent` stays under the complexity ceiling and both halves stay exhaustive. */
-function handleLineOrContextEvent(
+ * assembly set aside, and what it cost), the meter's per-call nudge, and the spend pause's two
+ * (the turn stopped between rounds to ask, or it runs on). Split out so `applyStreamEvent` stays
+ * under the complexity ceiling and both halves stay exhaustive. */
+function handleLineContextOrSpendEvent(
   event: Extract<
     TurnEvent,
     {
@@ -510,6 +547,8 @@ function handleLineOrContextEvent(
         | 'contextTrimmed'
         | 'contextUsage'
         | 'costMetered'
+        | 'spendPaused'
+        | 'spendResumed'
     }
   >,
 ): void {
@@ -535,6 +574,14 @@ function handleLineOrContextEvent(
     case 'costMetered':
       // The footer re-reads the meter (the one source of the total) on each bump.
       askCmdrState.costRevision += 1
+      return
+    case 'spendPaused':
+      adoptLiveTurn()
+      applySpendPaused(event.costMicros)
+      return
+    case 'spendResumed':
+      askCmdrState.spendPausedMicros = null
+      resetProgressWatchdog()
   }
 }
 
@@ -740,10 +787,10 @@ function applyFailed(
   stats: TurnStats | null = null,
 ): void {
   endTurn(stats)
-  // A turn that reached a per-answer ceiling says so in its own bubble, named and valued from
-  // its stats (`AskCmdrLimitNotice`), the way a reload shows it too; a second, vaguer line
-  // under it would only repeat it.
-  if (kind === 'budgetExhausted' && stats?.limit) return
+  // A turn that reached a per-answer limit says so in its own bubble, named and valued from its
+  // stats (`AskCmdrLimitNotice`), the way a reload shows it too; a second, vaguer line under it
+  // (`budgetExhausted`, `repeatedToolCall`, a stall's `timeout`) would only repeat it.
+  if (stats?.limit) return
   askCmdrState.messages.push({
     kind: 'error',
     errorKind: kind,
@@ -760,6 +807,7 @@ function applyFailed(
  */
 function endTurn(stats: TurnStats | null): void {
   liveRun = null
+  askCmdrState.spendPausedMicros = null
   const assistant = streamingAssistant()
   if (assistant) {
     assistant.stats = stats
@@ -787,6 +835,7 @@ function applyDiscarded(): void {
   askCmdrState.historyCount = 0
   askCmdrState.contextUsage = null
   askCmdrState.streaming = false
+  askCmdrState.spendPausedMicros = null
   clearProgressWatchdog()
   // There is no thread left to review against, so this turn's plans go back rather than
   // opening a dialog for a conversation that no longer exists.

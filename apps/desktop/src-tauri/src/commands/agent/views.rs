@@ -129,6 +129,9 @@ pub struct ConversationDetailView {
     /// after it are that turn's, still being written, so a result-less call among them is running
     /// (every other result-less call is settled). `None` when nothing runs.
     pub turn_in_flight_since_seq: Option<i64>,
+    /// The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
+    /// Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
+    pub spend_paused_micros: Option<i64>,
 }
 
 /// Why an expanded tool line has nothing to show. ❌ Not prose: the rail words each one.

@@ -131,7 +131,7 @@ describe('Stop before the thread id is known', () => {
     try {
       const answer = holdNextSend()
       sendMessage('first message')
-      await vi.advanceTimersByTimeAsync(90_000)
+      await vi.advanceTimersByTimeAsync(150_000)
       expect(askCmdrState.streaming).toBe(false)
 
       await answer(accepted(NEW_THREAD))
