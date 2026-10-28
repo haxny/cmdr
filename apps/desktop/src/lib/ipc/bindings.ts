@@ -4283,8 +4283,9 @@ export const commands = {
       /**
        *  Share rows: how `server_guid` was learned. Only `authenticated` on both rows
        *  lets one answer for the other (`location::same_share`). Written with the
-       *  GUID; a row saved before the field reads `unauthenticated` until a signed-in
-       *  session records its GUID again.
+       *  GUID, and demoted when a save changes the row's account
+       *  ([`keep_recorded_guid`]); a row saved before the field reads
+       *  `unauthenticated` until a signed-in session records its GUID again.
        */
       serverGuidProof?: GuidProof
     } | null>('get_known_share_by_name', { serverName, shareName }),
@@ -10558,8 +10559,9 @@ export type KnownNetworkShare = {
   /**
    *  Share rows: how `server_guid` was learned. Only `authenticated` on both rows
    *  lets one answer for the other (`location::same_share`). Written with the
-   *  GUID; a row saved before the field reads `unauthenticated` until a signed-in
-   *  session records its GUID again.
+   *  GUID, and demoted when a save changes the row's account
+   *  ([`keep_recorded_guid`]); a row saved before the field reads
+   *  `unauthenticated` until a signed-in session records its GUID again.
    */
   serverGuidProof?: GuidProof
 }
