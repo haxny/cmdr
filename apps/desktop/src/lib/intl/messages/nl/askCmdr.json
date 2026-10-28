@@ -422,9 +422,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "dat staat niet op de schijf die de AI noemde",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "staat niet op de genoemde schijf",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "daar is geen schijf verbonden",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -446,9 +446,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "een systeemmap die de AI overslaat",
+  "askCmdr.tool.outcome.miss.excluded": "een overgeslagen systeemmap",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "geen bevoegdheid om te kijken",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -1301,9 +1301,9 @@
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "wijzigen van een server",
+  "askCmdr.decision.verbEditServer": "wijzigen van de instellingen van een server",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "Opgeslagen",
   "@askCmdr.decision.saved": {

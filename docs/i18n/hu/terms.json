@@ -320,11 +320,7 @@
     "forms": "suffix without a hyphen, front vowel: Ask Cmdrt; article az before it (Az Ask Cmdr bezárása); compound with a hyphen: Ask Cmdr-csevegések; Turn on Ask Cmdr → Ask Cmdr bekapcsolása",
     "confidence": "high",
     "sources": "en @key (product name)",
-    "note": "The brand names only the chat panel (title, View menu, palette, Settings section, the switch). Prose about what the app does says a Cmdr or az AI; don't write Az Ask Cmdr… back into sentences.",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.sameName": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Kérj a Cmdrtől",
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Kérj a Cmdrtől"
-    }
+    "note": "The brand names only the chat panel (title, View menu, palette, Settings section, the switch). Prose about what the app does says a Cmdr or az AI; don't write Az Ask Cmdr… back into sentences."
   },
   "attachment": {
     "chosen": "melléklet",

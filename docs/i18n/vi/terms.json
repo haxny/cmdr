@@ -228,10 +228,6 @@
   "ask-cmdr": {
     "chosen": "Ask Cmdr",
     "confidence": "high",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "\"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel name, so it reads Hãy nhờ Cmdr …; the concept lacks an \"ask cmdr for\" notMatch (logged in source-queue.md).",
-      "errors.write.namedLeavesRefused.suggestion.sameName": "\"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel name, so it reads Hãy nhờ Cmdr …; the concept lacks an \"ask cmdr for\" notMatch (logged in source-queue.md)."
-    },
     "forms": "names the chat panel only; sentences about what the assistant does say Cmdr, sentences about the model say AI",
     "sources": "product name, kept verbatim"
   },
@@ -2739,7 +2735,7 @@
   "server": {
     "chosen": "máy chủ",
     "confidence": "high",
-    "forms": "the switcher row and scope Máy chủ; \"in/from Servers\" (the view) → trong/từ danh sách Máy chủ (servers.sheet.addedToast); connect to a server → kết nối tới (prose); the AI-suggestion kind tags Add a server / Change a server → Thêm một máy chủ / Sửa một máy chủ (Sửa, as Sửa máy chủ…, never đổi, which reads as swapping servers)",
+    "forms": "the switcher row and scope Máy chủ; \"in/from Servers\" (the view) → trong/từ danh sách Máy chủ (servers.sheet.addedToast); connect to a server → kết nối tới (prose); the AI-suggestion kind tags Add a server / Change server settings → Thêm một máy chủ / Sửa cài đặt máy chủ (Sửa, as Sửa máy chủ…, never đổi, which reads as swapping servers)",
     "sources": "macOS AppKit (Servers → Máy chủ), Finder N84, GNOME"
   },
   "server-address": {

@@ -409,10 +409,6 @@
     "confidence": "high",
     "sources": "concepts.json sense (product name, verbatim in every language); de and hu termbases (Ask Cmdr)",
     "note": "Names only the chat panel itself; a sentence about what the AI does says Cmdr or ИИ.",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.sameName": "English “Ask Cmdr for …” is the imperative verb plus the app, not the panel name → Попросите Cmdr …",
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English “Ask Cmdr for …” is the imperative verb plus the app, not the panel name → Попросите Cmdr …"
-    },
     "decision": "Ask Cmdr stays"
   },
   "ask-question": {
@@ -3048,9 +3044,6 @@
     "chosen": "Переместить",
     "accept": ["перемещ", "перемест"],
     "forms": "button/command → «Переместить»; progress → Перемещение; Move to → Переместить в",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "“the items being moved” also covers a copy, so it names them neutrally → объекты из этого предложения"
-    },
     "confidence": "high",
     "sources": "macOS Finder LocalizableMerged MV12 Move → «Переместить», AppKit MenuCommands Move To → «Переместить в»; MS move → «переместить»; Double Commander Move → «Переместить», Moving → «Перемещение»; Total Commander 97 «Переместить/переименовать файлы»; Xfce Thunar, GNOME Nautilus"
   },
@@ -4594,9 +4587,6 @@
     "chosen": "Поделиться",
     "accept": ["подел"],
     "forms": "menu item «Поделиться» / «Поделиться…»; empty state «Нет вариантов, чтобы поделиться»",
-    "exceptions": {
-      "suggestedOps.server.field.share": "the bare label names an SMB shared folder on a server suggestion, the network-share sense → Общая папка"
-    },
     "avoid": [
       {
         "form": "Отправить",

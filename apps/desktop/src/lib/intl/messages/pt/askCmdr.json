@@ -421,9 +421,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "isso não está no disco que a IA indicou",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "não está no disco indicado",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "nenhum disco conectado ali",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -445,9 +445,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "uma pasta de sistema que a IA ignora",
+  "askCmdr.tool.outcome.miss.excluded": "uma pasta de sistema ignorada",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "sem permissão para olhar",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -1300,9 +1300,9 @@
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "alterar um servidor",
+  "askCmdr.decision.verbEditServer": "alterar os ajustes de um servidor",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "Salvo",
   "@askCmdr.decision.saved": {

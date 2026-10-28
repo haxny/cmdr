@@ -421,9 +421,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "ez nincs azon a meghajtón, amelyet megnevezett",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "nincs a megnevezett meghajtón",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "ott nincs csatlakoztatott meghajtó",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -445,9 +445,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "egy rendszermappa, amelyet kihagy",
+  "askCmdr.tool.outcome.miss.excluded": "egy kihagyott rendszermappa",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "nincs engedélye belenézni",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -1298,9 +1298,9 @@
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "egy szerver módosítását",
+  "askCmdr.decision.verbEditServer": "egy szerver beállításainak módosítását",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "Mentve",
   "@askCmdr.decision.saved": {

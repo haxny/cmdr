@@ -2476,9 +2476,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "请让 Ask Cmdr 起一些和要移动的项目不重名的名称。",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "请让 Ask Cmdr 起一些和要移动或拷贝的项目不重名的名称。",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "先给已经在那个文件夹里的项目重命名，再移动或拷贝其余项目。",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

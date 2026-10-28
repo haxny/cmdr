@@ -421,9 +421,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "das liegt nicht auf dem angegebenen Laufwerk",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "nicht auf dem angegebenen Laufwerk",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "dort ist kein Laufwerk verbunden",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -445,9 +445,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "ein Systemordner, der übersprungen wird",
+  "askCmdr.tool.outcome.miss.excluded": "ein übersprungener Systemordner",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "keine Berechtigung zum Hineinschauen",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -1299,9 +1299,9 @@
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "das Ändern eines Servers",
+  "askCmdr.decision.verbEditServer": "das Ändern der Einstellungen eines Servers",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "Gespeichert",
   "@askCmdr.decision.saved": {

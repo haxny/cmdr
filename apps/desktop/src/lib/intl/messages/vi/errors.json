@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Hãy nhờ Cmdr đặt những tên không trùng với các mục đang được chuyển.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Hãy nhờ Cmdr đặt những tên không trùng với các mục đang được di chuyển hoặc sao chép.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Hãy đổi tên các mục đã nằm trong thư mục đó, rồi di chuyển hoặc sao chép các mục còn lại.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

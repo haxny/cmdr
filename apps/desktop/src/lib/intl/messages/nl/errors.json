@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Vraag Ask Cmdr om namen die niet overeenkomen met de onderdelen die je verplaatst.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Vraag Ask Cmdr om namen die niet overeenkomen met de onderdelen die je verplaatst of kopieert.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Wijzig de naam van de onderdelen die al in die map staan, en verplaats of kopieer daarna de rest.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Be Cmdr om namn som inte krockar med objekten som flyttas.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Be Cmdr om namn som inte krockar med objekten som flyttas eller kopieras.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Byt namn på objekten som redan ligger i den mappen och flytta eller kopiera sedan resten.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

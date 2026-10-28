@@ -427,10 +427,6 @@
   "@askCmdr.tool.connectVolume.tried": {
     "sourceHash": "452290d"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "no está en la unidad que indicó",
-  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "3883d55"
-  },
   "askCmdr.tool.outcome.miss.needsDiskAccess": "necesita acceso completo al disco",
   "@askCmdr.tool.outcome.miss.needsDiskAccess": {
     "sourceHash": "c1b6a8d"
@@ -458,6 +454,10 @@
   "askCmdr.decision.verbAddServer": "agregar un servidor",
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "373d316"
+  },
+  "askCmdr.decision.verbEditServer": "modificar la configuración de un servidor",
+  "@askCmdr.decision.verbEditServer": {
+    "sourceHash": "29332fd"
   },
   "askCmdr.decision.savedNotShare": "Se guardó el servidor, pero no su recurso compartido",
   "@askCmdr.decision.savedNotShare": {

@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Bitte Cmdr um Namen, die sich mit keinem der bewegten Objekte decken.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Bitte Cmdr um Namen, die sich mit keinem der bewegten oder kopierten Objekte decken.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Benenne die Objekte, die schon in diesem Ordner liegen, um und bewege oder kopiere dann den Rest.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

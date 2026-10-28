@@ -205,11 +205,7 @@
     "confidence": "confirmed",
     "sources": "product name, verbatim",
     "note": "Only where the English keeps it (the chat panel itself); prose about what the AI does says O Cmdr or a IA.",
-    "decision": "Ask Cmdr names only the chat panel",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.sameName": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Peça ao Cmdr",
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Peça ao Cmdr"
-    }
+    "decision": "Ask Cmdr names only the chat panel"
   },
   "attachment": {
     "chosen": "anexo",

@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Попросите Cmdr подобрать имена, которые не совпадают с именами объектов из этого предложения.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Попросите Cmdr подобрать имена, которые не совпадают с именами перемещаемых или копируемых объектов.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Переименуйте объекты, которые уже лежат в этой папке, а затем переместите или скопируйте остальные.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

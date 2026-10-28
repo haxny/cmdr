@@ -1339,7 +1339,7 @@
     "distinct": ["file", "network-share"],
     "en": "folder",
     "match": ["folder", "folders", "directory", "directories"],
-    "notMatch": ["working directory"],
+    "notMatch": ["working directory", "shared folder"],
     "sense": "A folder on disk."
   },
   "follow": {

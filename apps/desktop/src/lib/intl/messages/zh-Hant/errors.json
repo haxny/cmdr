@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "請讓 Ask Cmdr 取一些和要移動的項目不重名的名稱。",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "請讓 Ask Cmdr 取一些和要移動或複製的項目不重名的名稱。",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "先把已經在那個資料夾裡的項目重新命名，再移動或複製其餘的項目。",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

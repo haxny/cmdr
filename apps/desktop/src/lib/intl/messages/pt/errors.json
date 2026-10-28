@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Peça ao Cmdr nomes diferentes dos nomes dos itens que estão sendo movidos.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Peça ao Cmdr nomes diferentes dos nomes dos itens que estão sendo movidos ou copiados.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Renomeie os itens que já estão nessa pasta e depois mova ou copie o resto.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

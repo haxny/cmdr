@@ -420,9 +420,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "这不在它说的那个驱动器上",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "不在指定的驱动器上",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "那里没有连接驱动器",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -444,9 +444,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "它会跳过的系统文件夹",
+  "askCmdr.tool.outcome.miss.excluded": "已跳过的系统文件夹",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "没有权限查看",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -1296,9 +1296,9 @@
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "更改服务器",
+  "askCmdr.decision.verbEditServer": "更改服务器设置",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "已保存",
   "@askCmdr.decision.saved": {

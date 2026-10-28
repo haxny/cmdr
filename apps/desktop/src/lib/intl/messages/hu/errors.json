@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Kérj a Cmdrtől olyan neveket, amelyek eltérnek az áthelyezendő elemek nevétől.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Kérj a Cmdrtől olyan neveket, amelyek eltérnek az áthelyezendő vagy másolandó elemek nevétől.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Nevezd át azokat az elemeket, amelyek már abban a mappában vannak, aztán helyezd át vagy másold át a többit.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

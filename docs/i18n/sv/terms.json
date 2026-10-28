@@ -278,11 +278,7 @@
     "confidence": "high",
     "decision": "Ask Cmdr names only the chat panel",
     "forms": "verbatim; genitive Ask Cmdrs; names only the chat panel, prose about the AI says Cmdr or AI:n",
-    "sources": "product name",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.sameName": "English “Ask Cmdr for …” is the verb ask plus Cmdr, not the panel name, so it reads Be Cmdr om …",
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English “Ask Cmdr for …” is the verb ask plus Cmdr, not the panel name, so it reads Be Cmdr om …"
-    }
+    "sources": "product name"
   },
   "attachment": {
     "accept": ["bifoga"],

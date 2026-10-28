@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Demandez à Cmdr des noms différents de ceux des éléments déplacés.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Demandez à Cmdr des noms différents de ceux des éléments déplacés ou copiés.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Renommez les éléments déjà présents dans ce dossier, puis déplacez ou copiez le reste.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

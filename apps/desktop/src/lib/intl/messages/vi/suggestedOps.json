@@ -83,9 +83,9 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Thêm máy chủ",
+  "suggestedOps.approve.addServer": "Lưu máy chủ",
   "@suggestedOps.approve.addServer": {
-    "sourceHash": "1099b2a"
+    "sourceHash": "726b9af"
   },
   "suggestedOps.approve.editServer": "Lưu thay đổi",
   "@suggestedOps.approve.editServer": {
@@ -163,13 +163,13 @@
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "Có thể quên máy chủ này sau, trong danh sách Máy chủ",
+  "suggestedOps.reversible.forgetServer": "Có thể hoàn tác: quên máy chủ trong danh sách Máy chủ",
   "@suggestedOps.reversible.forgetServer": {
-    "sourceHash": "c94623d"
+    "sourceHash": "892c381"
   },
-  "suggestedOps.reversible.changeServerBack": "Có thể đổi lại như cũ trong danh sách Máy chủ",
+  "suggestedOps.reversible.changeServerBack": "Có thể hoàn tác: sửa lại cài đặt máy chủ như cũ trong danh sách Máy chủ",
   "@suggestedOps.reversible.changeServerBack": {
-    "sourceHash": "1a68195"
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr sẽ tạo thư mục này",
   "@suggestedOps.folderWillBeCreated": {
@@ -323,9 +323,9 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Hãy từ chối, rồi nhờ AI đề xuất lại.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Hãy từ chối, rồi nhờ Cmdr đề xuất lại.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
   },
   "suggestedOps.refusal.serverLabel": "Tại sao chưa lưu được",
   "@suggestedOps.refusal.serverLabel": {
@@ -335,33 +335,33 @@
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Hãy nhờ AI đề xuất lại, hoặc sửa máy chủ trong danh sách Máy chủ.",
+  "suggestedOps.refusal.serverChanged.suggestion": "Hãy nhờ Cmdr đề xuất lại, hoặc sửa máy chủ trong danh sách Máy chủ.",
   "@suggestedOps.refusal.serverChanged.suggestion": {
-    "sourceHash": "c83a215"
+    "sourceHash": "cab1352"
   },
   "suggestedOps.refusal.alreadySaved.message": "Máy chủ này đã có trong danh sách Máy chủ của bạn, nên Cmdr không lưu gì cả.",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Hãy mở máy chủ đó từ danh sách Máy chủ, hoặc nhờ AI đề xuất một thay đổi cho máy chủ đó.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "Hãy mở máy chủ đó từ danh sách Máy chủ, hoặc nhờ Cmdr đề xuất một thay đổi cho máy chủ đó.",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
-    "sourceHash": "eda1133"
+    "sourceHash": "6ec8bdc"
   },
   "suggestedOps.refusal.nameTaken.message": "Một máy chủ đã lưu khác đã mang tên {name}, nên Cmdr không lưu gì cả.",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Hãy nhờ AI đề xuất một tên khác.",
+  "suggestedOps.refusal.nameTaken.suggestion": "Hãy nhờ Cmdr đề xuất một tên khác.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
-    "sourceHash": "c059ee2"
+    "sourceHash": "e366b0c"
   },
   "suggestedOps.server.add": "Thêm một máy chủ",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Sửa một máy chủ",
+  "suggestedOps.server.change": "Sửa cài đặt máy chủ",
   "@suggestedOps.server.change": {
-    "sourceHash": "7c07b82"
+    "sourceHash": "187a941"
   },
   "suggestedOps.server.field.port": "Cổng",
   "@suggestedOps.server.field.port": {

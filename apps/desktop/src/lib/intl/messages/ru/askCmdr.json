@@ -421,9 +421,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "этого нет на указанном диске",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "не на указанном диске",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "там нет подключенного диска",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -445,9 +445,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "системная папка, поиск ее пропускает",
+  "askCmdr.tool.outcome.miss.excluded": "пропущенная системная папка",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "нет прав доступа",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -457,9 +457,9 @@
   "@askCmdr.tool.outcome.miss.cancelled": {
     "sourceHash": "4389728"
   },
-  "askCmdr.tool.outcome.connection.alreadyConnected": "уже был подключен",
+  "askCmdr.tool.outcome.connection.alreadyConnected": "уже подключено",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "повторное подключение еще идет",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {

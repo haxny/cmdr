@@ -2477,9 +2477,9 @@
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Pide a Cmdr nombres que no coincidan con los de los elementos que se mueven.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Pide a Cmdr nombres que no coincidan con los de los elementos que se mueven o se copian.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
-    "sourceHash": "45cc752"
+    "sourceHash": "9ab88ec"
   },
   "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Renombra los elementos que ya están en esa carpeta y luego mueve o copia el resto.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {

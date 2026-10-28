@@ -63,13 +63,13 @@
   "@suggestedOps.refusal.nothingSelected.message": {
     "sourceHash": "b157ef7"
   },
-  "suggestedOps.approve.addServer": "Agregar servidor",
-  "@suggestedOps.approve.addServer": {
-    "sourceHash": "edc745a"
-  },
   "suggestedOps.server.add": "Agregar un servidor",
   "@suggestedOps.server.add": {
     "sourceHash": "e859100"
+  },
+  "suggestedOps.server.change": "Modificar la configuración del servidor",
+  "@suggestedOps.server.change": {
+    "sourceHash": "0bd7763"
   },
   "suggestedOps.refusal.serverLabel": "Por qué no se guardó",
   "@suggestedOps.refusal.serverLabel": {

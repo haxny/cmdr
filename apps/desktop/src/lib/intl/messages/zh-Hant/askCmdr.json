@@ -420,9 +420,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "這不在它說的那個磁碟機上",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "不在指定的磁碟機上",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "sourceHash": "1602f88"
+    "sourceHash": "5a87cd6"
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "那裡沒有連線的磁碟機",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -444,9 +444,9 @@
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "它會略過的系統資料夾",
+  "askCmdr.tool.outcome.miss.excluded": "略過的系統資料夾",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "sourceHash": "67caa4d"
+    "sourceHash": "8198768"
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "沒有權限查看",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -1296,9 +1296,9 @@
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "更改伺服器",
+  "askCmdr.decision.verbEditServer": "更改伺服器設定",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "已儲存",
   "@askCmdr.decision.saved": {

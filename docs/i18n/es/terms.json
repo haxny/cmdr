@@ -240,11 +240,7 @@
     "chosen": "Ask Cmdr",
     "confidence": "high",
     "sources": "product name",
-    "note": "Names ONLY the chat panel (its title, menu item, palette command, settings section and switch, pointers back to that section). Prose about what the product does says Cmdr, or la IA for the model.",
-    "exceptions": {
-      "errors.write.namedLeavesRefused.suggestion.sameName": "English \"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel's name: Pide a Cmdr …",
-      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English \"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel's name: Pide a Cmdr …"
-    }
+    "note": "Names ONLY the chat panel (its title, menu item, palette command, settings section and switch, pointers back to that section). Prose about what the product does says Cmdr, or la IA for the model."
   },
   "attachment": {
     "chosen": "adjunto",
@@ -2869,7 +2865,7 @@
   "server": {
     "chosen": "servidor",
     "accept": ["servidores"],
-    "forms": "the chooser row and heading Servidores; changing a saved server's settings → modificar un servidor (❌ cambiar un servidor, which reads as swapping it for another), its save button Guardar cambios",
+    "forms": "the chooser row and heading Servidores; changing a saved server's settings → modificar los ajustes de un servidor (❌ cambiar un servidor, which reads as swapping it for another), its save button Guardar cambios",
     "confidence": "high",
     "sources": "macOS (desmontar servidores)"
   },
@@ -2907,10 +2903,7 @@
     "accept": ["compartir"],
     "forms": "share options → opciones para compartir",
     "confidence": "high",
-    "sources": "macOS (Compartir)",
-    "exceptions": {
-      "suggestedOps.server.field.share": "The NOUN naming an SMB shared folder, so the network-share ruling (Recurso compartido), not the Share menu's verb."
-    }
+    "sources": "macOS (Compartir)"
   },
   "sharing-and-permissions": {
     "chosen": "Compartir y permisos",

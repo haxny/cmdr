@@ -83,9 +83,9 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Voeg server toe",
+  "suggestedOps.approve.addServer": "Bewaar server",
   "@suggestedOps.approve.addServer": {
-    "sourceHash": "1099b2a"
+    "sourceHash": "726b9af"
   },
   "suggestedOps.approve.editServer": "Bewaar wijzigingen",
   "@suggestedOps.approve.editServer": {
@@ -163,13 +163,13 @@
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "Je kunt de server later in de lijst Servers vergeten",
+  "suggestedOps.reversible.forgetServer": "Dit kun je ongedaan maken: vergeet de server in de lijst Servers",
   "@suggestedOps.reversible.forgetServer": {
-    "sourceHash": "c94623d"
+    "sourceHash": "892c381"
   },
-  "suggestedOps.reversible.changeServerBack": "Zet het terug via de lijst Servers",
+  "suggestedOps.reversible.changeServerBack": "Dit kun je ongedaan maken: zet de instellingen van de server terug in de lijst Servers",
   "@suggestedOps.reversible.changeServerBack": {
-    "sourceHash": "1a68195"
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr maakt deze map aan",
   "@suggestedOps.folderWillBeCreated": {
@@ -323,9 +323,9 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Weiger het en vraag de AI om het opnieuw voor te stellen.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Weiger het en vraag Ask Cmdr om het opnieuw voor te stellen.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
   },
   "suggestedOps.refusal.serverLabel": "Waarom dit niet is bewaard",
   "@suggestedOps.refusal.serverLabel": {
@@ -335,33 +335,33 @@
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Vraag de AI om het opnieuw voor te stellen, of wijzig de server in de lijst Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "Vraag Ask Cmdr om het opnieuw voor te stellen, of wijzig de server in de lijst Servers.",
   "@suggestedOps.refusal.serverChanged.suggestion": {
-    "sourceHash": "c83a215"
+    "sourceHash": "cab1352"
   },
   "suggestedOps.refusal.alreadySaved.message": "Deze server staat al in je lijst Servers, dus Cmdr heeft niets bewaard.",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open de server via de lijst Servers, of vraag de AI liever om een wijziging aan deze server voor te stellen.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "Open de server via de lijst Servers, of vraag Ask Cmdr liever om een wijziging aan deze server voor te stellen.",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
-    "sourceHash": "eda1133"
+    "sourceHash": "6ec8bdc"
   },
   "suggestedOps.refusal.nameTaken.message": "Een andere opgeslagen server heet al {name}, dus Cmdr heeft niets bewaard.",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Vraag de AI om een andere naam voor te stellen.",
+  "suggestedOps.refusal.nameTaken.suggestion": "Vraag Ask Cmdr om een andere naam voor te stellen.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
-    "sourceHash": "c059ee2"
+    "sourceHash": "e366b0c"
   },
   "suggestedOps.server.add": "Server toevoegen",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Server wijzigen",
+  "suggestedOps.server.change": "Serverinstellingen wijzigen",
   "@suggestedOps.server.change": {
-    "sourceHash": "7c07b82"
+    "sourceHash": "187a941"
   },
   "suggestedOps.server.field.port": "Poort",
   "@suggestedOps.server.field.port": {
