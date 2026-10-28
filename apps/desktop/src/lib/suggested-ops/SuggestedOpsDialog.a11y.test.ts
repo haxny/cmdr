@@ -568,7 +568,7 @@ describe('a server card', () => {
     expect(facts).toContain('A new address')
     expect(host.querySelector('.group-head')?.textContent).toContain('Add a server')
     expect(host.querySelector('.group-title')?.textContent).toBe('Build box')
-    expect(host.textContent).toContain('You can forget it later in Servers')
+    expect(host.textContent).toContain('You can undo this: forget the server in Servers')
     await expectNoA11yViolations(host)
   })
 
@@ -594,7 +594,7 @@ describe('a server card', () => {
     seed(addCard)
     const host = mountDialog()
 
-    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add server')
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Save server')
     expect(button?.disabled).toBe(false)
     button?.click()
     expect(actions.approve).toHaveBeenCalledWith(7)
@@ -613,7 +613,7 @@ describe('a server card', () => {
     expect(rows).toContainEqual({ text: 'naspi.local', arrow: false })
     expect(host.textContent).not.toContain('A new address')
     expect(host.querySelector('.shares')?.textContent).toContain('This changes 3 saved shares on this server.')
-    expect(host.querySelector('.group-head')?.textContent).toContain('Change a server')
+    expect(host.querySelector('.group-head')?.textContent).toContain('Change server settings')
     const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
     expect(buttons).toContain('Save changes')
     await expectNoA11yViolations(host)

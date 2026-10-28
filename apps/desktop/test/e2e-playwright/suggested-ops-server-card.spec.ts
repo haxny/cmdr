@@ -91,7 +91,7 @@ test.describe('An AI suggestion to add a server', () => {
               var card = ${card};
               if (!card) return false;
               var button = [...card.querySelectorAll('button')].find(function (b) {
-                return (b.textContent || '').trim() === 'Add server' && !b.disabled;
+                return (b.textContent || '').trim() === 'Save server' && !b.disabled;
               });
               if (!button) return false;
               button.click();

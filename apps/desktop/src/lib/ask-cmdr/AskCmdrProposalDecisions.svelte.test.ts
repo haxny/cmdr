@@ -108,7 +108,7 @@ describe('AskCmdrProposalDecisions', () => {
     const target = render([decision({ verb: 'editServer', what: 'naspolya', ops: 0 })])
     await tick()
 
-    expect(target.textContent).toContain('You turned down changing a server')
+    expect(target.textContent).toContain('You turned down changing a server’s settings')
   })
 
   /** A rejection never ran, so there is nothing to report about it. */

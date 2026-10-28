@@ -180,7 +180,7 @@ const cases: Case[] = [
       [
         'ontoASource',
         'An item would land as /d/ghost.pdf, which is another item in this same suggestion, and replace it.',
-        'Ask Cmdr for names that don’t match the items being moved.',
+        'Ask Cmdr for names that don’t match the items being moved or copied.',
       ],
       [
         'alreadyInDestination',

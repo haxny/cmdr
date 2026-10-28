@@ -211,7 +211,7 @@ A group carrying `server` (`addServer` / `editServer`, zero ops) is the same hea
 file list. The backend: `apps/desktop/src-tauri/src/agent/suggested_ops/DETAILS.md` § Approving a server.
 
 - **The header** keeps the server's name as the title, and where a file group shows its count it says "Add a server" or
-  "Change a server". The reversibility pill reads from `serverSettings` (`reversibilityKey`).
+  "Change server settings". The reversibility pill reads from `serverSettings` (`reversibilityKey`).
 - **The facts are what the click saves** (`SuggestedServerFacts.svelte`, rows inside the group's own `<dl>`, so they
   read like From / To): Type (the hub's protocol label), then each `fields` row under the servers sheet's own label
   where it has one. An edit's changed rows show `old → new` (a screen reader hears "changes to"), unchanged rows plain,
