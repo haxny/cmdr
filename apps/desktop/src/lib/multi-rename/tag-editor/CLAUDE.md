@@ -23,9 +23,10 @@ sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted;
 - **F3 / ⌥Space** is `tags.play`: plays or stops the Tracks pane's cursor row; plain Space selects, as on files. ⌥Space
   is claimed (macOS types a non-breaking space for it). Playback stops on unmount, another play, `ended`, and a write
   (`onWriting`); each stop releases the URL.
-- **Scope**: the tag tools work on the Tracks pane's selection, ONE selection model (`track-selection.svelte.ts` over
-  the file panes' `createSelectionState`; the ☐ column draws it): `all` / `some` / `gone` through `TagsContent`'s
-  `runScoped`; a vanished selection never widens to every track. "Open in foobar2000" follows the same scope.
+- **Scope**: tools and the Album pane work on the Tracks pane's selection, ONE selection model
+  (`track-selection.svelte.ts` over the file panes' `createSelectionState`; the ☐ column draws it): `all` / `some` /
+  `gone` through `TagsContent`'s `runScoped`; a vanished selection never widens to every track. "Open in foobar2000"
+  follows the same scope.
 - **Totals are fields** (TrackTotal, DiscTotal), and `store` normalizes every edit for its format (an M4A's `01` shows
   as `1`). Find/replace and format run in the app's Rust (`tag_editor/text_tools.rs`) because they reuse Multi-Rename's
   own engine, not `cmdr-tags`; file name → tags stays the engine's `TagTool::FromFileName`.

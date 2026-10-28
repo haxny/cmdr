@@ -77,6 +77,7 @@ const VIEW = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
 }
 
 async function settle(): Promise<void> {

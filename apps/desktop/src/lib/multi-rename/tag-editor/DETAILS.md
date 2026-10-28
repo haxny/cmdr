@@ -205,7 +205,12 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   indices over the view's order; `sync` carries it across a reload by path) and answers `all` (nothing selected), `some`
   (the selected paths, in session order) or `gone` (everything selected vanished in a reload: the run is refused with a
   notice, then the next takes all). Every tool and "Open in foobar2000" take the scope from `TagsContent.runScoped`,
-  after `settled()`. Selected tracks don't narrow the Album pane's shared fields.
+  after `settled()`. The Album pane follows the selection too: `TagsContent` sends it to `setViewScope` 120 ms after it
+  last changed (one call for a run of ⇧↓; sorting doesn't change it, being keyed by path), the backend sums up only
+  those tracks in `shared` and says how many in `scopeCount` (the header's "5 of 42 tracks"; `null` for all), and every
+  Album edit road (typing, a picked value, Clear, Delete, paste, cut) goes through `editAlbum`, which turns each
+  `setAll` into a `setOne` per selected readable track. The track list, cover, dirty marks and bad dates stay over every
+  track. A scope is no edit (no undo step).
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format
   will hold (M4A integers). The one-file-BOOK rule (no track number) is decided on every audio track the session lists

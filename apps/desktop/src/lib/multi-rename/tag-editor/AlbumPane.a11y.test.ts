@@ -32,11 +32,16 @@ const ROWS: SharedRow[] = [
   { field: 'comment', value: 'empty', choices: [], choicesMore: 0 },
 ]
 
-async function mountPane(editable = true, cursor = 1): Promise<HTMLElement> {
+async function mountPane(
+  editable = true,
+  cursor = 1,
+  scope: { count: number; total: number } | null = null,
+): Promise<HTMLElement> {
   const mounted = await mountInto(AlbumPane, {
     rows: ROWS,
     editable,
     badDates: 1,
+    scope,
     focused: true,
     cursor,
     onCursorChange: () => {},
@@ -51,6 +56,10 @@ async function mountPane(editable = true, cursor = 1): Promise<HTMLElement> {
 describe('AlbumPane a11y', () => {
   it('with fields, multiple values, and a red Date has no violations', async () => {
     await expectNoA11yViolations(await mountPane())
+  })
+
+  it('with a selection narrowing the rows ("5 of 42 tracks") has no violations', async () => {
+    await expectNoA11yViolations(await mountPane(true, 1, { count: 5, total: 42 }))
   })
 
   it('with the editor open has no violations', async () => {

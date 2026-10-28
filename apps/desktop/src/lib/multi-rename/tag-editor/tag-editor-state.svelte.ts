@@ -28,6 +28,7 @@ import {
   setCoverFromFile,
   setCoverFromPath,
   sortTagTracks,
+  setTagViewScope,
   undoTagApply,
   undoTagEdit,
   redoTagEdit,
@@ -130,6 +131,11 @@ export interface TagEditorState {
    * reorders only the session's names: no edit and no file changes, and the next `[C]` or Renumber counts in this order.
    */
   sortTracks(sort: TrackSort): Promise<void>
+  /**
+   * Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every track for
+   * `null`, and takes the view it answers with (`view.scopeCount`). Not an edit: no undo step, `editing` stays off.
+   */
+  setViewScope(paths: string[] | null): Promise<void>
   /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
   tool(tool: TagTool, scope?: string[] | null): Promise<void>
   /**
@@ -397,6 +403,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     // Not an edit: it changes the order only, so `editing` stays off.
     sortTracks: (sort) => replaceView(() => sortTagTracks(sessionId, sort)),
+    // Not an edit either: it changes which tracks the Album pane sums up.
+    setViewScope: (paths) => replaceView(() => setTagViewScope(sessionId, paths)),
     tool: (tool, scope = null) => editView(() => runTagTool(sessionId, tool, scope)),
     textTool: (tool, scope = null) => editView(() => runTagTextTool(sessionId, tool, scope)),
     // A preview owns only a bad pattern: a good one leaves any other notice (a failed edit, a cover) standing.

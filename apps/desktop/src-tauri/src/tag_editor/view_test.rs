@@ -6,7 +6,7 @@ use cmdr_tags::shared::{SharedValue, ValueCount};
 use cmdr_tags::{Cover, FileTags, TagField};
 
 use super::session::{Entry, Loaded};
-use super::view::{Access, CoverSummary, ReadErrorCode, build, cover_hashes, cover_key};
+use super::view::{Access, CoverSummary, ReadErrorCode, TagEditorView, build as build_in, cover_hashes, cover_key};
 
 fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> Entry {
     let mut tags = FileTags::default();
@@ -33,6 +33,11 @@ const OPEN: Access = Access {
     editable: true,
     reason: None,
 };
+
+/// The view over every track (no scope).
+fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView {
+    build_in(access, tracks, None)
+}
 
 #[test]
 fn a_cover_is_same_multiple_or_empty() {
@@ -108,7 +113,7 @@ fn an_unreadable_row_is_listed_but_counts_in_no_summary() {
     assert_eq!(album, Some(&SharedValue::Same(vec!["Book".to_string()])));
 }
 
-fn row(view: &super::view::TagEditorView, field: TagField) -> &super::view::SharedRow {
+fn row(view: &TagEditorView, field: TagField) -> &super::view::SharedRow {
     view.shared
         .iter()
         .find(|row| row.field == field)
@@ -229,4 +234,115 @@ fn the_date_flag_clears_once_the_date_is_edited() {
     assert_eq!(build(OPEN, &[(a, &Entry::Loaded(file.clone()))]).bad_dates, 1);
     file.edited.fields.insert(TagField::Date, vec!["2010".to_string()]);
     assert_eq!(build(OPEN, &[(a, &Entry::Loaded(file))]).bad_dates, 0);
+}
+
+/// Ten tracks: `field` is `first` on tracks 1–5 and `second` on 6–10.
+fn two_halves(field: TagField, first: &str, second: &str) -> Vec<(PathBuf, Entry)> {
+    (1..=10)
+        .map(|index| {
+            let value = if index <= 5 { first } else { second };
+            (
+                PathBuf::from(format!("/m/{index:02}.mp3")),
+                loaded(&[(field, value)], None, &[]),
+            )
+        })
+        .collect()
+}
+
+fn as_tracks(entries: &[(PathBuf, Entry)]) -> Vec<(&Path, &Entry)> {
+    entries.iter().map(|(path, entry)| (path.as_path(), entry)).collect()
+}
+
+#[test]
+fn shared_fields_cover_only_the_scoped_tracks() {
+    let entries = two_halves(TagField::Artist, "A", "B");
+    let tracks = as_tracks(&entries);
+    assert_eq!(
+        row(&build(OPEN, &tracks), TagField::Artist).value,
+        SharedValue::Multiple
+    );
+
+    let view = build_in(OPEN, &tracks, Some(&tracks[..5]));
+
+    assert_eq!(
+        row(&view, TagField::Artist).value,
+        SharedValue::Same(vec!["A".to_string()])
+    );
+    assert_eq!(view.scope_count, Some(5));
+    assert_eq!(build(OPEN, &tracks).scope_count, None);
+}
+
+#[test]
+fn choices_cover_only_the_scoped_tracks() {
+    let entries: Vec<(PathBuf, Entry)> = ["X", "X", "Y", "Z", "Z"]
+        .iter()
+        .enumerate()
+        .map(|(index, album)| {
+            (
+                PathBuf::from(format!("/m/{index}.mp3")),
+                loaded(&[(TagField::Album, album)], None, &[]),
+            )
+        })
+        .collect();
+    let tracks = as_tracks(&entries);
+
+    let album = row(&build_in(OPEN, &tracks, Some(&tracks[..3])), TagField::Album).clone();
+
+    assert_eq!(album.value, SharedValue::Multiple);
+    assert_eq!(
+        album.choices,
+        vec![
+            ValueCount {
+                values: vec!["X".to_string()],
+                files: 2,
+            },
+            ValueCount {
+                values: vec!["Y".to_string()],
+                files: 1,
+            },
+        ]
+    );
+}
+
+#[test]
+fn tracks_cover_dirty_and_bad_dates_still_cover_all() {
+    let first = Path::new("/m/a.mp3");
+    let second = Path::new("/m/b.mp3");
+    let third = Path::new("/m/c.mp3");
+    let plain = loaded(&[(TagField::Date, "2010")], Some(&[1]), &[]);
+    let Entry::Loaded(mut edited) = loaded(&[(TagField::Date, "2010-20-09")], Some(&[2]), &[]) else {
+        unreachable!()
+    };
+    edited.edited.fields.insert(TagField::Album, vec!["New".to_string()]);
+    let edited = Entry::Loaded(edited);
+    let unreadable = Entry::Unreadable(ReadErrorCode::Parse);
+    let tracks = [(first, &plain), (second, &edited), (third, &unreadable)];
+
+    let view = build_in(OPEN, &tracks, Some(&tracks[..1]));
+
+    assert_eq!(view.tracks.len(), 3);
+    assert_eq!(view.cover, CoverSummary::Multiple);
+    assert!(view.dirty);
+    assert_eq!(view.bad_dates, 1);
+    assert_eq!(
+        row(&view, TagField::Date).value,
+        SharedValue::Same(vec!["2010".to_string()])
+    );
+}
+
+#[test]
+fn an_unreadable_scoped_track_is_counted_but_holds_no_value() {
+    let first = Path::new("/m/a.mp3");
+    let second = Path::new("/m/b.mp3");
+    let readable = loaded(&[(TagField::Album, "Book")], None, &[]);
+    let unreadable = Entry::Unreadable(ReadErrorCode::Parse);
+    let tracks = [(first, &readable), (second, &unreadable)];
+
+    let view = build_in(OPEN, &tracks, Some(&tracks));
+
+    assert_eq!(view.scope_count, Some(2));
+    assert_eq!(
+        row(&view, TagField::Album).value,
+        SharedValue::Same(vec!["Book".to_string()])
+    );
 }

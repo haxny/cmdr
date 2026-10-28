@@ -73,6 +73,11 @@ re-reads or follows a file that something else renamed.
   kind removes beyond them (`removals.rs` over `cmdr_tags::removed_by_kind`: an MP3's `TPE3` under Audiobook), read
   from the file after the tag lock, so the review list says everything `apply` with that kind will do. A file that
   can't be read for it is `removesUnknown` (typed `Removals::Unknown`), ❌ never an empty "removes nothing".
+- **The view takes a scope too.** `set_view_scope(session_id, paths)` (`set_tag_view_scope`) stores the Tracks pane's
+  selection in `TagSession::view_scope`; `view_of` then builds `shared` and its choices over those tracks alone (an
+  unreadable one counts in `scope_count` but holds no value) and everything else (tracks, cover, extras, dirty,
+  diacritics, bad dates) over every track. Paths the session doesn't have are dropped; a scope with none left, now or
+  after a reload, is every track (`scope_count: None`). Not an edit: no history step.
 - **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left

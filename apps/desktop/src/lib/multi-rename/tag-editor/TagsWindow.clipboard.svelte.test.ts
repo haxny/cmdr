@@ -18,6 +18,7 @@ const menu = vi.hoisted(() => ({ clipboard: undefined as ((action: TagsClipboard
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  setTagViewScope: vi.fn(),
   undoTagEdit: vi.fn(),
   redoTagEdit: vi.fn(),
   lastTagApply: vi.fn(() => Promise.resolve({ ok: true, value: null })),
@@ -97,12 +98,14 @@ const VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
   sort: null,
 }
 
 let cleanup: (() => void) | undefined
 beforeEach(() => {
   vi.clearAllMocks()
+  ipc.setTagViewScope.mockResolvedValue({ ok: true, value: VIEW })
   menu.clipboard = undefined
   document.body.innerHTML = ''
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })

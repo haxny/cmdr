@@ -243,6 +243,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::tag_editor::undo_tag_edit,
                     crate::commands::tag_editor::redo_tag_edit,
                     crate::commands::tag_editor::sort_tag_tracks,
+                    crate::commands::tag_editor::set_tag_view_scope,
                     crate::commands::tag_editor::run_tag_tool,
                     crate::commands::tag_editor::run_tag_text_tool,
                     crate::commands::tag_editor::preview_tags_from_names,

@@ -63,6 +63,7 @@ const VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
   sort: null,
 }
 
@@ -93,6 +94,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     tool: vi.fn(() => Promise.resolve()),
     textTool: vi.fn(() => Promise.resolve()),
     sortTracks: vi.fn(() => Promise.resolve()),
+    setViewScope: vi.fn(() => Promise.resolve()),
   }
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
@@ -164,6 +166,7 @@ describe('TagsContent', () => {
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn(() => Promise.resolve()),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
@@ -393,6 +396,7 @@ describe('TagsContent', () => {
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn(() => Promise.resolve()),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
@@ -423,6 +427,7 @@ describe('TagsContent', () => {
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn(() => Promise.resolve()),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
@@ -528,5 +533,88 @@ describe('TagsContent', () => {
       (b) => !readers.has(b.textContent.trim()) && !b.classList.contains('sortable-header'),
     )
     for (const button of writers) expect(button.disabled).toBe(true)
+  })
+})
+
+describe('TagsContent with tracks selected', () => {
+  /** How long the selection must rest before the Album pane follows it (`VIEW_SCOPE_DELAY_MS`), and a bit. */
+  const scopeRest = () => new Promise((resolve) => setTimeout(resolve, 200))
+  const FORTY_TWO = Array.from({ length: 42 }, (_, index) => {
+    const n = String(index + 1).padStart(2, '0')
+    return { ...VIEW.tracks[0], path: `/b/${n}.mp3`, fileName: `${n}.mp3` }
+  }) as TagEditorView['tracks']
+
+  /** A state whose `setViewScope` answers as the backend does: the count of the scope, or `null` for all. */
+  async function mountScoped() {
+    const state = $state({
+      view: { ...VIEW, tracks: FORTY_TWO },
+      error: null,
+      busy: false,
+      open: vi.fn(() => Promise.resolve()),
+      edit: vi.fn(() => Promise.resolve()),
+      coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
+      coverImage: vi.fn(() => Promise.resolve(null)),
+      coverChoices: vi.fn(() => Promise.resolve([])),
+      coverThumbnail: vi.fn(() => Promise.resolve(null)),
+      undoable: null,
+      settled: vi.fn(() => Promise.resolve()),
+      tool: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn((paths: string[] | null) => {
+        state.view = { ...state.view, scopeCount: paths === null ? null : paths.length }
+        return Promise.resolve()
+      }),
+    })
+    const mounted = await mountInto(TagsContent, { state: asTagState(state) })
+    cleanup = mounted.cleanup
+    const header = () => mounted.root.querySelector('.tag-pane-header')?.textContent ?? ''
+    return { root: mounted.root, state, header }
+  }
+
+  it('selecting tracks narrows the Album pane and its heading says 5 of 42 tracks', async () => {
+    const { root, state, header } = await mountScoped()
+    expect(header()).not.toContain('of 42')
+    const chosen = ['/b/03.mp3', '/b/04.mp3', '/b/05.mp3', '/b/06.mp3', '/b/07.mp3']
+    for (const path of chosen) await toggleTrack(root, path)
+    await scopeRest()
+    // One call for the whole run of clicks, not one per track.
+    expect(state.setViewScope).toHaveBeenCalledTimes(1)
+    expect(state.setViewScope).toHaveBeenCalledWith(chosen)
+    await tick()
+    expect(header()).toContain('5 of 42 tracks')
+    const list = paneList(root, 'Album tags')
+    expect(document.getElementById(list.getAttribute('aria-describedby') ?? '')?.textContent).toBe('5 of 42 tracks')
+  })
+
+  it('an Album edit with tracks selected sets only those', async () => {
+    const { root, state } = await mountScoped()
+    await toggleTrack(root, '/b/02.mp3')
+    await toggleTrack(root, '/b/04.mp3')
+    const album = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(album, 'Dracula')
+    await press(album, 'Enter')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([
+      { kind: 'setOne', path: '/b/02.mp3', field: 'album', values: ['Dracula'] },
+      { kind: 'setOne', path: '/b/04.mp3', field: 'album', values: ['Dracula'] },
+    ])
+    root.querySelector<HTMLButtonElement>('.row-actions button:last-child')?.click()
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([
+      { kind: 'setOne', path: '/b/02.mp3', field: 'album', values: [] },
+      { kind: 'setOne', path: '/b/04.mp3', field: 'album', values: [] },
+    ])
+  })
+
+  it('deselecting all returns to all tracks', async () => {
+    const { root, state, header } = await mountScoped()
+    await toggleTrack(root, '/b/02.mp3')
+    await scopeRest()
+    await tick()
+    expect(header()).toContain('1 of 42 tracks')
+    await toggleTrack(root, '/b/02.mp3')
+    await scopeRest()
+    await tick()
+    expect(state.setViewScope).toHaveBeenLastCalledWith(null)
+    expect(header()).not.toContain('of 42')
   })
 })

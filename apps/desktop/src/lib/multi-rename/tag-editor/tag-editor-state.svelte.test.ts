@@ -9,6 +9,7 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
   sortTagTracks: vi.fn(),
+  setTagViewScope: vi.fn(),
   undoTagEdit: vi.fn(),
   redoTagEdit: vi.fn(),
   runTagTool: vi.fn(),
@@ -210,6 +211,17 @@ describe('createTagEditorState', () => {
     await state.sortTracks({ key: 'fileName', descending: false })
     expect(state.error).toEqual({ kind: 'noSession' })
     expect(state.view).toBe(SORTED)
+  })
+
+  it('setViewScope narrows the view to the paths, as no edit', async () => {
+    const state = createTagEditorState('S')
+    const SCOPED = { editable: true, tracks: [{}, {}], dirty: false, scopeCount: 1 } as unknown as TagEditorView
+    ipc.setTagViewScope.mockResolvedValueOnce({ ok: true, value: SCOPED })
+    const asked = state.setViewScope(['/a.mp3'])
+    expect(state.editing).toBe(false)
+    await asked
+    expect(ipc.setTagViewScope).toHaveBeenCalledWith('S', ['/a.mp3'])
+    expect(state.view).toBe(SCOPED)
   })
 
   it('undoEdit and redoEdit swap in the view the backend answers with, after the edits still out have landed', async () => {

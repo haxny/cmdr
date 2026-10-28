@@ -16,6 +16,7 @@ import type { TagEditorView } from '#lib/tauri-commands/index.js'
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  setTagViewScope: vi.fn(),
   undoTagEdit: vi.fn(),
   redoTagEdit: vi.fn(),
   getTagChanges: vi.fn(),
@@ -106,12 +107,14 @@ const VIEW: TagEditorView = {
   badDates: 0,
   canUndoEdit: false,
   canRedoEdit: false,
+  scopeCount: null,
   sort: null,
 }
 
 let cleanup: (() => void) | undefined
 beforeEach(() => {
   vi.clearAllMocks()
+  ipc.setTagViewScope.mockResolvedValue({ ok: true, value: VIEW })
   ipc.lastTagApply.mockImplementation(replayLastApply(ipc))
   document.body.innerHTML = ''
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })

@@ -1651,6 +1651,12 @@ export const commands = {
   // Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
   sortTagTracks: (sessionId: string, sort: TrackSort) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('sort_tag_tracks', { sessionId, sort })),
+  /**
+   *  Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every
+   *  track for `None`. Not an edit: nothing joins the undo history.
+   */
+  setTagViewScope: (sessionId: string, paths: string[] | null) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_tag_view_scope', { sessionId, paths })),
   // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
   runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
@@ -18629,6 +18635,8 @@ export type TagEditorView = {
   canUndoEdit: boolean
   // An undone edit step can be redone (⇧⌘Z); set by the session.
   canRedoEdit: boolean
+  // How many tracks `shared` covers (the Tracks pane's selection, readable or not); `None` for every track.
+  scopeCount: number | null
 }
 
 /**

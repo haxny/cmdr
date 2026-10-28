@@ -98,6 +98,18 @@ export async function sortTagTracks(sessionId: string, sort: TrackSort): Promise
 }
 
 /**
+ * Narrows the Album pane's shared rows to the tracks at `paths` (the Tracks pane's selection), or widens them to every
+ * track for `null`. Paths the session doesn't have are dropped; none left is every track (`scopeCount` is `null`). Not
+ * an edit: nothing joins the undo history.
+ */
+export async function setTagViewScope(
+  sessionId: string,
+  paths: string[] | null,
+): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.setTagViewScope(sessionId, paths))
+}
+
+/**
  * Runs a tool over the tracks at `scope` (paths as `TrackRow.path` gives them, in session order), or over all the
  * session's files when `scope` is `null`. A path the session doesn't have (`unknownTrack`) refuses the run.
  */

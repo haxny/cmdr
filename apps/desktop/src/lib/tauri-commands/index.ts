@@ -1174,6 +1174,7 @@ export {
   openTagEditor,
   editTags,
   sortTagTracks,
+  setTagViewScope,
   undoTagEdit,
   redoTagEdit,
   runTagTool,

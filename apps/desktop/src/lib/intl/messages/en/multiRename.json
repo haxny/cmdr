@@ -1186,6 +1186,15 @@
   "@multiRename.tags.album.colValue": {
     "description": "Column header in the album pane of the tag editor window, above the tag values the files share."
   },
+  "multiRename.tags.album.scope": "{total, plural, one {{countText} of {totalText} track} other {{countText} of {totalText} tracks}}",
+  "@multiRename.tags.album.scope": {
+    "description": "Shown at the right of the album pane’s header in the tag editor window while some tracks are selected in the tracks pane: the album pane then shows and edits the tags of the selected tracks only. Screen readers read it as the pane’s description.",
+    "placeholders": {
+      "countText": "how many tracks are selected, formatted (for example 5)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 42)"
+    }
+  },
   "multiRename.tags.album.editLabel": "{field} for all files",
   "@multiRename.tags.album.editLabel": {
     "description": "Accessible name of the editing box that F2 opens over a row of the album pane in the tag editor window. What is typed there is set on every file. Only read aloud by screen readers.",

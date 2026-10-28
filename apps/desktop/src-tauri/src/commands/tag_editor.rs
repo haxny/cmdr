@@ -26,7 +26,7 @@ use crate::tag_editor::last_apply::{LastTagApply, last_of};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
-    preview_names, tool as run_tool,
+    preview_names, set_view_scope, tool as run_tool,
 };
 use crate::tag_editor::sort::{TrackSort, sort_tracks};
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
@@ -158,6 +158,17 @@ pub async fn sort_tag_tracks(session_id: String, sort: TrackSort) -> Result<TagE
         result
     })
     .await
+}
+
+/// Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every
+/// track for `None`. Not an edit: nothing joins the undo history.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_tag_view_scope(
+    session_id: String,
+    paths: Option<Vec<String>>,
+) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || set_view_scope(&session_id, paths)).await
 }
 
 /// Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.

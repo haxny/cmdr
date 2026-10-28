@@ -15,8 +15,8 @@ use cmdr_tags::{
 
 use super::cover_choices::shared_cover;
 use super::session::{
-    NamePreviewRow, NameValue, TagEdit, TagEditorError, changes, close, edit, is_open, open, preview_names, tool,
-    unchanged_on_disk,
+    NamePreviewRow, NameValue, TagEdit, TagEditorError, changes, close, edit, is_open, open, preview_names,
+    set_view_scope, tool, unchanged_on_disk,
 };
 use super::view::{CoverSummary, ReadErrorCode, ReadOnlyReason, TagEditorView};
 use crate::multi_rename::session::{RowMove, close as close_rename, move_row, open as open_rename};
@@ -850,4 +850,49 @@ fn the_folder_tracks_share_is_the_deepest_one_they_have_in_common() {
         dir.join("Book").join("1")
     );
     assert_eq!(tracks_folder(dir, &names(&[])), dir);
+}
+
+#[test]
+fn a_view_scope_narrows_the_shared_rows_and_is_no_edit() {
+    let (dir, _listing, id) = album("tag-editor-view-scope");
+    open(&id, false).expect("opens");
+    let scope = vec![path_of(&dir, "a.mp3"), path_of(&dir, "b.mp3")];
+
+    let view = set_view_scope(&id, Some(scope)).expect("narrows");
+
+    assert_eq!(
+        shared(&view, TagField::Album),
+        &SharedValue::Same(vec!["Book".to_string()])
+    );
+    assert_eq!(view.scope_count, Some(2));
+    assert_eq!(view.tracks.len(), 3);
+    assert!(!view.can_undo_edit, "a scope is no edit");
+    // Every later view keeps the scope until it is widened again.
+    let edited = edit(&id, vec![set_title(&dir, "c.mp3", "New")]).expect("edits");
+    assert_eq!(edited.scope_count, Some(2));
+    let widened = set_view_scope(&id, None).expect("widens");
+    assert_eq!(widened.scope_count, None);
+    assert_eq!(shared(&widened, TagField::Album), &SharedValue::Multiple);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_scope_of_vanished_paths_falls_back_to_all() {
+    let (dir, _listing, id) = album("tag-editor-view-scope-gone");
+    open(&id, false).expect("opens");
+
+    let gone = set_view_scope(&id, Some(vec![path_of(&dir, "nope.mp3")])).expect("an unknown path is dropped");
+    assert_eq!(gone.scope_count, None);
+    assert_eq!(shared(&gone, TagField::Album), &SharedValue::Multiple);
+    let empty = set_view_scope(&id, Some(vec![])).expect("an empty scope is every track");
+    assert_eq!(empty.scope_count, None);
+    let kept = set_view_scope(&id, Some(vec![path_of(&dir, "c.mp3"), path_of(&dir, "nope.mp3")])).expect("narrows");
+    assert_eq!(kept.scope_count, Some(1));
+    assert_eq!(
+        shared(&kept, TagField::Album),
+        &SharedValue::Same(vec!["Other".to_string()])
+    );
+    close(&id);
+    close_rename(&id);
 }

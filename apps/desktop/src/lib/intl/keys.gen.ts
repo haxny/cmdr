@@ -3003,6 +3003,7 @@ export type MessageKey =
   | 'multiRename.tags.album.colValue'
   | 'multiRename.tags.album.editLabel'
   | 'multiRename.tags.album.label'
+  | 'multiRename.tags.album.scope'
   | 'multiRename.tags.choices.button'
   | 'multiRename.tags.choices.empty'
   | 'multiRename.tags.choices.item'

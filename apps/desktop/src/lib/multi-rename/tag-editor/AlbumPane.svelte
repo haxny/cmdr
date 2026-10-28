@@ -10,6 +10,7 @@
      */
     import type { Snippet } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import type { SharedRow, TagField } from '#lib/ipc/bindings.js'
     import { getRowHeight, getStripedRows } from '#lib/settings/reactive-settings.svelte.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
@@ -32,6 +33,8 @@
         editable: boolean
         /** How many files carry a Date the writer would refuse; the Date row is red while it is above 0. */
         badDates?: number
+        /** The tracks the rows sum up when the Tracks pane has a selection (`count` of `total`); `null` for all. */
+        scope?: { count: number; total: number } | null
         /** This pane has focus: its cursor shows as the active one (`.is-focused`). */
         focused: boolean
         cursor: number
@@ -46,12 +49,36 @@
         cover?: Snippet
     }
 
-    const { rows, editable, badDates = 0, focused, cursor, onCursorChange, onEdit, onClear, onSwitchPane, isEcho, cover }: Props =
-        $props()
+    const {
+        rows,
+        editable,
+        badDates = 0,
+        scope = null,
+        focused,
+        cursor,
+        onCursorChange,
+        onEdit,
+        onClear,
+        onSwitchPane,
+        isEcho,
+        cover,
+    }: Props = $props()
 
     /** Fixed name column, flexing value: the pane never scrolls sideways. */
     const GRID = 'calc(110px * var(--font-scale)) minmax(0, 1fr)'
     const DATE_HINT_ID = 'tag-album-date-hint'
+    const SCOPE_ID = 'tag-album-scope'
+
+    /** "5 of 42 tracks" while a selection narrows the rows; nothing while they cover every track. */
+    const scopeText = $derived(
+        scope === null
+            ? null
+            : tString('multiRename.tags.album.scope', {
+                  countText: formatInteger(scope.count),
+                  total: scope.total,
+                  totalText: formatInteger(scope.total),
+              }),
+    )
 
     const rowHeight = $derived(getRowHeight())
     const striped = $derived(getStripedRows())
@@ -194,7 +221,13 @@
         aria-hidden="true"
     >
         <span class="cut">{tString('multiRename.tags.album.colName')}</span>
-        <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
+        <span class="value-head">
+            <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
+            {#if scopeText !== null}
+                <!-- Read out as the list's description: the header itself is hidden from screen readers. -->
+                <span class="scope cut" id={SCOPE_ID}>{scopeText}</span>
+            {/if}
+        </span>
     </div>
     <!-- `data-cover-clip`: the cover section cuts its drop area to this scroller (`CoverPanel`). -->
     <div class="full-list" bind:this={scroller} use:useScrollBoxSize={{ onResize: measureScroller }} data-cover-clip>
@@ -204,6 +237,7 @@
             role="listbox"
             tabindex="0"
             aria-label={tString('multiRename.tags.album.label')}
+            aria-describedby={scopeText === null ? undefined : SCOPE_ID}
             aria-activedescendant={current ? `tag-album-row-${current.field}` : undefined}
             {onkeydown}
         >
@@ -301,6 +335,19 @@
         margin: 0;
         padding: var(--spacing-xxs) var(--spacing-md);
         font-size: var(--font-size-sm);
+    }
+
+    /* The Value header, and "5 of 42 tracks" at its right while a selection narrows the rows. */
+    .value-head {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--spacing-sm);
+        min-width: 0;
+    }
+
+    .scope {
+        flex-shrink: 0;
+        color: var(--color-text-primary);
     }
 
     .row-actions {

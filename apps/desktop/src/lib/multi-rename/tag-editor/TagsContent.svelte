@@ -27,6 +27,7 @@
     import { joinSentences } from '#lib/intl/sentence-join.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import AlbumPane from './AlbumPane.svelte'
+    import { followViewScope, scopedAlbumEdits } from './album-scope.svelte'
     import { fileNameOf, outcomeOf, refusalOf } from './apply-outcome'
     import { answerWriteAnyway } from './write-anyway'
     import { KIND_LABELS } from './write-kind'
@@ -70,6 +71,9 @@
     $effect(() => {
         selection.sync(allPaths)
     })
+
+    // The Album pane sums up the selected tracks (every track while none is).
+    followViewScope({ selected: () => selection.selected, setViewScope: (paths) => tags.setViewScope(paths) })
 
     // Selecting again answers the "no longer here" notice.
     $effect(() => {
@@ -218,16 +222,15 @@
     /** The paths of the tracks whose tags were read: an edit can name only these. */
     const readablePaths = (): Set<string> => readablePathsOf(tags.view)
 
+    /** An Album pane edit: on the selected tracks (the readable ones), or on every file when none is selected. */
+    async function editAlbum(edits: TagEdit[]): Promise<void> {
+        const readable = readablePaths()
+        await runScoped((scope) => tags.edit(scopedAlbumEdits(edits, scope, readable)))
+    }
+
     /** Sets `field` to `values` on the selected tracks (the readable ones), or on every file when none is selected. */
     async function setFieldScoped(field: TagField, values: string[]): Promise<void> {
-        const readable = readablePaths()
-        await runScoped((scope) =>
-            tags.edit(
-                scope === null
-                    ? [{ kind: 'setAll', field, values }]
-                    : scope.filter((path) => readable.has(path)).map((path) => ({ kind: 'setOne', path, field, values })),
-            ),
-        )
+        await editAlbum([{ kind: 'setAll', field, values }])
     }
 
     /** Empties `field` on the selected tracks (the readable ones), or on every file when none is selected. */
@@ -572,10 +575,11 @@
                     rows={view.shared}
                     editable={view.editable}
                     badDates={view.badDates}
+                    scope={view.scopeCount === null ? null : { count: view.scopeCount, total: view.tracks.length }}
                     focused={inPanes && panes.active === 'album'}
                     cursor={panes.albumCursor}
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
-                    onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+                    onEdit={(edits: TagEdit[]) => editAlbum(edits)}
                     onClear={(target) => void clearTarget(target)}
                     onSwitchPane={() => { panes.switchPane() }}
                     isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}

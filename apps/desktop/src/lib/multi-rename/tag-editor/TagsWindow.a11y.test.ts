@@ -74,6 +74,7 @@ describe('TagsWindow a11y', () => {
         badDates: 0,
         canUndoEdit: false,
         canRedoEdit: false,
+        scopeCount: null,
       },
     })
     await expectNoA11yViolations(await mountWindow())

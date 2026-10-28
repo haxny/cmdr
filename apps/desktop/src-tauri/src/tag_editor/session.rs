@@ -141,6 +141,9 @@ pub(super) struct TagSession {
     pub(super) ordered: bool, // A sort has run: a restart keeps the order, even one moved by hand.
     /// The pending edits' undo and redo steps.
     pub(super) history: EditHistory,
+    /// The tracks the Album pane's shared rows cover (the Tracks pane's selection); `None` for every track.
+    /// Not an edit: no history step.
+    pub(super) view_scope: Option<HashSet<PathBuf>>,
 }
 
 pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -308,7 +311,19 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         .iter()
         .filter_map(|path| session.by_path.get(path).map(|entry| (path.as_path(), entry)))
         .collect();
-    let mut view = build(layout.access, &tracks);
+    // A scope none of whose tracks is still listed (a reload dropped them) is every track.
+    let scoped: Option<Vec<(&Path, &Entry)>> = session
+        .view_scope
+        .as_ref()
+        .map(|scope| {
+            tracks
+                .iter()
+                .copied()
+                .filter(|(path, _)| scope.contains(*path))
+                .collect::<Vec<_>>()
+        })
+        .filter(|scoped| !scoped.is_empty());
+    let mut view = build(layout.access, &tracks, scoped.as_deref());
     for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
         row.file_name = file_name_of(&layout.dir, path);
     }
@@ -318,6 +333,25 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         can_redo_edit: session.history.can_redo(),
         ..view
     }
+}
+
+/// Narrows the Album pane's shared rows to the tracks at `paths` (as `TrackRow::path` gives them); `None`
+/// is every track. Paths the session doesn't have are dropped, and a scope left empty is every track. Not
+/// an edit: the history and the edits stay as they are.
+pub fn set_view_scope(session_id: &str, paths: Option<Vec<String>>) -> Result<TagEditorView, TagEditorError> {
+    with_session(session_id, |layout, session| {
+        let scope: Option<HashSet<PathBuf>> = paths
+            .map(|paths| {
+                paths
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .filter(|path| session.by_path.contains_key(path))
+                    .collect::<HashSet<_>>()
+            })
+            .filter(|scope| !scope.is_empty());
+        session.view_scope = scope;
+        Ok(view_of(layout, session))
+    })
 }
 
 /// Runs `f` on the open session, after dropping entries that left the layout.
