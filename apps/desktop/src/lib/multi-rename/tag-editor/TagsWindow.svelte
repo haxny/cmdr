@@ -6,7 +6,10 @@
      * (`closeSelfWindow`, ❌ never `getCurrentWindow().close()` from a key handler). The backend ends the session too
      * when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A and ⌘⇧A reach it from the native menu
      * (`onTagsSelectAll`, `onTagsDeselectAll`): ⌘A selects the text of the box being typed in, else every track;
-     * ⌘⇧A clears the track selection.
+     * ⌘⇧A clears the track selection. The rest of the `Tags window` keys (`tags-function-keys.ts`) go to the content's
+     * `runCommand`, except while a value is typed (only ⌘S, which the box has already committed, and the close keys get
+     * through; the value editor claims its own Esc), while a dialog is open (it owns its keys, Escape included), and
+     * Enter on a focused control (a button presses).
      */
     import { onMount } from 'svelte'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
@@ -17,6 +20,7 @@
     import TagsTab from './TagsTab.svelte'
     import { createDiscardGuard } from './discard-guard'
     import { createTagEditorState } from './tag-editor-state.svelte'
+    import { PANE_KEYS, TAGS_WINDOW_KEYS, textBoxOf, type TagsCommandId } from './tags-function-keys'
 
     interface Props {
         sessionId: string
@@ -31,13 +35,12 @@
     const tags = createTagEditorState(sessionId)
     const guard = createDiscardGuard(tags, () => void end())
     let ended = false
-    let content = $state<{ selectAllTracks: () => void; deselectAllTracks: () => void }>()
-
-    /** A box that holds text to select (a checkbox or a button doesn't; its `selectionStart` is `null`). */
-    function textBoxOf(el: Element | null): HTMLInputElement | HTMLTextAreaElement | null {
-        if (el instanceof HTMLTextAreaElement) return el
-        return el instanceof HTMLInputElement && el.selectionStart !== null ? el : null
-    }
+    let content = $state<{
+        selectAllTracks: () => void
+        deselectAllTracks: () => void
+        runCommand: (id: TagsCommandId) => boolean
+        hasDialog: () => boolean
+    }>()
 
     /** ⌘A: the text of the box being typed in, as in any text field, else every track, as in a file pane. */
     function selectAll(): void {
@@ -102,11 +105,26 @@
         }
     }
 
+    /** The command a key means here, or `null`: what the key is, then whether it may act where it was pressed. */
+    function commandOf(e: KeyboardEvent): TagsCommandId | 'tags.close' | null {
+        const id = eventMatchesCommand(e, 'tags.close') ? 'tags.close' : TAGS_WINDOW_KEYS.find((key) => eventMatchesCommand(e, key))
+        if (id === undefined) return null
+        const target = e.target instanceof Element ? e.target : null
+        // Typing a value: its own keys (⌘Z is its text undo); ⌘S gets here only once the box committed.
+        if (textBoxOf(target) !== null) return id === 'tags.write' || id === 'tags.close' ? id : null
+        // Enter belongs to the control that has focus (a button, a checkbox); a focused pane has already answered it.
+        if (PANE_KEYS.has(id as TagsCommandId) && e.key === 'Enter' && target !== null && target !== document.body) return null
+        return id
+    }
+
     function onKeydown(e: KeyboardEvent): void {
-        // A box undoing its typing or a dialog closing claims its Escape first.
-        if (e.defaultPrevented || e.isComposing || !eventMatchesCommand(e, 'tags.close')) return
+        // A box undoing its typing, a pane, or a dialog claims its keys first; a dialog owns them all.
+        if (e.defaultPrevented || e.isComposing || content?.hasDialog() === true) return
+        const id = commandOf(e)
+        if (id === null) return
         claimKey(e)
-        guard.close()
+        if (id === 'tags.close') guard.close()
+        else content?.runCommand(id)
     }
 </script>
 

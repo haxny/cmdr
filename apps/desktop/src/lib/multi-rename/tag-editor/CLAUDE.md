@@ -13,13 +13,16 @@ sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted;
   handler. The backend ends the session on the window's `Destroyed` too.
 - **Two panes like the file panes**, Album | Tracks (`AlbumPane`, `TracksPane`): the global `app-file-list.css` row
   classes, `getRowHeight()`, the list font; fixed columns with one flexing, so nothing scrolls sideways. Keys are
-  `Tags window` registry commands answered by the focused pane's listbox (Tab, F2/Enter, ⇧F2, ⌥Space), plus the file
+  `Tags window` registry commands answered by the focused pane's listbox (Tab, F2/Enter, ⇧F2, F3/⌥Space), plus the file
   panes' own selection commands (`classifySelectionKey`) and `list-cursor.ts`. ❌ Rows never take focus (no `tabindex`;
   mousedown keeps it on the list), or the keys die after a click. ⌘A / ⌘⇧A arrive from the native menu
   (`onTagsSelectAll` / `onTagsDeselectAll`), never as a keydown.
-- **⌥Space** is `multiRename.playTrack`: plays or stops the Tracks pane's cursor row; plain Space selects, as on files.
-  It claims the key (macOS types a non-breaking space for ⌥Space). Playback stops on unmount, on another play, on
-  `ended`, and when a write starts (`ApplyPanel`'s `onWriting`); each stop releases the URL.
+- **The function-key bar and the dialogs**: `TagsFunctionKeyBar` at the foot runs the tools (F4–F8, ⇧F3–⇧F8) and ⌘S
+  Write; each opens a `ModalDialog` beside the content (`TagToolDialogs`, `WriteDialog`). ❌ Nothing goes in the
+  window's flow above or below the panes but the one fixed status line: the panes never move. DETAILS § Layout and keys.
+- **F3 / ⌥Space** is `tags.play`: plays or stops the Tracks pane's cursor row; plain Space selects, as on files. ⌥Space
+  is claimed (macOS types a non-breaking space for it). Playback stops on unmount, on another play, on `ended`, and when
+  a write starts (`ApplyPanel`'s `onWriting`); each stop releases the URL.
 - **Scope**: the tag tools work on the Tracks pane's selection, ONE selection model (`track-selection.svelte.ts` over
   the file panes' `createSelectionState`; the ☐ column draws it): `all` / `some` / `gone` through `TagsTab`'s
   `runScoped`; a vanished selection never widens to every track. "Open in foobar2000" follows the same scope.

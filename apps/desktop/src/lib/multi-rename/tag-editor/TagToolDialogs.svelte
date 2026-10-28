@@ -1,0 +1,218 @@
+<script lang="ts">
+    /**
+     * The tag tools, each in a dialog over the Tags window's panes (never in the flow, so the panes never move). The
+     * function-key bar or the tool's key opens one at a time (`open`). The text tools (Find and replace, Format a
+     * field, Tags from file names) are their Plan 2b panels, which stay open to run again until closed; the
+     * numbering wizard is its own dialog. Case, Clean up, Remove extras and Clear run once and close. Every tool goes
+     * through the window's `runScoped`, so it works on the Tracks pane's selection (all when none is selected, nothing
+     * when the selected tracks are gone). Case and Clear start on the field the user was on when the tool opened
+     * (`field`), or with none the five name fields (Case) and Title (Clear). Remove extras starts with nothing ticked.
+     */
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatUnitList } from '#lib/intl/list-format.js'
+    import type { CaseTool, TagField, TagTool } from '#lib/ipc/bindings.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Select from '#lib/ui/Select.svelte'
+    import { FIELD_LABELS, TAG_FIELDS } from './field-labels'
+    import FormatPanel from './FormatPanel.svelte'
+    import NamePatternPanel from './NamePatternPanel.svelte'
+    import NumberingDialog from './NumberingDialog.svelte'
+    import ReplacePanel from './ReplacePanel.svelte'
+    import type { TagEditorState } from './tag-editor-state.svelte'
+    import {
+        DIACRITICS_FIELDS,
+        caseFields,
+        caseTool,
+        removeExtrasTool,
+        showsRenumber,
+        type RunScoped,
+        type TagToolId,
+    } from './tag-tools'
+
+    interface Props {
+        open: TagToolId
+        /** The field the user was on when the tool opened (the Album cursor row, or Title in Tracks); `null` for none. */
+        field: TagField | null
+        trackCount: number
+        /** How many tracks are selected (0: the tools work on all). */
+        selectedCount: number
+        /** The files' extra (unmanaged) tag keys. */
+        extras: string[]
+        state: TagEditorState
+        runScoped: RunScoped
+        scopeKey: string
+        /** Runs a one-press tool on the selection. */
+        onTool: (tool: TagTool) => void
+        /** Empties `field` on the selection. */
+        onClear: (field: TagField) => void
+        onClose: () => void
+    }
+
+    const { open, field, trackCount, selectedCount, extras, state: tags, runScoped, scopeKey, onTool, onClear, onClose }: Props =
+        $props()
+
+    const TITLES: Record<TagToolId, MessageKey> = {
+        number: 'multiRename.tags.numbering.title',
+        replace: 'multiRename.tags.tools.replace.button',
+        format: 'multiRename.tags.tools.format.button',
+        fromName: 'multiRename.tags.dialog.fromName',
+        case: 'multiRename.tags.dialog.case',
+        cleanUp: 'multiRename.tags.dialog.cleanUp',
+        extras: 'multiRename.tags.dialog.extras',
+        clearField: 'multiRename.tags.dialog.clearField',
+    }
+
+    const CASES: readonly { value: CaseTool; label: MessageKey }[] = [
+        { value: 'sentence', label: 'multiRename.tags.tools.caseSentence' },
+        { value: 'title', label: 'multiRename.tags.tools.caseTitle' },
+        { value: 'lower', label: 'multiRename.tags.tools.caseLower' },
+        { value: 'upper', label: 'multiRename.tags.tools.caseUpper' },
+    ]
+
+    /** Clean up's one-press tools. */
+    const PLAIN: readonly { label: MessageKey; tool: TagTool }[] = [
+        { label: 'multiRename.tags.tools.stripTrackPrefix', tool: { kind: 'stripTrackPrefix' } },
+        { label: 'multiRename.tags.tools.albumArtistFromArtist', tool: { kind: 'albumArtistFromArtist' } },
+        { label: 'multiRename.tags.tools.narratorFromText', tool: { kind: 'narratorFromText' } },
+        { label: 'multiRename.tags.tools.clearRedundantTitles', tool: { kind: 'clearRedundantTitles' } },
+    ]
+
+    /** The text tools keep their panel open to run again; the rest close once run. */
+    const STAYS_OPEN: ReadonlySet<TagToolId> = new Set(['replace', 'format', 'fromName'])
+
+    let checked = $state.raw<readonly string[]>([])
+    // Read once: the field is the one the tool opened on.
+    // svelte-ignore state_referenced_locally
+    let clearing = $state<TagField>(field ?? 'title')
+
+    const caseFieldNames = $derived(formatUnitList(caseFields(field).map((f) => tString(FIELD_LABELS[f]))))
+    const fieldItems = $derived(TAG_FIELDS.map((value) => ({ value, label: tString(FIELD_LABELS[value]) })))
+    const clearingName = $derived(tString(FIELD_LABELS[clearing]))
+
+    function setChecked(key: string, on: boolean): void {
+        checked = on ? [...checked, key] : checked.filter((k) => k !== key)
+    }
+
+    function run(tool: TagTool | null): void {
+        if (tool === null) return
+        onClose()
+        onTool(tool)
+    }
+
+    function clear(): void {
+        onClose()
+        onClear(clearing)
+    }
+</script>
+
+{#if open === 'number'}
+    <NumberingDialog {trackCount} state={tags} {runScoped} onClose={onClose} />
+{:else}
+    <ModalDialog titleId="tag-tool-title" containerStyle="width: 480px; max-width: 90vw" growDownward onclose={onClose}>
+        {#snippet title()}{tString(TITLES[open])}{/snippet}
+        <div class="tool">
+            {#if open === 'replace'}
+                <ReplacePanel disabled={false} state={tags} {runScoped} focusedField={field} />
+            {:else if open === 'format'}
+                <FormatPanel disabled={false} state={tags} {runScoped} />
+            {:else if open === 'fromName'}
+                <NamePatternPanel disabled={false} state={tags} {runScoped} {scopeKey} />
+            {:else if open === 'case'}
+                <p class="hint">{tString('multiRename.tags.tools.caseFields', { fields: caseFieldNames })}</p>
+                <div class="choices">
+                    {#each CASES as choice (choice.value)}
+                        <Button onclick={() => { run(caseTool(choice.value, field)) }}>{tString(choice.label)}</Button>
+                    {/each}
+                </div>
+            {:else if open === 'cleanUp'}
+                <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each button is a tool that runs and closes, a choice list like Case's, not the dialog's own actions (those are in the footer). -->
+                <div class="choices">
+                    <Button
+                        tooltipContent={{ text: tString('multiRename.tags.tools.removeDiacriticsTooltip') }}
+                        onclick={() => { run({ kind: 'stripDiacritics', fields: [...DIACRITICS_FIELDS] }) }}
+                    >
+                        {tString('multiRename.tags.tools.removeDiacritics')}
+                    </Button>
+                    {#if showsRenumber(trackCount)}
+                        <Button onclick={() => { run({ kind: 'renumber', start: 1 }) }}>{tString('multiRename.tags.tools.renumber')}</Button>
+                    {/if}
+                    {#each PLAIN as plain (plain.label)}
+                        <Button onclick={() => { run(plain.tool) }}>{tString(plain.label)}</Button>
+                    {/each}
+                </div>
+            {:else if open === 'extras'}
+                <ul aria-label={tString('multiRename.tags.tools.extrasLabel')}>
+                    {#each extras as key (key)}
+                        <li>
+                            <Checkbox checked={checked.includes(key)} onCheckedChange={(on: boolean) => { setChecked(key, on) }}>{key}</Checkbox>
+                        </li>
+                    {/each}
+                </ul>
+            {:else}
+                <div class="line">
+                    <Select
+                        items={fieldItems}
+                        value={clearing}
+                        ariaLabel={tString('multiRename.tags.clearField.field')}
+                        onChange={(value: string) => { clearing = value as TagField }}
+                    />
+                </div>
+                <p class="hint">
+                    {selectedCount === 0
+                        ? tString('multiRename.tags.clearField.all', { field: clearingName })
+                        : tString('multiRename.tags.clearField.some', {
+                              field: clearingName,
+                              count: selectedCount,
+                              countText: formatInteger(selectedCount),
+                          })}
+                </p>
+            {/if}
+        </div>
+        {#snippet footer()}
+            {#if STAYS_OPEN.has(open) || open === 'case' || open === 'cleanUp'}
+                <Button onclick={onClose}>{tString('multiRename.tags.dialog.close')}</Button>
+            {:else if open === 'extras'}
+                <Button onclick={onClose}>{tString('multiRename.tags.dialog.close')}</Button>
+                <Button variant="primary" disabled={checked.length === 0} onclick={() => { run(removeExtrasTool(checked)) }}>
+                    {tString('multiRename.tags.tools.removeChecked', { count: checked.length, countText: formatInteger(checked.length) })}
+                </Button>
+            {:else}
+                <Button onclick={onClose}>{tString('multiRename.tags.dialog.close')}</Button>
+                <Button variant="primary" onclick={clear}>{tString('multiRename.tags.clearField.run')}</Button>
+            {/if}
+        {/snippet}
+    </ModalDialog>
+{/if}
+
+<style>
+    .tool {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .choices,
+    .line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+
+    .hint {
+        margin: 0;
+        color: var(--color-text-secondary);
+    }
+
+    ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        max-height: 40vh;
+        overflow: auto;
+    }
+</style>

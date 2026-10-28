@@ -87,7 +87,6 @@ export const FIXED_KEY_COMMAND_IDS = [
   'multiRename.fieldHistory',
   'multiRename.moveRowUp',
   'multiRename.moveRowDown',
-  'multiRename.playTrack',
   'multiRename.rename',
   'network.selectHost',
   'share.back',
@@ -115,6 +114,18 @@ export const FIXED_KEY_COMMAND_IDS = [
   'tags.switchPane',
   'tags.edit',
   'tags.editNumber',
+  'tags.play',
+  'tags.openInPlayer',
+  'tags.replace',
+  'tags.case',
+  'tags.format',
+  'tags.cleanUp',
+  'tags.fromName',
+  'tags.number',
+  'tags.clearField',
+  'tags.removeExtras',
+  'tags.write',
+  'tags.undo',
   // Family 4 — deliberate override. ErrorPane claims ⌘D through a CAPTURE-phase
   // document listener that runs ahead of the dispatch spine, so it wins over
   // whatever the user bound ⌘D to. Fixed because releasing the key would falsify

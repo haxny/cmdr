@@ -29,9 +29,31 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   write's applies, which "Undo tag changes" reverses; lives as long as its window, not persisted); `discard-guard.ts`.
 - **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
   the cursor row's Values… and Clear under the list; `CoverPanel` as the last group), `TracksPane` (☐ ▶ # Title Length
-  File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays over a row), `TagToolsBar`
-  (clean-up tools over the whole session, Case on the active pane's field), `ApplyPanel` + `ApplyOutcome` (what will
-  change, the per-file result, Undo), `WouldDropDialog` (items a format would lose; Write anyway or Skip).
+  File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays over a row), `TagsFunctionKeyBar`
+  (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` + `ApplyOutcome`: what will change, the
+  per-file result, Undo; `WouldDropDialog`: items a format would lose, Write anyway or Skip).
+- **Layout and keys**: panes | a one-line status | the function-key bar, top to bottom; only the panes flex. The status
+  line is always there (empty or not) and its notices cut with a tooltip, so a notice never moves the panes; every tool
+  and the write open in a `ModalDialog` rendered beside the content, never in its flow. Decision/Why: the tools bar
+  above the panes and the Apply panel under them pushed the table around and hid the write's answer in a small box (the
+  user's report, 2026-10-27). The bar (`tags-function-keys.ts` holds its slots) mirrors the main window's
+  `FunctionKeyBar` look but not its code, which is wired to the file commands: F2 Edit, F3 Play, F4 Replace, F5 Format,
+  F6 From name, F7 Number, F8 Clear, then ⌘S Write; Shift shows ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up,
+  ⇧F8 Remove extras. Its chips are the commands' live bindings (`getFirstShortcutReactive`), its buttons never take
+  focus, and a disabled slot is a command that can't act (read-only leaves Play and Open in player). The window's
+  keydown (`TagsWindow`) answers the same `Tags window` commands through `TagsTab.runCommand`, skipping a key a box, a
+  pane or a dialog already claimed, every key while a dialog is open, every key but ⌘S while a value is typed (⌘Z stays
+  the box's text undo), and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key list: it
+  holds the one-press tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist = Artist,
+  Narrator from text, Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the selection
+  (`setOne` per readable selected track) or every file (`setAll`). Each tool takes the field the user was on when it
+  opened, since focus then moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove extras
+  and Clear close once run. ⌘S opens `WriteDialog` listing the changes (`ApplyPanel.start()`), ⌘⏎ or Write tags writes;
+  it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question (`ApplyPanel.undo()`; a
+  "no" closes it), and without one says so in the status line. ⌘W reaches the window as the native Close tab item, which
+  closes a focused child window through its close request, so it meets the same discard guard as Esc. ❗ On macOS the
+  main menu's File items hold F2–F8 as registered accelerators, greyed in this window; whether AppKit then hands the
+  F-keys to the page is not verified in a running app (Plan 2c Task 4b).
 - **Panes** (`tags-panes.svelte.ts`: the active pane, each pane's cursor, Tab's switch). Decision: the rows use the file
   panes' classes directly (`.full-list-container` › `.file-entry` with `.is-striped` / `.is-selected` /
   `.is-under-cursor`, `.is-focused` on the container) rather than `ColumnList`. Why: `ColumnList` draws its own cursor
@@ -44,12 +66,13 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   (`tags.edit`) and ⇧F2 (`tags.editNumber`) open `TagValueEditor` over the cell, placed from the cell's box in the
   scroller (`pane-cursor.ts`'s `editorBox`), re-placed when the scroller resizes, and scrolled into view on open so a
   multiline box at the pane's foot isn't cut off. Enter commits, Esc cancels (claimed, so it never closes the window), a
-  click away commits, ⌥Enter adds a line in Comment and Description. Enter on a text the row can't send
-  (`sharedEditBlock`: the «multiple values» marker or the «…and N more» tail still in it) keeps the box open with a hint
-  saying what to delete. Case takes the Album cursor row's field while that pane is active, Title while the Tracks pane
-  is, none once focus leaves both (the tools bar keeps the pane, though the pane stops drawing its cursor as focused).
-  ⌘A / ⌘⇧A: Select all and Deselect all are registered accelerators that fire before the page sees the key, so
-  `menu_handlers.rs` sends `tags-select-all` / `tags-deselect-all` to the focused `tags-*` window
+  click away commits, ⌥Enter adds a line in Comment and Description. A text the row can't send (`sharedEditBlock`: the
+  «multiple values» marker or the «…and N more» tail still in it) keeps the box open with a hint saying what to delete,
+  on Enter, ⌘S and a click away alike (the box takes focus back, so the typing is never dropped without a word; Esc
+  gives it up). The hint follows the typing, goes once the text can be sent, and is scrolled into view when it appears.
+  Case, Replace and Clear take the Album cursor row's field while that pane is active, Title while the Tracks pane is,
+  none once focus leaves both. ⌘A / ⌘⇧A: Select all and Deselect all are registered accelerators that fire before the
+  page sees the key, so `menu_handlers.rs` sends `tags-select-all` / `tags-deselect-all` to the focused `tags-*` window
   (`focused_tags_window`); `TagsWindow` selects the text of a text box with focus (never a checkbox), else every track,
   and clears the track selection.
 - **Why edits are keyed by path**: the session's order can change under the view; every edit stays with its file.
@@ -59,13 +82,13 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
 - **`settled()` is bounded** (`SETTLE_LIMIT_MS`, 5 s): a call that never answers (a stalled network mount) can't hold
   the window. It answers `false` then, and the discard guard asks "Discard tag changes?" anyway, so Cancel and Esc
   always end in a question or a close.
-- **A write press always answers** (`ApplyPanel`): it waits up to `WRITE_WAIT_LIMIT_MS` (30 s, `write-wait.ts`) for the
-  calls out, showing "Finishing the last change…" after `WAITING_SHOWN_AFTER_MS`; a wait that gives up, a list that
-  can't be made, and a refused write are worded next to the buttons (`notice`, the `refused` step), once: `changes` and
-  `apply` leave the state's shared `error` (the tab's top line, for edits) alone. A press runs once (`oncePressed`), so
-  a double click or ⌘⏎ before a step shows starts no second write. A write where no file was written says "No file was
-  written." first, each file with why. Regression anchor (2026-10-27): on a real 22-file audiobook every file was
-  refused for a bad date and the write looked like nothing happened.
+- **A write press always answers** (`ApplyPanel`, in `WriteDialog`): it waits up to `WRITE_WAIT_LIMIT_MS` (30 s,
+  `write-wait.ts`) for the calls out, showing "Finishing the last change…" after `WAITING_SHOWN_AFTER_MS`; a wait that
+  gives up, a list that can't be made, and a refused write are worded next to the buttons (`notice`, the `refused`
+  step), once: `changes` and `apply` leave the state's shared `error` (the tab's top line, for edits) alone. A press
+  runs once (`oncePressed`), so a double click or ⌘⏎ before a step shows starts no second write. A write where no file
+  was written says "No file was written." first, each file with why. Regression anchor (2026-10-27): on a real 22-file
+  audiobook every file was refused for a bad date and the write looked like nothing happened.
 - **Apply / undo**: the old tags are recorded before any write; failures are per file and the rest are written; Undo
   restores exactly the written files after asking, and leaves one that changed since (its fingerprint moved) alone.
   Other open sessions keep their unwritten edits, rebased per field.
@@ -74,14 +97,15 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   folder); `getTagChanges` takes the kind and lists what it removes beyond the fields (`removes`, an MP3's `TPE3` under
   Audiobook), so the list matches the write; M4A genre is written only as freeform GENRE (the engine does it); a
   single-file book has no track number.
-- **Player** (`track-player.svelte.ts`, `TracksPane`'s ▶ column and ⌥Space, `TagsTab`): one `HTMLAudioElement` and one
-  `cmdr-media://` URL at a time. `toggle(path)` mints a URL (`tagTrackAudioUrl(sessionId, path)`), plays it, and
-  releases it when playback ends: another track, the same track again, `stop()`, `ended`, a decode error, or a URL that
-  arrives after a stop (released unused). `TagsTab` stops it on destroy, which covers the window closing. A failure
-  (`failed`) shows `multiRename.tags.play.failed`. The audio tokens are per tag session on the Rust side
-  (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's `media-src 'self' cmdr-media:` lets `<audio>` load
-  them. "Open in foobar2000" calls `openTagsInPlayer` with the selected tracks (or every track), through `runScoped`;
-  `playerUnavailable` and other failures are worded.
+- **Player** (`track-player.svelte.ts`, `TracksPane`'s ▶ column, F3 and ⌥Space (`tags.play`), `TagsTab`): one
+  `HTMLAudioElement` and one `cmdr-media://` URL at a time. `toggle(path)` mints a URL
+  (`tagTrackAudioUrl(sessionId, path)`), plays it, and releases it when playback ends: another track, the same track
+  again, `stop()`, `ended`, a decode error, or a URL that arrives after a stop (released unused). `TagsTab` stops it on
+  destroy, which covers the window closing. A failure (`failed`) shows `multiRename.tags.play.failed`. The audio tokens
+  are per tag session on the Rust side (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's
+  `media-src 'self' cmdr-media:` lets `<audio>` load them. "Open in foobar2000" (⇧F3) calls `openTagsInPlayer` with the
+  selected tracks (or every track), through `runScoped`; `playerUnavailable` and other failures are worded in the status
+  line.
 - **Scope**: `track-selection.svelte.ts` holds the Tracks pane's selection as the file panes do (`createSelectionState`,
   indices over the view's order; `sync` carries it across a reload by path) and answers `all` (nothing selected), `some`
   (the selected paths, in session order) or `gone` (everything selected vanished in a reload: the run is refused with a

@@ -4,8 +4,8 @@
      * file panes' row classes, row height and font. Selection works as it does on files (`classifySelectionKey` over
      * `track-selection.svelte.ts`, which is `createSelectionState`): Space toggles, Insert toggles and moves down,
      * ⇧ + a cursor key extends, ⌘A selects all; the ☐ column shows it, and the tag tools work on it. F2
-     * (`tags.edit`) edits the cursor row's Title in place, ⇧F2 (`tags.editNumber`) its #, ⌥Space
-     * (`multiRename.playTrack`) plays it, and Tab (`tags.switchPane`) goes to the Album pane. A single-file book has
+     * (`tags.edit`) edits the cursor row's Title in place, ⇧F2 (`tags.editNumber`) its #, F3 or ⌥Space
+     * (`tags.play`) plays it, and Tab (`tags.switchPane`) goes to the Album pane. A single-file book has
      * no # column: it has no track number.
      */
     import type { Snippet } from 'svelte'
@@ -75,6 +75,17 @@
         list?.focus()
     }
 
+    /** F2 / ⇧F2 from the window's bar or with focus outside the pane: the cursor row's Title or #. */
+    export function editAtCursor(field: EditedField): void {
+        if (field === 'track' && !showNumber) return
+        openEditor(at, field)
+    }
+
+    /** F3 from the window's bar or with focus outside the pane: plays or stops the cursor row. */
+    export function playAtCursor(): void {
+        play(at)
+    }
+
     function canEdit(track: TrackRow | undefined): track is TrackRow {
         return editable && track !== undefined && track.readError === null
     }
@@ -139,12 +150,12 @@
         return true
     }
 
-    /** The pane's own commands: Tab, ⌥Space, F2, ⇧F2. Returns whether the key was one of them. */
+    /** The pane's own commands: Tab, F3 / ⌥Space, F2, ⇧F2. Returns whether the key was one of them. */
     function answerPaneKey(e: KeyboardEvent): boolean {
         if (eventMatchesCommand(e, 'tags.switchPane')) {
             claimKey(e)
             onSwitchPane()
-        } else if (eventMatchesCommand(e, 'multiRename.playTrack')) {
+        } else if (eventMatchesCommand(e, 'tags.play')) {
             // Claimed even on an unreadable row: macOS would type a non-breaking space.
             claimKey(e)
             play(at)

@@ -6,12 +6,14 @@
      * never writes. Multiline for Comment and Description: ⌥Enter adds a line. Every key it acts on is claimed, so
      * Esc never reaches the window's `tags.close`.
      *
-     * Enter on a text the row can't send (`blockedHint` answers why, e.g. the «multiple values» marker is still in it)
-     * keeps the box open with that hint, so the typing isn't lost without a word. The pane places the box (`place`)
-     * and moves it when the pane resizes; on open it scrolls itself into view, so a tall multiline box near the
-     * pane's foot is never cut off.
+     * A text the row can't send (`blockedHint` answers why, e.g. the «multiple values» marker is still in it) keeps
+     * the box open with that hint, on Enter and on a click away alike (the box takes focus back), so the typing is
+     * never dropped without a word; Esc is the way to give it up. The hint follows the typing and goes once the text
+     * can be sent. ⌘S (`tags.write`) commits like Enter and then reaches the window, which lists the changes. The pane
+     * places the box (`place`) and moves it when the pane resizes; it scrolls itself into view on open and whenever
+     * the hint appears, so neither a tall multiline box nor its hint near the pane's foot is cut off.
      */
-    import { onMount, untrack } from 'svelte'
+    import { onMount, tick, untrack } from 'svelte'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
@@ -63,12 +65,27 @@
 
     const describedByAll = $derived([describedBy, hint === null ? undefined : hintId].filter(Boolean).join(' ') || undefined)
 
+    /** Brings the whole frame (box and hint) into the scroller's view. jsdom has no `scrollIntoView`. */
+    function reveal(): void {
+        if (frame && typeof frame.scrollIntoView === 'function') frame.scrollIntoView({ block: 'nearest' })
+    }
+
     onMount(() => {
         box?.focus()
         box?.select()
-        // jsdom has no `scrollIntoView`; the tests run there.
-        if (frame && typeof frame.scrollIntoView === 'function') frame.scrollIntoView({ block: 'nearest' })
+        reveal()
     })
+
+    // The hint grows the frame: show it, not only the box.
+    $effect(() => {
+        if (hint === null) return
+        void tick().then(reveal)
+    })
+
+    /** Why the text typed so far can't be sent, or `null`; an untouched value is never refused (it sends nothing). */
+    function refusal(text: string): string | null {
+        return text === value ? null : (blockedHint?.(text) ?? null)
+    }
 
     function finish(commit: boolean, refocus = true): void {
         if (done) return
@@ -85,10 +102,11 @@
     }
 
     /** Enter: commits, unless the text can't be sent as it is; then the box stays and says why. */
-    function tryCommit(): void {
-        const why = draft === value ? null : (blockedHint?.(draft) ?? null)
+    function tryCommit(): boolean {
+        const why = refusal(draft)
         if (why === null) finish(true)
         else hint = why
+        return why === null
     }
 
     /** ⌥Enter in a multiline box: a new line at the caret, replacing any selected text. */
@@ -117,11 +135,31 @@
         } else if (e.key === 'Escape') {
             claimKey(e)
             finish(false)
+        } else if (eventMatchesCommand(e, 'tags.write')) {
+            // Committed, the key goes on to the window, which lists the changes; refused, it stops here with the hint.
+            if (!tryCommit()) claimKey(e)
         }
     }
 
+    /** Typing: a shown hint follows the text, and goes once the text can be sent. */
+    function oninput(e: Event): void {
+        if (hint === null) return
+        const target = e.currentTarget
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) hint = refusal(target.value)
+    }
+
+    /** A click away commits; a text that can't be sent keeps the box (focus comes back to it) with the hint. */
     function onblur(e: FocusEvent): void {
-        finish(true, e.relatedTarget === null)
+        if (done) return
+        const why = refusal(draft)
+        if (why === null) {
+            finish(true, e.relatedTarget === null)
+            return
+        }
+        hint = why
+        setTimeout(() => {
+            if (!done && box?.isConnected === true) box.focus()
+        }, 0)
     }
 </script>
 
@@ -144,6 +182,7 @@
             aria-describedby={describedByAll}
             rows={4}
             {onkeydown}
+            {oninput}
             {onblur}
         ></textarea>
     {:else}
@@ -159,6 +198,7 @@
             aria-invalid={invalid ? 'true' : undefined}
             aria-describedby={describedByAll}
             {onkeydown}
+            {oninput}
             {onblur}
         />
     {/if}

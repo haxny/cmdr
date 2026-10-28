@@ -6,8 +6,8 @@
      * (`ApplyOutcome.svelte`). Every press answers here, next to the buttons: it acts, shows that it's waiting for the
      * last change ("Finishing the last change…"), or says why it can't (`notice`), never ends without a word.
      * "Undo tag changes" reverses the last write until the next one; a file changed since that
-     * write (written again, or another file renamed onto its name) is left alone and counted apart. The sheet's Start
-     * (⌘⏎) comes here while the Tags tab shows: `start()`.
+     * write (written again, or another file renamed onto its name) is left alone and counted apart. It is the body
+     * of the Tags window's Write dialog (`WriteDialog`): ⌘S runs `start()`, ⌘Z runs `undo()`.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -33,9 +33,11 @@
         tags: TagEditorState
         /** Called just before a write starts (the Tags tab stops a playing track: lofty rewrites the file it streams). */
         onWriting?: () => void
+        /** Whether a write is on its way (the dialog can't be closed under it). */
+        onBusy?: (busy: boolean) => void
     }
 
-    const { tags, onWriting }: Props = $props()
+    const { tags, onWriting, onBusy }: Props = $props()
 
     type Step =
         | { step: 'idle' }
@@ -260,17 +262,19 @@
             : message
     }
 
-    async function undo(): Promise<void> {
+    /** Undo tag changes (and ⌘Z): asks first. Resolves whether it undid anything (`false`: nothing to undo, or no). */
+    export async function undo(): Promise<boolean> {
         await tags.settled()
         const last = tags.undoable
-        if (last === null) return
+        if (last === null) return false
         const sure = await confirmDialog(
             undoQuestion(undoableCount(last)),
             tString('multiRename.tags.undo.title'),
             tString('multiRename.tags.undo.confirm'),
         )
-        if (!sure) return
+        if (!sure) return false
         current = undoneStep(await tags.undo())
+        return true
     }
 
     /** What an undo did: the files back as they were, and those still left (a failure leaves them undoable). */
@@ -310,6 +314,10 @@
             else if (['idle', 'done', 'refused', 'undone'].includes(current.step)) await review()
         })
     }
+
+    $effect(() => {
+        onBusy?.(current.step === 'writing' || (current.step === 'wouldDrop' && current.answering))
+    })
 
     const undoable = $derived(tags.undoable !== null && current.step !== 'writing' && current.step !== 'wouldDrop')
 </script>
@@ -430,11 +438,6 @@
         display: flex;
         flex-direction: column;
         gap: var(--spacing-xs);
-        flex-shrink: 0;
-        max-height: 40%;
-        overflow: auto;
-        padding-top: var(--spacing-sm);
-        border-top: 1px solid var(--color-border);
     }
 
     p {
@@ -458,10 +461,13 @@
         color: var(--color-warning-text);
     }
 
+    /* A long book's list scrolls inside the dialog; the buttons under it stay in view. */
     .changes {
         margin: 0;
         padding-left: var(--spacing-lg);
         overflow-wrap: anywhere;
+        max-height: 40vh;
+        overflow: auto;
     }
 
     .actions {

@@ -224,7 +224,6 @@ export const COMMAND_IDS = [
   'multiRename.fieldHistory',
   'multiRename.moveRowUp',
   'multiRename.moveRowDown',
-  'multiRename.playTrack',
   'multiRename.rename',
   'file.view',
   'file.edit',
@@ -336,6 +335,18 @@ export const COMMAND_IDS = [
   'tags.switchPane',
   'tags.edit',
   'tags.editNumber',
+  'tags.play',
+  'tags.openInPlayer',
+  'tags.replace',
+  'tags.case',
+  'tags.format',
+  'tags.cleanUp',
+  'tags.fromName',
+  'tags.number',
+  'tags.clearField',
+  'tags.removeExtras',
+  'tags.write',
+  'tags.undo',
 ] as const
 
 /** Closed union of every command id (invariant A3). */

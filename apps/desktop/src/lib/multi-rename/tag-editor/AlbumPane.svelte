@@ -76,6 +76,11 @@
         list?.focus()
     }
 
+    /** F2 from the window's bar or with focus outside the pane: edits the cursor row's value. */
+    export function editAtCursor(): void {
+        openEditor(at)
+    }
+
     /** Where the editor goes over row `index`'s value, or `null` when the row isn't drawn. */
     function placeAt(index: number): EditorPlace | null {
         const row = shown.at(index)

@@ -1167,14 +1167,6 @@
   "@multiRename.tags.clearRowLabel": {
     "sourceHash": "ac716fc"
   },
-  "multiRename.tags.tools.label": "Clean-up tools",
-  "@multiRename.tags.tools.label": {
-    "sourceHash": "2e5d3d6"
-  },
-  "multiRename.tags.tools.caseButton": "Case",
-  "@multiRename.tags.tools.caseButton": {
-    "sourceHash": "15f86e2"
-  },
   "multiRename.tags.tools.caseFields": "Changes: {fields}",
   "@multiRename.tags.tools.caseFields": {
     "sourceHash": "008465f"
@@ -1222,10 +1214,6 @@
   "multiRename.tags.tools.clearRedundantTitles": "Clear title = album",
   "@multiRename.tags.tools.clearRedundantTitles": {
     "sourceHash": "135f3e7"
-  },
-  "multiRename.tags.tools.removeExtras": "Remove extras…",
-  "@multiRename.tags.tools.removeExtras": {
-    "sourceHash": "e56d9d0"
   },
   "multiRename.tags.tools.extrasLabel": "Extra tags to remove",
   "@multiRename.tags.tools.extrasLabel": {
@@ -1487,10 +1475,6 @@
   "@multiRename.tags.selectionGone": {
     "sourceHash": "17373af"
   },
-  "multiRename.tags.tools.moreLabel": "More tag tools",
-  "@multiRename.tags.tools.moreLabel": {
-    "sourceHash": "2b47838"
-  },
   "multiRename.tags.tools.replace.button": "Find and replace",
   "@multiRename.tags.tools.replace.button": {
     "sourceHash": "9898ad0"
@@ -1498,10 +1482,6 @@
   "multiRename.tags.tools.format.button": "Format a field",
   "@multiRename.tags.tools.format.button": {
     "sourceHash": "ece9485"
-  },
-  "multiRename.tags.tools.name.button": "From file name",
-  "@multiRename.tags.tools.name.button": {
-    "sourceHash": "79a196a"
   },
   "multiRename.tags.tools.replace.fieldsLabel": "Fields to search",
   "@multiRename.tags.tools.replace.fieldsLabel": {
@@ -1602,10 +1582,6 @@
   "multiRename.tags.tools.name.noFields": "The pattern reads no tag field. Use a field like %title% or a named group like {example}.",
   "@multiRename.tags.tools.name.noFields": {
     "sourceHash": "4be905c"
-  },
-  "multiRename.tags.numbering.button": "Auto-number…",
-  "@multiRename.tags.numbering.button": {
-    "sourceHash": "0981989"
   },
   "multiRename.tags.numbering.title": "Auto-numbering wizard",
   "@multiRename.tags.numbering.title": {
@@ -1710,5 +1686,109 @@
   "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
   "@multiRename.tags.window.noTracks": {
     "sourceHash": "5765e14"
+  },
+  "multiRename.tags.keys.label": "Tag tools",
+  "@multiRename.tags.keys.label": {
+    "sourceHash": "75ff93d"
+  },
+  "multiRename.tags.keys.edit": "Edit",
+  "@multiRename.tags.keys.edit": {
+    "sourceHash": "464c4ff"
+  },
+  "multiRename.tags.keys.play": "Play",
+  "@multiRename.tags.keys.play": {
+    "sourceHash": "436e610"
+  },
+  "multiRename.tags.keys.replace": "Replace",
+  "@multiRename.tags.keys.replace": {
+    "sourceHash": "95e1543"
+  },
+  "multiRename.tags.keys.format": "Format",
+  "@multiRename.tags.keys.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.tags.keys.fromName": "From name",
+  "@multiRename.tags.keys.fromName": {
+    "sourceHash": "b28f93e"
+  },
+  "multiRename.tags.keys.number": "Number",
+  "@multiRename.tags.keys.number": {
+    "sourceHash": "bd82cf1"
+  },
+  "multiRename.tags.keys.clearField": "Clear",
+  "@multiRename.tags.keys.clearField": {
+    "sourceHash": "83b12c2"
+  },
+  "multiRename.tags.keys.editNumber": "Edit #",
+  "@multiRename.tags.keys.editNumber": {
+    "sourceHash": "3e37820"
+  },
+  "multiRename.tags.keys.openInPlayer": "Open in player",
+  "@multiRename.tags.keys.openInPlayer": {
+    "sourceHash": "bbd20b9"
+  },
+  "multiRename.tags.keys.case": "Case",
+  "@multiRename.tags.keys.case": {
+    "sourceHash": "15f86e2"
+  },
+  "multiRename.tags.keys.cleanUp": "Clean up",
+  "@multiRename.tags.keys.cleanUp": {
+    "sourceHash": "f938c32"
+  },
+  "multiRename.tags.keys.removeExtras": "Remove extras",
+  "@multiRename.tags.keys.removeExtras": {
+    "sourceHash": "b737aae"
+  },
+  "multiRename.tags.keys.write": "Write",
+  "@multiRename.tags.keys.write": {
+    "sourceHash": "3f00927"
+  },
+  "multiRename.tags.dialog.fromName": "Tags from file names",
+  "@multiRename.tags.dialog.fromName": {
+    "sourceHash": "bb61563"
+  },
+  "multiRename.tags.dialog.case": "Change case",
+  "@multiRename.tags.dialog.case": {
+    "sourceHash": "f97fe58"
+  },
+  "multiRename.tags.dialog.cleanUp": "Clean up",
+  "@multiRename.tags.dialog.cleanUp": {
+    "sourceHash": "f938c32"
+  },
+  "multiRename.tags.dialog.extras": "Remove extra tags",
+  "@multiRename.tags.dialog.extras": {
+    "sourceHash": "122f0a2"
+  },
+  "multiRename.tags.dialog.clearField": "Clear a field",
+  "@multiRename.tags.dialog.clearField": {
+    "sourceHash": "5b0b05c"
+  },
+  "multiRename.tags.dialog.write": "Write tags",
+  "@multiRename.tags.dialog.write": {
+    "sourceHash": "975c614"
+  },
+  "multiRename.tags.dialog.close": "Close",
+  "@multiRename.tags.dialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "multiRename.tags.clearField.field": "Field",
+  "@multiRename.tags.clearField.field": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.tags.clearField.all": "Empties {field} on every file.",
+  "@multiRename.tags.clearField.all": {
+    "sourceHash": "4b4481f"
+  },
+  "multiRename.tags.clearField.some": "{count, plural, one {Empties {field} on the selected track.} other {Empties {field} on the {countText} selected tracks.}}",
+  "@multiRename.tags.clearField.some": {
+    "sourceHash": "f33d90f"
+  },
+  "multiRename.tags.clearField.run": "Clear",
+  "@multiRename.tags.clearField.run": {
+    "sourceHash": "83b12c2"
+  },
+  "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
+  "@multiRename.tags.undo.nothing": {
+    "sourceHash": "6324c69"
   }
 }

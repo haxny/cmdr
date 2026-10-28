@@ -3,7 +3,10 @@
 
 use super::session::{is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
-use super::window::{TagsSessionInfo, end, focused_tags_window, hold, session_of_label};
+use super::window::{
+    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, menu_selection_of, session_of_label,
+};
+use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, SELECT_ALL_ID};
 use crate::multi_rename::session::{close as close_rename, is_held};
 
 #[test]
@@ -27,6 +30,30 @@ fn select_all_goes_to_the_focused_tags_window_only() {
         None
     );
     assert_eq!(focused_tags_window([("settings", true)]), None);
+}
+
+/// The menu branch (`menu_handlers.rs`) sends a Tags window exactly what was picked: Select all
+/// selects, Deselect all clears, and no other Edit item is taken from the native text lane.
+#[test]
+fn select_all_and_deselect_all_each_reach_a_tags_window_as_themselves() {
+    assert_eq!(menu_selection_of(SELECT_ALL_ID), Some(TagsMenuSelection::SelectAll));
+    assert_eq!(menu_selection_of(DESELECT_ALL_ID), Some(TagsMenuSelection::DeselectAll));
+    assert_eq!(menu_selection_of(EDIT_COPY_ID), None);
+    assert_eq!(menu_selection_of("close_tab"), None);
+}
+
+#[test]
+fn deselect_all_goes_to_the_focused_tags_window_only() {
+    let focused = focused_tags_window([("main", false), ("tags-multi-rename-3", true)]);
+    assert_eq!(
+        (menu_selection_of(DESELECT_ALL_ID), focused),
+        (Some(TagsMenuSelection::DeselectAll), Some("tags-multi-rename-3"))
+    );
+    // Main in front: the branch takes nothing, so main's own Deselect all runs.
+    assert_eq!(
+        focused_tags_window([("main", true), ("tags-multi-rename-3", false)]),
+        None
+    );
 }
 
 #[test]

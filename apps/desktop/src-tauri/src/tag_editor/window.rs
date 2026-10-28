@@ -35,6 +35,25 @@ pub(crate) fn focused_tags_window<'a>(windows: impl IntoIterator<Item = (&'a str
         .map(|(label, _)| label)
 }
 
+/// What a native Select-menu item asks of a focused Tags window (`menu_handlers.rs`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TagsMenuSelection {
+    /// Edit > Select all (⌘A): every track, or the text of the box being typed in.
+    SelectAll,
+    /// Select > Deselect all (⌘⇧A): no track selected.
+    DeselectAll,
+}
+
+/// The Tags window's answer to menu item `id`, or `None` for an item it doesn't take. Both
+/// accelerators fire before the page sees the key, so this is the keys' only road there.
+pub(crate) fn menu_selection_of(id: &str) -> Option<TagsMenuSelection> {
+    match id {
+        crate::menu::SELECT_ALL_ID => Some(TagsMenuSelection::SelectAll),
+        crate::menu::DESELECT_ALL_ID => Some(TagsMenuSelection::DeselectAll),
+        _ => None,
+    }
+}
+
 /// Holds `session_id` for its window and says what it holds.
 pub(crate) fn hold(session_id: &str) -> Result<TagsSessionInfo, MultiRenameError> {
     rename_session::hold(session_id)?;

@@ -34,6 +34,9 @@ export function removeExtrasTool(checked: readonly string[]): TagTool | null {
   return { kind: 'removeExtras', keys: [...new Set(checked)].sort() }
 }
 
+/** The tools that open a dialog over the Tags window's panes (`TagToolDialogs`). */
+export type TagToolId = 'replace' | 'format' | 'fromName' | 'number' | 'case' | 'cleanUp' | 'extras' | 'clearField'
+
 /**
  * Runs a backend call over the tracks the Tags tab's tools work on: waits for pending edits, then hands the call the
  * checked tracks' paths (`null` for every track). Resolves `undefined` without calling when the checked tracks are

@@ -24,7 +24,8 @@ import { getPaletteCommands } from '#lib/commands/index.js'
 describe('the tag editor’s commands in Settings › Keyboard shortcuts', () => {
   it('add no conflict: the count stays at upstream’s zero', () => {
     expect(getConflictCount()).toBe(0)
-    for (const id of ['file.editTags', 'tags.close'] as const) expect(getConflictingCommandIds().has(id)).toBe(false)
+    for (const id of ['file.editTags', 'tags.close', 'tags.write', 'tags.play'] as const)
+      expect(getConflictingCommandIds().has(id)).toBe(false)
   })
 
   it('file.editTags is ⌘⇧E, and no other command in reach of the file list takes it', () => {
@@ -39,15 +40,29 @@ describe('the tag editor’s commands in Settings › Keyboard shortcuts', () =>
     expect(listed(true)).toBe(true)
   })
 
-  it('tags.close is Escape, alone in the Tags window', () => {
-    expect(getDefaultShortcuts('tags.close')).toEqual(['Escape'])
-    expect(findConflictsForShortcut('Escape', 'Tags window').map((c) => c.id)).toEqual(['tags.close'])
+  it('tags.close is Escape and ⌘W, alone in the Tags window', () => {
+    expect(getDefaultShortcuts('tags.close')).toEqual(['Escape', '⌘W'])
+    for (const key of ['Escape', '⌘W']) {
+      expect(findConflictsForShortcut(key, 'Tags window').map((c) => c.id)).toEqual(['tags.close'])
+    }
   })
 
   it.each([
     ['tags.switchPane', ['Tab']],
     ['tags.edit', ['F2', 'Enter']],
     ['tags.editNumber', ['⇧F2']],
+    ['tags.play', ['F3', '⌥Space']],
+    ['tags.openInPlayer', ['⇧F3']],
+    ['tags.replace', ['F4']],
+    ['tags.case', ['⇧F4']],
+    ['tags.format', ['F5']],
+    ['tags.cleanUp', ['⇧F5']],
+    ['tags.fromName', ['F6']],
+    ['tags.number', ['F7']],
+    ['tags.clearField', ['F8']],
+    ['tags.removeExtras', ['⇧F8']],
+    ['tags.write', ['⌘S']],
+    ['tags.undo', ['⌘Z']],
   ] as const)('%s is %j, and no other command in the Tags window or App takes those keys', (id, keys) => {
     expect(getDefaultShortcuts(id)).toEqual(keys)
     for (const key of keys) expect(findConflictsForShortcut(key, 'Tags window').map((c) => c.id)).toEqual([id])
@@ -55,18 +70,12 @@ describe('the tag editor’s commands in Settings › Keyboard shortcuts', () =>
   })
 })
 
-describe('the Tags tab’s play command', () => {
-  it('is ⌥Space, fixed, and no other command or menu item takes the combo', () => {
-    expect(getDefaultShortcuts('multiRename.playTrack')).toEqual(['⌥Space'])
-    expect(findConflictsForShortcut('⌥Space', 'Tags window').map((c) => c.id)).toEqual(['multiRename.playTrack'])
-    expect(getConflictingCommandIds().has('multiRename.playTrack')).toBe(false)
-  })
-
+describe('the Tags window’s play command', () => {
   it('matches the key macOS sends for ⌥Space (a non-breaking space) and no plain Space', () => {
     const alt = new KeyboardEvent('keydown', { key: '\u00a0', code: 'Space', altKey: true })
     const plain = new KeyboardEvent('keydown', { key: ' ', code: 'Space' })
-    expect(eventMatchesCommand(alt, 'multiRename.playTrack')).toBe(true)
-    expect(eventMatchesCommand(plain, 'multiRename.playTrack')).toBe(false)
+    expect(eventMatchesCommand(alt, 'tags.play')).toBe(true)
+    expect(eventMatchesCommand(plain, 'tags.play')).toBe(false)
     // The bare-Space commands (file list, queue) never see ⌥Space.
     expect(resolveKeyCombo(alt)).toBe('⌥Space')
   })

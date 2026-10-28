@@ -9,10 +9,14 @@ afterEach(() => {
   cleanup = undefined
 })
 
-async function mountEditor() {
+/** A row that refuses any text still holding `BLOCK` (as «multiple values» refuses its marker). */
+const blockedHint = (text: string): string | null =>
+  text.includes('BLOCK') ? `Delete BLOCK (${String(text.length)})` : null
+
+async function mountEditor(value = 'Old') {
   const onCommit = vi.fn()
   const onClose = vi.fn()
-  const mounted = await mountInto(TagValueEditor, { value: 'Old', ariaLabel: 'Title', onCommit, onClose })
+  const mounted = await mountInto(TagValueEditor, { value, ariaLabel: 'Title', blockedHint, onCommit, onClose })
   cleanup = mounted.cleanup
   const input = mounted.root.querySelector<HTMLInputElement>('input')
   if (!input) throw new Error('no input')
@@ -42,5 +46,60 @@ describe('TagValueEditor', () => {
     expect(onCommit).toHaveBeenCalledTimes(1)
     expect(onCommit).toHaveBeenCalledWith('New')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('the hint follows the typing: it updates while the text is still refused, and goes once it can be sent', async () => {
+    const { input } = await mountEditor('BLOCK a; b')
+    await typeInto(input, 'BLOCK a')
+    await press(input, 'Enter')
+    const hint = () => input.parentElement?.querySelector('.tag-value-hint')
+    expect(hint()?.textContent).toBe('Delete BLOCK (7)')
+    await typeInto(input, 'BLOCK ab')
+    expect(hint()?.textContent).toBe('Delete BLOCK (8)')
+    await typeInto(input, 'a')
+    expect(hint()).toBeNull()
+    expect(input.getAttribute('aria-describedby')).toBeNull()
+  })
+
+  it('a click away while the text is refused keeps the box, the typing and the hint, and sends nothing', async () => {
+    const { input, onCommit, onClose } = await mountEditor('BLOCK a; b')
+    await typeInto(input, 'BLOCK a')
+    await leave(input)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(input.isConnected).toBe(true)
+    expect(input.value).toBe('BLOCK a')
+    expect(input.parentElement?.querySelector('.tag-value-hint')?.textContent).toBe('Delete BLOCK (7)')
+    expect(document.activeElement).toBe(input)
+    // Fixed, it goes as any edit does.
+    await typeInto(input, 'a')
+    await press(input, 'Enter')
+    expect(onCommit).toHaveBeenCalledWith('a')
+  })
+
+  it('a click away from an untouched refused value closes without sending, as before', async () => {
+    const { input, onCommit, onClose } = await mountEditor('BLOCK a; b')
+    await leave(input)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('scrolls the hint into view when it appears, not only when the box opens', async () => {
+    const scroll = vi.fn()
+    const had = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')
+    HTMLElement.prototype.scrollIntoView = scroll
+    try {
+      const { input } = await mountEditor('BLOCK a; b')
+      const onOpen = scroll.mock.calls.length
+      await typeInto(input, 'BLOCK a')
+      await press(input, 'Enter')
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(scroll.mock.calls.length).toBeGreaterThan(onOpen)
+      expect(scroll).toHaveBeenLastCalledWith({ block: 'nearest' })
+    } finally {
+      if (had) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', had)
+      else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView
+    }
   })
 })

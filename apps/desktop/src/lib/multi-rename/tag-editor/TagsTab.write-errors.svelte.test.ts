@@ -74,7 +74,17 @@ async function mountTab(): Promise<HTMLElement> {
   return mounted.root
 }
 
-const timesShown = (root: HTMLElement, text: string): number => root.textContent.split(text).length - 1
+/** The bar's Write (⌘S): opens the Write dialog, which lists the changes at once. */
+async function writeKey(root: HTMLElement): Promise<void> {
+  const write = [...root.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find(
+    (b) => b.querySelector('span')?.textContent === 'Write',
+  )
+  if (!write) throw new Error('no Write key')
+  write.click()
+  await settle()
+}
+
+const timesShown = (_root: HTMLElement, text: string): number => document.body.textContent.split(text).length - 1
 
 describe('TagsTab words a refused list or write once', () => {
   it.each([
@@ -87,8 +97,8 @@ describe('TagsTab words a refused list or write once', () => {
     ipc.applyTags.mockResolvedValue({ ok: false, error })
     const root = await mountTab()
 
-    await press(root, 'Write tags…')
-    await press(root, 'Write tags')
+    await writeKey(root)
+    await press(document.body, 'Write tags')
 
     expect(timesShown(root, reason)).toBe(1)
     expect(root.textContent).not.toContain(EDIT_FAILED)
@@ -98,7 +108,7 @@ describe('TagsTab words a refused list or write once', () => {
     ipc.getTagChanges.mockResolvedValue({ ok: false, error: { kind: 'taskFailed' } })
     const root = await mountTab()
 
-    await press(root, 'Write tags…')
+    await writeKey(root)
 
     expect(timesShown(root, 'Cmdr couldn’t check what will change. Try again in a moment.')).toBe(1)
     expect(root.textContent).not.toContain(EDIT_FAILED)

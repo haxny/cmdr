@@ -616,6 +616,54 @@
   "@commands.tagsEditNumber.label": {
     "description": "Row in the Keyboard shortcuts list: what Shift+F2 does in the tag editor window’s tracks pane. It opens an editing box over the track number of the row under the cursor. Read-only (the key can’t be rebound)."
   },
+  "commands.tagsPlay.label": "Play or stop the track under the cursor",
+  "@commands.tagsPlay.label": {
+    "description": "Row in the Keyboard shortcuts list: what F3 or Option+Space does in the tag editor window (the separate window that edits audio files’ tags). It plays the audio of the track under the cursor in the tracks pane, or stops it when it is already playing, so you can hear which track you are naming. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsOpenInPlayer.label": "Open the tracks in foobar2000",
+  "@commands.tagsOpenInPlayer.label": {
+    "description": "Row in the Keyboard shortcuts list: what Shift+F3 does in the tag editor window. It opens the selected tracks (every track when none is selected) in the foobar2000 music player. foobar2000 is a product name; keep it as is. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsReplace.label": "Find and replace in the tags",
+  "@commands.tagsReplace.label": {
+    "description": "Row in the Keyboard shortcuts list: what F4 does in the tag editor window. It opens a dialog that finds text inside tag values (not file names) and replaces it. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsCase.label": "Change the case of a tag",
+  "@commands.tagsCase.label": {
+    "description": "Row in the Keyboard shortcuts list: what Shift+F4 does in the tag editor window. It opens a small dialog to change a tag’s letter case (Sentence case, Title Case, lower case, UPPER CASE). Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsFormat.label": "Format a tag field",
+  "@commands.tagsFormat.label": {
+    "description": "Row in the Keyboard shortcuts list: what F5 does in the tag editor window. It opens a dialog that rebuilds one tag field from a pattern. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsCleanUp.label": "Clean up the tags",
+  "@commands.tagsCleanUp.label": {
+    "description": "Row in the Keyboard shortcuts list: what Shift+F5 does in the tag editor window. It opens a dialog of one-press clean-up tools (remove diacritics, strip a track-number prefix from titles, and similar). Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsFromName.label": "Read the tags from the file names",
+  "@commands.tagsFromName.label": {
+    "description": "Row in the Keyboard shortcuts list: what F6 does in the tag editor window. It opens a dialog that reads tag values (title, track number, and so on) out of the audio files’ names. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsNumber.label": "Number the tracks",
+  "@commands.tagsNumber.label": {
+    "description": "Row in the Keyboard shortcuts list: what F7 does in the tag editor window. It opens the auto-numbering wizard, which sets track (and disc) numbers. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsClearField.label": "Clear a tag field",
+  "@commands.tagsClearField.label": {
+    "description": "Row in the Keyboard shortcuts list: what F8 does in the tag editor window. It opens a small dialog that empties one tag field (the one under the cursor) on the selected tracks. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsRemoveExtras.label": "Remove extra tags",
+  "@commands.tagsRemoveExtras.label": {
+    "description": "Row in the Keyboard shortcuts list: what Shift+F8 does in the tag editor window. It opens a dialog listing the files’ extra tags (ones the editor doesn’t show as fields) to pick which to remove. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsWrite.label": "Write the tags into the files",
+  "@commands.tagsWrite.label": {
+    "description": "Row in the Keyboard shortcuts list: what Command+S does in the tag editor window. It lists what will change in each file, and writes the new tags into the files once you confirm. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsUndo.label": "Undo the last tag write",
+  "@commands.tagsUndo.label": {
+    "description": "Row in the Keyboard shortcuts list: what Command+Z does in the tag editor window when no value is being typed. It asks first, then puts back the tags the last write replaced. Read-only (the key can’t be rebound)."
+  },
   "commands.queueCursorUp.label": "Previous operation",
   "@commands.queueCursorUp.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above.",
@@ -1572,9 +1620,5 @@
   "commands.handler.viewDebugLog.unavailable": "Couldn’t open the debug log. Try again.",
   "@commands.handler.viewDebugLog.unavailable": {
     "description": "Toast after the View debug log action cannot get the log path or open the internal viewer window. No diagnostic details or placeholders. Suggest retrying."
-  },
-  "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
-  "@commands.multiRenamePlayTrack.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the tag editor window (the separate window that edits audio files’ tags). Read-only (the key can’t be rebound). It plays the audio of the track whose row has focus, or stops it when it is already playing, so you can hear which track you are naming."
   }
 }

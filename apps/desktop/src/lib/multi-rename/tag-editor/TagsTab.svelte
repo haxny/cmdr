@@ -1,26 +1,31 @@
 <script lang="ts">
     /**
-     * The Tags window's content: the clean-up tools, then two panes like the main window's file panes, Album (the
-     * tags the files share, then the cover) | Tracks (selected like files; the tools work on the selection), then the
-     * write (`ApplyPanel`). Tab switches the panes (`tags-panes.svelte.ts`). It opens the tag session when it mounts.
-     * The Tags window (`TagsWindow.svelte`) shows it.
+     * The Tags window's content: two panes like the main window's file panes, Album (the tags the files share, then
+     * the cover) | Tracks (selected like files; the tools work on the selection), a one-line status, and the
+     * function-key bar (`TagsFunctionKeyBar`). Every tool and the write open in a dialog over the panes
+     * (`TagToolDialogs`, `WriteDialog`), so nothing ever pushes or resizes the panes. `runCommand` runs a `Tags window`
+     * command, from the bar or from the window's keydown (`TagsWindow.svelte`). Tab switches the panes
+     * (`tags-panes.svelte.ts`). It opens the tag session when it mounts.
      */
     import { onDestroy, onMount } from 'svelte'
+    import { SvelteSet } from 'svelte/reactivity'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool } from '#lib/ipc/bindings.js'
     import { openTagsInPlayer, type TagEdit } from '#lib/tauri-commands/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
     import AlbumPane from './AlbumPane.svelte'
-    import ApplyPanel from './ApplyPanel.svelte'
     import CoverPanel from './CoverPanel.svelte'
-    import TagToolsBar from './TagToolsBar.svelte'
+    import TagsFunctionKeyBar from './TagsFunctionKeyBar.svelte'
+    import TagToolDialogs from './TagToolDialogs.svelte'
     import TracksPane from './TracksPane.svelte'
-    import type { RunScoped } from './tag-tools'
+    import WriteDialog from './WriteDialog.svelte'
+    import type { RunScoped, TagToolId } from './tag-tools'
+    import type { TagsBarCommandId, TagsCommandId } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
     import { createTrackSelection } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
-    import type { TagsTabApi } from './sheet-tab'
     import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
 
     interface Props {
@@ -47,8 +52,12 @@
         if (selection.count > 0) selectionGone = false
     })
 
-    let albumPane = $state<{ focus: () => void }>()
-    let tracksPane = $state<{ focus: () => void }>()
+    let albumPane = $state<{ focus: () => void; editAtCursor: () => void }>()
+    let tracksPane = $state<{
+        focus: () => void
+        editAtCursor: (field: 'title' | 'track') => void
+        playAtCursor: () => void
+    }>()
     const panes = createTagsPanes({
         focus: (pane) => {
             ;(pane === 'album' ? albumPane : tracksPane)?.focus()
@@ -135,12 +144,10 @@
         }
     }
 
-    let toolsBar = $state<HTMLElement>()
-
     /**
-     * The field Case changes: the Album pane's cursor row while that pane is active, Title while the Tracks pane is,
-     * none otherwise. Focus moving into the tools bar keeps the pane, so Case reaches the field the user just left
-     * for the button; focus anywhere else (the cover, the Apply panel) or out of the window clears it.
+     * The field the user is on: the Album pane's cursor row while that pane is active, Title while the Tracks pane
+     * is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
+     * Clear); the bar never takes focus, so a press on it keeps the pane.
      */
     const focusedField = $derived.by((): TagField | null => {
         if (panes.active === 'tracks') return 'title'
@@ -150,17 +157,11 @@
     })
 
     function followFocus(target: EventTarget | null): void {
-        if (target instanceof Node && toolsBar?.contains(target) === true) {
-            // Case and Replace keep the pane's field; the pane no longer draws its cursor as focused.
-            inPanes = false
-            return
-        }
         const slot = target instanceof Element ? target.closest<HTMLElement>('[data-pane]') : null
         const inCover = target instanceof Element && target.closest('.cover-group') !== null
         inPanes = slot !== null && !inCover
         panes.noteFocus(inPanes && slot !== null ? (slot.dataset.pane as TagsPaneId) : null)
     }
-    let applyPanel = $state<TagsTabApi>()
 
     /**
      * A tool works on what the files hold now, so an edit a box just sent lands first, and on the selected tracks
@@ -183,9 +184,100 @@
         await runScoped((scope) => tags.tool(tool, scope))
     }
 
-    /** Start: the Apply panel lists the changes, then writes them. */
-    export async function start(): Promise<void> {
-        await applyPanel?.start()
+    /** Empties `field` on the selected tracks (the readable ones), or on every file when none is selected. */
+    async function clearField(field: TagField): Promise<void> {
+        const readable = new Set(tags.view?.tracks.filter((track) => track.readError === null).map((track) => track.path))
+        await runScoped((scope) =>
+            tags.edit(
+                scope === null
+                    ? [{ kind: 'setAll', field, values: [] }]
+                    : scope.filter((path) => readable.has(path)).map((path) => ({ kind: 'setOne', path, field, values: [] })),
+            ),
+        )
+    }
+
+    /** The tool dialog showing, with the field the user was on when it opened. */
+    let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
+    /** The Write dialog showing: listing and writing (⌘S), or undoing the last write (⌘Z). */
+    let writeMode = $state<'write' | 'undo' | null>(null)
+    /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
+    let notice = $state<MessageKey | null>(null)
+
+    const EDITING_COMMANDS = [
+        'tags.edit',
+        'tags.replace',
+        'tags.case',
+        'tags.format',
+        'tags.cleanUp',
+        'tags.fromName',
+        'tags.number',
+        'tags.clearField',
+        'tags.write',
+    ] as const satisfies readonly TagsBarCommandId[]
+
+    /** The bar's commands that can act now: everything waits for the tags; read-only leaves Play and the player. */
+    const enabledCommands = $derived.by((): ReadonlySet<TagsBarCommandId> => {
+        const view = tags.view
+        const on = new SvelteSet<TagsBarCommandId>()
+        if (view === null) return on
+        on.add('tags.openInPlayer')
+        if (view.tracks.some((track) => track.readError === null)) on.add('tags.play')
+        if (!view.editable) return on
+        for (const id of EDITING_COMMANDS) on.add(id)
+        if (view.tracks.length > 1) on.add('tags.editNumber')
+        if (view.extras.length > 0) on.add('tags.removeExtras')
+        return on
+    })
+
+    function openTool(id: TagToolId): void {
+        tool = { id, field: focusedField }
+    }
+
+    function undoLast(): void {
+        if (tags.undoable === null) notice = 'multiRename.tags.undo.nothing'
+        else writeMode = 'undo'
+    }
+
+    const COMMANDS: Record<TagsCommandId, () => void> = {
+        'tags.edit': () => {
+            if (panes.active === 'tracks') tracksPane?.editAtCursor('title')
+            else albumPane?.editAtCursor()
+        },
+        'tags.editNumber': () => tracksPane?.editAtCursor('track'),
+        'tags.play': () => tracksPane?.playAtCursor(),
+        'tags.openInPlayer': () => void openInPlayer(),
+        'tags.replace': () => { openTool('replace') },
+        'tags.case': () => { openTool('case') },
+        'tags.format': () => { openTool('format') },
+        'tags.cleanUp': () => { openTool('cleanUp') },
+        'tags.fromName': () => { openTool('fromName') },
+        'tags.number': () => { openTool('number') },
+        'tags.clearField': () => { openTool('clearField') },
+        'tags.removeExtras': () => { openTool('extras') },
+        'tags.write': () => { writeMode = 'write' },
+        'tags.undo': undoLast,
+    }
+
+    /**
+     * Runs a `Tags window` command (the bar, or the window's keydown). Returns whether it acted: a command that can't
+     * act now (read-only, no extras, a dialog already open) does nothing.
+     */
+    export function runCommand(id: TagsCommandId): boolean {
+        if (hasDialog()) return false
+        if (id === 'tags.undo' ? tags.view?.editable !== true : !enabledCommands.has(id)) return false
+        notice = null
+        COMMANDS[id]()
+        return true
+    }
+
+    /** A tool or the Write dialog is open: it owns the keys, and Escape closes it, never the window. */
+    export function hasDialog(): boolean {
+        return tool !== null || writeMode !== null
+    }
+
+    /** Lists the changes, then writes them (⌘S). */
+    export function start(): void {
+        runCommand('tags.write')
     }
 
     async function listCandidates() {
@@ -202,40 +294,12 @@
 >
     {#if tags.view === null}
         {#if tags.error !== null}
-            <p role="alert">{tString('multiRename.tags.error')}</p>
+            <p class="opening" role="alert">{tString('multiRename.tags.error')}</p>
         {:else}
-            <p role="status">{tString('multiRename.tags.reading')}</p>
+            <p class="opening" role="status">{tString('multiRename.tags.reading')}</p>
         {/if}
     {:else}
         {@const view = tags.view}
-        {#if !view.editable}
-            <p class="notice" role="status">{tString('multiRename.tags.readOnly')}</p>
-        {/if}
-        {#if tags.error !== null}
-            {@const errorKey = editErrorKey(tags.error)}
-            {#if errorKey !== null}<p class="notice" role="alert">{tString(errorKey)}</p>{/if}
-        {/if}
-        {#if player.failed}
-            <p class="notice" role="alert">{tString('multiRename.tags.play.failed')}</p>
-        {/if}
-        {#if playerError !== null}
-            <p class="notice" role="alert">{tString(playerError)}</p>
-        {/if}
-        {#if selectionGone}
-            <p class="notice" role="status">{tString('multiRename.tags.selectionGone')}</p>
-        {/if}
-        <div bind:this={toolsBar}>
-        <TagToolsBar
-            trackCount={view.tracks.length}
-            extras={view.extras}
-            {focusedField}
-            disabled={!view.editable}
-            onTool={(tool: TagTool) => void runTool(tool)}
-            state={tags}
-            {runScoped}
-            {scopeKey}
-        />
-        </div>
         <div class="panes">
             <div class="pane-slot album" data-pane="album">
                 <AlbumPane
@@ -269,9 +333,56 @@
                 />
             </div>
         </div>
-        <ApplyPanel bind:this={applyPanel} {tags} onWriting={() => { player.stop() }} />
+        <!-- One line, always there, so a notice coming or going never moves the panes. -->
+        <div class="status">
+            <!-- eslint-disable @typescript-eslint/no-confusing-void-expression -- Svelte {@render} syntax -->
+            {#if !view.editable}
+                {@render line('multiRename.tags.readOnly', 'status')}
+            {/if}
+            {#if tags.error !== null}
+                {@const errorKey = editErrorKey(tags.error)}
+                {#if errorKey !== null}{@render line(errorKey, 'alert')}{/if}
+            {/if}
+            {#if player.failed}
+                {@render line('multiRename.tags.play.failed', 'alert')}
+            {/if}
+            {#if playerError !== null}
+                {@render line(playerError, 'alert')}
+            {/if}
+            {#if selectionGone}
+                {@render line('multiRename.tags.selectionGone', 'status')}
+            {/if}
+            {#if notice !== null}
+                {@render line(notice, 'status')}
+            {/if}
+            <!-- eslint-enable @typescript-eslint/no-confusing-void-expression -->
+        </div>
     {/if}
+    <TagsFunctionKeyBar enabled={enabledCommands} onCommand={(id: TagsBarCommandId) => { runCommand(id) }} />
 </div>
+
+{#if tool !== null && tags.view !== null}
+    <TagToolDialogs
+        open={tool.id}
+        field={tool.field}
+        trackCount={tags.view.tracks.length}
+        selectedCount={selection.count}
+        extras={tags.view.extras}
+        state={tags}
+        {runScoped}
+        {scopeKey}
+        onTool={(chosen: TagTool) => void runTool(chosen)}
+        onClear={(field: TagField) => void clearField(field)}
+        onClose={() => { tool = null }}
+    />
+{/if}
+{#if writeMode !== null}
+    <WriteDialog {tags} mode={writeMode} onWriting={() => { player.stop() }} onClose={() => { writeMode = null }} />
+{/if}
+
+{#snippet line(key: MessageKey, role: 'status' | 'alert')}
+    <p class="notice" {role} use:tooltip={{ text: tString(key), overflowOnly: true }}>{tString(key)}</p>
+{/snippet}
 
 {#snippet coverGroup()}
     {#if tags.view !== null}
@@ -291,19 +402,20 @@
 {/snippet}
 
 <style>
+    /* Panes, status line, function-key bar: edge to edge, as in the main window. Only the panes flex. */
     .tags-tab {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
         flex: 1;
         min-height: 0;
-        padding: var(--spacing-sm) 0;
+        padding-top: var(--spacing-sm);
         color: var(--color-text-primary);
     }
 
-    /* Everything but the panes keeps the window's margin; the panes run edge to edge, as in the main window. */
-    .tags-tab > :global(:not(.panes)) {
-        margin-inline: var(--spacing-md);
+    .opening {
+        flex: 1;
+        margin: 0;
+        padding: var(--spacing-sm) var(--spacing-md);
     }
 
     /* Album | Tracks, split like the main window's panes: a 1px divider in `--color-border` (`PaneResizer`). */
@@ -311,7 +423,7 @@
         display: flex;
         flex: 1;
         min-height: 0;
-        border-block: 1px solid var(--color-border);
+        border-top: 1px solid var(--color-border);
     }
 
     .pane-slot {
@@ -335,8 +447,24 @@
         background: var(--color-border);
     }
 
+    /* A fixed line: its notices sit side by side and cut with a tooltip rather than wrap. */
+    .status {
+        display: flex;
+        gap: var(--spacing-md);
+        flex-shrink: 0;
+        min-height: calc(var(--font-size-sm) * 2);
+        align-items: center;
+        padding: 0 var(--spacing-md);
+        overflow: hidden;
+        font-size: var(--font-size-sm);
+    }
+
     .notice {
+        min-width: 0;
         margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         color: var(--color-text-secondary);
     }
 </style>

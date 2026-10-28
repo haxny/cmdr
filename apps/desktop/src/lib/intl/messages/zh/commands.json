@@ -512,6 +512,54 @@
   "@commands.tagsEditNumber.label": {
     "sourceHash": "8e22423"
   },
+  "commands.tagsPlay.label": "Play or stop the track under the cursor",
+  "@commands.tagsPlay.label": {
+    "sourceHash": "b8e65e9"
+  },
+  "commands.tagsOpenInPlayer.label": "Open the tracks in foobar2000",
+  "@commands.tagsOpenInPlayer.label": {
+    "sourceHash": "a9b3c34"
+  },
+  "commands.tagsReplace.label": "Find and replace in the tags",
+  "@commands.tagsReplace.label": {
+    "sourceHash": "b0469b0"
+  },
+  "commands.tagsCase.label": "Change the case of a tag",
+  "@commands.tagsCase.label": {
+    "sourceHash": "140feab"
+  },
+  "commands.tagsFormat.label": "Format a tag field",
+  "@commands.tagsFormat.label": {
+    "sourceHash": "914b0ec"
+  },
+  "commands.tagsCleanUp.label": "Clean up the tags",
+  "@commands.tagsCleanUp.label": {
+    "sourceHash": "b02383d"
+  },
+  "commands.tagsFromName.label": "Read the tags from the file names",
+  "@commands.tagsFromName.label": {
+    "sourceHash": "382ca92"
+  },
+  "commands.tagsNumber.label": "Number the tracks",
+  "@commands.tagsNumber.label": {
+    "sourceHash": "bc524cc"
+  },
+  "commands.tagsClearField.label": "Clear a tag field",
+  "@commands.tagsClearField.label": {
+    "sourceHash": "da03dba"
+  },
+  "commands.tagsRemoveExtras.label": "Remove extra tags",
+  "@commands.tagsRemoveExtras.label": {
+    "sourceHash": "122f0a2"
+  },
+  "commands.tagsWrite.label": "Write the tags into the files",
+  "@commands.tagsWrite.label": {
+    "sourceHash": "534bc20"
+  },
+  "commands.tagsUndo.label": "Undo the last tag write",
+  "@commands.tagsUndo.label": {
+    "sourceHash": "b26cf96"
+  },
   "commands.queueCursorUp.label": "上一项操作",
   "@commands.queueCursorUp.label": {
     "sourceHash": "122b454"
@@ -1295,9 +1343,5 @@
   "commands.handler.viewDebugLog.unavailable": "无法打开调试日志。再试一次。",
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
-  },
-  "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
-  "@commands.multiRenamePlayTrack.label": {
-    "sourceHash": "2aeb9e0"
   }
 }

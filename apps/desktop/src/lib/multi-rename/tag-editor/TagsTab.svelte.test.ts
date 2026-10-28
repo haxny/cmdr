@@ -87,6 +87,30 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
   return { root: mounted.root, state }
 }
 
+/** Presses a function-key bar button by its label (Shift held for the Shift row), as a click would. */
+async function bar(root: HTMLElement, label: string, shift = false): Promise<void> {
+  if (shift) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }))
+  await tick()
+  const button = [...root.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find(
+    (b) => b.querySelector('span')?.textContent === label,
+  )
+  if (!button) throw new Error(`no ${label} key`)
+  button.click()
+  if (shift) document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Shift' }))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
+
+/** A button in the open dialog, by its text. */
+function inDialog(text: string): HTMLButtonElement {
+  const found = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+    (b) => b.textContent.trim() === text,
+  )
+  if (!found) throw new Error(`no ${text} in the dialog`)
+  return found
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+
 describe('TagsTab', () => {
   it('sends a shared edit and a track edit to the state', async () => {
     const { root, state } = await mountTab()
@@ -147,20 +171,21 @@ describe('TagsTab', () => {
     expect(document.activeElement).toBe(album)
   })
 
-  it('a pane draws its cursor as focused only while focus is in it, not while it visits the tools bar', async () => {
+  it('a pane draws its cursor as focused only while focus is in it, not while it is on the cover', async () => {
     const { root } = await mountTab()
     const albumPane = () => root.querySelector('[data-pane="album"] .full-list-container')
     expect(albumPane()?.classList.contains('is-focused')).toBe(true)
-    const tool = [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')
-    tool?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    const cover = [...root.querySelectorAll('button')].find((b) => b.textContent.includes('From folder'))
+    cover?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
     await tick()
     expect(albumPane()?.classList.contains('is-focused')).toBe(false)
   })
 
   it('a tool waits for an edit in flight, then runs', async () => {
     const { root, state } = await mountTab()
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Strip track prefix')?.click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await bar(root, 'Clean up', true)
+    inDialog('Strip track prefix').click()
+    await settle()
     expect(state.settled).toHaveBeenCalled()
     expect(state.tool).toHaveBeenCalledWith({ kind: 'stripTrackPrefix' }, null)
   })
@@ -174,8 +199,9 @@ describe('TagsTab', () => {
     const { root, state } = await mountTab({ view: { ...VIEW, tracks } })
     await toggleTrack(root, '/b/02.mp3')
     await toggleTrack(root, '/b/04.mp3')
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Renumber')?.click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await bar(root, 'Clean up', true)
+    inDialog('Renumber').click()
+    await settle()
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, ['/b/02.mp3', '/b/04.mp3'])
   })
 
@@ -222,20 +248,21 @@ describe('TagsTab', () => {
     })
     const mounted = await mountInto(TagsTab, { state: asTagState(state) })
     cleanup = mounted.cleanup
-    const renumber = () =>
-      [...mounted.root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Renumber')?.click()
-    const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+    const renumber = async () => {
+      await bar(mounted.root, 'Clean up', true)
+      inDialog('Renumber').click()
+    }
     await toggleTrack(mounted.root, '/b/02.mp3')
     const renamed = VIEW.tracks.map((t) => ({ ...t, path: `${t.path}.new` }))
     state.view = { ...VIEW, tracks: renamed }
     await tick()
 
-    renumber()
+    await renumber()
     await settle()
     expect(state.tool).not.toHaveBeenCalled()
     expect(mounted.root.textContent).toContain('The selected tracks are no longer here, so nothing was changed.')
 
-    renumber()
+    await renumber()
     await settle()
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, null)
     expect(mounted.root.textContent).not.toContain('no longer here')
@@ -244,10 +271,9 @@ describe('TagsTab', () => {
   it('the Find and replace panel works on the selected tracks alone', async () => {
     const { root, state } = await mountTab()
     await toggleTrack(root, '/b/02.mp3')
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Find and replace')?.click()
-    await tick()
-    await typeInto(byId<HTMLInputElement>(root, 'tag-replace-search'), 'a')
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Replace')?.click()
+    await bar(root, 'Replace')
+    await typeInto(byId<HTMLInputElement>(document.body, 'tag-replace-search'), 'a')
+    inDialog('Replace').click()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.settled).toHaveBeenCalled()
     expect(state.textTool).toHaveBeenCalledWith(expect.objectContaining({ kind: 'replace' }), ['/b/02.mp3'])
@@ -265,9 +291,8 @@ describe('TagsTab', () => {
   it('Case changes the Album pane’s cursor field while that pane has focus', async () => {
     const { root, state } = await mountTab()
     paneList(root, 'Album tags').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')?.click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'lower case')?.click()
+    await bar(root, 'Case', true)
+    inDialog('lower case').click()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.tool).toHaveBeenCalledWith({ kind: 'case', case: 'lower', fields: ['album'] }, null)
   })
@@ -275,34 +300,26 @@ describe('TagsTab', () => {
   it('Case changes Title while the Tracks pane has focus', async () => {
     const { root, state } = await mountTab()
     paneList(root, 'Tracks').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')?.click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'lower case')?.click()
+    await bar(root, 'Case', true)
+    inDialog('lower case').click()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.tool).toHaveBeenCalledWith({ kind: 'case', case: 'lower', fields: ['title'] }, null)
   })
 
-  it('Case forgets the pane once focus moves elsewhere in the tab, but not into the tools bar', async () => {
+  it('Case takes the field the user was on when it opened; on the cover it takes the five name fields', async () => {
     const { root, state } = await mountTab()
-    const buttons = () => [...root.querySelectorAll('button')]
-    const named = (text: string) => {
-      const found = buttons().find((b) => b.textContent.trim() === text)
-      if (!found) throw new Error(`no ${text} button`)
-      return found
-    }
     const focusIn = (el: Element) => el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
     focusIn(paneList(root, 'Album tags'))
-    focusIn(named('Case'))
-    named('Case').click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(root.textContent).toContain('Changes: Album')
-    // Focus on the Write tags… button: the Album pane was left, so Case takes the name fields again.
-    const write = buttons().find((b) => b.textContent.includes('Write tags…'))
-    if (!write) throw new Error('no Write tags… button')
-    focusIn(write)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    named('lower case').click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await bar(root, 'Case', true)
+    expect(document.body.textContent).toContain('Changes: Album')
+    inDialog('Close').click()
+    await settle()
+    const cover = [...root.querySelectorAll('button')].find((b) => b.textContent.includes('From folder'))
+    if (!cover) throw new Error('no cover button')
+    focusIn(cover)
+    await bar(root, 'Case', true)
+    inDialog('lower case').click()
+    await settle()
     expect(state.tool).toHaveBeenCalledWith(
       { kind: 'case', case: 'lower', fields: ['title', 'album', 'artist', 'albumArtist', 'performer'] },
       null,
@@ -321,13 +338,14 @@ describe('TagsTab', () => {
 
   it('read-only says why, opens no editor, and locks every button that writes', async () => {
     const { root } = await mountTab({ view: { ...VIEW, editable: false, readOnlyReason: 'remoteVolume' } })
-    // Once, at the top: it explains every locked row and button, Write tags… included.
+    // Once, in the status line: it explains every locked row and key, Write included.
     expect(root.textContent.split('Tags can only be edited for files on a local disk.')).toHaveLength(2)
     await press(paneList(root, 'Album tags'), 'F2')
     await press(paneList(root, 'Tracks'), 'F2')
     expect(root.querySelector('.tag-value-editor')).toBeNull()
-    // Playing and selecting write nothing, so Open in foobar2000 and the select-all box stay available.
-    const writers = [...root.querySelectorAll('button')].filter((b) => b.textContent.trim() !== 'Open in foobar2000')
+    // Playing and selecting write nothing, so Play, Open in foobar2000 and the select-all box stay available.
+    const readers = new Set(['Open in foobar2000', 'F3Play'])
+    const writers = [...root.querySelectorAll('button')].filter((b) => !readers.has(b.textContent.trim()))
     for (const button of writers) expect(button.disabled).toBe(true)
   })
 })
