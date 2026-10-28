@@ -17,7 +17,7 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => (
   getStripedRows: () => true,
 }))
 
-import type { TrackRow } from '#lib/ipc/bindings.js'
+import type { TrackRow, TrackSort } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
 import TracksPane from './TracksPane.svelte'
 import { createTrackSelection } from './track-selection.svelte'
@@ -44,7 +44,9 @@ function track(n: string, over: Partial<TrackRow> = {}): TrackRow {
 
 const TRACKS = [track('01'), track('02'), track('03'), track('04', { readError: 'unreadable' })]
 
-async function mountPane(over: { tracks?: TrackRow[]; editable?: boolean; cursor?: number } = {}) {
+async function mountPane(
+  over: { tracks?: TrackRow[]; editable?: boolean; cursor?: number; sort?: TrackSort | null } = {},
+) {
   const tracks = over.tracks ?? TRACKS
   const selection = createTrackSelection()
   selection.sync(tracks.map((t) => t.path))
@@ -52,6 +54,8 @@ async function mountPane(over: { tracks?: TrackRow[]; editable?: boolean; cursor
   const onCursorChange = vi.fn()
   const onSwitchPane = vi.fn()
   const onPlay = vi.fn()
+  const onSort = vi.fn()
+  const onClear = vi.fn()
   const mounted = await mountInto(TracksPane, {
     tracks,
     editable: over.editable ?? true,
@@ -62,12 +66,15 @@ async function mountPane(over: { tracks?: TrackRow[]; editable?: boolean; cursor
     playing: null,
     onPlay,
     onEdit,
+    onClear,
     onSwitchPane,
+    sort: over.sort ?? null,
+    onSort,
   })
   cleanup = mounted.cleanup
   const list = mounted.root.querySelector<HTMLElement>('[role="listbox"]')
   if (!list) throw new Error('no listbox')
-  return { root: mounted.root, list, selection, onEdit, onCursorChange, onSwitchPane, onPlay }
+  return { root: mounted.root, list, selection, onEdit, onClear, onCursorChange, onSwitchPane, onPlay, onSort }
 }
 
 const rowsOf = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[role="option"]')]
@@ -224,7 +231,10 @@ describe('TracksPane order and edits', () => {
       playing: null,
       onPlay: () => {},
       onEdit,
+      onClear: () => {},
       onSwitchPane: () => {},
+      sort: null,
+      onSort: () => {},
     })
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -294,5 +304,246 @@ describe('TracksPane after a click', () => {
     const { root, selection } = await mountPane()
     mouseDown(rowsOf(root)[0], { metaKey: true })
     expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3'] })
+  })
+})
+
+const headerButton = (root: HTMLElement, label: string) => {
+  const button = [...root.querySelectorAll<HTMLButtonElement>('.tag-pane-header button')].find(
+    (b) => b.querySelector('.label')?.textContent === label,
+  )
+  if (!button) throw new Error(`no ${label} header`)
+  return button
+}
+
+describe('TracksPane sorting', () => {
+  it.each([
+    ['#', 'discTrack'],
+    ['Title', 'title'],
+    ['Length', 'length'],
+    ['File name', 'fileName'],
+  ])('clicking %s sorts ascending, and a second click on the active header descending', async (label, key) => {
+    const { root, onSort } = await mountPane()
+    headerButton(root, label).click()
+    expect(onSort).toHaveBeenLastCalledWith({ key, descending: false })
+    cleanup?.()
+
+    const active = await mountPane({ sort: { key: key as TrackSort['key'], descending: false } })
+    headerButton(active.root, label).click()
+    expect(active.onSort).toHaveBeenLastCalledWith({ key, descending: true })
+  })
+
+  it('a click on the active descending header sorts ascending again', async () => {
+    const { root, onSort } = await mountPane({ sort: { key: 'title', descending: true } })
+    headerButton(root, 'Title').click()
+    expect(onSort).toHaveBeenLastCalledWith({ key: 'title', descending: false })
+  })
+
+  it('a click on another header starts ascending', async () => {
+    const { root, onSort } = await mountPane({ sort: { key: 'title', descending: true } })
+    headerButton(root, 'Length').click()
+    expect(onSort).toHaveBeenLastCalledWith({ key: 'length', descending: false })
+  })
+
+  it('the active header shows its direction', async () => {
+    const { root } = await mountPane({ sort: { key: 'length', descending: true } })
+    expect(headerButton(root, 'Length').getAttribute('aria-label')).toBe('Length, sorted descending')
+    expect(headerButton(root, 'Title').getAttribute('aria-label')).toBe('Title, not sorted')
+  })
+
+  it('☐ and ▶ are not sortable, and a single-file book has no # header', async () => {
+    const { root } = await mountPane()
+    expect(root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(4)
+    cleanup?.()
+    const single = await mountPane({ tracks: [track('01')] })
+    expect(single.root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(3)
+  })
+
+  it('a header click does not move the cursor or the selection', async () => {
+    const { root, onCursorChange, selection } = await mountPane()
+    headerButton(root, 'Title').click()
+    expect(onCursorChange).not.toHaveBeenCalled()
+    expect(selection.count).toBe(0)
+  })
+})
+
+describe('TracksPane double-click', () => {
+  const dblclick = async (el: Element | null) => {
+    el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    await tick()
+  }
+
+  it('double-click on the # cell edits the number', async () => {
+    const { root } = await mountPane()
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="number"]'))
+    expect(editorOf(root)?.value).toBe('02')
+  })
+
+  it('double-click on Title edits the title', async () => {
+    const { root } = await mountPane()
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="title"]'))
+    expect(editorOf(root)?.value).toBe('T02')
+  })
+
+  it('double-click on ▶ or ☐ opens nothing', async () => {
+    const { root } = await mountPane()
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="play"]'))
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="mark"]'))
+    expect(editorOf(root)).toBeNull()
+  })
+})
+
+describe('TracksPane header alignment', () => {
+  it('the header’s scroll bar width is the scroller’s offsetWidth minus clientWidth', async () => {
+    const offset = vi
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('full-list') ? 316 : 0
+      })
+    const client = vi
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('full-list') ? 306 : 0
+      })
+    try {
+      const { root } = await mountPane()
+      const header = root.querySelector<HTMLElement>('.tag-pane-header')
+      expect(header?.style.getPropertyValue('--spacing-scrollbar-width')).toBe('10px')
+    } finally {
+      offset.mockRestore()
+      client.mockRestore()
+    }
+  })
+
+  it('the select-all column is as wide as its 16px Checkbox, whatever the font scale', async () => {
+    const { root } = await mountPane()
+    expect(root.querySelector<HTMLElement>('.tag-pane-header')?.style.gridTemplateColumns.startsWith('16px ')).toBe(
+      true,
+    )
+  })
+})
+
+describe('TracksPane type-to-edit and Delete', () => {
+  it('typing a letter or a digit on a row opens its Title holding exactly that character', async () => {
+    const { root, list } = await mountPane({ cursor: 1 })
+    await press(list, 'H')
+    const editor = editorOf(root)
+    if (!editor) throw new Error('no editor')
+    expect(editor.value).toBe('H')
+    expect(editor.selectionStart).toBe(1)
+    expect(editor.selectionEnd).toBe(1)
+    await press(editor, 'Escape')
+    await press(list, '7')
+    expect(editorOf(root)?.value).toBe('7')
+  })
+
+  it('Space and * stay selection keys', async () => {
+    const { root, list, selection } = await mountPane()
+    await press(list, ' ')
+    expect(selection.has(0)).toBe(true)
+    const star = await press(list, '*')
+    expect(star.defaultPrevented).toBe(true)
+    expect(editorOf(root)).toBeNull()
+  })
+
+  it('⌘-letter, ⌥-letter, composition, a dialog and an unreadable row open nothing', async () => {
+    const { root, list } = await mountPane()
+    await press(list, 'a', { metaKey: true })
+    await press(list, 'a', { altKey: true })
+    await press(list, 'a', { isComposing: true })
+    expect(editorOf(root)).toBeNull()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'alertdialog')
+    document.body.appendChild(dialog)
+    try {
+      await press(list, 'x')
+    } finally {
+      dialog.remove()
+    }
+    expect(editorOf(root)).toBeNull()
+    const unreadable = await mountPane({ cursor: 3 })
+    await press(unreadable.list, 'x')
+    expect(editorOf(unreadable.root)).toBeNull()
+  })
+
+  it('read-only: typing and Delete do nothing', async () => {
+    const { root, list, onClear } = await mountPane({ editable: false })
+    await press(list, 'H')
+    await press(list, 'Delete')
+    expect(editorOf(root)).toBeNull()
+    expect(onClear).not.toHaveBeenCalled()
+  })
+
+  it('Delete and Backspace ask to empty the cursor row’s Title; a row with none asks nothing', async () => {
+    const { list, onClear } = await mountPane({ cursor: 1 })
+    await press(list, 'Delete')
+    expect(onClear).toHaveBeenLastCalledWith({ field: 'title', path: '/b/02.mp3' })
+    await press(list, 'Backspace')
+    expect(onClear).toHaveBeenCalledTimes(2)
+    const bare = await mountPane({ tracks: [track('01', { title: null })] })
+    await press(bare.list, 'Delete')
+    expect(bare.onClear).not.toHaveBeenCalled()
+  })
+})
+
+describe('TracksPane active cell and composition', () => {
+  it('←/→ move the active cell between # and Title; typing, F2 and Delete act on it, ⇧F2 still edits #', async () => {
+    const { root, list, onClear, onEdit } = await mountPane({ cursor: 1 })
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Title column')
+    const left = await press(list, 'ArrowLeft')
+    expect(left.defaultPrevented).toBe(true)
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Track number column')
+    expect(rowsOf(root)[1].querySelector('[data-col="number"]')?.classList.contains('is-active-cell')).toBe(true)
+    await press(list, '9')
+    const box = editorOf(root)
+    expect(box?.value).toBe('9')
+    if (box) await press(box, 'Enter')
+    expect(onEdit).toHaveBeenLastCalledWith([{ kind: 'setOne', path: '/b/02.mp3', field: 'track', values: ['9'] }])
+    await press(list, 'Delete')
+    expect(onClear).toHaveBeenLastCalledWith({ field: 'track', path: '/b/02.mp3' })
+    await press(list, 'F2')
+    expect(editorOf(root)?.value).toBe('02')
+    await press(editorOf(root) as HTMLElement, 'Escape')
+    await press(list, 'ArrowRight')
+    await press(list, 'F2', { shiftKey: true })
+    expect(editorOf(root)?.value).toBe('02')
+    await press(editorOf(root) as HTMLElement, 'Escape')
+    await press(list, 'F2')
+    expect(editorOf(root)?.value).toBe('T02')
+  })
+
+  it('a single-file book has no choice: ← keeps Title and says nothing', async () => {
+    const { root, list } = await mountPane({ tracks: [track('01')] })
+    await press(list, 'ArrowLeft')
+    await press(list, 'x')
+    expect(editorOf(root)?.value).toBe('x')
+    expect(root.querySelector('[role="status"]')).toBeNull()
+  })
+
+  it('a dead key opens an empty editor and is not claimed, so the OS composes into it; closing it untouched sends nothing', async () => {
+    const { root, list, onEdit } = await mountPane()
+    const dead = await press(list, 'Dead')
+    expect(dead.defaultPrevented).toBe(false)
+    const box = editorOf(root)
+    expect(box?.value).toBe('')
+    expect(document.activeElement).toBe(box)
+    if (box) await press(box, 'Enter')
+    expect(onEdit).not.toHaveBeenCalled()
+    expect(editorOf(root)).toBeNull()
+  })
+
+  it('Shift characters seed the editor, and Delete / Backspace inside an open editor stay text editing', async () => {
+    const { root, list, onClear } = await mountPane()
+    await press(list, 'H', { shiftKey: true })
+    const box = editorOf(root)
+    expect(box?.value).toBe('H')
+    if (box) {
+      await press(box, 'Backspace')
+      await press(box, 'Delete')
+      expect(editorOf(root)).toBe(box)
+      await press(box, 'Escape')
+    }
+    expect(onClear).not.toHaveBeenCalled()
+    await press(list, '?', { shiftKey: true })
+    expect(editorOf(root)?.value).toBe('?')
   })
 })

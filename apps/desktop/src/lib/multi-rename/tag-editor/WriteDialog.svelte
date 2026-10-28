@@ -2,7 +2,7 @@
     /**
      * The Tags window's Write dialog, over the panes: the Apply panel (`ApplyPanel`) with every step it has, from
      * "Finishing the last change…" through the change list, the write, the would-drop choice and the outcome, to its
-     * worded refusals. ⌘S opens it listing the changes (`mode: 'write'`); ⌘Z opens it on the undo question
+     * worded refusals. ⌘⇧S (Review) opens it listing the changes (`mode: 'write'`); ⌘Z opens it on the undo question
      * (`mode: 'undo'`), and a "no" closes it again. ⌘⏎ (`multiRename.rename`) presses the panel's primary button. It
      * can't be closed while a write or an undo is on its way; when the window was asked to close meanwhile
      * (`closeWaits`) it says to wait until it's done.
@@ -12,6 +12,7 @@
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import type { TagApplyReport } from '#lib/tauri-commands/index.js'
     import ApplyPanel from './ApplyPanel.svelte'
     import type { TagEditorState } from './tag-editor-state.svelte'
 
@@ -23,11 +24,13 @@
         onWriting?: () => void
         /** The dialog closed; `notWritten`: how many files the write it showed left unwritten. */
         onClose: (notWritten: number) => void
+        /** The applies of a ⌘⏎ press this list continues (an edit landed during its would-drop choice). */
+        continuing?: TagApplyReport[]
     }
 
-    const { tags, mode, closeWaits = false, onWriting, onClose }: Props = $props()
+    const { tags, mode, closeWaits = false, onWriting, onClose, continuing = [] }: Props = $props()
 
-    let panel = $state<{ start: () => Promise<void>; undo: () => Promise<boolean>; notWritten: () => number }>()
+    let panel = $state<{ start: (earlier?: TagApplyReport[]) => Promise<void>; undo: () => Promise<boolean>; notWritten: () => number }>()
     let busy = $state(false)
 
     onMount(() => {
@@ -35,7 +38,7 @@
             void panel?.undo().then((undid) => {
                 if (!undid) onClose(0)
             })
-        } else void panel?.start()
+        } else void panel?.start(continuing)
     })
 
     function close(): void {

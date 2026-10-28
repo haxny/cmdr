@@ -7,7 +7,8 @@
      * last change ("Finishing the last change…"), or says why it can't (`notice`), never ends without a word.
      * "Undo tag changes" reverses the last write until the next one; a file changed since that
      * write (written again, or another file renamed onto its name) is left alone and counted apart. It is the body
-     * of the Tags window's Write dialog (`WriteDialog`): ⌘S runs `start()`, ⌘Z runs `undo()`.
+     * of the Tags window's Write dialog (`WriteDialog`): ⌘⇧S runs `start()`, ⌘Z runs `undo()`. ⌘⏎ outside the dialog writes
+     * at once (`TagEditorState.writeNow`), with the same request.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -22,11 +23,12 @@
     import { confirmDialog } from '#lib/utils/confirm-dialog.js'
     import ApplyOutcome from './ApplyOutcome.svelte'
     import WouldDropDialog from './WouldDropDialog.svelte'
-    import { outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
+    import { fileNameOf, outcomeOf, refusalOf, removalsShown, type ApplyOutcome as Outcome } from './apply-outcome'
+    import { answerWriteAnyway } from './write-anyway'
     import { FIELD_LABELS } from './field-labels'
     import { undoableCount } from './last-tag-apply'
     import type { TagEditorState, TagStateError, TagUndoResult } from './tag-editor-state.svelte'
-    import { DEFAULT_WRITE_KIND, WRITE_KINDS, loadWriteKind, saveWriteKind } from './write-kind'
+    import { DEFAULT_WRITE_KIND, KIND_LABELS, WRITE_KINDS, loadWriteKind, saveWriteKind } from './write-kind'
     import { WAITING_SHOWN_AFTER_MS, WRITE_WAIT_LIMIT_MS } from './write-wait'
 
     interface Props {
@@ -67,6 +69,8 @@
               kind: ContentKind
               seen: TagEditorView | null
               answering: boolean
+              /** The files whose removals the list showed, allowed again for "Write anyway". */
+              allowRemovals: string[]
           }
         | { step: 'done'; outcome: Outcome }
         /** The write was refused: `noneWritten` when that came before any file was touched, and why. */
@@ -105,10 +109,15 @@
     }
 
     const view = $derived(tags.view)
+    // The rows' names (`Disc 1/01.mp3`), so tracks of different subfolders tell apart in the outcome.
+    const nameOf = $derived.by(() => {
+        const names = new Map((view?.tracks ?? []).map((track) => [track.path, track.fileName]))
+        return (path: string): string => names.get(path) ?? fileNameOf(path)
+    })
     const canWrite = $derived(view !== null && view.editable)
     const kindOptions = $derived([
-        { value: 'audiobook', label: tString('multiRename.tags.kind.audiobook') },
-        { value: 'music', label: tString('multiRename.tags.kind.music') },
+        { value: 'audiobook', label: tString(KIND_LABELS.audiobook) },
+        { value: 'music', label: tString(KIND_LABELS.music) },
     ])
     const labelOf = (of: ContentKind): string => kindOptions.find((option) => option.value === of)?.label ?? ''
     /** While a list or a write is on its way the kind stays as it was asked for. */
@@ -126,6 +135,7 @@
         if (change.cover) parts.push(tString('multiRename.tags.write.cover'))
         if (change.extras) parts.push(tString('multiRename.tags.write.extras'))
         for (const removal of change.removes) parts.push(tString(REMOVAL_KEYS[removal]))
+        if (change.removesUnknown) parts.push(tString('multiRename.tags.write.removesUnknown'))
         return tString('multiRename.tags.write.fileChanges', { fileName: change.fileName, fields: formatUnitList(parts) })
     }
 
@@ -179,14 +189,24 @@
         }
         current = { step: 'writing' }
         onWriting?.()
-        const res = await tags.apply({ kind: listedAs, allowFrameLoss: false, skip: [] }, { after: earlier })
+        // Only the files whose removals this list showed may lose a field; the backend holds back any other.
+        const allowRemovals = removalsShown(changes)
+        const res = await tags.apply(
+            { kind: listedAs, allowFrameLoss: false, skip: [], allowRemovals },
+            { after: earlier },
+        )
         if (!res.ok) {
             current = refusedStep(res.error.kind, earlier)
             return
         }
         const reports = [...earlier, res.value]
-        if (res.value.wouldDrop.length > 0) {
-            current = { step: 'wouldDrop', reports, kind: listedAs, seen: tags.view, answering: false }
+        if (res.value.wouldRemove.length > 0) {
+            // A file the list didn't show losing a field (it read differently at the write): list again, this press
+            // continuing, so its removal is seen before it's written.
+            await review(reports)
+            notice = 'multiRename.tags.write.listedAgain'
+        } else if (res.value.wouldDrop.length > 0) {
+            current = { step: 'wouldDrop', reports, kind: listedAs, seen: tags.view, answering: false, allowRemovals }
         }
         else current = endedStep(reports)
     }
@@ -205,53 +225,35 @@
             notice = 'multiRename.tags.write.stopped'
             return endedStep(earlier)
         }
-        switch (why) {
-            case 'undo':
-            case 'noAppDataDir':
-                return { step: 'refused', noneWritten: true, reason: 'multiRename.tags.undoStoreUnavailable' }
-            case 'readOnly':
-                return { step: 'refused', noneWritten: true, reason: 'multiRename.tags.readOnly' }
-            case 'noSession':
-            case 'notOpen':
-                return { step: 'refused', noneWritten: true, reason: 'multiRename.tags.write.sessionGone' }
-            default:
-                return { step: 'refused', noneWritten: false, reason: 'multiRename.tags.write.stopped' }
-        }
+        return { step: 'refused', ...refusalOf(why) }
     }
 
-    /** Every path the write knows, so "Write anyway" can skip all but the would-drop ones. */
-    function knownPaths(first: TagApplyReport): string[] {
-        return [
-            ...(tags.view?.tracks.map((track) => track.path) ?? []),
-            ...first.written,
-            ...first.failed.map((row) => row.path),
-            ...first.changedOnDisk,
-            ...first.wouldDrop.map((row) => row.path),
-        ]
-    }
-
+    /** "Write anyway" (`answerWriteAnyway`, shared with ⌘⏎'s choice). */
     async function writeAnyway(choice: Extract<Step, { step: 'wouldDrop' }>): Promise<void> {
-        const { reports, kind: listedAs, seen } = choice
-        const last = reports.at(-1)
-        if (last === undefined) return
+        const { reports } = choice
+        if (reports.length === 0) return
+        notice = null
         current = { ...choice, answering: true }
-        if (!(await callsAnswered(false))) {
-            // A call still out after the wait: write nothing, and the choice asks again.
-            current = { ...choice, answering: false }
-            return
+        const answer = await answerWriteAnyway(tags, choice, onWriting)
+        switch (answer.kind) {
+            case 'stillBusy':
+                // A call still out after the wait: write nothing, and the choice asks again.
+                notice = 'multiRename.tags.write.stillBusy'
+                current = { ...choice, answering: false }
+                break
+            case 'changed':
+                // Something was edited while the choice showed: nothing is written that wasn't listed. The applies so
+                // far go along, so the next write continues them and their Undo isn't lost.
+                await review(reports)
+                break
+            case 'written':
+                current = endedStep(answer.reports)
+                break
+            case 'refused':
+                // A refused "Write anyway" leaves those files unwritten, as a skip does, and says it stopped.
+                current = refusedStep(answer.error.kind, reports)
+                break
         }
-        if (tags.view !== seen) {
-            // Something was edited while the choice showed: nothing is written that wasn't listed. The applies so
-            // far go along, so the next write continues them and their Undo isn't lost.
-            await review(reports)
-            return
-        }
-        const request = writeAnywayRequest(listedAs, last.wouldDrop, knownPaths(last))
-        onWriting?.()
-        const res = await tags.apply(request, { after: reports })
-        // A refused "Write anyway" leaves those files unwritten, as a skip does, and says it stopped.
-        if (res.ok) current = endedStep([...reports, res.value])
-        else current = refusedStep(res.error.kind, reports)
     }
 
     /** The undo question: how many files go back, that a file changed since is left alone, and unwritten edits are lost. */
@@ -305,13 +307,16 @@
         current = { step: 'idle' }
     }
 
-    /** The sheet's Start: lists the changes, and from the list writes them. */
-    export async function start(): Promise<void> {
+    /**
+     * The sheet's Start: lists the changes, and from the list writes them. `earlier`: the applies of a press the list
+     * continues (⌘⏎'s, when an edit landed during its would-drop choice), so the write's Undo reverses them too.
+     */
+    export async function start(earlier: TagApplyReport[] = []): Promise<void> {
         // Read-only: the window says so at its top, and the button is disabled.
         if (!canWrite) return
         await oncePressed(async () => {
             if (current.step === 'review') await write(current)
-            else if (['idle', 'done', 'refused', 'undone'].includes(current.step)) await review()
+            else if (['idle', 'done', 'refused', 'undone'].includes(current.step)) await review(earlier)
         })
     }
 
@@ -349,6 +354,7 @@
         {#if earlier.length > 0}
             <ApplyOutcome
                 outcome={outcomeOf(earlier)}
+                {nameOf}
                 someUndoable={tags.undoable !== null}
                 onReload={() => { void reload() }}
             />
@@ -379,6 +385,7 @@
         {@const choice = current}
         <WouldDropDialog
             rows={choice.reports.at(-1)?.wouldDrop ?? []}
+            {nameOf}
             busy={choice.answering}
             onWriteAnyway={() => { void oncePressed(() => writeAnyway(choice)) }}
             onSkip={() => { current = endedStep(choice.reports) }}
@@ -391,6 +398,7 @@
         {:else if current.step === 'done'}
             <ApplyOutcome
                 outcome={current.outcome}
+                {nameOf}
                 someUndoable={tags.undoable !== null}
                 onReload={() => { void reload() }}
             />

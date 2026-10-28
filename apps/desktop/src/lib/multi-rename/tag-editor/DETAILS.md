@@ -39,10 +39,12 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   question.
 - **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
   the cursor row's Values… and Clear under the list; `CoverPanel` as the last group, inside the list's scroll),
-  `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays
-  over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` +
-  `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a format would lose, Write
-  anyway or Skip).
+  `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book; # Title Length File are
+  `TrackSortHeader` buttons that call `onSort`, the active one flipping direction and any other starting ascending, from
+  `view.sort`; the header pads by the scroller's scroll bar width, and a double-click edits # or Title),
+  `TagValueEditor` (the box F2 lays over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog),
+  `WriteDialog` (`ApplyPanel` + `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a
+  format would lose, Write anyway or Skip).
 - **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a tile with how
   many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new view; a new
   view also clears the section's notice). Tiles show `getCoverThumbnail` (asked once more when none came, then "No
@@ -74,24 +76,36 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   above the panes and the Apply panel under them pushed the table around and hid the write's answer in a small box (the
   user's report, 2026-10-27). The bar (`tags-function-keys.ts` holds its slots) mirrors the main window's
   `FunctionKeyBar` look but not its code, which is wired to the file commands: F2 Edit, F3 Play, F4 Replace, F5 Format,
-  F6 From name, F7 Number, F8 Clear, then ⌘S Write; Shift shows ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up,
-  ⇧F8 Remove extras. Its chips are the commands' live bindings (`getFirstShortcutReactive`), its buttons never take
-  focus, and a disabled slot is a command that can't act (read-only leaves Play and Open in player). The window's
-  keydown (`TagsWindow`) answers the same `Tags window` commands through `TagsContent.runCommand`, skipping a key a box,
-  a pane or a dialog already claimed, every key while a dialog is open, every key but ⌘S while a value is typed (⌘Z
-  stays the box's text undo), and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key
-  list: it holds the one-press tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist =
-  Artist, Narrator from text, Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the
-  selection (`setOne` per readable selected track) or every file (`setAll`). Each tool takes the field the user was on
-  when it opened, since focus then moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove
-  extras and Clear close once run. ⌘S opens `WriteDialog` listing the changes (`ApplyPanel.start()`), ⌘⏎ or Write tags
-  writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question
-  (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W reaches the window as the
-  native Close tab item, which closes a focused child window through its close request, so it meets the same discard
-  guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format re-applies the mask to
-  the value the first one made), as the in-flow panels did. A command that can't act (tags still being read, read-only,
-  no extras, a dialog open) does nothing: the reading notice or the status line already says why. Closing the Write
-  dialog on a write that left files unwritten keeps "Some files weren't written" in the status line.
+  F6 From name, F7 Number, F8 Clear, then ⌘⏎ Write; Shift shows ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up,
+  ⇧F8 Remove extras, and ⌘⇧S Review in Write's place. Its chips are the commands' live bindings
+  (`getFirstShortcutReactive`), its buttons never take focus, and a disabled slot is a command that can't act (read-only
+  leaves Play and Open in player). The window's keydown (`TagsWindow`) answers the same `Tags window` commands through
+  `TagsContent.runCommand`, skipping a key a box, a pane or a dialog already claimed, every key while a dialog is open,
+  every key but ⌘⏎ / ⌘S / ⌘⇧S (which the value box commits first) while a value is typed (⌘Z stays the box's text undo),
+  and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key list: it holds the one-press
+  tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist = Artist, Narrator from text,
+  Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the selection (`setOne` per readable
+  selected track) or every file (`setAll`). Each tool takes the field the user was on when it opened, since focus then
+  moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove extras and Clear close once run.
+  ⌘⏎ and ⌘S (`tags.write`) write at once: `TagEditorState.writeNow` is the Write dialog's own write without its list (it
+  waits for the edits out, lists as the remembered kind, writes nothing when nothing would change, then the same apply
+  request). ❗ When the kind would remove a field from any file (`removes`, an MP3's conductor for Audiobook) it writes
+  nothing and opens the list instead (`reviewFirst`, worded in the status line): a removal is only ever written from the
+  list that names it. The backend enforces it (`ApplyRequest.allowRemovals` → `wouldRemove`, backend `DETAILS.md` §
+  Write and undo): ⌘⏎ allows none, the dialog's write only the files it listed with a removal, and a file held back at
+  the write opens the list again, continuing the press. An edit landing between ⌘⏎'s list and its write writes nothing
+  and lists again (`changed`). The player stops first, a second press while it runs does nothing, would-drop files ask
+  in a `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`, shared with the dialog: an edit landed
+  meanwhile opens the list, continuing the press so Undo keeps both applies), and the status line says how many files
+  were written and how many weren't, until the next edit or 10 s. Refusals reuse the dialog's words (`refusalOf`). ⌘⇧S
+  (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write tags writes; it
+  can't close while a write is out. ⌘Z with a write to undo opens it on the undo question (`ApplyPanel.undo()`; a "no"
+  closes it), and without one says so in the status line. ⌘W reaches the window as the native Close tab item, which
+  closes a focused child window through its close request, so it meets the same discard guard as Esc. A text tool runs
+  again on each press while its dialog stays open (a second Format re-applies the mask to the value the first one made),
+  as the in-flow panels did. A command that can't act (tags still being read, read-only, no extras, a dialog open) does
+  nothing: the reading notice or the status line already says why. Closing the Write dialog on a write that left files
+  unwritten keeps "Some files weren't written" in the status line.
 - **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select items
   register F2–F8, ⇧F2, ⇧F4 and ⇧F8. Those accelerators fire ahead of the page and the file-scoped guard would drop them,
   so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
@@ -105,7 +119,8 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   a dialog for exactly that, `routes/(main)/DETAILS.md` § The dialog gate); a routed Tab would switch panes from a
   dialog or a field where Tab must move focus. The panes answer Tab themselves; elsewhere it is the browser's and the
   dialog focus trap's. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key reaches the page's keydown
-  (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` outside a text box and leaves ⌘Z to the
+  (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` (the last pending edit at once when
+  `view.canUndoEdit`, else the last write after asking; ⇧⌘Z is `tags.redo`) outside a text box and leaves ⌘Z to the
   box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S, ⇧F3, ⇧F5, ⌥Space and
   Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
   `every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window`. ❗ Not yet checked by hand in a built app:
@@ -141,6 +156,20 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   page sees the key, so `menu_handlers.rs` sends `tags-select-all` / `tags-deselect-all` to the focused `tags-*` window
   (`focused_tags_window`); `TagsWindow` selects the text of a text box with focus (never a checkbox), else every track,
   and clears the track selection.
+- **⌘X / ⌘C / ⌘V on a field**: Edit > Cut, Copy and Paste go to the focused `tags-*` window as `tags-clipboard`
+  (`TagsContent.clipboard`, `tags-clipboard.ts`). A focused text box, or focus in the cover section, gets the same
+  action back as the native `cut:` / `copy:` / `paste:` (`tagsNativeEdit`), so the box's own clipboard and its typing
+  undo, and the cover's picture paste (`beforepaste` / `paste`, below), work as before; under a dialog nothing else
+  happens. Otherwise Copy puts the cursor field's text on the clipboard (Album: the row, a «multiple values» row as its
+  distinct values joined by "; " without the marker; Tracks: the active cell, # or Title; an empty field copies ""), Cut
+  copies then empties it as Delete does (not when the copy didn't go through), and Paste sets the clipboard's plain text
+  (`field-clipboard.ts`: one trailing line break dropped; a one-line field takes the first line, a multi-value field
+  joins the lines with "; "; Comment and Description keep them) on the Album row in Clear's scope, or on the Tracks
+  cursor row, or on every selected row when several are and the cursor is on one. Each is a pending edit (⌘Z). The
+  clipboard goes through the backend (`copyToClipboard`, `readClipboardText`), ❌ not `navigator.clipboard`: the menu's
+  action is no user gesture in the page, so WebKit would refuse the read or show its Paste callout. A read that fails, a
+  clipboard with no text (or only blanks), and text over the field's limit (`pasteRefusal`: 64 KiB for Comment and
+  Description, 4 KiB for the rest) say so in the status line and change nothing.
 - **Why edits are keyed by path**: the session's order can change under the view; every edit stays with its file.
   `open()` fetches the view again (`openTagEditor(id)`, never a restart) when asked, so the list follows the order; the
   unwritten edits live in the backend session and come back with it. A view answer older than one already shown is

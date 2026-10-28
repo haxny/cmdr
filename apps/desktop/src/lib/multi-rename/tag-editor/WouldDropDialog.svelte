@@ -18,9 +18,11 @@
         busy: boolean
         onWriteAnyway: () => void
         onSkip: () => void
+        /** How a file is named (its path below the book folder); the bare file name by default. */
+        nameOf?: (path: string) => string
     }
 
-    const { rows, busy, onWriteAnyway, onSkip }: Props = $props()
+    const { rows, busy, onWriteAnyway, onSkip, nameOf = fileNameOf }: Props = $props()
 
     let section = $state<HTMLElement>()
 
@@ -45,7 +47,7 @@
         {#each rows as row (row.path)}
             <li>
                 {tString('multiRename.tags.wouldDrop.row', {
-                    fileName: fileNameOf(row.path),
+                    fileName: nameOf(row.path),
                     items: formatUnitList(row.items),
                 })}
             </li>

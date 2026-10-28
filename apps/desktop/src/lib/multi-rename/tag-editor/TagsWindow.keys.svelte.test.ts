@@ -16,6 +16,8 @@ import type { TagEditorView } from '#lib/tauri-commands/index.js'
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  undoTagEdit: vi.fn(),
+  redoTagEdit: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(() =>
@@ -102,6 +104,9 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
+  sort: null,
 }
 
 let cleanup: (() => void) | undefined
@@ -117,7 +122,17 @@ beforeEach(() => {
   ipc.listTagCovers.mockResolvedValue({ ok: true, value: [] })
   ipc.getTagChanges.mockResolvedValue({
     ok: true,
-    value: [{ path: '/b/01.mp3', fileName: '01.mp3', fields: ['album'], cover: false, extras: false, removes: [] }],
+    value: [
+      {
+        path: '/b/01.mp3',
+        fileName: '01.mp3',
+        fields: ['album'],
+        cover: false,
+        extras: false,
+        removes: [],
+        removesUnknown: false,
+      },
+    ],
   })
   ipc.applyTags.mockResolvedValue({
     ok: true,
@@ -125,6 +140,7 @@ beforeEach(() => {
       applyId: 'A1',
       written: ['/b/01.mp3'],
       wouldDrop: [],
+      wouldRemove: [],
       failed: [],
       changedOnDisk: [],
       undoUnavailable: false,
@@ -156,6 +172,9 @@ async function key(name: string, init: KeyboardEventInit = {}): Promise<Keyboard
 }
 
 const dialog = (): HTMLElement | null => document.querySelector('[role="dialog"]')
+/** ⇧⌘S: the Write dialog, listing the changes first. */
+const review = () => key('S', { metaKey: true, shiftKey: true, code: 'KeyS' })
+const statusLine = (): string => document.querySelector('.status')?.textContent ?? ''
 const dialogTitle = (): string => dialog()?.querySelector('h2, [id$="-title"]')?.textContent.trim() ?? ''
 
 describe('the Tags window’s function keys', () => {
@@ -306,9 +325,9 @@ describe('the Tags window’s function keys', () => {
     expect(document.activeElement).toBe(box)
   })
 
-  it('⌘S lists the changes in a dialog, and writes them on confirm', async () => {
+  it('⇧⌘S lists the changes in a dialog, and writes them on confirm', async () => {
     await mountWindow()
-    await key('s', { metaKey: true, code: 'KeyS' })
+    await review()
     expect(dialogTitle()).toBe('Write tags')
     expect(dialog()?.textContent).toContain('01.mp3')
     expect(ipc.applyTags).not.toHaveBeenCalled()
@@ -318,14 +337,15 @@ describe('the Tags window’s function keys', () => {
     expect(dialog()?.textContent).toContain('Tags written to 1 file')
   })
 
-  it('⌘S while typing a value sends that value first, then lists', async () => {
+  it('⌘S while typing a value sends that value first, then writes it', async () => {
     const root = await mountWindow()
     const box = await editCursorRow(paneList(root, 'Album tags'))
     await typeInto(box, 'Dracula')
     await key('s', { metaKey: true, code: 'KeyS' })
     expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
-    expect(ipc.getTagChanges).toHaveBeenCalled()
-    expect(dialogTitle()).toBe('Write tags')
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(ipc.editTags.mock.invocationCallOrder[0]).toBeLessThan(ipc.applyTags.mock.invocationCallOrder[0])
+    expect(dialog()).toBeNull()
   })
 
   it('⌘Z with no write to undo says so; while a value is typed it is the box’s own undo', async () => {
@@ -341,9 +361,62 @@ describe('the Tags window’s function keys', () => {
     expect(dialog()).toBeNull()
   })
 
+  it('⌘Z after a pane Delete takes the edit back at once, without a dialog; ⇧⌘Z puts it back', async () => {
+    const edited = { ...VIEW, dirty: true, canUndoEdit: true }
+    ipc.editTags.mockResolvedValue({ ok: true, value: edited })
+    ipc.undoTagEdit.mockResolvedValue({ ok: true, value: { ...VIEW, canRedoEdit: true } })
+    ipc.redoTagEdit.mockResolvedValue({ ok: true, value: edited })
+    const root = await mountWindow()
+    await key('Delete')
+    expect(ipc.editTags).toHaveBeenCalledTimes(1)
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    expect(ipc.undoTagEdit).toHaveBeenCalledWith('S')
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(dialog()).toBeNull()
+    expect(root.textContent).toContain('Undone')
+    expect(root.textContent).not.toContain('There’s no tag write to undo.')
+    await key('Z', { metaKey: true, shiftKey: true, code: 'KeyZ' })
+    expect(ipc.redoTagEdit).toHaveBeenCalledWith('S')
+    expect(root.textContent).toContain('Redone')
+  })
+
+  it('⌘Z right after a Delete, with a write behind, takes the Delete back: no write-undo question', async () => {
+    await mountWindow()
+    await review()
+    buttonNamed(dialog() as HTMLElement, 'Write tags').click()
+    await settle()
+    await key('Escape')
+    let landed: (res: unknown) => void = () => {}
+    ipc.editTags.mockReturnValueOnce(new Promise((resolve) => (landed = resolve)))
+    ipc.undoTagEdit.mockResolvedValue({ ok: true, value: VIEW })
+    await key('Delete')
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    landed({ ok: true, value: { ...VIEW, dirty: true, canUndoEdit: true } })
+    await settle()
+    expect(ipc.undoTagEdit).toHaveBeenCalledWith('S')
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(ipc.undoTagApply).not.toHaveBeenCalled()
+    expect(dialog()).toBeNull()
+  })
+
+  it('⇧⌘Z with nothing to redo does nothing, and in a value box both stay the box’s own', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: { ...VIEW, canUndoEdit: true } })
+    const root = await mountWindow()
+    await key('Z', { metaKey: true, shiftKey: true, code: 'KeyZ' })
+    expect(ipc.redoTagEdit).not.toHaveBeenCalled()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    const undo = await key('z', { metaKey: true, code: 'KeyZ' })
+    const redo = await key('Z', { metaKey: true, shiftKey: true, code: 'KeyZ' })
+    expect([undo.defaultPrevented, redo.defaultPrevented]).toEqual([false, false])
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    expect(ipc.redoTagEdit).not.toHaveBeenCalled()
+  })
+
   it('⌘Z after a write asks, then undoes it, in the Write dialog', async () => {
     await mountWindow()
-    await key('s', { metaKey: true, code: 'KeyS' })
+    await review()
     buttonNamed(dialog() as HTMLElement, 'Write tags').click()
     await settle()
     await key('Escape')
@@ -490,13 +563,14 @@ describe('the Tags window’s function keys', () => {
         applyId: 'A1',
         written: [],
         wouldDrop: [],
+        wouldRemove: [],
         failed: [{ path: '/b/01.mp3', error: { type: 'notSupported' } }],
         changedOnDisk: [],
         undoUnavailable: false,
       },
     })
     const root = await mountWindow()
-    await key('s', { metaKey: true, code: 'KeyS' })
+    await review()
     buttonNamed(dialog() as HTMLElement, 'Write tags').click()
     await settle()
     await key('Escape')
@@ -530,7 +604,7 @@ describe('closing the Tags window during a write', () => {
       void unmount(window)
     }
     await settle()
-    await key('s', { metaKey: true, code: 'KeyS' })
+    await review()
     buttonNamed(dialog() as HTMLElement, 'Write tags').click()
     await settle()
     expect(ipc.applyTags).toHaveBeenCalledTimes(1)
@@ -552,6 +626,7 @@ describe('closing the Tags window during a write', () => {
         applyId: 'A1',
         written: ['/b/01.mp3'],
         wouldDrop: [],
+        wouldRemove: [],
         failed: [],
         changedOnDisk: [],
         undoUnavailable: false,
@@ -566,5 +641,210 @@ describe('closing the Tags window during a write', () => {
     await settle()
     expect(ipc.closeMultiRename).toHaveBeenCalledWith('S')
     expect(closeSelfWindow).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('⌘⏎ and ⌘S write at once', () => {
+  const wouldDrop = {
+    applyId: 'A1',
+    written: [],
+    wouldDrop: [{ path: '/b/01.mp3', items: ['TSOP'] }],
+    wouldRemove: [],
+    failed: [],
+    changedOnDisk: [],
+    undoUnavailable: false,
+  }
+
+  it.each([
+    ['⌘⏎', 'Enter', 'Enter'],
+    ['⌘S', 's', 'KeyS'],
+  ])('%s writes without a dialog and the status line says how many files', async (_name, name, code) => {
+    await mountWindow()
+    await key(name, { metaKey: true, code })
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(ipc.applyTags).toHaveBeenCalledWith(
+      'S',
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      false,
+    )
+    expect(dialog()).toBeNull()
+    expect(statusLine()).toContain('1 file written')
+  })
+
+  it('⌘⏎ with an open editor commits the edit first, and writes once', async () => {
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(ipc.editTags.mock.invocationCallOrder[0]).toBeLessThan(ipc.getTagChanges.mock.invocationCallOrder[0])
+    expect(dialog()).toBeNull()
+  })
+
+  it('a second press while the write runs does nothing', async () => {
+    let finish: (value: unknown) => void = () => {}
+    ipc.applyTags.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    await key('s', { metaKey: true, code: 'KeyS' })
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(statusLine()).toContain('Writing tags…')
+    finish({ ok: true, value: { ...wouldDrop, written: ['/b/01.mp3'], wouldDrop: [] } })
+    await settle()
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(statusLine()).toContain('1 file written')
+  })
+
+  it('would-drop asks first; Write anyway writes those files alone', async () => {
+    ipc.applyTags.mockResolvedValueOnce({ ok: true, value: wouldDrop })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(dialog()?.textContent).toContain('01.mp3')
+    buttonNamed(dialog() as HTMLElement, 'Write anyway').click()
+    await settle()
+    expect(ipc.applyTags).toHaveBeenCalledTimes(2)
+    expect(ipc.applyTags).toHaveBeenLastCalledWith(
+      'S',
+      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'], allowRemovals: [] },
+      false,
+    )
+    expect(dialog()).toBeNull()
+    expect(statusLine()).toContain('1 file written')
+  })
+
+  it('would-drop: Skip leaves those files, and the status line says they weren’t written', async () => {
+    ipc.applyTags.mockResolvedValueOnce({ ok: true, value: wouldDrop })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    buttonNamed(dialog() as HTMLElement, 'Skip these files').click()
+    await settle()
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(dialog()).toBeNull()
+    expect(statusLine()).toContain('0 files written, 1 not written. Review changes (⌘⇧S) shows which.')
+  })
+
+  it('a refused write shows the worded reason in the status line', async () => {
+    ipc.applyTags.mockResolvedValue({ ok: false, error: { kind: 'notOpen' } })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(statusLine()).toContain('No file was written.')
+    expect(statusLine()).toContain('The tags aren’t open any more.')
+  })
+
+  it('a write that would remove a field opens the list instead, says why, and writes nothing', async () => {
+    ipc.getTagChanges.mockResolvedValue({
+      ok: true,
+      value: [
+        {
+          path: '/b/01.mp3',
+          fileName: '01.mp3',
+          fields: [],
+          cover: false,
+          extras: false,
+          removes: ['conductor'],
+          removesUnknown: false,
+        },
+      ],
+    })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(dialogTitle()).toBe('Write tags')
+    expect(dialog()?.textContent).toContain('conductor (removed)')
+    expect(statusLine()).toContain('Writing as Audiobook removes a tag from 1 file, so the list shows it first.')
+  })
+
+  it('⇧⌘S while typing a value sends that value first, then lists', async () => {
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    await review()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
+    expect(dialogTitle()).toBe('Write tags')
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+  })
+
+  it('a file the backend holds back for a removal opens the list; its write allows only what it shows', async () => {
+    ipc.applyTags.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        ...wouldDrop,
+        wouldDrop: [],
+        wouldRemove: [{ path: '/b/01.mp3', removes: ['conductor'], unknown: false }],
+      },
+    })
+    ipc.getTagChanges
+      .mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            path: '/b/01.mp3',
+            fileName: '01.mp3',
+            fields: ['album'],
+            cover: false,
+            extras: false,
+            removes: [],
+            removesUnknown: false,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            path: '/b/01.mp3',
+            fileName: '01.mp3',
+            fields: ['album'],
+            cover: false,
+            extras: false,
+            removes: ['conductor'],
+            removesUnknown: false,
+          },
+        ],
+      })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(dialogTitle()).toBe('Write tags')
+    expect(dialog()?.textContent).toContain('conductor (removed)')
+    buttonNamed(dialog() as HTMLElement, 'Write tags').click()
+    await settle()
+    expect(ipc.applyTags).toHaveBeenLastCalledWith(
+      'S',
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: ['/b/01.mp3'] },
+      false,
+    )
+  })
+
+  it('nothing to write says so and writes nothing', async () => {
+    ipc.getTagChanges.mockResolvedValue({ ok: true, value: [] })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(statusLine()).toContain('Nothing to write.')
+  })
+
+  it('the summary goes at the next edit', async () => {
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(statusLine()).toContain('1 file written')
+    await key('Delete')
+    expect(statusLine()).not.toContain('1 file written')
+  })
+
+  it('the summary goes after 10 s', async () => {
+    await mountWindow()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      await key('Enter', { metaKey: true, code: 'Enter' })
+      expect(statusLine()).toContain('1 file written')
+      await vi.advanceTimersByTimeAsync(9_000)
+      expect(statusLine()).toContain('1 file written')
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(statusLine()).not.toContain('1 file written')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

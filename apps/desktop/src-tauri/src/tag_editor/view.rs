@@ -13,6 +13,7 @@ use cmdr_tags::tools::fields_with_diacritics;
 use cmdr_tags::{Cover, FileTags, TagField, date_is_writable, format_of};
 
 use super::session::{Entry, Loaded};
+use super::sort::TrackSort;
 
 /// How many distinct values a «multiple values» row lists.
 const CHOICE_LIMIT: usize = 50;
@@ -108,6 +109,12 @@ pub struct TagEditorView {
     /// How many files carry a Date the writer would refuse (an MP3 whose TDAT reads as month 20):
     /// flagged on open, so the user corrects it before writing.
     pub bad_dates: u32,
+    /// The order the tracks are in. Set by the session; `None` straight out of `build`.
+    pub sort: Option<TrackSort>,
+    /// An edit step can be undone (⌘Z); set by the session.
+    pub can_undo_edit: bool,
+    /// An undone edit step can be redone (⇧⌘Z); set by the session.
+    pub can_redo_edit: bool,
 }
 
 /// What the session's rules say about the window, apart from the files.
@@ -149,6 +156,9 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .into_iter()
             .collect(),
         bad_dates: count_bad_dates(tracks),
+        sort: None,
+        can_undo_edit: false,
+        can_redo_edit: false,
     }
 }
 
@@ -186,6 +196,22 @@ fn count_bad_dates(tracks: &[(&Path, &Entry)]) -> u32 {
         })
         .count();
     u32::try_from(bad).unwrap_or(u32::MAX)
+}
+
+/// The file's name as the session names it: its path below the session's folder (`Disc 1/01.mp3`
+/// for a track of a folder), so tracks of different subfolders tell apart.
+pub(super) fn file_name_of(dir: &Path, path: &Path) -> String {
+    path.strip_prefix(dir)
+        .ok()
+        .or_else(|| path.file_name().map(Path::new))
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+pub(super) fn stem_of(path: &Path) -> String {
+    path.file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 fn track_row(path: &Path, entry: &Entry) -> TrackRow {

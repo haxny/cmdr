@@ -1639,6 +1639,18 @@ export const commands = {
   // Applies edits in memory; an unknown track refuses the whole batch.
   editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
+  /**
+   *  Reverses the last pending edit (an edit batch, a tool run or a cover change); changes nothing
+   *  when there is none.
+   */
+  undoTagEdit: (sessionId: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('undo_tag_edit', { sessionId })),
+  // Re-applies the last undone pending edit; changes nothing when there is none.
+  redoTagEdit: (sessionId: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('redo_tag_edit', { sessionId })),
+  // Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
+  sortTagTracks: (sessionId: string, sort: TrackSort) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('sort_tag_tracks', { sessionId, sort })),
   // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
   runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
@@ -1759,6 +1771,14 @@ export const commands = {
   // Lets eviction take the session again. No-op when it's already gone.
   releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
   /**
+   *  Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
+   *  (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
+   *  (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
+   *  the window sends them here, and the box (or the section's picture paste) keeps its own. Only a
+   *  Tags window that still has focus may: the action goes to whatever window is key.
+   */
+  tagsNativeEdit: (action: TagsClipboardAction) => __TAURI_INVOKE<void>('tags_native_edit', { action }),
+  /**
    *  A new Multi-Rename session over the files of `session_id` (an open sheet's), in their current
    *  order, for a Tags window: the sheet closing never ends the window's session.
    */
@@ -1767,7 +1787,8 @@ export const commands = {
   /**
    *  Opens a Multi-Rename session over the pane's selection for a Tags window, as
    *  `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
-   *  the window reads the tags itself.
+   *  the window reads the tags itself. A selected folder opens into its audio files; that walk gets
+   *  [`TAGS_FOLDER_OPEN_TIMEOUT`] (a share is slow), and one that runs out is stopped and leaves no session.
    */
   openTagsSession: (
     listingId: string,
@@ -1775,7 +1796,7 @@ export const commands = {
     selectedIndices: number[] | null,
     expectedSequence: number,
   ) =>
-    typedError<MultiRenameOpened, MultiRenameError>(
+    typedError<TagsOpened, MultiRenameError>(
       __TAURI_INVOKE('open_tags_session', { listingId, includeHidden, selectedIndices, expectedSequence }),
     ),
   // Moves a file or directory to the macOS Trash via NSFileManager.
@@ -5719,6 +5740,7 @@ export const events = {
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
+  tagsClipboard: makeEvent<TagsClipboard>('tags-clipboard'),
   tagsDeselectAll: makeEvent<TagsDeselectAll>('tags-deselect-all'),
   tagsMenuKey: makeEvent<TagsMenuKey>('tags-menu-key'),
   tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
@@ -6260,6 +6282,11 @@ export type ApplyRequest = {
   allowFrameLoss: boolean
   // Paths the user chose to skip, as the view shows them.
   skip: string[]
+  /**
+   *  Paths (as the view shows them) whose kind removals the user saw in the change list and
+   *  confirmed: only these may lose a field the kind removes. Absent means none.
+   */
+  allowRemovals?: string[]
 }
 
 /**
@@ -9150,6 +9177,8 @@ export type FileChangeView = {
   extras: boolean
   // What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
   removes: KindRemoval[]
+  // The file couldn't be read to tell what the kind removes: it may lose a field.
+  removesUnknown: boolean
 }
 
 /**
@@ -12973,6 +13002,8 @@ export type MultiRenameError =
   | { type: 'stillReading' }
   // The folder, or a row in it, is read-only because a route serves it.
   | { type: 'readOnly'; place: ReadOnlyPlace }
+  // A new order that isn't the session's own files, each exactly once. Nothing was changed.
+  | { type: 'notAPermutation' }
   // Results couldn't write its names file; `detail` is log text only.
   | { type: 'couldntWriteNames'; detail: string }
   /**
@@ -12982,6 +13013,10 @@ export type MultiRenameError =
   | { type: 'namesFileGone'; detail: string }
   // The work didn't finish within its deadline.
   | { type: 'timedOut' }
+  // A Tags window was asked for more audio files than it takes (`limit`) from the folders it was given.
+  | { type: 'tooManyTracks'; limit: number }
+  // A Tags window was asked for the files inside a folder, which only a disk this computer reads can list.
+  | { type: 'foldersNeedLocalDisk' }
   // The worker failed; `detail` is log text only.
   | { type: 'internal'; detail: string }
 
@@ -18474,6 +18509,8 @@ export type TagApplyReport = {
   written: string[]
   // Not written: the write would drop these items. The UI asks.
   wouldDrop: WouldDropRow[]
+  // Not written: the kind would remove a field the request didn't allow. The UI lists it.
+  wouldRemove: WouldRemoveRow[]
   // Not written, with why.
   failed: FailedRow[]
   // Not written: something else changed the file since the session read it.
@@ -18586,6 +18623,12 @@ export type TagEditorView = {
    *  flagged on open, so the user corrects it before writing.
    */
   badDates: number
+  // The order the tracks are in. Set by the session; `None` straight out of `build`.
+  sort: TrackSort | null
+  // An edit step can be undone (⌘Z); set by the session.
+  canUndoEdit: boolean
+  // An undone edit step can be redone (⇧⌘Z); set by the session.
+  canRedoEdit: boolean
 }
 
 /**
@@ -18770,6 +18813,20 @@ export type TagsAtQuit = {
 }
 
 /**
+ *  `tags-clipboard`: Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) while a Tags window is focused. The
+ *  accelerators fire before the page sees the keys, and the native `cut:`/`copy:`/`paste:` would
+ *  reach only a text box, so the window gets the action and decides: the field under the cursor,
+ *  or the same native action handed back (`tags_native_edit`) for a text box or the cover section.
+ *  Emitted to that window only.
+ */
+export type TagsClipboard = {
+  action: TagsClipboardAction
+}
+
+// Which of Edit > Cut, Copy and Paste a focused Tags window was asked for (`TagsClipboard`).
+export type TagsClipboardAction = 'cut' | 'copy' | 'paste'
+
+/**
  *  `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window
  *  clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
  */
@@ -18788,6 +18845,15 @@ export type TagsMenuKey = {
    *  still one of `command_id`'s keys: a rebound item no longer means the tag tool.
    */
   menuCommandId: string
+}
+
+// A Tags window's new session, and how much of the folders it couldn't see.
+export type TagsOpened = {
+  sessionId: string
+  // How many names the session holds.
+  count: number
+  // Places under the selected folders that couldn't be read (or named), so some tracks may be missing.
+  unreadable: number
 }
 
 /**
@@ -18947,6 +19013,17 @@ export type TrackRow = {
   // Set when the file couldn't be read: the row is shown greyed and never written.
   readError: ReadErrorCode | null
 }
+
+// The tracks' order: a key and a direction.
+export type TrackSort = {
+  key: TrackSortKey
+  descending: boolean
+}
+
+// What the tracks are ordered by.
+export type TrackSortKey =
+  // Disc number, then track number (`3` or `3/12`); a missing disc counts as disc 1.
+  'discTrack' | 'title' | 'length' | 'fileName'
 
 /**
  *  The live shape of a running transfer, on every progress event AND on
@@ -20871,6 +20948,15 @@ export type WipeReport = {
 export type WouldDropRow = {
   path: string
   items: string[]
+}
+
+// A file held back because writing it as the kind would remove a field (no values, ever).
+export type WouldRemoveRow = {
+  path: string
+  // What the kind would remove; empty when `unknown`.
+  removes: KindRemoval[]
+  // The file couldn't be read to tell: it may lose a field, so it isn't written.
+  unknown: boolean
 }
 
 /**

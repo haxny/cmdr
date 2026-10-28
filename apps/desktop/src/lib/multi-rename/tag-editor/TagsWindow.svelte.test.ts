@@ -35,6 +35,7 @@ const ipc = vi.hoisted(() => ({
     return Promise.resolve(() => {})
   }),
   onTagsMenuKey: vi.fn(() => Promise.resolve(() => {})),
+  onTagsClipboard: vi.fn(() => Promise.resolve(() => {})),
   onTagsDeselectAll: vi.fn((callback: () => void) => {
     menuDeselectAll.callback = callback
     return Promise.resolve(() => {})
@@ -74,6 +75,8 @@ const VIEW = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
 }
 
 async function settle(): Promise<void> {

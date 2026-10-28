@@ -169,8 +169,6 @@ pub(crate) fn open(
 enum MediaSeed {
     /// The listing's entries: every media file is queued for the background read.
     Listing,
-    /// Nothing: a session nothing previews a rename over reads no media.
-    Empty,
 }
 
 fn open_seeded(
@@ -196,7 +194,6 @@ fn open_seeded(
     let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
     let entries = match seed {
         MediaSeed::Listing => listings.entries(&id).map_err(|_| gone())?,
-        MediaSeed::Empty => Vec::new(),
     };
     Ok(insert_new(
         listing_id.to_string(),
@@ -500,6 +497,24 @@ pub(crate) fn move_row(session_id: &str, row: usize, direction: RowMove) -> Resu
     })?
 }
 
+/// Replaces the rename order with `names`, which must be the session's own files, each
+/// exactly once (anything else is `NotAPermutation`, nothing changed). Like [`move_row`] it
+/// retires the latest preview.
+pub(crate) fn set_order(session_id: &str, names: Vec<String>) -> Result<(), MultiRenameError> {
+    with_session(session_id, |s| {
+        let mut wanted: Vec<&String> = names.iter().collect();
+        let mut current: Vec<&String> = s.names.iter().collect();
+        wanted.sort_unstable();
+        current.sort_unstable();
+        if wanted != current {
+            return Err(MultiRenameError::NotAPermutation);
+        }
+        s.names = names.into();
+        s.latest = None;
+        Ok(())
+    })?
+}
+
 /// The most rows one range-samples request answers: the editor shows five.
 pub(crate) const MAX_RANGE_SAMPLES: usize = 16;
 
@@ -679,11 +694,17 @@ pub(super) fn is_open(session_id: &str) -> bool {
 mod tags;
 #[cfg(test)]
 pub(crate) use tags::is_held;
-pub(crate) use tags::{held_twin, hold, open_for_tags, release, reopen};
+#[cfg(test)]
+pub(crate) use tags::open_for_tags;
+pub(crate) use tags::{OpenHandshake, TagsOpened, held_twin, hold, plan_for_tags, release, reopen};
 
 #[cfg(test)]
 #[path = "session_hold_test.rs"]
 mod hold_test;
+
+#[cfg(test)]
+#[path = "session_tags_test.rs"]
+mod tags_test;
 
 #[cfg(test)]
 mod tests {

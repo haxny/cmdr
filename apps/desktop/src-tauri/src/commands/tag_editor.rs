@@ -11,8 +11,8 @@ use std::time::Instant;
 use cmdr_fs::deadline::{SESSION_IO_TIMEOUT, StallWatch, blocking_typed_result_until_stalled};
 
 use crate::multi_rename::error::MultiRenameError;
-use crate::multi_rename::session::MultiRenameOpened;
 use crate::multi_rename::session::files_of;
+use crate::multi_rename::session::{MultiRenameOpened, OpenHandshake, TagsOpened, plan_for_tags};
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
 use crate::tag_editor::at_quit;
@@ -21,15 +21,18 @@ use crate::tag_editor::cover_choices::{
     CoverChoice, DROP_READS, image_of, list as list_covers, set_for_all, set_from_bytes_within, set_from_path_within,
     thumbnail, use_for_all,
 };
+use crate::tag_editor::history::{redo_edit, undo_edit};
 use crate::tag_editor::last_apply::{LastTagApply, last_of};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
     preview_names, tool as run_tool,
 };
+use crate::tag_editor::sort::{TrackSort, sort_tracks};
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 use crate::tag_editor::window::TagsSessionInfo;
+use crate::window_events::TagsClipboardAction;
 
 /// How long a dropped picture's read may stand still before it's given up: a whole-file read off a
 /// NAS has no honest ceiling, only a silence one (`SESSION_IO_TIMEOUT`'s scale), so it may take as
@@ -112,6 +115,46 @@ pub async fn edit_tags(session_id: String, edits: Vec<TagEdit>) -> Result<TagEdi
         let started = Instant::now();
         let result = edit(&session_id, edits);
         activity::edited("edit", &result, started);
+        result
+    })
+    .await
+}
+
+/// Reverses the last pending edit (an edit batch, a tool run or a cover change); changes nothing
+/// when there is none.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_tag_edit(session_id: String) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = undo_edit(&session_id);
+        activity::edited("undo edit", &result, started);
+        result
+    })
+    .await
+}
+
+/// Re-applies the last undone pending edit; changes nothing when there is none.
+#[tauri::command]
+#[specta::specta]
+pub async fn redo_tag_edit(session_id: String) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = redo_edit(&session_id);
+        activity::edited("redo edit", &result, started);
+        result
+    })
+    .await
+}
+
+/// Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
+#[tauri::command]
+#[specta::specta]
+pub async fn sort_tag_tracks(session_id: String, sort: TrackSort) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = sort_tracks(&session_id, sort);
+        activity::edited("sort", &result, started);
         result
     })
     .await
@@ -260,11 +303,11 @@ pub async fn open_tags_in_player(
     blocking(move || open_in_player(&app, player_targets(&session_id, &paths)?)).await
 }
 
-/// The session's folder, when its files are on the local disk.
+/// The folder the session's tracks share, when its files are on the local disk.
 fn local_folder(session_id: &str) -> Result<std::path::PathBuf, TagEditorError> {
     let files = files_of(session_id).map_err(|_| TagEditorError::NoSession)?;
     if files.volume_id == LOCAL_VOLUME_ID {
-        Ok(files.dir)
+        Ok(crate::tag_editor::cover::tracks_folder(&files.dir, files.names.iter()))
     } else {
         Err(TagEditorError::ReadOnly)
     }
@@ -381,6 +424,34 @@ pub async fn hold_tags_session(session_id: String) -> Result<TagsSessionInfo, Mu
     crate::tag_editor::window::hold(&session_id)
 }
 
+/// Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
+/// (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
+/// (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
+/// the window sends them here, and the box (or the section's picture paste) keeps its own. Only a
+/// Tags window that still has focus may: the action goes to whatever window is key.
+#[tauri::command]
+#[specta::specta]
+pub async fn tags_native_edit(
+    app: tauri::AppHandle,
+    webview_window: tauri::WebviewWindow,
+    action: TagsClipboardAction,
+) {
+    let focused = webview_window.is_focused().unwrap_or(false);
+    if !crate::tag_editor::window::may_hand_back(webview_window.label(), focused) {
+        log::debug!("an edit action handed back by a window without focus (or not a Tags window) was dropped");
+        return;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let id = crate::tag_editor::window::native_edit_id_of(action);
+        if let Err(e) = app.run_on_main_thread(move || crate::menu::send_native_edit_action(id)) {
+            log::warn!("couldn't hand an edit action back to a Tags window: {e}");
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, action);
+}
+
 /// Lets eviction take the session again. No-op when it's already gone.
 #[tauri::command]
 #[specta::specta]
@@ -398,7 +469,8 @@ pub async fn reopen_for_tags(session_id: String) -> Result<MultiRenameOpened, Mu
 
 /// Opens a Multi-Rename session over the pane's selection for a Tags window, as
 /// `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
-/// the window reads the tags itself.
+/// the window reads the tags itself. A selected folder opens into its audio files; that walk gets
+/// [`TAGS_FOLDER_OPEN_TIMEOUT`] (a share is slow), and one that runs out is stopped and leaves no session.
 #[tauri::command]
 #[specta::specta]
 pub async fn open_tags_session(
@@ -406,19 +478,38 @@ pub async fn open_tags_session(
     include_hidden: bool,
     selected_indices: Option<Vec<usize>>,
     expected_sequence: u64,
-) -> Result<MultiRenameOpened, MultiRenameError> {
-    cmdr_fs::deadline::blocking_typed_result_with_timeout(
-        std::time::Duration::from_secs(2),
-        || MultiRenameError::TimedOut,
-        |detail| MultiRenameError::Internal { detail },
-        move || {
-            crate::multi_rename::session::open_for_tags(
+) -> Result<TagsOpened, MultiRenameError> {
+    let timed_out = || MultiRenameError::TimedOut;
+    let join_failed = |detail: String| MultiRenameError::Internal { detail };
+    let plan =
+        cmdr_fs::deadline::blocking_typed_result_with_timeout(TAGS_OPEN_TIMEOUT, timed_out, join_failed, move || {
+            plan_for_tags(
                 &listing_id,
                 include_hidden,
                 selected_indices.as_deref(),
                 expected_sequence,
             )
+        })
+        .await?;
+    let timeout = if plan.has_folder() {
+        TAGS_FOLDER_OPEN_TIMEOUT
+    } else {
+        TAGS_OPEN_TIMEOUT
+    };
+    let handshake = Arc::new(OpenHandshake::new());
+    let stop = Arc::clone(&handshake);
+    cmdr_fs::deadline::blocking_typed_result_with_timeout(
+        timeout,
+        move || {
+            stop.give_up();
+            MultiRenameError::TimedOut
         },
+        join_failed,
+        move || plan.open(&handshake),
     )
     .await
 }
+
+const TAGS_OPEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+/// A folder walk over an OS-mounted share reads one directory at a time.
+const TAGS_FOLDER_OPEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);

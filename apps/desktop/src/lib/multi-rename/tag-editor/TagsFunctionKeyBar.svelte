@@ -2,7 +2,7 @@
     /**
      * The Tags window's function-key bar, at its foot: the main window's `FunctionKeyBar` look (one flat band, a `<kbd>`
      * chip and a label per button, Shift showing the Shift row), with the tag commands' own slots
-     * (`tags-function-keys.ts`). Each chip is the command's live binding, so a rebind in Settings shows at once. It
+     * (`tags-function-keys.ts`): the last is Write (⌘⏎), and Review (⇧⌘S) with Shift held. Each chip is the command's live binding, so a rebind in Settings shows at once. It
      * never takes focus: every key path is the key itself, and a press keeps focus where it was.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -11,7 +11,13 @@
         getFirstShortcutReactive,
     } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
     import { toAriaKeyShortcut, toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
-    import { TAGS_PLAIN_ROW, TAGS_SHIFT_ROW, TAGS_WRITE_SLOT, type TagsBarCommandId } from './tags-function-keys'
+    import {
+        TAGS_PLAIN_ROW,
+        TAGS_REVIEW_SLOT,
+        TAGS_SHIFT_ROW,
+        TAGS_WRITE_SLOT,
+        type TagsBarCommandId,
+    } from './tags-function-keys'
 
     interface Props {
         /** The commands that can act now; a slot whose command isn't here is disabled. */
@@ -43,6 +49,9 @@
     const writeSlot = $derived(
         toSlot(TAGS_WRITE_SLOT.id, tString(TAGS_WRITE_SLOT.label), getFirstShortcutReactive(TAGS_WRITE_SLOT.id)),
     )
+    const reviewSlot = $derived(
+        toSlot(TAGS_REVIEW_SLOT.id, tString(TAGS_REVIEW_SLOT.label), getFirstShiftShortcutReactive(TAGS_REVIEW_SLOT.id)),
+    )
     const plainRow = $derived<(Slot | null)[]>([
         ...TAGS_PLAIN_ROW.map((slot) => toSlot(slot.id, tString(slot.label), getFirstShortcutReactive(slot.id))),
         writeSlot,
@@ -51,7 +60,7 @@
         ...TAGS_SHIFT_ROW.map((slot) =>
             slot === null ? null : toSlot(slot.id, tString(slot.label), getFirstShiftShortcutReactive(slot.id)),
         ),
-        writeSlot,
+        reviewSlot,
     ])
 
     function onKey(e: KeyboardEvent, down: boolean): void {

@@ -1117,6 +1117,12 @@
         return paneCommands.getFocusedPaneRenameTarget()
     }
 
+    // noinspection JSUnusedGlobalSymbols -- consumed by the Edit tags command (open-tags.ts)
+    /** Edit tags' target: the focused pane's selection, else its cursor row, with the sequence they belong to. */
+    export function getFocusedPaneTagsTarget(): MultiRenameSelection | null {
+        return paneCommands.getFocusedPaneTagsTarget()
+    }
+
     export async function getFocusedPaneEntries(): Promise<{
         entries: FileEntry[]
         cursorIndex: number

@@ -4,8 +4,15 @@
  */
 import { loadTagWriteKind, saveTagWriteKind } from '#lib/app-status-store.js'
 import type { ContentKind } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 export const WRITE_KINDS: readonly ContentKind[] = ['audiobook', 'music']
+
+/** Each kind's name, as the Write dialog's toggle shows it. */
+export const KIND_LABELS: Readonly<Record<ContentKind, MessageKey>> = {
+  audiobook: 'multiRename.tags.kind.audiobook',
+  music: 'multiRename.tags.kind.music',
+}
 
 /** The first-run choice: the user's canon is audiobooks. */
 export const DEFAULT_WRITE_KIND: ContentKind = 'audiobook'

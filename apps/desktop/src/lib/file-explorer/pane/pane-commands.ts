@@ -23,7 +23,7 @@ import type { createDialogState } from './dialog-state.svelte'
 import type { ConfirmOptions } from './dialog-props'
 import type { ProgrammaticConfirmVerdict } from './programmatic-confirm'
 import type { PaneAccess } from './pane-access'
-import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { toBackendIndices, toBackendSelectionOrCursor } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 
 type DialogState = ReturnType<typeof createDialogState>
 
@@ -389,6 +389,33 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     }
   }
 
+  /**
+   * What Edit tags opens a Tags window over: the focused pane's selection, else the row under the cursor (a file or
+   * a folder; none on `..` or in an empty pane, so `nothingSelected`). Same shape as the rename target, so the
+   * backend reads it the same way: `null` indices for every row when all are selected.
+   */
+  function getFocusedPaneTagsTarget(): MultiRenameSelection | null {
+    const pane = access.getPaneRef(access.getFocusedPane())
+    if (!pane || !capabilitiesFor(pane.getVolumeId()).hasBackendListing) return null
+    const listingId = pane.getListingId()
+    if (listingId === '') return null
+    const allSelected = pane.isAllSelected()
+    const rows = allSelected
+      ? []
+      : toBackendSelectionOrCursor(
+          [...pane.getSelectedIndices()].sort((a, b) => a - b),
+          pane.getCursorIndex(),
+          pane.hasParentEntry(),
+        )
+    if (rows.length > 0 && !pane.isRowStateReady()) return null
+    return {
+      listingId,
+      selectedIndices: rows.length > 0 ? rows : null,
+      expectedSequence: pane.getLastSequence(),
+      nothingSelected: !allSelected && rows.length === 0,
+    }
+  }
+
   /** Returns true when the cursor landed on the named item, false when it wasn't found. */
   async function moveCursorByName(paneRef: FilePaneAPI, name: string): Promise<boolean> {
     const inNetwork: boolean = paneRef.isInNetworkView()
@@ -616,6 +643,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     applyIndicesToFocusedPane,
     getFocusedPaneEntries,
     getFocusedPaneRenameTarget,
+    getFocusedPaneTagsTarget,
     moveCursorByName,
     moveCursorByNameInFileListing,
     scrollTo,

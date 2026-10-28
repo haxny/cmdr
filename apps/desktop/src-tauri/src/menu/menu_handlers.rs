@@ -149,8 +149,11 @@ pub(crate) fn native_edit_selector_for(menu_id: &str) -> Option<NativeEditSelect
 /// Used when a non-main window is focused: the custom Edit/Select menu items can't use the
 /// native responder chain like PredefinedMenuItems do, so we replicate it manually via
 /// `NSApplication.sendAction:to:from:` with nil target (routes to the first responder).
+///
+/// Also the Tags window's road back (`tags_native_edit`): it takes ⌘X/⌘C/⌘V for its fields and
+/// hands them back here while a text box or its cover section has focus. Main thread only.
 #[cfg(target_os = "macos")]
-fn send_native_edit_action(menu_id: &str) {
+pub(crate) fn send_native_edit_action(menu_id: &str) {
     use objc2::sel;
     use objc2_app_kit::NSApplication;
 

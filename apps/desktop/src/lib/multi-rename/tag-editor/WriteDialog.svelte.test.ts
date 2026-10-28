@@ -25,6 +25,7 @@ import WriteDialog from './WriteDialog.svelte'
 import { applyReport, asState, buttonNamed, fakeState, settle } from './apply-panel.test-helper'
 import { mountInto } from './tag-cell.test-helper'
 import type { LastTagApply } from './last-tag-apply'
+import type { TagApplyReport } from '#lib/tauri-commands/index.js'
 
 let cleanup: (() => void) | undefined
 afterEach(() => {
@@ -33,10 +34,10 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountDialog(mode: 'write' | 'undo', state = fakeState()) {
+async function mountDialog(mode: 'write' | 'undo', state = fakeState(), continuing?: TagApplyReport[]) {
   const onClose = vi.fn()
   const onWriting = vi.fn()
-  const mounted = await mountInto(WriteDialog, { tags: asState(state), mode, onWriting, onClose })
+  const mounted = await mountInto(WriteDialog, { tags: asState(state), mode, onWriting, onClose, continuing })
   cleanup = mounted.cleanup
   await settle()
   return { state, onClose, onWriting }
@@ -60,6 +61,18 @@ describe('WriteDialog', () => {
     await settle()
     expect(onWriting).toHaveBeenCalledTimes(1)
     expect(state.apply).toHaveBeenCalledTimes(1)
+  })
+
+  it('continuing a press (an edit arrived during ⌘⏎’s would-drop choice) lists again, and its write continues it', async () => {
+    const earlier = [applyReport({ written: ['/b/02.mp3'], wouldDrop: [{ path: '/b/01.mp3', items: ['TSOP'] }] })]
+    const { state } = await mountDialog('write', fakeState(), earlier)
+    expect(state.changes).toHaveBeenCalledTimes(1)
+    buttonNamed(document.body, 'Write tags').click()
+    await settle()
+    expect(state.apply).toHaveBeenCalledWith(
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: earlier },
+    )
   })
 
   it('⌘⏎ confirms the list', async () => {

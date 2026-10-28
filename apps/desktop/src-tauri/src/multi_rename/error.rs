@@ -33,6 +33,8 @@ pub enum MultiRenameError {
     StillReading,
     /// The folder, or a row in it, is read-only because a route serves it.
     ReadOnly { place: ReadOnlyPlace },
+    /// A new order that isn't the session's own files, each exactly once. Nothing was changed.
+    NotAPermutation,
     /// Results couldn't write its names file; `detail` is log text only.
     CouldntWriteNames { detail: String },
     /// There's no Results file to read back: none was written, or it's gone or
@@ -40,6 +42,10 @@ pub enum MultiRenameError {
     NamesFileGone { detail: String },
     /// The work didn't finish within its deadline.
     TimedOut,
+    /// A Tags window was asked for more audio files than it takes (`limit`) from the folders it was given.
+    TooManyTracks { limit: u32 },
+    /// A Tags window was asked for the files inside a folder, which only a disk this computer reads can list.
+    FoldersNeedLocalDisk,
     /// The worker failed; `detail` is log text only.
     Internal { detail: String },
 }

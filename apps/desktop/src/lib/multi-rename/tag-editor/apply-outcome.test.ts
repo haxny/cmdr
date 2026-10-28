@@ -5,7 +5,16 @@ import type { TagApplyReport } from '#lib/tauri-commands/index.js'
 import { failureKey, fileNameOf, outcomeOf, writeAnywayRequest } from './apply-outcome'
 
 function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
-  return { applyId: 'A1', written: [], wouldDrop: [], failed: [], changedOnDisk: [], undoUnavailable: false, ...over }
+  return {
+    applyId: 'A1',
+    written: [],
+    wouldDrop: [],
+    wouldRemove: [],
+    failed: [],
+    changedOnDisk: [],
+    undoUnavailable: false,
+    ...over,
+  }
 }
 
 describe('apply-outcome', () => {
@@ -15,7 +24,7 @@ describe('apply-outcome', () => {
       [{ path: '/b/2.mp3', items: ['TSOP'] }],
       ['/b/1.mp3', '/b/2.mp3', '/b/3.mp3', '/b/1.mp3'],
     )
-    expect(request).toEqual({ kind: 'music', allowFrameLoss: true, skip: ['/b/1.mp3', '/b/3.mp3'] })
+    expect(request).toEqual({ kind: 'music', allowFrameLoss: true, skip: ['/b/1.mp3', '/b/3.mp3'], allowRemovals: [] })
   })
 
   it('one report is its own outcome', () => {

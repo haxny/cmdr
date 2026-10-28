@@ -8,10 +8,14 @@ pub(crate) mod cover;
 pub(crate) mod cover_choices;
 pub(crate) mod cover_image;
 pub(crate) mod error;
+pub(crate) mod follow;
+pub(crate) mod history;
 pub(crate) mod last_apply;
 pub(crate) mod menu_route;
 pub(crate) mod playback;
+mod removals;
 pub(crate) mod session;
+pub(crate) mod sort;
 pub(crate) mod text_tools;
 pub(crate) mod undo;
 pub(crate) mod view;
@@ -30,6 +34,8 @@ mod cover_choices_test;
 #[cfg(test)]
 mod cover_test;
 #[cfg(test)]
+mod history_test;
+#[cfg(test)]
 mod kind_test;
 #[cfg(test)]
 mod last_apply_test;
@@ -37,6 +43,8 @@ mod last_apply_test;
 mod playback_test;
 #[cfg(test)]
 mod session_test;
+#[cfg(test)]
+mod sort_test;
 #[cfg(test)]
 mod text_tools_test;
 #[cfg(test)]

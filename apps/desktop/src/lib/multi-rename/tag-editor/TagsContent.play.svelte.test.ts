@@ -75,6 +75,9 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
+  sort: null,
 }
 
 async function mountTab() {
@@ -100,6 +103,11 @@ async function mountTab() {
     undoable: null,
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
+    writing: false,
+    writeNow: vi.fn((options?: { onWriting?: () => void }) => {
+      options?.onWriting?.()
+      return Promise.resolve({ kind: 'done', written: 1, failed: 0, changedOnDisk: 0 })
+    }),
   }
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
@@ -188,6 +196,20 @@ describe('Tags window player', () => {
     clickPlay(root, '/b/03.mp3')
     await settle()
     expect(tagTrackAudioUrl).not.toHaveBeenCalled()
+  })
+
+  it('a write at once (the bar’s Write, ⌘⏎) stops the track before the files are written', async () => {
+    const { root, state } = await mountTab()
+    clickPlay(root, '/b/01.mp3')
+    await settle()
+    const write = [...root.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find(
+      (b) => b.querySelector('span')?.textContent === 'Write',
+    )
+    write?.click()
+    await settle()
+    expect(state.writeNow).toHaveBeenCalledTimes(1)
+    expect(releaseTagTrackAudio).toHaveBeenCalledWith('cmdr-media://localhost/tok1')
+    expect(trackRow(root, '/b/01.mp3').textContent).not.toContain('Playing')
   })
 
   it('unmounting (the window closes) stops the track and releases its URL', async () => {

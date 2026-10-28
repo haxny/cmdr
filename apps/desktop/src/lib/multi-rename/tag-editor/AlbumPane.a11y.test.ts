@@ -41,6 +41,7 @@ async function mountPane(editable = true, cursor = 1): Promise<HTMLElement> {
     cursor,
     onCursorChange: () => {},
     onEdit: () => {},
+    onClear: () => {},
     onSwitchPane: () => {},
   })
   cleanup = mounted.cleanup

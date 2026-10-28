@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, unmount } from 'svelte'
 import ApplyPanel from './ApplyPanel.svelte'
 import { mountInto } from './tag-cell.test-helper'
-import { PANEL_VIEW, applyReport, asState, buttonNamed, fakeState, press } from './apply-panel.test-helper'
+import { CHANGES, PANEL_VIEW, applyReport, asState, buttonNamed, fakeState, press } from './apply-panel.test-helper'
 
 const confirm = vi.hoisted(() => vi.fn((_message: string, _title?: string, _label?: string) => Promise.resolve(true)))
 vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog: confirm }))
@@ -37,7 +37,57 @@ describe('ApplyPanel', () => {
     expect(root.textContent).toContain('Writing as Audiobook: 2 files will change:')
     expect(listed(root, 'Files that will change')).toEqual(['01.mp3: Album, Title, cover', '02.mp3: Album, extra tags'])
     await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] }, { after: [] })
+    expect(fake.apply).toHaveBeenCalledWith(
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: [] },
+    )
+  })
+
+  it('the list’s write allows a removal only on the files whose removal it showed', async () => {
+    const fake = fakeState()
+    fake.changes.mockResolvedValue({
+      ok: true,
+      value: [
+        { ...CHANGES[0], removes: ['conductor'], removesUnknown: false },
+        { ...CHANGES[1], removes: [], removesUnknown: true },
+        {
+          path: '/b/03.mp3',
+          fileName: '03.mp3',
+          fields: ['album'],
+          cover: false,
+          extras: false,
+          removes: [],
+          removesUnknown: false,
+        },
+      ],
+    })
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    expect(listed(root, 'Files that will change')).toEqual([
+      '01.mp3: Album, Title, cover, conductor (removed)',
+      '02.mp3: Album, extra tags, maybe a tag it couldn’t check (removed)',
+      '03.mp3: Album',
+    ])
+    await press(root, 'Write tags')
+    expect(fake.apply).toHaveBeenCalledWith(
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: ['/b/01.mp3', '/b/02.mp3'] },
+      { after: [] },
+    )
+  })
+
+  it('a removal the list didn’t show, caught at the write, lists again and continues the press', async () => {
+    const heldBack = applyReport({
+      written: ['/b/02.mp3'],
+      wouldRemove: [{ path: '/b/01.mp3', removes: ['conductor'], unknown: false }],
+    })
+    const fake = fakeState(undefined, [heldBack, applyReport({ applyId: 'A2', written: ['/b/01.mp3'] })])
+    const { root } = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    await press(root, 'Write tags')
+    expect(fake.changes).toHaveBeenCalledTimes(2)
+    expect(root.textContent).toContain('Something changed since the list was made, so here it is again.')
+    await press(root, 'Write tags')
+    expect(fake.apply).toHaveBeenLastCalledWith(expect.anything(), { after: [heldBack] })
   })
 
   it('tells the tab a write is starting, just before it asks the state to apply', async () => {
@@ -87,7 +137,10 @@ describe('ApplyPanel', () => {
     await press(root, 'Music')
     await press(root, 'Write tags…')
     await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'music', allowFrameLoss: false, skip: [] }, { after: [] })
+    expect(fake.apply).toHaveBeenCalledWith(
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: [] },
+    )
   })
 
   it('diacritics_warning_offers_fix_not_silent', async () => {
@@ -113,7 +166,7 @@ describe('ApplyPanel', () => {
     await press(root, 'Write anyway')
     expect(fake.apply).toHaveBeenCalledTimes(2)
     expect(fake.apply).toHaveBeenLastCalledWith(
-      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/01.mp3', '/b/03.mp3'] },
+      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/01.mp3', '/b/03.mp3'], allowRemovals: [] },
       { after: [expect.objectContaining({ applyId: 'A1', written: ['/b/01.mp3'] })] },
     )
     expect(root.textContent).toContain('Tags written to 2 files')
@@ -210,7 +263,7 @@ describe('ApplyPanel', () => {
     expect(root.textContent).toContain('will change:')
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenLastCalledWith(
-      { kind: 'audiobook', allowFrameLoss: false, skip: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
       { after: [first] },
     )
     expect(root.textContent).toContain('Tags written to 2 files')

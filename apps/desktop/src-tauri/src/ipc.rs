@@ -89,8 +89,8 @@ use crate::window_events::{
     CloseAbout, CloseAllFileViewers, CloseConfirmation, CloseFileViewer, ExecuteCommand, FocusAbout, FocusConfirmation,
     FocusFileViewer, ForegroundOperation, FunctionKeyBarHideRequested, McpSettingsClose, MouseNav, OpenErrorReport,
     OpenFavorite, OpenFileViewer, OpenSettings, PersistRestrictedSetting, QueueRowContextAction, QueueSelectAll,
-    RevealPath, ShowSearchResultInFolder, TabContextAction, TagsDeselectAll, TagsMenuKey, TagsSelectAll, TagsSkipped,
-    ViewerContextMenuAction, ViewerEditAction, ViewerHistoryAction, ViewerWordWrapToggled,
+    RevealPath, ShowSearchResultInFolder, TabContextAction, TagsClipboard, TagsDeselectAll, TagsMenuKey, TagsSelectAll,
+    TagsSkipped, ViewerContextMenuAction, ViewerEditAction, ViewerHistoryAction, ViewerWordWrapToggled,
 };
 // AI + system/misc events.
 use crate::ai::{
@@ -240,6 +240,9 @@ macro_rules! ipc_command_manifest {
                     crate::commands::multi_rename::save_multi_rename_last_settings,
                     crate::commands::tag_editor::open_tag_editor,
                     crate::commands::tag_editor::edit_tags,
+                    crate::commands::tag_editor::undo_tag_edit,
+                    crate::commands::tag_editor::redo_tag_edit,
+                    crate::commands::tag_editor::sort_tag_tracks,
                     crate::commands::tag_editor::run_tag_tool,
                     crate::commands::tag_editor::run_tag_text_tool,
                     crate::commands::tag_editor::preview_tags_from_names,
@@ -261,6 +264,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::tag_editor::open_tags_in_player,
                     crate::commands::tag_editor::hold_tags_session,
                     crate::commands::tag_editor::release_tags_session,
+                    crate::commands::tag_editor::tags_native_edit,
                     crate::commands::tag_editor::reopen_for_tags,
                     crate::commands::tag_editor::open_tags_session,
                     crate::commands::rename::move_to_trash,
@@ -1309,6 +1313,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             TagsSelectAll,
             TagsDeselectAll,
             TagsMenuKey,
+            TagsClipboard,
             ShowSearchResultInFolder,
             OpenSettings,
             OpenFileViewer,

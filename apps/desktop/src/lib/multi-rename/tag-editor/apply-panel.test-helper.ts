@@ -23,15 +23,43 @@ export const PANEL_VIEW: TagEditorView = {
   dirty: true,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
+  sort: null,
 }
 
 export const CHANGES: FileChangeView[] = [
-  { path: '/b/01.mp3', fileName: '01.mp3', fields: ['album', 'title'], cover: true, extras: false, removes: [] },
-  { path: '/b/02.mp3', fileName: '02.mp3', fields: ['album'], cover: false, extras: true, removes: [] },
+  {
+    path: '/b/01.mp3',
+    fileName: '01.mp3',
+    fields: ['album', 'title'],
+    cover: true,
+    extras: false,
+    removes: [],
+    removesUnknown: false,
+  },
+  {
+    path: '/b/02.mp3',
+    fileName: '02.mp3',
+    fields: ['album'],
+    cover: false,
+    extras: true,
+    removes: [],
+    removesUnknown: false,
+  },
 ]
 
 export function applyReport(over: Partial<TagApplyReport> = {}): TagApplyReport {
-  return { applyId: 'A1', written: [], wouldDrop: [], failed: [], changedOnDisk: [], undoUnavailable: false, ...over }
+  return {
+    applyId: 'A1',
+    written: [],
+    wouldDrop: [],
+    wouldRemove: [],
+    failed: [],
+    changedOnDisk: [],
+    undoUnavailable: false,
+    ...over,
+  }
 }
 
 /** A state whose calls answer at once; `apply` answers `reports` in turn. */

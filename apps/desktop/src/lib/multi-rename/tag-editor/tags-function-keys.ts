@@ -24,12 +24,13 @@ export const TAGS_BAR_COMMANDS = [
   'tags.clearField',
   'tags.removeExtras',
   'tags.write',
+  'tags.review',
 ] as const satisfies readonly CommandId[]
 
 export type TagsBarCommandId = (typeof TAGS_BAR_COMMANDS)[number]
 
-/** Every command the window runs: the bar's, plus ⌘Z. (Tab, `tags.switchPane`, is the panes' own.) */
-export type TagsCommandId = TagsBarCommandId | 'tags.undo'
+/** Every command the window runs: the bar's, plus ⌘Z and ⇧⌘Z. (Tab, `tags.switchPane`, is the panes' own.) */
+export type TagsCommandId = TagsBarCommandId | 'tags.undo' | 'tags.redo'
 
 export interface TagsBarSlot {
   id: TagsBarCommandId
@@ -58,8 +59,11 @@ export const TAGS_SHIFT_ROW: readonly (TagsBarSlot | null)[] = [
   { id: 'tags.removeExtras', label: 'multiRename.tags.keys.removeExtras' },
 ]
 
-/** Write, last in both rows: the one slot that isn't an F-key. */
+/** Write (⌘⏎, at once), last in the plain row: one of the two slots that aren't an F-key. */
 export const TAGS_WRITE_SLOT: TagsBarSlot = { id: 'tags.write', label: 'multiRename.tags.keys.write' }
+
+/** Review (⇧⌘S, the change list first), in Write's place in the Shift row. */
+export const TAGS_REVIEW_SLOT: TagsBarSlot = { id: 'tags.review', label: 'multiRename.tags.keys.review' }
 
 /**
  * The window keydown's commands, in the order it asks. The pane keys (edit, play) come last: a focused pane answers
@@ -67,7 +71,9 @@ export const TAGS_WRITE_SLOT: TagsBarSlot = { id: 'tags.write', label: 'multiRen
  */
 export const TAGS_WINDOW_KEYS: readonly TagsCommandId[] = [
   'tags.write',
+  'tags.review',
   'tags.undo',
+  'tags.redo',
   'tags.replace',
   'tags.case',
   'tags.format',
@@ -99,6 +105,7 @@ const EDITING_COMMANDS: readonly TagsBarCommandId[] = [
   'tags.number',
   'tags.clearField',
   'tags.write',
+  'tags.review',
 ]
 
 /** The bar's commands that can act on `view`: nothing before the tags are read; read-only leaves Play and the player. */

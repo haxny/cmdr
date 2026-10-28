@@ -25,6 +25,11 @@ const MULTI_FIELDS: ReadonlySet<TagField> = new Set<TagField>([
   'www',
 ])
 
+/** Whether `field` holds several values, joined with "; " in its text. */
+export function isMultiValueField(field: TagField): boolean {
+  return MULTI_FIELDS.has(field)
+}
+
 /** Comment and Description are prose: a textarea, not a line. */
 export function isMultiLineField(field: TagField): boolean {
   return field === 'comment' || field === 'description'

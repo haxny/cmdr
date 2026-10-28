@@ -1173,6 +1173,9 @@ export type {
 export {
   openTagEditor,
   editTags,
+  sortTagTracks,
+  undoTagEdit,
+  redoTagEdit,
   runTagTool,
   runTagTextTool,
   previewTagsFromNames,
@@ -1199,6 +1202,8 @@ export {
   onTagsSelectAll,
   onTagsDeselectAll,
   onTagsMenuKey,
+  onTagsClipboard,
+  tagsNativeEdit,
 } from './tag-editor'
 export type {
   ApplyRequest,
@@ -1214,8 +1219,12 @@ export type {
   TagEditorError,
   TagEditorResult,
   TagEditorView,
+  TagsOpened,
   TagTextTool,
   TagTool,
+  TagsClipboardAction,
   TagsMenuKey,
   TagsSessionInfo,
+  TrackSort,
+  TrackSortKey,
 } from './tag-editor'

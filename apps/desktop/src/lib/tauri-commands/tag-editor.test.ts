@@ -58,7 +58,7 @@ import {
 
 const noSession: TagEditorError = { kind: 'noSession' }
 const failure = { status: 'error' as const, error: noSession }
-const request: ApplyRequest = { kind: 'audiobook', allowFrameLoss: false, skip: [] }
+const request: ApplyRequest = { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -186,6 +186,7 @@ describe('applyTags', () => {
       applyId: 'tags-1-s1',
       written: ['/a.mp3'],
       wouldDrop: [],
+      wouldRemove: [],
       failed: [],
       changedOnDisk: ['/b.mp3'],
       undoUnavailable: false,

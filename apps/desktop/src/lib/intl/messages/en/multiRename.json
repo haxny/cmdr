@@ -1220,6 +1220,14 @@
       "fileName": "the name of the audio file the title belongs to"
     }
   },
+  "multiRename.tags.track.cellNumber": "Track number column",
+  "@multiRename.tags.track.cellNumber": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the left arrow moves the active cell to the track number column; typing and Delete then act on the track number."
+  },
+  "multiRename.tags.track.cellTitle": "Title column",
+  "@multiRename.tags.track.cellTitle": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the right arrow moves the active cell to the title column; typing and Delete then act on the title."
+  },
   "multiRename.tags.track.numberLabel": "Track number of {fileName}",
   "@multiRename.tags.track.numberLabel": {
     "description": "Accessible name of the box that edits one file's track number in the track list of the tag editor window. Only read aloud by screen readers.",
@@ -1977,6 +1985,25 @@
   "@multiRename.tags.numbering.cancel": {
     "description": "Button that closes the auto-numbering dialog without numbering anything."
   },
+  "multiRename.tags.sort.label": "Sort tracks",
+  "@multiRename.tags.sort.label": {
+    "description": "Screen-reader name of the row of column headers above the track list in the tag editor window; each header is a button that sorts the tracks by its column."
+  },
+  "multiRename.tags.sort.state": "{column}, {order, select, ascending {sorted ascending} descending {sorted descending} other {not sorted}}",
+  "@multiRename.tags.sort.state": {
+    "description": "What a screen reader says for a column header button above the track list in the tag editor window: the column’s name, then whether the tracks are sorted by it and which way, as in “Length, sorted descending” or “Title, not sorted”. Never shown on screen; the button shows only the column name and a small arrow.",
+    "placeholders": {
+      "column": "the column header’s own text, for example #, Title, Length, or File name",
+      "order": "ascending or descending when the tracks are sorted by this column, anything else when they aren’t"
+    }
+  },
+  "multiRename.tags.sort.by": "Sort by {column}",
+  "@multiRename.tags.sort.by": {
+    "description": "Hover tooltip on a column header above the track list in the tag editor window: clicking it puts the tracks in that column’s order (a second click reverses it).",
+    "placeholders": {
+      "column": "the column header’s own text, for example #, Title, Length, or File name"
+    }
+  },
   "multiRename.tags.col.play": "Play",
   "@multiRename.tags.col.play": {
     "description": "Column header (read only by screen readers) above the play buttons in the track list of the tag editor window."
@@ -2024,6 +2051,22 @@
   "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
   "@multiRename.tags.window.noTracks": {
     "description": "Notification when the user asks to edit tags but nothing selected is an audio file the tag editor supports (MP3, M4A, M4B, MP4, FLAC, OGG, Opus). No window opens."
+  },
+  "multiRename.tags.window.tooManyTracks": "Those folders hold more than {limit, number} audio files. Select a smaller part of the book.",
+  "@multiRename.tags.window.tooManyTracks": {
+    "description": "Notification when the user asks to edit tags on folders and the audio files in them (subfolders included) are more than the tag editor takes at once. {limit} is that most, a plain number such as 2000. No window opens."
+  },
+  "multiRename.tags.window.foldersNeedLocalDisk": "Edit tags opens a folder only on a disk of this computer. Open the folder and select its audio files instead.",
+  "@multiRename.tags.window.foldersNeedLocalDisk": {
+    "description": "Notification when the user asks to edit tags on a folder that lives on a network share, a phone or another drive Cmdr can't list the files of folder by folder; single files there still work. No window opens."
+  },
+  "multiRename.tags.window.openTimedOut": "Reading the folder took too long, so nothing was opened. Try again, or select the audio files themselves.",
+  "@multiRename.tags.window.openTimedOut": {
+    "description": "Notification when the user asks to edit tags on a folder and listing the audio files in it (a network share can be slow) did not finish in time. No window opens."
+  },
+  "multiRename.tags.window.someUnreadable": "{count, plural, one {# place in the folders couldn’t be read, so some tracks may be missing.} other {# places in the folders couldn’t be read, so some tracks may be missing.}}",
+  "@multiRename.tags.window.someUnreadable": {
+    "description": "Notification shown after the tag editor opened a folder of audio files (subfolders included) when some subfolders could not be read, so the window may lack some tracks. {count} is how many places were skipped."
   },
   "multiRename.tags.keys.label": "Tag tools",
   "@multiRename.tags.keys.label": {
@@ -2079,7 +2122,11 @@
   },
   "multiRename.tags.keys.write": "Write",
   "@multiRename.tags.keys.write": {
-    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Lists what will change, then writes the new tags into the files."
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Writes the new tags into the files straight away."
+  },
+  "multiRename.tags.keys.review": "Review",
+  "@multiRename.tags.keys.review": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4) while Shift is held, in the place of Write; keep it short, one or two words, so ten buttons fit side by side. Lists what will change in each file first, and writes on confirm."
   },
   "multiRename.tags.dialog.fromName": "Tags from file names",
   "@multiRename.tags.dialog.fromName": {
@@ -2125,13 +2172,73 @@
   "@multiRename.tags.clearField.run": {
     "description": "Button in the Clear a field dialog that empties the field. Nothing is written into the files until Write."
   },
+  "multiRename.tags.clipboard.readFailed": "Couldn’t read the clipboard. Try ⌘V again.",
+  "@multiRename.tags.clipboard.readFailed": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+V on a tag field couldn't read the clipboard, so nothing was pasted."
+  },
+  "multiRename.tags.clipboard.noText": "The clipboard holds no text to paste.",
+  "@multiRename.tags.clipboard.noText": {
+    "description": "Status line in the tag editor window when Command+V on a tag field found no plain text on the clipboard (for example, only a picture), so nothing was pasted."
+  },
+  "multiRename.tags.clipboard.tooLong": "The clipboard holds too much text for this field, so nothing was pasted.",
+  "@multiRename.tags.clipboard.tooLong": {
+    "description": "Status line in the tag editor window when Command+V on a tag field found more text on the clipboard than the field takes (64 KB for Comment and Description, 4 KB for the others). The field is left as it was."
+  },
+  "multiRename.tags.clipboard.writeFailed": "Couldn’t copy to the clipboard. Try again.",
+  "@multiRename.tags.clipboard.writeFailed": {
+    "description": "Status line in the tag editor window when Command+C or Command+X on a tag field couldn't put the field's text on the clipboard. After Command+X the field is left as it was."
+  },
+  "multiRename.tags.undo.editUndone": "Undone",
+  "@multiRename.tags.undo.editUndone": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) after Command+Z took back the last unwritten tag edit. One word, no detail."
+  },
+  "multiRename.tags.undo.editRedone": "Redone",
+  "@multiRename.tags.undo.editRedone": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) after Command+Shift+Z put back the unwritten tag edit that was just taken back. One word, no detail."
+  },
   "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
   "@multiRename.tags.undo.nothing": {
     "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+Z is pressed but no tag write can be undone."
   },
-  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "multiRename.tags.write.someLeft": "Some files weren’t written. Review lists their changes again.",
   "@multiRename.tags.write.someLeft": {
-    "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Write” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.write)."
+    "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Review” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.review)."
+  },
+  "multiRename.tags.write.doneSummary": "{count, plural, one {{countText} file written} other {{countText} files written}}",
+  "@multiRename.tags.write.doneSummary": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S wrote the new tags straight away, without listing the changes first: how many files got their new tags. Short; it goes away after a few seconds or at the next edit.",
+    "placeholders": {
+      "countText": "how many files were written, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.write.doneWithProblems": "{count, plural, one {{countText} file written} other {{countText} files written}}, {notWritten, plural, one {{notWrittenText} not written} other {{notWrittenText} not written}}. Review changes ({shortcut}) shows which.",
+  "@multiRename.tags.write.doneWithProblems": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S wrote the new tags straight away and some files were left unwritten (a file that couldn’t be written, or one another app changed since it was read). “Review changes” names the command that lists the changes, files left unwritten included; keep the key in brackets as given. One line, short.",
+    "placeholders": {
+      "countText": "how many files were written (for example 12)",
+      "notWrittenText": "how many files were left unwritten (for example 2)",
+      "shortcut": "the key of the Review command, as the function-key bar shows it (for example ⌘⇧S); don’t translate"
+    }
+  },
+  "multiRename.tags.write.reviewRemovals": "{count, plural, one {Writing as {kind} removes a tag from {countText} file, so the list shows it first.} other {Writing as {kind} removes a tag from {countText} files, so the list shows them first.}}",
+  "@multiRename.tags.write.reviewRemovals": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S: writing as the chosen content kind would remove a tag from some files (for example an MP3’s conductor when writing as Audiobook), so nothing was written and the list of changes opened instead, naming what each file loses. The user confirms there.",
+    "placeholders": {
+      "kind": "the chosen content kind, as the Write dialog names it (for example Audiobook or Music)",
+      "countText": "how many files would lose a tag (for example 3)"
+    }
+  },
+  "multiRename.tags.write.listedAgain": "Something changed since the list was made, so here it is again. Check it, then write.",
+  "@multiRename.tags.write.listedAgain": {
+    "description": "Shown in the tag editor window (the separate window that edits audio files’ tags), in its status line or next to the Write dialog’s buttons: between listing what a write will change and writing it, an edit came in or a file read differently, so files that weren’t in the list were not written and the list of changes is shown again for the user to check and confirm."
+  },
+  "multiRename.tags.write.removesUnknown": "maybe a tag it couldn’t check (removed)",
+  "@multiRename.tags.write.removesUnknown": {
+    "description": "Shown in the tag editor window, in the list of what a write will change in one file: the app couldn’t read the file to tell whether writing it as the chosen kind (Audiobook or Music) removes a tag, so it warns that one may be removed. One item of the list of changed fields; lower case, like “conductor (removed)”."
+  },
+  "multiRename.tags.write.nothingToWrite": "Nothing to write.",
+  "@multiRename.tags.write.nothingToWrite": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S when no file’s tags would change, so nothing was written."
   },
   "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
   "@multiRename.tags.write.closeWaits": {

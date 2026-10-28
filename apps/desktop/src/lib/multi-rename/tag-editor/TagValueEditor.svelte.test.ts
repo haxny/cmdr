@@ -123,3 +123,24 @@ describe('TagValueEditor', () => {
     }
   })
 })
+
+describe('TagValueEditor seed', () => {
+  it('starts with exactly the seed, caret at the end and nothing selected, and commits it on Enter', async () => {
+    const onCommit = vi.fn()
+    const mounted = await mountInto(TagValueEditor, {
+      value: 'Old',
+      seed: 'H',
+      ariaLabel: 'Title',
+      onCommit,
+      onClose: vi.fn(),
+    })
+    cleanup = mounted.cleanup
+    const input = mounted.root.querySelector<HTMLInputElement>('input')
+    if (!input) throw new Error('no input')
+    expect(input.value).toBe('H')
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(1)
+    await press(input, 'Enter')
+    expect(onCommit).toHaveBeenCalledWith('H')
+  })
+})

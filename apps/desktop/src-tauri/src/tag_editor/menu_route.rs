@@ -1,5 +1,6 @@
 //! The main-menu events a focused Tags window takes (`menu/menu_handlers.rs` asks first): Edit >
-//! Select all (⌘A), Select > Deselect all (⌘⇧A), and the File / Select F-keys. Each one's
+//! Select all (⌘A), Edit > Cut / Copy / Paste (⌘X, ⌘C, ⌘V), Select > Deselect all (⌘⇧A), and the
+//! File / Select F-keys. Each one's
 //! accelerator fires before the page sees the key, and the file-scoped focus guard after this
 //! would drop it, so this is the keys' only road there. What each item means is `window.rs`'s.
 
@@ -7,7 +8,7 @@ use tauri::{AppHandle, Manager, Wry};
 use tauri_specta::Event as _;
 
 use super::window::{TagsMenuSelection, focused_tags_window, menu_key_command_of, menu_selection_of};
-use crate::window_events::{TagsDeselectAll, TagsMenuKey, TagsSelectAll};
+use crate::window_events::{TagsClipboard, TagsDeselectAll, TagsMenuKey, TagsSelectAll};
 
 /// Sends menu item `id` to the focused Tags window when it takes it, and answers whether it did
 /// (then the item is handled). Main focused: no Tags window is, and the item runs as before.
@@ -23,6 +24,7 @@ pub(crate) fn route_menu_event(app: &AppHandle<Wry>, id: &str) -> bool {
     let sent = match (selection, key_command) {
         (Some(TagsMenuSelection::SelectAll), _) => TagsSelectAll.emit_to(app, label.as_str()),
         (Some(TagsMenuSelection::DeselectAll), _) => TagsDeselectAll.emit_to(app, label.as_str()),
+        (Some(TagsMenuSelection::Clipboard(action)), _) => TagsClipboard { action }.emit_to(app, label.as_str()),
         (None, Some(command_id)) => {
             // The window acts only while the item still holds the Tags command's key.
             let menu_command_id = crate::menu::menu_id_to_command(id)

@@ -13,7 +13,7 @@
 //!
 //! ❌ No file read under `SESSIONS`' lock: reads happen first, the lock only swaps results in.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex};
@@ -26,10 +26,16 @@ use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes}
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
     ContentKind, FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for,
-    read_duration, read_tags, removed_by_kind,
+    read_duration, read_tags,
 };
 
-use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key};
+use super::follow::follow_disk;
+use super::history::{EditHistory, capture, clear, record};
+use super::removals::{Removals, removals_of};
+use super::sort::{TrackSort, reorder};
+use super::view::{
+    Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, stem_of,
+};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::session::{SessionFiles, files_of};
@@ -37,7 +43,7 @@ use crate::multi_rename::session::{SessionFiles, files_of};
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
 pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
-const LOG_TARGET: &str = "tag_editor::session";
+pub(super) const LOG_TARGET: &str = "tag_editor::session";
 
 /// One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
 /// PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
@@ -68,6 +74,8 @@ pub struct FileChangeView {
     pub extras: bool,
     /// What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
     pub removes: Vec<KindRemoval>,
+    /// The file couldn't be read to tell what the kind removes: it may lose a field.
+    pub removes_unknown: bool,
 }
 
 /// What a file-name pattern reads from one track's name.
@@ -124,21 +132,30 @@ impl Entry {
 }
 
 #[derive(Default)]
-struct TagSession {
-    by_path: HashMap<PathBuf, Entry>,
+pub(super) struct TagSession {
+    pub(super) by_path: HashMap<PathBuf, Entry>,
+    /// The order last chosen or opened in; `None` before the first sort or once another road reordered the tracks.
+    pub(super) sort: Option<TrackSort>,
+    /// The order `sort` made; `sort` stands only while the tracks still are in it.
+    pub(super) sorted_tracks: Vec<PathBuf>,
+    pub(super) ordered: bool, // A sort has run: a restart keeps the order, even one moved by hand.
+    /// The pending edits' undo and redo steps.
+    pub(super) history: EditHistory,
 }
 
-static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// The session's audio files in its current order, where they are, and what the window may do
 /// with them.
-struct Layout {
+pub(super) struct Layout {
     access: Access,
     volume_id: String,
-    tracks: Vec<PathBuf>,
+    /// The folder the session's names are relative to.
+    pub(super) dir: PathBuf,
+    pub(super) tracks: Vec<PathBuf>,
 }
 
-fn layout_of(files: &SessionFiles) -> Layout {
+pub(super) fn layout_of(files: &SessionFiles) -> Layout {
     let local = files.volume_id == LOCAL_VOLUME_ID;
     let reachable = local || volume_gives_local_paths(&files.volume_id);
     let tracks = if reachable {
@@ -157,12 +174,13 @@ fn layout_of(files: &SessionFiles) -> Layout {
             reason: (!local).then_some(ReadOnlyReason::RemoteVolume),
         },
         volume_id: files.volume_id.clone(),
+        dir: files.dir.clone(),
         tracks,
     }
 }
 
 /// Whether `std::fs` reaches the volume's files (an OS-mounted share), so they can be read.
-fn volume_gives_local_paths(volume_id: &str) -> bool {
+pub(crate) fn volume_gives_local_paths(volume_id: &str) -> bool {
     crate::file_system::volume::manager::get_volume_manager()
         .get(volume_id)
         .is_some_and(|volume| volume.supports_local_fs_access())
@@ -245,12 +263,16 @@ pub(crate) fn open_counting(
             (path.clone(), entry)
         })
         .collect();
-    let view = {
+    let opened = {
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.entry(session_id.to_string()).or_default();
         session.by_path = by_path;
-        view_of(&layout, session)
+        clear(session);
+        session.drop_stale_sort(&layout);
+        let ordered = session.ordered.then(|| view_of(&layout, session));
+        ordered.ok_or_else(|| TrackSort::default_for(session))
     };
+    let view = opened.or_else(|default| reorder(session_id, default))?;
     // The rename session may have closed during the read, after its close hook already ran:
     // it removes its own session before calling the hook, so asking again now (lock order
     // rename → tag, never nested) catches every such close.
@@ -273,23 +295,33 @@ pub(super) fn with_loaded<R>(session_id: &str, f: impl FnOnce(&[&Loaded]) -> R) 
     })
 }
 
-/// Drops entries whose path isn't in the layout any more.
-fn prune(session: &mut TagSession, layout: &Layout) {
+/// Drops entries whose path left the layout, and the sort when another road reordered the tracks.
+pub(super) fn prune(session: &mut TagSession, layout: &Layout) {
     let current: HashSet<&PathBuf> = layout.tracks.iter().collect();
     session.by_path.retain(|path, _| current.contains(path));
+    session.drop_stale_sort(layout);
 }
 
-fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
+pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
     let tracks: Vec<(&Path, &Entry)> = layout
         .tracks
         .iter()
         .filter_map(|path| session.by_path.get(path).map(|entry| (path.as_path(), entry)))
         .collect();
-    build(layout.access, &tracks)
+    let mut view = build(layout.access, &tracks);
+    for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
+        row.file_name = file_name_of(&layout.dir, path);
+    }
+    TagEditorView {
+        sort: session.sort,
+        can_undo_edit: session.history.can_undo(),
+        can_redo_edit: session.history.can_redo(),
+        ..view
+    }
 }
 
 /// Runs `f` on the open session, after dropping entries that left the layout.
-fn with_session<R>(
+pub(super) fn with_session<R>(
     session_id: &str,
     f: impl FnOnce(&Layout, &mut TagSession) -> Result<R, TagEditorError>,
 ) -> Result<R, TagEditorError> {
@@ -335,18 +367,6 @@ fn scoped(
         .unzip())
 }
 
-fn file_name_of(path: &Path) -> String {
-    path.file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_default()
-}
-
-fn stem_of(path: &Path) -> String {
-    path.file_stem()
-        .map(|stem| stem.to_string_lossy().into_owned())
-        .unwrap_or_default()
-}
-
 /// What the tools know about `paths`, a selection of a book of `session_files` listed tracks (readable or not):
 /// each one's folder and stem, and the book's size (for the one-file-book rule).
 fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
@@ -367,7 +387,7 @@ fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
 /// `tags` as the file at `path` will hold them (an M4A track `01` is `1`); as given when the
 /// name has no supported format.
 fn as_format_holds(path: &Path, tags: FileTags) -> FileTags {
-    let held = match format_of(&file_name_of(path)) {
+    let held = match path.file_name().and_then(|name| format_of(&name.to_string_lossy())) {
         Some(format) => normalize_for(format, &tags),
         None => tags,
     };
@@ -406,7 +426,7 @@ fn store(session: &mut TagSession, paths: Vec<PathBuf>, edited: Vec<FileTags>) {
     }
 }
 
-fn require_editable(layout: &Layout) -> Result<(), TagEditorError> {
+pub(super) fn require_editable(layout: &Layout) -> Result<(), TagEditorError> {
     if layout.access.editable {
         Ok(())
     } else {
@@ -439,7 +459,9 @@ pub fn edit(session_id: &str, edits: Vec<TagEdit>) -> Result<TagEditorView, TagE
         let (paths, before) = readable(layout, session);
         let engine_edits = translate(&paths, edits)?;
         let after = apply_edits(&before, &engine_edits);
+        let snapshot = capture(session);
         store(session, paths, after);
+        record(session, snapshot);
         Ok(view_of(layout, session))
     })
 }
@@ -476,7 +498,9 @@ pub(super) fn edit_scoped(
             // Every audio track the session lists: a damaged file is still part of the book.
             let book = layout.tracks.len();
             let after = f(&paths, &before, book)?;
+            let snapshot = capture(session);
             store(session, paths, after);
+            record(session, snapshot);
         }
         Ok(view_of(layout, session))
     })
@@ -491,12 +515,14 @@ pub fn preview_names(
     scope: Option<Vec<String>>,
 ) -> Result<Vec<NamePreviewRow>, TagEditorError> {
     let compiled = compile_pattern(&pattern).map_err(|error| TagEditorError::BadPattern { error })?;
-    let (paths, _) = with_session(session_id, |layout, session| scoped(layout, session, scope.as_deref()))?;
+    let (paths, dir) = with_session(session_id, |layout, session| {
+        Ok((scoped(layout, session, scope.as_deref())?.0, layout.dir.clone()))
+    })?;
     Ok(paths
         .iter()
         .map(|path| NamePreviewRow {
             path: path.to_string_lossy().into_owned(),
-            file_name: file_name_of(path),
+            file_name: file_name_of(&dir, path),
             fields: compiled.read(&stem_of(path)).map(|pairs| {
                 pairs
                     .into_iter()
@@ -522,11 +548,12 @@ pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView
                     .next()?;
                 let view = FileChangeView {
                     path: path.to_string_lossy().into_owned(),
-                    file_name: file_name_of(path),
+                    file_name: file_name_of(&layout.dir, path),
                     fields: change.fields,
                     cover: change.cover,
                     extras: change.extras,
                     removes: Vec::new(),
+                    removes_unknown: false,
                 };
                 Some((path.clone(), view))
             })
@@ -534,23 +561,14 @@ pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView
     })?;
     Ok(listed
         .into_iter()
-        .map(|(path, view)| FileChangeView {
-            removes: kind_removals(&path, kind),
-            ..view
+        .map(|(path, view)| match removals_of(&path, kind) {
+            Removals::Known(removes) => FileChangeView { removes, ..view },
+            Removals::Unknown => FileChangeView {
+                removes_unknown: true,
+                ..view
+            },
         })
         .collect())
-}
-
-/// What writing `path` as `kind` removes beyond its fields. A file that can't be read lists
-/// nothing here; its write fails and says so. Blocking: ❌ not under a lock.
-fn kind_removals(path: &Path, kind: ContentKind) -> Vec<KindRemoval> {
-    match contain_panics(|| removed_by_kind(path, kind)) {
-        Some(Ok(removals)) => removals,
-        Some(Err(_)) | None => {
-            log::warn!(target: LOG_TARGET, "Couldn't read what a write kind would remove from a file");
-            Vec::new()
-        }
-    }
 }
 
 /// Whether the file at `path` is still the one the session read, so a write may go ahead. A
@@ -616,6 +634,10 @@ pub(super) fn pending(
 /// shows as a change. A file that no longer reads becomes an unreadable row. A no-op for a
 /// session or file that's gone.
 pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) {
+    if written.is_empty() {
+        // Nothing moved on disk: every edit is still pending, and so is its undo.
+        return;
+    }
     let fresh: Vec<(PathBuf, FileTags, Entry)> = written
         .into_iter()
         .map(|(path, requested)| {
@@ -627,6 +649,7 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
     let Some(session) = sessions.get_mut(session_id) else {
         return;
     };
+    clear(session);
     for (path, requested, entry) in fresh {
         let Some(slot) = session.by_path.get_mut(&path) else {
             continue;
@@ -655,7 +678,7 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
 /// Reads `paths` again (after an undo rewrote them) into every open tag session that holds them:
 /// the undo may come from another sheet than the one that wrote. The `undoing` session (whose
 /// user confirmed losing unwritten edits to those files) takes them as read. Every other session
-/// keeps its unwritten edits: only the parts it never edited follow the disk ([`rebase`]), and
+/// keeps its unwritten edits: only the parts it never edited follow the disk ([`super::follow::rebase`]), and
 /// its disk copy and fingerprint become what is on disk now. Each file is read once, outside the
 /// lock; only the tag lock is taken, so the rename → tag lock order holds.
 pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
@@ -677,6 +700,10 @@ pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
     let mut sessions = SESSIONS.lock_ignore_poison();
     for (session_id, session) in sessions.iter_mut() {
         let take_as_read = undoing == Some(session_id.as_str());
+        if fresh.iter().any(|(path, _)| session.by_path.contains_key(path)) {
+            // The files moved under the steps; they'd put back stale tags.
+            clear(session);
+        }
         for (path, entry) in &fresh {
             if let Some(slot) = session.by_path.get_mut(path) {
                 if take_as_read {
@@ -687,55 +714,6 @@ pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
             }
         }
     }
-}
-
-/// `held` takes the file's new disk state `now`, keeping its unwritten edits.
-fn follow_disk(held: &mut Entry, now: &Entry) {
-    match (held, now) {
-        (Entry::Loaded(held), Entry::Loaded(now)) => {
-            let mut keys = CoverKeys::default();
-            keys.remember(&held.edited.cover, held.cover_key);
-            keys.remember(&now.edited.cover, now.cover_key);
-            held.edited = rebase(&held.disk, &held.edited, &now.disk);
-            held.cover_key = keys.key_of(&held.edited.cover);
-            held.disk = now.disk.clone();
-            held.fingerprint = now.fingerprint.clone();
-            held.duration_ms = now.duration_ms;
-        }
-        (held, now) => *held = now.clone(),
-    }
-}
-
-/// `edited` moved from `old` onto `now`: each field, the cover, and each extra the user left as
-/// `old` had it takes `now`'s value; one the user changed keeps the edit.
-pub(super) fn rebase(old: &FileTags, edited: &FileTags, now: &FileTags) -> FileTags {
-    FileTags {
-        fields: rebase_map(&old.fields, &edited.fields, &now.fields),
-        cover: if edited.cover == old.cover {
-            now.cover.clone()
-        } else {
-            edited.cover.clone()
-        },
-        extras: rebase_map(&old.extras, &edited.extras, &now.extras),
-    }
-}
-
-fn rebase_map<K: Ord + Clone, V: PartialEq + Clone>(
-    old: &BTreeMap<K, V>,
-    edited: &BTreeMap<K, V>,
-    now: &BTreeMap<K, V>,
-) -> BTreeMap<K, V> {
-    let keys: BTreeSet<&K> = old.keys().chain(edited.keys()).chain(now.keys()).collect();
-    keys.into_iter()
-        .filter_map(|key| {
-            let value = if edited.get(key) == old.get(key) {
-                now.get(key)
-            } else {
-                edited.get(key)
-            };
-            value.map(|value| (key.clone(), value.clone()))
-        })
-        .collect()
 }
 
 /// Ends the tag session, dropping its edits. A no-op when it's already gone.

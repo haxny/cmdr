@@ -137,6 +137,8 @@ pub use media_index_items::{ImageIndexMenuState, image_index_menu_items};
 pub use menu_bar_builder::build_menu;
 pub use menu_handlers::handle_menu_event;
 #[cfg(target_os = "macos")]
+pub(crate) use menu_handlers::send_native_edit_action;
+#[cfg(target_os = "macos")]
 pub use menu_handlers::{
     cleanup_macos_menus, cleanup_macos_menus_from_command, set_display_accelerators,
     set_display_accelerators_from_command, set_macos_menu_icons, set_macos_menu_icons_from_command,

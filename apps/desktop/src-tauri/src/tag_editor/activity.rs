@@ -60,10 +60,11 @@ pub(crate) fn applied(result: &Result<TagApplyReport, TagEditorError>, started: 
     };
     log::info!(
         target: LOG_TARGET,
-        "apply: {} written, {} failed, {} would drop, {} changed on disk, in {ms} ms",
+        "apply: {} written, {} failed, {} would drop, {} would remove a field, {} changed on disk, in {ms} ms",
         report.written.len(),
         report.failed.len(),
         report.would_drop.len(),
+        report.would_remove.len(),
         report.changed_on_disk.len()
     );
     if !report.failed.is_empty() {

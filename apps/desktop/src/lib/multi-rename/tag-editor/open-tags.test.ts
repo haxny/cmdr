@@ -37,7 +37,7 @@ const SELECTION: TagsSelection = {
 }
 
 function explorer(target: TagsSelection | null = SELECTION) {
-  return { getFocusedPaneRenameTarget: vi.fn(() => target) }
+  return { getFocusedPaneTagsTarget: vi.fn(() => target) }
 }
 
 describe('opening a Tags window', () => {
@@ -109,6 +109,59 @@ describe('opening a Tags window', () => {
     expect(addToast).toHaveBeenCalledWith('None of the selected files is an audio file Cmdr can tag.', {
       level: 'info',
     })
+  })
+
+  it('with nothing selected the row under the cursor opens, as the target says', async () => {
+    await openTagsForSelection(explorer({ ...SELECTION, selectedIndices: [7], nothingSelected: false }))
+    expect(ipc.openTagsSession).toHaveBeenCalledWith('L', false, [7], 9)
+  })
+
+  it('on .. (no row at all) it says nothing is selected and opens nothing', async () => {
+    await openTagsForSelection(explorer({ ...SELECTION, selectedIndices: null, nothingSelected: true }))
+    expect(ipc.openTagsSession).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith('Select the audio files to tag first.', { level: 'info' })
+  })
+
+  it('too many tracks in the folders says how many it takes', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'tooManyTracks', limit: 2000 } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('2,000'), { level: 'warn' })
+  })
+
+  it('a folder walk that ran out of time says so and opens nothing', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'timedOut' } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('took too long'), { level: 'warn' })
+  })
+
+  it('unreadable places under a folder are told after the window opens', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 9, unreadable: 2 } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).toHaveBeenCalledTimes(1)
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('2 places'), { level: 'info' })
+  })
+
+  it('the unreadable-places toast waits for the window and stays away when the open ends in a raise or no track', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 9, unreadable: 2 } })
+    ipc.holdTagsSession.mockResolvedValue({
+      ok: true,
+      value: { tracks: 2, folderName: 'Dracula', alreadyOpen: 'multi-rename-2' },
+    })
+    await openTagsForSelection(explorer())
+    ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 0, folderName: 'X', alreadyOpen: null } })
+    await openTagsForSelection(explorer())
+    ipc.holdTagsSession.mockResolvedValue({ ok: false, error: { type: 'sessionClosed' } })
+    await openTagsForSelection(explorer())
+    expect(addToast).not.toHaveBeenCalledWith(expect.stringContaining('2 places'), expect.anything())
+  })
+
+  it('a folder on a disk Cmdr cannot read through says so', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'foldersNeedLocalDisk' } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('folder'), { level: 'info' })
   })
 
   it('a selection the listing moved past is refused as Multi-Rename refuses it', async () => {

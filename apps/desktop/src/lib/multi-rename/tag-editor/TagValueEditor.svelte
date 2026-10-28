@@ -9,7 +9,7 @@
      * A text the row can't send (`blockedHint` answers why, e.g. the «multiple values» marker is still in it) keeps
      * the box open with that hint, on Enter and on a click away alike (the box takes focus back), so the typing is
      * never dropped without a word; Esc is the way to give it up. The hint follows the typing and goes once the text
-     * can be sent. ⌘S (`tags.write`) commits like Enter and then reaches the window, which lists the changes. The pane
+     * can be sent. ⌘⏎ and ⌘S (`tags.write`) and ⌘⇧S (`tags.review`) commit like Enter and then reach the window, which acts. The pane
      * places the box (`place`) and moves it when the pane resizes; it scrolls itself into view on open and whenever
      * the hint appears, so neither a tall multiline box nor its hint near the pane's foot is cut off.
      */
@@ -23,6 +23,11 @@
         id?: string
         /** The text the row holds; the box starts with it. */
         value: string
+        /**
+         * A character typed on the row to open the box (spreadsheet style): the box starts with exactly it, caret at
+         * the end, nothing selected, instead of `value` selected.
+         */
+        seed?: string
         ariaLabel: string
         multiline?: boolean
         invalid?: boolean
@@ -43,6 +48,7 @@
     const {
         id,
         value,
+        seed,
         ariaLabel,
         multiline = false,
         invalid = false,
@@ -57,11 +63,13 @@
     const uid = $props.id()
     const hintId = `${uid}-hint`
 
-    let draft = $state(untrack(() => value))
+    let draft = $state(untrack(() => seed ?? value))
     let box = $state<HTMLInputElement | HTMLTextAreaElement>()
     let frame = $state<HTMLElement>()
     let hint = $state<string | null>(null)
     let done = false
+    /** The box opened empty for a dead key and nothing was typed: closing it sends nothing (it never clears the row). */
+    let untouched = untrack(() => seed === '')
 
     const describedByAll = $derived([describedBy, hint === null ? undefined : hintId].filter(Boolean).join(' ') || undefined)
 
@@ -72,7 +80,8 @@
 
     onMount(() => {
         box?.focus()
-        box?.select()
+        if (seed === undefined) box?.select()
+        else box?.setSelectionRange(draft.length, draft.length)
         reveal()
     })
 
@@ -90,7 +99,7 @@
     function finish(commit: boolean, refocus = true): void {
         if (done) return
         done = true
-        if (commit && draft !== value) {
+        if (commit && draft !== value && !(untouched && draft === '')) {
             // A refused edit is the state's to word; here it is only logged, by kind, never the text.
             void new Promise<void>((resolve) => {
                 resolve(onCommit(draft))
@@ -125,6 +134,12 @@
 
     function onkeydown(e: KeyboardEvent): void {
         if (e.isComposing) return
+        if (eventMatchesCommand(e, 'tags.write') || eventMatchesCommand(e, 'tags.review')) {
+            // ⌘⏎ / ⌘S (write) or ⌘⇧S (review): committed, the key goes on to the window, which acts; refused, it stops
+            // here with the hint. Before the Enter kinds, so ⌘⏎ commits once and writes once.
+            if (!tryCommit()) claimKey(e)
+            return
+        }
         const enter = enterKind(e)
         if (enter === 'line' && box instanceof HTMLTextAreaElement) {
             claimKey(e)
@@ -135,14 +150,12 @@
         } else if (e.key === 'Escape') {
             claimKey(e)
             finish(false)
-        } else if (eventMatchesCommand(e, 'tags.write')) {
-            // Committed, the key goes on to the window, which lists the changes; refused, it stops here with the hint.
-            if (!tryCommit()) claimKey(e)
         }
     }
 
     /** Typing: a shown hint follows the text, and goes once the text can be sent. */
     function oninput(e: Event): void {
+        untouched = false
         if (hint === null) return
         const target = e.currentTarget
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) hint = refusal(target.value)

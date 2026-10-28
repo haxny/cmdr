@@ -61,6 +61,9 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
+  sort: null,
 }
 
 /** The mock stands in for the state; only what the window reads is there. */
@@ -89,6 +92,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
     textTool: vi.fn(() => Promise.resolve()),
+    sortTracks: vi.fn(() => Promise.resolve()),
   }
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
@@ -134,6 +138,46 @@ describe('TagsContent', () => {
       [[{ kind: 'setAll', field: 'album', values: ['Dracula'] }]],
       [[{ kind: 'setOne', path: '/b/02.mp3', field: 'title', values: ['Konec'] }]],
     ])
+  })
+
+  it('a Tracks column header sorts through the state, flipping the direction of the view’s active sort', async () => {
+    const { root, state } = await mountTab({ view: { ...VIEW, sort: { key: 'title', descending: false } } })
+    const header = (label: string) =>
+      [...root.querySelectorAll<HTMLButtonElement>('.sortable-header')].find((b) => b.textContent.includes(label))
+    header('Title')?.click()
+    expect(state.sortTracks).toHaveBeenLastCalledWith({ key: 'title', descending: true })
+    header('Length')?.click()
+    expect(state.sortTracks).toHaveBeenLastCalledWith({ key: 'length', descending: false })
+  })
+
+  it('the Tracks cursor follows its track when the order changes', async () => {
+    const state = $state({
+      view: VIEW,
+      error: null,
+      busy: false,
+      open: vi.fn(() => Promise.resolve()),
+      edit: vi.fn(() => Promise.resolve()),
+      coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
+      coverImage: vi.fn(() => Promise.resolve(null)),
+      coverChoices: vi.fn(() => Promise.resolve([])),
+      coverThumbnail: vi.fn(() => Promise.resolve(null)),
+      undoable: null,
+      settled: vi.fn(() => Promise.resolve()),
+      tool: vi.fn(() => Promise.resolve()),
+    })
+    const mounted = await mountInto(TagsContent, { state: asTagState(state) })
+    cleanup = mounted.cleanup
+    const cursorPath = () =>
+      mounted.root.querySelector<HTMLElement>('[role="option"].is-under-cursor[data-track-path]')?.dataset.trackPath
+    mounted.root
+      .querySelector('[data-track-path="/b/02.mp3"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+    await tick()
+    expect(cursorPath()).toBe('/b/02.mp3')
+
+    state.view = { ...VIEW, tracks: [...VIEW.tracks].reverse() }
+    await tick()
+    expect(cursorPath()).toBe('/b/02.mp3')
   })
 
   it("passes the view's bad-date count on, so the Date row is flagged on open", async () => {
@@ -226,7 +270,7 @@ describe('TagsContent', () => {
       expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
     })
 
-    it('is reachable by keyboard: ⇧Tab from the Tracks pane walks back into it before the Album rows', async () => {
+    it('is reachable by keyboard: ⇧Tab from the Tracks pane passes the Tracks sort headers, then reaches it before the Album rows', async () => {
       const { root } = await mountTab({ choices: [FRONT, NONE] })
       await settle()
       await tick()
@@ -244,7 +288,12 @@ describe('TagsContent', () => {
       expect(at(section)).toBeGreaterThan(at(album))
       expect(at(section)).toBeLessThan(at(tracks))
       const between = stops.slice(at(section), at(tracks))
-      expect(between.every((stop) => stop.closest('[data-pane="album"]') !== null)).toBe(true)
+      // The Tracks pane's own sort headers sit just before its list.
+      expect(
+        between.every(
+          (stop) => stop.closest('[data-pane="album"]') !== null || stop.closest('.tag-pane-header') !== null,
+        ),
+      ).toBe(true)
     })
 
     it('a pasted picture goes to the state as bytes', async () => {
@@ -305,6 +354,29 @@ describe('TagsContent', () => {
     inDialog('Renumber').click()
     await settle()
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, ['/b/02.mp3', '/b/04.mp3'])
+  })
+
+  it('Delete in the Album pane empties the field on every file, or on the selected tracks alone, without asking', async () => {
+    const { root, state } = await mountTab()
+    await press(paneList(root, 'Album tags'), 'Delete')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([{ kind: 'setAll', field: 'album', values: [] }])
+    await toggleTrack(root, '/b/02.mp3')
+    await press(paneList(root, 'Album tags'), 'Backspace')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([{ kind: 'setOne', path: '/b/02.mp3', field: 'album', values: [] }])
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it('Delete in the Tracks pane empties the cursor row’s Title; typing there opens the editor', async () => {
+    const { root, state } = await mountTab()
+    const tracks = paneList(root, 'Tracks')
+    await press(tracks, 'ArrowDown')
+    await press(tracks, 'Delete')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([{ kind: 'setOne', path: '/b/02.mp3', field: 'title', values: [] }])
+    await press(tracks, 'K')
+    expect(root.querySelector<HTMLInputElement>('.tag-value-editor')?.value).toBe('K')
   })
 
   it('a view reload drops the selected tracks that are gone for good', async () => {
@@ -449,9 +521,12 @@ describe('TagsContent', () => {
     await press(paneList(root, 'Album tags'), 'F2')
     await press(paneList(root, 'Tracks'), 'F2')
     expect(root.querySelector('.tag-value-editor')).toBeNull()
-    // Playing and selecting write nothing, so Play, Open in foobar2000 and the select-all box stay available.
+    // Playing, selecting and sorting write nothing, so Play, Open in foobar2000, the select-all box and the column
+    // headers stay available.
     const readers = new Set(['Open in foobar2000', 'F3Play'])
-    const writers = [...root.querySelectorAll('button')].filter((b) => !readers.has(b.textContent.trim()))
+    const writers = [...root.querySelectorAll('button')].filter(
+      (b) => !readers.has(b.textContent.trim()) && !b.classList.contains('sortable-header'),
+    )
     for (const button of writers) expect(button.disabled).toBe(true)
   })
 })

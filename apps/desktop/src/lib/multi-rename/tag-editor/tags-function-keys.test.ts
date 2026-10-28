@@ -27,6 +27,9 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
+  sort: null,
 }
 
 describe('enabledTagsCommands', () => {
@@ -47,6 +50,7 @@ describe('enabledTagsCommands', () => {
     expect(full.has('tags.editNumber')).toBe(true)
     expect(full.has('tags.removeExtras')).toBe(true)
     expect(full.has('tags.write')).toBe(true)
+    expect(full.has('tags.review')).toBe(true)
   })
 })
 

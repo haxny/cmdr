@@ -54,7 +54,7 @@ async function shift(down: boolean): Promise<void> {
 }
 
 describe('TagsFunctionKeyBar', () => {
-  it('shows F2…F8 and ⌘S with their tag commands, each key read from the shortcuts store', () => {
+  it('shows F2…F8 and ⌘⏎ Write with their tag commands, each key read from the shortcuts store', () => {
     const { buttons } = mountBar()
     expect(buttons().map(labelOf)).toEqual([
       'Edit',
@@ -85,7 +85,7 @@ describe('TagsFunctionKeyBar', () => {
     ])
   })
 
-  it('with Shift held shows the Shift row: ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up, ⇧F8 Remove extras', async () => {
+  it('with Shift held shows the Shift row: ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up, ⇧F8 Remove extras, ⇧⌘S Review', async () => {
     const { buttons, onCommand } = mountBar()
     await shift(true)
     expect(buttons().map(labelOf)).toEqual([
@@ -96,8 +96,9 @@ describe('TagsFunctionKeyBar', () => {
       '',
       '',
       'Remove extras',
-      'Write',
+      'Review',
     ])
+    expect(chipOf(buttons()[7])).toBe(getFirstShiftShortcutReactive('tags.review'))
     for (const button of buttons()) if (!button.disabled) button.click()
     expect(onCommand.mock.calls.map(([id]) => id)).toEqual([
       'tags.editNumber',
@@ -105,7 +106,7 @@ describe('TagsFunctionKeyBar', () => {
       'tags.case',
       'tags.cleanUp',
       'tags.removeExtras',
-      'tags.write',
+      'tags.review',
     ])
     await shift(false)
     expect(labelOf(buttons()[0])).toBe('Edit')

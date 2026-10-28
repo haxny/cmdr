@@ -20,7 +20,11 @@ import {
   type TagEditorView,
   type TagTextTool,
   type TagTool,
+  type TrackSort,
+  type TrackSortKey,
+  type TagsClipboardAction,
   type TagsMenuKey,
+  type TagsOpened,
   type TagsSessionInfo,
   type MultiRenameError,
   type MultiRenameOpened,
@@ -41,7 +45,11 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TrackSort,
+  TrackSortKey,
+  TagsClipboardAction,
   TagsMenuKey,
+  TagsOpened,
   TagsSessionInfo,
 }
 
@@ -66,6 +74,27 @@ export async function editTags(
   edits: TagEdit_Deserialize[],
 ): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.editTags(sessionId, edits))
+}
+
+/**
+ * Reverses the last pending edit (an edit batch, a tool run, a cover change). With nothing to undo the view comes
+ * back unchanged (`canUndoEdit` says whether there is).
+ */
+export async function undoTagEdit(sessionId: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.undoTagEdit(sessionId))
+}
+
+/** Re-applies the last undone pending edit; with nothing to redo the view comes back unchanged. */
+export async function redoTagEdit(sessionId: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.redoTagEdit(sessionId))
+}
+
+/**
+ * Puts the tracks in `sort` order (the rename order moves with them). No file or edit is touched; the answer's
+ * `sort` is the order now.
+ */
+export async function sortTagTracks(sessionId: string, sort: TrackSort): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.sortTagTracks(sessionId, sort))
 }
 
 /**
@@ -254,7 +283,7 @@ export async function openTagsSession(
   includeHidden: boolean,
   selectedIndices: number[] | null,
   expectedSequence: number,
-): Promise<SessionResult<MultiRenameOpened>> {
+): Promise<SessionResult<TagsOpened>> {
   return sessionResult(await commands.openTagsSession(listingId, includeHidden, selectedIndices, expectedSequence))
 }
 
@@ -278,6 +307,22 @@ export async function onTagsMenuKey(callback: (key: TagsMenuKey) => void): Promi
   return events.tagsMenuKey.listen((event) => {
     callback(event.payload)
   })
+}
+
+/**
+ * Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) while this Tags window is focused: the accelerators fire before the page
+ * sees the keys, so `menu_handlers.rs` sends the action here instead of the native `cut:`/`copy:`/`paste:`. Returns
+ * an `UnlistenFn`.
+ */
+export async function onTagsClipboard(callback: (action: TagsClipboardAction) => void): Promise<UnlistenFn> {
+  return events.tagsClipboard.listen((event) => {
+    callback(event.payload.action)
+  })
+}
+
+/** Hands a routed Cut, Copy or Paste back as the native action, for the text box (or cover section) with focus. */
+export async function tagsNativeEdit(action: TagsClipboardAction): Promise<void> {
+  await commands.tagsNativeEdit(action)
 }
 
 /** Select > Deselect all (⌘⇧A) while this Tags window is focused; routed as `onTagsSelectAll`. */

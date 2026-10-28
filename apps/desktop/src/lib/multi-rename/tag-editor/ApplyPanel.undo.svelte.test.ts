@@ -49,6 +49,7 @@ describe('ApplyPanel undo', () => {
           applyId: 'A1',
           written: ['/b/01.mp3'],
           wouldDrop: [{ path: '/b/02.mp3', items: ['TSOP'] }],
+          wouldRemove: [],
         }),
       })
       .mockResolvedValueOnce({ ok: true, value: applyReport({ applyId: 'A2', written: ['/b/02.mp3'] }) })

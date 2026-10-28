@@ -2,6 +2,7 @@
  * The sheet's error line: every typed refusal the backend can answer, in words.
  */
 import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { MaskError, SpecError } from '#lib/ipc/bindings.js'
 import type { MultiRenameError } from '#lib/tauri-commands/index.js'
 
@@ -23,33 +24,29 @@ function readOnlyText(place: Extract<MultiRenameError, { type: 'readOnly' }>['pl
   return tString('multiRename.error.readOnly')
 }
 
+/** The refusals worded by one fixed message. */
+const PLAIN_TEXT: Record<Exclude<MultiRenameError['type'], 'spec' | 'readOnly' | 'tooManyTracks'>, MessageKey> = {
+  gone: 'multiRename.error.gone',
+  sessionClosed: 'multiRename.error.gone',
+  selectionChanged: 'multiRename.selectionChanged',
+  nothingToRename: 'multiRename.error.nothingToRename',
+  notConnected: 'multiRename.error.notConnected',
+  // A queued rename waits on `stillReading` rather than showing it; worded like a stale preview otherwise.
+  previewOutOfDate: 'multiRename.error.previewOutOfDate',
+  stillReading: 'multiRename.error.previewOutOfDate',
+  timedOut: 'multiRename.error.timedOut',
+  couldntWriteNames: 'multiRename.error.couldntWriteNames',
+  namesFileGone: 'multiRename.results.gone',
+  // The sort sends the session's own names, so this is a bug if it shows; worded like any internal failure.
+  notAPermutation: 'multiRename.error.couldntStart',
+  couldntStart: 'multiRename.error.couldntStart',
+  internal: 'multiRename.error.couldntStart',
+  foldersNeedLocalDisk: 'multiRename.tags.window.foldersNeedLocalDisk',
+}
+
 export function errorText(error: MultiRenameError): string {
-  switch (error.type) {
-    case 'spec':
-      return specErrorText(error.error)
-    case 'gone':
-    case 'sessionClosed':
-      return tString('multiRename.error.gone')
-    case 'selectionChanged':
-      return tString('multiRename.selectionChanged')
-    case 'nothingToRename':
-      return tString('multiRename.error.nothingToRename')
-    case 'notConnected':
-      return tString('multiRename.error.notConnected')
-    // A queued rename waits on `stillReading` rather than showing it; worded like a stale preview otherwise.
-    case 'previewOutOfDate':
-    case 'stillReading':
-      return tString('multiRename.error.previewOutOfDate')
-    case 'readOnly':
-      return readOnlyText(error.place)
-    case 'timedOut':
-      return tString('multiRename.error.timedOut')
-    case 'couldntWriteNames':
-      return tString('multiRename.error.couldntWriteNames')
-    case 'namesFileGone':
-      return tString('multiRename.results.gone')
-    case 'couldntStart':
-    case 'internal':
-      return tString('multiRename.error.couldntStart')
-  }
+  if (error.type === 'spec') return specErrorText(error.error)
+  if (error.type === 'readOnly') return readOnlyText(error.place)
+  if (error.type === 'tooManyTracks') return tString('multiRename.tags.window.tooManyTracks', { limit: error.limit })
+  return tString(PLAIN_TEXT[error.type])
 }

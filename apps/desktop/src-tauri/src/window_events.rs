@@ -50,6 +50,25 @@ pub struct TagsSelectAll;
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
 pub struct TagsDeselectAll;
 
+/// Which of Edit > Cut, Copy and Paste a focused Tags window was asked for (`TagsClipboard`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TagsClipboardAction {
+    Cut,
+    Copy,
+    Paste,
+}
+
+/// `tags-clipboard`: Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) while a Tags window is focused. The
+/// accelerators fire before the page sees the keys, and the native `cut:`/`copy:`/`paste:` would
+/// reach only a text box, so the window gets the action and decides: the field under the cursor,
+/// or the same native action handed back (`tags_native_edit`) for a text box or the cover section.
+/// Emitted to that window only.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+pub struct TagsClipboard {
+    pub action: TagsClipboardAction,
+}
+
 /// `tags-menu-key`: a File / Select menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while a Tags
 /// window is focused. Those accelerators fire before the page's keydown, so this is how the
 /// window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
