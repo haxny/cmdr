@@ -1,10 +1,11 @@
 /**
  * The Tags window's state for one Multi-Rename session: the backend's view of the tracks, the last typed error, and the
- * last apply Undo can reverse. The work is the backend's (`tauri-commands/tag-editor.ts`); this holds what it answered.
+ * last write Undo can reverse. The work is the backend's (`tauri-commands/tag-editor.ts`); this holds what it answered.
  * `open()` is lazy: the window calls it when it mounts; once a view is there it asks again for the session's
  * current order (the session's names can be reordered), keeping the unwritten edits, which live in the backend
  * session.
- * The write Undo reverses is kept in `last-tag-apply.svelte.ts`, so it outlives the sheet.
+ * The write Undo reverses is the backend's, kept per folder for the app's lifetime (`last-tag-apply.ts`), so it
+ * outlives the window: this only mirrors it, asking again on open and after every write and undo.
  */
 
 import type { ContentKind, TagTextTool } from '#lib/ipc/bindings.js'
@@ -16,6 +17,7 @@ import {
   getCoverImage,
   getCoverThumbnail,
   getTagChanges,
+  lastTagApply,
   listCoverCandidates,
   listTagCovers,
   openTagEditor,
@@ -41,7 +43,7 @@ import {
   type TagEditorView,
   type TagTool,
 } from '#lib/tauri-commands/index.js'
-import { getLastTagApply, setLastTagApply, type LastTagApply, type UndoableApply } from './last-tag-apply.svelte'
+import type { LastTagApply } from './last-tag-apply'
 
 /** Why an Undo has nothing to reverse: no apply wrote anything yet, or the store couldn't keep the old tags. */
 export type TagUndoRefusal = { kind: 'nothingToUndo' } | { kind: 'undoUnavailable' }
@@ -71,6 +73,10 @@ export interface TagEditorState {
   /** The last failed edit, tool, cover pick or open; a failed change list or write is the Apply panel's to word. */
   readonly error: TagStateError | null
   readonly busy: boolean
+  /** A write or an undo is on its way: the window can't close under it. */
+  readonly writing: boolean
+  /** An edit, tool, or cover change is on its way (a read isn't): closing asks about it. */
+  readonly editing: boolean
   /** The last write Undo can reverse, or `null` when there's none. */
   readonly undoable: LastTagApply | null
   /** Fetches the view; when one is there already, fetches it again in the session's current order. */
@@ -129,14 +135,16 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let view = $state.raw<TagEditorView | null>(null)
   let error = $state.raw<TagStateError | null>(null)
   let pending = $state(0)
+  let writes = $state(0)
+  let edits = $state(0)
+  /** The backend's last write of this folder, mirrored. */
+  let last = $state.raw<LastTagApply | null>(null)
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping of pending promises, nothing renders from it
   const inFlight = new Set<Promise<unknown>>()
   let opening: Promise<void> | null = null
   let started = false
   /** Set by `close()`: a reply that lands after it is dropped. */
   let closed = false
-  /** Why Undo has nothing to reverse, when the store holds no write. */
-  let refusal: TagUndoRefusal = { kind: 'nothingToUndo' }
   /** Counts view requests; an answer to an older one than the last that landed is dropped. */
   let viewAsked = 0
   let viewShown = 0
@@ -173,6 +181,50 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     view = res.value
   }
 
+  /** Runs an edit-like call (it changes the edits): `editing` is on meanwhile. */
+  async function editView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<void> {
+    edits += 1
+    try {
+      await replaceView(call)
+    } finally {
+      edits -= 1
+    }
+  }
+
+  /** Runs a write or an undo: `writing` is on meanwhile. */
+  async function whileWriting<T>(run: () => Promise<T>): Promise<T> {
+    writes += 1
+    try {
+      return await run()
+    } finally {
+      writes -= 1
+    }
+  }
+
+  /** Mirrors the backend's last write of this folder. A failed ask keeps what was there (logged by kind). */
+  async function refreshLast(): Promise<void> {
+    try {
+      const res = await lastTagApply(sessionId)
+      if (closed) return
+      if (res.ok) last = res.value
+      else log.warn("couldn't ask for the last tag write: {kind}", { kind: res.error.kind })
+    } catch (e) {
+      log.warn("couldn't ask for the last tag write: {reason}", { reason: e })
+    }
+  }
+
+  /** The mirrored last write while Undo has something to reverse. */
+  function undoableWrite(): LastTagApply | null {
+    return last !== null && last.applies.length > 0 ? last : null
+  }
+
+  /** Why Undo has nothing to reverse: a last write none of whose files kept their old tags, or none at all. */
+  function refusal(): TagUndoRefusal {
+    return last !== null && last.applies.length === 0 && last.partial
+      ? { kind: 'undoUnavailable' }
+      : { kind: 'nothingToUndo' }
+  }
+
   async function settled(limitMs = SETTLE_LIMIT_MS): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined
     const gaveUp = new Promise<false>((resolve) => {
@@ -198,9 +250,11 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       await replaceView(() => openTagEditor(sessionId))
       return
     }
-    opening ??= replaceView(() => openTagEditor(sessionId)).finally(() => {
-      opening = null
-    })
+    opening ??= Promise.all([replaceView(() => openTagEditor(sessionId)), refreshLast()])
+      .then(() => undefined)
+      .finally(() => {
+        opening = null
+      })
     started = true
     await opening
   }
@@ -216,13 +270,19 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     get busy() {
       return pending > 0
     },
+    get writing() {
+      return writes > 0
+    },
+    get editing() {
+      return edits > 0
+    },
     get undoable() {
       return undoableWrite()
     },
     open,
-    edit: (edits) => replaceView(() => editTags(sessionId, edits)),
-    tool: (tool, scope = null) => replaceView(() => runTagTool(sessionId, tool, scope)),
-    textTool: (tool, scope = null) => replaceView(() => runTagTextTool(sessionId, tool, scope)),
+    edit: (batch) => editView(() => editTags(sessionId, batch)),
+    tool: (tool, scope = null) => editView(() => runTagTool(sessionId, tool, scope)),
+    textTool: (tool, scope = null) => editView(() => runTagTextTool(sessionId, tool, scope)),
     // A preview owns only a bad pattern: a good one leaves any other notice (a failed edit, a cover) standing.
     previewFromNames: (pattern, scope = null) =>
       track(
@@ -255,31 +315,34 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       }
       return null
     },
-    useCoverForAll: (key) => replaceView(() => useCoverForAll(sessionId, key)),
-    coverFromBytes: (data) => replaceView(() => setCoverFromBytes(sessionId, data)),
-    coverFromPath: (path) => replaceView(() => setCoverFromPath(sessionId, path)),
+    useCoverForAll: (key) => editView(() => useCoverForAll(sessionId, key)),
+    coverFromBytes: (data) => editView(() => setCoverFromBytes(sessionId, data)),
+    coverFromPath: (path) => editView(() => setCoverFromPath(sessionId, path)),
     coverCandidates: () => track(() => listCoverCandidates(sessionId)),
-    coverFromFile: (fileName) => replaceView(() => setCoverFromFile(sessionId, fileName)),
+    coverFromFile: (fileName) => editView(() => setCoverFromFile(sessionId, fileName)),
     // The Apply panel words a failed list or write next to its buttons; the window's error is for edits.
     changes: (kind) => track(() => getTagChanges(sessionId, kind), null),
     async apply(request, options = {}) {
-      const res = await track(() => applyTags(sessionId, request), null)
-      if (!res.ok) return res
-      const continuing = (options.after ?? []).some((earlier) => earlier.written.length > 0)
-      // A write that wrote nothing leaves the last one undoable: there's nothing newer to protect.
-      if (continuing || res.value.written.length > 0) {
-        refusal = res.value.undoUnavailable ? { kind: 'undoUnavailable' } : { kind: 'nothingToUndo' }
-        setLastTagApply(nextUndoable(continuing ? getLastTagApply() : null, res.value))
-      }
-      await replaceView(() => openTagEditor(sessionId))
+      // A "Write anyway" after a press that wrote continues that write, so Undo reverses both.
+      const continues = (options.after ?? []).some((earlier) => earlier.written.length > 0)
+      const res = await whileWriting(async () => {
+        const answer = await track(() => applyTags(sessionId, request, continues), null)
+        if (answer.ok) await refreshLast()
+        return answer
+      })
+      if (res.ok) await replaceView(() => openTagEditor(sessionId))
       return res
     },
     async undo() {
-      const last = undoableWrite()
-      if (last === null) return { ok: false, error: refusal, restored: emptyRestore() }
-      // Taken first, so a second press doesn't undo the same write twice.
-      setLastTagApply(null)
-      const res = await undoAll(last, (applyId) => track(() => undoTagApply(applyId, sessionId)))
+      const undoing = undoableWrite()
+      if (undoing === null) return { ok: false, error: refusal(), restored: emptyRestore() }
+      // Taken first, so a second press doesn't undo the same write twice; the backend's answer comes back after.
+      last = null
+      const res = await whileWriting(async () => {
+        const undone = await undoAll(undoing, (applyId) => track(() => undoTagApply(applyId, sessionId)))
+        await refreshLast()
+        return undone
+      })
       // Even a failed undo may have restored some files: the view reads them again, and the error stays.
       if (started) await replaceView(() => openTagEditor(sessionId))
       if (!res.ok) error = res.error
@@ -290,7 +353,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       if (!started) return
       started = false
       closed = true
-      refusal = { kind: 'nothingToUndo' }
+      last = null
       view = null
       try {
         await closeTagEditor(sessionId)
@@ -306,46 +369,22 @@ function emptyRestore(): RestoreReport {
   return { restored: [], missing: [], changed: [], failed: [] }
 }
 
-/** The write Undo reverses after `report`: this apply (when it wrote and kept the old tags) after `before`'s. */
-function nextUndoable(before: LastTagApply | null, report: TagApplyReport): LastTagApply | null {
-  const keptOld = report.applyId !== null && !report.undoUnavailable && report.written.length > 0
-  const added: UndoableApply[] =
-    keptOld && report.applyId !== null ? [{ applyId: report.applyId, written: report.written.length }] : []
-  const applies = [...(before?.applies ?? []), ...added]
-  const partial = (before?.partial ?? false) || (report.undoUnavailable && report.written.length > 0)
-  // Kept with no applies when the write can't be undone at all, so a "Write anyway" after it is marked partial.
-  return applies.length === 0 && !partial ? null : { applies, partial }
-}
-
-/** The stored write while Undo has something to reverse. */
-function undoableWrite(): LastTagApply | null {
-  const last = getLastTagApply()
-  return last !== null && last.applies.length > 0 ? last : null
-}
-
 /**
- * Undoes `last`'s applies, the last one first. An apply the backend couldn't undo (an error, or files it couldn't
- * restore, whose record it keeps) stays in the store with its own count, so a retry says how many files are left.
+ * Undoes `last`'s applies, the last one first, and stops at the first that fails. The backend keeps the folder's last
+ * write in step (an apply put back goes, one with files left stays with their count), so the caller asks it again.
  */
 async function undoAll(
   last: LastTagApply,
   undoOne: (applyId: string) => Promise<TagEditorResult<RestoreReport>>,
 ): Promise<TagUndoResult> {
   const merged = emptyRestore()
-  const kept: UndoableApply[] = []
-  const left = [...last.applies]
-  for (let apply = left.pop(); apply !== undefined; apply = left.pop()) {
+  for (const apply of [...last.applies].reverse()) {
     const res = await undoOne(apply.applyId)
-    if (!res.ok) {
-      setLastTagApply({ ...last, applies: [...left, apply, ...kept] })
-      return { ok: false, error: res.error, restored: merged }
-    }
+    if (!res.ok) return { ok: false, error: res.error, restored: merged }
     merged.restored.push(...res.value.restored)
     merged.missing.push(...res.value.missing)
     merged.changed.push(...res.value.changed)
     merged.failed.push(...res.value.failed)
-    if (res.value.failed.length > 0) kept.unshift({ ...apply, written: res.value.failed.length })
   }
-  setLastTagApply(kept.length > 0 ? { ...last, applies: kept } : null)
   return { ok: true, value: merged }
 }

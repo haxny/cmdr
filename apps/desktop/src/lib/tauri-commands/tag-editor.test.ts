@@ -14,6 +14,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     getTagChanges: vi.fn(),
     applyTags: vi.fn(),
     undoTagApply: vi.fn(),
+    lastTagApply: vi.fn(),
     closeTagEditor: vi.fn(),
     listCoverCandidates: vi.fn(),
     setCoverFromFile: vi.fn(),
@@ -51,6 +52,7 @@ import {
   setCoverFromPath,
   tagTrackAudioUrl,
   undoTagApply,
+  lastTagApply,
   useCoverForAll,
 } from './tag-editor'
 
@@ -169,6 +171,15 @@ describe('getTagChanges', () => {
   })
 })
 
+describe('lastTagApply', () => {
+  it('asks for the folder’s last write, which outlives any window', async () => {
+    const last = { applies: [{ applyId: 'a1', written: 3 }], partial: false }
+    vi.mocked(commands.lastTagApply).mockResolvedValue({ status: 'ok', data: last } as never)
+    expect(await lastTagApply('s1')).toEqual({ ok: true, value: last })
+    expect(commands.lastTagApply).toHaveBeenCalledWith('s1')
+  })
+})
+
 describe('applyTags', () => {
   it('passes the request and the whole report through, undo flags included', async () => {
     const report = {
@@ -181,7 +192,7 @@ describe('applyTags', () => {
     }
     vi.mocked(commands.applyTags).mockResolvedValue({ status: 'ok', data: report } as never)
     expect(await applyTags('s1', request)).toEqual({ ok: true, value: report })
-    expect(commands.applyTags).toHaveBeenCalledWith('s1', request)
+    expect(commands.applyTags).toHaveBeenCalledWith('s1', request, false)
   })
 
   it('returns the typed error', async () => {
@@ -296,7 +307,8 @@ describe('the cover choices', () => {
       ok: true,
       value: { dirty: true },
     })
-    expect(commands.setCoverFromBytes).toHaveBeenCalledWith('s1', [0xff, 0xd8, 0xff])
+    // Base64, not a JSON number array: a large TIFF would cross IPC several times its size.
+    expect(commands.setCoverFromBytes).toHaveBeenCalledWith('s1', '/9j/')
   })
 
   it('sends a dropped path, and a folder comes back typed', async () => {

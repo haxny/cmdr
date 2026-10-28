@@ -246,6 +246,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::tag_editor::get_tag_changes,
                     crate::commands::tag_editor::apply_tags,
                     crate::commands::tag_editor::undo_tag_apply,
+                    crate::commands::tag_editor::last_tag_apply,
                     crate::commands::tag_editor::close_tag_editor,
                     crate::commands::tag_editor::list_cover_candidates,
                     crate::commands::tag_editor::set_cover_from_file,

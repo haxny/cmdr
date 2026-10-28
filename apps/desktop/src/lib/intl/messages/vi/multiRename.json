@@ -1880,5 +1880,33 @@
   "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
   "@multiRename.tags.write.someLeft": {
     "sourceHash": "b999e17"
+  },
+  "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.write.closeWaits": {
+    "sourceHash": "82e021e"
+  },
+  "multiRename.tags.window.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.window.closeWaits": {
+    "sourceHash": "82e021e"
+  },
+  "multiRename.tags.readTimedOut": "The drive stopped answering while the tags were read. Close the window and try again.",
+  "@multiRename.tags.readTimedOut": {
+    "sourceHash": "257c44c"
+  },
+  "multiRename.tags.quit.title": "{count, plural, one {Quit with tag changes not written?} other {Quit with tag changes not written in {countText} windows?}}",
+  "@multiRename.tags.quit.title": {
+    "sourceHash": "548be20"
+  },
+  "multiRename.tags.quit.writingTitle": "Quit while tags are being written?",
+  "@multiRename.tags.quit.writingTitle": {
+    "sourceHash": "3e1038f"
+  },
+  "multiRename.tags.quit.unwritten": "{count, plural, one {A Tags window has changes that haven’t been written. Quitting discards them.} other {{countText} Tags windows have changes that haven’t been written. Quitting discards them.}}",
+  "@multiRename.tags.quit.unwritten": {
+    "sourceHash": "78c6748"
+  },
+  "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
+  "@multiRename.tags.quit.writing": {
+    "sourceHash": "fb2d5ce"
   }
 }

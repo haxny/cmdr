@@ -121,6 +121,7 @@ fn error_kind(error: &TagEditorError) -> &'static str {
         TagEditorError::PasteTimedOut => "pasteTimedOut",
         TagEditorError::CoverNotAFile => "coverNotAFile",
         TagEditorError::UnknownCover => "unknownCover",
+        TagEditorError::ReadTimedOut => "readTimedOut",
         TagEditorError::TaskFailed => "taskFailed",
         TagEditorError::BadPattern { .. } => "badPattern",
         TagEditorError::BadRegex => "badRegex",

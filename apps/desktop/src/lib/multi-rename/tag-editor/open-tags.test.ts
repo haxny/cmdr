@@ -46,7 +46,7 @@ describe('opening a Tags window', () => {
     flags.tagEditor = true
     ipc.openTagsSession.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 2 } })
     ipc.reopenForTags.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-6', count: 2 } })
-    ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 2, folderName: 'Dracula' } })
+    ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 2, folderName: 'Dracula', alreadyOpen: null } })
   })
 
   it('file.editTags refuses with the setting off or with nothing selected', () => {
@@ -84,8 +84,22 @@ describe('opening a Tags window', () => {
     expect(ipc.closeMultiRename).not.toHaveBeenCalled()
   })
 
+  it('Edit tags again on the same files raises the window that shows them and gives the new session back', async () => {
+    ipc.holdTagsSession.mockResolvedValue({
+      ok: true,
+      value: { tracks: 2, folderName: 'Dracula', alreadyOpen: 'multi-rename-2' },
+    })
+
+    await openTagsForSelection(explorer())
+
+    expect(ipc.releaseTagsSession).toHaveBeenCalledWith('multi-rename-5')
+    expect(ipc.closeMultiRename).toHaveBeenCalledWith('multi-rename-5')
+    expect(openTagsWindow).toHaveBeenCalledTimes(1)
+    expect(openTagsWindow).toHaveBeenCalledWith('multi-rename-2', 'Dracula', expect.any(Function))
+  })
+
   it('a selection without a single audio file it can tag says so and ends the session', async () => {
-    ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 0, folderName: 'Photos' } })
+    ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 0, folderName: 'Photos', alreadyOpen: null } })
 
     await openTagsForSelection(explorer())
 

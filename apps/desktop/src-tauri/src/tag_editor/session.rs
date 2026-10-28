@@ -15,6 +15,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -216,7 +217,17 @@ fn read_entry(path: &Path) -> Entry {
 /// With `restart: false` an existing tag session is returned as it is, edits kept; with
 /// `restart: true` (or none yet) every file is read again and the edits are dropped.
 /// Blocking file work: call it off the IPC thread.
+#[cfg(test)]
 pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorError> {
+    open_counting(session_id, restart, &AtomicUsize::new(0))
+}
+
+/// Opens as `open` does (tests), counting each file read in `read`, so a caller can tell a slow read from a stalled one.
+pub(crate) fn open_counting(
+    session_id: &str,
+    restart: bool,
+    read: &AtomicUsize,
+) -> Result<TagEditorView, TagEditorError> {
     let layout = layout(session_id)?;
     if !restart {
         let mut sessions = SESSIONS.lock_ignore_poison();
@@ -228,7 +239,11 @@ pub fn open(session_id: &str, restart: bool) -> Result<TagEditorView, TagEditorE
     let by_path: HashMap<PathBuf, Entry> = layout
         .tracks
         .iter()
-        .map(|path| (path.clone(), read_entry(path)))
+        .map(|path| {
+            let entry = read_entry(path);
+            read.fetch_add(1, Ordering::Relaxed);
+            (path.clone(), entry)
+        })
         .collect();
     let view = {
         let mut sessions = SESSIONS.lock_ignore_poison();
@@ -740,6 +755,20 @@ pub(super) fn loaded_tracks(session_id: &str) -> Result<Vec<PathBuf>, TagEditorE
             .cloned()
             .collect())
     })
+}
+
+/// How many tag sessions hold edits not yet written: a quit asks about them (`at_quit.rs`).
+pub(crate) fn unwritten_sessions() -> usize {
+    SESSIONS
+        .lock_ignore_poison()
+        .values()
+        .filter(|session| {
+            session
+                .by_path
+                .values()
+                .any(|entry| entry.loaded().is_some_and(Loaded::changed))
+        })
+        .count()
 }
 
 /// Whether a tag session exists for `session_id`.

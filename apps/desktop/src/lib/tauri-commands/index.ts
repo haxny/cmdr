@@ -403,7 +403,7 @@ export type {
 // The quit gate: the backend holding an exit while operations run, and the
 // dialog's two answers.
 export { quitConfirm, quitCancel, onQuitRequested, onQuitCalledOff } from './quit'
-export type { QuitAnswer, QuitRequested } from './quit'
+export type { QuitAnswer, QuitRequested, TagsAtQuit } from './quit'
 
 // Network types
 export type { ManualConnectResult } from './networking'
@@ -1169,7 +1169,7 @@ export type {
   RenameExample,
 } from './multi-rename'
 
-// Tags tab of Multi-Rename
+// The Tags window
 export {
   openTagEditor,
   editTags,
@@ -1179,6 +1179,7 @@ export {
   getTagChanges,
   applyTags,
   undoTagApply,
+  lastTagApply,
   closeTagEditor,
   listCoverCandidates,
   setCoverFromFile,
@@ -1204,6 +1205,7 @@ export type {
   CoverCandidate,
   CoverChoice,
   FileChangeView,
+  LastTagApply,
   NamePattern,
   NamePreviewRow,
   RestoreReport,

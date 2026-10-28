@@ -3,10 +3,13 @@
 
 pub(crate) mod activity;
 pub(crate) mod apply;
+pub(crate) mod at_quit;
 pub(crate) mod cover;
 pub(crate) mod cover_choices;
 pub(crate) mod cover_image;
 pub(crate) mod error;
+pub(crate) mod last_apply;
+pub(crate) mod menu_route;
 pub(crate) mod playback;
 pub(crate) mod session;
 pub(crate) mod text_tools;
@@ -15,7 +18,11 @@ pub(crate) mod view;
 pub(crate) mod window;
 
 #[cfg(test)]
+mod apply_bad_date_test;
+#[cfg(test)]
 mod apply_test;
+#[cfg(test)]
+mod at_quit_test;
 #[cfg(test)]
 mod big_book_test;
 #[cfg(test)]
@@ -24,6 +31,8 @@ mod cover_choices_test;
 mod cover_test;
 #[cfg(test)]
 mod kind_test;
+#[cfg(test)]
+mod last_apply_test;
 #[cfg(test)]
 mod playback_test;
 #[cfg(test)]

@@ -3,15 +3,18 @@
      * The Tags window's body (route `/tags`): the tag content of the Multi-Rename session the window holds, and the
      * way out. Escape (`tags.close`) and the red button (`requestClose`) go through the discard guard; closing
      * releases the hold, ends the tag session and the Multi-Rename session, then asks the backend to close the window
-     * (`closeSelfWindow`, ❌ never `getCurrentWindow().close()` from a key handler). The backend ends the session too
-     * when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A and ⌘⇧A reach it from the native menu
-     * (`onTagsSelectAll`, `onTagsDeselectAll`): ⌘A selects the text of the box being typed in, else every track;
-     * ⌘⇧A clears the track selection. The rest of the `Tags window` keys (`tags-function-keys.ts`) go to the content's
+     * (`closeSelfWindow`, ❌ never `getCurrentWindow().close()` from a key handler). While a write or an undo is on
+     * its way nothing closes the window: a close request (Escape, ⌘W, the red button) shows "Writing tags…" in the
+     * Write dialog instead, and once the write is done its outcome shows and closing works again. The backend ends the
+     * session too when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A and ⌘⇧A reach it from the
+     * native menu (`onTagsSelectAll`, `onTagsDeselectAll`): ⌘A selects the text of the box being typed in, else every
+     * track; ⌘⇧A clears the track selection. Under a dialog neither touches the tracks: the dialog's tool would run on
+     * a selection it didn't show. The rest of the `Tags window` keys (`tags-function-keys.ts`) go to the content's
      * `runCommand`, except while a value is typed (only ⌘S, which the box has already committed, and the close keys get
      * through; the value editor claims its own Esc), while a dialog is open (it owns its keys, Escape included), and
      * Enter on a focused control (a button presses). On macOS the main menu this window installs holds F2–F8, ⇧F2,
      * ⇧F4 and ⇧F8 as accelerators that fire before the page: those presses arrive from the menu
-     * (`onTagsMenuKey`), under the same rules, and a press seen by both roads acts once (`TagsTab`'s key echo).
+     * (`onTagsMenuKey`), under the same rules, and a press seen by both roads acts once (`TagsContent`'s key echo).
      */
     import { onMount } from 'svelte'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
@@ -27,7 +30,7 @@
     } from '#lib/tauri-commands/index.js'
     import { getEffectiveShortcuts } from '#lib/shortcuts/shortcuts-store.js'
     import { getAppLogger } from '#lib/logging/logger.js'
-    import TagsTab from './TagsTab.svelte'
+    import TagsContent from './TagsContent.svelte'
     import { createDiscardGuard } from './discard-guard'
     import { createTagEditorState } from './tag-editor-state.svelte'
     import {
@@ -50,20 +53,30 @@
     // The window shows one session for its whole life; a new session is a new window.
     // svelte-ignore state_referenced_locally
     const tags = createTagEditorState(sessionId)
-    const guard = createDiscardGuard(tags, () => void end())
+    const guard = createDiscardGuard(
+        tags,
+        () => void end(),
+        () => content?.waitForWrite(),
+    )
     let ended = false
     let content = $state<{
         selectAllTracks: () => void
         deselectAllTracks: () => void
         runCommand: (id: TagsCommandId, road?: TagsKeyRoad) => boolean
         hasDialog: () => boolean
+        waitForWrite: () => void
     }>()
 
     /** ⌘A: the text of the box being typed in, as in any text field, else every track, as in a file pane. */
     function selectAll(): void {
         const box = textBoxOf(document.activeElement)
         if (box) box.select()
-        else content?.selectAllTracks()
+        else if (content?.hasDialog() !== true) content?.selectAllTracks()
+    }
+
+    /** ⌘⇧A: no track selected, unless a dialog is open over them. */
+    function deselectAll(): void {
+        if (content?.hasDialog() !== true) content?.deselectAllTracks()
     }
 
     /** Listens to a menu road for the window's life; a listener that arrives after the window went is dropped. */
@@ -87,7 +100,7 @@
     onMount(() => {
         const stops = [
             listenWhileMounted(() => onTagsSelectAll(selectAll), 'Select all'),
-            listenWhileMounted(() => onTagsDeselectAll(() => content?.deselectAllTracks()), 'Deselect all'),
+            listenWhileMounted(() => onTagsDeselectAll(deselectAll), 'Deselect all'),
             listenWhileMounted(() => onTagsMenuKey(onMenuKey), 'A function key'),
         ]
         return () => {
@@ -164,4 +177,4 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<TagsTab bind:this={content} state={tags} />
+<TagsContent bind:this={content} state={tags} />

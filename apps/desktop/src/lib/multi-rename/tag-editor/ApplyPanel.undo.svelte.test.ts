@@ -1,8 +1,8 @@
 /** Write, then Undo tag changes, through the real state: the IPC undoes exactly the write's apply ids. */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ApplyPanel from './ApplyPanel.svelte'
 import { createTagEditorState } from './tag-editor-state.svelte'
-import { setLastTagApply } from './last-tag-apply.svelte'
+import { replayLastApply } from './last-apply.test-helper'
 import { mountInto } from './tag-cell.test-helper'
 import { CHANGES, PANEL_VIEW, applyReport, buttonNamed, press } from './apply-panel.test-helper'
 
@@ -14,6 +14,7 @@ const ipc = vi.hoisted(() => ({
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(),
+  lastTagApply: vi.fn(),
   closeTagEditor: vi.fn(),
   listCoverCandidates: vi.fn(),
   setCoverFromFile: vi.fn(),
@@ -25,10 +26,12 @@ const confirm = vi.hoisted(() => vi.fn((_message: string, _title?: string, _labe
 vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog: confirm }))
 
 let cleanup: (() => void) | undefined
+beforeEach(() => {
+  ipc.lastTagApply.mockImplementation(replayLastApply(ipc))
+})
 afterEach(() => {
   cleanup?.()
   cleanup = undefined
-  setLastTagApply(null)
   vi.resetAllMocks()
 })
 

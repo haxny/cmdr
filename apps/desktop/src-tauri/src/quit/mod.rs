@@ -22,6 +22,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::ignore_poison::IgnorePoison;
+use crate::tag_editor::at_quit::TagsAtQuit;
 use cmdr_operations::{LifecycleStatus, OperationSnapshot, Operations, WriteOperationType};
 
 /// How long the dialog counts down before the gate quits on its own.
@@ -42,6 +43,12 @@ pub(crate) const DRAIN: Duration = Duration::from_millis(1_500);
 /// that a prompt cancel isn't waited out, large enough to cost nothing.
 const DRAIN_POLL: Duration = Duration::from_millis(20);
 
+/// How long the teardown waits for a tag write or undo still running (fork, the tag editor's
+/// Tags windows). Each file is written whole (copy, check, replace), but a quit between files
+/// would leave a book half written, so the teardown waits for the write to end; a write that
+/// stands still this long is left, and the process exits as it would at a logout.
+pub(crate) const TAG_WRITE_WAIT: Duration = Duration::from_secs(10);
+
 /// Emitted when a quit is held: what's still running, and how long the user has.
 ///
 /// Kebab-cases to `quit-requested`. The `countdownMs` is what the dialog counts
@@ -53,6 +60,8 @@ pub struct QuitRequested {
     pub operations: Vec<OperationSnapshot>,
     /// Milliseconds from this event to the automatic quit.
     pub countdown_ms: u32,
+    /// The Tags windows' share: unwritten tag edits, and a tag write the quit waits for.
+    pub tags: TagsAtQuit,
 }
 
 /// Emitted when a held quit is called off, so every window takes its prompt down.
@@ -112,6 +121,7 @@ pub enum QuitAnswer {
 pub(crate) struct QuitTimings {
     pub countdown: Duration,
     pub drain: Duration,
+    pub tag_write_wait: Duration,
 }
 
 impl Default for QuitTimings {
@@ -119,6 +129,7 @@ impl Default for QuitTimings {
         Self {
             countdown: COUNTDOWN,
             drain: DRAIN,
+            tag_write_wait: TAG_WRITE_WAIT,
         }
     }
 }
@@ -130,6 +141,11 @@ pub(crate) trait QuitHost: Send + Sync + 'static {
     /// Every operation the manager currently knows about. The gate applies
     /// [`blocks_quit`] itself, so the policy stays in one testable place.
     fn operations(&self) -> Vec<OperationSnapshot>;
+    /// What a quit would cut short in the Tags windows (fork). None by default: a host without
+    /// them has nothing to lose there.
+    fn tags(&self) -> TagsAtQuit {
+        TagsAtQuit::default()
+    }
     /// Tell the windows a quit is pending.
     fn announce(&self, event: QuitRequested);
     /// Tell the windows the pending quit is off, so no prompt is left counting.
@@ -168,6 +184,12 @@ pub(crate) fn blocks_quit(snapshot: &OperationSnapshot) -> bool {
         WriteOperationType::Rename | WriteOperationType::CreateFolder | WriteOperationType::CreateFile => false,
     };
     still_going && moves_bytes
+}
+
+/// Whether a quit has to ask: an operation [`blocks_quit`], or a Tags window holds unwritten
+/// edits or is writing (fork).
+pub(crate) fn holds_quit(blocking: &[OperationSnapshot], tags: TagsAtQuit) -> bool {
+    !blocking.is_empty() || tags.holds_quit()
 }
 
 /// The decision, on its way from an IPC command to the deadline thread.
@@ -239,13 +261,15 @@ impl QuitGate {
         }
 
         let operations: Vec<OperationSnapshot> = host.operations().into_iter().filter(blocks_quit).collect();
-        if operations.is_empty() {
+        let tags = host.tags();
+        if !holds_quit(&operations, tags) {
             *phase = Phase::Quitting;
             return QuitOutcome::Proceed;
         }
 
         let countdown = self.timings.countdown;
         let drain = self.timings.drain;
+        let tag_write_wait = self.timings.tag_write_wait;
         let countdown_ms = u32::try_from(countdown.as_millis()).unwrap_or(u32::MAX);
 
         let (decisions, answers) = mpsc::channel();
@@ -258,13 +282,16 @@ impl QuitGate {
 
         log::info!(
             target: "quit",
-            "holding the quit: {} operation(s) still running, {}s on the clock",
+            "holding the quit: {} operation(s) still running, {} Tags window(s) unwritten, tag write running: {}, {}s on the clock",
             operations.len(),
+            tags.unwritten,
+            tags.writing,
             countdown.as_secs()
         );
         host.announce(QuitRequested {
             operations: operations.clone(),
             countdown_ms,
+            tags,
         });
 
         // A dedicated OS thread, not a tokio task: the deadline must not be
@@ -290,7 +317,7 @@ impl QuitGate {
                     log::info!(target: "quit", "the countdown ran out; stopping everything");
                 }
             }
-            tear_down_and_exit(&*host, drain);
+            tear_down_and_exit(&*host, drain, tag_write_wait);
         });
         if let Err(e) = spawned {
             // No timer means no way back out of a held quit, so don't hold it.
@@ -377,8 +404,10 @@ fn remaining_ms(deadline: Instant) -> u32 {
 ///    layer own the leftovers rather than a backend that stopped talking.
 /// 4. **Fence the in-flight temp ledger**, so the next launch's sweep finds
 ///    every partial an abandoned worker is still writing.
-/// 5. **Exit.**
-fn tear_down_and_exit(host: &dyn QuitHost, drain: Duration) {
+/// 5. **Wait for a tag write** still running, up to `tag_write_wait` (fork): it
+///    has no cancel, and cutting it between files leaves a book half written.
+/// 6. **Exit.**
+fn tear_down_and_exit(host: &dyn QuitHost, drain: Duration, tag_write_wait: Duration) {
     let started = Instant::now();
     host.cancel_all();
 
@@ -392,6 +421,10 @@ fn tear_down_and_exit(host: &dyn QuitHost, drain: Duration) {
 
     host.abort_all();
     host.flush_temp_ledger();
+    let tags_deadline = Instant::now() + tag_write_wait;
+    while host.tags().writing && Instant::now() < tags_deadline {
+        std::thread::sleep(DRAIN_POLL);
+    }
     log::info!(
         target: "quit",
         "everything stopped in {:?}; exiting",
@@ -427,6 +460,10 @@ impl<R: tauri::Runtime> QuitHost for TauriQuitHost<R> {
         crate::operations_host::operations()
             .map(Operations::list_operations)
             .unwrap_or_default()
+    }
+
+    fn tags(&self) -> TagsAtQuit {
+        crate::tag_editor::at_quit::now()
     }
 
     fn announce(&self, event: QuitRequested) {
@@ -480,3 +517,7 @@ pub(crate) fn request_quit<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Quit
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "tags_tests.rs"]
+mod tags_tests;

@@ -679,7 +679,7 @@ pub(super) fn is_open(session_id: &str) -> bool {
 mod tags;
 #[cfg(test)]
 pub(crate) use tags::is_held;
-pub(crate) use tags::{hold, open_for_tags, release, reopen};
+pub(crate) use tags::{held_twin, hold, open_for_tags, release, reopen};
 
 #[cfg(test)]
 #[path = "session_hold_test.rs"]

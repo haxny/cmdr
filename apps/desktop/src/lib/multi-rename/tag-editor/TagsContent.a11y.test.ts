@@ -1,10 +1,10 @@
 /**
- * Tier 3 a11y tests for `TagsTab.svelte`: while the tags are read, with the full tab (shared fields, tracks, cover), read-only, and with errors.
+ * Tier 3 a11y tests for `TagsContent.svelte`: while the tags are read, with the full tab (shared fields, tracks, cover), read-only, and with errors.
  */
 
 import { afterEach, describe, it, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import TagsTab from './TagsTab.svelte'
+import TagsContent from './TagsContent.svelte'
 import type { TagEditorState } from './tag-editor-state.svelte'
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
@@ -77,7 +77,7 @@ async function mountTab(over: Partial<TagEditorState>): Promise<HTMLElement> {
   } as TagEditorState
   const root = document.createElement('div')
   document.body.appendChild(root)
-  const tab = mount(TagsTab, { target: root, props: { state } })
+  const tab = mount(TagsContent, { target: root, props: { state } })
   cleanup = () => {
     void unmount(tab)
   }
@@ -85,7 +85,7 @@ async function mountTab(over: Partial<TagEditorState>): Promise<HTMLElement> {
   return root
 }
 
-describe('TagsTab a11y', () => {
+describe('TagsContent a11y', () => {
   it('while reading has no violations', async () => {
     await expectNoA11yViolations(await mountTab({}))
   })

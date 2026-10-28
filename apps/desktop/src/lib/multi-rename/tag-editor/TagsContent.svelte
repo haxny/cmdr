@@ -203,6 +203,8 @@
     let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
     /** The Write dialog showing: listing and writing (⌘S), or undoing the last write (⌘Z). */
     let writeMode = $state<'write' | 'undo' | null>(null)
+    /** The window was asked to close while a write ran: the Write dialog says to wait until it's done. */
+    let closeWaits = $state(false)
     /** The cover opened large (`CoverViewer`), from a click on its thumbnail. */
     let viewing = $state<CoverShown | null>(null)
     /** A dialog is over the panes: the cover section takes no paste or drop meanwhile. */
@@ -277,7 +279,17 @@
      */
     function closeWrite(notWritten: number): void {
         writeMode = null
+        closeWaits = false
         if (notWritten > 0) notice = 'multiRename.tags.write.someLeft'
+    }
+
+    /**
+     * The window was asked to close while a write or an undo is on its way (`TagsWindow`'s discard guard): the Write
+     * dialog, which shows it, says to wait; its outcome follows once it's done.
+     */
+    export function waitForWrite(): void {
+        closeWaits = true
+        if (writeMode === null) notice = 'multiRename.tags.window.closeWaits'
     }
 
     /** Lists the changes, then writes them (⌘S). */
@@ -292,14 +304,15 @@
 </script>
 
 <div
-    class="tags-tab"
-    id="sheet-panel-tags"
+    class="tags-content"
     onfocusin={(e) => { followFocus(e.target) }}
     onfocusout={(e) => { if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) { inPanes = false; panes.noteFocus(null) } }}
 >
     {#if tags.view === null}
         {#if tags.error !== null}
-            <p class="opening" role="alert">{tString('multiRename.tags.error')}</p>
+            <p class="opening" role="alert">
+                {tString(tags.error.kind === 'readTimedOut' ? 'multiRename.tags.readTimedOut' : 'multiRename.tags.error')}
+            </p>
         {:else}
             <p class="opening" role="status">{tString('multiRename.tags.reading')}</p>
         {/if}
@@ -398,7 +411,7 @@
     />
 {/if}
 {#if writeMode !== null}
-    <WriteDialog {tags} mode={writeMode} onWriting={() => { player.stop() }} onClose={closeWrite} />
+    <WriteDialog {tags} mode={writeMode} {closeWaits} onWriting={() => { player.stop() }} onClose={closeWrite} />
 {/if}
 
 {#snippet line(key: MessageKey, role: 'status' | 'alert')}
@@ -429,7 +442,7 @@
 
 <style>
     /* Panes, status line, function-key bar: edge to edge, as in the main window. Only the panes flex. */
-    .tags-tab {
+    .tags-content {
         display: flex;
         flex-direction: column;
         flex: 1;

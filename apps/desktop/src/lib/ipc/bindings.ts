@@ -1629,7 +1629,11 @@ export const commands = {
    */
   saveMultiRenameLastSettings: (spec: MultiRenameSpec, presetId: string | null) =>
     __TAURI_INVOKE<void>('save_multi_rename_last_settings', { spec, presetId }),
-  // Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session.
+  /**
+   *  Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session. The
+   *  read may take as long as files keep being read; once none was for `SESSION_IO_TIMEOUT` (a
+   *  stalled share) it's given up as `ReadTimedOut`.
+   */
   openTagEditor: (sessionId: string, restart: boolean) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('open_tag_editor', { sessionId, restart })),
   // Applies edits in memory; an unknown track refuses the whole batch.
@@ -1652,9 +1656,14 @@ export const commands = {
   // What a write as `kind` would change, per file, including what the kind removes.
   getTagChanges: (sessionId: string, kind: ContentKind) =>
     typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
-  // Writes the changed files.
-  applyTags: (sessionId: string, request: ApplyRequest) =>
-    typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request })),
+  /**
+   *  Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
+   *  Undo reverses both; otherwise a write that writes something is the folder's new last write.
+   *  No deadline on purpose: the files are local (a remote session is refused), and a write cut
+   *  short would leave the book half written; a quit waits for it (`tag_editor/at_quit.rs`).
+   */
+  applyTags: (sessionId: string, request: ApplyRequest, continues: boolean) =>
+    typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request, continues })),
   /**
    *  Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
    *  the restored files as read, edits to them dropped (its user confirmed that); any other keeps
@@ -1662,6 +1671,20 @@ export const commands = {
    */
   undoTagApply: (applyId: string, sessionId: string | null) =>
     typedError<RestoreReport, TagEditorError>(__TAURI_INVOKE('undo_tag_apply', { applyId, sessionId })),
+  /**
+   *  The last tag write of the session's folder, which ⌘Z undoes: kept for the app's lifetime, so a
+   *  Tags window opened later over the same folder still offers it. `None` when there's none.
+   */
+  lastTagApply: (sessionId: string) =>
+    typedError<
+      {
+        // In the order they were written; empty when none kept its old tags.
+        applies: UndoableApply[]
+        // Some files of this write were written without their old tags kept: Undo can't reach them.
+        partial: boolean
+      } | null,
+      TagEditorError
+    >(__TAURI_INVOKE('last_tag_apply', { sessionId })),
   // Ends the tag session, dropping its edits.
   closeTagEditor: (sessionId: string) => __TAURI_INVOKE<void>('close_tag_editor', { sessionId }),
   // The images of the session's folder that can be a cover.
@@ -1688,11 +1711,13 @@ export const commands = {
   useCoverForAll: (sessionId: string, key: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('use_cover_for_all', { sessionId, key })),
   /**
-   *  Gives every file a pasted picture as its cover, in memory. A JPEG, PNG, or WebP image by its
-   *  first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted to PNG or JPEG
-   *  within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else is `PastedNotAnImage`.
+   *  Gives every file a pasted picture as its cover, in memory. The bytes come as base64 (a JSON
+   *  number array would make a large TIFF several times its size on both sides). A JPEG, PNG, or
+   *  WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted
+   *  to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else, bad base64
+   *  included, is `PastedNotAnImage`.
    */
-  setCoverFromBytes: (sessionId: string, data: number[]) =>
+  setCoverFromBytes: (sessionId: string, data: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
   /**
    *  Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
@@ -10800,6 +10825,14 @@ export type KnownWebdavServer = {
   lastConnectedAt: string
 }
 
+// The last write of a folder.
+export type LastTagApply = {
+  // In the order they were written; empty when none kept its old tags.
+  applies: UndoableApply[]
+  // Some files of this write were written without their old tags kept: Undo can't reach them.
+  partial: boolean
+}
+
 /**
  *  Successful resolution: the path to surface plus the pre-split parent dir +
  *  file name so the frontend doesn't have to parse the path itself.
@@ -14690,6 +14723,8 @@ export type QuitRequested = {
   operations: OperationSnapshot[]
   // Milliseconds from this event to the automatic quit.
   countdownMs: number
+  // The Tags windows' share: unwritten tag edits, and a tag write the quit waits for.
+  tags: TagsAtQuit
 }
 
 /**
@@ -18442,14 +18477,14 @@ export type TagApplyReport = {
 }
 
 /**
- *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
  *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
  *  the edit to another file.
  */
 export type TagEdit = TagEdit_Serialize | TagEdit_Deserialize
 
 /**
- *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
  *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
  *  the edit to another file.
  */
@@ -18462,7 +18497,7 @@ export type TagEdit_Deserialize =
   | { kind: 'cover'; edit: CoverEdit_Deserialize }
 
 /**
- *  One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
+ *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
  *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
  *  the edit to another file.
  */
@@ -18511,6 +18546,8 @@ export type TagEditorError =
   | { kind: 'coverNotAFile' }
   // No readable file carries the cover the key names (any more). Nothing was changed.
   | { kind: 'unknownCover' }
+  // Reading the files' tags stood still (their drive stopped answering). Nothing was changed.
+  | { kind: 'readTimedOut' }
   // The background task running the call failed.
   | { kind: 'taskFailed' }
   // A file-name pattern that can't be used. Nothing was changed.
@@ -18718,6 +18755,14 @@ export type TagTool =
       pattern: NamePattern
     }
 
+// The Tags windows' share of a quit.
+export type TagsAtQuit = {
+  // Tag sessions (one per Tags window) holding edits not yet written.
+  unwritten: number
+  // A tag write or undo is running.
+  writing: boolean
+}
+
 /**
  *  `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window
  *  clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
@@ -18752,6 +18797,11 @@ export type TagsSessionInfo = {
   tracks: number
   // The session's folder, for the window's title.
   folderName: string
+  /**
+   *  The session of a Tags window already showing the same files: the main window raises it
+   *  and gives this session back, so one book never has two windows.
+   */
+  alreadyOpen: string | null
 }
 
 /**
@@ -19359,6 +19409,12 @@ export type UndoReport = {
   operations: OperationUndoOutcome[]
   restored: number
   skipped: number
+}
+
+// One apply Undo can reverse, and how many files it wrote (or still has to put back).
+export type UndoableApply = {
+  applyId: string
+  written: number
 }
 
 /**

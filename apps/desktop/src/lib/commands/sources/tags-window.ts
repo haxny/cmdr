@@ -1,7 +1,7 @@
 /**
  * The Tags window's own keys (`Tags window`, fork, behind `multiRename.tagEditor`). Pure data; the window's keydown
- * asks `eventMatchesCommand` for each (`multi-rename/tag-editor/TagsWindow.svelte`). Fixed for now: the window
- * reads the shortcuts store, but none of its keys is worth a rebinding yet. See `../command-registry.ts` for how the
+ * asks `eventMatchesCommand` for each (`multi-rename/tag-editor/TagsWindow.svelte`). Every key is fixed (`fixedKey`):
+ * Settings doesn't rebind them; the window still reads the shortcuts store, so lifting that is a flag per entry. See `../command-registry.ts` for how the
  * scope arrays are concatenated.
  */
 import type { CommandSource } from '../types'

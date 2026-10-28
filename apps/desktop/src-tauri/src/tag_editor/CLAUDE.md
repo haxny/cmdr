@@ -11,14 +11,15 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,
   the in-memory "use for all", and a drop read under a deadline; `cover_image.rs` decodes (pasted TIFF → PNG/JPEG,
   cached tile thumbnails) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
-- `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`; `activity.rs` the
-  `tag_editor` log lines (counts and durations, never paths or values).
+- `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
+  folder's last write (⌘Z), kept for the app's lifetime; `at_quit.rs` what a quit would cut short, for `quit/`;
+  `activity.rs` log lines (counts and durations, never paths or values).
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
   Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
 - `window.rs` the Tags window's hold on its Multi-Rename session (`hold` counts tracks, names the folder; `end` on
   close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`). It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A, `menu_key_command_of`
-  for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu/menu_handlers.rs` emits there instead of dropping.
+  for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping.
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the
   viewer's choke point) and "open in foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread,
   never awaited).

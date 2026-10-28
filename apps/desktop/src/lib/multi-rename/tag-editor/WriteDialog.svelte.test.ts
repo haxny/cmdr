@@ -24,7 +24,7 @@ vi.mock('#lib/tauri-commands/index.js', async (original) => ({
 import WriteDialog from './WriteDialog.svelte'
 import { applyReport, asState, buttonNamed, fakeState, settle } from './apply-panel.test-helper'
 import { mountInto } from './tag-cell.test-helper'
-import type { LastTagApply } from './last-tag-apply.svelte'
+import type { LastTagApply } from './last-tag-apply'
 
 let cleanup: (() => void) | undefined
 afterEach(() => {

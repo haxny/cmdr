@@ -115,7 +115,11 @@ impl QuitHost for RecordingHost {
 
 /// A gate whose countdown and drain are short enough for a test to sit through.
 fn gate(countdown: Duration, drain: Duration) -> Arc<QuitGate> {
-    Arc::new(QuitGate::with_timings(QuitTimings { countdown, drain }))
+    Arc::new(QuitGate::with_timings(QuitTimings {
+        countdown,
+        drain,
+        tag_write_wait: Duration::ZERO,
+    }))
 }
 
 fn operation(operation_type: WriteOperationType, status: LifecycleStatus) -> OperationSnapshot {

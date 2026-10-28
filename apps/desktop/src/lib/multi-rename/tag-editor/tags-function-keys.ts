@@ -1,8 +1,8 @@
 /**
  * The Tags window's function keys: which tag command each slot of the bar carries (`TagsFunctionKeyBar`), and which
  * keys the window's keydown answers (`TagsWindow`). Pure, so the slots are pinned without mounting anything. Every id
- * is a `Tags window` registry command (`commands/sources/tags-window.ts`), so the bar's chips and the keys are the
- * user's bindings, never hardcoded F-keys.
+ * is a `Tags window` registry command (`commands/sources/tags-window.ts`), so the bar's chips and the keys read the
+ * registry, never hardcoded F-keys. Those keys are fixed (`fixedKey`): Settings doesn't rebind them yet.
  */
 import type { CommandId } from '#lib/commands/index.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'

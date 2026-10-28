@@ -19,6 +19,9 @@ pub struct TagsSessionInfo {
     pub tracks: usize,
     /// The session's folder, for the window's title.
     pub folder_name: String,
+    /// The session of a Tags window already showing the same files: the main window raises it
+    /// and gives this session back, so one book never has two windows.
+    pub already_open: Option<String>,
 }
 
 /// The session a window label names: `Some` only for a Tags window.
@@ -85,7 +88,8 @@ pub(crate) fn menu_key_command_of(id: &str) -> Option<&'static str> {
     }
 }
 
-/// Holds `session_id` for its window and says what it holds.
+/// Holds `session_id` for its window and says what it holds, and which window already shows the
+/// same files, if one does.
 pub(crate) fn hold(session_id: &str) -> Result<TagsSessionInfo, MultiRenameError> {
     rename_session::hold(session_id)?;
     let files = files_of(session_id)?;
@@ -99,7 +103,11 @@ pub(crate) fn hold(session_id: &str) -> Result<TagsSessionInfo, MultiRenameError
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| files.dir.to_string_lossy().into_owned());
-    Ok(TagsSessionInfo { tracks, folder_name })
+    Ok(TagsSessionInfo {
+        tracks,
+        folder_name,
+        already_open: rename_session::held_twin(session_id),
+    })
 }
 
 /// Releases and closes the session of the Tags window `label` (its tag session goes with it).

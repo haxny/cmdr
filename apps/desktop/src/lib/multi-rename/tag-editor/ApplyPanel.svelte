@@ -24,7 +24,7 @@
     import WouldDropDialog from './WouldDropDialog.svelte'
     import { outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
     import { FIELD_LABELS } from './field-labels'
-    import { undoableCount } from './last-tag-apply.svelte'
+    import { undoableCount } from './last-tag-apply'
     import type { TagEditorState, TagStateError, TagUndoResult } from './tag-editor-state.svelte'
     import { DEFAULT_WRITE_KIND, WRITE_KINDS, loadWriteKind, saveWriteKind } from './write-kind'
     import { WAITING_SHOWN_AFTER_MS, WRITE_WAIT_LIMIT_MS } from './write-wait'

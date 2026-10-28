@@ -10,6 +10,7 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
+  lastTagApply: vi.fn(),
   getCoverImage: vi.fn(),
   listTagCovers: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
   closeTagEditor: vi.fn(),
@@ -21,9 +22,8 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getStripedRows: () => true,
 }))
 
-import TagsTab from './TagsTab.svelte'
+import TagsContent from './TagsContent.svelte'
 import { createTagEditorState } from './tag-editor-state.svelte'
-import { setLastTagApply } from './last-tag-apply.svelte'
 import { mountInto } from './tag-cell.test-helper'
 import { press, settle } from './apply-panel.test-helper'
 
@@ -54,11 +54,11 @@ const EDIT_FAILED = 'Couldn’t apply that change.'
 let cleanup: (() => void) | undefined
 beforeEach(() => {
   vi.resetAllMocks()
-  setLastTagApply(null)
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
   ipc.getCoverImage.mockResolvedValue({ ok: true, value: null })
   ipc.listTagCovers.mockResolvedValue({ ok: true, value: [] })
   ipc.closeTagEditor.mockResolvedValue(undefined)
+  ipc.lastTagApply.mockResolvedValue({ ok: true, value: null })
   ipc.getTagChanges.mockResolvedValue({
     ok: true,
     value: [{ path: '/b/01.mp3', fileName: '01.mp3', fields: ['album'], cover: false, extras: false, removes: [] }],
@@ -70,7 +70,7 @@ afterEach(() => {
 })
 
 async function mountTab(): Promise<HTMLElement> {
-  const mounted = await mountInto(TagsTab, { state: createTagEditorState('S') })
+  const mounted = await mountInto(TagsContent, { state: createTagEditorState('S') })
   cleanup = mounted.cleanup
   await settle()
   return mounted.root
@@ -88,7 +88,7 @@ async function writeKey(root: HTMLElement): Promise<void> {
 
 const timesShown = (_root: HTMLElement, text: string): number => document.body.textContent.split(text).length - 1
 
-describe('TagsTab words a refused list or write once', () => {
+describe('TagsContent words a refused list or write once', () => {
   it.each([
     [{ kind: 'notOpen' }, 'The tags aren’t open any more. Close Multi-Rename and open it again.'],
     [{ kind: 'noSession' }, 'The tags aren’t open any more. Close Multi-Rename and open it again.'],

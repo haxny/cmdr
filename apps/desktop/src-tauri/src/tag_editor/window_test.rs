@@ -8,7 +8,7 @@ use super::window::{
     session_of_label,
 };
 use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, SELECT_ALL_ID};
-use crate::multi_rename::session::{close as close_rename, is_held};
+use crate::multi_rename::session::{close as close_rename, is_held, open as open_rename};
 
 #[test]
 fn a_window_label_names_its_session_and_no_other_window_does() {
@@ -118,7 +118,8 @@ fn hold_counts_the_tracks_and_names_the_folder() {
         info,
         TagsSessionInfo {
             tracks: 3,
-            folder_name: folder
+            folder_name: folder,
+            already_open: None,
         }
     );
     assert!(is_held(&session));
@@ -142,4 +143,25 @@ fn ending_the_window_releases_and_closes_both_sessions() {
     ));
     // Ending twice (Escape, then the window's Destroyed) is a no-op.
     end(&format!("tags-{session}"));
+}
+
+/// Edit tags twice on the same files: the second open finds the window already showing them, so
+/// the main window raises it instead of opening another over the same files.
+#[test]
+fn a_second_hold_over_the_same_files_names_the_window_already_open() {
+    let (_dir, listing, first) = album("tags-window-twin");
+    assert_eq!(hold(&first).expect("holds").already_open, None);
+    let second = open_rename(listing.id(), true, None, 0)
+        .expect("a second session opens")
+        .session_id;
+    assert_eq!(hold(&second).expect("holds").already_open, Some(first.clone()));
+
+    // Other files of the same folder are another window's.
+    let third = open_rename(listing.id(), true, Some(&[0]), 0)
+        .expect("a third session opens")
+        .session_id;
+    assert_eq!(hold(&third).expect("holds").already_open, None);
+    for id in [&first, &second, &third] {
+        end(&format!("tags-{id}"));
+    }
 }

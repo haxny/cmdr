@@ -2132,5 +2132,41 @@
   "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
   "@multiRename.tags.write.someLeft": {
     "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Write” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.write)."
+  },
+  "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.write.closeWaits": {
+    "description": "Shown in the tag editor window's Write dialog when the user tries to close the window (Escape, ⌘W, or the red close button) while tags are being written or undone. The window stays open so no file is left half written; once the write ends, the dialog shows what it did and the window can be closed."
+  },
+  "multiRename.tags.window.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "@multiRename.tags.window.closeWaits": {
+    "description": "Shown in the tag editor window's status line when the user tries to close the window while tags are being written or undone. Same meaning as the Write dialog's line: the window stays open until the write ends."
+  },
+  "multiRename.tags.readTimedOut": "The drive stopped answering while the tags were read. Close the window and try again.",
+  "@multiRename.tags.readTimedOut": {
+    "description": "Shown in the tag editor window instead of the tracks when reading the files' tags stood still for a while, usually because a network drive stopped answering. Nothing was changed."
+  },
+  "multiRename.tags.quit.title": "{count, plural, one {Quit with tag changes not written?} other {Quit with tag changes not written in {countText} windows?}}",
+  "@multiRename.tags.quit.title": {
+    "description": "Title of the quit dialog when the only thing holding the quit is one or more tag editor windows (Edit tags) whose changes haven't been written into the files yet. Quitting discards those changes.",
+    "placeholders": {
+      "count": "how many tag editor windows hold unwritten changes (drives the singular/plural form)",
+      "countText": "the same count, already formatted with the locale’s digit grouping"
+    }
+  },
+  "multiRename.tags.quit.writingTitle": "Quit while tags are being written?",
+  "@multiRename.tags.quit.writingTitle": {
+    "description": "Title of the quit dialog when the only thing holding the quit is a tag editor window writing tags into files right now."
+  },
+  "multiRename.tags.quit.unwritten": "{count, plural, one {A Tags window has changes that haven’t been written. Quitting discards them.} other {{countText} Tags windows have changes that haven’t been written. Quitting discards them.}}",
+  "@multiRename.tags.quit.unwritten": {
+    "description": "A line in the quit dialog: tag editor windows (titled \"Tags\") hold tag changes not yet written into the files, and quitting loses them. Choosing \"Keep working\" keeps them.",
+    "placeholders": {
+      "count": "how many tag editor windows hold unwritten changes (drives the singular/plural form)",
+      "countText": "the same count, already formatted with the locale’s digit grouping"
+    }
+  },
+  "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
+  "@multiRename.tags.quit.writing": {
+    "description": "A line in the quit dialog: a tag editor window is writing tags into audio files right now. Cmdr waits for that write to end before quitting (up to a short limit), rather than stopping between files. \"Book\" means an audiobook, a folder of audio files."
   }
 }

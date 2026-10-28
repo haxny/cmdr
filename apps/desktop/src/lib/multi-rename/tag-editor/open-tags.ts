@@ -3,7 +3,7 @@
  * (`holdTagsSession`), so the window owns it until it closes; the window gets no window-creation perms of its own.
  * Two roads: `file.editTags` from the focused pane's selection (`openTagsSession`: no media read), and the
  * Multi-Rename sheet's "Tags…" button, which copies the sheet's session (`reopenForTags`) rather than lending it,
- * so closing the sheet never ends the window's.
+ * so closing the sheet never ends the window's. Edit tags on files a Tags window already shows raises that window.
  * Off (`multiRename.tagEditor`) both do nothing, with no IPC.
  */
 
@@ -92,6 +92,14 @@ async function holdAndShow(sessionId: string): Promise<void> {
   if (!held.ok) {
     log.warn("couldn't hold the Tags window's session: {reason}", { reason: held.error.type })
     await giveBack(sessionId)
+    return
+  }
+  // The same files are in a Tags window already: raise it (`openTagsWindow` does for a window it finds) rather than
+  // open a second one over them.
+  const alreadyOpen = held.value.alreadyOpen
+  if (alreadyOpen !== null) {
+    await giveBack(sessionId)
+    await openTagsWindow(alreadyOpen, held.value.folderName, () => {})
     return
   }
   if (held.value.tracks === 0) {

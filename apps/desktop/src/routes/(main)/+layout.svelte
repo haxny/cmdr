@@ -422,6 +422,7 @@
     {#if quitPrompt.open}
         <QuitConfirmationDialog
             operations={quitPrompt.operations}
+            tags={quitPrompt.tags}
             secondsLeft={quitPrompt.secondsLeft}
             onQuit={() => {
                 quitPrompt.confirm()

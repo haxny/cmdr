@@ -8,25 +8,35 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   `openTagsSession` or as a copy of the sheet's with `reopenForTags`, holds it with `holdTagsSession`, then opens the
   window; no track, a failed hold, or a window that won't open gives the session back; a selection the listing moved
   past toasts as ⌃M does), `tags-window.ts` (the opener: label `tags-<sessionId>`, `/tags?session=…&folder=…`, raises
-  the window a session already has), `TagsWindow.svelte` (the body: `TagsTab` plus the close; Escape is `tags.close` in
-  scope `Tags window`) and the route `routes/tags/+page.svelte` (the shell, and the red button through
+  the window a session already has), `TagsWindow.svelte` (the body: `TagsContent` plus the close; Escape is `tags.close`
+  in scope `Tags window`) and the route `routes/tags/+page.svelte` (the shell, and the red button through
   `onCloseRequested`). Closing releases the hold, then `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`. **Why
   a copy from the sheet**: the sheet closes its session on Cancel, Rename, and Undo; a shared one would die under the
   window. **Why the hold**: Multi-Rename evicts idle (30 min) and least-recently-used (cap 4) sessions, and a window
   left open over lunch must keep its edits. The backend also ends a `tags-*` window's session on `Destroyed`
   (`src-tauri/src/tag_editor/window.rs`), so a window that dies without its own close leaks nothing. Capability:
-  `src-tauri/capabilities/tags.json` (its description says why each grant). **Two windows over the same files**: each
-  open is a new session, so Edit tags twice on one selection opens two windows, each with its own tag session. That's
-  safe (a write checks every file's fingerprint, so the second window's stale write is refused per file) but can
-  confuse; raising a window already open over the same folder and names would need main to track them. File > Edit tags…
-  is greyed and the palette row hidden while the setting is off (`edit-tags-menu-gate.ts`, palette condition
-  `tagEditorOn`); with nothing selected the command says "Select the audio files to tag first." The window's session
-  reads no media (`openTagsSession` / `reopenForTags` seed it empty), and held sessions never count against
-  Multi-Rename's cap, so open Tags windows never push out a sheet's live session.
+  `src-tauri/capabilities/tags.json` (its description says why each grant). **Same files twice**: Edit tags on the files
+  a Tags window already shows (same volume, folder and names, in any order) raises that window and gives the new session
+  back (`TagsSessionInfo.alreadyOpen`, from `held_twin`). Other files of the same folder open their own window; a write
+  there is still checked per file by fingerprint. **Closing during a write**: while a write or an undo runs
+  (`tags.writing`), a close request (Escape, ⌘W, the red button) neither asks "Discard?" nor ends anything: the Write
+  dialog says "Writing tags… wait until it's done", then shows the per-file outcome, and the next close goes through the
+  guard as usual. Discarding edits already on their way to disk would be a lie, and ending the session mid-write would
+  lose the outcome. **Quitting** asks about unwritten Tags windows and waits for a running write: the quit gate
+  (`src-tauri/src/quit/`, `src-tauri/src/tag_editor/at_quit.rs`). File > Edit tags… is greyed and the palette row hidden
+  while the setting is off (`edit-tags-menu-gate.ts`, palette condition `tagEditorOn`); with nothing selected the
+  command says "Select the audio files to tag first." The window's session reads no media (`openTagsSession` /
+  `reopenForTags` seed it empty), and held sessions never count against Multi-Rename's cap, so open Tags windows never
+  push out a sheet's live session.
 
 - **State**: `tag-editor-state.svelte.ts` (the view from the backend's `TagEditorView`, edits sent by path, `busy`,
-  `settled()` so a cell that just lost focus is in before a close/apply, Undo); `last-tag-apply.svelte.ts` (the last
-  write's applies, which "Undo tag changes" reverses; lives as long as its window, not persisted); `discard-guard.ts`.
+  `settled()` so a cell that just lost focus is in before a close/apply, Undo, `writing` and `editing`);
+  `last-tag-apply.ts` (the last write's applies, which "Undo tag changes" reverses). **The last write is the backend's**
+  (`src-tauri/src/tag_editor/last_apply.rs`), per folder for the app's lifetime, not persisted: a Tags window opened
+  later over the same folder offers ⌘Z for it, and the window only mirrors it (asked on open and after every write and
+  undo). Why: Undo outlived the Multi-Rename sheet before the window existed, and a write's Undo dying with its window
+  broke "undo first". `discard-guard.ts` asks only about edits: a read stuck on a stalled share closes without a
+  question.
 - **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
   the cursor row's Values… and Clear under the list; `CoverPanel` as the last group, inside the list's scroll),
   `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays
@@ -37,8 +47,8 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new view; a new
   view also clears the section's notice). Tiles show `getCoverThumbnail` (asked once more when none came, then "No
   preview"; a small PNG the backend makes once per cover key); a click opens the cover large in `CoverViewer` (a
-  `ModalDialog` owned by `TagsTab`, so `hasDialog()` keeps the window keys out), which fetches the full picture; "Use
-  for all files" there is `useCoverForAll`.
+  `ModalDialog` owned by `TagsContent`, so `hasDialog()` keeps the window keys out), which fetches the full picture;
+  "Use for all files" there is `useCoverForAll`.
 - **Paste**: ⌘V is the native Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box
   only when the page `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are
   listened to on the document and taken only while focus is in the section (which is focusable and takes focus on a
@@ -67,28 +77,28 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   F6 From name, F7 Number, F8 Clear, then ⌘S Write; Shift shows ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up,
   ⇧F8 Remove extras. Its chips are the commands' live bindings (`getFirstShortcutReactive`), its buttons never take
   focus, and a disabled slot is a command that can't act (read-only leaves Play and Open in player). The window's
-  keydown (`TagsWindow`) answers the same `Tags window` commands through `TagsTab.runCommand`, skipping a key a box, a
-  pane or a dialog already claimed, every key while a dialog is open, every key but ⌘S while a value is typed (⌘Z stays
-  the box's text undo), and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key list: it
-  holds the one-press tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist = Artist,
-  Narrator from text, Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the selection
-  (`setOne` per readable selected track) or every file (`setAll`). Each tool takes the field the user was on when it
-  opened, since focus then moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove extras
-  and Clear close once run. ⌘S opens `WriteDialog` listing the changes (`ApplyPanel.start()`), ⌘⏎ or Write tags writes;
-  it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question (`ApplyPanel.undo()`; a
-  "no" closes it), and without one says so in the status line. ⌘W reaches the window as the native Close tab item, which
-  closes a focused child window through its close request, so it meets the same discard guard as Esc. A text tool runs
-  again on each press while its dialog stays open (a second Format re-applies the mask to the value the first one made),
-  as the in-flow panels did. A command that can't act (tags still being read, read-only, no extras, a dialog open) does
-  nothing: the reading notice or the status line already says why. Closing the Write dialog on a write that left files
-  unwritten keeps "Some files weren't written" in the status line.
+  keydown (`TagsWindow`) answers the same `Tags window` commands through `TagsContent.runCommand`, skipping a key a box,
+  a pane or a dialog already claimed, every key while a dialog is open, every key but ⌘S while a value is typed (⌘Z
+  stays the box's text undo), and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key
+  list: it holds the one-press tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist =
+  Artist, Narrator from text, Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the
+  selection (`setOne` per readable selected track) or every file (`setAll`). Each tool takes the field the user was on
+  when it opened, since focus then moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove
+  extras and Clear close once run. ⌘S opens `WriteDialog` listing the changes (`ApplyPanel.start()`), ⌘⏎ or Write tags
+  writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question
+  (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W reaches the window as the
+  native Close tab item, which closes a focused child window through its close request, so it meets the same discard
+  guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format re-applies the mask to
+  the value the first one made), as the in-flow panels did. A command that can't act (tags still being read, read-only,
+  no extras, a dialog open) does nothing: the reading notice or the status line already says why. Closing the Write
+  dialog on a write that left files unwritten keeps "Some files weren't written" in the status line.
 - **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select items
   register F2–F8, ⇧F2, ⇧F4 and ⇧F8. Those accelerators fire ahead of the page and the file-scoped guard would drop them,
   so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
   (`tag_editor::window::menu_key_command_of`: the item's Tags command, plus the item's own command). `menuKeyCommand`
   acts only while that item's first key is still one of the Tags command's keys (a rebound file command never runs a tag
   tool), under the keydown's rules (no dialog open, no value being typed). If the page sees the key too, the press acts
-  once: `TagsTab`'s `createTagsKeyEcho` (per command, `createKeyRoadEcho`'s 300 ms) drops the other road's twin; the
+  once: `TagsContent`'s `createTagsKeyEcho` (per command, `createKeyRoadEcho`'s 300 ms) drops the other road's twin; the
   panes ask it for F2, ⇧F2 and F3 (never Enter or ⌥Space, which no menu item holds). Main focused: no Tags window is,
   and the items run as before. ❌ View > Switch pane's Tab is never routed. Decision/Why: the page sees Tab despite that
   accelerator (main's dialogs and inline rename move focus with it, and main's keydown resolver leaves Tab unclaimed in
@@ -153,20 +163,20 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   folder); `getTagChanges` takes the kind and lists what it removes beyond the fields (`removes`, an MP3's `TPE3` under
   Audiobook), so the list matches the write; M4A genre is written only as freeform GENRE (the engine does it); a
   single-file book has no track number.
-- **Player** (`track-player.svelte.ts`, `TracksPane`'s ▶ column, F3 and ⌥Space (`tags.play`), `TagsTab`): one
+- **Player** (`track-player.svelte.ts`, `TracksPane`'s ▶ column, F3 and ⌥Space (`tags.play`), `TagsContent`): one
   `HTMLAudioElement` and one `cmdr-media://` URL at a time. `toggle(path)` mints a URL
   (`tagTrackAudioUrl(sessionId, path)`), plays it, and releases it when playback ends: another track, the same track
-  again, `stop()`, `ended`, a decode error, or a URL that arrives after a stop (released unused). `TagsTab` stops it on
-  destroy, which covers the window closing. A failure (`failed`) shows `multiRename.tags.play.failed`. The audio tokens
-  are per tag session on the Rust side (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's
+  again, `stop()`, `ended`, a decode error, or a URL that arrives after a stop (released unused). `TagsContent` stops it
+  on destroy, which covers the window closing. A failure (`failed`) shows `multiRename.tags.play.failed`. The audio
+  tokens are per tag session on the Rust side (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's
   `media-src 'self' cmdr-media:` lets `<audio>` load them. "Open in foobar2000" (⇧F3) calls `openTagsInPlayer` with the
   selected tracks (or every track), through `runScoped`; `playerUnavailable` and other failures are worded in the status
   line.
 - **Scope**: `track-selection.svelte.ts` holds the Tracks pane's selection as the file panes do (`createSelectionState`,
   indices over the view's order; `sync` carries it across a reload by path) and answers `all` (nothing selected), `some`
   (the selected paths, in session order) or `gone` (everything selected vanished in a reload: the run is refused with a
-  notice, then the next takes all). Every tool and "Open in foobar2000" take the scope from `TagsTab.runScoped`, after
-  `settled()`. Selected tracks don't narrow the Album pane's shared fields.
+  notice, then the next takes all). Every tool and "Open in foobar2000" take the scope from `TagsContent.runScoped`,
+  after `settled()`. Selected tracks don't narrow the Album pane's shared fields.
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format
   will hold (M4A integers). The one-file-BOOK rule (no track number) is decided on every audio track the session lists

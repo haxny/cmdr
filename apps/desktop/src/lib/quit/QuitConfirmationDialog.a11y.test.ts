@@ -9,7 +9,7 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import QuitConfirmationDialog from './QuitConfirmationDialog.svelte'
-import type { OperationSnapshot } from '#lib/ipc/bindings.js'
+import type { OperationSnapshot, TagsAtQuit } from '#lib/ipc/bindings.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
@@ -34,12 +34,16 @@ function operation(operationId: string, operationType: OperationSnapshot['operat
   }
 }
 
-async function renderDialog(operations: OperationSnapshot[], secondsLeft: number): Promise<HTMLElement> {
+async function renderDialog(
+  operations: OperationSnapshot[],
+  secondsLeft: number,
+  tags: TagsAtQuit = { unwritten: 0, writing: false },
+): Promise<HTMLElement> {
   const target = document.createElement('div')
   document.body.appendChild(target)
   mount(QuitConfirmationDialog, {
     target,
-    props: { operations, secondsLeft, onQuit: () => {}, onKeepWorking: () => {} },
+    props: { operations, secondsLeft, tags, onQuit: () => {}, onKeepWorking: () => {} },
   })
   await tick()
   return target
@@ -58,6 +62,10 @@ describe('QuitConfirmationDialog a11y', () => {
       operation('op-4', 'archive_edit'),
     ]
     await expectNoA11yViolations(await renderDialog(operations, 9))
+  })
+
+  it('Tags windows unwritten and a tag write running have no a11y violations', async () => {
+    await expectNoA11yViolations(await renderDialog([], 12, { unwritten: 2, writing: true }))
   })
 
   it('the last second has no a11y violations', async () => {

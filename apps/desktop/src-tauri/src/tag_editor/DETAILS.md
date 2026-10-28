@@ -166,3 +166,20 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
 
 **Known gap.** A media read already in flight when the write lands may store the old facts; the next listing change
 (the write moves the file's mtime) queues it again.
+
+## The last write, and quitting
+
+- **The last write per folder** (`last_apply.rs`): `apply` records each report into the folder's last write under the
+  undo store (lock order: store, then this leaf). `continues` (a "Write anyway" after a press that wrote) adds to it;
+  any other apply that wrote replaces it; one that wrote nothing leaves it. An undo takes its apply out, or keeps it
+  with the files it couldn't restore. Kept in memory for the app's lifetime, keyed by `(volume_id, dir)`: a Tags window
+  opened later over the same folder, with any selection, offers ⌘Z for it (`last_tag_apply`). It isn't persisted: the
+  undo store's records outlive a restart, but which of them was "the last write" doesn't. Undo still refuses a file
+  changed since (the sealed fingerprint), whoever asks.
+- **Quitting** (`at_quit.rs`): `apply_tags` and `undo_tag_apply` count themselves (`writing()`, inside the blocking
+  work) and `unwritten_sessions` counts tag sessions holding edits. The quit gate (`quit/mod.rs`, `holds_quit`) asks
+  when either is non-zero, and its teardown waits for a running write up to `TAG_WRITE_WAIT` (10 s) before exiting:
+  each file is written whole anyway, but a cut between files leaves a book half written. The gate's countdown (15 s)
+  still applies, as for file operations: a logout must never wait on Cmdr.
+- **A second open over the same files** raises the window already showing them: `hold` answers `already_open`
+  (`held_twin`: another held session with the same volume, folder, and names in any order).

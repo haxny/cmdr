@@ -139,7 +139,7 @@ describe('ApplyPanel answers every press', () => {
     expect(panelText(root)).toContain('Nothing to write')
   })
 
-  it('a read-only session disables Write tags…; the tab says why, once, above (TagsTab’s test)', async () => {
+  it('a read-only session disables Write tags…; the tab says why, once, above (TagsContent’s test)', async () => {
     const { root, fake } = await mountPanel(fakeState({ ...PANEL_VIEW, editable: false }))
 
     expect(buttonNamed(root, 'Write tags…').disabled).toBe(true)

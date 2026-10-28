@@ -1,4 +1,4 @@
-// The Tags tab of Multi-Rename: a tag session per Multi-Rename session, edited in memory, then written. The work
+// The Tags window: a tag session per Multi-Rename session, edited in memory, then written. The work
 // is the backend's (`src-tauri/src/tag_editor/`); these are pass-throughs.
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
@@ -10,6 +10,7 @@ import {
   type CoverCandidate,
   type CoverChoice,
   type FileChangeView,
+  type LastTagApply,
   type NamePattern,
   type NamePreviewRow,
   type RestoreReport,
@@ -27,6 +28,7 @@ import {
 
 export type {
   ApplyRequest,
+  LastTagApply,
   CoverCandidate,
   CoverChoice,
   FileChangeView,
@@ -109,8 +111,24 @@ export async function getTagChanges(sessionId: string, kind: ContentKind): Promi
 }
 
 /** Writes the changed files. The report lists what was written, what would drop items, what failed, and what changed on disk. */
-export async function applyTags(sessionId: string, request: ApplyRequest): Promise<TagEditorResult<TagApplyReport>> {
-  return result(await commands.applyTags(sessionId, request))
+/**
+ * Writes the edits. `continues`: a "Write anyway" after a press that wrote, so Undo reverses both; otherwise a write
+ * that writes something becomes the folder's last write (`lastTagApply`).
+ */
+export async function applyTags(
+  sessionId: string,
+  request: ApplyRequest,
+  continues = false,
+): Promise<TagEditorResult<TagApplyReport>> {
+  return result(await commands.applyTags(sessionId, request, continues))
+}
+
+/**
+ * The last tag write of the session's folder, which ⌘Z undoes, or `null`. The backend keeps it for the app's lifetime,
+ * so a Tags window opened later over the same folder still offers it.
+ */
+export async function lastTagApply(sessionId: string): Promise<TagEditorResult<LastTagApply | null>> {
+  return result(await commands.lastTagApply(sessionId))
 }
 
 /**
@@ -171,7 +189,7 @@ export async function useCoverForAll(sessionId: string, key: string): Promise<Ta
  * them at 10 MiB (`coverTooLarge`). The IPC carries them as a plain number array.
  */
 export async function setCoverFromBytes(sessionId: string, data: Uint8Array): Promise<TagEditorResult<TagEditorView>> {
-  return result(await commands.setCoverFromBytes(sessionId, Array.from(data)))
+  return result(await commands.setCoverFromBytes(sessionId, toBase64(data)))
 }
 
 /** Gives every file a dropped picture file as its cover, in memory; a folder, FIFO, or symlink is `coverNotAFile`. */
@@ -266,4 +284,14 @@ export async function onTagsDeselectAll(callback: () => void): Promise<UnlistenF
   return events.tagsDeselectAll.listen(() => {
     callback()
   })
+}
+
+/** Bytes as base64, in chunks so a large picture never overflows the call stack. */
+function toBase64(data: Uint8Array): string {
+  const CHUNK = 0x8000
+  let binary = ''
+  for (let start = 0; start < data.length; start += CHUNK) {
+    binary += String.fromCharCode(...data.subarray(start, start + CHUNK))
+  }
+  return btoa(binary)
 }

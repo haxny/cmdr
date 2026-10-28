@@ -21,6 +21,7 @@ const ipc = vi.hoisted(() => ({
   undoTagApply: vi.fn(() =>
     Promise.resolve({ ok: true, value: { restored: ['/b/01.mp3'], missing: [], changed: [], failed: [] } }),
   ),
+  lastTagApply: vi.fn(),
   runTagTool: vi.fn(),
   runTagTextTool: vi.fn(),
   previewTagsFromNames: vi.fn(),
@@ -33,14 +34,24 @@ const ipc = vi.hoisted(() => ({
   tagTrackAudioUrl: vi.fn(() => Promise.resolve({ ok: false, error: { kind: 'unknownTrack' } })),
   releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
   openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
-  onTagsSelectAll: vi.fn(() => Promise.resolve(() => {})),
-  onTagsDeselectAll: vi.fn(() => Promise.resolve(() => {})),
+  onTagsSelectAll: vi.fn((callback: () => void) => {
+    menuSelect.all = callback
+    return Promise.resolve(() => {})
+  }),
+  onTagsDeselectAll: vi.fn((callback: () => void) => {
+    menuSelect.none = callback
+    return Promise.resolve(() => {})
+  }),
   onTagsMenuKey: vi.fn((callback: (key: { commandId: string; menuCommandId: string }) => void) => {
     menuKey.callback = callback
     return Promise.resolve(() => {})
   }),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
+}))
+const menuSelect = vi.hoisted(() => ({
+  all: undefined as (() => void) | undefined,
+  none: undefined as (() => void) | undefined,
 }))
 const menuKey = vi.hoisted(() => ({
   callback: undefined as ((key: { commandId: string; menuCommandId: string }) => void) | undefined,
@@ -67,7 +78,7 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
 }))
 
 import TagsWindow from './TagsWindow.svelte'
-import { setLastTagApply } from './last-tag-apply.svelte'
+import { replayLastApply } from './last-apply.test-helper'
 import { buttonNamed, settle } from './apply-panel.test-helper'
 import { editCursorRow, paneList, toggleTrack, typeInto } from './tag-cell.test-helper'
 
@@ -96,7 +107,7 @@ const VIEW: TagEditorView = {
 let cleanup: (() => void) | undefined
 beforeEach(() => {
   vi.clearAllMocks()
-  setLastTagApply(null)
+  ipc.lastTagApply.mockImplementation(replayLastApply(ipc))
   document.body.innerHTML = ''
   ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
   ipc.editTags.mockResolvedValue({ ok: true, value: { ...VIEW, dirty: true } })
@@ -166,7 +177,7 @@ describe('the Tags window’s function keys', () => {
 
   it('the panes don’t move when a tool opens: the dialog is an overlay, nothing joins the window’s flow', async () => {
     const root = await mountWindow()
-    const tab = root.querySelector<HTMLElement>('.tags-tab')
+    const tab = root.querySelector<HTMLElement>('.tags-content')
     if (!tab) throw new Error('no tags tab')
     const flow = () =>
       [...tab.children]
@@ -222,6 +233,26 @@ describe('the Tags window’s function keys', () => {
     expect(ipc.editTags).toHaveBeenCalledWith('S', [
       { kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] },
       { kind: 'setOne', path: '/b/03.mp3', field: 'title', values: [] },
+    ])
+  })
+
+  it('⌘A and ⌘⇧A from the menu leave the selection alone while a tool dialog shows its scope', async () => {
+    const root = await mountWindow()
+    await key('Tab')
+    await toggleTrack(root, '/b/01.mp3')
+    await key('F8')
+    menuSelect.all?.()
+    await settle()
+    buttonNamed(dialog() as HTMLElement, 'Clear').click()
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] }])
+    await key('F8')
+    menuSelect.none?.()
+    await settle()
+    buttonNamed(dialog() as HTMLElement, 'Clear').click()
+    await settle()
+    expect(ipc.editTags).toHaveBeenLastCalledWith('S', [
+      { kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] },
     ])
   })
 
@@ -481,5 +512,59 @@ describe('the Tags window’s function keys', () => {
     await tick()
     await settle()
     expect(dialogTitle()).toBe('Find and replace')
+  })
+})
+
+describe('closing the Tags window during a write', () => {
+  it('a close asked for mid-write never ends the session; it says to wait, then shows the outcome', async () => {
+    let finish: (value: unknown) => void = () => {}
+    ipc.applyTags.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const window = mount(TagsWindow, { target, props: { sessionId: 'S' } }) as { requestClose: () => void }
+    cleanup = () => {
+      void unmount(window)
+    }
+    await settle()
+    await key('s', { metaKey: true, code: 'KeyS' })
+    buttonNamed(dialog() as HTMLElement, 'Write tags').click()
+    await settle()
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+
+    // The red button and ⌘W both arrive as a close request; Escape belongs to the dialog meanwhile.
+    window.requestClose()
+    await key('Escape')
+    await settle()
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(ipc.releaseTagsSession).not.toHaveBeenCalled()
+    expect(ipc.closeTagEditor).not.toHaveBeenCalled()
+    expect(ipc.closeMultiRename).not.toHaveBeenCalled()
+    expect(closeSelfWindow).not.toHaveBeenCalled()
+    expect(dialog()?.textContent).toContain('Writing tags… Wait until it’s done, then close the window.')
+
+    finish({
+      ok: true,
+      value: {
+        applyId: 'A1',
+        written: ['/b/01.mp3'],
+        wouldDrop: [],
+        failed: [],
+        changedOnDisk: [],
+        undoUnavailable: false,
+      },
+    })
+    await settle()
+    expect(dialog()?.textContent).toContain('Tags written to 1 file')
+    expect(dialog()?.textContent).not.toContain('Wait until it’s done')
+
+    // Done: the next close goes through.
+    window.requestClose()
+    await settle()
+    expect(ipc.closeMultiRename).toHaveBeenCalledWith('S')
+    expect(closeSelfWindow).toHaveBeenCalledTimes(1)
   })
 })

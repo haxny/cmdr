@@ -30,6 +30,29 @@ pub(crate) fn hold(session_id: &str) -> Result<(), MultiRenameError> {
     with_session(session_id, |s| s.held = true)
 }
 
+/// Another held session over the same volume, folder, and files (in any order) as `session_id`:
+/// the session of a Tags window already showing them. `None` when there's none or it's gone.
+pub(crate) fn held_twin(session_id: &str) -> Option<String> {
+    let sessions = SESSIONS.lock_ignore_poison();
+    let this = sessions.get(session_id)?;
+    let sorted = |names: &[String]| {
+        let mut names = names.to_vec();
+        names.sort_unstable();
+        names
+    };
+    let files = sorted(&this.names);
+    sessions
+        .iter()
+        .find(|(id, other)| {
+            id.as_str() != session_id
+                && other.held
+                && other.volume_id == this.volume_id
+                && other.dir == this.dir
+                && sorted(&other.names) == files
+        })
+        .map(|(id, _)| id.clone())
+}
+
 /// Lets eviction take the session again. No-op when it's already gone.
 pub(crate) fn release(session_id: &str) {
     if let Some(session) = SESSIONS.lock_ignore_poison().get_mut(session_id) {

@@ -25,7 +25,7 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
 }))
 
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
-import TagsTab from './TagsTab.svelte'
+import TagsContent from './TagsContent.svelte'
 import type { TagEditorState } from './tag-editor-state.svelte'
 import { mountInto, paneList, press, toggleTrack, trackRow } from './tag-cell.test-helper'
 
@@ -101,7 +101,7 @@ async function mountTab() {
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
   }
-  const mounted = await mountInto(TagsTab, { state: asTagState(state) })
+  const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
   return { root: mounted.root, state, unmount: mounted.cleanup }
 }

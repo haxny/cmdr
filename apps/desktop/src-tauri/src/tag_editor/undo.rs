@@ -53,7 +53,12 @@ pub fn undo<R: tauri::Runtime>(
     apply_id: String,
     undoing: Option<String>,
 ) -> Result<RestoreReport, TagEditorError> {
-    with_store(app, |store| undo_with(store, &apply_id, undoing.as_deref()))
+    with_store(app, |store| {
+        let report = undo_with(store, &apply_id, undoing.as_deref())?;
+        // The folder's last write loses this apply, or keeps it with the files still to restore.
+        super::last_apply::undone(&apply_id, report.failed.len());
+        Ok(report)
+    })
 }
 
 /// [`undo`] against `store`. The caller holds the store for the whole call.

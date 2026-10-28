@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tick } from 'svelte'
 import type { CoverChoice } from '#lib/ipc/bindings.js'
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
-import TagsTab from './TagsTab.svelte'
+import TagsContent from './TagsContent.svelte'
 import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
 import { byId, editCursorRow, mountInto, paneList, press, toggleTrack, typeInto } from './tag-cell.test-helper'
 
@@ -90,7 +90,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     tool: vi.fn(() => Promise.resolve()),
     textTool: vi.fn(() => Promise.resolve()),
   }
-  const mounted = await mountInto(TagsTab, { state: asTagState(state) })
+  const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
   return { root: mounted.root, state }
 }
@@ -119,7 +119,7 @@ function inDialog(text: string): HTMLButtonElement {
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-describe('TagsTab', () => {
+describe('TagsContent', () => {
   it('sends a shared edit and a track edit to the state', async () => {
     const { root, state } = await mountTab()
     const album = await editCursorRow(paneList(root, 'Album tags'))
@@ -322,7 +322,7 @@ describe('TagsTab', () => {
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
     })
-    const mounted = await mountInto(TagsTab, { state: asTagState(state) })
+    const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
     const second = () => mounted.root.querySelector<HTMLElement>('[data-track-path="/b/02.mp3"]')
     await toggleTrack(mounted.root, '/b/02.mp3')
@@ -352,7 +352,7 @@ describe('TagsTab', () => {
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
     })
-    const mounted = await mountInto(TagsTab, { state: asTagState(state) })
+    const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
     const renumber = async () => {
       await bar(mounted.root, 'Clean up', true)

@@ -68,12 +68,24 @@ pub struct FailedRow {
 
 /// Writes the session's changed files. See the module doc for the flow. Blocking file work:
 /// call it off the IPC thread.
+///
+/// The folder's last write (`last_apply`) takes the report in: `continues` (a "Write anyway"
+/// after a press that wrote) adds to it, anything that wrote replaces it.
 pub fn apply<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     session_id: &str,
     req: ApplyRequest,
+    continues: bool,
 ) -> Result<TagApplyReport, TagEditorError> {
-    super::undo::with_store(app, |store| apply_with(store, session_id, req))
+    super::undo::with_store(app, |store| {
+        let report = apply_with(store, session_id, req)?;
+        // The session can't go mid-apply (the window holds it); if it did, the write stands
+        // without a ⌘Z later, which is all a missing key costs.
+        if let Ok(key) = super::last_apply::key_of(session_id) {
+            super::last_apply::record(key, &report, continues);
+        }
+        Ok(report)
+    })
 }
 
 /// [`apply`] against `store`. The caller holds the store for the whole call (one writer).

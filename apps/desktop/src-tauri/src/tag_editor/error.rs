@@ -44,6 +44,8 @@ pub enum TagEditorError {
     CoverNotAFile,
     /// No readable file carries the cover the key names (any more). Nothing was changed.
     UnknownCover,
+    /// Reading the files' tags stood still (their drive stopped answering). Nothing was changed.
+    ReadTimedOut,
     /// The background task running the call failed.
     TaskFailed,
     /// A file-name pattern that can't be used. Nothing was changed.

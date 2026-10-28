@@ -1,25 +1,32 @@
-//! IPC for the Tags tab of the Multi-Rename Tool. Thin: the work is `crate::tag_editor`.
+//! IPC for the Tags window. Thin: the work is `crate::tag_editor`.
 //! File work runs on the blocking pool, never on the IPC thread.
 
 use cmdr_tags::tools::TagTool;
 use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
+
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
+use cmdr_fs::deadline::{SESSION_IO_TIMEOUT, StallWatch, blocking_typed_result_until_stalled};
 
 use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::session::MultiRenameOpened;
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
+use crate::tag_editor::at_quit;
 use crate::tag_editor::cover::{CoverCandidate, candidates_in, read_cover, read_dropped_counted};
 use crate::tag_editor::cover_choices::{
     CoverChoice, DROP_READS, image_of, list as list_covers, set_for_all, set_from_bytes_within, set_from_path_within,
     thumbnail, use_for_all,
 };
+use crate::tag_editor::last_apply::{LastTagApply, last_of};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
-    FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open,
+    FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
     preview_names, tool as run_tool,
 };
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
@@ -44,17 +51,59 @@ async fn blocking<T: Send + 'static>(
         .map_err(|_| TagEditorError::TaskFailed)?
 }
 
-/// Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session.
+/// Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session. The
+/// read may take as long as files keep being read; once none was for `SESSION_IO_TIMEOUT` (a
+/// stalled share) it's given up as `ReadTimedOut`.
 #[tauri::command]
 #[specta::specta]
 pub async fn open_tag_editor(session_id: String, restart: bool) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || {
-        let started = Instant::now();
-        let result = open(&session_id, restart);
-        activity::opened(&result, started);
-        result
-    })
-    .await
+    let started = Instant::now();
+    let read = Arc::new(AtomicUsize::new(0));
+    let counted = Arc::clone(&read);
+    let result = blocking_typed_result_until_stalled(
+        SESSION_IO_TIMEOUT,
+        &mut ReadWatch::new(read),
+        |_| TagEditorError::TaskFailed,
+        move || open_counting(&session_id, restart, &counted),
+    )
+    .await;
+    activity::opened(&result, started);
+    result
+}
+
+/// Watches an open's reads: it stands still while no file finishes.
+struct ReadWatch {
+    read: Arc<AtomicUsize>,
+    seen: usize,
+    since: Instant,
+}
+
+impl ReadWatch {
+    fn new(read: Arc<AtomicUsize>) -> Self {
+        Self {
+            read,
+            seen: 0,
+            since: Instant::now(),
+        }
+    }
+}
+
+impl StallWatch<TagEditorError> for ReadWatch {
+    fn idle_for(&self) -> std::time::Duration {
+        self.since.elapsed()
+    }
+
+    fn on_poll(&mut self) {
+        let now = self.read.load(Ordering::Relaxed);
+        if now != self.seen {
+            self.seen = now;
+            self.since = Instant::now();
+        }
+    }
+
+    fn give_up(&mut self) -> Option<TagEditorError> {
+        Some(TagEditorError::ReadTimedOut)
+    }
 }
 
 /// Applies edits in memory; an unknown track refuses the whole batch.
@@ -129,17 +178,22 @@ pub async fn get_tag_changes(session_id: String, kind: ContentKind) -> Result<Ve
     .await
 }
 
-/// Writes the changed files.
+/// Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
+/// Undo reverses both; otherwise a write that writes something is the folder's new last write.
+/// No deadline on purpose: the files are local (a remote session is refused), and a write cut
+/// short would leave the book half written; a quit waits for it (`tag_editor/at_quit.rs`).
 #[tauri::command]
 #[specta::specta]
 pub async fn apply_tags(
     app: tauri::AppHandle,
     session_id: String,
     request: ApplyRequest,
+    continues: bool,
 ) -> Result<TagApplyReport, TagEditorError> {
     blocking(move || {
+        let _writing = at_quit::writing();
         let started = Instant::now();
-        let result = crate::tag_editor::apply::apply(&app, &session_id, request);
+        let result = crate::tag_editor::apply::apply(&app, &session_id, request, continues);
         activity::applied(&result, started);
         result
     })
@@ -157,12 +211,21 @@ pub async fn undo_tag_apply(
     session_id: Option<String>,
 ) -> Result<RestoreReport, TagEditorError> {
     blocking(move || {
+        let _writing = at_quit::writing();
         let started = Instant::now();
         let result = crate::tag_editor::undo::undo(&app, apply_id, session_id);
         activity::undone(&result, started);
         result
     })
     .await
+}
+
+/// The last tag write of the session's folder, which ⌘Z undoes: kept for the app's lifetime, so a
+/// Tags window opened later over the same folder still offers it. `None` when there's none.
+#[tauri::command]
+#[specta::specta]
+pub async fn last_tag_apply(session_id: String) -> Result<Option<LastTagApply>, TagEditorError> {
+    last_of(&session_id)
 }
 
 /// Ends the tag session, dropping its edits.
@@ -261,14 +324,19 @@ pub async fn use_cover_for_all(session_id: String, key: String) -> Result<TagEdi
     .await
 }
 
-/// Gives every file a pasted picture as its cover, in memory. A JPEG, PNG, or WebP image by its
-/// first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted to PNG or JPEG
-/// within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else is `PastedNotAnImage`.
+/// Gives every file a pasted picture as its cover, in memory. The bytes come as base64 (a JSON
+/// number array would make a large TIFF several times its size on both sides). A JPEG, PNG, or
+/// WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF is converted
+/// to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else, bad base64
+/// included, is `PastedNotAnImage`.
 #[tauri::command]
 #[specta::specta]
-pub async fn set_cover_from_bytes(session_id: String, data: Vec<u8>) -> Result<TagEditorView, TagEditorError> {
+pub async fn set_cover_from_bytes(session_id: String, data: String) -> Result<TagEditorView, TagEditorError> {
     let started = Instant::now();
-    let result = set_from_bytes_within(session_id, data, PASTE_CONVERT_TIMEOUT).await;
+    let result = match BASE64_STANDARD.decode(data) {
+        Ok(bytes) => set_from_bytes_within(session_id, bytes, PASTE_CONVERT_TIMEOUT).await,
+        Err(_) => Err(TagEditorError::PastedNotAnImage),
+    };
     activity::edited("cover from paste", &result, started);
     result
 }
