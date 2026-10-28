@@ -39,9 +39,10 @@ the shared `extract_metadata` primitive at `../metadata.rs` (documented in the [
 - **The bulk read is shared with the serial reconcile walk.** `bulk_read::bulk_read_dir_unwatched` is re-exported at
   `scanner` level (along with `RawDirEntry` / `RawFileType`) for `reconcile::reconciler::read_fs_children`, which reads
   on its own `GuardedReader` thread and has no watchdog to publish `ReadProgress` to. The walker engine itself stays
-  private to the scanner. It returns a `BulkDirRead` (entries + an `unusable` count) rather than a bare `Vec`, because
-  the reconcile can't tolerate a silently-short listing: `diff_dir_against_db` deletes index rows the live listing
-  lacks, so it re-reads a directory with `read_dir` when `unusable > 0`. See `../reconcile/DETAILS.md`.
+  private to the scanner. It returns a `BulkDirRead` (entries, an `unusable` count, and an `interrupted` flag) rather
+  than a bare `Vec`, because the reconcile can't tolerate a silently-short listing: `diff_dir_against_db` deletes index
+  rows the live listing lacks, so it re-reads a directory with `read_dir` whenever `BulkDirRead::doubt` is `Some`. See
+  `../reconcile/DETAILS.md`.
 - **Degrade, never drop.** The bulk reader decodes through `cmdr_fs::attr_buf`; a missing attribute costs an entry its
   inline stat, never the entry, and a record that can't become one makes the directory re-read with `read_dir`.
   `walker/DETAILS.md` § "The bulk reader".

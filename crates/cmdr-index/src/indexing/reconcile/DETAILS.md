@@ -167,7 +167,8 @@ can't, and this walk _writes what it reads_, so both failure modes are caught ra
   directory is re-read with `read_dir`. It must not be diffed short: `diff_dir_against_db` DELETES every DB child the
   live listing lacks, so one undecoded record would delete a real file (and its subtree) from the index. This is the
   same rule as the `EmptyRoot` guard and the cost-budget skip — a listing we don't fully trust is never handed to the
-  diff.
+  diff. An interrupted stream (`EINTR`) takes the same re-read: `read_fs_children` re-reads whenever
+  `BulkDirRead::doubt` is `Some` (why it never resumes: `../scanner/walker/DETAILS.md` § "The bulk reader").
 
 Both branches are unreachable on the filesystems we've measured (`FSOPT_PACK_INVAL_ATTRS` makes every requested
 attribute present), which is exactly why they're pinned by tests rather than by field evidence: `bulk_read.rs`'s

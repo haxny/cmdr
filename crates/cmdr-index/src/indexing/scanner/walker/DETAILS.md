@@ -140,8 +140,8 @@ Tests (`tests.rs`, all millisecond-scale with a mock reader): `a_read_that_keeps
 
 ## The bulk reader
 
-`bulk_read.rs` is the macOS reader: one `getattrlistbulk` call per batch, its own loop (open, retry on `EINTR`, publish
-each batch through `ReadProgress` before decoding it). The record layout is NOT here: it asks for `REQUEST` (an
+`bulk_read.rs` is the macOS reader: one `getattrlistbulk` call per batch, its own loop (open, give up on `EINTR`,
+publish each batch through `ReadProgress` before decoding it). The record layout is NOT here: it asks for `REQUEST` (an
 `attr_buf::Request`) and decodes through `cmdr_fs::attr_buf::records`, the one decoder the local lister uses too
 (`crates/cmdr-fs/DETAILS.md` § "`attr_buf`: the packed attribute layout"). ❌ No offset table, `attrlist`, or `ATTR_*`
 constant in this crate: two hand-rolled tables of one packed ABI is how the returned-vs-requested offset bug shipped
@@ -162,10 +162,22 @@ once. What the index does with a decoded record is its own policy, in `decode_ba
   group (`BadRecord::Truncated`) is unusable, where the index's own parser once kept it with `stat: None` and walked on
   by its length. The decoder can't locate anything past a record it doesn't believe, and a `read_dir` re-read is
   complete and correct, so the conservative answer costs only speed on a record no measured filesystem writes.
-- **`EINTR` is retried in place**, resuming the same fd. Whether a resumed `getattrlistbulk` can skip a batch is open:
-  [#708](https://github.com/vdavid/cmdr/issues/708).
+- **Decision/Why `EINTR` re-reads the directory whole, ❌ never resumes the fd** (David, 2026-10-28,
+  [#708](https://github.com/vdavid/cmdr/issues/708)). The man page doesn't say where an interrupted call leaves the
+  directory stream: if the kernel advanced the fd's offset past a batch before the interrupt surfaced, a retry on the
+  same fd continues after it, and that batch silently goes missing. For the walk that's an unlisted child; for the
+  reconcile it's worse, since `diff_dir_against_db` DELETES every row the listing lacks. So the read comes back
+  `interrupted` with no entries, `BulkDirRead::doubt` reports it alongside an unusable count, and both callers re-read
+  through `read_dir` exactly as for an unusable record. This matches the pane lister
+  (`crates/cmdr-local/src/reading/bulk.rs`, `Restart::Errno`). Rejected: proving the retry safe from XNU source
+  (evidence we'd have to re-verify per macOS release), and restarting the bulk read on a fresh fd a bounded number of
+  times (more code for a rare path whose `read_dir` fallback costs nothing measurable).
+
+The batch source is a parameter (`bulk_read_dir_with`, production passes `kernel_batch`), which is the seam the
+interrupted path is tested through.
 
 Tests (`bulk_read.rs`): `bulk_matches_symlink_metadata` (decoded values equal `symlink_metadata` field for field over a
 rich real tree), the synthetic-record cells for each branch above (`build_record` packs a record in `REQUEST`'s layout
-with attributes withheld), `a_truncated_record_and_everything_after_it_are_unusable`, and
-`the_walk_rereads_a_directory_with_an_unusable_record`.
+with attributes withheld), `a_truncated_record_and_everything_after_it_are_unusable`,
+`the_walk_rereads_a_directory_with_an_unusable_record`,
+`an_interrupted_bulk_read_is_marked_in_doubt_and_keeps_no_entries`, and `the_walk_rereads_an_interrupted_directory`.

@@ -65,7 +65,7 @@ use walker::{
 #[cfg(target_os = "macos")]
 pub(in crate::indexing) use walker::RawFileType;
 #[cfg(target_os = "macos")]
-pub(in crate::indexing) use walker::bulk_read::{BulkDirRead, bulk_read_dir_unwatched};
+pub(in crate::indexing) use walker::bulk_read::{BulkDirRead, bulk_read_dir_unwatched, log_reread as log_bulk_reread};
 
 /// How long one LOCAL directory read may go without producing anything before
 /// it's abandoned. It measures a STALL, never total duration: a disconnected File
