@@ -658,7 +658,11 @@
   },
   "commands.tagsWrite.label": "Write the tags into the files",
   "@commands.tagsWrite.label": {
-    "description": "Row in the Keyboard shortcuts list: what Command+S does in the tag editor window. It lists what will change in each file, and writes the new tags into the files once you confirm. Read-only (the key can’t be rebound)."
+    "description": "Row in the Keyboard shortcuts list: what Command+Return and Command+S do in the tag editor window. They write the new tags into the files straight away, and the status line says how many files were written. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsReview.label": "Review the changes, then write",
+  "@commands.tagsReview.label": {
+    "description": "Row in the Keyboard shortcuts list: what Command+Shift+S does in the tag editor window. It lists what will change in each file, and writes the new tags into the files once you confirm. Read-only (the key can’t be rebound)."
   },
   "commands.tagsUndo.label": "Undo the last tag edit or write",
   "@commands.tagsUndo.label": {

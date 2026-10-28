@@ -47,7 +47,10 @@ import {
   type TagTool,
   type TrackSort,
 } from '#lib/tauri-commands/index.js'
+import { outcomeOf } from './apply-outcome'
 import type { LastTagApply } from './last-tag-apply'
+import { loadWriteKind } from './write-kind'
+import { WRITE_WAIT_LIMIT_MS } from './write-wait'
 
 /** Why an Undo has nothing to reverse: no apply wrote anything yet, or the store couldn't keep the old tags. */
 export type TagUndoRefusal = { kind: 'nothingToUndo' } | { kind: 'undoUnavailable' }
@@ -68,6 +71,26 @@ export interface ApplyOptions {
    * reverses this apply with them; when none did, this apply starts the write Undo reverses on its own.
    */
   after?: readonly TagApplyReport[]
+}
+
+/**
+ * What `writeNow` did. `done`: how many files it wrote and left unwritten (failed, changed on disk since the read).
+ * `wouldDrop`: the first apply's report, with the kind it wrote as, for the "Write anyway" / "Skip" choice. `refused`:
+ * the write was refused, typed; `listFailed`: the change list before it couldn't be made, so nothing was written.
+ * `nothing`: no file would change. `stillBusy`: an edit was still out after
+ * the wait, so nothing was listed or written.
+ */
+export type WriteNowResult =
+  | { kind: 'done'; written: number; failed: number; changedOnDisk: number }
+  | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind }
+  | { kind: 'refused'; error: TagStateError }
+  | { kind: 'listFailed'; error: TagStateError }
+  | { kind: 'nothing' }
+  | { kind: 'stillBusy' }
+
+export interface WriteNowOptions {
+  /** Called just before the files are written (the window stops a playing track). */
+  onWriting?: () => void
 }
 
 export interface TagEditorState {
@@ -138,6 +161,12 @@ export interface TagEditorState {
   changes(kind: ContentKind): Promise<TagStateResult<FileChangeView[]>>
   /** Writes the edits; a refusal comes back typed and leaves `error` alone. */
   apply(request: ApplyRequest, options?: ApplyOptions): Promise<TagStateResult<TagApplyReport>>
+  /**
+   * ⌘⏎ / ⌘S: writes the edits at once, without the change list. The same write as the Write dialog's: it waits for the
+   * edits still out, lists the changes as the remembered kind (`loadWriteKind`), writes nothing when none would change
+   * (so the last write stays undoable), and otherwise applies them with no frame loss and no skips.
+   */
+  writeNow(options?: WriteNowOptions): Promise<WriteNowResult>
   /** Writes the old tags of the last write back, the last apply first. A failure leaves the rest undoable. */
   undo(): Promise<TagUndoResult>
   close(): Promise<void>
@@ -271,6 +300,37 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     return view !== before && error === null
   }
 
+  async function apply(request: ApplyRequest, options: ApplyOptions = {}): Promise<TagStateResult<TagApplyReport>> {
+    // A "Write anyway" after a press that wrote continues that write, so Undo reverses both.
+    const continues = (options.after ?? []).some((earlier) => earlier.written.length > 0)
+    const res = await whileWriting(async () => {
+      const answer = await track(() => applyTags(sessionId, request, continues), null)
+      if (answer.ok) await refreshLast()
+      return answer
+    })
+    if (res.ok) await replaceView(() => openTagEditor(sessionId))
+    return res
+  }
+
+  async function writeNow(options: WriteNowOptions = {}): Promise<WriteNowResult> {
+    if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
+    const kind = await loadWriteKind()
+    const listed = await track(() => getTagChanges(sessionId, kind), null)
+    if (!listed.ok) return { kind: 'listFailed', error: listed.error }
+    if (listed.value.length === 0) return { kind: 'nothing' }
+    options.onWriting?.()
+    const res = await apply({ kind, allowFrameLoss: false, skip: [] })
+    if (!res.ok) return { kind: 'refused', error: res.error }
+    if (res.value.wouldDrop.length > 0) return { kind: 'wouldDrop', report: res.value, writtenAs: kind }
+    const outcome = outcomeOf([res.value])
+    return {
+      kind: 'done',
+      written: outcome.written,
+      failed: outcome.failed.length,
+      changedOnDisk: outcome.changedOnDisk.length,
+    }
+  }
+
   async function open(): Promise<void> {
     if (view !== null) {
       // The session's order may have changed the files: the session answers in its current order, edits kept.
@@ -358,17 +418,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     coverFromFile: (fileName) => editView(() => setCoverFromFile(sessionId, fileName)),
     // The Apply panel words a failed list or write next to its buttons; the window's error is for edits.
     changes: (kind) => track(() => getTagChanges(sessionId, kind), null),
-    async apply(request, options = {}) {
-      // A "Write anyway" after a press that wrote continues that write, so Undo reverses both.
-      const continues = (options.after ?? []).some((earlier) => earlier.written.length > 0)
-      const res = await whileWriting(async () => {
-        const answer = await track(() => applyTags(sessionId, request, continues), null)
-        if (answer.ok) await refreshLast()
-        return answer
-      })
-      if (res.ok) await replaceView(() => openTagEditor(sessionId))
-      return res
-    },
+    apply,
+    writeNow,
     async undo() {
       const undoing = undoableWrite()
       if (undoing === null) return { ok: false, error: refusal(), restored: emptyRestore() }

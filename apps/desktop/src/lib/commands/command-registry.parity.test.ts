@@ -69,6 +69,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'tags.clearField': 'Clear a tag field',
   'tags.removeExtras': 'Remove extra tags',
   'tags.write': 'Write the tags into the files',
+  'tags.review': 'Review the changes, then write',
   'tags.undo': 'Undo the last tag edit or write',
   'tags.redo': 'Redo the last undone tag edit',
   'viewer.toggleWordWrap': 'Turn word wrap on or off',

@@ -2122,7 +2122,11 @@
   },
   "multiRename.tags.keys.write": "Write",
   "@multiRename.tags.keys.write": {
-    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Lists what will change, then writes the new tags into the files."
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Writes the new tags into the files straight away."
+  },
+  "multiRename.tags.keys.review": "Review",
+  "@multiRename.tags.keys.review": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4) while Shift is held, in the place of Write; keep it short, one or two words, so ten buttons fit side by side. Lists what will change in each file first, and writes on confirm."
   },
   "multiRename.tags.dialog.fromName": "Tags from file names",
   "@multiRename.tags.dialog.fromName": {
@@ -2196,9 +2200,29 @@
   "@multiRename.tags.undo.nothing": {
     "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+Z is pressed but no tag write can be undone."
   },
-  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "multiRename.tags.write.someLeft": "Some files weren’t written. Review lists their changes again.",
   "@multiRename.tags.write.someLeft": {
-    "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Write” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.write)."
+    "description": "Status line in the tag editor window after the Write dialog was closed on a write that left some files unwritten (each with its reason, shown in the dialog). “Review” is the name of the function-key bar’s button that lists the changes again (multiRename.tags.keys.review)."
+  },
+  "multiRename.tags.write.doneSummary": "{count, plural, one {{countText} file written} other {{countText} files written}}",
+  "@multiRename.tags.write.doneSummary": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S wrote the new tags straight away, without listing the changes first: how many files got their new tags. Short; it goes away after a few seconds or at the next edit.",
+    "placeholders": {
+      "countText": "how many files were written, ready to drop into the sentence (for example 1,234)"
+    }
+  },
+  "multiRename.tags.write.doneWithProblems": "{count, plural, one {{countText} file written} other {{countText} files written}}, {notWritten, plural, one {{notWrittenText} not written} other {{notWrittenText} not written}}. Review changes ({shortcut}) shows which.",
+  "@multiRename.tags.write.doneWithProblems": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S wrote the new tags straight away and some files were left unwritten (a file that couldn’t be written, or one another app changed since it was read). “Review changes” names the command that lists the changes, files left unwritten included; keep the key in brackets as given. One line, short.",
+    "placeholders": {
+      "countText": "how many files were written (for example 12)",
+      "notWrittenText": "how many files were left unwritten (for example 2)",
+      "shortcut": "the key of the Review command, as the function-key bar shows it (for example ⌘⇧S); don’t translate"
+    }
+  },
+  "multiRename.tags.write.nothingToWrite": "Nothing to write.",
+  "@multiRename.tags.write.nothingToWrite": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S when no file’s tags would change, so nothing was written."
   },
   "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
   "@multiRename.tags.write.closeWaits": {

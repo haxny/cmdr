@@ -346,6 +346,7 @@ export const COMMAND_IDS = [
   'tags.clearField',
   'tags.removeExtras',
   'tags.write',
+  'tags.review',
   'tags.undo',
   'tags.redo',
 ] as const

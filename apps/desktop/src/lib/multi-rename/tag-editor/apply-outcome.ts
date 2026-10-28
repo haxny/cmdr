@@ -5,7 +5,8 @@
 
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { ContentKind, FailedRow, TagError, WouldDropRow } from '#lib/ipc/bindings.js'
-import type { ApplyRequest, TagApplyReport } from '#lib/tauri-commands/index.js'
+import type { ApplyRequest, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
+import type { TagStateError } from './tag-editor-state.svelte'
 
 export interface ApplyOutcome {
   written: number
@@ -28,6 +29,40 @@ export function writeAnywayRequest(
   const dropping = new Set(wouldDrop.map((row) => row.path))
   const skip = [...new Set(allPaths)].filter((path) => !dropping.has(path))
   return { kind, allowFrameLoss: true, skip }
+}
+
+/**
+ * "Write anyway" after `last` asked: every path the write knows (the view's tracks and the report's) is skipped but
+ * the would-drop ones. Shared by the Write dialog and ⌘⏎'s write, so both write exactly the same.
+ */
+export function writeAnywayAfter(kind: ContentKind, last: TagApplyReport, view: TagEditorView | null): ApplyRequest {
+  const known = [
+    ...(view?.tracks.map((track) => track.path) ?? []),
+    ...last.written,
+    ...last.failed.map((row) => row.path),
+    ...last.changedOnDisk,
+    ...last.wouldDrop.map((row) => row.path),
+  ]
+  return writeAnywayRequest(kind, last.wouldDrop, known)
+}
+
+/**
+ * Why a write (or its change list) was refused, worded, when no earlier apply of the press wrote: `noneWritten` when
+ * the refusal came before any file was touched; another (a task that died) may come after some were.
+ */
+export function refusalOf(why: TagStateError['kind']): { noneWritten: boolean; reason: MessageKey } {
+  switch (why) {
+    case 'undo':
+    case 'noAppDataDir':
+      return { noneWritten: true, reason: 'multiRename.tags.undoStoreUnavailable' }
+    case 'readOnly':
+      return { noneWritten: true, reason: 'multiRename.tags.readOnly' }
+    case 'noSession':
+    case 'notOpen':
+      return { noneWritten: true, reason: 'multiRename.tags.write.sessionGone' }
+    default:
+      return { noneWritten: false, reason: 'multiRename.tags.write.stopped' }
+  }
 }
 
 type FileStatus =

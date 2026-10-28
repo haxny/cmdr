@@ -6,32 +6,38 @@
      * (`TagToolDialogs`, `WriteDialog`), so nothing ever pushes or resizes the panes. `runCommand` runs a `Tags window`
      * command, from the bar or from the window's keydown (`TagsWindow.svelte`). Tab switches the panes
      * (`tags-panes.svelte.ts`). ⌘X / ⌘C / ⌘V from the native menu act on the field under the cursor (`clipboard`).
+     * ⌘⏎ and ⌘S write at once and say in the status line how many files (`writeAtOnce`); ⇧⌘S opens the Write dialog,
+     * the change list first.
      * It opens the tag session when it mounts.
      */
     import { onDestroy, onMount, untrack } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
+    import type { ContentKind, TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
     import {
-        copyToClipboard,
         openTagsInPlayer,
-        readClipboardText,
-        tagsNativeEdit,
+        type TagApplyReport,
         type TagEdit,
-        type TagsClipboardAction,
+        type TagEditorView,
     } from '#lib/tauri-commands/index.js'
-    import { getAppLogger } from '#lib/logging/logger.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import { getFirstShiftShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { joinSentences } from '#lib/intl/sentence-join.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import AlbumPane from './AlbumPane.svelte'
+    import { fileNameOf, outcomeOf, refusalOf, writeAnywayAfter } from './apply-outcome'
     import CoverPanel from './CoverPanel.svelte'
     import CoverViewer from './CoverViewer.svelte'
     import { COVER_ERROR_KEYS, type CoverShown } from './cover-choices'
-    import { pastedValues, sharedCopyText } from './field-clipboard'
+    import { createTagsClipboard, readablePathsOf } from './tags-clipboard'
     import TagsFunctionKeyBar from './TagsFunctionKeyBar.svelte'
     import TagToolDialogs from './TagToolDialogs.svelte'
     import TracksPane from './TracksPane.svelte'
+    import WouldDropDialog from './WouldDropDialog.svelte'
     import WriteDialog from './WriteDialog.svelte'
+    import { WRITE_WAIT_LIMIT_MS } from './write-wait'
     import type { RunScoped, TagToolId } from './tag-tools'
     import {
         createTagsKeyEcho,
@@ -39,20 +45,17 @@
         type TagsBarCommandId,
         type TagsCommandId,
         type TagsKeyRoad,
-        textBoxOf,
     } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
     import { createTrackSelection } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
-    import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
+    import type { TagEditorState, TagStateError, WriteNowResult } from './tag-editor-state.svelte'
 
     interface Props {
         state: TagEditorState
     }
 
     const { state: tags }: Props = $props()
-
-    const log = getAppLogger('tagEditor')
 
     /** The selected tracks; the tools work on these alone. Created once per mount, synced on every view change. */
     const selection = createTrackSelection()
@@ -212,9 +215,7 @@
     }
 
     /** The paths of the tracks whose tags were read: an edit can name only these. */
-    function readablePaths(): Set<string> {
-        return new Set(tags.view?.tracks.filter((track) => track.readError === null).map((track) => track.path))
-    }
+    const readablePaths = (): Set<string> => readablePathsOf(tags.view)
 
     /** Sets `field` to `values` on the selected tracks (the readable ones), or on every file when none is selected. */
     async function setFieldScoped(field: TagField, values: string[]): Promise<void> {
@@ -242,101 +243,19 @@
         else await tags.edit([{ kind: 'setOne', path: target.path, field: target.field, values: [] }])
     }
 
-    /**
-     * What ⌘X / ⌘C / ⌘V act on: the Album pane's cursor row (`path` null), or the Tracks pane's cursor row's active
-     * cell (# or Title). `text` is what it copies. `null` with no pane active (focus on the cover, out of the window).
-     */
-    function clipboardTarget(): { field: TagField; text: string; path: string | null; index: number } | null {
-        const view = tags.view
-        if (view === null) return null
-        if (panes.active === 'album') {
-            const index = Math.max(0, Math.min(panes.albumCursor, view.shared.length - 1))
-            const row = view.shared.at(index)
-            return row === undefined ? null : { field: row.field, text: sharedCopyText(row), path: null, index }
-        }
-        if (panes.active !== 'tracks') return null
-        const index = Math.max(0, Math.min(panes.tracksCursor, view.tracks.length - 1))
-        const track = view.tracks.at(index)
-        if (track === undefined) return null
-        const field = tracksPane?.activeField() ?? 'title'
-        return { field, text: (field === 'title' ? track.title : track.track) ?? '', path: track.path, index }
-    }
-
-    /** Puts `text` on the clipboard; says so in the status line when it can't. */
-    async function copyText(text: string): Promise<boolean> {
-        try {
-            await copyToClipboard(text)
-            return true
-        } catch (e) {
-            log.warn("couldn't copy a field to the clipboard: {reason}", { reason: e instanceof Error ? e.name : typeof e })
-            notice = 'multiRename.tags.clipboard.writeFailed'
-            return false
-        }
-    }
-
-    /**
-     * The tracks a paste on the Tracks pane's cursor row sets: that row, or, when several tracks are selected and the
-     * row is one of them, every selected one (as a spreadsheet fills a selection). Readable tracks only.
-     */
-    function pasteTracks(target: { path: string; index: number }): string[] {
-        const readable = readablePaths()
-        const scope = selection.scope()
-        if (selection.count > 1 && selection.has(target.index) && scope.kind === 'some') {
-            return scope.paths.filter((path) => readable.has(path))
-        }
-        return readable.has(target.path) ? [target.path] : []
-    }
-
-    /** ⌘V: the clipboard's plain text into the target field (Album: in Clear's scope; Tracks: `pasteTracks`). */
-    async function paste(target: { field: TagField; path: string | null; index: number }): Promise<void> {
-        let text: string | null
-        try {
-            text = await readClipboardText()
-        } catch (e) {
-            log.warn("couldn't read the clipboard: {reason}", { reason: e instanceof Error ? e.name : typeof e })
-            notice = 'multiRename.tags.clipboard.readFailed'
-            return
-        }
-        if (text === null) {
-            notice = 'multiRename.tags.clipboard.noText'
-            return
-        }
-        const values = pastedValues(target.field, text)
-        const { field, path } = target
-        if (path === null) {
-            await setFieldScoped(field, values)
-            return
-        }
-        const paths = pasteTracks({ path, index: target.index })
-        if (paths.length > 0) await tags.edit(paths.map((one) => ({ kind: 'setOne', path: one, field, values })))
-    }
-
-    /**
-     * Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) from the native menu (`TagsWindow`). A focused text box, and the cover
-     * section (its picture paste, `CoverPanel`), get the native action back, so they keep their own. Under a dialog
-     * nothing else happens. Otherwise: Copy puts the cursor field's text on the clipboard, Cut copies it and then
-     * empties the field as Delete does, Paste sets the clipboard's plain text. Each edit is a pending edit, so ⌘Z takes
-     * it back.
-     */
-    export async function clipboard(action: TagsClipboardAction): Promise<void> {
-        const focus = document.activeElement
-        if (textBoxOf(focus) !== null || (focus !== null && focus.closest('.cover-group') !== null)) {
-            await tagsNativeEdit(action)
-            return
-        }
-        if (hasDialog()) return
-        const target = clipboardTarget()
-        if (target === null) return
-        const editable = tags.view?.editable === true
-        notice = null
-        if (action === 'paste') {
-            if (editable) await paste(target)
-            return
-        }
-        if (!(await copyText(target.text)) || action === 'copy' || !editable || target.text === '') return
-        if (target.path !== null && !readablePaths().has(target.path)) return
-        await clearTarget({ field: target.field, path: target.path })
-    }
+    /** ⌘X / ⌘C / ⌘V from the native menu (`TagsWindow`): the field under the cursor (`tags-clipboard.ts`). */
+    export const clipboard = createTagsClipboard({
+        tags,
+        panes,
+        activeTrackField: () => tracksPane?.activeField() ?? 'title',
+        selection,
+        setFieldScoped,
+        clearTarget,
+        hasDialog: () => hasDialog(),
+        say: (key) => {
+            notice = key
+        },
+    })
 
     /** The tool dialog showing, with the field the user was on when it opened. */
     let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
@@ -347,7 +266,7 @@
     /** The cover opened large (`CoverViewer`), from a click on its thumbnail. */
     let viewing = $state<CoverShown | null>(null)
     /** A dialog is over the panes: the cover section takes no paste or drop meanwhile. */
-    const dialogOpen = $derived(tool !== null || writeMode !== null || viewing !== null)
+    const dialogOpen = $derived(tool !== null || writeMode !== null || viewing !== null || dropChoice !== null)
     /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
     let notice = $state<MessageKey | null>(null)
 
@@ -377,6 +296,145 @@
         if (await tags.redoEdit()) notice = 'multiRename.tags.undo.editRedone'
     }
 
+    /** How long the status line keeps a write's summary, unless an edit comes first. */
+    const SUMMARY_SHOWN_MS = 10_000
+
+    /** One sentence of a write's summary in the status line. */
+    interface SummaryPart {
+        key: MessageKey
+        params?: Record<string, string | number>
+    }
+
+    /**
+     * What the last write at once (⌘⏎, ⌘S) did, and the view it left: the next edit (a new view) or 10 s ends it,
+     * whichever comes first.
+     */
+    let summary = $state.raw<{ parts: SummaryPart[]; role: 'status' | 'alert'; view: TagEditorView | null } | null>(null)
+    let summaryTimer: ReturnType<typeof setTimeout> | undefined
+    const shownSummary = $derived(summary !== null && summary.view === tags.view ? summary : null)
+    onDestroy(() => {
+        clearTimeout(summaryTimer)
+    })
+
+    function showSummary(parts: SummaryPart[], role: 'status' | 'alert' = 'status'): void {
+        clearTimeout(summaryTimer)
+        summary = { parts, role, view: tags.view }
+        summaryTimer = setTimeout(() => {
+            summary = null
+        }, SUMMARY_SHOWN_MS)
+    }
+
+    /** A write at once is on its way: a second press does nothing (no queue), and the status line says so. */
+    let writingNow = $state(false)
+    /** Files a write at once would make lose tag data ask first, over the panes (`WouldDropDialog`). */
+    let dropChoice = $state.raw<{
+        reports: TagApplyReport[]
+        kind: ContentKind
+        /** The view the choice was asked for: an edit since then writes nothing more. */
+        seen: TagEditorView | null
+        answering: boolean
+    } | null>(null)
+
+    /**
+     * ⌘⏎ / ⌘S: writes at once (`writeNow`, the Write dialog's own write without its list) and says in the status line
+     * how many files it wrote. The player stops first, as before the dialog's write.
+     */
+    async function writeAtOnce(): Promise<void> {
+        if (writingNow || tags.writing) return
+        writingNow = true
+        summary = null
+        try {
+            const res = await tags.writeNow({
+                onWriting: () => {
+                    player.stop()
+                },
+            })
+            answerWrite(res)
+        } finally {
+            writingNow = false
+        }
+    }
+
+    function answerWrite(res: WriteNowResult): void {
+        switch (res.kind) {
+            case 'done':
+                showDone(res.written, res.failed + res.changedOnDisk)
+                break
+            case 'wouldDrop':
+                dropChoice = { reports: [res.report], kind: res.writtenAs, seen: tags.view, answering: false }
+                break
+            case 'refused': {
+                const { noneWritten, reason } = refusalOf(res.error.kind)
+                const parts: SummaryPart[] = [{ key: reason }]
+                showSummary(noneWritten ? [{ key: 'multiRename.tags.write.refused' }, ...parts] : parts, 'alert')
+                break
+            }
+            case 'listFailed':
+                showSummary([{ key: 'multiRename.tags.write.listFailed' }], 'alert')
+                break
+            case 'nothing':
+                showSummary([{ key: 'multiRename.tags.write.nothingToWrite' }])
+                break
+            case 'stillBusy':
+                showSummary([{ key: 'multiRename.tags.write.stillBusy' }], 'alert')
+                break
+        }
+    }
+
+    /** How many files were written, and how many weren't (pointing at Review, which lists them). */
+    function showDone(written: number, notWritten: number, after: SummaryPart[] = []): void {
+        const count = { count: written, countText: formatInteger(written) }
+        const done: SummaryPart =
+            notWritten === 0
+                ? { key: 'multiRename.tags.write.doneSummary', params: count }
+                : {
+                      key: 'multiRename.tags.write.doneWithProblems',
+                      params: {
+                          ...count,
+                          notWritten,
+                          notWrittenText: formatInteger(notWritten),
+                          shortcut: getFirstShiftShortcutReactive('tags.review') ?? '',
+                      },
+                  }
+        showSummary([done, ...after], after.length > 0 ? 'alert' : 'status')
+    }
+
+    /** The summary of every apply of one press (the first, and a "Write anyway"), each file once. */
+    function showOutcome(reports: TagApplyReport[], after: SummaryPart[] = []): void {
+        const outcome = outcomeOf(reports)
+        showDone(outcome.written, outcome.failed.length + outcome.changedOnDisk.length + outcome.skipped.length, after)
+    }
+
+    /** "Skip these files": the would-drop files stay as they are, counted as not written. */
+    function skipDropped(choice: NonNullable<typeof dropChoice>): void {
+        dropChoice = null
+        showOutcome(choice.reports)
+    }
+
+    /**
+     * "Write anyway": the same request as the Write dialog's (`writeAnywayAfter`): frame loss allowed for the
+     * would-drop files alone. An edit made since the choice was asked writes nothing more (they count as skipped).
+     */
+    async function writeAnyway(choice: NonNullable<typeof dropChoice>): Promise<void> {
+        const last = choice.reports.at(-1)
+        if (last === undefined || choice.answering) return
+        dropChoice = { ...choice, answering: true }
+        if (!(await tags.settled(WRITE_WAIT_LIMIT_MS))) {
+            dropChoice = { ...choice, answering: false }
+            notice = 'multiRename.tags.write.stillBusy'
+            return
+        }
+        if (tags.view !== choice.seen) {
+            skipDropped(choice)
+            return
+        }
+        player.stop()
+        const res = await tags.apply(writeAnywayAfter(choice.kind, last, tags.view), { after: choice.reports })
+        dropChoice = null
+        if (res.ok) showOutcome([...choice.reports, res.value])
+        else showOutcome(choice.reports, [{ key: 'multiRename.tags.write.stopped' }])
+    }
+
     const COMMANDS: Record<TagsCommandId, () => void> = {
         'tags.edit': () => {
             if (panes.active === 'tracks') tracksPane?.editAtCursor()
@@ -393,7 +451,8 @@
         'tags.number': () => { openTool('number') },
         'tags.clearField': () => { openTool('clearField') },
         'tags.removeExtras': () => { openTool('extras') },
-        'tags.write': () => { writeMode = 'write' },
+        'tags.write': () => void writeAtOnce(),
+        'tags.review': () => { writeMode = 'write' },
         'tags.undo': () => void undoLast(),
         'tags.redo': () => void redoLast(),
     }
@@ -446,7 +505,7 @@
         if (writeMode === null) notice = 'multiRename.tags.window.closeWaits'
     }
 
-    /** Lists the changes, then writes them (⌘S). */
+    /** Writes at once (⌘⏎, ⌘S). */
     export function start(): void {
         runCommand('tags.write')
     }
@@ -533,6 +592,11 @@
             {#if notice !== null}
                 {@render line(notice, 'status')}
             {/if}
+            {#if writingNow}
+                {@render line('multiRename.tags.write.writing', 'status')}
+            {:else if shownSummary !== null}
+                {@render textLine(joinSentences(shownSummary.parts.map((part) => tString(part.key, part.params))), shownSummary.role)}
+            {/if}
             <!-- eslint-enable @typescript-eslint/no-confusing-void-expression -->
         </div>
     {/if}
@@ -572,8 +636,32 @@
     <WriteDialog {tags} mode={writeMode} {closeWaits} onWriting={() => { player.stop() }} onClose={closeWrite} />
 {/if}
 
+{#if dropChoice !== null}
+    {@const choice = dropChoice}
+    <ModalDialog
+        titleId="tag-write-now-title"
+        containerStyle="width: 520px; max-width: 90vw"
+        growDownward
+        onclose={choice.answering ? undefined : () => { skipDropped(choice) }}
+    >
+        {#snippet title()}{tString('multiRename.tags.dialog.write')}{/snippet}
+        <WouldDropDialog
+            rows={choice.reports.at(-1)?.wouldDrop ?? []}
+            nameOf={(path: string) => tags.view?.tracks.find((track) => track.path === path)?.fileName ?? fileNameOf(path)}
+            busy={choice.answering}
+            onWriteAnyway={() => void writeAnyway(choice)}
+            onSkip={() => { skipDropped(choice) }}
+        />
+    </ModalDialog>
+{/if}
+
 {#snippet line(key: MessageKey, role: 'status' | 'alert')}
-    <p class="notice" {role} use:tooltip={{ text: tString(key), overflowOnly: true }}>{tString(key)}</p>
+    <!-- eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -- Svelte {@render} syntax -->
+    {@render textLine(tString(key), role)}
+{/snippet}
+
+{#snippet textLine(text: string, role: 'status' | 'alert')}
+    <p class="notice" {role} use:tooltip={{ text, overflowOnly: true }}>{text}</p>
 {/snippet}
 
 {#snippet coverGroup()}

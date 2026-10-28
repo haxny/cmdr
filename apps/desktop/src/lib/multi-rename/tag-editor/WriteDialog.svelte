@@ -2,7 +2,7 @@
     /**
      * The Tags window's Write dialog, over the panes: the Apply panel (`ApplyPanel`) with every step it has, from
      * "Finishing the last change…" through the change list, the write, the would-drop choice and the outcome, to its
-     * worded refusals. ⌘S opens it listing the changes (`mode: 'write'`); ⌘Z opens it on the undo question
+     * worded refusals. ⌘⇧S (Review) opens it listing the changes (`mode: 'write'`); ⌘Z opens it on the undo question
      * (`mode: 'undo'`), and a "no" closes it again. ⌘⏎ (`multiRename.rename`) presses the panel's primary button. It
      * can't be closed while a write or an undo is on its way; when the window was asked to close meanwhile
      * (`closeWaits`) it says to wait until it's done.

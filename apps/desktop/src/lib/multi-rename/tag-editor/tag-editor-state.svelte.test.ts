@@ -34,8 +34,15 @@ vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
 }))
 
+const writeKind = vi.hoisted(() => ({ stored: 'music' as string | null }))
+vi.mock('#lib/app-status-store.js', () => ({
+  loadTagWriteKind: () => Promise.resolve(writeKind.stored),
+  saveTagWriteKind: () => Promise.resolve(),
+}))
+
 import { createTagEditorState } from './tag-editor-state.svelte'
 import { replayLastApply } from './last-apply.test-helper'
+import { WRITE_WAIT_LIMIT_MS } from './write-wait'
 
 const VIEW = { editable: true, tracks: [{}, {}], dirty: false } as unknown as TagEditorView
 const EDITED = { editable: true, tracks: [{}, {}], dirty: true } as unknown as TagEditorView
@@ -698,5 +705,81 @@ describe('createTagEditorState', () => {
     expect(ipc.setCoverFromPath).toHaveBeenCalledWith('S', '/d/front.png')
     expect(state.view).toBe(VIEW)
     expect(state.error).toBeNull()
+  })
+})
+
+describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list would', () => {
+  const CHANGED = [{ path: '/a.mp3', fileName: 'a.mp3', fields: ['album'], cover: false, extras: false, removes: [] }]
+
+  beforeEach(() => {
+    writeKind.stored = 'music'
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    ipc.getTagChanges.mockResolvedValue({ ok: true, value: CHANGED })
+  })
+
+  it('waits for the edit still out, checks there is something, then writes as the remembered kind', async () => {
+    let landed: (res: unknown) => void = () => {}
+    ipc.editTags.mockReturnValueOnce(new Promise((resolve) => (landed = resolve)))
+    ipc.applyTags.mockResolvedValue({
+      ok: true,
+      value: report({
+        written: ['/a.mp3'],
+        failed: [{ path: '/b.mp3', error: { type: 'notSupported' } }],
+        changedOnDisk: ['/c.mp3'],
+      }),
+    })
+    const onWriting = vi.fn()
+    const state = createTagEditorState('S')
+    void state.edit([])
+    const writing = state.writeNow({ onWriting })
+    await Promise.resolve()
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    landed({ ok: true, value: EDITED })
+    expect(await writing).toEqual({ kind: 'done', written: 1, failed: 1, changedOnDisk: 1 })
+    expect(ipc.getTagChanges).toHaveBeenCalledWith('S', 'music')
+    expect(ipc.applyTags).toHaveBeenCalledWith('S', { kind: 'music', allowFrameLoss: false, skip: [] }, false)
+    expect(onWriting).toHaveBeenCalledTimes(1)
+    expect(onWriting.mock.invocationCallOrder[0]).toBeLessThan(ipc.applyTags.mock.invocationCallOrder[0])
+  })
+
+  it('nothing to write writes nothing, so the last write stays undoable', async () => {
+    ipc.getTagChanges.mockResolvedValue({ ok: true, value: [] })
+    const onWriting = vi.fn()
+    const state = createTagEditorState('S')
+    expect(await state.writeNow({ onWriting })).toEqual({ kind: 'nothing' })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(onWriting).not.toHaveBeenCalled()
+  })
+
+  it('files that would lose data come back with the report and the kind, for the choice', async () => {
+    const asks = report({ written: [], wouldDrop: [{ path: '/a.mp3', items: ['TSOP'] }] })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: asks })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({ kind: 'wouldDrop', report: asks, writtenAs: 'music' })
+  })
+
+  it('a refused list or write comes back typed, and leaves the window’s error alone', async () => {
+    const state = createTagEditorState('S')
+    ipc.getTagChanges.mockResolvedValueOnce({ ok: false, error: { kind: 'notOpen' } })
+    expect(await state.writeNow()).toEqual({ kind: 'listFailed', error: { kind: 'notOpen' } })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    ipc.applyTags.mockResolvedValue({ ok: false, error: { kind: 'readOnly' } })
+    expect(await state.writeNow()).toEqual({ kind: 'refused', error: { kind: 'readOnly' } })
+    expect(state.error).toBeNull()
+  })
+
+  it('an edit that never lands writes nothing and says the window is still busy', async () => {
+    vi.useFakeTimers()
+    try {
+      ipc.editTags.mockReturnValueOnce(new Promise(() => {}))
+      const state = createTagEditorState('S')
+      void state.edit([])
+      const writing = state.writeNow()
+      await vi.advanceTimersByTimeAsync(WRITE_WAIT_LIMIT_MS)
+      expect(await writing).toEqual({ kind: 'stillBusy' })
+      expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -125,6 +125,7 @@ export const FIXED_KEY_COMMAND_IDS = [
   'tags.clearField',
   'tags.removeExtras',
   'tags.write',
+  'tags.review',
   'tags.undo',
   'tags.redo',
   // Family 4 — deliberate override. ErrorPane claims ⌘D through a CAPTURE-phase

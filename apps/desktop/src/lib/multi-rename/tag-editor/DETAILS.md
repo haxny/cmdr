@@ -76,18 +76,24 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   above the panes and the Apply panel under them pushed the table around and hid the write's answer in a small box (the
   user's report, 2026-10-27). The bar (`tags-function-keys.ts` holds its slots) mirrors the main window's
   `FunctionKeyBar` look but not its code, which is wired to the file commands: F2 Edit, F3 Play, F4 Replace, F5 Format,
-  F6 From name, F7 Number, F8 Clear, then ⌘S Write; Shift shows ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up,
-  ⇧F8 Remove extras. Its chips are the commands' live bindings (`getFirstShortcutReactive`), its buttons never take
-  focus, and a disabled slot is a command that can't act (read-only leaves Play and Open in player). The window's
-  keydown (`TagsWindow`) answers the same `Tags window` commands through `TagsContent.runCommand`, skipping a key a box,
-  a pane or a dialog already claimed, every key while a dialog is open, every key but ⌘S while a value is typed (⌘Z
-  stays the box's text undo), and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key
-  list: it holds the one-press tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist =
-  Artist, Narrator from text, Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the
-  selection (`setOne` per readable selected track) or every file (`setAll`). Each tool takes the field the user was on
-  when it opened, since focus then moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove
-  extras and Clear close once run. ⌘S opens `WriteDialog` listing the changes (`ApplyPanel.start()`), ⌘⏎ or Write tags
-  writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question
+  F6 From name, F7 Number, F8 Clear, then ⌘⏎ Write; Shift shows ⇧F2 Edit #, ⇧F3 Open in player, ⇧F4 Case, ⇧F5 Clean up,
+  ⇧F8 Remove extras, and ⌘⇧S Review in Write's place. Its chips are the commands' live bindings
+  (`getFirstShortcutReactive`), its buttons never take focus, and a disabled slot is a command that can't act (read-only
+  leaves Play and Open in player). The window's keydown (`TagsWindow`) answers the same `Tags window` commands through
+  `TagsContent.runCommand`, skipping a key a box, a pane or a dialog already claimed, every key while a dialog is open,
+  every key but ⌘⏎ / ⌘S (which the value box commits first) while a value is typed (⌘Z stays the box's text undo), and
+  Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key list: it holds the one-press tools
+  the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist = Artist, Narrator from text, Clear
+  title = album). Clear (F8) empties one field, starting on the cursor's, on the selection (`setOne` per readable
+  selected track) or every file (`setAll`). Each tool takes the field the user was on when it opened, since focus then
+  moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove extras and Clear close once run.
+  ⌘⏎ and ⌘S (`tags.write`) write at once: `TagEditorState.writeNow` is the Write dialog's own write without its list (it
+  waits for the edits out, lists as the remembered kind, writes nothing when nothing would change, then the same apply
+  request), the player stops first, a second press while it runs does nothing, would-drop files ask in a
+  `WouldDropDialog` over the panes ("Write anyway" sends `writeAnywayAfter`, the dialog's request), and the status line
+  says how many files were written and how many weren't, until the next edit or 10 s. Refusals reuse the dialog's words
+  (`refusalOf`). ⌘⇧S (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write
+  tags writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question
   (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W reaches the window as the
   native Close tab item, which closes a focused child window through its close request, so it meets the same discard
   guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format re-applies the mask to
@@ -145,18 +151,19 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   (`focused_tags_window`); `TagsWindow` selects the text of a text box with focus (never a checkbox), else every track,
   and clears the track selection.
 - **⌘X / ⌘C / ⌘V on a field**: Edit > Cut, Copy and Paste go to the focused `tags-*` window as `tags-clipboard`
-  (`TagsContent.clipboard`). A focused text box, or focus in the cover section, gets the same action back as the native
-  `cut:` / `copy:` / `paste:` (`tagsNativeEdit`), so the box's own clipboard and its typing undo, and the cover's
-  picture paste (`beforepaste` / `paste`, below), work as before; under a dialog nothing else happens. Otherwise Copy
-  puts the cursor field's text on the clipboard (Album: the row, a «multiple values» row as its distinct values joined
-  by "; " without the marker; Tracks: the active cell, # or Title; an empty field copies ""), Cut copies then empties it
-  as Delete does (not when the copy didn't go through), and Paste sets the clipboard's plain text (`field-clipboard.ts`:
-  one trailing line break dropped; a one-line field takes the first line, a multi-value field joins the lines with "; ";
-  Comment and Description keep them) on the Album row in Clear's scope, or on the Tracks cursor row, or on every
-  selected row when several are and the cursor is on one. Each is a pending edit (⌘Z). The clipboard goes through the
-  backend (`copyToClipboard`, `readClipboardText`), ❌ not `navigator.clipboard`: the menu's action is no user gesture
-  in the page, so WebKit would refuse the read or show its Paste callout. A read that fails, or a clipboard with no
-  text, says so in the status line.
+  (`TagsContent.clipboard`, `tags-clipboard.ts`). A focused text box, or focus in the cover section, gets the same
+  action back as the native `cut:` / `copy:` / `paste:` (`tagsNativeEdit`), so the box's own clipboard and its typing
+  undo, and the cover's picture paste (`beforepaste` / `paste`, below), work as before; under a dialog nothing else
+  happens. Otherwise Copy puts the cursor field's text on the clipboard (Album: the row, a «multiple values» row as its
+  distinct values joined by "; " without the marker; Tracks: the active cell, # or Title; an empty field copies ""), Cut
+  copies then empties it as Delete does (not when the copy didn't go through), and Paste sets the clipboard's plain text
+  (`field-clipboard.ts`: one trailing line break dropped; a one-line field takes the first line, a multi-value field
+  joins the lines with "; "; Comment and Description keep them) on the Album row in Clear's scope, or on the Tracks
+  cursor row, or on every selected row when several are and the cursor is on one. Each is a pending edit (⌘Z). The
+  clipboard goes through the backend (`copyToClipboard`, `readClipboardText`), ❌ not `navigator.clipboard`: the menu's
+  action is no user gesture in the page, so WebKit would refuse the read or show its Paste callout. A read that fails, a
+  clipboard with no text (or only blanks), and text over the field's limit (`pasteRefusal`: 64 KiB for Comment and
+  Description, 4 KiB for the rest) say so in the status line and change nothing.
 - **Why edits are keyed by path**: the session's order can change under the view; every edit stays with its file.
   `open()` fetches the view again (`openTagEditor(id)`, never a restart) when asked, so the list follows the order; the
   unwritten edits live in the backend session and come back with it. A view answer older than one already shown is

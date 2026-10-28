@@ -79,14 +79,22 @@ async function mountTab(): Promise<HTMLElement> {
   return mounted.root
 }
 
-/** The bar's Write (⌘S): opens the Write dialog, which lists the changes at once. */
-async function writeKey(root: HTMLElement): Promise<void> {
-  const write = [...root.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find(
-    (b) => b.querySelector('span')?.textContent === 'Write',
-  )
-  if (!write) throw new Error('no Write key')
-  write.click()
+/** The bar's key labelled `label`, Shift held for the Shift row. */
+async function barKey(label: string, shifted = false): Promise<void> {
+  if (shifted) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }))
   await settle()
+  const button = [...document.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button')].find(
+    (b) => b.querySelector('span')?.textContent === label,
+  )
+  if (shifted) document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Shift' }))
+  if (!button) throw new Error(`no ${label} key`)
+  button.click()
+  await settle()
+}
+
+/** The bar's Review (⇧⌘S): opens the Write dialog, which lists the changes at once. */
+async function writeKey(_root: HTMLElement): Promise<void> {
+  await barKey('Review', true)
 }
 
 const timesShown = (_root: HTMLElement, text: string): number => document.body.textContent.split(text).length - 1
@@ -117,5 +125,32 @@ describe('TagsContent words a refused list or write once', () => {
 
     expect(timesShown(root, 'Cmdr couldn’t check what will change. Try again in a moment.')).toBe(1)
     expect(root.textContent).not.toContain(EDIT_FAILED)
+  })
+})
+
+describe('TagsContent words a refused write at once (⌘⏎) once, in the status line', () => {
+  it.each([
+    [{ kind: 'readOnly' }, 'Tags can only be edited for files on a local disk.'],
+    [{ kind: 'taskFailed' }, 'The write stopped before it finished, so some files may not have their new tags.'],
+  ] as const)('a write refused with %j says why once', async (error, reason) => {
+    ipc.applyTags.mockResolvedValue({ ok: false, error })
+    const root = await mountTab()
+
+    await barKey('Write')
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(timesShown(root, reason)).toBe(1)
+    expect(root.querySelector('.status')?.textContent).toContain(reason)
+    expect(root.textContent).not.toContain(EDIT_FAILED)
+  })
+
+  it('a change list that could not be made says nothing was written', async () => {
+    ipc.getTagChanges.mockResolvedValue({ ok: false, error: { kind: 'taskFailed' } })
+    const root = await mountTab()
+
+    await barKey('Write')
+
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(root.querySelector('.status')?.textContent).toContain('Cmdr couldn’t check what will change.')
   })
 })

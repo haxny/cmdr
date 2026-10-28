@@ -242,6 +242,22 @@ describe('⌘V on a field', () => {
     expect(ipc.editTags).not.toHaveBeenCalled()
   })
 
+  it('a paste over the field’s limit says so and changes nothing', async () => {
+    const root = await mountWindow()
+    ipc.readClipboardText.mockResolvedValueOnce('x'.repeat(5000))
+    await fromMenu('paste')
+    expect(root.textContent).toContain('The clipboard holds too much text for this field, so nothing was pasted.')
+    expect(ipc.editTags).not.toHaveBeenCalled()
+  })
+
+  it('a blank clipboard says it holds no text, and changes nothing', async () => {
+    const root = await mountWindow()
+    ipc.readClipboardText.mockResolvedValueOnce(' \n\t')
+    await fromMenu('paste')
+    expect(root.textContent).toContain('The clipboard holds no text to paste.')
+    expect(ipc.editTags).not.toHaveBeenCalled()
+  })
+
   it('never sets an unreadable track', async () => {
     ipc.openTagEditor.mockResolvedValue({
       ok: true,

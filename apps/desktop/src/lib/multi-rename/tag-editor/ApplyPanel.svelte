@@ -7,7 +7,8 @@
      * last change ("Finishing the last change…"), or says why it can't (`notice`), never ends without a word.
      * "Undo tag changes" reverses the last write until the next one; a file changed since that
      * write (written again, or another file renamed onto its name) is left alone and counted apart. It is the body
-     * of the Tags window's Write dialog (`WriteDialog`): ⌘S runs `start()`, ⌘Z runs `undo()`.
+     * of the Tags window's Write dialog (`WriteDialog`): ⌘⇧S runs `start()`, ⌘Z runs `undo()`. ⌘⏎ outside the dialog writes
+     * at once (`TagEditorState.writeNow`), with the same request.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -22,7 +23,7 @@
     import { confirmDialog } from '#lib/utils/confirm-dialog.js'
     import ApplyOutcome from './ApplyOutcome.svelte'
     import WouldDropDialog from './WouldDropDialog.svelte'
-    import { fileNameOf, outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
+    import { fileNameOf, outcomeOf, refusalOf, writeAnywayAfter, type ApplyOutcome as Outcome } from './apply-outcome'
     import { FIELD_LABELS } from './field-labels'
     import { undoableCount } from './last-tag-apply'
     import type { TagEditorState, TagStateError, TagUndoResult } from './tag-editor-state.svelte'
@@ -210,29 +211,7 @@
             notice = 'multiRename.tags.write.stopped'
             return endedStep(earlier)
         }
-        switch (why) {
-            case 'undo':
-            case 'noAppDataDir':
-                return { step: 'refused', noneWritten: true, reason: 'multiRename.tags.undoStoreUnavailable' }
-            case 'readOnly':
-                return { step: 'refused', noneWritten: true, reason: 'multiRename.tags.readOnly' }
-            case 'noSession':
-            case 'notOpen':
-                return { step: 'refused', noneWritten: true, reason: 'multiRename.tags.write.sessionGone' }
-            default:
-                return { step: 'refused', noneWritten: false, reason: 'multiRename.tags.write.stopped' }
-        }
-    }
-
-    /** Every path the write knows, so "Write anyway" can skip all but the would-drop ones. */
-    function knownPaths(first: TagApplyReport): string[] {
-        return [
-            ...(tags.view?.tracks.map((track) => track.path) ?? []),
-            ...first.written,
-            ...first.failed.map((row) => row.path),
-            ...first.changedOnDisk,
-            ...first.wouldDrop.map((row) => row.path),
-        ]
+        return { step: 'refused', ...refusalOf(why) }
     }
 
     async function writeAnyway(choice: Extract<Step, { step: 'wouldDrop' }>): Promise<void> {
@@ -251,7 +230,7 @@
             await review(reports)
             return
         }
-        const request = writeAnywayRequest(listedAs, last.wouldDrop, knownPaths(last))
+        const request = writeAnywayAfter(listedAs, last, tags.view)
         onWriting?.()
         const res = await tags.apply(request, { after: reports })
         // A refused "Write anyway" leaves those files unwritten, as a skip does, and says it stopped.

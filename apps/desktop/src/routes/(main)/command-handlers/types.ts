@@ -112,6 +112,7 @@ export type DispatchExemptId =
   | 'tags.clearField'
   | 'tags.removeExtras'
   | 'tags.write'
+  | 'tags.review'
   | 'tags.undo'
   | 'tags.redo'
   // ErrorPane owns ⌘D through its own CAPTURE-phase document listener, which runs

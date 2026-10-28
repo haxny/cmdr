@@ -50,6 +50,7 @@ describe('enabledTagsCommands', () => {
     expect(full.has('tags.editNumber')).toBe(true)
     expect(full.has('tags.removeExtras')).toBe(true)
     expect(full.has('tags.write')).toBe(true)
+    expect(full.has('tags.review')).toBe(true)
   })
 })
 
