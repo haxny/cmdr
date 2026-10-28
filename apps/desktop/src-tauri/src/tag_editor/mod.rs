@@ -1,4 +1,4 @@
-//! The Tags tab of Multi-Rename: a tag session per Multi-Rename session, edited in memory.
+//! The Tags window: a tag session per Multi-Rename session, edited in memory.
 //! See `CLAUDE.md`.
 
 pub(crate) mod activity;

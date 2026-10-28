@@ -5,7 +5,7 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
 (`TagsButton`) over the sheet's files. Files in `tag-editor/`:
 
 - **Window**: `open-tags.ts` (main window only: opens a NEW Multi-Rename session, from the selection with
-  `openMultiRename` or as a copy of the sheet's with `reopenForTags`, holds it with `holdTagsSession`, then opens the
+  `openTagsSession` or as a copy of the sheet's with `reopenForTags`, holds it with `holdTagsSession`, then opens the
   window; no track, a failed hold, or a window that won't open gives the session back; a selection the listing moved
   past toasts as ⌃M does), `tags-window.ts` (the opener: label `tags-<sessionId>`, `/tags?session=…&folder=…`, raises
   the window a session already has), `TagsWindow.svelte` (the body: `TagsTab` plus the close; Escape is `tags.close` in
@@ -136,7 +136,7 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
 - **A write press always answers** (`ApplyPanel`, in `WriteDialog`): it waits up to `WRITE_WAIT_LIMIT_MS` (30 s,
   `write-wait.ts`) for the calls out, showing "Finishing the last change…" after `WAITING_SHOWN_AFTER_MS`; a wait that
   gives up, a list that can't be made, and a refused write are worded next to the buttons (`notice`, the `refused`
-  step), once: `changes` and `apply` leave the state's shared `error` (the tab's top line, for edits) alone. A press
+  step), once: `changes` and `apply` leave the state's shared `error` (the window's top line, for edits) alone. A press
   runs once (`oncePressed`), so a double click or ⌘⏎ before a step shows starts no second write. A write where no file
   was written says "No file was written." first, each file with why. Regression anchor (2026-10-27): on a real 22-file
   audiobook every file was refused for a bad date and the write looked like nothing happened.
@@ -163,9 +163,9 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   notice, then the next takes all). Every tool and "Open in foobar2000" take the scope from `TagsTab.runScoped`, after
   `settled()`. Selected tracks don't narrow the Album pane's shared fields.
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
-  them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the tab shows what the format will
-  hold (M4A integers). The one-file-BOOK rule (no track number) is decided on the session's readable track count
-  (`session_files`), not on the scope.
+  them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format
+  will hold (M4A integers). The one-file-BOOK rule (no track number) is decided on every audio track the session lists
+  (`session_files`, readable or not), not on the scope.
 - **Text tools live in the app**: find/replace and format a field run in `src-tauri/src/tag_editor/text_tools.rs`,
   reusing Multi-Rename's `Transform`/`Replace`/`Mask`, so the wildcard, case and regex rules match Multi-Rename's; the
   pure tag tools (file name → tags, `cmdr_tags::TagTool::FromFileName`, among them) stay in `cmdr-tags`.

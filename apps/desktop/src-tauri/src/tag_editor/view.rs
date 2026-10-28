@@ -1,4 +1,4 @@
-//! What the Tags tab shows: the foobar2000-style shared rows, the per-track list in the
+//! What the Tags window shows: the foobar2000-style shared rows, the per-track list in the
 //! Multi-Rename session's CURRENT order, and the cover, extras, and diacritics summaries.
 //! Pure: built from the session's entries, never reads a file.
 
@@ -17,7 +17,7 @@ use super::session::{Entry, Loaded};
 /// How many distinct values a «multiple values» row lists.
 const CHOICE_LIMIT: usize = 50;
 
-/// Why the tab can't write. A stable code, worded by the UI.
+/// Why the window can't write. A stable code, worded by the UI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ReadOnlyReason {
@@ -117,7 +117,7 @@ pub(super) struct Access {
     pub reason: Option<ReadOnlyReason>,
 }
 
-/// The tab for `tracks` (path and entry, in the session's current order). Unreadable files
+/// The view for `tracks` (path and entry, in the session's current order). Unreadable files
 /// are listed but count in no summary. Hashes no cover: each file's key comes from its read.
 pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView {
     let loaded: Vec<&Loaded> = tracks.iter().filter_map(|(_, entry)| entry.loaded()).collect();

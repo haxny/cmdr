@@ -1,9 +1,9 @@
 /**
- * The Tags tab's state for one Multi-Rename session: the backend's view of the tab, the last typed error, and the
+ * The Tags window's state for one Multi-Rename session: the backend's view of the tracks, the last typed error, and the
  * last apply Undo can reverse. The work is the backend's (`tauri-commands/tag-editor.ts`); this holds what it answered.
- * `open()` is lazy: the sheet calls it each time the Tags tab shows, so a sheet that never shows it asks nothing; once a
- * view is there it asks again for the session's current order (a reorder on the Rename tab), keeping the unwritten
- * edits, which live in the backend session.
+ * `open()` is lazy: the window calls it when it mounts; once a view is there it asks again for the session's
+ * current order (the session's names can be reordered), keeping the unwritten edits, which live in the backend
+ * session.
  * The write Undo reverses is kept in `last-tag-apply.svelte.ts`, so it outlives the sheet.
  */
 
@@ -193,7 +193,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
 
   async function open(): Promise<void> {
     if (view !== null) {
-      // The Rename tab may have reordered the files: the session answers in its current order, edits kept.
+      // The session's order may have changed the files: the session answers in its current order, edits kept.
       await settled()
       await replaceView(() => openTagEditor(sessionId))
       return

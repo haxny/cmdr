@@ -19,8 +19,9 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
   close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`). It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A, `menu_key_command_of`
   for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu/menu_handlers.rs` emits there instead of dropping.
-- `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the viewer's choke point) and "open in
-  foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread, never awaited).
+- `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the
+  viewer's choke point) and "open in foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread,
+  never awaited).
 
 ## Must-knows
 
@@ -29,8 +30,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
   path refuses the batch (`UnknownTrack`). A file whose fingerprint moved since the read is never written.
 - **Tools run on a scope** (track paths, `None` = all) in session order; an unknown path refuses (`UnknownTrack`).
   `store` normalizes every edit for its format (M4A track `01` → `1`).
-- **The no-track rule is about the BOOK**: only a one-track session loses its track number, counting every audio
-  track the session lists, readable or not (`ToolContext::session_files`); one selected track of a bigger book is numbered.
+- **The no-track rule is about the BOOK**: only a one-track session loses its track number, counting every audio track
+  the session lists, readable or not (`ToolContext::session_files`); one selected track of a bigger book is numbered.
 - **Only the `root` volume is editable**, as `multi_rename/run.rs` decides locality. Other volumes: `editable: false`,
   `RemoteVolume`; `edit` / `tool` / `apply` refuse with `ReadOnly`. Files are listed only if `std::fs` reaches the
   volume.

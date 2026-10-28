@@ -1,5 +1,5 @@
 /**
- * The content kind the Tags tab writes as (Audiobook or Music), remembered for this user across sheets and restarts
+ * The content kind the Tags window writes as (Audiobook or Music), remembered for this user across sheets and restarts
  * in `app-status.json`, as the app remembers other UI choices. Audiobook until the user first picks one.
  */
 import { loadTagWriteKind, saveTagWriteKind } from '#lib/app-status-store.js'

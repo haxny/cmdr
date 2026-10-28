@@ -129,7 +129,7 @@ struct TagSession {
 
 static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// The session's audio files in its current order, where they are, and what the tab may do
+/// The session's audio files in its current order, where they are, and what the window may do
 /// with them.
 struct Layout {
     access: Access,
@@ -332,7 +332,7 @@ fn stem_of(path: &Path) -> String {
         .unwrap_or_default()
 }
 
-/// What the tools know about `paths`, a selection of a book of `session_files` readable tracks:
+/// What the tools know about `paths`, a selection of a book of `session_files` listed tracks (readable or not):
 /// each one's folder and stem, and the book's size (for the one-file-book rule).
 fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
     ToolContext {

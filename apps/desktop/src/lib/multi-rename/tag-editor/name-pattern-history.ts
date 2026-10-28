@@ -1,5 +1,5 @@
 /**
- * The file-name patterns the user last took in the Tags tab's From file name panel, newest first, at most ten,
+ * The file-name patterns the user last took in the Tags window's From file name panel, newest first, at most ten,
  * remembered across sheets and restarts in `app-status.json` (`app-status-store.ts` validates them on load).
  */
 import { TAG_NAME_PATTERNS_MAX, loadTagNamePatterns, saveTagNamePatterns } from '#lib/app-status-store.js'

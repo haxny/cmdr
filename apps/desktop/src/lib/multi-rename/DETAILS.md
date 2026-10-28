@@ -1,6 +1,6 @@
 # Multi-Rename sheet: details
 
-The opt-in Tags tab (fork, setting `multiRename.tagEditor`) has its own docs: `tag-editor/CLAUDE.md` and
+The opt-in Tags window (fork, setting `multiRename.tagEditor`) has its own docs: `tag-editor/CLAUDE.md` and
 `tag-editor/DETAILS.md`.
 
 - **Keyboard-first**: the name mask has focus on open; Tab walks the fields; Enter in a text field starts (TC's Start!),

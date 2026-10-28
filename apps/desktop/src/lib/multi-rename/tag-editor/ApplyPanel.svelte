@@ -1,6 +1,6 @@
 <script lang="ts">
     /**
-     * Writing the Tags tab's edits into the files. "Write tags…" first lists what will change, per file; only then
+     * Writing the Tags window's edits into the files. "Write tags…" first lists what will change, per file; only then
      * does "Write tags" write. Fields that still carry diacritics are named with a one-click fix, never stripped
      * silently. Files that would lose tag data ask (`WouldDropDialog`); every file left unwritten is listed with why
      * (`ApplyOutcome.svelte`). Every press answers here, next to the buttons: it acts, shows that it's waiting for the
@@ -31,7 +31,7 @@
 
     interface Props {
         tags: TagEditorState
-        /** Called just before a write starts (the Tags tab stops a playing track: lofty rewrites the file it streams). */
+        /** Called just before a write starts (the Tags window stops a playing track: lofty rewrites the file it streams). */
         onWriting?: () => void
         /** Whether a write is on its way (the dialog can't be closed under it). */
         onBusy?: (busy: boolean) => void

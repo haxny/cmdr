@@ -20,7 +20,7 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
   `placeholder-help.ts`, `SearchOptionChips.svelte` / `search-option-help.ts`: tooltips and chips; `rename-examples.ts`
   renders the examples.
 - `last-run.svelte.ts` the last run, which Undo rename (⌘⌥Z) rolls back. Outlives the sheet.
-- `tag-editor/`: Tags tab.
+- `tag-editor/`: Tags window.
 - `option-keys.ts` the ⌘⌥ option keys (`TOGGLE_COMMANDS`) and the whole-name toggles in pipeline order. Pure.
 
 ## Must-knows

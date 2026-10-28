@@ -7,11 +7,11 @@ store's lock. Without `restart` an existing tag session comes back with its edit
 Every other call runs under the lock on in-memory tags and first drops entries that left the layout.
 
 Guaranteed: the file set is the one at `open` (Multi-Rename's names are fixed per session, a reorder only changes the
-order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and (in tests) `unchanged_on_disk` tells
-whether it still holds (stat'ed outside the lock); after the app's own write `mark_written` makes the written tags the
-disk copy and takes a fresh fingerprint; closing or evicting the rename session closes the tag session (hooks in
-`multi_rename/session.rs`), and a `NoSession` answer removes a leftover one. Not done: nothing re-reads or follows a
-file that something else renamed.
+order); each file has a `Fingerprint` (size, mtime, inode, ctime) taken before its read, and (in tests)
+`unchanged_on_disk` tells whether it still holds (stat'ed outside the lock); after the app's own write `mark_written`
+makes the written tags the disk copy and takes a fresh fingerprint; closing or evicting the rename session closes the
+tag session (hooks in `multi_rename/session.rs`), and a `NoSession` answer removes a leftover one. Not done: nothing
+re-reads or follows a file that something else renamed.
 
 ## Decisions
 
@@ -25,13 +25,13 @@ file that something else renamed.
   inserted if the rename session is gone.
 - **Cover size** comes from the image header (`image`), under `contain_panics`; `None` when unreadable.
 - A failed read of one file is a row with a `readError`, never a `TagEditorError`. Cover-file errors (`BadCoverName`,
-  `CoverTooLarge`, `CoverUnreadable`, `CoverNotAnImage`, `CoverNotAFile`) come from `cover.rs`: a name must be one plain file name that
-  resolves directly inside the session's folder (no separators, `..`, or symlink out; a symlink to a file in the folder
-  reads that file), it must be a regular file (checked before the open, so a FIFO named `x.jpg` can't block a pool
-  thread), it is opened at the resolved path with `O_NOFOLLOW | O_NONBLOCK` (a symlink or FIFO swapped in after the
-  check fails), and it is at most 10 MiB, enforced on the read too. Its MIME type comes from the magic bytes (JPEG
-  `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF????WEBP`), never the name: a WebP saved as `.jpg` is written as
-  `image/webp`, anything else is `CoverNotAnImage`. `TaskFailed` is a blocking task that didn't finish.
+  `CoverTooLarge`, `CoverUnreadable`, `CoverNotAnImage`, `CoverNotAFile`) come from `cover.rs`: a name must be one plain
+  file name that resolves directly inside the session's folder (no separators, `..`, or symlink out; a symlink to a file
+  in the folder reads that file), it must be a regular file (checked before the open, so a FIFO named `x.jpg` can't
+  block a pool thread), it is opened at the resolved path with `O_NOFOLLOW | O_NONBLOCK` (a symlink or FIFO swapped in
+  after the check fails), and it is at most 10 MiB, enforced on the read too. Its MIME type comes from the magic bytes
+  (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF????WEBP`), never the name: a WebP saved as `.jpg` is
+  written as `image/webp`, anything else is `CoverNotAnImage`. `TaskFailed` is a blocking task that didn't finish.
 - **Thumbnail.** `get_cover_image(session, key)` answers a cover as a `data:` URL (base64, typed by the bytes), because
   the app's CSP (`tauri.conf.json` `img-src`) allows `data:` but not `blob:`: the one a `CoverChoice::key` names, or for
   no key the shared one. `CoverSummary::Same::key` is a hash of the bytes, so the panel fetches again when a cover of
@@ -48,15 +48,15 @@ file that something else renamed.
   becomes an image by its bytes.
 - **A drop's read waits as long as it moves.** A dropped file can sit on a NAS: a 3–10 MiB cover over SMB may take
   seconds, and a hung mount blocks for minutes. Decision: `set_from_path_within` reads through
-  `cmdr_fs::deadline::blocking_typed_result_until_stalled` with a `ProgressWatch` fed by `read_counted`'s byte count
-  (64 KiB chunks), and gives up only once the count stood still for `COVER_READ_STALL_LIMIT` (10 s,
-  `SESSION_IO_TIMEOUT`'s scale), as the viewer's pulling open does. Why: the fixed 2 s read tier refused a slow but
-  healthy share. The edit is made only from the awaited answer, so a read given up on (`CoverTimedOut`, worded as
-  "the drive stopped answering") and finishing later changes nothing. Each read holds a permit of `DROP_READS`
-  (two at once) until it ends, given up on or not; with none free a drop is refused the same way without reading, so
-  repeated drops onto a dead mount never stack blocking threads. Tested: a read moving for 2.4 s against a 1 s stall
-  limit is taken; a stalled one is refused and its late end changes nothing; a third drop with two stuck is refused
-  unread.
+  `cmdr_fs::deadline::blocking_typed_result_until_stalled` with a `ProgressWatch` fed by `read_counted`'s byte count (64
+  KiB chunks), and gives up only once the count stood still for `COVER_READ_STALL_LIMIT` (10 s, `SESSION_IO_TIMEOUT`'s
+  scale), as the viewer's pulling open does. Why: the fixed 2 s read tier refused a slow but healthy share. The edit is
+  made only from the awaited answer, so a read given up on (`CoverTimedOut`, worded as "the drive stopped answering")
+  and finishing later changes nothing. Each read holds a permit of `DROP_READS` (two at once) until it ends, given up on
+  or not; with none free a drop is refused as `CoverBusy` (worded apart from the stall: earlier reads are still stuck)
+  without reading, so repeated drops onto a dead mount never stack blocking threads. Tested: a read moving for 2.4 s
+  against a 1 s stall limit is taken; a stalled one is refused and its late end changes nothing; a third drop with two
+  stuck is refused unread.
 - **A paste** has no file name, so its refusal is `PastedNotAnImage`, worded apart from a file's `CoverNotAnImage`.
   A TIFF (magic `II*\0` / `MM\0*`, at most 40 MiB: an uncompressed clipboard photo is big) is decoded
   (`cover_image.rs`, `contain_panics`, `image::Limits`: 20,000 px a side, 256 MiB) and re-encoded as PNG; when that PNG
@@ -64,8 +64,9 @@ file that something else renamed.
   (`set_from_bytes_within`, `PasteTimedOut`), with the same read-then-edit split as a drop: the edit follows only an
   in-time answer.
 - **Thumbnails** (`get_cover_thumbnail`): a tile shows a PNG of at most 176 px a side (twice the 88 px tile), made once
-  per cover key and byte length and cached process-wide (64 entries, then it starts over), under a 5 s deadline. Only the large view
-  (`get_cover_image`) ships the full picture, so per-chapter art never puts N full bitmaps in the section.
+  per cover key and byte length and cached process-wide (64 entries, then it starts over), under a 5 s deadline. Only
+  the large view (`get_cover_image`) ships the full picture, so per-chapter art never puts N full bitmaps in the
+  section.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`changes(session_id, kind)`** lists, per changed file, the fields, cover, and extras the edits change, plus what the
@@ -74,14 +75,15 @@ file that something else renamed.
 - **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
-  out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent folder
-  and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also carries the session's readable track count
-  (`session_files`): the numbering tools drop the track number only for a one-file BOOK, so a one-track scope of a
-  bigger book is numbered; with a partial scope TrackTotal counts the files numbered (as Mp3tag does). A bad file-name pattern is
-  `BadPattern` before anything is touched; `preview_names` shows what a pattern reads per file (`fields: None` when the
-  name doesn't match), matching outside the lock and changing nothing.
+  out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent
+  folder and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also
+  carries the session's listed track count (readable or not) (`session_files`): the numbering tools drop the track
+  number only for a one-file BOOK, so a one-track scope of a bigger book is numbered; with a partial scope TrackTotal
+  counts the files numbered (as Mp3tag does). A bad file-name pattern is `BadPattern` before anything is touched;
+  `preview_names` shows what a pattern reads per file (`fields: None` when the name doesn't match), matching outside the
+  lock and changing nothing.
 - **Every stored edit is normalized for its format** (`store` → `cmdr_tags::normalize_for`): an M4A holds track and disc
-  numbers as integers, so a padded `01` is kept as `1`, and the tab shows what the write will leave. A name with no
+  numbers as integers, so a padded `01` is kept as `1`, and the window shows what the write will leave. A name with no
   supported extension is stored as given.
 - **«Multiple values» rows carry their values.** `SharedRow::choices` is `cmdr_tags::shared::distinct_values` (most
   common first, at most 50) for a `Multiple` row, empty for every other.
