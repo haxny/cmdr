@@ -264,6 +264,10 @@
     "accept": ["Ask-Cmdr"],
     "chosen": "Ask Cmdr",
     "confidence": "high",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.sameName": "“Ask Cmdr for …” is the imperative verb plus the brand, not the panel name → Bitte Cmdr um …",
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "“Ask Cmdr for …” is the imperative verb plus the brand, not the panel name → Bitte Cmdr um …"
+    },
     "forms": "compounds couple through: Ask-Cmdr-Bereich, Ask-Cmdr-Einstellungen, Ask-Cmdr-Chats; the model field → Ask Cmdr-Modell",
     "note": "Names only the chat panel itself (title, View menu item, palette command, Settings section, switch). Don't add it where the English says Cmdr or the AI.",
     "sources": "product name; do-not-translate list"
@@ -3052,6 +3056,9 @@
     ],
     "chosen": "Teilen",
     "confidence": "tentative",
+    "exceptions": {
+      "suggestedOps.server.field.share": "the bare label names an SMB shared folder on a server suggestion, the network-share sense → Freigabe"
+    },
     "decision": "Platzhalterzeilen in „Öffnen mit“ und „Teilen“",
     "forms": "share options → Optionen zum Teilen; No share options → Keine Optionen zum Teilen",
     "sources": "macOS Finder (Teilen)"
@@ -4084,5 +4091,22 @@
     "confidence": "high",
     "forms": "a bare value or table cell → Unbekannt; after a noun → Größe unbekannt, Kosten unbekannt",
     "sources": "macOS (Unbekannt, Unbekannter Fehler); catalog (ai.local.modelUnknown Unbekannt, askCmdr.cost.unknown Kosten unbekannt)"
+  },
+  "start": {
+    "accept": ["gestartet", "starten", "startet", "lief", "läuft"],
+    "chosen": "starten",
+    "confidence": "high",
+    "exceptions": {
+      "indexing.step.statusPending": "a step's status chip for a step still waiting its turn → Ausstehend, the terse chip form"
+    },
+    "forms": "so nothing started → deshalb wurde nichts gestartet; Why this didn’t start → Warum es nicht gestartet ist; a refused approved suggestion may also say deshalb lief nichts",
+    "sources": "macOS (Das Programm „%@“ konnte nicht gestartet werden); catalog (suggestedOps.refusal.label, errors.write.namedLeavesRefused.message.notASource)"
+  },
+  "zip": {
+    "accept": ["Zips", "Zip-Archiv", "Zip-Archive", "Zip-Datei"],
+    "chosen": "Zip",
+    "confidence": "high",
+    "forms": "neuter: das Zip, ein Zip, des Zips; zip archive → Zip-Archiv (macOS Finder); the file itself → Zip-Datei; zip tools → Zip-Programme",
+    "sources": "macOS Finder (Zip-Archiv); catalog (errors.write.archiveEntryNameRefused.title Dieser Name passt nicht in ein Zip)"
   }
 }

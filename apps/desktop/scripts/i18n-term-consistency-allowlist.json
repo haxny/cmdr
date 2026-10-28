@@ -2,6 +2,10 @@
   "reviewed": {
     "de": [
       {
+        "source": "Share",
+        "reason": "Two senses of one English word. `menu.context.share` is the Share submenu VERB (`Teilen`, the `share-menu` ruling, as Finder); `suggestedOps.server.field.share` is the NOUN naming an SMB shared folder (`Freigabe`, the `network-share` ruling)."
+      },
+      {
         "source": "Browse",
         "reason": "Two senses of one English word, split into the `browse-file-picker` and `browse` rulings in `docs/i18n/de/terms.json`. `Durchsuchen…` is the button that opens the system file picker (`servers.sheet.browse`, `settings.adb.browse`), taken from Finder's own `ConnectToWindow.strings` `48.title`. `Durchsehen` is the archives segmented cell (`settings.archives.opt.browse`), which means step INTO the archive and list it like a folder (KDE Dolphin, \"Archive durchsehen\"). The archive sense cannot take `Durchsuchen`: that is the settled scan/search verb (\"Laufwerk wird durchsucht …\"), so merging them would tell the reader the app is searching the archive."
       },
