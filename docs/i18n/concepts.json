@@ -281,7 +281,7 @@
     "en": "Ask Cmdr",
     "match": ["ask cmdr"],
     "note": "Only the chat panel itself carries this name; a sentence that merely describes what the AI does says Cmdr or the AI.",
-    "notMatch": ["ask cmdr to"],
+    "notMatch": ["ask cmdr to", "ask cmdr for"],
     "sense": "The product name of the AI chat panel; stays verbatim in every language."
   },
   "ask-question": {

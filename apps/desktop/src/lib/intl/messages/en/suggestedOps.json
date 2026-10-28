@@ -83,9 +83,9 @@
   "@suggestedOps.approve.extract": {
     "description": "Primary button on a suggestion that unpacks archives (zip files and the like) into a folder. {countText} is how many archives would be unpacked, already formatted."
   },
-  "suggestedOps.approve.addServer": "Add server",
+  "suggestedOps.approve.addServer": "Save server",
   "@suggestedOps.approve.addServer": {
-    "description": "Primary button on a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. Pressing it saves the server without connecting to it. Takes no count."
+    "description": "Primary button on a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. Pressing it saves the server without connecting to it. Takes no count. It sits on the same card as the suggestedOps.server.add tag, so keep the two worded differently."
   },
   "suggestedOps.approve.editServer": "Save changes",
   "@suggestedOps.approve.editServer": {
@@ -163,13 +163,13 @@
   "@suggestedOps.irreversible.other": {
     "description": "Warning pill on a suggestion nothing can take back, when there's no more specific reason to give. Disclosure only: the user can still approve it."
   },
-  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "suggestedOps.reversible.forgetServer": "You can undo this: forget the server in Servers",
   "@suggestedOps.reversible.forgetServer": {
-    "description": "Pill on a suggestion to save a new server, saying the user can take it back: they can remove (forget) the saved server again in the Servers view. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
+    "description": "Pill on a suggestion to save a new server, saying the user can take it back: they can remove (forget) the saved server again in the Servers view. Same “You can undo this:” frame as the other suggestedOps.reversible.* pills. “Forget” is the word on the menu item that removes a saved server (menu.network.forgetServer), so use the same word your translation uses there. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
   },
-  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "suggestedOps.reversible.changeServerBack": "You can undo this: change the server back in Servers",
   "@suggestedOps.reversible.changeServerBack": {
-    "description": "Pill on a suggestion to change a saved server's settings, saying the user can take it back by editing the server again in the Servers view. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
+    "description": "Pill on a suggestion to change a saved server's settings, saying the user can take it back by editing the server again in the Servers view. Same “You can undo this:” frame as the other suggestedOps.reversible.* pills. “Change the server back” means putting its settings back the way they were. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
   },
   "suggestedOps.folderWillBeCreated": "Cmdr will create this folder",
   "@suggestedOps.folderWillBeCreated": {
@@ -323,9 +323,9 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "description": "Reason shown under a suggestion whose approval didn't start because the stored suggestion itself was incomplete (rare, an internal inconsistency). The suggestion is back on the list, waiting for an answer. Followed by suggestedOps.refusal.couldNotStart.suggestion."
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Reject it, and ask the AI to suggest it again.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Reject it, and ask Cmdr to suggest it again.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.couldNotStart.message. \"It\" is the suggestion; Reject is the button on it, and \"the AI\" is Ask Cmdr, as elsewhere in this dialog."
+    "description": "What to do next, under suggestedOps.refusal.couldNotStart.message. \"It\" is the suggestion; Reject is the button on it. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys."
   },
   "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
   "@suggestedOps.refusal.serverLabel": {
@@ -335,17 +335,17 @@
   "@suggestedOps.refusal.serverChanged.message": {
     "description": "Reason shown under a suggestion to change a saved server's settings, when the saved server itself was changed (by the person, or by another approved suggestion) after the AI suggested this. Saving would overwrite a change the suggestion doesn't show, so nothing was saved. Followed by suggestedOps.refusal.serverChanged.suggestion."
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "Ask Cmdr to suggest it again, or edit the server in Servers.",
   "@suggestedOps.refusal.serverChanged.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.serverChanged.message. \"The AI\" is Ask Cmdr, as elsewhere in this dialog; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
+    "description": "What to do next, under suggestedOps.refusal.serverChanged.message. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
   },
   "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
   "@suggestedOps.refusal.alreadySaved.message": {
     "description": "Reason shown under a suggestion to add a server, when a server at the same address was saved after the AI suggested this (by the person, or by another approved suggestion). Adding it again would replace that one's settings, so nothing was saved. Followed by suggestedOps.refusal.alreadySaved.suggestion."
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask Cmdr to suggest a change to it instead.",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.alreadySaved.message. \"It\" is the server already saved; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
+    "description": "What to do next, under suggestedOps.refusal.alreadySaved.message. \"It\" is the server already saved; \"ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
   },
   "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
   "@suggestedOps.refusal.nameTaken.message": {
@@ -354,17 +354,17 @@
       "name": "the name the other saved server already has, like Naspolya; never translated"
     }
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "suggestedOps.refusal.nameTaken.suggestion": "Ask Cmdr to suggest another name.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.nameTaken.message. \"The AI\" is Ask Cmdr, as elsewhere in this dialog."
+    "description": "What to do next, under suggestedOps.refusal.nameTaken.message. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys."
   },
   "suggestedOps.server.add": "Add a server",
   "@suggestedOps.server.add": {
-    "description": "Beside the title of a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. The title is the server's name. Says what kind of suggestion this is, where a file suggestion shows its file count."
+    "description": "Beside the title of a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. It names the kind of suggestion; the button on the same card is suggestedOps.approve.addServer, so keep the two worded differently. The title is the server's name. Says what kind of suggestion this is, where a file suggestion shows its file count."
   },
-  "suggestedOps.server.change": "Change a server",
+  "suggestedOps.server.change": "Change server settings",
   "@suggestedOps.server.change": {
-    "description": "Beside the title of a suggestion to change the settings of a server already saved in Cmdr's server list. The title is the server's name. Says what kind of suggestion this is, where a file suggestion shows its file count."
+    "description": "Beside the title of a suggestion to change the settings of a server already saved in Cmdr's server list. It means editing that server's settings, not swapping it for another server. The title is the server's name. Says what kind of suggestion this is, where a file suggestion shows its file count."
   },
   "suggestedOps.server.field.port": "Port",
   "@suggestedOps.server.field.port": {
@@ -374,9 +374,9 @@
   "@suggestedOps.server.field.account": {
     "description": "Label of a row on a suggestion to add or change a server: the account (username) Cmdr signs in as, or for an S3 server, the saved S3 account it belongs to. One word, NOUN."
   },
-  "suggestedOps.server.field.share": "Share",
+  "suggestedOps.server.field.share": "Shared folder",
   "@suggestedOps.server.field.share": {
-    "description": "Label of a row on a suggestion to add an SMB server (a NAS, a Windows PC): the shared folder on it that Cmdr saves. One word, NOUN; use the term Finder and Windows use for a network share."
+    "description": "Label of a row on a suggestion to add an SMB server (a NAS, a Windows PC): the shared folder on it that Cmdr saves. NOUN phrase, the network-share term (not the Share menu verb); use the term Finder and Windows use for a network share."
   },
   "suggestedOps.server.field.bucket": "Bucket",
   "@suggestedOps.server.field.bucket": {
@@ -384,7 +384,7 @@
   },
   "suggestedOps.server.notSet": "Not set",
   "@suggestedOps.server.notSet": {
-    "description": "Shown in place of a value on a suggestion to change a server, when a setting had no value before, or the change clears it (a start folder back to the default). Two words."
+    "description": "Shown in place of a value on a suggestion to change a server, when a setting had no value before, or the change clears it (a start folder back to the default). It stands in for any field (a port, a folder, an account), so it can't agree with one noun's gender: pick a form that needs no agreement, like “no value”. Short."
   },
   "suggestedOps.server.changesTo": "changes to",
   "@suggestedOps.server.changesTo": {

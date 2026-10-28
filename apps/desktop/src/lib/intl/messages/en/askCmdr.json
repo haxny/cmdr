@@ -524,9 +524,9 @@
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "description": "What came back, after a tool line’s label: the assistant named a drive or server Cmdr doesn’t know. Lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "that’s not on the drive it named",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "not on the named drive",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
-    "description": "What came back, after a tool line’s label: the folder the assistant asked about isn’t on the drive it said it was on. “It” is the assistant. Lowercase where your language allows."
+    "description": "What came back, after a tool line’s label: the folder the assistant asked about isn’t on the drive the assistant named for it. Lowercase where your language allows."
   },
   "askCmdr.tool.outcome.miss.noVolumeAtPath": "no drive is connected there",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
@@ -540,17 +540,17 @@
   "@askCmdr.tool.outcome.miss.needsDiskAccess": {
     "description": "What came back, after a tool line’s label: macOS keeps Cmdr out of this folder until the person grants Full Disk Access. “Full Disk Access” is the macOS setting’s name: use the name macOS shows in your language. Lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.miss.unreachable": "the drive didn’t answer",
+  "askCmdr.tool.outcome.miss.unreachable": "the drive didn’t respond",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "description": "What came back, after a tool line’s label: the drive or network share it’s on didn’t respond in time. Lowercase where your language allows."
+    "description": "What came back, after a tool line’s label: the drive or network share the folder is on didn’t respond in time. Lowercase where your language allows."
   },
   "askCmdr.tool.outcome.miss.notFound": "not there",
   "@askCmdr.tool.outcome.miss.notFound": {
     "description": "What came back, after a tool line’s label: nothing exists at the path the assistant asked about. Lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.miss.excluded": "a system folder it skips",
+  "askCmdr.tool.outcome.miss.excluded": "a skipped system folder",
   "@askCmdr.tool.outcome.miss.excluded": {
-    "description": "What came back, after a tool line’s label: the folder is a system, build, or cache folder that searches leave out. “It” is the assistant. Lowercase where your language allows."
+    "description": "What came back, after a tool line’s label: the folder is a system, build, or cache folder that the assistant’s searches leave out. Lowercase where your language allows."
   },
   "askCmdr.tool.outcome.miss.permissionDenied": "no permission to look",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
@@ -560,7 +560,7 @@
   "@askCmdr.tool.outcome.miss.cancelled": {
     "description": "What came back, after a tool line’s label: the person stopped the reply while the folder was being read. Lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.connection.alreadyConnected": "it was already connected",
+  "askCmdr.tool.outcome.connection.alreadyConnected": "already connected",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
     "description": "What came back, after the “Connected to your server” label: the server or share was connected before the assistant asked, so nothing new happened. Lowercase where your language allows."
   },
@@ -580,7 +580,7 @@
   "@askCmdr.tool.outcome.connection.rejected": {
     "description": "What came back, after the “Tried connecting to your server” label: the server (or the saved place’s own settings) turned the connection down. Lowercase where your language allows."
   },
-  "askCmdr.tool.outcome.connection.unreachable": "the server didn’t answer",
+  "askCmdr.tool.outcome.connection.unreachable": "the server didn’t respond",
   "@askCmdr.tool.outcome.connection.unreachable": {
     "description": "What came back, after the “Tried connecting to your server” label: the server couldn’t be reached. Lowercase where your language allows."
   },
@@ -1676,27 +1676,27 @@
   "@askCmdr.decision.serverRejected": {
     "description": "A line in the Ask Cmdr chat rail recording that the person said no when the agent suggested saving a server (a NAS, an SFTP or WebDAV server, and the like) or changing a saved one. It appears in the thread the suggestion came from, and the server's name is shown beside it rather than inside this sentence. Sentence case, no full stop. Address the person directly, in the informal register this app uses throughout.",
     "placeholders": {
-      "verbName": "The suggestion, already translated, from askCmdr.decision.verbAddServer or askCmdr.decision.verbEditServer: for English, adding a server or changing a server."
+      "verbName": "The suggestion, already translated, from askCmdr.decision.verbAddServer or askCmdr.decision.verbEditServer: for English, adding a server or changing a server’s settings."
     }
   },
   "askCmdr.decision.serverApproved": "You approved {verbName}",
   "@askCmdr.decision.serverApproved": {
     "description": "A line in the Ask Cmdr chat rail recording that the person approved the agent's suggestion to save a server (a NAS, an SFTP or WebDAV server, and the like) or change a saved one. It appears in the thread the suggestion came from, and the server's name is shown beside it rather than inside this sentence. The next line says how it went: askCmdr.decision.saved or askCmdr.decision.savedNotShare. Sentence case, no full stop. Address the person directly, in the informal register this app uses throughout.",
     "placeholders": {
-      "verbName": "The suggestion, already translated, from askCmdr.decision.verbAddServer or askCmdr.decision.verbEditServer: for English, adding a server or changing a server."
+      "verbName": "The suggestion, already translated, from askCmdr.decision.verbAddServer or askCmdr.decision.verbEditServer: for English, adding a server or changing a server’s settings."
     }
   },
   "askCmdr.decision.verbAddServer": "adding a server",
   "@askCmdr.decision.verbAddServer": {
-    "description": "The name of one suggestion Ask Cmdr can make (saving a new server in Cmdr's server list), dropped into the askCmdr.decision.serverRejected and askCmdr.decision.serverApproved sentences as their verbName placeholder. Translate it in whatever form those two sentences need in your language (English uses the -ing form). Lowercase, no full stop."
+    "description": "The name of one suggestion Ask Cmdr can make (saving a new server in Cmdr's server list), dropped into the askCmdr.decision.serverRejected and askCmdr.decision.serverApproved sentences as their verbName placeholder. Translate it in whatever form those two sentences need in your language (English uses the -ing form). That may be a noun phrase (“the adding of a server”), and it may take a different form from the file-operation verb keys (askCmdr.decision.verbMove and its siblings), which fill different sentences: pick what reads naturally in these two. Lowercase, no full stop."
   },
-  "askCmdr.decision.verbEditServer": "changing a server",
+  "askCmdr.decision.verbEditServer": "changing a server’s settings",
   "@askCmdr.decision.verbEditServer": {
-    "description": "The name of one suggestion Ask Cmdr can make (changing the settings of a server already saved in Cmdr's server list), dropped into the askCmdr.decision.serverRejected and askCmdr.decision.serverApproved sentences as their verbName placeholder. Translate it in whatever form those two sentences need in your language (English uses the -ing form). Lowercase, no full stop."
+    "description": "The name of one suggestion Ask Cmdr can make (changing the settings of a server already saved in Cmdr's server list), dropped into the askCmdr.decision.serverRejected and askCmdr.decision.serverApproved sentences as their verbName placeholder. It means editing that server's settings, not swapping it for another server. Translate it in whatever form those two sentences need in your language (English uses the -ing form). That may be a noun phrase (“the changing of a server's settings”), and it may take a different form from the file-operation verb keys (askCmdr.decision.verbMove and its siblings), which fill different sentences: pick what reads naturally in these two. Lowercase, no full stop."
   },
   "askCmdr.decision.saved": "Saved",
   "@askCmdr.decision.saved": {
-    "description": "A second line in the Ask Cmdr chat rail, under an approved suggestion to save or change a server (askCmdr.decision.serverApproved), saying Cmdr saved it. Saving doesn't connect to the server. Short status, sentence case, no full stop."
+    "description": "A second line in the Ask Cmdr chat rail, under an approved suggestion to save or change a server (askCmdr.decision.serverApproved), saying Cmdr saved the server (its new entry or its changed settings) in the server list. Where “Saved” agrees in gender or number in your language, agree it with “server”. Saving doesn't connect to the server. Short status, sentence case, no full stop."
   },
   "askCmdr.decision.savedNotShare": "Saved the server, not its share",
   "@askCmdr.decision.savedNotShare": {

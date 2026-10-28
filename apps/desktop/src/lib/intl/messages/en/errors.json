@@ -3878,7 +3878,7 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position."
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Ask Cmdr for names that don’t match the items being moved.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Ask Cmdr for names that don’t match the items being moved or copied.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
     "description": "Recovery suggestion for the reason this one's explanation gives (ontoASource). Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU).",
     "screenshot": "error-message-example.png",
