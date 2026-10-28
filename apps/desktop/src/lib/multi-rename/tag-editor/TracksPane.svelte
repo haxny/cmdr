@@ -306,7 +306,9 @@
         style:grid-template-columns={grid}
         style:--spacing-scrollbar-width="{scrollbarWidth}px"
     >
-        <span class="head-mark">
+        <!-- One cell per column, each with its row cells' `data-col`: an `.sr-only` element is `position: absolute`, so
+             as a grid child it takes no column and moves every label after it one column left. -->
+        <span class="head-mark" data-col="mark">
             <Checkbox
                 ariaLabel={tString('multiRename.tags.select.all')}
                 checked={allSelected}
@@ -315,13 +317,13 @@
                 onCheckedChange={() => { selection.setAll(!allSelected) }}
             />
         </span>
-        <span class="sr-only">{tString('multiRename.tags.col.play')}</span>
+        <span data-col="play"><span class="sr-only">{tString('multiRename.tags.col.play')}</span></span>
         {#if showNumber}
-            <TrackSortHeader sortKey="discTrack" label={tString('multiRename.tags.col.number')} current={sort} onClick={sortBy} align="right" />
+            <TrackSortHeader col="number" sortKey="discTrack" label={tString('multiRename.tags.col.number')} current={sort} onClick={sortBy} align="right" />
         {/if}
-        <TrackSortHeader sortKey="title" label={tString('multiRename.tags.col.title')} current={sort} onClick={sortBy} />
-        <TrackSortHeader sortKey="length" label={tString('multiRename.tags.col.length')} current={sort} onClick={sortBy} align="right" />
-        <TrackSortHeader sortKey="fileName" label={tString('multiRename.tags.col.fileName')} current={sort} onClick={sortBy} />
+        <TrackSortHeader col="title" sortKey="title" label={tString('multiRename.tags.col.title')} current={sort} onClick={sortBy} />
+        <TrackSortHeader col="length" sortKey="length" label={tString('multiRename.tags.col.length')} current={sort} onClick={sortBy} align="right" />
+        <TrackSortHeader col="file" sortKey="fileName" label={tString('multiRename.tags.col.fileName')} current={sort} onClick={sortBy} />
     </div>
     <!-- Says which cell typing, Delete and F2 act on, when ← / → move it. -->
     {#if showNumber}
