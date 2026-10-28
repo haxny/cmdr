@@ -262,3 +262,15 @@ fn diacritics_reported() {
     close(&id);
     close_rename(&id);
 }
+
+#[test]
+fn format_reads_n_of_m_track_and_disc_as_n() {
+    let (_dir, _listing, id) = album("tag-text-nofm");
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_all(TagField::Track, &["3/12"])]).expect("sets the track");
+    edit(&id, vec![set_all(TagField::Disc, &["1/2"])]).expect("sets the disc");
+    let view = run(&id, format(TagField::Title, "[=tag.disc]-[=tag.track]"), None).expect("formats");
+    assert_eq!(titles(&view), vec![Some("1-03"), Some("1-03"), Some("1-03")]);
+    close(&id);
+    close_rename(&id);
+}

@@ -662,15 +662,15 @@ impl SessionMedia {
                 .collect();
             (facts, inner.progress())
         };
+        // The example pads as these files' names would.
+        let number_width = NumberWidth::of(facts.iter().map(Arc::as_ref));
         let fields = MediaField::ALL
             .into_iter()
             .map(|field| {
                 let token = MediaToken::of(field);
                 MediaFieldOverview {
                     field,
-                    example: facts
-                        .iter()
-                        .find_map(|facts| token.value_text(facts, NumberWidth::default())),
+                    example: facts.iter().find_map(|facts| token.value_text(facts, number_width)),
                     files_with_it: facts.iter().filter(|facts| facts.get(field).is_some()).count(),
                 }
             })

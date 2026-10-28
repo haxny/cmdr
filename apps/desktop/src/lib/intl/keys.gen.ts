@@ -2813,6 +2813,7 @@ export type MessageKey =
   | 'multiRename.mediaEditor.dateHint'
   | 'multiRename.mediaEditor.digits'
   | 'multiRename.mediaEditor.digitsHint'
+  | 'multiRename.mediaEditor.digitsHintTrack'
   | 'multiRename.mediaEditor.digitsInvalid'
   | 'multiRename.mediaEditor.fallback'
   | 'multiRename.mediaEditor.format'

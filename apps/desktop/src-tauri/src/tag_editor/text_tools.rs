@@ -151,7 +151,10 @@ fn folder_name(folder: Option<&Path>) -> String {
 /// disc as integers, and the year from the first four digits of Date.
 fn media_facts_of(tags: &FileTags) -> MediaFacts {
     let first = |field: TagField| tags.fields.get(&field).and_then(|values| values.first()).cloned();
-    let number = |field: TagField| first(field).and_then(|text| text.trim().parse::<i64>().ok());
+    // `3/12` is track 3 of 12: the N, as the mask side reads it.
+    let number = |field: TagField| {
+        first(field).and_then(|text| text.split('/').next().and_then(|n| n.trim().parse::<i64>().ok()))
+    };
     MediaFacts {
         title: first(TagField::Title),
         artist: first(TagField::Artist),

@@ -554,3 +554,29 @@ fn asking_a_closed_session_says_so() {
         Err(MultiRenameError::SessionClosed)
     ));
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_pickers_track_example_pads_to_the_width_these_files_get() {
+    let (_dir, listing) = folder("media-track-example", &["a.mp3", "b.mp3"], &[]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let (events, calls) = (Events::default(), Calls::default());
+    start_media_with(
+        &session.session_id,
+        loader(1, &events, &calls, |job| {
+            Ok(MediaFacts {
+                track: Some(if job.name == "a.mp3" { 7 } else { 120 }),
+                ..MediaFacts::default()
+            })
+        }),
+    )
+    .expect("the read starts");
+    read_through(&session.session_id).await;
+    let overview = media_overview(&session.session_id).expect("an overview");
+    let track = overview
+        .fields
+        .iter()
+        .find(|f| f.field == MediaField::TagTrack)
+        .expect("listed");
+    assert_eq!(track.example.as_deref(), Some("007"));
+    close(&session.session_id);
+}

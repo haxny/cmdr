@@ -625,7 +625,11 @@
   },
   "multiRename.mediaEditor.digitsHint": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty for the number as it is.",
   "@multiRename.mediaEditor.digitsHint": {
-    "description": "Hint under the field editor's Digits box for a number field."
+    "description": "Hint under the field editor's Digits box for a number field that doesn't pad by itself (like ISO): empty shows the number as it is."
+  },
+  "multiRename.mediaEditor.digitsHintTrack": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty to pad to the longest number in these files, like 07 for 42 tracks.",
+  "@multiRename.mediaEditor.digitsHintTrack": {
+    "description": "Hint under the field editor's Digits box for the track and disc number fields, which pad by themselves when it is empty."
   },
   "multiRename.mediaEditor.digitsInvalid": "Type how many digits, like 2, or zeros, like 00.",
   "@multiRename.mediaEditor.digitsInvalid": {

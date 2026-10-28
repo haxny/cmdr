@@ -187,9 +187,23 @@ describe('the media field editor', () => {
     expect(document.querySelector('.media-editor .invalid')?.textContent).toBe(
       'Type how many digits, like 2, or zeros, like 00.',
     )
+    expect(document.querySelector('.media-editor .text-field-invalid')).not.toBeNull()
     await type(formatBox(), '00')
     expect(document.querySelector('.media-editor .invalid')).toBeNull()
+    expect(document.querySelector('.media-editor .text-field-invalid')).toBeNull()
     expect(track.value()).toBe('[=tag.track:2]')
+  })
+
+  it('hints at the longest-number padding for a track, and at plain padding for other numbers', async () => {
+    const track = await mountField('[=tag.track]')
+    await open(track, 5)
+    expect(document.querySelector('.media-editor .hint')?.textContent).toContain('longest number')
+    cleanup?.()
+    document.body.innerHTML = ''
+
+    const iso = await mountField('[=exif.iso]')
+    await open(iso, 5)
+    expect(document.querySelector('.media-editor .hint')?.textContent).toContain('the number as it is')
   })
 
   it('Enter goes back to the mask, and never reaches the sheet', async () => {

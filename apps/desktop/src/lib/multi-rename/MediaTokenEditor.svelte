@@ -158,7 +158,11 @@
         kind === 'date'
             ? tString('multiRename.mediaEditor.dateHint')
             : kind === 'number'
-              ? tString('multiRename.mediaEditor.digitsHint')
+              ? tString(
+                    value.field === 'tagTrack' || value.field === 'tagDisc'
+                        ? 'multiRename.mediaEditor.digitsHintTrack'
+                        : 'multiRename.mediaEditor.digitsHint',
+                )
               : tString('multiRename.mediaEditor.charactersHint'),
     )
 </script>
@@ -174,7 +178,7 @@
             radius="md"
             ariaLabel={formatLabel}
             aria-describedby={digitsInvalid ? `${hintId} ${invalidId}` : hintId}
-            aria-invalid={digitsInvalid ? 'true' : undefined}
+            invalid={digitsInvalid}
             oninput={(e: Event) => { typeFormat((e.currentTarget as HTMLInputElement).value) }}
             onblur={() => { draft = null }}
             onkeydown={(e: KeyboardEvent) => { onKeydown(e, true) }}
