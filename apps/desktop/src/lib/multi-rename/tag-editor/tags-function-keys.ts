@@ -28,8 +28,8 @@ export const TAGS_BAR_COMMANDS = [
 
 export type TagsBarCommandId = (typeof TAGS_BAR_COMMANDS)[number]
 
-/** Every command the window runs: the bar's, plus ⌘Z. (Tab, `tags.switchPane`, is the panes' own.) */
-export type TagsCommandId = TagsBarCommandId | 'tags.undo'
+/** Every command the window runs: the bar's, plus ⌘Z and ⇧⌘Z. (Tab, `tags.switchPane`, is the panes' own.) */
+export type TagsCommandId = TagsBarCommandId | 'tags.undo' | 'tags.redo'
 
 export interface TagsBarSlot {
   id: TagsBarCommandId
@@ -68,6 +68,7 @@ export const TAGS_WRITE_SLOT: TagsBarSlot = { id: 'tags.write', label: 'multiRen
 export const TAGS_WINDOW_KEYS: readonly TagsCommandId[] = [
   'tags.write',
   'tags.undo',
+  'tags.redo',
   'tags.replace',
   'tags.case',
   'tags.format',

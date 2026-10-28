@@ -1639,6 +1639,15 @@ export const commands = {
   // Applies edits in memory; an unknown track refuses the whole batch.
   editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
+  /**
+   *  Reverses the last pending edit (an edit batch, a tool run or a cover change); changes nothing
+   *  when there is none.
+   */
+  undoTagEdit: (sessionId: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('undo_tag_edit', { sessionId })),
+  // Re-applies the last undone pending edit; changes nothing when there is none.
+  redoTagEdit: (sessionId: string) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('redo_tag_edit', { sessionId })),
   // Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
   sortTagTracks: (sessionId: string, sort: TrackSort) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('sort_tag_tracks', { sessionId, sort })),
@@ -18598,6 +18607,10 @@ export type TagEditorView = {
   badDates: number
   // The order the tracks are in. Set by the session; `None` straight out of `build`.
   sort: TrackSort | null
+  // An edit step can be undone (⌘Z); set by the session.
+  canUndoEdit: boolean
+  // An undone edit step can be redone (⇧⌘Z); set by the session.
+  canRedoEdit: boolean
 }
 
 /**

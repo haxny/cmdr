@@ -21,6 +21,7 @@ use crate::tag_editor::cover_choices::{
     CoverChoice, DROP_READS, image_of, list as list_covers, set_for_all, set_from_bytes_within, set_from_path_within,
     thumbnail, use_for_all,
 };
+use crate::tag_editor::history::{redo_edit, undo_edit};
 use crate::tag_editor::last_apply::{LastTagApply, last_of};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
@@ -113,6 +114,33 @@ pub async fn edit_tags(session_id: String, edits: Vec<TagEdit>) -> Result<TagEdi
         let started = Instant::now();
         let result = edit(&session_id, edits);
         activity::edited("edit", &result, started);
+        result
+    })
+    .await
+}
+
+/// Reverses the last pending edit (an edit batch, a tool run or a cover change); changes nothing
+/// when there is none.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_tag_edit(session_id: String) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = undo_edit(&session_id);
+        activity::edited("undo edit", &result, started);
+        result
+    })
+    .await
+}
+
+/// Re-applies the last undone pending edit; changes nothing when there is none.
+#[tauri::command]
+#[specta::specta]
+pub async fn redo_tag_edit(session_id: String) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = redo_edit(&session_id);
+        activity::edited("redo edit", &result, started);
         result
     })
     .await

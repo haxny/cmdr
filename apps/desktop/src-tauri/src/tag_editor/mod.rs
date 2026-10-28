@@ -8,6 +8,8 @@ pub(crate) mod cover;
 pub(crate) mod cover_choices;
 pub(crate) mod cover_image;
 pub(crate) mod error;
+pub(crate) mod follow;
+pub(crate) mod history;
 pub(crate) mod last_apply;
 pub(crate) mod menu_route;
 pub(crate) mod playback;
@@ -30,6 +32,8 @@ mod big_book_test;
 mod cover_choices_test;
 #[cfg(test)]
 mod cover_test;
+#[cfg(test)]
+mod history_test;
 #[cfg(test)]
 mod kind_test;
 #[cfg(test)]

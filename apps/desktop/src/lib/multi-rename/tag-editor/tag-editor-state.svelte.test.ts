@@ -9,6 +9,8 @@ const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
   sortTagTracks: vi.fn(),
+  undoTagEdit: vi.fn(),
+  redoTagEdit: vi.fn(),
   runTagTool: vi.fn(),
   runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
@@ -200,6 +202,39 @@ describe('createTagEditorState', () => {
     await state.sortTracks({ key: 'fileName', descending: false })
     expect(state.error).toEqual({ kind: 'noSession' })
     expect(state.view).toBe(SORTED)
+  })
+
+  it('undoEdit and redoEdit swap in the view the backend answers with, after the edits still out have landed', async () => {
+    const state = createTagEditorState('S')
+    const UNDONE = { editable: true, tracks: [{}, {}], dirty: false, canRedoEdit: true } as unknown as TagEditorView
+    const REDONE = { editable: true, tracks: [{}, {}], dirty: true, canUndoEdit: true } as unknown as TagEditorView
+    let finishEdit: (res: unknown) => void = () => {}
+    ipc.editTags.mockReturnValueOnce(new Promise((resolve) => (finishEdit = resolve)))
+    ipc.undoTagEdit.mockResolvedValueOnce({ ok: true, value: UNDONE })
+    ipc.redoTagEdit.mockResolvedValueOnce({ ok: true, value: REDONE })
+    const editing = state.edit([])
+    const undoing = state.undoEdit()
+    await Promise.resolve()
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    finishEdit({ ok: true, value: EDITED })
+    await editing
+    await undoing
+    expect(ipc.undoTagEdit).toHaveBeenCalledWith('S')
+    expect(state.view).toBe(UNDONE)
+    expect(state.editing).toBe(false)
+    await state.redoEdit()
+    expect(ipc.redoTagEdit).toHaveBeenCalledWith('S')
+    expect(state.view).toBe(REDONE)
+  })
+
+  it('a failed undoEdit keeps the view and shows the typed error', async () => {
+    const state = createTagEditorState('S')
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: VIEW })
+    await state.open()
+    ipc.undoTagEdit.mockResolvedValueOnce({ ok: false, error: { kind: 'noSession' } })
+    await state.undoEdit()
+    expect(state.view).toBe(VIEW)
+    expect(state.error).toEqual({ kind: 'noSession' })
   })
 
   it('previewFromNames returns the rows and keeps a typed error', async () => {

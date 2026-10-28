@@ -63,6 +63,7 @@ describe('the tag editor’s commands in Settings › Keyboard shortcuts', () =>
     ['tags.removeExtras', ['⇧F8']],
     ['tags.write', ['⌘S']],
     ['tags.undo', ['⌘Z']],
+    ['tags.redo', ['⌘⇧Z']],
   ] as const)('%s is %j, and no other command in the Tags window or App takes those keys', (id, keys) => {
     expect(getDefaultShortcuts(id)).toEqual(keys)
     for (const key of keys) expect(findConflictsForShortcut(key, 'Tags window').map((c) => c.id)).toEqual([id])

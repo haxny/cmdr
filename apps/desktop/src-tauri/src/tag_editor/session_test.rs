@@ -538,7 +538,7 @@ fn rebase_keeps_edits_and_follows_the_disk_elsewhere() {
         (TagField::Comment, "c"),
     ]);
 
-    let rebased = super::session::rebase(&old, &edited, &now);
+    let rebased = super::follow::rebase(&old, &edited, &now);
 
     assert_eq!(
         rebased,

@@ -126,6 +126,7 @@ export const FIXED_KEY_COMMAND_IDS = [
   'tags.removeExtras',
   'tags.write',
   'tags.undo',
+  'tags.redo',
   // Family 4 — deliberate override. ErrorPane claims ⌘D through a CAPTURE-phase
   // document listener that runs ahead of the dispatch spine, so it wins over
   // whatever the user bound ⌘D to. Fixed because releasing the key would falsify

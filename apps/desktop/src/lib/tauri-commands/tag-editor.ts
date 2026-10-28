@@ -74,6 +74,19 @@ export async function editTags(
 }
 
 /**
+ * Reverses the last pending edit (an edit batch, a tool run, a cover change). With nothing to undo the view comes
+ * back unchanged (`canUndoEdit` says whether there is).
+ */
+export async function undoTagEdit(sessionId: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.undoTagEdit(sessionId))
+}
+
+/** Re-applies the last undone pending edit; with nothing to redo the view comes back unchanged. */
+export async function redoTagEdit(sessionId: string): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.redoTagEdit(sessionId))
+}
+
+/**
  * Puts the tracks in `sort` order (the rename order moves with them). No file or edit is touched; the answer's
  * `sort` is the order now.
  */

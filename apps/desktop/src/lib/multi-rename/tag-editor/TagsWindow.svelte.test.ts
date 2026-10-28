@@ -74,6 +74,8 @@ const VIEW = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
 }
 
 async function settle(): Promise<void> {

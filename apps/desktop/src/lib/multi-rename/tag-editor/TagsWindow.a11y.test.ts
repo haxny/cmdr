@@ -71,6 +71,8 @@ describe('TagsWindow a11y', () => {
         dirty: false,
         diacritics: [],
         badDates: 0,
+        canUndoEdit: false,
+        canRedoEdit: false,
       },
     })
     await expectNoA11yViolations(await mountWindow())

@@ -41,6 +41,8 @@ export const tagsWindowCommands: CommandSource[] = [
   { id: 'tags.removeExtras', nameKey: 'commands.tagsRemoveExtras.label', shortcuts: ['⇧F8'], ...tagsWindowKey },
   // Lists the changes in a dialog, then writes on confirm. From a value being typed it sends that value first.
   { id: 'tags.write', nameKey: 'commands.tagsWrite.label', shortcuts: ['⌘S'], ...tagsWindowKey },
-  // Undoes the last write (asks first). While a value is typed ⌘Z stays the box's own text undo.
+  // Undoes the last pending edit at once; with none, the last write (asks first). While a value is typed ⌘Z (and
+  // ⇧⌘Z) stay the box's own text undo.
   { id: 'tags.undo', nameKey: 'commands.tagsUndo.label', shortcuts: ['⌘Z'], ...tagsWindowKey },
+  { id: 'tags.redo', nameKey: 'commands.tagsRedo.label', shortcuts: ['⌘⇧Z'], ...tagsWindowKey },
 ]

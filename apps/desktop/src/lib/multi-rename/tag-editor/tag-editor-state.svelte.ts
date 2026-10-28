@@ -29,6 +29,8 @@ import {
   setCoverFromPath,
   sortTagTracks,
   undoTagApply,
+  undoTagEdit,
+  redoTagEdit,
   useCoverForAll,
   type ApplyRequest,
   type CoverCandidate,
@@ -86,6 +88,13 @@ export interface TagEditorState {
   /** Reads every file again, dropping every unwritten edit (after "changed on disk since it was read"). */
   reload(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
+  /**
+   * Reverses the last pending edit (one edit call: a batch, a tool run, a cover change) and takes the view it answers
+   * with. Waits for the edits still out first. Not the write undo (`undo`); `view.canUndoEdit` says whether there is one.
+   */
+  undoEdit(): Promise<void>
+  /** Re-applies the last undone edit (`view.canRedoEdit`). */
+  redoEdit(): Promise<void>
   /**
    * Puts the tracks in `sort` order and takes the view it answers with (`view.sort` is the order now). The backend
    * reorders only the session's names: no edit and no file changes, and the next `[C]` or Renumber counts in this order.
@@ -288,6 +297,14 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     open,
     edit: (batch) => editView(() => editTags(sessionId, batch)),
+    async undoEdit() {
+      await settled()
+      await editView(() => undoTagEdit(sessionId))
+    },
+    async redoEdit() {
+      await settled()
+      await editView(() => redoTagEdit(sessionId))
+    },
     // Not an edit: it changes the order only, so `editing` stays off.
     sortTracks: (sort) => replaceView(() => sortTagTracks(sessionId, sort)),
     tool: (tool, scope = null) => editView(() => runTagTool(sessionId, tool, scope)),

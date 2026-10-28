@@ -16,6 +16,8 @@ import type { TagEditorView } from '#lib/tauri-commands/index.js'
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  undoTagEdit: vi.fn(),
+  redoTagEdit: vi.fn(),
   getTagChanges: vi.fn(),
   applyTags: vi.fn(),
   undoTagApply: vi.fn(() =>
@@ -102,6 +104,8 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
   sort: null,
 }
 
@@ -340,6 +344,39 @@ describe('the Tags window’s function keys', () => {
     await key('z', { metaKey: true, code: 'KeyZ' })
     expect(root.textContent).toContain('There’s no tag write to undo.')
     expect(dialog()).toBeNull()
+  })
+
+  it('⌘Z after a pane Delete takes the edit back at once, without a dialog; ⇧⌘Z puts it back', async () => {
+    const edited = { ...VIEW, dirty: true, canUndoEdit: true }
+    ipc.editTags.mockResolvedValue({ ok: true, value: edited })
+    ipc.undoTagEdit.mockResolvedValue({ ok: true, value: { ...VIEW, canRedoEdit: true } })
+    ipc.redoTagEdit.mockResolvedValue({ ok: true, value: edited })
+    const root = await mountWindow()
+    await key('Delete')
+    expect(ipc.editTags).toHaveBeenCalledTimes(1)
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    expect(ipc.undoTagEdit).toHaveBeenCalledWith('S')
+    expect(confirmDialog).not.toHaveBeenCalled()
+    expect(dialog()).toBeNull()
+    expect(root.textContent).toContain('Undone')
+    expect(root.textContent).not.toContain('There’s no tag write to undo.')
+    await key('Z', { metaKey: true, shiftKey: true, code: 'KeyZ' })
+    expect(ipc.redoTagEdit).toHaveBeenCalledWith('S')
+    expect(root.textContent).toContain('Redone')
+  })
+
+  it('⇧⌘Z with nothing to redo does nothing, and in a value box both stay the box’s own', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: { ...VIEW, canUndoEdit: true } })
+    const root = await mountWindow()
+    await key('Z', { metaKey: true, shiftKey: true, code: 'KeyZ' })
+    expect(ipc.redoTagEdit).not.toHaveBeenCalled()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    const undo = await key('z', { metaKey: true, code: 'KeyZ' })
+    const redo = await key('Z', { metaKey: true, shiftKey: true, code: 'KeyZ' })
+    expect([undo.defaultPrevented, redo.defaultPrevented]).toEqual([false, false])
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    expect(ipc.redoTagEdit).not.toHaveBeenCalled()
   })
 
   it('⌘Z after a write asks, then undoes it, in the Write dialog', async () => {

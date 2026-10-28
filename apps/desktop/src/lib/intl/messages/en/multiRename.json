@@ -2168,6 +2168,14 @@
   "@multiRename.tags.clearField.run": {
     "description": "Button in the Clear a field dialog that empties the field. Nothing is written into the files until Write."
   },
+  "multiRename.tags.undo.editUndone": "Undone",
+  "@multiRename.tags.undo.editUndone": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) after Command+Z took back the last unwritten tag edit. One word, no detail."
+  },
+  "multiRename.tags.undo.editRedone": "Redone",
+  "@multiRename.tags.undo.editRedone": {
+    "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) after Command+Shift+Z put back the unwritten tag edit that was just taken back. One word, no detail."
+  },
   "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
   "@multiRename.tags.undo.nothing": {
     "description": "Status line in the tag editor window (the separate window that edits audio files’ tags) when Command+Z is pressed but no tag write can be undone."

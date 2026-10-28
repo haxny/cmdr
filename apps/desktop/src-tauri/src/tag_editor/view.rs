@@ -111,6 +111,10 @@ pub struct TagEditorView {
     pub bad_dates: u32,
     /// The order the tracks are in. Set by the session; `None` straight out of `build`.
     pub sort: Option<TrackSort>,
+    /// An edit step can be undone (⌘Z); set by the session.
+    pub can_undo_edit: bool,
+    /// An undone edit step can be redone (⇧⌘Z); set by the session.
+    pub can_redo_edit: bool,
 }
 
 /// What the session's rules say about the window, apart from the files.
@@ -153,6 +157,8 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .collect(),
         bad_dates: count_bad_dates(tracks),
         sort: None,
+        can_undo_edit: false,
+        can_redo_edit: false,
     }
 }
 

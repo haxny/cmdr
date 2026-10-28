@@ -8,6 +8,7 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 - `session.rs` the store (`SESSIONS`), `open` / `edit` / `tool` / `changes` / `close`; `error.rs` `TagEditorError`.
 - `sort.rs` the track order (`TrackSort`): reorders only the rename session's names via `set_order`, never a file or an
   edit; opens in disc/track order (file name when no track has a number), once.
+- `history.rs` the pending-edit undo/redo (⌘Z, ⇧⌘Z): one step per edit call (batch, tool run, text-tool run, cover change), only the files it changed, `EDIT_HISTORY_LIMIT = 200`; a write, a restart, or a reload under the edits clears it; a sort is no edit. `TagEditorView.can_undo_edit`/`can_redo_edit`.
 - `view.rs` the pure `TagEditorView`; `cover*.rs` covers; `apply.rs`, `undo.rs`, `last_apply.rs`, `at_quit.rs` the
   write, ⌘Z and the quit gate; `text_tools.rs` find/replace and format-from-mask; `window.rs` the window's hold on its
   session and menu-key routing; `playback.rs` audio tokens and foobar2000; `activity.rs` log lines.

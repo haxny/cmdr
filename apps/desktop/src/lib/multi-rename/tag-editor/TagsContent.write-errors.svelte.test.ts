@@ -47,6 +47,8 @@ const VIEW: TagEditorView = {
   dirty: true,
   diacritics: [],
   badDates: 0,
+  canUndoEdit: false,
+  canRedoEdit: false,
   sort: null,
 }
 

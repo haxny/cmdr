@@ -107,7 +107,8 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   a dialog for exactly that, `routes/(main)/DETAILS.md` § The dialog gate); a routed Tab would switch panes from a
   dialog or a field where Tab must move focus. The panes answer Tab themselves; elsewhere it is the browser's and the
   dialog focus trap's. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key reaches the page's keydown
-  (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` outside a text box and leaves ⌘Z to the
+  (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` (the last pending edit at once when
+  `view.canUndoEdit`, else the last write after asking; ⇧⌘Z is `tags.redo`) outside a text box and leaves ⌘Z to the
   box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S, ⇧F3, ⇧F5, ⌥Space and
   Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
   `every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window`. ❗ Not yet checked by hand in a built app:

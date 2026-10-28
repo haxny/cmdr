@@ -13,7 +13,7 @@
 //!
 //! ❌ No file read under `SESSIONS`' lock: reads happen first, the lock only swaps results in.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex};
@@ -29,6 +29,8 @@ use cmdr_tags::{
     read_duration, read_tags, removed_by_kind,
 };
 
+use super::follow::follow_disk;
+use super::history::{EditHistory, capture, clear, record};
 use super::sort::{TrackSort, reorder};
 use super::view::{
     Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, stem_of,
@@ -134,6 +136,8 @@ pub(super) struct TagSession {
     /// The order `sort` made; `sort` stands only while the tracks still are in it.
     pub(super) sorted_tracks: Vec<PathBuf>,
     pub(super) ordered: bool, // A sort has run: a restart keeps the order, even one moved by hand.
+    /// The pending edits' undo and redo steps.
+    pub(super) history: EditHistory,
 }
 
 pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -260,6 +264,7 @@ pub(crate) fn open_counting(
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.entry(session_id.to_string()).or_default();
         session.by_path = by_path;
+        clear(session);
         session.drop_stale_sort(&layout);
         let ordered = session.ordered.then(|| view_of(&layout, session));
         ordered.ok_or_else(|| TrackSort::default_for(session))
@@ -306,6 +311,8 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
     }
     TagEditorView {
         sort: session.sort,
+        can_undo_edit: session.history.can_undo(),
+        can_redo_edit: session.history.can_redo(),
         ..view
     }
 }
@@ -416,7 +423,7 @@ fn store(session: &mut TagSession, paths: Vec<PathBuf>, edited: Vec<FileTags>) {
     }
 }
 
-fn require_editable(layout: &Layout) -> Result<(), TagEditorError> {
+pub(super) fn require_editable(layout: &Layout) -> Result<(), TagEditorError> {
     if layout.access.editable {
         Ok(())
     } else {
@@ -449,7 +456,9 @@ pub fn edit(session_id: &str, edits: Vec<TagEdit>) -> Result<TagEditorView, TagE
         let (paths, before) = readable(layout, session);
         let engine_edits = translate(&paths, edits)?;
         let after = apply_edits(&before, &engine_edits);
+        let snapshot = capture(session);
         store(session, paths, after);
+        record(session, snapshot);
         Ok(view_of(layout, session))
     })
 }
@@ -486,7 +495,9 @@ pub(super) fn edit_scoped(
             // Every audio track the session lists: a damaged file is still part of the book.
             let book = layout.tracks.len();
             let after = f(&paths, &before, book)?;
+            let snapshot = capture(session);
             store(session, paths, after);
+            record(session, snapshot);
         }
         Ok(view_of(layout, session))
     })
@@ -639,6 +650,7 @@ pub(super) fn mark_written(session_id: &str, written: Vec<(PathBuf, FileTags)>) 
     let Some(session) = sessions.get_mut(session_id) else {
         return;
     };
+    clear(session);
     for (path, requested, entry) in fresh {
         let Some(slot) = session.by_path.get_mut(&path) else {
             continue;
@@ -689,6 +701,10 @@ pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
     let mut sessions = SESSIONS.lock_ignore_poison();
     for (session_id, session) in sessions.iter_mut() {
         let take_as_read = undoing == Some(session_id.as_str());
+        if fresh.iter().any(|(path, _)| session.by_path.contains_key(path)) {
+            // The files moved under the steps; they'd put back stale tags.
+            clear(session);
+        }
         for (path, entry) in &fresh {
             if let Some(slot) = session.by_path.get_mut(path) {
                 if take_as_read {
@@ -699,55 +715,6 @@ pub(super) fn reload(paths: &[PathBuf], undoing: Option<&str>) {
             }
         }
     }
-}
-
-/// `held` takes the file's new disk state `now`, keeping its unwritten edits.
-fn follow_disk(held: &mut Entry, now: &Entry) {
-    match (held, now) {
-        (Entry::Loaded(held), Entry::Loaded(now)) => {
-            let mut keys = CoverKeys::default();
-            keys.remember(&held.edited.cover, held.cover_key);
-            keys.remember(&now.edited.cover, now.cover_key);
-            held.edited = rebase(&held.disk, &held.edited, &now.disk);
-            held.cover_key = keys.key_of(&held.edited.cover);
-            held.disk = now.disk.clone();
-            held.fingerprint = now.fingerprint.clone();
-            held.duration_ms = now.duration_ms;
-        }
-        (held, now) => *held = now.clone(),
-    }
-}
-
-/// `edited` moved from `old` onto `now`: each field, the cover, and each extra the user left as
-/// `old` had it takes `now`'s value; one the user changed keeps the edit.
-pub(super) fn rebase(old: &FileTags, edited: &FileTags, now: &FileTags) -> FileTags {
-    FileTags {
-        fields: rebase_map(&old.fields, &edited.fields, &now.fields),
-        cover: if edited.cover == old.cover {
-            now.cover.clone()
-        } else {
-            edited.cover.clone()
-        },
-        extras: rebase_map(&old.extras, &edited.extras, &now.extras),
-    }
-}
-
-fn rebase_map<K: Ord + Clone, V: PartialEq + Clone>(
-    old: &BTreeMap<K, V>,
-    edited: &BTreeMap<K, V>,
-    now: &BTreeMap<K, V>,
-) -> BTreeMap<K, V> {
-    let keys: BTreeSet<&K> = old.keys().chain(edited.keys()).chain(now.keys()).collect();
-    keys.into_iter()
-        .filter_map(|key| {
-            let value = if edited.get(key) == old.get(key) {
-                now.get(key)
-            } else {
-                edited.get(key)
-            };
-            value.map(|value| (key.clone(), value.clone()))
-        })
-        .collect()
 }
 
 /// Ends the tag session, dropping its edits. A no-op when it's already gone.

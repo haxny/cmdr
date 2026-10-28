@@ -238,9 +238,22 @@
         tool = { id, field: focusedField }
     }
 
+    /** ⌘Z: the last pending edit at once; with none, the last write (asks first). */
     function undoLast(): void {
-        if (tags.undoable === null) notice = 'multiRename.tags.undo.nothing'
+        if (tags.view?.canUndoEdit === true) {
+            void tags.undoEdit().then(() => {
+                notice = 'multiRename.tags.undo.editUndone'
+            })
+        } else if (tags.undoable === null) notice = 'multiRename.tags.undo.nothing'
         else writeMode = 'undo'
+    }
+
+    /** ⇧⌘Z: the last undone edit again. Nothing to redo says nothing. */
+    function redoLast(): void {
+        if (tags.view?.canRedoEdit !== true) return
+        void tags.redoEdit().then(() => {
+            notice = 'multiRename.tags.undo.editRedone'
+        })
     }
 
     const COMMANDS: Record<TagsCommandId, () => void> = {
@@ -261,11 +274,12 @@
         'tags.removeExtras': () => { openTool('extras') },
         'tags.write': () => { writeMode = 'write' },
         'tags.undo': undoLast,
+        'tags.redo': redoLast,
     }
 
     /** Whether `id` can act on the tags as they are now. */
     function canRun(id: TagsCommandId): boolean {
-        if (id === 'tags.undo') return tags.view?.editable === true
+        if (id === 'tags.undo' || id === 'tags.redo') return tags.view?.editable === true
         return enabledCommands.has(id)
     }
 
