@@ -1,11 +1,11 @@
 /**
  * The card a running answer shows when it passed the user's spend threshold: the amount so far,
- * the estimate's caveat, and Keep going and Stop wired to their handlers. Plus its a11y.
+ * the estimate's caveat, and Keep going and Stop wired to their handlers. Its a11y lives in
+ * `AskCmdrSpendPause.a11y.test.ts`.
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { flushSync, mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { flushSync, mount } from 'svelte'
 
 import AskCmdrSpendPause from './AskCmdrSpendPause.svelte'
 
@@ -31,12 +31,5 @@ describe('AskCmdrSpendPause', () => {
     stop.click()
     expect(onKeepGoing).toHaveBeenCalledOnce()
     expect(onStop).toHaveBeenCalledOnce()
-  })
-
-  it('has no a11y violations', async () => {
-    document.body.innerHTML = ''
-    const { target } = render()
-    await tick()
-    await expectNoA11yViolations(target)
   })
 })
