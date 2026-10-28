@@ -1,6 +1,6 @@
 /**
- * The Tags tab's discard guard: closing the sheet, or pressing Rename, while tag edits are unwritten asks
- * "Discard tag changes?" first, so nothing is lost silently. The dialog holds one line of it; the logic lives here.
+ * The Tags window's discard guard: closing the window (Escape, the red button) while tag edits are unwritten asks
+ * "Discard tag changes?" first, so nothing is lost silently. `TagsWindow.svelte` holds one line of it.
  */
 
 import { getAppLogger } from '#lib/logging/logger.js'
@@ -13,19 +13,19 @@ const log = getAppLogger('multiRename')
 export interface DiscardGuard {
   /** There are tag edits not yet written to the files, or one still on its way. */
   readonly dirty: boolean
-  /** Resolves true when the sheet may go on to close or rename: nothing to lose, or the user chose Discard. */
+  /** Resolves true when the window may go on to close: nothing to lose, or the user chose Discard. */
   confirm: () => Promise<boolean>
   /** Closes right away when nothing is unwritten; otherwise asks first (one question at a time). */
   close: () => void
 }
 
-/** `tags` is `null` while the Tags tab is off: the guard then never asks and `close` is `onClose`. */
+/** With `tags` `null` the guard never asks and `close` is `onClose`. */
 export function createDiscardGuard(tags: TagEditorState | null, onClose: () => void): DiscardGuard {
   let asking = false
 
   async function confirm(): Promise<boolean> {
     // A cell that just lost focus has an edit on its way; the question is about what it leaves. A call that never
-    // answers (a stalled mount) can't hold the sheet: after the wait it asks anyway.
+    // answers (a stalled mount) can't hold the window: after the wait it asks anyway.
     const answered = (await tags?.settled()) ?? true
     if (answered && tags?.view?.dirty !== true) return true
     return confirmDialog(
@@ -52,7 +52,7 @@ export function createDiscardGuard(tags: TagEditorState | null, onClose: () => v
           if (discard) onClose()
         })
         .catch((e: unknown) => {
-          // A question that couldn't be asked keeps the sheet open: nothing is lost.
+          // A question that couldn't be asked keeps the window open: nothing is lost.
           log.warn("couldn't ask about unwritten tag changes: {reason}", { reason: e })
         })
         .finally(() => {

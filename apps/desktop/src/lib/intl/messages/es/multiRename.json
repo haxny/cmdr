@@ -1672,9 +1672,21 @@
   "@multiRename.tags.openWindow": {
     "sourceHash": "449cf54"
   },
-  "multiRename.tags.window.title": "Tags — {folder}",
+  "multiRename.tags.window.title": "Tags: {folder}",
   "@multiRename.tags.window.title": {
     "sourceHash": "9708a4d"
+  },
+  "multiRename.tags.window.nothingSelected": "Select the audio files to tag first.",
+  "@multiRename.tags.window.nothingSelected": {
+    "sourceHash": "1fbb8f5"
+  },
+  "multiRename.tags.window.openFailed": "Cmdr couldn’t open these tags. Close the window and try again.",
+  "@multiRename.tags.window.openFailed": {
+    "sourceHash": "ad77a4c"
+  },
+  "multiRename.tags.window.close": "Close",
+  "@multiRename.tags.window.close": {
+    "sourceHash": "7d9eb7a"
   },
   "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
   "@multiRename.tags.window.noTracks": {

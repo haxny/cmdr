@@ -185,7 +185,8 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             SEPARATOR,
             item(RENAME_ID, "menu.file.rename", macos("F2")),
             item(MULTI_RENAME_ID, "menu.file.multiRename", both("Ctrl+M")),
-            item(EDIT_TAGS_ID, "menu.file.editTags", macos("Cmd+Shift+E")),
+            // Built disabled; `set_edit_tags_enabled` turns it on while the tag editor setting is.
+            item(EDIT_TAGS_ID, "menu.file.editTags", macos("Cmd+Shift+E")).disabled(),
             SEPARATOR,
             labeled_item(
                 SHOW_IN_FINDER_ID,

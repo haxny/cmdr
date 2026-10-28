@@ -231,6 +231,18 @@ pub fn set_reopen_closed_tab_enabled<R: Runtime>(app: AppHandle<R>, enabled: boo
     Ok(())
 }
 
+/// Greys out (or restores) File > "Edit tags…", following the opt-in tag editor setting (fork).
+/// Pushed by the main window at startup and on every change of the setting. ⚠️ CHROME only: the
+/// handler checks the setting itself (`tag-editor/open-tags.ts`).
+#[tauri::command]
+#[specta::specta]
+pub fn set_edit_tags_enabled<R: Runtime>(app: AppHandle<R>, enabled: bool) -> Result<(), String> {
+    let menu_state = app.state::<MenuState<R>>();
+    menu_state.edit_tags_enabled.store(enabled, Ordering::Relaxed);
+    apply_menu_item_states(&menu_state);
+    Ok(())
+}
+
 /// Activates the right app menu for the window that just gained focus.
 ///
 /// `kind` is one of:

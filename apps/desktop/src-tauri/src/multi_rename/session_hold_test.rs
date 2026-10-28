@@ -30,7 +30,7 @@ fn held(last_used: Instant) -> Session {
 }
 
 #[test]
-fn a_held_session_survives_the_idle_limit_and_the_cap() {
+fn a_held_session_survives_the_idle_limit_and_never_counts_against_the_cap() {
     let now = Instant::now();
     let mut sessions = HashMap::from([
         ("held-idle".to_string(), held(now - IDLE_LIMIT - Duration::from_secs(1))),
@@ -39,12 +39,33 @@ fn a_held_session_survives_the_idle_limit_and_the_cap() {
         ("newest".to_string(), session(now)),
     ]);
 
-    // Room for one more under 4: the oldest unheld session goes, never a held one.
-    evict_to(&mut sessions, now, 4);
+    // Two unheld sessions fit under 3 with room for one more: nothing goes.
+    evict_to(&mut sessions, now, 3);
+    assert_eq!(sessions.len(), 4);
 
+    // Under 2, the oldest UNHELD one goes; the held ones are never candidates.
+    evict_to(&mut sessions, now, 2);
     let mut left: Vec<&str> = sessions.keys().map(String::as_str).collect();
     left.sort_unstable();
     assert_eq!(left, vec!["held-idle", "held-oldest", "newest"]);
+}
+
+#[test]
+fn open_tags_windows_never_push_out_the_sheets_live_session() {
+    // Three Tags windows hold their sessions and the sheet's session is open: the next open
+    // (the sheet's "Tags…" reopening it) must keep the sheet's.
+    let now = Instant::now();
+    let mut sessions = HashMap::from([
+        ("tags-1".to_string(), held(now - Duration::from_secs(300))),
+        ("tags-2".to_string(), held(now - Duration::from_secs(200))),
+        ("tags-3".to_string(), held(now - Duration::from_secs(100))),
+        ("sheet".to_string(), session(now - Duration::from_secs(400))),
+    ]);
+
+    evict_to(&mut sessions, now, MAX_SESSIONS_IN_PRODUCTION);
+
+    assert!(sessions.contains_key("sheet"));
+    assert_eq!(sessions.len(), 4);
 }
 
 #[test]

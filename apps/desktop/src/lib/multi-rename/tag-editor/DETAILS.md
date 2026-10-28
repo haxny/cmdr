@@ -15,7 +15,14 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   window. **Why the hold**: Multi-Rename evicts idle (30 min) and least-recently-used (cap 4) sessions, and a window
   left open over lunch must keep its edits. The backend also ends a `tags-*` window's session on `Destroyed`
   (`src-tauri/src/tag_editor/window.rs`), so a window that dies without its own close leaks nothing. Capability:
-  `src-tauri/capabilities/tags.json` (its description says why each grant).
+  `src-tauri/capabilities/tags.json` (its description says why each grant). **Two windows over the same files**: each
+  open is a new session, so Edit tags twice on one selection opens two windows, each with its own tag session. That's
+  safe (a write checks every file's fingerprint, so the second window's stale write is refused per file) but can
+  confuse; raising a window already open over the same folder and names would need main to track them. File > Edit tags…
+  is greyed and the palette row hidden while the setting is off (`edit-tags-menu-gate.ts`, palette condition
+  `tagEditorOn`); with nothing selected the command says "Select the audio files to tag first." The window's session
+  reads no media (`openTagsSession` / `reopenForTags` seed it empty), and held sessions never count against
+  Multi-Rename's cap, so open Tags windows never push out a sheet's live session.
 
 - **State**: `tag-editor-state.svelte.ts` (the view from the backend's `TagEditorView`, edits sent by path, `busy`,
   `settled()` so a cell that just lost focus is in before a close/apply, Undo); `last-tag-apply.svelte.ts` (the last

@@ -595,7 +595,7 @@
     "description": "Command name in the command palette and Keyboard shortcuts list: opens the tag editor window (artist, album, title, track numbers, cover) for the selected audio files. Only works when the opt-in tag editor setting is on.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
-  "commands.fileEditTags.description": "Opens the selected audio files' tags in their own window",
+  "commands.fileEditTags.description": "Opens the selected audio files’ tags in their own window",
   "@commands.fileEditTags.description": {
     "description": "Longer help text for \"Edit tags\", shown as a secondary line in the command palette."
   },
@@ -1563,6 +1563,6 @@
   },
   "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
   "@commands.multiRenamePlayTrack.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It plays the audio of the track whose row has focus in the Tags tab, or stops it when it is already playing, so you can hear which track you are naming."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the tag editor window (the separate window that edits audio files’ tags). Read-only (the key can’t be rebound). It plays the audio of the track whose row has focus, or stops it when it is already playing, so you can hear which track you are naming."
   }
 }

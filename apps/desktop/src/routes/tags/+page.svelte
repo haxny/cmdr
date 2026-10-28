@@ -19,6 +19,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import TagsWindow from '#lib/multi-rename/tag-editor/TagsWindow.svelte'
     import DialogBoundary from '#lib/ui/boundary/DialogBoundary.svelte'
+    import Button from '#lib/ui/Button.svelte'
     import { closeSelfWindow } from '#lib/child-window-close.js'
     import { TAGS_WINDOW_RECT_KEY } from '#lib/multi-rename/tag-editor/tags-window.js'
 
@@ -29,6 +30,8 @@
     const folder = params.get('folder') ?? ''
 
     let initialized = $state(false)
+    /** The shell couldn't start: the page says so and offers a way out, since Escape lives in the body. */
+    let failed = $state(false)
     let body = $state<{ requestClose: () => void; isEnding: () => boolean }>()
     const unlisten: UnlistenFn[] = []
     let unsubscribeLanguage: (() => void) | undefined
@@ -39,10 +42,21 @@
         try {
             await Promise.all([initWindowSettings(), initializeShortcuts()])
             unsubscribeLanguage = initWindowLanguageSync({ title: () => tString('multiRename.tags.window.title', { folder }) })
-            await initAccentColor()
-            await initDisplayAccessibility()
-            await initTextSize()
-            initialized = true
+        } catch (error) {
+            log.error('Failed to initialize the Tags window: {error}', { error })
+            failed = true
+            return
+        }
+        // Looks only: a failure here leaves the window usable.
+        for (const init of [initAccentColor, initDisplayAccessibility, initTextSize]) {
+            try {
+                await init()
+            } catch (error) {
+                log.warn('A Tags window look step failed: {error}', { error })
+            }
+        }
+        initialized = true
+        try {
             const win = getCurrentWindow()
             // The red button asks about unwritten edits first, as Escape does. Once the window is on its way out
             // (`closeSelfWindow` closes it again from Rust) the request goes through.
@@ -62,7 +76,7 @@
             )
             unlisten.push(await trackOwnRect(TAGS_WINDOW_RECT_KEY))
         } catch (error) {
-            log.error('Failed to initialize the Tags window: {error}', { error })
+            log.warn('Tags window: no close guard, menu sync, or remembered place: {error}', { error })
         }
     })
 
@@ -80,7 +94,12 @@
     <!-- Drag strip under the overlay traffic lights, like Settings and Keyboard shortcuts. -->
     <div class="window-drag-region" data-tauri-drag-region aria-hidden="true"></div>
     <DialogBoundary name="tagsWindow" onClose={() => void closeSelfWindow()}>
-        {#if initialized && sessionId !== ''}
+        {#if failed || (initialized && sessionId === '')}
+            <div class="failed">
+                <p role="alert">{tString('multiRename.tags.window.openFailed')}</p>
+                <Button onclick={() => void closeSelfWindow()}>{tString('multiRename.tags.window.close')}</Button>
+            </div>
+        {:else if initialized}
             <TagsWindow bind:this={body} {sessionId} />
         {/if}
     </DialogBoundary>
@@ -98,6 +117,14 @@
         flex-direction: column;
         position: relative;
         padding-top: var(--titlebar-height);
+    }
+
+    .failed {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-lg);
     }
 
     .window-drag-region {

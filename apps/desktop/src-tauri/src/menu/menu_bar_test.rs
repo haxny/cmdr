@@ -57,7 +57,7 @@ menu menu.bar.file id=menu_file
   12 separator
   13 item rename menu.file.rename [F2] tracked
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
-  15 item edit_tags menu.file.editTags [Cmd+Shift+E] tracked
+  15 item edit_tags menu.file.editTags [Cmd+Shift+E] disabled tracked
   16 separator
   17 item show_in_finder menu.file.showInFinder [Alt+Cmd+O] tracked
   18 item open_terminal_here menu.file.openTerminalHere [F9] tracked
@@ -181,7 +181,7 @@ menu menu.bar.file
   12 separator
   13 item rename menu.file.rename tracked
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
-  15 item edit_tags menu.file.editTags tracked
+  15 item edit_tags menu.file.editTags disabled tracked
   16 separator
   17 item show_in_finder menu.file.showInFileManager [Alt+Ctrl+O] tracked
   18 item get_info menu.file.getInfo [Ctrl+I] tracked

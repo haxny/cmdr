@@ -254,3 +254,30 @@ pub async fn release_tags_session(session_id: String) {
 pub async fn reopen_for_tags(session_id: String) -> Result<MultiRenameOpened, MultiRenameError> {
     crate::multi_rename::session::reopen(&session_id)
 }
+
+/// Opens a Multi-Rename session over the pane's selection for a Tags window, as
+/// `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
+/// the window reads the tags itself.
+#[tauri::command]
+#[specta::specta]
+pub async fn open_tags_session(
+    listing_id: String,
+    include_hidden: bool,
+    selected_indices: Option<Vec<usize>>,
+    expected_sequence: u64,
+) -> Result<MultiRenameOpened, MultiRenameError> {
+    cmdr_fs::deadline::blocking_typed_result_with_timeout(
+        std::time::Duration::from_secs(2),
+        || MultiRenameError::TimedOut,
+        |detail| MultiRenameError::Internal { detail },
+        move || {
+            crate::multi_rename::session::open_for_tags(
+                &listing_id,
+                include_hidden,
+                selected_indices.as_deref(),
+                expected_sequence,
+            )
+        },
+    )
+    .await
+}

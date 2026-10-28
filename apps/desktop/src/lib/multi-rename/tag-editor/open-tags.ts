@@ -1,7 +1,7 @@
 /**
  * How the main window opens a Tags window. Every open makes a NEW Multi-Rename session and holds it for the window
  * (`holdTagsSession`), so the window owns it until it closes; the window gets no window-creation perms of its own.
- * Two roads: `file.editTags` from the focused pane's selection, and the Multi-Rename sheet's "Tags…" button, which
+ * Two roads: `file.editTags` from the focused pane's selection (`openTagsSession`: no media read), and the Multi-Rename sheet's "Tags…" button, which
  * copies the sheet's session (`reopenForTags`) rather than lending it, so closing the sheet never ends the window's.
  * Off (`multiRename.tagEditor`) both do nothing, with no IPC.
  */
@@ -14,7 +14,7 @@ import { addToast } from '#lib/ui/toast/index.js'
 import {
   closeMultiRename,
   holdTagsSession,
-  openMultiRename,
+  openTagsSession,
   releaseTagsSession,
   reopenForTags,
   type MultiRenameError,
@@ -52,9 +52,12 @@ let opening = false
 export async function openTagsForSelection(explorer: TagsSelectionSource | undefined): Promise<void> {
   if (!getSetting('multiRename.tagEditor') || !explorer) return
   const selection = explorer.getFocusedPaneRenameTarget()
-  if (tagsOpenRefusal(true, selection) !== null || selection === null) return
+  if (tagsOpenRefusal(true, selection) !== null || selection === null) {
+    addToast(tString('multiRename.tags.window.nothingSelected'), { level: 'info' })
+    return
+  }
   await openOnce(() =>
-    openMultiRename(selection.listingId, getShowHiddenFiles(), selection.selectedIndices, selection.expectedSequence),
+    openTagsSession(selection.listingId, getShowHiddenFiles(), selection.selectedIndices, selection.expectedSequence),
   )
 }
 
@@ -95,8 +98,11 @@ async function holdAndShow(sessionId: string): Promise<void> {
     addToast(tString('multiRename.tags.window.noTracks'), { level: 'info' })
     return
   }
+  const failed = (): void => {
+    void giveBack(sessionId)
+  }
   try {
-    await openTagsWindow(sessionId, held.value.folderName)
+    await openTagsWindow(sessionId, held.value.folderName, failed)
   } catch (e) {
     log.warn("couldn't open the Tags window: {reason}", { reason: e })
     await giveBack(sessionId)

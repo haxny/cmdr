@@ -1705,6 +1705,20 @@ export const commands = {
    */
   reopenForTags: (sessionId: string) =>
     typedError<MultiRenameOpened, MultiRenameError>(__TAURI_INVOKE('reopen_for_tags', { sessionId })),
+  /**
+   *  Opens a Multi-Rename session over the pane's selection for a Tags window, as
+   *  `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
+   *  the window reads the tags itself.
+   */
+  openTagsSession: (
+    listingId: string,
+    includeHidden: boolean,
+    selectedIndices: number[] | null,
+    expectedSequence: number,
+  ) =>
+    typedError<MultiRenameOpened, MultiRenameError>(
+      __TAURI_INVOKE('open_tags_session', { listingId, includeHidden, selectedIndices, expectedSequence }),
+    ),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**

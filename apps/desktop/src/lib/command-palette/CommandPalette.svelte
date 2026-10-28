@@ -27,6 +27,7 @@
     import { getFocusedPanePath, getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
     import { capabilitiesForPane } from '#lib/file-explorer/pane/volume-capabilities.js'
     import { isTrashUndoAvailable } from '#lib/file-operations/delete/trash-undo.js'
+    import { getSetting } from '#lib/settings/index.js'
 
     /**
      * Whether each conditional row belongs in the palette right now. A record, so a
@@ -38,6 +39,8 @@
             capabilitiesForPane(getFocusedPaneVolumeId(), getFocusedPanePath()).canShareLinks,
         // Like the greyed-out Edit menu item: a row that could only do nothing isn't offered.
         trashUndoAvailable: isTrashUndoAvailable,
+        // Fork: Edit tags is offered only while the opt-in tag editor setting is on.
+        tagEditorOn: () => getSetting('multiRename.tagEditor'),
     }
     const paletteConditionHolds = (condition: PaletteCondition): boolean => PALETTE_CONDITIONS[condition]()
 

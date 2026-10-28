@@ -9,7 +9,8 @@
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { closeSelfWindow } from '#lib/child-window-close.js'
-    import { closeMultiRename, closeTagEditor, releaseTagsSession } from '#lib/tauri-commands/index.js'
+    import { closeMultiRename, releaseTagsSession } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import TagsTab from './TagsTab.svelte'
     import { createDiscardGuard } from './discard-guard'
     import { createTagEditorState } from './tag-editor-state.svelte'
@@ -19,6 +20,8 @@
     }
 
     const { sessionId }: Props = $props()
+
+    const log = getAppLogger('tagEditor')
 
     // The window shows one session for its whole life; a new session is a new window.
     // svelte-ignore state_referenced_locally
@@ -36,13 +39,22 @@
         guard.close()
     }
 
+    /**
+     * Releases the hold, ends the tag session (through the state, so a late reply is dropped) and the Multi-Rename
+     * session, then closes the window, whatever the calls answer: the backend ends the session on `Destroyed` anyway.
+     */
     async function end(): Promise<void> {
         if (ended) return
         ended = true
-        await releaseTagsSession(sessionId)
-        await closeTagEditor(sessionId)
-        await closeMultiRename(sessionId)
-        await closeSelfWindow()
+        try {
+            await releaseTagsSession(sessionId)
+            await tags.close()
+            await closeMultiRename(sessionId)
+        } catch (e) {
+            log.warn("couldn't end the Tags window's session: {reason}", { reason: e })
+        } finally {
+            await closeSelfWindow()
+        }
     }
 
     function onKeydown(e: KeyboardEvent): void {

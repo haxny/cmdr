@@ -8,13 +8,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const flags = vi.hoisted(() => ({ tagEditor: true }))
 const ipc = vi.hoisted(() => ({
-  openMultiRename: vi.fn(),
+  openTagsSession: vi.fn(),
   reopenForTags: vi.fn(),
   holdTagsSession: vi.fn(),
   releaseTagsSession: vi.fn(() => Promise.resolve()),
   closeMultiRename: vi.fn(() => Promise.resolve()),
 }))
-const openTagsWindow = vi.hoisted(() => vi.fn(() => Promise.resolve()))
+const openTagsWindow = vi.hoisted(() =>
+  vi.fn((_sessionId: string, _folder: string, _onFailed: () => void) => Promise.resolve()),
+)
 const addToast = vi.hoisted(() => vi.fn())
 
 vi.mock('#lib/tauri-commands/index.js', () => ipc)
@@ -42,7 +44,7 @@ describe('opening a Tags window', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     flags.tagEditor = true
-    ipc.openMultiRename.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 2 } })
+    ipc.openTagsSession.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 2 } })
     ipc.reopenForTags.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-6', count: 2 } })
     ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 2, folderName: 'Dracula' } })
   })
@@ -66,18 +68,19 @@ describe('opening a Tags window', () => {
     expect(openTagsWindow).not.toHaveBeenCalled()
   })
 
-  it('with nothing selected nothing opens', async () => {
+  it('with nothing selected nothing opens, and a toast says why', async () => {
     await openTagsForSelection(explorer({ ...SELECTION, selectedIndices: null, nothingSelected: true }))
-    expect(ipc.openMultiRename).not.toHaveBeenCalled()
+    expect(ipc.openTagsSession).not.toHaveBeenCalled()
     expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith('Select the audio files to tag first.', { level: 'info' })
   })
 
   it('opens a fresh session from the selection, holds it, then opens its window', async () => {
     await openTagsForSelection(explorer())
 
-    expect(ipc.openMultiRename).toHaveBeenCalledWith('L', false, [2, 3], 9)
+    expect(ipc.openTagsSession).toHaveBeenCalledWith('L', false, [2, 3], 9)
     expect(ipc.holdTagsSession).toHaveBeenCalledWith('multi-rename-5')
-    expect(openTagsWindow).toHaveBeenCalledWith('multi-rename-5', 'Dracula')
+    expect(openTagsWindow).toHaveBeenCalledWith('multi-rename-5', 'Dracula', expect.any(Function))
     expect(ipc.closeMultiRename).not.toHaveBeenCalled()
   })
 
@@ -95,7 +98,7 @@ describe('opening a Tags window', () => {
   })
 
   it('a selection the listing moved past is refused as Multi-Rename refuses it', async () => {
-    ipc.openMultiRename.mockResolvedValue({ ok: false, error: { type: 'selectionChanged', listingId: 'L' } })
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'selectionChanged', listingId: 'L' } })
 
     await openTagsForSelection(explorer())
 
@@ -112,18 +115,32 @@ describe('opening a Tags window', () => {
     expect(ipc.closeMultiRename).toHaveBeenCalledWith('multi-rename-5')
   })
 
+  it('a creation Tauri refuses later (`tauri://error`, after the open resolved) gives its session back', async () => {
+    openTagsWindow.mockImplementationOnce((_id, _folder, onFailed) => {
+      setTimeout(onFailed, 0)
+      return Promise.resolve()
+    })
+
+    await openTagsForSelection(explorer())
+    expect(ipc.releaseTagsSession).not.toHaveBeenCalled()
+    await new Promise((resolve) => setTimeout(resolve, 5))
+
+    expect(ipc.releaseTagsSession).toHaveBeenCalledWith('multi-rename-5')
+    expect(ipc.closeMultiRename).toHaveBeenCalledWith('multi-rename-5')
+  })
+
   it('from the sheet it copies the sheet’s session, never handing the window the sheet’s own', async () => {
     await openTagsForSession('multi-rename-1')
 
     expect(ipc.reopenForTags).toHaveBeenCalledWith('multi-rename-1')
     expect(ipc.holdTagsSession).toHaveBeenCalledWith('multi-rename-6')
-    expect(openTagsWindow).toHaveBeenCalledWith('multi-rename-6', 'Dracula')
-    expect(ipc.openMultiRename).not.toHaveBeenCalled()
+    expect(openTagsWindow).toHaveBeenCalledWith('multi-rename-6', 'Dracula', expect.any(Function))
+    expect(ipc.openTagsSession).not.toHaveBeenCalled()
   })
 
   it('a double press (the menu accelerator and the keydown both fire) opens one window', async () => {
     await Promise.all([openTagsForSelection(explorer()), openTagsForSelection(explorer())])
-    expect(ipc.openMultiRename).toHaveBeenCalledTimes(1)
+    expect(ipc.openTagsSession).toHaveBeenCalledTimes(1)
     expect(openTagsWindow).toHaveBeenCalledTimes(1)
   })
 })

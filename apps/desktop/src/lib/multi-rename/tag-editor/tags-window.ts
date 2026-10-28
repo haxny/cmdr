@@ -31,8 +31,12 @@ export function tagsWindowUrl(sessionId: string, folderName: string): string {
   return `/tags?session=${encodeURIComponent(sessionId)}&folder=${encodeURIComponent(folderName)}`
 }
 
-/** Opens the Tags window of `sessionId` (a session already held for it), or raises the one it has. */
-export async function openTagsWindow(sessionId: string, folderName: string): Promise<void> {
+/**
+ * Opens the Tags window of `sessionId` (a session already held for it), or raises the one it has. A refused creation
+ * doesn't throw: it arrives afterwards as `tauri://error`, and then `onFailed` runs (the caller gives the session
+ * back, since no `Destroyed` will ever come for a window that never existed).
+ */
+export async function openTagsWindow(sessionId: string, folderName: string, onFailed: () => void): Promise<void> {
   const label = tagsWindowLabel(sessionId)
   // E2E runs open windows without stealing OS focus (the plugin drives them over a socket).
   const isE2e = isE2eRun()
@@ -65,6 +69,10 @@ export async function openTagsWindow(sessionId: string, folderName: string): Pro
     titleBarStyle: 'overlay',
     hiddenTitle: true,
     trafficLightPosition: new LogicalPosition(14, 18),
+  })
+  void win.once('tauri://error', (event) => {
+    log.warn("Couldn't create the Tags window: {error}", { error: event.payload })
+    onFailed()
   })
   void orderChildWindowToBackInE2e(win)
 }

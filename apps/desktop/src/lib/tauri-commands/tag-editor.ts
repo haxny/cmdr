@@ -182,3 +182,16 @@ export async function releaseTagsSession(sessionId: string): Promise<void> {
 export async function reopenForTags(sessionId: string): Promise<SessionResult<MultiRenameOpened>> {
   return sessionResult(await commands.reopenForTags(sessionId))
 }
+
+/**
+ * Opens a Multi-Rename session over a pane's selection for a Tags window, as `openMultiRename` does, but with an
+ * empty media cache: no EXIF or tag read runs for it. `selectionChanged` when the rows are stale.
+ */
+export async function openTagsSession(
+  listingId: string,
+  includeHidden: boolean,
+  selectedIndices: number[] | null,
+  expectedSequence: number,
+): Promise<SessionResult<MultiRenameOpened>> {
+  return sessionResult(await commands.openTagsSession(listingId, includeHidden, selectedIndices, expectedSequence))
+}

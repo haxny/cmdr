@@ -208,6 +208,7 @@ export {
   updateUndoTrashMenu,
   setReopenClosedTabEnabled,
   setOpenTerminalHereEnabled,
+  setEditTagsEnabled,
   getChildWindowRect,
   setChildWindowRect,
   closeChildWindow,
@@ -1188,6 +1189,7 @@ export {
   holdTagsSession,
   releaseTagsSession,
   reopenForTags,
+  openTagsSession,
 } from './tag-editor'
 export type {
   ApplyRequest,

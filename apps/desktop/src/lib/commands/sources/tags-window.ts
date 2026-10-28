@@ -18,4 +18,12 @@ const tagsWindowKey = {
 export const tagsWindowCommands: CommandSource[] = [
   // Asks "Discard tag changes?" first when edits are unwritten.
   { id: 'tags.close', nameKey: 'commands.tagsClose.label', shortcuts: ['Escape'], ...tagsWindowKey },
+  // Plays or stops the track whose row holds focus. Plain Space types a space in a track cell, so the key is ⌥Space
+  // (macOS types a non-breaking space there, which `TagsTab` prevents when it acts). Answered by `TagsTab`'s keydown.
+  {
+    id: 'multiRename.playTrack',
+    nameKey: 'commands.multiRenamePlayTrack.label',
+    shortcuts: ['⌥Space'],
+    ...tagsWindowKey,
+  },
 ]

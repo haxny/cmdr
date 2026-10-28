@@ -178,4 +178,12 @@ describe('TagsWindow', () => {
       spy.mockRestore()
     }
   })
+
+  it('a close whose IPC is refused still closes the window', async () => {
+    ipc.releaseTagsSession.mockImplementationOnce(() => Promise.reject(new Error('gone')))
+    await mountWindow()
+    escape()
+    await settle()
+    expect(calls.at(-1)).toBe('closeSelfWindow')
+  })
 })

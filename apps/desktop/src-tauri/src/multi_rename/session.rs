@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 use cmdr_listing::{ListingId, ListingLookupError};
 
 use super::error::MultiRenameError;
@@ -34,7 +35,10 @@ use super::plan::{
 /// How many sessions live at once. A sheet is modal, so more than one or two is
 /// a window that closed without saying so. Tests share the store and run in
 /// parallel, so there the cap is out of reach (`evict` has its own tests).
-const MAX_SESSIONS: usize = if cfg!(test) { 1024 } else { 4 };
+const MAX_SESSIONS: usize = if cfg!(test) { 1024 } else { MAX_SESSIONS_IN_PRODUCTION };
+
+/// The cap outside tests, for the tests that pin what it does.
+const MAX_SESSIONS_IN_PRODUCTION: usize = 4;
 
 /// A session nobody touched for this long is a forgotten sheet (a reloaded
 /// window, a crash): opening another one drops it.
@@ -152,6 +156,30 @@ pub(crate) fn open(
     selected: Option<&[usize]>,
     expected_sequence: u64,
 ) -> Result<MultiRenameOpened, MultiRenameError> {
+    open_seeded(
+        listing_id,
+        include_hidden,
+        selected,
+        expected_sequence,
+        MediaSeed::Listing,
+    )
+}
+
+/// What a new session's media cache starts from.
+enum MediaSeed {
+    /// The listing's entries: every media file is queued for the background read.
+    Listing,
+    /// Nothing: a session nothing previews a rename over reads no media.
+    Empty,
+}
+
+fn open_seeded(
+    listing_id: &str,
+    include_hidden: bool,
+    selected: Option<&[usize]>,
+    expected_sequence: u64,
+    seed: MediaSeed,
+) -> Result<MultiRenameOpened, MultiRenameError> {
     let listings = crate::listing_host::listings();
     let id = ListingId::new(listing_id);
     let gone = || MultiRenameError::Gone {
@@ -166,19 +194,40 @@ pub(crate) fn open(
             },
         })?;
     let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
-    let entries = listings.entries(&id).map_err(|_| gone())?;
+    let entries = match seed {
+        MediaSeed::Listing => listings.entries(&id).map_err(|_| gone())?,
+        MediaSeed::Empty => Vec::new(),
+    };
+    Ok(insert_new(
+        listing_id.to_string(),
+        volume_id,
+        dir,
+        names.into(),
+        &entries,
+    ))
+}
+
+/// Stores a new session over `names` in `dir`, its media seeded from `entries` (empty: no read),
+/// after making room under the cap.
+fn insert_new(
+    listing_id: String,
+    volume_id: String,
+    dir: PathBuf,
+    names: Arc<[String]>,
+    entries: &[FileEntry],
+) -> MultiRenameOpened {
     let count = names.len();
     let session_id = format!("multi-rename-{}", NEXT_SESSION.fetch_add(1, Ordering::Relaxed));
-    let media = Arc::new(SessionMedia::seed(&session_id, dir.clone(), &names, &entries));
+    let media = Arc::new(SessionMedia::seed(&session_id, dir.clone(), &names, entries));
     let mut sessions = SESSIONS.lock_ignore_poison();
     evict_to(&mut sessions, Instant::now(), MAX_SESSIONS);
     sessions.insert(
         session_id.clone(),
         Session {
-            listing_id: listing_id.to_string(),
+            listing_id,
             volume_id,
             dir,
-            names: names.into(),
+            names,
             edits: Arc::default(),
             written: None,
             next_preview: 1,
@@ -188,7 +237,7 @@ pub(crate) fn open(
             held: false,
         },
     );
-    Ok(MultiRenameOpened { session_id, count })
+    MultiRenameOpened { session_id, count }
 }
 
 /// Where a session's files are: the volume, the folder, and the files in the CURRENT rename
@@ -281,7 +330,8 @@ pub(crate) fn media_over(volume_id: &str, dir: &Path) -> Vec<Arc<SessionMedia>> 
 }
 
 /// Drops idle sessions, then the least recently used until one more fits under `cap`. A held
-/// session (a Tags window's) is never dropped, even when that leaves the store over the cap.
+/// session (a Tags window's) is never dropped and never counts against the cap, so open Tags
+/// windows never push out a sheet's live session.
 fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
     sessions.retain(|id, s| {
         let keep = s.held || now.duration_since(s.last_used) < IDLE_LIMIT;
@@ -290,7 +340,7 @@ fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
         }
         keep
     });
-    while sessions.len() >= cap {
+    while sessions.values().filter(|s| !s.held).count() >= cap {
         let Some(oldest) = sessions
             .iter()
             .filter(|(_, s)| !s.held)
@@ -308,63 +358,6 @@ fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
 pub(crate) fn close(session_id: &str) {
     SESSIONS.lock_ignore_poison().remove(session_id);
     crate::tag_editor::session::close(session_id);
-}
-
-/// Holds a session a Tags window owns: `evict_to` passes it by (idle or not) until [`release`].
-/// `SessionClosed` when it's gone already.
-pub(crate) fn hold(session_id: &str) -> Result<(), MultiRenameError> {
-    with_session(session_id, |s| s.held = true)
-}
-
-/// Lets eviction take the session again. No-op when it's already gone.
-pub(crate) fn release(session_id: &str) {
-    if let Some(session) = SESSIONS.lock_ignore_poison().get_mut(session_id) {
-        session.held = false;
-    }
-}
-
-/// A new session over the same folder and the same files, in the session's current order: what
-/// the Tags window takes from an open sheet, so closing the sheet never ends the window's
-/// session. It reads no media (nothing previews a rename over it).
-pub(crate) fn reopen(session_id: &str) -> Result<MultiRenameOpened, MultiRenameError> {
-    let (listing_id, volume_id, dir, names) = with_session(session_id, |s| {
-        (
-            s.listing_id.clone(),
-            s.volume_id.clone(),
-            s.dir.clone(),
-            Arc::clone(&s.names),
-        )
-    })?;
-    let count = names.len();
-    let new_id = format!("multi-rename-{}", NEXT_SESSION.fetch_add(1, Ordering::Relaxed));
-    let media = Arc::new(SessionMedia::seed(&new_id, dir.clone(), &[], &[]));
-    let mut sessions = SESSIONS.lock_ignore_poison();
-    evict_to(&mut sessions, Instant::now(), MAX_SESSIONS);
-    sessions.insert(
-        new_id.clone(),
-        Session {
-            listing_id,
-            volume_id,
-            dir,
-            names,
-            edits: Arc::default(),
-            written: None,
-            next_preview: 1,
-            latest: None,
-            last_used: Instant::now(),
-            media,
-            held: false,
-        },
-    );
-    Ok(MultiRenameOpened {
-        session_id: new_id,
-        count,
-    })
-}
-
-#[cfg(test)]
-pub(crate) fn is_held(session_id: &str) -> bool {
-    SESSIONS.lock_ignore_poison().get(session_id).is_some_and(|s| s.held)
 }
 
 /// What a computation needs from a session, copied out so no lock is held while
@@ -679,6 +672,14 @@ pub(crate) fn clear_names(session_id: &str) -> Result<(), MultiRenameError> {
 pub(super) fn is_open(session_id: &str) -> bool {
     SESSIONS.lock_ignore_poison().contains_key(session_id)
 }
+
+// Fork: what the tag editor's Tags window needs of a session (`hold`, `release`, `reopen`,
+// `open_for_tags`), kept apart so this upstream file stays upstream's.
+#[path = "session_tags.rs"]
+mod tags;
+#[cfg(test)]
+pub(crate) use tags::is_held;
+pub(crate) use tags::{hold, open_for_tags, release, reopen};
 
 #[cfg(test)]
 #[path = "session_hold_test.rs"]

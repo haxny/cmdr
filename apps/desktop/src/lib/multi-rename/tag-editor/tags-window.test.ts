@@ -8,15 +8,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const tauri = vi.hoisted(() => ({
   existing: null as object | null,
   created: [] as { label: string; options: Record<string, unknown> }[],
+  errorHandlers: [] as ((event: { payload: unknown }) => void)[],
   raiseChildWindow: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- a stand-in for Tauri's class: a static lookup and a constructor
   WebviewWindow: class {
     static getByLabel = vi.fn(() => Promise.resolve(tauri.existing))
     constructor(label: string, options: Record<string, unknown>) {
       tauri.created.push({ label, options })
+    }
+    once(event: string, handler: (event: { payload: unknown }) => void): Promise<() => void> {
+      if (event === 'tauri://error') tauri.errorHandlers.push(handler)
+      return Promise.resolve(() => {})
     }
   },
 }))
@@ -39,6 +43,7 @@ describe('openTagsWindow', () => {
   beforeEach(() => {
     tauri.existing = null
     tauri.created = []
+    tauri.errorHandlers = []
     vi.clearAllMocks()
   })
 
@@ -50,21 +55,32 @@ describe('openTagsWindow', () => {
   })
 
   it('opens a new window titled after the folder', async () => {
-    await openTagsWindow('multi-rename-7', 'Dracula')
+    await openTagsWindow('multi-rename-7', 'Dracula', () => {})
 
     expect(tauri.created).toHaveLength(1)
     expect(tauri.created[0].label).toBe('tags-multi-rename-7')
     expect(tauri.created[0].options.url).toBe('/tags?session=multi-rename-7&folder=Dracula')
-    expect(tauri.created[0].options.title).toBe('Tags — Dracula')
+    expect(tauri.created[0].options.title).toBe('Tags: Dracula')
     expect(tauri.raiseChildWindow).not.toHaveBeenCalled()
   })
 
   it('raises the window the session already has instead of opening another', async () => {
     tauri.existing = {}
 
-    await openTagsWindow('multi-rename-7', 'Dracula')
+    await openTagsWindow('multi-rename-7', 'Dracula', () => {})
 
     expect(tauri.created).toEqual([])
     expect(tauri.raiseChildWindow).toHaveBeenCalledWith('tags-multi-rename-7')
+  })
+
+  it('a creation Tauri refuses afterwards (`tauri://error`) calls onFailed', async () => {
+    const onFailed = vi.fn()
+    await openTagsWindow('multi-rename-7', 'Dracula', onFailed)
+    expect(onFailed).not.toHaveBeenCalled()
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    for (const handler of tauri.errorHandlers) handler({ payload: 'not allowed' })
+
+    expect(onFailed).toHaveBeenCalledTimes(1)
   })
 })

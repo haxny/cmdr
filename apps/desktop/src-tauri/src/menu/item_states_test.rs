@@ -32,6 +32,7 @@ fn inputs(refused: &HashSet<String>) -> MenuItemInputs<'_> {
         file_operations_blocked: false,
         open_terminal_here_enabled: true,
         reopen_closed_tab_enabled: true,
+        edit_tags_enabled: true,
         undo_trash_available: true,
         refused,
     }
@@ -110,6 +111,12 @@ fn an_item_with_its_own_verdict_needs_that_verdict_and_the_gate() {
     };
     assert!(!menu_item_enabled(REOPEN_CLOSED_TAB_ID, &no_closed_tabs));
     assert!(menu_item_enabled(REOPEN_CLOSED_TAB_ID, &inputs(&nothing)));
+    let tag_editor_off = MenuItemInputs {
+        edit_tags_enabled: false,
+        ..inputs(&nothing)
+    };
+    assert!(!menu_item_enabled(EDIT_TAGS_ID, &tag_editor_off));
+    assert!(menu_item_enabled(EDIT_TAGS_ID, &inputs(&nothing)));
     assert!(!menu_item_enabled(
         REOPEN_CLOSED_TAB_ID,
         &inputs(&refusing(&["tab.reopen"]))

@@ -19,6 +19,7 @@ import {
   getConflictingCommandIds,
 } from '#lib/shortcuts/index.js'
 import { getDefaultShortcuts } from '#lib/shortcuts/shortcuts-store.js'
+import { getPaletteCommands } from '#lib/commands/index.js'
 
 describe('the tag editor’s commands in Settings › Keyboard shortcuts', () => {
   it('add no conflict: the count stays at upstream’s zero', () => {
@@ -31,6 +32,13 @@ describe('the tag editor’s commands in Settings › Keyboard shortcuts', () =>
     expect(findConflictsForShortcut('⌘⇧E', 'Main window/File list').map((c) => c.id)).toEqual(['file.editTags'])
   })
 
+  it('the palette lists Edit tags only while the tag editor setting is on', () => {
+    const listed = (on: boolean) =>
+      getPaletteCommands((condition) => (condition === 'tagEditorOn' ? on : true)).some((c) => c.id === 'file.editTags')
+    expect(listed(false)).toBe(false)
+    expect(listed(true)).toBe(true)
+  })
+
   it('tags.close is Escape, alone in the Tags window', () => {
     expect(getDefaultShortcuts('tags.close')).toEqual(['Escape'])
     expect(findConflictsForShortcut('Escape', 'Tags window').map((c) => c.id)).toEqual(['tags.close'])
@@ -40,9 +48,7 @@ describe('the tag editor’s commands in Settings › Keyboard shortcuts', () =>
 describe('the Tags tab’s play command', () => {
   it('is ⌥Space, fixed, and no other command or menu item takes the combo', () => {
     expect(getDefaultShortcuts('multiRename.playTrack')).toEqual(['⌥Space'])
-    expect(findConflictsForShortcut('⌥Space', 'Main window/Multi-rename').map((c) => c.id)).toEqual([
-      'multiRename.playTrack',
-    ])
+    expect(findConflictsForShortcut('⌥Space', 'Tags window').map((c) => c.id)).toEqual(['multiRename.playTrack'])
     expect(getConflictingCommandIds().has('multiRename.playTrack')).toBe(false)
   })
 

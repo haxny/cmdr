@@ -62,6 +62,7 @@ import {
 } from '#lib/indexing/index.js'
 import { startLowDiskSpaceEventBridge } from '#lib/low-disk-space/event-bridge.svelte.js'
 import { startOpenTerminalMenuGate } from '#lib/open-terminal/menu-gate.svelte.js'
+import { startEditTagsMenuGate } from '#lib/multi-rename/tag-editor/edit-tags-menu-gate.js'
 import { startSortMenuSync } from '#lib/file-explorer/pane/sort-menu-sync.svelte.js'
 import { initSnapshotPurge, destroySnapshotPurge } from '#lib/search/snapshot-purge.js'
 import { getSetting } from '#lib/settings/index.js'
@@ -129,6 +130,8 @@ export function startEarlyWindowServices(scope: MountScope): void {
   // Grey out the File menu's "Open terminal here" while the focused pane sits on a
   // phone, the network browser, or a search snapshot. Chrome only, same as above.
   scope.add(startOpenTerminalMenuGate())
+  // Fork: File > Edit tags… is live only while the tag editor setting is on.
+  scope.add(startEditTagsMenuGate())
   // Check View > Sort by's column and order on what the focused pane asked for.
   scope.add(startSortMenuSync())
   // Seed and subscribe the suggestions badge. The seed is not redundant with the subscription:
