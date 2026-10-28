@@ -12,7 +12,7 @@
     import { classifySelectionKey } from '#lib/file-explorer/pane/selection-keys.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
-    import type { TrackRow, TrackSort, TrackSortKey } from '#lib/ipc/bindings.js'
+    import type { TagField, TrackRow, TrackSort, TrackSortKey } from '#lib/ipc/bindings.js'
     import { getRowHeight, getStripedRows } from '#lib/settings/reactive-settings.svelte.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
@@ -25,6 +25,7 @@
     import { formatTrackLength, parseFieldText } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
     import TrackSortHeader from './TrackSortHeader.svelte'
+    import { dialogIsOpen, isClearKey, typedSeed } from './typed-key'
     import type { TagsCommandId } from './tags-function-keys'
     import type { TrackSelection } from './track-selection.svelte'
 
@@ -40,6 +41,8 @@
         /** Plays the track at `path`, or stops it when it is the one playing. */
         onPlay: (path: string) => void
         onEdit: (edits: TagEdit[]) => void | Promise<void>
+        /** Delete or Backspace on the cursor row's Title: empties it, with no confirmation (⌘Z undoes it). */
+        onClear: (target: { field: TagField; path: string | null }) => void
         onSwitchPane: () => void
         /** The order the tracks are in, or `null` when none of the headers' orders is (Multi-Rename moved a row). */
         sort: TrackSort | null
@@ -61,6 +64,7 @@
         playing,
         onPlay,
         onEdit,
+        onClear,
         onSwitchPane,
         sort,
         onSort,
@@ -95,7 +99,7 @@
     const measureScroller = (box: ScrollBoxSize) => {
         scrollbarWidth = Math.max(0, box.offsetWidth - box.clientWidth)
     }
-    let editing = $state<{ path: string; field: EditedField; place: EditorPlace } | null>(null)
+    let editing = $state<{ path: string; field: EditedField; place: EditorPlace; seed?: string } | null>(null)
     const edited = $derived(editing === null ? undefined : tracks.find((track) => track.path === editing?.path))
 
     /** Gives the pane focus (Tab from the other pane). */
@@ -141,11 +145,11 @@
         return editorBox(scroller, cell, rowHeight)
     }
 
-    function openEditor(index: number, field: EditedField): void {
+    function openEditor(index: number, field: EditedField, seed?: string): void {
         const track = tracks.at(index)
         const place = placeAt(index, field)
         if (!canEdit(track) || place === null) return
-        editing = { path: track.path, field, place }
+        editing = { path: track.path, field, place, seed }
     }
 
     // A resize reflows the flexing Title column: the open editor follows its cell.
@@ -220,9 +224,26 @@
         return true
     }
 
+    /**
+     * Typing on a row opens its Title holding the typed character, and Delete / Backspace empty it. The pane has no
+     * column cursor, so both work on the Title. Returns whether the key was one of them.
+     */
+    function answerTypedKey(e: KeyboardEvent): boolean {
+        if (dialogIsOpen()) return false
+        const seed = typedSeed(e)
+        const clear = seed === null && isClearKey(e)
+        if (seed === null && !clear) return false
+        const track = tracks.at(at)
+        if (!canEdit(track)) return false
+        claimKey(e)
+        if (seed !== null) openEditor(at, 'title', seed)
+        else if ((track.title ?? '') !== '') onClear({ field: 'title', path: track.path })
+        return true
+    }
+
     function onkeydown(e: KeyboardEvent): void {
         if (e.isComposing || e.target !== list || tracks.length === 0) return
-        if (answerPaneKey(e) || answerSelectionKey(e)) return
+        if (answerPaneKey(e) || answerSelectionKey(e) || answerTypedKey(e)) return
         const move = paneCursorMove(e, { count: tracks.length, from: at, visibleRows: visibleRowCount(scroller, rowHeight) })
         if (move === null) return
         claimKey(e)
@@ -330,6 +351,7 @@
             <TagValueEditor
                 bind:this={editor}
                 value={(field === 'title' ? track.title : track.track) ?? ''}
+                seed={editing.seed}
                 ariaLabel={tString(field === 'title' ? 'multiRename.tags.track.titleLabel' : 'multiRename.tags.track.numberLabel', { fileName: track.fileName })}
                 place={editing.place}
                 onCommit={(text: string) => commit(track.path, field, text)}

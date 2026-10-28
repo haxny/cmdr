@@ -23,6 +23,11 @@
         id?: string
         /** The text the row holds; the box starts with it. */
         value: string
+        /**
+         * A character typed on the row to open the box (spreadsheet style): the box starts with exactly it, caret at
+         * the end, nothing selected, instead of `value` selected.
+         */
+        seed?: string
         ariaLabel: string
         multiline?: boolean
         invalid?: boolean
@@ -43,6 +48,7 @@
     const {
         id,
         value,
+        seed,
         ariaLabel,
         multiline = false,
         invalid = false,
@@ -57,7 +63,7 @@
     const uid = $props.id()
     const hintId = `${uid}-hint`
 
-    let draft = $state(untrack(() => value))
+    let draft = $state(untrack(() => seed ?? value))
     let box = $state<HTMLInputElement | HTMLTextAreaElement>()
     let frame = $state<HTMLElement>()
     let hint = $state<string | null>(null)
@@ -72,7 +78,8 @@
 
     onMount(() => {
         box?.focus()
-        box?.select()
+        if (seed === undefined) box?.select()
+        else box?.setSelectionRange(draft.length, draft.length)
         reveal()
     })
 

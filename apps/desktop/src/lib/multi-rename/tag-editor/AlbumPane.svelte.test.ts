@@ -50,6 +50,7 @@ async function mountPane(over: Over = {}) {
   const onEdit = vi.fn((_edits: TagEdit[]) => Promise.resolve())
   const onCursorChange = vi.fn()
   const onSwitchPane = vi.fn()
+  const onClear = vi.fn()
   const mounted = await mountInto(AlbumPane, {
     rows: over.rows ?? ROWS,
     editable: over.editable ?? true,
@@ -58,12 +59,13 @@ async function mountPane(over: Over = {}) {
     cursor: over.cursor ?? 0,
     onCursorChange,
     onEdit,
+    onClear,
     onSwitchPane,
   })
   cleanup = mounted.cleanup
   const list = mounted.root.querySelector<HTMLElement>('[role="listbox"]')
   if (!list) throw new Error('no listbox')
-  return { root: mounted.root, list, onEdit, onCursorChange, onSwitchPane }
+  return { root: mounted.root, list, onEdit, onClear, onCursorChange, onSwitchPane }
 }
 
 const rowsOf = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[role="option"]')]
@@ -302,5 +304,58 @@ describe('AlbumPane editor placement and refusals', () => {
     await typeInto(editor, 'Book three')
     await press(editor, 'Enter')
     expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: ['Book three'] }])
+  })
+})
+
+describe('AlbumPane type-to-edit and Delete', () => {
+  it('typing a letter opens the editor holding exactly that letter, caret after it', async () => {
+    const { root, list } = await mountPane()
+    const key = await press(list, 'H')
+    const editor = editorOf(root)
+    if (!editor) throw new Error('no editor')
+    expect(editor.value).toBe('H')
+    expect(editor.selectionStart).toBe(1)
+    expect(editor.selectionEnd).toBe(1)
+    expect(key.defaultPrevented).toBe(true)
+  })
+
+  it('Space, ⌘-letter, ⌥-letter, composition and a dialog open nothing', async () => {
+    const { root, list } = await mountPane()
+    await press(list, ' ')
+    await press(list, 'a', { metaKey: true })
+    await press(list, 'a', { altKey: true })
+    await press(list, 'a', { isComposing: true })
+    await press(list, 'Process')
+    await press(list, 'Dead')
+    expect(editorOf(root)).toBeNull()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    document.body.appendChild(dialog)
+    try {
+      await press(list, 'x')
+      await press(list, 'Delete')
+    } finally {
+      dialog.remove()
+    }
+    expect(editorOf(root)).toBeNull()
+  })
+
+  it('read-only: typing and Delete do nothing', async () => {
+    const { root, list, onClear } = await mountPane({ editable: false })
+    await press(list, 'H')
+    await press(list, 'Delete')
+    expect(editorOf(root)).toBeNull()
+    expect(onClear).not.toHaveBeenCalled()
+  })
+
+  it('Delete and Backspace ask to empty the cursor row’s field, but not an already empty one', async () => {
+    const { list, onClear } = await mountPane()
+    await press(list, 'Delete')
+    expect(onClear).toHaveBeenLastCalledWith({ field: 'artist', path: null })
+    await press(list, 'Backspace')
+    expect(onClear).toHaveBeenCalledTimes(2)
+    const empty = await mountPane({ cursor: 3 })
+    await press(empty.list, 'Delete')
+    expect(empty.onClear).not.toHaveBeenCalled()
   })
 })

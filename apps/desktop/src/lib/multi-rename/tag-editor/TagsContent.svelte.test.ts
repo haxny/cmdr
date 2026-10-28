@@ -354,6 +354,29 @@ describe('TagsContent', () => {
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, ['/b/02.mp3', '/b/04.mp3'])
   })
 
+  it('Delete in the Album pane empties the field on every file, or on the selected tracks alone, without asking', async () => {
+    const { root, state } = await mountTab()
+    await press(paneList(root, 'Album tags'), 'Delete')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([{ kind: 'setAll', field: 'album', values: [] }])
+    await toggleTrack(root, '/b/02.mp3')
+    await press(paneList(root, 'Album tags'), 'Backspace')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([{ kind: 'setOne', path: '/b/02.mp3', field: 'album', values: [] }])
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it('Delete in the Tracks pane empties the cursor row’s Title; typing there opens the editor', async () => {
+    const { root, state } = await mountTab()
+    const tracks = paneList(root, 'Tracks')
+    await press(tracks, 'ArrowDown')
+    await press(tracks, 'Delete')
+    await settle()
+    expect(state.edit).toHaveBeenLastCalledWith([{ kind: 'setOne', path: '/b/02.mp3', field: 'title', values: [] }])
+    await press(tracks, 'K')
+    expect(root.querySelector<HTMLInputElement>('.tag-value-editor')?.value).toBe('K')
+  })
+
   it('a view reload drops the selected tracks that are gone for good', async () => {
     const state = $state({
       view: VIEW,

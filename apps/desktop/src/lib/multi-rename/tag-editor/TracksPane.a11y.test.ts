@@ -53,6 +53,7 @@ async function mountPane(tracks: TrackRow[], editable = true, sort: TrackSort | 
     playing: '/b/01.mp3',
     onPlay: () => {},
     onEdit: () => {},
+    onClear: () => {},
     onSwitchPane: () => {},
     sort,
     onSort: () => {},

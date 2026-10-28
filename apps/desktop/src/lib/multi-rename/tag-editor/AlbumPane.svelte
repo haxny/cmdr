@@ -24,6 +24,7 @@
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import TagValueEditor from './TagValueEditor.svelte'
     import type { TagsCommandId } from './tags-function-keys'
+    import { dialogIsOpen, isClearKey, typedSeed } from './typed-key'
     import ValueChoices from './ValueChoices.svelte'
 
     interface Props {
@@ -36,6 +37,8 @@
         cursor: number
         onCursorChange: (index: number) => void
         onEdit: (edits: TagEdit[]) => void | Promise<void>
+        /** Delete or Backspace on the cursor row: empties the field, in the scope Clear works in, without asking. */
+        onClear: (target: { field: TagField; path: string | null }) => void
         onSwitchPane: () => void
         /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
         isEcho?: (id: TagsCommandId) => boolean
@@ -43,7 +46,7 @@
         cover?: Snippet
     }
 
-    const { rows, editable, badDates = 0, focused, cursor, onCursorChange, onEdit, onSwitchPane, isEcho, cover }: Props =
+    const { rows, editable, badDates = 0, focused, cursor, onCursorChange, onEdit, onClear, onSwitchPane, isEcho, cover }: Props =
         $props()
 
     /** Fixed name column, flexing value: the pane never scrolls sideways. */
@@ -78,7 +81,7 @@
     const measureScroller = (box: ScrollBoxSize) => {
         scrollbarWidth = Math.max(0, box.offsetWidth - box.clientWidth)
     }
-    let editing = $state<{ field: TagField; place: EditorPlace } | null>(null)
+    let editing = $state<{ field: TagField; place: EditorPlace; seed?: string } | null>(null)
     const edited = $derived(editing === null ? undefined : shown.find((row) => row.field === editing?.field))
 
     /** Gives the pane focus (Tab from the other pane). */
@@ -109,11 +112,11 @@
         return editorBox(scroller, cell, isMultiLineField(row.field) ? null : rowHeight)
     }
 
-    function openEditor(index: number): void {
+    function openEditor(index: number, seed?: string): void {
         const row = shown.at(index)
         const place = placeAt(index)
         if (!editable || row === undefined || place === null) return
-        editing = { field: row.field, place }
+        editing = { field: row.field, place, seed }
     }
 
     // A resize reflows the flexing Value column: the open editor follows its cell.
@@ -144,6 +147,18 @@
         if (edit) return onEdit([edit])
     }
 
+    /** Typing on the cursor row opens its value holding the character; Delete / Backspace empty it. */
+    function answerTypedKey(e: KeyboardEvent): boolean {
+        if (dialogIsOpen() || !editable || current === undefined) return false
+        const seed = typedSeed(e)
+        const clear = seed === null && isClearKey(e)
+        if (seed === null && !clear) return false
+        claimKey(e)
+        if (seed !== null) openEditor(at, seed)
+        else if (!current.empty) onClear({ field: current.field, path: null })
+        return true
+    }
+
     function onkeydown(e: KeyboardEvent): void {
         if (e.isComposing || e.target !== list) return
         if (eventMatchesCommand(e, 'tags.switchPane')) {
@@ -157,6 +172,7 @@
             if (e.key === 'Enter' || isEcho?.('tags.edit') !== true) openEditor(at)
             return
         }
+        if (answerTypedKey(e)) return
         const move = paneCursorMove(e, { count: shown.length, from: at, visibleRows: visibleRowCount(scroller, rowHeight) })
         if (move === null || move.extend) return
         claimKey(e)
@@ -215,6 +231,7 @@
             <TagValueEditor
                 bind:this={editor}
                 value={row.text}
+                seed={editing.seed}
                 ariaLabel={tString('multiRename.tags.album.editLabel', { field: row.label })}
                 multiline={isMultiLineField(row.field)}
                 invalid={row.invalid}

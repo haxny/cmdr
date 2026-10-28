@@ -209,6 +209,15 @@
         )
     }
 
+    /**
+     * Delete / Backspace in a pane, with no confirmation: the Album pane (`path` null) empties the field in Clear's
+     * scope; the Tracks pane empties it on the one track.
+     */
+    async function clearTarget(target: { field: TagField; path: string | null }): Promise<void> {
+        if (target.path === null) await clearField(target.field)
+        else await tags.edit([{ kind: 'setOne', path: target.path, field: target.field, values: [] }])
+    }
+
     /** The tool dialog showing, with the field the user was on when it opened. */
     let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
     /** The Write dialog showing: listing and writing (⌘S), or undoing the last write (⌘Z). */
@@ -339,6 +348,7 @@
                     cursor={panes.albumCursor}
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+                    onClear={(target) => void clearTarget(target)}
                     onSwitchPane={() => { panes.switchPane() }}
                     isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
                     cover={coverGroup}
@@ -357,6 +367,7 @@
                     playing={player.playing}
                     onPlay={(path: string) => void player.toggle(path)}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+                    onClear={(target) => void clearTarget(target)}
                     onSwitchPane={() => { panes.switchPane() }}
                     sort={view.sort}
                     onSort={(sort: TrackSort) => void tags.sortTracks(sort)}

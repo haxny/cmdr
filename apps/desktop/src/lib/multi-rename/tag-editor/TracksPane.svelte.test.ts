@@ -55,6 +55,7 @@ async function mountPane(
   const onSwitchPane = vi.fn()
   const onPlay = vi.fn()
   const onSort = vi.fn()
+  const onClear = vi.fn()
   const mounted = await mountInto(TracksPane, {
     tracks,
     editable: over.editable ?? true,
@@ -65,6 +66,7 @@ async function mountPane(
     playing: null,
     onPlay,
     onEdit,
+    onClear,
     onSwitchPane,
     sort: over.sort ?? null,
     onSort,
@@ -72,7 +74,7 @@ async function mountPane(
   cleanup = mounted.cleanup
   const list = mounted.root.querySelector<HTMLElement>('[role="listbox"]')
   if (!list) throw new Error('no listbox')
-  return { root: mounted.root, list, selection, onEdit, onCursorChange, onSwitchPane, onPlay, onSort }
+  return { root: mounted.root, list, selection, onEdit, onClear, onCursorChange, onSwitchPane, onPlay, onSort }
 }
 
 const rowsOf = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[role="option"]')]
@@ -416,5 +418,69 @@ describe('TracksPane header alignment', () => {
     expect(root.querySelector<HTMLElement>('.tag-pane-header')?.style.gridTemplateColumns.startsWith('16px ')).toBe(
       true,
     )
+  })
+})
+
+describe('TracksPane type-to-edit and Delete', () => {
+  it('typing a letter or a digit on a row opens its Title holding exactly that character', async () => {
+    const { root, list } = await mountPane({ cursor: 1 })
+    await press(list, 'H')
+    const editor = editorOf(root)
+    if (!editor) throw new Error('no editor')
+    expect(editor.value).toBe('H')
+    expect(editor.selectionStart).toBe(1)
+    expect(editor.selectionEnd).toBe(1)
+    await press(editor, 'Escape')
+    await press(list, '7')
+    expect(editorOf(root)?.value).toBe('7')
+  })
+
+  it('Space and * stay selection keys', async () => {
+    const { root, list, selection } = await mountPane()
+    await press(list, ' ')
+    expect(selection.has(0)).toBe(true)
+    const star = await press(list, '*')
+    expect(star.defaultPrevented).toBe(true)
+    expect(editorOf(root)).toBeNull()
+  })
+
+  it('⌘-letter, ⌥-letter, composition, a dialog and an unreadable row open nothing', async () => {
+    const { root, list } = await mountPane()
+    await press(list, 'a', { metaKey: true })
+    await press(list, 'a', { altKey: true })
+    await press(list, 'a', { isComposing: true })
+    await press(list, 'Process')
+    expect(editorOf(root)).toBeNull()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'alertdialog')
+    document.body.appendChild(dialog)
+    try {
+      await press(list, 'x')
+    } finally {
+      dialog.remove()
+    }
+    expect(editorOf(root)).toBeNull()
+    const unreadable = await mountPane({ cursor: 3 })
+    await press(unreadable.list, 'x')
+    expect(editorOf(unreadable.root)).toBeNull()
+  })
+
+  it('read-only: typing and Delete do nothing', async () => {
+    const { root, list, onClear } = await mountPane({ editable: false })
+    await press(list, 'H')
+    await press(list, 'Delete')
+    expect(editorOf(root)).toBeNull()
+    expect(onClear).not.toHaveBeenCalled()
+  })
+
+  it('Delete and Backspace ask to empty the cursor row’s Title; a row with none asks nothing', async () => {
+    const { list, onClear } = await mountPane({ cursor: 1 })
+    await press(list, 'Delete')
+    expect(onClear).toHaveBeenLastCalledWith({ field: 'title', path: '/b/02.mp3' })
+    await press(list, 'Backspace')
+    expect(onClear).toHaveBeenCalledTimes(2)
+    const bare = await mountPane({ tracks: [track('01', { title: null })] })
+    await press(bare.list, 'Delete')
+    expect(bare.onClear).not.toHaveBeenCalled()
   })
 })
