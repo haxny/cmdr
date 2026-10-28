@@ -263,7 +263,7 @@ async fn a_third_drop_while_two_reads_are_stuck_is_refused_without_reading() {
         never,
     )
     .await;
-    assert_eq!(third, Err(TagEditorError::CoverTimedOut));
+    assert_eq!(third, Err(TagEditorError::CoverBusy));
     for gate in gates {
         gate.send(()).expect("the read waits");
     }

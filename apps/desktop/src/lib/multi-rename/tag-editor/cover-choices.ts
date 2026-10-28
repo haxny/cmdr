@@ -4,6 +4,7 @@
  */
 
 import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { formatInteger } from '#lib/intl/number-format.js'
 import type { CoverChoice } from '#lib/ipc/bindings.js'
 
@@ -68,4 +69,18 @@ export function pastedPicture(data: Pick<DataTransfer, 'items'> | null): File | 
     if (file !== null) return file
   }
   return null
+}
+
+/** What each failed cover pick, paste or drop says (`TagEditorError` kinds about covers). */
+export const COVER_ERROR_KEYS: Readonly<Partial<Record<string, MessageKey>>> = {
+  coverTooLarge: 'multiRename.tags.cover.tooLarge',
+  badCoverName: 'multiRename.tags.cover.unreadable',
+  coverUnreadable: 'multiRename.tags.cover.unreadable',
+  coverNotAnImage: 'multiRename.tags.cover.notAnImage',
+  pastedNotAnImage: 'multiRename.tags.cover.pasteNotAnImage',
+  coverTimedOut: 'multiRename.tags.cover.timedOut',
+  coverBusy: 'multiRename.tags.cover.busy',
+  pasteTimedOut: 'multiRename.tags.cover.pasteTimedOut',
+  coverNotAFile: 'multiRename.tags.cover.notAFile',
+  unknownCover: 'multiRename.tags.cover.gone',
 }

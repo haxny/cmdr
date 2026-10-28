@@ -1392,6 +1392,10 @@
   "@multiRename.tags.cover.timedOut": {
     "description": "Shown in the tag editor window when the drive of a picture file dropped on the cover section (for example a network drive) stopped sending it. A slow drive is waited for; only one that stopped is given up on. Nothing is changed."
   },
+  "multiRename.tags.cover.busy": "Earlier pictures from a drive that stopped answering are still being read. Wait a moment, or copy the picture to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.busy": {
+    "description": "Shown in the tag editor window when a picture file is dropped on the cover section while two earlier drops are still being read from a drive that stopped answering. The new drop isn't started. Nothing is changed."
+  },
   "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
   "@multiRename.tags.cover.pasteTimedOut": {
     "description": "Shown in the tag editor window when a pasted picture (a TIFF, which is converted first) took too long to convert. Nothing is changed."

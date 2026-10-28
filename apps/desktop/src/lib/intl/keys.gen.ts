@@ -3017,6 +3017,7 @@ export type MessageKey =
   | 'multiRename.tags.col.number'
   | 'multiRename.tags.col.play'
   | 'multiRename.tags.col.title'
+  | 'multiRename.tags.cover.busy'
   | 'multiRename.tags.cover.candidate'
   | 'multiRename.tags.cover.cantShow'
   | 'multiRename.tags.cover.caption'

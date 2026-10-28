@@ -17,7 +17,7 @@
     import AlbumPane from './AlbumPane.svelte'
     import CoverPanel from './CoverPanel.svelte'
     import CoverViewer from './CoverViewer.svelte'
-    import type { CoverShown } from './cover-choices'
+    import { COVER_ERROR_KEYS, type CoverShown } from './cover-choices'
     import TagsFunctionKeyBar from './TagsFunctionKeyBar.svelte'
     import TagToolDialogs from './TagToolDialogs.svelte'
     import TracksPane from './TracksPane.svelte'
@@ -139,28 +139,11 @@
             case 'badMask':
             case 'badPattern':
                 return null
-            case 'coverTooLarge':
-                return 'multiRename.tags.cover.tooLarge'
-            case 'badCoverName':
-            case 'coverUnreadable':
-                return 'multiRename.tags.cover.unreadable'
-            case 'coverNotAnImage':
-                return 'multiRename.tags.cover.notAnImage'
-            case 'pastedNotAnImage':
-                return 'multiRename.tags.cover.pasteNotAnImage'
-            case 'coverTimedOut':
-                return 'multiRename.tags.cover.timedOut'
-            case 'pasteTimedOut':
-                return 'multiRename.tags.cover.pasteTimedOut'
-            case 'coverNotAFile':
-                return 'multiRename.tags.cover.notAFile'
-            case 'unknownCover':
-                return 'multiRename.tags.cover.gone'
             case 'undo':
             case 'noAppDataDir':
                 return 'multiRename.tags.undoStoreUnavailable'
             default:
-                return 'multiRename.tags.editFailed'
+                return COVER_ERROR_KEYS[error.kind] ?? 'multiRename.tags.editFailed'
         }
     }
 

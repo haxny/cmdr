@@ -1,4 +1,4 @@
-//! What the Tags tab did, in the log: one `info` line per user action (counts and durations),
+//! What the Tags window did, in the log: one `info` line per user action (counts and durations),
 //! `debug` for the detail. ❌ Never a path or a tag value: errors go in by kind only (a
 //! `TagError::Write` message can quote a value).
 
@@ -117,6 +117,7 @@ fn error_kind(error: &TagEditorError) -> &'static str {
         TagEditorError::CoverNotAnImage => "coverNotAnImage",
         TagEditorError::PastedNotAnImage => "pastedNotAnImage",
         TagEditorError::CoverTimedOut => "coverTimedOut",
+        TagEditorError::CoverBusy => "coverBusy",
         TagEditorError::PasteTimedOut => "pasteTimedOut",
         TagEditorError::CoverNotAFile => "coverNotAFile",
         TagEditorError::UnknownCover => "unknownCover",

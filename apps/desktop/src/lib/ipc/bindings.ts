@@ -14738,7 +14738,7 @@ export type ReadOnlyPlace =
   // A restic repo's `Browse snapshots` row, or anything inside its snapshots.
   | 'resticSnapshots'
 
-// Why the tab can't write. A stable code, worded by the UI.
+// Why the window can't write. A stable code, worded by the UI.
 export type ReadOnlyReason =
   // The session's folder isn't on the local disk; v1 writes local files only.
   'remoteVolume'
@@ -18499,10 +18499,12 @@ export type TagEditorError =
   // Pasted bytes aren't a JPEG, PNG, WebP, or TIFF image (a TIFF is converted). Nothing was changed.
   | { kind: 'pastedNotAnImage' }
   /**
-   *  Reading a dropped picture stalled (its drive stopped answering), or earlier drops' reads are still stuck.
-   *  Nothing was changed, and the read finishing later changes nothing either.
+   *  Reading a dropped picture stalled (its drive stopped answering). Nothing was changed, and the read
+   *  finishing later changes nothing either.
    */
   | { kind: 'coverTimedOut' }
+  // Earlier drops' reads are still stuck, so this one wasn't started. Nothing was changed.
+  | { kind: 'coverBusy' }
   // Converting a pasted picture took too long. Nothing was changed, then or later.
   | { kind: 'pasteTimedOut' }
   // A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.

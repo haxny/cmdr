@@ -1208,6 +1208,10 @@
   "@multiRename.tags.cover.timedOut": {
     "sourceHash": "ec1b3bb"
   },
+  "multiRename.tags.cover.busy": "Earlier pictures from a drive that stopped answering are still being read. Wait a moment, or copy the picture to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.busy": {
+    "sourceHash": "f10fab5"
+  },
   "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
   "@multiRename.tags.cover.pasteTimedOut": {
     "sourceHash": "9e24fa9"

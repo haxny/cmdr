@@ -169,6 +169,10 @@ describe('TagsTab', () => {
       'The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.',
     ],
     [
+      { kind: 'coverBusy' },
+      'Earlier pictures from a drive that stopped answering are still being read. Wait a moment, or copy the picture to this Mac first, then drop it again.',
+    ],
+    [
       { kind: 'pasteTimedOut' },
       'Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.',
     ],

@@ -184,7 +184,7 @@ pub fn set_for_all(session_id: &str, cover: Cover) -> Result<TagEditorView, TagE
 
 /// How many dropped-file reads may run at once. A read given up on a dead mount stays parked on
 /// a blocking thread until the mount answers; past this many, a new drop is refused at once
-/// (`CoverTimedOut`) instead of parking another thread.
+/// (`CoverBusy`) instead of parking another thread.
 pub const DROP_READS_AT_ONCE: usize = 2;
 /// The app's permits for dropped-file reads ([`DROP_READS_AT_ONCE`]); tests pass their own.
 pub static DROP_READS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(DROP_READS_AT_ONCE)));
@@ -228,8 +228,8 @@ impl StallWatch<TagEditorError> for ProgressWatch {
 /// keeps moving, and is given up once its byte count stood still for `stall_limit`
 /// (`CoverTimedOut`). The edit is made only from the awaited answer, so a read given up on and
 /// finishing later changes nothing. Each read holds a permit of `reads` (the app's is
-/// [`DROP_READS`]) until it ends; with none free a drop is refused as stalled too (the reads
-/// before it are stuck), without reading.
+/// [`DROP_READS`]) until it ends; with none free a drop is refused as busy (the reads before
+/// it are stuck), without reading.
 pub async fn set_from_path_within(
     session_id: String,
     path: PathBuf,
@@ -237,7 +237,7 @@ pub async fn set_from_path_within(
     reads: Arc<Semaphore>,
     read: impl FnOnce(&Path, &AtomicU64) -> Result<Cover, TagEditorError> + Send + 'static,
 ) -> Result<TagEditorView, TagEditorError> {
-    let permit = reads.try_acquire_owned().map_err(|_| TagEditorError::CoverTimedOut)?;
+    let permit = reads.try_acquire_owned().map_err(|_| TagEditorError::CoverBusy)?;
     let progress = Arc::new(DropProgress::default());
     let reading = Arc::clone(&progress);
     let mut watch = ProgressWatch {
