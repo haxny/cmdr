@@ -14,7 +14,7 @@
 //! end up in this block and come back on every later thread, surviving restarts and thread
 //! deletion. Three things keep it from being an instruction channel: it sits AFTER the rules
 //! and in a user turn rather than in the system string, it sits inside a fence its content can't
-//! close, and [`MEMORY_HEADER`] says what it is before the model reads a word of it.
+//! close, and `MEMORY_HEADER` says what it is before the model reads a word of it.
 
 use serde::{Deserialize, Serialize};
 
