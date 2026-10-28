@@ -693,7 +693,6 @@ pub(super) fn is_open(session_id: &str) -> bool {
 // `open_for_tags`), kept apart so this upstream file stays upstream's.
 #[path = "session_tags.rs"]
 mod tags;
-#[cfg(test)]
 pub(crate) use tags::is_held;
 #[cfg(test)]
 pub(crate) use tags::open_for_tags;

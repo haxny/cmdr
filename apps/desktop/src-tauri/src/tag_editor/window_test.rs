@@ -5,7 +5,7 @@ use super::session::{is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
 use super::window::{
     TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, may_hand_back, menu_key_command_of,
-    menu_selection_of, native_edit_id_of, session_of_label,
+    menu_selection_of, native_edit_id_of, orphaned_tags_windows, session_of_label,
 };
 use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, SELECT_ALL_ID};
 use crate::multi_rename::session::{close as close_rename, is_held, open as open_rename};
@@ -204,4 +204,36 @@ fn a_second_hold_over_the_same_files_names_the_window_already_open() {
     for id in [&first, &second, &third] {
         end(&format!("tags-{id}"));
     }
+}
+
+/// A Tags window whose session is no longer held has been closed (its `end` released it) but is
+/// somehow still around, hidden: opening the next one takes it down, so it can't sit there for the
+/// life of the process. A held session's window, and every other window, is left alone.
+#[test]
+fn only_a_tags_window_whose_session_is_no_longer_held_is_an_orphan() {
+    let held = |id: &str| id == "multi-rename-1";
+    let labels = [
+        "main",
+        "tags-multi-rename-1",
+        "tags-multi-rename-2",
+        "viewer-3",
+        "settings",
+        "tags-",
+    ];
+    assert_eq!(orphaned_tags_windows(labels, held), vec!["tags-multi-rename-2"]);
+    assert!(orphaned_tags_windows(["main", "tags-multi-rename-1"], held).is_empty());
+}
+
+/// Wired to the real hold: a released (ended) session's window is an orphan, a held one isn't.
+#[test]
+fn a_window_whose_session_ended_is_an_orphan_and_a_held_one_is_not() {
+    let (_kept_dir, _kept_listing, kept) = album("tags-window-orphan-kept");
+    let (_ended_dir, _ended_listing, ended) = album("tags-window-orphan-ended");
+    hold(&kept).expect("hold");
+    hold(&ended).expect("hold");
+    end(&format!("tags-{ended}"));
+    let labels = [format!("tags-{kept}"), format!("tags-{ended}")];
+    let orphans = orphaned_tags_windows(labels.iter().map(String::as_str), is_held);
+    assert_eq!(orphans, vec![labels[1].as_str()]);
+    end(&labels[0]);
 }

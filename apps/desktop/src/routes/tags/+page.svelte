@@ -22,6 +22,10 @@
     import Button from '#lib/ui/Button.svelte'
     import { closeSelfWindow } from '#lib/child-window-close.js'
     import { TAGS_WINDOW_RECT_KEY } from '#lib/multi-rename/tag-editor/tags-window.js'
+    import {
+        onTagsCloseRequested,
+        type ClosableBody,
+    } from '#lib/multi-rename/tag-editor/tags-close-request.js'
 
     const log = getAppLogger('tagEditor')
 
@@ -32,7 +36,7 @@
     let initialized = $state(false)
     /** The shell couldn't start: the page says so and offers a way out, since Escape lives in the body. */
     let failed = $state(false)
-    let body = $state<{ requestClose: () => void; isEnding: () => boolean }>()
+    let body = $state<ClosableBody | null>()
     const unlisten: UnlistenFn[] = []
     let unsubscribeLanguage: (() => void) | undefined
 
@@ -58,14 +62,10 @@
         initialized = true
         try {
             const win = getCurrentWindow()
-            // The red button asks about unwritten edits first, as Escape does. Once the window is on its way out
-            // (`closeSelfWindow` closes it again from Rust) the request goes through.
+            // The red button asks about unwritten edits first, as Escape does (`tags-close-request.ts`).
             unlisten.push(
                 await win.onCloseRequested((event) => {
-                    const shown = body
-                    if (shown === undefined || shown.isEnding()) return
-                    event.preventDefault()
-                    shown.requestClose()
+                    onTagsCloseRequested(body, event)
                 }),
             )
             // macOS shares one menu bar: this window gets the main menu with the file items greyed.

@@ -217,7 +217,10 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
   Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
 - `window.rs` the Tags window's hold on its Multi-Rename session (`hold` counts tracks, names the folder; `end` on
-  close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`). It also
+  close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`).
+  `close_orphans` (run by `hold_tags_session`, so on every open) destroys, through the child-window hide-and-wait,
+  each `tags-*` window whose session is no longer held: one closed but still there would sit hidden for the life of
+  the process, holding its web content process. It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A and ⌘X / ⌘C / ⌘V, `menu_key_command_of`
   for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
   `tags_native_edit` hands back for a text box or the cover section.

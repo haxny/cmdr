@@ -10,7 +10,12 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   past toasts as ⌃M does), `tags-window.ts` (the opener: label `tags-<sessionId>`, `/tags?session=…&folder=…`, raises
   the window a session already has), `TagsWindow.svelte` (the body: `TagsContent` plus the close; Escape is `tags.close`
   in scope `Tags window`) and the route `routes/tags/+page.svelte` (the shell, and the red button through
-  `onCloseRequested`). Closing releases the hold, then `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`. **Why
+  `onCloseRequested`, answered by `tags-close-request.ts`: null-safe, never throws, lets the close go when in doubt).
+  Closing releases the hold, then `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`, which DESTROYS the window
+  after the hide and wait, so the page's own close listener can't veto it (a veto once left the window hidden and
+  alive for good). Opening a Tags window takes down any `tags-*` window whose session is no longer held
+  (`tag_editor/window.rs` `close_orphans`), and a Dock click brings back a hidden or minimized one whose session is
+  held (`app_lifecycle.rs`). The Window menu lists every open window (`menu/macos_appkit.rs`). **Why
   a copy from the sheet**: the sheet closes its session on Cancel, Rename, and Undo; a shared one would die under the
   window. **Why the hold**: Multi-Rename evicts idle (30 min) and least-recently-used (cap 4) sessions, and a window
   left open over lunch must keep its edits. The backend also ends a `tags-*` window's session on `Destroyed`

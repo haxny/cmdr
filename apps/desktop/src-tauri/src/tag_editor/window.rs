@@ -151,3 +151,27 @@ pub(crate) fn end(label: &str) {
     rename_session::release(session_id);
     rename_session::close(session_id);
 }
+
+/// Takes down every Tags window whose session is no longer held: closed (its `end` released it)
+/// but somehow still there. Opening a Tags window calls it (`hold_tags_session`), so an orphan
+/// can't sit hidden for the life of the process, holding its web content process. Through the
+/// same hide-and-wait as any child-window close, since its page may still be committing layers.
+pub(crate) fn close_orphans<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    use tauri::Manager;
+    let labels: Vec<String> = app.webview_windows().into_keys().collect();
+    for label in orphaned_tags_windows(labels.iter().map(String::as_str), rename_session::is_held) {
+        log::info!(target: "tag_editor", "Closing a Tags window whose session was already released");
+        crate::commands::child_window_state::hide_then_destroy(app, label);
+    }
+}
+
+/// The Tags windows among `labels` whose session `is_held` no longer holds.
+pub(crate) fn orphaned_tags_windows<'a>(
+    labels: impl IntoIterator<Item = &'a str>,
+    is_held: impl Fn(&str) -> bool,
+) -> Vec<&'a str> {
+    labels
+        .into_iter()
+        .filter(|label| session_of_label(label).is_some_and(|id| !is_held(id)))
+        .collect()
+}

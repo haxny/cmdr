@@ -392,7 +392,7 @@ pub(crate) fn reopen(session_id: &str) -> Result<MultiRenameOpened, MultiRenameE
     Ok(insert_new(listing_id, volume_id, dir, names, &[]))
 }
 
-#[cfg(test)]
+/// Whether a Tags window still holds `session_id`: `false` once released or gone.
 pub(crate) fn is_held(session_id: &str) -> bool {
     SESSIONS.lock_ignore_poison().get(session_id).is_some_and(|s| s.held)
 }

@@ -675,8 +675,8 @@ the seven color titles in order or nothing, because the header line carries the 
 puts a `Red` item above the real one.
 
 This is why every top-level menu in `menu_bar.rs` carries an ID from `command_map.rs`, which the macOS
-bar builds it with (Linux looks nothing up, so it builds its menus without one). Two IDs are shared
-with the viewer menu bar (`menu_structure.rs`): `EDIT_MENU_ID` and `HELP_MENU_ID`, because
+bar builds it with (Linux looks nothing up, so it builds its menus without one). Three IDs are shared
+with the viewer menu bar (`menu_structure.rs`): `EDIT_MENU_ID`, `WINDOW_MENU_ID`, and `HELP_MENU_ID`, because
 `cleanup_macos_menus` runs against whichever bar is installed. Only one bar is ever installed at a time,
 so the shared IDs never collide. Sort by carries `SORT_BY_MENU_ID` on both platforms.
 
@@ -686,6 +686,9 @@ so the shared IDs never collide. Sort by carries `SORT_BY_MENU_ID` on both platf
 1. Hands the Help menu (found by `HELP_MENU_ID`) to `NSApplication.setHelpMenu:` so macOS adds the
    search field. Tauri's `Submenu::set_as_help_menu_for_nsapp` resolves the live `NSMenu` itself, so
    this half needs no title at all.
+   It then hands the Window menu (`WINDOW_MENU_ID`, on both bars) to `NSApplication.setWindowsMenu:` through
+   `Submenu::set_as_windows_menu_for_nsapp`, so macOS lists every open window there (Tags, viewer, Settings).
+   Tauri registers only a menu whose id is its own `__tauri_window_menu__`, so without this the menu lists none.
 2. Hangs AppKit's own services menu off the Services item in the installed app menu
    (`adopt_installed_services_menu`), which is what makes `Cmdr > Services` list the file services
    Finder lists. muda registers one `NSMenu` at build time and the installed bar carries a different,

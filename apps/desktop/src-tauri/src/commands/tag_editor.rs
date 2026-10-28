@@ -428,11 +428,14 @@ pub async fn get_cover_thumbnail(session_id: String, key: String) -> Result<Opti
 
 /// Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
 /// many of its files are tracks and what its folder is called. The main window calls it right
-/// after opening the session; the window's close (or its `Destroyed`) releases it.
+/// after opening the session; the window's close (or its `Destroyed`) releases it. It also takes
+/// down any Tags window left behind with its session no longer held (`window::close_orphans`).
 #[tauri::command]
 #[specta::specta]
-pub async fn hold_tags_session(session_id: String) -> Result<TagsSessionInfo, MultiRenameError> {
-    crate::tag_editor::window::hold(&session_id)
+pub async fn hold_tags_session(app: tauri::AppHandle, session_id: String) -> Result<TagsSessionInfo, MultiRenameError> {
+    let held = crate::tag_editor::window::hold(&session_id);
+    crate::tag_editor::window::close_orphans(&app);
+    held
 }
 
 /// Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
