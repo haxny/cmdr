@@ -36,6 +36,8 @@ function whyKey(file: SideFile, reason: SideFileWithheld): MessageKey {
       return 'multiRename.tags.write.sideWhy.notAFile'
     case 'unreadable':
       return 'multiRename.tags.write.sideWhy.unreadable'
+    case 'notOneBook':
+      return 'multiRename.tags.write.sideWhy.notOneBook'
   }
 }
 

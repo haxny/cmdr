@@ -179,7 +179,12 @@ Performer (its `server/utils/prober.js` and `scanner/AudioFileScanner.js` map `t
 `scanner/BookScanner.js` reads `reader.txt` and `desc.txt` from the book folder; read 2026-10-28). The user's canon keeps
 the narrator in Performer, so a write also writes `reader.txt` (the tracks' Performer values, distinct, `, `-joined, only
 when every track names the same ones, in any order) and `desc.txt` (the Description every track shares) into
-`cover::tracks_folder`, from the session's tracks as edited (`session::book_of`). Decision: what the tracks don't agree
+the book folder (`side_files::book_folder`), from the session's tracks as edited (`side_files::book_of`). Decision: the
+book folder is the one folder the session was opened on (a name's first part), or the files' folder for plain files;
+a disc folder (`CD 1`, `CD1`, `Disc 2`, `disk 3`, any case) gives its parent, since Audiobookshelf reads the book
+folder, not a disc's. Why: the tracks' deepest common folder (`cover::tracks_folder`, still the covers' folder) is the
+library root when two books are opened, and a disc folder when one disc is. Tracks from more than one book (two folders,
+or a folder and loose files) get no side file: `SideFileWithheld::NotOneBook`, listed with its reason, nothing written. Decision: what the tracks don't agree
 on writes nothing, and the list says why (`SideFileChange::Withheld`), rather than guessing a majority. The list is
 `get_side_file_changes` (create / replace with the old text / withheld; one that already says the same, first line for
 `reader.txt`, is not listed and never touched). Safety: a replacement is written only when `allowSideFiles` names its
@@ -193,7 +198,8 @@ disk say right after it (`BookTags::OnDisk`, read after `mark_written`), so a sk
 track's edits never reach them; the list (`BookTags::Edited`) shows the intent. Undo: the old bytes (or "none") are kept in memory per
 apply id (as many applies as the store keeps); `undo_with` restores them, or removes a created file, only while the file
 still holds exactly what was written (else `changed`), and they count in the `RestoreReport` and in
-`UndoableApply.written`.
+`UndoableApply.written`. The store's record is forgotten only when the tracks and the side files all came back: a
+side file that couldn't be put back (a read-only folder) keeps the record, so the next ⌘Z retries it (`undo_with`).
 
 **Non-UTF-8 paths.** Paths cross IPC as lossy strings (`TrackRow::path`). Such a file is listed and written like any
 other, but `TagEdit::SetOne` can't name it (`UnknownTrack`, its `SetAll` edits still apply), and `skip` compares the

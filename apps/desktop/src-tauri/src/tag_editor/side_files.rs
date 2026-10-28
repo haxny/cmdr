@@ -1,5 +1,5 @@
 //! Audiobookshelf's side files: `reader.txt` (its first line is the narrator) and `desc.txt` (the
-//! description), written into the book folder (`cover::tracks_folder`) with the tags when the user
+//! description), written into the one book folder ([`book_folder`]) with the tags when the user
 //! turned `multiRename.tagEditor.absSideFiles` on (`ApplyRequest::side_files`). Audiobookshelf reads
 //! the narrator only from Composer or `reader.txt`, never from Performer, and the user's canon keeps
 //! the narrator in Performer, so the side file carries it.
@@ -80,6 +80,8 @@ pub enum SideFileWithheld {
     NotAFile,
     /// The file there is too large or can't be read, so its content couldn't be kept for undo.
     Unreadable,
+    /// The tracks come from more than one book folder, so no folder is the book's.
+    NotOneBook,
 }
 
 /// What a write would do with one side file. A file that already says the same isn't listed.
@@ -302,11 +304,52 @@ pub(super) enum BookTags {
     OnDisk,
 }
 
-/// The book a session writes side files for: its folder (`cover::tracks_folder`) and its readable
-/// tracks' tags, in current order.
+/// The book a session writes side files for: its folder ([`book_folder`], `None` when the tracks
+/// come from more than one book) and its readable tracks' tags, in current order.
 pub(super) struct Book {
-    pub folder: PathBuf,
+    pub folder: Option<PathBuf>,
     pub tracks: Vec<FileTags>,
+}
+
+/// Whether a folder's name is a disc's: `CD 1`, `CD1`, `Disc 2`, `disk 3` (any case, digits last).
+fn is_disc_folder(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    ["cd", "disc", "disk"].iter().any(|prefix| {
+        lower.strip_prefix(prefix).is_some_and(|rest| {
+            let digits = rest.trim_start_matches(' ');
+            !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+        })
+    })
+}
+
+/// `folder`, or its parent when `folder` is a disc folder ([`is_disc_folder`]): the book it belongs to.
+fn book_above(folder: PathBuf) -> PathBuf {
+    match (folder.file_name().and_then(|name| name.to_str()), folder.parent()) {
+        (Some(name), Some(parent)) if is_disc_folder(name) => parent.to_path_buf(),
+        _ => folder,
+    }
+}
+
+/// The one book folder the session's audio `names` (paths below the listing folder `dir`) belong
+/// to: the folder the session was opened on (a name's first part, `Book/Disc 1/01.mp3`), or `dir`
+/// for plain files; a disc folder's book is its parent. `None` when the names come from more than
+/// one book (two folders, or a folder and loose files): side files are then withheld
+/// ([`SideFileWithheld::NotOneBook`]). Covers keep `cover::tracks_folder`.
+pub(super) fn book_folder(dir: &Path, names: &[String]) -> Option<PathBuf> {
+    let mut books = names
+        .iter()
+        .filter(|name| cmdr_tags::format_of(name).is_some())
+        .map(|name| {
+            let mut parts = Path::new(name).components();
+            match (parts.next(), parts.next()) {
+                (Some(first), Some(_)) => book_above(dir.join(first)),
+                _ => book_above(dir.to_path_buf()),
+            }
+        });
+    let Some(first) = books.next() else {
+        return Some(book_above(dir.to_path_buf()));
+    };
+    books.all(|book| book == first).then_some(first)
 }
 
 /// The session's [`Book`], or `None` when it isn't editable (side files go only where tags do).
@@ -332,7 +375,7 @@ pub(super) fn book_of(session_id: &str, copy: BookTags) -> Result<Option<Book>, 
             })
             .collect();
         Ok(Some(Book {
-            folder: super::cover::tracks_folder(&layout.dir, names.iter()),
+            folder: book_folder(&layout.dir, &names),
             tracks,
         }))
     })
@@ -342,19 +385,26 @@ pub(super) fn book_of(session_id: &str, copy: BookTags) -> Result<Option<Book>, 
 /// read after the lock.
 pub fn side_file_changes(session_id: &str) -> Result<Vec<SideFileChange>, TagEditorError> {
     Ok(book_of(session_id, BookTags::Edited)?
-        .map(|book| changes(&book.folder, &book.tracks))
+        .map(|book| changes(book.folder.as_deref(), &book.tracks))
         .unwrap_or_default())
 }
 
-/// The change list's side-file rows for the book in `folder`, from its tracks as edited.
+/// The change list's side-file rows for the book in `folder` (`None`: more than one book, so
+/// each file the tracks ask for is withheld), from its tracks as edited.
 /// Reads the folder: ❌ not under a lock.
-pub(super) fn changes(folder: &Path, tracks: &[FileTags]) -> Vec<SideFileChange> {
+pub(super) fn changes(folder: Option<&Path>, tracks: &[FileTags]) -> Vec<SideFileChange> {
     wanted(tracks)
         .into_iter()
         .filter_map(|(file, text)| {
             let text = match text {
                 Ok(text) => text,
                 Err(reason) => return Some(SideFileChange::Withheld { file, reason }),
+            };
+            let Some(folder) = folder else {
+                return Some(SideFileChange::Withheld {
+                    file,
+                    reason: SideFileWithheld::NotOneBook,
+                });
             };
             let path = folder.join(file.file_name());
             match on_disk(&path) {

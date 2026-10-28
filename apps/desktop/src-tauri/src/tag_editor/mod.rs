@@ -45,6 +45,8 @@ mod playback_test;
 #[cfg(test)]
 mod session_test;
 #[cfg(test)]
+mod side_files_book_test;
+#[cfg(test)]
 mod side_files_test;
 #[cfg(test)]
 mod sort_test;

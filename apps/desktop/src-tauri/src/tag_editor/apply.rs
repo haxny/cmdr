@@ -184,7 +184,9 @@ fn write_side_files(session_id: &str, allowed: &[SideFileSeen], report: &mut Tag
             return;
         }
     };
-    let side = side_files::write(&book.folder, &book.tracks, allowed, report.apply_id.is_some());
+    // More than one book: no folder is the book's, so nothing is written (the list said why).
+    let Some(folder) = book.folder else { return };
+    let side = side_files::write(&folder, &book.tracks, allowed, report.apply_id.is_some());
     report.side_files_written.clone_from(&side.written);
     report.side_files_held.clone_from(&side.held);
     report.side_files_failed.clone_from(&side.failed);

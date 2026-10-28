@@ -2382,6 +2382,10 @@
   "@multiRename.tags.write.sideWhy.unreadable": {
     "description": "Why a side text file isn't written: the existing one is too large or unreadable, so Undo couldn't restore it. Completes multiRename.tags.write.sideWithheld."
   },
+  "multiRename.tags.write.sideWhy.notOneBook": "the tracks come from more than one book folder",
+  "@multiRename.tags.write.sideWhy.notOneBook": {
+    "description": "Why a side text file isn't written: the opened tracks sit in several book folders (two folders, or a folder and loose files), so there's no one folder to put it in. Completes multiRename.tags.write.sideWithheld."
+  },
   "multiRename.tags.write.sideWritten": "Also written beside the book: {files}",
   "@multiRename.tags.write.sideWritten": {
     "description": "Shown in the tag editor window after a write: the small text files (reader.txt, desc.txt) it also wrote into the book folder. {files} is a list of file names.",

@@ -17603,6 +17603,8 @@ export type SideFileWithheld =
   | 'notAFile'
   // The file there is too large or can't be read, so its content couldn't be kept for undo.
   | 'unreadable'
+  // The tracks come from more than one book folder, so no folder is the book's.
+  | 'notOneBook'
 
 /**
  *  What a "Sign in" affordance on a volume asks a person for: the FORM the sheet

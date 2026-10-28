@@ -32,6 +32,9 @@ describe('side files', () => {
     expect(sideRowOf({ kind: 'withheld', file: 'desc', reason: 'tracksDisagree' })).toMatchObject({
       why: 'multiRename.tags.write.sideWhy.descDisagree',
     })
+    expect(sideRowOf({ kind: 'withheld', file: 'reader', reason: 'notOneBook' })).toMatchObject({
+      why: 'multiRename.tags.write.sideWhy.notOneBook',
+    })
   })
 
   it('quotes the whole text, however long, on one line', () => {
