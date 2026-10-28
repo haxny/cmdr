@@ -580,6 +580,14 @@
   "@multiRename.mediaEditor.digitsHint": {
     "sourceHash": "d71b7d7"
   },
+  "multiRename.mediaEditor.digitsHintTrack": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty to pad to the longest number in these files, like 07 for 42 tracks.",
+  "@multiRename.mediaEditor.digitsHintTrack": {
+    "sourceHash": "9931936"
+  },
+  "multiRename.mediaEditor.digitsInvalid": "Type how many digits, like 2, or zeros, like 00.",
+  "@multiRename.mediaEditor.digitsInvalid": {
+    "sourceHash": "6f1da7c"
+  },
   "multiRename.mediaEditor.characters": "字元",
   "@multiRename.mediaEditor.characters": {
     "sourceHash": "6fac39e"
@@ -1040,9 +1048,17 @@
   "@multiRename.tags.album.colValue": {
     "sourceHash": "8e37953"
   },
+  "multiRename.tags.album.scope": "{total, plural, one {{countText} of {totalText} track} other {{countText} of {totalText} tracks}}",
+  "@multiRename.tags.album.scope": {
+    "sourceHash": "1cd1edf"
+  },
   "multiRename.tags.album.editLabel": "{field} for all files",
   "@multiRename.tags.album.editLabel": {
     "sourceHash": "980b039"
+  },
+  "multiRename.tags.album.editLabelScoped": "{total, plural, one {{field} for {countText} of {totalText} track} other {{field} for {countText} of {totalText} tracks}}",
+  "@multiRename.tags.album.editLabelScoped": {
+    "sourceHash": "0fd00e5"
   },
   "multiRename.tags.track.playing": "Playing",
   "@multiRename.tags.track.playing": {
@@ -1260,6 +1276,10 @@
   "@multiRename.tags.clearRowLabel": {
     "sourceHash": "ac716fc"
   },
+  "multiRename.tags.clearRowLabelScoped": "{total, plural, one {Clear {field} for {countText} of {totalText} track} other {Clear {field} for {countText} of {totalText} tracks}}",
+  "@multiRename.tags.clearRowLabelScoped": {
+    "sourceHash": "8d307ef"
+  },
   "multiRename.tags.tools.caseFields": "Changes: {fields}",
   "@multiRename.tags.tools.caseFields": {
     "sourceHash": "008465f"
@@ -1280,13 +1300,25 @@
   "@multiRename.tags.tools.caseUpper": {
     "sourceHash": "cc4c2e4"
   },
-  "multiRename.tags.tools.removeDiacritics": "Remove diacritics",
-  "@multiRename.tags.tools.removeDiacritics": {
-    "sourceHash": "4103ca1"
+  "multiRename.tags.tools.text.group": "Text",
+  "@multiRename.tags.tools.text.group": {
+    "sourceHash": "71988c4"
   },
-  "multiRename.tags.tools.removeDiacriticsTooltip": "Removes diacritics from every field except Comment and Description.",
-  "@multiRename.tags.tools.removeDiacriticsTooltip": {
-    "sourceHash": "ceb2678"
+  "multiRename.tags.tools.text.fieldsLabel": "Fields",
+  "@multiRename.tags.tools.text.fieldsLabel": {
+    "sourceHash": "616f48c"
+  },
+  "multiRename.tags.tools.text.allFields": "All fields except Comment and Description",
+  "@multiRename.tags.tools.text.allFields": {
+    "sourceHash": "fec24a7"
+  },
+  "multiRename.tags.tools.text.failed": "Couldn’t change the tags. Nothing was changed.",
+  "@multiRename.tags.tools.text.failed": {
+    "sourceHash": "ee97e79"
+  },
+  "multiRename.tags.tools.text.run": "Run",
+  "@multiRename.tags.tools.text.run": {
+    "sourceHash": "00d60e3"
   },
   "multiRename.tags.tools.stripTrackPrefix": "Strip track prefix",
   "@multiRename.tags.tools.stripTrackPrefix": {
@@ -1784,6 +1816,18 @@
   "@multiRename.tags.window.openFailed": {
     "sourceHash": "ad77a4c"
   },
+  "multiRename.tags.window.bodyReloaded": "The Tags window ran into a problem, so Cmdr reloaded it. Your tag edits are still here.",
+  "@multiRename.tags.window.bodyReloaded": {
+    "sourceHash": "dcf8eae"
+  },
+  "multiRename.tags.window.bodyStopped": "The Tags window keeps running into a problem, so Cmdr stopped reloading it.",
+  "@multiRename.tags.window.bodyStopped": {
+    "sourceHash": "4e61147"
+  },
+  "multiRename.tags.window.broken": "This Tags window can’t show its tags. Close it; if tag changes aren’t written to the files yet, Cmdr asks first.",
+  "@multiRename.tags.window.broken": {
+    "sourceHash": "afe391a"
+  },
   "multiRename.tags.window.close": "Close",
   "@multiRename.tags.window.close": {
     "sourceHash": "7d9eb7a"
@@ -1999,5 +2043,57 @@
   "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
   "@multiRename.tags.quit.waits": {
     "sourceHash": "ed6de29"
+  },
+  "multiRename.tags.write.sideHeading": "Beside the book:",
+  "@multiRename.tags.write.sideHeading": {
+    "sourceHash": "a64deb5"
+  },
+  "multiRename.tags.write.sideCreate": "Create {fileName}: {text}",
+  "@multiRename.tags.write.sideCreate": {
+    "sourceHash": "db5d831"
+  },
+  "multiRename.tags.write.sideReplace": "Replace {fileName}: “{old}” becomes “{text}”",
+  "@multiRename.tags.write.sideReplace": {
+    "sourceHash": "6263efd"
+  },
+  "multiRename.tags.write.sideWithheld": "{fileName} isn’t written: {reason}",
+  "@multiRename.tags.write.sideWithheld": {
+    "sourceHash": "875491f"
+  },
+  "multiRename.tags.write.sideWhy.readerDisagree": "the tracks name different narrators",
+  "@multiRename.tags.write.sideWhy.readerDisagree": {
+    "sourceHash": "952a61c"
+  },
+  "multiRename.tags.write.sideWhy.descDisagree": "the tracks have different descriptions",
+  "@multiRename.tags.write.sideWhy.descDisagree": {
+    "sourceHash": "33b4bfe"
+  },
+  "multiRename.tags.write.sideWhy.tooLong": "its text is longer than 64 KB",
+  "@multiRename.tags.write.sideWhy.tooLong": {
+    "sourceHash": "16dc435"
+  },
+  "multiRename.tags.write.sideWhy.notAFile": "something other than a plain file has that name",
+  "@multiRename.tags.write.sideWhy.notAFile": {
+    "sourceHash": "f2e8a54"
+  },
+  "multiRename.tags.write.sideWhy.unreadable": "the file there can’t be read, so it couldn’t be put back",
+  "@multiRename.tags.write.sideWhy.unreadable": {
+    "sourceHash": "943d1d1"
+  },
+  "multiRename.tags.write.sideWhy.notOneBook": "the tracks come from more than one book folder",
+  "@multiRename.tags.write.sideWhy.notOneBook": {
+    "sourceHash": "5c33ed4"
+  },
+  "multiRename.tags.write.sideWritten": "Also written beside the book: {files}",
+  "@multiRename.tags.write.sideWritten": {
+    "sourceHash": "11b2f55"
+  },
+  "multiRename.tags.write.sideNotWrittenHeading": "Not written beside the book:",
+  "@multiRename.tags.write.sideNotWrittenHeading": {
+    "sourceHash": "5e60c0f"
+  },
+  "multiRename.tags.write.reviewSideFiles": "{count, plural, one {A file beside the book says something else, so the list shows its replacement first.} other {Files beside the book say something else, so the list shows their replacement first.}}",
+  "@multiRename.tags.write.reviewSideFiles": {
+    "sourceHash": "def8bc2"
   }
 }

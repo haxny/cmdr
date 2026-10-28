@@ -3451,5 +3451,17 @@
   "settings.multiRename.tagEditor.keywords": "tags, id3, mp3, m4b, audiobook, music, metadata, artist, album",
   "@settings.multiRename.tagEditor.keywords": {
     "sourceHash": "8981b26"
+  },
+  "settings.multiRename.tagEditor.absSideFiles.label": "Write reader.txt and desc.txt for Audiobookshelf",
+  "@settings.multiRename.tagEditor.absSideFiles.label": {
+    "sourceHash": "208b53c"
+  },
+  "settings.multiRename.tagEditor.absSideFiles.description": "Audiobookshelf takes the narrator only from Composer or from reader.txt, never from Performer. With this on, writing tags also writes the narrator (Performer) into reader.txt and the description into desc.txt in the book folder. A file that says something else is replaced only after you've seen it in the list of changes.",
+  "@settings.multiRename.tagEditor.absSideFiles.description": {
+    "sourceHash": "e48b1f3"
+  },
+  "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
+  "@settings.multiRename.tagEditor.absSideFiles.keywords": {
+    "sourceHash": "806b0cd"
   }
 }
