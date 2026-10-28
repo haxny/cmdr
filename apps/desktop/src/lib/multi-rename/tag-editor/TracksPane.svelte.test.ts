@@ -17,7 +17,7 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => (
   getStripedRows: () => true,
 }))
 
-import type { TrackRow } from '#lib/ipc/bindings.js'
+import type { TrackRow, TrackSort } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
 import TracksPane from './TracksPane.svelte'
 import { createTrackSelection } from './track-selection.svelte'
@@ -44,7 +44,9 @@ function track(n: string, over: Partial<TrackRow> = {}): TrackRow {
 
 const TRACKS = [track('01'), track('02'), track('03'), track('04', { readError: 'unreadable' })]
 
-async function mountPane(over: { tracks?: TrackRow[]; editable?: boolean; cursor?: number } = {}) {
+async function mountPane(
+  over: { tracks?: TrackRow[]; editable?: boolean; cursor?: number; sort?: TrackSort | null } = {},
+) {
   const tracks = over.tracks ?? TRACKS
   const selection = createTrackSelection()
   selection.sync(tracks.map((t) => t.path))
@@ -52,6 +54,7 @@ async function mountPane(over: { tracks?: TrackRow[]; editable?: boolean; cursor
   const onCursorChange = vi.fn()
   const onSwitchPane = vi.fn()
   const onPlay = vi.fn()
+  const onSort = vi.fn()
   const mounted = await mountInto(TracksPane, {
     tracks,
     editable: over.editable ?? true,
@@ -63,11 +66,13 @@ async function mountPane(over: { tracks?: TrackRow[]; editable?: boolean; cursor
     onPlay,
     onEdit,
     onSwitchPane,
+    sort: over.sort ?? null,
+    onSort,
   })
   cleanup = mounted.cleanup
   const list = mounted.root.querySelector<HTMLElement>('[role="listbox"]')
   if (!list) throw new Error('no listbox')
-  return { root: mounted.root, list, selection, onEdit, onCursorChange, onSwitchPane, onPlay }
+  return { root: mounted.root, list, selection, onEdit, onCursorChange, onSwitchPane, onPlay, onSort }
 }
 
 const rowsOf = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[role="option"]')]
@@ -225,6 +230,8 @@ describe('TracksPane order and edits', () => {
       onPlay: () => {},
       onEdit,
       onSwitchPane: () => {},
+      sort: null,
+      onSort: () => {},
     })
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -294,5 +301,120 @@ describe('TracksPane after a click', () => {
     const { root, selection } = await mountPane()
     mouseDown(rowsOf(root)[0], { metaKey: true })
     expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3'] })
+  })
+})
+
+const headerButton = (root: HTMLElement, label: string) => {
+  const button = [...root.querySelectorAll<HTMLButtonElement>('.tag-pane-header button')].find(
+    (b) => b.querySelector('.label')?.textContent === label,
+  )
+  if (!button) throw new Error(`no ${label} header`)
+  return button
+}
+
+describe('TracksPane sorting', () => {
+  it.each([
+    ['#', 'discTrack'],
+    ['Title', 'title'],
+    ['Length', 'length'],
+    ['File name', 'fileName'],
+  ])('clicking %s sorts ascending, and a second click on the active header descending', async (label, key) => {
+    const { root, onSort } = await mountPane()
+    headerButton(root, label).click()
+    expect(onSort).toHaveBeenLastCalledWith({ key, descending: false })
+    cleanup?.()
+
+    const active = await mountPane({ sort: { key: key as TrackSort['key'], descending: false } })
+    headerButton(active.root, label).click()
+    expect(active.onSort).toHaveBeenLastCalledWith({ key, descending: true })
+  })
+
+  it('a click on the active descending header sorts ascending again', async () => {
+    const { root, onSort } = await mountPane({ sort: { key: 'title', descending: true } })
+    headerButton(root, 'Title').click()
+    expect(onSort).toHaveBeenLastCalledWith({ key: 'title', descending: false })
+  })
+
+  it('a click on another header starts ascending', async () => {
+    const { root, onSort } = await mountPane({ sort: { key: 'title', descending: true } })
+    headerButton(root, 'Length').click()
+    expect(onSort).toHaveBeenLastCalledWith({ key: 'length', descending: false })
+  })
+
+  it('the active header shows its direction', async () => {
+    const { root } = await mountPane({ sort: { key: 'length', descending: true } })
+    expect(headerButton(root, 'Length').getAttribute('aria-label')).toBe('Length, sorted descending')
+    expect(headerButton(root, 'Title').getAttribute('aria-label')).toBe('Title, not sorted')
+  })
+
+  it('☐ and ▶ are not sortable, and a single-file book has no # header', async () => {
+    const { root } = await mountPane()
+    expect(root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(4)
+    cleanup?.()
+    const single = await mountPane({ tracks: [track('01')] })
+    expect(single.root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(3)
+  })
+
+  it('a header click does not move the cursor or the selection', async () => {
+    const { root, onCursorChange, selection } = await mountPane()
+    headerButton(root, 'Title').click()
+    expect(onCursorChange).not.toHaveBeenCalled()
+    expect(selection.count).toBe(0)
+  })
+})
+
+describe('TracksPane double-click', () => {
+  const dblclick = async (el: Element | null) => {
+    el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    await tick()
+  }
+
+  it('double-click on the # cell edits the number', async () => {
+    const { root } = await mountPane()
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="number"]'))
+    expect(editorOf(root)?.value).toBe('02')
+  })
+
+  it('double-click on Title edits the title', async () => {
+    const { root } = await mountPane()
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="title"]'))
+    expect(editorOf(root)?.value).toBe('T02')
+  })
+
+  it('double-click on ▶ or ☐ opens nothing', async () => {
+    const { root } = await mountPane()
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="play"]'))
+    await dblclick(rowsOf(root)[1].querySelector('[data-col="mark"]'))
+    expect(editorOf(root)).toBeNull()
+  })
+})
+
+describe('TracksPane header alignment', () => {
+  it('the header’s scroll bar width is the scroller’s offsetWidth minus clientWidth', async () => {
+    const offset = vi
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('full-list') ? 316 : 0
+      })
+    const client = vi
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('full-list') ? 306 : 0
+      })
+    try {
+      const { root } = await mountPane()
+      const header = root.querySelector<HTMLElement>('.tag-pane-header')
+      expect(header?.style.getPropertyValue('--spacing-scrollbar-width')).toBe('10px')
+    } finally {
+      offset.mockRestore()
+      client.mockRestore()
+    }
+  })
+
+  it('the select-all column is as wide as its 16px Checkbox, whatever the font scale', async () => {
+    const { root } = await mountPane()
+    expect(root.querySelector<HTMLElement>('.tag-pane-header')?.style.gridTemplateColumns.startsWith('16px ')).toBe(
+      true,
+    )
   })
 })

@@ -12,17 +12,19 @@
     import { classifySelectionKey } from '#lib/file-explorer/pane/selection-keys.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
-    import type { TrackRow } from '#lib/ipc/bindings.js'
+    import type { TrackRow, TrackSort, TrackSortKey } from '#lib/ipc/bindings.js'
     import { getRowHeight, getStripedRows } from '#lib/settings/reactive-settings.svelte.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import type { TagEdit } from '#lib/tauri-commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Checkbox from '#lib/ui/Checkbox.svelte'
+    import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
     import './tag-pane.css'
     import { formatTrackLength, parseFieldText } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
+    import TrackSortHeader from './TrackSortHeader.svelte'
     import type { TagsCommandId } from './tags-function-keys'
     import type { TrackSelection } from './track-selection.svelte'
 
@@ -39,6 +41,10 @@
         onPlay: (path: string) => void
         onEdit: (edits: TagEdit[]) => void | Promise<void>
         onSwitchPane: () => void
+        /** The order the tracks are in, or `null` when none of the headers' orders is (Multi-Rename moved a row). */
+        sort: TrackSort | null
+        /** A header was clicked: the order to put the tracks in. */
+        onSort: (sort: TrackSort) => void
         /** Under the count, at the pane's foot (Open in foobar2000). */
         footer?: Snippet
         /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
@@ -56,6 +62,8 @@
         onPlay,
         onEdit,
         onSwitchPane,
+        sort,
+        onSort,
         footer,
         isEcho,
     }: Props = $props()
@@ -68,8 +76,8 @@
     /** Fixed columns, flexing Title: the pane never scrolls sideways. */
     const grid = $derived(
         [
-            // Wide enough for the header's select-all Checkbox.
-            'calc(16px * var(--font-scale))',
+            // The header's select-all Checkbox is 16px whatever the font scale, so this column is too.
+            '16px',
             'calc(14px * var(--font-scale))',
             ...(showNumber ? ['calc(32px * var(--font-scale))'] : []),
             'minmax(0, 1fr)',
@@ -82,6 +90,11 @@
 
     let list = $state<HTMLElement>()
     let scroller = $state<HTMLElement>()
+    /** The scroller's classic scroll bar: the header pads by it so its columns stay over the rows' (as `FullList`). */
+    let scrollbarWidth = $state(0)
+    const measureScroller = (box: ScrollBoxSize) => {
+        scrollbarWidth = Math.max(0, box.offsetWidth - box.clientWidth)
+    }
     let editing = $state<{ path: string; field: EditedField; place: EditorPlace } | null>(null)
     const edited = $derived(editing === null ? undefined : tracks.find((track) => track.path === editing?.path))
 
@@ -109,6 +122,11 @@
     /** F3 from the window's bar or with focus outside the pane: plays or stops the cursor row. */
     export function playAtCursor(): void {
         play(at)
+    }
+
+    /** A header click: the active column flips its direction, another column starts ascending. */
+    function sortBy(key: TrackSortKey): void {
+        onSort({ key, descending: sort?.key === key && !sort.descending })
     }
 
     function canEdit(track: TrackRow | undefined): track is TrackRow {
@@ -212,6 +230,13 @@
         moveTo(move.to)
     }
 
+    /** A double-click edits the number on #, else the Title (also from Length and File). ☐ and ▶ open nothing. */
+    function onRowDoubleClick(e: MouseEvent, index: number): void {
+        const column = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-col]')?.dataset.col : undefined
+        if (column === 'mark' || column === 'play') return
+        openEditor(index, column === 'number' ? 'track' : 'title')
+    }
+
     /**
      * A click on a row: the cursor goes there and the list keeps focus, so the keys go on working; ⌘ toggles the row
      * and ⇧ selects up to it, as on files. On the ☐ the click itself toggles, so ⌘ adds nothing there.
@@ -227,7 +252,13 @@
 </script>
 
 <div class="tag-pane full-list-container" class:is-focused={focused}>
-    <div class="tag-pane-header" style:grid-template-columns={grid}>
+    <div
+        class="tag-pane-header"
+        role="group"
+        aria-label={tString('multiRename.tags.sort.label')}
+        style:grid-template-columns={grid}
+        style:--spacing-scrollbar-width="{scrollbarWidth}px"
+    >
         <span class="head-mark">
             <Checkbox
                 ariaLabel={tString('multiRename.tags.select.all')}
@@ -238,12 +269,14 @@
             />
         </span>
         <span class="sr-only">{tString('multiRename.tags.col.play')}</span>
-        {#if showNumber}<span class="cut">{tString('multiRename.tags.col.number')}</span>{/if}
-        <span class="cut">{tString('multiRename.tags.col.title')}</span>
-        <span class="cut end">{tString('multiRename.tags.col.length')}</span>
-        <span class="cut">{tString('multiRename.tags.col.fileName')}</span>
+        {#if showNumber}
+            <TrackSortHeader sortKey="discTrack" label={tString('multiRename.tags.col.number')} current={sort} onClick={sortBy} align="right" />
+        {/if}
+        <TrackSortHeader sortKey="title" label={tString('multiRename.tags.col.title')} current={sort} onClick={sortBy} />
+        <TrackSortHeader sortKey="length" label={tString('multiRename.tags.col.length')} current={sort} onClick={sortBy} align="right" />
+        <TrackSortHeader sortKey="fileName" label={tString('multiRename.tags.col.fileName')} current={sort} onClick={sortBy} />
     </div>
-    <div class="full-list" bind:this={scroller}>
+    <div class="full-list" bind:this={scroller} use:useScrollBoxSize={{ onResize: measureScroller }}>
         <div
             bind:this={list}
             class="listbox-region"
@@ -274,7 +307,7 @@
                     style:height="{rowHeight}px"
                     style:grid-template-columns={grid}
                     onmousedown={(e: MouseEvent) => { onRowMouseDown(e, index) }}
-                    ondblclick={() => { openEditor(index, 'title') }}
+                    ondblclick={(e: MouseEvent) => { onRowDoubleClick(e, index) }}
                 >
                     <!-- Mouse shortcuts beside the keys (Space selects, ⌥Space plays); hidden from screen readers,
                          which hear the selection on the option and "Playing" at the row's end. -->

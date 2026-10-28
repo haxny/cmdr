@@ -1,6 +1,6 @@
 /** Tier 3 a11y tests for `TracksPane.svelte`: tracks with a selection, one playing, an unreadable one, one file, an open editor. */
 import { afterEach, describe, it, vi } from 'vitest'
-import type { TrackRow } from '#lib/ipc/bindings.js'
+import type { TrackRow, TrackSort } from '#lib/ipc/bindings.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import TracksPane from './TracksPane.svelte'
 import { createTrackSelection } from './track-selection.svelte'
@@ -39,7 +39,7 @@ const TRACKS: TrackRow[] = [
   },
 ]
 
-async function mountPane(tracks: TrackRow[], editable = true): Promise<HTMLElement> {
+async function mountPane(tracks: TrackRow[], editable = true, sort: TrackSort | null = null): Promise<HTMLElement> {
   const selection = createTrackSelection()
   selection.sync(tracks.map((t) => t.path))
   selection.toggleAt(0)
@@ -54,6 +54,8 @@ async function mountPane(tracks: TrackRow[], editable = true): Promise<HTMLEleme
     onPlay: () => {},
     onEdit: () => {},
     onSwitchPane: () => {},
+    sort,
+    onSort: () => {},
   })
   cleanup = mounted.cleanup
   return mounted.root
@@ -74,6 +76,10 @@ describe('TracksPane a11y', () => {
     if (!list) throw new Error('no listbox')
     await press(list, 'F2')
     await expectNoA11yViolations(root)
+  })
+
+  it('sorted by a column, with the direction caret, has no violations', async () => {
+    await expectNoA11yViolations(await mountPane(TRACKS, true, { key: 'title', descending: true }))
   })
 
   it('read-only has no violations', async () => {

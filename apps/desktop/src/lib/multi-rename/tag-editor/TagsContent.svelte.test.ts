@@ -90,6 +90,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
     textTool: vi.fn(() => Promise.resolve()),
+    sortTracks: vi.fn(() => Promise.resolve()),
   }
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
@@ -135,6 +136,16 @@ describe('TagsContent', () => {
       [[{ kind: 'setAll', field: 'album', values: ['Dracula'] }]],
       [[{ kind: 'setOne', path: '/b/02.mp3', field: 'title', values: ['Konec'] }]],
     ])
+  })
+
+  it('a Tracks column header sorts through the state, flipping the direction of the view’s active sort', async () => {
+    const { root, state } = await mountTab({ view: { ...VIEW, sort: { key: 'title', descending: false } } })
+    const header = (label: string) =>
+      [...root.querySelectorAll<HTMLButtonElement>('.sortable-header')].find((b) => b.textContent.includes(label))
+    header('Title')?.click()
+    expect(state.sortTracks).toHaveBeenLastCalledWith({ key: 'title', descending: true })
+    header('Length')?.click()
+    expect(state.sortTracks).toHaveBeenLastCalledWith({ key: 'length', descending: false })
   })
 
   it("passes the view's bad-date count on, so the Date row is flagged on open", async () => {
@@ -245,7 +256,12 @@ describe('TagsContent', () => {
       expect(at(section)).toBeGreaterThan(at(album))
       expect(at(section)).toBeLessThan(at(tracks))
       const between = stops.slice(at(section), at(tracks))
-      expect(between.every((stop) => stop.closest('[data-pane="album"]') !== null)).toBe(true)
+      // The Tracks pane's own sort headers sit just before its list.
+      expect(
+        between.every(
+          (stop) => stop.closest('[data-pane="album"]') !== null || stop.closest('.tag-pane-header') !== null,
+        ),
+      ).toBe(true)
     })
 
     it('a pasted picture goes to the state as bytes', async () => {
@@ -450,9 +466,12 @@ describe('TagsContent', () => {
     await press(paneList(root, 'Album tags'), 'F2')
     await press(paneList(root, 'Tracks'), 'F2')
     expect(root.querySelector('.tag-value-editor')).toBeNull()
-    // Playing and selecting write nothing, so Play, Open in foobar2000 and the select-all box stay available.
+    // Playing, selecting and sorting write nothing, so Play, Open in foobar2000, the select-all box and the column
+    // headers stay available.
     const readers = new Set(['Open in foobar2000', 'F3Play'])
-    const writers = [...root.querySelectorAll('button')].filter((b) => !readers.has(b.textContent.trim()))
+    const writers = [...root.querySelectorAll('button')].filter(
+      (b) => !readers.has(b.textContent.trim()) && !b.classList.contains('sortable-header'),
+    )
     for (const button of writers) expect(button.disabled).toBe(true)
   })
 })

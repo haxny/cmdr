@@ -1977,6 +1977,25 @@
   "@multiRename.tags.numbering.cancel": {
     "description": "Button that closes the auto-numbering dialog without numbering anything."
   },
+  "multiRename.tags.sort.label": "Sort tracks",
+  "@multiRename.tags.sort.label": {
+    "description": "Screen-reader name of the row of column headers above the track list in the tag editor window; each header is a button that sorts the tracks by its column."
+  },
+  "multiRename.tags.sort.state": "{column}, {order, select, ascending {sorted ascending} descending {sorted descending} other {not sorted}}",
+  "@multiRename.tags.sort.state": {
+    "description": "What a screen reader says for a column header button above the track list in the tag editor window: the column’s name, then whether the tracks are sorted by it and which way, as in “Length, sorted descending” or “Title, not sorted”. Never shown on screen; the button shows only the column name and a small arrow.",
+    "placeholders": {
+      "column": "the column header’s own text, for example #, Title, Length, or File name",
+      "order": "ascending or descending when the tracks are sorted by this column, anything else when they aren’t"
+    }
+  },
+  "multiRename.tags.sort.by": "Sort by {column}",
+  "@multiRename.tags.sort.by": {
+    "description": "Hover tooltip on a column header above the track list in the tag editor window: clicking it puts the tracks in that column’s order (a second click reverses it).",
+    "placeholders": {
+      "column": "the column header’s own text, for example #, Title, Length, or File name"
+    }
+  },
   "multiRename.tags.col.play": "Play",
   "@multiRename.tags.col.play": {
     "description": "Column header (read only by screen readers) above the play buttons in the track list of the tag editor window."

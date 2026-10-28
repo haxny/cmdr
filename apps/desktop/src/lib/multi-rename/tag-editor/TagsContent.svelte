@@ -10,7 +10,7 @@
     import { onDestroy, onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import type { TagField, TagTool } from '#lib/ipc/bindings.js'
+    import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
     import { openTagsInPlayer, type TagEdit } from '#lib/tauri-commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
@@ -348,6 +348,8 @@
                     onPlay={(path: string) => void player.toggle(path)}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
                     onSwitchPane={() => { panes.switchPane() }}
+                    sort={view.sort}
+                    onSort={(sort: TrackSort) => void tags.sortTracks(sort)}
                     isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
                     footer={tracksFooter}
                 />

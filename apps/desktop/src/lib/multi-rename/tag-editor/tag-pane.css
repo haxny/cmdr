@@ -22,7 +22,9 @@
 .tag-pane .tag-pane-header {
   display: grid;
   gap: var(--spacing-sm);
-  padding: var(--spacing-xxs) var(--spacing-md) var(--spacing-xs);
+  /* The right edge adds the scroller's scroll bar (measured by the pane, 0 when it overlays), as `FullListHeader`. */
+  padding: var(--spacing-xxs) calc(var(--spacing-md) + var(--spacing-scrollbar-width, 0px)) var(--spacing-xs)
+    var(--spacing-md);
   height: calc(22px * var(--font-scale) + var(--spacing-xs));
   align-items: center;
   flex-shrink: 0;

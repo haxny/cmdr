@@ -21,6 +21,7 @@
     import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
     import './tag-pane.css'
     import { formatFieldValue, isMultiLineField, multipleText, parseSharedEdit, sharedEditHint } from './shared-field-input'
+    import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import TagValueEditor from './TagValueEditor.svelte'
     import type { TagsCommandId } from './tags-function-keys'
     import ValueChoices from './ValueChoices.svelte'
@@ -72,6 +73,11 @@
 
     let list = $state<HTMLElement>()
     let scroller = $state<HTMLElement>()
+    /** The scroller's classic scroll bar: the header pads by it so its columns stay over the rows' (as `FullList`). */
+    let scrollbarWidth = $state(0)
+    const measureScroller = (box: ScrollBoxSize) => {
+        scrollbarWidth = Math.max(0, box.offsetWidth - box.clientWidth)
+    }
     let editing = $state<{ field: TagField; place: EditorPlace } | null>(null)
     const edited = $derived(editing === null ? undefined : shown.find((row) => row.field === editing?.field))
 
@@ -160,12 +166,17 @@
 </script>
 
 <div class="tag-pane full-list-container" class:is-focused={focused}>
-    <div class="tag-pane-header" style:grid-template-columns={GRID} aria-hidden="true">
+    <div
+        class="tag-pane-header"
+        style:grid-template-columns={GRID}
+        style:--spacing-scrollbar-width="{scrollbarWidth}px"
+        aria-hidden="true"
+    >
         <span class="cut">{tString('multiRename.tags.album.colName')}</span>
         <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
     </div>
     <!-- `data-cover-clip`: the cover section cuts its drop area to this scroller (`CoverPanel`). -->
-    <div class="full-list" bind:this={scroller} data-cover-clip>
+    <div class="full-list" bind:this={scroller} use:useScrollBoxSize={{ onResize: measureScroller }} data-cover-clip>
         <div
             bind:this={list}
             class="listbox-region"

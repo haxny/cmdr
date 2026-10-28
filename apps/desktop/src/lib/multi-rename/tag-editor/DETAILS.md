@@ -39,10 +39,12 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   question.
 - **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
   the cursor row's Values… and Clear under the list; `CoverPanel` as the last group, inside the list's scroll),
-  `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays
-  over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` +
-  `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a format would lose, Write
-  anyway or Skip).
+  `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book; # Title Length File are
+  `TrackSortHeader` buttons that call `onSort`, the active one flipping direction and any other starting ascending, from
+  `view.sort`; the header pads by the scroller's scroll bar width, and a double-click edits # or Title),
+  `TagValueEditor` (the box F2 lays over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog),
+  `WriteDialog` (`ApplyPanel` + `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a
+  format would lose, Write anyway or Skip).
 - **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a tile with how
   many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new view; a new
   view also clears the section's notice). Tiles show `getCoverThumbnail` (asked once more when none came, then "No
