@@ -100,10 +100,25 @@ pub(crate) async fn record_session_guid(
 /// probe whatever rows still lack one.
 pub(crate) fn adopt_live_guid(volume_id: &str) {
     if let Some(live) = live_share(volume_id) {
-        let saved = known_shares::record_server_guid(volume_id, &live.server_guid, live.proof);
-        log::debug!(target: "smb_server_guid", "{volume_id}: adopted its live session's GUID (saved row: {saved})");
+        let row_username = known_shares::share_by_volume_id(volume_id).and_then(|row| row.username);
+        let proof = adopted_proof(&live, row_username.as_deref());
+        let saved = known_shares::record_server_guid(volume_id, &live.server_guid, proof);
+        log::debug!(target: "smb_server_guid", "{volume_id}: adopted its live session's GUID ({proof:?}, saved row: {saved})");
     }
     schedule_probe(Duration::ZERO);
+}
+
+/// The proof a saved row may adopt from `live`: `Authenticated` only when the session
+/// signed in as the row's own account (`known_shares::share_account`), else
+/// `Unauthenticated`, which only fills a missing GUID. Proof earned as one account
+/// never vouches for another. Pure.
+fn adopted_proof(live: &LiveShare, row_username: Option<&str>) -> GuidProof {
+    let same_account =
+        known_shares::share_account(live.username.as_deref()) == known_shares::share_account(row_username);
+    match live.proof {
+        GuidProof::Authenticated if same_account => GuidProof::Authenticated,
+        _ => GuidProof::Unauthenticated,
+    }
 }
 
 /// The saved shares a probe pass dials: rows with no GUID whose share name another

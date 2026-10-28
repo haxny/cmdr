@@ -800,7 +800,8 @@ an `authenticated` one on BOTH rows lets one id answer for the other.
   off `SmbVolume::diagnostics` with no I/O). Signed in as an account it OVERWRITES the row's (a NAS restored or
   replaced mints a new one, and the latest authenticated answer is the truth); as a guest it only fills. A live share
   with no saved row keeps it in memory (`live_share`), and the row a mount saves later adopts it (`adopt_live_guid`): the
-  upgrade can land before `remember_mount`'s row does.
+  upgrade can land before `remember_mount`'s row does. It adopts `authenticated` only when the session signed in as
+  the row's own account (`adopted_proof`); a guest session or another account only fills.
 - **The probe fills the rest**: a NEGOTIATE-only dial of the saved address (`cmdr_smb::connection::probe_server_guid`,
   no session, no credentials, 3 s per step), only for rows with no GUID whose share name another row shares, one pass
   at a time, 20 s after startup and whenever a mount saves a share row. ❗ It only ever FILLS: whatever answers on a

@@ -141,3 +141,38 @@ fn no_tool_handler_reaches_the_probe() {
     }
     assert!(offenders.is_empty(), "these reach the GUID probe: {offenders:?}");
 }
+
+fn live(proof: GuidProof, username: Option<&str>) -> LiveShare {
+    LiveShare {
+        server_guid: ServerGuid::parse(BOX).expect("a GUID"),
+        proof,
+        share_name: "naspi".to_string(),
+        username: username.map(str::to_string),
+    }
+}
+
+/// ❗ **A row adopts a live session's proof only for its own account.** The session
+/// may have signed in as someone else than the row a later mount saved (or as a
+/// guest): its GUID still fills, as a hint, but vouches for nothing.
+#[test]
+fn an_adopted_guid_is_authenticated_only_for_the_rows_own_account() {
+    assert_eq!(
+        adopted_proof(&live(GuidProof::Authenticated, Some("David")), Some("david")),
+        GuidProof::Authenticated,
+        "the same account, folded"
+    );
+    assert_eq!(
+        adopted_proof(&live(GuidProof::Authenticated, Some("dori")), Some("david")),
+        GuidProof::Unauthenticated
+    );
+    assert_eq!(
+        adopted_proof(&live(GuidProof::Authenticated, Some("david")), None),
+        GuidProof::Unauthenticated,
+        "a guest row"
+    );
+    assert_eq!(
+        adopted_proof(&live(GuidProof::Unauthenticated, None), Some("david")),
+        GuidProof::Unauthenticated,
+        "a guest session"
+    );
+}
