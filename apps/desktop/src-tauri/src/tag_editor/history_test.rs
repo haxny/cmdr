@@ -13,11 +13,12 @@ use super::sort::{TrackSort, TrackSortKey, sort_tracks};
 use super::view::TagEditorView;
 use crate::multi_rename::session::close as close_rename;
 
-/// The view as the user sees the tags: the history flags are not part of that.
+/// The view as the user sees the tags: the history flags and the build stamp are not part of that.
 fn shown(view: &TagEditorView) -> TagEditorView {
     TagEditorView {
         can_undo_edit: false,
         can_redo_edit: false,
+        view_seq: 0,
         ..view.clone()
     }
 }

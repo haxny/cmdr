@@ -100,20 +100,36 @@ describe('createTagEditorState', () => {
     expect(state.view).toEqual(reordered)
   })
 
-  it('an older view answer that lands after a newer one is dropped', async () => {
+  it('a view the backend built earlier that lands after a later one is dropped', async () => {
     let answerOpen: (res: unknown) => void = () => {}
-    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: VIEW })
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: { ...VIEW, viewSeq: 1 } })
     const state = createTagEditorState('S')
     await state.open()
     ipc.openTagEditor.mockImplementationOnce(() => new Promise((resolve) => (answerOpen = resolve)))
-    const EDITED_VIEW = { ...VIEW, dirty: true }
+    const EDITED_VIEW = { ...VIEW, dirty: true, viewSeq: 3 }
     ipc.editTags.mockResolvedValueOnce({ ok: true, value: EDITED_VIEW })
     const reopening = state.open()
     await new Promise((resolve) => setTimeout(resolve, 0))
     await state.edit([])
-    answerOpen({ ok: true, value: VIEW })
+    answerOpen({ ok: true, value: { ...VIEW, viewSeq: 2 } })
     await reopening
     expect(state.view).toEqual(EDITED_VIEW)
+  })
+
+  it('an edit answer landing before the scope answer the backend built after it keeps the scope', async () => {
+    ipc.openTagEditor.mockResolvedValueOnce({ ok: true, value: { ...VIEW, viewSeq: 1 } })
+    const state = createTagEditorState('S')
+    await state.open()
+    let answerScope: (res: unknown) => void = () => {}
+    ipc.setTagViewScope.mockImplementationOnce(() => new Promise((resolve) => (answerScope = resolve)))
+    // Asked first, built last: the backend ran the edit (seq 2, old scope) before the scope (seq 3, with the edit).
+    const scoping = state.setViewScope(['/a.mp3'])
+    ipc.editTags.mockResolvedValueOnce({ ok: true, value: { ...VIEW, dirty: true, scopeCount: null, viewSeq: 2 } })
+    await state.edit([])
+    const SCOPED = { ...VIEW, dirty: true, scopeCount: 1, viewSeq: 3 }
+    answerScope({ ok: true, value: SCOPED })
+    expect(await scoping).toBe(true)
+    expect(state.view).toEqual(SCOPED)
   })
 
   it('settled() gives up after its limit when a call never answers, and says so', async () => {

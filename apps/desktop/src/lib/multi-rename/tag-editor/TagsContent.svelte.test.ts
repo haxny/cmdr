@@ -64,6 +64,7 @@ const VIEW: TagEditorView = {
   canUndoEdit: false,
   canRedoEdit: false,
   scopeCount: null,
+  viewSeq: 0,
   sort: null,
 }
 
@@ -94,7 +95,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
     tool: vi.fn(() => Promise.resolve()),
     textTool: vi.fn(() => Promise.resolve()),
     sortTracks: vi.fn(() => Promise.resolve()),
-    setViewScope: vi.fn(() => Promise.resolve()),
+    setViewScope: vi.fn(() => Promise.resolve(true)),
   }
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
@@ -166,7 +167,7 @@ describe('TagsContent', () => {
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
-      setViewScope: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn(() => Promise.resolve(true)),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
@@ -396,7 +397,7 @@ describe('TagsContent', () => {
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
-      setViewScope: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn(() => Promise.resolve(true)),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
@@ -427,7 +428,7 @@ describe('TagsContent', () => {
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
-      setViewScope: vi.fn(() => Promise.resolve()),
+      setViewScope: vi.fn(() => Promise.resolve(true)),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
     cleanup = mounted.cleanup
@@ -545,23 +546,23 @@ describe('TagsContent with tracks selected', () => {
   }) as TagEditorView['tracks']
 
   /** A state whose `setViewScope` answers as the backend does: the count of the scope, or `null` for all. */
-  async function mountScoped() {
+  async function mountScoped(over: { edit?: () => Promise<void>; settled?: () => Promise<unknown> } = {}) {
     const state = $state({
       view: { ...VIEW, tracks: FORTY_TWO },
       error: null,
       busy: false,
       open: vi.fn(() => Promise.resolve()),
-      edit: vi.fn(() => Promise.resolve()),
+      edit: vi.fn(over.edit ?? (() => Promise.resolve())),
       coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
       coverImage: vi.fn(() => Promise.resolve(null)),
       coverChoices: vi.fn(() => Promise.resolve([])),
       coverThumbnail: vi.fn(() => Promise.resolve(null)),
       undoable: null,
-      settled: vi.fn(() => Promise.resolve()),
+      settled: vi.fn(over.settled ?? (() => Promise.resolve())),
       tool: vi.fn(() => Promise.resolve()),
       setViewScope: vi.fn((paths: string[] | null) => {
         state.view = { ...state.view, scopeCount: paths === null ? null : paths.length }
-        return Promise.resolve()
+        return Promise.resolve(true)
       }),
     })
     const mounted = await mountInto(TagsContent, { state: asTagState(state) })
@@ -603,6 +604,87 @@ describe('TagsContent with tracks selected', () => {
       { kind: 'setOne', path: '/b/02.mp3', field: 'album', values: [] },
       { kind: 'setOne', path: '/b/04.mp3', field: 'album', values: [] },
     ])
+  })
+
+  it('Delete right after a deselect clears exactly what the header shows: all 42, the header updated first', async () => {
+    const shownAtEdit: string[] = []
+    const { root, state, header } = await mountScoped({
+      edit: () => {
+        shownAtEdit.push(header())
+        return Promise.resolve()
+      },
+    })
+    await toggleTrack(root, '/b/02.mp3')
+    await toggleTrack(root, '/b/04.mp3')
+    await scopeRest()
+    await tick()
+    expect(header()).toContain('2 of 42 tracks')
+    await toggleTrack(root, '/b/02.mp3')
+    await toggleTrack(root, '/b/04.mp3')
+    // Well inside the delay: the deselect hasn't gone out on its own yet.
+    await press(paneList(root, 'Album tags'), 'Delete')
+    await settle()
+    await tick()
+    expect(state.setViewScope).toHaveBeenLastCalledWith(null)
+    expect(state.edit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: [] }])
+    expect(shownAtEdit).toHaveLength(1)
+    expect(shownAtEdit[0]).not.toContain('of 42')
+    await scopeRest()
+    expect(state.setViewScope).toHaveBeenCalledTimes(2)
+  })
+
+  it('an Album edit in flight when the delay runs out holds the scope back until it answers', async () => {
+    let answerEdit: () => void = () => {}
+    let editOut: Promise<void> | null = null
+    const { root, state } = await mountScoped({
+      edit: () => {
+        editOut = new Promise<void>((resolve) => (answerEdit = resolve))
+        return editOut
+      },
+      settled: () => editOut ?? Promise.resolve(),
+    })
+    const album = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(album, 'Dracula')
+    await press(album, 'Enter')
+    await settle()
+    expect(state.edit).toHaveBeenCalledTimes(1)
+    await toggleTrack(root, '/b/02.mp3')
+    await scopeRest()
+    expect(state.setViewScope).not.toHaveBeenCalled()
+    answerEdit()
+    await settle()
+    expect(state.setViewScope).toHaveBeenCalledWith(['/b/02.mp3'])
+  })
+
+  it('a scope the newest view lost is sent again, once', async () => {
+    const { root, state } = await mountScoped()
+    await toggleTrack(root, '/b/02.mp3')
+    await scopeRest()
+    expect(state.setViewScope).toHaveBeenCalledTimes(1)
+    // A view that doesn't hold the scope the backend took (it never should, but a lost answer must not stick).
+    state.view = { ...state.view, scopeCount: null }
+    await tick()
+    await settle()
+    expect(state.setViewScope).toHaveBeenCalledTimes(2)
+    state.view = { ...state.view, scopeCount: null }
+    await tick()
+    await settle()
+    expect(state.setViewScope).toHaveBeenCalledTimes(2)
+  })
+
+  it('an Album edit after the selected tracks vanished is refused once with a notice, then goes to all', async () => {
+    const { root, state } = await mountScoped()
+    await toggleTrack(root, '/b/02.mp3')
+    await scopeRest()
+    state.view = { ...state.view, tracks: FORTY_TWO.map((track) => ({ ...track, path: `${track.path}.new` })) }
+    await tick()
+    await press(paneList(root, 'Album tags'), 'Delete')
+    await settle()
+    expect(state.edit).not.toHaveBeenCalled()
+    expect(root.textContent).toContain('The selected tracks are no longer here, so nothing was changed.')
+    await press(paneList(root, 'Album tags'), 'Delete')
+    await settle()
+    expect(state.edit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: [] }])
   })
 
   it('deselecting all returns to all tracks', async () => {

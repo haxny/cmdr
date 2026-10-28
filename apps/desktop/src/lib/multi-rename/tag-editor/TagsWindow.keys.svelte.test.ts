@@ -108,6 +108,7 @@ const VIEW: TagEditorView = {
   canUndoEdit: false,
   canRedoEdit: false,
   scopeCount: null,
+  viewSeq: 0,
   sort: null,
 }
 

@@ -15,7 +15,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,8 @@ use super::history::{EditHistory, capture, clear, record};
 use super::removals::{Removals, removals_of};
 use super::sort::{TrackSort, reorder};
 use super::view::{
-    Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, stem_of,
+    Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, scoped_tracks,
+    stem_of,
 };
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
@@ -147,6 +148,9 @@ pub(super) struct TagSession {
 }
 
 pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// The last `TagEditorView::view_seq` handed out, taken under `SESSIONS`' lock: it follows the order sessions change in.
+static VIEW_SEQ: AtomicU64 = AtomicU64::new(0);
 
 /// The session's audio files in its current order, where they are, and what the window may do
 /// with them.
@@ -311,18 +315,7 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         .iter()
         .filter_map(|path| session.by_path.get(path).map(|entry| (path.as_path(), entry)))
         .collect();
-    // A scope none of whose tracks is still listed (a reload dropped them) is every track.
-    let scoped: Option<Vec<(&Path, &Entry)>> = session
-        .view_scope
-        .as_ref()
-        .map(|scope| {
-            tracks
-                .iter()
-                .copied()
-                .filter(|(path, _)| scope.contains(*path))
-                .collect::<Vec<_>>()
-        })
-        .filter(|scoped| !scoped.is_empty());
+    let scoped = scoped_tracks(&tracks, session.view_scope.as_ref());
     let mut view = build(layout.access, &tracks, scoped.as_deref());
     for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
         row.file_name = file_name_of(&layout.dir, path);
@@ -331,25 +324,24 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         sort: session.sort,
         can_undo_edit: session.history.can_undo(),
         can_redo_edit: session.history.can_redo(),
+        view_seq: VIEW_SEQ.fetch_add(1, Ordering::Relaxed) + 1,
         ..view
     }
 }
 
-/// Narrows the Album pane's shared rows to the tracks at `paths` (as `TrackRow::path` gives them); `None`
-/// is every track. Paths the session doesn't have are dropped, and a scope left empty is every track. Not
-/// an edit: the history and the edits stay as they are.
+/// Narrows the shared rows to the tracks at `paths` (`TrackRow::path`); `None`, or none the session has, is
+/// every track. Not an edit: the history and the edits stay as they are.
 pub fn set_view_scope(session_id: &str, paths: Option<Vec<String>>) -> Result<TagEditorView, TagEditorError> {
     with_session(session_id, |layout, session| {
-        let scope: Option<HashSet<PathBuf>> = paths
-            .map(|paths| {
-                paths
-                    .into_iter()
-                    .map(PathBuf::from)
-                    .filter(|path| session.by_path.contains_key(path))
-                    .collect::<HashSet<_>>()
-            })
+        let known = |paths: Vec<String>| {
+            paths
+                .into_iter()
+                .map(PathBuf::from)
+                .filter(|path| session.by_path.contains_key(path))
+        };
+        session.view_scope = paths
+            .map(|paths| known(paths).collect::<HashSet<_>>())
             .filter(|scope| !scope.is_empty());
-        session.view_scope = scope;
         Ok(view_of(layout, session))
     })
 }

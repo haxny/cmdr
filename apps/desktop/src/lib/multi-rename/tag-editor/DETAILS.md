@@ -210,7 +210,12 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   those tracks in `shared` and says how many in `scopeCount` (the header's "5 of 42 tracks"; `null` for all), and every
   Album edit road (typing, a picked value, Clear, Delete, paste, cut) goes through `editAlbum`, which turns each
   `setAll` into a `setOne` per selected readable track. The track list, cover, dirty marks and bad dates stay over every
-  track. A scope is no edit (no undo step).
+  track. A scope is no edit (no undo step). The pane never shows one scope while an edit goes to another: `editAlbum`
+  first `flush`es a selection change still waiting (the view shows the new scope before the edit is sent), the scope
+  sender waits for `settled()`, and `replaceView` keeps the newest view by the backend's `viewSeq` (stamped under the
+  session lock), not by ask order, so a late answer never hides a later scope or edit. A newest view whose `scopeCount`
+  doesn't match the selection sends the scope again, once. The editor's and Clear's accessible names say "for 5 of 42
+  tracks" while scoped (`editLabelScoped`, `clearRowLabelScoped`).
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format
   will hold (M4A integers). The one-file-BOOK rule (no track number) is decided on every audio track the session lists

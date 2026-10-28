@@ -73,7 +73,12 @@
     })
 
     // The Album pane sums up the selected tracks (every track while none is).
-    followViewScope({ selected: () => selection.selected, setViewScope: (paths) => tags.setViewScope(paths) })
+    const viewScope = followViewScope({
+        selected: () => selection.selected,
+        shownCount: () => tags.view?.scopeCount,
+        settled: () => tags.settled(),
+        setViewScope: (paths) => tags.setViewScope(paths),
+    })
 
     // Selecting again answers the "no longer here" notice.
     $effect(() => {
@@ -222,10 +227,11 @@
     /** The paths of the tracks whose tags were read: an edit can name only these. */
     const readablePaths = (): Set<string> => readablePathsOf(tags.view)
 
-    /** An Album pane edit: on the selected tracks (the readable ones), or on every file when none is selected. */
+    /** An Album pane edit (typing, a pick, Clear, Delete, paste, cut): on the selected readable tracks, else all. */
     async function editAlbum(edits: TagEdit[]): Promise<void> {
-        const readable = readablePaths()
-        await runScoped((scope) => tags.edit(scopedAlbumEdits(edits, scope, readable)))
+        const flushing = viewScope.flush() // The pane shows the scope an edit goes to before it goes.
+        if (flushing !== null) await flushing
+        await runScoped((scope) => tags.edit(scopedAlbumEdits(edits, scope, readablePaths())))
     }
 
     /** Sets `field` to `values` on the selected tracks (the readable ones), or on every file when none is selected. */

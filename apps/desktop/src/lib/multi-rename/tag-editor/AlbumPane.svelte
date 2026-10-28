@@ -5,8 +5,10 @@
      * like a file pane. The cursor moves with the list keys; F2 or Enter (`tags.edit`) edits the cursor row's value
      * in place (`TagValueEditor`), and Tab (`tags.switchPane`) goes to the Tracks pane. A row whose files differ
      * holds «multiple values» followed by every value; it sends nothing while the marker (or the «…and N more» tail)
-     * is in the text, and once they are deleted the text left is set on every file (`parseSharedEdit`). The cursor
-     * row's Clear and Values… sit under the list; the cover is the last group, inside the list's scroll after the rows.
+     * is in the text, and once they are deleted the text left is set on every file (`parseSharedEdit`), or on the
+     * selected tracks alone while the Tracks pane has a selection (`scope`: the rows then sum up those tracks, the
+     * header says "5 of 42 tracks", and so does the editor's name). The cursor row's Clear and Values… sit under the
+     * list; the cover is the last group, inside the list's scroll after the rows.
      */
     import type { Snippet } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -69,16 +71,15 @@
     const DATE_HINT_ID = 'tag-album-date-hint'
     const SCOPE_ID = 'tag-album-scope'
 
-    /** "5 of 42 tracks" while a selection narrows the rows; nothing while they cover every track. */
-    const scopeText = $derived(
+    /** The scope's words for a label ("5 of 42 tracks"), or `null` while the rows cover every file. */
+    const scopeParams = $derived(
         scope === null
             ? null
-            : tString('multiRename.tags.album.scope', {
-                  countText: formatInteger(scope.count),
-                  total: scope.total,
-                  totalText: formatInteger(scope.total),
-              }),
+            : { total: scope.total, countText: formatInteger(scope.count), totalText: formatInteger(scope.total) },
     )
+
+    /** "5 of 42 tracks" while a selection narrows the rows; nothing while they cover every track. */
+    const scopeText = $derived(scopeParams === null ? null : tString('multiRename.tags.album.scope', scopeParams))
 
     const rowHeight = $derived(getRowHeight())
     const striped = $derived(getStripedRows())
@@ -98,6 +99,19 @@
             }
         }),
     )
+
+    /** The editor's name: what the typed value goes to, every file or the selected tracks. */
+    function editLabel(field: string): string {
+        if (scopeParams === null) return tString('multiRename.tags.album.editLabel', { field })
+        return tString('multiRename.tags.album.editLabelScoped', { field, ...scopeParams })
+    }
+
+    /** The Clear button's name, in the same scope. */
+    function clearLabel(field: string): string {
+        if (scopeParams === null) return tString('multiRename.tags.clearRowLabel', { field })
+        return tString('multiRename.tags.clearRowLabelScoped', { field, ...scopeParams })
+    }
+
     const at = $derived(Math.max(0, Math.min(cursor, shown.length - 1)))
     const current = $derived(shown.at(at))
 
@@ -271,7 +285,7 @@
                 bind:this={editor}
                 value={row.text}
                 seed={editing.seed}
-                ariaLabel={tString('multiRename.tags.album.editLabel', { field: row.label })}
+                ariaLabel={editLabel(row.label)}
                 multiline={isMultiLineField(row.field)}
                 invalid={row.invalid}
                 describedBy={row.invalid ? DATE_HINT_ID : undefined}
@@ -304,7 +318,7 @@
             <Button
                 size="mini"
                 disabled={!editable || row.empty}
-                aria-label={tString('multiRename.tags.clearRowLabel', { field: row.label })}
+                aria-label={clearLabel(row.label)}
                 onclick={() => { void onEdit([{ kind: 'setAll', field: row.field, values: [] }]) }}
             >
                 {tString('multiRename.tags.clearRow')}
@@ -347,7 +361,6 @@
 
     .scope {
         flex-shrink: 0;
-        color: var(--color-text-primary);
     }
 
     .row-actions {

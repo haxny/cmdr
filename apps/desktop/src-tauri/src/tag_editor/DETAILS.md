@@ -78,6 +78,9 @@ re-reads or follows a file that something else renamed.
   unreadable one counts in `scope_count` but holds no value) and everything else (tracks, cover, extras, dirty,
   diacritics, bad dates) over every track. Paths the session doesn't have are dropped; a scope with none left, now or
   after a reload, is every track (`scope_count: None`). Not an edit: no history step.
+- **Every view is stamped** (`TagEditorView::view_seq`, one counter taken in `view_of` under `SESSIONS`' lock), so
+  the UI keeps the newest view by the order the session changed in: answers from the blocking pool land in any order.
+  Tests compare views without it (`session_test::content`).
 - **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left

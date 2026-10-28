@@ -3,8 +3,8 @@
 //! Pure: built from the session's entries, never reads a file.
 
 use std::borrow::Cow;
-use std::collections::BTreeSet;
-use std::path::Path;
+use std::collections::{BTreeSet, HashSet};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use serde::Serialize;
@@ -118,6 +118,9 @@ pub struct TagEditorView {
     pub can_redo_edit: bool,
     /// How many tracks `shared` covers (the Tracks pane's selection, readable or not); `None` for every track.
     pub scope_count: Option<u32>,
+    /// When the session built this view, under its lock: a later view has a higher number, so the UI keeps the
+    /// newest by the backend's order, never by the order it asked in. Set by the session; 0 straight out of `build`.
+    pub view_seq: u64,
 }
 
 /// What the session's rules say about the window, apart from the files.
@@ -172,7 +175,23 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)], scope: Option<&[
         can_undo_edit: false,
         can_redo_edit: false,
         scope_count: scope.map(|scoped| u32::try_from(scoped.len()).unwrap_or(u32::MAX)),
+        view_seq: 0,
     }
+}
+
+/// The `tracks` at `scope` (the Album pane's, `TagSession::view_scope`), in their order; `None` for every track,
+/// and so is a scope none of whose tracks is still listed (a reload dropped them).
+pub(super) fn scoped_tracks<'a>(
+    tracks: &[(&'a Path, &'a Entry)],
+    scope: Option<&HashSet<PathBuf>>,
+) -> Option<Vec<(&'a Path, &'a Entry)>> {
+    let scope = scope?;
+    let scoped: Vec<_> = tracks
+        .iter()
+        .copied()
+        .filter(|(path, _)| scope.contains(*path))
+        .collect();
+    (!scoped.is_empty()).then_some(scoped)
 }
 
 /// One shared row; a «multiple values» one lists up to `CHOICE_LIMIT` distinct values and counts the rest.

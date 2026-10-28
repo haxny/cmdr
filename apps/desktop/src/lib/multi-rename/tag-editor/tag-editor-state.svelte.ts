@@ -134,8 +134,9 @@ export interface TagEditorState {
   /**
    * Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every track for
    * `null`, and takes the view it answers with (`view.scopeCount`). Not an edit: no undo step, `editing` stays off.
+   * Resolves whether the backend took it.
    */
-  setViewScope(paths: string[] | null): Promise<void>
+  setViewScope(paths: string[] | null): Promise<boolean>
   /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
   tool(tool: TagTool, scope?: string[] | null): Promise<void>
   /**
@@ -206,9 +207,6 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let started = false
   /** Set by `close()`: a reply that lands after it is dropped. */
   let closed = false
-  /** Counts view requests; an answer to an older one than the last that landed is dropped. */
-  let viewAsked = 0
-  let viewShown = 0
 
   /**
    * Runs one backend call with `busy` on, keeps its error, and hands the result back. `clears` says whether a success
@@ -234,12 +232,17 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     }
   }
 
-  async function replaceView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<void> {
-    const asked = ++viewAsked
+  /**
+   * Runs a view-returning call and keeps its answer unless the view shown is newer by the backend's order
+   * (`viewSeq`, stamped under the session lock): answers may land in any order, and the newest one holds every change
+   * made before it, a scope set or an edit alike.
+   */
+  async function replaceView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<boolean> {
     const res = await track(call)
-    if (!res.ok || closed || asked < viewShown) return
-    viewShown = asked
-    view = res.value
+    if (!res.ok || closed) return false
+    const older = view !== null && res.value.viewSeq < view.viewSeq
+    if (!older) view = res.value
+    return true
   }
 
   /** Runs an edit-like call (it changes the edits): `editing` is on meanwhile. */
@@ -402,7 +405,9 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       return await stepEdit(() => redoTagEdit(sessionId))
     },
     // Not an edit: it changes the order only, so `editing` stays off.
-    sortTracks: (sort) => replaceView(() => sortTagTracks(sessionId, sort)),
+    sortTracks: async (sort) => {
+      await replaceView(() => sortTagTracks(sessionId, sort))
+    },
     // Not an edit either: it changes which tracks the Album pane sums up.
     setViewScope: (paths) => replaceView(() => setTagViewScope(sessionId, paths)),
     tool: (tool, scope = null) => editView(() => runTagTool(sessionId, tool, scope)),
@@ -463,9 +468,9 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       if (!res.ok) error = res.error
       return res
     },
-    reload: () => {
+    reload: async () => {
       editsMade += 1
-      return replaceView(() => openTagEditor(sessionId, true))
+      await replaceView(() => openTagEditor(sessionId, true))
     },
     async close() {
       if (!started) return

@@ -92,6 +92,14 @@ pub(super) fn on_disk(dir: &Path, name: &str) -> FileTags {
     read_tags(&dir.join(name)).expect("the file reads")
 }
 
+/// What the view shows, without the stamp of when it was built (`view_seq`), so two views of the same tags compare.
+pub(super) fn content(view: &TagEditorView) -> TagEditorView {
+    TagEditorView {
+        view_seq: 0,
+        ..view.clone()
+    }
+}
+
 fn shared(view: &TagEditorView, field: TagField) -> &SharedValue {
     &view
         .shared
@@ -585,7 +593,7 @@ fn tool_runs_on_scope_only() {
         ]
     );
     let unchanged = tool(&id, TagTool::Renumber { start: 5 }, Some(vec![])).expect("an empty scope is a no-op");
-    assert_eq!(unchanged, view);
+    assert_eq!(content(&unchanged), content(&view));
     close(&id);
     close_rename(&id);
 }
@@ -603,7 +611,11 @@ fn unknown_scope_path_is_unknown_track() {
         preview_names(&id, format_pattern("%title%"), Some(scope)),
         Err(TagEditorError::UnknownTrack)
     );
-    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    assert_eq!(
+        content(&open(&id, false).expect("a refresh")),
+        content(&before),
+        "nothing changed"
+    );
     close(&id);
     close_rename(&id);
 }
@@ -663,7 +675,11 @@ fn bad_pattern_is_typed() {
         Err(refused.clone())
     );
     assert_eq!(preview_names(&id, bad, None), Err(refused));
-    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    assert_eq!(
+        content(&open(&id, false).expect("a refresh")),
+        content(&before),
+        "nothing changed"
+    );
     close(&id);
     close_rename(&id);
 }
@@ -892,6 +908,22 @@ fn a_scope_of_vanished_paths_falls_back_to_all() {
     assert_eq!(
         shared(&kept, TagField::Album),
         &SharedValue::Same(vec!["Other".to_string()])
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn every_view_is_stamped_later_than_the_one_before() {
+    let (dir, _listing, id) = album("tag-editor-view-seq");
+    let opened = open(&id, false).expect("opens");
+    let scoped = set_view_scope(&id, Some(vec![path_of(&dir, "a.mp3")])).expect("narrows");
+    let edited = edit(&id, vec![set_title(&dir, "b.mp3", "New")]).expect("edits");
+    assert!(opened.view_seq < scoped.view_seq && scoped.view_seq < edited.view_seq);
+    assert_eq!(
+        edited.scope_count,
+        Some(1),
+        "the later view carries the scope set before it"
     );
     close(&id);
     close_rename(&id);

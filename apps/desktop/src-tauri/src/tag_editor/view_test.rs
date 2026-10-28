@@ -6,7 +6,9 @@ use cmdr_tags::shared::{SharedValue, ValueCount};
 use cmdr_tags::{Cover, FileTags, TagField};
 
 use super::session::{Entry, Loaded};
-use super::view::{Access, CoverSummary, ReadErrorCode, TagEditorView, build as build_in, cover_hashes, cover_key};
+use super::view::{
+    Access, CoverSummary, ReadErrorCode, TagEditorView, build as build_in, cover_hashes, cover_key, scoped_tracks,
+};
 
 fn loaded(pairs: &[(TagField, &str)], cover: Option<&[u8]>, extras: &[&str]) -> Entry {
     let mut tags = FileTags::default();
@@ -344,5 +346,20 @@ fn an_unreadable_scoped_track_is_counted_but_holds_no_value() {
     assert_eq!(
         row(&view, TagField::Album).value,
         SharedValue::Same(vec!["Book".to_string()])
+    );
+}
+
+#[test]
+fn a_scope_none_of_whose_tracks_is_listed_is_every_track() {
+    let entries = two_halves(TagField::Artist, "A", "B");
+    let tracks = as_tracks(&entries);
+    let gone: std::collections::HashSet<PathBuf> = [PathBuf::from("/m/gone.mp3")].into();
+    assert!(scoped_tracks(&tracks, Some(&gone)).is_none());
+    assert!(scoped_tracks(&tracks, None).is_none());
+    let two: std::collections::HashSet<PathBuf> = [PathBuf::from("/m/02.mp3"), PathBuf::from("/m/gone.mp3")].into();
+    let kept = scoped_tracks(&tracks, Some(&two)).expect("one listed track is kept");
+    assert_eq!(
+        kept.iter().map(|(path, _)| *path).collect::<Vec<_>>(),
+        vec![Path::new("/m/02.mp3")]
     );
 }

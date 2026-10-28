@@ -4,7 +4,7 @@ use cmdr_tags::TagField;
 use cmdr_tags::shared::SharedValue;
 
 use super::session::{TagEdit, TagEditorError, close, edit, open};
-use super::session_test::{album, path_of, set_title};
+use super::session_test::{album, content, path_of, set_title};
 use super::text_tools::{TagTextTool, run};
 use super::view::TagEditorView;
 use crate::multi_rename::mask::MaskError;
@@ -202,7 +202,11 @@ fn format_bad_mask_is_typed() {
             error: MaskError::Unclosed { at: 0 }
         })
     );
-    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    assert_eq!(
+        content(&open(&id, false).expect("a refresh")),
+        content(&before),
+        "nothing changed"
+    );
     close(&id);
     close_rename(&id);
 }
@@ -220,7 +224,11 @@ fn bad_regex_is_typed() {
         regex: true,
     };
     assert_eq!(run(&id, tool, None), Err(TagEditorError::BadRegex));
-    assert_eq!(open(&id, false).expect("a refresh"), before, "nothing changed");
+    assert_eq!(
+        content(&open(&id, false).expect("a refresh")),
+        content(&before),
+        "nothing changed"
+    );
     close(&id);
     close_rename(&id);
 }

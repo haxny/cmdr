@@ -18637,6 +18637,11 @@ export type TagEditorView = {
   canRedoEdit: boolean
   // How many tracks `shared` covers (the Tracks pane's selection, readable or not); `None` for every track.
   scopeCount: number | null
+  /**
+   *  When the session built this view, under its lock: a later view has a higher number, so the UI keeps the
+   *  newest by the backend's order, never by the order it asked in. Set by the session; 0 straight out of `build`.
+   */
+  viewSeq: number
 }
 
 /**

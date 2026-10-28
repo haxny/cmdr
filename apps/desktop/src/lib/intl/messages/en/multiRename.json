@@ -1201,9 +1201,19 @@
   },
   "multiRename.tags.album.editLabel": "{field} for all files",
   "@multiRename.tags.album.editLabel": {
-    "description": "Accessible name of the editing box that F2 opens over a row of the album pane in the tag editor window. What is typed there is set on every file. Only read aloud by screen readers.",
+    "description": "Accessible name of the editing box that F2 opens over a row of the album pane in the tag editor window, while no track is selected: what is typed there is set on every file. With tracks selected, multiRename.tags.album.editLabelScoped is used instead. Only read aloud by screen readers.",
     "placeholders": {
       "field": "the tag’s name, like Album or Artist (multiRename.tags.field.*)"
+    }
+  },
+  "multiRename.tags.album.editLabelScoped": "{total, plural, one {{field} for {countText} of {totalText} track} other {{field} for {countText} of {totalText} tracks}}",
+  "@multiRename.tags.album.editLabelScoped": {
+    "description": "Accessible name of the editing box that F2 opens over a row of the album pane in the tag editor window, while some tracks are selected in the tracks pane: what is typed there is set on the selected tracks only. Only read aloud by screen readers.",
+    "placeholders": {
+      "field": "the tag’s name, like Album or Artist (multiRename.tags.field.*)",
+      "countText": "how many tracks are selected, formatted (for example 5)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 42)"
     }
   },
   "multiRename.tags.track.playing": "Playing",
@@ -1459,9 +1469,19 @@
   },
   "multiRename.tags.clearRowLabel": "Clear {field} for all files",
   "@multiRename.tags.clearRowLabel": {
-    "description": "Accessible name of the Clear button of a row in the tag editor window. Only read aloud by screen readers.",
+    "description": "Accessible name of the Clear button of a row in the tag editor window's album pane, while no track is selected: it empties the tag on every file. With tracks selected, multiRename.tags.clearRowLabelScoped is used instead. Only read aloud by screen readers.",
     "placeholders": {
       "field": "the name of the tag the row edits, like Album or Genre"
+    }
+  },
+  "multiRename.tags.clearRowLabelScoped": "{total, plural, one {Clear {field} for {countText} of {totalText} track} other {Clear {field} for {countText} of {totalText} tracks}}",
+  "@multiRename.tags.clearRowLabelScoped": {
+    "description": "Accessible name of the Clear button of a row in the tag editor window's album pane, while some tracks are selected in the tracks pane: it empties the tag on the selected tracks only. Only read aloud by screen readers.",
+    "placeholders": {
+      "field": "the name of the tag the row edits, like Album or Genre",
+      "countText": "how many tracks are selected, formatted (for example 5)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 42)"
     }
   },
   "multiRename.tags.tools.caseFields": "Changes: {fields}",
