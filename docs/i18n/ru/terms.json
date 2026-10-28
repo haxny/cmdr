@@ -409,6 +409,10 @@
     "confidence": "high",
     "sources": "concepts.json sense (product name, verbatim in every language); de and hu termbases (Ask Cmdr)",
     "note": "Names only the chat panel itself; a sentence about what the AI does says Cmdr or ИИ.",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.sameName": "English “Ask Cmdr for …” is the imperative verb plus the app, not the panel name → Попросите Cmdr …",
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English “Ask Cmdr for …” is the imperative verb plus the app, not the panel name → Попросите Cmdr …"
+    },
     "decision": "Ask Cmdr stays"
   },
   "ask-question": {
@@ -3044,6 +3048,9 @@
     "chosen": "Переместить",
     "accept": ["перемещ", "перемест"],
     "forms": "button/command → «Переместить»; progress → Перемещение; Move to → Переместить в",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "“the items being moved” also covers a copy, so it names them neutrally → объекты из этого предложения"
+    },
     "confidence": "high",
     "sources": "macOS Finder LocalizableMerged MV12 Move → «Переместить», AppKit MenuCommands Move To → «Переместить в»; MS move → «переместить»; Double Commander Move → «Переместить», Moving → «Перемещение»; Total Commander 97 «Переместить/переименовать файлы»; Xfce Thunar, GNOME Nautilus"
   },
@@ -4587,6 +4594,9 @@
     "chosen": "Поделиться",
     "accept": ["подел"],
     "forms": "menu item «Поделиться» / «Поделиться…»; empty state «Нет вариантов, чтобы поделиться»",
+    "exceptions": {
+      "suggestedOps.server.field.share": "the bare label names an SMB shared folder on a server suggestion, the network-share sense → Общая папка"
+    },
     "avoid": [
       {
         "form": "Отправить",
@@ -4962,6 +4972,13 @@
     "sources": "No source names a stalled transfer; live macOS: Not Responding → Не отвечает, Hang Report → Отчет о зависании (the hang sense to stay clear of)",
     "note": "Pick a word that says alive-but-not-moving; «остановилась» is the stop concept.",
     "decision": "Stalled transfer"
+  },
+  "start": {
+    "chosen": "запустить",
+    "accept": ["запуст", "запуск", "запущ", "выполн", "начат", "начн"],
+    "forms": "so nothing started → поэтому ничего не запустилось; Why this didn’t start → Почему это не запустилось; a refused approved suggestion may also say ничего не выполнилось; a step's status Not started → Не начато",
+    "confidence": "high",
+    "sources": "MS (start a task → запустить); catalog (suggestedOps.refusal.label Почему это не запустилось, suggestedOps.refusal.*.message ничего не выполнилось, indexing.step.statusPending Не начато)"
   },
   "start-up": {
     "chosen": "запуск",
@@ -6085,6 +6102,13 @@
     ],
     "confidence": "high",
     "sources": "MS: write (transfer information to a storage device) → записывать / запись; Thunar: Writing data to device → Запись данных на устройство; DC: Write → Запись; Finder: Writing track ^0 → Запись дорожки ^0"
+  },
+  "zip": {
+    "chosen": "zip-архив",
+    "accept": ["zip", "ZIP"],
+    "forms": "prose may say bare zip, uninflected (в zip, внутри zip, инструменты для zip); into or out of a zip archive → в zip-архив или из него; the format in a label → архивы zip",
+    "confidence": "high",
+    "sources": "Total Commander ru (ZIP-архив, Создать самораспаковывающийся ZIP-архив?); Nautilus ru (Формат zip‑архива); archive ruling (zip archive → zip-архив); catalog (errors.write.archiveEntryNameRefused.* в zip 10+×)"
   },
   "zoom": {
     "chosen": "Масштаб",
