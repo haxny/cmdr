@@ -68,8 +68,9 @@ function isDateFormat(text: string): boolean {
   return text === 'd' || text === 't' || /^[YyMDhms][YyMDhms\-._ ]*$/.test(text)
 }
 
-/** A digit count, 1 to `MAX_COUNTER_DIGITS`, read as Rust's `u32::from_str` reads it. */
+/** A digit count, 1 to `MAX_COUNTER_DIGITS`: a number as Rust's `u32::from_str` reads it, or zeros to count (`00` is 2; `0` is none). */
 function parseDigits(text: string): number | null {
+  if (text.length > 1 && /^0+$/.test(text)) return text.length <= MAX_COUNTER_DIGITS ? text.length : null
   if (!/^\+?\d+$/.test(text) || BigInt(text) > U32_MAX) return null
   const digits = Number(text)
   return digits >= 1 && digits <= MAX_COUNTER_DIGITS ? digits : null

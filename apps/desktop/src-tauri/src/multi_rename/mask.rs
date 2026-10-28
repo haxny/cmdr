@@ -36,7 +36,7 @@
 use std::fmt::Write as _;
 
 use chrono::{Datelike, NaiveDateTime, Timelike};
-use cmdr_media_meta::{MediaFacts, MediaField};
+use cmdr_media_meta::{MediaFacts, MediaField, MediaValue};
 
 mod media_token;
 
@@ -63,6 +63,44 @@ pub struct RowFacts<'a> {
     pub position: usize,
     /// What the file says about itself, for the `[=source.field]` placeholders.
     pub media: RowMedia<'a>,
+    /// How wide the run's track and disc numbers pad, for `[=tag.track]` and `[=tag.disc]`.
+    pub number_width: NumberWidth,
+}
+
+/// The width a plain `[=tag.track]` / `[=tag.disc]` pads to, worked out once over all the rows of a
+/// preview or format run, so every name in it lines up: a track pads to the digits of the largest
+/// track (at least 2), a disc to those of the largest disc. `:N` on the placeholder wins.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NumberWidth {
+    pub track: u32,
+    pub disc: u32,
+}
+
+impl Default for NumberWidth {
+    /// No numbers seen: tracks as `01`, discs as `1`.
+    fn default() -> Self {
+        Self { track: 2, disc: 1 }
+    }
+}
+
+impl NumberWidth {
+    /// The width for a run whose rows have `facts` (a row without them doesn't count).
+    pub fn of<'a>(facts: impl IntoIterator<Item = &'a MediaFacts>) -> Self {
+        let digits = |value: i64| value.max(0).to_string().len() as u32;
+        let (mut track, mut disc) = (0, 0);
+        for facts in facts {
+            if let Some(MediaValue::Number(value)) = facts.get(MediaField::TagTrack) {
+                track = track.max(digits(value));
+            }
+            if let Some(MediaValue::Number(value)) = facts.get(MediaField::TagDisc) {
+                disc = disc.max(digits(value));
+            }
+        }
+        Self {
+            track: track.max(2),
+            disc: disc.max(1),
+        }
+    }
 }
 
 /// A row's media facts, as the session's cache has them now.

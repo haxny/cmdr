@@ -178,6 +178,20 @@ describe('the media field editor', () => {
     expect(artist.value()).toBe('[=tag.artist:1-10]')
   })
 
+  it('says so under the Digits box while it cannot read what was typed, and stops once it can', async () => {
+    const track = await mountField('[=tag.track]')
+    await open(track, 5)
+    expect(document.querySelector('.media-editor .invalid')).toBeNull()
+    await type(formatBox(), '0')
+    expect(track.value()).toBe('[=tag.track]')
+    expect(document.querySelector('.media-editor .invalid')?.textContent).toBe(
+      'Type how many digits, like 2, or zeros, like 00.',
+    )
+    await type(formatBox(), '00')
+    expect(document.querySelector('.media-editor .invalid')).toBeNull()
+    expect(track.value()).toBe('[=tag.track:2]')
+  })
+
   it('Enter goes back to the mask, and never reaches the sheet', async () => {
     const m = await mountField('[=exif.taken:d]')
     await open(m, 5)

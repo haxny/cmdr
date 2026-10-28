@@ -25,7 +25,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_media_meta::{MediaFacts, MediaField, ReadError, VolumeByteSource, is_media_name, read_media_from};
 
-use super::mask::{FieldGap, FieldText, MediaToken, RowFacts, RowMedia};
+use super::mask::{FieldGap, FieldText, MediaToken, NumberWidth, RowFacts, RowMedia};
 use super::plan::{MediaLookup, folder_names};
 use crate::ignore_poison::IgnorePoison;
 
@@ -668,7 +668,9 @@ impl SessionMedia {
                 let token = MediaToken::of(field);
                 MediaFieldOverview {
                     field,
-                    example: facts.iter().find_map(|facts| token.value_text(facts)),
+                    example: facts
+                        .iter()
+                        .find_map(|facts| token.value_text(facts, NumberWidth::default())),
                     files_with_it: facts.iter().filter(|facts| facts.get(field).is_some()).count(),
                 }
             })
@@ -681,7 +683,18 @@ impl SessionMedia {
     /// usage is remembered per token until the cache changes.
     pub(crate) fn field_samples(&self, token: &MediaToken, names: &[String], rows: &[usize]) -> FieldSamples {
         let (parent, grandparent) = folder_names(&self.dir);
-        let resolve = |files: &HashMap<Arc<str>, Cached>, position: usize, name: &str| {
+        // One width over every file of the session, as the preview pads.
+        let width_of = |files: &HashMap<Arc<str>, Cached>| {
+            NumberWidth::of(
+                names
+                    .iter()
+                    .filter_map(|name| match files.get(name.as_str())?.state.row_media() {
+                        RowMedia::Read(facts) => Some(facts),
+                        _ => None,
+                    }),
+            )
+        };
+        let resolve = |files: &HashMap<Arc<str>, Cached>, number_width: NumberWidth, position: usize, name: &str| {
             let cached = files.get(name);
             // Composed, as the preview renders it (`plan.rs`).
             let file_name: String = name.nfc().collect();
@@ -693,16 +706,18 @@ impl SessionMedia {
                 modified: cached.and_then(|c| c.stamp.modified).and_then(local_time),
                 position,
                 media: cached.map_or(RowMedia::NotMedia, |c| c.state.row_media()),
+                number_width,
             })
         };
         // The sample rows are a handful: resolved under the lock, which also says
         // whether the remembered usage still holds.
         let (samples, generation) = {
             let inner = self.lock();
+            let number_width = width_of(&inner.files);
             let samples = rows
                 .iter()
                 .filter_map(|&row| Some((row, names.get(row)?)))
-                .map(|(row, name)| match resolve(&inner.files, row, name) {
+                .map(|(row, name)| match resolve(&inner.files, number_width, row, name) {
                     Ok(text) => FieldSample {
                         row,
                         text: Some(text.into_text()),
@@ -729,8 +744,9 @@ impl SessionMedia {
                 (inner.files.clone(), inner.generation)
             };
             let mut usage = FieldUsage::default();
+            let number_width = width_of(&files);
             for (position, name) in names.iter().enumerate() {
-                match resolve(&files, position, name) {
+                match resolve(&files, number_width, position, name) {
                     Ok(FieldText::Value(_)) => usage.with_value += 1,
                     Ok(FieldText::Fallback(_)) => usage.fallback += 1,
                     Err(FieldGap::Reading) => usage.reading += 1,

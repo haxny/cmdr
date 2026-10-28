@@ -25,7 +25,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_listing::{ListingId, ListingLookupError};
 
 use super::error::MultiRenameError;
-use super::mask::{MaskError, MediaToken, RangeToken, RowFacts, RowMedia};
+use super::mask::{MaskError, MediaToken, NumberWidth, RangeToken, RowFacts, RowMedia};
 use super::media::{FieldSamples, Loader, MediaOverview, MediaProgress, ProgressEmit, SessionMedia};
 use super::names_file::{self, Written};
 use super::plan::{
@@ -579,6 +579,7 @@ pub(crate) fn range_samples(
                 modified: None,
                 position: shown.row,
                 media: RowMedia::NotMedia,
+                number_width: NumberWidth::default(),
             };
             let text = range.source(&facts);
             let taken = range

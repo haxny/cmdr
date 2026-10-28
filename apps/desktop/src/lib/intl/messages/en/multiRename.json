@@ -627,6 +627,10 @@
   "@multiRename.mediaEditor.digitsHint": {
     "description": "Hint under the field editor's Digits box for a number field."
   },
+  "multiRename.mediaEditor.digitsInvalid": "Type how many digits, like 2, or zeros, like 00.",
+  "@multiRename.mediaEditor.digitsInvalid": {
+    "description": "Shown under the field editor's Digits box while what was typed can't be read as a digit count (like 0 or letters)."
+  },
   "multiRename.mediaEditor.characters": "Characters",
   "@multiRename.mediaEditor.characters": {
     "description": "Label of the field editor's box for a text field (like an artist): which characters to take, written as a range like 1-10."

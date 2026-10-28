@@ -4,7 +4,7 @@ use chrono::{NaiveDate, NaiveDateTime};
 use cmdr_media_meta::{FieldKind, MediaFacts, MediaField};
 
 use super::mask::{
-    FieldGap, FieldText, MAX_COUNTER_DIGITS, Mask, MaskError, MediaToken, RangeToken, RowFacts, RowMedia,
+    FieldGap, FieldText, MAX_COUNTER_DIGITS, Mask, MaskError, MediaToken, NumberWidth, RangeToken, RowFacts, RowMedia,
     counter_token, media_token_parts, range_token, range_token_bounds,
 };
 
@@ -28,6 +28,7 @@ fn facts(name: &str) -> RowFacts<'_> {
         modified: NaiveDate::from_ymd_opt(2026, 6, 15).and_then(|d| d.and_hms_opt(23, 10, 9)),
         position: 0,
         media: RowMedia::NotMedia,
+        number_width: NumberWidth::default(),
     }
 }
 
@@ -391,7 +392,7 @@ fn a_date_field_takes_the_date_letters_and_reads_as_date_and_time_without_them()
 fn a_number_field_pads_to_its_digits_and_never_cuts() {
     let photo = media();
     let read = RowMedia::Read(&photo);
-    assert_eq!(render("[=tag.track]", read).as_deref(), Ok("3"));
+    assert_eq!(render("[=tag.track]", read).as_deref(), Ok("03"));
     assert_eq!(render("[=tag.track:2]", read).as_deref(), Ok("03"));
     assert_eq!(render("[=exif.iso:4]", read).as_deref(), Ok("0064"));
     assert_eq!(render("[=exif.width:2]", read).as_deref(), Ok("4032"));
@@ -493,6 +494,7 @@ fn modified_stands_in_for_a_missing_date_but_not_for_one_still_being_read() {
     let undated = RowFacts {
         modified: None,
         media: RowMedia::NotMedia,
+        number_width: NumberWidth::default(),
         ..facts("a.txt")
     };
     assert_eq!(
@@ -523,14 +525,21 @@ fn a_media_token_alone_says_its_text_and_whether_it_fell_back() {
     assert_eq!(token.resolve(&row(RowMedia::Reading)), Err(FieldGap::Reading));
     // The default format, for the picker's examples.
     assert_eq!(
-        MediaToken::of(MediaField::ExifTaken).value_text(&photo).as_deref(),
+        MediaToken::of(MediaField::ExifTaken)
+            .value_text(&photo, NumberWidth::default())
+            .as_deref(),
         Some("2026-07-14 09.05.30")
     );
     assert_eq!(
-        MediaToken::of(MediaField::TagTrack).value_text(&photo).as_deref(),
-        Some("3")
+        MediaToken::of(MediaField::TagTrack)
+            .value_text(&photo, NumberWidth::default())
+            .as_deref(),
+        Some("03")
     );
-    assert_eq!(MediaToken::of(MediaField::TagAlbum).value_text(&photo), None);
+    assert_eq!(
+        MediaToken::of(MediaField::TagAlbum).value_text(&photo, NumberWidth::default()),
+        None
+    );
     assert_eq!(MediaToken::parse("N2-5"), None);
     assert_eq!(MediaToken::parse("=exif.nope"), None);
 }
@@ -592,4 +601,43 @@ fn the_media_grammar_agrees_with_the_shared_vectors() {
             "{token} must not parse"
         );
     }
+}
+
+fn numbered(track: i64, disc: i64) -> MediaFacts {
+    MediaFacts {
+        track: Some(track),
+        disc: Some(disc),
+        ..MediaFacts::default()
+    }
+}
+
+fn numbered_name(mask: &str, media: &MediaFacts, width: NumberWidth) -> String {
+    let row = RowFacts {
+        media: RowMedia::Read(media),
+        number_width: width,
+        ..facts("a.mp3")
+    };
+    Mask::parse(mask).expect("a valid mask").render(&row).expect("a value")
+}
+
+#[test]
+fn track_and_disc_keep_their_zeros_to_the_width_of_the_run() {
+    let run = |tracks: &[i64], discs: &[i64]| {
+        let all: Vec<MediaFacts> = tracks.iter().zip(discs).map(|(&t, &d)| numbered(t, d)).collect();
+        NumberWidth::of(&all)
+    };
+    let hobit = run(&(1..=42).collect::<Vec<_>>(), &[1; 42]);
+    assert_eq!(hobit, NumberWidth { track: 2, disc: 1 });
+    assert_eq!(numbered_name("[=tag.disc][=tag.track]", &numbered(7, 1), hobit), "107");
+    assert_eq!(numbered_name("[=tag.track]", &numbered(37, 1), hobit), "37");
+    let long = run(&(1..=120).collect::<Vec<_>>(), &[1; 120]);
+    assert_eq!(numbered_name("[=tag.track]", &numbered(7, 1), long), "007");
+    assert_eq!(run(&[1, 2, 3], &[1, 2, 3]).disc, 1);
+    let twelve = run(&[1, 2], &[1, 12]);
+    assert_eq!(numbered_name("[=tag.disc]", &numbered(1, 1), twelve), "01");
+    // `:N` wins over the run's width.
+    assert_eq!(numbered_name("[=tag.track:3]", &numbered(7, 1), hobit), "007");
+    assert_eq!(numbered_name("[=tag.track:1]", &numbered(7, 1), long), "7");
+    // No numbers at all: the defaults.
+    assert_eq!(NumberWidth::of(&[]), NumberWidth::default());
 }

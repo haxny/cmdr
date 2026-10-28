@@ -26,6 +26,7 @@
     const source = rangeSampleSource()
     const uid = $props.id()
     const hintId = `media-editor-hint-${uid}`
+    const invalidId = `media-editor-invalid-${uid}`
 
     const kind = $derived(MEDIA_FIELDS[value.field].kind)
     const tokenText = $derived(formatMediaToken(value))
@@ -58,12 +59,20 @@
 
     /** Writes `text` as the format when the grammar takes it (empty is none); a half-typed one writes nothing. */
     function writeFormat(text: string): void {
-        const trimmed = text.trim()
-        const bar = value.fallback ? '|modified' : ''
-        const parsed =
-            trimmed === '' ? { ...value, format: null } : parseMediaToken(`=${MEDIA_FIELDS[value.field].name}${bar}:${trimmed}`)
+        const parsed = parseFormat(text)
         if (parsed !== null) onChange(parsed)
     }
+
+    function parseFormat(text: string): MediaToken | null {
+        const trimmed = text.trim()
+        const bar = value.fallback ? '|modified' : ''
+        return trimmed === ''
+            ? { ...value, format: null }
+            : parseMediaToken(`=${MEDIA_FIELDS[value.field].name}${bar}:${trimmed}`)
+    }
+
+    /** A Digits box whose text the grammar can't read (`0`, `abc`): said under the box, not ignored. */
+    const digitsInvalid = $derived(kind === 'number' && draft !== null && parseFormat(draft) === null)
 
     function typeFormat(text: string): void {
         draft = text
@@ -164,13 +173,17 @@
             mono
             radius="md"
             ariaLabel={formatLabel}
-            aria-describedby={hintId}
+            aria-describedby={digitsInvalid ? `${hintId} ${invalidId}` : hintId}
+            aria-invalid={digitsInvalid ? 'true' : undefined}
             oninput={(e: Event) => { typeFormat((e.currentTarget as HTMLInputElement).value) }}
             onblur={() => { draft = null }}
             onkeydown={(e: KeyboardEvent) => { onKeydown(e, true) }}
         />
     </label>
     <p class="hint" id={hintId}>{formatHint}</p>
+    {#if digitsInvalid}
+        <p class="invalid" id={invalidId} role="alert">{tString('multiRename.mediaEditor.digitsInvalid')}</p>
+    {/if}
     {#if kind === 'date'}
         <ToggleGroup
             semantics="toggles"
@@ -235,6 +248,12 @@
     .hint,
     .usage {
         color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    .invalid {
+        margin: 0;
+        color: var(--color-error-text);
         font-size: var(--font-size-sm);
     }
 

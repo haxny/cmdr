@@ -18,7 +18,7 @@ use cmdr_fs::validation::{ValidationError, validate_filename};
 
 use cmdr_media_meta::{MediaFacts, MediaField};
 
-use super::mask::{FieldGap, Mask, MaskError, RowFacts, RowMedia};
+use super::mask::{FieldGap, Mask, MaskError, NumberWidth, RowFacts, RowMedia};
 use super::transform::{CaseChange, CompiledTransform, Replace, ReplaceError, Transform};
 
 /// Everything the sheet sets.
@@ -236,6 +236,7 @@ impl Compiled {
         dir: &Path,
         position: usize,
         media: RowMedia<'_>,
+        number_width: NumberWidth,
     ) -> Result<String, FieldGap> {
         // Composed, so a range never splits a letter from its accent in a name an
         // SMB share or HFS stores decomposed.
@@ -249,6 +250,7 @@ impl Compiled {
             modified: entry.modified_at.and_then(local_time),
             position,
             media,
+            number_width,
         })
     }
 
@@ -352,6 +354,7 @@ pub(crate) fn render_examples(examples: &[RenameExample]) -> Vec<Option<String>>
                     modified,
                     position: 0,
                     media: RowMedia::Read(&media),
+                    number_width: NumberWidth::of([&media]),
                 })
                 .ok()
         })
@@ -386,6 +389,11 @@ pub(crate) fn preview(
     edits: &NameEdits,
     media: &dyn MediaLookup,
 ) -> Vec<PreviewRow> {
+    // One width for the whole run, so `[=tag.track]` lines up across every name.
+    let number_width = NumberWidth::of(rows.iter().filter_map(|(_, entry)| match media.media(entry) {
+        RowMedia::Read(facts) => Some(facts),
+        _ => None,
+    }));
     let mut preview: Vec<PreviewRow> = rows
         .iter()
         .enumerate()
@@ -393,7 +401,7 @@ pub(crate) fn preview(
             let typed = edits.get(&entry.name);
             let new_name = match typed {
                 Some(typed) => Ok(compiled.finish(typed.to_string())),
-                None => compiled.new_name(entry, dir, position, media.media(entry)),
+                None => compiled.new_name(entry, dir, position, media.media(entry), number_width),
             };
             // A row a media field has no text for keeps its name until it does.
             let (new_name, status) = match new_name {

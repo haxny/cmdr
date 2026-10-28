@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 use super::session::{TagEditorError, edit_scoped};
 use super::view::TagEditorView;
-use crate::multi_rename::mask::{Mask, RowFacts, RowMedia};
+use crate::multi_rename::mask::{Mask, NumberWidth, RowFacts, RowMedia};
 use crate::multi_rename::transform::{CompiledTransform, Replace, Transform};
 
 /// A text tool over tag fields.
@@ -102,18 +102,20 @@ fn replace_in(files: &[FileTags], fields: &[TagField], compiled: &CompiledTransf
 
 /// `files` with `field` rebuilt from `mask`, each file's position in the scope as its counter.
 fn format_field(paths: &[PathBuf], files: &[FileTags], field: TagField, mask: &Mask) -> Vec<FileTags> {
+    let all_facts: Vec<MediaFacts> = files.iter().map(media_facts_of).collect();
+    let number_width = NumberWidth::of(&all_facts);
     paths
         .iter()
         .zip(files)
+        .zip(&all_facts)
         .enumerate()
-        .map(|(position, (path, tags))| {
+        .map(|(position, ((path, tags), facts))| {
             let current = tags
                 .fields
                 .get(&field)
                 .and_then(|values| values.first())
                 .cloned()
                 .unwrap_or_default();
-            let facts = media_facts_of(tags);
             let row = RowFacts {
                 file_name: &current,
                 is_directory: true,
@@ -121,7 +123,8 @@ fn format_field(paths: &[PathBuf], files: &[FileTags], field: TagField, mask: &M
                 grandparent: &folder_name(path.parent().and_then(Path::parent)),
                 modified: None,
                 position,
-                media: RowMedia::Read(&facts),
+                media: RowMedia::Read(facts),
+                number_width,
             };
             let mut out = tags.clone();
             if let Ok(text) = mask.render(&row) {

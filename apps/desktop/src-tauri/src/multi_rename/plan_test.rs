@@ -612,3 +612,28 @@ fn a_typed_name_matches_an_old_name_in_either_unicode_form() {
     let out = run_edited(&spec("[N]"), &folder, &[("\u{017D}adost.pdf", "Zadost.pdf")]);
     assert_eq!(out[0], ("Zadost.pdf".to_string(), RowStatus::Ready, true));
 }
+
+#[test]
+fn a_preview_pads_tracks_to_the_widest_of_all_its_rows() {
+    let short = MediaFacts {
+        track: Some(7),
+        disc: Some(1),
+        ..MediaFacts::default()
+    };
+    let last = MediaFacts {
+        track: Some(120),
+        disc: Some(1),
+        ..MediaFacts::default()
+    };
+    let folder = [file("a.mp3"), file("b.mp3"), file("c.mp3")];
+    let media = MediaByName(vec![
+        ("a.mp3", RowMedia::Read(&short)),
+        ("b.mp3", RowMedia::Read(&last)),
+        ("c.mp3", RowMedia::Unreadable),
+    ]);
+    let out = run_media(&spec("[=tag.disc][=tag.track]"), &folder, &media);
+    assert_eq!(out[0].0, "1007.mp3");
+    assert_eq!(out[1].0, "1120.mp3");
+    let out = run_media(&spec("[=tag.track:2]"), &folder, &media);
+    assert_eq!(out[0].0, "07.mp3");
+}
