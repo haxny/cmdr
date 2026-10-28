@@ -119,7 +119,8 @@ function describeCause(): string {
   if (last === null) return 'nothing had focus since the watchdog started'
   const lastText = describeElement(last)
   if (!last.isConnected) return `${lastText} left the page while it had focus`
-  if ((last as HTMLButtonElement).disabled === true) return `${lastText} was disabled while it had focus`
+  // `:disabled` covers every form control (button, input, textarea, select, fieldset).
+  if (last.matches(':disabled')) return `${lastText} was disabled while it had focus`
   const pressed = lastPointerDown
   if (pressed !== null && pressed.target !== last && performance.now() - pressed.at < WAIT_MS * 2) {
     return `a click on ${describeElement(pressed.target)} took it from ${lastText}`

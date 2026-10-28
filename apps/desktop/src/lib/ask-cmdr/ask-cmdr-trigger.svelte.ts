@@ -111,7 +111,8 @@ export function openNewChat(): void {
 /** The New chat shortcut as the tooltip shows it (`⌘N` by default, or the user's rebind), or
  * `undefined` when it's unbound. Read at render, so a rebind shows on the next one. */
 export function newChatShortcutText(): string | undefined {
-  const shortcut = getEffectiveShortcuts('askCmdr.newChat')[0]
+  // `.at(0)`, not `[0]`: an unbound command has no shortcuts, and `[0]` would type that away.
+  const shortcut = getEffectiveShortcuts('askCmdr.newChat').at(0)
   return shortcut === undefined ? undefined : toDisplayShortcut(shortcut)
 }
 
