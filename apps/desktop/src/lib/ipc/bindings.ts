@@ -1774,7 +1774,8 @@ export const commands = {
    *  Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
    *  (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
    *  (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
-   *  the window sends them here, and the box (or the section's picture paste) keeps its own.
+   *  the window sends them here, and the box (or the section's picture paste) keeps its own. Only a
+   *  Tags window that still has focus may: the action goes to whatever window is key.
    */
   tagsNativeEdit: (action: TagsClipboardAction) => __TAURI_INVOKE<void>('tags_native_edit', { action }),
   /**
@@ -6281,6 +6282,11 @@ export type ApplyRequest = {
   allowFrameLoss: boolean
   // Paths the user chose to skip, as the view shows them.
   skip: string[]
+  /**
+   *  Paths (as the view shows them) whose kind removals the user saw in the change list and
+   *  confirmed: only these may lose a field the kind removes. Absent means none.
+   */
+  allowRemovals?: string[]
 }
 
 /**
@@ -9171,6 +9177,8 @@ export type FileChangeView = {
   extras: boolean
   // What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
   removes: KindRemoval[]
+  // The file couldn't be read to tell what the kind removes: it may lose a field.
+  removesUnknown: boolean
 }
 
 /**
@@ -18501,6 +18509,8 @@ export type TagApplyReport = {
   written: string[]
   // Not written: the write would drop these items. The UI asks.
   wouldDrop: WouldDropRow[]
+  // Not written: the kind would remove a field the request didn't allow. The UI lists it.
+  wouldRemove: WouldRemoveRow[]
   // Not written, with why.
   failed: FailedRow[]
   // Not written: something else changed the file since the session read it.
@@ -20938,6 +20948,15 @@ export type WipeReport = {
 export type WouldDropRow = {
   path: string
   items: string[]
+}
+
+// A file held back because writing it as the kind would remove a field (no values, ever).
+export type WouldRemoveRow = {
+  path: string
+  // What the kind would remove; empty when `unknown`.
+  removes: KindRemoval[]
+  // The file couldn't be read to tell: it may lose a field, so it isn't written.
+  unknown: boolean
 }
 
 /**

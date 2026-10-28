@@ -46,13 +46,14 @@ import { WRITE_WAIT_LIMIT_MS } from './write-wait'
 
 const VIEW = { editable: true, tracks: [{}, {}], dirty: false } as unknown as TagEditorView
 const EDITED = { editable: true, tracks: [{}, {}], dirty: true } as unknown as TagEditorView
-const REQUEST = { kind: 'audiobook', allowFrameLoss: false, skip: [] } as never
+const REQUEST = { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] } as never
 
 function report(over: Partial<TagApplyReport> = {}): TagApplyReport {
   return {
     applyId: 'A1',
     written: ['/a.mp3'],
     wouldDrop: [],
+    wouldRemove: [],
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
@@ -709,7 +710,17 @@ describe('createTagEditorState', () => {
 })
 
 describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list would', () => {
-  const CHANGED = [{ path: '/a.mp3', fileName: 'a.mp3', fields: ['album'], cover: false, extras: false, removes: [] }]
+  const CHANGED = [
+    {
+      path: '/a.mp3',
+      fileName: 'a.mp3',
+      fields: ['album'],
+      cover: false,
+      extras: false,
+      removes: [],
+      removesUnknown: false,
+    },
+  ]
 
   beforeEach(() => {
     writeKind.stored = 'music'
@@ -737,9 +748,58 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     landed({ ok: true, value: EDITED })
     expect(await writing).toEqual({ kind: 'done', written: 1, failed: 1, changedOnDisk: 1 })
     expect(ipc.getTagChanges).toHaveBeenCalledWith('S', 'music')
-    expect(ipc.applyTags).toHaveBeenCalledWith('S', { kind: 'music', allowFrameLoss: false, skip: [] }, false)
+    expect(ipc.applyTags).toHaveBeenCalledWith(
+      'S',
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      false,
+    )
     expect(onWriting).toHaveBeenCalledTimes(1)
     expect(onWriting.mock.invocationCallOrder[0]).toBeLessThan(ipc.applyTags.mock.invocationCallOrder[0])
+  })
+
+  it('a file the backend held back for a removal at the write asks for the list, continuing that apply', async () => {
+    writeKind.stored = 'audiobook'
+    const heldBack = report({
+      written: ['/b.mp3'],
+      wouldRemove: [{ path: '/a.mp3', removes: ['conductor'], unknown: false }],
+    })
+    ipc.applyTags.mockResolvedValue({ ok: true, value: heldBack })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({
+      kind: 'reviewFirst',
+      removing: 1,
+      writtenAs: 'audiobook',
+      after: [heldBack],
+    })
+    expect(ipc.applyTags).toHaveBeenCalledWith(
+      'S',
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      false,
+    )
+  })
+
+  it('a file the list couldn’t check for removals asks for the list first', async () => {
+    ipc.getTagChanges.mockResolvedValue({ ok: true, value: [{ ...CHANGED[0], removesUnknown: true }] })
+    const state = createTagEditorState('S')
+    expect(await state.writeNow()).toEqual({ kind: 'reviewFirst', removing: 1, writtenAs: 'music', after: [] })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+  })
+
+  it('an edit that lands while the list is made writes nothing: the list comes again', async () => {
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: VIEW })
+    const state = createTagEditorState('S')
+    await state.open()
+    let listedNow: (res: unknown) => void = () => {}
+    ipc.getTagChanges.mockReturnValueOnce(new Promise((resolve) => (listedNow = resolve)))
+    ipc.editTags.mockResolvedValue({ ok: true, value: EDITED })
+    const writing = state.writeNow()
+    await vi.waitFor(() => {
+      expect(ipc.getTagChanges).toHaveBeenCalled()
+    })
+    await state.edit([])
+    listedNow({ ok: true, value: CHANGED })
+    expect(await writing).toEqual({ kind: 'changed' })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
   })
 
   it('nothing to write writes nothing, so the last write stays undoable', async () => {
@@ -755,13 +815,18 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     ipc.getTagChanges.mockResolvedValue({
       ok: true,
       value: [
-        { ...CHANGED[0], removes: ['conductor'] },
+        { ...CHANGED[0], removes: ['conductor'], removesUnknown: false },
         { ...CHANGED[0], path: '/b.mp3', fileName: 'b.mp3' },
       ],
     })
     const onWriting = vi.fn()
     const state = createTagEditorState('S')
-    expect(await state.writeNow({ onWriting })).toEqual({ kind: 'reviewFirst', removing: 1, writtenAs: 'music' })
+    expect(await state.writeNow({ onWriting })).toEqual({
+      kind: 'reviewFirst',
+      removing: 1,
+      writtenAs: 'music',
+      after: [],
+    })
     expect(ipc.applyTags).not.toHaveBeenCalled()
     expect(onWriting).not.toHaveBeenCalled()
   })

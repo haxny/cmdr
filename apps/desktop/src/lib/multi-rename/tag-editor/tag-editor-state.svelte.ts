@@ -78,7 +78,10 @@ export interface ApplyOptions {
  * `wouldDrop`: the first apply's report, with the kind it wrote as, for the "Write anyway" / "Skip" choice. `refused`:
  * the write was refused, typed; `listFailed`: the change list before it couldn't be made, so nothing was written.
  * `reviewFirst`: writing as the kind would remove a field from `removing` files (an MP3's conductor for an audiobook),
- * so nothing was written: a removal is only ever written from the list that names it. `nothing`: no file would change. `stillBusy`: an edit was still out after
+ * or may (a file it couldn't check), so those files weren't written: a removal is only ever written from the list
+ * that names it. Caught before the write, `after` is empty; caught by the backend's guard at the write (a file read
+ * differently then), `after` holds that apply, which the list's write continues. `changed`: an edit landed between the
+ * list and the write, so nothing was written: the caller lists again. `nothing`: no file would change. `stillBusy`: an edit was still out after
  * the wait, so nothing was listed or written.
  */
 export type WriteNowResult =
@@ -86,7 +89,8 @@ export type WriteNowResult =
   | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind }
   | { kind: 'refused'; error: TagStateError }
   | { kind: 'listFailed'; error: TagStateError }
-  | { kind: 'reviewFirst'; removing: number; writtenAs: ContentKind }
+  | { kind: 'reviewFirst'; removing: number; writtenAs: ContentKind; after: TagApplyReport[] }
+  | { kind: 'changed' }
   | { kind: 'nothing' }
   | { kind: 'stillBusy' }
 
@@ -186,6 +190,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   let pending = $state(0)
   let writes = $state(0)
   let edits = $state(0)
+  /** Counts the edit calls (and reloads) started: a write at once checks no edit came in after its list. */
+  let editsMade = 0
   /** The backend's last write of this folder, mirrored. */
   let last = $state.raw<LastTagApply | null>(null)
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping of pending promises, nothing renders from it
@@ -233,6 +239,7 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   /** Runs an edit-like call (it changes the edits): `editing` is on meanwhile. */
   async function editView(call: () => Promise<TagEditorResult<TagEditorView>>): Promise<void> {
     edits += 1
+    editsMade += 1
     try {
       await replaceView(call)
     } finally {
@@ -317,15 +324,23 @@ export function createTagEditorState(sessionId: string): TagEditorState {
 
   async function writeNow(options: WriteNowOptions = {}): Promise<WriteNowResult> {
     if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
+    const seen = editsMade
     const kind = await loadWriteKind()
     const listed = await track(() => getTagChanges(sessionId, kind), null)
     if (!listed.ok) return { kind: 'listFailed', error: listed.error }
     if (listed.value.length === 0) return { kind: 'nothing' }
-    const removing = listed.value.filter((change) => change.removes.length > 0).length
-    if (removing > 0) return { kind: 'reviewFirst', removing, writtenAs: kind }
+    const removing = listed.value.filter((change) => change.removes.length > 0 || change.removesUnknown).length
+    if (removing > 0) return { kind: 'reviewFirst', removing, writtenAs: kind, after: [] }
+    // An edit that landed while the list was made would be written unlisted: list again instead.
+    if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
+    if (editsMade !== seen) return { kind: 'changed' }
     options.onWriting?.()
-    const res = await apply({ kind, allowFrameLoss: false, skip: [] })
+    // No removal allowed: the backend holds back any file the kind would take a field from (`wouldRemove`).
+    const res = await apply({ kind, allowFrameLoss: false, skip: [], allowRemovals: [] })
     if (!res.ok) return { kind: 'refused', error: res.error }
+    if (res.value.wouldRemove.length > 0) {
+      return { kind: 'reviewFirst', removing: res.value.wouldRemove.length, writtenAs: kind, after: [res.value] }
+    }
     if (res.value.wouldDrop.length > 0) return { kind: 'wouldDrop', report: res.value, writtenAs: kind }
     const outcome = outcomeOf([res.value])
     return {
@@ -440,7 +455,10 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       if (!res.ok) error = res.error
       return res
     },
-    reload: () => replaceView(() => openTagEditor(sessionId, true)),
+    reload: () => {
+      editsMade += 1
+      return replaceView(() => openTagEditor(sessionId, true))
+    },
     async close() {
       if (!started) return
       started = false

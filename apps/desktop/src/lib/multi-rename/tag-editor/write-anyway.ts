@@ -16,6 +16,8 @@ export interface WouldDropChoice {
   reports: TagApplyReport[]
   kind: ContentKind
   seen: TagEditorView | null
+  /** The files whose kind removals the list this press wrote from showed (`removalsShown`); none for ⌘⏎. */
+  allowRemovals?: readonly string[]
 }
 
 export type WriteAnywayAnswer =
@@ -30,10 +32,12 @@ export async function answerWriteAnyway(
   onWriting?: () => void,
 ): Promise<WriteAnywayAnswer> {
   const last = choice.reports.at(-1)
-  if (last === undefined) return { kind: 'written', reports: choice.reports }
+  if (last === undefined) return { kind: 'changed' }
   if (!(await tags.settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
   if (tags.view !== choice.seen) return { kind: 'changed' }
   onWriting?.()
-  const res = await tags.apply(writeAnywayAfter(choice.kind, last, tags.view), { after: choice.reports })
+  const res = await tags.apply(writeAnywayAfter(choice.kind, last, tags.view, choice.allowRemovals), {
+    after: choice.reports,
+  })
   return res.ok ? { kind: 'written', reports: [...choice.reports, res.value] } : { kind: 'refused', error: res.error }
 }

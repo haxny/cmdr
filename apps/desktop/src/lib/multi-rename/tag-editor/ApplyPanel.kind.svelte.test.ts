@@ -44,7 +44,10 @@ describe('ApplyPanel write kind', () => {
     expect(fake.changes).toHaveBeenCalledWith('music')
     expect(root.textContent).toContain('Writing as Music: 2 files will change:')
     await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'music', allowFrameLoss: false, skip: [] }, { after: [] })
+    expect(fake.apply).toHaveBeenCalledWith(
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: [] },
+    )
   })
 
   it('is Audiobook on first run, and a pick is remembered', async () => {
@@ -62,7 +65,7 @@ describe('ApplyPanel write kind', () => {
     const fake = fakeState()
     fake.changes.mockResolvedValue({
       ok: true,
-      value: [{ ...CHANGES[1], fields: ['album'], extras: false, removes: ['conductor'] }],
+      value: [{ ...CHANGES[1], fields: ['album'], extras: false, removes: ['conductor'], removesUnknown: false }],
     })
     const { root } = await mountPanel(fake)
     await press(root, 'Write tags…')
@@ -79,7 +82,10 @@ describe('ApplyPanel write kind', () => {
     remember('music')
     await press(root, 'Write tags')
     expect(root.textContent).not.toContain('Writing as Music')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] }, { after: [] })
+    expect(fake.apply).toHaveBeenCalledWith(
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: [] },
+    )
   })
 
   it('listed as Music, a switch to Audiobook before the list shows can’t make the write drop the conductor unlisted', async () => {
@@ -97,7 +103,10 @@ describe('ApplyPanel write kind', () => {
     await settle()
     expect(root.textContent).toContain('Writing as Music')
     await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledWith({ kind: 'music', allowFrameLoss: false, skip: [] }, { after: [] })
+    expect(fake.apply).toHaveBeenCalledWith(
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: [] },
+    )
   })
 
   /** N4: a wait that gave up (a call still out) lists nothing and writes nothing. */

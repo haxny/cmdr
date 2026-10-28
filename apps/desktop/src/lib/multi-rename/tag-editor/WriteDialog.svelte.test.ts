@@ -69,7 +69,10 @@ describe('WriteDialog', () => {
     expect(state.changes).toHaveBeenCalledTimes(1)
     buttonNamed(document.body, 'Write tags').click()
     await settle()
-    expect(state.apply).toHaveBeenCalledWith({ kind: 'audiobook', allowFrameLoss: false, skip: [] }, { after: earlier })
+    expect(state.apply).toHaveBeenCalledWith(
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      { after: earlier },
+    )
   })
 
   it('⌘⏎ confirms the list', async () => {

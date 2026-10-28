@@ -2228,6 +2228,14 @@
       "countText": "how many files would lose a tag (for example 3)"
     }
   },
+  "multiRename.tags.write.listedAgain": "Something changed since the list was made, so here it is again. Check it, then write.",
+  "@multiRename.tags.write.listedAgain": {
+    "description": "Shown in the tag editor window (the separate window that edits audio files’ tags), in its status line or next to the Write dialog’s buttons: between listing what a write will change and writing it, an edit came in or a file read differently, so files that weren’t in the list were not written and the list of changes is shown again for the user to check and confirm."
+  },
+  "multiRename.tags.write.removesUnknown": "maybe a tag it couldn’t check (removed)",
+  "@multiRename.tags.write.removesUnknown": {
+    "description": "Shown in the tag editor window, in the list of what a write will change in one file: the app couldn’t read the file to tell whether writing it as the chosen kind (Audiobook or Music) removes a tag, so it warns that one may be removed. One item of the list of changed fields; lower case, like “conductor (removed)”."
+  },
   "multiRename.tags.write.nothingToWrite": "Nothing to write.",
   "@multiRename.tags.write.nothingToWrite": {
     "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S when no file’s tags would change, so nothing was written."

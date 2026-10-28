@@ -70,8 +70,9 @@ re-reads or follows a file that something else renamed.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`changes(session_id, kind)`** lists, per changed file, the fields, cover, and extras the edits change, plus what the
-  kind removes beyond them (`cmdr_tags::removed_by_kind`: an MP3's `TPE3` under Audiobook), read from the file after the
-  tag lock, so the review list says everything `apply` with that kind will do.
+  kind removes beyond them (`removals.rs` over `cmdr_tags::removed_by_kind`: an MP3's `TPE3` under Audiobook), read
+  from the file after the tag lock, so the review list says everything `apply` with that kind will do. A file that
+  can't be read for it is `removesUnknown` (typed `Removals::Unknown`), ❌ never an empty "removes nothing".
 - **Tools take a scope.** `tool(session_id, tool, scope)` runs over the readable tracks at `scope` (paths as
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
@@ -117,14 +118,18 @@ every write failed with nothing to point at (regression anchor, 2026-10-27).
 
 ## Write and undo
 
-`apply(app, session_id, ApplyRequest { kind, allowFrameLoss, skip })` (`apply.rs`):
+`apply(app, session_id, ApplyRequest { kind, allowFrameLoss, skip, allowRemovals })` (`apply.rs`):
 
 1. `pending` copies out the readable files whose edited tags differ from the disk's, in current order, minus `skip`; a
    read-only session refuses (`ReadOnly`).
 2. Each file's fingerprint is checked (stat outside every lock); a moved one is `changedOnDisk`, never written.
 3. `UndoStore::record(tags-<unix millis>-<session>, paths)` BEFORE any write; a refusal is `TagEditorError::Undo` and
    nothing is written. Millis never repeat within the process, so two applies can't share (and replace) a record.
-4. Each file is re-checked right before its write (the TOCTOU window shrinks to one stat), then `write_tags` with
+4. Each file is re-checked right before its write (the TOCTOU window shrinks to one stat), then checked for what the
+   kind removes (`removals_of`, read now): a file that would lose a field (or may: an unreadable check, fail closed)
+   and isn't in `allowRemovals` (the paths whose removals the change list showed and the user confirmed) is
+   `wouldRemove` and not written. This is the guard for every caller: ⌘⏎ sends none, the Write dialog only the files
+   it listed with a removal, so a removal is only ever written from a list that showed it. Then `write_tags` with
    `WriteOptions { kind, track_total: None, disc_total: None, allow_frame_loss }` (the totals travel as the fields
    `TrackTotal` / `DiscTotal`, so an edit keeps them). `WouldDrop` → `wouldDrop`, any other
    error → `failed`, a lofty panic (`contain_panics`) → `failed` with `TagError::Write`.

@@ -46,6 +46,7 @@ pub(super) fn request() -> ApplyRequest {
         kind: ContentKind::Audiobook,
         allow_frame_loss: false,
         skip: Vec::new(),
+        allow_removals: Vec::new(),
     }
 }
 

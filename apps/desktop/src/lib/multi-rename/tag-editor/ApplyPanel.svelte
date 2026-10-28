@@ -23,7 +23,7 @@
     import { confirmDialog } from '#lib/utils/confirm-dialog.js'
     import ApplyOutcome from './ApplyOutcome.svelte'
     import WouldDropDialog from './WouldDropDialog.svelte'
-    import { fileNameOf, outcomeOf, refusalOf, type ApplyOutcome as Outcome } from './apply-outcome'
+    import { fileNameOf, outcomeOf, refusalOf, removalsShown, type ApplyOutcome as Outcome } from './apply-outcome'
     import { answerWriteAnyway } from './write-anyway'
     import { FIELD_LABELS } from './field-labels'
     import { undoableCount } from './last-tag-apply'
@@ -69,6 +69,8 @@
               kind: ContentKind
               seen: TagEditorView | null
               answering: boolean
+              /** The files whose removals the list showed, allowed again for "Write anyway". */
+              allowRemovals: string[]
           }
         | { step: 'done'; outcome: Outcome }
         /** The write was refused: `noneWritten` when that came before any file was touched, and why. */
@@ -133,6 +135,7 @@
         if (change.cover) parts.push(tString('multiRename.tags.write.cover'))
         if (change.extras) parts.push(tString('multiRename.tags.write.extras'))
         for (const removal of change.removes) parts.push(tString(REMOVAL_KEYS[removal]))
+        if (change.removesUnknown) parts.push(tString('multiRename.tags.write.removesUnknown'))
         return tString('multiRename.tags.write.fileChanges', { fileName: change.fileName, fields: formatUnitList(parts) })
     }
 
@@ -186,14 +189,24 @@
         }
         current = { step: 'writing' }
         onWriting?.()
-        const res = await tags.apply({ kind: listedAs, allowFrameLoss: false, skip: [] }, { after: earlier })
+        // Only the files whose removals this list showed may lose a field; the backend holds back any other.
+        const allowRemovals = removalsShown(changes)
+        const res = await tags.apply(
+            { kind: listedAs, allowFrameLoss: false, skip: [], allowRemovals },
+            { after: earlier },
+        )
         if (!res.ok) {
             current = refusedStep(res.error.kind, earlier)
             return
         }
         const reports = [...earlier, res.value]
-        if (res.value.wouldDrop.length > 0) {
-            current = { step: 'wouldDrop', reports, kind: listedAs, seen: tags.view, answering: false }
+        if (res.value.wouldRemove.length > 0) {
+            // A file the list didn't show losing a field (it read differently at the write): list again, this press
+            // continuing, so its removal is seen before it's written.
+            await review(reports)
+            notice = 'multiRename.tags.write.listedAgain'
+        } else if (res.value.wouldDrop.length > 0) {
+            current = { step: 'wouldDrop', reports, kind: listedAs, seen: tags.view, answering: false, allowRemovals }
         }
         else current = endedStep(reports)
     }

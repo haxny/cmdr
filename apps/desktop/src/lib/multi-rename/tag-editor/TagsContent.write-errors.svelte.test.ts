@@ -64,7 +64,17 @@ beforeEach(() => {
   ipc.lastTagApply.mockResolvedValue({ ok: true, value: null })
   ipc.getTagChanges.mockResolvedValue({
     ok: true,
-    value: [{ path: '/b/01.mp3', fileName: '01.mp3', fields: ['album'], cover: false, extras: false, removes: [] }],
+    value: [
+      {
+        path: '/b/01.mp3',
+        fileName: '01.mp3',
+        fields: ['album'],
+        cover: false,
+        extras: false,
+        removes: [],
+        removesUnknown: false,
+      },
+    ],
   })
 })
 afterEach(() => {

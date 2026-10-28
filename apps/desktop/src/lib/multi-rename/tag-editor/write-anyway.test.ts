@@ -15,7 +15,7 @@ describe('answerWriteAnyway', () => {
     const onWriting = vi.fn()
     const answer = await answerWriteAnyway(asState(state), choice, onWriting)
     expect(state.apply).toHaveBeenCalledWith(
-      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'] },
+      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'], allowRemovals: [] },
       { after: [first] },
     )
     expect(onWriting.mock.invocationCallOrder[0]).toBeLessThan(state.apply.mock.invocationCallOrder[0])

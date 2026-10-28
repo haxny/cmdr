@@ -376,8 +376,8 @@
                 showSummary([{ key: 'multiRename.tags.write.listFailed' }], 'alert')
                 break
             case 'reviewFirst':
-                // A removal is written only from the list that names it.
-                openReview()
+                // A removal is written only from the list that names it; the list continues any apply already made.
+                openReview(res.after)
                 showSummary([
                     {
                         key: 'multiRename.tags.write.reviewRemovals',
@@ -388,6 +388,11 @@
                         },
                     },
                 ])
+                break
+            case 'changed':
+                // An edit landed between the list and the write: nothing unlisted is written.
+                openReview()
+                showSummary([{ key: 'multiRename.tags.write.listedAgain' }])
                 break
             case 'nothing':
                 showSummary([{ key: 'multiRename.tags.write.nothingToWrite' }])

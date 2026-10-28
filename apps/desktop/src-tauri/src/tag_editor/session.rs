@@ -26,11 +26,12 @@ use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes}
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
     ContentKind, FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for,
-    read_duration, read_tags, removed_by_kind,
+    read_duration, read_tags,
 };
 
 use super::follow::follow_disk;
 use super::history::{EditHistory, capture, clear, record};
+use super::removals::{Removals, removals_of};
 use super::sort::{TrackSort, reorder};
 use super::view::{
     Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, stem_of,
@@ -73,6 +74,8 @@ pub struct FileChangeView {
     pub extras: bool,
     /// What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
     pub removes: Vec<KindRemoval>,
+    /// The file couldn't be read to tell what the kind removes: it may lose a field.
+    pub removes_unknown: bool,
 }
 
 /// What a file-name pattern reads from one track's name.
@@ -550,6 +553,7 @@ pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView
                     cover: change.cover,
                     extras: change.extras,
                     removes: Vec::new(),
+                    removes_unknown: false,
                 };
                 Some((path.clone(), view))
             })
@@ -557,23 +561,14 @@ pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView
     })?;
     Ok(listed
         .into_iter()
-        .map(|(path, view)| FileChangeView {
-            removes: kind_removals(&path, kind),
-            ..view
+        .map(|(path, view)| match removals_of(&path, kind) {
+            Removals::Known(removes) => FileChangeView { removes, ..view },
+            Removals::Unknown => FileChangeView {
+                removes_unknown: true,
+                ..view
+            },
         })
         .collect())
-}
-
-/// What writing `path` as `kind` removes beyond its fields. A file that can't be read lists
-/// nothing here; its write fails and says so. Blocking: ❌ not under a lock.
-fn kind_removals(path: &Path, kind: ContentKind) -> Vec<KindRemoval> {
-    match contain_panics(|| removed_by_kind(path, kind)) {
-        Some(Ok(removals)) => removals,
-        Some(Err(_)) | None => {
-            log::warn!(target: LOG_TARGET, "Couldn't read what a write kind would remove from a file");
-            Vec::new()
-        }
-    }
 }
 
 /// Whether the file at `path` is still the one the session read, so a write may go ahead. A

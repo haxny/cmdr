@@ -91,8 +91,11 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   waits for the edits out, lists as the remembered kind, writes nothing when nothing would change, then the same apply
   request). ❗ When the kind would remove a field from any file (`removes`, an MP3's conductor for Audiobook) it writes
   nothing and opens the list instead (`reviewFirst`, worded in the status line): a removal is only ever written from the
-  list that names it. The player stops first, a second press while it runs does nothing, would-drop files ask in a
-  `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`, shared with the dialog: an edit landed
+  list that names it. The backend enforces it (`ApplyRequest.allowRemovals` → `wouldRemove`, backend `DETAILS.md` §
+  Write and undo): ⌘⏎ allows none, the dialog's write only the files it listed with a removal, and a file held back at
+  the write opens the list again, continuing the press. An edit landing between ⌘⏎'s list and its write writes nothing
+  and lists again (`changed`). The player stops first, a second press while it runs does nothing, would-drop files ask
+  in a `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`, shared with the dialog: an edit landed
   meanwhile opens the list, continuing the press so Undo keeps both applies), and the status line says how many files
   were written and how many weren't, until the next edit or 10 s. Refusals reuse the dialog's words (`refusalOf`). ⌘⇧S
   (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write tags writes; it

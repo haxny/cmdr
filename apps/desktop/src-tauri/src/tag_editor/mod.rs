@@ -13,6 +13,7 @@ pub(crate) mod history;
 pub(crate) mod last_apply;
 pub(crate) mod menu_route;
 pub(crate) mod playback;
+mod removals;
 pub(crate) mod session;
 pub(crate) mod sort;
 pub(crate) mod text_tools;

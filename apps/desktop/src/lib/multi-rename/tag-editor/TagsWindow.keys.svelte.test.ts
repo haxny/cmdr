@@ -122,7 +122,17 @@ beforeEach(() => {
   ipc.listTagCovers.mockResolvedValue({ ok: true, value: [] })
   ipc.getTagChanges.mockResolvedValue({
     ok: true,
-    value: [{ path: '/b/01.mp3', fileName: '01.mp3', fields: ['album'], cover: false, extras: false, removes: [] }],
+    value: [
+      {
+        path: '/b/01.mp3',
+        fileName: '01.mp3',
+        fields: ['album'],
+        cover: false,
+        extras: false,
+        removes: [],
+        removesUnknown: false,
+      },
+    ],
   })
   ipc.applyTags.mockResolvedValue({
     ok: true,
@@ -130,6 +140,7 @@ beforeEach(() => {
       applyId: 'A1',
       written: ['/b/01.mp3'],
       wouldDrop: [],
+      wouldRemove: [],
       failed: [],
       changedOnDisk: [],
       undoUnavailable: false,
@@ -552,6 +563,7 @@ describe('the Tags window’s function keys', () => {
         applyId: 'A1',
         written: [],
         wouldDrop: [],
+        wouldRemove: [],
         failed: [{ path: '/b/01.mp3', error: { type: 'notSupported' } }],
         changedOnDisk: [],
         undoUnavailable: false,
@@ -614,6 +626,7 @@ describe('closing the Tags window during a write', () => {
         applyId: 'A1',
         written: ['/b/01.mp3'],
         wouldDrop: [],
+        wouldRemove: [],
         failed: [],
         changedOnDisk: [],
         undoUnavailable: false,
@@ -636,6 +649,7 @@ describe('⌘⏎ and ⌘S write at once', () => {
     applyId: 'A1',
     written: [],
     wouldDrop: [{ path: '/b/01.mp3', items: ['TSOP'] }],
+    wouldRemove: [],
     failed: [],
     changedOnDisk: [],
     undoUnavailable: false,
@@ -648,7 +662,11 @@ describe('⌘⏎ and ⌘S write at once', () => {
     await mountWindow()
     await key(name, { metaKey: true, code })
     expect(ipc.applyTags).toHaveBeenCalledTimes(1)
-    expect(ipc.applyTags).toHaveBeenCalledWith('S', { kind: 'audiobook', allowFrameLoss: false, skip: [] }, false)
+    expect(ipc.applyTags).toHaveBeenCalledWith(
+      'S',
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [] },
+      false,
+    )
     expect(dialog()).toBeNull()
     expect(statusLine()).toContain('1 file written')
   })
@@ -688,7 +706,7 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(ipc.applyTags).toHaveBeenCalledTimes(2)
     expect(ipc.applyTags).toHaveBeenLastCalledWith(
       'S',
-      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'] },
+      { kind: 'audiobook', allowFrameLoss: true, skip: ['/b/02.mp3', '/b/03.mp3'], allowRemovals: [] },
       false,
     )
     expect(dialog()).toBeNull()
@@ -718,7 +736,15 @@ describe('⌘⏎ and ⌘S write at once', () => {
     ipc.getTagChanges.mockResolvedValue({
       ok: true,
       value: [
-        { path: '/b/01.mp3', fileName: '01.mp3', fields: [], cover: false, extras: false, removes: ['conductor'] },
+        {
+          path: '/b/01.mp3',
+          fileName: '01.mp3',
+          fields: [],
+          cover: false,
+          extras: false,
+          removes: ['conductor'],
+          removesUnknown: false,
+        },
       ],
     })
     await mountWindow()
@@ -737,6 +763,58 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
     expect(dialogTitle()).toBe('Write tags')
     expect(ipc.applyTags).not.toHaveBeenCalled()
+  })
+
+  it('a file the backend holds back for a removal opens the list; its write allows only what it shows', async () => {
+    ipc.applyTags.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        ...wouldDrop,
+        wouldDrop: [],
+        wouldRemove: [{ path: '/b/01.mp3', removes: ['conductor'], unknown: false }],
+      },
+    })
+    ipc.getTagChanges
+      .mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            path: '/b/01.mp3',
+            fileName: '01.mp3',
+            fields: ['album'],
+            cover: false,
+            extras: false,
+            removes: [],
+            removesUnknown: false,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: [
+          {
+            path: '/b/01.mp3',
+            fileName: '01.mp3',
+            fields: ['album'],
+            cover: false,
+            extras: false,
+            removes: ['conductor'],
+            removesUnknown: false,
+          },
+        ],
+      })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.applyTags).toHaveBeenCalledTimes(1)
+    expect(dialogTitle()).toBe('Write tags')
+    expect(dialog()?.textContent).toContain('conductor (removed)')
+    buttonNamed(dialog() as HTMLElement, 'Write tags').click()
+    await settle()
+    expect(ipc.applyTags).toHaveBeenLastCalledWith(
+      'S',
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: ['/b/01.mp3'] },
+      false,
+    )
   })
 
   it('nothing to write says so and writes nothing', async () => {

@@ -4,7 +4,10 @@
 //! Flow: the changed files (minus the user's skips) are copied out of the session; one whose
 //! fingerprint moved since the session read it is `changedOnDisk` and never written. The rest
 //! are recorded in the undo store BEFORE any write, then written one by one, each re-checked
-//! right before its write. A `WouldDrop` is `wouldDrop` (the user decides), any other error
+//! right before its write, and held back as `wouldRemove` when the kind would remove a field
+//! from it (an MP3's conductor under Audiobook) that the request doesn't allow (a removal is
+//! written only from the list that showed it; an unreadable check holds it back too). A
+//! `WouldDrop` is `wouldDrop` (the user decides), any other error
 //! `failed`. The record is sealed to the files written, each with its fingerprint right after
 //! its write (an undo leaves a file alone once that moves), or forgotten when none was; written
 //! files become the session's disk copy, and Multi-Rename's media cache reads them again.
@@ -16,8 +19,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use cmdr_tags::{ApplyId, ContentKind, FileTags, Fingerprint, TagError, UndoStore, WriteOptions, write_tags};
+use cmdr_tags::{
+    ApplyId, ContentKind, FileTags, Fingerprint, KindRemoval, TagError, UndoStore, WriteOptions, write_tags,
+};
 
+use super::removals::{Removals, removals_of};
 use super::session::{Pending, TagEditorError, mark_written, pending};
 use crate::crash_reporter::contain_panics;
 use crate::multi_rename::session::media_over;
@@ -33,6 +39,10 @@ pub struct ApplyRequest {
     pub allow_frame_loss: bool,
     /// Paths the user chose to skip, as the view shows them.
     pub skip: Vec<String>,
+    /// Paths (as the view shows them) whose kind removals the user saw in the change list and
+    /// confirmed: only these may lose a field the kind removes. Absent means none.
+    #[serde(default)]
+    pub allow_removals: Vec<String>,
 }
 
 /// What a write did, per file. Paths are as the view shows them.
@@ -44,6 +54,8 @@ pub struct TagApplyReport {
     pub written: Vec<String>,
     /// Not written: the write would drop these items. The UI asks.
     pub would_drop: Vec<WouldDropRow>,
+    /// Not written: the kind would remove a field the request didn't allow. The UI lists it.
+    pub would_remove: Vec<WouldRemoveRow>,
     /// Not written, with why.
     pub failed: Vec<FailedRow>,
     /// Not written: something else changed the file since the session read it.
@@ -57,6 +69,17 @@ pub struct TagApplyReport {
 pub struct WouldDropRow {
     pub path: String,
     pub items: Vec<String>,
+}
+
+/// A file held back because writing it as the kind would remove a field (no values, ever).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct WouldRemoveRow {
+    pub path: String,
+    /// What the kind would remove; empty when `unknown`.
+    pub removes: Vec<KindRemoval>,
+    /// The file couldn't be read to tell: it may lose a field, so it isn't written.
+    pub unknown: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -131,7 +154,8 @@ pub(super) fn apply_with_before_write(
         disc_total: None,
         allow_frame_loss: req.allow_frame_loss,
     };
-    let written = write_each(ready, &opts, before_write, &mut report);
+    let allowed = |path: &Path| req.allow_removals.iter().any(|allowed| *allowed == shown(path));
+    let written = write_each(ready, &opts, &allowed, before_write, &mut report);
     report.written = written.iter().map(|file| shown(&file.path)).collect();
     let written_paths: Vec<PathBuf> = written.iter().map(|file| file.path.clone()).collect();
     let sealed: Vec<(PathBuf, Fingerprint)> = written
@@ -168,6 +192,7 @@ struct Written {
 fn write_each(
     ready: Vec<Pending>,
     opts: &WriteOptions,
+    removal_allowed: &dyn Fn(&Path) -> bool,
     before_write: &dyn Fn(&Path),
     report: &mut TagApplyReport,
 ) -> Vec<Written> {
@@ -176,6 +201,10 @@ fn write_each(
         before_write(&file.path);
         if !Fingerprint::holds(file.fingerprint.as_ref(), &file.path) {
             report.changed_on_disk.push(shown(&file.path));
+            continue;
+        }
+        if let Some(row) = held_back(&file.path, opts.kind, removal_allowed) {
+            report.would_remove.push(row);
             continue;
         }
         let outcome = contain_panics(|| write_tags(&file.path, &file.tags, opts)).unwrap_or_else(|| Err(panicked()));
@@ -196,6 +225,28 @@ fn write_each(
         }
     }
     written
+}
+
+/// The row for a file the kind would remove a field from (or may: an unreadable check) when the
+/// request doesn't allow it; `None` when the write may go ahead.
+pub(super) fn held_back(
+    path: &Path,
+    kind: ContentKind,
+    removal_allowed: &dyn Fn(&Path) -> bool,
+) -> Option<WouldRemoveRow> {
+    let removals = removals_of(path, kind);
+    if !removals.any() || removal_allowed(path) {
+        return None;
+    }
+    let (removes, unknown) = match removals {
+        Removals::Known(removes) => (removes, false),
+        Removals::Unknown => (Vec::new(), true),
+    };
+    Some(WouldRemoveRow {
+        path: shown(path),
+        removes,
+        unknown,
+    })
 }
 
 /// Seals the record to the files written, each with its fingerprint after its write, so an
