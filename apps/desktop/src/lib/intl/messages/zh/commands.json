@@ -556,9 +556,17 @@
   "@commands.tagsWrite.label": {
     "sourceHash": "534bc20"
   },
+  "commands.tagsReview.label": "Review the changes, then write",
+  "@commands.tagsReview.label": {
+    "sourceHash": "7de2e09"
+  },
   "commands.tagsUndo.label": "Undo the last tag write",
   "@commands.tagsUndo.label": {
     "sourceHash": "b26cf96"
+  },
+  "commands.tagsRedo.label": "Redo the last undone tag edit",
+  "@commands.tagsRedo.label": {
+    "sourceHash": "1b672b3"
   },
   "commands.queueCursorUp.label": "上一项操作",
   "@commands.queueCursorUp.label": {

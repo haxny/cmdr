@@ -1075,6 +1075,14 @@
   "@multiRename.tags.track.titleLabel": {
     "sourceHash": "d1d8d11"
   },
+  "multiRename.tags.track.cellNumber": "Track number column",
+  "@multiRename.tags.track.cellNumber": {
+    "sourceHash": "091f2c2"
+  },
+  "multiRename.tags.track.cellTitle": "Title column",
+  "@multiRename.tags.track.cellTitle": {
+    "sourceHash": "1868f82"
+  },
   "multiRename.tags.track.numberLabel": "Track number of {fileName}",
   "@multiRename.tags.track.numberLabel": {
     "sourceHash": "312b18b"
@@ -1731,6 +1739,18 @@
   "@multiRename.tags.numbering.cancel": {
     "sourceHash": "19766ed"
   },
+  "multiRename.tags.sort.label": "Sort tracks",
+  "@multiRename.tags.sort.label": {
+    "sourceHash": "ffef16b"
+  },
+  "multiRename.tags.sort.state": "{column}, {order, select, ascending {sorted ascending} descending {sorted descending} other {not sorted}}",
+  "@multiRename.tags.sort.state": {
+    "sourceHash": "b4787e7"
+  },
+  "multiRename.tags.sort.by": "Sort by {column}",
+  "@multiRename.tags.sort.by": {
+    "sourceHash": "55fb1bf"
+  },
   "multiRename.tags.col.play": "Play",
   "@multiRename.tags.col.play": {
     "sourceHash": "436e610"
@@ -1778,6 +1798,22 @@
   "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
   "@multiRename.tags.window.noTracks": {
     "sourceHash": "5765e14"
+  },
+  "multiRename.tags.window.tooManyTracks": "Those folders hold more than {limit, number} audio files. Select a smaller part of the book.",
+  "@multiRename.tags.window.tooManyTracks": {
+    "sourceHash": "daee60a"
+  },
+  "multiRename.tags.window.foldersNeedLocalDisk": "Edit tags opens a folder only on a disk of this computer. Open the folder and select its audio files instead.",
+  "@multiRename.tags.window.foldersNeedLocalDisk": {
+    "sourceHash": "ce31fcf"
+  },
+  "multiRename.tags.window.openTimedOut": "Reading the folder took too long, so nothing was opened. Try again, or select the audio files themselves.",
+  "@multiRename.tags.window.openTimedOut": {
+    "sourceHash": "b41c453"
+  },
+  "multiRename.tags.window.someUnreadable": "{count, plural, one {# place in the folders couldn’t be read, so some tracks may be missing.} other {# places in the folders couldn’t be read, so some tracks may be missing.}}",
+  "@multiRename.tags.window.someUnreadable": {
+    "sourceHash": "99dae0a"
   },
   "multiRename.tags.keys.label": "Tag tools",
   "@multiRename.tags.keys.label": {
@@ -1835,6 +1871,10 @@
   "@multiRename.tags.keys.write": {
     "sourceHash": "3f00927"
   },
+  "multiRename.tags.keys.review": "Review",
+  "@multiRename.tags.keys.review": {
+    "sourceHash": "aff0766"
+  },
   "multiRename.tags.dialog.fromName": "Tags from file names",
   "@multiRename.tags.dialog.fromName": {
     "sourceHash": "bb61563"
@@ -1879,6 +1919,30 @@
   "@multiRename.tags.clearField.run": {
     "sourceHash": "83b12c2"
   },
+  "multiRename.tags.clipboard.readFailed": "Couldn’t read the clipboard. Try ⌘V again.",
+  "@multiRename.tags.clipboard.readFailed": {
+    "sourceHash": "db20129"
+  },
+  "multiRename.tags.clipboard.noText": "The clipboard holds no text to paste.",
+  "@multiRename.tags.clipboard.noText": {
+    "sourceHash": "c8936c0"
+  },
+  "multiRename.tags.clipboard.tooLong": "The clipboard holds too much text for this field, so nothing was pasted.",
+  "@multiRename.tags.clipboard.tooLong": {
+    "sourceHash": "ef75331"
+  },
+  "multiRename.tags.clipboard.writeFailed": "Couldn’t copy to the clipboard. Try again.",
+  "@multiRename.tags.clipboard.writeFailed": {
+    "sourceHash": "e1ca017"
+  },
+  "multiRename.tags.undo.editUndone": "Undone",
+  "@multiRename.tags.undo.editUndone": {
+    "sourceHash": "dcccf56"
+  },
+  "multiRename.tags.undo.editRedone": "Redone",
+  "@multiRename.tags.undo.editRedone": {
+    "sourceHash": "6579cb1"
+  },
   "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
   "@multiRename.tags.undo.nothing": {
     "sourceHash": "6324c69"
@@ -1886,6 +1950,30 @@
   "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
   "@multiRename.tags.write.someLeft": {
     "sourceHash": "b999e17"
+  },
+  "multiRename.tags.write.doneSummary": "{count, plural, one {{countText} file written} other {{countText} files written}}",
+  "@multiRename.tags.write.doneSummary": {
+    "sourceHash": "cb31071"
+  },
+  "multiRename.tags.write.doneWithProblems": "{count, plural, one {{countText} file written} other {{countText} files written}}, {notWritten, plural, one {{notWrittenText} not written} other {{notWrittenText} not written}}. Review changes ({shortcut}) shows which.",
+  "@multiRename.tags.write.doneWithProblems": {
+    "sourceHash": "9cceaed"
+  },
+  "multiRename.tags.write.reviewRemovals": "{count, plural, one {Writing as {kind} removes a tag from {countText} file, so the list shows it first.} other {Writing as {kind} removes a tag from {countText} files, so the list shows them first.}}",
+  "@multiRename.tags.write.reviewRemovals": {
+    "sourceHash": "5bd733f"
+  },
+  "multiRename.tags.write.listedAgain": "Something changed since the list was made, so here it is again. Check it, then write.",
+  "@multiRename.tags.write.listedAgain": {
+    "sourceHash": "6e80be7"
+  },
+  "multiRename.tags.write.removesUnknown": "maybe a tag it couldn’t check (removed)",
+  "@multiRename.tags.write.removesUnknown": {
+    "sourceHash": "619d906"
+  },
+  "multiRename.tags.write.nothingToWrite": "Nothing to write.",
+  "@multiRename.tags.write.nothingToWrite": {
+    "sourceHash": "498d365"
   },
   "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
   "@multiRename.tags.write.closeWaits": {
