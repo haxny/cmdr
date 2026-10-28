@@ -12,7 +12,7 @@ One message in, an answer out, crash-safe and within budget.
   provider readiness and the gauge's baseline), `stream.rs` (`AskCmdrTurn`, a turn's one progress
   transport), `message_view.rs` (one stored row's display projection, shared by history and the
   stream; `message_view/thread.rs` projects a history page with its turns in view), and
-  `cancel.rs` (the in-flight-turn registry, keyed by conversation, so a wake can register too).
+  `cancel.rs` (the in-flight-turn registry, a wake's too) with `spend_pause.rs` (each turn's pause slot).
 
 ## Must-knows
 
@@ -40,9 +40,8 @@ One message in, an answer out, crash-safe and within budget.
   shape-agnostic and under 80 tokens: a digest describes a delivery, never is one (invariant 6).
 - **Content is written only on `End`; the user row on the FIRST `End`** (crash cases (a)–(d),
   red-guarded). Don't pre-persist either row.
-- **Runaway loops are impossible**: both caps are checked at the loop's TOP (the round cap buys ONE
-  tool-less wrap-up call); a FAILED call's identical repeat isn't re-dispatched (`repeats.rs`). ❌ No
-  token total gates a turn.
+- **Limits sit at the loop's TOP**: ❌ no round cap on a user's turn, 25 on a background one; cap and
+  loop guard buy ONE tool-less wrap-up; silence, ❌ never length, ends calls. `DETAILS.md` § Constants.
 - **The event seam is `AgentChatEvent` over an `UnboundedSender`**, forwarded onto one
   conversation-keyed event: ❌ never key a turn to the invoke that started it, or a reload loses it.
 - **Terminal events come only from `run_turn`, once per turn** (a panicking rail turn's guard is the

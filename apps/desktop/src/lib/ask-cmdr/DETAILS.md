@@ -56,6 +56,12 @@ Three things follow from the subscription being conversation-keyed rather than p
   tool calls still run) before its terminal arrives. Those would otherwise read as a live turn and re-enter "working…",
   so the thread holds a pending stop until that terminal: § Stop is local first, settled by the backend.
 
+**The progress watchdog is a backstop.** Quiet for `STALL_AFTER_MS` (30 s), the bubble says it's taking a while; quiet
+for `STOP_AFTER_MS` (150 s), the rail stops the turn with a `timeout` item. 150 s sits past the backend's own stall
+window (120 s, which counts the provider's keep-alives the rail never sees), so a live turn always ends with the
+backend's typed terminal first and the watchdog only catches a backend that went away. A turn paused on spend has no
+watchdog (§ Spend pause).
+
 **One bubble per turn, made of rounds.** An assistant item (`AssistantItem`, `ask-cmdr-messages.ts`) is one turn:
 `rounds` (one per model call: `{ messageId, text, calls }`), `turnId` (the opener row's id), and `stats`. A round's text
 renders BEFORE its calls whatever order the wire interleaved them in, because that is the order the stored row holds
@@ -804,14 +810,28 @@ move it: the highlight marks the row Space acts on.
 
 ## Limit notice
 
-A turn that reached a per-answer ceiling (rounds of tool calls, or wall time) carries `stats.limit` (`TurnLimit`: kind,
-the value that applied, `answered`), and `AskCmdrMessage` renders `AskCmdrLimitNotice` from it above the stats line. It
-names the limit and its value (`limitNoticeText`), says it's fixed with no setting, links Send feedback
-(`openFeedbackDialog`), and on the thread's latest turn, with nothing running, offers "Keep going", which sends
-`askCmdr.limit.continueMessage` as an ordinary message: the next turn starts with a fresh budget and the whole history.
-Reading it from the stats is what makes live equal reload, since the `TurnFinished` row stores them. A live `failed`
-with `budgetExhausted` and a limit adds no separate error line (`applyFailed`): the notice already says it, better.
-Backend side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and cancellation.
+A turn that reached a per-answer limit carries `stats.limit` (`TurnLimit`: kind, the value that applied, `answered`),
+and `AskCmdrMessage` renders `AskCmdrLimitNotice` from it above the stats line. The kinds: a background turn's round cap
+(`toolRounds`), the loop guard (`repeatedCall`, `noProgress`), a stall (`stalled`), and `wallTime`, which only turns
+recorded before the stall check carry. It names the limit and its value (`limitNoticeText`); for the fixed ceilings only
+(`limitIsFixedCeiling`) it adds that no setting moves it and links Send feedback (`openFeedbackDialog`), since the loop
+guard and a stall need no apology. On the thread's latest turn, with nothing running, it offers "Keep going", which
+sends `askCmdr.limit.continueMessage` as an ordinary message: the next turn starts fresh with the whole history. Reading
+it from the stats is what makes live equal reload, since the `TurnFinished` row stores them. A live `failed` with a
+limit adds no separate error line (`applyFailed`), whatever its kind (`budgetExhausted`, `repeatedToolCall`, a stall's
+`timeout`): the notice already says it, better. Backend side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and
+cancellation.
+
+## Spend pause
+
+A user-started turn whose estimated spend passed `askCmdr.spendPause` (Settings › AI › Ask Cmdr, default $2) stops
+between rounds and emits `spendPaused { costMicros }`. The rail holds it in `askCmdrState.spendPausedMicros` and renders
+`AskCmdrSpendPause` under the thread while the turn streams: "This answer has used about $X so far. Keep going?", the
+list-price caveat, Keep going (`keepGoingPastSpend` → `keepGoingAskCmdr`) and Stop (the ordinary `stopStreaming`). The
+turn is quiet on purpose while it waits, so the pause clears the progress watchdog and the thinking/stalled labels; Keep
+going or `spendResumed` re-arms it. A paused turn emits nothing to re-adopt, so a thread load reads the question back
+from `ConversationDetailView.spendPausedMicros` (`resumeThread`). The turn ending, Stop, and a discard clear it. Backend
+side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and cancellation.
 
 ## The context gauge (how full the chat is)
 

@@ -71,8 +71,9 @@ genai → agent (parse), per `genai_content_to_agent_parts(content, origin)`, st
 
 Stream events → `AgentDelta` (`map_stream_event`): `Chunk` → `Text` (empty chunks skipped); `ReasoningChunk` /
 `ThoughtSignatureChunk` → `ReasoningTick` (content never surfaced); `ToolCallChunk` → `ToolCallStarted`, **once per
-call id** (`map_stream`); `End` → `End{stop, usage, message}` built from the captured content, stop reason, and usage;
-a stream error → mapped `AgentLlmError`.
+call id** (`map_stream`); `Start` / `Heartbeat` → `KeepAlive` (shown as nothing; it resets the runtime's stall check,
+`chat/DETAILS.md` § Constants table); `End` → `End{stop, usage, message}` built from the captured content, stop reason,
+and usage; a stream error → mapped `AgentLlmError`.
 
 Gotcha: genai's OpenAI streamer (verified on genai 0.6.5, reading its OpenAI adapter's streamer source, 2026-10-22) emits a
 `ToolCallChunk` for EVERY argument fragment, each carrying the merged call's id. Passed through raw, a call whose

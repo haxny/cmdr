@@ -216,21 +216,50 @@ depth, not the main line.
 
 In `context.rs` (turn shape and compaction):
 
-- `MAX_TOOL_TURNS = 25` — rounds of tool calls per message; past it ONE wrap-up call answers (§ Budgets and
-  cancellation). Why 25: at 8, a real "where should these Downloads go" turn (verified on a dev build, `main.db`
-  conversation 689, 2026-10-28) spent all eight rounds orienting (pane, importance, home, Documents, two cloud
-  folders, volumes, the NAS, then a memory note) and never answered, at a tenth of its window. A cleanup that also
-  reads its destinations and proposes in `files_per_batch` batches needs 15–20 rounds; 25 leaves headroom, and the
-  wrap-up call plus "Keep going" carry a longer job across answers. Spend: a round re-sends the prompt, which grows
-  by what the round read (each result is capped at `MAX_TOOL_RESULT_TOKENS`), so 25 rounds of a turn like 689's
-  (~11k prompt, ~3k growth per round) re-send roughly 1.2M prompt tokens, mostly prompt-cache reads. The cap and the
-  repeat breaker are what bound that; a dollar ceiling per answer is not built.
-- `MAX_WALL_TIME = 600s` — per message wall-clock ceiling across the whole loop: a hang guard, not a spend guard
-  (Stop is the user's). Ten minutes is 25 rounds of a reasoning-heavy model at ~20 s each with room left; it ends
-  the turn with no further call.
-- Neither is a setting: the rail's limit notice says the limit is fixed and links Send feedback. ❌ No token total
-  gates a turn: the per-turn and per-thread token figures are display (the stats line, the cost footer); only the
-  context window bounds one call (`tokens_summed_across_rounds_never_end_a_turn`).
+The per-answer limits split by who started the turn (`TurnOrigin::user_started`). Decision/Why (David, 2026-10-28):
+Claude Code runs an interactive turn with no tool-round cap, relying on the user watching it, a Stop that works, and
+visible spend. A user-started Ask Cmdr turn has all three (Stop is airtight in every turn state, § Budgets and
+cancellation; the cost footer moves per call), so it gets no round cap; a loop guard and a spend pause bound it
+instead. A background turn has nobody watching, so it keeps the cap. An approved action belongs to the user, but no
+turn runs on an approval today; the `Outcomes` follow-up a rejection opens runs unattended and keeps the cap.
+
+- `BACKGROUND_MAX_TOOL_TURNS = 25` — rounds of tool calls per BACKGROUND answer (a wake, a follow-up); past it ONE
+  wrap-up call answers (§ Budgets and cancellation). Why 25: at 8, a real "where should these Downloads go" turn
+  (verified on a dev build, `main.db` conversation 689, 2026-10-28) spent all eight rounds orienting and never
+  answered, at a tenth of its window; a cleanup that reads its destinations and proposes in `files_per_batch` batches
+  needs 15–20. Spend: a round re-sends the prompt, which grows by what the round read (each result capped at
+  `MAX_TOOL_RESULT_TOKENS`), so 25 rounds of a turn like 689's (~11k prompt, ~3k growth per round) re-send roughly
+  1.2M prompt tokens, mostly prompt-cache reads. A wake's daily ceiling (`../wake/DETAILS.md`) bounds the rest.
+- `LOOP_GUARD_REPEATS = 3` — a call identical to two earlier ones of the turn (`AgentToolCall::identity_key`, the
+  rail's "Same as above" key) wraps up, success or not. Why 3: one repeat is normal (a model re-reads after losing
+  track), and the repeat breaker already refuses the second sending of a FAILED call, so the third is a model that
+  ignored that. It replaces the breaker's old "end the turn failed" step: the user gets an answer from what was found.
+- `LOOP_GUARD_STALE_ROUNDS = 3` — three rounds in a row that found nothing new wrap up. "New" is structural: some call
+  went out for the first time this turn AND came back without a problem (`dispatch_ok`). Never judged by content: a
+  run of empty folders is a run of different calls, so it is progress (`many_different_successful_calls_never_trip_the_guard`).
+  Why 3: one failed round is a model fixing its arguments; three is flailing.
+- `STREAM_STALL_TIMEOUT = 120s` — no stream item at all for this long ends the call as stalled (`TurnLimitKind::Stalled`,
+  `AgentErrorKind::Timeout`); it also bounds the call opening. It replaced a 10-minute total, which ended long, healthy
+  answers. Any item resets it, the provider's keep-alive included (`AgentDelta::KeepAlive`, from genai's
+  `Start` / `Heartbeat`: Anthropic `ping`s, Gemini status updates), so it measures silence, not length. Why 120 s:
+  Claude streams its thinking (`ReasoningTick`) and pings; Gemini streams thought summaries; OpenAI's Responses API
+  streams reasoning summaries (genai asks for `summary: detailed` when reasoning is captured), so the longest silence
+  is one reasoning step before its summary lands, which a High effort can stretch past a minute (verified by reading
+  genai 0.7.1's adapters, `vendor/genai/src/adapter/adapters/`, 2026-10-28; no live measurement). Two minutes leaves
+  that room; a dead connection still ends well inside the rail's watchdog, which gives up at 150 s
+  (`apps/desktop/src/lib/ask-cmdr/DETAILS.md` § The streaming model). Unverified: a chat-completions OpenAI reasoning
+  model with no summary may think silently for longer at its highest effort.
+- The spend pause, default `$2` (`askCmdr.spendPause`, Settings › AI › Ask Cmdr: $0.50, $1, $2, $5, $10, Never;
+  `settings::DEFAULT_ASK_CMDR_SPEND_PAUSE_MICROS`) — a user-started turn whose estimated spend (`agent::pricing`, the
+  cost footer's estimate) passes the threshold pauses between rounds and asks; past Keep going it asks again at the
+  next multiple. Why $2: the estimate ignores prompt caching, so it reads at list price; at Sonnet 5's $2 per million
+  prompt tokens that is about 1M re-sent tokens, roughly 20 rounds of a 689-shaped turn, which is the size of a long
+  cleanup. So an ordinary answer (under ten rounds) never sees it, a long job checks in about once, Opus 5.5 checks in
+  after about ten rounds, and Haiku 5.5 practically never (a 25th of the price). An unpriced model adds nothing to
+  the estimate, so it never pauses; a local model is free. ❌ Not a hard ceiling: it asks.
+- None of the limits is a setting except the pause: the rail's notice calls the round cap fixed and links Send
+  feedback, and names the loop guard and a stall without apology. ❌ No token total gates a turn: the token figures
+  are display; only the context window bounds one call (`tokens_summed_across_rounds_never_end_a_turn`).
 - `MIN_ELISION_TURNS_BACK = 1` — the floor above; the current turn's results never elide.
 - `THREAD_SOFT_CAP_MESSAGES = 40` — past this the UI nudges "start a fresh one?".
 
@@ -454,11 +483,12 @@ the test and this section together.
 
 ## The runtime (`runtime/`)
 
-Eight files plus `ChatRuntime` in `mod.rs`: `types.rs` (what a turn IS as data), `events.rs`
+Ten files plus `ChatRuntime` in `mod.rs`: `types.rs` (what a turn IS as data), `events.rs`
 (the `AgentChatEvent` seam and the typed `AgentErrorKind`), `dispatch.rs` (the
 `ToolDispatcher` seam and `AppHandleDispatcher`; every call carries a `CallContext`, the turn's origin and its Stop,
 and runs under `dispatch_until_stopped`, § Stop reaches every tool call), `turn.rs` (`run_turn` and everything it
-drives), `repeats.rs` (the turn's memory of calls that already failed), `cost.rs` (metering one
+drives), `consume.rs` (reading one stream, Stop and the stall check included), `limits.rs` (the loop guard and what
+each wrap-up records), `repeats.rs` (the turn's memory of calls that already failed), `cost.rs` (metering one
 completed `respond`), `cmdr_md.rs` (which `CMDR.md`, and how much of it), `analytics.rs` (the
 anonymous `ask_cmdr_turn` event). `mod.rs` re-exports all of it, so callers keep saying
 `chat::runtime::X`.
@@ -484,7 +514,7 @@ this one and the wake loop's; WAL makes that fine (`wake/DETAILS.md` says why).
 ### The repeat breaker (`repeats.rs`)
 
 A refused `propose_rename_plan` came back to the driver eight times running, byte-identical each
-time, until `MAX_TOOL_TURNS` ended the turn: about 90 seconds and eight provider round trips
+time, until the round cap ended the turn: about 90 seconds and eight provider round trips
 spent on one broken payload, and from the user's side the agent simply stopped answering. The
 model had nothing new to read, so it had nothing new to try.
 
@@ -498,10 +528,11 @@ build, so it sorts explicitly and key order can't split one call into two record
    `repeatedCall: true` and a sentence saying this answers the same way every time, so the model
    still reads what to fix and learns that re-sending is not the move.
 3. **Identical to one it was already told that about** ⇒ hand back the same again (the transcript
-   still needs a result row against every call, or the next turn loads a dangling tool call), and
-   end the turn with `AgentErrorKind::RepeatedToolCall` once the message's calls are all
-   answered. Three round trips instead of eight, and the user reads "it kept retrying the same
-   lookup" rather than "it hit its limit".
+   still needs a result row against every call, or the next turn loads a dangling tool call). That
+   third sending trips the loop guard (`LOOP_GUARD_REPEATS`), so once the message's calls are all
+   answered the next call is the wrap-up, and the user gets an answer plus a notice saying it kept
+   repeating the same lookup. Four round trips instead of eight; a wrap-up that still reaches for
+   the tool ends `AgentErrorKind::RepeatedToolCall`.
 
 **Why it can't fire on a legitimate repeat.** Only a call that came back with a PROBLEM is
 remembered, judged by `dispatch_ok`'s typed result keys and never by wording. A re-fetch of an
@@ -695,18 +726,34 @@ variants carry wording; `crate::ai`'s `provider_error_detail` extracts the JSON 
 
 ### Budgets and cancellation
 
-`MAX_TOOL_TURNS` and `MAX_WALL_TIME` are checked at the TOP of the loop, so a runaway is
-impossible by construction. Wall time ends the turn there (`BudgetExhausted`). The round cap
-instead makes ONE wrap-up call: the same assembly plus a trailing user message,
-`context::tool_round_wrap_up_note()`, telling the model no further tool will run and to answer
-from what it found, naming what it didn't get to. The note is appended after assembly, so the
-cached prefix holds, and it is never persisted, so the thread's history stays what was said.
-Its own bounding: the reply's tool calls are stripped before the row persists (no call without
-a result row) and never run; prose alone answers the turn, and prose plus a tool call, or no
-prose, ends it `BudgetExhausted`. Either way `TurnTally::limit` records a `TurnLimit` (kind,
-the value that applied, `answered`), which rides `TurnStats` into the terminal event and the
+Every limit is checked at the TOP of the loop (`turn.rs`, with the guard's bookkeeping in `limits.rs`), so a runaway
+is impossible by construction. A background turn's round cap and the loop guard (§ Constants table) each make ONE
+wrap-up call: the same assembly plus a trailing user message, `context::wrap_up_note(WrapUp)`, saying why (the cap,
+a repeated call, rounds that found nothing new), that no further tool will run, and to answer from what it found,
+naming what it didn't get to. The note is appended after assembly, so the cached prefix holds, and it is never
+persisted, so the thread's history stays what was said. Its own bounding: the reply's tool calls are stripped before
+the row persists (no call without a result row) and never run; prose alone answers the turn, and prose plus a tool
+call, or no prose, ends it `BudgetExhausted` (`RepeatedToolCall` for a repeat). Either way `TurnTally::limit` records
+a `TurnLimit` (kind, the value that applied, `answered`), which rides `TurnStats` into the terminal event and the
 `TurnFinished` row, so the rail names the limit live and after a reload
-(`apps/desktop/src/lib/ask-cmdr/DETAILS.md` § Limit notice).
+(`apps/desktop/src/lib/ask-cmdr/DETAILS.md` § Limit notice). The guard fires in background turns too, whichever
+comes first.
+
+A stall (`consume.rs`) makes no further call: the stream is dropped, the stats carry `Stalled`, and the turn ends
+`Timeout`. ❌ There is no total time limit: `a_long_turn_is_not_ended_by_its_length`. `TurnLimitKind::WallTime`
+stays only so a turn recorded under the old 10-minute total still reads after a reload.
+
+**The spend pause** (`spend_pause.rs`). At the loop top, when no wrap-up is due and the turn's summed estimate
+(`TurnTally::cost_micros`, what `meter_cost` returned per call) has reached the next pause point, the turn emits
+`SpendPaused { cost_micros }` and waits on its `PauseSlot`, raced against Stop. Between rounds nothing runs, so a
+paused turn spends nothing. Keep going (`ask_cmdr_keep_going` → `cancel::keep_going`) answers the slot, the turn
+emits `SpendResumed`, and the next pause waits for the next multiple of the threshold (`next_pause_at`); Stop is the
+ordinary `ask_cmdr_cancel` and ends the turn `Cancelled`. The slot lives in the turn's cancel registration
+(`cancel.rs`), so the command finds the running turn by conversation exactly as Stop does, and a reload reads the
+question back off `ConversationDetailView::spend_paused_micros` (`cancel::paused_spend`): a paused turn emits nothing
+to re-adopt. Decision/Why a oneshot per pause, not a `Notify`: a `Notify` keeps a permit, so a double-clicked Keep
+going would quietly pre-approve the NEXT pause. The threshold is read at send (`settings::load_ask_cmdr_spend_pause_micros`),
+like the budget; `TurnParams::spend_pause` is `None` for every background turn and for "Never".
 
 **Decision: the round cap asks for an answer instead of failing.** Why: every round's results
 were already paid for, and failing at the cap threw them away unread, leaving the user a
@@ -923,8 +970,9 @@ The context tests are four modules under `context/`, split by concern: `tests.rs
 the envelope, elision, the budget), `stub_tests.rs` (what a dropped result says, and that a plan
 can't cite it), `cost_tests.rs` (what the real shapes cost), and `test_support.rs` (the
 transcript builders and budgets they share). The runtime tests split the same way, over
-`runtime/test_support.rs`: `tests.rs` (single-flight, the per-message budgets, cancellation,
+`runtime/test_support.rs`: `tests.rs` (single-flight, cancellation,
 the crash cases, cost, the typed error surface, and the attachment + send gates),
+`limit_tests.rs` (the round cap, no cap for the user, the loop guard, the stall check, and the spend pause),
 `repeat_tests.rs` (the repeat breaker), `line_events_tests.rs` (the tool-line events and the
 turn's stats), `context_budget_tests.rs`, `slot_change_tests.rs`, and `wake_tests.rs`. Put a new test in the module whose concern it matches rather than growing
 `tests.rs`.
@@ -933,7 +981,8 @@ Every `context.rs` test runs with no tokio runtime (the core is pure). The runti
 use a local `ProgrammableLlm` (per-turn text / tool calls / usage / a mid-stream drop with
 no `End`) and scripted `ToolDispatcher` doubles — there is no in-tree full-Tauri harness for
 the agent toolset at unit-test scope, so tool dispatch is exercised at the seam level.
-Wall-time uses `tokio::time` under `start_paused`; a `SleepingDispatcher` advances virtual
-time past the ceiling. The read→green evidence for the load-bearing invariants
+The stall check runs under `start_paused` with `Program::Silent` / `NeverOpens` /
+`KeepAliveThenAnswer` (keep-alives spaced in virtual time); the spend pause joins the turn's future
+with one that answers its `PauseSlot`. The read→green evidence for the load-bearing invariants
 (prefix stability, envelope-only-on-latest, elision, budget halt, crash-a persistence) was
 captured by mutation before the code was completed.

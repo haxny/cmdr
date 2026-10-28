@@ -12,6 +12,8 @@ satisfies the live-apply rule below.
 - `mod.rs`: re-exports `load_settings` from `loader`.
 - `loader.rs`: `Settings` struct + `load_settings` (reads `settings.json`, falls back to `Default`); the `RestrictedWindowSettings`
   snapshot; the early-load helpers.
+- `ask_cmdr.rs`: the AI and Ask Cmdr settings the agent reads fresh per send or wake (model, chat memory, efforts, the
+  spend pause, proactive, wake delay), each with a pure `parse_*` half.
 - `ai_gates.rs`: switches the AI gates read fresh (`askCmdr.enabled` via the policy `overlay`, held-"no" markers).
 - `restricted_shortcuts.rs`: the viewer's read-only snapshot of `shortcuts.json` (its keys are remappable, and it has no
   store access); `lib/shortcuts/DETAILS.md` § "The viewer's keys".
