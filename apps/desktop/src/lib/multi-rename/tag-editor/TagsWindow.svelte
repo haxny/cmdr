@@ -107,12 +107,19 @@
             listenWhileMounted(() => onTagsSelectAll(selectAll), 'Select all'),
             listenWhileMounted(() => onTagsDeselectAll(deselectAll), 'Deselect all'),
             listenWhileMounted(() => onTagsMenuKey(onMenuKey), 'A function key'),
-            listenWhileMounted(() => onTagsClipboard((action) => void content?.clipboard(action)), 'Cut, copy or paste'),
+            listenWhileMounted(() => onTagsClipboard(onClipboard), 'Cut, copy or paste'),
         ]
         return () => {
             for (const stop of stops) stop()
         }
     })
+
+    /** ⌘X / ⌘C / ⌘V from the menu: the content's; a call that doesn't go through is logged by kind, never retried. */
+    function onClipboard(action: TagsClipboardAction): void {
+        content?.clipboard(action).catch((e: unknown) => {
+            log.warn('a cut, copy or paste from the menu didn’t go through: {reason}', { reason: e instanceof Error ? e.name : typeof e })
+        })
+    }
 
     /** True once the window is on its way out: the red button's second close-request must go through. */
     export function isEnding(): boolean {

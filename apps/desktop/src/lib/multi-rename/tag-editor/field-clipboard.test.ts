@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { SharedRow } from '#lib/ipc/bindings.js'
-import { pastedValues, sharedCopyText } from './field-clipboard'
+import { PASTE_LIMIT_LINE, PASTE_LIMIT_PROSE, pasteRefusal, pastedValues, sharedCopyText } from './field-clipboard'
 
 const row = (value: SharedRow['value'], choices: SharedRow['choices'] = [], choicesMore = 0): SharedRow => ({
   field: 'artist',
@@ -45,5 +45,20 @@ describe('pastedValues', () => {
     ['title', '  ', []],
   ] as const)('%s takes %j as %j', (field, text, values) => {
     expect(pastedValues(field, text)).toEqual(values)
+  })
+})
+
+describe('pasteRefusal', () => {
+  it('takes up to 4 KiB into a one-line field and up to 64 KiB into Comment or Description', () => {
+    expect(pasteRefusal('album', 'a'.repeat(PASTE_LIMIT_LINE))).toBeNull()
+    expect(pasteRefusal('comment', 'a'.repeat(PASTE_LIMIT_PROSE))).toBeNull()
+    expect(pasteRefusal('description', 'a'.repeat(PASTE_LIMIT_LINE + 1))).toBeNull()
+  })
+
+  it('refuses more, counted in UTF-8 bytes, so nothing changes', () => {
+    expect(pasteRefusal('album', 'a'.repeat(PASTE_LIMIT_LINE + 1))).toBe('multiRename.tags.clipboard.tooLong')
+    expect(pasteRefusal('comment', 'a'.repeat(PASTE_LIMIT_PROSE + 1))).toBe('multiRename.tags.clipboard.tooLong')
+    // 2 049 two-byte letters are 4 098 bytes.
+    expect(pasteRefusal('title', 'č'.repeat(PASTE_LIMIT_LINE / 2 + 1))).toBe('multiRename.tags.clipboard.tooLong')
   })
 })

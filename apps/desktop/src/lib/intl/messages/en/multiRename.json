@@ -2176,6 +2176,10 @@
   "@multiRename.tags.clipboard.noText": {
     "description": "Status line in the tag editor window when Command+V on a tag field found no plain text on the clipboard (for example, only a picture), so nothing was pasted."
   },
+  "multiRename.tags.clipboard.tooLong": "The clipboard holds too much text for this field, so nothing was pasted.",
+  "@multiRename.tags.clipboard.tooLong": {
+    "description": "Status line in the tag editor window when Command+V on a tag field found more text on the clipboard than the field takes (64 KB for Comment and Description, 4 KB for the others). The field is left as it was."
+  },
   "multiRename.tags.clipboard.writeFailed": "Couldn’t copy to the clipboard. Try again.",
   "@multiRename.tags.clipboard.writeFailed": {
     "description": "Status line in the tag editor window when Command+C or Command+X on a tag field couldn't put the field's text on the clipboard. After Command+X the field is left as it was."

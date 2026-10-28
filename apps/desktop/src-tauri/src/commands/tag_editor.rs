@@ -427,10 +427,20 @@ pub async fn hold_tags_session(session_id: String) -> Result<TagsSessionInfo, Mu
 /// Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
 /// (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
 /// (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
-/// the window sends them here, and the box (or the section's picture paste) keeps its own.
+/// the window sends them here, and the box (or the section's picture paste) keeps its own. Only a
+/// Tags window that still has focus may: the action goes to whatever window is key.
 #[tauri::command]
 #[specta::specta]
-pub async fn tags_native_edit(app: tauri::AppHandle, action: TagsClipboardAction) {
+pub async fn tags_native_edit(
+    app: tauri::AppHandle,
+    webview_window: tauri::WebviewWindow,
+    action: TagsClipboardAction,
+) {
+    let focused = webview_window.is_focused().unwrap_or(false);
+    if !crate::tag_editor::window::may_hand_back(webview_window.label(), focused) {
+        log::debug!("an edit action handed back by a window without focus (or not a Tags window) was dropped");
+        return;
+    }
     #[cfg(target_os = "macos")]
     {
         let id = crate::tag_editor::window::native_edit_id_of(action);

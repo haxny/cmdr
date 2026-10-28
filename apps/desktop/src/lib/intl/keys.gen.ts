@@ -3015,6 +3015,7 @@ export type MessageKey =
   | 'multiRename.tags.clearRowLabel'
   | 'multiRename.tags.clipboard.noText'
   | 'multiRename.tags.clipboard.readFailed'
+  | 'multiRename.tags.clipboard.tooLong'
   | 'multiRename.tags.clipboard.writeFailed'
   | 'multiRename.tags.col.fileName'
   | 'multiRename.tags.col.length'

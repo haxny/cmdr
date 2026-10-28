@@ -290,6 +290,14 @@ describe('where ⌘X / ⌘C / ⌘V stay native', () => {
     expect(ipc.readClipboardText).not.toHaveBeenCalled()
   })
 
+  it('a hand-back that doesn’t go through is logged, never an unhandled rejection', async () => {
+    ipc.tagsNativeEdit.mockRejectedValueOnce(new Error('ipc'))
+    const root = await mountWindow()
+    await editCursorRow(paneList(root, 'Album tags'))
+    await fromMenu('paste')
+    expect(ipc.tagsNativeEdit).toHaveBeenCalledWith('paste')
+  })
+
   it('the cover section keeps its picture paste', async () => {
     const root = await mountWindow()
     root.querySelector<HTMLElement>('section.cover')?.focus()

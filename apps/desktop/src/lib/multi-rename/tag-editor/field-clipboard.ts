@@ -3,6 +3,7 @@
  * text stands for in a field. Plain text only.
  */
 
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { SharedRow, TagField } from '#lib/ipc/bindings.js'
 import { MULTI_SEPARATOR, isMultiLineField, isMultiValueField, parseFieldText } from './shared-field-input'
 
@@ -27,4 +28,18 @@ export function pastedValues(field: TagField, text: string): string[] {
   if (isMultiLineField(field)) return parseFieldText(field, lines)
   const split = lines.split('\n')
   return parseFieldText(field, isMultiValueField(field) ? split.join(MULTI_SEPARATOR) : (split[0] ?? ''))
+}
+
+/** The most a paste puts into Comment or Description, in UTF-8 bytes. */
+export const PASTE_LIMIT_PROSE = 64 * 1024
+/** The most a paste puts into any other field, in UTF-8 bytes. */
+export const PASTE_LIMIT_LINE = 4 * 1024
+
+/**
+ * Why `text` from the clipboard isn't pasted into `field`, or `null` when it is: over the field's limit (64 KiB for
+ * Comment and Description, 4 KiB for the rest), so a stray page of text never lands in every file. Nothing changes.
+ */
+export function pasteRefusal(field: TagField, text: string): MessageKey | null {
+  const limit = isMultiLineField(field) ? PASTE_LIMIT_PROSE : PASTE_LIMIT_LINE
+  return new TextEncoder().encode(text).length > limit ? 'multiRename.tags.clipboard.tooLong' : null
 }

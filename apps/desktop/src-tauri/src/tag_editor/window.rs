@@ -64,6 +64,13 @@ pub(crate) fn menu_selection_of(id: &str) -> Option<TagsMenuSelection> {
     }
 }
 
+/// Whether window `label` may hand an edit action back (`tags_native_edit`): a Tags window that
+/// still has focus. The action goes to the key window's first responder, so any other caller (or a
+/// Tags window the user switched away from) would cut, copy or paste somewhere else.
+pub(crate) fn may_hand_back(label: &str, focused: bool) -> bool {
+    focused && session_of_label(label).is_some()
+}
+
 /// The Edit item whose native action (`cut:`, `copy:`, `paste:`) `action` hands back to the
 /// window's first responder, for a text box or the cover section (`tags_native_edit`).
 #[cfg_attr(

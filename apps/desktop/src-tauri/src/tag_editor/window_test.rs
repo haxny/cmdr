@@ -4,8 +4,8 @@
 use super::session::{is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
 use super::window::{
-    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, menu_key_command_of, menu_selection_of,
-    native_edit_id_of, session_of_label,
+    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, may_hand_back, menu_key_command_of,
+    menu_selection_of, native_edit_id_of, session_of_label,
 };
 use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, SELECT_ALL_ID};
 use crate::multi_rename::session::{close as close_rename, is_held, open as open_rename};
@@ -63,15 +63,24 @@ fn cut_copy_and_paste_reach_a_focused_tags_window_as_themselves() {
     }
 }
 
-/// Main in front: no Tags window is focused, so the route takes none of the three and main's own
-/// Cut / Copy / Paste (`edit.cut`, `edit.copy`, `edit.paste`) run as before.
+/// Main in front: no Tags window is focused, so `route_menu_event` has no window to send the
+/// three to and main's own Cut / Copy / Paste run as before.
 #[test]
-fn cut_copy_and_paste_stay_main_windows_while_main_is_focused() {
-    let windows = [("main", true), ("tags-multi-rename-4", false)];
-    for id in [EDIT_CUT_ID, EDIT_COPY_ID, EDIT_PASTE_ID] {
-        assert!(menu_selection_of(id).is_some(), "{id}");
-        assert_eq!(focused_tags_window(windows), None, "{id}");
-    }
+fn no_tags_window_takes_cut_copy_or_paste_while_main_is_focused() {
+    assert_eq!(
+        focused_tags_window([("main", true), ("tags-multi-rename-4", false)]),
+        None
+    );
+}
+
+/// The native action handed back goes to whatever window is key when it runs: only a Tags window
+/// that still has focus may send it, so a ⌘` away mid-round-trip never pastes into main.
+#[test]
+fn only_a_focused_tags_window_may_hand_an_edit_action_back() {
+    assert!(may_hand_back("tags-multi-rename-4", true));
+    assert!(!may_hand_back("tags-multi-rename-4", false));
+    assert!(!may_hand_back("main", true));
+    assert!(!may_hand_back("viewer-1", true));
 }
 
 #[test]
