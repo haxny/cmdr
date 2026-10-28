@@ -2093,6 +2093,10 @@
   "@multiRename.tags.window.openFailed": {
     "description": "Shown in the tag editor window when it couldn't start (its settings didn't load). Beside a Close button."
   },
+  "multiRename.tags.window.bodyReloaded": "The Tags window ran into a problem, so Cmdr reloaded it. Your tag edits are still here.",
+  "@multiRename.tags.window.bodyReloaded": {
+    "description": "Toast in the tag editor window when its content broke unexpectedly and was reloaded in place. The window stays open and the person's edits that aren't written to the files yet are kept, so they can carry on. If nothing was unwritten, the window closes instead."
+  },
   "multiRename.tags.window.close": "Close",
   "@multiRename.tags.window.close": {
     "description": "Button in the tag editor window that couldn't start: closes the window."

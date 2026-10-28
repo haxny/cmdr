@@ -447,6 +447,15 @@ pub async fn hold_tags_session(app: tauri::AppHandle, session_id: String) -> Res
     held
 }
 
+/// Whether the Tags window of `session_id` may close without the discard question: no unwritten
+/// edit in its session and no tag write running. Its error boundary asks before it closes the
+/// window, since the edits live here and a closed window takes them along.
+#[tauri::command]
+#[specta::specta]
+pub async fn tags_window_may_close(session_id: String) -> bool {
+    crate::tag_editor::window::may_close_unasked(&session_id)
+}
+
 /// Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
 /// (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
 /// (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus

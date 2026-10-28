@@ -1776,10 +1776,17 @@ export const commands = {
   /**
    *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
    *  many of its files are tracks and what its folder is called. The main window calls it right
-   *  after opening the session; the window's close (or its `Destroyed`) releases it.
+   *  after opening the session; the window's close (or its `Destroyed`) releases it. It also takes
+   *  down any Tags window left behind with its session no longer held (`window::close_orphans`).
    */
   holdTagsSession: (sessionId: string) =>
     typedError<TagsSessionInfo, MultiRenameError>(__TAURI_INVOKE('hold_tags_session', { sessionId })),
+  /**
+   *  Whether the Tags window of `session_id` may close without the discard question: no unwritten
+   *  edit in its session and no tag write running. Its error boundary asks before it closes the
+   *  window, since the edits live here and a closed window takes them along.
+   */
+  tagsWindowMayClose: (sessionId: string) => __TAURI_INVOKE<boolean>('tags_window_may_close', { sessionId }),
   // Lets eviction take the session again. No-op when it's already gone.
   releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
   /**
@@ -1851,8 +1858,9 @@ export const commands = {
    *  windows need no `core:window:allow-hide` in their capabilities, since nothing calls `hide` from
    *  JavaScript.
    *
-   *  The destroy is unconditional once scheduled: an early return between the hide and the close
-   *  would leak exactly the invisible-but-alive window this is meant to prevent.
+   *  The destroy is unconditional once scheduled: an early return between the hide and the destroy
+   *  (or a close the page could veto) would leak exactly the invisible-but-alive window this is
+   *  meant to prevent.
    */
   closeChildWindow: (label: string) => __TAURI_INVOKE<void>('close_child_window', { label }),
   /**

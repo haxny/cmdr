@@ -175,3 +175,11 @@ pub(crate) fn orphaned_tags_windows<'a>(
         .filter(|label| session_of_label(label).is_some_and(|id| !is_held(id)))
         .collect()
 }
+
+/// Whether the Tags window of `session_id` may close without the discard question: its session
+/// holds no unwritten edit and no tag write or undo is running (any session's: the counter isn't
+/// per session, and waiting out someone else's write costs nothing). Its error boundary asks
+/// before it closes the window, since the edits live here and a closed window ends the session.
+pub(crate) fn may_close_unasked(session_id: &str) -> bool {
+    !super::session::has_unwritten(session_id) && !super::at_quit::is_writing()
+}

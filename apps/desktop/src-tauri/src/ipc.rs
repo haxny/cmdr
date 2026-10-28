@@ -265,6 +265,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::tag_editor::release_tag_track_audio,
                     crate::commands::tag_editor::open_tags_in_player,
                     crate::commands::tag_editor::hold_tags_session,
+                    crate::commands::tag_editor::tags_window_may_close,
                     crate::commands::tag_editor::release_tags_session,
                     crate::commands::tag_editor::tags_native_edit,
                     crate::commands::tag_editor::reopen_for_tags,

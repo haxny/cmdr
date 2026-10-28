@@ -23,6 +23,7 @@
     import { closeSelfWindow } from '#lib/child-window-close.js'
     import { TAGS_WINDOW_RECT_KEY } from '#lib/multi-rename/tag-editor/tags-window.js'
     import {
+        closeAfterBodyFailed,
         onTagsCloseRequested,
         type ClosableBody,
     } from '#lib/multi-rename/tag-editor/tags-close-request.js'
@@ -93,7 +94,12 @@
     <h1 class="sr-only">{tString('multiRename.tags.window.title', { folder })}</h1>
     <!-- Drag strip under the overlay traffic lights, like Settings and Keyboard shortcuts. -->
     <div class="window-drag-region" data-tauri-drag-region aria-hidden="true"></div>
-    <DialogBoundary name="tagsWindow" onClose={() => void closeSelfWindow()}>
+    <!-- A broken body reloads in place while its session holds unwritten edits; only a clean one closes the window. -->
+    <DialogBoundary
+        name="tagsWindow"
+        onClose={() => void closeAfterBodyFailed(sessionId)}
+        closedMessage={tString('multiRename.tags.window.bodyReloaded')}
+    >
         {#if failed || (initialized && sessionId === '')}
             <div class="failed">
                 <p role="alert">{tString('multiRename.tags.window.openFailed')}</p>

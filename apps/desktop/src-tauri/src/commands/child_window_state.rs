@@ -116,7 +116,8 @@ mod tests {
     fn a_window_whose_close_listener_never_answers_is_still_destroyed() {
         let (gone_tx, gone_rx) = mpsc::channel();
         // The mock run loop blocks its thread until the last window goes, so it gets a thread of
-        // its own and the test waits on it with a deadline instead of hanging.
+        // its own and the test waits on it with a deadline instead of hanging. On a failure that
+        // thread stays blocked; nextest runs each test in its own process, which ends it.
         std::thread::spawn(move || {
             let app = mock_builder().build(mock_context(noop_assets())).expect("a mock app");
             WebviewWindowBuilder::new(&app, "tags-s1", WebviewUrl::default())

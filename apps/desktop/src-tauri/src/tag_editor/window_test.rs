@@ -1,11 +1,12 @@
 //! The Tags window's hold on its Multi-Rename session: what holding answers, and that the
 //! window going (however it goes) releases and ends both sessions.
 
-use super::session::{is_open as tag_session_open, open as open_tags};
+use super::at_quit::writing;
+use super::session::{TagEdit, edit, is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
 use super::window::{
-    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, may_hand_back, menu_key_command_of,
-    menu_selection_of, native_edit_id_of, orphaned_tags_windows, session_of_label,
+    TagsMenuSelection, TagsSessionInfo, end, focused_tags_window, hold, may_close_unasked, may_hand_back,
+    menu_key_command_of, menu_selection_of, native_edit_id_of, orphaned_tags_windows, session_of_label,
 };
 use crate::menu::{DESELECT_ALL_ID, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, SELECT_ALL_ID};
 use crate::multi_rename::session::{close as close_rename, is_held, open as open_rename};
@@ -236,4 +237,38 @@ fn a_window_whose_session_ended_is_an_orphan_and_a_held_one_is_not() {
     let orphans = orphaned_tags_windows(labels.iter().map(String::as_str), is_held);
     assert_eq!(orphans, vec![labels[1].as_str()]);
     end(&labels[0]);
+}
+
+/// The window's error boundary may close it without the discard question only while nothing
+/// would be lost: no unwritten edit in its session (the edits live here, not in the page).
+#[test]
+fn a_tags_window_with_unwritten_edits_may_not_close_unasked() {
+    let (_dir, _listing, id) = album("tags-window-may-close-dirty");
+    hold(&id).expect("holds");
+    open_tags(&id, false).expect("the tag session opens");
+    assert!(may_close_unasked(&id), "a session only read loses nothing");
+    edit(
+        &id,
+        vec![TagEdit::SetAll {
+            field: cmdr_tags::TagField::Album,
+            values: vec!["Kniha".to_string()],
+        }],
+    )
+    .expect("edits");
+    assert!(!may_close_unasked(&id));
+    assert!(is_held(&id), "asking changes nothing");
+    end(&format!("tags-{id}"));
+}
+
+/// Nor while a tag write or undo runs: closing then would cut a book's write short.
+#[test]
+fn a_tags_window_may_not_close_unasked_while_a_write_runs() {
+    let (_dir, _listing, id) = album("tags-window-may-close-writing");
+    hold(&id).expect("holds");
+    open_tags(&id, false).expect("the tag session opens");
+    let running = writing();
+    assert!(!may_close_unasked(&id));
+    drop(running);
+    assert!(may_close_unasked(&id));
+    end(&format!("tags-{id}"));
 }

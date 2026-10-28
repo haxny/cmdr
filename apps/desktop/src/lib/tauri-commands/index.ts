@@ -1198,6 +1198,7 @@ export {
   releaseTagTrackAudio,
   openTagsInPlayer,
   holdTagsSession,
+  tagsWindowMayClose,
   releaseTagsSession,
   reopenForTags,
   openTagsSession,

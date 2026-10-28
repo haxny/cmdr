@@ -157,7 +157,7 @@ pub fn register_window_session(window_label: &str, session_id: &str) {
 }
 
 /// Frees the session owned by `window_label`, if any. Called from the window
-/// `Destroyed`/`CloseRequested` handler for `viewer-*` windows. Idempotent: a
+/// `Destroyed` handler for `viewer-*` windows. Idempotent: a
 /// window with no recorded session (or an already-closed session) is a no-op.
 pub fn close_session_for_window(window_label: &str) {
     // A window closed mid-pull has no session yet: stop the pull instead. Abandon

@@ -763,16 +763,23 @@ pub(super) fn loaded_tracks(session_id: &str) -> Result<Vec<PathBuf>, TagEditorE
 
 /// How many tag sessions hold edits not yet written: a quit asks about them (`at_quit.rs`).
 pub(crate) fn unwritten_sessions() -> usize {
+    let sessions = SESSIONS.lock_ignore_poison();
+    sessions.values().filter(|s| holds_unwritten(s)).count()
+}
+
+/// Whether `session_id`'s tag session holds unwritten edits (`false` if gone): `window::may_close_unasked`.
+pub(crate) fn has_unwritten(session_id: &str) -> bool {
     SESSIONS
         .lock_ignore_poison()
+        .get(session_id)
+        .is_some_and(holds_unwritten)
+}
+
+fn holds_unwritten(session: &TagSession) -> bool {
+    session
+        .by_path
         .values()
-        .filter(|session| {
-            session
-                .by_path
-                .values()
-                .any(|entry| entry.loaded().is_some_and(Loaded::changed))
-        })
-        .count()
+        .any(|entry| entry.loaded().is_some_and(Loaded::changed))
 }
 
 /// Whether a tag session exists for `session_id`.

@@ -288,6 +288,11 @@ export async function holdTagsSession(sessionId: string): Promise<SessionResult<
   return sessionResult(await commands.holdTagsSession(sessionId))
 }
 
+/** Whether the Tags window may close without asking: no unwritten edit in its session and no tag write running. */
+export function tagsWindowMayClose(sessionId: string): Promise<boolean> {
+  return commands.tagsWindowMayClose(sessionId)
+}
+
 /** Lets eviction take the session again. */
 export async function releaseTagsSession(sessionId: string): Promise<void> {
   await commands.releaseTagsSession(sessionId)

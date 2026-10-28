@@ -3219,6 +3219,7 @@ export type MessageKey =
   | 'multiRename.tags.undo.tooltip'
   | 'multiRename.tags.undo.unwrittenLost'
   | 'multiRename.tags.undoStoreUnavailable'
+  | 'multiRename.tags.window.bodyReloaded'
   | 'multiRename.tags.window.close'
   | 'multiRename.tags.window.closeWaits'
   | 'multiRename.tags.window.foldersNeedLocalDisk'

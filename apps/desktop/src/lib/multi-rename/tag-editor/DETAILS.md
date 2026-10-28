@@ -11,28 +11,30 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   the window a session already has), `TagsWindow.svelte` (the body: `TagsContent` plus the close; Escape is `tags.close`
   in scope `Tags window`) and the route `routes/tags/+page.svelte` (the shell, and the red button through
   `onCloseRequested`, answered by `tags-close-request.ts`: null-safe, never throws, lets the close go when in doubt).
-  Closing releases the hold, then `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`, which DESTROYS the window
-  after the hide and wait, so the page's own close listener can't veto it (a veto once left the window hidden and alive
-  for good). Opening a Tags window takes down any `tags-*` window whose session is no longer held
-  (`tag_editor/window.rs` `close_orphans`), and a Dock click brings back a hidden or minimized one whose session is held
-  (`app_lifecycle.rs`). The Window menu lists every open window (`menu/macos_appkit.rs`). **Why a copy from the sheet**:
-  the sheet closes its session on Cancel, Rename, and Undo; a shared one would die under the window. **Why the hold**:
-  Multi-Rename evicts idle (30 min) and least-recently-used (cap 4) sessions, and a window left open over lunch must
-  keep its edits. The backend also ends a `tags-*` window's session on `Destroyed`
-  (`src-tauri/src/tag_editor/window.rs`), so a window that dies without its own close leaks nothing. Capability:
-  `src-tauri/capabilities/tags.json` (its description says why each grant). **Same files twice**: Edit tags on the files
-  a Tags window already shows (same volume, folder and names, in any order) raises that window and gives the new session
-  back (`TagsSessionInfo.alreadyOpen`, from `held_twin`). Other files of the same folder open their own window; a write
-  there is still checked per file by fingerprint. **Closing during a write**: while a write or an undo runs
-  (`tags.writing`), a close request (Escape, ⌘W, the red button) neither asks "Discard?" nor ends anything: the Write
-  dialog says "Writing tags… wait until it's done", then shows the per-file outcome, and the next close goes through the
-  guard as usual. Discarding edits already on their way to disk would be a lie, and ending the session mid-write would
-  lose the outcome. **Quitting** asks about unwritten Tags windows and waits for a running write: the quit gate
-  (`src-tauri/src/quit/`, `src-tauri/src/tag_editor/at_quit.rs`). File > Edit tags… is greyed and the palette row hidden
-  while the setting is off (`edit-tags-menu-gate.ts`, palette condition `tagEditorOn`); with nothing selected the
-  command says "Select the audio files to tag first." The window's session reads no media (`openTagsSession` /
-  `reopenForTags` seed it empty), and held sessions never count against Multi-Rename's cap, so open Tags windows never
-  push out a sheet's live session.
+  The route's error boundary closes the window only after `tagsWindowMayClose` says nothing would be lost (no unwritten
+  edit in the session, no tag write running): otherwise it keeps the window and remounts the body, which reads the same
+  backend session back, edits and all (`closeAfterBodyFailed`; toast `tags.window.bodyReloaded`). Closing releases the
+  hold, then `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`, which DESTROYS the window after the hide and
+  wait, so the page's own close listener can't veto it (a veto once left the window hidden and alive for good). Opening
+  a Tags window takes down any `tags-*` window whose session is no longer held (`tag_editor/window.rs` `close_orphans`),
+  and a Dock click brings back a hidden or minimized one whose session is held (`app_lifecycle.rs`). The Window menu
+  lists every open window (`menu/macos_appkit.rs`). **Why a copy from the sheet**: the sheet closes its session on
+  Cancel, Rename, and Undo; a shared one would die under the window. **Why the hold**: Multi-Rename evicts idle (30 min)
+  and least-recently-used (cap 4) sessions, and a window left open over lunch must keep its edits. The backend also ends
+  a `tags-*` window's session on `Destroyed` (`src-tauri/src/tag_editor/window.rs`), so a window that dies without its
+  own close leaks nothing. Capability: `src-tauri/capabilities/tags.json` (its description says why each grant). **Same
+  files twice**: Edit tags on the files a Tags window already shows (same volume, folder and names, in any order) raises
+  that window and gives the new session back (`TagsSessionInfo.alreadyOpen`, from `held_twin`). Other files of the same
+  folder open their own window; a write there is still checked per file by fingerprint. **Closing during a write**:
+  while a write or an undo runs (`tags.writing`), a close request (Escape, ⌘W, the red button) neither asks "Discard?"
+  nor ends anything: the Write dialog says "Writing tags… wait until it's done", then shows the per-file outcome, and
+  the next close goes through the guard as usual. Discarding edits already on their way to disk would be a lie, and
+  ending the session mid-write would lose the outcome. **Quitting** asks about unwritten Tags windows and waits for a
+  running write: the quit gate (`src-tauri/src/quit/`, `src-tauri/src/tag_editor/at_quit.rs`). File > Edit tags… is
+  greyed and the palette row hidden while the setting is off (`edit-tags-menu-gate.ts`, palette condition
+  `tagEditorOn`); with nothing selected the command says "Select the audio files to tag first." The window's session
+  reads no media (`openTagsSession` / `reopenForTags` seed it empty), and held sessions never count against
+  Multi-Rename's cap, so open Tags windows never push out a sheet's live session.
 
 - **State**: `tag-editor-state.svelte.ts` (the view from the backend's `TagEditorView`, edits sent by path, `busy`,
   `settled()` so a cell that just lost focus is in before a close/apply, Undo, `writing` and `editing`);
@@ -99,24 +101,23 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   list that names it. The backend enforces it (`ApplyRequest.allowRemovals` → `wouldRemove`, backend `DETAILS.md` §
   Write and undo): ⌘⏎ allows none, the dialog's write only the files it listed with a removal, and a file held back at
   the write opens the list again, continuing the press. With `multiRename.tagEditor.absSideFiles` on, the list also
-  names Audiobookshelf's `reader.txt` / `desc.txt` under the files (`side-files.ts`; asked only with the setting on
-  and a file to change, the setting read once per press and sent as `sideFiles`, so off changes nothing): side files
-  ride along with a tag write, never alone; ⌘⏎ creates a missing one but opens the list for one that says something
-  else (`reviewFirst.replacing`), and the dialog's write sends back only the replacements it showed with their old and
-  new text (`allowSideFiles`); one held back at the write is listed as not written (backend `DETAILS.md` § Write and
-  undo). An edit landing between ⌘⏎'s list and its write
-  writes nothing and lists again (`changed`). The player stops first, a second press while it runs does nothing,
-  would-drop files ask in a `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`, shared with the
-  dialog: an edit landed meanwhile opens the list, continuing the press so Undo keeps both applies), and the status line
-  says how many files were written and how many weren't, until the next edit or 10 s. Refusals reuse the dialog's words
-  (`refusalOf`). ⌘⇧S (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write
-  tags writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question
-  (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W reaches the window as the
-  native Close tab item, which closes a focused child window through its close request, so it meets the same discard
-  guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format re-applies the mask to
-  the value the first one made), as the in-flow panels did. A command that can't act (tags still being read, read-only,
-  no extras, a dialog open) does nothing: the reading notice or the status line already says why. Closing the Write
-  dialog on a write that left files unwritten keeps "Some files weren't written" in the status line.
+  names Audiobookshelf's `reader.txt` / `desc.txt` under the files (`side-files.ts`; asked only with the setting on and
+  a file to change, the setting read once per press and sent as `sideFiles`, so off changes nothing): side files ride
+  along with a tag write, never alone; ⌘⏎ creates a missing one but opens the list for one that says something else
+  (`reviewFirst.replacing`), and the dialog's write sends back only the replacements it showed with their old and new
+  text (`allowSideFiles`); one held back at the write is listed as not written (backend `DETAILS.md` § Write and undo).
+  An edit landing between ⌘⏎'s list and its write writes nothing and lists again (`changed`). The player stops first, a
+  second press while it runs does nothing, would-drop files ask in a `WouldDropDialog` over the panes ("Write anyway" is
+  `answerWriteAnyway`, shared with the dialog: an edit landed meanwhile opens the list, continuing the press so Undo
+  keeps both applies), and the status line says how many files were written and how many weren't, until the next edit or
+  10 s. Refusals reuse the dialog's words (`refusalOf`). ⌘⇧S (`tags.review`) opens `WriteDialog` listing the changes
+  (`ApplyPanel.start()`), where ⌘⏎ or Write tags writes; it can't close while a write is out. ⌘Z with a write to undo
+  opens it on the undo question (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W
+  reaches the window as the native Close tab item, which closes a focused child window through its close request, so it
+  meets the same discard guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format
+  re-applies the mask to the value the first one made), as the in-flow panels did. A command that can't act (tags still
+  being read, read-only, no extras, a dialog open) does nothing: the reading notice or the status line already says why.
+  Closing the Write dialog on a write that left files unwritten keeps "Some files weren't written" in the status line.
 - **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select items
   register F2–F8, ⇧F2, ⇧F4 and ⇧F8. Those accelerators fire ahead of the page and the file-scoped guard would drop them,
   so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
