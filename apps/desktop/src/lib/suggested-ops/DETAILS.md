@@ -191,6 +191,10 @@ generic path kept only the variant name; the failure's message carries both.
   tick that unmounts the dialog pulls each row's op out from under its cells mid-teardown (Ark's checkbox reads
   `checked` on the way out), and the throw takes the main window down to its crash panel. Regression anchor:
   `SuggestedOpsDialog.close.test.ts`; the E2E dialog-inset sweep first caught it as a wedged app.
+- **A re-read drops a gone group's review only after the flush that unmounts its rows** (`refreshSuggestions` awaits
+  `tick()` first), for the same teardown read: approving a group used to crash the window the moment its move started.
+  Regression anchor: `SuggestedOpsDialog.approve.test.ts`; E2E caught it as every spec after `suggested-ops-named-move`
+  failing on the crash panel.
 - **Decision: Approve stays enabled while a group's rows are loading or couldn't load** (David, 2026-09-25, #155). Its
   count comes from `COUNT(*)`, so the button says exactly how many ops it approves even before any row shows. ❌ Don't
   gate Approve on the op window.

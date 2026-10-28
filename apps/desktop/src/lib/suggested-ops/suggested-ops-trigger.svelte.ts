@@ -18,6 +18,7 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { tick } from 'svelte'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { getAppLogger } from '#lib/logging/logger.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -365,12 +366,16 @@ function listenForChanges(): Promise<UnlistenFn> {
  * Re-read the waiting sweeps, then give every new group its review and first page.
  *
  * A group already under review keeps its rows: when its revision moved past the one on screen,
- * it's announced, never swapped. A group that's gone (answered elsewhere, or withdrawn) drops its review.
+ * it's announced, never swapped. A group that's gone (answered here or elsewhere, or withdrawn)
+ * drops its review, but only after the flush that takes its rows off screen: dropping it in the
+ * same tick pulls each row's op out from under its cells mid-teardown (Ark's checkbox reads
+ * `checked` on the way out), and the throw takes the main window down to its crash panel.
  */
 export async function refreshSuggestions(): Promise<void> {
   suggestedOpsState.loading = true
   suggestedOpsState.loadError = false
   const fresh: number[] = []
+  const gone: number[] = []
   try {
     suggestedOpsState.sweeps = await listSuggestedOps()
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
@@ -388,14 +393,19 @@ export async function refreshSuggestions(): Promise<void> {
         review.changedUnderReview = true
       }
     }
-    for (const groupId of [...suggestedOpsState.reviews.keys()]) {
-      if (!live.has(groupId)) dropReview(groupId)
+    for (const groupId of suggestedOpsState.reviews.keys()) {
+      if (!live.has(groupId)) gone.push(groupId)
     }
   } catch (e) {
     suggestedOpsState.loadError = true
     log.warn("Couldn't read the waiting suggestions: {error}", { error: e })
   } finally {
     suggestedOpsState.loading = false
+  }
+  if (gone.length > 0) {
+    await tick()
+    // A re-read that landed during the tick may have brought one back: it keeps its review.
+    for (const groupId of gone) if (!groupById(groupId)) dropReview(groupId)
   }
   // Every list shows right away, so each new group reads its first page now, side by side.
   await Promise.all(fresh.map((groupId) => ensureOpWindow(groupId, 0)))
