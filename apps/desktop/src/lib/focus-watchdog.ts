@@ -6,8 +6,10 @@
  * Catches a class of bug where a modal or palette closes without restoring
  * focus to the previously focused pane. Arrow keys then silently no-op
  * because they go to `<body>`. The user just sees "keyboard nav broken"
- * with no obvious trigger; this logs the offending `activeElement` so we
- * can trace it back to the component that should have restored focus.
+ * with no obvious trigger; this logs the offending `activeElement` and the
+ * likely cause (what last had focus, and whether it left the page, got
+ * disabled, or lost it to a click on something unfocusable) so we can trace
+ * it back to the component that should have kept or restored focus.
  *
  * Event-driven, no polling: `focusin`/`focusout` on document plus
  * `focus`/`blur` on window. Cost is a handful of listeners + at most one
@@ -25,6 +27,10 @@ const WAIT_MS = 500
 let timeoutId: number | null = null
 let warned = false
 let installed = false
+/** The last element that held focus (never `<body>`), for naming what lost it. */
+let lastFocused: Element | null = null
+/** The last pointer press and when, for naming a click that put focus nowhere. */
+let lastPointerDown: { target: Element; at: number } | null = null
 
 /**
  * Selectors for every region that is a legitimate keyboard home: the dual-pane
@@ -38,7 +44,7 @@ let installed = false
  * notifications" (or a click on a toast button) put it there.
  */
 const KEYBOARD_HOME_SELECTOR =
-  '.dual-pane-explorer, .ask-cmdr-rail, [data-menu], [data-menu-submenu], [data-toast-stack]'
+  '.dual-pane-explorer, .ask-cmdr-rail, .status-corner, [data-menu], [data-menu-submenu], [data-toast-stack]'
 
 /**
  * Returns true when `document.activeElement` lives inside a keyboard home. This
@@ -83,15 +89,52 @@ function check(): void {
       if (shouldSuppress()) return
       warned = true
       const ae = document.activeElement
-      const aeDescription = ae
-        ? `${ae.tagName.toLowerCase()}${ae.id ? `#${ae.id}` : ''}${ae.className && typeof ae.className === 'string' ? `.${ae.className.split(' ').filter(Boolean).slice(0, 3).join('.')}` : ''}`
-        : 'null'
-      log.warn('Focus left both panes for {ms} ms with no dialog open. activeElement={ae}', {
+      log.warn('Focus left every keyboard home for {ms} ms with no dialog open: {cause}. activeElement={ae}', {
         ms: WAIT_MS,
-        ae: aeDescription,
+        ae: ae ? describeElement(ae) : 'null',
+        cause: describeCause(),
       })
     }, WAIT_MS)
   }
+}
+
+/** `tag#id.class1.class2.class3`: enough to find the component in the source. */
+function describeElement(el: Element): string {
+  const id = el.id ? `#${el.id}` : ''
+  const classes =
+    typeof el.className === 'string' && el.className
+      ? `.${el.className.split(' ').filter(Boolean).slice(0, 3).join('.')}`
+      : ''
+  return `${el.tagName.toLowerCase()}${id}${classes}`
+}
+
+/**
+ * Why focus is loose, from what had it last and the last pointer press. The usual causes, most
+ * telling first: the focused element left the page (an `{#if}` swapped it out), it got
+ * disabled, or a click landed on something WebKit won't focus (a button) with no focusable
+ * ancestor, which drops focus to `<body>`.
+ */
+function describeCause(): string {
+  const last = lastFocused
+  if (last === null) return 'nothing had focus since the watchdog started'
+  const lastText = describeElement(last)
+  if (!last.isConnected) return `${lastText} left the page while it had focus`
+  if ((last as HTMLButtonElement).disabled === true) return `${lastText} was disabled while it had focus`
+  const pressed = lastPointerDown
+  if (pressed !== null && pressed.target !== last && performance.now() - pressed.at < WAIT_MS * 2) {
+    return `a click on ${describeElement(pressed.target)} took it from ${lastText}`
+  }
+  return `${lastText} lost it`
+}
+
+function onFocusIn(event: FocusEvent): void {
+  const target = event.target
+  if (target instanceof Element && target !== document.body) lastFocused = target
+  check()
+}
+
+function onPointerDown(event: Event): void {
+  if (event.target instanceof Element) lastPointerDown = { target: event.target, at: performance.now() }
 }
 
 function reset(): void {
@@ -112,8 +155,10 @@ export function initFocusWatchdog(): void {
   // `focusin`/`focusout` bubble and fire on every focus change in the
   // document. Capture phase ensures we see them even if a handler down the
   // tree calls `stopPropagation`.
-  document.addEventListener('focusin', check, true)
+  document.addEventListener('focusin', onFocusIn, true)
   document.addEventListener('focusout', check, true)
+  // Only remembered, for the log line's cause; it never starts a check on its own.
+  document.addEventListener('pointerdown', onPointerDown, true)
   // Window-level focus/blur covers OS-level switches (other app, other window).
   window.addEventListener('focus', check)
   window.addEventListener('blur', reset)
@@ -129,8 +174,11 @@ export function initFocusWatchdog(): void {
  * stale handlers that fire alongside the new ones.
  */
 export function _resetForTests(): void {
-  document.removeEventListener('focusin', check, true)
+  document.removeEventListener('focusin', onFocusIn, true)
   document.removeEventListener('focusout', check, true)
+  document.removeEventListener('pointerdown', onPointerDown, true)
+  lastFocused = null
+  lastPointerDown = null
   window.removeEventListener('focus', check)
   window.removeEventListener('blur', reset)
   reset()
