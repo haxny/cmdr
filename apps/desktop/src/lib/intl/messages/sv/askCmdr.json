@@ -439,7 +439,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "enheten svarade inte",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "finns inte",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -459,7 +459,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "var redan ansluten",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "återansluter fortfarande",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -479,7 +479,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "servern svarade inte",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "inte en sparad server",
   "@askCmdr.tool.outcome.connection.notSaved": {

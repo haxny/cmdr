@@ -439,7 +439,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "ổ đĩa không phản hồi kịp",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "không có ở đó",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -459,7 +459,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "đã kết nối từ trước",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "vẫn đang kết nối lại",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -479,7 +479,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "máy chủ không phản hồi",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "không phải máy chủ đã lưu",
   "@askCmdr.tool.outcome.connection.notSaved": {

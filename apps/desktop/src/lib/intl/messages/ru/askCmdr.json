@@ -439,7 +439,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "диск не ответил",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "отсутствует",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -479,7 +479,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "сервер не ответил",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "этот сервер не сохранен",
   "@askCmdr.tool.outcome.connection.notSaved": {
@@ -1299,7 +1299,7 @@
   },
   "askCmdr.decision.verbEditServer": "изменение настроек сервера",
   "@askCmdr.decision.verbEditServer": {
-    "sourceHash": "0067d9a"
+    "sourceHash": "155d3fd"
   },
   "askCmdr.decision.saved": "Сохранен",
   "@askCmdr.decision.saved": {

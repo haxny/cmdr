@@ -438,7 +438,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "磁碟機沒有回應",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "不存在",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -458,7 +458,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "之前就已經連線了",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "還在重新連線",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -478,7 +478,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "伺服器沒有回應",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "不是已儲存的伺服器",
   "@askCmdr.tool.outcome.connection.notSaved": {

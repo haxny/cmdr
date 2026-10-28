@@ -440,7 +440,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "de schijf reageerde niet",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "niet aanwezig",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -460,7 +460,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "er was al verbinding",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "nog bezig met opnieuw verbinden",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -480,7 +480,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "de server reageerde niet",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "geen opgeslagen server",
   "@askCmdr.tool.outcome.connection.notSaved": {

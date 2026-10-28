@@ -438,7 +438,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "驱动器没有响应",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "不存在",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -458,7 +458,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "之前就已连接",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "还在重新连接",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -478,7 +478,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "服务器没有响应",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "不是保存过的服务器",
   "@askCmdr.tool.outcome.connection.notSaved": {

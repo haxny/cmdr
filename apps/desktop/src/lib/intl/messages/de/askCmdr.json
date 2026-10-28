@@ -439,7 +439,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "das Laufwerk hat nicht geantwortet",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "nicht vorhanden",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -459,7 +459,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "die Verbindung bestand schon",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "die Verbindung wird noch wiederhergestellt",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -479,7 +479,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "der Server hat nicht geantwortet",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "kein gespeicherter Server",
   "@askCmdr.tool.outcome.connection.notSaved": {

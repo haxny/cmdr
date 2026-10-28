@@ -439,7 +439,7 @@
   },
   "askCmdr.tool.outcome.miss.unreachable": "o disco não respondeu",
   "@askCmdr.tool.outcome.miss.unreachable": {
-    "sourceHash": "fe3a69d"
+    "sourceHash": "f39fad7"
   },
   "askCmdr.tool.outcome.miss.notFound": "não existe",
   "@askCmdr.tool.outcome.miss.notFound": {
@@ -459,7 +459,7 @@
   },
   "askCmdr.tool.outcome.connection.alreadyConnected": "já estava conectado",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
-    "sourceHash": "72f41d9"
+    "sourceHash": "168827a"
   },
   "askCmdr.tool.outcome.connection.stillReconnecting": "ainda reconectando",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
@@ -479,7 +479,7 @@
   },
   "askCmdr.tool.outcome.connection.unreachable": "o servidor não respondeu",
   "@askCmdr.tool.outcome.connection.unreachable": {
-    "sourceHash": "3089e21"
+    "sourceHash": "80aae90"
   },
   "askCmdr.tool.outcome.connection.notSaved": "não é um servidor salvo",
   "@askCmdr.tool.outcome.connection.notSaved": {
