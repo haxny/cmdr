@@ -5,6 +5,7 @@
     import { focusFirstField, trapFocus } from './focus-trap'
     import { captureFocusOrigin, restoreFocus, type FocusOrigin } from './focus-restore'
     import { anchoredTopFor } from './modal-anchor'
+    import { clampDragOffset, clampPointToArea, dragFrameOf } from './modal-drag'
     import {
         declaredStyle,
         observeFooterRow,
@@ -169,6 +170,7 @@
     // rung and the focus trap, and it doesn't clip the way the panel does.
     providePortalTarget(() => overlayElement)
     let dialogElement: HTMLDivElement | undefined = $state()
+    let titleBarElement: HTMLDivElement | undefined = $state()
     let dialogPosition = $state({ x: 0, y: 0 })
     let isDragging = $state(false)
     /** Distance from the overlay's top to the dialog's top, once `growDownward` pins it. */
@@ -183,6 +185,8 @@
      */
     let focusOrigin: FocusOrigin | null = null
     let heightObserver: ResizeObserver | null = null
+    /** Re-clamps the drag offset when the window or the panel changes size (`keepTitleBarReachable`). */
+    let reachObserver: ResizeObserver | null = null
     /** Size the user dragged the panel to. */
     let resizedSize = $state<DraggedSize>({ width: null, height: null })
     /** Tears down whichever pointer drag (move or resize) is running, so a dialog closed mid-drag leaves no listeners. */
@@ -334,35 +338,60 @@
         anchoredTop = anchoredTopFor(homeTop, overlayElement.clientHeight, dialogElement.offsetHeight, margin)
     }
 
-    function handleTitleMouseDown(event: MouseEvent) {
+    /** `offset`, kept where the title bar stays grabbable (`modal-drag.ts`); as is with no layout to measure. */
+    function reachableOffset(offset: { x: number; y: number }): { x: number; y: number } {
+        if (!overlayElement || !dialogElement || !titleBarElement) return offset
+        const frame = dragFrameOf(overlayElement, dialogElement, titleBarElement)
+        return frame ? clampDragOffset(offset, frame) : offset
+    }
+
+    /**
+     * Pulls the panel back after the window shrinks or the panel changes size, so
+     * nothing but a drag can leave the title bar out of reach. A no-op when it's
+     * already reachable, so it never fights a drag.
+     */
+    function keepTitleBarReachable() {
+        const next = reachableOffset(dialogPosition)
+        if (next.x !== dialogPosition.x || next.y !== dialogPosition.y) dialogPosition = next
+    }
+
+    /**
+     * Moves the panel with the pointer, stopping it where the title bar would leave
+     * the overlay. The pointer itself roams free (a webview can't confine it); the
+     * panel picks it back up once it returns past where the panel stopped.
+     */
+    function handleTitlePointerDown(event: PointerEvent) {
         if (!draggable) return
         if ((event.target as HTMLElement).tagName === 'BUTTON') return
 
         event.preventDefault()
+        // A second press takes over rather than leaving the first drag's listeners running.
+        stopActiveDrag?.()
         isDragging = true
 
         const startX = event.clientX - dialogPosition.x
         const startY = event.clientY - dialogPosition.y
 
-        const handleMouseMove = (e: MouseEvent) => {
-            dialogPosition = {
-                x: e.clientX - startX,
-                y: e.clientY - startY,
-            }
+        const handlePointerMove = (moveEvent: PointerEvent) => {
+            dialogPosition = reachableOffset({ x: moveEvent.clientX - startX, y: moveEvent.clientY - startY })
         }
 
-        const handleMouseUp = () => {
+        const handlePointerUp = () => {
             isDragging = false
-            document.removeEventListener('mousemove', handleMouseMove)
-            document.removeEventListener('mouseup', handleMouseUp)
+            document.removeEventListener('pointermove', handlePointerMove)
+            document.removeEventListener('pointerup', handlePointerUp)
+            document.removeEventListener('pointercancel', handlePointerUp)
             document.body.style.cursor = ''
+            document.body.style.userSelect = ''
             stopActiveDrag = null
         }
 
-        document.addEventListener('mousemove', handleMouseMove)
-        document.addEventListener('mouseup', handleMouseUp)
+        document.addEventListener('pointermove', handlePointerMove)
+        document.addEventListener('pointerup', handlePointerUp)
+        document.addEventListener('pointercancel', handlePointerUp)
         document.body.style.cursor = 'move'
-        stopActiveDrag = handleMouseUp
+        document.body.style.userSelect = 'none'
+        stopActiveDrag = handlePointerUp
     }
 
     /** Drags one edge or corner, keeping the OPPOSITE edge where it is (`resizeStep`). */
@@ -389,13 +418,19 @@
             verticalDrift: align === 'center' && anchoredTop === null ? 0.5 : 0,
         }
         const [startX, startY] = [event.clientX, event.clientY]
+        // An edge stops at the window's edges, so the north one can't carry the title bar
+        // out of reach. `null` with no layout to measure (jsdom).
+        const overlayRect = overlayElement?.getBoundingClientRect()
+        const area = overlayRect && overlayRect.width > 0 && overlayRect.height > 0 ? overlayRect : null
 
         const handlePointerMove = (moveEvent: PointerEvent) => {
+            const raw = { x: moveEvent.clientX, y: moveEvent.clientY }
+            const pointer = area ? clampPointToArea(raw, area) : raw
             const next = resizeStep({
                 ...start,
                 dragged: resizedSize,
-                dx: moveEvent.clientX - startX,
-                dy: moveEvent.clientY - startY,
+                dx: pointer.x - startX,
+                dy: pointer.y - startY,
             })
             resizedSize = next.size
             dialogPosition = next.position
@@ -504,6 +539,15 @@
             if (!dialogElement || !focusFirstField(dialogElement)) overlayElement.focus()
         }
 
+        // The overlay tracks the window; the panel grows with its body or a resize. Either
+        // can strand a dragged panel's title bar, and both report after layout, so this
+        // also runs after `anchorToCurrentCenter` has re-pinned a `growDownward` panel.
+        if (overlayElement && dialogElement) {
+            reachObserver = new ResizeObserver(keepTitleBarReachable)
+            reachObserver.observe(overlayElement)
+            reachObserver.observe(dialogElement)
+        }
+
         if (!growDownward || !dialogElement) return
         anchorToCurrentCenter()
         // Height changes come from the body (a mode switch, an expanding section),
@@ -519,6 +563,8 @@
         stopActiveDrag?.()
         heightObserver?.disconnect()
         heightObserver = null
+        reachObserver?.disconnect()
+        reachObserver = null
         if (growDownward) window.removeEventListener('resize', anchorToCurrentCenter)
         if (dialogId) {
             markDialogClosed(dialogId)
@@ -572,7 +618,7 @@
         -->
         <div class="modal-content">
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="dialog-title-bar" class:draggable onmousedown={handleTitleMouseDown}>
+            <div class="dialog-title-bar" class:draggable bind:this={titleBarElement} onpointerdown={handleTitlePointerDown}>
                 <h2 id={titleId}>
                     {@render title()}
                 </h2>

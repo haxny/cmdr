@@ -8,6 +8,7 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`ModalDialog.svelte`**: Central modal container: overlay, dragging, Escape, focus, MCP tracking
 - **`modal-resize.ts`**: `ModalDialog`'s edge-and-corner resize geometry as pure functions (`resizeStep`, the limits,
   which bands show)
+- **`modal-drag.ts`**: where `ModalDialog` may be dragged: the clamp that keeps the title bar grabbable
 - **`focus-trap.ts`**: `use:trapFocus` action: Tab wrapping, focus-leak guard, Escape fallback, trap stack
 - **`dialog-registry.ts`**: `SOFT_DIALOG_REGISTRY` array: single source of truth for all dialog IDs
 - **`markdown-link-click.ts`**: `handleMarkdownLinkClick`, the click delegate every `{@html}`-rendered markdown block
@@ -188,6 +189,18 @@ The same trap sits one level up: `blur` puts `backdrop-filter` on the OVERLAY, w
 dialog hosts a `Popover` today (the query dialogs, the only `Popover` consumers, don't set `blur`), and unlike the panel
 transform this one can't just be dropped — the filter IS the feature. So if a blurred dialog ever needs a popover, that
 one has to portal.
+
+**The title bar always stays grabbable.** A title-bar drag stops the panel where its top would pass the overlay's top
+(which already sits below the window's own title bar and traffic lights), where less than the title bar's full height
+would stay above the bottom, or where less than 100px of it would stay inside either side. The pointer itself roams
+free, the way a macOS window stops at the menu bar while the cursor keeps going: a webview can't confine the cursor, and
+warping it fights the user. The clamp runs on the RAW offset (pointer minus grab point) on every move, so the panel
+picks the pointer back up exactly where it stopped. Two more paths could strand the title bar, and both are covered: a
+resize band's pointer is held inside the overlay, so the north edge can't carry the title out; and a `ResizeObserver` on
+the overlay and the panel re-clamps after the window shrinks or the panel grows. **Why**: a dialog dragged up under the
+window's title bar had nothing left to grab, and stayed clipped until it closed. The geometry is pure
+(`modal-drag.ts::clampDragOffset`), pinned by `modal-drag.test.ts`; `ModalDialog.svelte.test.ts` § "drag limits" drives
+it end to end. With no layout to measure (an overlay of zero size, as under happy-dom), nothing is clamped.
 
 **`resizable` is the answer to a path that doesn't fit**, so every dialog rendering one takes it (delete, copy/move,
 progress, transfer error, operation log, go to path, new file/folder, alert, and the query dialogs). It puts a grab band
