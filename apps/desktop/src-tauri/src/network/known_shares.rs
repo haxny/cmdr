@@ -328,8 +328,9 @@ fn keep_recorded_guid(row: &mut KnownNetworkShare, existing: &mut KnownNetworkSh
 ///
 /// What a replace keeps: the pin (only `set_share_pinned` moves one, except that
 /// a share's FIRST mount pins it, rule 1 of the servers model), and a volume id,
-/// mount path, address, and port the new row doesn't bring (an add names none of
-/// them). The account is the new row's: the row remembers who opened it last.
+/// mount path, address, port, and `last_connected_at` the new row doesn't bring (an
+/// add names none of them, and connects nothing). The account is the new row's: the
+/// row remembers who opened it last.
 ///
 /// ❗ Except that an ADD naming no account keeps the one the share is saved with. An
 /// add is the row with no address (every mount records the address it dialed), and
@@ -361,6 +362,9 @@ fn upsert_share_row(
                 row.last_connection_mode = existing.last_connection_mode;
             }
             row.address = row.address.or(existing.address.take());
+            if row.last_connected_at.is_empty() {
+                row.last_connected_at = std::mem::take(&mut existing.last_connected_at);
+            }
             *existing = row;
             previous
         }

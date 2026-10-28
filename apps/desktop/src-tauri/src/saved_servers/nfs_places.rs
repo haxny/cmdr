@@ -101,7 +101,7 @@ pub(super) fn nfs_place(target: ServerTarget) -> Option<(KnownNfsPlace, String)>
         start_folder: start_folder.filter(|folder| !folder.trim().is_empty()),
         auto_reconnect,
         pinned: true,
-        last_connected_at: chrono::Utc::now().to_rfc3339(),
+        last_connected_at: String::new(),
     };
     Some((place, display_name))
 }

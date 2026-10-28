@@ -416,7 +416,8 @@ fn is_place(entry: &KnownS3Place, volume_id: &str) -> bool {
 /// dial could reach isn't stored.
 ///
 /// ❗ **`place.pinned` is honored only when the entry is NEW**, so a reconnect
-/// can't re-pin a place the user unpinned (the WebDAV store's rule).
+/// can't re-pin a place the user unpinned (the WebDAV store's rule). An empty
+/// `last_connected_at` is a save that connected nothing, so the stored time stays.
 pub fn remember(mut place: KnownS3Place) {
     let Some(volume_id) = place.volume_id() else {
         log::warn!(target: "volume", "an S3 place with an unusable provider wasn't saved");
@@ -431,6 +432,9 @@ pub fn remember(mut place: KnownS3Place) {
         {
             Some(existing) => {
                 place.pinned = existing.pinned;
+                if place.last_connected_at.is_empty() {
+                    place.last_connected_at = std::mem::take(&mut existing.last_connected_at);
+                }
                 *existing = place;
             }
             None => store.known_s3_places.push(place),

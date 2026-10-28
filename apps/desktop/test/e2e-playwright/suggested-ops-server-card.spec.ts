@@ -29,6 +29,7 @@ const LOCAL_VOLUME_NAME = os.platform() === 'linux' ? 'Root' : 'Macintosh HD'
 interface SavedServerRow {
   id: string
   displayName: string
+  lastConnectedAt: string | null
 }
 
 async function savedServerNamed(tauriPage: PageLike, name: string): Promise<SavedServerRow | undefined> {
@@ -100,9 +101,9 @@ test.describe('An AI suggestion to add a server', () => {
         )
         .toBe(true)
 
-      // Saved. (Its `lastConnectedAt` proves nothing either way: an SFTP entry is stamped
-      // when it's saved, "Add anyway" included, `saved_servers/saves.rs::entry_of`.)
+      // Saved, and never connected: a save files no `lastConnectedAt`.
       await expect.poll(() => savedServerNamed(tauriPage, name), { timeout: waitBudget(10000) }).toBeDefined()
+      expect((await savedServerNamed(tauriPage, name))?.lastConnectedAt).toBeFalsy()
 
       // In the servers hub, as a saved server with no session: `saved`, never `connected`.
       await escapeOverlayUntilGone(tauriPage, DIALOG)

@@ -39,8 +39,9 @@
 ## Saving and editing
 
 - `save_target` is "Add anyway": it builds the store entry (`entry_of`) and calls the wiring's
-  `save_without_connecting`, which writes the store when the place isn't connected. A NEW SFTP or WebDAV entry is saved
-  `pinned: true` with a fresh `last_connected_at`; `remember` keeps a stored pin on a replace.
+  `save_without_connecting`, which writes the store when the place isn't connected. A NEW entry is saved
+  `pinned: true` with an EMPTY `last_connected_at` (a save connects nothing); `remember` keeps a stored pin and a stored
+  time on a replace. Why the time matters: `network/DETAILS.md` § Saved SMB shares.
 - `save_edit` finds the saved entry by its id (`saved_by_id`): the same address saves in place, another one MOVES the
   server (`server_move.rs`). An S3 place or NFS export naming another place answers `AccountChanged`, since its address
   IS the place. A place nobody saved any more answers `Unreachable`, ❌ never a quiet re-save.

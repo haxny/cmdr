@@ -637,9 +637,11 @@ fn mounted(
     }
 }
 
-/// A share row as Add files it: named in `smb://user@host/share`, never mounted.
+/// A share row as Add files it: named in `smb://user@host/share`, never mounted,
+/// so never connected.
 fn added(server_name: &str, share: &str, username: Option<&str>) -> KnownNetworkShare {
     KnownNetworkShare {
+        last_connected_at: String::new(),
         address: None,
         volume_id: None,
         mount_path: None,
@@ -709,6 +711,10 @@ fn re_adding_a_mounted_share_keeps_its_place() {
     assert_eq!(rows[0].mount_path.as_deref(), Some("/Volumes/photos"));
     assert_eq!(rows[0].address.as_deref(), Some("10.0.0.2"));
     assert_eq!(rows[0].username.as_deref(), Some("ada"));
+    assert_eq!(
+        rows[0].last_connected_at, "2026-09-24T10:00:00Z",
+        "an add connects nothing, so the mount's time stays: `connect_volume` dials the most recently connected member of a share"
+    );
 }
 
 /// ❗ **An Add never erases a known account.** A plain re-Add of

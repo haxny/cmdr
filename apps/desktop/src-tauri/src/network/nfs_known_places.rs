@@ -262,7 +262,8 @@ pub fn adopt_typed_name(place: &KnownNfsPlace, name: &str) {
 /// Adds `place`, or replaces the entry with the same place id.
 ///
 /// ❗ **`place.pinned` is honored only when the entry is NEW**, so a reconnect
-/// can't re-pin a place the user unpinned (the WebDAV store's rule).
+/// can't re-pin a place the user unpinned (the WebDAV store's rule). An empty
+/// `last_connected_at` is a save that connected nothing, so the stored time stays.
 pub fn remember(mut place: KnownNfsPlace) {
     place.export = cmdr_fs::volume::canonical_nfs_export(&place.export);
     let volume_id = place.volume_id();
@@ -275,6 +276,9 @@ pub fn remember(mut place: KnownNfsPlace) {
         {
             Some(existing) => {
                 place.pinned = existing.pinned;
+                if place.last_connected_at.is_empty() {
+                    place.last_connected_at = std::mem::take(&mut existing.last_connected_at);
+                }
                 *existing = place;
             }
             None => store.known_nfs_places.push(place),

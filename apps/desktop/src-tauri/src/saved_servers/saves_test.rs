@@ -46,6 +46,7 @@ async fn an_add_without_a_dial_writes_the_store_and_contacts_nothing() {
     .await;
     let sftp = sftp_known_servers::find("192.0.2.81", 22, "ada").expect("saved");
     assert!(sftp.pinned, "a new place shows in the switcher, as the add form's does");
+    assert_eq!(sftp.last_connected_at, "", "a save claims no connection");
 
     let url = "https://192.0.2.82:5006/dav/";
     saved_without_contact(ServerTarget::Webdav {
@@ -57,7 +58,8 @@ async fn an_add_without_a_dial_writes_the_store_and_contacts_nothing() {
         auto_reconnect: false,
     })
     .await;
-    assert!(webdav_known_servers::find(url, "ada").is_some(), "saved");
+    let webdav = webdav_known_servers::find(url, "ada").expect("saved");
+    assert_eq!(webdav.last_connected_at, "", "a save claims no connection");
 
     let s3 = saved_without_contact(ServerTarget::S3 {
         display_name: "Archive".to_string(),
@@ -69,7 +71,8 @@ async fn an_add_without_a_dial_writes_the_store_and_contacts_nothing() {
         auto_reconnect: false,
     })
     .await;
-    assert!(s3_known_places::find(&s3).is_some(), "saved");
+    let s3 = s3_known_places::find(&s3).expect("saved");
+    assert_eq!(s3.last_connected_at, "", "a save claims no connection");
 
     let nfs = saved_without_contact(ServerTarget::Nfs {
         display_name: "Media NAS".to_string(),
@@ -82,5 +85,50 @@ async fn an_add_without_a_dial_writes_the_store_and_contacts_nothing() {
         auto_reconnect: false,
     })
     .await;
-    assert!(nfs_known_places::find(&nfs).is_some(), "saved");
+    let nfs = nfs_known_places::find(&nfs).expect("saved");
+    assert_eq!(nfs.last_connected_at, "", "a save claims no connection");
+}
+
+/// An edit of a saved, unconnected place keeps when it was last connected: the
+/// time feeds "Last used" and recency order, and a rename isn't a connection.
+#[tokio::test]
+async fn an_edit_without_a_dial_keeps_the_last_connected_time() {
+    use crate::saved_servers::save_edit;
+    use crate::saved_servers::test_fixtures::{sftp_entry, webdav_entry};
+    let _secrets = crate::test_support::isolate_secrets();
+
+    let sftp = sftp_entry("192.0.2.85", true);
+    sftp_known_servers::remember(sftp.clone());
+    let id = cmdr_fs::volume::sftp_volume_id(&sftp.host, sftp.port, &sftp.username);
+    let renamed = ServerTarget::Sftp {
+        display_name: "Renamed box".to_string(),
+        host: sftp.host.clone(),
+        port: sftp.port,
+        username: sftp.username.clone(),
+        remote_root: sftp.remote_root.clone(),
+        start_folder: None,
+        key_file: None,
+        use_agent: false,
+        auto_reconnect: true,
+    };
+    assert_eq!(save_edit(&id, renamed).await, SavedServerOutcome::Saved);
+    let saved = sftp_known_servers::find(&sftp.host, sftp.port, &sftp.username).expect("saved");
+    assert_eq!(saved.display_name, "Renamed box");
+    assert_eq!(saved.last_connected_at, sftp.last_connected_at);
+
+    let webdav = webdav_entry("192.0.2.86", true);
+    webdav_known_servers::remember(webdav.clone());
+    let target = ServerTarget::Webdav {
+        display_name: "Renamed dav".to_string(),
+        url: webdav.url.clone(),
+        username: webdav.username.clone(),
+        remote_root: webdav.remote_root.clone(),
+        start_folder: None,
+        auto_reconnect: true,
+    };
+    let id = place_id(target.clone()).expect("an id");
+    assert_eq!(save_edit(&id, target).await, SavedServerOutcome::Saved);
+    let saved = webdav_known_servers::find(&webdav.url, &webdav.username).expect("saved");
+    assert_eq!(saved.display_name, "Renamed dav");
+    assert_eq!(saved.last_connected_at, webdav.last_connected_at);
 }

@@ -94,7 +94,7 @@ pub(super) fn s3_place(
         bucket: bucket.map(|b| b.trim().to_string()).filter(|b| !b.is_empty()),
         auto_reconnect,
         pinned: true,
-        last_connected_at: chrono::Utc::now().to_rfc3339(),
+        last_connected_at: String::new(),
     }
 }
 

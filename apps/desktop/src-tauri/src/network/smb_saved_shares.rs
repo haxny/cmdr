@@ -131,13 +131,14 @@ pub async fn remember_mount_since(mounted: MountedShare<'_>, set_out: DialTicket
 /// kept its old account until the pane left the hub.
 ///
 /// ❗ Contacts nothing: no mount went through, so the GUID probe skips the row
-/// (`smb_server_guid::rows_to_probe`) until one does.
+/// (`smb_server_guid::rows_to_probe`) until one does. So it claims no connection
+/// either: a new row reads "never used", and a saved one keeps its time.
 pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>) {
     known_shares::remember_share(KnownNetworkShare {
         server_name: host_name.to_string(),
         share_name: share.to_string(),
         protocol: "smb".to_string(),
-        last_connected_at: chrono::Utc::now().to_rfc3339(),
+        last_connected_at: String::new(),
         last_connection_mode: ConnectionMode::Credentials,
         last_known_auth_options: AuthOptions::GuestOrCredentials,
         username: username.map(str::to_string),

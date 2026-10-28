@@ -737,6 +737,13 @@ the migration, and what Forget does). What the code has to defend:
   mount watcher, the adopter pass, the pane-open upgrade, or "Connect directly": they see mounts nobody asked Cmdr to
   save, and a row for one would invent history. That split is also why nothing dedupes by hand: every path keys the
   volume by the same `statfs` id (`smb_upgrade::mounted_volume_id`), so a saved row and a live mount meet on the id.
+- **❗ `lastConnectedAt` means a connection happened, in every saved-server store.** A save that connected nothing (an
+  Add naming a share, "Add anyway", an edit of an unconnected place, an approved Ask Cmdr card) files it EMPTY, and each
+  store's `remember` (`upsert_share_row` for SMB) keeps the stored time when the incoming one is empty. Why: it's
+  "Last used" and the hub's recency order, and `connect_volume` dials the most recently connected member of a share
+  (`location/same_share.rs` `connect_target`), so a stamped save would steer a dial to a place nobody connected.
+  Empty already reads as "never used" everywhere (`servers-hub-rows.ts`, the recency sorts). An SMB host's "saved at"
+  is the manual entry's own `added_at`.
 - **One row per share, keyed by server identity + folded share name, ❌ never by account**: an SMB volume id carries no
   username (`known_shares::upsert_share_row`). A replace keeps the pin, except that the FIRST mount pins it (rule 1 of
   the servers model). ❗ Two rows that both know their port (a mount filed each) are one share only on the same port:

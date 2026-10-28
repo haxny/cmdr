@@ -182,8 +182,9 @@ impl Entry {
 
 /// The store entry `server` describes.
 ///
-/// ❗ `pinned: true` and a fresh `last_connected_at` are read only for a NEW
-/// entry: `remember` keeps a stored pin, and a move keeps both.
+/// ❗ `pinned: true` is read only for a NEW entry: `remember` keeps a stored pin,
+/// and a move keeps both. `last_connected_at` is empty, since a save connects
+/// nothing: a new entry reads "never used", and `remember` keeps a stored time.
 fn entry_of(server: ServerTarget) -> Option<Entry> {
     let entry = match server {
         ServerTarget::Sftp {
@@ -207,7 +208,7 @@ fn entry_of(server: ServerTarget) -> Option<Entry> {
             use_agent,
             auto_reconnect,
             pinned: true,
-            last_connected_at: chrono::Utc::now().to_rfc3339(),
+            last_connected_at: String::new(),
         }),
         ServerTarget::Webdav {
             display_name,
@@ -224,7 +225,7 @@ fn entry_of(server: ServerTarget) -> Option<Entry> {
             start_folder,
             auto_reconnect,
             pinned: true,
-            last_connected_at: chrono::Utc::now().to_rfc3339(),
+            last_connected_at: String::new(),
         }),
         ServerTarget::S3 {
             display_name,
