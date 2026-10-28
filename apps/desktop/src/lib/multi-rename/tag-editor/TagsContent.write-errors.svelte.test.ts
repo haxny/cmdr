@@ -47,6 +47,7 @@ const VIEW: TagEditorView = {
   dirty: true,
   diacritics: [],
   badDates: 0,
+  sort: null,
 }
 
 const EDIT_FAILED = 'Couldn’t apply that change.'

@@ -13,6 +13,10 @@
       "lines": 800,
       "reason": "TODO: two seams sit beside the request path and only share imports with it. Move the policy-guarded HTTP client (`policy_guarded_http_client`, `policy_guarded_redirects`, `follow_allowed_hop`, `remote_destination`, `remote_endpoint`, `parse_endpoint`) into `client_policy.rs`, and the provider-error mapping (`AiError` with its `Display`, `ai_error_for_status`, `provider_error_detail`, `map_genai_error`) into `client_errors.rs`, about 140 lines out together. What stays is `AiBackend`, the three `chat_completion*` entry points, the model-specific option tweaks, and the response logging, which is what callers mean by the AI client."
     },
+    "apps/desktop/src-tauri/src/multi_rename/session.rs": {
+      "lines": 813,
+      "reason": "Fork (tag editor): upstream's 795-line session store plus `set_order`, which replaces the rename order for the tag editor's sort and has to sit beside `move_row` in the store that owns `Session.names`. Splitting an upstream file in the fork would make every upstream merge of it conflict; drop this entry if upstream splits the file or the fork merges back."
+    },
     "apps/desktop/src-tauri/src/multi_rename/media.rs": {
       "lines": 810,
       "reason": "Fork (tag editor): upstream's 796-line media cache plus one 14-line `SessionMedia::reread` that must reach the cache's private state (`Inner`, `set_state`, `kick`). Splitting an upstream file in the fork would make every upstream merge of it conflict; drop this entry if upstream splits the file or the fork merges back."
@@ -142,7 +146,7 @@
       "reason": "TODO: two concerns share the file. Move `SettingsValues` (the stored-value map, one line per setting, about 370 lines) and the value unions it uses (`UiDensity` through `LanguageSetting`) into `settings-values.ts`, re-exported from here, so this file keeps only the registry's definition, constraint, and search shapes."
     },
     "apps/desktop/src/lib/tauri-commands/index.ts": {
-      "lines": 1112,
+      "lines": 1224,
       "reason": "A pure barrel: nothing but `export { … } from './x'` and `export type { … }` across about 40 domain sub-files, one line per re-exported symbol, with zero declarations, imports, or logic anywhere in it. `tauri-commands/CLAUDE.md` makes it the single stable import path precisely so sub-file layout can shift behind it, so its length tracks the IPC surface and cutting it would mean either fewer commands or breaking that contract."
     },
     "apps/desktop/src/lib/ui/Menu.svelte": {

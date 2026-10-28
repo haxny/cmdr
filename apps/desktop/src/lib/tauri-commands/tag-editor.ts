@@ -20,6 +20,8 @@ import {
   type TagEditorView,
   type TagTextTool,
   type TagTool,
+  type TrackSort,
+  type TrackSortKey,
   type TagsMenuKey,
   type TagsSessionInfo,
   type MultiRenameError,
@@ -41,6 +43,8 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TrackSort,
+  TrackSortKey,
   TagsMenuKey,
   TagsSessionInfo,
 }
@@ -66,6 +70,14 @@ export async function editTags(
   edits: TagEdit_Deserialize[],
 ): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.editTags(sessionId, edits))
+}
+
+/**
+ * Puts the tracks in `sort` order (the rename order moves with them). No file or edit is touched; the answer's
+ * `sort` is the order now.
+ */
+export async function sortTagTracks(sessionId: string, sort: TrackSort): Promise<TagEditorResult<TagEditorView>> {
+  return result(await commands.sortTagTracks(sessionId, sort))
 }
 
 /**

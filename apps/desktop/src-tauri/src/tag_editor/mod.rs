@@ -12,6 +12,7 @@ pub(crate) mod last_apply;
 pub(crate) mod menu_route;
 pub(crate) mod playback;
 pub(crate) mod session;
+pub(crate) mod sort;
 pub(crate) mod text_tools;
 pub(crate) mod undo;
 pub(crate) mod view;
@@ -37,6 +38,8 @@ mod last_apply_test;
 mod playback_test;
 #[cfg(test)]
 mod session_test;
+#[cfg(test)]
+mod sort_test;
 #[cfg(test)]
 mod text_tools_test;
 #[cfg(test)]

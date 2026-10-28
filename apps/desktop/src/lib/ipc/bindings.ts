@@ -1639,6 +1639,9 @@ export const commands = {
   // Applies edits in memory; an unknown track refuses the whole batch.
   editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
+  // Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
+  sortTagTracks: (sessionId: string, sort: TrackSort) =>
+    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('sort_tag_tracks', { sessionId, sort })),
   // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
   runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
@@ -12973,6 +12976,8 @@ export type MultiRenameError =
   | { type: 'stillReading' }
   // The folder, or a row in it, is read-only because a route serves it.
   | { type: 'readOnly'; place: ReadOnlyPlace }
+  // A new order that isn't the session's own files, each exactly once. Nothing was changed.
+  | { type: 'notAPermutation' }
   // Results couldn't write its names file; `detail` is log text only.
   | { type: 'couldntWriteNames'; detail: string }
   /**
@@ -18586,6 +18591,8 @@ export type TagEditorView = {
    *  flagged on open, so the user corrects it before writing.
    */
   badDates: number
+  // The order the tracks are in. Set by the session; `None` straight out of `build`.
+  sort: TrackSort | null
 }
 
 /**
@@ -18947,6 +18954,17 @@ export type TrackRow = {
   // Set when the file couldn't be read: the row is shown greyed and never written.
   readError: ReadErrorCode | null
 }
+
+// The tracks' order: a key and a direction.
+export type TrackSort = {
+  key: TrackSortKey
+  descending: boolean
+}
+
+// What the tracks are ordered by.
+export type TrackSortKey =
+  // Disc number, then track number (`3` or `3/12`); a missing disc counts as disc 1.
+  'discTrack' | 'title' | 'length' | 'fileName'
 
 /**
  *  The live shape of a running transfer, on every progress event AND on

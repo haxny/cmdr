@@ -6,6 +6,7 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 ## Module map
 
 - `session.rs` the store (`SESSIONS`), `open` / `edit` / `tool` / `changes` / `close`; `error.rs` `TagEditorError`.
+- `sort.rs` the track order (`TrackSort`, `sort_tracks`): reorders only the Multi-Rename session's names via `set_order`, never a file or an edit; a session opens in disc/track order (file name when no track has a number), once.
 - `view.rs` the pure `TagEditorView`: shared rows, track rows, cover, extras, dirty, diacritics.
 - `cover.rs` reading a cover (a folder picture by plain name, a dropped file, pasted bytes: regular file, 10 MiB, type
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,

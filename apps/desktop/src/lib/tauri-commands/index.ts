@@ -1173,6 +1173,7 @@ export type {
 export {
   openTagEditor,
   editTags,
+  sortTagTracks,
   runTagTool,
   runTagTextTool,
   previewTagsFromNames,
@@ -1218,4 +1219,6 @@ export type {
   TagTool,
   TagsMenuKey,
   TagsSessionInfo,
+  TrackSort,
+  TrackSortKey,
 } from './tag-editor'

@@ -240,6 +240,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::multi_rename::save_multi_rename_last_settings,
                     crate::commands::tag_editor::open_tag_editor,
                     crate::commands::tag_editor::edit_tags,
+                    crate::commands::tag_editor::sort_tag_tracks,
                     crate::commands::tag_editor::run_tag_tool,
                     crate::commands::tag_editor::run_tag_text_tool,
                     crate::commands::tag_editor::preview_tags_from_names,

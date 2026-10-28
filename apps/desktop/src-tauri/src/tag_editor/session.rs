@@ -29,6 +29,7 @@ use cmdr_tags::{
     read_duration, read_tags, removed_by_kind,
 };
 
+use super::sort::{TrackSort, reorder};
 use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
@@ -37,7 +38,7 @@ use crate::multi_rename::session::{SessionFiles, files_of};
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
 pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
-const LOG_TARGET: &str = "tag_editor::session";
+pub(super) const LOG_TARGET: &str = "tag_editor::session";
 
 /// One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
 /// PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
@@ -124,21 +125,23 @@ impl Entry {
 }
 
 #[derive(Default)]
-struct TagSession {
-    by_path: HashMap<PathBuf, Entry>,
+pub(super) struct TagSession {
+    pub(super) by_path: HashMap<PathBuf, Entry>,
+    /// The order the user last chose or the session opened in; `None` before the first open sets it.
+    pub(super) sort: Option<TrackSort>,
 }
 
-static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// The session's audio files in its current order, where they are, and what the window may do
 /// with them.
-struct Layout {
+pub(super) struct Layout {
     access: Access,
     volume_id: String,
-    tracks: Vec<PathBuf>,
+    pub(super) tracks: Vec<PathBuf>,
 }
 
-fn layout_of(files: &SessionFiles) -> Layout {
+pub(super) fn layout_of(files: &SessionFiles) -> Layout {
     let local = files.volume_id == LOCAL_VOLUME_ID;
     let reachable = local || volume_gives_local_paths(&files.volume_id);
     let tracks = if reachable {
@@ -245,12 +248,17 @@ pub(crate) fn open_counting(
             (path.clone(), entry)
         })
         .collect();
-    let view = {
+    // The first open of a tag session sorts by default; a restart keeps the user's order.
+    let opened = {
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.entry(session_id.to_string()).or_default();
         session.by_path = by_path;
-        view_of(&layout, session)
+        match session.sort {
+            Some(_) => Ok(view_of(&layout, session)),
+            None => Err(TrackSort::default_for(session)),
+        }
     };
+    let view = opened.or_else(|default_sort| reorder(session_id, default_sort))?;
     // The rename session may have closed during the read, after its close hook already ran:
     // it removes its own session before calling the hook, so asking again now (lock order
     // rename → tag, never nested) catches every such close.
@@ -273,23 +281,26 @@ pub(super) fn with_loaded<R>(session_id: &str, f: impl FnOnce(&[&Loaded]) -> R) 
     })
 }
 
-/// Drops entries whose path isn't in the layout any more.
-fn prune(session: &mut TagSession, layout: &Layout) {
+/// Drops entries whose path left the layout.
+pub(super) fn prune(session: &mut TagSession, layout: &Layout) {
     let current: HashSet<&PathBuf> = layout.tracks.iter().collect();
     session.by_path.retain(|path, _| current.contains(path));
 }
 
-fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
+pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
     let tracks: Vec<(&Path, &Entry)> = layout
         .tracks
         .iter()
         .filter_map(|path| session.by_path.get(path).map(|entry| (path.as_path(), entry)))
         .collect();
-    build(layout.access, &tracks)
+    TagEditorView {
+        sort: session.sort,
+        ..build(layout.access, &tracks)
+    }
 }
 
 /// Runs `f` on the open session, after dropping entries that left the layout.
-fn with_session<R>(
+pub(super) fn with_session<R>(
     session_id: &str,
     f: impl FnOnce(&Layout, &mut TagSession) -> Result<R, TagEditorError>,
 ) -> Result<R, TagEditorError> {

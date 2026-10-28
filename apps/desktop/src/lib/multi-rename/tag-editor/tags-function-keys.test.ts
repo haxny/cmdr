@@ -27,6 +27,7 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  sort: null,
 }
 
 describe('enabledTagsCommands', () => {

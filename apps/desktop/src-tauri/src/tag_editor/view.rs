@@ -13,6 +13,7 @@ use cmdr_tags::tools::fields_with_diacritics;
 use cmdr_tags::{Cover, FileTags, TagField, date_is_writable, format_of};
 
 use super::session::{Entry, Loaded};
+use super::sort::TrackSort;
 
 /// How many distinct values a «multiple values» row lists.
 const CHOICE_LIMIT: usize = 50;
@@ -108,6 +109,8 @@ pub struct TagEditorView {
     /// How many files carry a Date the writer would refuse (an MP3 whose TDAT reads as month 20):
     /// flagged on open, so the user corrects it before writing.
     pub bad_dates: u32,
+    /// The order the tracks are in. Set by the session; `None` straight out of `build`.
+    pub sort: Option<TrackSort>,
 }
 
 /// What the session's rules say about the window, apart from the files.
@@ -149,6 +152,7 @@ pub(super) fn build(access: Access, tracks: &[(&Path, &Entry)]) -> TagEditorView
             .into_iter()
             .collect(),
         bad_dates: count_bad_dates(tracks),
+        sort: None,
     }
 }
 

@@ -8,7 +8,9 @@ use super::error::MultiRenameError;
 use super::plan::MultiRenameSpec;
 use super::run::apply;
 use super::run_test::{folder, names_on_disk, settled, strip_diacritics};
-use super::session::{PreviewFilter, RowMove, TakenChars, close, move_row, open, page, preview_session, range_samples};
+use super::session::{
+    PreviewFilter, RowMove, TakenChars, close, move_row, open, page, preview_session, range_samples, set_order,
+};
 use cmdr_operations::testing::CollectorEventSink;
 
 /// `1 a.txt`, `2 b.txt`, …: the counter shows the rename order.
@@ -146,5 +148,47 @@ fn range_samples_refuse_a_token_that_isnt_a_range_and_wait_for_a_moved_rows_prev
         range_samples(&session.session_id, "N", &[0]),
         Err(MultiRenameError::PreviewOutOfDate)
     ));
+    close(&session.session_id);
+}
+
+fn owned(names: &[&str]) -> Vec<String> {
+    names.iter().map(|name| (*name).to_string()).collect()
+}
+
+#[test]
+fn set_order_refuses_a_name_not_in_the_session() {
+    let (_dir, listing) = folder("multi-rename-set-order-refuse", &["a.txt", "b.txt"]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+
+    for bad in [
+        &["a.txt", "x.txt"][..],
+        &["a.txt"][..],
+        &["a.txt", "a.txt"][..],
+        &["a.txt", "b.txt", "b.txt"][..],
+    ] {
+        assert!(matches!(
+            set_order(&session.session_id, owned(bad)),
+            Err(MultiRenameError::NotAPermutation)
+        ));
+    }
+    let kept = preview_session(&session.session_id, &numbered()).expect("a preview");
+    assert_eq!(new_names(&kept.rows), vec!["1 a.txt", "2 b.txt"]);
+    close(&session.session_id);
+}
+
+#[test]
+fn set_order_reorders_and_clears_the_preview() {
+    let (_dir, listing) = folder("multi-rename-set-order", &["a.txt", "b.txt", "c.txt"]);
+    let session = open(listing.id(), true, None, 0).expect("the session opens");
+    let shown = preview_session(&session.session_id, &numbered()).expect("a preview");
+
+    set_order(&session.session_id, owned(&["c.txt", "a.txt", "b.txt"])).expect("a permutation is taken");
+
+    assert!(matches!(
+        page(&session.session_id, shown.preview_id, 0, 10, PreviewFilter::All),
+        Err(MultiRenameError::PreviewOutOfDate)
+    ));
+    let after = preview_session(&session.session_id, &numbered()).expect("a preview");
+    assert_eq!(new_names(&after.rows), vec!["1 c.txt", "2 a.txt", "3 b.txt"]);
     close(&session.session_id);
 }

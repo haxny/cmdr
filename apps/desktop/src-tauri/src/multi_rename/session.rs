@@ -500,6 +500,24 @@ pub(crate) fn move_row(session_id: &str, row: usize, direction: RowMove) -> Resu
     })?
 }
 
+/// Replaces the rename order with `names`, which must be the session's own files, each
+/// exactly once (anything else is `NotAPermutation`, nothing changed). Like [`move_row`] it
+/// retires the latest preview.
+pub(crate) fn set_order(session_id: &str, names: Vec<String>) -> Result<(), MultiRenameError> {
+    with_session(session_id, |s| {
+        let mut wanted: Vec<&String> = names.iter().collect();
+        let mut current: Vec<&String> = s.names.iter().collect();
+        wanted.sort_unstable();
+        current.sort_unstable();
+        if wanted != current {
+            return Err(MultiRenameError::NotAPermutation);
+        }
+        s.names = names.into();
+        s.latest = None;
+        Ok(())
+    })?
+}
+
 /// The most rows one range-samples request answers: the editor shows five.
 pub(crate) const MAX_RANGE_SAMPLES: usize = 16;
 

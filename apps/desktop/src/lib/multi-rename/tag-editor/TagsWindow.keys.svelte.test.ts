@@ -102,6 +102,7 @@ const VIEW: TagEditorView = {
   dirty: false,
   diacritics: [],
   badDates: 0,
+  sort: null,
 }
 
 let cleanup: (() => void) | undefined

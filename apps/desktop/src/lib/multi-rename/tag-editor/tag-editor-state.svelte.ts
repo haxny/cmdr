@@ -27,6 +27,7 @@ import {
   setCoverFromBytes,
   setCoverFromFile,
   setCoverFromPath,
+  sortTagTracks,
   undoTagApply,
   useCoverForAll,
   type ApplyRequest,
@@ -42,6 +43,7 @@ import {
   type TagEditorResult,
   type TagEditorView,
   type TagTool,
+  type TrackSort,
 } from '#lib/tauri-commands/index.js'
 import type { LastTagApply } from './last-tag-apply'
 
@@ -84,6 +86,11 @@ export interface TagEditorState {
   /** Reads every file again, dropping every unwritten edit (after "changed on disk since it was read"). */
   reload(): Promise<void>
   edit(edits: TagEdit[]): Promise<void>
+  /**
+   * Puts the tracks in `sort` order and takes the view it answers with (`view.sort` is the order now). The backend
+   * reorders only the session's names: no edit and no file changes, and the next `[C]` or Renumber counts in this order.
+   */
+  sortTracks(sort: TrackSort): Promise<void>
   /** Runs `tool` over the tracks at `scope` (their paths), or over every track when it's absent or `null`. */
   tool(tool: TagTool, scope?: string[] | null): Promise<void>
   /**
@@ -281,6 +288,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     },
     open,
     edit: (batch) => editView(() => editTags(sessionId, batch)),
+    // Not an edit: it changes the order only, so `editing` stays off.
+    sortTracks: (sort) => replaceView(() => sortTagTracks(sessionId, sort)),
     tool: (tool, scope = null) => editView(() => runTagTool(sessionId, tool, scope)),
     textTool: (tool, scope = null) => editView(() => runTagTextTool(sessionId, tool, scope)),
     // A preview owns only a bad pattern: a good one leaves any other notice (a failed edit, a cover) standing.

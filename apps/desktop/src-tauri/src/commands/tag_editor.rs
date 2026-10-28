@@ -27,6 +27,7 @@ use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
     preview_names, tool as run_tool,
 };
+use crate::tag_editor::sort::{TrackSort, sort_tracks};
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 use crate::tag_editor::window::TagsSessionInfo;
@@ -112,6 +113,19 @@ pub async fn edit_tags(session_id: String, edits: Vec<TagEdit>) -> Result<TagEdi
         let started = Instant::now();
         let result = edit(&session_id, edits);
         activity::edited("edit", &result, started);
+        result
+    })
+    .await
+}
+
+/// Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
+#[tauri::command]
+#[specta::specta]
+pub async fn sort_tag_tracks(session_id: String, sort: TrackSort) -> Result<TagEditorView, TagEditorError> {
+    blocking(move || {
+        let started = Instant::now();
+        let result = sort_tracks(&session_id, sort);
+        activity::edited("sort", &result, started);
         result
     })
     .await

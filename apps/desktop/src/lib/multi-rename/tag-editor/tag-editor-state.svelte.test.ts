@@ -8,6 +8,7 @@ import type { TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js
 const ipc = vi.hoisted(() => ({
   openTagEditor: vi.fn(),
   editTags: vi.fn(),
+  sortTagTracks: vi.fn(),
   runTagTool: vi.fn(),
   runTagTextTool: vi.fn(),
   getTagChanges: vi.fn(),
@@ -184,6 +185,21 @@ describe('createTagEditorState', () => {
     await state.textTool(tool)
     expect(state.error).toEqual({ kind: 'badRegex' })
     expect(state.view).toBe(EDITED)
+  })
+
+  it('sortTracks asks the backend for the order, swaps in the returned view, and keeps a typed error', async () => {
+    const state = createTagEditorState('S')
+    const sort = { key: 'title', descending: true } as const
+    const SORTED = { editable: true, tracks: [{}, {}], dirty: false, sort } as unknown as TagEditorView
+    ipc.sortTagTracks.mockResolvedValueOnce({ ok: true, value: SORTED })
+    await state.sortTracks(sort)
+    expect(ipc.sortTagTracks).toHaveBeenCalledWith('S', sort)
+    expect(state.view).toBe(SORTED)
+    expect(state.editing).toBe(false)
+    ipc.sortTagTracks.mockResolvedValueOnce({ ok: false, error: { kind: 'noSession' } })
+    await state.sortTracks({ key: 'fileName', descending: false })
+    expect(state.error).toEqual({ kind: 'noSession' })
+    expect(state.view).toBe(SORTED)
   })
 
   it('previewFromNames returns the rows and keeps a typed error', async () => {

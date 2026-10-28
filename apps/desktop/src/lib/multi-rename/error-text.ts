@@ -48,6 +48,8 @@ export function errorText(error: MultiRenameError): string {
       return tString('multiRename.error.couldntWriteNames')
     case 'namesFileGone':
       return tString('multiRename.results.gone')
+    // The sort sends the session's own names, so this is a bug if it shows; worded like any internal failure.
+    case 'notAPermutation':
     case 'couldntStart':
     case 'internal':
       return tString('multiRename.error.couldntStart')

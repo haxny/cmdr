@@ -33,6 +33,8 @@ pub enum MultiRenameError {
     StillReading,
     /// The folder, or a row in it, is read-only because a route serves it.
     ReadOnly { place: ReadOnlyPlace },
+    /// A new order that isn't the session's own files, each exactly once. Nothing was changed.
+    NotAPermutation,
     /// Results couldn't write its names file; `detail` is log text only.
     CouldntWriteNames { detail: String },
     /// There's no Results file to read back: none was written, or it's gone or
