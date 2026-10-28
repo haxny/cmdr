@@ -155,3 +155,17 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   that the server pair may take a different form from the file-op `verb*` keys. (fr)
 - `suggestedOps.server.field.share` ("Share") collides with the Share-menu verb in term-consistency in every locale that
   splits verb and noun; consider "Shared folder" or a note pointing at `network-share`. (fr)
+- `concepts.json` `ask-cmdr` has `notMatch: ["ask cmdr to"]` but not `"ask cmdr for"`, so
+  `errors.write.namedLeavesRefused.suggestion.sameName` / `ontoASource` (the verb "Ask Cmdr for …") false-match the
+  panel brand; add it. (hu)
+- The same act, asking for a new suggestion, says "Ask Cmdr" in `errors.write.namedLeavesRefused.suggestion.*` but "Ask
+  the AI" in `suggestedOps.refusal.*.suggestion`; align the English subject. (hu)
+- `suggestedOps.reversible.forgetServer` / `changeServerBack` drop the "You can undo this:" frame every other
+  `suggestedOps.reversible.*` pill shares; confirm that's deliberate. (hu)
+- `errors.write.namedLeavesRefused.suggestion.ontoASource` says "the items being moved", but the refusal also covers a
+  copy; say "the items in this suggestion" or similar. (de)
+- `suggestedOps.server.add` ("Add a server", the kind tag) and `suggestedOps.approve.addServer` ("Add server", the
+  button) collapse to one German string (`Server hinzufügen`) on the same card; if the tag should read as a noun, say so
+  in its description. (de)
+- de also hit the `ask cmdr for` false match, the "Share" verb/noun split, and the dropped "You can undo this:" frame
+  logged above (fr, hu); handled with termbase exceptions and a term-consistency allowlist entry. (de)

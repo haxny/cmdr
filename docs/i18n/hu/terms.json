@@ -320,7 +320,11 @@
     "forms": "suffix without a hyphen, front vowel: Ask Cmdrt; article az before it (Az Ask Cmdr bezárása); compound with a hyphen: Ask Cmdr-csevegések; Turn on Ask Cmdr → Ask Cmdr bekapcsolása",
     "confidence": "high",
     "sources": "en @key (product name)",
-    "note": "The brand names only the chat panel (title, View menu, palette, Settings section, the switch). Prose about what the app does says a Cmdr or az AI; don't write Az Ask Cmdr… back into sentences."
+    "note": "The brand names only the chat panel (title, View menu, palette, Settings section, the switch). Prose about what the app does says a Cmdr or az AI; don't write Az Ask Cmdr… back into sentences.",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.sameName": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Kérj a Cmdrtől",
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Kérj a Cmdrtől"
+    }
   },
   "attachment": {
     "chosen": "melléklet",
@@ -1241,7 +1245,7 @@
   },
   "edit": {
     "chosen": "szerkesztés",
-    "accept": ["szerkeszt", "módosít"],
+    "accept": ["szerkeszt", "szerkeszd", "módosít"],
     "forms": "the menu bar Edit → Szerkesztés; F4 Edit in editor → Megnyitás szerkesztésre (tentative); editing an archive → Archívum szerkesztése; editing a saved server → Szerver szerkesztése…; to change them (a form) → a módosításukhoz",
     "confidence": "high",
     "sources": "macOS (Szerkesztés); catalog (commands.fileEdit.label)"
@@ -3560,6 +3564,16 @@
     "confidence": "high",
     "sources": "catalog"
   },
+  "start": {
+    "chosen": "elindul",
+    "accept": ["elindít", "indul", "indít"],
+    "exceptions": {
+      "indexing.step.statusPending": "a status cell: Not started is the waiting state, and the slot takes one word (Várakozik)"
+    },
+    "forms": "a task starting → elindul; so nothing started → ezért semmi nem indult el; Why this didn’t start → Miért nem indult el; Cmdr starts X → a Cmdr elindítja",
+    "confidence": "high",
+    "sources": "macOS AppKit hu (nem sikerült elindítani); catalog (suggestedOps.refusal.label, suggestedOps.refusal.couldNotStart.message: semmi nem indult el, 4×)"
+  },
   "startup-disk": {
     "chosen": "indítólemez",
     "forms": "your startup disk → az indítólemezed",
@@ -4200,5 +4214,12 @@
       "fileExplorer.errorPane.hoursAgo": "a terse age chip in the error pane: the bare abbreviation ({hours} ó) already reads as elapsed time, and ezelőtt would crowd the chip"
     },
     "sources": "macOS Finder hu (Egy héttel ezelőtt); catalog (ui.toast.age, queryUi.age.*, fileExplorer.errorPane.aMomentAgo)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip-archívum", "zip archívum", "zipet", "zipben", "zipből", "Zip"],
+    "forms": "the bare prose noun takes front-vowel suffixes, no hyphen (zipet, zipben, zipből); into or out of a zip archive → zip-archívumba / zip-archívumból (see archive); a capitalized heading keeps macOS's space (Zip archívumok)",
+    "confidence": "high",
+    "sources": "macOS hu (Zip archívum, ZIP-archívum); Total Commander / Double Commander hu (ZIP fájl); catalog (zipet 3×, zipben 2×, zipből, zip-archívum 3×)"
   }
 }
