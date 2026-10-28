@@ -10,7 +10,7 @@ use super::session::{Loaded, close, edit, open, unchanged_on_disk};
 use super::session_test::{album, folder, path_of, set_title, tag_file};
 use super::sort::{SortItem, TrackSort, TrackSortKey, sort_tracks, sorted_names};
 use super::view::TagEditorView;
-use crate::multi_rename::session::{close as close_rename, files_of, open as open_rename};
+use crate::multi_rename::session::{RowMove, close as close_rename, files_of, move_row, open as open_rename};
 
 const ASC: bool = false;
 
@@ -314,4 +314,36 @@ fn a_file_name_sort_keeps_unreadable_files_in_name_order() {
         sorted_names(&items, sort(TrackSortKey::FileName, ASC), &collator),
         vec!["a.mp3", "b.flac", "c.mp3"]
     );
+}
+
+#[test]
+fn a_row_moved_by_another_road_clears_the_stored_sort() {
+    let (_dir, id, _listing) = session_of(
+        "tag-sort-stale",
+        &[
+            ("a.mp3", &[(TagField::Track, "1")]),
+            ("b.mp3", &[(TagField::Track, "2")]),
+            ("c.mp3", &[(TagField::Track, "3")]),
+        ],
+    );
+    open(&id, false).expect("opens");
+    let view = sort_tracks(&id, sort(TrackSortKey::DiscTrack, ASC)).expect("sorts");
+    assert_eq!(view.sort, Some(sort(TrackSortKey::DiscTrack, ASC)));
+
+    // Multi-Rename's own reorder: the header must no longer claim an order.
+    move_row(&id, 0, RowMove::Down).expect("moves");
+    let view = open(&id, false).expect("reopens");
+    assert_eq!(names(&view), vec!["b.mp3", "a.mp3", "c.mp3"]);
+    assert_eq!(view.sort, None);
+
+    // The moved order is the user's: reopening never sorts it back.
+    let view = open(&id, false).expect("reopens again");
+    assert_eq!(names(&view), vec!["b.mp3", "a.mp3", "c.mp3"]);
+    assert_eq!(view.sort, None);
+
+    // A fresh sort sets it again.
+    let view = sort_tracks(&id, sort(TrackSortKey::FileName, ASC)).expect("sorts");
+    assert_eq!(view.sort, Some(sort(TrackSortKey::FileName, ASC)));
+    close(&id);
+    close_rename(&id);
 }

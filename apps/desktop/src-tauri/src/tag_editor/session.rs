@@ -127,8 +127,11 @@ impl Entry {
 #[derive(Default)]
 pub(super) struct TagSession {
     pub(super) by_path: HashMap<PathBuf, Entry>,
-    /// The order the user last chose or the session opened in; `None` before the first open sets it.
+    /// The order last chosen or opened in; `None` before the first sort or once another road reordered the tracks.
     pub(super) sort: Option<TrackSort>,
+    /// The order `sort` made; `sort` stands only while the tracks still are in it.
+    pub(super) sorted_tracks: Vec<PathBuf>,
+    pub(super) ordered: bool, // A sort has run: a restart keeps the order, even one moved by hand.
 }
 
 pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -248,17 +251,15 @@ pub(crate) fn open_counting(
             (path.clone(), entry)
         })
         .collect();
-    // The first open of a tag session sorts by default; a restart keeps the user's order.
     let opened = {
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.entry(session_id.to_string()).or_default();
         session.by_path = by_path;
-        match session.sort {
-            Some(_) => Ok(view_of(&layout, session)),
-            None => Err(TrackSort::default_for(session)),
-        }
+        session.drop_stale_sort(&layout);
+        let ordered = session.ordered.then(|| view_of(&layout, session));
+        ordered.ok_or_else(|| TrackSort::default_for(session))
     };
-    let view = opened.or_else(|default_sort| reorder(session_id, default_sort))?;
+    let view = opened.or_else(|default| reorder(session_id, default))?;
     // The rename session may have closed during the read, after its close hook already ran:
     // it removes its own session before calling the hook, so asking again now (lock order
     // rename → tag, never nested) catches every such close.
@@ -281,10 +282,11 @@ pub(super) fn with_loaded<R>(session_id: &str, f: impl FnOnce(&[&Loaded]) -> R) 
     })
 }
 
-/// Drops entries whose path left the layout.
+/// Drops entries whose path left the layout, and the sort when another road reordered the tracks.
 pub(super) fn prune(session: &mut TagSession, layout: &Layout) {
     let current: HashSet<&PathBuf> = layout.tracks.iter().collect();
     session.by_path.retain(|path, _| current.contains(path));
+    session.drop_stale_sort(layout);
 }
 
 pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {

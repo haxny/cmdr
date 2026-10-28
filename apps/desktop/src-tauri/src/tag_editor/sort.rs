@@ -63,6 +63,15 @@ impl TrackSort {
     }
 }
 
+impl TagSession {
+    /// Forgets `sort` when the tracks no longer stand in the order it made.
+    pub(super) fn drop_stale_sort(&mut self, layout: &Layout) {
+        if self.sort.is_some() && self.sorted_tracks != layout.tracks {
+            self.sort = None;
+        }
+    }
+}
+
 /// One session file to place: its name as the session holds it, and its tags when it was read.
 pub(super) struct SortItem<'a> {
     pub name: &'a str,
@@ -173,7 +182,6 @@ pub(super) fn reorder(session_id: &str, sort: TrackSort) -> Result<TagEditorView
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.get_mut(session_id).ok_or(TagEditorError::NotOpen)?;
         prune(session, &layout);
-        session.sort = Some(sort);
         ordered_names(&files, &layout, session, sort)
     };
     set_order(session_id, new_names).map_err(|error| match error {
@@ -184,7 +192,13 @@ pub(super) fn reorder(session_id: &str, sort: TrackSort) -> Result<TagEditorView
         _ => TagEditorError::TaskFailed,
     })?;
     log::debug!(target: LOG_TARGET, "sorted {} tracks", layout.tracks.len());
-    with_session(session_id, |layout, session| Ok(view_of(layout, session)))
+    with_session(session_id, |layout, session| {
+        // Only now that the order is set: a failed sort leaves the session to be sorted again.
+        session.sort = Some(sort);
+        session.sorted_tracks = layout.tracks.clone();
+        session.ordered = true;
+        Ok(view_of(layout, session))
+    })
 }
 
 /// The session's names with its audio files in `sort` order, in the places the audio files held.
