@@ -164,8 +164,9 @@ the write; any refusal writes nothing.
     `name`. Edit: `name`, `startFolder`. An add without `uid` / `gid` stores none: the add form's guess
     asks the server, which an approval mustn't, so the approval decides.
   - `s3`. Add: a BUCKET place under a saved account, `account` (its listing id) and `bucket`, plus `name`. Edit: `name`.
-    No account at all is a new account, `protocolNotProposable` (the user adds one in Servers, where the key id comes
-    from).
+    No account at all is a new account, `protocolNotProposable` (the user adds one in Servers). Why so narrow: a new
+    account needs the provider-and-endpoint union in the schema, paid on every turn for a rare case, and its key id
+    can only come from the user, who is better served by the add sheet.
   - ❗ An NFS or S3 `name` is the SERVER's or the ACCOUNT's (the stores keep no per-export or per-bucket name), so it
     renames the row every place under it shares.
 - **Identity fields** (`host`, `port`, `url`, `export`, `account`, `bucket`, the protocol, and who the server signs

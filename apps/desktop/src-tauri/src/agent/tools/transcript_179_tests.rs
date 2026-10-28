@@ -1,5 +1,5 @@
 //! The volume facts of prod conversation 179, replayed: the acceptance test for
-//! volume-aware tools (`docs/specs/ask-cmdr-volume-aware-tools-plan.md`).
+//! volume-aware tools (`DETAILS.md` § The location contract).
 //!
 //! One NAS, two ids. The Tailscale share is saved and not connected, last root
 //! `/Volumes/naspi`, with a drive index on disk; the LAN share is live at

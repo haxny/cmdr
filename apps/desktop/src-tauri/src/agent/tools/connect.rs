@@ -17,8 +17,8 @@
 //!   `saved_servers::connect_saved_place` with no secret: one flight per
 //!   place, shared with a pane's own dial (`network::dial_flights`).
 //!
-//! Before any of that, a share reached by two addresses is one share (decision 15
-//! of `docs/specs/ask-cmdr-volume-aware-tools-plan.md`): a member whose
+//! Before any of that, a share reached by two addresses is one share (`DETAILS.md`
+//! § Connecting a saved place): a member whose
 //! same-account sibling is serving answers `alreadyConnected` with that sibling's
 //! location and `via`; with none serving, the dial goes to the member connected
 //! most recently. Both through `VolumeFacts::connect_target`, on the same

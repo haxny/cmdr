@@ -325,7 +325,7 @@ launch and on every network action) leaves it out of the list too.
 - **A contact-free save never hides an ordinary host**, and the user's own add of a waiting host makes it ordinary: a
   re-save keeps the flag only while both saves say so (`add_server_entry_to_path`).
 - **Decision: the add sheet's "Add anyway" keeps joining the list** (`add_manual_server` with `Reachability::Skip`):
-  the person typed that address and asked for it. Whether it should save contact-free too is David's call (#749).
+  the person typed that address and asked for it. Whether it should save contact-free too is David's call (#777).
 
 ### Mount path disambiguation for same-name shares
 
