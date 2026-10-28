@@ -362,11 +362,40 @@ describe('the Tags window’s function keys', () => {
     expect(document.activeElement).toBe(box)
   })
 
-  it('Tab by the menu switches the panes', async () => {
+  it('Tab is never taken from the menu: it stays the panes’ and the page’s', async () => {
     const root = await mountWindow()
     menuKey.callback?.({ commandId: 'tags.switchPane', menuCommandId: 'pane.switch' })
     await settle()
-    expect(document.activeElement).toBe(paneList(root, 'Tracks'))
+    expect(document.activeElement).toBe(paneList(root, 'Album tags'))
+  })
+
+  it('Tab in an open tool dialog moves focus within the dialog (its focus trap), never the panes', async () => {
+    const root = await mountWindow()
+    await key('F8')
+    const inDialog = () => dialog()?.contains(document.activeElement) === true
+    const tabbables = [...(dialog() as HTMLElement).querySelectorAll<HTMLElement>('button:not([disabled])')]
+    const last = tabbables.at(-1)
+    if (!last) throw new Error('nothing to tab to in the dialog')
+    last.focus()
+    await key('Tab')
+    expect(inDialog()).toBe(true)
+    expect(document.activeElement).not.toBe(last)
+    await key('Tab', { shiftKey: true })
+    expect(inDialog()).toBe(true)
+    expect(document.activeElement).not.toBe(paneList(root, 'Tracks'))
+    expect(dialog()).not.toBeNull()
+  })
+
+  it('Tab in the value box doesn’t switch the panes', async () => {
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    const tab = await key('Tab')
+    expect(tab.defaultPrevented).toBe(false)
+    expect(document.activeElement).not.toBe(paneList(root, 'Tracks'))
+    expect(root.querySelector('[data-pane="tracks"] .full-list-container')?.classList.contains('is-focused')).toBe(
+      false,
+    )
+    expect(box.isConnected).toBe(true)
   })
 
   it('refused text in the value box: a click on Write acts on nothing, and focus settles in the box with no loop', async () => {

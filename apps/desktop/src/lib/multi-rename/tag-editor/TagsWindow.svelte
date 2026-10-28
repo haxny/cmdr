@@ -10,7 +10,7 @@
      * `runCommand`, except while a value is typed (only ⌘S, which the box has already committed, and the close keys get
      * through; the value editor claims its own Esc), while a dialog is open (it owns its keys, Escape included), and
      * Enter on a focused control (a button presses). On macOS the main menu this window installs holds F2–F8, ⇧F2,
-     * ⇧F4, ⇧F8 and Tab as accelerators that fire before the page: those presses arrive from the menu
+     * ⇧F4 and ⇧F8 as accelerators that fire before the page: those presses arrive from the menu
      * (`onTagsMenuKey`), under the same rules, and a press seen by both roads acts once (`TagsTab`'s key echo).
      */
     import { onMount } from 'svelte'

@@ -50,7 +50,7 @@ pub struct TagsSelectAll;
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
 pub struct TagsDeselectAll;
 
-/// `tags-menu-key`: a File / Select / View menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8, Tab) pressed while a Tags
+/// `tags-menu-key`: a File / Select menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while a Tags
 /// window is focused. Those accelerators fire before the page's keydown, so this is how the
 /// window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]

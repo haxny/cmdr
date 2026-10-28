@@ -241,12 +241,10 @@
         'tags.removeExtras': () => { openTool('extras') },
         'tags.write': () => { writeMode = 'write' },
         'tags.undo': undoLast,
-        'tags.switchPane': () => { panes.switchPane() },
     }
 
     /** Whether `id` can act on the tags as they are now. */
     function canRun(id: TagsCommandId): boolean {
-        if (id === 'tags.switchPane') return tags.view !== null
         if (id === 'tags.undo') return tags.view?.editable === true
         return enabledCommands.has(id)
     }

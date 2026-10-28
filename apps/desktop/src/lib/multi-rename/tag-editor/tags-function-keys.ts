@@ -28,8 +28,8 @@ export const TAGS_BAR_COMMANDS = [
 
 export type TagsBarCommandId = (typeof TAGS_BAR_COMMANDS)[number]
 
-/** Every command the window runs: the bar's, plus ⌘Z and Tab (Tab only by the menu road; the panes answer it). */
-export type TagsCommandId = TagsBarCommandId | 'tags.undo' | 'tags.switchPane'
+/** Every command the window runs: the bar's, plus ⌘Z. (Tab, `tags.switchPane`, is the panes' own.) */
+export type TagsCommandId = TagsBarCommandId | 'tags.undo'
 
 export interface TagsBarSlot {
   id: TagsBarCommandId
@@ -114,7 +114,10 @@ export function enabledTagsCommands(view: TagEditorView | null): ReadonlySet<Tag
   return new Set(on)
 }
 
-/** The commands a main-menu key may run in the window (`TagsMenuKey`, `tag_editor::window::menu_key_command_of`). */
+/**
+ * The commands a main-menu key may run in the window (`TagsMenuKey`, `tag_editor::window::menu_key_command_of`).
+ * ❌ Never Tab: the page sees it anyway, and in a dialog or a field it must move focus, not switch panes.
+ */
 const MENU_KEY_COMMANDS: ReadonlySet<string> = new Set<TagsCommandId>([
   'tags.edit',
   'tags.editNumber',
@@ -126,7 +129,6 @@ const MENU_KEY_COMMANDS: ReadonlySet<string> = new Set<TagsCommandId>([
   'tags.number',
   'tags.clearField',
   'tags.removeExtras',
-  'tags.switchPane',
 ])
 
 /**

@@ -632,8 +632,8 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         return;
     }
 
-    // === The File / Select F-keys (and View's Tab) in a Tags window: its tag tools ===
-    // F2–F8, ⇧F2, ⇧F4, ⇧F8 and Tab are this bar's accelerators, which fire ahead of the page; greyed
+    // === The File / Select F-keys in a Tags window: its tag tools ===
+    // F2–F8, ⇧F2, ⇧F4 and ⇧F8 are this bar's accelerators, which fire ahead of the page; greyed
     // in a Tags window, they'd reach the FileScoped guard below and be dropped. Main focused: no
     // Tags window is, and they run as before.
     if let Some(command_id) = crate::tag_editor::window::menu_key_command_of(id)

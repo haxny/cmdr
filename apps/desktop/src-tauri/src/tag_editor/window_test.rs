@@ -63,7 +63,7 @@ fn deselect_all_goes_to_the_focused_tags_window_only() {
 fn the_file_and_select_f_keys_name_the_tag_command_with_the_same_key() {
     use crate::menu::{
         COMPARE_DIRECTORIES_ID, EDIT_ID, FILE_COPY_ID, FILE_DELETE_ID, FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID,
-        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID, SWITCH_PANE_ID,
+        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID,
     };
     let expected = [
         (RENAME_ID, "tags.edit"),                          // F2
@@ -76,7 +76,6 @@ fn the_file_and_select_f_keys_name_the_tag_command_with_the_same_key() {
         (FILE_NEW_FOLDER_ID, "tags.number"),               // F7
         (FILE_DELETE_ID, "tags.clearField"),               // F8
         (FILE_DELETE_PERMANENTLY_ID, "tags.removeExtras"), // ⇧F8
-        (SWITCH_PANE_ID, "tags.switchPane"),               // Tab
     ];
     for (id, command) in expected {
         assert_eq!(menu_key_command_of(id), Some(command), "{id}");
@@ -86,8 +85,12 @@ fn the_file_and_select_f_keys_name_the_tag_command_with_the_same_key() {
 /// Items whose keys the Tags window has no command for stay on their own road (greyed there).
 #[test]
 fn other_menu_items_are_not_tag_keys() {
-    use crate::menu::{CLOSE_TAB_ID, FILE_COMPRESS_ID, FILE_DUPLICATE_ID, OPEN_TERMINAL_HERE_ID, SELECT_ALL_ID};
+    use crate::menu::{
+        CLOSE_TAB_ID, FILE_COMPRESS_ID, FILE_DUPLICATE_ID, OPEN_TERMINAL_HERE_ID, SELECT_ALL_ID, SWITCH_PANE_ID,
+    };
+    // Switch pane's Tab stays the page's: in a dialog or a field it moves focus, never the panes.
     for id in [
+        SWITCH_PANE_ID,
         FILE_COMPRESS_ID,
         FILE_DUPLICATE_ID,
         OPEN_TERMINAL_HERE_ID,

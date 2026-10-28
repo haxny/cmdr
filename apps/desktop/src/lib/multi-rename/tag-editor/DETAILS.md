@@ -56,20 +56,25 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   as the in-flow panels did. A command that can't act (tags still being read, read-only, no extras, a dialog open) does
   nothing: the reading notice or the status line already says why. Closing the Write dialog on a write that left files
   unwritten keeps "Some files weren't written" in the status line.
-- **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select / View
-  items register F2–F8, ⇧F2, ⇧F4, ⇧F8 and Tab. Those accelerators fire ahead of the page and the file-scoped guard would
-  drop them, so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
+- **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select items
+  register F2–F8, ⇧F2, ⇧F4 and ⇧F8. Those accelerators fire ahead of the page and the file-scoped guard would drop them,
+  so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
   (`tag_editor::window::menu_key_command_of`: the item's Tags command, plus the item's own command). `menuKeyCommand`
   acts only while that item's first key is still one of the Tags command's keys (a rebound file command never runs a tag
   tool), under the keydown's rules (no dialog open, no value being typed). If the page sees the key too, the press acts
   once: `TagsTab`'s `createTagsKeyEcho` (per command, `createKeyRoadEcho`'s 300 ms) drops the other road's twin; the
-  panes ask it for F2, ⇧F2, F3 and Tab (never Enter or ⌥Space, which no menu item holds). Main focused: no Tags window
-  is, and the items run as before. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key reaches the
-  page's keydown (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` outside a text box and
-  leaves ⌘Z to the box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S, ⇧F3,
-  ⇧F5, ⌥Space and Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
+  panes ask it for F2, ⇧F2 and F3 (never Enter or ⌥Space, which no menu item holds). Main focused: no Tags window is,
+  and the items run as before. ❌ View > Switch pane's Tab is never routed. Decision/Why: the page sees Tab despite that
+  accelerator (main's dialogs and inline rename move focus with it, and main's keydown resolver leaves Tab unclaimed in
+  a dialog for exactly that, `routes/(main)/DETAILS.md` § The dialog gate); a routed Tab would switch panes from a
+  dialog or a field where Tab must move focus. The panes answer Tab themselves; elsewhere it is the browser's and the
+  dialog focus trap's. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key reaches the page's keydown
+  (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` outside a text box and leaves ⌘Z to the
+  box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S, ⇧F3, ⇧F5, ⌥Space and
+  Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
   `every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window`. ❗ Not yet checked by hand in a built app:
-  F2–F8, ⇧F2–⇧F5, ⇧F8, Tab, ⌘S, ⌘Z (in and out of a box), ⌘W, Esc (Plan 2c Task 4b fix round 1, 2026-10-28).
+  F2–F8, ⇧F2–⇧F5, ⇧F8, Tab (panes, a tool dialog, the value box), ⌘S, ⌘Z (in and out of a box), ⌘W, Esc (Plan 2c Task 4b
+  fix rounds 1–2, 2026-10-28).
 - **A value box with text in it settles before any other command** (`runCommand` → each pane's `settleEditor` →
   `TagValueEditor.commit()`): sendable text is sent, as a click away does; refused text («multiple values» marker left
   in) keeps the box open with its hint and the command doesn't run. A click away from refused text takes focus back,

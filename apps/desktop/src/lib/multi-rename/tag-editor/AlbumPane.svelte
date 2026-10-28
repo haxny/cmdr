@@ -142,7 +142,7 @@
         if (e.isComposing || e.target !== list) return
         if (eventMatchesCommand(e, 'tags.switchPane')) {
             claimKey(e)
-            if (isEcho?.('tags.switchPane') !== true) onSwitchPane()
+            onSwitchPane()
             return
         }
         if (eventMatchesCommand(e, 'tags.edit')) {

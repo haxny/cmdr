@@ -1327,7 +1327,7 @@ class of bug.
   PredefinedMenuItem::select_all which would conflict with the custom MenuItem. Deselect all (⌘⇧A)
   stays on the plain `FileScoped` path: AppKit has no standard "deselect all" responder action for
   text fields, so there's nothing native to forward to. A focused Tags window (`tags-*`) is the exception for both,
-  and for the File / Select / View items holding F2–F8, ⇧F2, ⇧F4, ⇧F8 and Tab: they go to that window as its own
+  and for the File / Select items holding F2–F8, ⇧F2, ⇧F4 and ⇧F8 (not Switch pane's Tab): they go to that window as its own
   events (`tag_editor::window`; why and how: `apps/desktop/src/lib/multi-rename/tag-editor/DETAILS.md` § Keys the native
   menu takes first).
 - **An item carrying a view still claims the image column.** AppKit reserves image space for a view item's `image`, so

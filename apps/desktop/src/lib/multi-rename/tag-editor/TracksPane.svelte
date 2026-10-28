@@ -176,7 +176,7 @@
     }
 
     /** The command a pane key means: Tab, F3 / ⌥Space, F2 / Enter, ⇧F2. */
-    function paneCommandOf(e: KeyboardEvent): TagsCommandId | null {
+    function paneCommandOf(e: KeyboardEvent): TagsCommandId | 'tags.switchPane' | null {
         const ids = ['tags.switchPane', 'tags.play', 'tags.edit', 'tags.editNumber'] as const
         return ids.find((id) => eventMatchesCommand(e, id)) ?? null
     }
@@ -189,11 +189,14 @@
         const id = paneCommandOf(e)
         if (id === null) return false
         claimKey(e)
-        // Enter and ⌥Space are no menu keys, so only F2, F3, ⇧F2 and Tab can have arrived by the menu too.
+        if (id === 'tags.switchPane') {
+            onSwitchPane()
+            return true
+        }
+        // Enter and ⌥Space are no menu keys, so only F2, F3 and ⇧F2 can have arrived by the menu too.
         const viaMenuToo = e.key !== 'Enter' && e.code !== 'Space'
         if (viaMenuToo && isEcho?.(id) === true) return true
-        if (id === 'tags.switchPane') onSwitchPane()
-        else if (id === 'tags.play') play(at)
+        if (id === 'tags.play') play(at)
         else if (id === 'tags.edit') openEditor(at, 'title')
         else if (showNumber) openEditor(at, 'track')
         return true
