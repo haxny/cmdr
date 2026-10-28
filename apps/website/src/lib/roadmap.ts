@@ -744,6 +744,12 @@ export const roadmapSections: RoadmapSection[] = [
             description: 'Put capture dates, music artists, track #, etc. in file names.',
             done: true,
           },
+          {
+            date: '(Oct 26)',
+            title: 'Useful AI',
+            description: 'Full revamp: more capable agent, transparent tool calls, new suggestions UI.',
+            done: true,
+          },
         ],
       },
     ],

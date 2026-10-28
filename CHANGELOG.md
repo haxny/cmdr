@@ -5,9 +5,100 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
-## [0.56.0] - 2026-10-23
+## [0.57.0] - 2026-10-28
 
-Another big one! The highlights:
+The three highlights:
+
+1. I've neglected AI features for months. Now I finally gave them some love. The agent got better system prompts and
+   more tools. The UI finally displays the agent's tool calls transparently, and the suggestions UI is basically new.
+   It's still not perfect but improved a lot. With an Opus 5.5 wired in it's already pretty decent, but I also want to
+   set up Sonnet-level agents for success.
+2. A major MTP speedup: big Android folders now list up to 10× faster—I listed 3,248 photos in 0.4 s down from 5.5 s.
+3. The usual: 30+ bug fixes and smaller improvements.
+
+### Added
+
+- See what Ask Cmdr looked at and what came back on every step, with paths that open in a pane and steps folded under
+  one summary (9c40a5c7d, 54e4ee35f, 9fe4e9a83, 407d2f54c, d40ced760, 73ac3126b, 2a4f7fe32, 4bbcb5ea6, a1bdd8b54,
+  18ee599ed)
+- Let Ask Cmdr list and search your NAS even while it sleeps, and connect a server you saved when you ask (fa35bb827,
+  edc396c27, 56f76dfdd, 4c214ff72, 29837a245, 038a62c52, b7ec0ad78, 7b2552499, 27a1a66a9, de3081fde, 0430170dc,
+  65bf7c4b0)
+- Let Ask Cmdr file things by your existing folders and naming, with suggested moves that rename each file and one Undo
+  (6679a11a9, 5995443b8, 7ad9d7d7f, f9ed9161d, f02a4597a, b45abb80c, 5cd741860)
+- Approve Ask Cmdr's suggestions to save, rename, or refolder a server, with no password and no contact until you
+  connect (088b13f2a, da8de1c06, 7293b5880, c18cc5b17, 73843a33a)
+- Redesign the AI suggestions dialog: each action is named and explained, files show their current size and date, and
+  you pick which ones run (22f0b5e27, ab575e1c1, 0a602a31c, f246efe3c, acd351522, 10ac39b12, 2831b348d, e4db8a35a,
+  1393d8794, 19663703d, f80b3317d)
+- Let Ask Cmdr's answers run as long as they need, with a loop guard and a check-in past a set cost (default $2)
+  (c223b8794, 1645f7a8f, 1bebcb8dd)
+- Pick how hard each cloud model thinks in Settings > AI, with reasoning on every provider (0455eed34, 306b6ac46,
+  168541a10, f9941fd8c)
+- Show Ask Cmdr's cost and tokens in an always-visible footer, and say when no AI provider is set up (539e710ac,
+  4c03216f0, 8752bc227, e6e432f96)
+- Start a new Ask Cmdr chat with ⌘N (2d2be75b2)
+- Open "Go to folder…" with ⌘⇧G too, like in Finder (6c713a22f)
+- See everything an error report or feedback would send, in full, in the File viewer (ac14acdfe, 2689bd4b7)
+- Save an SMB server without contacting it through "Add anyway" (a5ec09734)
+
+### Changed
+
+- Make Ask Cmdr turns cheaper: earlier turns aren't billed again, and Claude and GPT-5.6+ hit the prompt cache
+  (c756e81a4, b07041114, 55a28ef9e)
+- Let Ask Cmdr's chat memory use the model's whole context window (45bb10848, 743e18f68)
+- Show numbers in the app's language and dates in your Mac's region format (7978560e2, 0a3e179eb)
+- List big Android folders 10× faster or more (6378b645d)
+- Say up front when an AI trash suggestion is on a drive with no Trash, and delete for good once you approve (189ecb597,
+  0a345e636, df2dbc921, bb6d06c7f)
+- Light a drive's indexing dot blue the moment you turn indexing on (103f69cbd)
+- Use clearer wording across the app, in all 11 languages (360a0cfb2, 02e44f6c6, 8c9d24006, 1a2cb3a1e)
+
+### Fixed
+
+- Fix links and buttons in Settings doing nothing, like the AI sign-up links, Buy a license, and Open log folder
+  (4cbbf5747)
+- Fix the operation queue, Settings, and Keyboard shortcuts not coming back when clicked while minimized (343c926cf)
+- Fix a setting changed right before quitting getting lost (412fa20e6)
+- Fix AI folder suggestions, AI search, AI selection, and the Anthropic key check failing on current Claude models
+  (f97ff4447, 35c69dc49, 8491aa4bc, 9704e4767, 7dadf540b)
+- Fix Ask Cmdr's cost meter showing almost four times the real price for current Claude models (a0aa00857)
+- Fix the model picker offering models that can't chat (31eb48cc4)
+- Fix some zstd-compressed zip entries failing to open as corrupt (ed3aa3ca0)
+- Fix FAT32 and exFAT USB sticks not offering the Trash (2a4e94f5f, 893e692af)
+- Fix progress on network folder copies ending at "1 / 36", and quick copies showing every file at 0 bytes (1952093dc,
+  e37ca9301, 3efcf2f1f, 2110c6a99)
+- Fix new folders showing "≥" sizes or `<dir>` until the next launch (401364633, b5ba9e701)
+- Fix Brief view cutting names short after a zoom change (34c3907b9, a0e8ccb39)
+- Fix words breaking mid-word in dialogs, the operation log, and the queue (096edbcdd, 34becf272, 4580d6522, fc61100bc)
+- Fix closing some list dialogs crashing the window (aa1b4a115)
+- Fix menu commands sometimes running twice after the window reloaded (12c1ddcf0)
+- Fix restic snapshots failing to browse for minutes after a prune on another machine (7ce00ca18)
+- Fix long pauses still failing some WebDAV uploads, and canceled uploads leaving temp files on the server (1179a77a2,
+  7299220a7)
+- Fix a phone move under a new name replacing a file there, and names too long for a phone garbling the transfer
+  (be7ff2d9c, 04f123065)
+- Fix searching "German" (or any language's English name) not finding the Language setting (aaae2ec0e)
+- Fix a dragged dialog getting stuck where you can't grab it, and checkboxes hopping when ticked (60eb4fda8, b9b6e4352)
+- Fix folder importance ranking app internals as top projects and ignoring folders you open on a NAS (30f15aad2,
+  d7a8856ef, 5e4c87749)
+
+### Security
+
+- Stop a malicious `.git/config` in a browsed repo from switching off git's path protections (70ae9eb83)
+- Keep S3 access key IDs out of logs and the copy dialog (1981c788b)
+- Update SQLite, zstd, and tokio for upstream security fixes (c01c0dbe5, 4afd0a946, 1e2dec747)
+
+### Non-app
+
+- Fuzz every NFS reply decoder against hostile servers (d8c5fcfdb, 9fd3cc7c6)
+- Serve the website from Cloudflare's edge with long caching, a report-only CSP, and a dead-link check (2df192f8c,
+  ff1135a06, 6f0eb05eb, 1a2c6d2da)
+- Switch every product screenshot to shadowless window captures (02d315083, d1a07f10d)
+- Make docs-only and merge-back CI runs finish in minutes, and `land` report red CI at the first failed job (9bd4d81fe,
+  8b9651933, 2964c87e3)
+
+## [0.56.0] - 2026-10-23
 
 Wow, this one was quick! My three highlights:
 
