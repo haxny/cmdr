@@ -2099,6 +2099,17 @@
     "forms": "Language & Region → 語言與地區",
     "sources": "AP-TW = AP-HK, MS"
   },
+  "later": {
+    "accept": ["之後", "以後"],
+    "chosen": "稍後",
+    "confidence": "high",
+    "exceptions": {
+      "fileOperations.transferDialog.policyStop": "\"Ask later\" (a conflict policy) is 逐一詢問 (ask for each), not the Later button.",
+      "settings.fileOperations.defaultConflictPolicy.opt.stop": "The same conflict policy as fileOperations.transferDialog.policyStop, reusing its 逐一詢問."
+    },
+    "note": "Only the button that defers a prompt (`updates.toast.later`); the adverb later is 之後 / 以後 (Apple's 你可以之後再將「^0」燒錄至光碟。, `suggestedOps.reversible.forgetServer`).",
+    "sources": "AP-TW (稍後, 之後 in prose); catalog"
+  },
   "layout": {
     "chosen": "版面配置",
     "confidence": "high",
@@ -3482,6 +3493,9 @@
   "share-menu": {
     "chosen": "分享",
     "confidence": "high",
+    "exceptions": {
+      "suggestedOps.server.field.share": "The SMB shared folder on a suggested server (network-share), not the Share menu; English is moving to \"Shared folder\"."
+    },
     "forms": "share options → 分享選項; No share options → 沒有分享選項",
     "note": "Apple itself swaps the words (TW 共享與權限： vs HK 分享與權限：), so 分享 is the safer single choice for handing a file to another app; an SMB share is 共享資料夾.",
     "sources": "AP-TW (#N166), MS"
@@ -3724,6 +3738,13 @@
     "chosen": "啟動磁碟",
     "confidence": "confirmed",
     "sources": "AP-TW (選擇啟動磁碟)"
+  },
+  "start": {
+    "accept": ["啟動"],
+    "chosen": "開始",
+    "confidence": "high",
+    "forms": "nothing started → 什麼都沒有開始; a background service starting up → 啟動",
+    "sources": "AP-TW (若要開始進行⋯); Total Commander zh-TW (開始); catalog (`suggestedOps.refusal.label` 沒有開始的原因)"
   },
   "status": {
     "chosen": "狀態",
@@ -4306,6 +4327,13 @@
     "chosen": "寫入",
     "confidence": "confirmed",
     "sources": "AP-TW/HK, MS"
+  },
+  "zip": {
+    "accept": ["Zip"],
+    "chosen": "zip",
+    "confidence": "high",
+    "forms": "prose keeps the Latin format word, spaced (放進 zip, 這個 zip); zip archive → zip 壓縮檔",
+    "sources": "catalog (`errors.write.archiveEntryNameRefused.title` 這個名稱不能放進 zip); AP-TW Zip封存檔 / Zip檔 (tight, which § Spacing departs from)"
   },
   "zoom": {
     "accept": ["放大", "縮小"],

@@ -83,11 +83,11 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Add server",
+  "suggestedOps.approve.addServer": "加入伺服器",
   "@suggestedOps.approve.addServer": {
     "sourceHash": "1099b2a"
   },
-  "suggestedOps.approve.editServer": "Save changes",
+  "suggestedOps.approve.editServer": "儲存更改",
   "@suggestedOps.approve.editServer": {
     "sourceHash": "dd0ae7a"
   },
@@ -163,11 +163,11 @@
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "suggestedOps.reversible.forgetServer": "之後可以在「伺服器」裡忘記它",
   "@suggestedOps.reversible.forgetServer": {
     "sourceHash": "c94623d"
   },
-  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "suggestedOps.reversible.changeServerBack": "可以在「伺服器」裡改回來",
   "@suggestedOps.reversible.changeServerBack": {
     "sourceHash": "1a68195"
   },
@@ -327,75 +327,75 @@
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "5b5b779"
   },
-  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "suggestedOps.refusal.serverLabel": "沒有儲存的原因",
   "@suggestedOps.refusal.serverLabel": {
     "sourceHash": "c1958af"
   },
-  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "suggestedOps.refusal.serverChanged.message": "AI 提出這項建議之後，這個伺服器有了更動，所以 Cmdr 什麼都沒有儲存。",
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "請讓 AI 再建議一次，或是在「伺服器」裡編輯這個伺服器。",
   "@suggestedOps.refusal.serverChanged.suggestion": {
     "sourceHash": "c83a215"
   },
-  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "suggestedOps.refusal.alreadySaved.message": "這個伺服器已經在你的「伺服器」列表裡了，所以 Cmdr 什麼都沒有儲存。",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "請從「伺服器」開啟它，或是讓 AI 改成建議更改這個伺服器。",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
     "sourceHash": "eda1133"
   },
-  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "suggestedOps.refusal.nameTaken.message": "另一個已儲存的伺服器已經叫 {name} 了，所以 Cmdr 什麼都沒有儲存。",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "suggestedOps.refusal.nameTaken.suggestion": "請讓 AI 建議另一個名稱。",
   "@suggestedOps.refusal.nameTaken.suggestion": {
     "sourceHash": "c059ee2"
   },
-  "suggestedOps.server.add": "Add a server",
+  "suggestedOps.server.add": "加入伺服器",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Change a server",
+  "suggestedOps.server.change": "更改伺服器",
   "@suggestedOps.server.change": {
     "sourceHash": "7c07b82"
   },
-  "suggestedOps.server.field.port": "Port",
+  "suggestedOps.server.field.port": "連接埠",
   "@suggestedOps.server.field.port": {
     "sourceHash": "72e9a59"
   },
-  "suggestedOps.server.field.account": "Account",
+  "suggestedOps.server.field.account": "帳號",
   "@suggestedOps.server.field.account": {
     "sourceHash": "7e1b0d5"
   },
-  "suggestedOps.server.field.share": "Share",
+  "suggestedOps.server.field.share": "共享資料夾",
   "@suggestedOps.server.field.share": {
     "sourceHash": "29887a5"
   },
-  "suggestedOps.server.field.bucket": "Bucket",
+  "suggestedOps.server.field.bucket": "儲存貯體",
   "@suggestedOps.server.field.bucket": {
     "sourceHash": "c83b657"
   },
-  "suggestedOps.server.notSet": "Not set",
+  "suggestedOps.server.notSet": "未設定",
   "@suggestedOps.server.notSet": {
     "sourceHash": "4895f73"
   },
-  "suggestedOps.server.changesTo": "changes to",
+  "suggestedOps.server.changesTo": "改成",
   "@suggestedOps.server.changesTo": {
     "sourceHash": "8c0db20"
   },
-  "suggestedOps.server.newAddress": "A new address",
+  "suggestedOps.server.newAddress": "新位址",
   "@suggestedOps.server.newAddress": {
     "sourceHash": "5fc5498"
   },
-  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "suggestedOps.server.newAddressTooltip": "你儲存的伺服器都不在這個位址。請確認這就是你要的那一個。",
   "@suggestedOps.server.newAddressTooltip": {
     "sourceHash": "16d851c"
   },
-  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "suggestedOps.server.sharesAffected": "這項更改會影響這個伺服器上已儲存的 {countText} 個{count, plural, other {共享資料夾}}。",
   "@suggestedOps.server.sharesAffected": {
     "sourceHash": "390f931"
   },
