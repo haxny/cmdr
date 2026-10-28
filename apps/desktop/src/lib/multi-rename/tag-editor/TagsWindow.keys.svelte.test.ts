@@ -727,7 +727,6 @@ describe('⌘⏎ and ⌘S write at once', () => {
         allowFrameLoss: true,
         skip: ['/b/02.mp3', '/b/03.mp3'],
         allowRemovals: [],
-        sideFiles: false,
       },
       false,
     )

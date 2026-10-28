@@ -16,7 +16,7 @@
     import { formatUnitList } from '#lib/intl/list-format.js'
     import { joinSentences } from '#lib/intl/sentence-join.js'
     import type { ContentKind, KindRemoval, TagField } from '#lib/ipc/bindings.js'
-    import type { FileChangeView, SideFileChange, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
+    import type { FileChangeView, SideFileChange, SideFileSeen, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import Button from '#lib/ui/Button.svelte'
     import Spinner from '#lib/ui/Spinner.svelte'
@@ -26,7 +26,7 @@
     import WouldDropDialog from './WouldDropDialog.svelte'
     import { fileNameOf, outcomeOf, refusalOf, removalsShown, type ApplyOutcome as Outcome } from './apply-outcome'
     import { answerWriteAnyway } from './write-anyway'
-    import { replacementsShown, sideRowOf, sideWrites } from './side-files'
+    import { replacementsShown, sideFilesOn, sideRowOf } from './side-files'
     import { FIELD_LABELS } from './field-labels'
     import { undoableCount } from './last-tag-apply'
     import type { TagEditorState, TagStateError, TagUndoResult } from './tag-editor-state.svelte'
@@ -56,8 +56,10 @@
         | {
               step: 'review'
               changes: FileChangeView[]
-              /** The book's side files (`reader.txt`, `desc.txt`); none with the setting off. */
+              /** The book's side files (`reader.txt`, `desc.txt`); none with the setting off or no file to change. */
               sideFiles: SideFileChange[]
+              /** The setting as the list read it: the write sends the same (`ApplyRequest.sideFiles`). */
+              sideFilesAsked: boolean
               kind: ContentKind
               seen: TagEditorView | null
               earlier: TagApplyReport[]
@@ -75,6 +77,8 @@
               answering: boolean
               /** The files whose removals the list showed, allowed again for "Write anyway". */
               allowRemovals: string[]
+              sideFiles: boolean
+              allowSideFiles: SideFileSeen[]
           }
         | { step: 'done'; outcome: Outcome }
         /** The write was refused: `noneWritten` when that came before any file was touched, and why. */
@@ -178,10 +182,13 @@
         const listedAs = kind
         kindChosen = true
         current = { step: 'checking' }
+        const sideFilesAsked = sideFilesOn()
         const res = await tags.changes(listedAs)
-        const side = res.ok ? await tags.sideFileChanges() : null
-        if (res.ok && side?.ok === true) {
-            current = { step: 'review', changes: res.value, sideFiles: side.value, kind: listedAs, seen: tags.view, earlier }
+        // Side files ride along with a tag write, never alone: listed only when a file changes.
+        const side =
+            res.ok && res.value.length > 0 && sideFilesAsked ? await tags.sideFileChanges() : { ok: true as const, value: [] }
+        if (res.ok && side.ok) {
+            current = { step: 'review', changes: res.value, sideFiles: side.value, sideFilesAsked, kind: listedAs, seen: tags.view, earlier }
         } else {
             current = endedStep(earlier)
             notice = 'multiRename.tags.write.listFailed'
@@ -190,8 +197,8 @@
 
     /** Writes what `reviewed` listed. A list with nothing in it writes nothing (and so keeps the last Undo). */
     async function write(reviewed: Extract<Step, { step: 'review' }>): Promise<void> {
-        const { changes, sideFiles, kind: listedAs, seen, earlier } = reviewed
-        if (changes.length === 0 && !sideWrites(sideFiles)) return
+        const { changes, sideFiles, sideFilesAsked, kind: listedAs, seen, earlier } = reviewed
+        if (changes.length === 0) return
         // A call still out after the wait: write nothing; the list stays for another press.
         if (!(await callsAnswered())) return
         if (tags.view !== seen) {
@@ -205,7 +212,7 @@
         const allowRemovals = removalsShown(changes)
         const allowSideFiles = replacementsShown(sideFiles)
         const res = await tags.apply(
-            { kind: listedAs, allowFrameLoss: false, skip: [], allowRemovals, allowSideFiles },
+            { kind: listedAs, allowFrameLoss: false, skip: [], allowRemovals, allowSideFiles, sideFiles: sideFilesAsked },
             { after: earlier },
         )
         if (!res.ok) {
@@ -213,13 +220,22 @@
             return
         }
         const reports = [...earlier, res.value]
-        if (res.value.wouldRemove.length + res.value.sideFilesHeld.length > 0) {
-            // A file the list didn't show losing a field (it read differently at the write), or a side file that changed
-            // since the list: list again, this press continuing, so it is seen before it's written.
+        if (res.value.wouldRemove.length > 0) {
+            // A file the list didn't show losing a field (it read differently at the write): list again, this press
+            // continuing, so its removal is seen before it's written. A side file held back is listed as not written.
             await review(reports)
             notice = 'multiRename.tags.write.listedAgain'
         } else if (res.value.wouldDrop.length > 0) {
-            current = { step: 'wouldDrop', reports, kind: listedAs, seen: tags.view, answering: false, allowRemovals }
+            current = {
+                step: 'wouldDrop',
+                reports,
+                kind: listedAs,
+                seen: tags.view,
+                answering: false,
+                allowRemovals,
+                sideFiles: sideFilesAsked,
+                allowSideFiles,
+            }
         }
         else current = endedStep(reports)
     }
@@ -372,9 +388,9 @@
                 onReload={() => { void reload() }}
             />
         {/if}
-        {#if changes.length === 0 && sideFiles.length === 0}
+        {#if changes.length === 0}
             <p>{tString('multiRename.tags.write.nothing')}</p>
-        {:else if changes.length > 0}
+        {:else}
             <p>
                 {tString('multiRename.tags.write.summaryAs', {
                     kind: labelOf(reviewed.kind),
@@ -397,7 +413,7 @@
             </ul>
         {/if}
         <div class="actions">
-            <Button variant="primary" disabled={!canWrite || (changes.length === 0 && !sideWrites(sideFiles))} keyHint={{ commandId: 'multiRename.rename' }} onclick={() => { void oncePressed(() => write(reviewed)) }}>
+            <Button variant="primary" disabled={!canWrite || changes.length === 0} keyHint={{ commandId: 'multiRename.rename' }} onclick={() => { void oncePressed(() => write(reviewed)) }}>
                 {tString('multiRename.tags.write.confirm')}
             </Button>
             <Button onclick={() => { notice = null; current = endedStep(earlier) }}>{tString('multiRename.tags.write.back')}</Button>

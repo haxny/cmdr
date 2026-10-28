@@ -11,8 +11,9 @@
 //! `failed`. The record is sealed to the files written, each with its fingerprint right after
 //! its write (an undo leaves a file alone once that moves), or forgotten when none was; written
 //! files become the session's disk copy, and Multi-Rename's media cache reads them again.
-//! With `side_files`, Audiobookshelf's `reader.txt` / `desc.txt` follow the tracks (`side_files.rs`),
-//! a different one replaced only as `allow_side_files` names it; side files alone are a write too.
+//! With `side_files`, Audiobookshelf's `reader.txt` / `desc.txt` follow a tag write (never alone),
+//! from what the files say after it (`side_files.rs`); a different one is replaced only as
+//! `allow_side_files` names it, and only when the write keeps an undo.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -27,7 +28,7 @@ use cmdr_tags::{
 
 use super::removals::{Removals, removals_of};
 use super::session::{Pending, TagEditorError, mark_written, pending};
-use super::side_files::{self, SideFileSeen, book_of};
+use super::side_files::{self, BookTags, SideFileSeen, book_of};
 use crate::crash_reporter::contain_panics;
 use crate::multi_rename::session::media_over;
 
@@ -149,36 +150,45 @@ pub(super) fn apply_with_before_write(
     // Compared as the view shows paths, so a file whose name isn't UTF-8 can still be skipped.
     let skip = |path: &Path| req.skip.iter().any(|skipped| *skipped == shown(path));
     let (target, candidates) = pending(session_id, &skip)?;
-    // Copied before any write: the side files say what the tracks are being written to say.
-    let book = if req.side_files { book_of(session_id)? } else { None };
     let mut report = TagApplyReport::default();
     let (ready, moved): (Vec<Pending>, Vec<Pending>) = candidates
         .into_iter()
         .partition(|file| Fingerprint::holds(file.fingerprint.as_ref(), &file.path));
     report.changed_on_disk = moved.iter().map(|file| shown(&file.path)).collect();
-    if ready.is_empty() && book.is_none() {
+    if ready.is_empty() {
         return Ok(report);
     }
 
     let id = ApplyId(format!("tags-{}-{session_id}", unix_millis()));
-    if !ready.is_empty() {
-        let written = write_tracks(store, &id, ready, &req, before_write, &mut report)?;
-        let written_paths: Vec<PathBuf> = written.iter().map(|(path, _)| path.clone()).collect();
-        mark_written(session_id, written);
-        reread_media(&target.volume_id, &written_paths);
-    }
-    if let Some(book) = book {
-        let side = side_files::write(&book.folder, &book.tracks, &req.allow_side_files);
-        report.side_files_written.clone_from(&side.written);
-        report.side_files_held.clone_from(&side.held);
-        report.side_files_failed.clone_from(&side.failed);
-        // A write of side files alone is undone by its own id: no track record stands behind it.
-        if report.apply_id.is_none() && report.written.is_empty() && !side.written.is_empty() {
-            report.apply_id = Some(id.0.clone());
-        }
-        side.keep_undo(report.apply_id.as_deref());
+    let written = write_tracks(store, &id, ready, &req, before_write, &mut report)?;
+    let written_paths: Vec<PathBuf> = written.iter().map(|(path, _)| path.clone()).collect();
+    mark_written(session_id, written);
+    reread_media(&target.volume_id, &written_paths);
+    // Side files ride along with a tag write, never alone, and say what the files on disk say now.
+    if req.side_files && !report.written.is_empty() {
+        write_side_files(session_id, &req.allow_side_files, &mut report);
     }
     Ok(report)
+}
+
+/// Writes the book's side files after a tag write, from the tracks as they are on disk now (the
+/// written ones read again by `mark_written`), so a skipped or held track's edits never reach them.
+/// A replacement needs this write's undo (`apply_id`): without one it is held back. The tracks
+/// stand whatever happens here.
+fn write_side_files(session_id: &str, allowed: &[SideFileSeen], report: &mut TagApplyReport) {
+    let book = match book_of(session_id, BookTags::OnDisk) {
+        Ok(Some(book)) => book,
+        Ok(None) => return,
+        Err(error) => {
+            log::warn!(target: LOG_TARGET, "Couldn't read the book for its side files after a write: {error:?}");
+            return;
+        }
+    };
+    let side = side_files::write(&book.folder, &book.tracks, allowed, report.apply_id.is_some());
+    report.side_files_written.clone_from(&side.written);
+    report.side_files_held.clone_from(&side.held);
+    report.side_files_failed.clone_from(&side.failed);
+    side.keep_undo(report.apply_id.as_deref());
 }
 
 /// Records `ready`'s old tags under `id`, writes each, and seals the record to the files written

@@ -111,6 +111,7 @@ pub enum SideFileChange {
 pub struct SideFileSeen {
     pub path: String,
     pub old: String,
+    pub text: String,
 }
 
 /// What the book's tracks say a side file should hold: `None` when they say nothing (no narrator,
@@ -219,9 +220,9 @@ fn read_no_follow(path: &Path) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
-/// Writes `bytes` to `path` through a new temporary file in the same folder, renamed over the
-/// name. Refuses when the name holds anything but a regular file (or nothing) right before.
-fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
+/// A new temporary file beside `path` holding `bytes`, synced, never opened through a link. It is
+/// removed again when this fails.
+fn temp_beside(path: &Path, bytes: &[u8]) -> io::Result<PathBuf> {
     static NEXT: AtomicU64 = AtomicU64::new(0);
     let (Some(dir), Some(name)) = (path.parent(), path.file_name()) else {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "no folder"));
@@ -232,16 +233,17 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
-    let written = write_then_rename(&tmp, path, bytes);
-    if written.is_err() {
-        // Best effort: a temp file left behind is hidden and harmless; the write's own error is what counts.
-        let _ = std::fs::remove_file(&tmp);
+    match write_new(&tmp, bytes) {
+        Ok(()) => Ok(tmp),
+        Err(error) => {
+            discard(&tmp);
+            Err(error)
+        }
     }
-    written
 }
 
-/// [`write_atomic`]'s steps: a new file at `tmp` (never through a link), synced, renamed over `path`.
-fn write_then_rename(tmp: &Path, path: &Path, bytes: &[u8]) -> io::Result<()> {
+/// A new file at `tmp` (never through a link) holding `bytes`, synced.
+fn write_new(tmp: &Path, bytes: &[u8]) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -249,18 +251,59 @@ fn write_then_rename(tmp: &Path, path: &Path, bytes: &[u8]) -> io::Result<()> {
         .custom_flags(libc::O_NOFOLLOW)
         .open(tmp)?;
     file.write_all(bytes)?;
-    file.sync_all()?;
-    match std::fs::symlink_metadata(path) {
-        Ok(meta) if !meta.file_type().is_file() => {
-            Err(io::Error::new(io::ErrorKind::InvalidData, "not a regular file"))
-        }
-        Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
-        _ => std::fs::rename(tmp, path),
+    file.sync_all()
+}
+
+/// Best effort: a temp file left behind is hidden and harmless; the write's own answer is what counts.
+fn discard(tmp: &Path) {
+    if let Err(error) = std::fs::remove_file(tmp) {
+        log::warn!(target: LOG_TARGET, "Couldn't remove a side file's temporary copy: {:?}", error.kind());
     }
 }
 
+/// Creates `path` holding `bytes`, whole or not at all. ❌ Never replaces anything: a file (or link)
+/// that appeared at the name since the check makes it `AlreadyExists` (a hard link, unlike a
+/// rename, refuses an existing name).
+pub(super) fn create_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    let tmp = temp_beside(path, bytes)?;
+    let linked = std::fs::hard_link(&tmp, path);
+    discard(&tmp);
+    linked
+}
+
+/// Replaces `path` with `bytes` only while it still holds exactly `expected` (read again right
+/// before, never through a link): `Ok(false)` when it changed since. The new file keeps the old
+/// one's permissions.
+pub(super) fn replace_atomic(path: &Path, bytes: &[u8], expected: &[u8]) -> io::Result<bool> {
+    let tmp = temp_beside(path, bytes)?;
+    let replaced = swap_in(&tmp, path, expected);
+    if !matches!(replaced, Ok(true)) {
+        discard(&tmp);
+    }
+    replaced
+}
+
+/// [`replace_atomic`]'s last steps: the old permissions onto `tmp`, the old bytes checked, the rename.
+fn swap_in(tmp: &Path, path: &Path, expected: &[u8]) -> io::Result<bool> {
+    let permissions = std::fs::symlink_metadata(path)?.permissions();
+    std::fs::set_permissions(tmp, permissions)?;
+    if read_no_follow(path)? != expected {
+        return Ok(false);
+    }
+    std::fs::rename(tmp, path).map(|()| true)
+}
+
+/// Which copy of the tracks' tags a [`Book`] holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum BookTags {
+    /// As edited: what a write would make them (the change list).
+    Edited,
+    /// As on disk: what the files say (right after a write, what the side files may say).
+    OnDisk,
+}
+
 /// The book a session writes side files for: its folder (`cover::tracks_folder`) and its readable
-/// tracks' tags as edited, in current order.
+/// tracks' tags, in current order.
 pub(super) struct Book {
     pub folder: PathBuf,
     pub tracks: Vec<FileTags>,
@@ -268,7 +311,7 @@ pub(super) struct Book {
 
 /// The session's [`Book`], or `None` when it isn't editable (side files go only where tags do).
 /// Copies only: no file is touched.
-pub(super) fn book_of(session_id: &str) -> Result<Option<Book>, TagEditorError> {
+pub(super) fn book_of(session_id: &str, copy: BookTags) -> Result<Option<Book>, TagEditorError> {
     with_session(session_id, |layout, session| {
         if require_editable(layout).is_err() {
             return Ok(None);
@@ -283,7 +326,10 @@ pub(super) fn book_of(session_id: &str) -> Result<Option<Book>, TagEditorError> 
             .tracks
             .iter()
             .filter_map(|path| session.by_path.get(path)?.loaded())
-            .map(|loaded| loaded.edited.clone())
+            .map(|loaded| match copy {
+                BookTags::Edited => loaded.edited.clone(),
+                BookTags::OnDisk => loaded.disk.clone(),
+            })
             .collect();
         Ok(Some(Book {
             folder: super::cover::tracks_folder(&layout.dir, names.iter()),
@@ -295,7 +341,7 @@ pub(super) fn book_of(session_id: &str) -> Result<Option<Book>, TagEditorError> 
 /// What a write would do with the book's side files; none for a read-only session. The files are
 /// read after the lock.
 pub fn side_file_changes(session_id: &str) -> Result<Vec<SideFileChange>, TagEditorError> {
-    Ok(book_of(session_id)?
+    Ok(book_of(session_id, BookTags::Edited)?
         .map(|book| changes(&book.folder, &book.tracks))
         .unwrap_or_default())
 }
@@ -361,14 +407,17 @@ impl SideFilesWritten {
     }
 }
 
-/// Writes the side files the tracks ask for into `folder`, each checked again right before:
-/// a file that already says the same is left alone, a different one is replaced only when
-/// `allowed` names its path with its current text. Blocking file work.
-pub(super) fn write(folder: &Path, tracks: &[FileTags], allowed: &[SideFileSeen]) -> SideFilesWritten {
+/// Writes the side files the tracks ask for into `folder`, each checked again right before: a file
+/// that already says the same is left alone, a different one is replaced only when `allowed` names
+/// its path with its current text and the new text, and only when this write keeps an undo
+/// (`undoable`; else it is held: a user's file is never replaced for good). A missing one is
+/// created. Blocking file work.
+pub(super) fn write(folder: &Path, tracks: &[FileTags], allowed: &[SideFileSeen], undoable: bool) -> SideFilesWritten {
     let mut done = SideFilesWritten::default();
     for (file, text) in wanted(tracks) {
         let Ok(text) = text else { continue };
         let path = folder.join(file.file_name());
+        let content = content_of(&text);
         let before = match on_disk(&path) {
             OnDisk::Missing => None,
             OnDisk::File(bytes) => {
@@ -376,8 +425,10 @@ pub(super) fn write(folder: &Path, tracks: &[FileTags], allowed: &[SideFileSeen]
                 if file.says(&old, &text) {
                     continue;
                 }
-                let seen = allowed.iter().any(|seen| seen.path == shown(&path) && seen.old == old);
-                if !seen {
+                let seen = allowed
+                    .iter()
+                    .any(|seen| seen.path == shown(&path) && seen.old == old && seen.text == text);
+                if !seen || !undoable {
                     done.held.push(shown(&path));
                     continue;
                 }
@@ -385,9 +436,12 @@ pub(super) fn write(folder: &Path, tracks: &[FileTags], allowed: &[SideFileSeen]
             }
             OnDisk::Withheld(_) => continue,
         };
-        let content = content_of(&text);
-        match write_atomic(&path, &content) {
-            Ok(()) => {
+        let written = match &before {
+            None => create_atomic(&path, &content).map(|()| true),
+            Some(old) => replace_atomic(&path, &content, old),
+        };
+        match written {
+            Ok(true) => {
                 done.written.push(shown(&path));
                 done.undo.push(Undoable {
                     path,
@@ -395,6 +449,9 @@ pub(super) fn write(folder: &Path, tracks: &[FileTags], allowed: &[SideFileSeen]
                     written: content,
                 });
             }
+            // Changed (or appeared) since the check: as unseen as any other.
+            Ok(false) => done.held.push(shown(&path)),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => done.held.push(shown(&path)),
             Err(error) => {
                 log::warn!(target: LOG_TARGET, "Couldn't write a side file: {:?}", error.kind());
                 done.failed.push(shown(&path));
@@ -416,11 +473,6 @@ fn remember(apply_id: &str, undo: Vec<Undoable>) {
     while kept.len() > cmdr_tags::UndoLimits::default().max_applies {
         kept.pop_front();
     }
-}
-
-/// Whether apply `apply_id` wrote side files an undo would put back.
-pub(super) fn has_undo(apply_id: &str) -> bool {
-    UNDO.lock_ignore_poison().iter().any(|(id, _)| id == apply_id)
 }
 
 /// Puts back the side files apply `apply_id` wrote, adding each to `report`: the old content back
@@ -448,11 +500,12 @@ pub(super) fn undo(apply_id: &str, report: &mut RestoreReport) {
             }
         }
         let restored = match &entry.before {
-            Some(before) => write_atomic(&entry.path, before),
-            None => std::fs::remove_file(&entry.path),
+            Some(before) => replace_atomic(&entry.path, before, &entry.written),
+            None => std::fs::remove_file(&entry.path).map(|()| true),
         };
         match restored {
-            Ok(()) => report.restored.push(entry.path),
+            Ok(true) => report.restored.push(entry.path),
+            Ok(false) => report.changed.push(entry.path),
             Err(error) => {
                 log::warn!(target: LOG_TARGET, "Couldn't put a side file back: {:?}", error.kind());
                 report.failed.push((

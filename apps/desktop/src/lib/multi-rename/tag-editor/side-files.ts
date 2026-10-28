@@ -19,13 +19,9 @@ export const SIDE_FILE_NAMES: Readonly<Record<SideFile, string>> = {
   desc: 'desc.txt',
 }
 
-/** The longest old or new text a list row quotes; the write compares the full text. */
-export const SIDE_TEXT_SHOWN = 200
-
-/** `text` as a list row quotes it: one line, at most `SIDE_TEXT_SHOWN` characters. */
+/** `text` as a list row quotes it: all of it (the write replaces all of it), on one line. */
 export function quoted(text: string): string {
-  const line = text.trim().replace(/\s+/g, ' ')
-  return line.length > SIDE_TEXT_SHOWN ? `${line.slice(0, SIDE_TEXT_SHOWN)}…` : line
+  return text.trim().replace(/\s+/g, ' ')
 }
 
 function whyKey(file: SideFile, reason: SideFileWithheld): MessageKey {
@@ -67,14 +63,11 @@ export function sideRowOf(change: SideFileChange): SideRow {
   }
 }
 
-/** Whether a write from this list would write a side file (a withheld one is only explained). */
-export function sideWrites(changes: readonly SideFileChange[]): boolean {
-  return changes.some((change) => change.kind !== 'withheld')
-}
-
 /** The replacements this list showed, each with the old text it showed: the only ones its write may make. */
 export function replacementsShown(changes: readonly SideFileChange[]): SideFileSeen[] {
-  return changes.flatMap((change) => (change.kind === 'replace' ? [{ path: change.path, old: change.old }] : []))
+  return changes.flatMap((change) =>
+    change.kind === 'replace' ? [{ path: change.path, old: change.old, text: change.text }] : [],
+  )
 }
 
 /** How many side files the list would replace: ⌘⏎ shows those first. */

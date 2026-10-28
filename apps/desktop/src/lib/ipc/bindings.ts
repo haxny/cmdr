@@ -17582,6 +17582,7 @@ export type SideFileChange =
 export type SideFileSeen = {
   path: string
   old: string
+  text: string
 }
 
 // Why a side file isn't written.

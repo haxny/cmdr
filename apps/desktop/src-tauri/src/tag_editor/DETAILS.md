@@ -183,14 +183,17 @@ when every track names the same ones, in any order) and `desc.txt` (the Descript
 on writes nothing, and the list says why (`SideFileChange::Withheld`), rather than guessing a majority. The list is
 `get_side_file_changes` (create / replace with the old text / withheld; one that already says the same, first line for
 `reader.txt`, is not listed and never touched). Safety: a replacement is written only when `allowSideFiles` names its
-path with the old text the list showed (else `sideFilesHeld`), so ⌘⏎ never replaces one; writes go to a same-folder
-temp file renamed over the name; a symlink or non-file at the name is never read, followed, or replaced; 64 KiB cap
-both ways; only an editable (local) session gets any. Side files are written in every apply that asks, after the
-tracks, even when none of them was written (they're idempotent: a second apply finds them saying the same), so side
-files alone are a write too, with the apply's id minted for them. Undo: the old bytes (or "none") are kept in memory per
+path with the old and the new text the list showed (else `sideFilesHeld`), so ⌘⏎ never replaces one, and only when
+the apply keeps an undo (`undoUnavailable` holds it: a user's file is never replaced for good); a create is a
+same-folder temp file hard-linked to the name, so a file that appeared meanwhile is never replaced; a replacement
+re-reads the old bytes right before its rename and keeps the old permissions; a symlink or non-file at the name is
+never read, followed, or replaced; 64 KiB cap both ways; only an editable (local) session gets any. Decision: side
+files ride along with a tag write, never alone (written only when the apply wrote a track), and say what the files on
+disk say right after it (`BookTags::OnDisk`, read after `mark_written`), so a skipped, held, failed, or changed-on-disk
+track's edits never reach them; the list (`BookTags::Edited`) shows the intent. Undo: the old bytes (or "none") are kept in memory per
 apply id (as many applies as the store keeps); `undo_with` restores them, or removes a created file, only while the file
 still holds exactly what was written (else `changed`), and they count in the `RestoreReport` and in
-`UndoableApply.written`. A side-file-only apply has no track record: its `NotFound` restore is taken as empty.
+`UndoableApply.written`.
 
 **Non-UTF-8 paths.** Paths cross IPC as lossy strings (`TrackRow::path`). Such a file is listed and written like any
 other, but `TagEdit::SetOne` can't name it (`UnknownTrack`, its `SetAll` edits still apply), and `skip` compares the
@@ -240,7 +243,9 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`).
   `close_orphans` (run by `hold_tags_session`, so on every open) destroys, through the child-window hide-and-wait,
   each `tags-*` window whose session is no longer held: one closed but still there would sit hidden for the life of
-  the process, holding its web content process. It also
+  the process, holding its web content process. `may_close_unasked` (IPC `tags_window_may_close`) tells the window's
+  error boundary whether closing would lose anything: unwritten edits in the session (`session::has_unwritten`) or a
+  tag write running (`at_quit::is_writing`). It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A and ⌘X / ⌘C / ⌘V, `menu_key_command_of`
   for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
   `tags_native_edit` hands back for a text box or the cover section.

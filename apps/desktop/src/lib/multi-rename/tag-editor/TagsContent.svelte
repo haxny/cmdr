@@ -278,6 +278,7 @@
         /** The view the choice was asked for: an edit since then lists again. */
         seen: TagEditorView | null
         answering: boolean
+        sideFiles: boolean
     } | null>(null)
     /** The ⌘⏎ applies the Write dialog's list continues (`openReview`). */
     let reviewContinues: TagApplyReport[] = []
@@ -373,7 +374,7 @@
                 showDone(res.written, res.failed + res.changedOnDisk)
                 break
             case 'wouldDrop':
-                dropChoice = { reports: [res.report], kind: res.writtenAs, seen: tags.view, answering: false }
+                dropChoice = { reports: [res.report], kind: res.writtenAs, seen: tags.view, answering: false, sideFiles: res.sideFiles }
                 break
             case 'refused': {
                 const { noneWritten, reason } = refusalOf(res.error.kind)

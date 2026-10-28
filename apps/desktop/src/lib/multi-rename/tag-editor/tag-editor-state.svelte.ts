@@ -52,7 +52,7 @@ import {
 } from '#lib/tauri-commands/index.js'
 import { outcomeOf } from './apply-outcome'
 import type { LastTagApply } from './last-tag-apply'
-import { replacing, sideFilesOn, sideWrites } from './side-files'
+import { replacing, sideFilesOn } from './side-files'
 import { loadWriteKind } from './write-kind'
 import { WRITE_WAIT_LIMIT_MS } from './write-wait'
 
@@ -91,7 +91,7 @@ export interface ApplyOptions {
  */
 export type WriteNowResult =
   | { kind: 'done'; written: number; failed: number; changedOnDisk: number }
-  | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind }
+  | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind; sideFiles: boolean }
   | { kind: 'refused'; error: TagStateError }
   | { kind: 'listFailed'; error: TagStateError }
   | { kind: 'reviewFirst'; removing: number; replacing: number; writtenAs: ContentKind; after: TagApplyReport[] }
@@ -177,14 +177,12 @@ export interface TagEditorState {
   /** What a write as `kind` would change, with what the kind removes beyond the fields. A failure leaves `error` alone. */
   changes(kind: ContentKind): Promise<TagStateResult<FileChangeView[]>>
   /**
-   * What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`); none while the
-   * `multiRename.tagEditor.absSideFiles` setting is off. A failure leaves `error` alone.
+   * What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`). The caller asks only
+   * with `multiRename.tagEditor.absSideFiles` on (`sideFilesOn`), and sends the same answer as `sideFiles`. A failure
+   * leaves `error` alone.
    */
   sideFileChanges(): Promise<TagStateResult<SideFileChange[]>>
-  /**
-   * Writes the edits, and the side files when the setting is on (unless `request.sideFiles` says); a refusal comes
-   * back typed and leaves `error` alone.
-   */
+  /** Writes the edits (and the side files when `request.sideFiles`); a refusal comes back typed and leaves `error` alone. */
   apply(request: ApplyRequest, options?: ApplyOptions): Promise<TagStateResult<TagApplyReport>>
   /**
    * ⌘⏎ / ⌘S: writes the edits at once, without the change list. The same write as the Write dialog's: it waits for the
@@ -334,9 +332,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   async function apply(request: ApplyRequest, options: ApplyOptions = {}): Promise<TagStateResult<TagApplyReport>> {
     // A "Write anyway" after a press that wrote continues that write, so Undo reverses both.
     const continues = (options.after ?? []).some((earlier) => earlier.written.length > 0)
-    const sent: ApplyRequest = { ...request, sideFiles: request.sideFiles ?? sideFilesOn() }
     const res = await whileWriting(async () => {
-      const answer = await track(() => applyTags(sessionId, sent, continues), null)
+      const answer = await track(() => applyTags(sessionId, request, continues), null)
       if (answer.ok) await refreshLast()
       return answer
     })
@@ -345,19 +342,21 @@ export function createTagEditorState(sessionId: string): TagEditorState {
   }
 
   async function sideFileChanges(): Promise<TagStateResult<SideFileChange[]>> {
-    if (!sideFilesOn()) return { ok: true, value: [] }
     return await track(() => getSideFileChanges(sessionId), null)
   }
 
   async function writeNow(options: WriteNowOptions = {}): Promise<WriteNowResult> {
     if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
     const seen = editsMade
+    // Read once: the side files listed are the ones the write may write, even if the setting flips meanwhile.
+    const sideFiles = sideFilesOn()
     const kind = await loadWriteKind()
     const listed = await track(() => getTagChanges(sessionId, kind), null)
     if (!listed.ok) return { kind: 'listFailed', error: listed.error }
-    const side = await sideFileChanges()
+    // Side files ride along with a tag write, never alone.
+    if (listed.value.length === 0) return { kind: 'nothing' }
+    const side = sideFiles ? await sideFileChanges() : { ok: true as const, value: [] }
     if (!side.ok) return { kind: 'listFailed', error: side.error }
-    if (listed.value.length === 0 && !sideWrites(side.value)) return { kind: 'nothing' }
     const removing = listed.value.filter((change) => change.removes.length > 0 || change.removesUnknown).length
     const replaces = replacing(side.value)
     if (removing + replaces > 0)
@@ -366,20 +365,20 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     if (!(await settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
     if (editsMade !== seen) return { kind: 'changed' }
     options.onWriting?.()
-    // No removal or side-file replacement allowed: the backend holds back any (`wouldRemove`, `sideFilesHeld`).
-    const res = await apply({ kind, allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] })
+    // No removal or side-file replacement allowed: the backend holds back any (`wouldRemove`; a side file that
+    // appeared since the list is `sideFilesHeld`, counted as not written).
+    const res = await apply({ kind, allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles })
     if (!res.ok) return { kind: 'refused', error: res.error }
-    const { wouldRemove, sideFilesHeld } = res.value
-    if (wouldRemove.length + sideFilesHeld.length > 0) {
+    if (res.value.wouldRemove.length > 0) {
       return {
         kind: 'reviewFirst',
-        removing: wouldRemove.length,
-        replacing: sideFilesHeld.length,
+        removing: res.value.wouldRemove.length,
+        replacing: 0,
         writtenAs: kind,
         after: [res.value],
       }
     }
-    if (res.value.wouldDrop.length > 0) return { kind: 'wouldDrop', report: res.value, writtenAs: kind }
+    if (res.value.wouldDrop.length > 0) return { kind: 'wouldDrop', report: res.value, writtenAs: kind, sideFiles }
     const outcome = outcomeOf([res.value])
     return {
       kind: 'done',

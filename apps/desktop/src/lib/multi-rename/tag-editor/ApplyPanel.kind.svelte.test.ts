@@ -45,7 +45,7 @@ describe('ApplyPanel write kind', () => {
     expect(root.textContent).toContain('Writing as Music: 2 files will change:')
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenCalledWith(
-      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       { after: [] },
     )
   })
@@ -83,7 +83,7 @@ describe('ApplyPanel write kind', () => {
     await press(root, 'Write tags')
     expect(root.textContent).not.toContain('Writing as Music')
     expect(fake.apply).toHaveBeenCalledWith(
-      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
+      { kind: 'audiobook', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       { after: [] },
     )
   })
@@ -104,7 +104,7 @@ describe('ApplyPanel write kind', () => {
     expect(root.textContent).toContain('Writing as Music')
     await press(root, 'Write tags')
     expect(fake.apply).toHaveBeenCalledWith(
-      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [] },
+      { kind: 'music', allowFrameLoss: false, skip: [], allowRemovals: [], allowSideFiles: [], sideFiles: false },
       { after: [] },
     )
   })

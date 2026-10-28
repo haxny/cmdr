@@ -43,4 +43,14 @@ describe('answerWriteAnyway', () => {
     state.apply.mockResolvedValue({ ok: false, error: { kind: 'readOnly' } } as never)
     expect(await answerWriteAnyway(asState(state), choice)).toEqual({ kind: 'refused', error: { kind: 'readOnly' } })
   })
+
+  it('a press that writes side files keeps them, with the replacements its list showed', async () => {
+    const state = fakeState(PANEL_VIEW)
+    const allowSideFiles = [{ path: '/b/reader.txt', old: 'Someone\n', text: 'Vladimir Kudla' }]
+    await answerWriteAnyway(asState(state), { ...choice, sideFiles: true, allowSideFiles })
+    expect(state.apply).toHaveBeenCalledWith(
+      expect.objectContaining({ sideFiles: true, allowSideFiles, skip: ['/b/02.mp3', '/b/03.mp3'] }),
+      { after: [first] },
+    )
+  })
 })

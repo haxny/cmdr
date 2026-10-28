@@ -6,12 +6,13 @@ use std::path::Path;
 use cmdr_media_meta::test_fixtures::mp3_frames;
 use cmdr_tags::{FileTags, TagField};
 
-use super::apply::{ApplyRequest, apply_with};
+use super::apply::{ApplyRequest, TagApplyReport, apply_with};
 use super::apply_test::{done, request, store};
 use super::session::{TagEdit, TagEditorError, edit, open};
-use super::session_test::{album, folder, path_of, tags};
+use super::session_test::{album, folder, path_of, set_title, tag_file, tags};
 use super::side_files::{
-    SIDE_FILE_LIMIT, SideFile, SideFileChange, SideFileSeen, SideFileWithheld, side_file_changes, wanted,
+    SIDE_FILE_LIMIT, SideFile, SideFileChange, SideFileSeen, SideFileWithheld, create_atomic, replace_atomic,
+    side_file_changes, wanted, write as write_side_files,
 };
 use super::undo::undo_with;
 use crate::multi_rename::session::open as open_rename;
@@ -185,36 +186,43 @@ fn a_different_file_is_replaced_only_as_listed_and_undo_puts_it_back() {
     assert_eq!(report.side_files_held, vec![reader.clone()]);
     assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("Someone Else\n"));
 
-    // Shown with other old text (the file changed since the list): still held.
-    let stale = ApplyRequest {
-        allow_side_files: vec![SideFileSeen {
-            path: reader.clone(),
-            old: "Another\n".to_string(),
-        }],
-        ..with_side_files()
-    };
-    assert_eq!(
-        apply_with(&store, &id, stale).expect("applies").side_files_held,
-        vec![reader.clone()]
-    );
+    // Shown with other old text (the file changed since the list), or other new text: still held.
+    for (n, (old, text)) in [("Another\n", "Vladimir Kudla"), ("Someone Else\n", "Somebody New")]
+        .into_iter()
+        .enumerate()
+    {
+        edit(&id, vec![set_title(&dir, "a.mp3", &format!("Alpha {n}"))]).expect("edits");
+        let stale = ApplyRequest {
+            allow_side_files: vec![seen(&reader, old, text)],
+            ..with_side_files()
+        };
+        let report = apply_with(&store, &id, stale).expect("applies");
+        assert_eq!(report.written.len(), 1);
+        assert_eq!(report.side_files_held, vec![reader.clone()]);
+    }
 
-    // Shown as it is: replaced, alone (the tracks were written already), and undoable.
-    let seen = ApplyRequest {
-        allow_side_files: vec![SideFileSeen {
-            path: reader.clone(),
-            old: "Someone Else\n".to_string(),
-        }],
+    // Shown as it is, with a tag write: replaced, and undone with it.
+    edit(&id, vec![set_title(&dir, "a.mp3", "Alpha again")]).expect("edits");
+    let shown = ApplyRequest {
+        allow_side_files: vec![seen(&reader, "Someone Else\n", "Vladimir Kudla")],
         ..with_side_files()
     };
-    let report = apply_with(&store, &id, seen).expect("applies");
-    assert!(report.written.is_empty());
+    let report = apply_with(&store, &id, shown).expect("applies");
     assert_eq!(report.side_files_written, vec![reader.clone()]);
     assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("Vladimir Kudla\n"));
 
     let undone = undo_with(&store, &report.apply_id.expect("undoable"), Some(&id)).expect("undoes");
-    assert_eq!(undone.restored, vec![dir.join("reader.txt")]);
+    assert!(undone.restored.contains(&dir.join("reader.txt")));
     assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("Someone Else\n"));
     done(&id);
+}
+
+fn seen(path: &str, old: &str, text: &str) -> SideFileSeen {
+    SideFileSeen {
+        path: path.to_string(),
+        old: old.to_string(),
+        text: text.to_string(),
+    }
 }
 
 #[test]
@@ -256,10 +264,7 @@ fn desc_txt_holds_the_shared_description() {
         &store,
         &id,
         ApplyRequest {
-            allow_side_files: vec![SideFileSeen {
-                path: desc.clone(),
-                old: "Old blurb\n".to_string(),
-            }],
+            allow_side_files: vec![seen(&desc, "Old blurb\n", "A book about a dog.")],
             ..with_side_files()
         },
     )
@@ -273,7 +278,7 @@ fn desc_txt_holds_the_shared_description() {
 }
 
 #[test]
-fn side_files_alone_are_written_and_undone() {
+fn side_files_never_go_alone_they_ride_along_with_a_tag_write() {
     let (dir, _listing, id) = album("side-alone");
     let (_store_dir, store) = store("side-alone-store");
     open(&id, false).expect("opens");
@@ -282,12 +287,92 @@ fn side_files_alone_are_written_and_undone() {
 
     let report = apply_with(&store, &id, with_side_files()).expect("applies");
 
-    assert!(report.written.is_empty());
-    assert_eq!(report.side_files_written, vec![path_of(&dir, "reader.txt")]);
-    let undone = undo_with(&store, &report.apply_id.expect("undoable"), Some(&id)).expect("undoes");
-    assert_eq!(undone.restored, vec![dir.join("reader.txt")]);
+    assert_eq!(report, TagApplyReport::default(), "no tag write, so no side file");
     assert_eq!(text_of(&dir, "reader.txt"), None);
     done(&id);
+}
+
+#[test]
+fn side_files_say_what_the_files_on_disk_say_after_the_write() {
+    let (dir, _listing, id) = album("side-skipped");
+    let (_store_dir, store) = store("side-skipped-store");
+    tag_file(
+        &dir,
+        "b.mp3",
+        &[(TagField::Title, "Beta"), (TagField::Performer, "Someone Else")],
+    );
+    open(&id, false).expect("opens");
+    edit(&id, vec![set_all(TagField::Performer, &["Vladimir Kudla"])]).expect("edits");
+
+    // b is skipped: it still names someone else on disk, so the book's tracks disagree.
+    let skipping_b = ApplyRequest {
+        skip: vec![path_of(&dir, "b.mp3")],
+        ..with_side_files()
+    };
+    let report = apply_with(&store, &id, skipping_b).expect("applies");
+
+    assert_eq!(report.written.len(), 2);
+    assert!(report.side_files_written.is_empty());
+    assert_eq!(text_of(&dir, "reader.txt"), None);
+
+    // Once b is written too, they agree.
+    let report = apply_with(&store, &id, with_side_files()).expect("applies");
+    assert_eq!(report.side_files_written, vec![path_of(&dir, "reader.txt")]);
+    assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("Vladimir Kudla\n"));
+    done(&id);
+}
+
+#[test]
+fn without_an_undo_a_side_file_is_created_but_never_replaced() {
+    let dir = crate::test_support::TestDir::new("side-no-undo");
+    std::fs::write(dir.join("desc.txt"), "Hand written\n").expect("writes");
+    let mut book = performers(&["Vladimir Kudla"]);
+    book.fields
+        .insert(TagField::Description, vec!["A book about a dog.".to_string()]);
+    let desc = path_of(&dir, "desc.txt");
+    let allowed = [seen(&desc, "Hand written\n", "A book about a dog.")];
+
+    let written = write_side_files(&dir, &[book], &allowed, false);
+
+    assert_eq!(written.written, vec![path_of(&dir, "reader.txt")]);
+    assert_eq!(written.held, vec![desc]);
+    assert_eq!(text_of(&dir, "desc.txt").as_deref(), Some("Hand written\n"));
+}
+
+#[test]
+fn a_create_never_replaces_a_file_that_appeared_meanwhile() {
+    let dir = crate::test_support::TestDir::new("side-create-race");
+    std::fs::write(dir.join("reader.txt"), "Mine\n").expect("writes");
+
+    let created = create_atomic(&dir.join("reader.txt"), b"Vladimir Kudla\n");
+
+    assert_eq!(
+        created.map_err(|error| error.kind()),
+        Err(std::io::ErrorKind::AlreadyExists)
+    );
+    assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("Mine\n"));
+    assert_eq!(
+        std::fs::read_dir(&*dir).expect("lists").count(),
+        1,
+        "no temp file is left"
+    );
+}
+
+#[test]
+fn a_replace_checks_the_old_bytes_right_before_and_keeps_the_mode() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = crate::test_support::TestDir::new("side-replace-race");
+    let path = dir.join("reader.txt");
+    std::fs::write(&path, "Changed meanwhile\n").expect("writes");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).expect("chmods");
+
+    assert!(!replace_atomic(&path, b"New\n", b"What the list showed\n").expect("checks"));
+    assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("Changed meanwhile\n"));
+
+    assert!(replace_atomic(&path, b"New\n", b"Changed meanwhile\n").expect("replaces"));
+    assert_eq!(text_of(&dir, "reader.txt").as_deref(), Some("New\n"));
+    let mode = std::fs::metadata(&path).expect("stats").permissions().mode() & 0o777;
+    assert_eq!(mode, 0o600);
 }
 
 #[test]

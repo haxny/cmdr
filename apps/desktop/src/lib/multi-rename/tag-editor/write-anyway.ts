@@ -6,7 +6,7 @@
  * (`writeAnywayAfter`), as part of the same press (`after`), so Undo reverses it with the first apply.
  */
 import type { ContentKind } from '#lib/ipc/bindings.js'
-import type { TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
+import type { SideFileSeen, TagApplyReport, TagEditorView } from '#lib/tauri-commands/index.js'
 import { writeAnywayAfter } from './apply-outcome'
 import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
 import { WRITE_WAIT_LIMIT_MS } from './write-wait'
@@ -18,6 +18,9 @@ export interface WouldDropChoice {
   seen: TagEditorView | null
   /** The files whose kind removals the list this press wrote from showed (`removalsShown`); none for ⌘⏎. */
   allowRemovals?: readonly string[]
+  /** Whether the press writes the side files, and the replacements its list showed (none for ⌘⏎). */
+  sideFiles?: boolean
+  allowSideFiles?: readonly SideFileSeen[]
 }
 
 export type WriteAnywayAnswer =
@@ -36,8 +39,14 @@ export async function answerWriteAnyway(
   if (!(await tags.settled(WRITE_WAIT_LIMIT_MS))) return { kind: 'stillBusy' }
   if (tags.view !== choice.seen) return { kind: 'changed' }
   onWriting?.()
-  const res = await tags.apply(writeAnywayAfter(choice.kind, last, tags.view, choice.allowRemovals), {
-    after: choice.reports,
-  })
+  const request = writeAnywayAfter(choice.kind, last, tags.view, choice.allowRemovals)
+  const sideFiles =
+    choice.sideFiles === true ? { sideFiles: true, allowSideFiles: [...(choice.allowSideFiles ?? [])] } : {}
+  const res = await tags.apply(
+    { ...request, ...sideFiles },
+    {
+      after: choice.reports,
+    },
+  )
   return res.ok ? { kind: 'written', reports: [...choice.reports, res.value] } : { kind: 'refused', error: res.error }
 }

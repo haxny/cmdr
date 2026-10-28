@@ -99,10 +99,12 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   list that names it. The backend enforces it (`ApplyRequest.allowRemovals` → `wouldRemove`, backend `DETAILS.md` §
   Write and undo): ⌘⏎ allows none, the dialog's write only the files it listed with a removal, and a file held back at
   the write opens the list again, continuing the press. With `multiRename.tagEditor.absSideFiles` on, the list also
-  names Audiobookshelf's `reader.txt` / `desc.txt` under the files (`side-files.ts`; `TagEditorState.sideFileChanges`,
-  `[]` with the setting off, so off changes nothing): ⌘⏎ creates a missing one but opens the list for one that says
-  something else (`reviewFirst.replacing`), and the dialog's write sends back only the replacements it showed with their
-  old text (`allowSideFiles`; backend `DETAILS.md` § Write and undo). An edit landing between ⌘⏎'s list and its write
+  names Audiobookshelf's `reader.txt` / `desc.txt` under the files (`side-files.ts`; asked only with the setting on
+  and a file to change, the setting read once per press and sent as `sideFiles`, so off changes nothing): side files
+  ride along with a tag write, never alone; ⌘⏎ creates a missing one but opens the list for one that says something
+  else (`reviewFirst.replacing`), and the dialog's write sends back only the replacements it showed with their old and
+  new text (`allowSideFiles`); one held back at the write is listed as not written (backend `DETAILS.md` § Write and
+  undo). An edit landing between ⌘⏎'s list and its write
   writes nothing and lists again (`changed`). The player stops first, a second press while it runs does nothing,
   would-drop files ask in a `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`, shared with the
   dialog: an edit landed meanwhile opens the list, continuing the press so Undo keeps both applies), and the status line

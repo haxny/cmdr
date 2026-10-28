@@ -1,15 +1,25 @@
 /**
  * The Write dialog with Audiobookshelf's side files on: the list names `reader.txt` and `desc.txt` under the files,
- * its write may replace only the side files it showed (with the old text it showed), side files alone are a write,
- * and one held back at the write (it changed since the list) lists again.
+ * its write may replace only the side files it showed (with the old and new text it showed), side files ride along
+ * with a tag write and never go alone, one held back at the write is listed as not written, and the write sends the
+ * setting as the list read it.
  */
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SideFileChange } from '#lib/tauri-commands/index.js'
+
+const settings = vi.hoisted(() => ({ absSideFiles: true }))
+vi.mock('#lib/settings/index.js', () => ({
+  getSetting: (id: string) => (id === 'multiRename.tagEditor.absSideFiles' ? settings.absSideFiles : false),
+}))
+
 import ApplyPanel from './ApplyPanel.svelte'
 import { mountInto } from './tag-cell.test-helper'
 import { applyReport, asState, buttonNamed, fakeState, press } from './apply-panel.test-helper'
 
 let cleanup: (() => void) | undefined
+beforeEach(() => {
+  settings.absSideFiles = true
+})
 afterEach(() => {
   cleanup?.()
   cleanup = undefined
@@ -46,27 +56,25 @@ describe('ApplyPanel side files', () => {
         allowFrameLoss: false,
         skip: [],
         allowRemovals: [],
-        allowSideFiles: [{ path: '/b/reader.txt', old: 'Someone Else\n' }],
+        allowSideFiles: [{ path: '/b/reader.txt', old: 'Someone Else\n', text: 'Vladimir Kudla' }],
+        sideFiles: true,
       },
       { after: [] },
     )
   })
 
-  it('side files alone are a write', async () => {
-    const fake = fakeState(undefined, [applyReport({ sideFilesWritten: ['/b/desc.txt'] })])
-    fake.changes.mockResolvedValue({ ok: true, value: [] })
-    fake.sideFileChanges.mockResolvedValue({ ok: true, value: [SIDE[1]] })
-    const root = await mountPanel(fake)
-    await press(root, 'Write tags…')
-    expect(buttonNamed(root, 'Write tags').disabled).toBe(false)
-    await press(root, 'Write tags')
-    expect(fake.apply).toHaveBeenCalledTimes(1)
-    expect(root.textContent).toContain('Also written beside the book: desc.txt')
-  })
-
-  it('a withheld side file says why, and alone writes nothing', async () => {
+  it('side files never go alone: with no file to change, nothing is listed or written', async () => {
     const fake = fakeState()
     fake.changes.mockResolvedValue({ ok: true, value: [] })
+    fake.sideFileChanges.mockResolvedValue({ ok: true, value: SIDE })
+    const root = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    expect(fake.sideFileChanges).not.toHaveBeenCalled()
+    expect(buttonNamed(root, 'Write tags').disabled).toBe(true)
+  })
+
+  it('a withheld side file says why', async () => {
+    const fake = fakeState()
     fake.sideFileChanges.mockResolvedValue({
       ok: true,
       value: [{ kind: 'withheld', file: 'reader', reason: 'tracksDisagree' }],
@@ -74,18 +82,32 @@ describe('ApplyPanel side files', () => {
     const root = await mountPanel(fake)
     await press(root, 'Write tags…')
     expect(listed(root, 'Beside the book:')).toEqual(['reader.txt isn’t written: the tracks name different narrators'])
-    expect(buttonNamed(root, 'Write tags').disabled).toBe(true)
   })
 
-  it('one held back at the write lists again, continuing the press', async () => {
-    const held = applyReport({ written: ['/b/01.mp3'], sideFilesHeld: ['/b/reader.txt'] })
+  it('one held back at the write is listed as not written', async () => {
+    const held = applyReport({
+      written: ['/b/01.mp3', '/b/02.mp3'],
+      sideFilesWritten: ['/b/desc.txt'],
+      sideFilesHeld: ['/b/reader.txt'],
+    })
     const fake = fakeState(undefined, [held])
-    fake.sideFileChanges.mockResolvedValue({ ok: true, value: [SIDE[1]] })
+    fake.sideFileChanges.mockResolvedValue({ ok: true, value: SIDE })
     const root = await mountPanel(fake)
     await press(root, 'Write tags…')
     await press(root, 'Write tags')
-    expect(fake.changes).toHaveBeenCalledTimes(2)
-    expect(fake.sideFileChanges).toHaveBeenCalledTimes(2)
-    expect(root.textContent).toContain('Something changed since the list was made, so here it is again.')
+    expect(fake.changes).toHaveBeenCalledTimes(1)
+    expect(root.textContent).toContain('Also written beside the book: desc.txt')
+    expect(listed(root, 'Not written beside the book:')).toEqual(['reader.txt'])
+  })
+
+  it('the write sends the setting as the list read it, even if it flips meanwhile', async () => {
+    settings.absSideFiles = false
+    const fake = fakeState()
+    const root = await mountPanel(fake)
+    await press(root, 'Write tags…')
+    settings.absSideFiles = true
+    await press(root, 'Write tags')
+    expect(fake.sideFileChanges).not.toHaveBeenCalled()
+    expect(fake.apply).toHaveBeenCalledWith(expect.objectContaining({ sideFiles: false }), { after: [] })
   })
 })

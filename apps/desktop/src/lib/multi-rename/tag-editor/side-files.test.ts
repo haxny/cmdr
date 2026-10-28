@@ -4,7 +4,7 @@ import type { SideFileChange } from '#lib/tauri-commands/index.js'
 
 vi.mock('#lib/settings/index.js', () => ({ getSetting: () => false }))
 
-import { SIDE_TEXT_SHOWN, quoted, replacementsShown, replacing, sideFilesOn, sideRowOf, sideWrites } from './side-files'
+import { quoted, replacementsShown, replacing, sideFilesOn, sideRowOf } from './side-files'
 
 const CREATE: SideFileChange = { kind: 'create', file: 'reader', path: '/b/reader.txt', text: 'Vladimir Kudla' }
 const REPLACE: SideFileChange = { kind: 'replace', file: 'desc', path: '/b/desc.txt', old: 'Old\nblurb\n', text: 'New' }
@@ -34,19 +34,15 @@ describe('side files', () => {
     })
   })
 
-  it('quotes a long text shortened on one line', () => {
-    const shown = quoted('x'.repeat(SIDE_TEXT_SHOWN + 10))
-    expect(shown).toHaveLength(SIDE_TEXT_SHOWN + 1)
-    expect(shown.endsWith('…')).toBe(true)
+  it('quotes the whole text, however long, on one line', () => {
+    const long = `${'x'.repeat(300)}\n\nend`
+    expect(quoted(long)).toBe(`${'x'.repeat(300)} end`)
   })
 
   it('hands back only the replacements shown, each with the full old text', () => {
-    expect(replacementsShown([CREATE, REPLACE, WITHHELD])).toEqual([{ path: '/b/desc.txt', old: 'Old\nblurb\n' }])
+    expect(replacementsShown([CREATE, REPLACE, WITHHELD])).toEqual([
+      { path: '/b/desc.txt', old: 'Old\nblurb\n', text: 'New' },
+    ])
     expect(replacing([CREATE, REPLACE, WITHHELD])).toBe(1)
-  })
-
-  it('a withheld file alone writes nothing', () => {
-    expect(sideWrites([WITHHELD])).toBe(false)
-    expect(sideWrites([WITHHELD, CREATE])).toBe(true)
   })
 })
