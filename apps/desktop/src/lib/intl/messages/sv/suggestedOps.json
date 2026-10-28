@@ -83,11 +83,11 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Add server",
+  "suggestedOps.approve.addServer": "Lägg till server",
   "@suggestedOps.approve.addServer": {
     "sourceHash": "1099b2a"
   },
-  "suggestedOps.approve.editServer": "Save changes",
+  "suggestedOps.approve.editServer": "Spara ändringar",
   "@suggestedOps.approve.editServer": {
     "sourceHash": "dd0ae7a"
   },
@@ -163,11 +163,11 @@
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "suggestedOps.reversible.forgetServer": "Du kan glömma servern senare i Servrar",
   "@suggestedOps.reversible.forgetServer": {
     "sourceHash": "c94623d"
   },
-  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "suggestedOps.reversible.changeServerBack": "Du kan ändra tillbaka inställningarna i Servrar",
   "@suggestedOps.reversible.changeServerBack": {
     "sourceHash": "1a68195"
   },
@@ -327,75 +327,77 @@
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "5b5b779"
   },
-  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "suggestedOps.refusal.serverLabel": "Varför det här inte sparades",
   "@suggestedOps.refusal.serverLabel": {
     "sourceHash": "c1958af"
   },
-  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "suggestedOps.refusal.serverChanged.message": "Servern har ändrats sedan AI:n föreslog det här, så Cmdr sparade ingenting.",
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "Be AI:n att föreslå det igen, eller redigera servern i Servrar.",
   "@suggestedOps.refusal.serverChanged.suggestion": {
     "sourceHash": "c83a215"
   },
-  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "suggestedOps.refusal.alreadySaved.message": "Servern finns redan i listan Servrar, så Cmdr sparade ingenting.",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "Öppna servern i Servrar, eller be AI:n att i stället föreslå en ändring av servern.",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
     "sourceHash": "eda1133"
   },
-  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "suggestedOps.refusal.nameTaken.message": "En annan sparad server heter redan {name}, så Cmdr sparade ingenting.",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "suggestedOps.refusal.nameTaken.suggestion": "Be AI:n att föreslå ett annat namn.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
     "sourceHash": "c059ee2"
   },
-  "suggestedOps.server.add": "Add a server",
+  "suggestedOps.server.add": "Lägg till en server",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Change a server",
+  "suggestedOps.server.change": "Ändra en server",
   "@suggestedOps.server.change": {
     "sourceHash": "7c07b82"
   },
   "suggestedOps.server.field.port": "Port",
   "@suggestedOps.server.field.port": {
-    "sourceHash": "72e9a59"
+    "sourceHash": "72e9a59",
+    "sameAsSourceJustification": "The network port is port in Swedish (sv/terms.json port ruling, MS terminology), like settings.developer.mcpPort.label. Deliberately identical."
   },
-  "suggestedOps.server.field.account": "Account",
+  "suggestedOps.server.field.account": "Konto",
   "@suggestedOps.server.field.account": {
     "sourceHash": "7e1b0d5"
   },
-  "suggestedOps.server.field.share": "Share",
+  "suggestedOps.server.field.share": "Delad mapp",
   "@suggestedOps.server.field.share": {
     "sourceHash": "29887a5"
   },
   "suggestedOps.server.field.bucket": "Bucket",
   "@suggestedOps.server.field.bucket": {
-    "sourceHash": "c83b657"
+    "sourceHash": "c83b657",
+    "sameAsSourceJustification": "S3 users and Swedish cloud consoles keep bucket (sv/terms.json bucket ruling), like servers.sheet.s3Bucket. Deliberately identical."
   },
-  "suggestedOps.server.notSet": "Not set",
+  "suggestedOps.server.notSet": "Inget värde",
   "@suggestedOps.server.notSet": {
     "sourceHash": "4895f73"
   },
-  "suggestedOps.server.changesTo": "changes to",
+  "suggestedOps.server.changesTo": "ändras till",
   "@suggestedOps.server.changesTo": {
     "sourceHash": "8c0db20"
   },
-  "suggestedOps.server.newAddress": "A new address",
+  "suggestedOps.server.newAddress": "Ny adress",
   "@suggestedOps.server.newAddress": {
     "sourceHash": "5fc5498"
   },
-  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "suggestedOps.server.newAddressTooltip": "Ingen av dina sparade servrar finns på den här adressen. Kontrollera att det är den adress du menar.",
   "@suggestedOps.server.newAddressTooltip": {
     "sourceHash": "16d851c"
   },
-  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "suggestedOps.server.sharesAffected": "{count, plural, one {Ändringen gäller {countText} sparad delad mapp på den här servern.} other {Ändringen gäller {countText} sparade delade mappar på den här servern.}}",
   "@suggestedOps.server.sharesAffected": {
     "sourceHash": "390f931"
   },

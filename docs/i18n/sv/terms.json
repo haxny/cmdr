@@ -278,7 +278,11 @@
     "confidence": "high",
     "decision": "Ask Cmdr names only the chat panel",
     "forms": "verbatim; genitive Ask Cmdrs; names only the chat panel, prose about the AI says Cmdr or AI:n",
-    "sources": "product name"
+    "sources": "product name",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.sameName": "English “Ask Cmdr for …” is the verb ask plus Cmdr, not the panel name, so it reads Be Cmdr om …",
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English “Ask Cmdr for …” is the verb ask plus Cmdr, not the panel name, so it reads Be Cmdr om …"
+    }
   },
   "attachment": {
     "accept": ["bifoga"],
@@ -3711,5 +3715,19 @@
     "confidence": "high",
     "forms": "an option or field label → Reguljärt uttryck; the short mode name Regex stays (queryUi.mode.regex.label, viewer.search.regex) and compounds with a hyphen (Regex-läge, regex-sökningar)",
     "sources": "catalog (queryUi.bar.placeholder.regex Reguljärt uttryck, queryUi.mode.regex.label Regex); Double Commander sv (Regular expressions → Reguljära uttryck, unverified: the pile has no sv Double Commander catalog); Total Commander sv (6626 RegE&x); MS terminology (regular expression → reguljärt uttryck)"
+  },
+  "start": {
+    "chosen": "starta",
+    "accept": ["startade", "startar", "startat", "startas", "börja", "börjar", "påbörjad"],
+    "confidence": "high",
+    "forms": "so nothing started → så inget startade; Why this didn’t start → Varför det här inte startade; a task about to begin → börja / börjar (Det gick inte att börja byta namn, Bildindexeringen börjar …); a step's pending chip → Inte påbörjad",
+    "sources": "catalog (suggestedOps.refusal.label Varför det här inte startade, errors.write.namedLeavesRefused.message.notASource så inget startade); Total Commander sv (Filen kan inte startas)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip-arkiv", "zip-arkivet", "zip-fil", "zip-filen", "zip-filer"],
+    "confidence": "high",
+    "forms": "a bare zip in prose → en zip; zip archive → zip-arkiv; the file itself → zip-filen; lowercase in running text (catalog: 17 zip-filen, four zip-arkiv) even though Finder writes Zip-arkiv",
+    "sources": "macOS Finder sv (Zip-arkiv, ZIP-fil in CompressWithOptions); catalog (errors.write.archiveEntryNameRefused.title Det här namnet kan inte ligga i en zip, errors.write.namedLeavesRefused.message.routeCannotName zip-arkiv)"
   }
 }
