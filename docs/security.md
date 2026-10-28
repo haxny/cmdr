@@ -325,7 +325,8 @@ Ask Cmdr is the widest of these, so the rest of this section is its detail. Ask 
   a server to add or a change to a saved one; the user's approval saves it through the servers hub's own code, and
   nothing contacts the server until the user connects it. No password, key, key file, or switch that unlocks one can
   enter a proposal, so none is stored or shown. An edit can't change where a saved server is or which account it signs
-  in as (the app's edit would move the stored password to the new address), an add can't replace a saved server or wear
+  in as, on any protocol (a username, or NFS's uid and gid): the app's edit would move the stored password to a new
+  address, and a new account would act as someone the user never picked. An add can't replace a saved server or wear
   another's name, and the tool refuses on a turn the user didn't start. No egress moves. Canonical:
   `apps/desktop/src-tauri/src/agent/tools/suggestions/DETAILS.md` § Proposing a server.
 - **The agent writes one folder, and what it writes egresses forever after.** `Access::Memory` covers `memory_write` and

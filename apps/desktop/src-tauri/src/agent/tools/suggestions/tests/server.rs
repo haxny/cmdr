@@ -369,9 +369,17 @@ fn an_edit_that_names_another_address_or_account_refuses() {
             json!({ "protocol": "nfs", "editing": NFS_ID, "export": "/Private" }),
             "export",
         ),
+        // Who a server signs in as is identity on every protocol: an SMB username, an NFS
+        // uid or gid.
+        (json!({ "protocol": "nfs", "editing": NFS_ID, "uid": 0 }), "uid"),
+        (json!({ "protocol": "nfs", "editing": NFS_ID, "gid": 0 }), "gid"),
         (
             json!({ "protocol": "smb", "editing": SMB_SHARE, "host": "10.0.0.66" }),
             "host",
+        ),
+        (
+            json!({ "protocol": "smb", "editing": SMB_SHARE, "username": "dori" }),
+            "username",
         ),
         (
             json!({ "protocol": "s3", "editing": S3_BUCKET_ID, "bucket": "other" }),
@@ -399,6 +407,8 @@ fn an_edit_may_restate_its_address_in_the_stores_own_spelling() {
         "the draft keeps the saved address, never the call's spelling"
     );
     assert!(plan(json!({ "protocol": "sftp", "editing": SFTP_ID, "host": "Build.LAN", "port": 22 })).is_ok());
+    assert!(plan(json!({ "protocol": "smb", "editing": SMB_SHARE, "username": "david", "name": "NAS" })).is_ok());
+    assert!(plan(json!({ "protocol": "nfs", "editing": NFS_ID, "uid": 1000, "gid": 1000, "name": "Files" })).is_ok());
 }
 
 #[test]
@@ -419,10 +429,13 @@ fn an_edit_stores_what_it_changes_and_the_saved_entry_with_its_address() {
 
 #[test]
 fn an_smb_edits_name_lands_on_the_host_and_counts_its_shares() {
-    let planned =
-        plan(json!({ "protocol": "smb", "editing": SMB_SHARE, "name": "NAS", "username": "dori" })).expect("edit");
+    let planned = plan(json!({ "protocol": "smb", "editing": SMB_SHARE, "name": "NAS" })).expect("edit");
     assert_eq!(planned.draft.display_name.as_deref(), Some("NAS"));
-    assert_eq!(planned.draft.username.as_deref(), Some("dori"));
+    assert_eq!(
+        planned.draft.username.as_deref(),
+        Some("david"),
+        "the saved account rides along"
+    );
     assert_eq!(planned.draft.share, None, "a name is the host's, never a share's");
     assert_eq!(planned.draft.shares_affected, Some(2));
     assert_eq!(planned.edit.expect("edit").previous, smb_saved());

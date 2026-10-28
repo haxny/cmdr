@@ -100,8 +100,8 @@ struct FieldMap {
     add: &'static [Field],
     required: &'static [Field],
     edit: &'static [Field],
-    /// Where the server is, and (SFTP, WebDAV) who it signs in as: required on an add, and an
-    /// edit may only restate it.
+    /// Where the server is, and who it signs in as (a username, NFS's uid and gid): an edit
+    /// may only restate it, on every protocol.
     identity: &'static [Field],
 }
 
@@ -111,8 +111,8 @@ fn field_map(protocol: DraftProtocol) -> FieldMap {
         DraftProtocol::Smb => FieldMap {
             add: &[Host, Port, Username, Share, Name],
             required: &[Host],
-            edit: &[Name, Username],
-            identity: &[Host, Port],
+            edit: &[Name],
+            identity: &[Host, Port, Username],
         },
         DraftProtocol::Sftp => FieldMap {
             add: &[Host, Port, Username, Path, StartFolder, Name],
@@ -129,8 +129,8 @@ fn field_map(protocol: DraftProtocol) -> FieldMap {
         DraftProtocol::Nfs => FieldMap {
             add: &[Host, Port, Export, Uid, Gid, StartFolder, Name],
             required: &[Host, Export],
-            edit: &[Name, Uid, Gid, StartFolder],
-            identity: &[Host, Port, Export],
+            edit: &[Name, StartFolder],
+            identity: &[Host, Port, Export, Uid, Gid],
         },
         DraftProtocol::S3 => FieldMap {
             add: &[Account, Bucket, Name],
@@ -517,8 +517,8 @@ fn plan_add(
     Ok((draft, None, placed.own_row))
 }
 
-/// A change to a saved place: its address and account stay exactly as saved, and only the
-/// map's editable fields move. Answers the draft, the edit (with `previous`), and the row.
+/// A change to a saved place: its address and who it signs in as stay exactly as saved, and
+/// only the map's editable fields move. Answers the draft, the edit (with `previous`), and the row.
 fn plan_edit(
     ask: &Ask,
     protocol: DraftProtocol,
@@ -543,22 +543,11 @@ fn plan_edit(
     if ask.name.is_some() {
         draft.display_name = ask.name.clone();
     }
-    // SMB's only other editable field; on every other protocol `username` is identity, which
-    // `restates` already held equal.
-    if protocol == DraftProtocol::Smb && ask.username.is_some() {
-        draft.username = ask.username.clone();
-    }
     if ask.path.is_some() {
         draft.remote_root = ask.path.clone();
     }
     if ask.start_folder.is_some() {
         draft.start_folder = ask.start_folder.clone();
-    }
-    if ask.uid.is_some() {
-        draft.uid = ask.uid;
-    }
-    if ask.gid.is_some() {
-        draft.gid = ask.gid;
     }
     check_start_folder(&draft)?;
     let edit = ServerEdit {
@@ -584,6 +573,8 @@ fn restates(ask: &Ask, field: Field, previous: &ServerDraft) -> bool {
         }
         Field::Account => ask.account == previous.account_id,
         Field::Bucket => ask.bucket.as_deref().map(str::trim) == previous.bucket.as_deref().map(str::trim),
+        Field::Uid => ask.uid == previous.uid,
+        Field::Gid => ask.gid == previous.gid,
         _ => true,
     }
 }

@@ -149,26 +149,27 @@ the write; any refusal writes nothing.
 - **The field map** (a field outside its row is `unboundField`; an add without a required one is `missingField`;
   defaults are the add form's, `apps/desktop/src/lib/servers/server-form.ts`):
   - `smb`. Add: `host` (required), `port` (445), `username`, `share`, `name` (the HOST's). Edit (`editing` is any of
-    the host's share volume ids): `name` (the host's, ❌ never a share's), `username` (the host's account). The draft
-    records how many saved shares the host has, for the card.
+    the host's share volume ids): `name` (the host's, ❌ never a share's). The draft records how many saved shares the
+    host has, for the card.
   - `sftp`. Add: `host`, `username` (both required), `port` (22), `path` (the remote root, `/`), `startFolder`, `name`.
     Edit: `name`, `path`, `startFolder`.
   - `webdav`. Add: `url`, `username` (both required), `path` (`/`), `startFolder`, `name`. Edit: `name`, `path`,
     `startFolder`.
   - `nfs`. Add: `host`, `export` (both required), `port` (absent asks the portmapper), `uid`, `gid`, `startFolder`,
-    `name`. Edit: `name`, `uid`, `gid`, `startFolder`. An add without `uid` / `gid` stores none: the add form's guess
+    `name`. Edit: `name`, `startFolder`. An add without `uid` / `gid` stores none: the add form's guess
     asks the server, which an approval mustn't, so the approval decides.
   - `s3`. Add: a BUCKET place under a saved account, `account` (its listing id) and `bucket`, plus `name`. Edit: `name`.
     No account at all is a new account, `protocolNotProposable` (the user adds one in Servers, where the key id comes
     from).
   - ❗ An NFS or S3 `name` is the SERVER's or the ACCOUNT's (the stores keep no per-export or per-bucket name), so it
     renames the row every place under it shares.
-- **Identity fields** (`host`, `port`, `url`, `export`, `account`, `bucket`, the protocol, and the SFTP / WebDAV
-  `username`) are required on an add and immutable in an edit: an edit may restate one in the store's own spelling (a
-  host's case, a URL's trailing slash, an export's `//`), and the draft keeps the SAVED spelling; any other value is
-  `addressChange`. **Why**: the app's edit MOVES the server and its stored password to a new address, and
-  auto-reconnect would then send it there with nobody watching, so one approved click would hand a credential to
-  whatever answers at an address an injected file name chose.
+- **Identity fields** (`host`, `port`, `url`, `export`, `account`, `bucket`, the protocol, and who the server signs
+  in as: every protocol's `username`, NFS's `uid` and `gid`) are immutable in an edit: an edit may restate one in the
+  store's own spelling (a host's case, a URL's trailing slash, an export's `//`), and the draft keeps the SAVED
+  spelling; any other value is `addressChange`. **Why**: the app's edit MOVES the server and its stored password to a
+  new address, and auto-reconnect would then send it there with nobody watching, so one approved click would hand a
+  credential to whatever answers at an address an injected file name chose. A new account is the same shape the other
+  way round: an SMB host signing in as someone else, or an NFS export acting as uid 0, is a power the user never picked.
 - **Every value one plain thing.** `name`, `share`, `username`, and `bucket` pass `validate_plain_leaf`; `path`,
   `export`, and `startFolder` are absolute, each folder a plain leaf; a host is a plain ASCII host name or IP literal
   (a look-alike of a saved host, `nаspolya` with a Cyrillic `а`, can't stand in for it; an internationalized name goes
