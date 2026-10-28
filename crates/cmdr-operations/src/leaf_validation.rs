@@ -204,6 +204,18 @@ fn landing_clash(
     destination: &Path,
     identity: LeafIdentity,
 ) -> Result<(), LandingClash> {
+    landing_clash_with(items, destination, identity, file_id)
+}
+
+/// [`landing_clash`] with its stat as a seam. `Names` mode never calls `stat`:
+/// it runs for remote routes (whose paths mean nothing on this disk) and on a
+/// tokio worker for an AI proposal, where one stat of a hung mount stalls it.
+fn landing_clash_with(
+    items: &[(&Path, Option<&str>)],
+    destination: &Path,
+    identity: LeafIdentity,
+    stat: impl Fn(&Path) -> Option<(u64, u64)>,
+) -> Result<(), LandingClash> {
     for (_, leaf) in items {
         let Some(leaf) = leaf else { continue };
         if let Err(refusal) = cmdr_fs::validation::validate_plain_leaf(leaf) {
@@ -235,13 +247,14 @@ fn landing_clash(
     // the same item reached through another spelling or a symlinked folder.
     let by_name: HashMap<String, &Path> = items.iter().map(|(s, _)| (folded(s), *s)).collect();
     let by_inode: HashMap<(u64, u64), &Path> = match identity {
-        LeafIdentity::NamesAndInodes => items.iter().filter_map(|(s, _)| Some((file_id(s)?, *s))).collect(),
+        LeafIdentity::NamesAndInodes => items.iter().filter_map(|(s, _)| Some((stat(s)?, *s))).collect(),
         LeafIdentity::Names => HashMap::new(),
     };
     for (source, landing) in landings {
-        let onto = by_name
-            .get(&folded(&landing))
-            .or_else(|| file_id(&landing).and_then(|id| by_inode.get(&id)));
+        let onto = by_name.get(&folded(&landing)).or_else(|| match identity {
+            LeafIdentity::NamesAndInodes => stat(&landing).and_then(|id| by_inode.get(&id)),
+            LeafIdentity::Names => None,
+        });
         // Landing on ITSELF is the next rule's, not a chain.
         if onto.is_some_and(|other| *other != source) {
             return Err(LandingClash::OntoASource { landing });
@@ -252,12 +265,12 @@ fn landing_clash(
     // and the same-volume move's identity guard would drop a case-only one.
     let destination_key = folded(destination);
     let destination_id = (identity == LeafIdentity::NamesAndInodes)
-        .then(|| file_id(destination))
+        .then(|| stat(destination))
         .flatten();
     for (source, _) in items {
         let Some(parent) = source.parent() else { continue };
         let already_there =
-            folded(parent) == destination_key || destination_id.is_some_and(|id| file_id(parent) == Some(id));
+            folded(parent) == destination_key || destination_id.is_some_and(|id| stat(parent) == Some(id));
         if already_there {
             return Err(LandingClash::AlreadyInDestination {
                 source: source.to_path_buf(),
@@ -301,4 +314,38 @@ pub(crate) fn refuse_per_source_leaves_here(
         });
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A name-only check runs for remote routes (whose paths mean nothing on
+    /// this disk) and on a tokio worker for an AI proposal, so one stat of a
+    /// hung mount would stall it: `Names` mode must never touch the disk.
+    #[test]
+    fn names_mode_never_stats() {
+        let items: Vec<(&Path, Option<&str>)> = vec![
+            (Path::new("/Volumes/hung/a.txt"), Some("b.txt")),
+            (Path::new("/Volumes/hung/c.txt"), None),
+        ];
+        let stat = |path: &Path| -> Option<(u64, u64)> { panic!("statted {}", path.display()) };
+        let result = landing_clash_with(&items, Path::new("/Volumes/hung/dest"), LeafIdentity::Names, stat);
+        assert_eq!(result, Ok(()));
+    }
+
+    #[test]
+    fn names_and_inodes_mode_stats_landings_and_destination() {
+        let items: Vec<(&Path, Option<&str>)> = vec![(Path::new("/src/a.txt"), Some("b.txt"))];
+        let statted = std::cell::RefCell::new(Vec::new());
+        let stat = |path: &Path| {
+            statted.borrow_mut().push(path.to_path_buf());
+            None
+        };
+        let result = landing_clash_with(&items, Path::new("/dest"), LeafIdentity::NamesAndInodes, stat);
+        assert_eq!(result, Ok(()));
+        let statted = statted.into_inner();
+        assert!(statted.contains(&PathBuf::from("/dest/b.txt")), "{statted:?}");
+        assert!(statted.contains(&PathBuf::from("/dest")), "{statted:?}");
+    }
 }

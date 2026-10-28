@@ -609,7 +609,10 @@ only in Rust). The destination argument remains its parent directory. On the wir
     a zip), whose plan takes one leaf at most (`refuse_per_source_leaves_here`, in `route_volume_copy` /
     `route_volume_move`). Every other engine names each source.
   - On a route whose ends aren't both on this machine, the comparisons are by folded path alone, even across two
-    volumes: the two could be one share under two addresses, and a refusal there costs a retry.
+    volumes: the two could be one share under two addresses, and a refusal there costs a retry. By-name mode
+    (`LeafIdentity::Names`) stats nothing: a remote route's paths mean nothing on this disk, and `check_landings` runs
+    on a tokio worker for an AI proposal, where one stat of a hung mount would stall it (pinned by
+    `leaf_validation::tests::names_mode_never_stats`).
   - The name rules (plain leaf, `sameName`, `ontoASource`, `alreadyInDestination`) are one function,
     `leaf_validation::landing_clash`, and a caller checking a batch BEFORE its start asks the same one by name alone
     through the public `TransferLeaves::check_landings` (typed `LandingClash`): an AI proposal refuses there, while the
