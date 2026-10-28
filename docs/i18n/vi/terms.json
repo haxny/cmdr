@@ -228,6 +228,10 @@
   "ask-cmdr": {
     "chosen": "Ask Cmdr",
     "confidence": "high",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "\"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel name, so it reads Hãy nhờ Cmdr …; the concept lacks an \"ask cmdr for\" notMatch (logged in source-queue.md).",
+      "errors.write.namedLeavesRefused.suggestion.sameName": "\"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel name, so it reads Hãy nhờ Cmdr …; the concept lacks an \"ask cmdr for\" notMatch (logged in source-queue.md)."
+    },
     "forms": "names the chat panel only; sentences about what the assistant does say Cmdr, sentences about the model say AI",
     "sources": "product name, kept verbatim"
   },
@@ -2735,7 +2739,7 @@
   "server": {
     "chosen": "máy chủ",
     "confidence": "high",
-    "forms": "the switcher row and scope Máy chủ; connect to a server → kết nối tới (prose)",
+    "forms": "the switcher row and scope Máy chủ; \"in/from Servers\" (the view) → trong/từ danh sách Máy chủ (servers.sheet.addedToast); connect to a server → kết nối tới (prose); the AI-suggestion kind tags Add a server / Change a server → Thêm một máy chủ / Sửa một máy chủ (Sửa, as Sửa máy chủ…, never đổi, which reads as swapping servers)",
     "sources": "macOS AppKit (Servers → Máy chủ), Finder N84, GNOME"
   },
   "server-address": {
@@ -2860,6 +2864,13 @@
     "confidence": "high",
     "forms": "the From heading → Từ",
     "sources": "GNOME (thư mục nguồn), Total Commander"
+  },
+  "start": {
+    "chosen": "bắt đầu",
+    "confidence": "high",
+    "accept": ["khởi động"],
+    "forms": "nothing started → chưa có gì bắt đầu; Not started → Chưa bắt đầu; launching a machine-like process (a watcher, a rollback run) → khởi động",
+    "sources": "macOS Finder (Đang bắt đầu nén đến “^0”, Bắt đầu); catalog (65 bắt đầu, indexing.step.statusPending, suggestedOps.refusal.label)"
   },
   "start-up": {
     "chosen": "khởi động",
@@ -3380,6 +3391,13 @@
     "decision": "Hộp thoại thoát khi thao tác đang chạy",
     "forms": "partly written → đã được ghi một phần (predicative); half-written file → tệp ghi dở (attributive)",
     "sources": "macOS Finder (ghi đè)"
+  },
+  "zip": {
+    "chosen": "tệp zip",
+    "confidence": "high",
+    "accept": ["zip"],
+    "forms": "inside the zip → bên trong tệp zip; a zip archive → tệp nén zip (archive ruling); Finder's kind name → Tệp lưu trữ Zip",
+    "sources": "macOS Finder (Tệp Zip, Tệp lưu trữ Zip); catalog (23 tệp zip, errors.write.archiveEntryNameRefused.*)"
   },
   "zoom": {
     "accept": ["phóng to", "thu nhỏ", "mức phóng"],
