@@ -1523,6 +1523,10 @@
   "@multiRename.tags.tools.text.allFields": {
     "description": "Shown in the tag editor's Clean up dialog: a choice of fields for the text options. Every tag field but Comment and Description, which keep their diacritics on purpose."
   },
+  "multiRename.tags.tools.text.failed": "Couldn’t change the tags. Nothing was changed.",
+  "@multiRename.tags.tools.text.failed": {
+    "description": "Shown in the tag editor's Clean up dialog under the Text options when running them didn't work. The dialog stays open so the user can try again."
+  },
   "multiRename.tags.tools.text.run": "Run",
   "@multiRename.tags.tools.text.run": {
     "description": "Shown in the tag editor's Clean up dialog: the button that runs the ticked text options (Greek to Latin, Remove diacritics, Normalize Unicode) on the chosen fields."

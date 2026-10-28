@@ -3194,6 +3194,7 @@ export type MessageKey =
   | 'multiRename.tags.tools.replace.search'
   | 'multiRename.tags.tools.stripTrackPrefix'
   | 'multiRename.tags.tools.text.allFields'
+  | 'multiRename.tags.tools.text.failed'
   | 'multiRename.tags.tools.text.fieldsLabel'
   | 'multiRename.tags.tools.text.group'
   | 'multiRename.tags.tools.text.run'

@@ -136,13 +136,36 @@ describe('TagToolDialogs', () => {
     )
   })
 
-  it('Clean up’s Text group offers the field the dialog opened on beside All fields, and Run stays enabled', async () => {
+  it('Clean up’s Text group runs on the field the dialog opened on when it is chosen, even Comment', async () => {
     const { fake } = await mountTool('cleanUp', { field: 'comment' })
-    const select = document.querySelector<HTMLElement>('[aria-label="Fields"]')
-    expect(select).not.toBeNull()
-    expect(document.body.textContent).toContain('All fields except Comment and Description')
-    expect(buttonNamed(document.body, 'Run').disabled).toBe(false)
-    expect(fake.textTool).not.toHaveBeenCalled()
+    const trigger = document.querySelector<HTMLElement>('.select-trigger')
+    expect(trigger).not.toBeNull()
+    trigger?.click()
+    await tick()
+    await tick()
+    const item = [
+      ...document.querySelectorAll<HTMLElement>('[data-part="content"][data-state="open"] [data-part="item"]'),
+    ].find((el) => el.getAttribute('data-value') === 'comment')
+    expect(item).toBeDefined()
+    item?.click()
+    await tick()
+    await tick()
+    await click('Run')
+    expect(fake.textTool).toHaveBeenCalledWith(
+      { kind: 'text', fields: ['comment'], greekToLatin: false, removeDiacritics: true, normalizeUnicode: false },
+      SCOPE,
+    )
+  })
+
+  it('a failed run keeps the dialog open and says so', async () => {
+    const { fake, onClose } = await mountTool('cleanUp')
+    fake.textTool.mockImplementation(() => {
+      fake.error = { kind: 'unknownTrack' }
+      return Promise.resolve()
+    })
+    await click('Run')
+    expect(onClose).not.toHaveBeenCalled()
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('Couldn’t change the tags')
   })
 
   it('Run is disabled with nothing ticked', async () => {

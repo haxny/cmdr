@@ -303,20 +303,27 @@ fn text_remove_diacritics_on_title_leaves_comment() {
         &id,
         vec![
             set_title(&dir, "a.mp3", "Žluťoučký"),
-            TagEdit::SetOne {
-                path: path_of(&dir, "a.mp3"),
-                field: TagField::Comment,
-                values: vec!["Žluťoučký".to_string()],
-            },
+            set_all(TagField::Comment, &["Žluťoučký"]),
         ],
     )
     .expect("edits");
     let view = run(&id, text(&[TagField::Title], false, true, false), None).expect("runs");
     assert_eq!(titles(&view)[0], Some("Zlutoucky"));
-    // Only a.mp3 has a comment, so the shared row is "multiple"; compare through a scoped second run instead.
-    assert!(
-        matches!(shared(&view, TagField::Comment), SharedValue::Multiple),
-        "Comment still set on a.mp3"
+    assert_eq!(
+        shared(&view, TagField::Comment),
+        &SharedValue::Same(vec!["Žluťoučký".to_string()]),
+        "Comment untouched"
+    );
+    let view = run(
+        &id,
+        text(&[TagField::Title, TagField::Comment], false, true, false),
+        None,
+    )
+    .expect("runs");
+    assert_eq!(
+        shared(&view, TagField::Comment),
+        &SharedValue::Same(vec!["Zlutoucky".to_string()]),
+        "picking Comment explicitly strips it"
     );
     close(&id);
     close_rename(&id);
@@ -337,14 +344,19 @@ fn text_normalize_unicode_composes() {
 fn text_runs_in_multi_renames_order_and_stays_on_the_selected_tracks() {
     let (dir, _listing, id) = album("tag-text-scope-order");
     open(&id, false).expect("opens");
+    // Greek first, then diacritics: the tonos mark left on the Latin `f` is the one the
+    // other order (diacritics first, then Greek) never produces, so a swapped order fails here.
     edit(
         &id,
-        vec![set_title(&dir, "a.mp3", "Ά"), set_title(&dir, "b.mp3", "Žluťoučký")],
+        vec![
+            set_title(&dir, "a.mp3", "Ευ\u{301}"),
+            set_title(&dir, "b.mp3", "Ευ\u{301}"),
+        ],
     )
     .expect("edits");
     let scope = Some(vec![path_of(&dir, "b.mp3")]);
     let view = run(&id, text(&[TagField::Title], true, true, true), scope).expect("runs");
-    assert_eq!(titles(&view), vec![Some("Ά"), Some("Zlutoucky"), Some("Gamma")]);
+    assert_eq!(titles(&view), vec![Some("Ευ\u{301}"), Some("Ef\u{301}"), Some("Gamma")]);
     close(&id);
     close_rename(&id);
 }

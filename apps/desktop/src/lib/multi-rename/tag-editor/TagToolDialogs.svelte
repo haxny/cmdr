@@ -99,6 +99,7 @@
     const ALL_FIELDS = 'all'
     let textOptions = $state<TextOptions>({ greekToLatin: false, removeDiacritics: true, normalizeUnicode: false })
     let textChoice = $state(ALL_FIELDS)
+    let textFailed = $state(false)
     const textFieldItems = $derived([
         { value: ALL_FIELDS, label: tString('multiRename.tags.tools.text.allFields') },
         ...(field === null ? [] : [{ value: field, label: tString(FIELD_LABELS[field]) }]),
@@ -110,8 +111,11 @@
     async function runText(): Promise<void> {
         const tool = textToRun
         if (tool === null) return
-        await runScoped((scope) => tags.textTool(tool, scope))
-        onClose()
+        textFailed = false
+        const ran = await runScoped((scope) => tags.textTool(tool, scope).then(() => true))
+        // Stay open when the run didn't happen or failed, so the notice is seen and Run can be retried.
+        if (ran === true && tags.error === null) onClose()
+        else if (ran === true) textFailed = true
     }
 
     function setChecked(key: string, on: boolean): void {
@@ -159,8 +163,8 @@
                         <Button onclick={() => { run(plain.tool) }}>{tString(plain.label)}</Button>
                     {/each}
                 </div>
-                <div class="text" role="group" aria-label={tString('multiRename.tags.tools.text.group')}>
-                    <h3>{tString('multiRename.tags.tools.text.group')}</h3>
+                <div class="text" role="group" aria-labelledby="tag-text-group">
+                    <h3 id="tag-text-group">{tString('multiRename.tags.tools.text.group')}</h3>
                     <Checkbox checked={textOptions.greekToLatin} onCheckedChange={(on: boolean) => { textOptions = { ...textOptions, greekToLatin: on } }}>
                         {tString('multiRename.greekToLatin')}
                     </Checkbox>
@@ -181,6 +185,9 @@
                             {tString('multiRename.tags.tools.text.run')}
                         </Button>
                     </div>
+                    {#if textFailed}
+                        <p class="error" role="alert">{tString('multiRename.tags.tools.text.failed')}</p>
+                    {/if}
                 </div>
             {:else if open === 'extras'}
                 <ul aria-label={tString('multiRename.tags.tools.extrasLabel')}>
@@ -251,6 +258,11 @@
         flex-direction: column;
         gap: var(--spacing-xs);
         margin-top: var(--spacing-xs);
+    }
+
+    .error {
+        margin: 0;
+        color: var(--color-error-text);
     }
 
     h3 {
