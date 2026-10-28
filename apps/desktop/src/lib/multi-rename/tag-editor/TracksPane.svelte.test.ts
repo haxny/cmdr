@@ -257,3 +257,42 @@ describe('TracksPane order and edits', () => {
     expect(onEdit).toHaveBeenCalledWith([{ kind: 'setOne', path: '/b/01.mp3', field: 'title', values: [] }])
   })
 })
+
+describe('TracksPane after a click', () => {
+  function mouseDown(el: Element, init: MouseEventInit = {}): MouseEvent {
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true, ...init })
+    el.dispatchEvent(event)
+    return event
+  }
+
+  it('a click on a row keeps focus on the list, so ↓, Space, and F2 act', async () => {
+    const { root, list, selection, onCursorChange } = await mountPane()
+    const row = rowsOf(root)[1]
+    expect(row.hasAttribute('tabindex')).toBe(false)
+    expect(mouseDown(row).defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(list)
+    expect(onCursorChange).toHaveBeenLastCalledWith(1)
+    const target = document.activeElement as HTMLElement
+    await press(target, 'ArrowDown')
+    expect(onCursorChange).toHaveBeenCalledTimes(2)
+    await press(target, ' ', { code: 'Space' })
+    expect(selection.count).toBe(1)
+    await press(target, 'F2')
+    expect(editorOf(root)).not.toBeNull()
+  })
+
+  it('⌘-click on ☐ toggles the track once, not twice', async () => {
+    const { root, selection } = await mountPane()
+    const mark = rowsOf(root)[2].querySelector<HTMLElement>('[data-col="mark"]')
+    if (!mark) throw new Error('no mark')
+    mouseDown(mark, { metaKey: true })
+    mark.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }))
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/03.mp3'] })
+  })
+
+  it('⌘-click on the row elsewhere toggles it, as on files', async () => {
+    const { root, selection } = await mountPane()
+    mouseDown(rowsOf(root)[0], { metaKey: true })
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3'] })
+  })
+})

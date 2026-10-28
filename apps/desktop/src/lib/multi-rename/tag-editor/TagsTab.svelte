@@ -68,6 +68,14 @@
         selection.selectAll()
     }
 
+    /** ⌘⇧A from the native menu (`TagsWindow`): no track selected. */
+    export function deselectAllTracks(): void {
+        selection.deselectAll()
+    }
+
+    /** Focus is inside one of the panes (not the tools bar, the cover, or Write): only then a pane draws as focused. */
+    let inPanes = $state(false)
+
     onMount(() => {
         void tags.open()
     })
@@ -142,10 +150,15 @@
     })
 
     function followFocus(target: EventTarget | null): void {
-        if (target instanceof Node && toolsBar?.contains(target) === true) return
+        if (target instanceof Node && toolsBar?.contains(target) === true) {
+            // Case and Replace keep the pane's field; the pane no longer draws its cursor as focused.
+            inPanes = false
+            return
+        }
         const slot = target instanceof Element ? target.closest<HTMLElement>('[data-pane]') : null
         const inCover = target instanceof Element && target.closest('.cover-group') !== null
-        panes.noteFocus(slot === null || inCover ? null : (slot.dataset.pane as TagsPaneId))
+        inPanes = slot !== null && !inCover
+        panes.noteFocus(inPanes && slot !== null ? (slot.dataset.pane as TagsPaneId) : null)
     }
     let applyPanel = $state<TagsTabApi>()
 
@@ -185,7 +198,7 @@
     class="tags-tab"
     id="sheet-panel-tags"
     onfocusin={(e) => { followFocus(e.target) }}
-    onfocusout={(e) => { if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) panes.noteFocus(null) }}
+    onfocusout={(e) => { if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) { inPanes = false; panes.noteFocus(null) } }}
 >
     {#if tags.view === null}
         {#if tags.error !== null}
@@ -230,7 +243,7 @@
                     rows={view.shared}
                     editable={view.editable}
                     badDates={view.badDates}
-                    focused={panes.active === 'album'}
+                    focused={inPanes && panes.active === 'album'}
                     cursor={panes.albumCursor}
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
@@ -244,7 +257,7 @@
                     bind:this={tracksPane}
                     tracks={view.tracks}
                     editable={view.editable}
-                    focused={panes.active === 'tracks'}
+                    focused={inPanes && panes.active === 'tracks'}
                     cursor={panes.tracksCursor}
                     onCursorChange={(index: number) => { panes.tracksCursor = index }}
                     {selection}

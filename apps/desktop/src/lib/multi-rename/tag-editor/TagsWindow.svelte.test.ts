@@ -33,8 +33,13 @@ const ipc = vi.hoisted(() => ({
     menuSelectAll.callback = callback
     return Promise.resolve(() => {})
   }),
+  onTagsDeselectAll: vi.fn((callback: () => void) => {
+    menuDeselectAll.callback = callback
+    return Promise.resolve(() => {})
+  }),
 }))
 const menuSelectAll = vi.hoisted(() => ({ callback: undefined as (() => void) | undefined }))
+const menuDeselectAll = vi.hoisted(() => ({ callback: undefined as (() => void) | undefined }))
 const closeSelfWindow = vi.hoisted(() =>
   vi.fn(() => {
     calls.push('closeSelfWindow')
@@ -205,6 +210,24 @@ describe('TagsWindow', () => {
     box.setSelectionRange(0, 0)
     menuSelectAll.callback?.()
     expect([box.selectionStart, box.selectionEnd]).toEqual([0, 'Alpha'.length])
+    expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'false'])
+  })
+
+  it('⌘⇧A from the menu clears the track selection; ⌘A with focus on the header box still selects the tracks', async () => {
+    const first = { ...VIEW.tracks[0], title: 'Alpha' }
+    ipc.openTagEditor.mockResolvedValue({
+      ok: true,
+      value: { ...VIEW, tracks: [first, { ...first, path: '/m/b.mp3', fileName: 'b.mp3' }] },
+    })
+    await mountWindow()
+    const options = () => [...document.querySelectorAll('[aria-label="Tracks"] [role="option"]')]
+    // The header box has focus: it holds no text, so ⌘A means the tracks.
+    document.querySelector<HTMLInputElement>('input[aria-label="Select all tracks"]')?.focus()
+    menuSelectAll.callback?.()
+    await settle()
+    expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['true', 'true'])
+    menuDeselectAll.callback?.()
+    await settle()
     expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'false'])
   })
 

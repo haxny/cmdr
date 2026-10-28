@@ -76,11 +76,31 @@ function moreTail(more: number): string {
  * text is what every file gets (`setAll`), and an empty box clears the field, as Clear does.
  */
 export function parseSharedEdit(field: TagField, original: string, typed: string, more = 0): TagEdit | null {
-  if (typed === original) return null
-  if (typed.startsWith(tString('multiRename.tags.multipleValues'))) return null
-  // The list was cut: with the tail still there, the text isn't every value, so it must not replace them.
-  if (more > 0 && typed.includes(moreTail(more))) return null
+  if (typed === original || sharedEditBlock(typed, more) !== null) return null
   return { kind: 'setAll', field, values: parseFieldText(field, typed) }
+}
+
+/**
+ * What keeps a typed shared row from being sent: the «multiple values» marker still starts it (`marker`), or the
+ * «…and N more» tail of a cut list is still in it (`tail`; the text isn't every value, so it must not replace them).
+ * `null` when nothing does.
+ */
+export function sharedEditBlock(typed: string, more = 0): 'marker' | 'tail' | null {
+  if (typed.startsWith(tString('multiRename.tags.multipleValues'))) return 'marker'
+  if (more > 0 && typed.includes(moreTail(more))) return 'tail'
+  return null
+}
+
+/** What the editor says when Enter can't send the text (`sharedEditBlock`), or `null` when it can. */
+export function sharedEditHint(typed: string, more = 0): string | null {
+  switch (sharedEditBlock(typed, more)) {
+    case 'marker':
+      return tString('multiRename.tags.multipleValues.keepHint', { marker: tString('multiRename.tags.multipleValues') })
+    case 'tail':
+      return tString('multiRename.tags.multipleValues.tailHint', { tail: moreTail(more) })
+    case null:
+      return null
+  }
 }
 
 /** A track length as `m:ss`, or `h:mm:ss` from an hour on; blank when the file has none. */

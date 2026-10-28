@@ -45,6 +45,11 @@ pub struct QueueSelectAll;
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
 pub struct TagsSelectAll;
 
+/// `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window
+/// clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+pub struct TagsDeselectAll;
+
 /// `show-search-result-in-folder`: a snapshot context-menu click. The primary
 /// right-clicked path travels with the event so the frontend never rereads a
 /// potentially different cursor or selection after the native popup closes.

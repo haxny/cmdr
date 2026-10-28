@@ -18,8 +18,9 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
     import { FIELD_LABELS } from './field-labels'
-    import { editorBox, paneCursorMove, revealRow, visibleRowCount } from './pane-cursor'
-    import { formatFieldValue, isMultiLineField, multipleText, parseSharedEdit } from './shared-field-input'
+    import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
+    import './tag-pane.css'
+    import { formatFieldValue, isMultiLineField, multipleText, parseSharedEdit, sharedEditHint } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
     import ValueChoices from './ValueChoices.svelte'
 
@@ -67,7 +68,7 @@
 
     let list = $state<HTMLElement>()
     let scroller = $state<HTMLElement>()
-    let editing = $state<{ field: TagField; style: string } | null>(null)
+    let editing = $state<{ field: TagField; place: EditorPlace } | null>(null)
     const edited = $derived(editing === null ? undefined : shown.find((row) => row.field === editing?.field))
 
     /** Gives the pane focus (Tab from the other pane). */
@@ -75,11 +76,37 @@
         list?.focus()
     }
 
-    function openEditor(index: number): void {
+    /** Where the editor goes over row `index`'s value, or `null` when the row isn't drawn. */
+    function placeAt(index: number): EditorPlace | null {
         const row = shown.at(index)
         const cell = list?.querySelector<HTMLElement>(`[data-index="${String(index)}"] .col-value`)
-        if (!editable || row === undefined || !cell || !scroller) return
-        editing = { field: row.field, style: editorBox(scroller, cell, isMultiLineField(row.field) ? null : rowHeight) }
+        if (row === undefined || !cell || !scroller) return null
+        return editorBox(scroller, cell, isMultiLineField(row.field) ? null : rowHeight)
+    }
+
+    function openEditor(index: number): void {
+        const row = shown.at(index)
+        const place = placeAt(index)
+        if (!editable || row === undefined || place === null) return
+        editing = { field: row.field, place }
+    }
+
+    // A resize reflows the flexing Value column: the open editor follows its cell.
+    $effect(() => {
+        if (!scroller) return
+        return onResize(scroller, () => {
+            const open = editing
+            if (open === null) return
+            const place = placeAt(shown.findIndex((row) => row.field === open.field))
+            if (place !== null) editing = { ...open, place }
+        })
+    })
+
+    /** A click on a row: the cursor goes there and the list keeps focus, so the keys go on working. */
+    function onRowMouseDown(e: MouseEvent, index: number): void {
+        e.preventDefault()
+        list?.focus()
+        onCursorChange(index)
     }
 
     function closeEditor(refocus: boolean): void {
@@ -112,8 +139,8 @@
     }
 </script>
 
-<div class="pane full-list-container" class:is-focused={focused}>
-    <div class="header-row" style:grid-template-columns={GRID} aria-hidden="true">
+<div class="tag-pane full-list-container" class:is-focused={focused}>
+    <div class="tag-pane-header" style:grid-template-columns={GRID} aria-hidden="true">
         <span class="cut">{tString('multiRename.tags.album.colName')}</span>
         <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
     </div>
@@ -128,10 +155,12 @@
             {onkeydown}
         >
             {#each shown as row, index (row.field)}
+                <!-- Not focusable, as in `FullList`: the listbox holds focus and names the cursor row through
+                     `aria-activedescendant`, so a click never strands the keys on a row. -->
+                <!-- svelte-ignore a11y_interactive_supports_focus -->
                 <div
                     id="tag-album-row-{row.field}"
                     role="option"
-                    tabindex="-1"
                     aria-selected={index === at}
                     aria-describedby={row.invalid ? DATE_HINT_ID : undefined}
                     class="file-entry"
@@ -141,7 +170,7 @@
                     data-index={index}
                     style:height="{rowHeight}px"
                     style:grid-template-columns={GRID}
-                    onmousedown={() => { onCursorChange(index) }}
+                    onmousedown={(e: MouseEvent) => { onRowMouseDown(e, index) }}
                     ondblclick={() => { openEditor(index) }}
                 >
                     <span class="col-name cut">{row.label}</span>
@@ -157,7 +186,8 @@
                 multiline={isMultiLineField(row.field)}
                 invalid={row.invalid}
                 describedBy={row.invalid ? DATE_HINT_ID : undefined}
-                style={editing.style}
+                place={editing.place}
+                blockedHint={(typed: string) => sharedEditHint(typed, row.more)}
                 onCommit={(typed: string) => commit(row, typed)}
                 onClose={closeEditor}
             />
@@ -194,69 +224,8 @@
 </div>
 
 <style>
-    /* The file panes' Full view: `FullList.svelte`'s container, header, scroller, gutter, and row box. The stripe,
-       selection, and cursor fills come from the global `app-file-list.css` through the same classes. */
-    .pane {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
-        min-width: 0;
-        background-color: var(--color-bg-primary);
-    }
-
-    .header-row {
-        display: grid;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-xxs) var(--spacing-md) var(--spacing-xs);
-        height: calc(22px * var(--font-scale) + var(--spacing-xs));
-        align-items: center;
-        flex-shrink: 0;
-        overflow-x: hidden;
-        background: var(--color-bg-secondary);
-        color: var(--color-text-secondary);
-        font-size: var(--font-size-sm);
-        user-select: none;
-    }
-
-    .full-list {
-        /* The containing block for the in-place editor, so it scrolls with its row. */
-        position: relative;
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        font-family: var(--font-system), sans-serif;
-        font-size: var(--font-size-sm);
-        line-height: var(--font-line-height-flat);
-    }
-
-    .listbox-region {
-        outline: none;
-        padding: var(--spacing-xs);
-    }
-
-    .file-entry {
-        display: grid;
-        box-sizing: border-box;
-        padding: var(--spacing-xxs) var(--spacing-sm);
-        gap: var(--spacing-sm);
-        align-items: center;
-        white-space: nowrap;
-        cursor: default;
-    }
-
-    /* Long names and values are cut with …; the tooltip shows the whole text. The block padding is FullList's
-       descender room for clipped text (the flat line height would cut a "g"). */
-    .cut {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding-block: 0.2em;
-        margin-block: -0.2em;
-    }
-
+    /* The pane's box (container, header, scroller, gutter, row) is the shared `tag-pane.css`, the file panes' Full
+       view; the fills are the global `app-file-list.css`'s. Only this pane's own cells are styled here. */
     .col-name {
         color: var(--color-text-secondary);
     }

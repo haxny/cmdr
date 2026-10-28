@@ -11,6 +11,8 @@ import {
   multipleText,
   parseFieldText,
   parseSharedEdit,
+  sharedEditBlock,
+  sharedEditHint,
 } from './shared-field-input'
 
 const MARKER = '‹multiple values›'
@@ -193,5 +195,16 @@ describe('in another language', () => {
     expect(parseSharedEdit('album', text, '‹vice hodnot› A', 3)).toBeNull()
     expect(parseSharedEdit('album', text, 'A; …a dalsich 3', 3)).toBeNull()
     expect(parseSharedEdit('album', text, 'A', 3)).toEqual({ kind: 'setAll', field: 'album', values: ['A'] })
+  })
+})
+
+describe('sharedEditBlock and sharedEditHint', () => {
+  it('names what keeps a typed row from being sent, and the hint says what to delete', () => {
+    expect(sharedEditBlock(`${MARKER} A; B`)).toBe('marker')
+    expect(sharedEditBlock('A; B; …and 3 more', 3)).toBe('tail')
+    expect(sharedEditBlock('A; B', 3)).toBeNull()
+    expect(sharedEditHint(`${MARKER} A`)).toContain(`Delete ${MARKER} to set what’s left on every file.`)
+    expect(sharedEditHint('A; …and 3 more', 3)).toContain('Delete “…and 3 more” too')
+    expect(sharedEditHint('A')).toBeNull()
   })
 })

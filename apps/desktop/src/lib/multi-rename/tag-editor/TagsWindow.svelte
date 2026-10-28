@@ -4,14 +4,15 @@
      * way out. Escape (`tags.close`) and the red button (`requestClose`) go through the discard guard; closing
      * releases the hold, ends the tag session and the Multi-Rename session, then asks the backend to close the window
      * (`closeSelfWindow`, ❌ never `getCurrentWindow().close()` from a key handler). The backend ends the session too
-     * when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A reaches it from the native menu
-     * (`onTagsSelectAll`): the text of the box being typed in, else every track.
+     * when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A and ⌘⇧A reach it from the native menu
+     * (`onTagsSelectAll`, `onTagsDeselectAll`): ⌘A selects the text of the box being typed in, else every track;
+     * ⌘⇧A clears the track selection.
      */
     import { onMount } from 'svelte'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { closeSelfWindow } from '#lib/child-window-close.js'
-    import { closeMultiRename, onTagsSelectAll, releaseTagsSession } from '#lib/tauri-commands/index.js'
+    import { closeMultiRename, onTagsDeselectAll, onTagsSelectAll, releaseTagsSession } from '#lib/tauri-commands/index.js'
     import { getAppLogger } from '#lib/logging/logger.js'
     import TagsTab from './TagsTab.svelte'
     import { createDiscardGuard } from './discard-guard'
@@ -30,29 +31,46 @@
     const tags = createTagEditorState(sessionId)
     const guard = createDiscardGuard(tags, () => void end())
     let ended = false
-    let content = $state<{ selectAllTracks: () => void }>()
+    let content = $state<{ selectAllTracks: () => void; deselectAllTracks: () => void }>()
+
+    /** A box that holds text to select (a checkbox or a button doesn't; its `selectionStart` is `null`). */
+    function textBoxOf(el: Element | null): HTMLInputElement | HTMLTextAreaElement | null {
+        if (el instanceof HTMLTextAreaElement) return el
+        return el instanceof HTMLInputElement && el.selectionStart !== null ? el : null
+    }
 
     /** ⌘A: the text of the box being typed in, as in any text field, else every track, as in a file pane. */
     function selectAll(): void {
-        const active = document.activeElement
-        if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) active.select()
+        const box = textBoxOf(document.activeElement)
+        if (box) box.select()
         else content?.selectAllTracks()
     }
 
-    onMount(() => {
+    /** Listens to a menu road for the window's life; a listener that arrives after the window went is dropped. */
+    function listenWhileMounted(subscribe: () => Promise<() => void>, what: string): () => void {
         let stop: (() => void) | undefined
         let gone = false
-        onTagsSelectAll(selectAll)
+        subscribe()
             .then((unlisten) => {
                 if (gone) unlisten()
                 else stop = unlisten
             })
             .catch((e: unknown) => {
-                log.warn("⌘A won't select the tracks: {reason}", { reason: e })
+                log.warn('{what} from the menu won’t reach the tracks: {reason}', { what, reason: e })
             })
         return () => {
             gone = true
             stop?.()
+        }
+    }
+
+    onMount(() => {
+        const stops = [
+            listenWhileMounted(() => onTagsSelectAll(selectAll), 'Select all'),
+            listenWhileMounted(() => onTagsDeselectAll(() => content?.deselectAllTracks()), 'Deselect all'),
+        ]
+        return () => {
+            for (const stop of stops) stop()
         }
     })
 

@@ -208,3 +208,10 @@ export async function onTagsSelectAll(callback: () => void): Promise<UnlistenFn>
     callback()
   })
 }
+
+/** Select > Deselect all (⌘⇧A) while this Tags window is focused; routed as `onTagsSelectAll`. */
+export async function onTagsDeselectAll(callback: () => void): Promise<UnlistenFn> {
+  return events.tagsDeselectAll.listen(() => {
+    callback()
+  })
+}

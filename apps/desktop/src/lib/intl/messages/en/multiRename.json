@@ -1148,6 +1148,20 @@
   "@multiRename.tags.multipleValues": {
     "description": "Marker at the start of a tag box of the tag editor window when the selected files have different values for that tag; the values follow it in the same box. While the marker stays, each file keeps its own value; deleting it makes the text left the value of every file. Keep the brackets."
   },
+  "multiRename.tags.multipleValues.keepHint": "Delete {marker} to set what’s left on every file. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.keepHint": {
+    "description": "Hint under the editing box of a tag row in the tag editor window, shown when the user pressed Return but the row’s text still starts with the «multiple values» marker (the files hold different values). Nothing was changed; the box stays open.",
+    "placeholders": {
+      "marker": "the marker text itself, multiRename.tags.multipleValues, like ‹multiple values›"
+    }
+  },
+  "multiRename.tags.multipleValues.tailHint": "Delete “{tail}” too: with it, the text isn’t every value. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.tailHint": {
+    "description": "Hint under the editing box of a tag row in the tag editor window, shown when the user pressed Return but the text still ends with the note that the list of values was cut (like “…and 10 more”). Nothing was changed; the box stays open.",
+    "placeholders": {
+      "tail": "that note, multiRename.tags.choicesMore, like …and 10 more"
+    }
+  },
   "multiRename.tags.date.invalid": "This date doesn't exist. Type the right one, for example 2010, before writing.",
   "@multiRename.tags.date.invalid": {
     "description": "Hint under the Date row of the tag editor window, shown as soon as the book opens when some file carries a date the tag can't hold (for example an MP3 whose day and month were swapped). Writing is refused until the date is corrected."

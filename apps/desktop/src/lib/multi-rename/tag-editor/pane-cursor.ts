@@ -57,14 +57,41 @@ export function visibleRowCount(list: HTMLElement | undefined, rowHeight: number
   return Math.max(1, Math.floor(list.clientHeight / rowHeight))
 }
 
+/** Where the in-place editor sits, in the scroller's coordinates; `height` `null` lets a multiline box size itself. */
+export interface EditorPlace {
+  top: number
+  left: number
+  width: number
+  height: number | null
+}
+
+/** The narrowest the editor gets, so a squeezed column still leaves room to type. */
+const EDITOR_MIN_WIDTH = 40
+
 /** Where the in-place editor sits: over `cell`, in the coordinates of the scrolling `container`. */
-export function editorBox(container: HTMLElement, cell: HTMLElement, height: number | null): string {
+export function editorBox(container: HTMLElement, cell: HTMLElement, height: number | null): EditorPlace {
   const outer = container.getBoundingClientRect()
   const inner = cell.getBoundingClientRect()
-  const top = inner.top - outer.top + container.scrollTop
-  const left = inner.left - outer.left + container.scrollLeft
-  const sized = height === null ? '' : ` height: ${String(height)}px;`
-  return `top: ${String(top)}px; left: ${String(left)}px; width: ${String(Math.max(inner.width, 40))}px;${sized}`
+  return {
+    top: inner.top - outer.top + container.scrollTop,
+    left: inner.left - outer.left + container.scrollLeft,
+    width: Math.max(inner.width, EDITOR_MIN_WIDTH),
+    height,
+  }
+}
+
+/**
+ * Calls `onResize` whenever `el` changes size (a window resize reflows the flexing column), so an open editor can
+ * follow its cell. Returns the cleanup.
+ */
+export function onResize(el: HTMLElement, callback: () => void): () => void {
+  const observer = new ResizeObserver(() => {
+    callback()
+  })
+  observer.observe(el)
+  return () => {
+    observer.disconnect()
+  }
 }
 
 /** Scrolls row `index` of `list` into view after a key moved the cursor there. */

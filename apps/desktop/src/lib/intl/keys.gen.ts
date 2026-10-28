@@ -3045,6 +3045,8 @@ export type MessageKey =
   | 'multiRename.tags.kind.label'
   | 'multiRename.tags.kind.music'
   | 'multiRename.tags.multipleValues'
+  | 'multiRename.tags.multipleValues.keepHint'
+  | 'multiRename.tags.multipleValues.tailHint'
   | 'multiRename.tags.numbering.begin'
   | 'multiRename.tags.numbering.button'
   | 'multiRename.tags.numbering.cancel'

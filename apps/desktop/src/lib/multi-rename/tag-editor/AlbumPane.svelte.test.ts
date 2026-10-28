@@ -8,6 +8,7 @@ import { tick } from 'svelte'
 import type { SharedRow } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
 import AlbumPane from './AlbumPane.svelte'
+import { installLayoutMock } from '#lib/test-layout.js'
 import { mountInto, press, typeInto } from './tag-cell.test-helper'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
@@ -211,5 +212,95 @@ describe('AlbumPane row actions', () => {
     expect(root.querySelector<HTMLButtonElement>('button[aria-label="Clear Artist for all files"]')?.disabled).toBe(
       true,
     )
+  })
+})
+
+/** A real click's first half on `el`: the row handler runs, and the default (focus, text selection) is cancelable. */
+function mouseDown(el: Element): MouseEvent {
+  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+  el.dispatchEvent(event)
+  return event
+}
+
+describe('AlbumPane mouse', () => {
+  it('after a click on a row the keys still work: the list keeps focus, ↓ and F2 act', async () => {
+    const { root, list, onCursorChange } = await mountPane()
+    const row = rowsOf(root)[1]
+    expect(row.hasAttribute('tabindex')).toBe(false)
+    const down = mouseDown(row)
+    expect(down.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(list)
+    expect(onCursorChange).toHaveBeenLastCalledWith(1)
+    const target = document.activeElement as HTMLElement
+    await press(target, 'ArrowDown')
+    expect(onCursorChange).toHaveBeenCalledTimes(2)
+    await press(target, 'F2')
+    expect(editorOf(root)).not.toBeNull()
+  })
+
+  it('a double-click on a row opens its editor', async () => {
+    const { root } = await mountPane()
+    rowsOf(root)[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    await tick()
+    expect(editorOf(root)?.value).toBe('Karel Capek')
+  })
+})
+
+describe('AlbumPane date flag', () => {
+  it('the red Date clears once a reload says every date can be written', async () => {
+    const props = $state({
+      rows: ROWS,
+      editable: true,
+      badDates: 2,
+      focused: true,
+      cursor: 0,
+      onCursorChange: () => {},
+      onEdit: () => {},
+      onSwitchPane: () => {},
+    })
+    const mounted = await mountInto(AlbumPane, props)
+    cleanup = mounted.cleanup
+    expect(rowsOf(mounted.root)[2].classList.contains('is-invalid')).toBe(true)
+    props.badDates = 0
+    props.rows = ROWS.map((row) => (row.field === 'date' ? { ...row, value: { same: ['2010'] } } : row))
+    await tick()
+    expect(rowsOf(mounted.root)[2].classList.contains('is-invalid')).toBe(false)
+    expect(mounted.root.querySelector('#tag-album-date-hint')).toBeNull()
+  })
+})
+
+describe('AlbumPane editor placement and refusals', () => {
+  it('the open editor follows its cell when the pane resizes', async () => {
+    const layout = installLayoutMock({ '.tag-pane .full-list': { clientHeight: 300, clientWidth: 400 } })
+    const { root, list } = await mountPane()
+    const cell = rowsOf(root)[0].querySelector<HTMLElement>('.col-value')
+    if (!cell) throw new Error('no value cell')
+    let width = 200
+    cell.getBoundingClientRect = () => DOMRect.fromRect({ x: 120, y: 0, width, height: 20 })
+    await press(list, 'F2')
+    const frame = () => root.querySelector<HTMLElement>('.tag-value-frame')
+    expect(frame()?.style.width).toBe('200px')
+    width = 340
+    layout.resize('.tag-pane .full-list', { clientWidth: 560 })
+    await tick()
+    expect(frame()?.style.width).toBe('340px')
+    expect(frame()?.style.left).toBe('120px')
+  })
+
+  it('Enter with the «multiple values» marker still in the text keeps the editor open and says why', async () => {
+    const { root, list, onEdit } = await mountPane({ cursor: 1 })
+    await press(list, 'F2')
+    const editor = editorOf(root)
+    if (!editor) throw new Error('no editor')
+    await typeInto(editor, '‹multiple values› Book one; Book three')
+    await press(editor, 'Enter')
+    expect(onEdit).not.toHaveBeenCalled()
+    expect(editorOf(root)).toBe(editor)
+    const hint = root.querySelector('.tag-value-hint')
+    expect(hint?.textContent).toContain('Delete ‹multiple values› to set what’s left on every file.')
+    expect(editor.getAttribute('aria-describedby')).toBe(hint?.id)
+    await typeInto(editor, 'Book three')
+    await press(editor, 'Enter')
+    expect(onEdit).toHaveBeenCalledWith([{ kind: 'setAll', field: 'album', values: ['Book three'] }])
   })
 })

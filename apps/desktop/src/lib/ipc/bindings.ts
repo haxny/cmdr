@@ -5660,6 +5660,7 @@ export const events = {
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
+  tagsDeselectAll: makeEvent<TagsDeselectAll>('tags-deselect-all'),
   tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
   tagsSkipped: makeEvent<TagsSkipped>('tags-skipped'),
   viewModeChanged: makeEvent<ViewModeChanged>('view-mode-changed'),
@@ -18651,6 +18652,12 @@ export type TagTool =
       // How to read the file names.
       pattern: NamePattern
     }
+
+/**
+ *  `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window
+ *  clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
+ */
+export type TagsDeselectAll = null
 
 /**
  *  `tags-select-all`: Edit > Select all (⌘A) while a Tags window (`tags-<id>`) is focused. As

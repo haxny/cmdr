@@ -19,7 +19,8 @@
     import type { TagEdit } from '#lib/tauri-commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Checkbox from '#lib/ui/Checkbox.svelte'
-    import { editorBox, paneCursorMove, revealRow, visibleRowCount } from './pane-cursor'
+    import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
+    import './tag-pane.css'
     import { formatTrackLength, parseFieldText } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
     import type { TrackSelection } from './track-selection.svelte'
@@ -52,7 +53,8 @@
     /** Fixed columns, flexing Title: the pane never scrolls sideways. */
     const grid = $derived(
         [
-            'calc(14px * var(--font-scale))',
+            // Wide enough for the header's select-all Checkbox.
+            'calc(16px * var(--font-scale))',
             'calc(14px * var(--font-scale))',
             ...(showNumber ? ['calc(32px * var(--font-scale))'] : []),
             'minmax(0, 1fr)',
@@ -65,7 +67,7 @@
 
     let list = $state<HTMLElement>()
     let scroller = $state<HTMLElement>()
-    let editing = $state<{ path: string; field: EditedField; style: string } | null>(null)
+    let editing = $state<{ path: string; field: EditedField; place: EditorPlace } | null>(null)
     const edited = $derived(editing === null ? undefined : tracks.find((track) => track.path === editing?.path))
 
     /** Gives the pane focus (Tab from the other pane). */
@@ -77,13 +79,31 @@
         return editable && track !== undefined && track.readError === null
     }
 
-    function openEditor(index: number, field: EditedField): void {
-        const track = tracks.at(index)
+    /** Where the editor goes over row `index`'s Title or #, or `null` when that cell isn't drawn. */
+    function placeAt(index: number, field: EditedField): EditorPlace | null {
         const column = field === 'title' ? 'title' : 'number'
         const cell = list?.querySelector<HTMLElement>(`[data-index="${String(index)}"] [data-col="${column}"]`)
-        if (!canEdit(track) || !cell || !scroller) return
-        editing = { path: track.path, field, style: editorBox(scroller, cell, rowHeight) }
+        if (!cell || !scroller) return null
+        return editorBox(scroller, cell, rowHeight)
     }
+
+    function openEditor(index: number, field: EditedField): void {
+        const track = tracks.at(index)
+        const place = placeAt(index, field)
+        if (!canEdit(track) || place === null) return
+        editing = { path: track.path, field, place }
+    }
+
+    // A resize reflows the flexing Title column: the open editor follows its cell.
+    $effect(() => {
+        if (!scroller) return
+        return onResize(scroller, () => {
+            const open = editing
+            if (open === null) return
+            const place = placeAt(tracks.findIndex((track) => track.path === open.path), open.field)
+            if (place !== null) editing = { ...open, place }
+        })
+    })
 
     function closeEditor(refocus: boolean): void {
         editing = null
@@ -148,16 +168,22 @@
         moveTo(move.to)
     }
 
-    /** A click on a row: the cursor goes there; ⌘ toggles it and ⇧ selects up to it, as on files. */
+    /**
+     * A click on a row: the cursor goes there and the list keeps focus, so the keys go on working; ⌘ toggles the row
+     * and ⇧ selects up to it, as on files. On the ☐ the click itself toggles, so ⌘ adds nothing there.
+     */
     function onRowMouseDown(e: MouseEvent, index: number): void {
-        if (e.metaKey) selection.toggleAt(index)
+        e.preventDefault()
+        list?.focus()
+        const onMark = e.target instanceof Element && e.target.closest('[data-col="mark"]') !== null
+        if (e.metaKey && !onMark) selection.toggleAt(index)
         else if (e.shiftKey) selection.extendTo(index, at)
         onCursorChange(index)
     }
 </script>
 
-<div class="pane full-list-container" class:is-focused={focused}>
-    <div class="header-row" style:grid-template-columns={grid}>
+<div class="tag-pane full-list-container" class:is-focused={focused}>
+    <div class="tag-pane-header" style:grid-template-columns={grid}>
         <span class="head-mark">
             <Checkbox
                 ariaLabel={tString('multiRename.tags.select.all')}
@@ -186,10 +212,12 @@
         >
             {#each tracks as track, index (track.path)}
                 {@const selected = selection.has(index)}
+                <!-- Not focusable, as in `FullList`: the listbox holds focus and names the cursor row through
+                     `aria-activedescendant`, so a click never strands the keys on a row. -->
+                <!-- svelte-ignore a11y_interactive_supports_focus -->
                 <div
                     id="tag-track-row-{index}"
                     role="option"
-                    tabindex="-1"
                     aria-selected={selected}
                     class="file-entry"
                     class:is-under-cursor={index === at}
@@ -225,7 +253,7 @@
             <TagValueEditor
                 value={(field === 'title' ? track.title : track.track) ?? ''}
                 ariaLabel={tString(field === 'title' ? 'multiRename.tags.track.titleLabel' : 'multiRename.tags.track.numberLabel', { fileName: track.fileName })}
-                style={editing.style}
+                place={editing.place}
                 onCommit={(text: string) => commit(track.path, field, text)}
                 onClose={closeEditor}
             />
@@ -240,72 +268,11 @@
 </div>
 
 <style>
-    /* The file panes' Full view, as in `AlbumPane.svelte`: `FullList.svelte`'s container, header, scroller, gutter,
-       and row box; the stripe, selection, and cursor fills are the global `app-file-list.css`'s. */
-    .pane {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
-        min-width: 0;
-        background-color: var(--color-bg-primary);
-    }
-
-    .header-row {
-        display: grid;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-xxs) var(--spacing-md) var(--spacing-xs);
-        height: calc(22px * var(--font-scale) + var(--spacing-xs));
-        align-items: center;
-        flex-shrink: 0;
-        overflow-x: hidden;
-        background: var(--color-bg-secondary);
-        color: var(--color-text-secondary);
-        font-size: var(--font-size-sm);
-        user-select: none;
-    }
-
+    /* The pane's box (container, header, scroller, gutter, row) is the shared `tag-pane.css`, the file panes' Full
+       view; the fills are the global `app-file-list.css`'s. Only this pane's own cells are styled here. */
     .head-mark {
         display: flex;
         align-items: center;
-    }
-
-    .full-list {
-        /* The containing block for the in-place editor, so it scrolls with its row. */
-        position: relative;
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        font-family: var(--font-system), sans-serif;
-        font-size: var(--font-size-sm);
-        line-height: var(--font-line-height-flat);
-    }
-
-    .listbox-region {
-        outline: none;
-        padding: var(--spacing-xs);
-    }
-
-    .file-entry {
-        display: grid;
-        box-sizing: border-box;
-        padding: var(--spacing-xxs) var(--spacing-sm);
-        gap: var(--spacing-sm);
-        align-items: center;
-        white-space: nowrap;
-        cursor: default;
-    }
-
-    /* Long titles and file names are cut with …; the tooltip shows the whole text. The block padding is FullList's
-       descender room for clipped text. */
-    .cut {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding-block: 0.2em;
-        margin-block: -0.2em;
     }
 
     .end {

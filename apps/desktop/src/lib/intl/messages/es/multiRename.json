@@ -1008,6 +1008,14 @@
   "@multiRename.tags.multipleValues": {
     "sourceHash": "39e9850"
   },
+  "multiRename.tags.multipleValues.keepHint": "Delete {marker} to set what’s left on every file. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.keepHint": {
+    "sourceHash": "a1204ff"
+  },
+  "multiRename.tags.multipleValues.tailHint": "Delete “{tail}” too: with it, the text isn’t every value. Esc keeps each file’s own value.",
+  "@multiRename.tags.multipleValues.tailHint": {
+    "sourceHash": "b38728d"
+  },
   "multiRename.tags.date.invalid": "This date doesn't exist (month 20). Type the right one, for example 2010, before writing.",
   "@multiRename.tags.date.invalid": {
     "sourceHash": "04ede92"

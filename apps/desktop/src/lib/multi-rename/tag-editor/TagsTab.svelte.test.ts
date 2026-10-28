@@ -147,6 +147,16 @@ describe('TagsTab', () => {
     expect(document.activeElement).toBe(album)
   })
 
+  it('a pane draws its cursor as focused only while focus is in it, not while it visits the tools bar', async () => {
+    const { root } = await mountTab()
+    const albumPane = () => root.querySelector('[data-pane="album"] .full-list-container')
+    expect(albumPane()?.classList.contains('is-focused')).toBe(true)
+    const tool = [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')
+    tool?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    await tick()
+    expect(albumPane()?.classList.contains('is-focused')).toBe(false)
+  })
+
   it('a tool waits for an edit in flight, then runs', async () => {
     const { root, state } = await mountTab()
     ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Strip track prefix')?.click()

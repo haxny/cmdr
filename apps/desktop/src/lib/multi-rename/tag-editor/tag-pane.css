@@ -1,0 +1,72 @@
+/**
+ * The Tags window's two panes (`AlbumPane.svelte`, `TracksPane.svelte`) drawn as the main window's Full view.
+ *
+ * These are `FullList.svelte`'s (and `FullListHeader.svelte`'s) box rules: container, header, scroller, gutter, row box,
+ * and the descender room of a clipped cell. The stripe, selection, and cursor fills are NOT here: they come from the
+ * global `app-file-list.css` through the same classes (`.full-list-container` › `.file-entry.is-striped` /
+ * `.is-selected` / `.is-under-cursor`, `.is-focused`). One copy for both panes, so a change to `FullList`'s box has
+ * one place to follow it. Imported from each pane's `<script>` (`import './tag-pane.css'`), so every rule is
+ * prefixed with `.tag-pane` and reaches nothing else.
+ */
+
+.tag-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background-color: var(--color-bg-primary);
+}
+
+/* `FullListHeader`'s `.header-row`: the rows' padding plus the list gutter, so the columns line up. */
+.tag-pane .tag-pane-header {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xxs) var(--spacing-md) var(--spacing-xs);
+  height: calc(22px * var(--font-scale) + var(--spacing-xs));
+  align-items: center;
+  flex-shrink: 0;
+  overflow-x: hidden;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  user-select: none;
+}
+
+.tag-pane .full-list {
+  /* The containing block for the in-place editor (`TagValueEditor`), so it scrolls with its row. */
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--font-system), sans-serif;
+  font-size: var(--font-size-sm);
+  line-height: var(--font-line-height-flat);
+}
+
+.tag-pane .listbox-region {
+  outline: none;
+  padding: var(--spacing-xs);
+}
+
+.tag-pane .file-entry {
+  display: grid;
+  box-sizing: border-box;
+  padding: var(--spacing-xxs) var(--spacing-sm);
+  gap: var(--spacing-sm);
+  align-items: center;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* Long text is cut with …; the cell's tooltip shows the whole of it. The block padding is FullList's descender room
+   for clipped text (the flat line height would cut a "g"); the negative margin keeps the row box as it was. */
+.tag-pane .cut {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-block: 0.2em;
+  margin-block: -0.2em;
+}

@@ -1191,6 +1191,7 @@ export {
   reopenForTags,
   openTagsSession,
   onTagsSelectAll,
+  onTagsDeselectAll,
 } from './tag-editor'
 export type {
   ApplyRequest,

@@ -37,15 +37,21 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   `.is-under-cursor`, `.is-focused` on the container) rather than `ColumnList`. Why: `ColumnList` draws its own cursor
   fill (`--color-accent-subtle`), font (`--font-size-md`) and padding, and takes one static `rowClass` for every row, so
   per-row selection and stripes can't reach `app-file-list.css`; overriding it all would be a second look to keep in
-  step. Each pane copies `FullList`'s box rules (header, gutter, row padding, descender room) in its own style block.
-  Keys go to the focused pane's listbox only (`e.target === list`), so Tab is the browser's anywhere else (tools, cover,
-  Write). F2/Enter (`tags.edit`) and ⇧F2 (`tags.editNumber`) open `TagValueEditor` over the cell, placed from the cell's
-  box in the scroller (`pane-cursor.ts`'s `editorBox`); Enter commits, Esc cancels (claimed, so it never closes the
-  window), a click away commits, ⌥Enter adds a line in Comment and Description. Case takes the Album cursor row's field
-  while that pane is active, Title while the Tracks pane is, none once focus leaves both (the tools bar keeps the pane).
-  ⌘A: Edit > Select all is a registered accelerator that fires before the page sees the key, so `menu_handlers.rs` sends
-  `tags-select-all` to the focused `tags-*` window (`focused_tags_window`); `TagsWindow` selects the text of the box
-  being typed in, else every track.
+  step. `FullList`'s box rules (header, gutter, row padding, descender room) live once, in `tag-pane.css`, imported by
+  both panes. Rows carry no `tabindex` and a row's mousedown is prevented and refocuses the list, as in `FullList`: a
+  focusable row would take focus on a click, and the pane answers keys only from its listbox. Keys go to the focused
+  pane's listbox only (`e.target === list`), so Tab is the browser's anywhere else (tools, cover, Write). F2/Enter
+  (`tags.edit`) and ⇧F2 (`tags.editNumber`) open `TagValueEditor` over the cell, placed from the cell's box in the
+  scroller (`pane-cursor.ts`'s `editorBox`), re-placed when the scroller resizes, and scrolled into view on open so a
+  multiline box at the pane's foot isn't cut off. Enter commits, Esc cancels (claimed, so it never closes the window), a
+  click away commits, ⌥Enter adds a line in Comment and Description. Enter on a text the row can't send
+  (`sharedEditBlock`: the «multiple values» marker or the «…and N more» tail still in it) keeps the box open with a hint
+  saying what to delete. Case takes the Album cursor row's field while that pane is active, Title while the Tracks pane
+  is, none once focus leaves both (the tools bar keeps the pane, though the pane stops drawing its cursor as focused).
+  ⌘A / ⌘⇧A: Select all and Deselect all are registered accelerators that fire before the page sees the key, so
+  `menu_handlers.rs` sends `tags-select-all` / `tags-deselect-all` to the focused `tags-*` window
+  (`focused_tags_window`); `TagsWindow` selects the text of a text box with focus (never a checkbox), else every track,
+  and clears the track selection.
 - **Why edits are keyed by path**: the session's order can change under the view; every edit stays with its file.
   `open()` fetches the view again (`openTagEditor(id)`, never a restart) when asked, so the list follows the order; the
   unwritten edits live in the backend session and come back with it. A view answer older than one already shown is

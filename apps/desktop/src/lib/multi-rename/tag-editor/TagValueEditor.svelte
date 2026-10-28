@@ -5,11 +5,17 @@
      * Like `EditableCell` it sends nothing when the text is unchanged, so Enter on an untouched «multiple values» box
      * never writes. Multiline for Comment and Description: ⌥Enter adds a line. Every key it acts on is claimed, so
      * Esc never reaches the window's `tags.close`.
+     *
+     * Enter on a text the row can't send (`blockedHint` answers why, e.g. the «multiple values» marker is still in it)
+     * keeps the box open with that hint, so the typing isn't lost without a word. The pane places the box (`place`)
+     * and moves it when the pane resizes; on open it scrolls itself into view, so a tall multiline box near the
+     * pane's foot is never cut off.
      */
     import { onMount, untrack } from 'svelte'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import type { EditorPlace } from './pane-cursor'
 
     interface Props {
         id?: string
@@ -19,8 +25,10 @@
         multiline?: boolean
         invalid?: boolean
         describedBy?: string
-        /** Where the box sits over its row (`top`/`left`/`width`/`height`), set by the pane. */
-        style?: string
+        /** Where the box sits over its row, in the scroller's coordinates. */
+        place?: EditorPlace
+        /** Why `text` can't be sent as it is, or `null` when it can. Enter then keeps the box open with the words. */
+        blockedHint?: (text: string) => string | null
         /** Called with the typed text, only when it differs from `value`. */
         onCommit: (text: string) => void | Promise<void>
         /**
@@ -30,17 +38,36 @@
         onClose: (refocus: boolean) => void
     }
 
-    const { id, value, ariaLabel, multiline = false, invalid = false, describedBy, style, onCommit, onClose }: Props = $props()
+    const {
+        id,
+        value,
+        ariaLabel,
+        multiline = false,
+        invalid = false,
+        describedBy,
+        place,
+        blockedHint,
+        onCommit,
+        onClose,
+    }: Props = $props()
 
     const log = getAppLogger('tagEditor')
+    const uid = $props.id()
+    const hintId = `${uid}-hint`
 
     let draft = $state(untrack(() => value))
     let box = $state<HTMLInputElement | HTMLTextAreaElement>()
+    let frame = $state<HTMLElement>()
+    let hint = $state<string | null>(null)
     let done = false
+
+    const describedByAll = $derived([describedBy, hint === null ? undefined : hintId].filter(Boolean).join(' ') || undefined)
 
     onMount(() => {
         box?.focus()
         box?.select()
+        // jsdom has no `scrollIntoView`; the tests run there.
+        if (frame && typeof frame.scrollIntoView === 'function') frame.scrollIntoView({ block: 'nearest' })
     })
 
     function finish(commit: boolean, refocus = true): void {
@@ -55,6 +82,13 @@
             })
         }
         onClose(refocus)
+    }
+
+    /** Enter: commits, unless the text can't be sent as it is; then the box stays and says why. */
+    function tryCommit(): void {
+        const why = draft === value ? null : (blockedHint?.(draft) ?? null)
+        if (why === null) finish(true)
+        else hint = why
     }
 
     /** ⌥Enter in a multiline box: a new line at the caret, replacing any selected text. */
@@ -79,52 +113,73 @@
             insertLine(box)
         } else if (enter === 'commit') {
             claimKey(e)
-            finish(true)
+            tryCommit()
         } else if (e.key === 'Escape') {
             claimKey(e)
             finish(false)
         }
     }
+
+    function onblur(e: FocusEvent): void {
+        finish(true, e.relatedTarget === null)
+    }
 </script>
 
-{#if multiline}
-    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- laid over a pane row like the inline rename field: it takes the row's font and box, which the framed `TextArea` (its padding, radius, ring) can't. -->
-    <textarea
-        bind:this={box}
-        bind:value={draft}
-        {id}
-        class="tag-value-editor multiline"
-        aria-label={ariaLabel}
-        aria-invalid={invalid ? 'true' : undefined}
-        aria-describedby={describedBy}
-        rows={4}
-        {style}
-        {onkeydown}
-        onblur={(e: FocusEvent) => { finish(true, e.relatedTarget === null) }}
-    ></textarea>
-{:else}
-    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- laid over a pane row like the inline rename field (`InlineRenameEditor`): it takes the row's height and font, which the framed `TextInput`'s padding would break. -->
-    <input
-        bind:this={box}
-        bind:value={draft}
-        {id}
-        type="text"
-        class="tag-value-editor"
-        aria-label={ariaLabel}
-        aria-invalid={invalid ? 'true' : undefined}
-        aria-describedby={describedBy}
-        {style}
-        {onkeydown}
-        onblur={(e: FocusEvent) => { finish(true, e.relatedTarget === null) }}
-    />
-{/if}
+<div
+    bind:this={frame}
+    class="tag-value-frame"
+    style:top={place ? `${String(place.top)}px` : undefined}
+    style:left={place ? `${String(place.left)}px` : undefined}
+    style:width={place ? `${String(place.width)}px` : undefined}
+>
+    {#if multiline}
+        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- laid over a pane row like the inline rename field: it takes the row's font and box, which the framed `TextArea` (its padding, radius, ring) can't. -->
+        <textarea
+            bind:this={box}
+            bind:value={draft}
+            {id}
+            class="tag-value-editor multiline"
+            aria-label={ariaLabel}
+            aria-invalid={invalid ? 'true' : undefined}
+            aria-describedby={describedByAll}
+            rows={4}
+            {onkeydown}
+            {onblur}
+        ></textarea>
+    {:else}
+        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- laid over a pane row like the inline rename field (`InlineRenameEditor`): it takes the row's height and font, which the framed `TextInput`'s padding would break. -->
+        <input
+            bind:this={box}
+            bind:value={draft}
+            {id}
+            type="text"
+            class="tag-value-editor"
+            style:height={place?.height === null || place === undefined ? undefined : `${String(place.height)}px`}
+            aria-label={ariaLabel}
+            aria-invalid={invalid ? 'true' : undefined}
+            aria-describedby={describedByAll}
+            {onkeydown}
+            {onblur}
+        />
+    {/if}
+    {#if hint !== null}
+        <p class="tag-value-hint" id={hintId} role="status">{hint}</p>
+    {/if}
+</div>
 
 <style>
-    /* The inline rename field's look (`InlineRenameEditor`), in the accent rather than a severity color. */
-    .tag-value-editor {
+    .tag-value-frame {
         position: absolute;
         z-index: 1;
+        /* Room under the box when it's the last thing in the scroller, so `scrollIntoView` shows all of it. */
+        padding-bottom: var(--spacing-xs);
+    }
+
+    /* The inline rename field's look (`InlineRenameEditor`), in the accent rather than a severity color. */
+    .tag-value-editor {
+        display: block;
         box-sizing: border-box;
+        width: 100%;
         margin: 0;
         padding: 0 var(--spacing-xxs);
         font: inherit;
@@ -146,5 +201,16 @@
 
     .tag-value-editor[aria-invalid='true'] {
         border-color: var(--color-error);
+    }
+
+    .tag-value-hint {
+        margin: var(--spacing-xxs) 0 0;
+        padding: var(--spacing-xxs) var(--spacing-xs);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+        font-size: var(--font-size-sm);
+        line-height: var(--font-line-height-normal);
+        white-space: normal;
     }
 </style>
