@@ -63,11 +63,15 @@ pub(crate) fn hide_then_destroy<R: Runtime>(app: &AppHandle<R>, label: &str) {
     let label = label.to_owned();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(WINDOW_CLOSE_DEFER_MS)).await;
-        // Another close (Escape plus the red button, the Tags orphan sweep) may have taken it
-        // during the wait.
-        let Some(window) = app.get_webview_window(&label) else {
+        // The handle taken before the wait, ❌ never the label looked up again: a window opened
+        // under the same label during the wait (Escape, the red button, ⌘, again, all inside
+        // 100 ms) is a new one, and must not go. Another close (Escape plus the red button, the
+        // Tags orphan sweep) may have taken this one during the wait: then it's gone already.
+        // (Tauri sends `destroy` to the handle's window id, not its label: verified on
+        // tauri-runtime-wry 2.12.2, `WindowMessage::Destroy` in its source, 2026-10-29.)
+        if app.get_webview_window(&label).is_none() {
             return;
-        };
+        }
         // ❗ `destroy`, not `close`: every caller has already decided, and `close` would put the
         // decision to the page again. A JS `onCloseRequested` listener (the Tags window's) makes
         // Tauri veto the close and hand it to a page that is now HIDDEN, which left the window
@@ -75,8 +79,9 @@ pub(crate) fn hide_then_destroy<R: Runtime>(app: &AppHandle<R>, label: &str) {
         // viewer's session, the Tags window's `end`); no child window does cleanup on
         // `CloseRequested` (only `main` does, and it never comes here).
         if let Err(e) = window.destroy() {
+            // Gone during the wait, with a new window under its label: ordinary, not a fault.
             // allowed-log-private: a Tauri window label of our own
-            log::warn!("Child window close: couldn't destroy {label}: {e}");
+            log::debug!("Child window close: couldn't destroy {label}: {e}");
         }
     });
 }

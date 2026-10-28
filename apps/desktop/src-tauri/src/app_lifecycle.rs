@@ -125,10 +125,13 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: tauri::RunEvent) {
             reveal::on_urls_opened(app, urls);
         }
         // A Dock click (or a reopen from Finder). macOS apps bring back what the user can't
-        // otherwise reach: a minimized main window, and a Tags window that's minimized or hidden
-        // while its session is still held. AppKit would only activate the app.
+        // otherwise reach: a minimized main window when no window is on screen (with one, AppKit
+        // only activates the app), and a Tags window that's minimized or hidden while its session
+        // is still held.
         #[cfg(target_os = "macos")]
-        tauri::RunEvent::Reopen { .. } => bring_windows_back(app),
+        tauri::RunEvent::Reopen {
+            has_visible_windows, ..
+        } => bring_windows_back(app, has_visible_windows),
         // ⌘Q, the app menu's Quit, the Dock's Quit, a logout or
         // restart, and every `AppHandle::exit` in the app all land
         // here. With non-instant work in flight the gate holds the
@@ -186,7 +189,7 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: tauri::RunEvent) {
 
 /// Raises what [`windows_to_bring_back`] picks, main first, so a Tags window ends up in front.
 #[cfg(target_os = "macos")]
-fn bring_windows_back(app: &AppHandle<Wry>) {
+fn bring_windows_back(app: &AppHandle<Wry>, has_visible_windows: bool) {
     let windows = app.webview_windows();
     let states: Vec<ShownState<'_>> = windows
         .iter()
@@ -197,7 +200,7 @@ fn bring_windows_back(app: &AppHandle<Wry>) {
         })
         .collect();
     let is_held = |session_id: &str| crate::multi_rename::session::is_held(session_id);
-    for label in windows_to_bring_back(&states, is_held) {
+    for label in windows_to_bring_back(&states, has_visible_windows, is_held) {
         crate::commands::window_ordering::raise_child_window(app.clone(), label.to_owned());
     }
 }
@@ -223,12 +226,19 @@ pub(crate) struct ShownState<'a> {
         reason = "only macOS has a Dock reopen; the decision is still pinned by tests"
     )
 )]
-/// The windows a Dock click brings back, in raise order: main if minimized, then every Tags window
-/// that's minimized or hidden while `is_held` still holds its session.
-fn windows_to_bring_back<'a>(windows: &[ShownState<'a>], is_held: impl Fn(&str) -> bool) -> Vec<&'a str> {
+/// The windows a Dock click brings back, in raise order: main if minimized and no window is on
+/// screen (`has_visible_windows`, AppKit's own answer: with one, a Dock click only activates the
+/// app), then every Tags window that's minimized or hidden while `is_held` still holds its session.
+fn windows_to_bring_back<'a>(
+    windows: &[ShownState<'a>],
+    has_visible_windows: bool,
+    is_held: impl Fn(&str) -> bool,
+) -> Vec<&'a str> {
     let out_of_reach = |w: &&ShownState<'a>| w.minimized || !w.visible;
     // A hidden main window is still starting up (it shows itself once its page is ready).
-    let main = windows.iter().filter(|w| w.label == "main" && w.minimized);
+    let main = windows
+        .iter()
+        .filter(|w| !has_visible_windows && w.label == "main" && w.minimized);
     // A released Tags window is on its way out; showing it would put a half-torn-down page up.
     let tags = windows
         .iter()
@@ -263,7 +273,7 @@ mod tests {
             window("settings", false, false),
         ];
         assert_eq!(
-            windows_to_bring_back(&windows, held),
+            windows_to_bring_back(&windows, false, held),
             vec!["main", "tags-hidden", "tags-minimized"]
         );
     }
@@ -275,6 +285,20 @@ mod tests {
     fn a_dock_click_leaves_released_tags_windows_and_a_starting_main_window_alone() {
         let held = |id: &str| id != "gone";
         let windows = [window("main", false, false), window("tags-gone", false, false)];
-        assert!(windows_to_bring_back(&windows, held).is_empty());
+        assert!(windows_to_bring_back(&windows, false, held).is_empty());
+    }
+
+    /// With another window on screen (Settings, a viewer), a Dock click only activates the app, as
+    /// AppKit does: a minimized main stays minimized. A held Tags window out of reach still comes
+    /// back, since nothing else reaches it.
+    #[test]
+    fn a_dock_click_with_a_window_on_screen_leaves_a_minimized_main_alone() {
+        let held = |id: &str| id != "gone";
+        let windows = [
+            window("main", true, true),
+            window("settings", true, false),
+            window("tags-hidden", false, false),
+        ];
+        assert_eq!(windows_to_bring_back(&windows, true, held), vec!["tags-hidden"]);
     }
 }

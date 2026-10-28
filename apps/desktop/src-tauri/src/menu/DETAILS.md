@@ -688,7 +688,11 @@ so the shared IDs never collide. Sort by carries `SORT_BY_MENU_ID` on both platf
    this half needs no title at all.
    It then hands the Window menu (`WINDOW_MENU_ID`, on both bars) to `NSApplication.setWindowsMenu:` through
    `Submenu::set_as_windows_menu_for_nsapp`, so macOS lists every open window there (Tags, viewer, Settings).
-   Tauri registers only a menu whose id is its own `__tauri_window_menu__`, so without this the menu lists none.
+   Tauri registers only a menu whose id is its own `__tauri_window_menu__`, so without this the menu lists none
+   (verified on tauri 2.12.4 and muda 0.20.0, reading `app.rs` (`WINDOW_SUBMENU_ID`) and muda's `setWindowsMenu:` call,
+   2026-10-29). The window list is AppKit's documented `NSApplication.windowsMenu` behaviour; AppKit also adds its own
+   items there (Bring All to Front, and on macOS 15 and later Fill, Center, and Move & Resize), on both bars. Those
+   stay, as in any Mac app with a Window menu; neither the list nor those items is checked in the built app yet.
 2. Hangs AppKit's own services menu off the Services item in the installed app menu
    (`adopt_installed_services_menu`), which is what makes `Cmdr > Services` list the file services
    Finder lists. muda registers one `NSMenu` at build time and the installed bar carries a different,
