@@ -83,6 +83,14 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
+  "suggestedOps.approve.addServer": "Add server",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "1099b2a"
+  },
+  "suggestedOps.approve.editServer": "Save changes",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
+  },
   "suggestedOps.reject": "拒绝",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
@@ -154,6 +162,14 @@
   "suggestedOps.irreversible.other": "这项操作无法撤销",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "c94623d"
+  },
+  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "1a68195"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr 会创建这个文件夹",
   "@suggestedOps.folderWillBeCreated": {
@@ -310,6 +326,78 @@
   "suggestedOps.refusal.couldNotStart.suggestion": "请拒绝这条建议，然后让 AI 再建议一次。",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "5b5b779"
+  },
+  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "c83a215"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "eda1133"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "c059ee2"
+  },
+  "suggestedOps.server.add": "Add a server",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Change a server",
+  "@suggestedOps.server.change": {
+    "sourceHash": "7c07b82"
+  },
+  "suggestedOps.server.field.port": "Port",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59"
+  },
+  "suggestedOps.server.field.account": "Account",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Share",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "29887a5"
+  },
+  "suggestedOps.server.field.bucket": "Bucket",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657"
+  },
+  "suggestedOps.server.notSet": "Not set",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "changes to",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "A new address",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "有 AI 建议在等你。点按即可复查。",
   "@suggestedOps.indicatorTooltip": {

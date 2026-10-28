@@ -168,6 +168,14 @@
   "@askCmdr.tool.proposeSuggestions.done": {
     "sourceHash": "42457d2"
   },
+  "askCmdr.tool.proposeServer.doing": "Preparing a server suggestion",
+  "@askCmdr.tool.proposeServer.doing": {
+    "sourceHash": "cf8e5f0"
+  },
+  "askCmdr.tool.proposeServer.done": "Prepared a server suggestion",
+  "@askCmdr.tool.proposeServer.done": {
+    "sourceHash": "b075032"
+  },
   "askCmdr.tool.nothingToSuggest.doing": "Bedömer om det är värt att nämna",
   "@askCmdr.tool.nothingToSuggest.doing": {
     "sourceHash": "51ef519"
@@ -191,6 +199,18 @@
   "askCmdr.tool.memoryEdit.done": "Uppdaterade sina anteckningar",
   "@askCmdr.tool.memoryEdit.done": {
     "sourceHash": "5fdfbdc"
+  },
+  "askCmdr.tool.connectVolume.doing": "Connecting to your server",
+  "@askCmdr.tool.connectVolume.doing": {
+    "sourceHash": "5f24f83"
+  },
+  "askCmdr.tool.connectVolume.done": "Connected to your server",
+  "@askCmdr.tool.connectVolume.done": {
+    "sourceHash": "8f89103"
+  },
+  "askCmdr.tool.connectVolume.tried": "Tried connecting to your server",
+  "@askCmdr.tool.connectVolume.tried": {
+    "sourceHash": "b6d7bcf"
   },
   "askCmdr.tool.unknown.doing": "Arbetar",
   "@askCmdr.tool.unknown.doing": {
@@ -397,6 +417,78 @@
   "@askCmdr.tool.outcome.problem": {
     "sourceHash": "05a940f"
   },
+  "askCmdr.tool.outcome.miss.unknownVolume": "no drive by that name",
+  "@askCmdr.tool.outcome.miss.unknownVolume": {
+    "sourceHash": "94aa69b"
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "that’s not on the drive it named",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "sourceHash": "1602f88"
+  },
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "no drive is connected there",
+  "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
+    "sourceHash": "8ce9e0e"
+  },
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "that drive isn’t connected",
+  "@askCmdr.tool.outcome.miss.volumeNotConnected": {
+    "sourceHash": "d7b4614"
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "needs Full Disk Access",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "sourceHash": "a0a6a84"
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "the drive didn’t answer",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "sourceHash": "fe3a69d"
+  },
+  "askCmdr.tool.outcome.miss.notFound": "not there",
+  "@askCmdr.tool.outcome.miss.notFound": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.outcome.miss.excluded": "a system folder it skips",
+  "@askCmdr.tool.outcome.miss.excluded": {
+    "sourceHash": "67caa4d"
+  },
+  "askCmdr.tool.outcome.miss.permissionDenied": "no permission to look",
+  "@askCmdr.tool.outcome.miss.permissionDenied": {
+    "sourceHash": "75756a9"
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "stopped while reading",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "sourceHash": "4389728"
+  },
+  "askCmdr.tool.outcome.connection.alreadyConnected": "it was already connected",
+  "@askCmdr.tool.outcome.connection.alreadyConnected": {
+    "sourceHash": "72f41d9"
+  },
+  "askCmdr.tool.outcome.connection.stillReconnecting": "still reconnecting",
+  "@askCmdr.tool.outcome.connection.stillReconnecting": {
+    "sourceHash": "078929e"
+  },
+  "askCmdr.tool.outcome.connection.needsCredentials": "needs you to sign in",
+  "@askCmdr.tool.outcome.connection.needsCredentials": {
+    "sourceHash": "1833a39"
+  },
+  "askCmdr.tool.outcome.connection.needsApproval": "needs your approval",
+  "@askCmdr.tool.outcome.connection.needsApproval": {
+    "sourceHash": "80288d6"
+  },
+  "askCmdr.tool.outcome.connection.rejected": "the server said no",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "sourceHash": "53878fc"
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "the server didn’t answer",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "sourceHash": "3089e21"
+  },
+  "askCmdr.tool.outcome.connection.notSaved": "not a saved server",
+  "@askCmdr.tool.outcome.connection.notSaved": {
+    "sourceHash": "1ac6950"
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "stopped while connecting",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "sourceHash": "2934c58"
+  },
   "askCmdr.tool.outcome.memory.outsideMemory": "det ligger utanför anteckningsmappen",
   "@askCmdr.tool.outcome.memory.outsideMemory": {
     "sourceHash": "c320cc4"
@@ -500,6 +592,10 @@
   "askCmdr.tool.preview.status.unsupportedVolume": "på en enhet som AI:n inte kan titta in i",
   "@askCmdr.tool.preview.status.unsupportedVolume": {
     "sourceHash": "945bf7c"
+  },
+  "askCmdr.tool.preview.status.noVolumeAtPath": "on a drive that isn’t connected",
+  "@askCmdr.tool.preview.status.noVolumeAtPath": {
+    "sourceHash": "3b32abe"
   },
   "askCmdr.tool.preview.status.notIndexed": "inte indexerad än",
   "@askCmdr.tool.preview.status.notIndexed": {
@@ -1189,6 +1285,30 @@
   "askCmdr.decision.verbExtract": "extrahera",
   "@askCmdr.decision.verbExtract": {
     "sourceHash": "c924f71"
+  },
+  "askCmdr.decision.serverRejected": "You turned down {verbName}",
+  "@askCmdr.decision.serverRejected": {
+    "sourceHash": "b9797ee"
+  },
+  "askCmdr.decision.serverApproved": "You approved {verbName}",
+  "@askCmdr.decision.serverApproved": {
+    "sourceHash": "5ed18c2"
+  },
+  "askCmdr.decision.verbAddServer": "adding a server",
+  "@askCmdr.decision.verbAddServer": {
+    "sourceHash": "0304bc5"
+  },
+  "askCmdr.decision.verbEditServer": "changing a server",
+  "@askCmdr.decision.verbEditServer": {
+    "sourceHash": "0067d9a"
+  },
+  "askCmdr.decision.saved": "Saved",
+  "@askCmdr.decision.saved": {
+    "sourceHash": "b5c120b"
+  },
+  "askCmdr.decision.savedNotShare": "Saved the server, not its share",
+  "@askCmdr.decision.savedNotShare": {
+    "sourceHash": "e93a7bc"
   },
   "askCmdr.railBoundary.closedToast": "Ask Cmdr stötte på ett problem och stängdes. Öppna Ask Cmdr igen för att fortsätta.",
   "@askCmdr.railBoundary.closedToast": {
