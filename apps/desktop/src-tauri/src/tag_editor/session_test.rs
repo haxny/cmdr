@@ -789,3 +789,65 @@ fn a_total_without_its_number_is_dropped_in_store() {
     close(&id);
     close_rename(&id);
 }
+
+/// A book folder `Book/Disc 1/01.mp3`, `Book/Disc 2/01.mp3` and a `Book/cover.jpg`, opened as a Tags window opens it.
+fn book(tag: &str) -> (TestDir, TestListingGuard, String) {
+    let dir = TestDir::new(tag);
+    for (path, bytes) in [
+        ("Book/Disc 1/01.mp3", mp3_frames()),
+        ("Book/Disc 2/01.mp3", mp3_frames()),
+        ("Book/cover.jpg", vec![1, 2, 3]),
+    ] {
+        std::fs::create_dir_all(dir.join(path).parent().expect("a parent")).expect("dirs are made");
+        std::fs::write(dir.join(path), bytes).expect("writes");
+    }
+    let listing = TestListing::new()
+        .volume("root")
+        .path(dir.to_path_buf())
+        .entries(list_directory_core(&dir, &crate::listing_host::backends::AppListings).expect("the dir lists"))
+        .insert(crate::listing_host::listings(), tag);
+    let opened = crate::multi_rename::session::open_for_tags(listing.id(), true, Some(&[0]), 0).expect("opens");
+    (dir, listing, opened.session_id)
+}
+
+#[test]
+fn a_books_tracks_show_their_path_below_the_listing_folder_and_its_cover_comes_from_the_book() {
+    let (dir, _listing, id) = book("tag-editor-book");
+    let view = open(&id, false).expect("the tag session opens");
+    let names: Vec<&str> = view.tracks.iter().map(|row| row.file_name.as_str()).collect();
+    assert_eq!(names, vec!["Book/Disc 1/01.mp3", "Book/Disc 2/01.mp3"]);
+    assert!(view.tracks[0].path.ends_with("Book/Disc 1/01.mp3"));
+
+    let files = crate::multi_rename::session::files_of(&id).expect("files");
+    let folder = super::cover::tracks_folder(&files.dir, files.names.iter());
+    assert_eq!(folder, dir.join("Book"));
+    let candidates = super::cover::candidates_in(&folder).expect("lists");
+    assert_eq!(
+        candidates.iter().map(|c| c.file_name.as_str()).collect::<Vec<_>>(),
+        vec!["cover.jpg"]
+    );
+    // Its last write is the book's, not that of the folder the book sits in.
+    let key = super::last_apply::key_of(&id).expect("a key");
+    assert_eq!(key, super::last_apply::FolderKey::new("root", dir.join("Book")));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn the_folder_tracks_share_is_the_deepest_one_they_have_in_common() {
+    use super::cover::tracks_folder;
+    let dir = Path::new("/music");
+    let names = |list: &[&str]| list.iter().map(|n| (*n).to_string()).collect::<Vec<_>>();
+    assert_eq!(tracks_folder(dir, &names(&["a.mp3", "b.mp3"])), dir);
+    assert_eq!(
+        tracks_folder(dir, &names(&["Book/1/a.mp3", "Book/2/a.mp3"])),
+        dir.join("Book")
+    );
+    assert_eq!(tracks_folder(dir, &names(&["Book/a.mp3", "Other/a.mp3"])), dir);
+    // Files that aren't tracks don't pull the folder up.
+    assert_eq!(
+        tracks_folder(dir, &names(&["Book/1/a.mp3", "notes.txt"])),
+        dir.join("Book").join("1")
+    );
+    assert_eq!(tracks_folder(dir, &names(&[])), dir);
+}

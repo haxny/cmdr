@@ -30,7 +30,9 @@ use cmdr_tags::{
 };
 
 use super::sort::{TrackSort, reorder};
-use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key};
+use super::view::{
+    Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, stem_of,
+};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
 use crate::multi_rename::session::{SessionFiles, files_of};
@@ -141,6 +143,8 @@ pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, TagSession>>> = LazyL
 pub(super) struct Layout {
     access: Access,
     volume_id: String,
+    /// The folder the session's names are relative to.
+    pub(super) dir: PathBuf,
     pub(super) tracks: Vec<PathBuf>,
 }
 
@@ -163,12 +167,13 @@ pub(super) fn layout_of(files: &SessionFiles) -> Layout {
             reason: (!local).then_some(ReadOnlyReason::RemoteVolume),
         },
         volume_id: files.volume_id.clone(),
+        dir: files.dir.clone(),
         tracks,
     }
 }
 
 /// Whether `std::fs` reaches the volume's files (an OS-mounted share), so they can be read.
-fn volume_gives_local_paths(volume_id: &str) -> bool {
+pub(crate) fn volume_gives_local_paths(volume_id: &str) -> bool {
     crate::file_system::volume::manager::get_volume_manager()
         .get(volume_id)
         .is_some_and(|volume| volume.supports_local_fs_access())
@@ -295,9 +300,13 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         .iter()
         .filter_map(|path| session.by_path.get(path).map(|entry| (path.as_path(), entry)))
         .collect();
+    let mut view = build(layout.access, &tracks);
+    for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
+        row.file_name = file_name_of(&layout.dir, path);
+    }
     TagEditorView {
         sort: session.sort,
-        ..build(layout.access, &tracks)
+        ..view
     }
 }
 
@@ -348,18 +357,6 @@ fn scoped(
         .unzip())
 }
 
-fn file_name_of(path: &Path) -> String {
-    path.file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_default()
-}
-
-fn stem_of(path: &Path) -> String {
-    path.file_stem()
-        .map(|stem| stem.to_string_lossy().into_owned())
-        .unwrap_or_default()
-}
-
 /// What the tools know about `paths`, a selection of a book of `session_files` listed tracks (readable or not):
 /// each one's folder and stem, and the book's size (for the one-file-book rule).
 fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
@@ -380,7 +377,7 @@ fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
 /// `tags` as the file at `path` will hold them (an M4A track `01` is `1`); as given when the
 /// name has no supported format.
 fn as_format_holds(path: &Path, tags: FileTags) -> FileTags {
-    let held = match format_of(&file_name_of(path)) {
+    let held = match path.file_name().and_then(|name| format_of(&name.to_string_lossy())) {
         Some(format) => normalize_for(format, &tags),
         None => tags,
     };
@@ -504,12 +501,14 @@ pub fn preview_names(
     scope: Option<Vec<String>>,
 ) -> Result<Vec<NamePreviewRow>, TagEditorError> {
     let compiled = compile_pattern(&pattern).map_err(|error| TagEditorError::BadPattern { error })?;
-    let (paths, _) = with_session(session_id, |layout, session| scoped(layout, session, scope.as_deref()))?;
+    let (paths, dir) = with_session(session_id, |layout, session| {
+        Ok((scoped(layout, session, scope.as_deref())?.0, layout.dir.clone()))
+    })?;
     Ok(paths
         .iter()
         .map(|path| NamePreviewRow {
             path: path.to_string_lossy().into_owned(),
-            file_name: file_name_of(path),
+            file_name: file_name_of(&dir, path),
             fields: compiled.read(&stem_of(path)).map(|pairs| {
                 pairs
                     .into_iter()
@@ -535,7 +534,7 @@ pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView
                     .next()?;
                 let view = FileChangeView {
                     path: path.to_string_lossy().into_owned(),
-                    file_name: file_name_of(path),
+                    file_name: file_name_of(&layout.dir, path),
                     fields: change.fields,
                     cover: change.cover,
                     extras: change.extras,

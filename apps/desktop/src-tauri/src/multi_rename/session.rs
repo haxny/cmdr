@@ -169,8 +169,6 @@ pub(crate) fn open(
 enum MediaSeed {
     /// The listing's entries: every media file is queued for the background read.
     Listing,
-    /// Nothing: a session nothing previews a rename over reads no media.
-    Empty,
 }
 
 fn open_seeded(
@@ -196,7 +194,6 @@ fn open_seeded(
     let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
     let entries = match seed {
         MediaSeed::Listing => listings.entries(&id).map_err(|_| gone())?,
-        MediaSeed::Empty => Vec::new(),
     };
     Ok(insert_new(
         listing_id.to_string(),
@@ -702,6 +699,10 @@ pub(crate) use tags::{held_twin, hold, open_for_tags, release, reopen};
 #[cfg(test)]
 #[path = "session_hold_test.rs"]
 mod hold_test;
+
+#[cfg(test)]
+#[path = "session_tags_test.rs"]
+mod tags_test;
 
 #[cfg(test)]
 mod tests {

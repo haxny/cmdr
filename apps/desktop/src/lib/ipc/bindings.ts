@@ -12987,6 +12987,10 @@ export type MultiRenameError =
   | { type: 'namesFileGone'; detail: string }
   // The work didn't finish within its deadline.
   | { type: 'timedOut' }
+  // A Tags window was asked for more audio files than it takes (`limit`) from the folders it was given.
+  | { type: 'tooManyTracks'; limit: number }
+  // A Tags window was asked for the files inside a folder, which only a disk this computer reads can list.
+  | { type: 'foldersNeedLocalDisk' }
   // The worker failed; `detail` is log text only.
   | { type: 'internal'; detail: string }
 

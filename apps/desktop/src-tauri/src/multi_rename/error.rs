@@ -42,6 +42,10 @@ pub enum MultiRenameError {
     NamesFileGone { detail: String },
     /// The work didn't finish within its deadline.
     TimedOut,
+    /// A Tags window was asked for more audio files than it takes (`limit`) from the folders it was given.
+    TooManyTracks { limit: u32 },
+    /// A Tags window was asked for the files inside a folder, which only a disk this computer reads can list.
+    FoldersNeedLocalDisk,
     /// The worker failed; `detail` is log text only.
     Internal { detail: String },
 }

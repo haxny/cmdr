@@ -60,6 +60,7 @@ function buildPaneRef(
     /** What a fresh re-read finds under the cursor; defaults to the cached name and path. */
     freshEntry: { name: string; path: string } | null
     selectedIndices: number[]
+    cursorIndex: number
     allSelected: boolean
     rowStateReady: boolean
     lastSequence: number
@@ -82,6 +83,7 @@ function buildPaneRef(
       return Promise.resolve({ name, path: overrides.pathUnderCursor ?? `/listing/${name}`, isDirectory: false })
     },
     getSelectedIndices: () => overrides.selectedIndices ?? [],
+    getCursorIndex: () => overrides.cursorIndex ?? 0,
     isAllSelected: () => overrides.allSelected ?? false,
     isRowStateReady: () => overrides.rowStateReady ?? true,
     getLastSequence: () => overrides.lastSequence ?? 0,
@@ -453,6 +455,57 @@ describe('getFocusedPaneRenameTarget', () => {
     expect(create(buildAccess({ paneRefs: { left: settling } })).getFocusedPaneRenameTarget()).toBeNull()
     const search = buildPaneRef({ volumeId: 'search-results' })
     expect(create(buildAccess({ paneRefs: { left: search } })).getFocusedPaneRenameTarget()).toBeNull()
+  })
+})
+
+describe('getFocusedPaneTagsTarget', () => {
+  it('takes the selection like the rename target does', () => {
+    const ref = buildPaneRef({ hasParent: true, selectedIndices: [5, 0, 2], cursorIndex: 3, lastSequence: 9 })
+    expect(create(buildAccess({ paneRefs: { left: ref } })).getFocusedPaneTagsTarget()).toEqual({
+      listingId: 'listing-1',
+      selectedIndices: [1, 4],
+      expectedSequence: 9,
+      nothingSelected: false,
+    })
+  })
+
+  it('with nothing selected takes the row under the cursor, a folder as much as a file', () => {
+    const ref = buildPaneRef({ hasParent: true, cursorIndex: 4, lastSequence: 2 })
+    expect(create(buildAccess({ paneRefs: { left: ref } })).getFocusedPaneTagsTarget()).toEqual({
+      listingId: 'listing-1',
+      selectedIndices: [3],
+      expectedSequence: 2,
+      nothingSelected: false,
+    })
+    const noParent = buildPaneRef({ cursorIndex: 0 })
+    expect(create(buildAccess({ paneRefs: { left: noParent } })).getFocusedPaneTagsTarget()).toMatchObject({
+      selectedIndices: [0],
+      nothingSelected: false,
+    })
+  })
+
+  it('on the .. row, or in an empty pane, there is nothing to tag', () => {
+    const onParent = buildPaneRef({ hasParent: true, cursorIndex: 0 })
+    expect(create(buildAccess({ paneRefs: { left: onParent } })).getFocusedPaneTagsTarget()).toMatchObject({
+      selectedIndices: null,
+      nothingSelected: true,
+    })
+    const empty = buildPaneRef({ cursorIndex: -1 })
+    expect(create(buildAccess({ paneRefs: { left: empty } })).getFocusedPaneTagsTarget()).toMatchObject({
+      nothingSelected: true,
+    })
+  })
+
+  it('select all is every row, and a pane that is settling or has no listing opens nothing', () => {
+    const all = buildPaneRef({ allSelected: true, selectedIndices: [0, 1] })
+    expect(create(buildAccess({ paneRefs: { left: all } })).getFocusedPaneTagsTarget()).toMatchObject({
+      selectedIndices: null,
+      nothingSelected: false,
+    })
+    const settling = buildPaneRef({ selectedIndices: [1], rowStateReady: false })
+    expect(create(buildAccess({ paneRefs: { left: settling } })).getFocusedPaneTagsTarget()).toBeNull()
+    const search = buildPaneRef({ volumeId: 'search-results' })
+    expect(create(buildAccess({ paneRefs: { left: search } })).getFocusedPaneTagsTarget()).toBeNull()
   })
 })
 

@@ -192,6 +192,22 @@ fn count_bad_dates(tracks: &[(&Path, &Entry)]) -> u32 {
     u32::try_from(bad).unwrap_or(u32::MAX)
 }
 
+/// The file's name as the session names it: its path below the session's folder (`Disc 1/01.mp3`
+/// for a track of a folder), so tracks of different subfolders tell apart.
+pub(super) fn file_name_of(dir: &Path, path: &Path) -> String {
+    path.strip_prefix(dir)
+        .ok()
+        .or_else(|| path.file_name().map(Path::new))
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+pub(super) fn stem_of(path: &Path) -> String {
+    path.file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
 fn track_row(path: &Path, entry: &Entry) -> TrackRow {
     let base = TrackRow {
         path: path.to_string_lossy().into_owned(),

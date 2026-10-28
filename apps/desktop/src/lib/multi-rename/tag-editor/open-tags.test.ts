@@ -37,7 +37,7 @@ const SELECTION: TagsSelection = {
 }
 
 function explorer(target: TagsSelection | null = SELECTION) {
-  return { getFocusedPaneRenameTarget: vi.fn(() => target) }
+  return { getFocusedPaneTagsTarget: vi.fn(() => target) }
 }
 
 describe('opening a Tags window', () => {
@@ -109,6 +109,31 @@ describe('opening a Tags window', () => {
     expect(addToast).toHaveBeenCalledWith('None of the selected files is an audio file Cmdr can tag.', {
       level: 'info',
     })
+  })
+
+  it('with nothing selected the row under the cursor opens, as the target says', async () => {
+    await openTagsForSelection(explorer({ ...SELECTION, selectedIndices: [7], nothingSelected: false }))
+    expect(ipc.openTagsSession).toHaveBeenCalledWith('L', false, [7], 9)
+  })
+
+  it('on .. (no row at all) it says nothing is selected and opens nothing', async () => {
+    await openTagsForSelection(explorer({ ...SELECTION, selectedIndices: null, nothingSelected: true }))
+    expect(ipc.openTagsSession).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith('Select the audio files to tag first.', { level: 'info' })
+  })
+
+  it('too many tracks in the folders says how many it takes', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'tooManyTracks', limit: 2000 } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('2,000'), { level: 'warn' })
+  })
+
+  it('a folder on a disk Cmdr cannot read through says so', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'foldersNeedLocalDisk' } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('folder'), { level: 'info' })
   })
 
   it('a selection the listing moved past is refused as Multi-Rename refuses it', async () => {

@@ -5,9 +5,9 @@ sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted;
 `src-tauri/src/tag_editor/CLAUDE.md`.
 
 - **A window per session**, `tags-<sessionId>` on `/tags`, opened only by the main window (`open-tags.ts`): File > Edit
-  tags… (`file.editTags`, ⌘⇧E) from the selection, or the sheet's "Tags…". Each open makes a NEW Multi-Rename session
-  and HOLDS it (`holdTagsSession`), so eviction never takes it. ❌ Never hand the window the sheet's own session: the
-  sheet closing would end it (`reopenForTags` copies it).
+  tags… (`file.editTags`, ⌘⇧E) from the selection or cursor row, or the sheet's "Tags…". Each open makes a NEW
+  Multi-Rename session and HOLDS it (`holdTagsSession`), so eviction never takes it. ❌ Never hand the window the
+  sheet's own session: the sheet closing would end it (`reopenForTags` copies it).
 - **Closing** goes through the discard guard (Escape = `tags.close`, the red button via `onCloseRequested`), then
   releases, `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`. ❌ Never `getCurrentWindow().close()` from a key
   handler. The backend ends the session on the window's `Destroyed` too.

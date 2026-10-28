@@ -25,9 +25,9 @@ import { openTagsWindow } from './tags-window'
 
 const log = getAppLogger('tagEditor')
 
-/** What `file.editTags` needs from the explorer: the focused pane's selection, as Multi-Rename takes it. */
+/** What `file.editTags` needs from the explorer: the focused pane's selection, else its cursor row. */
 export interface TagsSelectionSource {
-  getFocusedPaneRenameTarget(): TagsSelection | null
+  getFocusedPaneTagsTarget(): TagsSelection | null
 }
 
 export interface TagsSelection {
@@ -37,7 +37,7 @@ export interface TagsSelection {
   nothingSelected: boolean
 }
 
-/** Why `file.editTags` does nothing: the setting is off, or nothing is selected (a pane with no listing included). */
+/** Why `file.editTags` does nothing: the setting is off, or there is no selection and no cursor row (`..`, an empty pane, a pane with no listing). */
 export type TagsOpenRefusal = 'off' | 'nothingSelected'
 
 export function tagsOpenRefusal(settingOn: boolean, selection: TagsSelection | null): TagsOpenRefusal | null {
@@ -52,7 +52,7 @@ let opening = false
 /** `file.editTags`: a Tags window over the focused pane's selection. */
 export async function openTagsForSelection(explorer: TagsSelectionSource | undefined): Promise<void> {
   if (!getSetting('multiRename.tagEditor') || !explorer) return
-  const selection = explorer.getFocusedPaneRenameTarget()
+  const selection = explorer.getFocusedPaneTagsTarget()
   if (tagsOpenRefusal(true, selection) !== null || selection === null) {
     addToast(tString('multiRename.tags.window.nothingSelected'), { level: 'info' })
     return
@@ -60,6 +60,20 @@ export async function openTagsForSelection(explorer: TagsSelectionSource | undef
   await openOnce(() =>
     openTagsSession(selection.listingId, getShowHiddenFiles(), selection.selectedIndices, selection.expectedSequence),
   )
+}
+
+/** What a refused open tells the user; the errors with no wording of their own say nothing, as before. */
+function openFailureToast(error: MultiRenameError): { text: string; level: 'info' | 'warn' } | null {
+  switch (error.type) {
+    case 'selectionChanged':
+      return { text: tString('multiRename.selectionChanged'), level: 'warn' }
+    case 'tooManyTracks':
+      return { text: tString('multiRename.tags.window.tooManyTracks', { limit: error.limit }), level: 'warn' }
+    case 'foldersNeedLocalDisk':
+      return { text: tString('multiRename.tags.window.foldersNeedLocalDisk'), level: 'info' }
+    default:
+      return null
+  }
 }
 
 /** The sheet's "Tags…": a Tags window over a copy of the sheet's session. */
@@ -77,7 +91,8 @@ async function openOnce(open: () => Promise<Opened>): Promise<void> {
     const opened = await open()
     if (!opened.ok) {
       log.warn("couldn't open a session for the Tags window: {reason}", { reason: opened.error.type })
-      if (opened.error.type === 'selectionChanged') addToast(tString('multiRename.selectionChanged'), { level: 'warn' })
+      const toast = openFailureToast(opened.error)
+      if (toast !== null) addToast(toast.text, { level: toast.level })
       return
     }
     await holdAndShow(opened.value.sessionId)

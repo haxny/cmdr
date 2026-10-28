@@ -2044,6 +2044,14 @@
   "@multiRename.tags.window.noTracks": {
     "description": "Notification when the user asks to edit tags but nothing selected is an audio file the tag editor supports (MP3, M4A, M4B, MP4, FLAC, OGG, Opus). No window opens."
   },
+  "multiRename.tags.window.tooManyTracks": "Those folders hold more than {limit, number} audio files. Select a smaller part of the book.",
+  "@multiRename.tags.window.tooManyTracks": {
+    "description": "Notification when the user asks to edit tags on folders and the audio files in them (subfolders included) are more than the tag editor takes at once. {limit} is that most, a plain number such as 2000. No window opens."
+  },
+  "multiRename.tags.window.foldersNeedLocalDisk": "Edit tags opens a folder only on a disk of this computer. Open the folder and select its audio files instead.",
+  "@multiRename.tags.window.foldersNeedLocalDisk": {
+    "description": "Notification when the user asks to edit tags on a folder that lives on a network share, a phone or another drive Cmdr can't list the files of folder by folder; single files there still work. No window opens."
+  },
   "multiRename.tags.keys.label": "Tag tools",
   "@multiRename.tags.keys.label": {
     "description": "Accessible name of the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags): a row of buttons, one per key (F2, F3, …), that run the tag tools."

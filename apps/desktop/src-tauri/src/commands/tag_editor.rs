@@ -274,11 +274,11 @@ pub async fn open_tags_in_player(
     blocking(move || open_in_player(&app, player_targets(&session_id, &paths)?)).await
 }
 
-/// The session's folder, when its files are on the local disk.
+/// The folder the session's tracks share, when its files are on the local disk.
 fn local_folder(session_id: &str) -> Result<std::path::PathBuf, TagEditorError> {
     let files = files_of(session_id).map_err(|_| TagEditorError::NoSession)?;
     if files.volume_id == LOCAL_VOLUME_ID {
-        Ok(files.dir)
+        Ok(crate::tag_editor::cover::tracks_folder(&files.dir, files.names.iter()))
     } else {
         Err(TagEditorError::ReadOnly)
     }

@@ -369,6 +369,8 @@ export interface ExplorerAPI {
   refuseMultiRename: () => boolean
   /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
   getFocusedPaneRenameTarget: () => MultiRenameSelection | null
+  /** Edit tags' target: the focused pane's selection, else its cursor row (none on `..`). */
+  getFocusedPaneTagsTarget: () => MultiRenameSelection | null
   /**
    * Returns a snapshot of the focused pane's entries + cursor index for the Selection
    * dialog. Captured ONCE at dialog open; the dialog does not refresh on mid-dialog

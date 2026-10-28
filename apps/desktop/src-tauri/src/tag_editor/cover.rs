@@ -37,6 +37,32 @@ fn mime_of(name: &str) -> Option<&'static str> {
     }
 }
 
+/// The folder the session's tracks share: `dir` for tracks directly in it, `dir/Book` for a book's
+/// `Book/Disc 1/01.mp3` and `Book/Disc 2/01.mp3`. The covers of the session are looked for there, not
+/// in the listing's folder the book sits in. `dir` when there is no track.
+pub(crate) fn tracks_folder<'a>(dir: &Path, names: impl IntoIterator<Item = &'a String>) -> std::path::PathBuf {
+    let mut common: Option<Vec<std::ffi::OsString>> = None;
+    for name in names.into_iter().filter(|name| cmdr_tags::format_of(name).is_some()) {
+        let parents: Vec<std::ffi::OsString> = Path::new(name)
+            .parent()
+            .map(|parent| parent.components().map(|c| c.as_os_str().to_os_string()).collect())
+            .unwrap_or_default();
+        common = Some(match common {
+            None => parents,
+            Some(so_far) => so_far
+                .into_iter()
+                .zip(parents)
+                .take_while(|(a, b)| a == b)
+                .map(|(a, _)| a)
+                .collect(),
+        });
+    }
+    common
+        .unwrap_or_default()
+        .iter()
+        .fold(dir.to_path_buf(), |folder, part| folder.join(part))
+}
+
 /// The jpg, jpeg, png and webp files directly in `dir`, by name. Blocking file work.
 pub(crate) fn candidates_in(dir: &Path) -> Result<Vec<CoverCandidate>, TagEditorError> {
     let entries = std::fs::read_dir(dir).map_err(|_| TagEditorError::CoverUnreadable)?;

@@ -174,10 +174,12 @@ fn next_last(before: Option<LastTagApply>, report: &TagApplyReport) -> Option<La
 
 static LAST: LazyLock<Mutex<LastApplies>> = LazyLock::new(|| Mutex::new(LastApplies::default()));
 
-/// The folder of Multi-Rename session `session_id`, or `NoSession`.
+/// The folder of Multi-Rename session `session_id`, or `NoSession`: the one its tracks share, so two
+/// books opened from the same parent folder keep their own last write.
 pub(crate) fn key_of(session_id: &str) -> Result<FolderKey, TagEditorError> {
     let files = files_of(session_id).map_err(|_| TagEditorError::NoSession)?;
-    Ok(FolderKey::new(files.volume_id, files.dir))
+    let dir = super::cover::tracks_folder(&files.dir, files.names.iter());
+    Ok(FolderKey::new(files.volume_id, dir))
 }
 
 /// Records an apply of session `session_id`'s folder. Call it under the undo store.
