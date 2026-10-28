@@ -714,6 +714,31 @@ describe('⌘⏎ and ⌘S write at once', () => {
     expect(statusLine()).toContain('The tags aren’t open any more.')
   })
 
+  it('a write that would remove a field opens the list instead, says why, and writes nothing', async () => {
+    ipc.getTagChanges.mockResolvedValue({
+      ok: true,
+      value: [
+        { path: '/b/01.mp3', fileName: '01.mp3', fields: [], cover: false, extras: false, removes: ['conductor'] },
+      ],
+    })
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(dialogTitle()).toBe('Write tags')
+    expect(dialog()?.textContent).toContain('conductor (removed)')
+    expect(statusLine()).toContain('Writing as Audiobook removes a tag from 1 file, so the list shows it first.')
+  })
+
+  it('⇧⌘S while typing a value sends that value first, then lists', async () => {
+    const root = await mountWindow()
+    const box = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(box, 'Dracula')
+    await review()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setAll', field: 'album', values: ['Dracula'] }])
+    expect(dialogTitle()).toBe('Write tags')
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+  })
+
   it('nothing to write says so and writes nothing', async () => {
     ipc.getTagChanges.mockResolvedValue({ ok: true, value: [] })
     await mountWindow()

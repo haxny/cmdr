@@ -12,7 +12,7 @@
      * a selection it didn't show. ⌘X, ⌘C and ⌘V arrive the same way
      * (`onTagsClipboard`) and go to the content's `clipboard`: the field under the cursor, or the native action back
      * for a text box. The rest of the `Tags window` keys (`tags-function-keys.ts`) go to the content's
-     * `runCommand`, except while a value is typed (only ⌘S, which the box has already committed, and the close keys get
+     * `runCommand`, except while a value is typed (only ⌘⏎ / ⌘S / ⌘⇧S, which the box has already committed, and the close keys get
      * through; the value editor claims its own Esc), while a dialog is open (it owns its keys, Escape included), and
      * Enter on a focused control (a button presses). On macOS the main menu this window installs holds F2–F8, ⇧F2,
      * ⇧F4 and ⇧F8 as accelerators that fire before the page: those presses arrive from the menu
@@ -149,13 +149,16 @@
         }
     }
 
+    /** The keys that act from a text box too: the write, the review, and the close keys. */
+    const THROUGH_TEXT_BOXES: ReadonlySet<TagsCommandId | 'tags.close'> = new Set(['tags.write', 'tags.review', 'tags.close'])
+
     /** The command a key means here, or `null`: what the key is, then whether it may act where it was pressed. */
     function commandOf(e: KeyboardEvent): TagsCommandId | 'tags.close' | null {
         const id = eventMatchesCommand(e, 'tags.close') ? 'tags.close' : TAGS_WINDOW_KEYS.find((key) => eventMatchesCommand(e, key))
         if (id === undefined) return null
         const target = e.target instanceof Element ? e.target : null
-        // Typing a value: its own keys (⌘Z is its text undo); ⌘S gets here only once the box committed.
-        if (textBoxOf(target) !== null) return id === 'tags.write' || id === 'tags.close' ? id : null
+        // Typing a value: its own keys (⌘Z is its text undo); ⌘⏎ / ⌘S / ⌘⇧S get here only once the box committed.
+        if (textBoxOf(target) !== null) return THROUGH_TEXT_BOXES.has(id) ? id : null
         // Enter belongs to the control that has focus (a button, a checkbox); a focused pane has already answered it.
         if (PANE_KEYS.has(id as TagsCommandId) && e.key === 'Enter' && target !== null && target !== document.body) return null
         return id
@@ -181,7 +184,7 @@
             guard.close()
             return
         }
-        // ⌘S from a text box other than the value editor (which committed already): leave it first, so its change lands.
+        // ⌘⏎ / ⌘S / ⌘⇧S from a text box other than the value editor (which committed already): leave it first, so its change lands.
         const box = textBoxOf(e.target instanceof Element ? e.target : null)
         if (box?.isConnected === true) box.blur()
         content?.runCommand(id, 'keyboard')

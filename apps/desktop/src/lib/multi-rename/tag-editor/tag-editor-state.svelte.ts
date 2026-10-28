@@ -77,7 +77,8 @@ export interface ApplyOptions {
  * What `writeNow` did. `done`: how many files it wrote and left unwritten (failed, changed on disk since the read).
  * `wouldDrop`: the first apply's report, with the kind it wrote as, for the "Write anyway" / "Skip" choice. `refused`:
  * the write was refused, typed; `listFailed`: the change list before it couldn't be made, so nothing was written.
- * `nothing`: no file would change. `stillBusy`: an edit was still out after
+ * `reviewFirst`: writing as the kind would remove a field from `removing` files (an MP3's conductor for an audiobook),
+ * so nothing was written: a removal is only ever written from the list that names it. `nothing`: no file would change. `stillBusy`: an edit was still out after
  * the wait, so nothing was listed or written.
  */
 export type WriteNowResult =
@@ -85,6 +86,7 @@ export type WriteNowResult =
   | { kind: 'wouldDrop'; report: TagApplyReport; writtenAs: ContentKind }
   | { kind: 'refused'; error: TagStateError }
   | { kind: 'listFailed'; error: TagStateError }
+  | { kind: 'reviewFirst'; removing: number; writtenAs: ContentKind }
   | { kind: 'nothing' }
   | { kind: 'stillBusy' }
 
@@ -164,7 +166,8 @@ export interface TagEditorState {
   /**
    * ⌘⏎ / ⌘S: writes the edits at once, without the change list. The same write as the Write dialog's: it waits for the
    * edits still out, lists the changes as the remembered kind (`loadWriteKind`), writes nothing when none would change
-   * (so the last write stays undoable), and otherwise applies them with no frame loss and no skips.
+   * (so the last write stays undoable) or when the kind would remove a field (`reviewFirst`: the list must show it),
+   * and otherwise applies them with no frame loss and no skips.
    */
   writeNow(options?: WriteNowOptions): Promise<WriteNowResult>
   /** Writes the old tags of the last write back, the last apply first. A failure leaves the rest undoable. */
@@ -318,6 +321,8 @@ export function createTagEditorState(sessionId: string): TagEditorState {
     const listed = await track(() => getTagChanges(sessionId, kind), null)
     if (!listed.ok) return { kind: 'listFailed', error: listed.error }
     if (listed.value.length === 0) return { kind: 'nothing' }
+    const removing = listed.value.filter((change) => change.removes.length > 0).length
+    if (removing > 0) return { kind: 'reviewFirst', removing, writtenAs: kind }
     options.onWriting?.()
     const res = await apply({ kind, allowFrameLoss: false, skip: [] })
     if (!res.ok) return { kind: 'refused', error: res.error }

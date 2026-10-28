@@ -27,7 +27,9 @@
     import { joinSentences } from '#lib/intl/sentence-join.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import AlbumPane from './AlbumPane.svelte'
-    import { fileNameOf, outcomeOf, refusalOf, writeAnywayAfter } from './apply-outcome'
+    import { fileNameOf, outcomeOf, refusalOf } from './apply-outcome'
+    import { answerWriteAnyway } from './write-anyway'
+    import { KIND_LABELS } from './write-kind'
     import CoverPanel from './CoverPanel.svelte'
     import CoverViewer from './CoverViewer.svelte'
     import { COVER_ERROR_KEYS, type CoverShown } from './cover-choices'
@@ -37,7 +39,6 @@
     import TracksPane from './TracksPane.svelte'
     import WouldDropDialog from './WouldDropDialog.svelte'
     import WriteDialog from './WriteDialog.svelte'
-    import { WRITE_WAIT_LIMIT_MS } from './write-wait'
     import type { RunScoped, TagToolId } from './tag-tools'
     import {
         createTagsKeyEcho,
@@ -259,8 +260,18 @@
 
     /** The tool dialog showing, with the field the user was on when it opened. */
     let tool = $state<{ id: TagToolId; field: TagField | null } | null>(null)
-    /** The Write dialog showing: listing and writing (⌘S), or undoing the last write (⌘Z). */
+    /** The Write dialog showing: listing and writing (⌘⇧S), or undoing the last write (⌘Z). */
     let writeMode = $state<'write' | 'undo' | null>(null)
+    /** Files a write at once would make lose tag data ask first, over the panes (`WouldDropDialog`). */
+    let dropChoice = $state.raw<{
+        reports: TagApplyReport[]
+        kind: ContentKind
+        /** The view the choice was asked for: an edit since then lists again. */
+        seen: TagEditorView | null
+        answering: boolean
+    } | null>(null)
+    /** The ⌘⏎ applies the Write dialog's list continues (`openReview`). */
+    let reviewContinues: TagApplyReport[] = []
     /** The window was asked to close while a write ran: the Write dialog says to wait until it's done. */
     let closeWaits = $state(false)
     /** The cover opened large (`CoverViewer`), from a click on its thumbnail. */
@@ -326,14 +337,6 @@
 
     /** A write at once is on its way: a second press does nothing (no queue), and the status line says so. */
     let writingNow = $state(false)
-    /** Files a write at once would make lose tag data ask first, over the panes (`WouldDropDialog`). */
-    let dropChoice = $state.raw<{
-        reports: TagApplyReport[]
-        kind: ContentKind
-        /** The view the choice was asked for: an edit since then writes nothing more. */
-        seen: TagEditorView | null
-        answering: boolean
-    } | null>(null)
 
     /**
      * ⌘⏎ / ⌘S: writes at once (`writeNow`, the Write dialog's own write without its list) and says in the status line
@@ -371,6 +374,20 @@
             }
             case 'listFailed':
                 showSummary([{ key: 'multiRename.tags.write.listFailed' }], 'alert')
+                break
+            case 'reviewFirst':
+                // A removal is written only from the list that names it.
+                openReview()
+                showSummary([
+                    {
+                        key: 'multiRename.tags.write.reviewRemovals',
+                        params: {
+                            count: res.removing,
+                            countText: formatInteger(res.removing),
+                            kind: tString(KIND_LABELS[res.writtenAs]),
+                        },
+                    },
+                ])
                 break
             case 'nothing':
                 showSummary([{ key: 'multiRename.tags.write.nothingToWrite' }])
@@ -411,28 +428,39 @@
         showOutcome(choice.reports)
     }
 
-    /**
-     * "Write anyway": the same request as the Write dialog's (`writeAnywayAfter`): frame loss allowed for the
-     * would-drop files alone. An edit made since the choice was asked writes nothing more (they count as skipped).
-     */
+    /** "Write anyway" (`answerWriteAnyway`, shared with the Write dialog, so both write and re-list alike). */
     async function writeAnyway(choice: NonNullable<typeof dropChoice>): Promise<void> {
-        const last = choice.reports.at(-1)
-        if (last === undefined || choice.answering) return
+        if (choice.answering) return
         dropChoice = { ...choice, answering: true }
-        if (!(await tags.settled(WRITE_WAIT_LIMIT_MS))) {
-            dropChoice = { ...choice, answering: false }
-            notice = 'multiRename.tags.write.stillBusy'
-            return
+        const answer = await answerWriteAnyway(tags, choice, () => {
+            player.stop()
+        })
+        switch (answer.kind) {
+            case 'stillBusy':
+                dropChoice = { ...choice, answering: false }
+                notice = 'multiRename.tags.write.stillBusy'
+                break
+            case 'changed':
+                // An edit landed while the choice showed: nothing unlisted is written. The list opens, continuing this
+                // press, so its write's Undo reverses the first apply too.
+                dropChoice = null
+                openReview(choice.reports)
+                break
+            case 'written':
+                dropChoice = null
+                showOutcome(answer.reports)
+                break
+            case 'refused':
+                dropChoice = null
+                showOutcome(choice.reports, [{ key: 'multiRename.tags.write.stopped' }])
+                break
         }
-        if (tags.view !== choice.seen) {
-            skipDropped(choice)
-            return
-        }
-        player.stop()
-        const res = await tags.apply(writeAnywayAfter(choice.kind, last, tags.view), { after: choice.reports })
-        dropChoice = null
-        if (res.ok) showOutcome([...choice.reports, res.value])
-        else showOutcome(choice.reports, [{ key: 'multiRename.tags.write.stopped' }])
+    }
+
+    /** ⌘⇧S: the Write dialog, the change list first; `continuing`: the applies of a ⌘⏎ press it continues. */
+    function openReview(continuing: TagApplyReport[] = []): void {
+        reviewContinues = continuing
+        writeMode = 'write'
     }
 
     const COMMANDS: Record<TagsCommandId, () => void> = {
@@ -452,7 +480,7 @@
         'tags.clearField': () => { openTool('clearField') },
         'tags.removeExtras': () => { openTool('extras') },
         'tags.write': () => void writeAtOnce(),
-        'tags.review': () => { writeMode = 'write' },
+        'tags.review': () => { openReview() },
         'tags.undo': () => void undoLast(),
         'tags.redo': () => void redoLast(),
     }
@@ -492,6 +520,7 @@
      */
     function closeWrite(notWritten: number): void {
         writeMode = null
+        reviewContinues = []
         closeWaits = false
         if (notWritten > 0) notice = 'multiRename.tags.write.someLeft'
     }
@@ -633,7 +662,7 @@
     />
 {/if}
 {#if writeMode !== null}
-    <WriteDialog {tags} mode={writeMode} {closeWaits} onWriting={() => { player.stop() }} onClose={closeWrite} />
+    <WriteDialog {tags} mode={writeMode} {closeWaits} continuing={reviewContinues} onWriting={() => { player.stop() }} onClose={closeWrite} />
 {/if}
 
 {#if dropChoice !== null}

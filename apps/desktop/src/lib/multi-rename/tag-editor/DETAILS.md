@@ -81,25 +81,28 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   (`getFirstShortcutReactive`), its buttons never take focus, and a disabled slot is a command that can't act (read-only
   leaves Play and Open in player). The window's keydown (`TagsWindow`) answers the same `Tags window` commands through
   `TagsContent.runCommand`, skipping a key a box, a pane or a dialog already claimed, every key while a dialog is open,
-  every key but ⌘⏎ / ⌘S (which the value box commits first) while a value is typed (⌘Z stays the box's text undo), and
-  Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key list: it holds the one-press tools
-  the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist = Artist, Narrator from text, Clear
-  title = album). Clear (F8) empties one field, starting on the cursor's, on the selection (`setOne` per readable
+  every key but ⌘⏎ / ⌘S / ⌘⇧S (which the value box commits first) while a value is typed (⌘Z stays the box's text undo),
+  and Enter on a focused control. Clean up (⇧F5, `tags.cleanUp`) is not in the plan's key list: it holds the one-press
+  tools the old bar had (Remove diacritics, Renumber, Strip track prefix, Album artist = Artist, Narrator from text,
+  Clear title = album). Clear (F8) empties one field, starting on the cursor's, on the selection (`setOne` per readable
   selected track) or every file (`setAll`). Each tool takes the field the user was on when it opened, since focus then
   moves into the dialog. The text tools stay open to run again; Case, Clean up, Remove extras and Clear close once run.
   ⌘⏎ and ⌘S (`tags.write`) write at once: `TagEditorState.writeNow` is the Write dialog's own write without its list (it
   waits for the edits out, lists as the remembered kind, writes nothing when nothing would change, then the same apply
-  request), the player stops first, a second press while it runs does nothing, would-drop files ask in a
-  `WouldDropDialog` over the panes ("Write anyway" sends `writeAnywayAfter`, the dialog's request), and the status line
-  says how many files were written and how many weren't, until the next edit or 10 s. Refusals reuse the dialog's words
-  (`refusalOf`). ⌘⇧S (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write
-  tags writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo question
-  (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W reaches the window as the
-  native Close tab item, which closes a focused child window through its close request, so it meets the same discard
-  guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format re-applies the mask to
-  the value the first one made), as the in-flow panels did. A command that can't act (tags still being read, read-only,
-  no extras, a dialog open) does nothing: the reading notice or the status line already says why. Closing the Write
-  dialog on a write that left files unwritten keeps "Some files weren't written" in the status line.
+  request). ❗ When the kind would remove a field from any file (`removes`, an MP3's conductor for Audiobook) it writes
+  nothing and opens the list instead (`reviewFirst`, worded in the status line): a removal is only ever written from the
+  list that names it. The player stops first, a second press while it runs does nothing, would-drop files ask in a
+  `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`, shared with the dialog: an edit landed
+  meanwhile opens the list, continuing the press so Undo keeps both applies), and the status line says how many files
+  were written and how many weren't, until the next edit or 10 s. Refusals reuse the dialog's words (`refusalOf`). ⌘⇧S
+  (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write tags writes; it
+  can't close while a write is out. ⌘Z with a write to undo opens it on the undo question (`ApplyPanel.undo()`; a "no"
+  closes it), and without one says so in the status line. ⌘W reaches the window as the native Close tab item, which
+  closes a focused child window through its close request, so it meets the same discard guard as Esc. A text tool runs
+  again on each press while its dialog stays open (a second Format re-applies the mask to the value the first one made),
+  as the in-flow panels did. A command that can't act (tags still being read, read-only, no extras, a dialog open) does
+  nothing: the reading notice or the status line already says why. Closing the Write dialog on a write that left files
+  unwritten keeps "Some files weren't written" in the status line.
 - **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select items
   register F2–F8, ⇧F2, ⇧F4 and ⇧F8. Those accelerators fire ahead of the page and the file-scoped guard would drop them,
   so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`

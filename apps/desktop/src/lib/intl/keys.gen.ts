@@ -3257,6 +3257,7 @@ export type MessageKey =
   | 'multiRename.tags.write.reload'
   | 'multiRename.tags.write.removesConductor'
   | 'multiRename.tags.write.review'
+  | 'multiRename.tags.write.reviewRemovals'
   | 'multiRename.tags.write.sessionGone'
   | 'multiRename.tags.write.skippedHeading'
   | 'multiRename.tags.write.someLeft'

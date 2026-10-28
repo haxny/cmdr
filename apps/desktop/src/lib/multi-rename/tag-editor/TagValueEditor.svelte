@@ -9,7 +9,7 @@
      * A text the row can't send (`blockedHint` answers why, e.g. the «multiple values» marker is still in it) keeps
      * the box open with that hint, on Enter and on a click away alike (the box takes focus back), so the typing is
      * never dropped without a word; Esc is the way to give it up. The hint follows the typing and goes once the text
-     * can be sent. ⌘⏎ and ⌘S (`tags.write`) commit like Enter and then reach the window, which writes. The pane
+     * can be sent. ⌘⏎ and ⌘S (`tags.write`) and ⌘⇧S (`tags.review`) commit like Enter and then reach the window, which acts. The pane
      * places the box (`place`) and moves it when the pane resizes; it scrolls itself into view on open and whenever
      * the hint appears, so neither a tall multiline box nor its hint near the pane's foot is cut off.
      */
@@ -134,9 +134,9 @@
 
     function onkeydown(e: KeyboardEvent): void {
         if (e.isComposing) return
-        if (eventMatchesCommand(e, 'tags.write')) {
-            // ⌘⏎ or ⌘S: committed, the key goes on to the window, which writes; refused, it stops here with the hint.
-            // Before the Enter kinds, so ⌘⏎ commits once and writes once.
+        if (eventMatchesCommand(e, 'tags.write') || eventMatchesCommand(e, 'tags.review')) {
+            // ⌘⏎ / ⌘S (write) or ⌘⇧S (review): committed, the key goes on to the window, which acts; refused, it stops
+            // here with the hint. Before the Enter kinds, so ⌘⏎ commits once and writes once.
             if (!tryCommit()) claimKey(e)
             return
         }

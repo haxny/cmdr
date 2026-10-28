@@ -30,10 +30,10 @@ export function pastedValues(field: TagField, text: string): string[] {
   return parseFieldText(field, isMultiValueField(field) ? split.join(MULTI_SEPARATOR) : (split[0] ?? ''))
 }
 
-/** The most a paste puts into Comment or Description, in UTF-8 bytes. */
-export const PASTE_LIMIT_PROSE = 64 * 1024
-/** The most a paste puts into any other field, in UTF-8 bytes. */
-export const PASTE_LIMIT_LINE = 4 * 1024
+/** The most a paste puts into Comment or Description, in UTF-8 bytes (64 KiB). A threshold, never shown as a size. */
+export const PASTE_LIMIT_PROSE = 65_536
+/** The most a paste puts into any other field, in UTF-8 bytes (4 KiB). */
+export const PASTE_LIMIT_LINE = 4_096
 
 /**
  * Why `text` from the clipboard isn't pasted into `field`, or `null` when it is: over the field's limit (64 KiB for

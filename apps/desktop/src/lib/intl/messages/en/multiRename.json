@@ -2220,6 +2220,14 @@
       "shortcut": "the key of the Review command, as the function-key bar shows it (for example ⌘⇧S); don’t translate"
     }
   },
+  "multiRename.tags.write.reviewRemovals": "{count, plural, one {Writing as {kind} removes a tag from {countText} file, so the list shows it first.} other {Writing as {kind} removes a tag from {countText} files, so the list shows them first.}}",
+  "@multiRename.tags.write.reviewRemovals": {
+    "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S: writing as the chosen content kind would remove a tag from some files (for example an MP3’s conductor when writing as Audiobook), so nothing was written and the list of changes opened instead, naming what each file loses. The user confirms there.",
+    "placeholders": {
+      "kind": "the chosen content kind, as the Write dialog names it (for example Audiobook or Music)",
+      "countText": "how many files would lose a tag (for example 3)"
+    }
+  },
   "multiRename.tags.write.nothingToWrite": "Nothing to write.",
   "@multiRename.tags.write.nothingToWrite": {
     "description": "Status line at the foot of the tag editor window (the separate window that edits audio files’ tags) after Command+Return or Command+S when no file’s tags would change, so nothing was written."

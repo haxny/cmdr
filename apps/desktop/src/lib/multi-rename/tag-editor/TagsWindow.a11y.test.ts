@@ -16,6 +16,7 @@ const ipc = vi.hoisted(() => ({
   releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
   onTagsSelectAll: vi.fn(() => Promise.resolve(() => {})),
   onTagsMenuKey: vi.fn(() => Promise.resolve(() => {})),
+  onTagsClipboard: vi.fn(() => Promise.resolve(() => {})),
   onTagsDeselectAll: vi.fn(() => Promise.resolve(() => {})),
 }))
 vi.mock('#lib/tauri-commands/index.js', () => ipc)

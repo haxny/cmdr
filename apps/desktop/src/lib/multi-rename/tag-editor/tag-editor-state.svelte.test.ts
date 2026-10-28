@@ -751,6 +751,21 @@ describe('writeNow (⌘⏎, ⌘S): writes at once, as the Write dialog’s list 
     expect(onWriting).not.toHaveBeenCalled()
   })
 
+  it('a write that would remove a field (the kind’s removals) writes nothing and asks for the list first', async () => {
+    ipc.getTagChanges.mockResolvedValue({
+      ok: true,
+      value: [
+        { ...CHANGED[0], removes: ['conductor'] },
+        { ...CHANGED[0], path: '/b.mp3', fileName: 'b.mp3' },
+      ],
+    })
+    const onWriting = vi.fn()
+    const state = createTagEditorState('S')
+    expect(await state.writeNow({ onWriting })).toEqual({ kind: 'reviewFirst', removing: 1, writtenAs: 'music' })
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(onWriting).not.toHaveBeenCalled()
+  })
+
   it('files that would lose data come back with the report and the kind, for the choice', async () => {
     const asks = report({ written: [], wouldDrop: [{ path: '/a.mp3', items: ['TSOP'] }] })
     ipc.applyTags.mockResolvedValue({ ok: true, value: asks })
