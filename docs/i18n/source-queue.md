@@ -158,3 +158,9 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `settings.ai.reasoningEfforts.description` (“More effort helps…”) is unchanged, so zh / zh-Hant still say `强度越高` /
   `強度越高`, a word none of the three new labels uses; consider wording the English around thinking time so no locale
   echoes a label it no longer shows. (zh, zh-Hant)
+- `askCmdr.limit.repeatedCall.answered`, `askCmdr.limit.noProgress.answered`: "Cmdr stopped it looking" reads as a typo
+  for "stopped it from looking"; consider "Cmdr had it stop looking and answer with what it found". (all)
+- `settings.askCmdr.spendPause.label`: "Check in" (ask the user) collides with the `check` (verify) concept; patched
+  with a `notMatch` "check in when", which a future "check in" string won't share. (all)
+- `settings.askCmdr.spendPause.opt.never` vs `servers.hub.neverUsed`: "Never" as a choice vs never happened needed
+  allowlist entries in vi, zh, zh-Hant; a distinct English ("Never used") would avoid it. (vi, zh, zh-Hant)
