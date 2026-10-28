@@ -5,14 +5,14 @@ use cmdr_tags::tools::TagTool;
 use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use cmdr_fs::deadline::{SESSION_IO_TIMEOUT, StallWatch, blocking_typed_result_until_stalled};
 
 use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::session::files_of;
-use crate::multi_rename::session::{MultiRenameOpened, TagsOpened, plan_for_tags};
+use crate::multi_rename::session::{MultiRenameOpened, OpenHandshake, TagsOpened, plan_for_tags};
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
 use crate::tag_editor::at_quit;
@@ -439,16 +439,16 @@ pub async fn open_tags_session(
     } else {
         TAGS_OPEN_TIMEOUT
     };
-    let cancel = Arc::new(AtomicBool::new(false));
-    let stop = Arc::clone(&cancel);
+    let handshake = Arc::new(OpenHandshake::new());
+    let stop = Arc::clone(&handshake);
     cmdr_fs::deadline::blocking_typed_result_with_timeout(
         timeout,
         move || {
-            stop.store(true, Ordering::Relaxed);
+            stop.give_up();
             MultiRenameError::TimedOut
         },
         join_failed,
-        move || plan.open(&cancel),
+        move || plan.open(&handshake),
     )
     .await
 }

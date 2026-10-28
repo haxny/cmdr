@@ -98,23 +98,23 @@ async function openOnce(open: () => Promise<Opened>): Promise<void> {
       if (toast !== null) addToast(toast.text, { level: toast.level })
       return
     }
+    const shown = await holdAndShow(opened.value.sessionId)
     const unreadable = 'unreadable' in opened.value ? opened.value.unreadable : 0
-    if (unreadable > 0) {
+    if (shown && unreadable > 0) {
       addToast(tString('multiRename.tags.window.someUnreadable', { count: unreadable }), { level: 'info' })
     }
-    await holdAndShow(opened.value.sessionId)
   } finally {
     opening = false
   }
 }
 
-/** Holds the new session and opens its window; a session with no track, or a window that won't open, goes again. */
-async function holdAndShow(sessionId: string): Promise<void> {
+/** Holds the new session and opens its window; a session with no track, or a window that won't open, goes again. `true` when this open showed a new window. */
+async function holdAndShow(sessionId: string): Promise<boolean> {
   const held = await holdTagsSession(sessionId)
   if (!held.ok) {
     log.warn("couldn't hold the Tags window's session: {reason}", { reason: held.error.type })
     await giveBack(sessionId)
-    return
+    return false
   }
   // The same files are in a Tags window already: raise it (`openTagsWindow` does for a window it finds) rather than
   // open a second one over them.
@@ -122,21 +122,23 @@ async function holdAndShow(sessionId: string): Promise<void> {
   if (alreadyOpen !== null) {
     await giveBack(sessionId)
     await openTagsWindow(alreadyOpen, held.value.folderName, () => {})
-    return
+    return false
   }
   if (held.value.tracks === 0) {
     await giveBack(sessionId)
     addToast(tString('multiRename.tags.window.noTracks'), { level: 'info' })
-    return
+    return false
   }
   const failed = (): void => {
     void giveBack(sessionId)
   }
   try {
     await openTagsWindow(sessionId, held.value.folderName, failed)
+    return true
   } catch (e) {
     log.warn("couldn't open the Tags window: {reason}", { reason: e })
     await giveBack(sessionId)
+    return false
   }
 }
 

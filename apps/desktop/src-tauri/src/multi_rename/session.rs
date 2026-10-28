@@ -696,7 +696,7 @@ mod tags;
 pub(crate) use tags::is_held;
 #[cfg(test)]
 pub(crate) use tags::open_for_tags;
-pub(crate) use tags::{TagsOpened, held_twin, hold, plan_for_tags, release, reopen};
+pub(crate) use tags::{OpenHandshake, TagsOpened, held_twin, hold, plan_for_tags, release, reopen};
 
 #[cfg(test)]
 #[path = "session_hold_test.rs"]

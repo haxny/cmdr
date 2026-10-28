@@ -143,6 +143,20 @@ describe('opening a Tags window', () => {
     expect(addToast).toHaveBeenCalledWith(expect.stringContaining('2 places'), { level: 'info' })
   })
 
+  it('the unreadable-places toast waits for the window and stays away when the open ends in a raise or no track', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 9, unreadable: 2 } })
+    ipc.holdTagsSession.mockResolvedValue({
+      ok: true,
+      value: { tracks: 2, folderName: 'Dracula', alreadyOpen: 'multi-rename-2' },
+    })
+    await openTagsForSelection(explorer())
+    ipc.holdTagsSession.mockResolvedValue({ ok: true, value: { tracks: 0, folderName: 'X', alreadyOpen: null } })
+    await openTagsForSelection(explorer())
+    ipc.holdTagsSession.mockResolvedValue({ ok: false, error: { type: 'sessionClosed' } })
+    await openTagsForSelection(explorer())
+    expect(addToast).not.toHaveBeenCalledWith(expect.stringContaining('2 places'), expect.anything())
+  })
+
   it('a folder on a disk Cmdr cannot read through says so', async () => {
     ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'foldersNeedLocalDisk' } })
     await openTagsForSelection(explorer())

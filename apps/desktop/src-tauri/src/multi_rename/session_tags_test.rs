@@ -2,7 +2,7 @@
 //! below the listing's folder, with the caps and refusals that keep a huge or remote folder out.
 
 use super::tags::{TAGS_FOLDER_DEPTH, TAGS_FOLDER_FILE_CAP};
-use super::{MultiRenameError, close, files_of, held_twin, hold, open_for_tags, release, reopen};
+use super::{MultiRenameError, OpenHandshake, close, files_of, held_twin, hold, open_for_tags, release, reopen};
 use crate::test_support::TestDir;
 use cmdr_listing::ListingId;
 use cmdr_listing::testing::{TestListing, TestListingGuard};
@@ -240,26 +240,28 @@ fn a_link_to_a_track_already_taken_is_one_row_not_two() {
 
 #[test]
 fn a_walk_the_caller_gave_up_on_stops_and_leaves_no_session() {
-    use std::sync::atomic::AtomicBool;
     let (_dir, listing) = tree("tags-folder-cancel", "root", &["Book/01.mp3", "Book/02.mp3"]);
     let plan = super::plan_for_tags(listing.id(), true, Some(&[row_of(&listing, "Book")]), 0).expect("plans");
     assert!(plan.has_folder());
-    let refused = plan.open(&AtomicBool::new(true));
+    let handshake = OpenHandshake::new();
+    handshake.give_up();
+    let refused = plan.open(&handshake);
     assert!(matches!(refused, Err(MultiRenameError::TimedOut)), "got {refused:?}");
     assert_eq!(sessions_over(&listing), 0);
 }
 
 #[test]
-fn a_cancel_that_lands_after_the_session_was_stored_closes_it_again() {
-    use std::sync::atomic::{AtomicBool, Ordering};
-    // Plain files never look at the flag while walking, only after storing: the stored session must go.
+fn a_caller_that_gives_up_after_the_session_was_stored_closes_it() {
+    // The timer fires between the store and the caller taking the answer: the answer is dropped, so the
+    // give-up must take the stored session with it.
     let (_dir, listing) = tree("tags-folder-cancel-late", "root", &["a.mp3"]);
     let plan = super::plan_for_tags(listing.id(), true, Some(&[row_of(&listing, "a.mp3")]), 0).expect("plans");
-    assert!(!plan.has_folder());
-    let cancel = AtomicBool::new(false);
-    cancel.store(true, Ordering::Relaxed);
-    assert!(matches!(plan.open(&cancel), Err(MultiRenameError::TimedOut)));
+    let handshake = OpenHandshake::new();
+    let opened = plan.open(&handshake).expect("the walk won the race");
+    assert_eq!(sessions_over(&listing), 1);
+    handshake.give_up();
     assert_eq!(sessions_over(&listing), 0);
+    assert!(files_of(&opened.session_id).is_err());
 }
 
 #[cfg(unix)]
@@ -300,4 +302,39 @@ fn a_book_opened_from_its_parent_is_named_after_the_book() {
     assert_eq!(info.folder_name, "Dracula");
     release(&id);
     close(&id);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_plain_selected_file_and_a_link_to_it_in_a_selected_folder_are_one_row_whichever_comes_first() {
+    let (dir, listing) = tree(
+        "tags-folder-plain-alias",
+        "root",
+        &["01.mp3", "Book/00-link.mp3", "Book/02.mp3"],
+    );
+    std::fs::remove_file(dir.join("Book/00-link.mp3")).expect("rm");
+    std::os::unix::fs::symlink(dir.join("01.mp3"), dir.join("Book/00-link.mp3")).expect("link");
+    let (plain, book) = (row_of(&listing, "01.mp3"), row_of(&listing, "Book"));
+    for rows in [[plain, book], [book, plain]] {
+        let id = opened(&listing, true, &rows).expect("opens");
+        let mut names = names_of(&id);
+        names.sort();
+        assert_eq!(names, vec!["01.mp3", "Book/02.mp3"], "rows {rows:?}");
+        close(&id);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_non_utf8_name_counts_as_unreadable_only_when_it_could_be_a_track() {
+    use std::os::unix::ffi::OsStrExt;
+    let (dir, listing) = tree("tags-folder-nonutf8", "root", &["Book/01.mp3"]);
+    for name in [&b"bad\xff.txt"[..], &b"bad\xff.mp3"[..]] {
+        if std::fs::write(dir.join("Book").join(std::ffi::OsStr::from_bytes(name)), b"x").is_err() {
+            return; // this file system (APFS) refuses names that are not UTF-8
+        }
+    }
+    let opened = open_for_tags(listing.id(), true, Some(&[row_of(&listing, "Book")]), 0).expect("opens");
+    assert_eq!(opened.unreadable, 1);
+    close(&opened.session_id);
 }
