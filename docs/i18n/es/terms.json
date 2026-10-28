@@ -240,7 +240,11 @@
     "chosen": "Ask Cmdr",
     "confidence": "high",
     "sources": "product name",
-    "note": "Names ONLY the chat panel (its title, menu item, palette command, settings section and switch, pointers back to that section). Prose about what the product does says Cmdr, or la IA for the model."
+    "note": "Names ONLY the chat panel (its title, menu item, palette command, settings section and switch, pointers back to that section). Prose about what the product does says Cmdr, or la IA for the model.",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.sameName": "English \"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel's name: Pide a Cmdr …",
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English \"Ask Cmdr for …\" is the verb ask plus Cmdr, not the panel's name: Pide a Cmdr …"
+    }
   },
   "attachment": {
     "chosen": "adjunto",
@@ -2865,7 +2869,7 @@
   "server": {
     "chosen": "servidor",
     "accept": ["servidores"],
-    "forms": "the chooser row and heading Servidores",
+    "forms": "the chooser row and heading Servidores; changing a saved server's settings → modificar un servidor (❌ cambiar un servidor, which reads as swapping it for another), its save button Guardar cambios",
     "confidence": "high",
     "sources": "macOS (desmontar servidores)"
   },
@@ -2903,7 +2907,10 @@
     "accept": ["compartir"],
     "forms": "share options → opciones para compartir",
     "confidence": "high",
-    "sources": "macOS (Compartir)"
+    "sources": "macOS (Compartir)",
+    "exceptions": {
+      "suggestedOps.server.field.share": "The NOUN naming an SMB shared folder, so the network-share ruling (Recurso compartido), not the Share menu's verb."
+    }
   },
   "sharing-and-permissions": {
     "chosen": "Compartir y permisos",
@@ -3817,5 +3824,22 @@
     "forms": "masculine despite -a: un problema, algún problema",
     "confidence": "high",
     "sources": "shipped catalog (errors.listing.diskReadProblem.title Problema de lectura del disco, errors.listing.deviceProblem.title Problema con el dispositivo)"
+  },
+  "start": {
+    "chosen": "empezar",
+    "accept": ["empez", "empiez", "comenz", "comienz", "inici", "iníci"],
+    "forms": "intransitive, a task starting on its own → empezar (no ha empezado nada, Por qué no ha empezado, empezará en cuanto …); transitive, someone starts a task → iniciar is fine too (Cmdr no ha podido iniciar la reversión, Iníciala sin ventana de progreso)",
+    "exceptions": {
+      "indexing.step.statusPending": "A step status: Not started → Pendiente, the status word, not a verb."
+    },
+    "confidence": "high",
+    "sources": "shipped catalog (suggestedOps.refusal.label Por qué no ha empezado, fileOperations.transferProgress.rowsStillSettlingToast no ha empezado nada, multiRename.error.couldntStart, errors.mutation.archiveEditCouldntStart); macOS es has 4 empez- vs 37 inici- hits, the latter mostly start-up and sign-in (grep over the pile's macOS folder, 2026-10-28)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip", "zips"],
+    "forms": "lowercase in prose: un zip, en un zip, un archivo zip; the format name in a label may be Zip as macOS writes it (Archivo Zip)",
+    "confidence": "high",
+    "sources": "shipped catalog (errors.write.archiveEntryNameRefused.title Este nombre no puede ir en un zip); macOS es (archivo Zip, comprimido Zip; grep over the pile's macOS folder, 2026-10-28)"
   }
 }

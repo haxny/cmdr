@@ -870,5 +870,13 @@
   "errors.write.replySignatureRefused.message": "La respuesta del servidor no tenía una firma válida, así que Cmdr se detuvo.",
   "@errors.write.replySignatureRefused.message": {
     "sourceHash": "5415085"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Uno de los nombres nuevos es para {path}, que no forma parte de esta sugerencia, así que no empezó nada.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "e03e662"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr no puede dar a cada elemento su propio nombre al meterlo en un zip o sacarlo de uno, así que no llegó nada a {path}.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "ccd9d14"
   }
 }

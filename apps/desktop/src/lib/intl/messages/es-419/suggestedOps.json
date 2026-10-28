@@ -62,5 +62,29 @@
   "suggestedOps.refusal.nothingSelected.message": "Ninguno de los archivos que marcaste sigue en esta sugerencia, así que no se ejecutó nada.",
   "@suggestedOps.refusal.nothingSelected.message": {
     "sourceHash": "b157ef7"
+  },
+  "suggestedOps.approve.addServer": "Agregar servidor",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "edc745a"
+  },
+  "suggestedOps.server.add": "Agregar un servidor",
+  "@suggestedOps.server.add": {
+    "sourceHash": "e859100"
+  },
+  "suggestedOps.refusal.serverLabel": "Por qué no se guardó",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "e7f2d46"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Este servidor cambió desde que la IA hizo esta sugerencia, así que Cmdr no guardó nada.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "5736c9b"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Este servidor ya está en tu lista Servidores, así que Cmdr no guardó nada.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "07c239d"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Ya hay otro servidor guardado que se llama {name}, así que Cmdr no guardó nada.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "82e8501"
   }
 }

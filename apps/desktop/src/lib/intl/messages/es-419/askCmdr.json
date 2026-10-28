@@ -414,5 +414,53 @@
   "askCmdr.providerNotice.openSettings": "Abrir la configuración de IA",
   "@askCmdr.providerNotice.openSettings": {
     "sourceHash": "1994c72"
+  },
+  "askCmdr.tool.proposeServer.done": "Se preparó una sugerencia de servidor",
+  "@askCmdr.tool.proposeServer.done": {
+    "sourceHash": "cfbd826"
+  },
+  "askCmdr.tool.connectVolume.done": "Se conectó a tu servidor",
+  "@askCmdr.tool.connectVolume.done": {
+    "sourceHash": "ba44f84"
+  },
+  "askCmdr.tool.connectVolume.tried": "Se intentó conectar a tu servidor",
+  "@askCmdr.tool.connectVolume.tried": {
+    "sourceHash": "452290d"
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "no está en la unidad que indicó",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "sourceHash": "3883d55"
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "necesita acceso completo al disco",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "sourceHash": "c1b6a8d"
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "la unidad no respondió",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "sourceHash": "ce47144"
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "se detuvo mientras leía",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "sourceHash": "d331c6c"
+  },
+  "askCmdr.tool.outcome.connection.rejected": "el servidor dijo que no",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "sourceHash": "c8659f4"
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "el servidor no respondió",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "sourceHash": "02b3b80"
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "se detuvo mientras se conectaba",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "sourceHash": "9cf32bd"
+  },
+  "askCmdr.decision.verbAddServer": "agregar un servidor",
+  "@askCmdr.decision.verbAddServer": {
+    "sourceHash": "373d316"
+  },
+  "askCmdr.decision.savedNotShare": "Se guardó el servidor, pero no su recurso compartido",
+  "@askCmdr.decision.savedNotShare": {
+    "sourceHash": "a319b16"
   }
 }

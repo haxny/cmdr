@@ -83,11 +83,11 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Add server",
+  "suggestedOps.approve.addServer": "Añadir servidor",
   "@suggestedOps.approve.addServer": {
     "sourceHash": "1099b2a"
   },
-  "suggestedOps.approve.editServer": "Save changes",
+  "suggestedOps.approve.editServer": "Guardar cambios",
   "@suggestedOps.approve.editServer": {
     "sourceHash": "dd0ae7a"
   },
@@ -163,11 +163,11 @@
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "suggestedOps.reversible.forgetServer": "Puedes olvidarlo más tarde en Servidores",
   "@suggestedOps.reversible.forgetServer": {
     "sourceHash": "c94623d"
   },
-  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "suggestedOps.reversible.changeServerBack": "Puedes dejarlo como estaba en Servidores",
   "@suggestedOps.reversible.changeServerBack": {
     "sourceHash": "1a68195"
   },
@@ -327,75 +327,76 @@
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "5b5b779"
   },
-  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "suggestedOps.refusal.serverLabel": "Por qué no se ha guardado",
   "@suggestedOps.refusal.serverLabel": {
     "sourceHash": "c1958af"
   },
-  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "suggestedOps.refusal.serverChanged.message": "Este servidor ha cambiado desde que la IA hizo esta sugerencia, así que Cmdr no ha guardado nada.",
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "Pide a la IA que te la vuelva a sugerir, o edita el servidor en Servidores.",
   "@suggestedOps.refusal.serverChanged.suggestion": {
     "sourceHash": "c83a215"
   },
-  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "suggestedOps.refusal.alreadySaved.message": "Este servidor ya está en tu lista Servidores, así que Cmdr no ha guardado nada.",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "Ábrelo desde Servidores, o pide a la IA que te sugiera un cambio en él.",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
     "sourceHash": "eda1133"
   },
-  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "suggestedOps.refusal.nameTaken.message": "Ya hay otro servidor guardado que se llama {name}, así que Cmdr no ha guardado nada.",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "suggestedOps.refusal.nameTaken.suggestion": "Pide a la IA que te sugiera otro nombre.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
     "sourceHash": "c059ee2"
   },
-  "suggestedOps.server.add": "Add a server",
+  "suggestedOps.server.add": "Añadir un servidor",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Change a server",
+  "suggestedOps.server.change": "Modificar un servidor",
   "@suggestedOps.server.change": {
     "sourceHash": "7c07b82"
   },
-  "suggestedOps.server.field.port": "Port",
+  "suggestedOps.server.field.port": "Puerto",
   "@suggestedOps.server.field.port": {
     "sourceHash": "72e9a59"
   },
-  "suggestedOps.server.field.account": "Account",
+  "suggestedOps.server.field.account": "Cuenta",
   "@suggestedOps.server.field.account": {
     "sourceHash": "7e1b0d5"
   },
-  "suggestedOps.server.field.share": "Share",
+  "suggestedOps.server.field.share": "Recurso compartido",
   "@suggestedOps.server.field.share": {
     "sourceHash": "29887a5"
   },
   "suggestedOps.server.field.bucket": "Bucket",
   "@suggestedOps.server.field.bucket": {
-    "sourceHash": "c83b657"
+    "sourceHash": "c83b657",
+    "sameAsSourceJustification": "Término de S3 que la consola de AWS en español deja sin traducir; el catálogo ya lo usa así en servers.sheet.s3Bucket."
   },
-  "suggestedOps.server.notSet": "Not set",
+  "suggestedOps.server.notSet": "Sin definir",
   "@suggestedOps.server.notSet": {
     "sourceHash": "4895f73"
   },
-  "suggestedOps.server.changesTo": "changes to",
+  "suggestedOps.server.changesTo": "cambia a",
   "@suggestedOps.server.changesTo": {
     "sourceHash": "8c0db20"
   },
-  "suggestedOps.server.newAddress": "A new address",
+  "suggestedOps.server.newAddress": "Una dirección nueva",
   "@suggestedOps.server.newAddress": {
     "sourceHash": "5fc5498"
   },
-  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "suggestedOps.server.newAddressTooltip": "Ninguno de tus servidores guardados está en esta dirección. Comprueba que es la que quieres.",
   "@suggestedOps.server.newAddressTooltip": {
     "sourceHash": "16d851c"
   },
-  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "suggestedOps.server.sharesAffected": "{count, plural, one {Esto cambia {countText} recurso compartido guardado en este servidor.} many {Esto cambia {countText} recursos compartidos guardados en este servidor.} other {Esto cambia {countText} recursos compartidos guardados en este servidor.}}",
   "@suggestedOps.server.sharesAffected": {
     "sourceHash": "390f931"
   },
