@@ -23,9 +23,7 @@ impl ShareIdentity {
         Self {
             server_guid: server_guid.and_then(|(guid, proof)| Some((ServerGuid::parse(guid)?, proof))),
             share_name: fold(share_name),
-            username: username
-                .filter(|name| !name.is_empty() && !name.eq_ignore_ascii_case("guest"))
-                .map(fold),
+            username: crate::network::known_shares::share_account(username),
         }
     }
 

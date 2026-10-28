@@ -79,8 +79,9 @@ pub struct KnownNetworkShare {
     pub server_guid: Option<String>,
     /// Share rows: how `server_guid` was learned. Only `authenticated` on both rows
     /// lets one answer for the other (`location::same_share`). Written with the
-    /// GUID; a row saved before the field reads `unauthenticated` until a signed-in
-    /// session records its GUID again.
+    /// GUID, and demoted when a save changes the row's account
+    /// ([`keep_recorded_guid`]); a row saved before the field reads
+    /// `unauthenticated` until a signed-in session records its GUID again.
     #[serde(default)]
     pub server_guid_proof: GuidProof,
 }
@@ -316,12 +317,30 @@ fn same_share_row(a: &KnownNetworkShare, b: &KnownNetworkShare, hosts: &[Network
         .any(|x| names(b).iter().any(|y| same_machine(x, y, hosts)))
 }
 
-/// Keeps the GUID `existing` recorded, with its proof, when `row` brings none.
+/// Keeps the GUID `existing` recorded when `row` brings none, with its proof only
+/// while the row keeps its account ([`share_account`]). ❗ Proof earned signed in
+/// as one account never vouches for another: `location::same_share` would let a
+/// read on this share be answered by a session that opens it as someone else, so
+/// a new account (a guest included) keeps the GUID as a hint, unauthenticated,
+/// until its own signed-in session records it.
 fn keep_recorded_guid(row: &mut KnownNetworkShare, existing: &mut KnownNetworkShare) {
     if row.server_guid.is_none() {
+        let same_account = share_account(row.username.as_deref()) == share_account(existing.username.as_deref());
         row.server_guid = existing.server_guid.take();
-        row.server_guid_proof = existing.server_guid_proof;
+        row.server_guid_proof = if same_account {
+            existing.server_guid_proof
+        } else {
+            GuidProof::Unauthenticated
+        };
     }
+}
+
+/// The account a share is opened as, the way `location::same_share` compares it:
+/// folded, and a guest (no name, empty, or `Guest`) is no account.
+pub(crate) fn share_account(username: Option<&str>) -> Option<String> {
+    username
+        .filter(|name| !name.is_empty() && !name.eq_ignore_ascii_case("guest"))
+        .map(fold_name)
 }
 
 /// Files `row` (a share row) in `rows`, replacing the one for the same share.
@@ -354,13 +373,14 @@ fn upsert_share_row(
             row.pinned = existing.pinned || first_mount;
             row.volume_id = row.volume_id.or(existing.volume_id.take());
             row.mount_path = row.mount_path.or(existing.mount_path.take());
-            keep_recorded_guid(&mut row, existing);
             row.port = row.port.or(existing.port);
             let is_add = row.address.is_none();
             if is_add && row.username.is_none() && existing.username.is_some() {
-                row.username = existing.username.take();
+                row.username = existing.username.clone();
                 row.last_connection_mode = existing.last_connection_mode;
             }
+            // After the account settles: the GUID's proof follows it.
+            keep_recorded_guid(&mut row, existing);
             row.address = row.address.or(existing.address.take());
             if row.last_connected_at.is_empty() {
                 row.last_connected_at = std::mem::take(&mut existing.last_connected_at);

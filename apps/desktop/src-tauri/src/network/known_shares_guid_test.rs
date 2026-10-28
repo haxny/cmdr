@@ -118,6 +118,69 @@ fn a_remount_keeps_the_recorded_guid_and_its_proof() {
     assert_eq!(reconnect.server_guid_proof, GuidProof::Authenticated);
 }
 
+/// ❗ **Proof earned as one account never vouches for another.** A save that
+/// changes the share's account (a mount as someone else, a sheet's new account)
+/// keeps the GUID as a hint but drops its proof, so `location::same_share` can't
+/// redirect a read to a session that would answer as another person.
+#[test]
+fn a_save_under_another_account_demotes_the_guids_proof() {
+    let mut rows = lan_row();
+    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+
+    upsert_share_row(
+        &mut rows,
+        mounted("192.168.1.111", "192.168.1.111", "naspi", Some("dori"), "smb-lan"),
+        &[],
+    );
+    assert_eq!(rows[0].server_guid.as_deref(), Some(BOX), "the GUID stays, as a hint");
+    assert_eq!(rows[0].server_guid_proof, GuidProof::Unauthenticated);
+
+    let mut rows = lan_row();
+    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+    upsert_share_row(
+        &mut rows,
+        mounted("192.168.1.111", "192.168.1.111", "naspi", None, "smb-lan"),
+        &[],
+    );
+    assert_eq!(
+        rows[0].server_guid_proof,
+        GuidProof::Unauthenticated,
+        "a guest mount is another account too"
+    );
+}
+
+/// The account compares the way `location::same_share` reads it: folded, and an
+/// add naming no account keeps the saved one, so neither moves the proof.
+#[test]
+fn a_save_under_the_same_account_keeps_the_proof() {
+    let mut rows = lan_row();
+    record_guid_in(&mut rows, "smb-lan", BOX, GuidProof::Authenticated);
+
+    upsert_share_row(
+        &mut rows,
+        mounted("192.168.1.111", "192.168.1.111", "naspi", Some("DAVID"), "smb-lan"),
+        &[],
+    );
+    assert_eq!(rows[0].server_guid_proof, GuidProof::Authenticated);
+
+    upsert_share_row(&mut rows, added("192.168.1.111", "naspi", None), &[]);
+    assert_eq!(rows[0].username.as_deref(), Some("DAVID"));
+    assert_eq!(rows[0].server_guid_proof, GuidProof::Authenticated);
+}
+
+/// The share list's own writer (`update_known_share`) holds the same rule.
+#[test]
+fn a_share_list_reconnect_under_another_account_demotes_the_proof() {
+    let mut existing = lan_row().remove(0);
+    existing.server_guid = Some(BOX.to_string());
+    existing.server_guid_proof = GuidProof::Authenticated;
+
+    let mut reconnect = mounted("192.168.1.111", "192.168.1.111", "naspi", Some("dori"), "smb-lan");
+    keep_recorded_guid(&mut reconnect, &mut existing);
+    assert_eq!(reconnect.server_guid.as_deref(), Some(BOX));
+    assert_eq!(reconnect.server_guid_proof, GuidProof::Unauthenticated);
+}
+
 /// `known-shares.json` from before Cmdr kept the proof: its GUID reads as one no
 /// sign-in vouched for, and the proof is written beside it from then on.
 #[test]

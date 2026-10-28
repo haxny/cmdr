@@ -788,9 +788,13 @@ an `authenticated` one on BOTH rows lets one id answer for the other.
 
 - **The proof that won is the one recorded** (`known_shares::record_guid_in`): a fill by the probe or a guest session
   records `unauthenticated`; a signed-in session records `authenticated`, whether it overwrote the GUID or confirmed the
-  one a probe filled. Nothing moves a proof down. A row saved before the field reads `unauthenticated` until a signed-in
-  session records its GUID again, and every refresh of a row (a remount, a share-list reconnect) keeps the GUID and its
-  proof together (`keep_recorded_guid`).
+  one a probe filled. A row saved before the field reads `unauthenticated` until a signed-in session records its GUID
+  again, and every refresh of a row (a remount, a share-list reconnect) keeps the GUID and its proof together
+  (`keep_recorded_guid`).
+- ❗ **Except across accounts: the one thing that moves a proof down.** A save that changes the share's account
+  (`known_shares::share_account`, folded, a guest counting as none) keeps the GUID as a hint but demotes it to
+  `unauthenticated`: proof earned signed in as one account must not let `same_share` answer a read with a session that
+  opens the share as another. An add naming no account keeps the saved one, so it demotes nothing.
 
 - **A direct session coming up records its GUID** (`record_session_guid`, from both `smb_upgrade` install paths, read
   off `SmbVolume::diagnostics` with no I/O). Signed in as an account it OVERWRITES the row's (a NAS restored or
