@@ -205,7 +205,11 @@
     "confidence": "confirmed",
     "sources": "product name, verbatim",
     "note": "Only where the English keeps it (the chat panel itself); prose about what the AI does says O Cmdr or a IA.",
-    "decision": "Ask Cmdr names only the chat panel"
+    "decision": "Ask Cmdr names only the chat panel",
+    "exceptions": {
+      "errors.write.namedLeavesRefused.suggestion.sameName": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Peça ao Cmdr",
+      "errors.write.namedLeavesRefused.suggestion.ontoASource": "English Ask Cmdr for … is the imperative verb plus the app, not the panel name, so it reads Peça ao Cmdr"
+    }
   },
   "attachment": {
     "chosen": "anexo",
@@ -2921,6 +2925,13 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR; MS terminology pt-BR"
   },
+  "start": {
+    "chosen": "começar",
+    "accept": ["começ", "inici", "executad"],
+    "forms": "a task starting → começar; so nothing started → então nada começou; Why this didn’t start → Por que isto não começou; the suggestion refusals say nada foi executado",
+    "confidence": "high",
+    "sources": "catalog (suggestedOps.refusal.label Por que isto não começou; fileOperations.transferProgress.rowsStillSettlingToast então nada começou; nada foi executado 3×)"
+  },
   "start-up": {
     "chosen": "inicialização",
     "accept": ["inici"],
@@ -3459,6 +3470,13 @@
       "multiRename.rangeEditor.writeAs": "how a placeholder is spelled in the mask ([N2-5] vs [N2,4]), not data landing on a disk, so the everyday Escrever como"
     },
     "sources": "shipped pt catalog"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["arquivo zip", "arquivos zip", "Zip"],
+    "forms": "masculine bare prose noun (o zip, no zip, do zip); a zip archive → um arquivo zip (Finder's Arquivo zip; see archive)",
+    "confidence": "high",
+    "sources": "macOS Finder pt-BR (Zip file → Arquivo zip); catalog (no zip, do zip 6×, arquivos zip 3×)"
   },
   "zoom": {
     "chosen": "zoom",

@@ -169,3 +169,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   in its description. (de)
 - de also hit the `ask cmdr for` false match, the "Share" verb/noun split, and the dropped "You can undo this:" frame
   logged above (fr, hu); handled with termbase exceptions and a term-consistency allowlist entry. (de)
+- `suggestedOps.server.notSet` ("Not set") stands in for any field (port, folder, account), so a gendered locale can't
+  agree a participle with it; pt used the agreement-free `Sem valor`. Say in the description that the value may belong
+  to fields of different gender, or offer "No value". (pt)
