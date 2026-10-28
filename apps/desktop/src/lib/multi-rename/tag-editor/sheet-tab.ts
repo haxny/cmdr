@@ -1,14 +1,4 @@
-import type { CommandId } from '#lib/commands/index.js'
-
-export type SheetTab = 'rename' | 'tags'
-
-/** What the sheet asks of the Tags tab: its Start (the Rename button's ⌘⏎) while the tab shows. */
+/** What the Tags content offers its host: the Apply panel's Start (list the changes, then write them). */
 export interface TagsTabApi {
   start(): Promise<void>
 }
-
-/** The registry command that picks each tab (⌘⇧[ and ⌘⇧]). */
-export const TAB_COMMANDS: readonly { tab: SheetTab; command: CommandId }[] = [
-  { tab: 'rename', command: 'multiRename.tabRename' },
-  { tab: 'tags', command: 'multiRename.tabTags' },
-]

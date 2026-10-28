@@ -73,8 +73,6 @@ export type DispatchExemptId =
   | 'multiRename.fieldHistory'
   | 'multiRename.moveRowUp'
   | 'multiRename.moveRowDown'
-  | 'multiRename.tabRename'
-  | 'multiRename.tabTags'
   | 'multiRename.playTrack'
   | 'multiRename.rename'
   | 'network.selectHost'
@@ -99,6 +97,8 @@ export type DispatchExemptId =
   | 'queue.nextControl'
   | 'queue.previousControl'
   | 'queue.close'
+  // The Tags window's keys: a window of its own, answered by its keydown.
+  | 'tags.close'
   // ErrorPane owns ⌘D through its own CAPTURE-phase document listener, which runs
   // ahead of the dispatch spine on purpose (it must beat any user binding on ⌘D).
   | 'errorPane.toggleTechnicalDetails'

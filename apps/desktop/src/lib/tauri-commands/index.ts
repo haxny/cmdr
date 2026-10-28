@@ -1185,6 +1185,9 @@ export {
   tagTrackAudioUrl,
   releaseTagTrackAudio,
   openTagsInPlayer,
+  holdTagsSession,
+  releaseTagsSession,
+  reopenForTags,
 } from './tag-editor'
 export type {
   ApplyRequest,
@@ -1200,4 +1203,5 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TagsSessionInfo,
 } from './tag-editor'

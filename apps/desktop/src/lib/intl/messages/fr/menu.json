@@ -738,6 +738,10 @@
   "@menu.file.multiRename": {
     "sourceHash": "36b1dc2"
   },
+  "menu.file.editTags": "Edit tags…",
+  "@menu.file.editTags": {
+    "sourceHash": "ca536ed"
+  },
   "menu.queue.moveUp": "Avancer",
   "@menu.queue.moveUp": {
     "sourceHash": "c66feb5"

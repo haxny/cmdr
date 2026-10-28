@@ -928,18 +928,6 @@
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
   },
-  "multiRename.tabs.label": "Multi-Rename sections",
-  "@multiRename.tabs.label": {
-    "sourceHash": "f66219f"
-  },
-  "multiRename.tabs.rename": "Rename",
-  "@multiRename.tabs.rename": {
-    "sourceHash": "3064d79"
-  },
-  "multiRename.tabs.tags": "Tags",
-  "@multiRename.tabs.tags": {
-    "sourceHash": "1331275"
-  },
   "multiRename.tags.reading": "Reading tags…",
   "@multiRename.tags.reading": {
     "sourceHash": "c4a8191"
@@ -1683,5 +1671,17 @@
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
     "sourceHash": "d8d01f0"
+  },
+  "multiRename.tags.openWindow": "Tags…",
+  "@multiRename.tags.openWindow": {
+    "sourceHash": "449cf54"
+  },
+  "multiRename.tags.window.title": "Tags — {folder}",
+  "@multiRename.tags.window.title": {
+    "sourceHash": "9708a4d"
+  },
+  "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
+  "@multiRename.tags.window.noTracks": {
+    "sourceHash": "5765e14"
   }
 }

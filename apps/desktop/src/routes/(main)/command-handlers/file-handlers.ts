@@ -38,6 +38,7 @@ import { editServerInView } from '#lib/file-explorer/network/servers-hub-actions
 import { forgetResticPassword } from '#lib/file-explorer/restic/forget-password.js'
 import type { CommandArgs } from '#lib/commands/index.js'
 import { detached } from './detached'
+import { openTagsForSelection } from '#lib/multi-rename/tag-editor/open-tags.js'
 import { confirmDialogForMcp } from '../mcp-dialog-confirm'
 import type { CommandHandlerContext, CommandHandlerRecord } from './types'
 
@@ -149,6 +150,11 @@ export const fileHandlers = {
 
   'file.multiRename': ({ ctx }) => {
     ctx.dialogs.showMultiRename()
+  },
+
+  // Fork: a no-op with the `multiRename.tagEditor` setting off or nothing selected (`open-tags.ts`).
+  'file.editTags': ({ explorerRef }) => {
+    detached(openTagsForSelection(explorerRef))
   },
 
   'file.rename': ({ explorerRef, dispatchArgs }) => {

@@ -9,6 +9,7 @@ pub(crate) mod session;
 pub(crate) mod text_tools;
 pub(crate) mod undo;
 pub(crate) mod view;
+pub(crate) mod window;
 
 #[cfg(test)]
 mod apply_test;
@@ -26,3 +27,5 @@ mod session_test;
 mod text_tools_test;
 #[cfg(test)]
 mod view_test;
+#[cfg(test)]
+mod window_test;

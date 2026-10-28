@@ -69,6 +69,10 @@
   "@shortcuts.scope.viewerWindow": {
     "sourceHash": "b32f632"
   },
+  "shortcuts.scope.tagsWindow": "Tags window",
+  "@shortcuts.scope.tagsWindow": {
+    "sourceHash": "df84973"
+  },
   "shortcuts.scope.aboutWindow": "Over-venster",
   "@shortcuts.scope.aboutWindow": {
     "sourceHash": "615b547"

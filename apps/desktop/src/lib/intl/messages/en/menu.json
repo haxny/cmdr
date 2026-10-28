@@ -770,6 +770,10 @@
   "@menu.file.multiRename": {
     "description": "File menu item (Ctrl+M): opens the tool that renames many files at once with a name mask, like Total Commander's Multi-Rename Tool. The ellipsis says it opens a sheet."
   },
+  "menu.file.editTags": "Edit tags…",
+  "@menu.file.editTags": {
+    "description": "File menu item (Cmd+Shift+E): opens the selected audio files' tags (artist, album, title, track numbers, cover) in a window of their own. Does nothing unless the opt-in tag editor setting is on. The ellipsis says it opens a window."
+  },
   "menu.queue.moveUp": "Move up",
   "@menu.queue.moveUp": {
     "description": "VERB phrase (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Moves a WAITING operation one place earlier in line, so it starts sooner. Greyed out on the first waiting one. Same action as the window's ⌥↑ key. No capture can photograph a native menu, so this description is the whole translator aid."

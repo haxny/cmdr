@@ -7,6 +7,8 @@ use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
 use std::time::Instant;
 
+use crate::multi_rename::error::MultiRenameError;
+use crate::multi_rename::session::MultiRenameOpened;
 use crate::multi_rename::session::files_of;
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
@@ -18,6 +20,7 @@ use crate::tag_editor::session::{
 };
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
+use crate::tag_editor::window::TagsSessionInfo;
 
 /// Runs blocking `work` off the IPC thread.
 async fn blocking<T: Send + 'static>(
@@ -226,4 +229,28 @@ pub async fn set_cover_from_file(session_id: String, file_name: String) -> Resul
 #[specta::specta]
 pub async fn get_cover_image(session_id: String) -> Result<Option<String>, TagEditorError> {
     blocking(move || Ok(shared_cover(&session_id)?.and_then(|cover| thumbnail_url(&cover.data)))).await
+}
+
+/// Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
+/// many of its files are tracks and what its folder is called. The main window calls it right
+/// after opening the session; the window's close (or its `Destroyed`) releases it.
+#[tauri::command]
+#[specta::specta]
+pub async fn hold_tags_session(session_id: String) -> Result<TagsSessionInfo, MultiRenameError> {
+    crate::tag_editor::window::hold(&session_id)
+}
+
+/// Lets eviction take the session again. No-op when it's already gone.
+#[tauri::command]
+#[specta::specta]
+pub async fn release_tags_session(session_id: String) {
+    crate::multi_rename::session::release(&session_id);
+}
+
+/// A new Multi-Rename session over the files of `session_id` (an open sheet's), in their current
+/// order, for a Tags window: the sheet closing never ends the window's session.
+#[tauri::command]
+#[specta::specta]
+pub async fn reopen_for_tags(session_id: String) -> Result<MultiRenameOpened, MultiRenameError> {
+    crate::multi_rename::session::reopen(&session_id)
 }

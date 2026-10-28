@@ -103,6 +103,12 @@
     "screenshot": "settings-keyboard-shortcuts.png"
   },
 
+  "shortcuts.scope.tagsWindow": "Tags window",
+  "@shortcuts.scope.tagsWindow": {
+    "description": "Group heading in the Keyboard shortcuts list for the keys that work in the tag editor window (the separate window that edits audio files' tags). A short section title.",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
+
   "shortcuts.scope.aboutWindow": "About window",
   "@shortcuts.scope.aboutWindow": {
     "description": "Group heading in the Keyboard shortcuts list for commands in the About window. A short section title.",

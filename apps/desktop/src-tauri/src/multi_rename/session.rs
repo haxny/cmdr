@@ -128,6 +128,8 @@ struct Session {
     last_used: Instant,
     /// What the files' EXIF and tags say, read in the background.
     media: Arc<SessionMedia>,
+    /// A Tags window owns it (`hold`): eviction passes it by.
+    held: bool,
 }
 
 /// A session that goes (closed, evicted) stops its media read.
@@ -183,6 +185,7 @@ pub(crate) fn open(
             latest: None,
             last_used: Instant::now(),
             media,
+            held: false,
         },
     );
     Ok(MultiRenameOpened { session_id, count })
@@ -277,10 +280,11 @@ pub(crate) fn media_over(volume_id: &str, dir: &Path) -> Vec<Arc<SessionMedia>> 
         .collect()
 }
 
-/// Drops idle sessions, then the least recently used until one more fits under `cap`.
+/// Drops idle sessions, then the least recently used until one more fits under `cap`. A held
+/// session (a Tags window's) is never dropped, even when that leaves the store over the cap.
 fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
     sessions.retain(|id, s| {
-        let keep = now.duration_since(s.last_used) < IDLE_LIMIT;
+        let keep = s.held || now.duration_since(s.last_used) < IDLE_LIMIT;
         if !keep {
             crate::tag_editor::session::close(id);
         }
@@ -289,6 +293,7 @@ fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
     while sessions.len() >= cap {
         let Some(oldest) = sessions
             .iter()
+            .filter(|(_, s)| !s.held)
             .min_by_key(|(_, s)| s.last_used)
             .map(|(id, _)| id.clone())
         else {
@@ -303,6 +308,63 @@ fn evict_to(sessions: &mut HashMap<String, Session>, now: Instant, cap: usize) {
 pub(crate) fn close(session_id: &str) {
     SESSIONS.lock_ignore_poison().remove(session_id);
     crate::tag_editor::session::close(session_id);
+}
+
+/// Holds a session a Tags window owns: `evict_to` passes it by (idle or not) until [`release`].
+/// `SessionClosed` when it's gone already.
+pub(crate) fn hold(session_id: &str) -> Result<(), MultiRenameError> {
+    with_session(session_id, |s| s.held = true)
+}
+
+/// Lets eviction take the session again. No-op when it's already gone.
+pub(crate) fn release(session_id: &str) {
+    if let Some(session) = SESSIONS.lock_ignore_poison().get_mut(session_id) {
+        session.held = false;
+    }
+}
+
+/// A new session over the same folder and the same files, in the session's current order: what
+/// the Tags window takes from an open sheet, so closing the sheet never ends the window's
+/// session. It reads no media (nothing previews a rename over it).
+pub(crate) fn reopen(session_id: &str) -> Result<MultiRenameOpened, MultiRenameError> {
+    let (listing_id, volume_id, dir, names) = with_session(session_id, |s| {
+        (
+            s.listing_id.clone(),
+            s.volume_id.clone(),
+            s.dir.clone(),
+            Arc::clone(&s.names),
+        )
+    })?;
+    let count = names.len();
+    let new_id = format!("multi-rename-{}", NEXT_SESSION.fetch_add(1, Ordering::Relaxed));
+    let media = Arc::new(SessionMedia::seed(&new_id, dir.clone(), &[], &[]));
+    let mut sessions = SESSIONS.lock_ignore_poison();
+    evict_to(&mut sessions, Instant::now(), MAX_SESSIONS);
+    sessions.insert(
+        new_id.clone(),
+        Session {
+            listing_id,
+            volume_id,
+            dir,
+            names,
+            edits: Arc::default(),
+            written: None,
+            next_preview: 1,
+            latest: None,
+            last_used: Instant::now(),
+            media,
+            held: false,
+        },
+    );
+    Ok(MultiRenameOpened {
+        session_id: new_id,
+        count,
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn is_held(session_id: &str) -> bool {
+    SESSIONS.lock_ignore_poison().get(session_id).is_some_and(|s| s.held)
 }
 
 /// What a computation needs from a session, copied out so no lock is held while
@@ -619,6 +681,10 @@ pub(super) fn is_open(session_id: &str) -> bool {
 }
 
 #[cfg(test)]
+#[path = "session_hold_test.rs"]
+mod hold_test;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -634,6 +700,7 @@ mod tests {
             latest: None,
             last_used,
             media: Arc::new(SessionMedia::seed("", PathBuf::new(), &[], &[])),
+            held: false,
         }
     }
 

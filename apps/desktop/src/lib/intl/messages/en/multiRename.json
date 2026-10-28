@@ -1061,18 +1061,6 @@
   "@multiRename.placeholderHelp.rangeEditHint": {
     "description": "In the Multi-rename sheet, a tooltip on a placeholder button (such as [N], [E], or [C]) explains what that placeholder puts in the new name, lists a few of its other forms, and shows each with an example on a made-up file (Beach day.jpg, in the folder Trips/Lisbon 2026, last changed 2026-07-14 09:05:30). Last line of the [N], [E], and [P] tooltips: with the text cursor in such a placeholder in the mask, the down arrow key opens a small editor to pick which characters it takes. Keep [N] and ↓ as they are."
   },
-  "multiRename.tabs.label": "Multi-Rename sections",
-  "@multiRename.tabs.label": {
-    "description": "Accessible name of the tab strip at the top of the Multi-Rename sheet, which switches between the Rename and Tags tabs. Only read aloud by screen readers."
-  },
-  "multiRename.tabs.rename": "Rename",
-  "@multiRename.tabs.rename": {
-    "description": "Label of the tab that shows the usual Multi-Rename sheet (masks, search and replace, preview). Shown in a tab strip beside \"Tags\"."
-  },
-  "multiRename.tabs.tags": "Tags",
-  "@multiRename.tabs.tags": {
-    "description": "Label of the tab that edits the tags inside music and audiobook files (artist, album, title). Shown in a tab strip beside \"Rename\"."
-  },
   "multiRename.tags.reading": "Reading tags…",
   "@multiRename.tags.reading": {
     "description": "Shown in the Tags tab of Multi-Rename while Cmdr reads the tags of the selected music files."
@@ -1913,5 +1901,17 @@
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
     "description": "Notice in the Tags tab of Multi-Rename when Open in foobar2000 failed for a reason other than a missing player, for example a track that is no longer in the list."
+  },
+  "multiRename.tags.openWindow": "Tags…",
+  "@multiRename.tags.openWindow": {
+    "description": "Button at the top of the Multi-Rename sheet (only with the opt-in tag editor setting on): opens the sheet's audio files in the Tags window, where their tags are edited. The ellipsis says it opens a window."
+  },
+  "multiRename.tags.window.title": "Tags — {folder}",
+  "@multiRename.tags.window.title": {
+    "description": "Title of the tag editor window. {folder} is the name of the folder the audio files are in, like \"Dracula\". Keep the dash between the word and the folder name."
+  },
+  "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
+  "@multiRename.tags.window.noTracks": {
+    "description": "Notification when the user asks to edit tags but nothing selected is an audio file the tag editor supports (MP3, M4A, M4B, MP4, FLAC, OGG, Opus). No window opens."
   }
 }

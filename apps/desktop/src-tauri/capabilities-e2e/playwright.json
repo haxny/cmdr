@@ -2,7 +2,7 @@
     "$schema": "../gen/schemas/desktop-schema.json",
     "identifier": "playwright",
     "description": "Playwright E2E testing plugin permissions. Lives outside capabilities/ so that only playwright-e2e builds glob it; see build.rs.",
-    "windows": ["main", "settings", "viewer-*", "shortcuts", "queue"],
+    "windows": ["main", "settings", "viewer-*", "shortcuts", "queue", "tags-*"],
     "permissions": [
         "playwright:default",
         "core:window:allow-title",

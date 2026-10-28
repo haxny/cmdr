@@ -2,7 +2,7 @@
     /**
      * The Tags tab of the Multi-Rename sheet, foobar2000 Properties style: the clean-up tools, the tags the files
      * share, the track list (title and number edit in place), the cover, and the write (`ApplyPanel`). It opens the tag
-     * session the first time it shows. The sheet's Start comes to `start()` while the tab shows.
+     * session the first time it shows. The Tags window (`TagsWindow.svelte`) shows it.
      */
     import { onDestroy, onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -47,8 +47,8 @@
     })
 
     /**
-     * The tracks play here, one at a time. The Rename tab unmounts this component (and so does closing the sheet), and
-     * either way playback stops and its URL is released.
+     * The tracks play here, one at a time. Closing the window unmounts this component: playback stops and its URL is
+     * released.
      */
     const player = createTrackPlayer(tags.sessionId)
     onDestroy(player.stop)
@@ -151,7 +151,7 @@
         await runScoped((scope) => tags.tool(tool, scope))
     }
 
-    /** The sheet's Start while this tab shows: the Apply panel lists the changes, then writes them. */
+    /** Start: the Apply panel lists the changes, then writes them. */
     export async function start(): Promise<void> {
         await applyPanel?.start()
     }
@@ -162,12 +162,11 @@
     }
 </script>
 
-<!-- svelte-ignore a11y_interactive_supports_focus -- the key handler only hears keys bubbling from the focused rows inside -->
+<!-- The key handler only hears keys bubbling from the focused rows inside. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
     class="tags-tab"
     id="sheet-panel-tags"
-    role="tabpanel"
-    aria-labelledby="sheet-tab-tags"
     onkeydown={answerPlayKey}
     onfocusin={(e) => { followFocus(e.target) }}
     onfocusout={(e) => { if (e.relatedTarget instanceof Node && !e.currentTarget.contains(e.relatedTarget)) focusedField = null }}

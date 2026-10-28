@@ -201,6 +201,19 @@ export const fileListCommands: CommandSource[] = [
     keywords: ['batch rename', 'bulk rename', 'mass rename', 'rename multiple', 'rename many'],
   },
   {
+    // Fork (opt-in `multiRename.tagEditor`): the Tags window over the selected audio files. ⌘⇧T is
+    // Reopen closed tab and ⌘⌥T Open terminal here, so ⌘⇧E ("edit"). Off, or with nothing
+    // selected, it does nothing (`tag-editor/open-tags.ts`).
+    id: 'file.editTags',
+    nameKey: 'commands.fileEditTags.label',
+    scope: 'Main window/File list',
+    showInPalette: true,
+    shortcuts: ['⌘⇧E'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.fileEditTags.description',
+    keywords: ['audio tags', 'id3 tags', 'mp3 tags', 'audiobook tags'],
+  },
+  {
     id: 'file.view',
     nameKey: 'commands.fileView.label',
     scope: 'Main window/File list',

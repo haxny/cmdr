@@ -16,6 +16,9 @@ import {
   type TagEditorView,
   type TagTextTool,
   type TagTool,
+  type TagsSessionInfo,
+  type MultiRenameError,
+  type MultiRenameOpened,
 } from '#lib/ipc/bindings.js'
 
 export type {
@@ -31,6 +34,7 @@ export type {
   TagEditorView,
   TagTextTool,
   TagTool,
+  TagsSessionInfo,
 }
 
 /** A typed answer the tab words itself: the value, or why there is none. */
@@ -153,4 +157,28 @@ export async function releaseTagTrackAudio(url: string): Promise<void> {
  */
 export async function openTagsInPlayer(sessionId: string, paths: string[]): Promise<TagEditorResult<null>> {
   return result(await commands.openTagsInPlayer(sessionId, paths))
+}
+
+/** A Multi-Rename answer for the Tags window's session calls. */
+type SessionResult<T> = { ok: true; value: T } | { ok: false; error: MultiRenameError }
+
+function sessionResult<T>(
+  res: { status: 'ok'; data: T } | { status: 'error'; error: MultiRenameError },
+): SessionResult<T> {
+  return res.status === 'ok' ? { ok: true, value: res.data } : { ok: false, error: res.error }
+}
+
+/** Holds a Multi-Rename session for a Tags window (no eviction takes it), and says its track count and folder. */
+export async function holdTagsSession(sessionId: string): Promise<SessionResult<TagsSessionInfo>> {
+  return sessionResult(await commands.holdTagsSession(sessionId))
+}
+
+/** Lets eviction take the session again. */
+export async function releaseTagsSession(sessionId: string): Promise<void> {
+  await commands.releaseTagsSession(sessionId)
+}
+
+/** A new session over an open sheet's files, in their current order, for a Tags window of its own. */
+export async function reopenForTags(sessionId: string): Promise<SessionResult<MultiRenameOpened>> {
+  return sessionResult(await commands.reopenForTags(sessionId))
 }

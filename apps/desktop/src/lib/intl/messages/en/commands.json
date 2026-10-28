@@ -590,6 +590,20 @@
   "@commands.fileMultiRename.description": {
     "description": "Longer help text for \"Multi-rename\", shown as a secondary line in the command palette."
   },
+  "commands.fileEditTags.label": "Edit tags",
+  "@commands.fileEditTags.label": {
+    "description": "Command name in the command palette and Keyboard shortcuts list: opens the tag editor window (artist, album, title, track numbers, cover) for the selected audio files. Only works when the opt-in tag editor setting is on.",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
+  "commands.fileEditTags.description": "Opens the selected audio files' tags in their own window",
+  "@commands.fileEditTags.description": {
+    "description": "Longer help text for \"Edit tags\", shown as a secondary line in the command palette."
+  },
+  "commands.tagsClose.label": "Close the Tags window",
+  "@commands.tagsClose.label": {
+    "description": "Row in the Keyboard shortcuts list: what Escape does in the tag editor window. It closes the window, asking first when tag changes aren't written yet. Read-only (the key can't be rebound).",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
   "commands.queueCursorUp.label": "Previous operation",
   "@commands.queueCursorUp.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above.",
@@ -1546,14 +1560,6 @@
   "commands.handler.viewDebugLog.unavailable": "Couldn’t open the debug log. Try again.",
   "@commands.handler.viewDebugLog.unavailable": {
     "description": "Toast after the View debug log action cannot get the log path or open the internal viewer window. No diagnostic details or placeholders. Suggest retrying."
-  },
-  "commands.multiRenameTabRename.label": "Show the Rename tab",
-  "@commands.multiRenameTabRename.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It switches the tool to the Rename tab."
-  },
-  "commands.multiRenameTabTags.label": "Show the Tags tab",
-  "@commands.multiRenameTabTags.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open and its optional Tags tab is switched on. Read-only (the key can’t be rebound). It switches the tool to the Tags tab."
   },
   "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
   "@commands.multiRenamePlayTrack.label": {

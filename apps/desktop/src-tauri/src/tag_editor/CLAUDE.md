@@ -1,4 +1,4 @@
-# Tag editor (Tags tab of Multi-Rename)
+# Tag editor (the Tags window)
 
 A tag session per Multi-Rename session: the supported audio files' tags, as on disk and as edited, in memory. Opt-in
 (`multiRename.tagEditor`); the engine is `crates/cmdr-tags`.
@@ -13,6 +13,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
   `tag_editor` log lines (counts and durations, never paths or values).
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
   Multi-Rename's engine (`Transform`, `Replace`, `Mask`).
+- `window.rs` the Tags window's hold on its Multi-Rename session (`hold` counts tracks, names the folder; `end` on
+  close and on the window's `Destroyed`). A held session is never evicted (`multi_rename::session::hold`).
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the viewer's choke point) and "open in
   foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread, never awaited).
 

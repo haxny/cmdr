@@ -488,6 +488,18 @@
   "@commands.fileMultiRename.description": {
     "sourceHash": "d294fb1"
   },
+  "commands.fileEditTags.label": "Edit tags",
+  "@commands.fileEditTags.label": {
+    "sourceHash": "4687da8"
+  },
+  "commands.fileEditTags.description": "Opens the selected audio files' tags in their own window",
+  "@commands.fileEditTags.description": {
+    "sourceHash": "9db7159"
+  },
+  "commands.tagsClose.label": "Close the Tags window",
+  "@commands.tagsClose.label": {
+    "sourceHash": "cff7a3c"
+  },
   "commands.queueCursorUp.label": "Operação anterior",
   "@commands.queueCursorUp.label": {
     "sourceHash": "122b454"
@@ -1271,14 +1283,6 @@
   "commands.handler.viewDebugLog.unavailable": "Não foi possível abrir o registro de depuração. Tente de novo.",
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
-  },
-  "commands.multiRenameTabRename.label": "Show the Rename tab",
-  "@commands.multiRenameTabRename.label": {
-    "sourceHash": "3e496e2"
-  },
-  "commands.multiRenameTabTags.label": "Show the Tags tab",
-  "@commands.multiRenameTabTags.label": {
-    "sourceHash": "4236482"
   },
   "commands.multiRenamePlayTrack.label": "Play or stop the focused track",
   "@commands.multiRenamePlayTrack.label": {

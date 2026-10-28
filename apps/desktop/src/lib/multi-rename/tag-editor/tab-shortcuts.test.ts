@@ -1,5 +1,5 @@
 /**
- * The Tags tab's two commands are in the registry for every user, setting on or off, so Settings › Keyboard shortcuts
+ * The tag editor's commands are in the registry for every user, setting on or off, so Settings › Keyboard shortcuts
  * shows them. Their keys must not add a conflict there: upstream ships none on macOS, and `getConflictCount()` drives
  * the badge, the "Conflicts" filter and each row's warning icon.
  */
@@ -19,20 +19,21 @@ import {
   getConflictingCommandIds,
 } from '#lib/shortcuts/index.js'
 import { getDefaultShortcuts } from '#lib/shortcuts/shortcuts-store.js'
-import { TAB_COMMANDS } from './sheet-tab'
 
-describe('the Tags tab commands in Settings › Keyboard shortcuts', () => {
-  it('add no conflict: the count stays at upstream’s zero, setting on or off', () => {
+describe('the tag editor’s commands in Settings › Keyboard shortcuts', () => {
+  it('add no conflict: the count stays at upstream’s zero', () => {
     expect(getConflictCount()).toBe(0)
-    for (const { command } of TAB_COMMANDS) expect(getConflictingCommandIds().has(command)).toBe(false)
+    for (const id of ['file.editTags', 'tags.close'] as const) expect(getConflictingCommandIds().has(id)).toBe(false)
   })
 
-  it('are ⌘⇧[ / ⌘⇧], and each combo names only its own command', () => {
-    expect(TAB_COMMANDS.map(({ command }) => getDefaultShortcuts(command))).toEqual([['⌘⇧['], ['⌘⇧]']])
-    for (const { command } of TAB_COMMANDS) {
-      const [shortcut] = getDefaultShortcuts(command)
-      expect(findConflictsForShortcut(shortcut, 'Main window/Multi-rename').map((c) => c.id)).toEqual([command])
-    }
+  it('file.editTags is ⌘⇧E, and no other command in reach of the file list takes it', () => {
+    expect(getDefaultShortcuts('file.editTags')).toEqual(['⌘⇧E'])
+    expect(findConflictsForShortcut('⌘⇧E', 'Main window/File list').map((c) => c.id)).toEqual(['file.editTags'])
+  })
+
+  it('tags.close is Escape, alone in the Tags window', () => {
+    expect(getDefaultShortcuts('tags.close')).toEqual(['Escape'])
+    expect(findConflictsForShortcut('Escape', 'Tags window').map((c) => c.id)).toEqual(['tags.close'])
   })
 })
 

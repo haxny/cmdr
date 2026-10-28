@@ -1690,6 +1690,21 @@ export const commands = {
    */
   openTagsInPlayer: (sessionId: string, paths: string[]) =>
     typedError<null, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths })),
+  /**
+   *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
+   *  many of its files are tracks and what its folder is called. The main window calls it right
+   *  after opening the session; the window's close (or its `Destroyed`) releases it.
+   */
+  holdTagsSession: (sessionId: string) =>
+    typedError<TagsSessionInfo, MultiRenameError>(__TAURI_INVOKE('hold_tags_session', { sessionId })),
+  // Lets eviction take the session again. No-op when it's already gone.
+  releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
+  /**
+   *  A new Multi-Rename session over the files of `session_id` (an open sheet's), in their current
+   *  order, for a Tags window: the sheet closing never ends the window's session.
+   */
+  reopenForTags: (sessionId: string) =>
+    typedError<MultiRenameOpened, MultiRenameError>(__TAURI_INVOKE('reopen_for_tags', { sessionId })),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -18621,6 +18636,14 @@ export type TagTool =
       // How to read the file names.
       pattern: NamePattern
     }
+
+// What the main window needs to open a held session's window.
+export type TagsSessionInfo = {
+  // How many of the session's files are audio the engine can tag (by name; none means no window).
+  tracks: number
+  // The session's folder, for the window's title.
+  folderName: string
+}
 
 /**
  *  `tags-skipped`: a color-tag toggle (keyboard command or context-menu circle) left
