@@ -602,6 +602,24 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         return;
     }
 
+    // === Select all in a Tags window: its tracks (or the text being typed), its page decides ===
+    // Same reason as the queue's: the accelerator fires before the page's keydown sees ⌘A.
+    if id == SELECT_ALL_ID {
+        let windows = app.webview_windows();
+        let focused = crate::tag_editor::window::focused_tags_window(
+            windows
+                .iter()
+                .map(|(label, window)| (label.as_str(), window.is_focused().unwrap_or(false))),
+        );
+        if let Some(label) = focused {
+            use tauri_specta::Event as _;
+            if let Err(e) = crate::window_events::TagsSelectAll.emit_to(app, label) {
+                log::warn!(target: "menu", "failed to emit tags-select-all: {e}");
+            }
+            return;
+        }
+    }
+
     // === Edit-action exception: file semantics in main window, native text semantics elsewhere ===
     // Custom MenuItems for Cut/Copy/Paste/Select all route through execute-command in the main
     // window so the frontend can decide between file and text semantics. In non-main windows

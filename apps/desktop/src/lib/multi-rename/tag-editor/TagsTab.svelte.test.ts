@@ -1,12 +1,19 @@
-/** The Tags tab wired to its state: edits reach `state.edit`, a failed edit is worded by its typed kind, read-only locks it. */
+/**
+ * The Tags window's content wired to its state: the two panes' edits reach `state.edit`, the Tracks pane's selection
+ * scopes the tools, a failed edit is worded by its typed kind, read-only locks it.
+ */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tick } from 'svelte'
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
 import TagsTab from './TagsTab.svelte'
 import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
-import { byId, leave, mountInto, typeInto } from './tag-cell.test-helper'
+import { byId, editCursorRow, mountInto, paneList, press, toggleTrack, typeInto } from './tag-cell.test-helper'
 
-vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'binary' }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
+  getFileSizeFormat: () => 'binary',
+  getRowHeight: () => 20,
+  getStripedRows: () => true,
+}))
 
 let cleanup: (() => void) | undefined
 afterEach(() => {
@@ -83,10 +90,14 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
 describe('TagsTab', () => {
   it('sends a shared edit and a track edit to the state', async () => {
     const { root, state } = await mountTab()
-    await typeInto(byId<HTMLInputElement>(root, 'tag-field-album'), 'Dracula')
-    await leave(byId(root, 'tag-field-album'))
-    await typeInto(byId<HTMLInputElement>(root, 'tag-track-title-1'), 'Konec')
-    await leave(byId(root, 'tag-track-title-1'))
+    const album = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(album, 'Dracula')
+    await press(album, 'Enter')
+    const tracks = paneList(root, 'Tracks')
+    await press(tracks, 'ArrowDown')
+    const title = await editCursorRow(tracks)
+    await typeInto(title, 'Konec')
+    await press(title, 'Enter')
     expect(state.edit.mock.calls).toEqual([
       [[{ kind: 'setAll', field: 'album', values: ['Dracula'] }]],
       [[{ kind: 'setOne', path: '/b/02.mp3', field: 'title', values: ['Konec'] }]],
@@ -100,8 +111,8 @@ describe('TagsTab', () => {
       badDates: 3,
     }
     const { root } = await mountTab({ view })
-    expect(byId(root, 'tag-field-date').getAttribute('aria-invalid')).toBe('true')
-    expect(root.querySelector('#tag-field-date-hint')).not.toBeNull()
+    expect(byId(root, 'tag-album-row-date').classList.contains('is-invalid')).toBe(true)
+    expect(root.querySelector('#tag-album-date-hint')).not.toBeNull()
   })
 
   it('the cover picker lists the folder and a pick goes to the state', async () => {
@@ -121,7 +132,19 @@ describe('TagsTab', () => {
   ] as const)('a failed edit (%j) over the tags says %j', async (error, text) => {
     const { root } = await mountTab({ error })
     expect(root.querySelector('[role="alert"]')?.textContent).toBe(text)
-    expect(root.querySelector('table')).not.toBeNull()
+    expect(root.querySelector('[role="listbox"]')).not.toBeNull()
+  })
+
+  it('opens with the Album pane focused, and Tab moves focus to the Tracks pane and back', async () => {
+    const { root } = await mountTab()
+    const album = paneList(root, 'Album tags')
+    const tracks = paneList(root, 'Tracks')
+    expect(document.activeElement).toBe(album)
+    await press(album, 'Tab')
+    expect(document.activeElement).toBe(tracks)
+    expect(root.querySelector('[data-pane="tracks"] .full-list-container')?.classList.contains('is-focused')).toBe(true)
+    await press(tracks, 'Tab')
+    expect(document.activeElement).toBe(album)
   })
 
   it('a tool waits for an edit in flight, then runs', async () => {
@@ -132,22 +155,21 @@ describe('TagsTab', () => {
     expect(state.tool).toHaveBeenCalledWith({ kind: 'stripTrackPrefix' }, null)
   })
 
-  it('with 2 of 4 tracks checked, Renumber works on those two only', async () => {
+  it('with 2 of 4 tracks selected, Renumber works on those two only', async () => {
     const tracks = ['01', '02', '03', '04'].map((n) => ({
       ...VIEW.tracks[0],
       path: `/b/${n}.mp3`,
       fileName: `${n}.mp3`,
     })) as TagEditorView['tracks']
     const { root, state } = await mountTab({ view: { ...VIEW, tracks } })
-    root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')?.click()
-    root.querySelector<HTMLInputElement>('input[aria-label="Select 04.mp3"]')?.click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await toggleTrack(root, '/b/02.mp3')
+    await toggleTrack(root, '/b/04.mp3')
     ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Renumber')?.click()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, ['/b/02.mp3', '/b/04.mp3'])
   })
 
-  it('a view reload drops the checked tracks that are gone for good', async () => {
+  it('a view reload drops the selected tracks that are gone for good', async () => {
     const state = $state({
       view: VIEW,
       error: null,
@@ -162,10 +184,9 @@ describe('TagsTab', () => {
     })
     const mounted = await mountInto(TagsTab, { state: asTagState(state) })
     cleanup = mounted.cleanup
-    const second = () => mounted.root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')
-    second()?.click()
-    await tick()
-    expect(second()?.checked).toBe(true)
+    const second = () => mounted.root.querySelector<HTMLElement>('[data-track-path="/b/02.mp3"]')
+    await toggleTrack(mounted.root, '/b/02.mp3')
+    expect(second()?.getAttribute('aria-selected')).toBe('true')
 
     state.view = { ...VIEW, tracks: VIEW.tracks.slice(0, 1) }
     await tick()
@@ -173,10 +194,10 @@ describe('TagsTab', () => {
 
     state.view = VIEW
     await tick()
-    expect(second()?.checked).toBe(false)
+    expect(second()?.getAttribute('aria-selected')).toBe('false')
   })
 
-  it('when every checked track vanished, the tool does not run and a notice says so; the next run takes all', async () => {
+  it('when every selected track vanished, the tool does not run and a notice says so; the next run takes all', async () => {
     const state = $state({
       view: VIEW,
       error: null,
@@ -194,8 +215,7 @@ describe('TagsTab', () => {
     const renumber = () =>
       [...mounted.root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Renumber')?.click()
     const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
-    mounted.root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')?.click()
-    await tick()
+    await toggleTrack(mounted.root, '/b/02.mp3')
     const renamed = VIEW.tracks.map((t) => ({ ...t, path: `${t.path}.new` }))
     state.view = { ...VIEW, tracks: renamed }
     await tick()
@@ -203,7 +223,7 @@ describe('TagsTab', () => {
     renumber()
     await settle()
     expect(state.tool).not.toHaveBeenCalled()
-    expect(mounted.root.textContent).toContain('The checked tracks are no longer here, so nothing was changed.')
+    expect(mounted.root.textContent).toContain('The selected tracks are no longer here, so nothing was changed.')
 
     renumber()
     await settle()
@@ -211,10 +231,9 @@ describe('TagsTab', () => {
     expect(mounted.root.textContent).not.toContain('no longer here')
   })
 
-  it('the Find and replace panel works on the checked tracks alone', async () => {
+  it('the Find and replace panel works on the selected tracks alone', async () => {
     const { root, state } = await mountTab()
-    root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')?.click()
-    await tick()
+    await toggleTrack(root, '/b/02.mp3')
     ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Find and replace')?.click()
     await tick()
     await typeInto(byId<HTMLInputElement>(root, 'tag-replace-search'), 'a')
@@ -233,9 +252,9 @@ describe('TagsTab', () => {
     expect(root.querySelector('[role="alert"]')).toBeNull()
   })
 
-  it('Case changes the field whose box last had focus', async () => {
+  it('Case changes the Album pane’s cursor field while that pane has focus', async () => {
     const { root, state } = await mountTab()
-    byId(root, 'tag-field-album').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    paneList(root, 'Album tags').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
     ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')?.click()
     await new Promise((resolve) => setTimeout(resolve, 0))
     ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'lower case')?.click()
@@ -243,7 +262,17 @@ describe('TagsTab', () => {
     expect(state.tool).toHaveBeenCalledWith({ kind: 'case', case: 'lower', fields: ['album'] }, null)
   })
 
-  it('Case forgets a field once focus moves elsewhere in the tab, but not into the tools bar', async () => {
+  it('Case changes Title while the Tracks pane has focus', async () => {
+    const { root, state } = await mountTab()
+    paneList(root, 'Tracks').dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Case')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'lower case')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.tool).toHaveBeenCalledWith({ kind: 'case', case: 'lower', fields: ['title'] }, null)
+  })
+
+  it('Case forgets the pane once focus moves elsewhere in the tab, but not into the tools bar', async () => {
     const { root, state } = await mountTab()
     const buttons = () => [...root.querySelectorAll('button')]
     const named = (text: string) => {
@@ -252,12 +281,12 @@ describe('TagsTab', () => {
       return found
     }
     const focusIn = (el: Element) => el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
-    focusIn(byId(root, 'tag-field-album'))
+    focusIn(paneList(root, 'Album tags'))
     focusIn(named('Case'))
     named('Case').click()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(root.textContent).toContain('Changes: Album')
-    // Focus on the Write tags… button: the album box was left, so Case takes the name fields again.
+    // Focus on the Write tags… button: the Album pane was left, so Case takes the name fields again.
     const write = buttons().find((b) => b.textContent.includes('Write tags…'))
     if (!write) throw new Error('no Write tags… button')
     focusIn(write)
@@ -280,15 +309,15 @@ describe('TagsTab', () => {
     },
   )
 
-  it('read-only says why and locks every box and button', async () => {
+  it('read-only says why, opens no editor, and locks every button that writes', async () => {
     const { root } = await mountTab({ view: { ...VIEW, editable: false, readOnlyReason: 'remoteVolume' } })
-    // Once, at the top: it explains every locked box and button, Write tags… included.
+    // Once, at the top: it explains every locked row and button, Write tags… included.
     expect(root.textContent.split('Tags can only be edited for files on a local disk.')).toHaveLength(2)
-    for (const box of root.querySelectorAll<HTMLInputElement>('input')) expect(box.disabled).toBe(true)
-    // Playing writes nothing, so the play buttons and Open in foobar2000 stay available.
-    const writers = [...root.querySelectorAll('button')].filter(
-      (b) => !b.classList.contains('play') && b.textContent.trim() !== 'Open in foobar2000',
-    )
+    await press(paneList(root, 'Album tags'), 'F2')
+    await press(paneList(root, 'Tracks'), 'F2')
+    expect(root.querySelector('.tag-value-editor')).toBeNull()
+    // Playing and selecting write nothing, so Open in foobar2000 and the select-all box stay available.
+    const writers = [...root.querySelectorAll('button')].filter((b) => b.textContent.trim() !== 'Open in foobar2000')
     for (const button of writers) expect(button.disabled).toBe(true)
   })
 })

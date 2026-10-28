@@ -3,7 +3,7 @@
 
 use super::session::{is_open as tag_session_open, open as open_tags};
 use super::session_test::album;
-use super::window::{TagsSessionInfo, end, hold, session_of_label};
+use super::window::{TagsSessionInfo, end, focused_tags_window, hold, session_of_label};
 use crate::multi_rename::session::{close as close_rename, is_held};
 
 #[test]
@@ -12,6 +12,21 @@ fn a_window_label_names_its_session_and_no_other_window_does() {
     assert_eq!(session_of_label("tags-"), None);
     assert_eq!(session_of_label("viewer-123"), None);
     assert_eq!(session_of_label("settings"), None);
+}
+
+#[test]
+fn select_all_goes_to_the_focused_tags_window_only() {
+    let windows = [
+        ("main", false),
+        ("tags-multi-rename-1", false),
+        ("tags-multi-rename-2", true),
+    ];
+    assert_eq!(focused_tags_window(windows), Some("tags-multi-rename-2"));
+    assert_eq!(
+        focused_tags_window([("main", true), ("tags-multi-rename-1", false)]),
+        None
+    );
+    assert_eq!(focused_tags_window([("settings", true)]), None);
 }
 
 #[test]

@@ -27,10 +27,25 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
 - **State**: `tag-editor-state.svelte.ts` (the view from the backend's `TagEditorView`, edits sent by path, `busy`,
   `settled()` so a cell that just lost focus is in before a close/apply, Undo); `last-tag-apply.svelte.ts` (the last
   write's applies, which "Undo tag changes" reverses; lives as long as its window, not persisted); `discard-guard.ts`.
-- **Parts**: `SharedFieldsTable` (one row per field; a "multiple values" row is untouched until changed), `TrackList`
-  (per-file Title and #; the # column is hidden for a one-file book), `CoverPanel` (+ thumbnail), `EditableCell`,
-  `TagToolsBar` (clean-up tools over the whole session, Case on the focused field), `ApplyPanel` + `ApplyOutcome` (what
-  will change, the per-file result, Undo), `WouldDropDialog` (items a format would lose; Write anyway or Skip).
+- **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
+  the cursor row's Values… and Clear under the list; `CoverPanel` as the last group), `TracksPane` (☐ ▶ # Title Length
+  File; the # column is hidden for a one-file book), `TagValueEditor` (the box F2 lays over a row), `TagToolsBar`
+  (clean-up tools over the whole session, Case on the active pane's field), `ApplyPanel` + `ApplyOutcome` (what will
+  change, the per-file result, Undo), `WouldDropDialog` (items a format would lose; Write anyway or Skip).
+- **Panes** (`tags-panes.svelte.ts`: the active pane, each pane's cursor, Tab's switch). Decision: the rows use the file
+  panes' classes directly (`.full-list-container` › `.file-entry` with `.is-striped` / `.is-selected` /
+  `.is-under-cursor`, `.is-focused` on the container) rather than `ColumnList`. Why: `ColumnList` draws its own cursor
+  fill (`--color-accent-subtle`), font (`--font-size-md`) and padding, and takes one static `rowClass` for every row, so
+  per-row selection and stripes can't reach `app-file-list.css`; overriding it all would be a second look to keep in
+  step. Each pane copies `FullList`'s box rules (header, gutter, row padding, descender room) in its own style block.
+  Keys go to the focused pane's listbox only (`e.target === list`), so Tab is the browser's anywhere else (tools, cover,
+  Write). F2/Enter (`tags.edit`) and ⇧F2 (`tags.editNumber`) open `TagValueEditor` over the cell, placed from the cell's
+  box in the scroller (`pane-cursor.ts`'s `editorBox`); Enter commits, Esc cancels (claimed, so it never closes the
+  window), a click away commits, ⌥Enter adds a line in Comment and Description. Case takes the Album cursor row's field
+  while that pane is active, Title while the Tracks pane is, none once focus leaves both (the tools bar keeps the pane).
+  ⌘A: Edit > Select all is a registered accelerator that fires before the page sees the key, so `menu_handlers.rs` sends
+  `tags-select-all` to the focused `tags-*` window (`focused_tags_window`); `TagsWindow` selects the text of the box
+  being typed in, else every track.
 - **Why edits are keyed by path**: the session's order can change under the view; every edit stays with its file.
   `open()` fetches the view again (`openTagEditor(id)`, never a restart) when asked, so the list follows the order; the
   unwritten edits live in the backend session and come back with it. A view answer older than one already shown is
@@ -53,17 +68,19 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   folder); `getTagChanges` takes the kind and lists what it removes beyond the fields (`removes`, an MP3's `TPE3` under
   Audiobook), so the list matches the write; M4A genre is written only as freeform GENRE (the engine does it); a
   single-file book has no track number.
-- **Player** (`track-player.svelte.ts`, `PlayButton.svelte`, `TrackList`'s play column, `TagsTab`): one
-  `HTMLAudioElement` and one `cmdr-media://` URL at a time. `toggle(path)` mints a URL
-  (`tagTrackAudioUrl(sessionId, path)`), plays it, and releases it when playback ends: another track, the same track
-  again, `stop()`, `ended`, a decode error, or a URL that arrives after a stop (released unused). `TagsTab` stops it on
-  destroy, which covers the window closing. A failure (`failed`) shows `multiRename.tags.play.failed`. The audio tokens
-  are per tag session on the Rust side (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's
-  `media-src 'self' cmdr-media:` lets `<audio>` load them. "Open in foobar2000" calls `openTagsInPlayer` with the
-  checked tracks (or every track), through `runScoped`; `playerUnavailable` and other failures are worded.
-- **Scope**: `track-selection.svelte.ts` answers `all` (nothing checked), `some` (the checked paths, in session order)
-  or `gone` (everything checked vanished in a reload: the run is refused with a notice, then the next takes all). Every
-  tool and "Open in foobar2000" take the scope from `TagsTab.runScoped`, after `settled()`.
+- **Player** (`track-player.svelte.ts`, `TracksPane`'s ▶ column and ⌥Space, `TagsTab`): one `HTMLAudioElement` and one
+  `cmdr-media://` URL at a time. `toggle(path)` mints a URL (`tagTrackAudioUrl(sessionId, path)`), plays it, and
+  releases it when playback ends: another track, the same track again, `stop()`, `ended`, a decode error, or a URL that
+  arrives after a stop (released unused). `TagsTab` stops it on destroy, which covers the window closing. A failure
+  (`failed`) shows `multiRename.tags.play.failed`. The audio tokens are per tag session on the Rust side
+  (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's `media-src 'self' cmdr-media:` lets `<audio>` load
+  them. "Open in foobar2000" calls `openTagsInPlayer` with the selected tracks (or every track), through `runScoped`;
+  `playerUnavailable` and other failures are worded.
+- **Scope**: `track-selection.svelte.ts` holds the Tracks pane's selection as the file panes do (`createSelectionState`,
+  indices over the view's order; `sync` carries it across a reload by path) and answers `all` (nothing selected), `some`
+  (the selected paths, in session order) or `gone` (everything selected vanished in a reload: the run is refused with a
+  notice, then the next takes all). Every tool and "Open in foobar2000" take the scope from `TagsTab.runScoped`, after
+  `settled()`. Selected tracks don't narrow the Album pane's shared fields.
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the tab shows what the format will
   hold (M4A integers). The one-file-BOOK rule (no track number) is decided on the session's readable track count

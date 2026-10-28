@@ -1,8 +1,10 @@
 // The Tags tab of Multi-Rename: a tag session per Multi-Rename session, edited in memory, then written. The work
 // is the backend's (`src-tauri/src/tag_editor/`); these are pass-throughs.
 
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
   commands,
+  events,
   type ApplyRequest,
   type ContentKind,
   type CoverCandidate,
@@ -194,4 +196,15 @@ export async function openTagsSession(
   expectedSequence: number,
 ): Promise<SessionResult<MultiRenameOpened>> {
   return sessionResult(await commands.openTagsSession(listingId, includeHidden, selectedIndices, expectedSequence))
+}
+
+/**
+ * Edit > Select all (⌘A) while this Tags window is focused. The menu accelerator fires before the page's keydown
+ * sees ⌘A, so this is how the window learns of it (`menu_handlers.rs` routes it here instead of the native
+ * `selectAll:`). Returns an `UnlistenFn`.
+ */
+export async function onTagsSelectAll(callback: () => void): Promise<UnlistenFn> {
+  return events.tagsSelectAll.listen(() => {
+    callback()
+  })
 }

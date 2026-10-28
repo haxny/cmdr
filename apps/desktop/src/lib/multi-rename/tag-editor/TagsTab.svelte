@@ -1,23 +1,23 @@
 <script lang="ts">
     /**
-     * The Tags tab of the Multi-Rename sheet, foobar2000 Properties style: the clean-up tools, the tags the files
-     * share, the track list (title and number edit in place), the cover, and the write (`ApplyPanel`). It opens the tag
-     * session the first time it shows. The Tags window (`TagsWindow.svelte`) shows it.
+     * The Tags window's content: the clean-up tools, then two panes like the main window's file panes, Album (the
+     * tags the files share, then the cover) | Tracks (selected like files; the tools work on the selection), then the
+     * write (`ApplyPanel`). Tab switches the panes (`tags-panes.svelte.ts`). It opens the tag session when it mounts.
+     * The Tags window (`TagsWindow.svelte`) shows it.
      */
     import { onDestroy, onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool } from '#lib/ipc/bindings.js'
-    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
-    import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { openTagsInPlayer, type TagEdit } from '#lib/tauri-commands/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import AlbumPane from './AlbumPane.svelte'
     import ApplyPanel from './ApplyPanel.svelte'
     import CoverPanel from './CoverPanel.svelte'
-    import SharedFieldsTable from './SharedFieldsTable.svelte'
     import TagToolsBar from './TagToolsBar.svelte'
-    import TrackList from './TrackList.svelte'
-    import { focusedFieldOf, type RunScoped } from './tag-tools'
+    import TracksPane from './TracksPane.svelte'
+    import type { RunScoped } from './tag-tools'
+    import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
     import { createTrackSelection } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
     import type { TagsTabApi } from './sheet-tab'
@@ -29,18 +29,44 @@
 
     const { state: tags }: Props = $props()
 
-    /** The checked tracks; the tools work on these alone. Created once per mount, pruned on every view change. */
+    /** The selected tracks; the tools work on these alone. Created once per mount, synced on every view change. */
     const selection = createTrackSelection()
     const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
-    /** Changes with the checked tracks and the track list: a file-name preview is only good for the tracks it listed. */
+    /** Changes with the selected tracks and the track list: a file-name preview is only good for the tracks it listed. */
     const scopeKey = $derived(JSON.stringify([[...selection.selected].sort(), allPaths]))
 
     let selectionGone = $state(false)
 
-    // Converges: `prune` writes only when a checked path is dropped.
+    // Converges: `sync` writes only when the list of paths changed.
     $effect(() => {
-        selection.prune(allPaths)
+        selection.sync(allPaths)
     })
+
+    // Selecting again answers the "no longer here" notice.
+    $effect(() => {
+        if (selection.count > 0) selectionGone = false
+    })
+
+    let albumPane = $state<{ focus: () => void }>()
+    let tracksPane = $state<{ focus: () => void }>()
+    const panes = createTagsPanes({
+        focus: (pane) => {
+            ;(pane === 'album' ? albumPane : tracksPane)?.focus()
+        },
+    })
+
+    // The window opens with the Album pane focused, as the main window opens with a file pane focused.
+    let focusedOnce = false
+    $effect(() => {
+        if (focusedOnce || albumPane === undefined) return
+        focusedOnce = true
+        albumPane.focus()
+    })
+
+    /** ⌘A from the native menu (`TagsWindow`): every track, as in a file pane. */
+    export function selectAllTracks(): void {
+        selection.selectAll()
+    }
 
     onMount(() => {
         void tags.open()
@@ -51,28 +77,14 @@
      * released.
      */
     const player = createTrackPlayer(tags.sessionId)
-    onDestroy(player.stop)
-
-    /**
-     * ⌥Space (`multiRename.playTrack`) plays or stops the track whose row holds focus. Only inside the track list:
-     * elsewhere the key is none of ours and goes on. It claims the key when it acts: macOS types a non-breaking space
-     * for ⌥Space, which would land in the title the cell holds.
-     */
-    function answerPlayKey(e: KeyboardEvent): void {
-        if (e.isComposing || !eventMatchesCommand(e, 'multiRename.playTrack')) return
-        if (!(e.target instanceof Element)) return
-        const path = e.target.closest<HTMLElement>('tr[data-track-path]')?.dataset.trackPath
-        if (path === undefined) return
-        const row = tags.view?.tracks.find((track) => track.path === path)
-        if (row === undefined || row.readError !== null) return
-        claimKey(e)
-        void player.toggle(path)
-    }
+    onDestroy(() => {
+        player.stop()
+    })
 
     /** Why the last Open in foobar2000 failed, when it did. */
     let playerError = $state<MessageKey | null>(null)
 
-    /** Opens the checked tracks (every track when none is checked) in foobar2000, else each in its default app. */
+    /** Opens the selected tracks (every track when none is selected) in foobar2000, else each in its default app. */
     async function openInPlayer(): Promise<void> {
         playerError = null
         // Unreadable tracks are not the session's tracks for the backend (it refuses the call for one), so they never go.
@@ -115,30 +127,37 @@
         }
     }
 
-    /** The field whose box last had focus, for Case; focus on anything else in the tags clears it. */
-    let focusedField = $state<TagField | null>(null)
     let toolsBar = $state<HTMLElement>()
 
     /**
-     * Focus anywhere in the tab names the field Case changes: a tag box names its field, anything else (the cover,
-     * the Apply panel, a Clear button) none. Focus moving into the tools bar keeps it, so Case reaches the field
-     * the user just left for the button; focus leaving the tab clears it.
+     * The field Case changes: the Album pane's cursor row while that pane is active, Title while the Tracks pane is,
+     * none otherwise. Focus moving into the tools bar keeps the pane, so Case reaches the field the user just left
+     * for the button; focus anywhere else (the cover, the Apply panel) or out of the window clears it.
      */
+    const focusedField = $derived.by((): TagField | null => {
+        if (panes.active === 'tracks') return 'title'
+        if (panes.active !== 'album') return null
+        const shared = tags.view?.shared ?? []
+        return shared.at(Math.max(0, Math.min(panes.albumCursor, shared.length - 1)))?.field ?? null
+    })
+
     function followFocus(target: EventTarget | null): void {
         if (target instanceof Node && toolsBar?.contains(target) === true) return
-        focusedField = target instanceof HTMLElement ? focusedFieldOf(target.id) : null
+        const slot = target instanceof Element ? target.closest<HTMLElement>('[data-pane]') : null
+        const inCover = target instanceof Element && target.closest('.cover-group') !== null
+        panes.noteFocus(slot === null || inCover ? null : (slot.dataset.pane as TagsPaneId))
     }
     let applyPanel = $state<TagsTabApi>()
 
     /**
-     * A tool works on what the files hold now, so an edit a blur just sent lands first, and on the checked tracks
-     * alone (`null` for all). Resolves `undefined` without calling when the checked tracks are gone.
+     * A tool works on what the files hold now, so an edit a box just sent lands first, and on the selected tracks
+     * alone (`null` for all). Resolves `undefined` without calling when the selected tracks are gone.
      */
     const runScoped: RunScoped = async (call) => {
         await tags.settled()
-        const scope = selection.scope(allPaths)
+        const scope = selection.scope()
         if (scope.kind === 'gone') {
-            // The checked tracks are gone: never widen to every track. The next run takes them all.
+            // The selected tracks are gone: never widen to every track. The next run takes them all.
             selection.clearGone()
             selectionGone = true
             return undefined
@@ -162,14 +181,11 @@
     }
 </script>
 
-<!-- The key handler only hears keys bubbling from the focused rows inside. -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
     class="tags-tab"
     id="sheet-panel-tags"
-    onkeydown={answerPlayKey}
     onfocusin={(e) => { followFocus(e.target) }}
-    onfocusout={(e) => { if (e.relatedTarget instanceof Node && !e.currentTarget.contains(e.relatedTarget)) focusedField = null }}
+    onfocusout={(e) => { if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) panes.noteFocus(null) }}
 >
     {#if tags.view === null}
         {#if tags.error !== null}
@@ -207,36 +223,59 @@
             {scopeKey}
         />
         </div>
-        <div class="columns">
-            <div class="main">
-                <SharedFieldsTable rows={view.shared} editable={view.editable} badDates={view.badDates} onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
-                <TrackList
+        <div class="panes">
+            <div class="pane-slot album" data-pane="album">
+                <AlbumPane
+                    bind:this={albumPane}
+                    rows={view.shared}
+                    editable={view.editable}
+                    badDates={view.badDates}
+                    focused={panes.active === 'album'}
+                    cursor={panes.albumCursor}
+                    onCursorChange={(index: number) => { panes.albumCursor = index }}
+                    onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+                    onSwitchPane={() => { panes.switchPane() }}
+                    cover={coverGroup}
+                />
+            </div>
+            <div class="divider" aria-hidden="true"></div>
+            <div class="pane-slot tracks" data-pane="tracks">
+                <TracksPane
+                    bind:this={tracksPane}
                     tracks={view.tracks}
                     editable={view.editable}
-                    selected={selection.selected}
-                    onToggle={(path: string) => { selectionGone = false; selection.toggle(path) }}
-                    onToggleAll={(on: boolean) => { selectionGone = false; selection.setAll(allPaths, on) }}
+                    focused={panes.active === 'tracks'}
+                    cursor={panes.tracksCursor}
+                    onCursorChange={(index: number) => { panes.tracksCursor = index }}
+                    {selection}
                     playing={player.playing}
                     onPlay={(path: string) => void player.toggle(path)}
-                    onEdit={(edits: TagEdit[]) => tags.edit(edits)} />
-                <div class="player">
-                    <Button size="mini" onclick={() => void openInPlayer()}>{tString('multiRename.tags.play.openInPlayer')}</Button>
-                </div>
-            </div>
-            <aside class="side">
-                <CoverPanel
-                    cover={view.cover}
-                    editable={view.editable}
-                    {listCandidates}
-                    loadImage={() => tags.coverImage()}
-                    onPick={(fileName: string) => void tags.coverFromFile(fileName)}
                     onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+                    onSwitchPane={() => { panes.switchPane() }}
+                    footer={tracksFooter}
                 />
-            </aside>
+            </div>
         </div>
-        <ApplyPanel bind:this={applyPanel} {tags} onWriting={player.stop} />
+        <ApplyPanel bind:this={applyPanel} {tags} onWriting={() => { player.stop() }} />
     {/if}
 </div>
+
+{#snippet coverGroup()}
+    {#if tags.view !== null}
+        <CoverPanel
+            cover={tags.view.cover}
+            editable={tags.view.editable}
+            {listCandidates}
+            loadImage={() => tags.coverImage()}
+            onPick={(fileName: string) => void tags.coverFromFile(fileName)}
+            onEdit={(edits: TagEdit[]) => tags.edit(edits)}
+        />
+    {/if}
+{/snippet}
+
+{#snippet tracksFooter()}
+    <Button size="mini" onclick={() => void openInPlayer()}>{tString('multiRename.tags.play.openInPlayer')}</Button>
+{/snippet}
 
 <style>
     .tags-tab {
@@ -245,35 +284,42 @@
         gap: var(--spacing-sm);
         flex: 1;
         min-height: 0;
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm) 0;
         color: var(--color-text-primary);
     }
 
-    .columns {
-        display: flex;
-        gap: var(--spacing-lg);
-        flex: 1;
-        min-height: 0;
+    /* Everything but the panes keeps the window's margin; the panes run edge to edge, as in the main window. */
+    .tags-tab > :global(:not(.panes)) {
+        margin-inline: var(--spacing-md);
     }
 
-    .main {
+    /* Album | Tracks, split like the main window's panes: a 1px divider in `--color-border` (`PaneResizer`). */
+    .panes {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        border-block: 1px solid var(--color-border);
+    }
+
+    .pane-slot {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-md);
-        flex: 1;
         min-width: 0;
         min-height: 0;
-        overflow: auto;
     }
 
-    .player {
-        display: flex;
-        gap: var(--spacing-xs);
+    .pane-slot.album {
+        flex: 45 1 0;
     }
 
-    .side {
-        width: 240px;
+    .pane-slot.tracks {
+        flex: 55 1 0;
+    }
+
+    .divider {
+        width: 1px;
         flex-shrink: 0;
+        background: var(--color-border);
     }
 
     .notice {

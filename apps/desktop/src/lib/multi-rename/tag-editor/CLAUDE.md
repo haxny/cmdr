@@ -11,14 +11,17 @@ sheet is upstream's (its one foothold, `index.ts`'s `TagsButton`, isn't mounted;
 - **Closing** goes through the discard guard (Escape = `tags.close`, the red button via `onCloseRequested`), then
   releases, `closeTagEditor`, `closeMultiRename`, `closeSelfWindow()`. ❌ Never `getCurrentWindow().close()` from a key
   handler. The backend ends the session on the window's `Destroyed` too.
-- **⌥Space** is `multiRename.playTrack`: plays or stops the track whose row holds focus (a cell or the checkbox). Plain
-  Space types a space in a cell, so the key is ⌥Space; ⌘⌥P is `multiRename.normalizeUnicode`'s. It acts only inside the
-  track list, and claims the key when it acts (macOS types a non-breaking space for ⌥Space, and `key-capture.ts` reads
-  that NBSP as `Space` only with ⌥ held). Playback stops on unmount (the window closes), on another play, on `ended`,
-  and when a write starts (`ApplyPanel`'s `onWriting`); each stop releases the URL.
-- **Scope**: the tag tools work on the checked tracks (`all` / `some` / `gone`, `track-selection.svelte.ts`) through
-  `TagsTab`'s `runScoped`; a vanished selection never widens to every track. "Open in foobar2000" follows the same
-  scope.
+- **Two panes like the file panes**, Album | Tracks (`AlbumPane`, `TracksPane`): the global `app-file-list.css` row
+  classes, `getRowHeight()`, the list font; fixed columns with one flexing, so nothing scrolls sideways. Keys are
+  `Tags window` registry commands answered by the focused pane's listbox (Tab, F2/Enter, ⇧F2, ⌥Space), plus the file
+  panes' own selection commands (`classifySelectionKey`) and `list-cursor.ts`. ⌘A arrives from the native menu
+  (`onTagsSelectAll`), never as a keydown.
+- **⌥Space** is `multiRename.playTrack`: plays or stops the Tracks pane's cursor row; plain Space selects, as on files.
+  It claims the key (macOS types a non-breaking space for ⌥Space). Playback stops on unmount, on another play, on
+  `ended`, and when a write starts (`ApplyPanel`'s `onWriting`); each stop releases the URL.
+- **Scope**: the tag tools work on the Tracks pane's selection, ONE selection model (`track-selection.svelte.ts` over
+  the file panes' `createSelectionState`; the ☐ column draws it): `all` / `some` / `gone` through `TagsTab`'s
+  `runScoped`; a vanished selection never widens to every track. "Open in foobar2000" follows the same scope.
 - **Totals are fields** (TrackTotal, DiscTotal), and `store` normalizes every edit for its format (an M4A's `01` shows
   as `1`). Find/replace and format run in the app's Rust (`tag_editor/text_tools.rs`) because they reuse Multi-Rename's
   own engine, not `cmdr-tags`; file name → tags stays the engine's `TagTool::FromFileName`.

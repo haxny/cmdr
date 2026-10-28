@@ -1,4 +1,4 @@
-/** The Tags tab's player: ⌥Space plays the focused row, the row buttons toggle, "Open in foobar2000" takes the scope. */
+/** The Tags window's player: ⌥Space plays the Tracks pane's cursor row, ▶ toggles, "Open in foobar2000" takes the selection. */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { tick } from 'svelte'
 
@@ -12,7 +12,11 @@ const tagTrackAudioUrl = vi.hoisted(() => vi.fn())
 const releaseTagTrackAudio = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 const openTagsInPlayer = vi.hoisted(() => vi.fn())
 
-vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'binary' }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
+  getFileSizeFormat: () => 'binary',
+  getRowHeight: () => 20,
+  getStripedRows: () => true,
+}))
 vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   tagTrackAudioUrl,
@@ -23,7 +27,7 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
 import TagsTab from './TagsTab.svelte'
 import type { TagEditorState } from './tag-editor-state.svelte'
-import { byId, mountInto } from './tag-cell.test-helper'
+import { mountInto, paneList, press, toggleTrack, trackRow } from './tag-cell.test-helper'
 
 class FakeAudio {
   src = ''
@@ -95,9 +99,14 @@ async function mountTab() {
     settled: vi.fn(() => Promise.resolve()),
     tool: vi.fn(() => Promise.resolve()),
   }
-  const mounted = await mountInto(TagsTab, { state: state as unknown as TagEditorState })
+  const mounted = await mountInto(TagsTab, { state: asTagState(state) })
   cleanup = mounted.cleanup
   return { root: mounted.root, state, unmount: mounted.cleanup }
+}
+
+/** The mock stands in for the state; only what the tab reads is there. */
+function asTagState(mock: object): TagEditorState {
+  return mock as TagEditorState
 }
 
 /** ⌥Space the way macOS sends it: the key is a non-breaking space, the code says Space. */
@@ -118,12 +127,21 @@ const settle = async () => {
   await tick()
 }
 
-describe('Tags tab player', () => {
-  it('⌥Space in a track cell plays that row and claims the key, so no non-breaking space is typed', async () => {
+/** A click on a track's ▶ cell. */
+function clickPlay(root: HTMLElement, path: string): void {
+  trackRow(root, path)
+    .querySelector('[data-col="play"]')
+    ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+}
+
+describe('Tags window player', () => {
+  it('⌥Space in the Tracks pane plays the cursor row and claims the key, so no non-breaking space is typed', async () => {
     const { root } = await mountTab()
+    const tracks = paneList(root, 'Tracks')
+    await press(tracks, 'ArrowDown')
     const reached = vi.fn()
     document.addEventListener('keydown', reached)
-    const event = altSpace(byId(root, 'tag-track-title-1'))
+    const event = altSpace(tracks)
     document.removeEventListener('keydown', reached)
     await settle()
     expect(tagTrackAudioUrl).toHaveBeenCalledWith('s1', '/b/02.mp3')
@@ -131,47 +149,48 @@ describe('Tags tab player', () => {
     expect(reached).not.toHaveBeenCalled()
   })
 
-  it('⌥Space on a row checkbox plays that row, and a second press stops it and releases the URL', async () => {
+  it('a second ⌥Space stops the track and releases its URL', async () => {
     const { root } = await mountTab()
-    const box = root.querySelector<HTMLInputElement>('input[aria-label="Select 01.mp3"]') as HTMLInputElement
-    altSpace(box)
+    const tracks = paneList(root, 'Tracks')
+    altSpace(tracks)
     await settle()
     expect(tagTrackAudioUrl).toHaveBeenCalledWith('s1', '/b/01.mp3')
-    altSpace(box)
+    altSpace(tracks)
     await settle()
     expect(releaseTagTrackAudio).toHaveBeenCalledWith('cmdr-media://localhost/tok1')
   })
 
-  it('⌥Space outside the track list does nothing and leaves the key alone', async () => {
+  it('⌥Space in the Album pane does nothing and leaves the key alone', async () => {
     const { root } = await mountTab()
-    const event = altSpace(byId(root, 'tag-field-album'))
+    const event = altSpace(paneList(root, 'Album tags'))
     await settle()
     expect(tagTrackAudioUrl).not.toHaveBeenCalled()
     expect(event.defaultPrevented).toBe(false)
   })
 
-  it('a row button plays and stops its track, named for its file', async () => {
+  it('a click on ▶ plays the track and a second one stops it; the row says Playing meanwhile', async () => {
     const { root } = await mountTab()
-    const play = () => root.querySelector<HTMLButtonElement>('button[aria-label="Play 02.mp3"]')
-    play()?.click()
+    clickPlay(root, '/b/02.mp3')
     await settle()
     expect(tagTrackAudioUrl).toHaveBeenCalledWith('s1', '/b/02.mp3')
-    const stop = root.querySelector<HTMLButtonElement>('button[aria-label="Stop 02.mp3"]')
-    expect(stop?.getAttribute('aria-pressed')).toBe('true')
-    stop?.click()
+    expect(trackRow(root, '/b/02.mp3').textContent).toContain('Playing')
+    clickPlay(root, '/b/02.mp3')
     await settle()
     expect(releaseTagTrackAudio).toHaveBeenCalledWith('cmdr-media://localhost/tok1')
-    expect(play()?.getAttribute('aria-pressed')).toBe('false')
+    expect(trackRow(root, '/b/02.mp3').textContent).not.toContain('Playing')
   })
 
-  it('an unreadable track has a disabled play button', async () => {
+  it('an unreadable track has no ▶ and a click on its cell plays nothing', async () => {
     const { root } = await mountTab()
-    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Play 03.mp3"]')?.disabled).toBe(true)
+    expect(trackRow(root, '/b/03.mp3').querySelector('[data-col="play"]')?.textContent).toBe('')
+    clickPlay(root, '/b/03.mp3')
+    await settle()
+    expect(tagTrackAudioUrl).not.toHaveBeenCalled()
   })
 
-  it('unmounting the tab (the Rename tab shows, or the sheet closes) stops the track and releases its URL', async () => {
+  it('unmounting (the window closes) stops the track and releases its URL', async () => {
     const { root, unmount } = await mountTab()
-    root.querySelector<HTMLButtonElement>('button[aria-label="Play 01.mp3"]')?.click()
+    clickPlay(root, '/b/01.mp3')
     await settle()
     unmount()
     cleanup = undefined
@@ -181,10 +200,10 @@ describe('Tags tab player', () => {
   it('a failed URL request words the failure and plays nothing', async () => {
     const { root } = await mountTab()
     urlCalls.fail = true
-    root.querySelector<HTMLButtonElement>('button[aria-label="Play 01.mp3"]')?.click()
+    clickPlay(root, '/b/01.mp3')
     await settle()
     expect(root.textContent).toContain('Couldn’t play that track.')
-    expect(root.querySelector('button[aria-label="Stop 01.mp3"]')).toBeNull()
+    expect(trackRow(root, '/b/01.mp3').textContent).not.toContain('Playing')
   })
 })
 
@@ -192,36 +211,33 @@ describe('Open in foobar2000', () => {
   const openButton = (root: HTMLElement) =>
     [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Open in foobar2000')
 
-  it('with nothing checked opens every readable track (the backend refuses an unreadable one)', async () => {
+  it('with nothing selected opens every readable track (the backend refuses an unreadable one)', async () => {
     const { root } = await mountTab()
     openButton(root)?.click()
     await settle()
     expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/01.mp3', '/b/02.mp3'])
   })
 
-  it('with only an unreadable track checked sends nothing and says so', async () => {
+  it('with only an unreadable track selected sends nothing and says so', async () => {
     const { root } = await mountTab()
-    root.querySelector<HTMLInputElement>('input[aria-label="Select 03.mp3"]')?.click()
-    await settle()
+    await toggleTrack(root, '/b/03.mp3')
     openButton(root)?.click()
     await settle()
     expect(openTagsInPlayer).not.toHaveBeenCalled()
     expect(root.textContent).toContain('None of those tracks can be read')
   })
 
-  it('with a readable and an unreadable track checked opens the readable one', async () => {
+  it('with a readable and an unreadable track selected opens the readable one', async () => {
     const { root } = await mountTab()
-    for (const n of ['01', '03']) root.querySelector<HTMLInputElement>(`input[aria-label="Select ${n}.mp3"]`)?.click()
-    await settle()
+    for (const n of ['01', '03']) await toggleTrack(root, `/b/${n}.mp3`)
     openButton(root)?.click()
     await settle()
     expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/01.mp3'])
   })
 
-  it('with tracks checked opens those alone', async () => {
+  it('with tracks selected opens those alone', async () => {
     const { root } = await mountTab()
-    root.querySelector<HTMLInputElement>('input[aria-label="Select 02.mp3"]')?.click()
-    await settle()
+    await toggleTrack(root, '/b/02.mp3')
     openButton(root)?.click()
     await settle()
     expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/02.mp3'])

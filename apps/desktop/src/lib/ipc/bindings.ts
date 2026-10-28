@@ -5660,6 +5660,7 @@ export const events = {
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
+  tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
   tagsSkipped: makeEvent<TagsSkipped>('tags-skipped'),
   viewModeChanged: makeEvent<ViewModeChanged>('view-mode-changed'),
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
@@ -18650,6 +18651,13 @@ export type TagTool =
       // How to read the file names.
       pattern: NamePattern
     }
+
+/**
+ *  `tags-select-all`: Edit > Select all (⌘A) while a Tags window (`tags-<id>`) is focused. As
+ *  for the queue, the accelerator fires before the page sees ⌘A; the window selects every track,
+ *  or the text of the box being typed in. Payloadless, emitted to that window only.
+ */
+export type TagsSelectAll = null
 
 // What the main window needs to open a held session's window.
 export type TagsSessionInfo = {

@@ -89,8 +89,8 @@ use crate::window_events::{
     CloseAbout, CloseAllFileViewers, CloseConfirmation, CloseFileViewer, ExecuteCommand, FocusAbout, FocusConfirmation,
     FocusFileViewer, ForegroundOperation, FunctionKeyBarHideRequested, McpSettingsClose, MouseNav, OpenErrorReport,
     OpenFavorite, OpenFileViewer, OpenSettings, PersistRestrictedSetting, QueueRowContextAction, QueueSelectAll,
-    RevealPath, ShowSearchResultInFolder, TabContextAction, TagsSkipped, ViewerContextMenuAction, ViewerEditAction,
-    ViewerHistoryAction, ViewerWordWrapToggled,
+    RevealPath, ShowSearchResultInFolder, TabContextAction, TagsSelectAll, TagsSkipped, ViewerContextMenuAction,
+    ViewerEditAction, ViewerHistoryAction, ViewerWordWrapToggled,
 };
 // AI + system/misc events.
 use crate::ai::{
@@ -1300,6 +1300,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             // overrides. `execute-command` is also FE-emitted (LicenseSection).
             ExecuteCommand,
             QueueSelectAll,
+            TagsSelectAll,
             ShowSearchResultInFolder,
             OpenSettings,
             OpenFileViewer,

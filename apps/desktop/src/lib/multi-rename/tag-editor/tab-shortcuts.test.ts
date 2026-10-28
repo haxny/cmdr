@@ -43,6 +43,16 @@ describe('the tag editor’s commands in Settings › Keyboard shortcuts', () =>
     expect(getDefaultShortcuts('tags.close')).toEqual(['Escape'])
     expect(findConflictsForShortcut('Escape', 'Tags window').map((c) => c.id)).toEqual(['tags.close'])
   })
+
+  it.each([
+    ['tags.switchPane', ['Tab']],
+    ['tags.edit', ['F2', 'Enter']],
+    ['tags.editNumber', ['⇧F2']],
+  ] as const)('%s is %j, and no other command in the Tags window or App takes those keys', (id, keys) => {
+    expect(getDefaultShortcuts(id)).toEqual(keys)
+    for (const key of keys) expect(findConflictsForShortcut(key, 'Tags window').map((c) => c.id)).toEqual([id])
+    expect(getConflictingCommandIds().has(id)).toBe(false)
+  })
 })
 
 describe('the Tags tab’s play command', () => {

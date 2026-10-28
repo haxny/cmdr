@@ -112,6 +112,9 @@ export const FIXED_KEY_COMMAND_IDS = [
   'queue.previousControl',
   'queue.close',
   'tags.close',
+  'tags.switchPane',
+  'tags.edit',
+  'tags.editNumber',
   // Family 4 — deliberate override. ErrorPane claims ⌘D through a CAPTURE-phase
   // document listener that runs ahead of the dispatch spine, so it wins over
   // whatever the user bound ⌘D to. Fixed because releasing the key would falsify

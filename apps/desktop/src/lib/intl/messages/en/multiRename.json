@@ -1144,10 +1144,6 @@
   "@multiRename.tags.field.www": {
     "description": "Label of a row in the tag editor window, beside the box that edits a web address of the selected music files."
   },
-  "multiRename.tags.shared.label": "Tags shared by the files",
-  "@multiRename.tags.shared.label": {
-    "description": "Accessible name of the table of tag fields (artist, album, genre…) in the tag editor window. Typing in a row sets that tag on every selected file. Only read aloud by screen readers."
-  },
   "multiRename.tags.multipleValues": "‹multiple values›",
   "@multiRename.tags.multipleValues": {
     "description": "Marker at the start of a tag box of the tag editor window when the selected files have different values for that tag; the values follow it in the same box. While the marker stays, each file keeps its own value; deleting it makes the text left the value of every file. Keep the brackets."
@@ -1163,6 +1159,29 @@
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
     "description": "Accessible name of the list of audio files in the tag editor window, where each file's title and track number can be edited."
+  },
+  "multiRename.tags.album.label": "Album tags",
+  "@multiRename.tags.album.label": {
+    "description": "Accessible name of the left pane of the tag editor window: a list of the tags the audio files share (Artist, Album, Date…), one row per tag, laid out like Cmdr’s file panes. Only read aloud by screen readers."
+  },
+  "multiRename.tags.album.colName": "Name",
+  "@multiRename.tags.album.colName": {
+    "description": "Column header in the album pane of the tag editor window, above the tag names (Artist, Album, Date…)."
+  },
+  "multiRename.tags.album.colValue": "Value",
+  "@multiRename.tags.album.colValue": {
+    "description": "Column header in the album pane of the tag editor window, above the tag values the files share."
+  },
+  "multiRename.tags.album.editLabel": "{field} for all files",
+  "@multiRename.tags.album.editLabel": {
+    "description": "Accessible name of the editing box that F2 opens over a row of the album pane in the tag editor window. What is typed there is set on every file. Only read aloud by screen readers.",
+    "placeholders": {
+      "field": "the tag’s name, like Album or Artist (multiRename.tags.field.*)"
+    }
+  },
+  "multiRename.tags.track.playing": "Playing",
+  "@multiRename.tags.track.playing": {
+    "description": "Read by screen readers at the end of a row in the tracks pane of the tag editor window while that track’s audio plays (⌥Space plays or stops it)."
   },
   "multiRename.tags.col.number": "#",
   "@multiRename.tags.col.number": {
@@ -1643,14 +1662,7 @@
   },
   "multiRename.tags.select.all": "Select all tracks",
   "@multiRename.tags.select.all": {
-    "description": "Accessible name of the checkbox in the header of the track list of the tag editor window. It checks or unchecks every track; the tag tools then work on the checked tracks only (all tracks when none is checked). Only read aloud by screen readers."
-  },
-  "multiRename.tags.select.track": "Select {fileName}",
-  "@multiRename.tags.select.track": {
-    "description": "Accessible name of the checkbox at the start of a track row in the tag editor window. Checked tracks are the only ones the tag tools work on. Only read aloud by screen readers.",
-    "placeholders": {
-      "fileName": "the file name of the track, like 01.mp3"
-    }
+    "description": "Accessible name of the checkbox in the header of the tracks pane of the tag editor window. It selects or deselects every track; the tag tools then work on the selected tracks only (all tracks when none is selected). Only read aloud by screen readers."
   },
   "multiRename.tags.choices.button": "Values…",
   "@multiRename.tags.choices.button": {
@@ -1675,9 +1687,9 @@
   "@multiRename.tags.choices.empty": {
     "description": "Greyed text for a value in the list of a «multiple values» row in the tag editor window when some files have no value for that tag at all."
   },
-  "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
+  "multiRename.tags.selectionGone": "The selected tracks are no longer here, so nothing was changed. Select tracks again, or run the tool with none selected for all tracks.",
   "@multiRename.tags.selectionGone": {
-    "description": "Notice in the tag editor window: the user checked some tracks, then they disappeared (for example renamed on the Rename tab), and a tag tool was pressed. The tool did not run, so it can’t change every track by surprise."
+    "description": "Notice in the tag editor window: the user selected some tracks in the tracks pane, then they disappeared (for example renamed elsewhere), and a tag tool was pressed. The tool did not run, so it can’t change every track by surprise."
   },
   "multiRename.tags.tools.moreLabel": "More tag tools",
   "@multiRename.tags.tools.moreLabel": {
@@ -1867,20 +1879,6 @@
   "multiRename.tags.col.play": "Play",
   "@multiRename.tags.col.play": {
     "description": "Column header (read only by screen readers) above the play buttons in the track list of the tag editor window."
-  },
-  "multiRename.tags.play.play": "Play {fileName}",
-  "@multiRename.tags.play.play": {
-    "description": "Accessible name and tooltip of the play button at the end of a track row in the tag editor window. It plays the track so you can hear which one you are naming.",
-    "placeholders": {
-      "fileName": "the file name of the track, like 01.mp3"
-    }
-  },
-  "multiRename.tags.play.stop": "Stop {fileName}",
-  "@multiRename.tags.play.stop": {
-    "description": "Accessible name and tooltip of the play button of a track that is playing in the tag editor window. It stops the track.",
-    "placeholders": {
-      "fileName": "the file name of the track, like 01.mp3"
-    }
   },
   "multiRename.tags.play.failed": "Couldn’t play that track.",
   "@multiRename.tags.play.failed": {

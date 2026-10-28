@@ -26,6 +26,15 @@ pub(crate) fn session_of_label(label: &str) -> Option<&str> {
     label.strip_prefix(LABEL_PREFIX).filter(|id| !id.is_empty())
 }
 
+/// The focused Tags window's label among `(label, focused)` pairs: where Edit > Select all (⌘A)
+/// goes, since its accelerator fires before the page sees the key (`menu_handlers.rs`).
+pub(crate) fn focused_tags_window<'a>(windows: impl IntoIterator<Item = (&'a str, bool)>) -> Option<&'a str> {
+    windows
+        .into_iter()
+        .find(|(label, focused)| *focused && session_of_label(label).is_some())
+        .map(|(label, _)| label)
+}
+
 /// Holds `session_id` for its window and says what it holds.
 pub(crate) fn hold(session_id: &str) -> Result<TagsSessionInfo, MultiRenameError> {
     rename_session::hold(session_id)?;

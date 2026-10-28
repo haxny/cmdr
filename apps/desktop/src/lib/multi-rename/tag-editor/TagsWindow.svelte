@@ -4,12 +4,14 @@
      * way out. Escape (`tags.close`) and the red button (`requestClose`) go through the discard guard; closing
      * releases the hold, ends the tag session and the Multi-Rename session, then asks the backend to close the window
      * (`closeSelfWindow`, ❌ never `getCurrentWindow().close()` from a key handler). The backend ends the session too
-     * when the window is destroyed some other way (`tag_editor/window.rs`).
+     * when the window is destroyed some other way (`tag_editor/window.rs`). ⌘A reaches it from the native menu
+     * (`onTagsSelectAll`): the text of the box being typed in, else every track.
      */
+    import { onMount } from 'svelte'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { closeSelfWindow } from '#lib/child-window-close.js'
-    import { closeMultiRename, releaseTagsSession } from '#lib/tauri-commands/index.js'
+    import { closeMultiRename, onTagsSelectAll, releaseTagsSession } from '#lib/tauri-commands/index.js'
     import { getAppLogger } from '#lib/logging/logger.js'
     import TagsTab from './TagsTab.svelte'
     import { createDiscardGuard } from './discard-guard'
@@ -28,6 +30,31 @@
     const tags = createTagEditorState(sessionId)
     const guard = createDiscardGuard(tags, () => void end())
     let ended = false
+    let content = $state<{ selectAllTracks: () => void }>()
+
+    /** ⌘A: the text of the box being typed in, as in any text field, else every track, as in a file pane. */
+    function selectAll(): void {
+        const active = document.activeElement
+        if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) active.select()
+        else content?.selectAllTracks()
+    }
+
+    onMount(() => {
+        let stop: (() => void) | undefined
+        let gone = false
+        onTagsSelectAll(selectAll)
+            .then((unlisten) => {
+                if (gone) unlisten()
+                else stop = unlisten
+            })
+            .catch((e: unknown) => {
+                log.warn("⌘A won't select the tracks: {reason}", { reason: e })
+            })
+        return () => {
+            gone = true
+            stop?.()
+        }
+    })
 
     /** True once the window is on its way out: the red button's second close-request must go through. */
     export function isEnding(): boolean {
@@ -67,4 +94,4 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<TagsTab state={tags} />
+<TagsTab bind:this={content} state={tags} />

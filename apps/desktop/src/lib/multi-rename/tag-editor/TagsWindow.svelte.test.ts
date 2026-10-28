@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import TagsWindow from './TagsWindow.svelte'
-import { typeInto, press } from './tag-cell.test-helper'
+import { editCursorRow, typeInto, press } from './tag-cell.test-helper'
 
 const calls = vi.hoisted(() => [] as string[])
 const ipc = vi.hoisted(() => ({
@@ -29,7 +29,12 @@ const ipc = vi.hoisted(() => ({
   tagTrackAudioUrl: vi.fn(() => Promise.resolve({ ok: false, error: { kind: 'unknownTrack' } })),
   releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
   openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
+  onTagsSelectAll: vi.fn((callback: () => void) => {
+    menuSelectAll.callback = callback
+    return Promise.resolve(() => {})
+  }),
 }))
+const menuSelectAll = vi.hoisted(() => ({ callback: undefined as (() => void) | undefined }))
 const closeSelfWindow = vi.hoisted(() =>
   vi.fn(() => {
     calls.push('closeSelfWindow')
@@ -153,30 +158,54 @@ describe('TagsWindow', () => {
     await unmount(window)
   })
 
-  it('in a Comment box ⌘⏎ commits the text and closes nothing; a plain ⏎ is a new line', async () => {
+  it('in the Comment editor ⌥⏎ adds a line and ⏎ commits; Esc in an editor closes the editor, not the window', async () => {
     const base = { ...VIEW, shared: [{ field: 'comment', value: 'multiple', choices: [], choicesMore: 0 }] }
     ipc.openTagEditor.mockResolvedValue({ ok: true, value: base })
     ipc.editTags.mockResolvedValue({ ok: true, value: { ...base, dirty: true } })
-    const spy = vi.spyOn(globalThis, 'navigator', 'get')
-    spy.mockReturnValue({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' } as Navigator)
-    try {
-      await mountWindow()
-      const box = document.querySelector<HTMLTextAreaElement>('textarea#tag-field-comment')
-      if (!box) throw new Error('no comment textarea')
-      await typeInto(box, 'Line one')
-      const plain = await press(box, 'Enter')
-      expect(plain.defaultPrevented).toBe(false)
-      expect(ipc.editTags).not.toHaveBeenCalled()
-      await press(box, 'Enter', { metaKey: true })
-      await settle()
-      expect(ipc.editTags).toHaveBeenCalledWith('multi-rename-5', [
-        { kind: 'setAll', field: 'comment', values: ['Line one'] },
-      ])
-      expect(ipc.getTagChanges).not.toHaveBeenCalled()
-      expect(calls).toEqual([])
-    } finally {
-      spy.mockRestore()
-    }
+    await mountWindow()
+    const list = document.querySelector<HTMLElement>('[role="listbox"][aria-label="Album tags"]')
+    if (!list) throw new Error('no Album pane')
+    const box = await editCursorRow(list)
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('no comment textarea')
+    await typeInto(box, 'Line one')
+    box.setSelectionRange(8, 8)
+    const line = await press(box, 'Enter', { altKey: true })
+    expect(line.defaultPrevented).toBe(true)
+    expect(ipc.editTags).not.toHaveBeenCalled()
+    await press(box, 'Enter')
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledWith('multi-rename-5', [
+      { kind: 'setAll', field: 'comment', values: ['Line one\n'] },
+    ])
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+
+    const again = await editCursorRow(list)
+    await press(again, 'Escape')
+    await settle()
+    expect(document.querySelector('.tag-value-editor')).toBeNull()
+    expect(calls).toEqual([])
+  })
+
+  it('⌘A from the menu selects every track, or the text of the box being typed in', async () => {
+    const first = { ...VIEW.tracks[0], title: 'Alpha' }
+    const two = { ...VIEW, tracks: [first, { ...first, path: '/m/b.mp3', fileName: 'b.mp3' }] }
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: two })
+    await mountWindow()
+    const options = () => [...document.querySelectorAll('[aria-label="Tracks"] [role="option"]')]
+    menuSelectAll.callback?.()
+    await settle()
+    expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['true', 'true'])
+
+    const list = document.querySelector<HTMLElement>('[role="listbox"][aria-label="Tracks"]')
+    if (!list) throw new Error('no Tracks pane')
+    // The header box clears the selection again.
+    document.querySelector<HTMLInputElement>('input[aria-label="Select all tracks"]')?.click()
+    await settle()
+    const box = await editCursorRow(list)
+    box.setSelectionRange(0, 0)
+    menuSelectAll.callback?.()
+    expect([box.selectionStart, box.selectionEnd]).toEqual([0, 'Alpha'.length])
+    expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'false'])
   })
 
   it('a close whose IPC is refused still closes the window', async () => {

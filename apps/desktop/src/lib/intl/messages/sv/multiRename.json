@@ -1010,10 +1010,6 @@
   "@multiRename.tags.field.www": {
     "sourceHash": "45099c5"
   },
-  "multiRename.tags.shared.label": "Tags shared by the files",
-  "@multiRename.tags.shared.label": {
-    "sourceHash": "41d61a3"
-  },
   "multiRename.tags.multipleValues": "‹multiple values›",
   "@multiRename.tags.multipleValues": {
     "sourceHash": "39e9850"
@@ -1029,6 +1025,26 @@
   "multiRename.tags.tracks.label": "Tracks",
   "@multiRename.tags.tracks.label": {
     "sourceHash": "8898015"
+  },
+  "multiRename.tags.album.label": "Album tags",
+  "@multiRename.tags.album.label": {
+    "sourceHash": "41747f9"
+  },
+  "multiRename.tags.album.colName": "Name",
+  "@multiRename.tags.album.colName": {
+    "sourceHash": "dcd1d52"
+  },
+  "multiRename.tags.album.colValue": "Value",
+  "@multiRename.tags.album.colValue": {
+    "sourceHash": "8e37953"
+  },
+  "multiRename.tags.album.editLabel": "{field} for all files",
+  "@multiRename.tags.album.editLabel": {
+    "sourceHash": "980b039"
+  },
+  "multiRename.tags.track.playing": "Playing",
+  "@multiRename.tags.track.playing": {
+    "sourceHash": "deaf6f9"
   },
   "multiRename.tags.col.number": "#",
   "@multiRename.tags.col.number": {
@@ -1442,10 +1458,6 @@
   "@multiRename.tags.select.all": {
     "sourceHash": "9320e48"
   },
-  "multiRename.tags.select.track": "Select {fileName}",
-  "@multiRename.tags.select.track": {
-    "sourceHash": "e7e5769"
-  },
   "multiRename.tags.choices.button": "Values…",
   "@multiRename.tags.choices.button": {
     "sourceHash": "e8e4b2c"
@@ -1645,14 +1657,6 @@
   "multiRename.tags.col.play": "Play",
   "@multiRename.tags.col.play": {
     "sourceHash": "436e610"
-  },
-  "multiRename.tags.play.play": "Play {fileName}",
-  "@multiRename.tags.play.play": {
-    "sourceHash": "d684027"
-  },
-  "multiRename.tags.play.stop": "Stop {fileName}",
-  "@multiRename.tags.play.stop": {
-    "sourceHash": "a116eda"
   },
   "multiRename.tags.play.failed": "Couldn’t play that track.",
   "@multiRename.tags.play.failed": {

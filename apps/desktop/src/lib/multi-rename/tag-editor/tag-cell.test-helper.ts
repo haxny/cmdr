@@ -49,3 +49,33 @@ export async function leave(el: HTMLElement): Promise<void> {
   el.dispatchEvent(new FocusEvent('blur'))
   await tick()
 }
+
+/** The Tracks pane's row for `path` (`TracksPane`). */
+export function trackRow(root: HTMLElement, path: string): HTMLElement {
+  const row = root.querySelector<HTMLElement>(`[role="option"][data-track-path="${path}"]`)
+  if (!row) throw new Error(`no track row ${path}`)
+  return row
+}
+
+/** Clicks a track's ☐ in the Tracks pane: toggles its selection, as a click on a file's mark would. */
+export async function toggleTrack(root: HTMLElement, path: string): Promise<void> {
+  trackRow(root, path)
+    .querySelector('[data-col="mark"]')
+    ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  await tick()
+}
+
+/** Opens a pane's in-place editor on its cursor row with F2 (`tags.edit`), and returns it. */
+export async function editCursorRow(list: HTMLElement): Promise<HTMLInputElement | HTMLTextAreaElement> {
+  await press(list, 'F2')
+  const editor = list.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>('.tag-value-editor')
+  if (!editor) throw new Error('no editor')
+  return editor
+}
+
+/** A pane's listbox (`AlbumPane` / `TracksPane`), by its accessible name. */
+export function paneList(root: HTMLElement, label: string): HTMLElement {
+  const list = root.querySelector<HTMLElement>(`[role="listbox"][aria-label="${label}"]`)
+  if (!list) throw new Error(`no ${label} pane`)
+  return list
+}

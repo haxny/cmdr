@@ -500,6 +500,18 @@
   "@commands.tagsClose.label": {
     "sourceHash": "cff7a3c"
   },
+  "commands.tagsSwitchPane.label": "Switch between the album and the tracks",
+  "@commands.tagsSwitchPane.label": {
+    "sourceHash": "848a730"
+  },
+  "commands.tagsEdit.label": "Edit the value under the cursor",
+  "@commands.tagsEdit.label": {
+    "sourceHash": "6feffdf"
+  },
+  "commands.tagsEditNumber.label": "Edit the track number under the cursor",
+  "@commands.tagsEditNumber.label": {
+    "sourceHash": "8e22423"
+  },
   "commands.queueCursorUp.label": "Vorheriger Vorgang",
   "@commands.queueCursorUp.label": {
     "sourceHash": "122b454"

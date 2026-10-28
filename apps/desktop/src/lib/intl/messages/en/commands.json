@@ -604,6 +604,18 @@
     "description": "Row in the Keyboard shortcuts list: what Escape does in the tag editor window. It closes the window, asking first when tag changes aren't written yet. Read-only (the key can't be rebound).",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
+  "commands.tagsSwitchPane.label": "Switch between the album and the tracks",
+  "@commands.tagsSwitchPane.label": {
+    "description": "Row in the Keyboard shortcuts list: what Tab does in the tag editor window, which shows the album’s shared tags and its tracks as two panes side by side, like the main window’s two file panes. Tab moves the focus to the other pane. Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsEdit.label": "Edit the value under the cursor",
+  "@commands.tagsEdit.label": {
+    "description": "Row in the Keyboard shortcuts list: what F2 or Return does in the tag editor window. It opens an editing box over the row under the cursor: the tag value in the album pane, the title in the tracks pane (like F2 renames a file). Read-only (the key can’t be rebound)."
+  },
+  "commands.tagsEditNumber.label": "Edit the track number under the cursor",
+  "@commands.tagsEditNumber.label": {
+    "description": "Row in the Keyboard shortcuts list: what Shift+F2 does in the tag editor window’s tracks pane. It opens an editing box over the track number of the row under the cursor. Read-only (the key can’t be rebound)."
+  },
   "commands.queueCursorUp.label": "Previous operation",
   "@commands.queueCursorUp.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above.",

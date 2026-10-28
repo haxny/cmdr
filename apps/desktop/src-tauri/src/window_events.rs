@@ -39,6 +39,12 @@ pub struct ExecuteCommand {
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
 pub struct QueueSelectAll;
 
+/// `tags-select-all`: Edit > Select all (⌘A) while a Tags window (`tags-<id>`) is focused. As
+/// for the queue, the accelerator fires before the page sees ⌘A; the window selects every track,
+/// or the text of the box being typed in. Payloadless, emitted to that window only.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+pub struct TagsSelectAll;
+
 /// `show-search-result-in-folder`: a snapshot context-menu click. The primary
 /// right-clicked path travels with the event so the frontend never rereads a
 /// potentially different cursor or selection after the native popup closes.

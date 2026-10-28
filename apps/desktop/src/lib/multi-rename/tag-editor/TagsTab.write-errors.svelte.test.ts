@@ -14,7 +14,11 @@ const ipc = vi.hoisted(() => ({
   closeTagEditor: vi.fn(),
 }))
 vi.mock('#lib/tauri-commands/index.js', async (original) => ({ ...(await original<object>()), ...ipc }))
-vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'binary' }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
+  getFileSizeFormat: () => 'binary',
+  getRowHeight: () => 20,
+  getStripedRows: () => true,
+}))
 
 import TagsTab from './TagsTab.svelte'
 import { createTagEditorState } from './tag-editor-state.svelte'

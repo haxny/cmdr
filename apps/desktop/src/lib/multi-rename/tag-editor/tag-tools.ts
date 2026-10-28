@@ -4,7 +4,7 @@
  */
 
 import type { CaseTool, TagField, TagTool } from '#lib/ipc/bindings.js'
-import { FIELD_LABELS, TAG_FIELDS } from './field-labels'
+import { TAG_FIELDS } from './field-labels'
 
 /** What Case changes with no field focused: the names a person reads. */
 export const DEFAULT_CASE_FIELDS: readonly TagField[] = ['title', 'album', 'artist', 'albumArtist', 'performer']
@@ -13,14 +13,6 @@ export const DEFAULT_CASE_FIELDS: readonly TagField[] = ['title', 'album', 'arti
 export const DIACRITICS_FIELDS: readonly TagField[] = TAG_FIELDS.filter(
   (field) => field !== 'comment' && field !== 'description',
 )
-
-/** The field a tag box edits, by its id (`SharedFieldsTable`, `TrackList`); `null` for any other element. */
-export function focusedFieldOf(id: string): TagField | null {
-  if (/^tag-track-title-\d+$/.test(id)) return 'title'
-  if (/^tag-track-number-\d+$/.test(id)) return 'track'
-  const shared = /^tag-field-(\w+)$/.exec(id)?.[1]
-  return shared !== undefined && Object.hasOwn(FIELD_LABELS, shared) ? (shared as TagField) : null
-}
 
 /** The fields Case changes: the focused one, or with none the default set. */
 export function caseFields(focused: TagField | null): readonly TagField[] {

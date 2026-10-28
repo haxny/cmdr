@@ -333,6 +333,9 @@ export const COMMAND_IDS = [
   'palette.close',
   // The Tags window's own keys (fork, `multiRename.tagEditor`).
   'tags.close',
+  'tags.switchPane',
+  'tags.edit',
+  'tags.editNumber',
 ] as const
 
 /** Closed union of every command id (invariant A3). */
