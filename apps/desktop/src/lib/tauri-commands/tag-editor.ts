@@ -23,6 +23,7 @@ import {
   type TrackSort,
   type TrackSortKey,
   type TagsMenuKey,
+  type TagsOpened,
   type TagsSessionInfo,
   type MultiRenameError,
   type MultiRenameOpened,
@@ -266,7 +267,7 @@ export async function openTagsSession(
   includeHidden: boolean,
   selectedIndices: number[] | null,
   expectedSequence: number,
-): Promise<SessionResult<MultiRenameOpened>> {
+): Promise<SessionResult<TagsOpened>> {
   return sessionResult(await commands.openTagsSession(listingId, includeHidden, selectedIndices, expectedSequence))
 }
 

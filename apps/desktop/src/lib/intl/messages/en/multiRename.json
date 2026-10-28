@@ -2052,6 +2052,14 @@
   "@multiRename.tags.window.foldersNeedLocalDisk": {
     "description": "Notification when the user asks to edit tags on a folder that lives on a network share, a phone or another drive Cmdr can't list the files of folder by folder; single files there still work. No window opens."
   },
+  "multiRename.tags.window.openTimedOut": "Reading the folder took too long, so nothing was opened. Try again, or select the audio files themselves.",
+  "@multiRename.tags.window.openTimedOut": {
+    "description": "Notification when the user asks to edit tags on a folder and listing the audio files in it (a network share can be slow) did not finish in time. No window opens."
+  },
+  "multiRename.tags.window.someUnreadable": "{count, plural, one {# place in the folders couldn’t be read, so some tracks may be missing.} other {# places in the folders couldn’t be read, so some tracks may be missing.}}",
+  "@multiRename.tags.window.someUnreadable": {
+    "description": "Notification shown after the tag editor opened a folder of audio files (subfolders included) when some subfolders could not be read, so the window may lack some tracks. {count} is how many places were skipped."
+  },
   "multiRename.tags.keys.label": "Tag tools",
   "@multiRename.tags.keys.label": {
     "description": "Accessible name of the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags): a row of buttons, one per key (F2, F3, …), that run the tag tools."

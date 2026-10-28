@@ -1770,7 +1770,8 @@ export const commands = {
   /**
    *  Opens a Multi-Rename session over the pane's selection for a Tags window, as
    *  `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
-   *  the window reads the tags itself.
+   *  the window reads the tags itself. A selected folder opens into its audio files; that walk gets
+   *  [`TAGS_FOLDER_OPEN_TIMEOUT`] (a share is slow), and one that runs out is stopped and leaves no session.
    */
   openTagsSession: (
     listingId: string,
@@ -1778,7 +1779,7 @@ export const commands = {
     selectedIndices: number[] | null,
     expectedSequence: number,
   ) =>
-    typedError<MultiRenameOpened, MultiRenameError>(
+    typedError<TagsOpened, MultiRenameError>(
       __TAURI_INVOKE('open_tags_session', { listingId, includeHidden, selectedIndices, expectedSequence }),
     ),
   // Moves a file or directory to the macOS Trash via NSFileManager.
@@ -18799,6 +18800,15 @@ export type TagsMenuKey = {
    *  still one of `command_id`'s keys: a rebound item no longer means the tag tool.
    */
   menuCommandId: string
+}
+
+// A Tags window's new session, and how much of the folders it couldn't see.
+export type TagsOpened = {
+  sessionId: string
+  // How many names the session holds.
+  count: number
+  // Places under the selected folders that couldn't be read (or named), so some tracks may be missing.
+  unreadable: number
 }
 
 /**

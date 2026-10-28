@@ -1215,6 +1215,7 @@ export type {
   TagEditorError,
   TagEditorResult,
   TagEditorView,
+  TagsOpened,
   TagTextTool,
   TagTool,
   TagsMenuKey,

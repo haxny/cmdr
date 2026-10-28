@@ -16,9 +16,11 @@
         someUndoable: boolean
         /** Reads every file again (after "changed on disk"). */
         onReload: () => void
+        /** How a file is named in the lists (its path below the book folder); the bare file name by default. */
+        nameOf?: (path: string) => string
     }
 
-    const { outcome, someUndoable, onReload }: Props = $props()
+    const { outcome, someUndoable, onReload, nameOf = fileNameOf }: Props = $props()
 
     const lists = $derived(
         [
@@ -26,18 +28,18 @@
                 heading: 'multiRename.tags.write.failedHeading' as MessageKey,
                 rows: outcome.failed.map((row) =>
                     tString('multiRename.tags.write.failedRow', {
-                        fileName: fileNameOf(row.path),
+                        fileName: nameOf(row.path),
                         reason: tString(failureKey(row.error), failureParams(row.error)),
                     }),
                 ),
             },
             {
                 heading: 'multiRename.tags.write.changedOnDiskHeading' as MessageKey,
-                rows: outcome.changedOnDisk.map(fileNameOf),
+                rows: outcome.changedOnDisk.map(nameOf),
             },
             {
                 heading: 'multiRename.tags.write.skippedHeading' as MessageKey,
-                rows: outcome.skipped.map((row) => fileNameOf(row.path)),
+                rows: outcome.skipped.map((row) => nameOf(row.path)),
             },
         ].filter((list) => list.rows.length > 0),
     )

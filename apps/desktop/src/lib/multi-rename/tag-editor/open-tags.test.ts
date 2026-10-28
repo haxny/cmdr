@@ -129,6 +129,20 @@ describe('opening a Tags window', () => {
     expect(addToast).toHaveBeenCalledWith(expect.stringContaining('2,000'), { level: 'warn' })
   })
 
+  it('a folder walk that ran out of time says so and opens nothing', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'timedOut' } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('took too long'), { level: 'warn' })
+  })
+
+  it('unreadable places under a folder are told after the window opens', async () => {
+    ipc.openTagsSession.mockResolvedValue({ ok: true, value: { sessionId: 'multi-rename-5', count: 9, unreadable: 2 } })
+    await openTagsForSelection(explorer())
+    expect(openTagsWindow).toHaveBeenCalledTimes(1)
+    expect(addToast).toHaveBeenCalledWith(expect.stringContaining('2 places'), { level: 'info' })
+  })
+
   it('a folder on a disk Cmdr cannot read through says so', async () => {
     ipc.openTagsSession.mockResolvedValue({ ok: false, error: { type: 'foldersNeedLocalDisk' } })
     await openTagsForSelection(explorer())

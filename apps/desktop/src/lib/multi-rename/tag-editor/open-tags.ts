@@ -20,6 +20,7 @@ import {
   reopenForTags,
   type MultiRenameError,
   type MultiRenameOpened,
+  type TagsOpened,
 } from '#lib/tauri-commands/index.js'
 import { openTagsWindow } from './tags-window'
 
@@ -69,6 +70,8 @@ function openFailureToast(error: MultiRenameError): { text: string; level: 'info
       return { text: tString('multiRename.selectionChanged'), level: 'warn' }
     case 'tooManyTracks':
       return { text: tString('multiRename.tags.window.tooManyTracks', { limit: error.limit }), level: 'warn' }
+    case 'timedOut':
+      return { text: tString('multiRename.tags.window.openTimedOut'), level: 'warn' }
     case 'foldersNeedLocalDisk':
       return { text: tString('multiRename.tags.window.foldersNeedLocalDisk'), level: 'info' }
     default:
@@ -82,7 +85,7 @@ export async function openTagsForSession(sheetSessionId: string): Promise<void> 
   await openOnce(() => reopenForTags(sheetSessionId))
 }
 
-type Opened = { ok: true; value: MultiRenameOpened } | { ok: false; error: MultiRenameError }
+type Opened = { ok: true; value: TagsOpened | MultiRenameOpened } | { ok: false; error: MultiRenameError }
 
 async function openOnce(open: () => Promise<Opened>): Promise<void> {
   if (opening) return
@@ -94,6 +97,10 @@ async function openOnce(open: () => Promise<Opened>): Promise<void> {
       const toast = openFailureToast(opened.error)
       if (toast !== null) addToast(toast.text, { level: toast.level })
       return
+    }
+    const unreadable = 'unreadable' in opened.value ? opened.value.unreadable : 0
+    if (unreadable > 0) {
+      addToast(tString('multiRename.tags.window.someUnreadable', { count: unreadable }), { level: 'info' })
     }
     await holdAndShow(opened.value.sessionId)
   } finally {

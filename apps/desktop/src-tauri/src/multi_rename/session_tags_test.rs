@@ -211,3 +211,93 @@ fn reopening_a_sheets_session_leaves_out_a_folder_named_like_audio() {
     close(&sheet.session_id);
     close(&copy);
 }
+
+#[test]
+fn appledouble_files_are_never_tracks_even_with_hidden_files_shown() {
+    let (_dir, listing) = tree(
+        "tags-folder-appledouble",
+        "root",
+        &["Book/._01.mp3", "Book/01.mp3", "Book/Disc 1/._02.mp3"],
+    );
+    let id = opened(&listing, true, &[row_of(&listing, "Book")]).expect("opens");
+    assert_eq!(names_of(&id), vec!["Book/01.mp3"]);
+    close(&id);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_link_to_a_track_already_taken_is_one_row_not_two() {
+    let (dir, listing) = tree("tags-folder-alias", "root", &["Book/01.mp3", "Elsewhere/99.mp3"]);
+    // `00-link.mp3` sorts before its target, so a name-only dedupe would keep the link and the file.
+    std::os::unix::fs::symlink(dir.join("Book/01.mp3"), dir.join("Book/00-link.mp3")).expect("link");
+    std::os::unix::fs::symlink(dir.join("Elsewhere/99.mp3"), dir.join("Book/98-a.mp3")).expect("link");
+    std::os::unix::fs::symlink(dir.join("Elsewhere/99.mp3"), dir.join("Book/99-b.mp3")).expect("link");
+    let id = opened(&listing, true, &[row_of(&listing, "Book")]).expect("opens");
+    // The real file wins over its alias; two links to one outside file make one row.
+    assert_eq!(names_of(&id), vec!["Book/01.mp3", "Book/98-a.mp3"]);
+    close(&id);
+}
+
+#[test]
+fn a_walk_the_caller_gave_up_on_stops_and_leaves_no_session() {
+    use std::sync::atomic::AtomicBool;
+    let (_dir, listing) = tree("tags-folder-cancel", "root", &["Book/01.mp3", "Book/02.mp3"]);
+    let plan = super::plan_for_tags(listing.id(), true, Some(&[row_of(&listing, "Book")]), 0).expect("plans");
+    assert!(plan.has_folder());
+    let refused = plan.open(&AtomicBool::new(true));
+    assert!(matches!(refused, Err(MultiRenameError::TimedOut)), "got {refused:?}");
+    assert_eq!(sessions_over(&listing), 0);
+}
+
+#[test]
+fn a_cancel_that_lands_after_the_session_was_stored_closes_it_again() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    // Plain files never look at the flag while walking, only after storing: the stored session must go.
+    let (_dir, listing) = tree("tags-folder-cancel-late", "root", &["a.mp3"]);
+    let plan = super::plan_for_tags(listing.id(), true, Some(&[row_of(&listing, "a.mp3")]), 0).expect("plans");
+    assert!(!plan.has_folder());
+    let cancel = AtomicBool::new(false);
+    cancel.store(true, Ordering::Relaxed);
+    assert!(matches!(plan.open(&cancel), Err(MultiRenameError::TimedOut)));
+    assert_eq!(sessions_over(&listing), 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn unreadable_folders_are_counted_and_the_rest_still_opens() {
+    use std::os::unix::fs::PermissionsExt;
+    let (dir, listing) = tree("tags-folder-unreadable", "root", &["Book/01.mp3", "Book/Locked/02.mp3"]);
+    let locked = dir.join("Book/Locked");
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).expect("chmod");
+    let readable_anyway = std::fs::read_dir(&locked).is_ok(); // running as root
+    let opened = open_for_tags(listing.id(), true, Some(&[row_of(&listing, "Book")]), 0).expect("opens");
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).expect("chmod back");
+    if !readable_anyway {
+        assert_eq!(opened.unreadable, 1);
+        assert_eq!(names_of(&opened.session_id), vec!["Book/01.mp3"]);
+    }
+    close(&opened.session_id);
+}
+
+fn sessions_over(listing: &TestListingGuard) -> usize {
+    use crate::ignore_poison::IgnorePoison;
+    super::SESSIONS
+        .lock_ignore_poison()
+        .values()
+        .filter(|s| s.listing_id == listing.id())
+        .count()
+}
+
+#[test]
+fn a_book_opened_from_its_parent_is_named_after_the_book() {
+    let (_dir, listing) = tree(
+        "tags-folder-title",
+        "root",
+        &["Dracula/Disc 1/01.mp3", "Dracula/Disc 2/01.mp3"],
+    );
+    let id = opened(&listing, true, &[row_of(&listing, "Dracula")]).expect("opens");
+    let info = crate::tag_editor::window::hold(&id).expect("holds");
+    assert_eq!(info.folder_name, "Dracula");
+    release(&id);
+    close(&id);
+}

@@ -22,7 +22,7 @@
     import { confirmDialog } from '#lib/utils/confirm-dialog.js'
     import ApplyOutcome from './ApplyOutcome.svelte'
     import WouldDropDialog from './WouldDropDialog.svelte'
-    import { outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
+    import { fileNameOf, outcomeOf, writeAnywayRequest, type ApplyOutcome as Outcome } from './apply-outcome'
     import { FIELD_LABELS } from './field-labels'
     import { undoableCount } from './last-tag-apply'
     import type { TagEditorState, TagStateError, TagUndoResult } from './tag-editor-state.svelte'
@@ -105,6 +105,11 @@
     }
 
     const view = $derived(tags.view)
+    // The rows' names (`Disc 1/01.mp3`), so tracks of different subfolders tell apart in the outcome.
+    const nameOf = $derived.by(() => {
+        const names = new Map((view?.tracks ?? []).map((track) => [track.path, track.fileName]))
+        return (path: string): string => names.get(path) ?? fileNameOf(path)
+    })
     const canWrite = $derived(view !== null && view.editable)
     const kindOptions = $derived([
         { value: 'audiobook', label: tString('multiRename.tags.kind.audiobook') },
@@ -349,6 +354,7 @@
         {#if earlier.length > 0}
             <ApplyOutcome
                 outcome={outcomeOf(earlier)}
+                {nameOf}
                 someUndoable={tags.undoable !== null}
                 onReload={() => { void reload() }}
             />
@@ -379,6 +385,7 @@
         {@const choice = current}
         <WouldDropDialog
             rows={choice.reports.at(-1)?.wouldDrop ?? []}
+            {nameOf}
             busy={choice.answering}
             onWriteAnyway={() => { void oncePressed(() => writeAnyway(choice)) }}
             onSkip={() => { current = endedStep(choice.reports) }}
@@ -391,6 +398,7 @@
         {:else if current.step === 'done'}
             <ApplyOutcome
                 outcome={current.outcome}
+                {nameOf}
                 someUndoable={tags.undoable !== null}
                 onReload={() => { void reload() }}
             />

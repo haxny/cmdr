@@ -5,14 +5,14 @@ use cmdr_tags::tools::TagTool;
 use cmdr_tags::{ContentKind, NamePattern, RestoreReport};
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Instant;
 
 use cmdr_fs::deadline::{SESSION_IO_TIMEOUT, StallWatch, blocking_typed_result_until_stalled};
 
 use crate::multi_rename::error::MultiRenameError;
-use crate::multi_rename::session::MultiRenameOpened;
 use crate::multi_rename::session::files_of;
+use crate::multi_rename::session::{MultiRenameOpened, TagsOpened, plan_for_tags};
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
 use crate::tag_editor::at_quit;
@@ -412,7 +412,8 @@ pub async fn reopen_for_tags(session_id: String) -> Result<MultiRenameOpened, Mu
 
 /// Opens a Multi-Rename session over the pane's selection for a Tags window, as
 /// `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
-/// the window reads the tags itself.
+/// the window reads the tags itself. A selected folder opens into its audio files; that walk gets
+/// [`TAGS_FOLDER_OPEN_TIMEOUT`] (a share is slow), and one that runs out is stopped and leaves no session.
 #[tauri::command]
 #[specta::specta]
 pub async fn open_tags_session(
@@ -420,19 +421,38 @@ pub async fn open_tags_session(
     include_hidden: bool,
     selected_indices: Option<Vec<usize>>,
     expected_sequence: u64,
-) -> Result<MultiRenameOpened, MultiRenameError> {
-    cmdr_fs::deadline::blocking_typed_result_with_timeout(
-        std::time::Duration::from_secs(2),
-        || MultiRenameError::TimedOut,
-        |detail| MultiRenameError::Internal { detail },
-        move || {
-            crate::multi_rename::session::open_for_tags(
+) -> Result<TagsOpened, MultiRenameError> {
+    let timed_out = || MultiRenameError::TimedOut;
+    let join_failed = |detail: String| MultiRenameError::Internal { detail };
+    let plan =
+        cmdr_fs::deadline::blocking_typed_result_with_timeout(TAGS_OPEN_TIMEOUT, timed_out, join_failed, move || {
+            plan_for_tags(
                 &listing_id,
                 include_hidden,
                 selected_indices.as_deref(),
                 expected_sequence,
             )
+        })
+        .await?;
+    let timeout = if plan.has_folder() {
+        TAGS_FOLDER_OPEN_TIMEOUT
+    } else {
+        TAGS_OPEN_TIMEOUT
+    };
+    let cancel = Arc::new(AtomicBool::new(false));
+    let stop = Arc::clone(&cancel);
+    cmdr_fs::deadline::blocking_typed_result_with_timeout(
+        timeout,
+        move || {
+            stop.store(true, Ordering::Relaxed);
+            MultiRenameError::TimedOut
         },
+        join_failed,
+        move || plan.open(&cancel),
     )
     .await
 }
+
+const TAGS_OPEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+/// A folder walk over an OS-mounted share reads one directory at a time.
+const TAGS_FOLDER_OPEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);

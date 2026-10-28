@@ -98,11 +98,12 @@ pub(crate) fn hold(session_id: &str) -> Result<TagsSessionInfo, MultiRenameError
         .iter()
         .filter(|name| cmdr_tags::format_of(name).is_some())
         .count();
-    let folder_name = files
-        .dir
+    // The folder the tracks share, so a book opened from its parent is named after the book.
+    let folder = super::cover::tracks_folder(&files.dir, files.names.iter());
+    let folder_name = folder
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| files.dir.to_string_lossy().into_owned());
+        .unwrap_or_else(|| folder.to_string_lossy().into_owned());
     Ok(TagsSessionInfo {
         tracks,
         folder_name,

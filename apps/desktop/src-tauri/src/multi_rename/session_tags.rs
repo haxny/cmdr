@@ -3,8 +3,11 @@
 //! of an open sheet's.
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use serde::Serialize;
 
 use cmdr_collation::NameCollator;
 
@@ -18,16 +21,33 @@ pub(crate) const TAGS_FOLDER_FILE_CAP: usize = 2000;
 /// How many levels of subfolders below a given folder a Tags window looks into for audio files.
 pub(crate) const TAGS_FOLDER_DEPTH: usize = 8;
 
-/// [`super::open`] for a Tags window: the same files, but its media cache starts empty, so no EXIF or
-/// tag read is ever queued for it (the window reads tags itself, through `tag_editor`). A selected folder
-/// is opened into the audio files under it (subfolders included), named by their path below the
-/// listing's folder (`Book/Disc 1/01.mp3`); a plain file is taken as it is.
-pub(crate) fn open_for_tags(
+/// A Tags window's new session, and how much of the folders it couldn't see.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TagsOpened {
+    pub session_id: String,
+    /// How many names the session holds.
+    pub count: usize,
+    /// Places under the selected folders that couldn't be read (or named), so some tracks may be missing.
+    pub unreadable: u32,
+}
+
+/// What a Tags window was asked to open, read from the pane's listing and not yet walked.
+pub(crate) struct TagsPlan {
+    listing_id: String,
+    volume_id: String,
+    dir: PathBuf,
+    include_hidden: bool,
+    entries: Vec<FileEntry>,
+}
+
+/// The listing's side of [`open_for_tags`]: the selected entries and where they are. In memory, quick.
+pub(crate) fn plan_for_tags(
     listing_id: &str,
     include_hidden: bool,
     selected: Option<&[usize]>,
     expected_sequence: u64,
-) -> Result<MultiRenameOpened, MultiRenameError> {
+) -> Result<TagsPlan, MultiRenameError> {
     let listings = crate::listing_host::listings();
     let id = ListingId::new(listing_id);
     let gone = || MultiRenameError::Gone {
@@ -52,17 +72,81 @@ pub(crate) fn open_for_tags(
         .selection_entries(&id, include_hidden, &rows, expected_sequence)
         .map_err(lookup_error)?;
     let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
-    let reads_disk = || {
-        volume_id == crate::tag_editor::session::LOCAL_VOLUME_ID
-            || crate::tag_editor::session::volume_gives_local_paths(&volume_id)
-    };
-    let names = names_for_tags(&entries, &dir, include_hidden, reads_disk, &listings.collator())?;
-    Ok(insert_new(listing_id.to_string(), volume_id, dir, names.into(), &[]))
+    Ok(TagsPlan {
+        listing_id: listing_id.to_string(),
+        volume_id,
+        dir,
+        include_hidden,
+        entries,
+    })
 }
 
-/// The session names for the selected `entries` in `dir`, in selection order: a plain file by its name,
-/// a folder by the audio files under it (sorted by `collator` on their relative names). A file reached
-/// twice is named once. `reads_disk` says whether the folder's volume gives `std::fs` its files; it is
+impl TagsPlan {
+    /// Whether opening walks the disk (a folder is selected), which can take a while on a share.
+    pub(crate) fn has_folder(&self) -> bool {
+        self.entries.iter().any(|entry| entry.is_directory)
+    }
+
+    /// Walks the folders and stores the session. `cancel` set (the caller gave up waiting) stops the walk,
+    /// and a session stored in the same instant is closed again: an abandoned open leaves nothing behind.
+    pub(crate) fn open(self, cancel: &AtomicBool) -> Result<TagsOpened, MultiRenameError> {
+        let reads_disk = || {
+            self.volume_id == crate::tag_editor::session::LOCAL_VOLUME_ID
+                || crate::tag_editor::session::volume_gives_local_paths(&self.volume_id)
+        };
+        let collator = crate::listing_host::listings().collator();
+        let (names, unreadable) = names_for_tags(
+            &self.entries,
+            &self.dir,
+            self.include_hidden,
+            reads_disk,
+            &collator,
+            cancel,
+        )?;
+        let opened = insert_new(self.listing_id, self.volume_id, self.dir, names.into(), &[]);
+        if cancel.load(Ordering::Relaxed) {
+            super::close(&opened.session_id);
+            return Err(MultiRenameError::TimedOut);
+        }
+        Ok(TagsOpened {
+            session_id: opened.session_id,
+            count: opened.count,
+            unreadable,
+        })
+    }
+}
+
+/// [`super::open`] for a Tags window: the same files, but its media cache starts empty, so no EXIF or
+/// tag read is ever queued for it (the window reads tags itself, through `tag_editor`). A selected folder
+/// is opened into the audio files under it (subfolders included), named by their path below the
+/// listing's folder (`Book/Disc 1/01.mp3`); a plain file is taken as it is.
+#[cfg(test)]
+pub(crate) fn open_for_tags(
+    listing_id: &str,
+    include_hidden: bool,
+    selected: Option<&[usize]>,
+    expected_sequence: u64,
+) -> Result<TagsOpened, MultiRenameError> {
+    plan_for_tags(listing_id, include_hidden, selected, expected_sequence)?.open(&AtomicBool::new(false))
+}
+
+fn too_many() -> MultiRenameError {
+    MultiRenameError::TooManyTracks {
+        limit: u32::try_from(TAGS_FOLDER_FILE_CAP).unwrap_or(u32::MAX),
+    }
+}
+
+/// A track found under a folder: its session name, and the file it really is (a link's target).
+struct Found {
+    name: String,
+    real: PathBuf,
+    is_link: bool,
+}
+
+/// The session names for the selected `entries` in `dir`, in selection order, and how many places under
+/// the folders couldn't be read: a plain file by its name, a folder by the audio files under it (sorted
+/// by `collator` on their relative names). A file reached twice, by name or as a link to a file already
+/// taken, is named once. `reads_disk` says whether the folder's volume gives `std::fs` its files; it is
 /// asked only when a folder is selected.
 fn names_for_tags(
     entries: &[FileEntry],
@@ -70,13 +154,16 @@ fn names_for_tags(
     include_hidden: bool,
     reads_disk: impl FnOnce() -> bool,
     collator: &NameCollator,
-) -> Result<Vec<String>, MultiRenameError> {
+    cancel: &AtomicBool,
+) -> Result<(Vec<String>, u32), MultiRenameError> {
     if entries.iter().any(|entry| entry.is_directory) && !reads_disk() {
         return Err(MultiRenameError::FoldersNeedLocalDisk);
     }
     let mut seen: HashSet<String> = HashSet::new();
+    let mut real_files: HashSet<PathBuf> = HashSet::new();
     let mut names = Vec::with_capacity(entries.len());
     let mut walked = 0usize;
+    let mut unreadable = 0usize;
     for entry in entries {
         if !entry.is_directory {
             if seen.insert(entry.name.clone()) {
@@ -84,38 +171,57 @@ fn names_for_tags(
             }
             continue;
         }
-        let mut found = audio_files_under(dir, &entry.name, include_hidden)?;
-        found.sort_by(|a, b| collator.compare(a, b));
-        for name in found {
-            if !seen.insert(name.clone()) {
+        let (mut found, skipped) = audio_files_under(dir, &entry.name, include_hidden, cancel)?;
+        unreadable += skipped;
+        found.sort_by(|a, b| collator.compare(&a.name, &b.name));
+        // Real files first, so a link never shadows the file it points at.
+        real_files.extend(found.iter().filter(|f| !f.is_link).map(|f| f.real.clone()));
+        for file in found {
+            if file.is_link && !real_files.insert(file.real.clone()) {
+                continue;
+            }
+            if !seen.insert(file.name.clone()) {
                 continue;
             }
             walked += 1;
             if walked > TAGS_FOLDER_FILE_CAP {
-                return Err(MultiRenameError::TooManyTracks {
-                    limit: u32::try_from(TAGS_FOLDER_FILE_CAP).unwrap_or(u32::MAX),
-                });
+                return Err(too_many());
             }
-            names.push(name);
+            names.push(file.name);
         }
     }
-    Ok(names)
+    if unreadable > 0 {
+        log::debug!(target: "multi_rename::session_tags", "Tags window: places under a selected folder that couldn't be read or named: {unreadable}");
+    }
+    Ok((names, u32::try_from(unreadable).unwrap_or(u32::MAX)))
 }
 
-/// The audio files below `dir/folder` (to [`TAGS_FOLDER_DEPTH`] levels, symlinked folders not followed),
-/// named by their path below `dir`. Stops with `TooManyTracks` as soon as one folder alone is over the cap.
-fn audio_files_under(dir: &Path, folder: &str, include_hidden: bool) -> Result<Vec<String>, MultiRenameError> {
+/// The audio files below `dir/folder` (to [`TAGS_FOLDER_DEPTH`] levels, symlinked folders not followed,
+/// AppleDouble `._*` files never), and how many places couldn't be read or named. Stops with
+/// `TooManyTracks` as soon as one folder alone is over the cap, and with `TimedOut` once `cancel` is set.
+fn audio_files_under(
+    dir: &Path,
+    folder: &str,
+    include_hidden: bool,
+    cancel: &AtomicBool,
+) -> Result<(Vec<Found>, usize), MultiRenameError> {
+    // Where the files really are, so a link into the same folder is told from the file by its target.
+    let real_dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
     let walk = walkdir::WalkDir::new(dir.join(folder))
         .max_depth(TAGS_FOLDER_DEPTH + 1) // the files of the deepest folder sit one level lower
         .follow_links(false)
         .follow_root_links(false)
         .into_iter()
         .filter_entry(|entry| {
-            include_hidden || entry.depth() == 0 || !entry.file_name().to_string_lossy().starts_with('.')
+            let name = entry.file_name().to_string_lossy();
+            entry.depth() == 0 || (!name.starts_with("._") && (include_hidden || !name.starts_with('.')))
         });
     let mut found = Vec::new();
     let mut skipped = 0usize;
     for entry in walk {
+        if cancel.load(Ordering::Relaxed) {
+            return Err(MultiRenameError::TimedOut);
+        }
         let Ok(entry) = entry else {
             skipped += 1;
             continue;
@@ -124,26 +230,32 @@ fn audio_files_under(dir: &Path, folder: &str, include_hidden: bool) -> Result<V
             skipped += 1;
             continue;
         };
-        if entry.depth() == 0 || cmdr_tags::format_of(name).is_none() || !is_file(&entry) {
+        if entry.depth() == 0 || cmdr_tags::format_of(name).is_none() {
             continue;
         }
-        found.push(name.to_string());
+        let kind = entry.file_type();
+        let is_link = kind.is_symlink();
+        let real = if is_link {
+            // A link to a file is a track; to anything else, or to nothing, it is not.
+            match std::fs::canonicalize(entry.path()) {
+                Ok(real) if real.is_file() => real,
+                _ => continue,
+            }
+        } else if kind.is_file() {
+            real_dir.join(name)
+        } else {
+            continue;
+        };
+        found.push(Found {
+            name: name.to_string(),
+            real,
+            is_link,
+        });
         if found.len() > TAGS_FOLDER_FILE_CAP {
-            return Err(MultiRenameError::TooManyTracks {
-                limit: u32::try_from(TAGS_FOLDER_FILE_CAP).unwrap_or(u32::MAX),
-            });
+            return Err(too_many());
         }
     }
-    if skipped > 0 {
-        log::debug!(target: "multi_rename::session_tags", "Tags window: entries under a selected folder that couldn't be read or named: {skipped}");
-    }
-    Ok(found)
-}
-
-/// A file, or a symlink to one (a symlinked folder is never followed, but a linked track is a track).
-fn is_file(entry: &walkdir::DirEntry) -> bool {
-    let kind = entry.file_type();
-    kind.is_file() || (kind.is_symlink() && std::fs::metadata(entry.path()).is_ok_and(|meta| meta.is_file()))
+    Ok((found, skipped))
 }
 
 /// Holds a session a Tags window owns: `evict_to` passes it by (idle or not) until [`release`].
