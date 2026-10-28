@@ -15,9 +15,12 @@
 //! but a rename, move, or copy is unrepresentable rather than checked again downstream. The
 //! names themselves are checked by `names.rs`, on the placed group.
 
+use std::path::Path;
+use std::sync::Arc;
+
 use serde::Deserialize;
 
-use super::names::{check_transfer_names, plain_name};
+use super::names::{check_transfer_names, own_names, plain_name};
 use super::place::GroupPlacer;
 pub(super) use super::problem::GroupProblem;
 use super::problem::PlaceField;
@@ -25,6 +28,7 @@ use crate::agent::store::proposals::{GroupIntent, NewOp, NewRename, TransferOp, 
 use crate::agent::suggested_ops::OpSelector;
 use crate::agent::tools::read::expand_tilde;
 use crate::agent::types::ProposalVerb;
+use crate::file_system::volume::Volume;
 use crate::location::Location;
 use crate::location::resolve::{LocationInput, VolumeFacts};
 use crate::location::same_share::Via;
@@ -321,6 +325,44 @@ pub(super) fn plan_sweep(
         rationale: input.rationale,
         groups,
     })
+}
+
+/// Refuse the call when a hand-listed move or copy names two sources its route can't tell
+/// apart (`names::own_names`). Its own step after [`plan_sweep`], because which engine runs is
+/// the live volumes' to say, and the plan stays pure over its facts. A volume nobody
+/// registered is skipped: its group's start would refuse it as missing anyway.
+pub(super) fn check_own_names(
+    planned: &PlannedSweep,
+    volume_for: impl Fn(&str) -> Option<Arc<dyn Volume>>,
+) -> Result<(), PlanRefusal> {
+    for (index, group) in planned.groups.iter().enumerate() {
+        let (sources, source_volume_id, destination): (Vec<&Path>, _, _) = match &group.ops {
+            PlannedOps::Named { shape, ops, naming } => (
+                ops.iter().map(|op| Path::new(&op.source_path)).collect(),
+                &naming.source_volume_id,
+                shape.destination(),
+            ),
+            PlannedOps::Sources {
+                shape: SourceShape::Move { destination } | SourceShape::Copy { destination },
+                sources: PlannedSources::Paths { ops, naming },
+            } => (
+                ops.iter().map(|op| Path::new(&op.source_path)).collect(),
+                &naming.source_volume_id,
+                destination,
+            ),
+            // A selector's sources are resolved at the write, and nothing else transfers.
+            PlannedOps::Sources { .. } | PlannedOps::Rename { .. } => continue,
+        };
+        let (Some(source_volume), Some(dest_volume)) = (
+            volume_for(source_volume_id),
+            volume_for(&destination.location().volume_id),
+        ) else {
+            continue;
+        };
+        own_names(&sources, source_volume.as_ref(), dest_volume.as_ref())
+            .map_err(|problem| PlanRefusal::Group { group: index, problem })?;
+    }
+    Ok(())
 }
 
 fn plan_group(group: GroupInput, now: i64, facts: &VolumeFacts) -> Result<PlannedGroup, GroupProblem> {

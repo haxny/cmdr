@@ -83,6 +83,17 @@ pub(crate) fn on_local_root(src_root: &std::path::Path, source: &std::path::Path
     src_root.join(source)
 }
 
+/// Both volumes' local roots when a transfer between them runs on the native engines (both
+/// ends sit on a local path), else `None` for the cross-volume engine. The one fork the
+/// both-local facades, the routed start's leaf validation, and the ahead-of-start
+/// `TransferLeaves::check_own_names` share, so they can't disagree on which engine runs.
+pub(crate) fn native_roots(
+    source_volume: &dyn cmdr_fs::volume::Volume,
+    dest_volume: &dyn cmdr_fs::volume::Volume,
+) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
+    source_volume.local_path().zip(dest_volume.local_path())
+}
+
 // Driven directly by the SMB/MTP integration suites and the volume-journal
 // capture tests, which bypass the Tauri command layer.
 #[cfg(any(test, feature = "testing"))]

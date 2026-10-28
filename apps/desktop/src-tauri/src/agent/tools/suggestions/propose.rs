@@ -27,7 +27,7 @@ use tauri::{AppHandle, Manager, Runtime};
 
 use super::input::{
     ExplicitNaming, GroupProblem, MAX_GROUPS, MAX_PATHS, PlanRefusal, PlannedGroup, PlannedOps, PlannedSources,
-    PlannedSweep, plan_sweep,
+    PlannedSweep, check_own_names, plan_sweep,
 };
 use super::problem::PlaceField;
 use crate::agent::AgentDb;
@@ -156,11 +156,12 @@ pub(crate) async fn propose_in_thread<R: Runtime>(
         Ok(planned) => planned,
         Err(refusal) => return Ok(plan_refusal_content(&refusal)),
     };
+    let registered = |volume_id: &str| crate::file_system::volume::manager::get_volume_manager().get(volume_id);
+    if let Err(refusal) = check_own_names(&planned, registered) {
+        return Ok(plan_refusal_content(&refusal));
+    }
     // Off the database thread: it's volume I/O, bounded by its own deadline.
-    super::snapshot::freeze_named_sources(&mut planned, |volume_id| {
-        crate::file_system::volume::manager::get_volume_manager().get(volume_id)
-    })
-    .await;
+    super::snapshot::freeze_named_sources(&mut planned, registered).await;
     let db_path = app
         .try_state::<AgentDb>()
         .ok_or_else(|| ToolError::internal("Cmdr's suggestion store isn't open yet."))?
@@ -387,6 +388,13 @@ fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
             "That's a rename for the files already in that folder: split the group, renaming those with the rename \
              verb and moving the rest."
                 .into(),
+        ),
+        GroupProblem::SharedName { name, first, second } => (
+            "sharedName",
+            format!(
+                "{first} and {second} are both named {name}, and between these two drives each file lands under its \
+                 own name, so new names don't help. Send them in separate groups, to different folders."
+            ),
         ),
         GroupProblem::ImpossibleWindow => (
             "impossibleWindow",

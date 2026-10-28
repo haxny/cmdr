@@ -10,8 +10,10 @@ use std::path::{Path, PathBuf};
 
 use cmdr_fs::name_fold::fold_name;
 
+use super::transfer::volume::native_roots;
 use super::types::{NamedLeavesRefusal, TransferLeaves, WriteOperationError};
-use super::validation::validate_path_length;
+use super::validation::{first_shared_name, validate_path_length};
+use cmdr_fs::volume::Volume;
 
 /// How the start may tell whether two paths are one item: by name alone, or
 /// also by `dev+ino` when every path is on this machine's disk and can be
@@ -102,6 +104,12 @@ fn validate_per_source_leaves(
         LandingClash::SameName { landing } => refused(&landing, NamedLeavesRefusal::SameName),
         LandingClash::OntoASource { landing } => refused(&landing, NamedLeavesRefusal::OntoASource),
         LandingClash::AlreadyInDestination { source } => refused(&source, NamedLeavesRefusal::AlreadyInDestination),
+        // `landing_clash` never answers this one; it's the start's own refusal.
+        LandingClash::SharedOwnName { name, first, second } => WriteOperationError::DuplicateSourceNames {
+            name,
+            first: first.display().to_string(),
+            second: second.display().to_string(),
+        },
     })?;
     for source in sources {
         let Some(leaf) = names.get(source) else { continue };
@@ -137,6 +145,17 @@ pub enum LandingClash {
         /// That item.
         source: PathBuf,
     },
+    /// Two items share an ORIGINAL name (byte-exact) on a route that keys each
+    /// landing on it, whatever names were chosen for them. Only
+    /// [`TransferLeaves::check_own_names`] answers this.
+    SharedOwnName {
+        /// The name they share.
+        name: String,
+        /// The first item carrying it.
+        first: PathBuf,
+        /// The second one.
+        second: PathBuf,
+    },
 }
 
 impl TransferLeaves {
@@ -148,6 +167,32 @@ impl TransferLeaves {
     /// it can stat. `transfer/DETAILS.md` § "Named destinations".
     pub fn check_landings(items: &[(&Path, Option<&str>)], destination: &Path) -> Result<(), LandingClash> {
         landing_clash(items, destination, LeafIdentity::Names)
+    }
+
+    /// The ORIGINAL-name rule a transfer's start enforces on its route, for a
+    /// caller that checks a batch ahead of starting it (an AI proposal). Where
+    /// both ends sit on a local path the native engines run, and they key every
+    /// subtree on `<destination>/<own name>`, so two sources sharing a name
+    /// (byte-exact) refuse there whatever names were chosen for them. The
+    /// cross-volume engine keys each landing on the source path, so this passes
+    /// there and [`Self::check_landings`] speaks for the chosen names.
+    /// `transfer/DETAILS.md` § "Named destinations".
+    pub fn check_own_names(
+        sources: &[&Path],
+        source_volume: &dyn Volume,
+        dest_volume: &dyn Volume,
+    ) -> Result<(), LandingClash> {
+        if native_roots(source_volume, dest_volume).is_none() {
+            return Ok(());
+        }
+        match first_shared_name(sources.iter().copied()) {
+            Some((name, first, second)) => Err(LandingClash::SharedOwnName {
+                name: name.to_string_lossy().into_owned(),
+                first: first.to_path_buf(),
+                second: second.to_path_buf(),
+            }),
+            None => Ok(()),
+        }
     }
 }
 

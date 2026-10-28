@@ -16,6 +16,7 @@ use cmdr_operations::{LandingClash, TransferLeaves};
 
 use super::problem::{GroupProblem, NameRule, PHONE_NAME_UNITS};
 use crate::agent::store::proposals::TransferOp;
+use crate::file_system::volume::Volume;
 use crate::mcp::resources::volumes::VolumeKind;
 
 /// The characters Android's shared storage refuses in a name, FAT's reserved set.
@@ -53,14 +54,7 @@ pub(super) fn check_transfer_names(
         .iter()
         .map(|op| (Path::new(&op.source_path), op.new_name.as_deref()))
         .collect();
-    TransferLeaves::check_landings(&items, Path::new(destination)).map_err(|clash| match clash {
-        LandingClash::NotPlain { leaf, refusal } => not_a_bare_name(&leaf, NameRule::Plain(refusal)),
-        LandingClash::SameName { landing } => GroupProblem::DuplicateLeaf { name: leaf(&landing) },
-        LandingClash::OntoASource { landing } => GroupProblem::ChainOverwrite {
-            path: landing.display().to_string(),
-        },
-        LandingClash::AlreadyInDestination { .. } => GroupProblem::UseRename,
-    })?;
+    TransferLeaves::check_landings(&items, Path::new(destination)).map_err(problem_of)?;
 
     if matches!(destination_kind, Some(VolumeKind::Mtp | VolumeKind::Adb)) {
         for name in ops.iter().filter_map(|op| op.new_name.as_deref()) {
@@ -68,6 +62,34 @@ pub(super) fn check_transfer_names(
         }
     }
     Ok(())
+}
+
+/// Refuse a move's or copy's `sources` when its route can't tell two of them apart: the
+/// engine's own ahead-of-start answer (`TransferLeaves::check_own_names`), on the live source
+/// and destination volumes, since which engine runs is theirs to say.
+pub(super) fn own_names(
+    sources: &[&Path],
+    source_volume: &dyn Volume,
+    dest_volume: &dyn Volume,
+) -> Result<(), GroupProblem> {
+    TransferLeaves::check_own_names(sources, source_volume, dest_volume).map_err(problem_of)
+}
+
+/// The engine's landing clash in the proposal's refusal vocabulary.
+fn problem_of(clash: LandingClash) -> GroupProblem {
+    match clash {
+        LandingClash::SharedOwnName { name, first, second } => GroupProblem::SharedName {
+            name,
+            first: first.display().to_string(),
+            second: second.display().to_string(),
+        },
+        LandingClash::NotPlain { leaf, refusal } => not_a_bare_name(&leaf, NameRule::Plain(refusal)),
+        LandingClash::SameName { landing } => GroupProblem::DuplicateLeaf { name: leaf(&landing) },
+        LandingClash::OntoASource { landing } => GroupProblem::ChainOverwrite {
+            path: landing.display().to_string(),
+        },
+        LandingClash::AlreadyInDestination { .. } => GroupProblem::UseRename,
+    }
 }
 
 /// What a phone takes in a name beyond a plain leaf. Proposal-time only: nothing below

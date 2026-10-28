@@ -40,7 +40,23 @@ pub(crate) fn validate_sources(sources: &[PathBuf]) -> Result<(), WriteOperation
 /// (`leaf_validation::validate_transfer_leaves`); this check still runs under them, because
 /// the native engines key their subtree remap on `<destination>/<own name>`.
 pub(crate) fn validate_source_names_are_distinct(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
-    let mut seen: HashMap<&std::ffi::OsStr, &PathBuf> = HashMap::with_capacity(sources.len());
+    match first_shared_name(sources.iter().map(PathBuf::as_path)) {
+        Some((name, first, second)) => Err(WriteOperationError::DuplicateSourceNames {
+            name: name.to_string_lossy().into_owned(),
+            first: first.display().to_string(),
+            second: second.display().to_string(),
+        }),
+        None => Ok(()),
+    }
+}
+
+/// The first two of `sources` sharing a byte-exact name, the rule
+/// [`validate_source_names_are_distinct`] refuses on, and what
+/// `TransferLeaves::check_own_names` asks ahead of a start.
+pub(crate) fn first_shared_name<'a>(
+    sources: impl IntoIterator<Item = &'a Path>,
+) -> Option<(&'a std::ffi::OsStr, &'a Path, &'a Path)> {
+    let mut seen: HashMap<&std::ffi::OsStr, &Path> = HashMap::new();
     for source in sources {
         // A path with no final component (`/`, a trailing `..`) can't be a
         // selected item; the existence check above already spoke for it.
@@ -48,14 +64,10 @@ pub(crate) fn validate_source_names_are_distinct(sources: &[PathBuf]) -> Result<
             continue;
         };
         if let Some(first) = seen.insert(name, source) {
-            return Err(WriteOperationError::DuplicateSourceNames {
-                name: name.to_string_lossy().into_owned(),
-                first: first.display().to_string(),
-                second: source.display().to_string(),
-            });
+            return Some((name, first, source));
         }
     }
-    Ok(())
+    None
 }
 
 /// Ensures the destination exists as a directory, creating it (and any missing

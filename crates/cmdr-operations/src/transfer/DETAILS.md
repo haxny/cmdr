@@ -617,7 +617,10 @@ only in Rust). The destination argument remains its parent directory. On the wir
   - Two sources sharing an ORIGINAL name still refuse byte-exact on the native engines, in the started operation
     (`validate_source_names_are_distinct`), map or not: they key their subtree remap on `<destination>/<own name>`, so
     two such sources can't be told apart there. The volume engines key every landing on the source PATH, so there two
-    such sources named apart land apart.
+    such sources named apart land apart. A caller checking ahead asks the public `TransferLeaves::check_own_names`
+    (`LandingClash::SharedOwnName`, folded into the one public clash type rather than a new root promise) with the two
+    volumes: it takes the same fork the facades do (`transfer::volume::native_roots`, both ends on a local path) and the
+    same rule (`validation::first_shared_name`).
 
 Native Copy seeds the shared `named_destination::initial_remap` before its identity check. The per-file loop and
 empty-directory pass use that map, so staging, journal entries, durability, and rollback refer to the requested paths.

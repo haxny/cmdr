@@ -114,6 +114,13 @@ renamed invoices are one approval, one queue row, and one undo, which puts every
   any source already in the destination is `useRename` ("split the group"), because the same-volume move's identity
   guard drops a case-only name there and the rename verb is the one that works. The engine adds `dev+ino` where it can
   stat; the proposal can't, so the folded comparison is its check.
+- **Two sources sharing an ORIGINAL name** (`paths` or `renames`) are the route's question, asked after the plan by
+  `input::check_own_names` through `cmdr_operations::TransferLeaves::check_own_names` on the live source and destination
+  volumes (`names::own_names`): where both ends sit on a local path the native engines run, key each subtree on
+  `<destination>/<own name>`, and refuse the pair at the start, named apart or not. So the proposal refuses the whole
+  call as `sharedName` ("separate groups, different folders"); a route whose engine keys landings on the source path
+  takes them. A separate step because the engine is the live volumes' to say and `plan_sweep` stays pure over its
+  facts. A selector's sources resolve at the write, so a selector group isn't asked.
 - **A phone's names**: onto an MTP or ADB destination a name is also at most 254 UTF-16 code units and holds none of
   FAT's reserved `" * : < > ? \ |`. Proposal-time only: nothing below refuses them first (`crates/cmdr-mtp/DETAILS.md` §
   Names a phone takes).

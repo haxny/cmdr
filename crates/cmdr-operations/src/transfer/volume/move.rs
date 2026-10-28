@@ -93,7 +93,7 @@ impl crate::Operations {
         }
 
         // Both local: delegate to the battle-tested move implementation
-        if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
+        if let Some((src_root, dest_root)) = super::native_roots(source_volume.as_ref(), dest_volume.as_ref()) {
             log::debug!(
                 "move_between_volumes: both volumes are local, delegating to native move (src={}, dest={})",
                 LogPrivate::dir_path(&src_root),

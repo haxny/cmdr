@@ -167,6 +167,58 @@ fn two_files_landing_as_one_name_refuse_even_by_case_or_unicode_form() {
     }
 }
 
+/// Two files sharing an original name pass the shape checks, then refuse at the start of a
+/// route that keys each landing on a file's own name (both ends on a local path), named apart
+/// or not. The proposal asks the engine's own rule and refuses the whole call there; a route
+/// that keys landings on the source path takes them.
+#[test]
+fn two_files_sharing_a_name_refuse_where_the_route_cant_tell_them_apart() {
+    use std::sync::Arc;
+
+    use crate::agent::tools::suggestions::input::check_own_names;
+    use crate::file_system::volume::{InMemoryVolume, Volume};
+
+    let disk: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
+        "Root",
+        "/",
+        crate::volume_host::host(),
+    ));
+    let remote: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Remote"));
+    let (first, second) = (format!("{DOWNLOADS}/a/report.pdf"), format!("{DOWNLOADS}/b/report.pdf"));
+    let paths_call = |verb: &str| {
+        json!({ "groups": [{
+            "verb": verb,
+            "sourceVolumeId": "root",
+            "displayName": "Reports",
+            "destination": { "volumeId": "root", "path": INVOICES },
+            "paths": [first, second],
+        }] })
+    };
+    for verb in ["move", "copy"] {
+        let named = named_call(verb, &[("a/report.pdf", "one.pdf"), ("b/report.pdf", "two.pdf")]);
+        for call in [paths_call(verb), named] {
+            let planned = plan_sweep(&call, NOW, &local_facts()).expect("the shape is valid");
+            assert_eq!(
+                check_own_names(&planned, |_| Some(Arc::clone(&disk))),
+                Err(PlanRefusal::Group {
+                    group: 0,
+                    problem: GroupProblem::SharedName {
+                        name: "report.pdf".to_string(),
+                        first: first.clone(),
+                        second: second.clone(),
+                    },
+                }),
+                "{verb} {call}"
+            );
+            assert_eq!(
+                check_own_names(&planned, |_| Some(Arc::clone(&remote))),
+                Ok(()),
+                "{verb} {call}"
+            );
+        }
+    }
+}
+
 #[test]
 fn a_file_never_lands_on_another_source_of_its_group() {
     // `a` lands as `Old`, which is another source of the group, compared ignoring case. A

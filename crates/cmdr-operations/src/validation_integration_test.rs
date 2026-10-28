@@ -179,6 +179,40 @@ fn sources_differing_only_in_case_are_allowed() {
     assert!(validate_source_names_are_distinct(&[first, second]).is_ok());
 }
 
+/// A caller checking a batch ahead of its start (an AI proposal) gets the same answer the
+/// start gives: two sources sharing an original name refuse where both ends are local (the
+/// native engines key landings on `<destination>/<own name>`), and pass where a volume
+/// engine keys every landing on the source path.
+#[test]
+fn a_both_local_route_refuses_sources_sharing_a_name_ahead_of_its_start() {
+    use cmdr_fs::volume::{InMemoryVolume, Volume};
+    use cmdr_local::LocalPosixVolume;
+
+    let temp_dir = create_temp_dir("own_names_ahead");
+    let local = |name: &str| LocalPosixVolume::local_folder(name, &*temp_dir, host::testing::pane_order_host());
+    let (disk, other) = (local("Disk"), local("Other"));
+    let remote = InMemoryVolume::new("Remote");
+    let shared = [Path::new("/a/invoices"), Path::new("/b/invoices")];
+
+    assert_eq!(
+        TransferLeaves::check_own_names(&shared, &disk, &other),
+        Err(LandingClash::SharedOwnName {
+            name: "invoices".into(),
+            first: PathBuf::from("/a/invoices"),
+            second: PathBuf::from("/b/invoices"),
+        })
+    );
+    assert_eq!(
+        TransferLeaves::check_own_names(&shared, &disk, &remote as &dyn Volume),
+        Ok(())
+    );
+    assert_eq!(
+        TransferLeaves::check_own_names(&[Path::new("/a/invoices"), Path::new("/b/Invoices")], &disk, &other),
+        Ok(()),
+        "byte-exact, as the start compares"
+    );
+}
+
 /// The ordinary selection passes untouched.
 #[test]
 fn distinct_source_names_are_allowed() {

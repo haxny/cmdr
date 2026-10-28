@@ -71,6 +71,13 @@ pub(super) enum GroupProblem {
     /// A move or copy with names whose destination already holds one of its sources: that's a
     /// rename for those files.
     UseRename,
+    /// Two sources of a move or copy share an original name on a route that keys each landing
+    /// on it (both ends local), so its start would refuse them, named apart or not.
+    SharedName {
+        name: String,
+        first: String,
+        second: String,
+    },
     /// A size or age window nothing can satisfy.
     ImpossibleWindow,
     /// A place the resolver couldn't put on a live volume, nor re-address onto a live sibling.

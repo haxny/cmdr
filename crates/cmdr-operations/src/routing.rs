@@ -28,7 +28,7 @@ use super::leaf_validation::{LeafIdentity, refuse_per_source_leaves_here, valida
 use super::routed_writes::{first_routed, routed_transfer_refusal};
 use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
-use super::transfer::volume::{PathRole, on_local_root, unregistered_volume_error};
+use super::transfer::volume::{PathRole, native_roots, on_local_root, unregistered_volume_error};
 use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::Volume;
@@ -83,7 +83,7 @@ fn validate_leaves_for_route(
     dest_path: &Path,
     into_zip: bool,
 ) -> Result<(), WriteOperationError> {
-    let local_roots = source_volume.local_path().zip(dest_volume.local_path());
+    let local_roots = native_roots(source_volume.as_ref(), dest_volume.as_ref());
     let (Some((src_root, dest_root)), false) = (local_roots, into_zip) else {
         return validate_transfer_leaves(leaves, source_paths, dest_path, LeafIdentity::Names);
     };
