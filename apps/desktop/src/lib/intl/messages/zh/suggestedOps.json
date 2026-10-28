@@ -83,11 +83,11 @@
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Add server",
+  "suggestedOps.approve.addServer": "添加服务器",
   "@suggestedOps.approve.addServer": {
     "sourceHash": "1099b2a"
   },
-  "suggestedOps.approve.editServer": "Save changes",
+  "suggestedOps.approve.editServer": "保存更改",
   "@suggestedOps.approve.editServer": {
     "sourceHash": "dd0ae7a"
   },
@@ -163,11 +163,11 @@
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "You can forget it later in Servers",
+  "suggestedOps.reversible.forgetServer": "之后可以在“服务器”中忘记它",
   "@suggestedOps.reversible.forgetServer": {
     "sourceHash": "c94623d"
   },
-  "suggestedOps.reversible.changeServerBack": "Change it back in Servers",
+  "suggestedOps.reversible.changeServerBack": "可以在“服务器”中改回来",
   "@suggestedOps.reversible.changeServerBack": {
     "sourceHash": "1a68195"
   },
@@ -327,75 +327,75 @@
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "5b5b779"
   },
-  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "suggestedOps.refusal.serverLabel": "没有保存的原因",
   "@suggestedOps.refusal.serverLabel": {
     "sourceHash": "c1958af"
   },
-  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "suggestedOps.refusal.serverChanged.message": "AI 提出这条建议后，这台服务器有了改动，所以 Cmdr 什么都没保存。",
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Ask the AI to suggest it again, or edit the server in Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "请让 AI 再建议一次，或者在“服务器”中编辑这台服务器。",
   "@suggestedOps.refusal.serverChanged.suggestion": {
     "sourceHash": "c83a215"
   },
-  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "suggestedOps.refusal.alreadySaved.message": "这台服务器已经在你的“服务器”列表里了，所以 Cmdr 什么都没保存。",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask the AI to suggest a change to it instead.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "请从“服务器”中打开它，或者让 AI 改为建议更改这台服务器。",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
     "sourceHash": "eda1133"
   },
-  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "suggestedOps.refusal.nameTaken.message": "另一台保存的服务器已经叫 {name} 了，所以 Cmdr 什么都没保存。",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Ask the AI to suggest another name.",
+  "suggestedOps.refusal.nameTaken.suggestion": "请让 AI 建议另一个名称。",
   "@suggestedOps.refusal.nameTaken.suggestion": {
     "sourceHash": "c059ee2"
   },
-  "suggestedOps.server.add": "Add a server",
+  "suggestedOps.server.add": "添加服务器",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Change a server",
+  "suggestedOps.server.change": "更改服务器",
   "@suggestedOps.server.change": {
     "sourceHash": "7c07b82"
   },
-  "suggestedOps.server.field.port": "Port",
+  "suggestedOps.server.field.port": "端口",
   "@suggestedOps.server.field.port": {
     "sourceHash": "72e9a59"
   },
-  "suggestedOps.server.field.account": "Account",
+  "suggestedOps.server.field.account": "账户",
   "@suggestedOps.server.field.account": {
     "sourceHash": "7e1b0d5"
   },
-  "suggestedOps.server.field.share": "Share",
+  "suggestedOps.server.field.share": "共享文件夹",
   "@suggestedOps.server.field.share": {
     "sourceHash": "29887a5"
   },
-  "suggestedOps.server.field.bucket": "Bucket",
+  "suggestedOps.server.field.bucket": "存储桶",
   "@suggestedOps.server.field.bucket": {
     "sourceHash": "c83b657"
   },
-  "suggestedOps.server.notSet": "Not set",
+  "suggestedOps.server.notSet": "未设置",
   "@suggestedOps.server.notSet": {
     "sourceHash": "4895f73"
   },
-  "suggestedOps.server.changesTo": "changes to",
+  "suggestedOps.server.changesTo": "更改为",
   "@suggestedOps.server.changesTo": {
     "sourceHash": "8c0db20"
   },
-  "suggestedOps.server.newAddress": "A new address",
+  "suggestedOps.server.newAddress": "新地址",
   "@suggestedOps.server.newAddress": {
     "sourceHash": "5fc5498"
   },
-  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "suggestedOps.server.newAddressTooltip": "你保存的服务器都不在这个地址。请确认这就是你要的那一台。",
   "@suggestedOps.server.newAddressTooltip": {
     "sourceHash": "16d851c"
   },
-  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "suggestedOps.server.sharesAffected": "这项更改会影响这台服务器上已保存的 {countText} 个{count, plural, other {共享}}。",
   "@suggestedOps.server.sharesAffected": {
     "sourceHash": "390f931"
   },

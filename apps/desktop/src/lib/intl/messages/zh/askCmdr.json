@@ -168,11 +168,11 @@
   "@askCmdr.tool.proposeSuggestions.done": {
     "sourceHash": "42457d2"
   },
-  "askCmdr.tool.proposeServer.doing": "Preparing a server suggestion",
+  "askCmdr.tool.proposeServer.doing": "正在准备服务器建议",
   "@askCmdr.tool.proposeServer.doing": {
     "sourceHash": "cf8e5f0"
   },
-  "askCmdr.tool.proposeServer.done": "Prepared a server suggestion",
+  "askCmdr.tool.proposeServer.done": "已准备好服务器建议",
   "@askCmdr.tool.proposeServer.done": {
     "sourceHash": "b075032"
   },
@@ -200,15 +200,15 @@
   "@askCmdr.tool.memoryEdit.done": {
     "sourceHash": "5fdfbdc"
   },
-  "askCmdr.tool.connectVolume.doing": "Connecting to your server",
+  "askCmdr.tool.connectVolume.doing": "正在连接到你的服务器",
   "@askCmdr.tool.connectVolume.doing": {
     "sourceHash": "5f24f83"
   },
-  "askCmdr.tool.connectVolume.done": "Connected to your server",
+  "askCmdr.tool.connectVolume.done": "已连接到你的服务器",
   "@askCmdr.tool.connectVolume.done": {
     "sourceHash": "8f89103"
   },
-  "askCmdr.tool.connectVolume.tried": "Tried connecting to your server",
+  "askCmdr.tool.connectVolume.tried": "尝试连接到你的服务器",
   "@askCmdr.tool.connectVolume.tried": {
     "sourceHash": "b6d7bcf"
   },
@@ -416,75 +416,75 @@
   "@askCmdr.tool.outcome.problem": {
     "sourceHash": "05a940f"
   },
-  "askCmdr.tool.outcome.miss.unknownVolume": "no drive by that name",
+  "askCmdr.tool.outcome.miss.unknownVolume": "没有叫这个名字的驱动器",
   "@askCmdr.tool.outcome.miss.unknownVolume": {
     "sourceHash": "94aa69b"
   },
-  "askCmdr.tool.outcome.miss.pathOutsideVolume": "that’s not on the drive it named",
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "这不在它说的那个驱动器上",
   "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
     "sourceHash": "1602f88"
   },
-  "askCmdr.tool.outcome.miss.noVolumeAtPath": "no drive is connected there",
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "那里没有连接驱动器",
   "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
     "sourceHash": "8ce9e0e"
   },
-  "askCmdr.tool.outcome.miss.volumeNotConnected": "that drive isn’t connected",
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "那个驱动器没有连接",
   "@askCmdr.tool.outcome.miss.volumeNotConnected": {
     "sourceHash": "d7b4614"
   },
-  "askCmdr.tool.outcome.miss.needsDiskAccess": "needs Full Disk Access",
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "需要完全磁盘访问权限",
   "@askCmdr.tool.outcome.miss.needsDiskAccess": {
     "sourceHash": "a0a6a84"
   },
-  "askCmdr.tool.outcome.miss.unreachable": "the drive didn’t answer",
+  "askCmdr.tool.outcome.miss.unreachable": "驱动器没有响应",
   "@askCmdr.tool.outcome.miss.unreachable": {
     "sourceHash": "fe3a69d"
   },
-  "askCmdr.tool.outcome.miss.notFound": "not there",
+  "askCmdr.tool.outcome.miss.notFound": "不存在",
   "@askCmdr.tool.outcome.miss.notFound": {
     "sourceHash": "56ee722"
   },
-  "askCmdr.tool.outcome.miss.excluded": "a system folder it skips",
+  "askCmdr.tool.outcome.miss.excluded": "它会跳过的系统文件夹",
   "@askCmdr.tool.outcome.miss.excluded": {
     "sourceHash": "67caa4d"
   },
-  "askCmdr.tool.outcome.miss.permissionDenied": "no permission to look",
+  "askCmdr.tool.outcome.miss.permissionDenied": "没有权限查看",
   "@askCmdr.tool.outcome.miss.permissionDenied": {
     "sourceHash": "75756a9"
   },
-  "askCmdr.tool.outcome.miss.cancelled": "stopped while reading",
+  "askCmdr.tool.outcome.miss.cancelled": "读取时已停止",
   "@askCmdr.tool.outcome.miss.cancelled": {
     "sourceHash": "4389728"
   },
-  "askCmdr.tool.outcome.connection.alreadyConnected": "it was already connected",
+  "askCmdr.tool.outcome.connection.alreadyConnected": "之前就已连接",
   "@askCmdr.tool.outcome.connection.alreadyConnected": {
     "sourceHash": "72f41d9"
   },
-  "askCmdr.tool.outcome.connection.stillReconnecting": "still reconnecting",
+  "askCmdr.tool.outcome.connection.stillReconnecting": "还在重新连接",
   "@askCmdr.tool.outcome.connection.stillReconnecting": {
     "sourceHash": "078929e"
   },
-  "askCmdr.tool.outcome.connection.needsCredentials": "needs you to sign in",
+  "askCmdr.tool.outcome.connection.needsCredentials": "需要你登录",
   "@askCmdr.tool.outcome.connection.needsCredentials": {
     "sourceHash": "1833a39"
   },
-  "askCmdr.tool.outcome.connection.needsApproval": "needs your approval",
+  "askCmdr.tool.outcome.connection.needsApproval": "需要你批准",
   "@askCmdr.tool.outcome.connection.needsApproval": {
     "sourceHash": "80288d6"
   },
-  "askCmdr.tool.outcome.connection.rejected": "the server said no",
+  "askCmdr.tool.outcome.connection.rejected": "服务器拒绝了连接",
   "@askCmdr.tool.outcome.connection.rejected": {
     "sourceHash": "53878fc"
   },
-  "askCmdr.tool.outcome.connection.unreachable": "the server didn’t answer",
+  "askCmdr.tool.outcome.connection.unreachable": "服务器没有响应",
   "@askCmdr.tool.outcome.connection.unreachable": {
     "sourceHash": "3089e21"
   },
-  "askCmdr.tool.outcome.connection.notSaved": "not a saved server",
+  "askCmdr.tool.outcome.connection.notSaved": "不是保存过的服务器",
   "@askCmdr.tool.outcome.connection.notSaved": {
     "sourceHash": "1ac6950"
   },
-  "askCmdr.tool.outcome.connection.cancelled": "stopped while connecting",
+  "askCmdr.tool.outcome.connection.cancelled": "连接时已停止",
   "@askCmdr.tool.outcome.connection.cancelled": {
     "sourceHash": "2934c58"
   },
@@ -592,7 +592,7 @@
   "@askCmdr.tool.preview.status.unsupportedVolume": {
     "sourceHash": "945bf7c"
   },
-  "askCmdr.tool.preview.status.noVolumeAtPath": "on a drive that isn’t connected",
+  "askCmdr.tool.preview.status.noVolumeAtPath": "在没有连接的驱动器上",
   "@askCmdr.tool.preview.status.noVolumeAtPath": {
     "sourceHash": "3b32abe"
   },
@@ -1284,27 +1284,27 @@
   "@askCmdr.decision.verbExtract": {
     "sourceHash": "c924f71"
   },
-  "askCmdr.decision.serverRejected": "You turned down {verbName}",
+  "askCmdr.decision.serverRejected": "你拒绝了{verbName}",
   "@askCmdr.decision.serverRejected": {
     "sourceHash": "b9797ee"
   },
-  "askCmdr.decision.serverApproved": "You approved {verbName}",
+  "askCmdr.decision.serverApproved": "你批准了{verbName}",
   "@askCmdr.decision.serverApproved": {
     "sourceHash": "5ed18c2"
   },
-  "askCmdr.decision.verbAddServer": "adding a server",
+  "askCmdr.decision.verbAddServer": "添加服务器",
   "@askCmdr.decision.verbAddServer": {
     "sourceHash": "0304bc5"
   },
-  "askCmdr.decision.verbEditServer": "changing a server",
+  "askCmdr.decision.verbEditServer": "更改服务器",
   "@askCmdr.decision.verbEditServer": {
     "sourceHash": "0067d9a"
   },
-  "askCmdr.decision.saved": "Saved",
+  "askCmdr.decision.saved": "已保存",
   "@askCmdr.decision.saved": {
     "sourceHash": "b5c120b"
   },
-  "askCmdr.decision.savedNotShare": "Saved the server, not its share",
+  "askCmdr.decision.savedNotShare": "已保存服务器，但没有保存它的共享",
   "@askCmdr.decision.savedNotShare": {
     "sourceHash": "e93a7bc"
   },
