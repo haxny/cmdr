@@ -14,6 +14,7 @@ use super::{
     normalize_mtp_path, twins,
 };
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::indexing::WatchGap;
@@ -813,10 +814,10 @@ impl MtpConnectionManager {
     /// from them, with handles the device may no longer know.
     pub(super) async fn invalidate_listing_subtree(&self, device_id: &str, storage_id: u32, old_path: &Path) {
         let devices = self.devices.lock().await;
-        if let Some(entry) = devices.get(device_id)
-            && let Ok(mut cache_map) = entry.listing_cache.write()
-            && let Some(storage_cache) = cache_map.get_mut(&storage_id)
-        {
+        let Some(entry) = devices.get(device_id) else { return };
+        // Recover a poisoned cache rather than skip: skipping is exactly the stale
+        // answer this exists to prevent.
+        if let Some(storage_cache) = entry.listing_cache.write_ignore_poison().get_mut(&storage_id) {
             storage_cache.listings.retain(|dir, _| !dir.starts_with(old_path));
         }
     }
