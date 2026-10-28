@@ -53,8 +53,8 @@ pub use memory_notes::memory_notes_for_turn;
 /// `DETAILS.md` § Constants table.
 pub const BACKGROUND_MAX_TOOL_TURNS: usize = 25;
 
-/// The loop guard's repeat half: a tool call identical to two earlier ones of the same turn
-/// (its third sending) wraps the turn up. Why 3: `DETAILS.md` § Constants table.
+/// The loop guard's repeat half: a tool call sent in this many rounds of one turn wraps the turn
+/// up (copies within one round count once). Why 3: `DETAILS.md` § Constants table.
 pub const LOOP_GUARD_REPEATS: usize = 3;
 
 /// The loop guard's progress half: this many rounds in a row that found nothing new (every

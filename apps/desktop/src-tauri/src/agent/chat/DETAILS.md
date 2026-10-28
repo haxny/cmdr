@@ -230,10 +230,13 @@ turn runs on an approval today; the `Outcomes` follow-up a rejection opens runs 
   needs 15–20. Spend: a round re-sends the prompt, which grows by what the round read (each result capped at
   `MAX_TOOL_RESULT_TOKENS`), so 25 rounds of a turn like 689's (~11k prompt, ~3k growth per round) re-send roughly
   1.2M prompt tokens, mostly prompt-cache reads. A wake's daily ceiling (`../wake/DETAILS.md`) bounds the rest.
-- `LOOP_GUARD_REPEATS = 3` — a call identical to two earlier ones of the turn (`AgentToolCall::identity_key`, the
-  rail's "Same as above" key) wraps up, success or not. Why 3: one repeat is normal (a model re-reads after losing
-  track), and the repeat breaker already refuses the second sending of a FAILED call, so the third is a model that
-  ignored that. It replaces the breaker's old "end the turn failed" step: the user gets an answer from what was found.
+- `LOOP_GUARD_REPEATS = 3` — a call (`AgentToolCall::identity_key`, the rail's "Same as above" key) sent in a third
+  round of the turn wraps up, success or not. Sendings count per ROUND: the same call twice in one round is one,
+  since a model can't have ignored a result it hasn't seen yet (regression anchor: the E2E fake's `[tools]` script
+  sends `list_volumes` once, then twice in its next round, and per-call counting cut it off before its answer). Why
+  3: one repeat is normal (a model re-reads after losing track), and the repeat breaker already refuses the second
+  sending of a FAILED call, so the third is a model that ignored that. It replaces the breaker's old "end the turn
+  failed" step: the user gets an answer from what was found.
 - `LOOP_GUARD_STALE_ROUNDS = 3` — three rounds in a row that found nothing new wrap up. "New" is structural: some call
   went out for the first time this turn AND came back without a problem (`dispatch_ok`). Never judged by content: a
   run of empty folders is a run of different calls, so it is progress (`many_different_successful_calls_never_trip_the_guard`).

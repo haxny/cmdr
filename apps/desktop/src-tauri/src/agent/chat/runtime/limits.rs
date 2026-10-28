@@ -15,18 +15,24 @@ use crate::agent::store::{TurnLimit, TurnLimitKind};
 
 /// The loop guard: whether a turn is going in circles. Structural, never a judgement of content:
 /// a call repeats when its identity (`AgentToolCall::identity_key`, the repeat breaker's and the
-/// rail's "Same as above" key) was already sent this turn, and a round found something new when
-/// any call in it went out for the first time and came back without a problem.
+/// rail's "Same as above" key) was already sent in an EARLIER round of this turn, and a round found
+/// something new when any call in it went out for the first time and came back without a problem.
+///
+/// Sendings count per round: the same call twice in one round is one, since a model can't have
+/// ignored a result it hasn't seen yet.
 #[derive(Default)]
 pub(super) struct LoopGuard {
-    sent: HashMap<String, usize>,
+    /// Per call identity: how many rounds sent it, and the last round that did.
+    sent: HashMap<String, (usize, usize)>,
+    /// The round being dispatched, counted from 0; [`Self::judge_round`] moves it on.
+    round: usize,
     stale_rounds: usize,
 }
 
 /// What one round did, as the loop guard reads it.
 #[derive(Default)]
 pub(super) struct RoundJudgement {
-    /// The most times any one call of the round has now been sent this turn.
+    /// The most rounds any one call of this round has now been sent in.
     most_sent: usize,
     /// Some call went out for the first time and came back without a problem.
     found_new: bool,
@@ -40,19 +46,24 @@ impl RoundJudgement {
 }
 
 impl LoopGuard {
-    /// Count one sending of `call`, answering how many times it has now been sent this turn.
+    /// Count `call` as sent in the current round, answering in how many rounds of this turn it has
+    /// now been sent. A second copy in the same round answers the same count.
     pub(super) fn sent(&mut self, call: &AgentToolCall) -> usize {
-        let count = self.sent.entry(call.identity_key()).or_default();
-        *count += 1;
-        *count
+        let (rounds, last) = self.sent.entry(call.identity_key()).or_insert((0, usize::MAX));
+        if *last != self.round {
+            *rounds += 1;
+            *last = self.round;
+        }
+        *rounds
     }
 
-    /// After a round: wrap up once a call has been sent [`LOOP_GUARD_REPEATS`] times, or once
+    /// After a round: wrap up once a call has been sent in [`LOOP_GUARD_REPEATS`] rounds, or once
     /// [`LOOP_GUARD_STALE_ROUNDS`] rounds in a row found nothing new.
     pub(super) fn judge_round(&mut self, round: RoundJudgement) -> Option<WrapUp> {
+        self.round += 1;
         self.stale_rounds = if round.found_new { 0 } else { self.stale_rounds + 1 };
         if round.most_sent >= LOOP_GUARD_REPEATS {
-            log::info!(target: LOG_TARGET, "loop guard: one tool call went out {} times; wrapping up", round.most_sent);
+            log::info!(target: LOG_TARGET, "loop guard: one tool call went out in {} rounds; wrapping up", round.most_sent);
             return Some(WrapUp::RepeatedCall);
         }
         if self.stale_rounds >= LOOP_GUARD_STALE_ROUNDS {
@@ -115,6 +126,25 @@ mod tests {
         assert_eq!(round(&mut guard, "/a", true), None);
         assert_eq!(round(&mut guard, "/a", true), None);
         assert_eq!(round(&mut guard, "/a", true), Some(WrapUp::RepeatedCall));
+    }
+
+    /// A model can't have ignored a result it hasn't seen yet, so the same call twice in ONE round
+    /// is one sending. Regression anchor: the E2E fake's `[tools]` script sends `list_volumes`
+    /// once, then twice in its next round, and counting per call wrapped that turn up before the
+    /// round that answers.
+    #[test]
+    fn the_same_call_twice_in_one_round_counts_as_one_sending() {
+        let mut guard = LoopGuard::default();
+        assert_eq!(round(&mut guard, "/a", true), None);
+        let mut second = RoundJudgement::default();
+        second.note(guard.sent(&call("/a")), true);
+        second.note(guard.sent(&call("/a")), true);
+        assert_eq!(guard.judge_round(second), None, "two rounds, so two sendings");
+        assert_eq!(
+            round(&mut guard, "/a", true),
+            Some(WrapUp::RepeatedCall),
+            "the third round's is the third"
+        );
     }
 
     #[test]
