@@ -14,6 +14,7 @@ import {
   closeTagEditor,
   editTags,
   getCoverImage,
+  getCoverThumbnail,
   getTagChanges,
   listCoverCandidates,
   listTagCovers,
@@ -96,6 +97,8 @@ export interface TagEditorState {
    * `null` when there is none, the files differ, or it can't be read.
    */
   coverImage(key?: string | null): Promise<string | null>
+  /** A tile's small picture of the cover `key` names; `null` when there is none or it can't be had (logged by kind). */
+  coverThumbnail(key: string): Promise<string | null>
   /** Every distinct cover with how many files carry it (the files without one last), or `null` when that failed. */
   coverChoices(): Promise<CoverChoice[] | null>
   /** Gives every file the cover `key` names, in memory: a change Write lists. */
@@ -232,6 +235,13 @@ export function createTagEditorState(sessionId: string): TagEditorState {
       if (res.ok) return res.value
       // Only the thumbnail is missing; the kind is no path or value.
       log.warn("couldn't read the cover image: {kind}", { kind: res.error.kind })
+      return null
+    },
+    async coverThumbnail(key) {
+      const res = await getCoverThumbnail(sessionId, key)
+      if (res.ok) return res.value
+      // Only the tile's picture is missing; the kind is no path or value.
+      log.warn("couldn't make a cover thumbnail: {kind}", { kind: res.error.kind })
       return null
     },
     async coverChoices() {

@@ -70,6 +70,7 @@ async function mountTab(over: Partial<TagEditorState>): Promise<HTMLElement> {
     coverFromFile: vi.fn(() => Promise.resolve()),
     coverImage: vi.fn(() => Promise.resolve(null)),
     coverChoices: vi.fn(() => Promise.resolve([])),
+    coverThumbnail: vi.fn(() => Promise.resolve(null)),
     undoable: null,
     settled: vi.fn(() => Promise.resolve()),
     ...over,

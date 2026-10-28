@@ -33,20 +33,30 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` +
   `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a format would lose, Write
   anyway or Skip).
-- **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a thumbnail
-  with how many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new
-  view; each image fetched once per key). A click opens it large in `CoverViewer` (a `ModalDialog` owned by `TagsTab`,
-  so `hasDialog()` keeps the window keys out); "Use for all files" there is `useCoverForAll`. Paste: ⌘V is the native
-  Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box only when the page
-  `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are listened to on the
-  document and taken only while focus is in the section (which is focusable and takes focus on a click). No registry key
-  is added, and ⌘V in a text box stays its own. The picture's bytes go as a number array (capped at 10 MiB here first).
-  Drop: Tauri's `dragDropEnabled` turns file drags into the webview's `onDragDropEvent` (never an HTML5 `drop`),
-  hit-tested against the section's rect as Ask Cmdr does; one path goes to `setCoverFromPath`, two or more ask for one.
-  While a dialog is open the section takes no paste or drop. Decision: the section sits inside the Album list's scroll
-  after the rows, so its thumbnails can grow without pushing or resizing the panes. Not yet checked in a built app: that
-  ⌘V reaches a focused section, and which image type a copied picture arrives as (TIFF would be refused as not a JPEG,
-  PNG, or WebP).
+- **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a tile with how
+  many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new view; a new
+  view also clears the section's notice). Tiles show `getCoverThumbnail` (a small PNG the backend makes once per cover
+  key); a click opens the cover large in `CoverViewer` (a `ModalDialog` owned by `TagsTab`, so `hasDialog()` keeps the
+  window keys out), which fetches the full picture; "Use for all files" there is `useCoverForAll`.
+- **Paste**: ⌘V is the native Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box
+  only when the page `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are
+  listened to on the document and taken only while focus is in the section (which is focusable and takes focus on a
+  click). No registry key is added, and ⌘V in a text box stays its own. The Paste picture button is the mouse road
+  (`navigator.clipboard.read()`; WebKit shows its own Paste callout) and the fallback if ⌘V proves dead. The section
+  refuses over 10 MiB before sending, except a TIFF (up to 40 MiB), which the backend converts to PNG or JPEG.
+- **IPC cost of a paste**: the bytes cross as a JSON number array: the repo's IPC is JSON throughout
+  (`src-tauri/src/commands/DETAILS.md`; `viewer_get_bytes` does the same). At the 10 MiB cap that is about 80 MB of
+  transient JS array and a 40 MB body, for a one-shot user action. A raw `tauri::ipc::Request` body would be the
+  codebase's first and bypass specta, so it isn't used.
+- **Drop**: Tauri's `dragDropEnabled` turns file drags into the webview's `onDragDropEvent` (never an HTML5 `drop`),
+  hit-tested as Ask Cmdr does, against the section's rect cut to the Album scroller (`data-cover-clip`), so a drop on
+  what shows where the section is scrolled out of view (the rows' strip, the status line, the bar) is never the cover's.
+  One path goes to `setCoverFromPath` (read under a deadline in the backend), two or more ask for one. While a dialog is
+  open the section takes no paste or drop.
+- **Decision**: the section sits inside the Album list's scroll after the rows, so its tiles can grow without pushing or
+  resizing the panes. Not yet checked in a built app: that ⌘V reaches a focused section; which image type a copied
+  picture arrives as (Preview ⌘C, Safari Copy Image, Finder ⌘C on a .jpg, a real .tiff); and that drop positions match
+  `getBoundingClientRect` in the Tags window.
 - **Layout and keys**: panes | a one-line status | the function-key bar, top to bottom; only the panes flex. The status
   line is always there (empty or not) and its notices cut with a tooltip, so a notice never moves the panes; every tool
   and the write open in a `ModalDialog` rendered beside the content, never in its flow. Decision/Why: the tools bar

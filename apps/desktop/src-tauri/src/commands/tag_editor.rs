@@ -12,7 +12,9 @@ use crate::multi_rename::session::files_of;
 use crate::tag_editor::activity;
 use crate::tag_editor::apply::{ApplyRequest, TagApplyReport};
 use crate::tag_editor::cover::{CoverCandidate, candidates_in, cover_from_bytes, read_cover, read_dropped};
-use crate::tag_editor::cover_choices::{CoverChoice, image_of, list as list_covers, set_for_all, use_for_all};
+use crate::tag_editor::cover_choices::{
+    CoverChoice, image_of, list as list_covers, set_for_all, set_from_path_within, thumbnail, use_for_all,
+};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open,
@@ -21,6 +23,11 @@ use crate::tag_editor::session::{
 use crate::tag_editor::text_tools::{TagTextTool, run as run_text_tool};
 use crate::tag_editor::view::TagEditorView;
 use crate::tag_editor::window::TagsSessionInfo;
+
+/// How long a dropped picture's read may take: the read tier of `commands/CLAUDE.md` (2 s).
+const COVER_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+/// How long a thumbnail's decode and resize may take (CPU, growing with the picture).
+const THUMBNAIL_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Runs blocking `work` off the IPC thread.
 async fn blocking<T: Send + 'static>(
@@ -263,16 +270,30 @@ pub async fn set_cover_from_bytes(session_id: String, data: Vec<u8>) -> Result<T
 }
 
 /// Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
-/// (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap.
+/// (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap. A drop
+/// can come from a network mount: the read gets the read tier's deadline (`COVER_READ_TIMEOUT`),
+/// past it the answer is `CoverTimedOut` and nothing changes, then or later.
 #[tauri::command]
 #[specta::specta]
 pub async fn set_cover_from_path(session_id: String, path: String) -> Result<TagEditorView, TagEditorError> {
-    blocking(move || {
-        let started = Instant::now();
-        let result = read_dropped(std::path::Path::new(&path)).and_then(|cover| set_for_all(&session_id, cover));
-        activity::edited("cover from drop", &result, started);
-        result
-    })
+    let started = Instant::now();
+    let result = set_from_path_within(session_id, path.into(), COVER_READ_TIMEOUT, read_dropped).await;
+    activity::edited("cover from drop", &result, started);
+    result
+}
+
+/// A small PNG `data:` URL of the cover `key` names, for a tile (about twice its size, cached by
+/// key); `None` for "none" or a cover that doesn't decode. The viewer keeps the full image
+/// (`get_cover_image`).
+#[tauri::command]
+#[specta::specta]
+pub async fn get_cover_thumbnail(session_id: String, key: String) -> Result<Option<String>, TagEditorError> {
+    cmdr_fs::deadline::blocking_typed_result_with_timeout(
+        THUMBNAIL_TIMEOUT,
+        || TagEditorError::CoverTimedOut,
+        |_| TagEditorError::TaskFailed,
+        move || thumbnail(&session_id, &key),
+    )
     .await
 }
 

@@ -148,6 +148,14 @@ export async function getCoverImage(
   return result(await commands.getCoverImage(sessionId, key))
 }
 
+/**
+ * A small PNG `data:` URL of the cover `key` names, for a tile (about twice its size, cached by key in the backend);
+ * `null` for `'none'` or a cover that doesn't decode. The large view takes the full image (`getCoverImage`).
+ */
+export async function getCoverThumbnail(sessionId: string, key: string): Promise<TagEditorResult<string | null>> {
+  return result(await commands.getCoverThumbnail(sessionId, key))
+}
+
 /** Every distinct cover of the readable files with how many carry it, most common first, the files without one last. */
 export async function listTagCovers(sessionId: string): Promise<TagEditorResult<CoverChoice[]>> {
   return result(await commands.listTagCovers(sessionId))

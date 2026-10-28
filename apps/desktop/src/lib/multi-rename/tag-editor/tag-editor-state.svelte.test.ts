@@ -18,6 +18,7 @@ const ipc = vi.hoisted(() => ({
   setCoverFromFile: vi.fn(),
   getCoverImage: vi.fn(),
   listTagCovers: vi.fn(),
+  getCoverThumbnail: vi.fn(),
   useCoverForAll: vi.fn(),
   setCoverFromBytes: vi.fn(),
   setCoverFromPath: vi.fn(),
@@ -555,6 +556,16 @@ describe('createTagEditorState', () => {
     expect(ipc.getCoverImage).toHaveBeenCalledWith('S', '00ff')
     await state.coverImage()
     expect(ipc.getCoverImage).toHaveBeenLastCalledWith('S', null)
+  })
+
+  it('coverThumbnail asks for the small picture; a failure is null and leaves the error alone', async () => {
+    const state = createTagEditorState('S')
+    ipc.getCoverThumbnail.mockResolvedValue({ ok: true, value: 'data:image/png;base64,x' })
+    expect(await state.coverThumbnail('k')).toBe('data:image/png;base64,x')
+    expect(ipc.getCoverThumbnail).toHaveBeenCalledWith('S', 'k')
+    ipc.getCoverThumbnail.mockResolvedValue({ ok: false, error: { kind: 'coverTimedOut' } })
+    expect(await state.coverThumbnail('k')).toBeNull()
+    expect(state.error).toBeNull()
   })
 
   it('coverChoices lists every cover; a failure is null and leaves the error alone', async () => {

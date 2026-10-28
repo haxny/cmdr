@@ -19,6 +19,7 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     setCoverFromFile: vi.fn(),
     getCoverImage: vi.fn(),
     listTagCovers: vi.fn(),
+    getCoverThumbnail: vi.fn(),
     useCoverForAll: vi.fn(),
     setCoverFromBytes: vi.fn(),
     setCoverFromPath: vi.fn(),
@@ -35,6 +36,7 @@ import {
   closeTagEditor,
   editTags,
   getCoverImage,
+  getCoverThumbnail,
   getTagChanges,
   listCoverCandidates,
   listTagCovers,
@@ -261,6 +263,14 @@ describe('getCoverImage', () => {
   it('returns the typed error', async () => {
     vi.mocked(commands.getCoverImage).mockResolvedValue(failure)
     expect(await getCoverImage('s1')).toEqual({ ok: false, error: noSession })
+  })
+})
+
+describe('getCoverThumbnail', () => {
+  it('asks for the small picture of a cover', async () => {
+    vi.mocked(commands.getCoverThumbnail).mockResolvedValue({ status: 'ok', data: 'data:image/png;base64,x' } as never)
+    expect(await getCoverThumbnail('s1', '00ff')).toEqual({ ok: true, value: 'data:image/png;base64,x' })
+    expect(commands.getCoverThumbnail).toHaveBeenCalledWith('s1', '00ff')
   })
 })
 

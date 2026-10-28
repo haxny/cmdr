@@ -81,6 +81,7 @@ async function mountTab(over: { view?: TagEditorView; error?: TagStateError | nu
       Promise.resolve(key === 'k1' ? 'data:image/png;base64,iVBORw0KGgo=' : null),
     ),
     coverChoices: vi.fn(() => Promise.resolve(over.choices ?? [])),
+    coverThumbnail: vi.fn(() => Promise.resolve('data:image/png;base64,small')),
     useCoverForAll: vi.fn(() => Promise.resolve()),
     coverFromBytes: vi.fn(() => Promise.resolve()),
     coverFromPath: vi.fn(() => Promise.resolve()),
@@ -159,6 +160,14 @@ describe('TagsTab', () => {
     [{ kind: 'coverUnreadable' }, 'Couldn’t read that picture, or it isn’t a supported image.'],
     [{ kind: 'badCoverName' }, 'Couldn’t read that picture, or it isn’t a supported image.'],
     [{ kind: 'coverNotAnImage' }, 'That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.'],
+    [
+      { kind: 'pastedNotAnImage' },
+      'That isn’t a picture Cmdr can use as a cover. Copy a JPEG, PNG, WebP, or TIFF picture, then paste again.',
+    ],
+    [
+      { kind: 'coverTimedOut' },
+      'Reading that picture took too long, so the cover is unchanged. Copy it to this Mac first, then drop it again.',
+    ],
     [{ kind: 'coverNotAFile' }, 'Only a picture file can become the cover, not a folder or a link.'],
     [{ kind: 'unknownCover' }, 'That cover isn’t in the files any more. Pick another one.'],
     [{ kind: 'unknownTrack' }, 'Couldn’t apply that change.'],
@@ -182,8 +191,13 @@ describe('TagsTab', () => {
       const { root, state } = await mountTab({ choices: [FRONT, NONE] })
       await settle()
       await tick()
+      expect(root.querySelector('.choice img')?.getAttribute('src')).toBe('data:image/png;base64,small')
+      expect(state.coverThumbnail).toHaveBeenCalledWith('k1')
       root.querySelector<HTMLButtonElement>('.choice')?.click()
+      await settle()
       await tick()
+      // The large view shows the full picture, not the tile's thumbnail.
+      expect(state.coverImage).toHaveBeenCalledWith('k1')
       expect(document.querySelector('[role="dialog"] img')?.getAttribute('src')).toBe(
         'data:image/png;base64,iVBORw0KGgo=',
       )
@@ -202,6 +216,27 @@ describe('TagsTab', () => {
       expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
       await bar(root, 'Replace')
       expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+    })
+
+    it('is reachable by keyboard: ⇧Tab from the Tracks pane walks back into it before the Album rows', async () => {
+      const { root } = await mountTab({ choices: [FRONT, NONE] })
+      await settle()
+      await tick()
+      const tracks = paneList(root, 'Tracks')
+      const shiftTab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })
+      tracks.dispatchEvent(shiftTab)
+      expect(shiftTab.defaultPrevented).toBe(false)
+      // The browser's order: every tab stop, in document order.
+      const stops = [
+        ...root.querySelectorAll<HTMLElement>('[tabindex="0"], button:not([disabled]):not([tabindex="-1"])'),
+      ]
+      const at = (element: Element | null) => stops.findIndex((stop) => stop === element)
+      const section = root.querySelector('section.cover')
+      const album = paneList(root, 'Album tags')
+      expect(at(section)).toBeGreaterThan(at(album))
+      expect(at(section)).toBeLessThan(at(tracks))
+      const between = stops.slice(at(section), at(tracks))
+      expect(between.every((stop) => stop.closest('[data-pane="album"]') !== null)).toBe(true)
     })
 
     it('a pasted picture goes to the state as bytes', async () => {
@@ -274,6 +309,7 @@ describe('TagsTab', () => {
       coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
       coverImage: vi.fn(() => Promise.resolve(null)),
       coverChoices: vi.fn(() => Promise.resolve([])),
+      coverThumbnail: vi.fn(() => Promise.resolve(null)),
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),
@@ -303,6 +339,7 @@ describe('TagsTab', () => {
       coverCandidates: vi.fn(() => Promise.resolve({ ok: true, value: [] })),
       coverImage: vi.fn(() => Promise.resolve(null)),
       coverChoices: vi.fn(() => Promise.resolve([])),
+      coverThumbnail: vi.fn(() => Promise.resolve(null)),
       undoable: null,
       settled: vi.fn(() => Promise.resolve()),
       tool: vi.fn(() => Promise.resolve()),

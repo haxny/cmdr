@@ -4,11 +4,11 @@
      * many files carry it and its size, and the files without one counted too (`list_tag_covers`, listed again on
      * every new view). A click opens a cover large (`onView`, the `CoverViewer` dialog), where "Use for all files"
      * gives it to every file. A picture pasted (⌘V) while the section has focus, or a picture file dropped on it,
-     * becomes every file's cover; "From folder…" lists the pictures beside the files; "Remove" takes every cover out.
+     * becomes every file's cover, as does Paste picture (the mouse road, `navigator.clipboard.read()`); "From folder…" lists the pictures beside the files; "Remove" takes every cover out.
      * Each is an in-memory change Write lists; nothing touches a file before Write.
      *
-     * Thumbnails are the `data:` URLs the backend builds from each cover's bytes (the CSP allows `data:` images, not
-     * `blob:`), fetched once per cover key. ⌘V is the native Edit > Paste, which WebKit offers on a non-text focus
+     * Thumbnails are small PNG `data:` URLs the backend makes from each cover (`get_cover_thumbnail`; the CSP allows
+     * `data:` images, not `blob:`), fetched once per cover key; the viewer fetches the full picture. ⌘V is the native Edit > Paste, which WebKit offers on a non-text focus
      * only when the page takes `beforepaste`; the `paste` then comes to the document, so both are listened to there,
      * and acted on only while focus is in this section. A drop is the webview's native drag-drop (`cover-drop.ts`).
      */
@@ -20,7 +20,7 @@
     import { formatFileSizeWithFormat } from '#lib/units/byte-size.js'
     import Button from '#lib/ui/Button.svelte'
     import { dependOn } from '#lib/utils/reactivity.js'
-    import { MAX_COVER_BYTES, NO_COVER_KEY, coverDetails, filesText, pastedPicture, type CoverShown } from './cover-choices'
+    import { NO_COVER_KEY, coverDetails, filesText, pasteLimit, pastedPicture, visiblePart, type CoverShown } from './cover-choices'
     import { isOver, subscribeCoverDrop, type CoverDropEvent, type CoverDropSubscriber } from './cover-drop'
 
     interface Props {
@@ -30,8 +30,8 @@
         revision: unknown
         /** Every distinct cover with its count, or `null` when listing them failed. */
         listChoices: () => Promise<CoverChoice[] | null>
-        /** One cover as a `data:` URL; `null` when it can't be had. */
-        loadImage: (key: string) => Promise<string | null>
+        /** A tile's small picture of one cover (`get_cover_thumbnail`); `null` when it can't be had. */
+        loadThumbnail: (key: string) => Promise<string | null>
         /** The folder's pictures, or `null` when listing them failed. */
         listCandidates: () => Promise<CoverCandidate[] | null>
         onView: (shown: CoverShown) => void
@@ -50,7 +50,7 @@
         editable,
         revision,
         listChoices,
-        loadImage,
+        loadThumbnail,
         listCandidates,
         onView,
         onPick,
@@ -76,6 +76,8 @@
 
     $effect(() => {
         dependOn(revision)
+        // A new view answers the last paste or drop (or an edit made otherwise): its notice goes.
+        notice = null
         const ask = ++choicesAsk
         void listChoices().then((listed) => {
             if (ask !== choicesAsk) return
@@ -90,7 +92,7 @@
         requested = Object.fromEntries(keys.filter((key) => key in requested).map((key) => [key, true as const]))
         for (const key of keys.filter((key) => !(key in requested))) {
             requested[key] = true
-            void loadImage(key).then((url) => {
+            void loadThumbnail(key).then((url) => {
                 if (key in requested) images = { ...images, [key]: url }
             })
         }
@@ -103,6 +105,16 @@
         return section !== undefined && section.contains(document.activeElement)
     }
 
+    /** A pasted picture, by ⌘V or the Paste picture button: refused here when too large, else sent. */
+    async function takePicture(picture: Blob): Promise<void> {
+        if (picture.size > pasteLimit(picture.type)) {
+            notice = 'multiRename.tags.cover.tooLarge'
+            return
+        }
+        notice = null
+        onPaste(new Uint8Array(await picture.arrayBuffer()))
+    }
+
     async function takePaste(e: ClipboardEvent): Promise<void> {
         e.preventDefault()
         const picture = pastedPicture(e.clipboardData)
@@ -110,12 +122,26 @@
             notice = 'multiRename.tags.cover.pasteNoImage'
             return
         }
-        if (picture.size > MAX_COVER_BYTES) {
-            notice = 'multiRename.tags.cover.tooLarge'
+        await takePicture(picture)
+    }
+
+    /** The Paste picture button: the mouse road to the clipboard (WebKit shows its own Paste callout first). */
+    async function pasteFromClipboard(): Promise<void> {
+        let items: ClipboardItem[]
+        try {
+            items = await navigator.clipboard.read()
+        } catch {
+            notice = 'multiRename.tags.cover.pasteUnavailable'
             return
         }
-        notice = null
-        onPaste(new Uint8Array(await picture.arrayBuffer()))
+        for (const item of items) {
+            const type = item.types.find((candidate) => candidate.startsWith('image/'))
+            if (type !== undefined) {
+                await takePicture(await item.getType(type))
+                return
+            }
+        }
+        notice = 'multiRename.tags.cover.pasteNoImage'
     }
 
     $effect(() => {
@@ -138,8 +164,18 @@
     /** A file is dragged over the section. */
     let dragOver = $state(false)
 
+    /**
+     * The part of the section a drop can land on: its rect cut to the scroller it sits in (`data-cover-clip`), so a
+     * section scrolled out of view never takes a drop on what shows there (the rows' strip, the status line, the bar).
+     */
+    function dropRect(): DOMRect | null {
+        if (!section) return null
+        const clip = section.closest('[data-cover-clip]')?.getBoundingClientRect() ?? null
+        return visiblePart(section.getBoundingClientRect(), clip)
+    }
+
     function onDragEvent(event: CoverDropEvent): void {
-        const rect = section?.getBoundingClientRect() ?? null
+        const rect = dropRect()
         if (!editable || event.type === 'leave') {
             dragOver = false
             return
@@ -173,7 +209,7 @@
     })
 
     function view(choice: CoverChoice): void {
-        onView({ choice, total, image: images[choice.key] ?? null })
+        onView({ choice, total })
     }
 
     type Picker = { status: 'loading' } | { status: 'failed' } | { status: 'list'; candidates: CoverCandidate[] }
@@ -261,6 +297,9 @@
         <p class="notice" role="status">{tString(notice)}</p>
     {/if}
     <div class="actions">
+        <Button disabled={!editable} onclick={() => { void pasteFromClipboard() }}>
+            {tString('multiRename.tags.cover.pasteButton')}
+        </Button>
         <Button disabled={!editable} onclick={() => { void openPicker() }}>
             {tString('multiRename.tags.cover.fromFolder')}
         </Button>

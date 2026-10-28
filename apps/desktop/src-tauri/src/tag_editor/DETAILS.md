@@ -46,6 +46,17 @@ file that something else renamed.
   the same cap and sniff. Each is an in-memory `CoverEdit::Set` / `Remove` through `edit`: listed by `changes`,
   written only by Write, undone like any write. A dropped path can be anywhere: the user dragged it; it only ever
   becomes an image by its bytes.
+- **A drop's read runs under the read tier's deadline** (2 s, `COVER_READ_TIMEOUT`, `cmdr_fs::deadline`), because a
+  dropped file can sit on a network mount whose syscalls block for minutes. `set_from_path_within` awaits the read and
+  only then edits: past the deadline it answers `CoverTimedOut`, and the read that finishes later returns its cover to
+  nobody, so no cover appears unbidden after the user moved on or wrote. Tested with an injected slow reader.
+- **A paste** has no file name, so its refusal is `PastedNotAnImage`, worded apart from a file's `CoverNotAnImage`.
+  A TIFF (magic `II*\0` / `MM\0*`, at most 40 MiB: an uncompressed clipboard photo is big) is decoded
+  (`cover_image.rs`, `contain_panics`, `image::Limits`: 20,000 px a side, 256 MiB) and re-encoded as PNG; when that PNG
+  is over 10 MiB, as JPEG at quality 90; still over is `CoverTooLarge`.
+- **Thumbnails** (`get_cover_thumbnail`): a tile shows a PNG of at most 176 px a side (twice the 88 px tile), made once
+  per cover key and cached process-wide (64 entries, then it starts over), under a 5 s deadline. Only the large view
+  (`get_cover_image`) ships the full picture, so per-chapter art never puts N full bitmaps in the section.
 - **`TagEdit` names a track by path** and is translated to the engine's row-based `Edit`; a path that is not a readable
   track refuses the whole batch with `UnknownTrack` (nothing half-applies).
 - **`changes(session_id, kind)`** lists, per changed file, the fields, cover, and extras the edits change, plus what the

@@ -29,7 +29,7 @@ async function mountPanel(cover: CoverSummary, choices: CoverChoice[], editable 
     editable,
     revision: 1,
     listChoices: () => Promise.resolve(choices),
-    loadImage: () => Promise.resolve('data:image/png;base64,iVBORw0KGgo='),
+    loadThumbnail: () => Promise.resolve('data:image/png;base64,iVBORw0KGgo='),
     listCandidates: () => Promise.resolve([{ fileName: 'cover.jpg', size: 2048 }]),
     onView: () => {},
     onPick: () => {},

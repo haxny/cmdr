@@ -164,7 +164,8 @@
         <span class="cut">{tString('multiRename.tags.album.colName')}</span>
         <span class="cut">{tString('multiRename.tags.album.colValue')}</span>
     </div>
-    <div class="full-list" bind:this={scroller}>
+    <!-- `data-cover-clip`: the cover section cuts its drop area to this scroller (`CoverPanel`). -->
+    <div class="full-list" bind:this={scroller} data-cover-clip>
         <div
             bind:this={list}
             class="listbox-region"

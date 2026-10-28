@@ -5,11 +5,12 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
 
 ## Module map
 
-- `session.rs` the store (`SESSIONS`), `open` / `edit` / `tool` / `changes` / `close`, and `TagEditorError`.
+- `session.rs` the store (`SESSIONS`), `open` / `edit` / `tool` / `changes` / `close`; `error.rs` `TagEditorError`.
 - `view.rs` the pure `TagEditorView`: shared rows, track rows, cover, extras, dirty, diacritics.
 - `cover.rs` reading a cover (a folder picture by plain name, a dropped file, pasted bytes: regular file, 10 MiB, type
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,
-  and the in-memory "use for all". IPC in `commands/tag_editor.rs`.
+  the in-memory "use for all", and a drop read under a deadline; `cover_image.rs` decodes (pasted TIFF → PNG/JPEG,
+  cached tile thumbnails) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
 - `apply.rs` the write (`apply`, `TagApplyReport`); `undo.rs` the app's `UndoStore` and `undo`; `activity.rs` the
   `tag_editor` log lines (counts and durations, never paths or values).
 - `text_tools.rs` find/replace and format-from-mask over tag fields: in the app, not `cmdr-tags`, because they reuse
@@ -35,6 +36,8 @@ A tag session per Multi-Rename session: the supported audio files' tags, as on d
   volume.
 - **Every lofty call goes through `contain_panics`**; a panic is a `readError` or `failed` row, never a crash.
   Unreadable rows are never written and count in no summary.
+- **A drop's read is deadline-bound and the edit follows only an in-time read** (`set_from_path_within`): a late
+  read from a hung mount must never set a cover afterwards.
 - **❌ No file read under `SESSIONS`' lock**; ❌ never log paths or tag values.
 - **Record before write**: `apply` records the old tags first, then seals the record to the files written with their
   post-write `Fingerprint`, so undo touches exactly those, and only while unchanged (never a file renamed onto the

@@ -136,9 +136,30 @@ pub(crate) fn read_dropped(path: &Path) -> Result<Cover, TagEditorError> {
     read_open(file, TagEditorError::CoverNotAFile)
 }
 
-/// A pasted picture as a cover: at most 10 MiB (`CoverTooLarge`), and a JPEG, PNG, or WebP image
-/// by its first bytes (`CoverNotAnImage`), whatever the clipboard called it.
+/// The largest pasted TIFF taken: it is converted ([`super::cover_image::cover_from_tiff`]), and an uncompressed
+/// clipboard TIFF of a photo is far bigger than the cover it becomes.
+pub(crate) const MAX_PASTED_TIFF_BYTES: u64 = 40 * 1024 * 1024;
+
+/// A pasted picture as a cover. A JPEG, PNG, or WebP by its first bytes is taken as it is, at most 10 MiB
+/// (`CoverTooLarge`); a TIFF (at most 40 MiB) becomes a PNG, or a JPEG when the PNG is over 10 MiB; anything else is
+/// `PastedNotAnImage` (a paste has no file name to blame).
 pub(crate) fn cover_from_bytes(data: Vec<u8>) -> Result<Cover, TagEditorError> {
+    let len = u64::try_from(data.len()).unwrap_or(u64::MAX);
+    if super::cover_image::is_tiff(&data) {
+        if len > MAX_PASTED_TIFF_BYTES {
+            return Err(TagEditorError::CoverTooLarge);
+        }
+        return super::cover_image::cover_from_tiff(&data);
+    }
+    sniffed(data).map_err(|error| match error {
+        TagEditorError::CoverNotAnImage => TagEditorError::PastedNotAnImage,
+        other => other,
+    })
+}
+
+/// `data` as a cover: at most 10 MiB (`CoverTooLarge`), and a JPEG, PNG, or WebP image by its first bytes
+/// (`CoverNotAnImage`), whatever it was called.
+fn sniffed(data: Vec<u8>) -> Result<Cover, TagEditorError> {
     if u64::try_from(data.len()).unwrap_or(u64::MAX) > MAX_COVER_BYTES {
         return Err(TagEditorError::CoverTooLarge);
     }
@@ -159,7 +180,7 @@ fn read_open(file: std::fs::File, not_regular: TagEditorError) -> Result<Cover, 
     if meta.len() > MAX_COVER_BYTES {
         return Err(TagEditorError::CoverTooLarge);
     }
-    cover_from_bytes(read_capped(file, MAX_COVER_BYTES)?)
+    sniffed(read_capped(file, MAX_COVER_BYTES)?)
 }
 
 /// Opens `path` for reading without following a symlink at its last component and without

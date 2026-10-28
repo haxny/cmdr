@@ -28,13 +28,15 @@ async function mountViewer(
   const props = {
     choice: over.choice ?? FRONT,
     total: over.total ?? 22,
-    image: over.image === undefined ? URL : over.image,
+    loadImage: vi.fn(() => (over.image === undefined ? Promise.resolve(URL) : Promise.resolve(over.image))),
     editable: over.editable ?? true,
     onUseForAll: vi.fn(),
     onClose: vi.fn(),
   }
   const mounted = await mountInto(CoverViewer, props)
   cleanup = mounted.cleanup
+  await tick()
+  await new Promise((resolve) => setTimeout(resolve, 0))
   await tick()
   return props
 }
@@ -75,6 +77,21 @@ describe('CoverViewer', () => {
     await mountViewer({ image: null })
     expect(document.querySelector('[role="dialog"] img')).toBeNull()
     expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Can’t show this picture')
+  })
+
+  it('says the picture is on its way until it comes', async () => {
+    const mounted = await mountInto(CoverViewer, {
+      choice: FRONT,
+      total: 22,
+      loadImage: () => new Promise<string | null>(() => {}),
+      editable: true,
+      onUseForAll: vi.fn(),
+      onClose: vi.fn(),
+    })
+    cleanup = mounted.cleanup
+    await tick()
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Loading the picture…')
+    expect(document.querySelector('[role="dialog"] img')).toBeNull()
   })
 
   it('Close closes', async () => {

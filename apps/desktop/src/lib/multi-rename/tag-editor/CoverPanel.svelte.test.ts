@@ -39,7 +39,7 @@ function props(over: Partial<ComponentProps<typeof CoverPanel>> & { choices?: Co
     editable: true,
     revision: 1,
     listChoices: vi.fn(() => Promise.resolve(choices === undefined ? [FRONT, BACK, NONE] : choices)),
-    loadImage: vi.fn((key: string) => Promise.resolve(URLS[key] ?? null)),
+    loadThumbnail: vi.fn((key: string) => Promise.resolve(URLS[key] ?? null)),
     listCandidates: vi.fn(() => Promise.resolve<{ fileName: string; size: number }[] | null>([])),
     onView: vi.fn(),
     onPick: vi.fn(),
@@ -82,7 +82,7 @@ function paste(root: HTMLElement, items: { type: string; file: File | null }[]):
 
 describe('CoverPanel', () => {
   it('shows a thumbnail per cover with how many files carry it and its size, and counts the files without one', async () => {
-    const { root, loadImage } = await mountPanel()
+    const { root, loadThumbnail } = await mountPanel()
     const shown = tiles(root)
     expect(shown.map((tile) => tile.querySelector('.caption')?.textContent.trim())).toEqual([
       '12 files · 2.00 KiB',
@@ -93,8 +93,8 @@ describe('CoverPanel', () => {
     expect(shown[1].querySelector('img')?.getAttribute('src')).toBe(URLS.k2)
     expect(shown[2].textContent).toContain('No cover')
     expect(shown[2].querySelector('img')).toBeNull()
-    expect(loadImage).toHaveBeenCalledTimes(2)
-    expect(loadImage).not.toHaveBeenCalledWith('none')
+    expect(loadThumbnail).toHaveBeenCalledTimes(2)
+    expect(loadThumbnail).not.toHaveBeenCalledWith('none')
   })
 
   it('names each cover for a screen reader', async () => {
@@ -107,7 +107,7 @@ describe('CoverPanel', () => {
   it('a click on a cover opens it large, with its image', async () => {
     const { root, onView } = await mountPanel()
     tiles(root)[1].click()
-    expect(onView).toHaveBeenCalledWith({ choice: BACK, total: 16, image: URLS.k2 })
+    expect(onView).toHaveBeenCalledWith({ choice: BACK, total: 16 })
   })
 
   it('a new view lists the choices again; an image already loaded is not asked for again', async () => {
@@ -126,7 +126,7 @@ describe('CoverPanel', () => {
     await settle()
     expect(given.listChoices).toHaveBeenCalledTimes(2)
     expect(tiles(root)).toHaveLength(1)
-    expect(given.loadImage).toHaveBeenCalledTimes(2)
+    expect(given.loadThumbnail).toHaveBeenCalledTimes(2)
   })
 
   it('a late answer for an older view is dropped', async () => {
@@ -150,6 +150,25 @@ describe('CoverPanel', () => {
     answers[0]([FRONT, BACK, NONE])
     await settle()
     expect(tiles(root)).toHaveLength(1)
+  })
+
+  it('a new view clears the last paste or drop notice', async () => {
+    const given = props()
+    const live = $state<ComponentProps<typeof CoverPanel>>(given)
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const panel = mount(CoverPanel, { target: root, props: live })
+    cleanup = () => {
+      void unmount(panel)
+      root.remove()
+    }
+    await settle()
+    paste(root, [{ type: 'text/plain', file: null }])
+    await settle()
+    expect(root.querySelector('[role="status"]')).not.toBeNull()
+    live.revision = 2
+    await settle()
+    expect(root.querySelector('[role="status"]')).toBeNull()
   })
 
   it('says so when the covers couldn’t be listed', async () => {
@@ -206,6 +225,53 @@ describe('CoverPanel', () => {
       expect(locked.onPaste).not.toHaveBeenCalled()
     })
 
+    it('a TIFF up to 40 MiB is sent (the backend converts it); a JPEG over 10 MiB is not', async () => {
+      const { root, onPaste } = await mountPanel()
+      const tiff = new File([new Uint8Array(11 * 1024 * 1024)], 'image.tiff', { type: 'image/tiff' })
+      paste(root, [{ type: 'image/tiff', file: tiff }])
+      await settle()
+      expect(onPaste).toHaveBeenCalledTimes(1)
+      const jpeg = new File([new Uint8Array(11 * 1024 * 1024)], 'image.jpg', { type: 'image/jpeg' })
+      paste(root, [{ type: 'image/jpeg', file: jpeg }])
+      await settle()
+      expect(onPaste).toHaveBeenCalledTimes(1)
+    })
+
+    it('the Paste picture button reads the clipboard: a picture goes to every file', async () => {
+      const picture = new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image/jpeg' })
+      const read = vi.fn(() =>
+        Promise.resolve([{ types: ['text/plain', 'image/jpeg'], getType: () => Promise.resolve(picture) }]),
+      )
+      Object.defineProperty(navigator, 'clipboard', { value: { read }, configurable: true })
+      const { root, onPaste } = await mountPanel()
+      button(root, 'Paste picture').click()
+      await settle()
+      expect(onPaste).toHaveBeenCalledWith(new Uint8Array([0xff, 0xd8, 0xff]))
+    })
+
+    it('the Paste picture button says so with no picture, or when the clipboard can’t be read', async () => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          read: () => Promise.resolve([{ types: ['text/plain'], getType: () => Promise.reject(new Error('x')) }]),
+        },
+        configurable: true,
+      })
+      const empty = await mountPanel()
+      button(empty.root, 'Paste picture').click()
+      await settle()
+      expect(empty.root.querySelector('[role="status"]')?.textContent).toContain('There’s no picture on the clipboard')
+      cleanup?.()
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { read: () => Promise.reject(new DOMException('denied', 'NotAllowedError')) },
+        configurable: true,
+      })
+      const denied = await mountPanel()
+      button(denied.root, 'Paste picture').click()
+      await settle()
+      expect(denied.root.querySelector('[role="status"]')?.textContent).toContain('Couldn’t read the clipboard')
+      expect(denied.onPaste).not.toHaveBeenCalled()
+    })
+
     it('lets WebKit offer Paste while the cover has focus (beforepaste)', async () => {
       const { root } = await mountPanel()
       root.querySelector<HTMLElement>('section.cover')?.focus()
@@ -254,6 +320,28 @@ describe('CoverPanel', () => {
       await settle()
       expect(onDrop).not.toHaveBeenCalled()
       expect(root.querySelector('[role="status"]')?.textContent).toContain('Drop one picture')
+    })
+
+    it('a drop where the section is scrolled out of view is not the cover’s', async () => {
+      // The section sits in a scroller that shows only its top 40 px; below that are the strip, status line and bar.
+      const clip = document.createElement('div')
+      clip.setAttribute('data-cover-clip', '')
+      clip.getBoundingClientRect = () => ({ left: 0, top: 0, right: 100, bottom: 40 }) as DOMRect
+      const { root, drop, onDrop } = await withDrop()
+      const section = root.querySelector('section.cover')
+      if (!section) throw new Error('no section')
+      root.replaceWith(clip)
+      clip.appendChild(root)
+      drop({ type: 'over', position: { x: 10, y: 80 } })
+      await settle()
+      expect(section.classList.contains('drop-target')).toBe(false)
+      drop({ type: 'drop', paths: ['/pics/front.jpg'], position: { x: 10, y: 80 } })
+      await settle()
+      expect(onDrop).not.toHaveBeenCalled()
+      drop({ type: 'drop', paths: ['/pics/front.jpg'], position: { x: 10, y: 20 } })
+      await settle()
+      expect(onDrop).toHaveBeenCalledWith('/pics/front.jpg')
+      clip.remove()
     })
 
     it('read-only takes no drop', async () => {

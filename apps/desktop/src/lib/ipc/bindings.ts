@@ -1695,10 +1695,19 @@ export const commands = {
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
   /**
    *  Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
-   *  (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap.
+   *  (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap. A drop
+   *  can come from a network mount: the read gets the read tier's deadline (`COVER_READ_TIMEOUT`),
+   *  past it the answer is `CoverTimedOut` and nothing changes, then or later.
    */
   setCoverFromPath: (sessionId: string, path: string) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_path', { sessionId, path })),
+  /**
+   *  A small PNG `data:` URL of the cover `key` names, for a tile (about twice its size, cached by
+   *  key); `None` for "none" or a cover that doesn't decode. The viewer keeps the full image
+   *  (`get_cover_image`).
+   */
+  getCoverThumbnail: (sessionId: string, key: string) =>
+    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_thumbnail', { sessionId, key })),
   /**
    *  A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
    *  Only a readable track of the session gets one (`UnknownTrack` otherwise).
@@ -18486,6 +18495,13 @@ export type TagEditorError =
   | { kind: 'coverUnreadable' }
   // The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
   | { kind: 'coverNotAnImage' }
+  // Pasted bytes aren't a JPEG, PNG, WebP, or TIFF image (a TIFF is converted). Nothing was changed.
+  | { kind: 'pastedNotAnImage' }
+  /**
+   *  Reading a dropped picture didn't finish in time (a slow or hung network mount). Nothing was changed, and
+   *  the read finishing later changes nothing either.
+   */
+  | { kind: 'coverTimedOut' }
   // A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
   | { kind: 'coverNotAFile' }
   // No readable file carries the cover the key names (any more). Nothing was changed.

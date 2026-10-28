@@ -19,64 +19,24 @@ use std::sync::{LazyLock, Mutex};
 
 use serde::{Deserialize, Serialize};
 
+pub use super::error::TagEditorError;
 pub(super) use cmdr_tags::Fingerprint;
 use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
-    ContentKind, FileTags, KindRemoval, NamePattern, PatternError, TagError, TagField, compile_pattern, format_of,
-    normalize_for, read_duration, read_tags, removed_by_kind,
+    ContentKind, FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for,
+    read_duration, read_tags, removed_by_kind,
 };
 
 use super::view::{Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key};
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
-use crate::multi_rename::mask::MaskError;
 use crate::multi_rename::session::{SessionFiles, files_of};
 
 /// The only volume v1 writes: the local disk, as Multi-Rename's apply tells it (`run.rs`).
 pub(crate) const LOCAL_VOLUME_ID: &str = "root";
 
 const LOG_TARGET: &str = "tag_editor::session";
-
-/// Why a tag-editor call didn't answer.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
-pub enum TagEditorError {
-    /// The Multi-Rename session is gone.
-    NoSession,
-    /// `open` wasn't called for this session.
-    NotOpen,
-    /// The session's volume is read-only for the tag editor.
-    ReadOnly,
-    /// An edit names a path that isn't a readable track of the session. Nothing was applied.
-    UnknownTrack,
-    /// The undo store refused: recording before a write (nothing was written), or an undo.
-    Undo { error: TagError },
-    /// The app's data folder, which holds the undo store, isn't available. Nothing was written.
-    NoAppDataDir,
-    /// A cover file name that isn't a plain file name inside the session's folder.
-    BadCoverName,
-    /// The cover file is over the size limit (10 MiB).
-    CoverTooLarge,
-    /// The cover file couldn't be read (or isn't a regular file, or has an unsupported name).
-    CoverUnreadable,
-    /// The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
-    CoverNotAnImage,
-    /// A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
-    CoverNotAFile,
-    /// No readable file carries the cover the key names (any more). Nothing was changed.
-    UnknownCover,
-    /// The background task running the call failed.
-    TaskFailed,
-    /// A file-name pattern that can't be used. Nothing was changed.
-    BadPattern { error: PatternError },
-    /// A find/replace search that isn't a valid regular expression. Nothing was changed.
-    BadRegex,
-    /// A Format mask that doesn't parse. Nothing was changed.
-    BadMask { error: MaskError },
-    /// Neither foobar2000 nor the files' default app could be launched.
-    PlayerUnavailable,
-}
 
 /// One user edit against the tab. Unlike the engine's `Edit`, a single track is named by its
 /// PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send

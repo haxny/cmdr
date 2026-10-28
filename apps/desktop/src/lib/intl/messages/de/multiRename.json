@@ -1200,6 +1200,26 @@
   "@multiRename.tags.cover.useForAll": {
     "sourceHash": "723f22c"
   },
+  "multiRename.tags.cover.pasteNotAnImage": "That isn’t a picture Cmdr can use as a cover. Copy a JPEG, PNG, WebP, or TIFF picture, then paste again.",
+  "@multiRename.tags.cover.pasteNotAnImage": {
+    "sourceHash": "291f4a5"
+  },
+  "multiRename.tags.cover.timedOut": "Reading that picture took too long, so the cover is unchanged. Copy it to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.timedOut": {
+    "sourceHash": "1cf00df"
+  },
+  "multiRename.tags.cover.pasteButton": "Paste picture",
+  "@multiRename.tags.cover.pasteButton": {
+    "sourceHash": "fa34bdb"
+  },
+  "multiRename.tags.cover.pasteUnavailable": "Couldn’t read the clipboard. Select the cover section and press ⌘V instead.",
+  "@multiRename.tags.cover.pasteUnavailable": {
+    "sourceHash": "e7a30af"
+  },
+  "multiRename.tags.cover.loading": "Loading the picture…",
+  "@multiRename.tags.cover.loading": {
+    "sourceHash": "a47d42d"
+  },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {
     "sourceHash": "9747a7c"

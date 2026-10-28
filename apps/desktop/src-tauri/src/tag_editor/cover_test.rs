@@ -164,7 +164,11 @@ fn pasted_bytes_are_sniffed_and_capped() {
         b"GIF89a".to_vec(),
         b"RIFF\0\0\0\0WAVE".to_vec(),
     ] {
-        assert_eq!(cover_from_bytes(refused), Err(TagEditorError::CoverNotAnImage));
+        assert_eq!(
+            cover_from_bytes(refused),
+            Err(TagEditorError::PastedNotAnImage),
+            "a paste has no file name: its refusal is worded apart"
+        );
     }
     let limit = usize::try_from(MAX_COVER_BYTES).expect("fits");
     let mut at_limit = JPEG.to_vec();
@@ -228,4 +232,49 @@ fn a_dropped_folder_fifo_or_symlink_is_refused() {
         .recv_timeout(Duration::from_secs(5))
         .expect("read_dropped answers instead of blocking on the FIFO");
     assert_eq!(result, Err(TagEditorError::CoverNotAFile));
+}
+
+/// Noise, so neither PNG nor JPEG can shrink it much.
+fn noise(width: u32, height: u32) -> image::RgbImage {
+    let mut state = 0x1234_5678_u32;
+    image::RgbImage::from_fn(width, height, |_, _| {
+        let mut next = || {
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            (state >> 24) as u8
+        };
+        image::Rgb([next(), next(), next()])
+    })
+}
+
+fn tiff_of(picture: image::RgbImage) -> Vec<u8> {
+    let mut out = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgb8(picture)
+        .write_to(&mut out, image::ImageFormat::Tiff)
+        .expect("encodes a TIFF");
+    out.into_inner()
+}
+
+/// A TIFF pasted (a macOS image copy can carry only TIFF) becomes a PNG of the same picture.
+#[test]
+fn a_pasted_tiff_becomes_a_png() {
+    let cover = cover_from_bytes(tiff_of(noise(40, 30))).expect("converts");
+    assert_eq!(cover.mime, "image/png");
+    let decoded = image::load_from_memory(&cover.data).expect("a PNG");
+    assert_eq!((decoded.width(), decoded.height()), (40, 30));
+}
+
+/// A big photo pasted as TIFF whose PNG is over 10 MiB becomes a JPEG under the cap instead of being refused.
+#[test]
+fn a_pasted_tiff_too_big_as_png_becomes_a_jpeg() {
+    let cover = cover_from_bytes(tiff_of(noise(1900, 1900))).expect("converts");
+    assert_eq!(cover.mime, "image/jpeg");
+    assert!(u64::try_from(cover.data.len()).expect("fits") <= MAX_COVER_BYTES);
+}
+
+/// A broken TIFF is not a picture, and the conversion never panics out.
+#[test]
+fn a_broken_tiff_is_refused() {
+    let mut broken = tiff_of(noise(8, 8));
+    broken.truncate(16);
+    assert_eq!(cover_from_bytes(broken), Err(TagEditorError::PastedNotAnImage));
 }

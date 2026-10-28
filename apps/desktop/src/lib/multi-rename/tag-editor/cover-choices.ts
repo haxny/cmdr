@@ -14,11 +14,32 @@ export const NO_COVER_KEY = 'none'
 // eslint-disable-next-line cmdr/no-private-unit-format -- a fixed byte limit the backend shares, not a size shown as text
 export const MAX_COVER_BYTES = 10 * 1024 * 1024
 
-/** A cover opened large: the choice, how many readable files there are, and its `data:` URL (`null`: can't show). */
+/**
+ * The largest pasted TIFF sent (`MAX_PASTED_TIFF_BYTES`, 40 MiB): the backend converts it, and an uncompressed clipboard
+ * TIFF is far bigger than the PNG or JPEG it becomes.
+ */
+// eslint-disable-next-line cmdr/no-private-unit-format -- a fixed byte limit the backend shares, not a size shown as text
+export const MAX_PASTED_TIFF_BYTES = 40 * 1024 * 1024
+
+/** How many bytes a pasted picture of `type` may have before it's refused here, unsent. */
+export function pasteLimit(type: string): number {
+  return type === 'image/tiff' ? MAX_PASTED_TIFF_BYTES : MAX_COVER_BYTES
+}
+
+/** A cover opened large: the choice, and how many readable files there are. The viewer fetches the full image. */
 export interface CoverShown {
   choice: CoverChoice
   total: number
-  image: string | null
+}
+
+/** The part of `rect` inside `clip` (the scroller the section sits in); `null` when nothing of it shows. */
+export function visiblePart(rect: DOMRect, clip: DOMRect | null): DOMRect | null {
+  if (clip === null) return rect
+  const left = Math.max(rect.left, clip.left)
+  const top = Math.max(rect.top, clip.top)
+  const right = Math.min(rect.right, clip.right)
+  const bottom = Math.min(rect.bottom, clip.bottom)
+  return right > left && bottom > top ? new DOMRect(left, top, right - left, bottom - top) : null
 }
 
 /** "image/jpeg, 600×400 px, 2.00 KiB", or without the pixels when the header couldn't be read. */

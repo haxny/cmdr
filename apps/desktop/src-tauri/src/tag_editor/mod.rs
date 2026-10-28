@@ -5,6 +5,8 @@ pub(crate) mod activity;
 pub(crate) mod apply;
 pub(crate) mod cover;
 pub(crate) mod cover_choices;
+pub(crate) mod cover_image;
+pub(crate) mod error;
 pub(crate) mod playback;
 pub(crate) mod session;
 pub(crate) mod text_tools;

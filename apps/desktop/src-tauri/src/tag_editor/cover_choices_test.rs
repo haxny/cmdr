@@ -3,7 +3,10 @@
 
 use cmdr_tags::{ContentKind, Cover, FileTags, TagField, WriteOptions, write_tags};
 
-use super::cover_choices::{CoverChoice, NO_COVER_KEY, choices_of, image_of, list, set_for_all, use_for_all};
+use super::cover_choices::{
+    CoverChoice, NO_COVER_KEY, choices_of, covers_of, image_of, list, set_for_all, set_from_path_within, use_for_all,
+};
+use super::cover_image::{thumbnail_encodes, thumbnail_of};
 use super::session::{Entry, Loaded, TagEditorError, changes, close, open};
 use super::session_test::{album, on_disk, tags};
 use super::view::{CoverSummary, cover_key};
@@ -54,7 +57,7 @@ fn choices_group_by_cover_key_with_counts_most_common_first_and_none_last() {
         })),
     ];
     let files: Vec<&Loaded> = entries.iter().filter_map(Entry::loaded).collect();
-    let choices = choices_of(&files);
+    let choices = choices_of(&covers_of(&files));
     let summary: Vec<(String, u32, u64)> = choices.iter().map(|c| (c.key.clone(), c.files, c.bytes)).collect();
     assert_eq!(
         summary,
@@ -73,7 +76,7 @@ fn none_is_counted_and_no_files_give_no_choices() {
     let entries = [loaded(None), loaded(None)];
     let files: Vec<&Loaded> = entries.iter().filter_map(Entry::loaded).collect();
     assert_eq!(
-        choices_of(&files),
+        choices_of(&covers_of(&files)),
         vec![CoverChoice {
             key: NO_COVER_KEY.to_string(),
             mime: String::new(),
@@ -150,4 +153,83 @@ fn a_new_cover_goes_to_every_file_in_memory_and_a_closed_session_is_typed() {
     assert_eq!(on_disk(&dir, "a.mp3").cover, None, "nothing written before Write");
     close(&id);
     close_rename(&id);
+}
+
+/// A dropped file read past its deadline (a hung network mount) refuses, and the read finishing later changes
+/// nothing: the edit is applied only when the read came back in time.
+#[tokio::test]
+async fn a_dropped_file_read_past_the_deadline_changes_nothing_ever() {
+    let (_dir, _listing, id) = album("tag-editor-cover-drop-late");
+    open(&id, false).expect("opens");
+    // The read is held until the deadline has passed, then let go: a hung mount that answers late.
+    let (gate_send, gate) = std::sync::mpsc::channel::<()>();
+    let (done_send, done) = std::sync::mpsc::channel();
+    let slow = move |_: &std::path::Path| {
+        let _ = gate.recv();
+        let _ = done_send.send(());
+        Ok(png(5, 40))
+    };
+    let result = set_from_path_within(
+        id.clone(),
+        "/Volumes/slow/front.png".into(),
+        std::time::Duration::from_millis(50),
+        slow,
+    )
+    .await;
+    assert_eq!(result, Err(TagEditorError::CoverTimedOut));
+    gate_send.send(()).expect("the read still waits");
+    done.recv_timeout(std::time::Duration::from_secs(5))
+        .expect("the late read ends");
+    // Its cover went to nobody: the edit is made only by the awaited answer, which already gave up.
+    assert!(
+        changes(&id, ContentKind::Audiobook).expect("changes").is_empty(),
+        "the late read set no cover"
+    );
+
+    let quick = |_: &std::path::Path| Ok(png(6, 40));
+    let view = set_from_path_within(
+        id.clone(),
+        "/pics/front.png".into(),
+        std::time::Duration::from_secs(5),
+        quick,
+    )
+    .await
+    .expect("sets");
+    assert!(matches!(view.cover, CoverSummary::Same { bytes: 40, .. }));
+    close(&id);
+    close_rename(&id);
+}
+
+fn real_png(width: u32, height: u32) -> Cover {
+    let mut out = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(width, height, image::Rgb([200, 10, 10])))
+        .write_to(&mut out, image::ImageFormat::Png)
+        .expect("encodes");
+    Cover {
+        mime: "image/png".to_string(),
+        data: out.into_inner().into(),
+    }
+}
+
+/// A tile gets a small PNG of the cover, not the full image, made once per cover.
+#[test]
+fn a_thumbnail_is_small_and_made_once_per_cover() {
+    let big = real_png(1200, 600);
+    let before = thumbnail_encodes();
+    let url = thumbnail_of(&big, &key_of(&big)).expect("a thumbnail");
+    let base64 = url.strip_prefix("data:image/png;base64,").expect("a PNG data URL");
+    use base64::Engine;
+    let bytes = base64::prelude::BASE64_STANDARD.decode(base64).expect("base64");
+    let small = image::load_from_memory(&bytes).expect("decodes");
+    assert!(
+        small.width() <= 176 && small.height() <= 176,
+        "{}×{}",
+        small.width(),
+        small.height()
+    );
+    assert_eq!((small.width(), small.height()), (176, 88), "the aspect is kept");
+    assert_eq!(thumbnail_of(&big, &key_of(&big)), Some(url));
+    assert_eq!(thumbnail_encodes() - before, 1, "the second ask is the cache's");
+    // Bytes that aren't a picture have no thumbnail.
+    assert_eq!(thumbnail_of(&png(1, 40), &key_of(&png(1, 40))), None);
 }

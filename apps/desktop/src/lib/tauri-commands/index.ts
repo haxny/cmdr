@@ -1183,6 +1183,7 @@ export {
   listCoverCandidates,
   setCoverFromFile,
   getCoverImage,
+  getCoverThumbnail,
   listTagCovers,
   useCoverForAll,
   setCoverFromBytes,

@@ -1,9 +1,11 @@
 <script lang="ts">
     /**
-     * One cover of the files, large, in a dialog over the panes: the picture, what it is (type, pixel size, size), on
+     * One cover of the files, large, in a dialog over the panes: the full picture (fetched on open; the tiles show small
+     * thumbnails), what it is (type, pixel size, size), on
      * how many of the files it is, and "Use for all files", which gives it to every file in memory (a change Write
      * lists). The button is off when every file has it already, or read-only. Esc or Close closes it.
      */
+    import { onMount } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import type { CoverChoice } from '#lib/ipc/bindings.js'
@@ -17,14 +19,26 @@
         choice: CoverChoice
         /** How many readable files there are. */
         total: number
-        /** The cover as a `data:` URL, or `null` when it can't be shown. */
-        image: string | null
+        /** The full cover as a `data:` URL (`get_cover_image`); `null` when it can't be shown. */
+        loadImage: () => Promise<string | null>
         editable: boolean
         onUseForAll: (key: string) => void
         onClose: () => void
     }
 
-    const { choice, total, image, editable, onUseForAll, onClose }: Props = $props()
+    const { choice, total, loadImage, editable, onUseForAll, onClose }: Props = $props()
+
+    /** `undefined` while the picture is on its way. */
+    let image = $state<string | null | undefined>(undefined)
+    onMount(() => {
+        let gone = false
+        void loadImage().then((url) => {
+            if (!gone) image = url
+        })
+        return () => {
+            gone = true
+        }
+    })
 
     const details = $derived(coverDetails(choice, formatFileSizeWithFormat(choice.bytes, getFileSizeFormat())))
 </script>
@@ -32,7 +46,9 @@
 <ModalDialog titleId="tag-cover-viewer-title" containerStyle="width: 640px; max-width: 90vw" onclose={onClose}>
     {#snippet title()}{tString('multiRename.tags.cover.viewerTitle')}{/snippet}
     <div class="viewer">
-        {#if image !== null}
+        {#if image === undefined}
+            <p class="cant-show" role="status">{tString('multiRename.tags.cover.loading')}</p>
+        {:else if image !== null}
             <img src={image} alt={tString('multiRename.tags.cover.viewerAlt', { details })} />
         {:else}
             <p class="cant-show" role="status">{tString('multiRename.tags.cover.cantShow')}</p>

@@ -6,11 +6,16 @@
 //! here), so grouping hashes nothing. Unreadable files are never written, so they count in no
 //! choice.
 
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use cmdr_fs::deadline::blocking_typed_result_with_timeout;
 use cmdr_tags::Cover;
 use cmdr_tags::shared::CoverEdit;
 use serde::Serialize;
 
 use super::cover::thumbnail_url;
+use super::cover_image::thumbnail_of;
 use super::session::{Loaded, TagEdit, TagEditorError, edit, with_loaded};
 use super::view::{TagEditorView, common_cover, cover_key, pixel_size};
 
@@ -33,6 +38,23 @@ pub struct CoverChoice {
     pub files: u32,
 }
 
+/// One readable file's edited cover and its key, copied out of the session (a shared buffer, no bytes copied).
+pub(super) struct FileCover {
+    cover: Option<Cover>,
+    key: Option<u64>,
+}
+
+/// Each file's cover and key: all `list` needs, so it never copies the files' tags.
+pub(super) fn covers_of(files: &[&Loaded]) -> Vec<FileCover> {
+    files
+        .iter()
+        .map(|file| FileCover {
+            cover: file.edited.cover.clone(),
+            key: file.cover_key,
+        })
+        .collect()
+}
+
 /// One distinct cover while grouping: its first carrier's cover, key, and count.
 struct Group<'a> {
     cover: &'a Cover,
@@ -40,10 +62,10 @@ struct Group<'a> {
     files: u32,
 }
 
-/// The key a file's edited cover goes by: the cached one, else (never in practice: every read and
-/// store keys it) a hash.
-fn key_of(file: &Loaded, cover: &Cover) -> u64 {
-    file.cover_key.unwrap_or_else(|| cover_key(cover))
+/// The key a cover goes by: the cached one, else (never in practice: every read and store keys
+/// it) a hash.
+fn key_or_hash(key: Option<u64>, cover: &Cover) -> u64 {
+    key.unwrap_or_else(|| cover_key(cover))
 }
 
 fn key_text(key: u64) -> String {
@@ -52,15 +74,15 @@ fn key_text(key: u64) -> String {
 
 /// The distinct covers of `files`, the most carried first (ties in file order), then the files
 /// without one. Same MIME, size, and key is one cover. Pure; reads no file.
-pub(super) fn choices_of(files: &[&Loaded]) -> Vec<CoverChoice> {
+pub(super) fn choices_of(files: &[FileCover]) -> Vec<CoverChoice> {
     let mut groups: Vec<Group<'_>> = Vec::new();
     let mut uncovered = 0u32;
     for file in files {
-        let Some(cover) = &file.edited.cover else {
+        let Some(cover) = &file.cover else {
             uncovered += 1;
             continue;
         };
-        let key = key_of(file, cover);
+        let key = key_or_hash(file.key, cover);
         match groups.iter_mut().find(|group| {
             group.key == key && group.cover.mime == cover.mime && group.cover.data.len() == cover.data.len()
         }) {
@@ -100,16 +122,15 @@ fn find(files: &[&Loaded], key: &str) -> Option<Option<Cover>> {
     }
     files.iter().find_map(|file| {
         let cover = file.edited.cover.as_ref()?;
-        (key_text(key_of(file, cover)) == key).then(|| Some(cover.clone()))
+        (key_text(key_or_hash(file.cover_key, cover)) == key).then(|| Some(cover.clone()))
     })
 }
 
-/// The session's cover choices. The covers are copied out under the lock (shared buffers, no
-/// bytes copied); their pixel sizes are read after it.
+/// The session's cover choices. Only each file's cover and key are copied out under the lock;
+/// the pixel sizes are read after it.
 pub fn list(session_id: &str) -> Result<Vec<CoverChoice>, TagEditorError> {
-    let owned: Vec<Loaded> = with_loaded(session_id, |files| files.iter().map(|file| (*file).clone()).collect())?;
-    let files: Vec<&Loaded> = owned.iter().collect();
-    Ok(choices_of(&files))
+    let covers = with_loaded(session_id, covers_of)?;
+    Ok(choices_of(&covers))
 }
 
 /// The cover every readable file shares (its edited tags), or `None` when no file has one, there
@@ -127,6 +148,13 @@ pub fn image_of(session_id: &str, key: Option<&str>) -> Result<Option<String>, T
         Some(key) => with_loaded(session_id, |files| find(files, key))?.ok_or(TagEditorError::UnknownCover)?,
     };
     Ok(cover.and_then(|cover| thumbnail_url(&cover.data)))
+}
+
+/// A small PNG `data:` URL of the cover `key` names, for a tile (`cover_image::thumbnail_of`,
+/// cached by key); `None` for "none" or a cover that doesn't decode, `UnknownCover` for a stale key.
+pub fn thumbnail(session_id: &str, key: &str) -> Result<Option<String>, TagEditorError> {
+    let cover = with_loaded(session_id, |files| find(files, key))?.ok_or(TagEditorError::UnknownCover)?;
+    Ok(cover.and_then(|cover| thumbnail_of(&cover, key)))
 }
 
 /// Gives every readable file the cover `key` names ("none" takes every cover out), in memory.
@@ -148,4 +176,26 @@ pub fn set_for_all(session_id: &str, cover: Cover) -> Result<TagEditorView, TagE
             edit: CoverEdit::Set(cover),
         }],
     )
+}
+
+/// Gives every readable file the picture file at `path` (a drop), in memory, read by `read`
+/// (`cover::read_dropped`) within `limit`. A drop can come from a network mount that hangs, so
+/// the read runs under the deadline and the edit is made only once it came back in time: past
+/// the deadline the answer is `CoverTimedOut`, and the read finishing later changes nothing.
+pub async fn set_from_path_within(
+    session_id: String,
+    path: PathBuf,
+    limit: Duration,
+    read: impl FnOnce(&Path) -> Result<Cover, TagEditorError> + Send + 'static,
+) -> Result<TagEditorView, TagEditorError> {
+    let cover = blocking_typed_result_with_timeout(
+        limit,
+        || TagEditorError::CoverTimedOut,
+        |_| TagEditorError::TaskFailed,
+        move || read(&path),
+    )
+    .await?;
+    tokio::task::spawn_blocking(move || set_for_all(&session_id, cover))
+        .await
+        .map_err(|_| TagEditorError::TaskFailed)?
 }

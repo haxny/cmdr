@@ -146,6 +146,10 @@
                 return 'multiRename.tags.cover.unreadable'
             case 'coverNotAnImage':
                 return 'multiRename.tags.cover.notAnImage'
+            case 'pastedNotAnImage':
+                return 'multiRename.tags.cover.pasteNotAnImage'
+            case 'coverTimedOut':
+                return 'multiRename.tags.cover.timedOut'
             case 'coverNotAFile':
                 return 'multiRename.tags.cover.notAFile'
             case 'unknownCover':
@@ -395,10 +399,11 @@
     />
 {/if}
 {#if viewing !== null && tags.view !== null}
+    {@const shown = viewing}
     <CoverViewer
-        choice={viewing.choice}
-        total={viewing.total}
-        image={viewing.image}
+        choice={shown.choice}
+        total={shown.total}
+        loadImage={() => tags.coverImage(shown.choice.key)}
         editable={tags.view.editable}
         onUseForAll={(key: string) => {
             viewing = null
@@ -422,7 +427,7 @@
             editable={tags.view.editable && !dialogOpen}
             revision={tags.view}
             listChoices={() => tags.coverChoices()}
-            loadImage={(key: string) => tags.coverImage(key)}
+            loadThumbnail={(key: string) => tags.coverThumbnail(key)}
             {listCandidates}
             onView={(shown: CoverShown) => { viewing = shown }}
             onPick={(fileName: string) => void tags.coverFromFile(fileName)}

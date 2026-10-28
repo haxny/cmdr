@@ -1307,7 +1307,11 @@
   },
   "multiRename.tags.cover.files": "{count, plural, one {{countText} file} other {{countText} files}}",
   "@multiRename.tags.cover.files": {
-    "description": "In the cover section of the tag editor window, under a cover picture: how many of the files carry that cover. {countText} is the formatted number."
+    "description": "In the cover section of the tag editor window, under a cover picture: how many of the files carry that cover. {countText} is the formatted number.",
+    "placeholders": {
+      "count": "the number of files, which picks the plural form",
+      "countText": "the formatted number of files, like 12"
+    }
   },
   "multiRename.tags.cover.caption": "{filesText} · {sizeText}",
   "@multiRename.tags.cover.caption": {
@@ -1379,6 +1383,26 @@
   "multiRename.tags.cover.useForAll": "Use for all files",
   "@multiRename.tags.cover.useForAll": {
     "description": "Button in the dialog showing one cover large, in the tag editor window: makes this picture the cover of every file. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.cover.pasteNotAnImage": "That isn’t a picture Cmdr can use as a cover. Copy a JPEG, PNG, WebP, or TIFF picture, then paste again.",
+  "@multiRename.tags.cover.pasteNotAnImage": {
+    "description": "Shown in the tag editor window when what the user pasted on the cover section isn't a usable picture. Nothing is changed."
+  },
+  "multiRename.tags.cover.timedOut": "Reading that picture took too long, so the cover is unchanged. Copy it to this Mac first, then drop it again.",
+  "@multiRename.tags.cover.timedOut": {
+    "description": "Shown in the tag editor window when a picture file dropped on the cover section, for example from a slow network drive, couldn't be read in time. Nothing is changed."
+  },
+  "multiRename.tags.cover.pasteButton": "Paste picture",
+  "@multiRename.tags.cover.pasteButton": {
+    "description": "Button in the cover section of the tag editor window: makes the picture on the clipboard the cover of every file. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.cover.pasteUnavailable": "Couldn’t read the clipboard. Select the cover section and press ⌘V instead.",
+  "@multiRename.tags.cover.pasteUnavailable": {
+    "description": "Shown in the cover section of the tag editor window when the Paste picture button couldn't read the clipboard."
+  },
+  "multiRename.tags.cover.loading": "Loading the picture…",
+  "@multiRename.tags.cover.loading": {
+    "description": "Shown in the dialog showing one cover large, in the tag editor window, while the picture is on its way."
   },
   "multiRename.tags.editFailed": "Couldn’t apply that change.",
   "@multiRename.tags.editFailed": {
