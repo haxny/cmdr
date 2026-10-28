@@ -262,6 +262,46 @@ describe('the Tags window’s function keys', () => {
     ])
   })
 
+  it('a tool takes the Tracks pane’s active cell: F8 on # clears the track number', async () => {
+    const root = await mountWindow()
+    await key('Tab')
+    await key('ArrowLeft')
+    await toggleTrack(root, '/b/02.mp3')
+    await key('F8')
+    buttonNamed(dialog() as HTMLElement, 'Clear').click()
+    await settle()
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [{ kind: 'setOne', path: '/b/02.mp3', field: 'track', values: [] }])
+  })
+
+  it('while a write at once runs, a command that opens a dialog does nothing', async () => {
+    let finish: (value: unknown) => void = () => {}
+    ipc.applyTags.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    await mountWindow()
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    expect(statusLine()).toContain('Writing tags…')
+    await key('F4')
+    await review()
+    expect(dialog()).toBeNull()
+    finish({
+      ok: true,
+      value: {
+        applyId: 'A1',
+        written: ['/b/01.mp3'],
+        wouldDrop: [],
+        wouldRemove: [],
+        failed: [],
+        changedOnDisk: [],
+        undoUnavailable: false,
+        sideFilesWritten: [],
+        sideFilesHeld: [],
+        sideFilesFailed: [],
+      },
+    })
+    await settle()
+    await key('F4')
+    expect(dialogTitle()).toBe('Find and replace')
+  })
+
   it('⌘A and ⌘⇧A from the menu leave the selection alone while a tool dialog shows its scope', async () => {
     const root = await mountWindow()
     await key('Tab')
@@ -473,6 +513,48 @@ describe('the Tags window’s function keys', () => {
     await settle()
     expect(dialog()).toBeNull()
     expect(document.activeElement).toBe(box)
+  })
+
+  it('an open Values… list is a dialog to every road: F4, ⌘Z, ⌘⏎, ⌘A and a menu key do nothing behind it', async () => {
+    const multiple: TagEditorView = {
+      ...VIEW,
+      canUndoEdit: true,
+      shared: [
+        {
+          field: 'album',
+          value: 'multiple',
+          choices: [
+            { values: ['Kniha'], files: 2 },
+            { values: ['Jina'], files: 1 },
+          ],
+          choicesMore: 0,
+        },
+      ],
+    }
+    ipc.openTagEditor.mockResolvedValue({ ok: true, value: multiple })
+    const root = await mountWindow()
+    root.querySelector<HTMLButtonElement>('button[aria-label="Album values"]')?.click()
+    await settle()
+    expect(document.querySelector('[role="dialog"] [role="option"]')).not.toBeNull()
+    // Each road on its own first, the ones that open a dialog last.
+    await key('z', { metaKey: true, code: 'KeyZ' })
+    await key('Enter', { metaKey: true, code: 'Enter' })
+    menuSelect.all?.()
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    expect(ipc.editTags).not.toHaveBeenCalled()
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    expect(ipc.setTagViewScope).not.toHaveBeenCalled()
+    menuKey.callback?.({ commandId: 'tags.replace', menuCommandId: 'file.edit' })
+    await settle()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+    await key('F4')
+    expect(document.querySelector('[role="dialog"] [role="option"]')).not.toBeNull()
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+    expect(ipc.undoTagEdit).not.toHaveBeenCalled()
+    expect(ipc.getTagChanges).not.toHaveBeenCalled()
+    expect(ipc.applyTags).not.toHaveBeenCalled()
+    expect(ipc.setTagViewScope).not.toHaveBeenCalled()
   })
 
   it('Tab is never taken from the menu: it stays the panes’ and the page’s', async () => {

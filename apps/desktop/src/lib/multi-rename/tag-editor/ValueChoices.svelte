@@ -45,7 +45,9 @@
     }
 
     function onOptionKey(event: KeyboardEvent, values: string[]): void {
-        if (event.key === 'Enter' || event.key === ' ') {
+        // Plain Enter or Space picks; ⌘⏎ and the like are the window's, which an open list holds back.
+        const plain = !event.metaKey && !event.ctrlKey && !event.altKey
+        if (plain && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault()
             pick(values)
             return

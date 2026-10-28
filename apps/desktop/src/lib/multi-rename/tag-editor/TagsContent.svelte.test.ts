@@ -8,7 +8,16 @@ import type { CoverChoice } from '#lib/ipc/bindings.js'
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
 import TagsContent from './TagsContent.svelte'
 import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
-import { byId, editCursorRow, mountInto, paneList, press, toggleTrack, typeInto } from './tag-cell.test-helper'
+import {
+  byId,
+  editCursorRow,
+  mountInto,
+  paneList,
+  press,
+  toggleTrack,
+  trackRow,
+  typeInto,
+} from './tag-cell.test-helper'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
@@ -603,6 +612,26 @@ describe('TagsContent with tracks selected', () => {
     expect(state.edit).toHaveBeenLastCalledWith([
       { kind: 'setOne', path: '/b/02.mp3', field: 'album', values: [] },
       { kind: 'setOne', path: '/b/04.mp3', field: 'album', values: [] },
+    ])
+  })
+
+  it('⌘-click on a track while an Album box is open sends the value to the tracks shown, not the new selection', async () => {
+    const { root, state } = await mountScoped()
+    await toggleTrack(root, '/b/02.mp3')
+    await toggleTrack(root, '/b/04.mp3')
+    await scopeRest()
+    const album = await editCursorRow(paneList(root, 'Album tags'))
+    await typeInto(album, 'Dracula')
+    // The click blurs the box (its commit) and toggles the sixth track in the same handler.
+    trackRow(root, '/b/06.mp3').dispatchEvent(
+      new MouseEvent('mousedown', { bubbles: true, cancelable: true, metaKey: true }),
+    )
+    await settle()
+    await tick()
+    expect(state.edit).toHaveBeenCalledTimes(1)
+    expect(state.edit).toHaveBeenLastCalledWith([
+      { kind: 'setOne', path: '/b/02.mp3', field: 'album', values: ['Dracula'] },
+      { kind: 'setOne', path: '/b/04.mp3', field: 'album', values: ['Dracula'] },
     ])
   })
 
