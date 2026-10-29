@@ -309,6 +309,7 @@ async fn tokens_summed_across_rounds_never_end_a_turn() {
     let heavy = AgentUsage {
         prompt_tokens: 900_000,
         completion_tokens: 20_000,
+        ..AgentUsage::default()
     };
     let mut programs: Vec<Program> = (0..3)
         .map(|index| Program::Tools {
@@ -477,6 +478,7 @@ fn pricey_rounds(count: usize) -> Vec<Program> {
             usage: AgentUsage {
                 prompt_tokens: 600_000,
                 completion_tokens: 0,
+                ..AgentUsage::default()
             },
         })
         .collect();

@@ -17,16 +17,29 @@ use crate::agent::store::{self, CostRecord};
 ///
 /// Answers the estimate it metered, so the turn can add it up for the spend pause.
 pub(super) fn meter_cost(conn: &rusqlite::Connection, params: &TurnParams<'_>, usage: AgentUsage) -> i64 {
-    let prompt_tokens = usage.prompt_tokens as u64;
-    let completion_tokens = usage.completion_tokens as u64;
-    let priced = crate::agent::pricing::price_call(params.provider, &params.model, prompt_tokens, completion_tokens);
+    let priced = crate::agent::pricing::price_call(params.provider, &params.model, usage);
+    // What a call cost and how much of its prompt came from the cache: the one line that shows
+    // the prompt cache working (`agent/llm/DETAILS.md` § Prompt caching).
+    log::debug!(
+        target: LOG_TARGET,
+        "metered a call: model={}, prompt={} (cache read {}, cache write {}), completion={}, cost_micros={}, priced={}",
+        params.model,
+        usage.prompt_tokens,
+        usage.cache_read_tokens,
+        usage.cache_write_tokens,
+        usage.completion_tokens,
+        priced.cost_micros,
+        priced.priced
+    );
     let record = CostRecord {
         day: day_for(params.now_secs, params.offset),
         conversation_id: params.conversation_id,
         provider: params.provider,
         model: params.model.clone(),
-        prompt_tokens,
-        completion_tokens,
+        prompt_tokens: u64::from(usage.prompt_tokens),
+        completion_tokens: u64::from(usage.completion_tokens),
+        cache_read_tokens: u64::from(usage.cache_read_tokens),
+        cache_write_tokens: u64::from(usage.cache_write_tokens),
         cost_micros: priced.cost_micros,
         priced: priced.priced,
     };

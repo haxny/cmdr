@@ -36,6 +36,9 @@ decision rationale): `DETAILS.md`.
   outbound drops what old threads already stored (the call plus its result). Keep both halves.
 - **`ToolId` and errors classify by variant/HTTP status, never by message string**. Provider
   errors are status-classified upstream in `crate::ai` and mapped variant-to-variant here.
+- **Every request asks for caching, in its provider's shape: one `CachePlan` (`genai_impl/cache.rs`).** A wrong ask
+  isn't a no-op: a message mark on OpenAI GPT-5.6+ turns on genai's explicit mode, which caches nothing once the last
+  message is a tool result. `DETAILS.md` § Prompt caching.
 - **Tool declarations are never `strict: true`**: OpenAI strict also demands all-required, which genai doesn't
   enforce, so an optional prop 400s. `tool_declaration_to_genai` leaves strict unset.
 

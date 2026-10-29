@@ -70,6 +70,17 @@ pub(super) fn replays_chat_reasoning_for_host(host: &str) -> bool {
     )
 }
 
+/// Whether this host and model cache only when the request carries a top-level `cache_control`:
+/// OpenRouter routing to a Claude model. Claude caches nothing unmarked, and genai's OpenAI
+/// adapter drops the per-message marker, so without this every round re-bills the whole chat at
+/// full price (#801). The top-level field is OpenRouter's automatic caching for Claude: the
+/// breakpoint lands on the last cacheable block and moves forward as the thread grows (verified
+/// on OpenRouter's prompt-caching guide, "Anthropic Claude", 2026-10-29). Other OpenRouter models
+/// cache on their own or take per-block markers only, so the field stays off for them.
+pub(super) fn wants_top_level_cache_marker(host: &str, model: &str) -> bool {
+    host == "openrouter.ai" && model.trim_start_matches('~').starts_with("anthropic/")
+}
+
 /// Per-model option fixup: reasoning-class models reject `temperature`. Returns a
 /// modified clone of `options` when needed; otherwise hands back a clone unchanged.
 pub(super) fn adjust_for_model(options: &ChatOptions, target: &ServiceTarget) -> ChatOptions {

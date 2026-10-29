@@ -525,4 +525,52 @@ async fn openrouter_keeps_index_zero_signed_reasoning_blocks_apart() {
     );
 }
 
+/// The one request body a single `respond` sends to `backend`'s loopback stand-in.
+async fn first_request_body(configure: impl FnOnce(AiBackend) -> AiBackend, model: &str) -> Value {
+    let (base_url, requests) = serve(vec![chat_round_two()]).await;
+    let llm = GenaiAgentLlm::new(configure(AiBackend::remote_for_tests(
+        "k".into(),
+        base_url,
+        model.into(),
+    )));
+    let user = AgentMessage {
+        role: AgentRole::User,
+        parts: vec![AgentPart::Text("Where am I?".into())],
+        at: 1,
+    };
+    respond(&llm, &[user]).await;
+    requests
+        .lock_ignore_poison()
+        .first()
+        .cloned()
+        .expect("the request was sent")
+}
+
+/// #801: OpenRouter passes Anthropic's caching through only when the request asks, and genai's
+/// OpenAI adapter drops the per-message marker, so every round re-billed the whole chat at full
+/// price. The top-level `cache_control` is OpenRouter's automatic mode for Claude: the
+/// breakpoint lands on the last cacheable block and moves forward as the thread grows.
+#[tokio::test]
+async fn openrouter_claude_asks_for_caching_at_the_top_level() {
+    let body = first_request_body(
+        |backend| backend.with_top_level_cache_marker(true),
+        "anthropic/claude-sonnet-5.5",
+    )
+    .await;
+    assert_eq!(body["cache_control"], json!({ "type": "ephemeral" }), "{body}");
+    assert_eq!(
+        body.to_string().matches("cache_control").count(),
+        1,
+        "one marker, and no per-block one beside it: {body}"
+    );
+}
+
+/// Every other chat-completions endpoint caches on its own (or not at all), and an unknown
+/// top-level field is a 400 risk there, so it stays off.
+#[tokio::test]
+async fn other_chat_completions_endpoints_get_no_top_level_marker() {
+    let body = first_request_body(|backend| backend, "deepseek/deepseek-v4.1-flash").await;
+    assert!(body.get("cache_control").is_none(), "{body}");
+}
+
 // endregion: --- Chat completions

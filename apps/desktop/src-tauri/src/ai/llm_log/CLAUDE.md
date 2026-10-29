@@ -27,7 +27,7 @@ metadata schema, privacy, setting wiring): `DETAILS.md`.
   auth is applied downstream of it by genai's web client, so the body carries no secret. Every file still passes through
   `redact::redact_secrets` as a belt — don't remove it, and don't start logging headers/URLs without keeping it.
 - **Request fidelity is `request_struct`, not wire.** The byte-identical per-adapter wire payload sits behind genai's
-  `to_web_request_data`, whose types are `pub(crate)` at the pinned `genai =0.6.0-beta.19` and unreachable from Cmdr
+  `to_web_request_data`, whose types are `pub(crate)` in genai 0.7.1 and unreachable from Cmdr
   (see DETAILS). The `ChatRequest` serialization still carries the full assembled prompt (system, tools, history,
   envelope). Reaching true wire needs a genai patch — a named follow-up, not a v1 gap.
 - **Enabled + dir are process globals.** `ENABLED` defaults to `cfg!(debug_assertions)` (dev-on, prod-off); the

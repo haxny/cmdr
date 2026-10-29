@@ -510,9 +510,38 @@ fn cost(
         model: "test-model".to_string(),
         prompt_tokens: prompt,
         completion_tokens: completion,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
         cost_micros: micros,
         priced: true,
     }
+}
+
+/// The meter keeps what a call read from and wrote to the provider's prompt cache (#770), and a
+/// discarded thread's fold onto the quiet-wakes row carries them too.
+#[test]
+fn the_meter_keeps_cache_reads_and_writes_through_a_fold() {
+    let conn = migrated_conn();
+    let id = create_conversation(&conn, "T", 1, None).expect("create");
+    let cached = |read, write| CostRecord {
+        cache_read_tokens: read,
+        cache_write_tokens: write,
+        ..cost("2026-10-29", id, ProviderTag::Anthropic, 1_000, 10, 100)
+    };
+    record_cost(&conn, &cached(0, 900)).expect("first call writes");
+    record_cost(&conn, &cached(900, 80)).expect("second call reads");
+    let sums = |conversation_id: i64| -> (i64, i64) {
+        conn.query_row(
+            "SELECT SUM(cache_read_tokens), SUM(cache_write_tokens) FROM cost_meter WHERE conversation_id = ?1",
+            [conversation_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("sums")
+    };
+    assert_eq!(sums(id), (900, 980));
+
+    discard_conversation_keeping_cost(&conn, id).expect("discard");
+    assert_eq!(sums(quiet_wakes_conversation(&conn).expect("reserved")), (900, 980));
 }
 
 #[test]

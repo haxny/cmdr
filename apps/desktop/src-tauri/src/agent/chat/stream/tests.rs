@@ -139,6 +139,7 @@ fn usage_maps_field_for_field() {
     let usage = UsageView::from(AgentUsage {
         prompt_tokens: 1_200,
         completion_tokens: 34,
+        ..AgentUsage::default()
     });
     assert_eq!(usage.prompt_tokens, 1_200);
     assert_eq!(usage.completion_tokens, 34);
@@ -211,6 +212,7 @@ fn done_carries_the_persisted_identity_stop_reason_and_usage() {
             usage: AgentUsage {
                 prompt_tokens: 900,
                 completion_tokens: 120,
+                ..AgentUsage::default()
             },
             turn: None,
         }),

@@ -180,6 +180,7 @@ fn effort_maps_to_genai_and_provider_default_sends_nothing() {
             max_output_tokens: 32_000,
             model_reasons: Some(true),
         },
+        CachePlan::Breakpoints,
     );
     assert_eq!(keyword(options.reasoning_effort), Some("high"));
     assert_eq!(options.capture_reasoning_content, Some(true));
@@ -199,6 +200,7 @@ fn a_model_known_not_to_reason_is_asked_for_no_reasoning_at_all() {
                 model_reasons: Some(false),
                 ..CallSettings::default()
             },
+            CachePlan::Breakpoints,
         );
         assert_eq!(keyword(options.reasoning_effort), None, "{effort:?}");
         assert_eq!(options.capture_reasoning_content, Some(false), "{effort:?}");
@@ -256,9 +258,40 @@ fn a_nameless_call_and_the_result_answering_it_both_drop_out_of_the_replay() {
         },
     ];
 
-    let request = build_request("sys", &[], &transcript, &gemini());
+    let request = build_request("sys", &[], &transcript, &gemini(), CachePlan::Breakpoints);
     assert_eq!(request.messages.len(), 1, "only the user message survives the replay");
     assert_eq!(request.messages[0].role, ChatRole::User);
+}
+
+/// Regression anchor (#770, live on `gpt-6.1-terra`, 2026-10-29): a marked last message put
+/// genai's GPT-5.6+ explicit mode on, and once that message was a tool result (no text block
+/// to carry a breakpoint) the call cached nothing: call 2 of a tool loop read 0 and wrote 0.
+/// Under the automatic plan nothing is marked, so OpenAI's own caching stays on.
+#[test]
+fn the_automatic_plan_marks_no_message() {
+    let user = AgentMessage {
+        role: AgentRole::User,
+        parts: vec![AgentPart::Text("Where am I?".into())],
+        at: 1,
+    };
+    let marked = |request: &ChatRequest| {
+        request
+            .messages
+            .iter()
+            .filter(|message| message.options.as_ref().is_some_and(|o| o.cache_control.is_some()))
+            .count()
+    };
+    let responses = origin(AdapterKind::OpenAIResp, "gpt-6.1-terra");
+    let automatic = build_request(
+        "sys",
+        &[],
+        std::slice::from_ref(&user),
+        &responses,
+        CachePlan::Automatic,
+    );
+    assert_eq!(marked(&automatic), 0);
+    let breakpoints = build_request("sys", &[], &[user], &responses, CachePlan::Breakpoints);
+    assert_eq!(marked(&breakpoints), 1);
 }
 
 #[test]
@@ -297,7 +330,7 @@ fn tool_result_carries_the_originating_tool_name() {
         },
     ];
 
-    let request = build_request("system", &[], &transcript, &gemini());
+    let request = build_request("system", &[], &transcript, &gemini(), CachePlan::Breakpoints);
     let response = request
         .messages
         .iter()
@@ -326,7 +359,7 @@ fn tool_result_without_a_matching_call_omits_the_tool_name() {
         at: 1_001,
     }];
 
-    let request = build_request("system", &[], &transcript, &gemini());
+    let request = build_request("system", &[], &transcript, &gemini(), CachePlan::Breakpoints);
     let response = request
         .messages
         .iter()
@@ -402,6 +435,7 @@ fn agent_calls_leave_room_for_reasoning_and_a_tool_call() {
             max_output_tokens: 32_000,
             model_reasons: None,
         },
+        CachePlan::Breakpoints,
     );
     assert_eq!(options.max_tokens, Some(32_000));
 }
@@ -477,7 +511,39 @@ fn usage_maps_and_clamps_negatives() {
         AgentUsage {
             prompt_tokens: 120,
             completion_tokens: 0,
+            ..AgentUsage::default()
         }
+    );
+}
+
+/// The cost meter prices a cached prompt token at the cache rate (#770), so the read and
+/// write counts genai reports have to survive the mapping, as shares of the whole prompt.
+#[test]
+fn usage_keeps_the_cache_reads_and_writes() {
+    let usage = |read, write| GenaiUsage {
+        prompt_tokens: Some(1_000),
+        completion_tokens: Some(50),
+        prompt_tokens_details: Some(genai::chat::PromptTokensDetails {
+            cached_tokens: read,
+            cache_creation_tokens: write,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    assert_eq!(
+        map_usage(usage(Some(700), Some(200))),
+        AgentUsage {
+            prompt_tokens: 1_000,
+            completion_tokens: 50,
+            cache_read_tokens: 700,
+            cache_write_tokens: 200,
+        }
+    );
+    // A provider that reports more cached than it read in all can't make the plain share negative.
+    let overcounted = map_usage(usage(Some(900), Some(400)));
+    assert_eq!(
+        (overcounted.cache_read_tokens, overcounted.cache_write_tokens),
+        (900, 100)
     );
 }
 

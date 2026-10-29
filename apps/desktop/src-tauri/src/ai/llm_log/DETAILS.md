@@ -44,10 +44,11 @@ Responses are logged as the assembled reply: for streams, the captured content w
 agent does), else the text accumulated from the chunk stream, plus stop reason and usage
 (`fidelity: "assembled"`); for the non-stream helper, the parsed genai `ChatResponse` (`fidelity: "parsed"`).
 
-**Follow-up for true wire fidelity:** a scoped `[patch.crates.io]` genai fork that re-exports those four items as `pub`
-(or a thin `pub` wrapper calling `to_web_request_data`) would let the tap log the byte-identical wire `payload`
-(`fidelity: "wire"`) with no other change. This is the same class of change as the already-tracked Anthropic
-thinking-capture patch (plan § 13 follow-ups) — bundle them if that fork lands.
+**Follow-up for true wire fidelity:** genai is already vendored with a patch (`vendor/genai/CMDR-PATCH.md`); re-exporting
+those four items as `pub` there (or a thin `pub` wrapper calling `to_web_request_data`) would let the tap log the
+byte-identical wire `payload` (`fidelity: "wire"`) with no other change. The Anthropic thinking-capture patch once
+planned beside it isn't needed: genai 0.7 captures and replays signed, omitted, and redacted thinking unpatched
+(verified on genai 0.7.1 by `replay_fixtures.rs`'s Anthropic round-trip and a live Claude tool loop, 2026-10-29).
 
 ## File layout
 

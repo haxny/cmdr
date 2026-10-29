@@ -90,6 +90,27 @@ fn only_verified_hosts_take_chat_reasoning_back() {
     }
 }
 
+/// #801: only OpenRouter routing to a Claude model needs the request-level marker. Model ids
+/// are OpenRouter's own (`anthropic/…`, and `~anthropic/…` for its "latest" aliases).
+#[test]
+fn only_openrouter_claude_asks_for_caching_at_the_top_level() {
+    for model in [
+        "anthropic/claude-sonnet-5.5",
+        "anthropic/claude-opus-5",
+        "~anthropic/claude-sonnet-latest",
+    ] {
+        assert!(wants_top_level_cache_marker("openrouter.ai", model), "{model}");
+    }
+    for (host, model) in [
+        ("openrouter.ai", "deepseek/deepseek-v4.1-flash"),
+        ("openrouter.ai", "openai/gpt-6.1-sol"),
+        ("api.anthropic.com", "claude-sonnet-5-5"),
+        ("api.together.xyz", "anthropic/claude-sonnet-5.5"),
+    ] {
+        assert!(!wants_top_level_cache_marker(host, model), "{host} {model}");
+    }
+}
+
 /// A Gemini user who picked `models/gemini-…` from the old OpenAI-compatible list keeps a
 /// working model once the preset moves to Google's native API.
 #[test]

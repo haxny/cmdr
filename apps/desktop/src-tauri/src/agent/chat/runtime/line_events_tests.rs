@@ -16,6 +16,7 @@ fn usage(prompt_tokens: u32, completion_tokens: u32) -> AgentUsage {
     AgentUsage {
         prompt_tokens,
         completion_tokens,
+        ..AgentUsage::default()
     }
 }
 

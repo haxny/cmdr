@@ -37,7 +37,7 @@ mod routing;
 
 #[cfg(test)]
 use routing::is_openai_chat_reasoning_model;
-use routing::{adjust_for_model, remote_model_iden, replays_chat_reasoning_for_host};
+use routing::{adjust_for_model, remote_model_iden, replays_chat_reasoning_for_host, wants_top_level_cache_marker};
 
 const GENAI_BUILD_WITH_REQWEST: &str = "genai builds without error when handed a reqwest client";
 
@@ -53,6 +53,8 @@ pub struct AiBackend {
     /// Whether this endpoint takes a chat-completions turn's reasoning text back
     /// ([`replays_chat_reasoning_for_host`]). Native protocols ignore it.
     replays_chat_reasoning: bool,
+    /// Caches only on a request-level `cache_control` ([`wants_top_level_cache_marker`]).
+    top_level_cache_marker: bool,
     /// The logging context for this backend's calls, or `None` to skip logging (the default;
     /// unit-test backends and any path that hasn't opted in). Set by the caller via
     /// [`AiBackend::with_log_context`] once it knows which feature (and session) the call
@@ -61,26 +63,9 @@ pub struct AiBackend {
     log_ctx: Option<LlmLogContext>,
 }
 
+/// Test-only constructors and overrides (`remote_for_tests`, `with_chat_reasoning_replay`, …).
 #[cfg(test)]
-impl AiBackend {
-    /// [`remote`](Self::remote) for tests outside `ai/` (live smoke tests, evals), which call a
-    /// provider directly and so have no consent to check.
-    pub(crate) fn remote_for_tests(api_key: String, base_url: String, model: String) -> Self {
-        Self::remote(api_key, base_url, model)
-    }
-
-    /// [`local`](Self::local) for tests outside `ai/`.
-    pub(crate) fn local_for_tests(port: u16) -> Self {
-        Self::local(port)
-    }
-
-    /// Overrides the host-derived [`replays_chat_reasoning`](Self::replays_chat_reasoning), for a
-    /// loopback fixture server standing in for a host that takes reasoning back.
-    pub(crate) fn with_chat_reasoning_replay(mut self, replays: bool) -> Self {
-        self.replays_chat_reasoning = replays;
-        self
-    }
-}
+mod test_support;
 
 impl AiBackend {
     /// Local llama-server on `127.0.0.1:<port>`. Forces the OpenAI chat-completions
@@ -108,6 +93,7 @@ impl AiBackend {
             // Unverified: llama-server reads `reasoning_content` back for some chat templates,
             // but no local model has been run through a reasoning tool loop yet.
             replays_chat_reasoning: false,
+            top_level_cache_marker: false,
             log_ctx: None,
         }
     }
@@ -122,8 +108,10 @@ impl AiBackend {
     pub(in crate::ai) fn remote(api_key: String, base_url: String, model: String) -> Self {
         let endpoint = remote_endpoint(base_url);
         let endpoint_url = parse_endpoint(&endpoint);
-        let model = remote_model_iden(&model, endpoint_url.host_str());
-        let replays_chat_reasoning = endpoint_url.host_str().is_some_and(replays_chat_reasoning_for_host);
+        let host = endpoint_url.host_str();
+        let top_level_cache_marker = host.is_some_and(|host| wants_top_level_cache_marker(host, &model));
+        let model = remote_model_iden(&model, host);
+        let replays_chat_reasoning = host.is_some_and(replays_chat_reasoning_for_host);
         let destination = AiDestination::Remote(endpoint_url);
         let resolver = make_resolver(endpoint, AuthData::from_single(api_key), ForceAdapter::None);
         let client = Client::builder()
@@ -138,6 +126,7 @@ impl AiBackend {
             model,
             destination,
             replays_chat_reasoning,
+            top_level_cache_marker,
             log_ctx: None,
         }
     }
@@ -168,6 +157,11 @@ impl AiBackend {
     /// ([`replays_chat_reasoning_for_host`]). The native protocols don't read it.
     pub(crate) fn replays_chat_reasoning(&self) -> bool {
         self.replays_chat_reasoning
+    }
+
+    /// Whether a request that wants caching must say so at its top level (OpenRouter to Claude).
+    pub(crate) fn wants_top_level_cache_marker(&self) -> bool {
+        self.top_level_cache_marker
     }
 
     /// Resolves the adapter and the bare model name this backend sends, without a network call.

@@ -29,8 +29,8 @@ use crate::ai::client::AiBackend;
 use super::AgentLlm;
 use super::genai_impl::GenaiAgentLlm;
 use super::types::{
-    AgentDelta, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolResult, ReasoningEffort, ToolDeclaration,
-    ToolId,
+    AgentDelta, AgentMessage, AgentPart, AgentRole, AgentStopReason, AgentToolResult, AgentUsage, ProviderTag,
+    ReasoningEffort, ToolDeclaration, ToolId,
 };
 
 fn env_or_skip(var: &str) -> String {
@@ -90,6 +90,8 @@ struct LoopOutcome {
     /// carrying their own signature.
     reasoning_parts: usize,
     answer: String,
+    /// Each call's usage, in order: the cache smokes read the reads and writes off it.
+    calls: Vec<AgentUsage>,
 }
 
 /// Canned `list_dir` answers. The root names three `reports-N` folders and only the
@@ -121,6 +123,15 @@ fn fake_list_dir(arguments: &serde_json::Value) -> serde_json::Value {
 /// `End` message is replayed verbatim as the assistant turn (reasoning parts and
 /// all), followed by a tool turn with the results, until the model answers in prose.
 async fn run_tool_loop(backend: AiBackend, effort: ReasoningEffort) -> LoopOutcome {
+    run_tool_loop_with(
+        backend,
+        effort,
+        "You are a file assistant. Use the tools; never guess folder contents.",
+    )
+    .await
+}
+
+async fn run_tool_loop_with(backend: AiBackend, effort: ReasoningEffort, system: &str) -> LoopOutcome {
     let llm = GenaiAgentLlm::new(backend);
     let tools = [ToolDeclaration {
         name: ToolId::ListDir,
@@ -141,12 +152,13 @@ async fn run_tool_loop(backend: AiBackend, effort: ReasoningEffort) -> LoopOutco
         reasoning_ticks: 0,
         reasoning_parts: 0,
         answer: String::new(),
+        calls: Vec::new(),
     };
 
     for _ in 0..5 {
         let stream = llm
             .respond(
-                "You are a file assistant. Use the tools; never guess folder contents.",
+                system,
                 &tools,
                 &messages,
                 crate::agent::llm::CallSettings {
@@ -161,9 +173,10 @@ async fn run_tool_loop(backend: AiBackend, effort: ReasoningEffort) -> LoopOutco
             .map(|item| item.unwrap_or_else(|error| panic!("stream error: {error:?}")))
             .collect()
             .await;
-        let Some(AgentDelta::End { stop, message, .. }) = deltas.last() else {
+        let Some(AgentDelta::End { stop, message, usage }) = deltas.last() else {
             panic!("stream did not end with an End delta");
         };
+        outcome.calls.push(*usage);
 
         outcome.reasoning_ticks += deltas
             .iter()
@@ -411,6 +424,90 @@ async fn smoke_openrouter_claude_tool_loop() {
 async fn smoke_openrouter_grok_tool_loop() {
     let backend = remote("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "x-ai/grok-4.7");
     assert_tool_loop("openrouter grok", backend, ReasoningEffort::Medium, false).await;
+}
+
+/// A system prompt past every provider's cache minimum (512 tokens on Claude 5.x, 1,024 on
+/// OpenAI), so the prefix is cacheable at all. Ask Cmdr's own prompt is far past it.
+fn cache_padded_system() -> String {
+    let rule = "Name folders exactly as the tool lists them, never from memory or a guess. ";
+    format!(
+        "You are a file assistant. Use the tools; never guess folder contents. {}",
+        rule.repeat(120)
+    )
+}
+
+/// #770's "done when": a multi-step turn reports cache reads from the second call on, and the
+/// meter prices them below the uncached rate. Runs the tool loop with a cacheable prefix, logs
+/// each call's usage and priced cost (`RUST_LOG=info`, `--no-capture` to see them), and asserts
+/// every call after the first read from the cache.
+async fn assert_cache_reads(label: &str, backend: AiBackend, provider: ProviderTag, model: &str) {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let outcome = run_tool_loop_with(backend, ReasoningEffort::ProviderDefault, &cache_padded_system()).await;
+    assert!(outcome.calls.len() >= 2, "{label}: expected 2+ calls");
+    for (index, usage) in outcome.calls.iter().enumerate() {
+        let priced = crate::agent::pricing::price_call(provider, model, *usage);
+        let uncached = crate::agent::pricing::price_call(
+            provider,
+            model,
+            AgentUsage {
+                cache_read_tokens: 0,
+                cache_write_tokens: 0,
+                ..*usage
+            },
+        );
+        log::info!(
+            target: "agent::llm",
+            "{label} call {}: prompt {} (cache read {}, write {}), completion {}, cost {} micro-USD (uncached {}), priced={}",
+            index + 1,
+            usage.prompt_tokens,
+            usage.cache_read_tokens,
+            usage.cache_write_tokens,
+            usage.completion_tokens,
+            priced.cost_micros,
+            uncached.cost_micros,
+            priced.priced
+        );
+        assert!(priced.priced, "{label}: {model} must be in the price table");
+        if index == 0 {
+            continue;
+        }
+        assert!(
+            usage.cache_read_tokens > 0,
+            "{label}: call {} read nothing from the cache: {usage:?}",
+            index + 1
+        );
+        assert!(
+            priced.cost_micros < uncached.cost_micros,
+            "{label}: call {} priced {}, not under the uncached {}",
+            index + 1,
+            priced.cost_micros,
+            uncached.cost_micros
+        );
+    }
+}
+
+#[tokio::test]
+#[ignore = "real API call: set ANTHROPIC_API_KEY to run"]
+async fn smoke_anthropic_cache_reads() {
+    let model = "claude-sonnet-5-5";
+    assert_cache_reads("claude cache", anthropic_backend(model), ProviderTag::Anthropic, model).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENAI_API_KEY to run"]
+async fn smoke_openai_explicit_cache_reads() {
+    // GPT-5.6 and later cache only where a request marks a breakpoint (genai's explicit mode).
+    let model = "gpt-6.1-terra";
+    let backend = remote("OPENAI_API_KEY", "https://api.openai.com/v1/", model);
+    assert_cache_reads("gpt cache", backend, ProviderTag::OpenAiResponses, model).await;
+}
+
+#[tokio::test]
+#[ignore = "real API call: set OPENROUTER_API_KEY to run"]
+async fn smoke_openrouter_claude_cache_reads() {
+    let model = "anthropic/claude-sonnet-5.5";
+    let backend = remote("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", model);
+    assert_cache_reads("openrouter claude cache", backend, ProviderTag::OpenAi, model).await;
 }
 
 #[tokio::test]

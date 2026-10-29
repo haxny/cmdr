@@ -667,7 +667,13 @@ state is unambiguous:
 - **(d)** cost is metered per completed `End` via `store::record_cost`, so completed turns
   count once, never double, never lost. Pricing is a per-model table (`pricing.rs`): a local
   model is free + priced, a known cloud model is estimated + priced, and an unknown cloud model
-  records tokens with `priced = false` (cost "unknown", never a silent $0 — spec §2.4).
+  records tokens with `priced = false` (cost "unknown", never a silent $0 — spec §2.4). The
+  prompt's cached share prices at the cache rates: reads at the model's discount (Claude 0.1x
+  of input, 0.05x on Opus and Sonnet 5.5; OpenAI's published cached rate), writes at the
+  surcharge where there is one (Claude 1.25x, GPT-5.6+'s 30-minute rate), and
+  `cache_read_tokens` / `cache_write_tokens` land in the meter beside the totals. `meter_cost`
+  logs each call's split at debug (`agent::chat` target), the quickest proof the cache works.
+  An OpenRouter id (`anthropic/claude-sonnet-5.5`) prices off its maker's table.
 
 `TurnResult` (`Answered` / `Failed(kind)` / `Cancelled`) is the caller's bookkeeping; the
 `AgentChatEvent`s already told the frontend everything.

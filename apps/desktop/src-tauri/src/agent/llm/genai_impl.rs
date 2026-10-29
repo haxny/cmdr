@@ -32,6 +32,9 @@ use super::types::{
 };
 use super::{AgentDeltaStream, AgentLlm};
 
+mod cache;
+use cache::CachePlan;
+
 const LOG_TARGET: &str = "agent::llm";
 
 /// The genai-backed agent LLM. Wraps a configured [`AiBackend`] (the interactive
@@ -61,12 +64,14 @@ impl AgentLlm for GenaiAgentLlm {
             let adapter = model.adapter_kind;
             let origin = ReasoningOrigin::of(&model).with_chat_reasoning(self.backend.replays_chat_reasoning());
 
-            let request = build_request(system, tools, messages, &origin);
-            let options = build_options(adapter, call);
+            let cache = CachePlan::for_request(adapter, &origin.model, self.backend.wants_top_level_cache_marker());
+
+            let request = build_request(system, tools, messages, &origin, cache);
+            let options = build_options(adapter, call, cache);
 
             log::debug!(
                 target: LOG_TARGET,
-                "respond: opening stream (adapter={adapter:?}, effort={:?}, max_output={}, tools={}, messages={})",
+                "respond: opening stream (adapter={adapter:?}, cache={cache:?}, effort={:?}, max_output={}, tools={}, messages={})",
                 call.effort,
                 call.max_output_tokens,
                 tools.len(),
@@ -125,16 +130,18 @@ where
 /// `origin` is the model this request goes to: reasoning that some other model produced stays
 /// out of the replay ([`ReasoningOrigin::may_replay`]).
 ///
-/// **Prompt-cache breakpoints** (`DETAILS.md` § Prompt caching): the last message is marked, so
-/// a provider that caches only on request caches the whole prompt, and the next call (the same
-/// bytes plus a little) reads it back at a tenth of the price. Anthropic also gets one on the
-/// system string, so the tools and system prompt every thread shares stay cached across threads.
-/// A provider that caches automatically (OpenAI before GPT-5.6, Gemini, DeepSeek) ignores both.
+/// **Prompt-cache breakpoints** (`DETAILS.md` § Prompt caching), under [`CachePlan::Breakpoints`]:
+/// the last message is marked, so a provider that caches only on request caches the whole
+/// prompt, and the next call (the same bytes plus a little) reads it back at a tenth of the
+/// price. Anthropic also gets one on the system string, so the tools and system prompt every
+/// thread shares stay cached across threads. A provider that caches automatically (OpenAI before
+/// GPT-5.6, Gemini, DeepSeek) ignores both. The other plans mark nothing here.
 fn build_request(
     system: &str,
     tools: &[ToolDeclaration],
     messages: &[AgentMessage],
     origin: &ReasoningOrigin,
+    cache: CachePlan,
 ) -> ChatRequest {
     let replay = Replay {
         tool_names: tool_names_by_call_id(messages),
@@ -148,10 +155,12 @@ fn build_request(
         // thread persisted before the inbound guard existed.
         .filter(|message| !message.content.is_empty())
         .collect();
-    if let Some(last) = chat_messages.pop() {
+    if cache.marks_messages()
+        && let Some(last) = chat_messages.pop()
+    {
         chat_messages.push(last.with_options(CacheControl::Ephemeral));
     }
-    let mut request = if origin.provider == ProviderTag::Anthropic {
+    let mut request = if cache.marks_messages() && origin.provider == ProviderTag::Anthropic {
         // genai can't mark the request's `system` slot, only a system-role message, which its
         // Anthropic adapter lifts into the same `system` field.
         let system = ChatMessage::system(system).with_options(CacheControl::Ephemeral);
@@ -172,12 +181,16 @@ fn build_request(
 /// `capture_reasoning_content` is load-bearing, not just for display: it's genai's opt-in for
 /// Anthropic's thinking-block signatures and the OpenAI Responses `reasoning.encrypted_content`
 /// include, the halves a tool loop has to replay.
-fn build_options(adapter: AdapterKind, call: CallSettings) -> ChatOptions {
-    let options = ChatOptions::default()
-        .with_max_tokens(call.max_output_tokens)
-        .with_capture_content(true)
-        .with_capture_tool_calls(true)
-        .with_capture_usage(true);
+///
+/// `cache` adds the request-level half of the cache plan ([`CachePlan::apply`]).
+fn build_options(adapter: AdapterKind, call: CallSettings, cache: CachePlan) -> ChatOptions {
+    let options = cache.apply(
+        ChatOptions::default()
+            .with_max_tokens(call.max_output_tokens)
+            .with_capture_content(true)
+            .with_capture_tool_calls(true)
+            .with_capture_usage(true),
+    );
 
     // A model known not to reason gets asked for none: no effort, and no reasoning capture,
     // which on the Responses API would add a `reasoning.summary` it 400s on. The explicit
@@ -484,14 +497,27 @@ fn map_stop_reason(reason: GenaiStopReason) -> AgentStopReason {
 /// adapter (Anthropic `output_tokens`, OpenAI `completion_tokens` / `output_tokens`, Gemini
 /// candidates plus thoughts). The one gap: genai 0.7.1 leaves `completion_tokens` unset when
 /// Gemini reports thoughts and no candidates, so the thoughts stand in rather than metering $0.
+///
+/// The cache counts come from genai's `prompt_tokens_details`, which every adapter fills the same
+/// way: `cached_tokens` is a read (Anthropic `cache_read_input_tokens`, OpenAI and OpenRouter
+/// `cached_tokens`, Gemini `cachedContentTokenCount`), `cache_creation_tokens` a write (Anthropic
+/// `cache_creation_input_tokens`, OpenAI and OpenRouter `cache_write_tokens`). `prompt_tokens`
+/// already includes both, so they're shares of it, capped there in case a provider disagrees.
 fn map_usage(usage: GenaiUsage) -> AgentUsage {
     let reasoning_tokens = usage
         .completion_tokens_details
         .as_ref()
         .and_then(|details| details.reasoning_tokens);
+    let prompt_tokens = non_negative(usage.prompt_tokens);
+    let details = usage.prompt_tokens_details.as_ref();
+    let cache_read_tokens = non_negative(details.and_then(|d| d.cached_tokens)).min(prompt_tokens);
+    let cache_write_tokens = non_negative(details.and_then(|d| d.cache_creation_tokens))
+        .min(prompt_tokens.saturating_sub(cache_read_tokens));
     AgentUsage {
-        prompt_tokens: non_negative(usage.prompt_tokens),
+        prompt_tokens,
         completion_tokens: non_negative(usage.completion_tokens.or(reasoning_tokens)),
+        cache_read_tokens,
+        cache_write_tokens,
     }
 }
 

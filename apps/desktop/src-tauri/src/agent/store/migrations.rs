@@ -107,6 +107,11 @@ pub const MIGRATIONS: &[Migration] = &[
         description: "proposal_server_drafts: the server a zero-op server group proposes",
         up: migrate_v13_proposal_server_drafts,
     },
+    Migration {
+        version: 14,
+        description: "cost_meter.cache_read_tokens/cache_write_tokens: the prompt-cache share of each prompt",
+        up: migrate_v14_cost_meter_cache_tokens,
+    },
 ];
 
 /// The meta key holding the integer schema version (as text). Absent ⇒ 0 (a fresh DB
@@ -593,5 +598,17 @@ fn migrate_v13_proposal_server_drafts(tx: &Transaction<'_>) -> rusqlite::Result<
             CHECK ((editing_id IS NULL) = (previous IS NULL))
         );
         ",
+    )
+}
+
+/// Version 14: how much of each prompt the provider's cache served (`cache_read_tokens`) and
+/// stored for the next call (`cache_write_tokens`), both shares of `prompt_tokens`, which stays
+/// the whole input. Cmdr asks every provider to cache (`agent/llm/DETAILS.md` § Prompt
+/// caching), and `cost_micros` already prices the two at their own rates; these say why a
+/// cached thread costs what it does. Rows metered before this read 0 for both.
+fn migrate_v14_cost_meter_cache_tokens(tx: &Transaction<'_>) -> rusqlite::Result<()> {
+    tx.execute_batch(
+        "ALTER TABLE cost_meter ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+         ALTER TABLE cost_meter ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;",
     )
 }

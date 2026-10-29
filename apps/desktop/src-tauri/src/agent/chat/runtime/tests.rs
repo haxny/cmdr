@@ -361,6 +361,7 @@ async fn an_assistant_turn_with_nothing_in_it_is_an_unfinished_reply() {
         usage: AgentUsage {
             prompt_tokens: 10,
             completion_tokens: 5,
+            ..AgentUsage::default()
         },
     }]);
     let (tx, mut rx) = unbounded_channel();
@@ -400,6 +401,7 @@ async fn crash_c_completed_turns_persist_and_a_retry_resumes_from_them() {
             usage: AgentUsage {
                 prompt_tokens: 10,
                 completion_tokens: 5,
+                ..AgentUsage::default()
             },
         },
         Program::DropAfterText {
@@ -472,6 +474,7 @@ async fn cost_is_metered_per_completed_respond_call() {
             usage: AgentUsage {
                 prompt_tokens: 10,
                 completion_tokens: 5,
+                ..AgentUsage::default()
             },
         },
         Program::Answer {
@@ -479,6 +482,7 @@ async fn cost_is_metered_per_completed_respond_call() {
             usage: AgentUsage {
                 prompt_tokens: 20,
                 completion_tokens: 10,
+                ..AgentUsage::default()
             },
         },
     ]);
