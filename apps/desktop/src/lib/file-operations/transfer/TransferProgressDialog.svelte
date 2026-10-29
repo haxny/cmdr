@@ -16,7 +16,7 @@
     import TransferDoneSummary from './TransferDoneSummary.svelte'
     import { getVolumes } from '#lib/stores/volume-store.svelte.js'
     import DirectionIndicator from './DirectionIndicator.svelte'
-    import { conflictDialogWidthStyle, deriveTransferLabel } from './transfer-dialog-utils'
+    import { conflictDialogWidthStyle, conflictTitle, deriveTransferLabel } from './transfer-dialog-utils'
     import ScanPhaseBody from './ScanPhaseBody.svelte'
     import TransferConflictDialog from './TransferConflictDialog.svelte'
     import { createTransferProgressState } from './transfer-progress-state.svelte'
@@ -607,7 +607,7 @@
                 {tString('fileOperations.transferProgress.titleCancelling')}
             {/if}
         {:else if conflictEvent}
-            {tString('fileOperations.transferProgress.titleConflict')}
+            {conflictTitle(conflictEvent)}
         {:else if isPaused}
             <!-- Before scanning, not after: a paused scan is stopped, so
                  "Scanning to copy..." over it would describe a walk that isn't

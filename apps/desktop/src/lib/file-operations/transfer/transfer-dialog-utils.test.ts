@@ -5,6 +5,7 @@ import { resolveTransferFilename, initialEditedPath, editedPathAfterOperationCha
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
 import {
+  conflictTitle,
   containingFolder,
   deriveTransferLabel,
   generateTitle,
@@ -475,5 +476,14 @@ describe('rename mode: the path box holds folder + new name', () => {
 
   it('hands back an empty name for a bare root, so validation can say so', () => {
     expect(splitPathLeaf('/')).toEqual({ folder: '/', leaf: '' })
+  })
+})
+
+describe('conflictTitle', () => {
+  it('heads a clash as a name that exists, and a refused name as what was refused', () => {
+    expect(conflictTitle({ refusedName: null })).toBe('File already exists')
+    expect(conflictTitle({})).toBe('File already exists')
+    expect(conflictTitle({ refusedName: 'tooLong' })).toBe('Name too long for the destination')
+    expect(conflictTitle({ refusedName: 'notAllowed' })).toBe('Name not allowed at the destination')
   })
 })

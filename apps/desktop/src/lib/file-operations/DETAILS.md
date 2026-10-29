@@ -277,6 +277,14 @@ Decisions:
   dispatch abandons the first without ending it any sooner), and a flag would let the first one's teardown clear the
   second one's claim.
 
+## A refused name is a conflict prompt
+
+A `write-conflict` whose `refusedName` is set (`tooLong` / `notAllowed`) isn't a clash: the destination refused to store
+one item under its name, and nothing is there (backend: `crates/cmdr-operations/DETAILS.md` § "A name the destination
+refuses"). Every surface takes it like any clash. `TransferConflictDialog` then shows why instead of the size and date
+rows, offers only Skip and Skip all (the other letters are dead), and keeps the Cancel / Rollback row as the Stop; both
+hosts head it with `transfer-dialog-utils.ts::conflictTitle`.
+
 ## Conflict prompts for operations with no dialog
 
 `operation-conflict.svelte.ts` (+ `operation-conflict-rules.ts`, `OperationConflictDialog.svelte`) is the main window's
