@@ -28,6 +28,7 @@ use cmdr_fs::pluralize::{grouped, pluralize_grouped};
 mod live;
 mod rename_detect;
 mod replay;
+mod replay_cost;
 mod storm;
 mod verification;
 mod verify_guard;
@@ -37,6 +38,7 @@ mod verify_guard;
 // stress tests) after the internal split.
 pub(in crate::indexing) use live::{LiveConfig, LiveLoopEnd, run_live_event_loop};
 pub(in crate::indexing) use replay::run_replay_event_loop;
+pub(in crate::indexing) use replay_cost::ReplayBudget;
 // Only the indexing stress tests and the branch-watch tests reach these
 // directly; gate the re-exports so the non-test build doesn't see them as
 // unused imports.
@@ -58,9 +60,15 @@ pub(crate) const LIVE_FLUSH_INTERVAL_MS: u64 = 1000;
 /// to the 60 s window while staying negligible work when idle.
 pub(crate) const THROTTLE_SWEEP_INTERVAL_MS: u64 = 1000;
 
-/// Threshold for detecting a journal gap. If the first event ID received is
-/// more than this many IDs ahead of the stored `since_event_id`, we consider
-/// the journal unavailable and fall back to a full scan.
+/// Purged-history detector. If the FIRST event a replay receives is more than
+/// this many ids past the stored `since_event_id`, macOS no longer holds the
+/// history in between, so the replay can't be trusted and falls back to a full
+/// scan. On an intact journal the first event sits right after the stored id,
+/// however busy the machine was since.
+///
+/// ❌ Not a launch gate on `current - stored`: ids count every write on the
+/// machine, so that distance measures build activity, not staleness (#751).
+/// The branch watch still uses it that way (`lifecycle/manager/branch_watch.rs`).
 pub(crate) const JOURNAL_GAP_THRESHOLD: u64 = 10_000_000;
 
 /// Healthy watcher→loop queue depth. The channel is UNBOUNDED (Fix 2: a slow
@@ -235,6 +243,8 @@ pub(crate) struct ReplayConfig {
     /// and a claim held that long would refuse every scan and search walk on the
     /// boot disk until quit.
     pub(in crate::indexing) ground: crate::indexing::lifecycle::cover::Claim,
+    /// How many paths the replay may process before a full reconcile is cheaper.
+    pub(in crate::indexing) budget: ReplayBudget,
 }
 
 // ── Shared helpers ───────────────────────────────────────────────────

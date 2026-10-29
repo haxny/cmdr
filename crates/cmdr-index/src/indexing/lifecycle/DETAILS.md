@@ -128,10 +128,11 @@ first. For everything the local guarded walker reads, in the order the function 
 - **`index_needs_rebuild` set** ⇒ `RebuildThenCoverInPhases`, or `ScanTheVolume` with the phased first index switched
   off. Asked FIRST, ahead of every other cell: an index that may have lost rows to a leaving drive looks healthy to all
   of them, so anything else here would replay or reconcile in place over holes. § "The rebuild marker".
-- **journal replayable, gap too wide** ⇒ `start_scan("stale index: journal gap too large")`. Unchanged, and reachable
-  ONLY on a volume that completed a scan, since replaying at all requires one, so NO volume being covered in phases can
-  take it. Its phased counterpart is `ensure_branch_watch`'s conditional epoch bump: a resume that can't replay the gap
-  keeps the rows and says they're stale (`a_relaunch_with_no_replayable_journal_bumps_the_epoch`).
+- **journal replayable, but running BEHIND the stored id** ⇒ `start_scan("journal runs behind the stored event id")`. ❌
+  A wide id gap alone is not this cell: the replay bounds its own cost (`../watch/DETAILS.md` § "Replay cost, not event
+  count"). Reachable ONLY on a volume that completed a scan, since replaying at all requires one, so NO volume being
+  covered in phases can take it. Its phased counterpart is `ensure_branch_watch`'s conditional epoch bump: a resume that
+  can't replay the gap keeps the rows and says they're stale (`a_relaunch_with_no_replayable_journal_bumps_the_epoch`).
 - **journal replayable** ⇒ `start_replay`. An install that already finished its first index loses nothing.
 - **`scan_completed_at` set** ⇒ `start_scan("rescan of existing index")`, which reconciles in place. ⚠️ This is the path
   a `LocalExternal` drive takes at EVERY mount (`has_event_journal()` is `Local`-only) and the Linux boot disk's normal

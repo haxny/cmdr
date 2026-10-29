@@ -43,16 +43,18 @@ post-replay verification COST-BOUNDING (the two teeth) in `../reconcile/DETAILS.
 - **event_loop/rename_detect.rs** — `detect_renames_by_inode` (the pre-pass `process_live_batch` runs between its
   dir-creation phase and everything else) and the `split_parent_and_name` helper it needs.
 - **event_loop/replay.rs** — `run_replay_event_loop` (cold-start journal replay, two-phase, boot disk only; hands off to
-  live mode and spawns verification), the replay-only bounded-buffer constants (`MAX_AFFECTED_PATHS`,
-  `REPLAY_EVENT_COUNT_LIMIT`, `REPLAY_DEDUP_BATCH_SIZE`), and `defer_replay_rescan` / `flush_replay_batch`. Deferred
-  `MustScanSubDirs` anchors are collected into a `HashSet` (dedup) and handed to the live drain after replay; NO
-  subtree-count cap and no full-scan escalation on churn (the live drain dedups, ancestor-collapses, and
-  per-subtree-throttles them). Full-scan fallback stays only for a genuine journal purge, >10M replayed events, or a
-  watcher-channel overflow; its cause rides the `oneshot::<RescanReason>`. ⚠️ It also OWNS the volume's ground for the
-  replay phase (`ReplayConfig::ground`, taken by `start_replay`) and drops it beside the `scanning.store(false)` that
-  ends that phase, rather than where the task ends — this same task runs the live loop afterwards, and ground held that
-  long would refuse every scan and search walk on the boot disk until quit. Why replay claims ground it never walks:
-  `../lifecycle/DETAILS.md` § "The two single-flight questions a scan has to ask".
+  live mode and spawns verification), the replay-only constants (`MAX_ORIGIN_DIRS`, `REPLAY_PRESSURE_CHECK_EVERY`), and
+  `defer_replay_rescan` / `flush_replay_batch`. Deferred `MustScanSubDirs` anchors are collected into a `HashSet`
+  (dedup) and handed to the live drain after replay; NO subtree-count cap and no full-scan escalation on churn (the live
+  drain dedups, ancestor-collapses, and per-subtree-throttles them). Full-scan fallback stays only for a genuine journal
+  purge, a spent path budget, the ingestion RAM guard, or a watcher-channel overflow; its cause rides the
+  `oneshot::<RescanReason>`. ⚠️ It also OWNS the volume's ground for the replay phase (`ReplayConfig::ground`, taken by
+  `start_replay`) and drops it beside the `scanning.store(false)` that ends that phase, rather than where the task ends
+  — this same task runs the live loop afterwards, and ground held that long would refuse every scan and search walk on
+  the boot disk until quit. Why replay claims ground it never walks: `../lifecycle/DETAILS.md` § "The two single-flight
+  questions a scan has to ask".
+- **event_loop/replay_cost.rs** — the pure cost pieces replay runs on: `ReplayWindow` (dedup by distinct paths,
+  `REPLAY_DEDUP_WINDOW_PATHS`) and `ReplayBudget` (`REPLAY_PATH_BUDGET_FLOOR`). Why: § "Replay cost, not event count".
 - **event_loop/verification.rs** — `run_background_verification` + `verify_affected_dirs` (below).
 - **event_loop/verify_guard.rs** — the two pure cost-bounding decisions for verification (`VerifyVerdict`,
   `HUGE_DIR_CHILDREN`). Structural role below; the cost-bounding RATIONALE is canonical in `../reconcile/DETAILS.md` §
@@ -141,9 +143,9 @@ never routes a shallow `MustScanSubDirs` to the visible scanner, whose shallow a
 
 **The journal position follows the STREAM, not what was processed.** A branch-watched loop discards most events, and
 `process_live_batch` only advances `last_event_id` for what it wrote; left there, a volume with quiet branches would age
-its stored position until the next launch's replay gap is too wide to be worth replaying. `safe_event_id` advances it
-from every event SEEN, and returns `None` while anything is buffered (advancing past a held event would let a restart
-skip it).
+its stored position until the next resume's id-distance gate (`JOURNAL_GAP_THRESHOLD`) refuses to replay it.
+`safe_event_id` advances it from every event SEEN, and returns `None` while anything is buffered (advancing past a held
+event would let a restart skip it).
 
 ⚠️ One limit left standing there, self-healing through the frontier. `process_live_batch` sends its own
 `UpdateLastEventId` for what it processed, so a processed event with a higher id than a HELD one can still carry the
@@ -164,10 +166,11 @@ sizes nor coverage questions. ❌ There is no launch-time pass, and adding one w
 asking about. `resumed_for` restores INTO whatever the session already holds rather than replacing it.
 
 **Replay, or an honest epoch bump.** A resumed watch starts from the stored `last_event_id` so FSEvents replays what
-happened while the app was off. When it can't (no replay support, no stored id, or a gap past `JOURNAL_GAP_THRESHOLD`)
-the resume bumps `current_epoch`: the rows stay covered and trusted (Decision 5) and the read side renders them stale
-rather than current. ❌ Never on the walk path — a bump right after a walk would mark rows stale that were written a
-second ago.
+happened while the app was off. When it can't (no replay support, no stored id, or an id distance past
+`JOURNAL_GAP_THRESHOLD`; still the raw distance here, unlike the cold start, since the live loop this feeds has no
+purged-history check of its own) the resume bumps `current_epoch`: the rows stay covered and trusted (Decision 5) and
+the read side renders them stale rather than current. ❌ Never on the walk path — a bump right after a walk would mark
+rows stale that were written a second ago.
 
 **A watch that starts from now records where now is** (`manager/branch_watch.rs`, `UpdateLastEventId` before the stream
 starts). A session whose stream never delivers an event otherwise stores no position, and the next start can't replay:
@@ -234,6 +237,47 @@ Cold-start replay (boot disk only, has_event_journal()):
   |-- sinceWhen replay -> two-phase drain -> hands off to live mode -> spawns run_background_verification
 ```
 
+## Replay cost, not event count
+
+**Decision: a launch replays the journal whenever it can serve the stored id, and the replay itself decides when a full
+reconcile is cheaper.** The launch refuses only a journal whose current id is BEHIND the stored one
+(`launch_route::journal_runs_behind`): ids only grow on a healthy journal, so that one was reset and a replay from a
+future id would deliver nothing and miss every change. Everything else is the replay's call:
+
+- **Purged history** (`JOURNAL_GAP_THRESHOLD`, checked on the FIRST delivered event): on an intact journal the first
+  event sits right after the stored id however busy the machine was, so a first event 10 M+ ids later means macOS
+  dropped the history in between. Falls back with `JournalGap`.
+- **Cost** (`ReplayBudget`, `replay_cost.rs`): the paths the replay actually PROCESSES (each a stat, a path resolve, and
+  an upsert), checked before each window drains, against the index's entry count (floor `REPLAY_PATH_BUDGET_FLOOR`). A
+  full reconcile visits every entry once, so a replay that would process more paths than the index holds costs more than
+  the walk. This also catches the Full Disk Access toggle that suddenly reveals millions of hidden paths. Falls back
+  with `ReplayOverflow`.
+- **Memory**: the ingestion RAM guard (§ "Unbounded ingestion buffer").
+
+**Why not the id gap at launch, which is what it used to be (#751).** FSEvents ids are machine-wide and count every
+write, not time. Measured 2026-10-26 on David's Mac: 14,029,000 ids in about 90 minutes, mostly two ~10-minute `cargo`
+builds, against an index fully reconciled 90 minutes earlier. A 10 M launch gate walked the whole drive for that (5–15
+minutes at background priority, hourglasses everywhere) when the index was nearly current. A raw processed-event cap
+(the old 10 M `REPLAY_EVENT_COUNT_LIMIT`) had the same flaw one step later, so it went too: raw events now cost a hash
+merge each, and the budget counts what actually costs.
+
+**Why the dedup window is bounded by distinct paths.** A build rewrites the same `target/` files over and over, and the
+old 1,000-event batches processed every repeat that fell in a different batch. Processing re-stats each path, so a path
+processed once per window lands at its CURRENT state and a wider window only saves repeat work. ❌ Don't fear stale
+merged flags: `handle_removal` stats first and upserts a path that still exists, and an upsert of a gone path deletes
+it. `REPLAY_DEDUP_WINDOW_PATHS` (100,000, about 30 MB) keeps the window small next to the ingestion cap. The read
+connection can't see the replay's own uncommitted rows anyway (one transaction for the whole phase), so a wider window
+changes no parent-resolution order. `UpdateLastEventId` goes out after each drain, so the stored id never passes an
+event still in the window.
+
+**Not measured yet**: the issue asked for a timed 10–50 M-event replay against the full reconcile it replaces. The
+budget's 1:1 ratio (paths processed vs. entries walked) is the reasoned default until that measurement lands in
+`docs/notes/`; a replayed path likely costs a few times a walked entry, so the ratio may want lowering, ❌ never raising
+past 1:1 without numbers.
+
+Out of scope, deliberately: writing a newer event id into a stale index to skip work. That claims changes the index
+never saw and leaves sizes stale for good.
+
 ## A batch's deletes wait for one presence read
 
 An FSEvent that says "removed" is a claim the loop has to CHECK, because the check and the failure mode look identical:
@@ -255,7 +299,7 @@ Three drivers own a gate. The live loop flushes through `EventReconciler::flush_
 file-removal pass relies on the dir removals being committed so file-siblings resolve to nothing and become cheap
 unknown-path skips (the ~3-5× saving above), and deferring every delete to the end of the batch would leave nothing
 committed for them to resolve against. The post-scan buffered replay flushes once at the end of
-`EventReconciler::replay`. Cold-start replay gathers per dedup batch and per HistoryDone event, through
+`EventReconciler::replay`. Cold-start replay gathers per dedup window drain and per HistoryDone event, through
 `send_replay_deletes`.
 
 `reconciler::process_fs_event` is kept as the immediate-send form for callers with no volume to name (tests, and
@@ -274,8 +318,8 @@ during a long replay the loop drains slower than FSEvents produces → the chann
 forward task → the upstream cmdr-fsevent-stream buffer overflows and sets its flag → `WatcherChannelOverflow` → a forced
 full scan (measured firing at a 100M-event replay). So a slow drain, not real data loss, threw away a working replay.
 Decoupling ingestion from processing removes that cascade. Memory is bounded by the loop instead of the channel, via
-`classify_ingestion_pressure(event_rx.len())` (checked on each loop's flush tick and at the replay dedup-batch
-boundary):
+`classify_ingestion_pressure(event_rx.len())` (checked on each loop's flush tick and every `REPLAY_PRESSURE_CHECK_EVERY`
+replay events):
 
 - **Healthy** (`<= INGESTION_BACKLOG_WARN = 20_000`): do nothing. Steady state sits well under this (each event ~300 B).
 - **FallingBehind** (`> 20_000`): REPORT the backlog (rate-limited to one line per `INGESTION_WARN_INTERVAL = 5 s`),

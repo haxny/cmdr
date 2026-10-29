@@ -23,7 +23,7 @@ use crate::indexing::scanner;
 use crate::indexing::store::IndexStore;
 use crate::indexing::volume::IndexVolumeKind;
 use crate::indexing::watch::branches;
-use crate::indexing::watch::event_loop::JOURNAL_GAP_THRESHOLD;
+use crate::indexing::watch::event_loop::ReplayBudget;
 use crate::indexing::watch::watcher::{self, DriveWatcher};
 use crate::indexing::writer::{IndexWriter, WriteMessage};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -405,11 +405,12 @@ impl IndexManager {
         }
 
         // Journal replay is gated on the KIND, never on a stored event id (see
-        // `should_replay_journal` for the load-bearing why). The gap pre-check
-        // rides along: replaying tens of millions of events is slower than a fresh
-        // walk, so a stored id the journal has run far past is no longer a
-        // replayable one. (The watcher channel's overflow detection is the
-        // secondary net.)
+        // `should_replay_journal` for the load-bearing why). ❌ No gap pre-check on
+        // the id distance: FSEvents ids count every write on the machine, so an
+        // hour of compiling reads as "ancient" while the index is nearly current
+        // (#751). The replay judges its own cost and trust (purged history, path
+        // budget, RAM guard) and falls back to the walk itself. The one launch-time
+        // refusal is a journal BEHIND the stored id, which can't serve it at all.
         let last_event_id = stored_event_id.unwrap_or(0);
         let journal_replayable = should_replay_journal(
             self.kind,
@@ -422,15 +423,18 @@ impl IndexManager {
         } else {
             0
         };
-        let journal_gap_too_wide = current_id > 0 && current_id > last_event_id + JOURNAL_GAP_THRESHOLD;
+        let journal_runs_behind = journal_replayable && launch_route::journal_runs_behind(last_event_id, current_id);
 
-        let has_rows = IndexStore::get_entry_count(read_conn).is_ok_and(|count| count > 1);
+        // One `COUNT(*)` for both questions: whether there are rows, and the
+        // replay's path budget.
+        let entry_count = IndexStore::get_entry_count(read_conn).ok();
+        let has_rows = entry_count.is_some_and(|count| count > 1);
         let route = launch_route::launch_route(&launch_route::IndexOnDisk {
             scan_completed: status.scan_completed_at.is_some(),
             has_rows,
             has_covered_branches: branches::any_persisted(read_conn),
             journal_replayable,
-            journal_gap_too_wide,
+            journal_runs_behind,
             phased_first_index: phases::phased_first_index(),
             // Read FIRST in the table it feeds, because an index a vanishing drive
             // deleted from can look perfectly finished. ❗ A read that FAILED counts as
@@ -444,25 +448,24 @@ impl IndexManager {
             launch_route::LaunchRoute::ReplayTheJournal => {
                 let gap = current_id.saturating_sub(last_event_id);
                 log::info!(
-                    "Startup: cold-start replay (last_event_id={last_event_id}, current={current_id}, gap={gap})"
+                    "Startup: replaying the journal, not walking the drive (last_event_id={last_event_id}, \
+                     current={current_id}, machine-wide FSEvents id gap={gap}; the replay bounds its own cost)"
                 );
-                self.start_replay(last_event_id, heal_pending)
+                self.start_replay(last_event_id, heal_pending, ReplayBudget::for_index(entry_count))
             }
             launch_route::LaunchRoute::ScanTheVolume => {
-                let trigger = if journal_gap_too_wide {
-                    let gap = current_id.saturating_sub(last_event_id);
+                let trigger = if journal_runs_behind {
                     emit_rescan_notification(
                         self.events.as_ref(),
                         &self.volume_id,
-                        RescanReason::StaleIndex,
+                        RescanReason::JournalGap,
                         format!(
-                            "Stored last_event_id={last_event_id}, current system \
-                             event_id={current_id}, gap={gap} \
-                             (threshold={JOURNAL_GAP_THRESHOLD}). \
-                             The app likely hasn't run for a long time."
+                            "Stored last_event_id={last_event_id} is ahead of the system's current \
+                             event_id={current_id}, so the FSEvents journal can't replay from it. \
+                             Walking the drive instead."
                         ),
                     );
-                    "stale index: journal gap too large"
+                    "journal runs behind the stored event id"
                 } else if status.scan_completed_at.is_some() {
                     // A COMPLETED index with no journal to replay: the walk brings
                     // it current in place (and (re)starts the `DriveWatcher`). This

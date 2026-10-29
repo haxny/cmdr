@@ -312,10 +312,13 @@ struct ReplayPoint {
 
 /// Read the stored replay point against the journal's current id.
 ///
-/// Same threshold the cold-start replay uses, for the same reason, and the same
-/// consolation: nothing is lost that the index claimed to know, because a gap this
-/// wide leaves the covered rows stale-but-trusted (Decision 5) rather than
-/// wrong-and-confident.
+/// ⚠️ This still gates on the raw id distance, which the cold-start replay no
+/// longer does: ids count every write on the machine, so a busy build can trip it
+/// on a nearly current index (#751). The consequence here is milder: nothing is
+/// lost that the index claimed to know, because a gap this wide leaves the
+/// covered rows stale-but-trusted (Decision 5) rather than wrong-and-confident.
+/// The live loop this feeds has no purged-history check of its own, which is
+/// why the gate stays until it gets one.
 fn replay_point(db_path: &Path, volume_root: &Path) -> ReplayPoint {
     if !watcher::supports_event_replay() {
         return ReplayPoint {
