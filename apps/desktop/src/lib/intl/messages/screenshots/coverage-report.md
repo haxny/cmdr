@@ -16,26 +16,26 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 3018 / 5169 keys have a screenshot (58%):** 1680 direct (33%) and 1338 representative (26%). 1961 remain
+**Total: 3021 / 5192 keys have a screenshot (58%):** 1680 direct (32%) and 1341 representative (26%). 1981 remain
 uncoupled, and 190 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
 | --------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
 | adb             |      3 |              0 |        17 |      0 |    20 |   15% |
-| ai              |      0 |            139 |         0 |      0 |   139 |  100% |
-| askCmdr         |     64 |              0 |       268 |      0 |   332 |   19% |
+| ai              |      0 |            138 |         0 |      0 |   138 |  100% |
+| askCmdr         |     64 |              0 |       281 |      0 |   345 |   19% |
 | commandPalette  |      3 |              2 |         2 |      0 |     7 |   71% |
 | commands        |    224 |              1 |        95 |      0 |   320 |   70% |
-| common          |      8 |              1 |         9 |      0 |    18 |   50% |
+| common          |      8 |              1 |        10 |      0 |    19 |   47% |
 | crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
 | errorReporter   |     16 |              0 |        43 |      0 |    59 |   27% |
 | errors          |    151 |            464 |         0 |      0 |   615 |  100% |
 | feedback        |      8 |              6 |         2 |      0 |    16 |   88% |
-| fileExplorer    |    122 |             65 |       337 |      0 |   524 |   36% |
+| fileExplorer    |    122 |             65 |       341 |      0 |   528 |   35% |
 | fileOperations  |    137 |             83 |       111 |      0 |   331 |   66% |
 | goToPath        |      5 |              6 |         2 |      0 |    13 |   85% |
-| indexing        |     34 |             17 |        20 |      0 |    71 |   72% |
+| indexing        |     34 |             17 |        19 |      0 |    70 |   73% |
 | licensing       |     49 |             35 |        25 |      0 |   109 |   77% |
 | lowDiskSpace    |      0 |              0 |         5 |      0 |     5 |    0% |
 | main            |      7 |              0 |        46 |      2 |    55 |   13% |
@@ -50,8 +50,8 @@ uncoupled, and 190 are native surfaces a webview capture cannot reach.
 | search          |      9 |             48 |         0 |      0 |    57 |  100% |
 | securityNotices |      0 |              0 |        13 |      0 |    13 |    0% |
 | selection       |     14 |              0 |         1 |      0 |    15 |   93% |
-| servers         |     84 |             27 |       116 |      0 |   227 |   49% |
-| settings        |    422 |             41 |       403 |      0 |   866 |   53% |
+| servers         |     84 |             27 |       117 |      0 |   228 |   49% |
+| settings        |    422 |             45 |       405 |      0 |   872 |   54% |
 | shortcuts       |     35 |             28 |         0 |      0 |    63 |  100% |
 | stateRecovery   |      0 |              0 |        32 |      0 |    32 |    0% |
 | suggestedOps    |      0 |              0 |       110 |      0 |   110 |    0% |
