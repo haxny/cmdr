@@ -87,8 +87,9 @@ Everything Search-specific sits in a module beside it, one per job, each unit-te
   user asked for. It also writes the coverage note on both paths, cleared before the ask and filled from the answer.
 - **`search-run-tracking.ts`** — the run clock and the one `search_used` event per run, plus the two CTA events. The
   vocabulary is `search-analytics.ts`; this is the wiring.
-- **`ai-translate.ts`** — calls `translate_search_query` and applies the AI's filter writes (`size`, `date`, scope,
-  `caseSensitive`, `excludeSystemDirs`, Pattern chip + label). Returns `{ caveat, highlightedFields }` to QueryDialog.
+- **`ai-translate.ts`** — calls `translate_search_query` and returns `{ caveat, apply }` to QueryDialog; `apply()` holds
+  the AI's filter writes (`size`, `date`, scope, `caseSensitive`, `excludeSystemDirs`, Pattern chip + label), run only
+  while the run is still the newest (`query-ui/DETAILS.md`, ownership contract 2).
 - **`coverage-cta.svelte.ts`** — reads the note and decides what may be OFFERED over it: the per-drive indexing offer,
   the Full Disk Access route (with its quiet TCC probe), and the `search_cta_offered` reporting.
 - **`snapshot-promotion.ts`** — "Show all in main window" (⌥⏎): builds the `SearchSnapshot`, mints an id, pins via

@@ -26,8 +26,9 @@
  *
  *   3. The consumer's `translateAi` callback owns applying every other AI-returned
  *      field to state (size, date, scope, caseSensitive, AI pattern + label, etc).
- *      It returns `{ caveat, highlightedFields }`; QueryDialog flashes the listed
- *      fields and writes the caveat after the promise resolves.
+ *      It returns `{ caveat, apply }` and writes NOTHING before that: `apply` does the
+ *      writes and returns the fields to flash, and QueryDialog calls it only while the
+ *      run is still the newest, so a stale answer can't change a filter (#762).
  *
  *   4. The consumer's `runQuery` returns `{ entries, totalCount }` and does NOT
  *      write to `state.results` / `state.totalCount` / `state.cursorIndex` /
@@ -67,14 +68,18 @@ export interface QueryDialogEmptyState {
 }
 
 /**
- * Result of an AI translation. The consumer's `translateAi` callback applies the
- * AI's filter writes itself; QueryDialog only consumes the metadata it needs to
- * surface in the AI transparency strip and the flash effect.
+ * Result of an AI translation. The answer's filter writes are deferred into `apply`, so
+ * QueryDialog decides WHETHER they happen: an answer that arrives after a newer run
+ * started is dropped whole, writes included (#762).
  */
 export interface AiTranslateResult {
   caveat: string | null
-  /** Names of filter chips to briefly highlight (for example 'size', 'date', 'pattern'). */
-  highlightedFields?: string[]
+  /**
+   * Writes the answer into the consumer's state and returns the names of the filter chips
+   * it changed, to briefly highlight (for example 'size', 'date', 'pattern'). Called at
+   * most once, and only while this run is still the newest.
+   */
+  apply: () => string[]
 }
 
 /**
@@ -329,9 +334,9 @@ export interface QueryDialogConfig<E = unknown> {
   streamingSource?: QueryStreamSource
 
   /**
-   * Optional AI translation. The consumer's callback applies AI-returned filter
-   * writes (size, date, scope, AI pattern + label, …) and returns the caveat +
-   * which fields to flash. QueryDialog handles capturing the prompt
+   * Optional AI translation. The consumer's callback returns the caveat plus an
+   * `apply` holding the AI-returned filter writes (size, date, scope, AI pattern +
+   * label, …), ❌ never writing state itself. QueryDialog handles capturing the prompt
    * (`state.lastAiPrompt`) before invoking and setting the caveat
    * (`state.lastAiCaveat`) after. Returns `null` on translation failure (silent).
    */

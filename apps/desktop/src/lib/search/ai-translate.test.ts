@@ -108,7 +108,7 @@ describe('applyAiTranslationToState', () => {
 })
 
 describe('translateAi', () => {
-  it('hands the current type in as context and returns the caveat plus the changed chips', async () => {
+  it('hands the current type in as context, writes nothing until `apply`, then reports the changed chips', async () => {
     searchQueryState.setTypeFilter('file')
     translateSearchQueryMock.mockResolvedValueOnce({
       display: { namePattern: '*.pdf', patternType: 'glob' },
@@ -120,7 +120,9 @@ describe('translateAi', () => {
 
     expect(translateSearchQueryMock).toHaveBeenCalledWith('my pdfs', false)
     expect(result?.caveat).toBe('I looked at PDFs only.')
-    expect(result?.highlightedFields).toContain('pattern')
+    // Deferred so QueryDialog can drop a stale answer whole (#762).
+    expect(getLastAiPattern()).not.toBe('*.pdf')
+    expect(result?.apply()).toContain('pattern')
     expect(getLastAiPattern()).toBe('*.pdf')
   })
 

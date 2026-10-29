@@ -480,9 +480,10 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
 
   /**
    * Runs an AI translation for `prompt`, then executes the query. The consumer's
-   * `translateAi` owns applying every AI-returned filter (size / date / scope / AI pattern +
-   * label / etc); the runner captures the prompt, flashes any highlighted fields, sets the
-   * caveat, and runs the query.
+   * `translateAi` answers with an `apply` that writes every AI-returned filter (size / date /
+   * scope / AI pattern + label / etc); the runner captures the prompt, calls `apply` only
+   * while this run is still the newest, flashes the fields it reports, sets the caveat, and
+   * runs the query.
    *
    * The spinner covers the WHOLE round-trip: we flip `isSearching` on before the cloud
    * translate (the slow part: seconds) and leave it on through `executeQuery`, which clears
@@ -526,17 +527,19 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
       return
     }
     // A newer run (AI or not) superseded this one while it translated: its answer must not
-    // flash, caveat, or vouch for the strip the newer run owns.
+    // write a filter, flash, caveat, or vouch for the strip the newer run owns. This is the
+    // ONE guard: the consumer's writes live in `apply`, which only this line lets through.
     if (seq !== aiRunSeq) return
     if (!result) {
       config.state.setIsSearching(false)
       return
     }
 
-    // Flash the changed fields so the user sees what the AI touched.
-    if (result.highlightedFields && result.highlightedFields.length > 0) {
+    // Write the answer into state, then flash the fields the AI touched.
+    const changed = result.apply()
+    if (changed.length > 0) {
       highlightedFields.clear()
-      for (const field of result.highlightedFields) highlightedFields.add(field)
+      for (const field of changed) highlightedFields.add(field)
       setTimeout(() => {
         highlightedFields.clear()
       }, AI_HIGHLIGHT_FLASH_MS)

@@ -125,6 +125,13 @@
         // Let the typed IPC error throw: QueryDialog catches it and shows a specific toast
         // (cloud-only gate, quota, key rejected, timeout, …) instead of failing silently.
         const result = await translateSelectionQuery(prompt, sample, currentType)
+        // Deferred: QueryDialog calls it only while this run is still the newest, so a
+        // stale answer never reaches the chips.
+        return { caveat: result.caveat, apply: () => applyAiAnswer(result) }
+    }
+
+    /** Writes a translation into Selection state; returns the chips it changed, to flash. */
+    function applyAiAnswer(result: Awaited<ReturnType<typeof translateSelectionQuery>>): string[] {
         const changed = new SvelteSet<string>()
         if (result.pattern != null && result.pattern.trim()) {
             const kind: 'glob' | 'regex' = result.kind === 'regex' ? 'regex' : 'glob'
@@ -158,10 +165,7 @@
         // (`isDirectory == null`), in which case the user's current Both/Files/Folders choice
         // stands. See `applyTypeFromAi` and `apply-ai-filters.ts` for the why.
         if (applyTypeFromAi(selectionQueryState, result.isDirectory)) changed.add('type')
-        return {
-            caveat: result.caveat,
-            highlightedFields: Array.from(changed),
-        }
+        return Array.from(changed)
     }
 
     /**

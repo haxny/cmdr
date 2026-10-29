@@ -323,7 +323,7 @@ describe('scheduleSearch (auto-apply gates)', () => {
 })
 
 describe('runAiSearch', () => {
-  const translated: AiTranslateResult = { caveat: 'Guessed 10 MB as "big"', highlightedFields: ['size', 'query'] }
+  const translated: AiTranslateResult = { caveat: 'Guessed 10 MB as "big"', apply: () => ['size', 'query'] }
 
   it('captures the prompt before the IPC, then runs the query and scrolls to the top', async () => {
     const seen: (string | null)[] = []
@@ -423,12 +423,20 @@ describe('runAiSearch', () => {
     })
     const first = runner.runAiSearch('old question')
     const second = runner.runAiSearch('new question')
-    answers[1]({ caveat: 'new caveat' })
+    const applied: string[] = []
+    const applying = (name: string, field: string) => (): string[] => {
+      applied.push(name)
+      return [field]
+    }
+    answers[1]({ caveat: 'new caveat', apply: applying('new', 'size') })
     await second
-    answers[0]({ caveat: 'old caveat' })
+    answers[0]({ caveat: 'old caveat', apply: applying('old', 'date') })
     await first
     expect(config.state.getLastAiPrompt()).toBe('new question')
     expect(config.state.getLastAiCaveat()).toBe('new caveat')
+    // The stale answer's writes never run, so it can't touch a filter.
+    expect(applied).toEqual(['new'])
+    expect([...runner.highlightedFields]).toEqual(['size'])
     expect(calls.runQuery).toBe(1)
   })
 
@@ -451,7 +459,7 @@ describe('run / runFromButton', () => {
   it('routes to the AI round-trip in AI mode', async () => {
     const { runner, config, calls } = makeRunner({
       query: 'big photos',
-      translateAi: () => Promise.resolve({ caveat: null }),
+      translateAi: () => Promise.resolve({ caveat: null, apply: () => [] }),
     })
     config.state.setMode('ai')
     runner.runFromButton()
@@ -471,14 +479,14 @@ describe('run / runFromButton', () => {
   it('runAiFromQuery stays quiet when AI is off or the query is blank', async () => {
     const offConfig = makeRunner({
       query: 'big photos',
-      translateAi: () => Promise.resolve({ caveat: null }),
+      translateAi: () => Promise.resolve({ caveat: null, apply: () => [] }),
       overrides: { aiEnabled: false },
     })
     offConfig.runner.runAiFromQuery()
     await Promise.resolve()
     expect(offConfig.calls.translateAi).toEqual([])
 
-    const blank = makeRunner({ query: '', translateAi: () => Promise.resolve({ caveat: null }) })
+    const blank = makeRunner({ query: '', translateAi: () => Promise.resolve({ caveat: null, apply: () => [] }) })
     blank.runner.runAiFromQuery()
     await Promise.resolve()
     expect(blank.calls.translateAi).toEqual([])

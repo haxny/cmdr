@@ -212,6 +212,45 @@ describe('SearchDialog AI transparency strip', () => {
     cleanup()
   })
 
+  it('ignores an AI answer that arrives after a newer search started, filters included', async () => {
+    const answers: ((result: TranslateResult) => void)[] = []
+    translateSearchQueryMock.mockImplementation(
+      () =>
+        new Promise<TranslateResult>((resolve) => {
+          answers.push(resolve)
+        }),
+    )
+    const { overlay, cleanup } = await mountDialog()
+    setMode('ai')
+    setQuery('huge videos')
+    dispatchKey(overlay, 'Enter')
+    await flushAi()
+    setQuery('tax report from last year')
+    dispatchKey(overlay, 'Enter')
+    await flushAi()
+    expect(answers).toHaveLength(2)
+
+    answers[1]({
+      display: { namePattern: '*tax*', patternType: 'glob' },
+      query: {},
+      caveat: null,
+    } as unknown as TranslateResult)
+    await flushAi()
+    answers[0]({
+      display: { namePattern: '*.mov', patternType: 'glob', minSize: 1024 * 1024 * 1024, maxSize: null },
+      query: {},
+      caveat: 'old caveat',
+    } as unknown as TranslateResult)
+    await flushAi()
+
+    expect(getLastAiPrompt()).toBe('tax report from last year')
+    expect(getLastAiPattern()).toBe('*tax*')
+    expect(getSizeFilter()).toBe('any')
+    expect(getLastAiCaveat()).toBeNull()
+
+    cleanup()
+  })
+
   it('hides when a non-AI search runs successfully', async () => {
     translateSearchQueryMock.mockResolvedValueOnce({
       display: { namePattern: '*.pdf', patternType: 'glob' },

@@ -96,11 +96,14 @@ Three pieces of state are QueryDialog's alone; the consumer's callbacks MUST NOT
    `runQuery` resolves. Writing it from a consumer callback breaks `deriveEnterAction` and the `⏎` ownership swap.
 2. **`state.lastAiPrompt` / `state.lastAiCaveat`** are QueryDialog's. The orchestrator sets the prompt to the trimmed
    user input BEFORE invoking `translateAi`, and sets the caveat to whatever the consumer's callback returns. The
-   consumer's `translateAi` returns `{ caveat, highlightedFields }` only. `state.aiTrailReady` rides along: false from
-   the run's start until its answer lands (and after a failed one), and the strip shows the prompt alone meanwhile. Why:
-   the "what the agent did" summary is built from the live chips, which still hold the PREVIOUS query until the answer
-   applies, so a plain "invoice" search's glob read as this query's step (#762). The runner's `aiRunSeq` drops a
-   translation that answers after a newer run started, so it can't caveat, flash, or vouch for the newer strip.
+   consumer's `translateAi` returns `{ caveat, apply }` and writes nothing itself: `apply()` makes the answer's filter
+   writes and returns the chips to flash, and the runner calls it only while the run is still the newest (the `aiRunSeq`
+   check below), so a stale answer never touches a filter. Deferring the writes is what single-sources the guard: a
+   consumer can't forget a check it never runs. `state.aiTrailReady` rides along: false from the run's start until its
+   answer lands (and after a failed one), and the strip shows the prompt alone meanwhile. Why: the "what the agent did"
+   summary is built from the live chips, which still hold the PREVIOUS query until the answer applies, so a plain
+   "invoice" search's glob read as this query's step (#762). The runner's `aiRunSeq` drops a translation that answers
+   after a newer run started, so it can't write a filter, caveat, flash, or vouch for the newer strip.
 3. **`state.results` / `state.totalCount` / `state.cursorIndex`** are QueryDialog's after `runQuery` resolves. The
    consumer's `runQuery` returns `{ entries, totalCount }` and never touches the state.
 
