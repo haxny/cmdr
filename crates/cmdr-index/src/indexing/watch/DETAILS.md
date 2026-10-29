@@ -177,8 +177,20 @@ boot disk the stream sees every write, so it replays across any id distance and 
 it writes anything. ⚠️ A stream rooted at a mount (`LocalExternal`) is filtered to that mount's paths, so its first
 event lands however many writes the REST of the machine made later and proves nothing; it keeps the id-distance gate
 (`JOURNAL_GAP_THRESHOLD`), which errs toward a false "stale" after a busy stretch elsewhere, never toward rows served as
-current over a hole. A real per-mount signal would be the device's journal UUID (`FSEventsCopyUUIDForDevice`), which
-nothing reads yet.
+current over a hole. Nothing reads a per-mount signal yet, and the obvious one is not enough on its own (#808; verified
+on macOS 27.0.1, APFS and HFS+ disk images driven by an FSEvents probe, 2026-10-29):
+
+- A mounted external gets its own `.fseventsd`, and a path-rooted replay from a stored id serves its history across a
+  detach and any amount of boot-disk churn, ending in `HistoryDone`.
+- The journal UUID (`FSEventsCopyUUIDForDevice`) changes when the journal is WIPED, but stays the same when its page
+  files are deleted (simulated pruning). Either way the replay skips the lost events SILENTLY: no `MustScanSubDirs`, no
+  dropped flag. So "same UUID" doesn't prove "no hole".
+- The UUID reads `nil` for a moment right after a mount: treat `nil` as unknown, ❌ never as changed.
+- `FSEventsGetLastEventIdForDeviceBeforeTime` returns `0` for every device and time, the boot disk included. Dead end.
+- `.fseventsd` page files are named by hex event id (the page's last id + 1), so "oldest page ≤ stored id" could prove
+  retention, but it's an undocumented format, and listing the folder worked only because the image ignores ownership.
+- A drive written by another OS records nothing in any journal, so the id-distance gate catches that hole only when
+  enough machine-wide ids pass meanwhile: it's a time proxy, not a proof.
 
 **A watch that starts from now records where now is** (`manager/branch_watch.rs`, `UpdateLastEventId` before the stream
 starts). A session whose stream never delivers an event otherwise stores no position, and the next start can't replay:
