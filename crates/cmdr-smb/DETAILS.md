@@ -726,7 +726,8 @@ path (0.27.0, vdavid/smb2#15), but Cmdr drives the lock-free `Tree` API on clone
   of one still fail, at the scan or the landing rename, though every byte the copy would move follows the link.
   `smb_dfs_the_main_sessions_calls_dont_follow_a_link_yet` pins the gap; it flips when those calls learn the same trick.
 - Pinned by `dfs_links_integration_test.rs` against smb2's INTERNAL DFS fixtures (`smb-dfs-root` → `smb-dfs-target`),
-  which Cmdr's vendored stack doesn't carry, so its cells are `smb_dfs_*`, outside CI's `smb_integration_` lane; its
+  which Cmdr's vendored stack doesn't carry. The fixture lane runs every ignored cell in this package, so each cell also
+  skips (prints "skipped", passes) unless `CMDR_SMB_DFS_FIXTURE` is set; set and unreachable, it fails. The file's
   header says how to start the two containers. The target's container name reaches loopback through
   `session::TEST_DFS_TARGET_OVERRIDES` (`testing` builds only; a shipped build overrides nothing).
 
@@ -1534,11 +1535,13 @@ Every Docker cell is `#[ignore]`d, so a default run skips it. Start the containe
 `apps/desktop/test/smb-servers/start.sh` and run `cargo nextest run -E 'package(cmdr-smb)' --run-ignored only` — select
 by PACKAGE, not by the `smb_integration` name, or a cell named for what it asserts drops out of your run. A new Docker
 cell here can be named that way precisely because `desktop-rust-integration-tests` selects this whole package's ignored
-tests: every `#[ignore]` in a crate with no app around it IS a Docker cell. The app's SMB cells have no such luxury and
-still need the `smb_integration_` prefix the same lane filters them by, which `fixture-lane-coverage` enforces rather
-than asks for. The fixture ports come from the environment (`SMB_CONSUMER_GUEST_PORT` and friends, defaulting to smb2's
-own 10480 / 10481 / 10488 / 10493); Cmdr's stack publishes 11480+ so both harnesses coexist, and the check runner
-exports the override. The full container list: `apps/desktop/test/smb-servers/README.md`.
+tests: every `#[ignore]` in a crate with no app around it IS a Docker cell, so a cell that needs a container the
+consumer stack lacks (the DFS cells, § "A DFS link inside the share") skips itself unless its own variable is set. The
+app's SMB cells have no such luxury and still need the `smb_integration_` prefix the same lane filters them by, which
+`fixture-lane-coverage` enforces rather than asks for. The fixture ports come from the environment
+(`SMB_CONSUMER_GUEST_PORT` and friends, defaulting to smb2's own 10480 / 10481 / 10488 / 10493); Cmdr's stack publishes
+11480+ so both harnesses coexist, and the check runner exports the override. The full container list:
+`apps/desktop/test/smb-servers/README.md`.
 
 ## Diagnostic privacy
 

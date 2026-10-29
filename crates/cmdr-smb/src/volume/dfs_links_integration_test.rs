@@ -4,11 +4,15 @@
 //! (port 10457).
 //!
 //! These fixtures live in smb2's INTERNAL Docker stack, not the consumer stack
-//! Cmdr vendors, so the cells are named `smb_dfs_*` (outside the
-//! `smb_integration_` filter CI's fixture lane runs) and need the two
-//! containers started by hand from the smb2 repo:
+//! Cmdr vendors, so the cells are opt-in: they need the two containers started
+//! by hand from the smb2 repo,
 //! `docker compose -f crates/smb2/tests/docker/internal/docker-compose.yml up -d --build smb-dfs-root smb-dfs-target`,
-//! then `cargo nextest run -p cmdr-smb --run-ignored all -E 'test(smb_dfs_)'`.
+//! then `CMDR_SMB_DFS_FIXTURE=1 cargo nextest run -p cmdr-smb --run-ignored all -E 'test(smb_dfs_)'`.
+//!
+//! ❗ `#[ignore]` alone doesn't keep them out of a gating run: the integration
+//! lane runs EVERY ignored cell in `package(cmdr-smb)` against the consumer
+//! stack, which has no DFS containers. Without the variable each cell says
+//! "skipped" and passes ([`dfs_fixture_not_requested`]).
 
 use super::session::TEST_DFS_TARGET_OVERRIDES;
 use super::test_support::*;
@@ -19,6 +23,25 @@ use std::path::Path;
 
 const DFS_ROOT_PORT: u16 = 10456;
 const DFS_TARGET_ADDR: &str = "127.0.0.1:10457";
+
+/// The variable that says smb2's DFS containers are up (this file's header).
+const DFS_FIXTURE_ENV: &str = "CMDR_SMB_DFS_FIXTURE";
+
+/// Answers true, having said why, when nobody asked for the DFS cells: the
+/// shared fixture lane selects them with the rest of the package, and its stack
+/// has no DFS containers. Asked for and unreachable still FAILS, in
+/// [`dfs_volume`].
+#[allow(
+    clippy::print_stderr,
+    reason = "a skip notice belongs in the test runner's captured output, where nextest attributes it to the cell"
+)]
+fn dfs_fixture_not_requested() -> bool {
+    if std::env::var_os(DFS_FIXTURE_ENV).is_some_and(|v| !v.is_empty()) {
+        return false;
+    }
+    eprintln!("skipped: set {DFS_FIXTURE_ENV}=1 once smb2's DFS containers are up (see this file's header)");
+    true
+}
 
 /// A volume on the DFS root share, with the link's target name pointed at the
 /// target container's port-mapped address.
@@ -61,8 +84,11 @@ async fn upload(vol: &SmbVolume, path: &str, bytes: Vec<u8>, mode: WriteMode) {
 }
 
 #[tokio::test]
-#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers (see this file's header)"]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
 async fn smb_dfs_a_file_behind_a_link_downloads_streamed_and_hinted() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
     let vol = dfs_volume().await;
     let expected = b"Hello from DFS target!\n".to_vec();
 
@@ -85,8 +111,11 @@ async fn smb_dfs_a_file_behind_a_link_downloads_streamed_and_hinted() {
 }
 
 #[tokio::test]
-#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers (see this file's header)"]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
 async fn smb_dfs_uploads_through_a_link_land_on_the_target_streamed_and_single_frame() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
     let vol = dfs_volume().await;
     // Fixed names, replaced on every run: the delete that would tidy them is a
     // main-session mutation, which doesn't follow a link yet (the cell below).
@@ -114,8 +143,11 @@ async fn smb_dfs_uploads_through_a_link_land_on_the_target_streamed_and_single_f
 /// landing rename, though every byte-moving call above follows the link. When
 /// those learn to follow it too, this cell flips and goes.
 #[tokio::test]
-#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers (see this file's header)"]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
 async fn smb_dfs_the_main_sessions_calls_dont_follow_a_link_yet() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
     let vol = dfs_volume().await;
     assert!(vol.list_directory(Path::new("data"), None).await.is_err(), "a listing");
     assert!(vol.get_metadata(Path::new("data/hello.txt")).await.is_err(), "a stat");
@@ -127,8 +159,11 @@ async fn smb_dfs_the_main_sessions_calls_dont_follow_a_link_yet() {
 }
 
 #[tokio::test]
-#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers (see this file's header)"]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
 async fn smb_dfs_a_server_side_copy_through_a_link_asks_the_caller_to_stream() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
     let vol = dfs_volume().await;
     let result = Volume::copy_within(
         &vol,
