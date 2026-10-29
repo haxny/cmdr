@@ -1,0 +1,357 @@
+name: haxny fork build
+
+# The haxny fork's own build: merges an upstream vdavid/cmdr release tag into `haxny-build`,
+# regenerates what a merge leaves stale, runs a test subset aimed at the fork's own features,
+# builds an ad-hoc signed DMG under the fork's identity ("Cmdr haxny", `com.haxny.cmdr`, so it runs
+# beside official Cmdr), pushes `haxny-build`, and publishes a release with the DMG.
+#
+# ❗ GitHub runs `schedule` (and lists `workflow_dispatch`) only from the DEFAULT branch's copy of
+# this file. Either make `haxny-build` the fork's default branch or keep a copy on `main`.
+# Fork files: `.github/haxny/` (build config, `prepare-build.sh`, `disable-inherited-workflows.sh`).
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: 'Upstream tag to merge and build, like v0.57.0 (empty: vdavid/cmdr latest release)'
+        required: false
+        default: ''
+      force:
+        description: 'Build even when haxny-build already contains the tag'
+        type: boolean
+        default: false
+  schedule:
+    # Daily, off the hour (GitHub drops scheduled runs at busy :00 slots first).
+    - cron: '23 5 * * *'
+
+permissions:
+  contents: read
+
+# One merge-and-build at a time: two runs would race to push `haxny-build`. Queued, not cancelled,
+# so a dispatch during a scheduled run waits instead of killing a half-done build.
+concurrency:
+  group: haxny-fork-build
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: vdavid/cmdr
+  BUILD_BRANCH: haxny-build
+
+jobs:
+  # Cheap ubuntu gate: picks the tag, skips when it's already merged, and tries the merge so a
+  # conflict opens an issue without ever starting a macOS runner.
+  check:
+    name: Pick the upstream tag and try the merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write # the conflict issue
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      build: ${{ steps.contained.outputs.build }}
+    steps:
+      - name: Pick the tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-}"
+          if [ -z "$tag" ]; then
+            tag="$(gh api "repos/$UPSTREAM_REPO/releases/latest" --jq .tag_name)"
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$tag' isn't an upstream release tag like v0.57.0."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Upstream tag: $tag"
+
+      - name: Checkout haxny-build
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.BUILD_BRANCH }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the upstream tag
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: git fetch --no-tags "https://github.com/$UPSTREAM_REPO.git" "refs/tags/$TAG:refs/tags/$TAG"
+
+      - name: Skip when haxny-build already has it
+        id: contained
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          FORCE: ${{ inputs.force || false }}
+        run: |
+          set -euo pipefail
+          if git merge-base --is-ancestor "refs/tags/$TAG" HEAD; then
+            if [ "$FORCE" = true ]; then
+              echo "haxny-build already contains $TAG; building anyway (force)."
+              echo "build=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "haxny-build already contains $TAG; nothing to do."
+              echo "build=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Try the merge
+        if: steps.contained.outputs.build == 'true'
+        id: merge
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git merge --no-ff --no-commit "refs/tags/$TAG" > merge.log 2>&1; then
+            git merge --abort 2>/dev/null || true
+            echo "$TAG merges cleanly."
+            exit 0
+          fi
+          cat merge.log
+          git diff --name-only --diff-filter=U > conflicts.txt
+          git merge --abort || true
+          echo "conflicted=true" >> "$GITHUB_OUTPUT"
+          echo "::error::Merging $TAG into $BUILD_BRANCH conflicts in $(wc -l < conflicts.txt) file(s)."
+          exit 1
+
+      - name: Open an issue listing the conflicts
+        if: failure() && steps.merge.outputs.conflicted == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Merging upstream $TAG into $BUILD_BRANCH conflicts"
+          # One open issue per tag: a daily retry of the same conflict comments instead.
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')"
+          {
+            echo "The fork build couldn't merge \`$TAG\` from \`$UPSTREAM_REPO\` into \`$BUILD_BRANCH\`."
+            echo
+            echo "Conflicted files:"
+            echo
+            sed 's/^/- `/; s/$/`/' conflicts.txt
+            echo
+            echo "Resolve locally: \`git fetch upstream tag $TAG && git switch $BUILD_BRANCH && git merge --no-ff $TAG\`, fix, push; the next run builds it."
+            echo
+            echo "Run: $RUN_URL"
+          } > body.md
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file body.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file body.md
+          fi
+
+  build:
+    name: Merge, test, and build the DMG
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    # Apple Silicon. Pinned to the image upstream's release builds on (`release-pipeline.yml`'s
+    # `runs-on` comment): the image fixes the macOS SDK, and an SDK move changes the app (menu icons).
+    runs-on: macos-26
+    # A cold ~1000-crate compile twice over (the test build, then the release build) on 3 cores.
+    timeout-minutes: 150
+    permissions:
+      contents: write # push haxny-build, create the release
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+    steps:
+      - name: Checkout haxny-build
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.BUILD_BRANCH }}
+          fetch-depth: 0
+          # The build runs third-party code (cargo build scripts, npm packages), so no token sits in
+          # `.git/config`; the push step hands it over explicitly.
+          persist-credentials: false
+
+      - name: Merge the upstream tag
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch --no-tags "https://github.com/$UPSTREAM_REPO.git" "refs/tags/$TAG:refs/tags/$TAG"
+          if git merge-base --is-ancestor "refs/tags/$TAG" HEAD; then
+            echo "Already contains $TAG (forced rebuild)."
+          else
+            git merge --no-ff --no-edit -m "merge: upstream $TAG into $BUILD_BRANCH" "refs/tags/$TAG"
+          fi
+
+      - name: Install mise
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+
+      - name: Install tools with mise
+        run: mise install
+
+      - name: Keep only the pinned Rust toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: haxny-fork-macos
+          cache-on-failure: true
+
+      - name: Cache pnpm
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate SvelteKit types
+        run: pnpm exec svelte-kit sync
+        working-directory: ./apps/desktop
+
+      - name: Install cargo-nextest (the version the check runner pins)
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^const NextestVersion = "\(.*\)"$/\1/p' scripts/check/checks/tool-install.go)"
+          test -n "$version"
+          if [ "$(cargo nextest --version 2>/dev/null | head -1)" != "cargo-nextest $version" ]; then
+            cargo install cargo-nextest --version "$version" --locked
+          fi
+
+      # The three generators a merge leaves stale: new English keys reach every locale (in English
+      # until translated), the IPC bindings follow the merged Rust commands, and the message-key
+      # types follow the catalogs.
+      - name: Sync locale keys
+        run: node apps/desktop/scripts/sync-locale-keys.ts
+
+      - name: Regenerate IPC bindings
+        run: pnpm bindings:regen
+        working-directory: ./apps/desktop
+
+      - name: Regenerate message keys
+        run: pnpm intl:keys
+        working-directory: ./apps/desktop
+
+      - name: Commit regenerated files
+        run: |
+          set -euo pipefail
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            git add -A
+            git commit -m "chore: regenerate locale keys, IPC bindings, and message keys after merging upstream $TAG"
+          else
+            echo "Nothing to regenerate."
+          fi
+
+      # The subset: the type check covers the whole frontend (a merge most often breaks types
+      # across the fork/upstream seam), the vitest dirs and Rust filters cover the fork's own
+      # features (Multi-Rename, the Tags window, the bundle identity) plus the locale catalogs the
+      # sync just rewrote. Upstream's own suites already passed upstream's CI for this tag.
+      - name: Type check (svelte-check)
+        run: pnpm exec svelte-check --tsconfig ./tsconfig.json --threshold error
+        working-directory: ./apps/desktop
+
+      - name: Vitest (Multi-Rename and the locale catalogs)
+        run: pnpm exec vitest run src/lib/multi-rename src/lib/intl
+        working-directory: ./apps/desktop
+
+      - name: Rust tests (Tags window, Multi-Rename, tag crate, bundle identity)
+        # Same feature set as `bindings:regen`, so it reuses that test build.
+        run: >-
+          cargo nextest run --locked --workspace --features cmdr/virtual-mtp --no-fail-fast -E 'test(tag_editor) |
+          test(multi_rename) | package(cmdr-tags) | test(bundle_identity) | test(keychain_macos) | test(updater::tests)'
+
+      - name: Pick the fork version
+        id: version
+        run: |
+          set -euo pipefail
+          upstream="${TAG#v}"
+          app="$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)"
+          if [ "$app" != "$upstream" ]; then
+            echo "::warning::tauri.conf.json says $app, the tag says $upstream; the build is versioned after the app."
+          fi
+          fork="$app-haxny.${{ github.run_number }}"
+          echo "fork=$fork" >> "$GITHUB_OUTPUT"
+          echo "release=haxny-$TAG-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "Fork version: $fork"
+
+      - name: Build the DMG
+        env:
+          FORK_VERSION: ${{ steps.version.outputs.fork }}
+        run: |
+          set -euo pipefail
+          .github/haxny/prepare-build.sh "$FORK_VERSION" "$RUNNER_TEMP/haxny.conf.json"
+          cd apps/desktop
+          pnpm tauri build --target aarch64-apple-darwin --bundles app,dmg --config "$RUNNER_TEMP/haxny.conf.json"
+
+      - name: Check and stage the DMG
+        id: dmg
+        env:
+          FORK_VERSION: ${{ steps.version.outputs.fork }}
+        run: |
+          set -euo pipefail
+          bundle=target/aarch64-apple-darwin/release/bundle
+          app="$bundle/macos/Cmdr haxny.app"
+          id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")"
+          short="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
+          echo "Bundle: $id $short"
+          [ "$id" = com.haxny.cmdr ] || { echo "::error::The app carries $id, not com.haxny.cmdr."; exit 1; }
+          [ "$short" = "$FORK_VERSION" ] || { echo "::error::The app says version $short, not $FORK_VERSION."; exit 1; }
+          codesign --verify --deep --strict "$app"
+          # The binary must have compiled the fork identity in (`config::BUNDLE_ID`), or its data,
+          # cache, and logs would land in official Cmdr's folders.
+          grep -q -a com.haxny.cmdr "$app/Contents/MacOS/"* || { echo "::error::The binary doesn't carry com.haxny.cmdr."; exit 1; }
+          mkdir -p dist
+          src="$(ls "$bundle"/dmg/*.dmg)"
+          out="dist/Cmdr-haxny-$FORK_VERSION-aarch64.dmg"
+          cp "$src" "$out"
+          (cd dist && shasum -a 256 "$(basename "$out")" > "$(basename "$out").sha256")
+          cat dist/*.sha256
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the DMG as a run artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: cmdr-haxny-${{ steps.version.outputs.fork }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Push haxny-build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Fast-forward only: if someone pushed meanwhile, this fails rather than overwrite them,
+          # and the next run merges onto their work.
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BUILD_BRANCH"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ steps.version.outputs.release }}
+          FORK_VERSION: ${{ steps.version.outputs.fork }}
+          DMG: ${{ steps.dmg.outputs.path }}
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          {
+            echo "Cmdr haxny $FORK_VERSION: upstream [$TAG](https://github.com/$UPSTREAM_REPO/releases/tag/$TAG) merged into \`$BUILD_BRANCH\` at \`${sha:0:12}\`."
+            echo
+            echo "Apple Silicon only, ad-hoc signed (not notarized): on first launch, right-click the app and choose Open, or run \`xattr -dr com.apple.quarantine \"/Applications/Cmdr haxny.app\"\`."
+            echo "Runs beside official Cmdr with its own settings and data (\`~/Library/Application Support/com.haxny.cmdr\`). It never updates itself; install the next release by hand."
+            echo
+            echo "SHA-256:"
+            echo
+            echo '```'
+            cat "$DMG.sha256"
+            echo '```'
+          } > notes.md
+          gh release create "$RELEASE" "$DMG" "$DMG.sha256" \
+            --repo "$GITHUB_REPOSITORY" --target "$sha" \
+            --title "Cmdr haxny $FORK_VERSION" --notes-file notes.md

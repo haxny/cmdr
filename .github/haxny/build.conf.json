@@ -1,0 +1,11 @@
+{
+  "productName": "Cmdr haxny",
+  "identifier": "com.haxny.cmdr",
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "macOS": {
+      "bundleName": "Cmdr haxny",
+      "signingIdentity": "-"
+    }
+  }
+}
