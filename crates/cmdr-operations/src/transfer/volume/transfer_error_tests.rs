@@ -450,3 +450,67 @@ fn a_hard_abort_marks_the_path_it_stopped_waiting_for() {
         format!("Cancelled: stopped waiting for {path} so the app can quit")
     );
 }
+
+/// A name over the strictest limit Cmdr writes scratch names under, refused at
+/// the LANDING (the temp in the same folder, at most 143 bytes, was accepted):
+/// the length is what the share refused, so the user reads "name too long"
+/// (cmdr-reports#83, a Synology encrypted share's eCryptfs cap).
+#[test]
+fn a_long_name_refused_at_the_landing_is_too_long() {
+    let long_leaf = format!("{}.flac", "Ölmalmen – a very long live recording title ".repeat(4));
+    assert!(long_leaf.len() > cmdr_fs::staging::MAX_SCRATCH_NAME_BYTES);
+    let dest = PathBuf::from(format!("/Volumes/naspi/music/{long_leaf}"));
+    let failure = FinalizeFailure {
+        error: VolumeError::InvalidName("Protocol error: STATUS_OBJECT_NAME_INVALID during SetInfo".into()),
+        aftermath: None,
+    };
+
+    let error = WriteFailure::from(PathedVolumeError::from_landing(failure, &dest)).error;
+
+    assert!(
+        matches!(&error, WriteOperationError::NameTooLong { path } if path == &dest.display().to_string()),
+        "got {error:?}"
+    );
+}
+
+/// A short name refused at the landing fit the temp's budget whole, so its
+/// length proves nothing: it stays the "name not allowed" refusal.
+#[test]
+fn a_short_name_refused_at_the_landing_stays_not_allowed() {
+    let dest = PathBuf::from("/Volumes/naspi/export/CON");
+    let failure = FinalizeFailure {
+        error: VolumeError::InvalidName("STATUS_OBJECT_NAME_INVALID".into()),
+        aftermath: None,
+    };
+
+    let error = WriteFailure::from(PathedVolumeError::from_landing(failure, &dest)).error;
+
+    assert!(
+        matches!(error, WriteOperationError::InvalidName { .. }),
+        "got {error:?}"
+    );
+}
+
+/// A destination refusing a name past 255 bytes AND 255 UTF-16 units refused
+/// it for its length wherever it came from: no filesystem Cmdr writes to holds
+/// one.
+#[test]
+fn a_destination_refusing_a_name_over_every_limit_says_too_long() {
+    let leaf = "a".repeat(300);
+    let path = format!("/Volumes/naspi/{leaf}");
+
+    let error = map_volume_error(&path, PathRole::Destination, VolumeError::InvalidName("refused".into()));
+    assert!(
+        matches!(&error, WriteOperationError::NameTooLong { path: p } if p == &path),
+        "got {error:?}"
+    );
+
+    // 100 three-byte characters: 300 UTF-8 bytes, but 100 UTF-16 units, which
+    // NTFS and exFAT store fine, so the length isn't what they refused.
+    let wide = format!("/Volumes/naspi/{}", "日".repeat(100));
+    let error = map_volume_error(&wide, PathRole::Destination, VolumeError::InvalidName("refused".into()));
+    assert!(
+        matches!(error, WriteOperationError::InvalidName { .. }),
+        "got {error:?}"
+    );
+}
