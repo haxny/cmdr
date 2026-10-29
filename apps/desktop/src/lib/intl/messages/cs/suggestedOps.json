@@ -55,6 +55,34 @@
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
   },
+  "suggestedOps.action.move": "Move",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Copy",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "Move to Trash",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Delete",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Rename",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Compress",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Extract",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
+  },
   "suggestedOps.approve.move": "Přesunout {countText} {count, plural, one {soubor} few {soubory} many {souboru} other {souborů}}",
   "@suggestedOps.approve.move": {
     "sourceHash": "4c89041"
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "Extrahovat {countText} {count, plural, one {archiv} few {archivy} many {archivu} other {archivů}}",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Save server",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Save changes",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Odmítnout",
   "@suggestedOps.reject": {
@@ -139,13 +175,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Nelze spustit: tento disk nemá koš",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "This drive has no Trash",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "Disk s těmito soubory nemá koš, takže je tam přesunout nejde a nic by se nestalo. Návrh odmítni, nebo soubory smaž ručně, pokud to chceš.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "The drive these files are on keeps no Trash, so approving this deletes them for good.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Nedá se to odvolat: nahradí existující archiv",
   "@suggestedOps.irreversible.overwrite": {
@@ -154,6 +190,14 @@
   "suggestedOps.irreversible.other": "Nedá se to odvolat",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "You can undo this: forget the server in Servers",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "You can undo this: change the server back in Servers",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr tuto složku vytvoří",
   "@suggestedOps.folderWillBeCreated": {
@@ -311,8 +355,88 @@
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "5b5b779"
   },
+  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Ask Cmdr to suggest it again, or edit the server in Servers.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask Cmdr to suggest a change to it instead.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Ask Cmdr to suggest another name.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Add a server",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Change server settings",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Port",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59"
+  },
+  "suggestedOps.server.field.account": "Account",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Shared folder",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Bucket",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657"
+  },
+  "suggestedOps.server.notSet": "Not set",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "changes to",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "A new address",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
+  },
   "suggestedOps.indicatorTooltip": "Čekají návrhy od AI. Klikni a posuď je.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "Name already taken",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Something called “{name}” is already there.",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

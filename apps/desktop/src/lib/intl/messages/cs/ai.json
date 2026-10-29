@@ -263,6 +263,54 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Context window: {windowText} {window, plural, one {token} other {tokens}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Context window: about {windowText} {window, plural, one {token} other {tokens}} (from Cmdr’s built-in list)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Recommended",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Recommended ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Off",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Low",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Medium",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "High",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Max",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr uses its own model, {model}, so this applies to that model.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "3a36d6f"
+  },
+  "ai.cloud.effort.levelsUnknown": "This service doesn’t say which levels this model takes, so it decides.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "4688a12"
+  },
+  "ai.cloud.maxOutput": "Longest reply: {outputText} {output, plural, one {token} other {tokens}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Zkontrolovat znovu",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

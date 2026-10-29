@@ -1218,6 +1218,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Reasoning effort",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "Effort",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Thinking level",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "How long the model thinks before it answers. More effort helps with tricky tasks, but replies come slower and the thinking is billed as output.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "reasoning effort, effort, reasoning, thinking, think, speed, cost, quality",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "Kontextové okno",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2326,6 +2346,22 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
+  "settings.askCmdr.spendPause.label": "Check in when an answer costs over",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "One answer can run many lookups. Past this estimated cost, Cmdr pauses it and asks before it spends more. Estimates use list prices, so caching usually makes the real cost lower.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Never",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "cost, spend, money, price, budget, limit, pause, dollars, expensive",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
+  },
   "settings.askCmdr.chatMemorySize.keywords": "chat, paměť, kontext, kontextové okno, tokeny, velikost, rozpočet, historie",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"
@@ -2929,6 +2965,30 @@
   "settings.advanced.card.updates": "Aktualizace",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr shows what the AI looks at while it works. Pick whether those lines fold away once the answer arrives.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "Aktualizace",
   "@settings.updates.card.updates": {
