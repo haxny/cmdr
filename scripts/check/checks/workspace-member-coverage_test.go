@@ -74,7 +74,7 @@ func TestMemberCoverage_FailsOnAnUnclassifiedRustCheck(t *testing.T) {
 	defs := []CheckDefinition{
 		{ID: "desktop-rust-tests", Tech: "🦀 Rust"},
 		{ID: "desktop-rust-brand-new-scanner", Tech: "🦀 Rust"},
-		{ID: "desktop-svelte-eslint", Tech: "🎨 Svelte"},
+		{ID: "desktop-svelte-stylelint", Tech: "🎨 Svelte"},
 	}
 
 	problems := findUnclassifiedRustChecks(defs, rustCheckClassification{
@@ -85,7 +85,7 @@ func TestMemberCoverage_FailsOnAnUnclassifiedRustCheck(t *testing.T) {
 	if !containsSubstring(problems, "desktop-rust-brand-new-scanner") {
 		t.Fatalf("expected the unclassified Rust check to be reported, got: %v", problems)
 	}
-	if containsSubstring(problems, "desktop-svelte-eslint") {
+	if containsSubstring(problems, "desktop-svelte-stylelint") {
 		t.Errorf("a non-Rust check is out of scope, got: %v", problems)
 	}
 }

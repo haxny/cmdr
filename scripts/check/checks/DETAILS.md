@@ -50,9 +50,9 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
 
 ```go
 CheckDefinition{
-    ID:          "desktop-svelte-eslint", // unique, always accepted as a CLI selector
-    Nickname:    "",                      // short alias, also accepted as a selector (optional)
-    DisplayName: "eslint",                // shown in output
+    ID:          "desktop-svelte-stylelint", // unique, always accepted as a CLI selector
+    Nickname:    "stylelint",                // short alias, also accepted as a selector (optional)
+    DisplayName: "stylelint",                // shown in output
     App:         AppDesktop,
     Tech:        "🎨 Svelte",
     IsSlow:      false,
@@ -1011,7 +1011,7 @@ Policy by staleness class:
 
 External tools enforce the same principle natively: knip (`treatConfigHintsAsErrors` in `knip.json`), stylelint
 (`reportNeedlessDisables` in `.stylelintrc.mjs`), cargo-deny (`unused-allowed-license = "deny"` in `deny.toml`), and the
-slow eslint lane (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the `osv-scanner.toml`
+type-aware eslint lanes (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the `osv-scanner.toml`
 ignores, one beside each lockfile: a quarterly task in `docs/maintenance.md`.
 
 ## Allowlist consent
@@ -2118,7 +2118,7 @@ doubles as production code.
   names, so the lane that does compile the test still catches a rename. Atoms are read from `filter =` declarations
   only, never from comments quoting one). The crates' code is also covered by the desktop Rust lanes above, which all
   run workspace-wide; this scope is for checks about the crate boundary itself.
-- **Desktop / Svelte**: eslint, svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint,
+- **Desktop / Svelte**: svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint,
   css-unused, a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a directory-level
   `*.a11y.test.ts` that imports it), ui-primitive-coverage (every top-level `lib/ui/*.svelte` primitive has a Debug >
   Components catalog section), dialog-gallery-coverage (every `SOFT_DIALOG_REGISTRY` id has a row in the Debug > Soft
@@ -2585,14 +2585,16 @@ narrowed by a shared `mtpTrees`), the same shape `derive-default-justified` uses
 `AppTreeOnly` they would have kept passing while guarding nothing, which is why each carries a Go cell that plants a
 violation inside the crate.
 
-**Decision**: Split `desktop-svelte-eslint` into fast (non-type-aware) and slow (full) checks. **Why**: Type-aware rules
-(`no-floating-promises`, `no-unsafe-*`, etc.) take ~45% of lint time due to TypeScript project service startup. The fast
-check sets `ESLINT_NO_TYPECHECK=1`, which `eslint.config.js` reads to use `tseslint.configs.strict` (no type info) and
-suppress `reportUnusedDisableDirectives` (since disable comments for type-aware rules would look unused). The full
-checks (`eslint-typecheck-svelte`, `eslint-typecheck-ts`) run the whole config with `reportUnusedDisableDirectives` on,
-so stale disable comments are still caught. In CI they get their own per-push job (`desktop-svelte-eslint-typecheck`)
-beside `desktop-svelte`, so their 2–4 min don't lengthen it. They used to run only in the every-six-days slow workflow,
-where 25 errors (one a real toast-timeout bug) sat on a green `main` (2026-10-21).
+**Decision**: the desktop's ESLint is just the two type-aware lanes (`eslint-typecheck-svelte`, `eslint-typecheck-ts`),
+with no separate no-type-info lane. **Why**: the full config is a strict superset of the `ESLINT_NO_TYPECHECK=1` one
+(`eslint.config.js` only swaps `tseslint.configs.strict` for `strictTypeChecked`, adds the type-aware rules, and turns
+`reportUnusedDisableDirectives` back on), and the two scopes partition `eslint .`, so a plain `desktop-svelte-eslint`
+lane (23 s median, ~600 local runs a month, plus a CI step) found nothing they didn't. Its one unique job was the local
+safe `--fix`, which moved into the type-aware lanes and runs only when their verdict is red (most runs are green, so
+the green path stays one ESLint invocation). Each fix pass is scoped to its lane's files, so the two parallel lanes
+never rewrite the same file. In CI they have their own per-push job (`desktop-svelte-eslint-typecheck`) beside
+`desktop-svelte`, so their 2–4 min don't lengthen it. They used to run only in the every-six-days slow workflow, where
+25 errors (one a real toast-timeout bug) sat on a green `main` (2026-10-21).
 
 **Decision**: ESLint never auto-fixes with type information. **Why**: a type-aware rule judges code against the
 TypeScript program, so while the tree doesn't typecheck (another agent's half-written change in a shared worktree, a
@@ -2603,8 +2605,8 @@ cause it, so the invariant is structural instead, planned in `eslint-passes.go` 
 `TestESLintPassesNeverFixWithTypeAwareRules`: any pass with `--fix` sets `ESLINT_NO_TYPECHECK=1` (every app's
 `eslint.config.js` then turns the type-aware rules and unused-directive reporting off) and passes
 `--fix-type problem,suggestion,layout`, so even a misconfigured rule set can't delete an `eslint-disable`. Per lane: the
-desktop's fast `eslint` lane is that fix pass; the two `eslint-typecheck-*` lanes are check-only in every mode; the
-single-lane apps (`api-server`, `website`, `dashboard`) run the fix pass and then the full config check-only, the final
+desktop's two `eslint-typecheck-*` lanes run the full config check-only first and, only on a red local run, the fix
+pass over their own file set followed by the verdict again (`typeAwareFixPasses`); the single-lane apps (`api-server`, `website`, `dashboard`) run the fix pass and then the full config check-only, the final
 pass being the verdict. The cost: type-aware findings (`no-unnecessary-type-assertion`, `no-unnecessary-condition`,
 unused directives) are reported, never fixed, so an agent fixes them by hand.
 

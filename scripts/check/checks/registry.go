@@ -929,16 +929,6 @@ var AllChecks = []CheckDefinition{
 	},
 
 	// Desktop - Svelte checks
-	{
-		ID:          "desktop-svelte-eslint",
-		CpuWeight:   2,
-		DisplayName: "eslint",
-		App:         AppDesktop,
-		Tech:        "🎨 Svelte",
-		DependsOn:   []string{"oxfmt"},
-		Inputs:      svelteInputs,
-		Run:         RunDesktopESLint,
-	},
 	// Generates `node_modules/$app/tsconfig.json` (which `tsconfig.json` extends as `$app/tsconfig`).
 	// The type-aware checks below depend on it so a TypeScript program can be
 	// built; without it on a fresh tree, type-aware `eslint --fix` strips
@@ -957,8 +947,8 @@ var AllChecks = []CheckDefinition{
 	// Type-aware ESLint is split into a Svelte pass and a TypeScript (non-Svelte)
 	// pass: linting both in one `eslint .` invocation hits a projectService cliff
 	// (~25x slower). Split, each is ~10-15s with identical coverage, so both are
-	// normal (non-slow) and run in parallel with each other and the fast
-	// `desktop-svelte-eslint`. See docs/notes/check-cpu-contention.md.
+	// normal (non-slow) and run in parallel. Together they're the desktop's whole
+	// ESLint coverage, auto-fix included. See docs/notes/check-cpu-contention.md.
 	{
 		ID:          "desktop-svelte-eslint-typecheck-svelte",
 		CpuWeight:   2,

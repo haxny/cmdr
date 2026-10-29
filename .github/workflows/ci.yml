@@ -665,9 +665,8 @@ jobs:
         run: go build -o check .
         working-directory: ./scripts/check
 
-      - name: Run ESLint
-        run: ./scripts/check/check --check desktop-svelte-eslint --ci
-
+      # ESLint runs in `desktop-svelte-eslint-typecheck`: its two type-aware passes run the full
+      # config over all of `eslint .`, a superset of the no-type-info rules.
       - name: Run Stylelint
         run: ./scripts/check/check --check desktop-svelte-stylelint --ci
 
@@ -770,10 +769,10 @@ jobs:
   # Desktop app - type-aware ESLint
   # ===========================================
   # The rules that need TypeScript's types (`no-unnecessary-condition`, `no-floating-promises`,
-  # `no-deprecated`, ...). The `desktop-svelte` job's ESLint step runs with them OFF. They used
-  # to live only in the every-six-days slow workflow, where 25 errors sat on a green `main`
-  # (2026-10-21), one of them a real toast bug. Their own job, so the 2-4 min they take run
-  # beside `desktop-svelte` instead of lengthening it.
+  # `no-deprecated`, ...), plus every other rule: these two passes are the desktop's only ESLint
+  # job. They used to live only in the every-six-days slow workflow, where 25 errors sat on a
+  # green `main` (2026-10-21), one of them a real toast bug. Their own job, so the 2-4 min they
+  # take run beside `desktop-svelte` instead of lengthening it.
   desktop-svelte-eslint-typecheck:
     name: Desktop (Svelte, type-aware ESLint)
     runs-on: ubuntu-latest
