@@ -113,7 +113,26 @@ on macOS 27.0.1 by rendering `NSWorkspace iconForFile:` for folders built with `
   customization and an `Icon\r` exist, macOS draws the symbol, so the xattr's presence alone decides.
 
 The FE keeps the flag beside the `path:` key (`isAccentTintedCustomFolder`, dropped with the key) and `FileIcon` adds
-the filter. The filter is grayscale-first, so an emoji turns gold-sepia with the folder. Both flag and pixels share the
+the filter. A symbol is drawn in a darker shade of the accent, so the grayscale-first filter recolors it cleanly as one
+bitmap.
+
+**Emoji folders under gold are two layers (#814).** The filter grays the whole bitmap first, so on the macOS bitmap the
+emoji turned gold-sepia with the folder. So `classify_custom_folder_icon` parses the xattr value
+(`customization_emoji`: `{"emoji":"🍕"}` → `"🍕"`; a symbol, bad JSON, or text that can't be one emoji → `None`) and
+`AccentTinted { emoji }` reaches the FE as `CustomFolderIconId.emoji` (`getAccentTintedCustomFolderEmoji`). Under gold,
+`FileIcon` then draws the plain `dir` icon under the filter and the emoji as text in a sibling `.folder-emoji` span the
+filter never reaches. Gold off, it draws macOS's own bitmap as before.
+
+- Decision/Why FE layers, not a Rust composite: the gold recolor IS a CSS filter, so a Rust-side composite would have
+  to reimplement it in pixels and produce gold-dependent bitmaps under a key that doesn't vary with gold. Two layers
+  reuse the already-cached, variant-correct `dir` base (Increase contrast, dark mode) and change no cached pixels, so
+  no `CACHE_SCHEMA` bump and no new epoch-guarded write.
+- The span's size and nudge match macOS: at the 32 px fetch, both put a 🙂 at 16×15 px from (8, 9) (verified on macOS
+  27.0.1 by diffing an `NSWorkspace iconForFile:` render against the span in Chrome at 2× DPR, 2026-10-29). macOS
+  scales the emoji non-linearly with icon size (half the icon at 32 px, a third at 256 px), so the ratio holds for
+  the list's 16 pt icon only.
+
+Both flag and pixels share the
 `path:` key's lifecycle, so a tag change or a Finder tint-switch flip shows on the next re-detection (navigating back),
 not live; neither bumps the folder's mtime, so the disk tier can also serve pre-change pixels until the next accent or
 theme flush.

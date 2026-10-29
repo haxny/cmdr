@@ -39,6 +39,7 @@ import {
   prefetchIcons,
   prefetchCustomFolderIcons,
   isAccentTintedCustomFolder,
+  getAccentTintedCustomFolderEmoji,
   clearDirectoryIconCache,
   initIconDisplayVariant,
   cleanupIconDisplayVariant,
@@ -213,7 +214,7 @@ describe('prefetchCustomFolderIcons', () => {
 
   it('fetches the returned custom-folder ids through getIcons', async () => {
     vi.mocked(getCustomFolderIconIds).mockResolvedValue({
-      data: [{ iconId: 'path:/Users/me/Custom', followsAccent: false }],
+      data: [{ iconId: 'path:/Users/me/Custom', followsAccent: false, emoji: null }],
       timedOut: false,
     })
     vi.mocked(getIcons).mockResolvedValue({
@@ -231,24 +232,34 @@ describe('prefetchCustomFolderIcons', () => {
   it('remembers which custom icons follow the accent, until their key leaves the cache', async () => {
     vi.mocked(getCustomFolderIconIds).mockResolvedValue({
       data: [
-        { iconId: 'path:/Users/me/Work/Symbol', followsAccent: true },
-        { iconId: 'path:/Users/me/Work/Artwork', followsAccent: false },
+        { iconId: 'path:/Users/me/Work/Symbol', followsAccent: true, emoji: null },
+        { iconId: 'path:/Users/me/Work/Pizza', followsAccent: true, emoji: '🍕' },
+        { iconId: 'path:/Users/me/Work/Artwork', followsAccent: false, emoji: null },
       ],
       timedOut: false,
     })
     vi.mocked(getIcons).mockResolvedValue({
-      data: { 'path:/Users/me/Work/Symbol': 'symbol-url', 'path:/Users/me/Work/Artwork': 'artwork-url' },
+      data: {
+        'path:/Users/me/Work/Symbol': 'symbol-url',
+        'path:/Users/me/Work/Pizza': 'pizza-url',
+        'path:/Users/me/Work/Artwork': 'artwork-url',
+      },
       timedOut: false,
     })
 
-    await prefetchCustomFolderIcons(['/Users/me/Work/Symbol', '/Users/me/Work/Artwork'], false)
+    await prefetchCustomFolderIcons(['/Users/me/Work/Symbol', '/Users/me/Work/Pizza', '/Users/me/Work/Artwork'], false)
 
     expect(isAccentTintedCustomFolder('/Users/me/Work/Symbol')).toBe(true)
+    expect(isAccentTintedCustomFolder('/Users/me/Work/Pizza')).toBe(true)
     expect(isAccentTintedCustomFolder('/Users/me/Work/Artwork')).toBe(false)
+    // The emoji rides along so `FileIcon` can draw it over the gold folder (#814).
+    expect(getAccentTintedCustomFolderEmoji('/Users/me/Work/Pizza')).toBe('🍕')
+    expect(getAccentTintedCustomFolderEmoji('/Users/me/Work/Symbol')).toBeUndefined()
 
     // Navigating away drops the icon, and the flag with it, so a re-icon is re-detected.
     evictPerPathIconsForDir('/Users/me/Work')
     expect(isAccentTintedCustomFolder('/Users/me/Work/Symbol')).toBe(false)
+    expect(getAccentTintedCustomFolderEmoji('/Users/me/Work/Pizza')).toBeUndefined()
   })
 
   it('does nothing on an empty input and never throws on backend error', async () => {

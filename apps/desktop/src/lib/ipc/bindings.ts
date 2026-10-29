@@ -8030,6 +8030,12 @@ export type CustomFolderIconId = {
    *  for a color the person chose with a tag, which are drawn as-is.
    */
   followsAccent: boolean
+  /**
+   *  The emoji of an accent-following emoji customization, `None` otherwise (a symbol, artwork,
+   *  a tag color). The gold recolor grays the whole bitmap, so for these the frontend draws the
+   *  gold plain folder with this emoji on top in its own colors (#814).
+   */
+  emoji: string | null
 }
 
 // Why a wipe didn't start. Nothing was deleted in either case.

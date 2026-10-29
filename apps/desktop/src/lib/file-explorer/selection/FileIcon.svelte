@@ -3,6 +3,7 @@
     import {
         getCachedIcon,
         getCachedCustomFolderIcon,
+        getAccentTintedCustomFolderEmoji,
         iconCacheVersion,
         isAccentTintedCustomFolder,
     } from '#lib/icon-cache.js'
@@ -84,6 +85,17 @@
     const recolorToGold = $derived(
         isFolderIcon && (!customFolderIconUrl || customIconFollowsAccent) && getIsCmdrGold(),
     )
+    // The gold filter is grayscale-first, so on an emoji folder it turned the emoji
+    // gold-sepia too (#814). Such a folder draws as two layers instead: the plain
+    // folder (its own `dir` iconId) under the filter, and the emoji on top, outside it.
+    // A symbol is macOS-tinted in the accent's hue, so it recolors cleanly as one bitmap.
+    const goldFolderEmoji = $derived(
+        recolorToGold && customIconFollowsAccent ? getAccentTintedCustomFolderEmoji(file.path) : undefined,
+    )
+    const displayedIconUrl = $derived.by((): string | undefined => {
+        dependOn(_cacheVersion) // Track cache version for reactivity
+        return goldFolderEmoji ? getCachedIcon(file.iconId) : iconUrl
+    })
 
     // Git portal icons resolve in the frontend via Lucide instead of going
     // through the OS icon provider. The four IDs are reserved by the
@@ -120,8 +132,8 @@
         <span class="restic-icon">
             <Icon name="history" size={16} />
         </span>
-    {:else if iconUrl}
-        <img class="icon" class:gold-folder={recolorToGold} src={iconUrl} alt="" width="16" height="16" />
+    {:else if displayedIconUrl}
+        <img class="icon" class:gold-folder={recolorToGold} src={displayedIconUrl} alt="" width="16" height="16" />
     {:else}
         <!-- Cache miss (cold first launch, or briefly after a theme/accent change clears the cache):
              show the bundled macOS default folder/file icon (from `static/icons/default-*.png`,
@@ -136,6 +148,10 @@
             width="16"
             height="16"
         />
+    {/if}
+    {#if goldFolderEmoji}
+        <!-- Decorative: the folder's name says what it is. -->
+        <span class="folder-emoji" aria-hidden="true">{goldFolderEmoji}</span>
     {/if}
     {#if file.isSymlink}
         <span
@@ -191,6 +207,23 @@
 
     .gold-folder {
         filter: grayscale(1) sepia(1) hue-rotate(3deg) saturate(2.5) brightness(0.95);
+    }
+
+    /* The emoji layer of a gold emoji folder, placed and sized like macOS draws it on the
+       folder face: at the 32 px render Cmdr fetches, both put a 🙂 at 16×15 px from (8, 9)
+       (verified on macOS 27.0.1 by diffing an `NSWorkspace` render against this CSS in
+       Chrome, 2026-10-29). Scales with the icon, so it follows `--font-scale`. The top
+       padding nudges the flex-centered glyph down half its own amount. */
+    .folder-emoji {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: calc(var(--spacing-icon-size) / 16);
+        font-size: calc(var(--spacing-icon-size) * 0.41);
+        line-height: var(--font-line-height-flat);
+        pointer-events: none;
     }
 
     .git-icon {

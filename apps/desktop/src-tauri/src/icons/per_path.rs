@@ -67,12 +67,18 @@ const FOLDER_CUSTOMIZATION_XATTR: &str = "com.apple.icon.folder#S";
 #[cfg(target_os = "macos")]
 const TAG_TINTING_DISABLED_KEY: &str = "AppleDisableTagBasedIconTinting";
 
+/// The longest emoji value Cmdr draws, in code points. A ZWJ family with skin tones is 11; anything
+/// longer can't be one glyph, so the folder falls back to the recolored macOS bitmap.
+const MAX_EMOJI_CHARS: usize = 16;
+
 /// What a custom-icon folder's icon is made of, which decides whether Cmdr may recolor it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CustomFolderIcon {
     /// Finder's Customize Folder symbol or emoji on the plain folder, which macOS tints with the
-    /// system accent like any plain folder. Cmdr's gold recolor applies.
-    AccentTinted,
+    /// system accent like any plain folder. Cmdr's gold recolor applies. `emoji` names the emoji
+    /// for an emoji customization (`None` for a symbol): the gold filter grays the whole bitmap,
+    /// so the frontend draws a gold plain folder and this emoji on top in its own colors (#814).
+    AccentTinted { emoji: Option<String> },
     /// The same customization, tinted by a colored Finder tag. That's a color the person chose
     /// (Customize Folder's color dots ARE tags), so Cmdr keeps it.
     TagTinted,
@@ -82,34 +88,58 @@ pub enum CustomFolderIcon {
 
 impl CustomFolderIcon {
     /// True when macOS draws this folder in the system accent, so Cmdr's gold recolor applies.
-    pub fn follows_accent(self) -> bool {
-        self == Self::AccentTinted
+    pub fn follows_accent(&self) -> bool {
+        matches!(self, Self::AccentTinted { .. })
+    }
+
+    /// The emoji an accent-tinted emoji customization draws, for the frontend's gold composite.
+    pub fn accent_emoji(&self) -> Option<&str> {
+        match self {
+            Self::AccentTinted { emoji } => emoji.as_deref(),
+            Self::TagTinted | Self::Artwork => None,
+        }
     }
 }
 
 /// Pure classifier behind [`custom_folder_icon`]. `None` unless `kHasCustomIcon` is set: macOS
 /// draws neither artwork nor a customization without it. A customization xattr wins over an
 /// `Icon\r` file when both exist (macOS draws the symbol), so its presence alone decides it.
-/// `tag_tinting_disabled` is a closure because it's a preferences read, needed only for a
-/// customized folder with a colored tag.
+/// `customization` is that xattr's value, if any. `tag_tinting_disabled` is a closure because it's
+/// a preferences read, needed only for a customized folder with a colored tag.
 pub fn classify_custom_folder_icon(
     finder_info: &[u8],
-    has_folder_customization: bool,
+    customization: Option<&[u8]>,
     tags: &[TagRef],
     tag_tinting_disabled: impl FnOnce() -> bool,
 ) -> Option<CustomFolderIcon> {
     if !finder_info_has_custom_icon(finder_info) {
         return None;
     }
-    if !has_folder_customization {
+    let Some(customization) = customization else {
         return Some(CustomFolderIcon::Artwork);
-    }
+    };
     let has_colored_tag = tags.iter().any(|tag| tag.color != 0);
     if has_colored_tag && !tag_tinting_disabled() {
         Some(CustomFolderIcon::TagTinted)
     } else {
-        Some(CustomFolderIcon::AccentTinted)
+        Some(CustomFolderIcon::AccentTinted {
+            emoji: customization_emoji(customization),
+        })
     }
+}
+
+/// Pure parser: the emoji a Customize Folder xattr value (`{"emoji":"🍕"}`) names. `None` for a
+/// symbol (`{"sym":…}`), unreadable JSON, or text that can't be one emoji (blank, a control
+/// character, past [`MAX_EMOJI_CHARS`]), since the value lands on screen as text.
+pub fn customization_emoji(customization: &[u8]) -> Option<String> {
+    #[derive(serde::Deserialize)]
+    struct Customization {
+        emoji: Option<String>,
+    }
+    let emoji = serde_json::from_slice::<Customization>(customization).ok()?.emoji?;
+    let plausible =
+        !emoji.trim().is_empty() && emoji.chars().count() <= MAX_EMOJI_CHARS && !emoji.chars().any(char::is_control);
+    plausible.then_some(emoji)
 }
 
 /// Classifies a folder's custom icon from its on-disk metadata: two or three `getxattr`s and, for
@@ -125,13 +155,13 @@ pub fn custom_folder_icon(path: &Path) -> Option<CustomFolderIcon> {
     if !finder_info_has_custom_icon(&finder_info) {
         return None;
     }
-    let has_folder_customization = matches!(xattr::get(path, FOLDER_CUSTOMIZATION_XATTR), Ok(Some(_)));
-    let tags = if has_folder_customization {
+    let customization = xattr::get(path, FOLDER_CUSTOMIZATION_XATTR).ok().flatten();
+    let tags = if customization.is_some() {
         crate::file_system::tags::read_tags(path)
     } else {
         Vec::new()
     };
-    classify_custom_folder_icon(&finder_info, has_folder_customization, &tags, tag_tinting_disabled)
+    classify_custom_folder_icon(&finder_info, customization.as_deref(), &tags, tag_tinting_disabled)
 }
 
 /// Reads Finder's "Tint folders based on tags" switch, re-syncing the global domain first so a
@@ -212,12 +242,16 @@ mod tests {
         false
     }
 
+    /// The xattr values Customize Folder writes for a symbol and for an emoji.
+    const SYMBOL: &[u8] = br#"{"sym":"checkmark"}"#;
+    const PIZZA: &[u8] = r#"{"emoji":"🍕"}"#.as_bytes();
+
     #[test]
     fn no_custom_icon_flag_means_no_custom_icon_even_with_a_customization() {
         // macOS draws neither the symbol nor artwork without `kHasCustomIcon`.
         let info = finder_info_with_flags(0);
-        assert_eq!(classify_custom_folder_icon(&info, true, &[], tinting_on), None);
-        assert_eq!(classify_custom_folder_icon(&[], false, &[], tinting_on), None);
+        assert_eq!(classify_custom_folder_icon(&info, Some(SYMBOL), &[], tinting_on), None);
+        assert_eq!(classify_custom_folder_icon(&[], None, &[], tinting_on), None);
     }
 
     #[test]
@@ -226,7 +260,7 @@ mod tests {
         // Tags don't tint artwork, so a colored tag changes nothing.
         let tags = [tag("Red", 6)];
         assert_eq!(
-            classify_custom_folder_icon(&info, false, &tags, tinting_on),
+            classify_custom_folder_icon(&info, None, &tags, tinting_on),
             Some(CustomFolderIcon::Artwork)
         );
     }
@@ -235,9 +269,9 @@ mod tests {
     fn an_untagged_customization_follows_the_accent() {
         // Issue #110: the green "checkmark design" folder under a green accent.
         let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
-        let icon = classify_custom_folder_icon(&info, true, &[], tinting_on);
-        assert_eq!(icon, Some(CustomFolderIcon::AccentTinted));
-        assert!(icon.is_some_and(CustomFolderIcon::follows_accent));
+        let icon = classify_custom_folder_icon(&info, Some(SYMBOL), &[], tinting_on);
+        assert_eq!(icon, Some(CustomFolderIcon::AccentTinted { emoji: None }));
+        assert!(icon.is_some_and(|icon| icon.follows_accent()));
     }
 
     #[test]
@@ -245,8 +279,8 @@ mod tests {
         let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
         let tags = [tag("Work", 0)];
         assert_eq!(
-            classify_custom_folder_icon(&info, true, &tags, tinting_on),
-            Some(CustomFolderIcon::AccentTinted)
+            classify_custom_folder_icon(&info, Some(SYMBOL), &tags, tinting_on),
+            Some(CustomFolderIcon::AccentTinted { emoji: None })
         );
     }
 
@@ -254,9 +288,9 @@ mod tests {
     fn a_colored_tag_tints_a_customization_with_the_persons_color() {
         let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
         let tags = [tag("Work", 0), tag("Red", 6)];
-        let icon = classify_custom_folder_icon(&info, true, &tags, tinting_on);
+        let icon = classify_custom_folder_icon(&info, Some(PIZZA), &tags, tinting_on);
         assert_eq!(icon, Some(CustomFolderIcon::TagTinted));
-        assert!(!icon.is_some_and(CustomFolderIcon::follows_accent));
+        assert!(!icon.is_some_and(|icon| icon.follows_accent()));
     }
 
     #[test]
@@ -264,8 +298,8 @@ mod tests {
         let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
         let tags = [tag("Red", 6)];
         assert_eq!(
-            classify_custom_folder_icon(&info, true, &tags, || true),
-            Some(CustomFolderIcon::AccentTinted)
+            classify_custom_folder_icon(&info, Some(SYMBOL), &tags, || true),
+            Some(CustomFolderIcon::AccentTinted { emoji: None })
         );
     }
 
@@ -273,8 +307,60 @@ mod tests {
     fn the_tinting_switch_is_read_only_for_a_customization_with_a_colored_tag() {
         let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
         let untouched = || -> bool { panic!("read the tinting switch without needing it") };
-        classify_custom_folder_icon(&info, true, &[], untouched);
-        classify_custom_folder_icon(&info, false, &[tag("Red", 6)], untouched);
+        classify_custom_folder_icon(&info, Some(SYMBOL), &[], untouched);
+        classify_custom_folder_icon(&info, None, &[tag("Red", 6)], untouched);
+    }
+
+    #[test]
+    fn an_emoji_customization_carries_its_emoji_for_the_gold_composite() {
+        // Issue #814: the gold recolor grays the whole bitmap, so the frontend draws the emoji
+        // itself over a gold folder, and needs to know which one.
+        let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
+        let icon = classify_custom_folder_icon(&info, Some(PIZZA), &[], tinting_on);
+        assert_eq!(
+            icon,
+            Some(CustomFolderIcon::AccentTinted {
+                emoji: Some("🍕".to_string())
+            })
+        );
+        assert_eq!(icon.as_ref().and_then(CustomFolderIcon::accent_emoji), Some("🍕"));
+    }
+
+    #[test]
+    fn a_symbol_or_unreadable_customization_has_no_emoji_but_still_follows_the_accent() {
+        let info = finder_info_with_flags(K_HAS_CUSTOM_ICON);
+        let customizations: [&[u8]; 4] = [SYMBOL, b"not json", br#"{"emoji":42}"#, b""];
+        for customization in customizations {
+            assert_eq!(
+                classify_custom_folder_icon(&info, Some(customization), &[], tinting_on),
+                Some(CustomFolderIcon::AccentTinted { emoji: None }),
+                "customization {:?}",
+                String::from_utf8_lossy(customization)
+            );
+        }
+    }
+
+    #[test]
+    fn customization_emoji_keeps_multi_code_point_emoji_whole() {
+        // A ZWJ family with skin tones is 11 code points; it's still one emoji.
+        let family = "👨🏻‍👩🏻‍👧🏻‍👦🏻";
+        let json = format!(r#"{{"emoji":"{family}"}}"#);
+        assert_eq!(customization_emoji(json.as_bytes()).as_deref(), Some(family));
+        assert_eq!(
+            customization_emoji(r#"{"emoji":"🇸🇪"}"#.as_bytes()).as_deref(),
+            Some("🇸🇪")
+        );
+    }
+
+    #[test]
+    fn customization_emoji_refuses_text_that_cannot_be_one_emoji() {
+        // The value lands on screen as text, so anything that can't be one glyph is dropped and
+        // the folder falls back to the recolored macOS bitmap.
+        assert_eq!(customization_emoji(br#"{"emoji":""}"#), None);
+        assert_eq!(customization_emoji(br#"{"emoji":"   "}"#), None);
+        assert_eq!(customization_emoji(br#"{"emoji":"a\nb"}"#), None);
+        let long = "🙂".repeat(MAX_EMOJI_CHARS + 1);
+        assert_eq!(customization_emoji(format!(r#"{{"emoji":"{long}"}}"#).as_bytes()), None);
     }
 
     #[cfg(target_os = "macos")]
@@ -291,8 +377,11 @@ mod tests {
         assert_eq!(custom_folder_icon(&dir), Some(CustomFolderIcon::Artwork));
 
         // Plus the xattr Customize Folder writes → accent-tinted.
-        xattr::set(&dir, FOLDER_CUSTOMIZATION_XATTR, br#"{"sym":"checkmark"}"#).expect("set xattr");
-        assert_eq!(custom_folder_icon(&dir), Some(CustomFolderIcon::AccentTinted));
+        xattr::set(&dir, FOLDER_CUSTOMIZATION_XATTR, SYMBOL).expect("set xattr");
+        assert_eq!(
+            custom_folder_icon(&dir),
+            Some(CustomFolderIcon::AccentTinted { emoji: None })
+        );
 
         // Clear the flag → no longer detected.
         let cleared = finder_info_with_flags(0);
@@ -327,6 +416,11 @@ mod tests {
         xattr::set(&dir, FOLDER_CUSTOMIZATION_XATTR, r#"{"emoji":"🙂"}"#.as_bytes()).expect("set xattr");
         let tags = crate::file_system::tags::encode_tags_plist(&[tag("Work", 0)]).expect("encode tags");
         xattr::set(&dir, crate::file_system::tags::TAGS_XATTR, &tags).expect("set xattr");
-        assert_eq!(custom_folder_icon(&dir), Some(CustomFolderIcon::AccentTinted));
+        assert_eq!(
+            custom_folder_icon(&dir),
+            Some(CustomFolderIcon::AccentTinted {
+                emoji: Some("🙂".to_string())
+            })
+        );
     }
 }

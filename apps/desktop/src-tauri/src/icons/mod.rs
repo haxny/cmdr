@@ -226,6 +226,10 @@ pub struct CustomFolderIconId {
     /// frontend applies the gold recolor to it like to a plain folder. False for pasted artwork and
     /// for a color the person chose with a tag, which are drawn as-is.
     pub follows_accent: bool,
+    /// The emoji of an accent-following emoji customization, `None` otherwise (a symbol, artwork,
+    /// a tag color). The gold recolor grays the whole bitmap, so for these the frontend draws the
+    /// gold plain folder with this emoji on top in its own colors (#814).
+    pub emoji: Option<String>,
 }
 
 /// Detects which of the given VISIBLE directory paths carry a Finder custom icon,
@@ -247,6 +251,7 @@ pub fn custom_folder_icon_ids(directory_paths: Vec<String>) -> Vec<CustomFolderI
             Some(CustomFolderIconId {
                 icon_id: format!("{PATH_KEY_PREFIX}{path}"),
                 follows_accent: icon.follows_accent(),
+                emoji: icon.accent_emoji().map(str::to_owned),
             })
         })
         .collect()

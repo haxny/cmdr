@@ -120,10 +120,11 @@ const memoryCache = new Map<string, string>()
 
 /**
  * The `path:` keys whose custom icon follows the system accent (`followsAccent` from
- * `getCustomFolderIconIds`). Only meaningful while the key is in `memoryCache`, so every
- * removal goes through `deleteCacheEntry` / `clearMemoryCache`, which keep the two in step.
+ * `getCustomFolderIconIds`), each mapped to its Customize Folder emoji, or `null` for a symbol.
+ * Only meaningful while the key is in `memoryCache`, so every removal goes through
+ * `deleteCacheEntry` / `clearMemoryCache`, which keep the two in step.
  */
-const accentTintedCustomFolderKeys = new Set<string>()
+const accentTintedCustomFolderKeys = new Map<string, string | null>()
 
 /** Removes one cache entry, with its accent flag. */
 function deleteCacheEntry(key: string): void {
@@ -334,8 +335,8 @@ export async function prefetchCustomFolderIcons(
     return // Best-effort: keep the generic dir glyph.
   }
   if (found.length === 0) return
-  for (const { iconId, followsAccent } of found) {
-    if (followsAccent) accentTintedCustomFolderKeys.add(iconId)
+  for (const { iconId, followsAccent, emoji } of found) {
+    if (followsAccent) accentTintedCustomFolderKeys.set(iconId, emoji)
     else accentTintedCustomFolderKeys.delete(iconId)
   }
   await prefetchIcons(
@@ -351,6 +352,15 @@ export async function prefetchCustomFolderIcons(
  */
 export function isAccentTintedCustomFolder(directoryPath: string): boolean {
   return accentTintedCustomFolderKeys.has(`${PATH_KEY_PREFIX}${directoryPath}`)
+}
+
+/**
+ * The emoji of an accent-tinted Customize Folder emoji folder, or undefined (a symbol, artwork,
+ * a tag color, no custom icon). The gold filter grays the whole bitmap, emoji included, so
+ * `FileIcon` draws such a folder as the gold plain folder plus this emoji on top (#814).
+ */
+export function getAccentTintedCustomFolderEmoji(directoryPath: string): string | undefined {
+  return accentTintedCustomFolderKeys.get(`${PATH_KEY_PREFIX}${directoryPath}`) ?? undefined
 }
 
 /**
