@@ -726,9 +726,8 @@ jobs:
       - name: Check message-key naming
         run: ./scripts/check/check --check desktop-message-key-naming --ci
 
-      - name: Check for unused message keys
-        run: ./scripts/check/check --check desktop-message-keys-unused --ci
-
+      # `desktop-message-keys-unused` runs in `hygiene`: it reads Rust too, which this job's
+      # filter doesn't watch.
       - name: Check message screenshot couplings
         run: ./scripts/check/check --check desktop-message-screenshots-fresh --ci
 
@@ -1609,6 +1608,12 @@ jobs:
       # Same reason: each locale's `mechanics.json` lives under `docs/i18n/`.
       - name: Check catalog values follow each locale's declared typography
         run: ./scripts/check/check --check desktop-i18n-mechanics --ci
+
+      # Same reason: it reads the frontend AND the Rust app (`menu_t` is the only reference the
+      # native menu keys have), so the `svelte`-gated job would skip it on the Rust-only change
+      # that orphans a key. A sub-second Go scan, so every run can afford it.
+      - name: Check for unused message keys
+        run: ./scripts/check/check --check desktop-message-keys-unused --ci
 
       - name: Check PostHog events match their catalog
         run: ./scripts/check/check --check analytics-event-catalog --ci
