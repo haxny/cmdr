@@ -170,13 +170,31 @@ mod tests {
     use std::sync::mpsc;
     use std::time::Duration;
 
-    fn burn(iterations: u64) {
+    /// Spends `cpu` of THIS thread's CPU time, by its own CPU clock: a fixed
+    /// iteration count costs a debug build 10× its CPU in wall clock on a loaded
+    /// machine and ran past the 8 s nextest cap, where a CPU budget stays a CPU budget.
+    fn burn(cpu: Duration) {
+        let thread_cpu = || {
+            // SAFETY: an all-zero `timespec` is a valid value of that plain C struct.
+            let mut now: libc::timespec = unsafe { std::mem::zeroed() };
+            // SAFETY: `clock_gettime` writes one `timespec` through the pointer, a live,
+            // writable local of exactly that type.
+            let read = unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &mut now) };
+            assert_eq!(read, 0, "the thread CPU clock reads");
+            Duration::new(now.tv_sec as u64, now.tv_nsec as u32)
+        };
+        let until = thread_cpu() + cpu;
         let mut sink = 0u64;
-        for i in 0..iterations {
-            sink = sink.wrapping_add(i).wrapping_mul(2_654_435_761);
+        while thread_cpu() < until {
+            for i in 0..100_000u64 {
+                sink = sink.wrapping_add(i).wrapping_mul(2_654_435_761);
+            }
         }
         std::hint::black_box(sink);
     }
+
+    /// Twice the 20 ms both cells assert, so the census's rounding can't sink it.
+    const BURN: Duration = Duration::from_millis(40);
 
     /// The whole point: a named thread's work lands on THAT name, and nowhere else.
     #[test]
@@ -188,7 +206,7 @@ mod tests {
             .name("cpu-census-probe".into())
             .spawn(move || {
                 go_rx.recv().expect("go");
-                burn(300_000_000);
+                burn(BURN);
                 done_tx.send(()).expect("done");
                 stop_rx.recv().expect("stop");
             })
@@ -221,7 +239,7 @@ mod tests {
             .expect("the probe is live at the second reading");
         assert!(
             probe.cpu.cpu_us > 20_000,
-            "300 M iterations must cost the probe real CPU: {probe:?}"
+            "40 ms of burning must show on the probe: {probe:?}"
         );
         assert!(
             census.process.cpu_us >= probe.cpu.cpu_us,
@@ -233,25 +251,38 @@ mod tests {
 
     /// A thread that exits between the readings still shows up, as the process delta
     /// the live threads don't explain.
+    ///
+    /// ❗ `join` returning doesn't mean the kernel has let go of the thread: its Mach
+    /// thread tears down after the pthread signals its exit, so `PROC_PIDLISTTHREADIDS`
+    /// can still list it for a moment, and under load that moment is long enough to
+    /// land in the second reading (CI, 8 `raced` verdicts 2026-10-26 to 2026-10-28).
+    /// So the second reading is the first one the kernel no longer lists it in.
     #[test]
     fn a_thread_that_exits_inside_the_window_lands_in_exited_cpu() {
         let start = take_snapshot().expect("first reading");
-        std::thread::Builder::new()
+        let churn = std::thread::Builder::new()
             .name("cpu-census-churn".into())
-            .spawn(|| burn(300_000_000))
+            .spawn(|| {
+                burn(BURN);
+                let mut id = 0u64;
+                // SAFETY: a null thread asks for the calling thread's ID, written through
+                // `id`, a live, writable `u64` local.
+                let read = unsafe { libc::pthread_threadid_np(0 as libc::pthread_t, &mut id) };
+                assert_eq!(read, 0, "pthread_threadid_np reads the calling thread's ID");
+                id
+            })
             .expect("spawn")
             .join()
             .expect("churn thread");
-        let end = take_snapshot().expect("second reading");
+        // By ID, ❌ not by name: a thread on its way out may already list without one.
+        let mut end = None;
+        crate::testing::wait_until(Duration::from_secs(5), "the kernel lets go of the churn thread", || {
+            end = take_snapshot().filter(|snap| snap.threads.iter().all(|t| t.id != churn));
+            end.is_some()
+        });
+        let end = end.expect("wait_until returned, so a reading without the churn thread is there");
 
         let census = super::super::CpuCensus::between(&start, &end, 1_000);
-        assert!(
-            census
-                .threads
-                .iter()
-                .all(|t| t.name.as_deref() != Some("cpu-census-churn")),
-            "the churn thread is gone by the second reading"
-        );
         assert!(
             census.exited_threads.cpu_us > 20_000,
             "the exited thread's work must land in exitedThreads: {census:?}"
