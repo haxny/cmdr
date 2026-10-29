@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"cmdr/scripts/check/checks"
@@ -64,6 +66,13 @@ func logPath(fileName string) (string, error) {
 // writing `header` first when the file is new. Every failure is silent: these
 // logs are instrumentation, and a full disk or a read-only home must not colour
 // a run's verdict.
+//
+// ❗ Several runners append to the same file at once (one per worktree), and `mu`
+// only orders this process's writers. So the batch is rendered whole first and
+// leaves in ONE write under an exclusive `flock`, and the header is decided under
+// that lock by the file's size. Through csv.Writer's 4 KiB buffer, one write per
+// buffer-full, two processes' chunks interleaved mid-row
+// (`TestAppendCSVRowsKeepsConcurrentProcessesRowsWhole`).
 func appendCSVRows(mu *sync.Mutex, fileName string, header []string, rows [][]string) {
 	if len(rows) == 0 {
 		return
@@ -78,24 +87,30 @@ func appendCSVRows(mu *sync.Mutex, fileName string, header []string, rows [][]st
 		return
 	}
 
-	_, statErr := os.Stat(csvPath)
-	isNew := os.IsNotExist(statErr)
-
 	f, err := os.OpenFile(csvPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
 	defer f.Close()
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return
+	}
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
-	w := csv.NewWriter(f)
-	defer w.Flush()
-
-	if isNew {
+	info, err := f.Stat()
+	if err != nil {
+		return
+	}
+	var batch bytes.Buffer
+	w := csv.NewWriter(&batch)
+	if info.Size() == 0 {
 		_ = w.Write(header)
 	}
 	for _, row := range rows {
 		_ = w.Write(row)
 	}
+	w.Flush()
+	_, _ = f.Write(batch.Bytes())
 }
 
 // logCheckStats appends one CSV row to the per-run log with the check result.

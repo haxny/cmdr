@@ -467,6 +467,11 @@ sqlite3 -column -header :memory: '.import --csv ~/.local/share/check-runner/cmdr
 Narrow either to a window with `and timestamp >= '2026-08-01'`, or to one lane with `and "check" = 'rust-tests'`.
 Remember what "absent" means here: fast, or never ran. Never "passed".
 
+**One batch, one write.** Every runner on the machine appends to the same four CSVs, so `appendCSVRows` renders a batch
+whole and writes it once under an exclusive `flock`, deciding the header by the file's size under that lock. Before,
+csv.Writer's 4 KiB chunks from two processes interleaved mid-row (13 torn rows by 2026-10-29). Rows older than that fix
+can still be torn; `sqlite3 .import` warns and skips the extras.
+
 **Disabled by `--no-log` and `--ci`**, like the check-level log, so CI runners don't write a log nobody reads.
 
 Example queries (the log is plain CSV; `duration_s` can be `N/A`, so cast defensively):
