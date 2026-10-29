@@ -187,9 +187,12 @@ for.
 - **Where**: the first step of each starter's body (local delete and trash in `../local_start.rs`, the volume delete in
   `volume_start.rs::run_volume_delete`), BEFORE the source binding and the queue check. A queued delete whose items left
   meanwhile therefore completes, and ❌ never asks "delete the rest?" about items whose absence is the goal.
-- **The probe**: one per top-level source, the queue check's own (`queued_sources::local_source_is_gone` /
-  `volume_source_is_gone`). Only a POSITIVE `NotFound` counts; "we couldn't look" stays in the batch, so the engine's
-  typed error says what happened (a dead mount must never read as "already gone").
+- **The probe**: one per top-level source. Local: the queue check's own (`queued_sources::local_source_is_gone`).
+  Volume: the walk's own top-level probe (`volume_scan::top_level_entry`, link-aware, so a dangling link is there, not
+  gone), and the walk takes its answer as the top-level hint (`delete_volume_files_with_progress_probed`). ❌ Never a
+  second probe per item: on S3 it cost a HEAD (a folder, a listing too) the cost estimate doesn't count
+  (`s3_integration_the_engine_sends_what_the_estimate_counts_*`). Only a POSITIVE `NotFound` counts; "we couldn't look"
+  stays in the batch, so the engine's typed error says what happened (a dead mount must never read as "already gone").
 - **What it reports**: each gone source gets a `Skipped` `write-source-item-done` with `source_removed: true` (so search
   snapshots drop it, and an approved suggestion's op isn't recorded as deleted: a moved-away file still exists), and the
   completion carries `already_gone: Some(AlreadyGone { item_count, total_count, name })`, `name` only for a single one.

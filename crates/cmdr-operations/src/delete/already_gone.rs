@@ -8,8 +8,9 @@
 //! event's `already_gone`. ❌ Never a `SourceNotFound` failure: nothing went
 //! wrong, and a failure there auto-sent an error report for a non-event.
 //!
-//! Only a POSITIVE absence counts, through the same probes the queue check uses
-//! (`queued_sources.rs`): a source that can't be looked at (permission, a
+//! Only a POSITIVE absence counts: a local source through the queue check's
+//! probe (`queued_sources.rs`), a volume source through the walk's own
+//! top-level probe, whose answer the walk then reuses (`split_on`). A source that can't be looked at (permission, a
 //! dropped share) stays in the batch for the engine, whose typed error says what
 //! really happened. "We couldn't look" is not "it's gone".
 //!
@@ -17,15 +18,19 @@
 //! whose items left meanwhile completes instead of asking "delete the rest?"
 //! about items whose absence is the goal.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::super::event_sinks::{OperationEventSink, SinkDecorator};
-use super::super::queued_sources::{local_source_is_gone, volume_source_is_gone};
+use super::super::queued_sources::local_source_is_gone;
 use super::super::types::{
     AlreadyGone, SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::log_private::LogPrivate;
-use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::{Volume, VolumeError};
+
+use super::outage::Listed;
+use super::volume_scan::top_level_entry;
 
 /// The positions in `sources` still there, plus what the probe found gone.
 pub(crate) struct GoneSplit {
@@ -52,18 +57,40 @@ pub(crate) fn split_local(events: &dyn OperationEventSink, operation_id: &str, s
     finish_split(events, operation_id, sources, &gone)
 }
 
+/// A volume batch's split, plus what the probe learned of each source still
+/// there, which the walk takes as its top-level answer
+/// (`delete_volume_files_with_progress_probed`).
+pub(super) struct VolumeGoneSplit {
+    pub split: GoneSplit,
+    pub probed: HashMap<PathBuf, Listed>,
+}
+
 /// [`split_local`] for a batch on a `Volume`.
-pub(crate) async fn split_on(
+///
+/// ❗ It asks the walk's own top-level question (`top_level_entry`: link-aware,
+/// one request), and the walk reuses the answer. A second probe per item cost
+/// an object store a HEAD (a folder, a listing too) its estimate never counts.
+pub(super) async fn split_on(
     volume: &dyn Volume,
     events: &dyn OperationEventSink,
     operation_id: &str,
     sources: &[PathBuf],
-) -> GoneSplit {
+) -> VolumeGoneSplit {
     let mut gone = Vec::with_capacity(sources.len());
+    let mut probed = HashMap::new();
     for source in sources {
-        gone.push(volume_source_is_gone(volume, source).await);
+        match top_level_entry(volume, source).await {
+            Ok(listed) => {
+                probed.insert(source.clone(), listed);
+                gone.push(false);
+            }
+            Err(error) => gone.push(matches!(error, VolumeError::NotFound(_))),
+        }
     }
-    finish_split(events, operation_id, sources, &gone)
+    VolumeGoneSplit {
+        split: finish_split(events, operation_id, sources, &gone),
+        probed,
+    }
 }
 
 fn finish_split(events: &dyn OperationEventSink, operation_id: &str, sources: &[PathBuf], gone: &[bool]) -> GoneSplit {

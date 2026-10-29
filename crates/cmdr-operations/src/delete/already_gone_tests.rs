@@ -6,7 +6,9 @@
 //! error report. The file was gone, which is what the person wanted.
 
 use std::fs;
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -18,9 +20,10 @@ use super::super::types::{
     AlreadyGone, ScanPreviewPurpose, SourceItemOutcome, WriteCompleteEvent, WriteOperationConfig,
 };
 use super::walker::delete_files_with_progress_inner;
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::{TestDir, wait_until_async};
-use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, Volume};
+use cmdr_fs::volume::{CopyScanResult, EntryKind, InMemoryVolume, Volume, VolumeError};
 use cmdr_operation_log::types::Initiator;
 
 const WAIT: Duration = Duration::from_secs(5);
@@ -278,4 +281,138 @@ fn a_local_delete_carries_on_past_a_file_that_vanished_after_the_scan() {
         "the rest of the folder is deleted, the folder with it"
     );
     assert_eq!(sink.complete.lock_ignore_poison().len(), 1);
+}
+
+/// Counts the top-level probes (`get_metadata` and `entry_kind`) per path, and
+/// forwards everything a volume delete asks to an `InMemoryVolume`.
+struct ProbeCountingVolume {
+    inner: InMemoryVolume,
+    probes: std::sync::Mutex<std::collections::HashMap<PathBuf, usize>>,
+}
+
+impl ProbeCountingVolume {
+    fn count(&self, path: &Path) {
+        *self.probes.lock_ignore_poison().entry(path.to_path_buf()).or_default() += 1;
+    }
+    fn probes_of(&self, path: &str) -> usize {
+        self.probes
+            .lock_ignore_poison()
+            .get(Path::new(path))
+            .copied()
+            .unwrap_or(0)
+    }
+}
+
+impl Volume for ProbeCountingVolume {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.inner.list_directory(path, on_progress)
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.count(path);
+        self.inner.get_metadata(path)
+    }
+    fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
+        self.inner.exists(path)
+    }
+    fn is_directory<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
+        self.count(path);
+        self.inner.is_directory(path)
+    }
+    fn entry_kind<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<EntryKind, VolumeError>> + Send + 'a>> {
+        self.count(path);
+        self.inner.entry_kind(path)
+    }
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.inner.delete(path)
+    }
+}
+
+/// Regression anchor: the already-gone probe came on top of the walk's own
+/// top-level probe, so an S3 delete sent a second HEAD (and a folder a second
+/// listing) per selected item, more than its cost estimate counts
+/// (`s3_integration_the_engine_sends_what_the_estimate_counts_*`). The probe's
+/// answer now feeds the walk: one probe per top-level item, and what's there
+/// still goes.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_volume_delete_probes_each_selected_item_once() {
+    let volume = Arc::new(ProbeCountingVolume {
+        inner: InMemoryVolume::new("bucket"),
+        probes: std::sync::Mutex::new(std::collections::HashMap::new()),
+    });
+    volume
+        .inner
+        .create_file(Path::new("/file.txt"), b"x")
+        .await
+        .expect("file");
+    volume
+        .inner
+        .create_directory(Path::new("/folder"))
+        .await
+        .expect("folder");
+    volume
+        .inner
+        .create_file(Path::new("/folder/child.txt"), b"y")
+        .await
+        .expect("child");
+    let engine = TestOperations::new();
+    let volume_id = format!("already-gone-probe-once-{}", std::process::id());
+    engine.volumes().register(&volume_id, volume.clone() as Arc<dyn Volume>);
+    let events = Arc::new(CollectorEventSink::new());
+
+    engine
+        .delete_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![PathBuf::from("/file.txt"), PathBuf::from("/folder")],
+            WriteOperationConfig::default(),
+            Some(volume_id),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("start delete");
+
+    let complete = settled_completion(&events).await;
+    assert_eq!(complete.already_gone, None);
+    assert!(
+        !volume.inner.exists(Path::new("/file.txt")).await,
+        "the file is deleted"
+    );
+    assert!(
+        !volume.inner.exists(Path::new("/folder")).await,
+        "the folder is deleted"
+    );
+    assert_eq!(
+        volume.probes_of("/file.txt"),
+        1,
+        "{:?}",
+        volume.probes.lock_ignore_poison()
+    );
+    assert_eq!(
+        volume.probes_of("/folder"),
+        1,
+        "{:?}",
+        volume.probes.lock_ignore_poison()
+    );
 }

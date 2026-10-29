@@ -22,7 +22,7 @@ use super::super::types::{
 };
 use super::super::{journal, path_summary, scan_bridge};
 use super::already_gone::{self, AlreadyGoneSink};
-use super::delete_volume_files_with_progress_inner;
+use super::volume_walker::delete_volume_files_with_progress_probed;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind, OperationId};
 
@@ -205,7 +205,8 @@ async fn run_volume_delete(
     };
 
     // An item that's already gone is done (`already_gone.rs`).
-    let split = already_gone::split_on(volume.as_ref(), events, op_id, &sources).await;
+    let already_gone::VolumeGoneSplit { split, probed } =
+        already_gone::split_on(volume.as_ref(), events, op_id, &sources).await;
     if split.kept.is_empty()
         && let Some(gone) = split.already_gone
     {
@@ -232,7 +233,9 @@ async fn run_volume_delete(
         return ExecutionStatus::Done;
     };
 
-    match delete_volume_files_with_progress_inner(volume, volume_id, events, op_id, state, &sources, config).await {
+    match delete_volume_files_with_progress_probed(volume, volume_id, events, op_id, state, &sources, config, &probed)
+        .await
+    {
         Ok(()) => ExecutionStatus::Done,
         Err(ref error) if matches!(error, WriteOperationError::Cancelled { .. }) => ExecutionStatus::Canceled,
         Err(error) => {
