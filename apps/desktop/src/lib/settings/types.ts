@@ -509,6 +509,8 @@ export interface SettingsValues {
   'fileOperations.keepProgressOpenWhenDone': boolean
   'fileOperations.progressUpdateInterval': number
   'fileOperations.maxConflictsToShow': number
+  /** Whether a delete or trash that found items already gone says so in a short toast. */
+  'fileOperations.showAlreadyGoneToast': boolean
 
   // Updates & privacy
   'updates.autoCheck': boolean

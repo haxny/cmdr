@@ -26,6 +26,7 @@ import { getForegroundOperationId } from '#lib/file-operations/foreground-operat
 import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { planCompletionToasts } from '#lib/file-operations/transfer/transfer-complete-toast.js'
+import { maybeShowAlreadyGoneToast } from '#lib/file-operations/delete/already-gone-toast.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { formatByteSize } from '#lib/units/index.js'
 import { pluralize } from '#lib/utils/pluralize.js'
@@ -143,6 +144,7 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
         metadataLeftBehind,
         lockedKept,
         durabilityUnconfirmed,
+        alreadyGone,
       }: TransferCompletePayload,
       view: CompletionView = { keptOpen: false },
     ): void {
@@ -171,12 +173,14 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
           lockedKept,
           refused,
           durabilityUnconfirmed,
+          alreadyGone,
         },
         view.keptOpen,
       )
       if (plan.message !== null) addToast(plan.message, { level: plan.level, timeoutMs: 7000 })
       if (plan.refused !== null) addToast(plan.refused, { level: 'warn', timeoutMs: 10000 })
       if (plan.durability !== null) addToast(plan.durability, { level: 'warn', dismissal: 'persistent' })
+      maybeShowAlreadyGoneToast(alreadyGone)
 
       if (view.keptOpen) return
       settle()

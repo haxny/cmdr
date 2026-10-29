@@ -144,6 +144,7 @@ describe('createTransferProgressState: progress + complete', () => {
         metadataLeftBehind: null,
         lockedKept: null,
         durabilityUnconfirmed: null,
+        alreadyGone: null,
       },
       { keptOpen: false },
     )
@@ -876,6 +877,7 @@ describe('createTransferProgressState: disposal', () => {
         metadataLeftBehind: null,
         lockedKept: null,
         durabilityUnconfirmed: null,
+        alreadyGone: null,
       },
       { keptOpen: false },
     )

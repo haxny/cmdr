@@ -328,6 +328,7 @@ describe('TransferProgressDialog cancel-settle gate', () => {
           metadataLeftBehind: null,
           lockedKept: null,
           durabilityUnconfirmed: null,
+          alreadyGone: null,
         },
         { keptOpen: false },
       )

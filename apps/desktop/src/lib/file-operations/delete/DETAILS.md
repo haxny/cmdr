@@ -53,6 +53,8 @@ webdav no.
 
 ## Scan-preview detail
 
+`data-scan-state` on `.scan-stats` (`counting` | `done`) is the only "counting done" signal; tests and MCP wait on it.
+
 The confirmation dialog starts a scan preview for deep file/dir/byte counts and shows running tallies, the current
 scanning directory, and a throughput readout from `ScanThroughput` (`../scan-throughput.ts`). For trash, the scan is
 cancelled on confirm. For permanent delete, the scan must complete first (the progress dialog shows the scanning phase
@@ -98,6 +100,15 @@ read as "already deleting" while the scan was still counting.
   the error dialog's own wording (`composeTrashRefusedToast` in `transfer-complete-toast.ts`), so the partial ending
   can't drift from the total one. It rides a toast of its own because the completion sentences carry no terminal
   punctuation to append to, and no locale would agree on which mark to add.
+- **Items already gone** (another app moved or deleted them, often while the pane still showed them; ERR-X84HN): the
+  backend counts them as done and completes, with `alreadyGone` (`{ itemCount, totalCount, name }`) on the completion
+  (backend `delete/DETAILS.md` § "An item that's already gone is done"). The frontend raises a five-second `info` note
+  (`already-gone-toast.ts` + `AlreadyGoneToastContent.svelte`), naming the item for one and counting for several, with
+  "Never show this again", which turns `fileOperations.showAlreadyGoneToast` off (back on in Settings > Advanced > Hints
+  and warnings). When EVERY item was gone, `planCompletionToasts` drops the "Delete complete: 0 files" sentence and no
+  trash Undo is remembered, so the note speaks alone. Both panes refresh on the completion as after any delete, which is
+  what takes the stale row away. ❌ Never an error tone, and ❌ never a log above info: warn reaches error-report
+  bundles, and an ERROR auto-sends one.
 
 ## Undo and go-to-trash (the trash completion toast)
 

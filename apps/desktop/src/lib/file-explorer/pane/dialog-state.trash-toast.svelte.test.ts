@@ -109,6 +109,7 @@ const ONE_FILE: TransferCompletePayload = {
   metadataLeftBehind: null,
   lockedKept: null,
   durabilityUnconfirmed: null,
+  alreadyGone: null,
 }
 
 /** One file went, one the OS turned down and left in the pane. */

@@ -2727,6 +2727,7 @@
     "fileOperations.mtpConnectionWarning": true,
     "fileOperations.mtpEnabled": true,
     "fileOperations.progressUpdateInterval": 500,
+    "fileOperations.showAlreadyGoneToast": true,
     "fileOperations.skipConfirmation": false,
     "fileViewer.suppressBinaryWarning": false,
     "indexing.askForEachDrive": true,

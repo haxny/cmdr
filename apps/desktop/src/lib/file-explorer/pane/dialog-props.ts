@@ -10,6 +10,7 @@
 
 import type { Initiator, ProgressAtStop } from '#lib/tauri-commands/index.js'
 import type {
+  AlreadyGone,
   AppearedDuringMove,
   MetadataLeftBehind,
   DurabilityUnconfirmed,
@@ -135,6 +136,9 @@ export interface TransferCompletePayload {
   /** A copy whose closing flush couldn't confirm its files are on the disk. `null` when the flush
    *  confirmed everything, which is the ordinary case. */
   durabilityUnconfirmed: DurabilityUnconfirmed | null
+  /** What a delete or trash found already gone and counted as done. `null` when every item was
+   *  there, which is the ordinary case. */
+  alreadyGone: AlreadyGone | null
 }
 
 /**

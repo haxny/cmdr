@@ -32,6 +32,7 @@ import { joinSentences } from '#lib/intl/sentence-join.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type {
+  AlreadyGone,
   AppearedDuringMove,
   DurabilityUnconfirmed,
   LockedKept,
@@ -73,6 +74,10 @@ export interface TransferCompleteToastInput {
    *  keeps locked (no answer can move those). Absent when it left none, which is the ordinary case.
    *  Adds a sentence per kind; the move still reads as a success. */
   lockedKept?: LockedKept | null
+  /** What a delete or trash found already gone and counted as done. When it's EVERY item, the
+   *  completion toast stays quiet and the already-gone note (`../delete/already-gone-toast.ts`)
+   *  speaks alone: "Delete complete: 0 files" would read as nothing happening. */
+  alreadyGone?: AlreadyGone | null
 }
 
 /** Composes the copy/move/trash/delete completion toast from catalog keys. */
@@ -112,13 +117,18 @@ export function planCompletionToasts(
   const durability = composeDurabilityUnconfirmedToast(input.durabilityUnconfirmed)
   const allSkipped = input.filesSkipped > 0 && input.filesSkipped === input.filesProcessed
   const level: NonErrorToastLevel = refused !== null || durability !== null ? 'warn' : allSkipped ? 'info' : 'success'
-  const quiet = keptOpen && !completionToastCarriesMore(input)
+  const quiet = (keptOpen && !completionToastCarriesMore(input)) || everyItemWasAlreadyGone(input.alreadyGone)
   return {
     message: quiet ? null : composeTransferCompleteToast(input),
     level,
     refused: keptOpen ? null : refused,
     durability,
   }
+}
+
+/** A delete or trash that found every one of its items already gone: nothing left for it to do. */
+function everyItemWasAlreadyGone(alreadyGone: AlreadyGone | null | undefined): boolean {
+  return alreadyGone !== null && alreadyGone !== undefined && alreadyGone.itemCount >= alreadyGone.totalCount
 }
 
 /**

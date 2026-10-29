@@ -443,6 +443,7 @@ describe('an archive password, for a job with no dialog', () => {
       metadataLeftBehind: null,
       lockedKept: null,
       durabilityUnconfirmed: null,
+      alreadyGone: null,
     })
     await settle()
 

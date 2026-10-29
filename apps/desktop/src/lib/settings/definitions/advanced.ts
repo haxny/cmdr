@@ -180,6 +180,20 @@ export const advancedSettings: SettingDefinitionSource[] = [
     component: 'switch',
   },
   {
+    // The note after a delete or trash found items already gone
+    // (`file-operations/delete/already-gone-toast.ts`). Positive and on by default:
+    // the toast's "Never show this again" turns it off, this row turns it back on.
+    id: 'fileOperations.showAlreadyGoneToast',
+    section: ['Advanced'],
+    cardKey: 'settings.advanced.card.hintsAndWarnings',
+    labelKey: 'settings.fileOperations.showAlreadyGoneToast.label',
+    descriptionKey: 'settings.fileOperations.showAlreadyGoneToast.description',
+    keywordsKey: 'settings.fileOperations.showAlreadyGoneToast.keywords',
+    type: 'boolean',
+    default: true,
+    component: 'switch',
+  },
+  {
     id: 'fileExplorer.tabs.closedTabHistorySize',
     section: ['Advanced'],
     cardKey: 'settings.advanced.card.historyAndLimits',

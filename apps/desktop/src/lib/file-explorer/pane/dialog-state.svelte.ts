@@ -33,6 +33,7 @@ import { dismissQueueHandoffToast } from '#lib/file-operations/queue/queue-hando
 import { tString } from '#lib/intl/messages.svelte.js'
 import { planCompletionToasts } from '#lib/file-operations/transfer/transfer-complete-toast.js'
 import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { maybeShowAlreadyGoneToast } from '#lib/file-operations/delete/already-gone-toast.js'
 import { isOperationLogRecording } from '#lib/operation-log/recording.js'
 import {
   rememberTrashForUndo,
@@ -217,7 +218,8 @@ export function createDialogState(deps: DialogStateDeps) {
     if (op === 'trash' && settledOperationId) {
       // With the operation log off, the trash was never journaled: no Undo, and nothing for Edit > Undo trash.
       const undoable = isOperationLogRecording()
-      if (undoable) rememberTrashForUndo(settledOperationId, trashed)
+      // A trash that found every item already gone moved nothing: no Undo to remember.
+      if (undoable && trashed.itemCount > 0) rememberTrashForUndo(settledOperationId, trashed)
       if (message !== null) {
         addToast(TrashCompleteToastContent, {
           id: trashCompleteToastId(settledOperationId),
@@ -264,6 +266,7 @@ export function createDialogState(deps: DialogStateDeps) {
       metadataLeftBehind,
       lockedKept,
       durabilityUnconfirmed,
+      alreadyGone,
     }: TransferCompletePayload,
     settledOperationId: string | null,
     view: CompletionView = { keptOpen: false },
@@ -301,6 +304,7 @@ export function createDialogState(deps: DialogStateDeps) {
         lockedKept,
         refused,
         durabilityUnconfirmed,
+        alreadyGone,
       },
       view.keptOpen,
     )
@@ -317,6 +321,8 @@ export function createDialogState(deps: DialogStateDeps) {
         itemCount: filesProcessed,
       },
     )
+    // Last, so it lands newest: the items a delete or trash found already gone.
+    maybeShowAlreadyGoneToast(alreadyGone)
   }
 
   /** Opens the error dialog, claiming the failure so the corner chip and the
