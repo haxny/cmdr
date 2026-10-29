@@ -134,8 +134,14 @@
         max-width: 40%;
     }
 
+    /* ❌ Never a content basis (`auto`) here: `useShortenMiddle` rewrites this
+       span's text from its ResizeObserver, and with `.from` also shrinking, a
+       content basis made each truncation resize the span again in the same
+       round. WebKit reported that as "ResizeObserver loop completed with
+       undelivered notifications", an auto-sent error report as the queue
+       window opened (cmdr-reports#86). A zero basis sizes it off the row alone. */
     .path.dest {
-        flex: 1 1 auto;
+        flex: 1 1 0;
         color: var(--color-accent-text);
     }
 
