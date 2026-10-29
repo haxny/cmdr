@@ -418,6 +418,11 @@ fn hand_the_manager_back(volume_id: &str, mgr: Box<IndexManager>, start_phases: 
 /// ⚠️ **The window can't strand the volume**, and ❌ that isn't up to `work`: the
 /// [`DetachedManager`] guard ends it on every path out, panic included.
 ///
+/// ❌ **Never call this from a thread holding a share of the volume's hold** (a
+/// `VolumeWork`): a clear claimed in the window runs on this thread at the
+/// handback, and waits for the volume to be let go before deleting (#620,
+/// `teardown.rs::remove_once_let_go`), so it would wait on its own caller.
+///
 /// `why` names the caller in the two INFO lines that bracket the window. They're
 /// what makes a `work` that never returns readable from an INFO log: an "out"
 /// with no "back" names who is stuck, and for what.

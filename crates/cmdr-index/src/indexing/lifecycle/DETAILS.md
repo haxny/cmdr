@@ -314,8 +314,17 @@ the new `-shm` for its own, truncated it as the first user it believed it was, a
 in `walIndexAppend` (verified on macOS 27.0, a 40-round stress of `cold_drive_tests` plus an lldb backtrace,
 2026-10-19). So the clear waits up to five seconds on the volume's hold, which every drive-reading worker carries, and
 keeps the files (an error) if something still holds it. The manager is dropped before the wait, since it carries a
-share. ⚠️ The one exception is the CLAIMED clear (`finish_the_claimed_teardown`): it runs on the scan start that handed
-the manager back, which may hold a share itself, so it deletes at once.
+share. **Every clear waits, with no exception**: the CLAIMED clear (`finish_the_claimed_teardown`, run at a `Detached`
+volume's handback) once deleted at once on the guess that its thread might hold a share, and that was the second SIGBUS
+(#620): stop, forget, and start inside one detached window, landing while the drive's first index was still in phases,
+cleared at the handback while that index's phase machine still read its frontier, and the start riding the claim built
+the new database under it (verified on macOS 27.0, 13 SIGBUS in 1,305 nextest stress rounds without the wait, 0 in 1,303
+with it, 2026-10-29). The price is the invariant that makes the wait answerable: ⚠️ **the thread that runs a clear holds
+no share of the volume.** The manager drops its share before the wait, and no caller of `off_the_registry` (an IPC
+rescan, the spawned `run_owed_now` and `perform_registry_rescan` tasks, the maintenance tick's phase resume) carries a
+`VolumeWork`. ❌ Don't call `off_the_registry` from a worker that does: its clear would wait five seconds on itself and
+keep the files. Pinned by
+`cold_drive_tests::toggles::a_clear_claimed_on_a_detached_drive_waits_for_the_volume_to_be_let_go`.
 
 **Freeing a slot and withdrawing its handles is ONE critical section** (`remove_instance_and_handles`, the start-up
 failure path). The two orders are not equivalent: withdraw-then-free is safe because the key still exists while the

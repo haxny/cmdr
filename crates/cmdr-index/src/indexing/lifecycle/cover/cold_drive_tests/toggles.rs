@@ -191,6 +191,32 @@ fn two_teardowns_and_a_start_in_one_window_end_with_a_rebuilt_index() {
     wait_until_indexed(&drive, "the rebuilt index to cover the drive again");
 }
 
+/// The same three toggles while the drive's FIRST index is still in phases, which
+/// is where they crashed with SIGBUS (#620): the clear lands at the handback, and
+/// the phase machine of the generation it ends still reads its frontier there. The
+/// clear has to wait for that machine before deleting, or the machine opens the
+/// rebuilt database's `-shm` and truncates it under the new writer. A stress test
+/// by nature: the race only shows across rounds, about 1 in 100 without the wait.
+#[test]
+fn two_teardowns_and_a_start_during_the_first_index_end_with_a_rebuilt_index() {
+    let drive = with_its_proof_row(ColdDrive::new("cover-toggle-two-teardowns-in-phases-test"));
+
+    state::while_detached_for_test(drive.volume_id, || {
+        turn_off(&drive);
+        drive
+            .index
+            .forget_volume(drive.volume_id)
+            .expect("the drive is forgotten");
+        turn_on(&drive);
+    });
+
+    assert!(
+        state::is_active(drive.volume_id),
+        "the start that came last is the one that decides where the volume ends up"
+    );
+    wait_until_indexed(&drive, "the rebuilt index to cover the drive again");
+}
+
 /// A start that meets a drive whose index DIED rebuilds it, instead of bouncing
 /// off the `Failed` instance still holding the volume's key.
 ///
@@ -277,6 +303,40 @@ fn a_clear_waits_for_the_volume_to_be_let_go_before_deleting_its_database() {
         .expect("the clear finishes once the volume is let go")
         .expect("and succeeds");
     assert!(!db_path.exists(), "the dead database is gone");
+}
+
+/// The same wait on the CLAIMED path (#620): a clear that lands while a scan start
+/// has the manager out runs at the handback, and it deleted at once, so a worker of
+/// the old generation (the phase machine of a first index still in phases) could
+/// still open the database after the start riding the claim built a new one at the
+/// same path. That is the SIGBUS of
+/// `two_teardowns_and_a_start_during_the_first_index_end_with_a_rebuilt_index`.
+#[test]
+fn a_clear_claimed_on_a_detached_drive_waits_for_the_volume_to_be_let_go() {
+    let drive = an_indexed_drive("cover-toggle-claimed-clear-waits-test");
+    let db_path = state::resolved_index_db_path(drive.volume_id).expect("a database path");
+    let straggler = VolumeWork::for_test(drive.volume_id);
+
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let volume_id = drive.volume_id;
+    std::thread::spawn(move || {
+        state::while_detached_for_test(volume_id, || {
+            state::clear_index(volume_id, crate::volume_files::Removal::Forgotten).expect("the clear is claimed");
+        });
+        let _ = done_tx.send(());
+    });
+
+    assert!(
+        done_rx.recv_timeout(std::time::Duration::from_millis(300)).is_err(),
+        "the claimed clear waits while something still holds the volume"
+    );
+    assert!(db_path.exists(), "and deletes nothing under it");
+
+    drop(straggler);
+    done_rx
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .expect("the claimed clear finishes once the volume is let go");
+    assert!(!db_path.exists(), "the database is gone");
 }
 
 /// A start meeting a drive whose manager is momentarily OUT of the registry, with

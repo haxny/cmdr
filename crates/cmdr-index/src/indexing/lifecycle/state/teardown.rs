@@ -77,7 +77,7 @@ pub(super) fn finish_the_claimed_teardown(
         TeardownClaim::Failed(reason) => super::supervisor::finish_failing(events, volume_id, mgr, reason),
         TeardownClaim::Stopped(persist) => finish_stopping(volume_id, mgr, persist),
         TeardownClaim::Cleared(why) => {
-            if let Err(e) = finish_clearing(volume_id, mgr, why, LetGo::CallerMayHoldIt) {
+            if let Err(e) = finish_clearing(volume_id, mgr, why) {
                 log::warn!("Drive index clear for '{volume_id}' finished with: {e}");
             }
         }
@@ -505,7 +505,7 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
                 // files can go straight away.
                 drop(reg);
                 let db_path = resolved_index_db_path(volume_id)?;
-                remove_once_let_go(volume_id, &db_path, why, LetGo::WaitFirst)?;
+                remove_once_let_go(volume_id, &db_path, why)?;
                 log::info!("Drive index cleared for '{volume_id}' (no live index; database deleted)");
                 return Ok(());
             }
@@ -553,9 +553,9 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
 
     // Guard released: run the blocking drain (Running only) without the lock.
     match target {
-        ClearTarget::Running { mgr } => finish_clearing(volume_id, mgr, why, LetGo::WaitFirst),
+        ClearTarget::Running { mgr } => finish_clearing(volume_id, mgr, why),
         ClearTarget::NoWriter { db_path } => {
-            remove_once_let_go(volume_id, &db_path, why, LetGo::WaitFirst)?;
+            remove_once_let_go(volume_id, &db_path, why)?;
             log::info!("Drive index cleared for '{volume_id}' (DB deleted)");
             Ok(())
         }
@@ -567,20 +567,18 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
 /// too, so a clear blocks no longer than it already could.
 const CLEAR_WAITS_FOR_RELEASE: Duration = Duration::from_secs(5);
 
-/// Whether a clear may wait for the volume's hold before deleting its files.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LetGo {
-    /// The clearing thread holds no share of the volume: wait for the rest to drop.
-    WaitFirst,
-    /// The clear runs on the scan start that handed its manager back, which may
-    /// carry a share of its own, so a wait could only time out on itself. Deletes at
-    /// once, as every clear did before #459. ⚠️ The one path a straggler can still
-    /// race; nothing has hit it yet.
-    CallerMayHoldIt,
-}
-
 /// Delete the files `why` takes for `volume_id`, but only once no worker holds the
-/// volume any more (#459).
+/// volume any more (#459, #620). EVERY clear waits, the one claimed on a `Detached`
+/// volume and carried out at the handback included: that path deleted at once, so
+/// the old generation's phase machine could still open the database after the
+/// start riding the claim built a new one.
+///
+/// ⚠️ **So the thread that runs a clear must hold no share of the volume**, or the
+/// wait can only time out on itself (and keep the files). The manager's share is
+/// dropped before the wait (`finish_clearing`), and no caller of the detached
+/// window (`off_the_registry`: an IPC rescan, the spawned `run_owed_now` and
+/// `perform_registry_rescan` tasks, the maintenance tick's phase resume) carries
+/// a `VolumeWork`. ❌ Don't call `off_the_registry` from a worker that does.
 ///
 /// ❗ **A worker that outlives its manager's drain may still open a connection**
 /// (the phase machine reading its frontier, a cancelled walk finishing a
@@ -594,10 +592,8 @@ enum LetGo {
 /// Still held when the wait runs out ⇒ the files stay and this is an error: a
 /// dead index left on disk is a rebuild later, a truncated `-shm` under a live
 /// writer is a crash now.
-fn remove_once_let_go(volume_id: &str, db_path: &std::path::Path, why: Removal, let_go: LetGo) -> Result<(), String> {
-    if let_go == LetGo::WaitFirst
-        && let hold::Release::StillHeld(holders) = hold::wait_until_released(volume_id, CLEAR_WAITS_FOR_RELEASE)
-    {
+fn remove_once_let_go(volume_id: &str, db_path: &std::path::Path, why: Removal) -> Result<(), String> {
+    if let hold::Release::StillHeld(holders) = hold::wait_until_released(volume_id, CLEAR_WAITS_FOR_RELEASE) {
         return Err(format!(
             "'{volume_id}' is still held by {holders:?} after {CLEAR_WAITS_FOR_RELEASE:?}; keeping its database rather than deleting it under a live reader"
         ));
@@ -614,7 +610,7 @@ fn remove_once_let_go(volume_id: &str, db_path: &std::path::Path, why: Removal, 
 /// `mgr.shutdown()` fires the volume's stop signal, which is what stops an
 /// importance pass, so by the time `volume_files::remove` asks the importance
 /// writer to let go nothing is feeding it.
-fn finish_clearing(volume_id: &str, mut mgr: Box<IndexManager>, why: Removal, let_go: LetGo) -> Result<(), String> {
+fn finish_clearing(volume_id: &str, mut mgr: Box<IndexManager>, why: Removal) -> Result<(), String> {
     withdraw_from_the_read_path(volume_id);
     let db_path = mgr.db_path().to_path_buf();
     mgr.shutdown();
@@ -622,8 +618,10 @@ fn finish_clearing(volume_id: &str, mut mgr: Box<IndexManager>, why: Removal, le
     // wait, or the clear would wait on itself.
     drop(mgr);
     let restart = retire_the_instance(volume_id);
-    let deleted = remove_once_let_go(volume_id, &db_path, why, let_go);
-    log::info!("Drive index cleared for '{volume_id}' (DB deleted)");
+    let deleted = remove_once_let_go(volume_id, &db_path, why);
+    if deleted.is_ok() {
+        log::info!("Drive index cleared for '{volume_id}' (DB deleted)");
+    }
     // A start that landed mid-clear runs even if the files wouldn't go: it asked for
     // this drive to be indexed, and a locked database file is not an answer to that.
     if let Some(request) = restart {
