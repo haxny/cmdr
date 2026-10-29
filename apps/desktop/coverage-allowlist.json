@@ -52,9 +52,6 @@
     "file-explorer/pane/tab-operations.ts": {
       "reason": "Extracted from DualPaneExplorer, depends on Tauri commands and confirmDialog"
     },
-    "file-explorer/rename/ExtensionChangeDialog.svelte": {
-      "reason": "UI modal, logic tested in rename-dialogs.test.ts"
-    },
     "file-explorer/rename/rename-activation.ts": {
       "reason": "Depends on document event listeners and timers"
     },
