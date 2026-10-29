@@ -713,6 +713,41 @@ the listing, and, when the directory is genuinely gone, emits `directory-deleted
 the directory's own mtime and produces one, so counting it would route every change through the full re-read and cost
 the incremental path its entire reason to exist.
 
+## Known gap: a missed rename-out under load (ERR-X84HN)
+
+**Symptom** (2026-10-28, 0.56.0, macOS 27.0.1): another app renamed a file out of a `~/Downloads/<dir>/<dir>` pane, the
+indexer's FSEvents stream logged it, and the pane's listing watch fired nothing for 11 minutes, until the person's
+delete of the stale row failed. Heavy indexing and SMB load were running. The delete side is handled
+(`crates/cmdr-operations/src/delete/DETAILS.md` § "An item that's already gone is done"); the watcher cause is open.
+
+**Ruled out** (code reading, notify 8.2.1 and notify-debouncer-full 0.7.0 sources, 2026-10-29):
+
+- **Own-write suppression**: nothing in the listing watcher or `cmdr-listing` mutes events after Cmdr's own operation.
+  `host().announce` feeds the downloads watcher's ignore set only, so Cmdr's move two minutes earlier can't have muted it.
+- **The batch handling**: on macOS a rename reaches us as `Modify(Name(Any))` on the old path (FSEvents only says
+  `ItemRenamed`); the debouncer routes it through `handle_rename_from` because the path no longer exists, and
+  `handle_directory_change_incremental` rebases it, stats it as gone, and removes the row. `NoCache` changes nothing
+  there (§ "Arming a listing watch is detached").
+- **The debounce window**: 200 ms by default, and every escape hatch re-reads (a debouncer `Err`, over 500 events,
+  `EventKind::Any` / `Other`). A rescan-flagged event becomes the debouncer's `rescan_event`, delivered as `Other`.
+- **A late arm**: covered by the mtime check in `arm_and_reconcile`; and an arm hours earlier can't explain a rename
+  minutes later.
+- **Path forms**: a firmlinked path, a symlinked root, and a differently normalized name all match through
+  `canonical_dir` (§ "Watcher path rebasing").
+
+**Leading hypothesis, unverified**: dropped events. Under churn macOS drops fine-grained events and raises
+`MustScanSubDirs` (with `UserDropped` / `KernelDropped`) on ever-higher paths, up to `/` (observed by the indexer on
+David's Mac, 14 of 28 scans 2026-07-18..20, `crates/cmdr-index/src/indexing/reconcile/reconciler/rescan/route.rs`).
+notify's FSEvents callback keeps an event only when its path `starts_with` the watched directory, so a rescan anchored
+at an ANCESTOR of a listing is discarded before the debouncer sees it, and the listing never learns it lost events.
+Not confirmed: whether a single-directory stream is handed ancestor-anchored drops at all, and whether its own stream
+dropped anything that night (the watcher logs at debug, so a shipped build's bundle can't say). Reproducing it needs
+provoked kernel or user drops, which no test here can script.
+
+**If it holds, the fix direction**: the indexer's whole-volume stream already sees every drop anchor, so a drop anchor
+could re-read each open listing at or under it (`Listings::refresh`), independent of the per-listing stream. That
+couples the listing watcher to the indexer being on, so it's a design call, not a patch.
+
 ## Tag analytics
 
 `toggle_color` reports `tag_toggled` at its single exit, so all three triggers (the seven keyboard commands, the
