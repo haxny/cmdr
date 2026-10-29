@@ -21,17 +21,17 @@ use std::sync::{LazyLock, Mutex};
 use serde::{Deserialize, Serialize};
 
 pub use super::error::TagEditorError;
+pub use super::file_changes::changes;
 pub(super) use cmdr_tags::Fingerprint;
-use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
+use cmdr_tags::shared::{CoverEdit, Edit, apply_edits};
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
-    ContentKind, FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for,
-    read_duration, read_tags,
+    FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for, read_duration,
+    read_tags,
 };
 
 use super::follow::follow_disk;
 use super::history::{EditHistory, capture, clear, record};
-use super::removals::{Removals, removals_of};
 use super::sort::{TrackSort, reorder};
 use super::view::{
     Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, scoped_tracks,
@@ -566,44 +566,6 @@ pub fn preview_names(
                     .map(|(field, value)| NameValue { field, value })
                     .collect()
             }),
-        })
-        .collect())
-}
-
-/// What a write as `kind` would change, per file, in current order: the fields, cover, and
-/// extras the edits change, and what the kind removes beyond them (an MP3's conductor under
-/// an audiobook write), read from each file after the lock, so the list matches the write.
-pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView>, TagEditorError> {
-    let listed: Vec<(PathBuf, FileChangeView)> = with_session(session_id, |layout, session| {
-        Ok(layout
-            .tracks
-            .iter()
-            .filter_map(|path| {
-                let loaded = session.by_path.get(path)?.loaded()?;
-                let change = engine_changes(std::slice::from_ref(&loaded.disk), std::slice::from_ref(&loaded.edited))
-                    .into_iter()
-                    .next()?;
-                let view = FileChangeView {
-                    path: path.to_string_lossy().into_owned(),
-                    file_name: file_name_of(&layout.dir, path),
-                    fields: change.fields,
-                    cover: change.cover,
-                    extras: change.extras,
-                    removes: Vec::new(),
-                    removes_unknown: false,
-                };
-                Some((path.clone(), view))
-            })
-            .collect())
-    })?;
-    Ok(listed
-        .into_iter()
-        .map(|(path, view)| match removals_of(&path, kind) {
-            Removals::Known(removes) => FileChangeView { removes, ..view },
-            Removals::Unknown => FileChangeView {
-                removes_unknown: true,
-                ..view
-            },
         })
         .collect())
 }

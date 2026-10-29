@@ -9,6 +9,7 @@ pub(crate) mod cover_choices;
 pub(crate) mod cover_image;
 pub(crate) mod cover_likeness;
 pub(crate) mod error;
+pub(crate) mod file_changes;
 pub(crate) mod follow;
 pub(crate) mod history;
 pub(crate) mod last_apply;
