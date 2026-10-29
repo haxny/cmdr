@@ -328,7 +328,13 @@ the frontend (`spec.ts`).
   every later call is a no-op for them. The names are message keys the backend can't read, and from then on they're
   plain user data, so nothing re-translates them. A preset saved before the first read keeps its place: the seeds go
   after it.
-- **The file** keeps the `crate::recents` envelope (`_schemaVersion: 1`, `entries`) plus `seeded`, so an older build's
+  **Seed versions:** each `PresetSeed` carries the Cmdr `version` that introduced it (the first four are 1; the user's
+  seven foobar2000 patterns, `MaskSyntax::Foobar` with Remove diacritics on, are 2). The file's `seedVersion`
+  (`#[serde(default)]`, schema stays 1) is the newest version the list took; a `seeded` file without it counts as 1. A
+  seed goes in when its version is above that, by the same rules (after the user's presets, name taken: skipped, cap),
+  and `seedVersion` is stored after, so deleting a version-2 seed never brings it back. A set-aside file stores
+  `u32::MAX`: no seeds, ever. The seven patterns are pinned by `foobar_spec_test.rs` (rendered through the real pipeline) and `spec.test.ts`.
+- **The file** keeps the `crate::recents` envelope (`_schemaVersion: 1`, `entries`) plus `seeded` and `seedVersion`, so an older build's
   file reads as stored (newest first) and an older build reads ours. A file that won't read goes through
   `state_recovery::read_state_file` (set aside, the person told once), like every state file; the lock discipline is
   `recents`' (two locks, never held at once).

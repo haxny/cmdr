@@ -11,18 +11,53 @@ describe('multi-rename spec helpers', () => {
   })
 
   it('seeds Date and time, then one preset per whole-name option, each changing that alone', () => {
-    expect(PRESET_SEEDS.map((seed) => seed.nameKey)).toEqual([
+    const first = PRESET_SEEDS.slice(0, 4)
+    expect(first.map((seed) => seed.nameKey)).toEqual([
       'multiRename.preset.dateAndTime',
       'multiRename.preset.removeDiacritics',
       'multiRename.preset.greekToLatin',
       'multiRename.preset.normalizeUnicode',
     ])
-    expect(PRESET_SEEDS.map((seed) => seed.spec)).toEqual([
+    expect(first.map((seed) => seed.spec)).toEqual([
       { ...DEFAULT_SPEC, nameMask: '[Y-M-D h.m.s]' },
       { ...DEFAULT_SPEC, removeDiacritics: true },
       { ...DEFAULT_SPEC, greekToLatin: true },
       { ...DEFAULT_SPEC, normalizeUnicode: true },
     ])
+  })
+
+  it('ships the seven foobar2000 patterns as version 2 seeds, after the first four', () => {
+    const foobar = PRESET_SEEDS.slice(4)
+    expect(PRESET_SEEDS.slice(0, 4).every((seed) => seed.version === 1)).toBe(true)
+    expect(foobar.map((seed) => seed.version)).toEqual([2, 2, 2, 2, 2, 2, 2])
+    expect(foobar.map((seed) => seed.nameKey)).toEqual([
+      'multiRename.preset.foobarAuthorYearAlbumTrack',
+      'multiRename.preset.foobarArtistAlbum',
+      'multiRename.preset.foobarAuthorYearAlbumTrackTitle',
+      'multiRename.preset.foobarReadByDiscTrackTitle',
+      'multiRename.preset.foobarReadByDiscTrack',
+      'multiRename.preset.foobarReadByPublisherDiscTrack',
+      'multiRename.preset.foobarSftRadioShow',
+    ])
+    // The same strings `foobar_spec_test.rs` renders through the real pipeline (SHIPPED_PATTERNS).
+    expect(foobar.map((seed) => seed.spec.nameMask)).toEqual([
+      "[%album artist% - ]'('%year%')' %album% - %track%",
+      '[%artist% -] %album%',
+      "[%album artist% - ]'('%year%')' %album% - %track% %title%",
+      "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2) %title%",
+      "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2)",
+      "[%album artist% - ]'('%year%')' %album% '('cte %performer%, %publisher%')' - %disc%$num(%tracknumber%,2)",
+      "SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'",
+    ])
+    for (const seed of foobar) {
+      expect(seed.spec).toEqual({
+        ...DEFAULT_SPEC,
+        nameMask: seed.spec.nameMask,
+        maskSyntax: 'foobar',
+        removeDiacritics: true,
+      })
+      expect(seed.spec.extensionMask).toBe('[E]')
+    }
   })
 
   it('compares two specs field by field, whatever order the fields came in', () => {

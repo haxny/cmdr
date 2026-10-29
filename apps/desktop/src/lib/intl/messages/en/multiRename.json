@@ -210,6 +210,34 @@
   "@multiRename.preset.normalizeUnicode": {
     "description": "Name of a preset Cmdr starts the Presets list with, saved in this language the first time the list loads; the user can rename or delete it like their own. It only stores accented letters in the single-character form Windows, Linux, and websites expect; the names look the same."
   },
+  "multiRename.preset.foobarAuthorYearAlbumTrack": "Author – (year) Album – track",
+  "@multiRename.preset.foobarAuthorYearAlbumTrack": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): author, year, album and track number, like Anne Frank - (1947) Denik - 03. The author part is left out when the album artist is empty. Keep the dashes and the parentheses."
+  },
+  "multiRename.preset.foobarArtistAlbum": "Artist – Album",
+  "@multiRename.preset.foobarArtistAlbum": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): artist and album, like Anne Frank - Denik. Keep the dash."
+  },
+  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Author – (year) Album – track title",
+  "@multiRename.preset.foobarAuthorYearAlbumTrackTitle": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): author, year, album, track number and title, like Anne Frank - (1947) Denik - 03 Kapitola treti. Keep the dashes and the parentheses."
+  },
+  "multiRename.preset.foobarReadByDiscTrackTitle": "… (read by) – disc track title",
+  "@multiRename.preset.foobarReadByDiscTrackTitle": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc, track number and title, like Anne Frank - (1947) Denik (cte Vera Slunecka) - 103 Kapitola treti. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+  },
+  "multiRename.preset.foobarReadByDiscTrack": "… (read by) – disc track",
+  "@multiRename.preset.foobarReadByDiscTrack": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Slunecka) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+  },
+  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (read by, publisher) – disc track",
+  "@multiRename.preset.foobarReadByPublisherDiscTrack": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator and the publisher in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Slunecka, audioteka 2011) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+  },
+  "multiRename.preset.foobarSftRadioShow": "SFT radio show",
+  "@multiRename.preset.foobarSftRadioShow": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): a radio show recording: SFT, date, disc and track number in parentheses, title and artist in parentheses, like SFT 1947 (103) Kapitola treti (Anne Frank). SFT is a fixed label; keep it."
+  },
   "multiRename.presetName": "Preset name",
   "@multiRename.presetName": {
     "description": "Label of the name field in the small popup that saves the current fields as a preset (Cmd+S) or renames a saved one."
@@ -1321,6 +1349,28 @@
     "description": "After the count beside the tracks filter field of the tag editor window: selected tracks that the filter hides. They stay selected, and the tag tools still work on them.",
     "placeholders": {
       "countText": "how many selected tracks the filter hides, formatted (for example 3)"
+    }
+  },
+  "multiRename.tags.filter.countWithHidden": "{count}, {hidden}",
+  "@multiRename.tags.filter.countWithHidden": {
+    "description": "Beside the tracks filter field of the tag editor window, when the filter hides some selected tracks: the count of shown tracks, then how many selected ones are hidden. Change the punctuation if your language joins two phrases differently.",
+    "placeholders": {
+      "count": "the shown count, like “12 of 98 tracks” (multiRename.tags.filter.count)",
+      "hidden": "the hidden selection, like “3 selected tracks hidden” (multiRename.tags.filter.hiddenSelected)"
+    }
+  },
+  "multiRename.tags.cover.useForAllHidden": "{count, plural, one {Use for the {countText} file, hidden one too} other {Use for all {countText} files, hidden ones too}}",
+  "@multiRename.tags.cover.useForAllHidden": {
+    "description": "Button in the dialog showing one cover large, in the tag editor window, while a filter hides some tracks: the picture still becomes the cover of every file, including the ones the filter hides. Nothing is written into the files until Write.",
+    "placeholders": {
+      "countText": "how many files get the cover, formatted (for example 22)"
+    }
+  },
+  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {A cover goes to every file, also the {countText} the filter hides.} other {A cover goes to every file, also the {countText} the filter hides.}}",
+  "@multiRename.tags.cover.allFilesFiltered": {
+    "description": "Hint in the cover section of the tag editor window while a filter in the tracks pane hides some tracks: picking, pasting, or dropping a cover still changes every file, not only the shown ones.",
+    "placeholders": {
+      "countText": "how many tracks the filter hides, formatted (for example 4)"
     }
   },
   "multiRename.tags.filter.noneShown": "No track matches the filter, so nothing was changed. Change the filter, or press Esc in it to show every track.",

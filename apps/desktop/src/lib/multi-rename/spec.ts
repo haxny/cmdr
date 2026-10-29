@@ -30,20 +30,72 @@ export const DEFAULT_SPEC: MultiRenameSpec = {
  * rename, update, move, or delete.
  */
 export interface PresetSeedSource {
+  /** The Cmdr version that introduced the seed (`seed_in`): a list takes a seed once, when its version is newer. */
+  version: number
   nameKey:
     | 'multiRename.preset.dateAndTime'
     | 'multiRename.preset.removeDiacritics'
     | 'multiRename.preset.greekToLatin'
     | 'multiRename.preset.normalizeUnicode'
+    | 'multiRename.preset.foobarAuthorYearAlbumTrack'
+    | 'multiRename.preset.foobarArtistAlbum'
+    | 'multiRename.preset.foobarAuthorYearAlbumTrackTitle'
+    | 'multiRename.preset.foobarReadByDiscTrackTitle'
+    | 'multiRename.preset.foobarReadByDiscTrack'
+    | 'multiRename.preset.foobarReadByPublisherDiscTrack'
+    | 'multiRename.preset.foobarSftRadioShow'
   spec: MultiRenameSpec
 }
 
-/** The seeds, top to bottom. */
+/**
+ * A foobar2000 pattern as a preset: the pattern is the name mask, the extension stays, and Remove
+ * diacritics is on (the user's tag canon names files without diacritics; `DEFAULT_SPEC` has it off).
+ */
+function foobarSpec(nameMask: string): MultiRenameSpec {
+  return { ...DEFAULT_SPEC, nameMask, maskSyntax: 'foobar', removeDiacritics: true }
+}
+
+/** The seeds, top to bottom; version 2 ones follow the first four so they land after them in a new list. */
 export const PRESET_SEEDS: PresetSeedSource[] = [
-  { nameKey: 'multiRename.preset.dateAndTime', spec: { ...DEFAULT_SPEC, nameMask: '[Y-M-D h.m.s]' } },
-  { nameKey: 'multiRename.preset.removeDiacritics', spec: { ...DEFAULT_SPEC, removeDiacritics: true } },
-  { nameKey: 'multiRename.preset.greekToLatin', spec: { ...DEFAULT_SPEC, greekToLatin: true } },
-  { nameKey: 'multiRename.preset.normalizeUnicode', spec: { ...DEFAULT_SPEC, normalizeUnicode: true } },
+  { version: 1, nameKey: 'multiRename.preset.dateAndTime', spec: { ...DEFAULT_SPEC, nameMask: '[Y-M-D h.m.s]' } },
+  { version: 1, nameKey: 'multiRename.preset.removeDiacritics', spec: { ...DEFAULT_SPEC, removeDiacritics: true } },
+  { version: 1, nameKey: 'multiRename.preset.greekToLatin', spec: { ...DEFAULT_SPEC, greekToLatin: true } },
+  { version: 1, nameKey: 'multiRename.preset.normalizeUnicode', spec: { ...DEFAULT_SPEC, normalizeUnicode: true } },
+  {
+    version: 2,
+    nameKey: 'multiRename.preset.foobarAuthorYearAlbumTrack',
+    spec: foobarSpec("[%album artist% - ]'('%year%')' %album% - %track%"),
+  },
+  { version: 2, nameKey: 'multiRename.preset.foobarArtistAlbum', spec: foobarSpec('[%artist% -] %album%') },
+  {
+    version: 2,
+    nameKey: 'multiRename.preset.foobarAuthorYearAlbumTrackTitle',
+    spec: foobarSpec("[%album artist% - ]'('%year%')' %album% - %track% %title%"),
+  },
+  {
+    version: 2,
+    nameKey: 'multiRename.preset.foobarReadByDiscTrackTitle',
+    spec: foobarSpec(
+      "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2) %title%",
+    ),
+  },
+  {
+    version: 2,
+    nameKey: 'multiRename.preset.foobarReadByDiscTrack',
+    spec: foobarSpec("[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2)"),
+  },
+  {
+    version: 2,
+    nameKey: 'multiRename.preset.foobarReadByPublisherDiscTrack',
+    spec: foobarSpec(
+      "[%album artist% - ]'('%year%')' %album% '('cte %performer%, %publisher%')' - %disc%$num(%tracknumber%,2)",
+    ),
+  },
+  {
+    version: 2,
+    nameKey: 'multiRename.preset.foobarSftRadioShow',
+    spec: foobarSpec("SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'"),
+  },
 ]
 
 /**

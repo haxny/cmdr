@@ -229,3 +229,73 @@ fn the_extension_mask_stays_cmdr_syntax_under_a_foobar_name_mask() {
     let out = run(&spec, &[file("a.mp3")], &MediaByName(vec![]));
     assert_eq!(out[0].0, "a.mp3_1");
 }
+
+/// The seven patterns Cmdr ships as presets (`PRESET_SEEDS` in the frontend's `spec.ts`, which a test
+/// there pins to these strings), each rendered through the real pipeline with the settings they ship
+/// with: Remove diacritics on, since the user's canon names carry none.
+const SHIPPED_PATTERNS: [(&str, &str); 7] = [
+    (
+        "author - (year) album - track",
+        "[%album artist% - ]'('%year%')' %album% - %track%",
+    ),
+    ("artist - album", "[%artist% -] %album%"),
+    (
+        "author - (year) album - track title",
+        "[%album artist% - ]'('%year%')' %album% - %track% %title%",
+    ),
+    (
+        "(read by) - disc track title",
+        "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2) %title%",
+    ),
+    (
+        "(read by) - disc track",
+        "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2)",
+    ),
+    (
+        "(read by, publisher) - disc track",
+        "[%album artist% - ]'('%year%')' %album% '('cte %performer%, %publisher%')' - %disc%$num(%tracknumber%,2)",
+    ),
+    (
+        "SFT radio show",
+        "SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'",
+    ),
+];
+
+fn shipped_spec(pattern: &str) -> MultiRenameSpec {
+    MultiRenameSpec {
+        remove_diacritics: true,
+        ..foobar(pattern)
+    }
+}
+
+#[test]
+fn each_shipped_pattern_names_the_anne_frank_book_as_the_user_files_it() {
+    let facts = MediaFacts {
+        title: Some("Kapitola třetí".to_string()),
+        artist: Some("Anne Frank".to_string()),
+        disc: Some(1),
+        ..anne_frank()
+    };
+    let media = MediaByName(vec![("03.mp3", RowMedia::Read(&facts))]);
+    let expected = [
+        "Anne Frank - (1947) Denik - 03.mp3",
+        "Anne Frank - Denik.mp3",
+        "Anne Frank - (1947) Denik - 03 Kapitola treti.mp3",
+        "Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103 Kapitola treti.mp3",
+        "Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103.mp3",
+        "Anne Frank - (1947) Denik (cte Vera Sluneckova, audioteka 2011) - 103.mp3",
+        "SFT 1947 (103) Kapitola treti (Anne Frank).mp3",
+    ];
+    for ((label, pattern), expected) in SHIPPED_PATTERNS.into_iter().zip(expected) {
+        let out = run(&shipped_spec(pattern), &[file("03.mp3")], &media);
+        assert_eq!(out, vec![(expected.to_string(), RowStatus::Ready)], "{label}");
+    }
+}
+
+#[test]
+fn the_shipped_patterns_all_compile_and_read_the_tags() {
+    for (label, pattern) in SHIPPED_PATTERNS {
+        let compiled = Compiled::new(&shipped_spec(pattern)).unwrap_or_else(|e| panic!("{label}: {e:?}"));
+        assert!(compiled.uses_media(), "{label}");
+    }
+}

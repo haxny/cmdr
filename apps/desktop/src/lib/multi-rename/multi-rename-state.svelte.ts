@@ -563,7 +563,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     },
     async loadPresets() {
       presets = await getMultiRenamePresets(
-        PRESET_SEEDS.map((seed) => ({ name: tString(seed.nameKey), spec: seed.spec })),
+        PRESET_SEEDS.map((seed) => ({ name: tString(seed.nameKey), version: seed.version, spec: seed.spec })),
       )
     },
     presetNamed,

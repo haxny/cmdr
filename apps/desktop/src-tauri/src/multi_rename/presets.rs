@@ -157,6 +157,22 @@ pub struct PresetList {
     /// The seeds went in (or the list's file was set aside, which isn't a new
     /// install). Never goes back to `false`, so a deleted seed stays deleted.
     pub seeded: bool,
+    /// The newest seed version this list took. A list saved before seeds were
+    /// versioned reads 0: [`stored_seed_version`] counts it as 1 when `seeded`.
+    pub seed_version: u32,
+}
+
+/// What a list whose seeds are never to be added counts as having taken: a file
+/// that was set aside isn't a new install, and its person didn't ask for more.
+pub const SEEDS_NEVER_AGAIN: u32 = u32::MAX;
+
+/// The seed version a list has taken. A list that took the seeds before they were
+/// versioned (`seeded` with no version) took version 1.
+fn stored_seed_version(list: &PresetList) -> u32 {
+    match (list.seed_version, list.seeded) {
+        (0, true) => 1,
+        (version, _) => version,
+    }
 }
 
 /// A preset Cmdr starts the list with ("Date and time", "Remove diacritics", …),
@@ -166,18 +182,28 @@ pub struct PresetList {
 #[serde(rename_all = "camelCase")]
 pub struct PresetSeed {
     pub name: String,
+    /// The Cmdr version that introduced this seed (1: the first four). A list takes
+    /// each seed once: those whose version is above the list's.
+    pub version: u32,
     pub spec: MultiRenameSpec,
 }
 
-/// Adds the seeds after the user's presets, once per list: none whose name the
-/// list already has, none past `max`. Returns whether it ran.
+/// Adds the seeds the list hasn't taken yet (a version above its own) after the
+/// user's presets: none whose name the list already has, none past `max`. The list
+/// then counts as having taken the newest version, so a seed deleted later stays
+/// deleted. Returns whether anything changed.
 pub fn seed_in(list: &mut PresetList, seeds: Vec<PresetSeed>, max: usize) -> bool {
-    if list.seeded {
+    let stored = stored_seed_version(list);
+    let Some(newest) = seeds.iter().map(|seed| seed.version).max().filter(|&v| v > stored) else {
         return false;
-    }
-    for PresetSeed { name, spec } in seeds {
+    };
+    for PresetSeed { name, version, spec } in seeds {
         let key = name_key(&name);
-        if key.is_empty() || list.entries.len() >= max || list.entries.iter().any(|p| p.key() == key) {
+        if version <= stored
+            || key.is_empty()
+            || list.entries.len() >= max
+            || list.entries.iter().any(|p| p.key() == key)
+        {
             continue;
         }
         list.entries.push(MultiRenamePreset {
@@ -187,6 +213,7 @@ pub fn seed_in(list: &mut PresetList, seeds: Vec<PresetSeed>, max: usize) -> boo
         });
     }
     list.seeded = true;
+    list.seed_version = newest;
     true
 }
 
