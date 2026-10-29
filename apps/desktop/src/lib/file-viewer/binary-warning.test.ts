@@ -91,7 +91,13 @@ describe('categorizeForViewerWarning', () => {
     })
 
     it('multi-dot filenames use the last segment', () => {
-      expect(categorizeForViewerWarning('archive.tar.gz')).toEqual({ shouldWarn: true, category: 'binary', ext: 'GZ' })
+      // A compressed tar is one extension (`#lib/utils/file-extension`).
+      expect(categorizeForViewerWarning('archive.tar.gz')).toEqual({
+        shouldWarn: true,
+        category: 'binary',
+        ext: 'TAR.GZ',
+      })
+      expect(categorizeForViewerWarning('Smlouva v. 2 final')).toEqual({ shouldWarn: false, category: null, ext: '' })
       expect(categorizeForViewerWarning('photo.thumbnail.png')).toEqual({
         shouldWarn: true,
         category: 'image',

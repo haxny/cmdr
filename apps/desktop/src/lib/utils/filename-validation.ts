@@ -1,6 +1,7 @@
 /** Client-side filename validation for instant keystroke feedback. */
 
 import { tString } from '#lib/intl/messages.svelte.js'
+import { fileExtension } from './file-extension'
 
 /** Defaults match macOS. Call initPathLimits() at startup to get platform-specific values from the backend. */
 let maxNameBytes = 255
@@ -82,13 +83,6 @@ export function validatePathLength(parentPath: string, name: string): Validation
   return OK_RESULT
 }
 
-/** Extracts the extension from a filename (empty string if none). */
-export function getExtension(filename: string): string {
-  const lastDot = filename.lastIndexOf('.')
-  if (lastDot <= 0) return ''
-  return filename.substring(lastDot)
-}
-
 /**
  * Extensions treated as equivalent: switching between any two in a group skips the rename warning.
  * Each group lists spellings of the same underlying format, lowercase, no leading dot.
@@ -113,9 +107,8 @@ const EXTENSION_TO_GROUP: ReadonlyMap<string, number> = new Map(
   EQUIVALENT_EXTENSION_GROUPS.flatMap((group, i) => group.map((ext) => [ext, i] as const)),
 )
 
-function normalizedExt(filename: string): string {
-  const ext = getExtension(filename).toLowerCase()
-  return ext.startsWith('.') ? ext.slice(1) : ext
+function normalizedExt(filename: string, isDirectory: boolean): string {
+  return fileExtension(filename, isDirectory).toLowerCase()
 }
 
 /**
@@ -124,46 +117,22 @@ function normalizedExt(filename: string): string {
  * between known equivalents (`photo.jpeg` → `photo.jpg`, `notes.md` → `notes.txt`),
  * so users aren't pestered to confirm what's effectively a metadata tweak.
  */
-export function extensionsDifferMeaningfully(oldName: string, newName: string): boolean {
-  const oldExt = normalizedExt(oldName)
-  const newExt = normalizedExt(newName.trim())
+export function extensionsDifferMeaningfully(oldName: string, newName: string, isDirectory = false): boolean {
+  const oldExt = normalizedExt(oldName, isDirectory)
+  const newExt = normalizedExt(newName.trim(), isDirectory)
   if (oldExt === newExt) return false
   const oldGroup = EXTENSION_TO_GROUP.get(oldExt)
   return oldGroup === undefined || oldGroup !== EXTENSION_TO_GROUP.get(newExt)
 }
 
 /**
- * Folder extensions that make macOS treat the folder as a package (one opaque item in Finder).
- * Lowercase, no leading dot. Hand-kept until the backend reports packages itself (issue #385).
- */
-const PACKAGE_EXTENSIONS: ReadonlySet<string> = new Set([
-  'app',
-  'appex',
-  'bundle',
-  'component',
-  'framework',
-  'kext',
-  'mdimporter',
-  'photoslibrary',
-  'pkg',
-  'plugin',
-  'prefpane',
-  'qlgenerator',
-  'rtfd',
-  'saver',
-  'xcodeproj',
-  'xcworkspace',
-])
-
-/**
  * True if renaming `oldName` to `newName` changes the extension enough to confirm.
- * For a folder, the part after a dot is usually just part of its name (`release.v1.2`), so a
- * folder only counts when the change makes it stop or start being a macOS package (`Cmdr.app`).
+ * What an extension is comes from `file-extension.ts`: a folder has one only when
+ * it's a macOS package, so `release.v1.2` → `release.v1.3` asks nothing while
+ * `Cmdr.app` → `Cmdr.old` does.
  */
 export function extensionChangeNeedsConfirmation(oldName: string, newName: string, isDirectory: boolean): boolean {
-  if (!extensionsDifferMeaningfully(oldName, newName)) return false
-  if (!isDirectory) return true
-  return PACKAGE_EXTENSIONS.has(normalizedExt(oldName)) || PACKAGE_EXTENSIONS.has(normalizedExt(newName.trim()))
+  return extensionsDifferMeaningfully(oldName, newName, isDirectory)
 }
 
 /** Validates extension change against the user's preference. */
@@ -178,7 +147,8 @@ export function validateExtensionChange(
   if (!extensionChangeNeedsConfirmation(oldName, newName, isDirectory)) return OK_RESULT
 
   if (allowExtensionChanges === 'no') {
-    const oldExt = getExtension(oldName)
+    const ext = fileExtension(oldName, isDirectory)
+    const oldExt = ext ? `.${ext}` : ''
     return {
       severity: 'error',
       message: tString('fileOperations.validation.extensionChangeBlocked', { oldExt }),

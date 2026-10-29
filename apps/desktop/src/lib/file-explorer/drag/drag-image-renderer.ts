@@ -4,6 +4,7 @@
 
 import type { DragFileInfo } from './drag-drop'
 import { getCachedIcon } from '#lib/icon-cache.js'
+import { fileExtension } from '#lib/utils/file-extension.js'
 
 /** Configuration for the drag image renderer */
 const cardBg = 'rgba(20, 20, 20, 0.75)'
@@ -46,10 +47,11 @@ export function getEntryEmoji(name: string, isDirectory: boolean): string {
 export function truncateMiddle(name: string, maxLength: number): string {
   if (name.length <= maxLength) return name
 
-  const dotIndex = name.lastIndexOf('.')
-  const hasExtension = dotIndex > 0 && dotIndex < name.length - 1
-  const extension = hasExtension ? name.slice(dotIndex) : ''
-  const baseName = hasExtension ? name.slice(0, dotIndex) : name
+  // The product's one extension rule, read as a file's: only a name is known
+  // here, and keeping a short tail visible is harmless for a folder too.
+  const ext = fileExtension(name, false)
+  const extension = ext ? `.${ext}` : ''
+  const baseName = name.slice(0, name.length - extension.length)
 
   // Reserve space for the extension and the ellipsis character
   const availableForBase = maxLength - extension.length - 1

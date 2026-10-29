@@ -63,8 +63,9 @@ the next section.
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs
   on a volume with none of its own, so a copy walk leaves it out), `archive_format.rs` (sole source of truth for archive
-  detection, and the extension-only split of a path at its archive component), `restic_view.rs` (the `Browse snapshots`
-  name and the lexical split of a path at it, here so the listing engine and the write guards ask it without linking
+  detection, and the extension-only split of a path at its archive component), `file_extension.rs` (what counts as a
+  name's extension, product-wide: § "What counts as an extension"), `restic_view.rs` (the `Browse snapshots` name and
+  the lexical split of a path at it, here so the listing engine and the write guards ask it without linking
   `rustic_core`; `cmdr-restic` confirms), `benchmark.rs` (the env-gated `[TIMELINE]` stderr events,
   `docs/guides/benchmarking-file-loading.md`), `cloud_provider.rs` (macOS: which cloud provider owns a path, and what it
   can do; pure path rules, its module docs say why it's a type), `validation.rs` (the platform's name and path-length
@@ -100,6 +101,39 @@ the next section.
   runner, § "`testing::disk_images`") and `metadata_fixture.rs` (files and folders carrying birth, flags, an ACL,
   xattrs, and mode, for the copy-keeps-metadata cells; its `Drop` unlocks and strips ACLs so a Locked leftover can't
   fail the cleanup).
+
+## What counts as an extension (`file_extension`)
+
+One rule, everywhere a name is split at its extension: sorting by extension (`cmdr-listing`), the Ext column and "select
+same kind", the rename field's pre-selection, its F2 cycle and dot stops, both extension-change warnings (the rename
+field's and Ask Cmdr's bulk-rename preflight), the New folder name suggestion, the viewer's raw-view banner, and the
+drag image's truncation. The past pain that justifies it: with each site taking the last-dot segment (any length, files
+and folders alike), `Smlouva v. 2 final` pre-selected `Smlouva v` and raised the extension warning on a file that has
+none, and the column, the sort, and the warning could disagree about one name.
+
+- **A folder has none, unless it's a macOS package** (`PACKAGE_EXTENSIONS`: `Cmdr.app` has `app`). A dot in a folder
+  name is part of the name (`release.v1.2`, `Project 1.5 backup`). The list is hand-kept until the backend reports
+  packages itself (issue #385). It's wider than `icons::packages`, which is bounded by what's worth an icon fetch.
+- **A file's extension is 1–10 ASCII letters and digits after the last dot.** Anything else after it (a space, an
+  underscore, a hyphen, a non-ASCII letter, 11+ characters) makes it part of the name: `J. Novak - notes`,
+  `db.sqlite3-journal`, and `photo.jpg_old` have none. The cost is the odd real extension that breaks the shape, which
+  then reads as part of the name; the misfires it removes are far more common.
+- **A compressed tar counts as one** (`COMPOUND_EXTENSIONS`: `tar.gz`, `tar.bz2`, `tar.xz`, `tar.zst`), exactly the
+  dotted `ArchiveFormat::label`s (a test pins it), so the archive the app browses and the extension the rename field
+  selects agree on where the name ends.
+- **A leading dot isn't one, and needs a stem**: `.gitignore` has none, `.config.json` has `json`, `.tar.gz` has `gz`. A
+  trailing dot (`file.`) has none.
+- **The answer keeps the name's case and drops the dot.** Callers lowercase to compare.
+
+**Decision: a Rust rule with a TypeScript mirror, pinned by one shared case file.** The frontend asks on every keystroke
+in the rename field, about names that exist nowhere but that field, so an IPC hop per keystroke is out (the same reason
+filename validation stays frontend-pure). `apps/desktop/src/lib/utils/file-extension.ts` mirrors the rule, and both
+suites run `src/file_extension_cases.json` (cases plus both lists), so the two languages can't drift: a new case goes in
+the JSON and both sides answer it.
+
+**Out of scope on purpose: OS type lookups.** Icon UTIs (`derive_icon_id`, `fileIconId`), "Open with" defaults, the
+archive Enter policy, and the viewer's content sniffing keep `Path::extension` semantics: there, what macOS calls the
+extension is the truth, and a bogus one only finds no match.
 
 ## Why each thing is here rather than in the app
 

@@ -31,8 +31,12 @@ describe('sameKindTargetFor', () => {
     expect(sameKindTargetFor(entry('SCAN.PDF'))).toEqual({ kind: 'sameExtension', extension: 'pdf' })
   })
 
-  it('reads `archive.tar.gz` as `gz`, the last segment the Ext column shows', () => {
-    expect(sameKindTargetFor(entry('archive.tar.gz'))).toEqual({ kind: 'sameExtension', extension: 'gz' })
+  it('reads `archive.tar.gz` as `tar.gz`, the one extension the Ext column shows', () => {
+    expect(sameKindTargetFor(entry('archive.tar.gz'))).toEqual({ kind: 'sameExtension', extension: 'tar.gz' })
+  })
+
+  it('reads words after a dot as part of the name, like the Ext column does', () => {
+    expect(sameKindTargetFor(entry('Smlouva v. 2 final'))).toEqual({ kind: 'noExtension' })
   })
 
   it('reads a dotfile with no second dot as extension-less, like the Ext column does', () => {
@@ -43,7 +47,7 @@ describe('sameKindTargetFor', () => {
     expect(sameKindTargetFor(entry('.eslintrc.json'))).toEqual({ kind: 'sameExtension', extension: 'json' })
   })
 
-  it('reads a trailing-dot name as extension-less, matching the Ext column (not `getExtension`)', () => {
+  it('reads a trailing-dot name as extension-less, matching the Ext column', () => {
     expect(sameKindTargetFor(entry('file.'))).toEqual({ kind: 'noExtension' })
   })
 
@@ -78,9 +82,10 @@ describe('sameKindIndices', () => {
     expect(sameKindIndices({ kind: 'sameExtension', extension: 'pdf' }, entries)).toEqual([0, 1])
   })
 
-  it('matches `gz` on the last segment only, so `.tar` stays out', () => {
+  it('keeps a compressed tar apart from a bare `gz` and a plain `tar`', () => {
     const entries = [entry('archive.tar.gz'), entry('backup.gz'), entry('plain.tar')]
-    expect(sameKindIndices({ kind: 'sameExtension', extension: 'gz' }, entries)).toEqual([0, 1])
+    expect(sameKindIndices({ kind: 'sameExtension', extension: 'gz' }, entries)).toEqual([1])
+    expect(sameKindIndices({ kind: 'sameExtension', extension: 'tar.gz' }, entries)).toEqual([0])
   })
 
   it('groups every extension-less file together, folders excluded', () => {

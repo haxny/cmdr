@@ -1,13 +1,16 @@
 <script lang="ts">
     import { onMount, tick } from 'svelte'
-    import { getExtension } from '#lib/utils/filename-validation.js'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import { dependOn } from '#lib/utils/reactivity.js'
     import type { RenameSessionId } from './rename-state.svelte'
     import { renameStepDirection, type RenameStepDirection } from './rename-step'
+    import { nextRenameSelection, renameSelectionStages, wordStopSelection } from './rename-selection'
 
     interface Props {
         /** Current filename value (two-way bindable via onInput) */
         value: string
+        /** Whether the entry is a folder: a folder's dot is part of its name unless it's a package */
+        isDirectory?: boolean
         /** The rename session this editor was opened for; handed back with `onCancel` */
         sessionId: RenameSessionId
         /** Validation severity for border coloring */
@@ -38,6 +41,7 @@
 
     const {
         value,
+        isDirectory = false,
         sessionId,
         severity,
         shaking,
@@ -61,13 +65,42 @@
     // edit the user has already started there.
     const openedForSession = sessionId
 
-    /** Focuses the input and selects the filename excluding the extension. */
+    /** Focuses the input and selects the filename excluding the extension (the cycle's first stage). */
     function focusAndSelect() {
         if (!inputElement) return
         inputElement.focus()
-        const ext = getExtension(value)
-        const nameWithoutExt = ext ? value.slice(0, -ext.length) : value
-        inputElement.setSelectionRange(0, nameWithoutExt.length)
+        const first = renameSelectionStages(value, isDirectory).at(0) ?? { start: 0, end: 0 }
+        inputElement.setSelectionRange(first.start, first.end)
+    }
+
+    /** `file.rename` pressed again: step the selection through name, whole name, extension. */
+    function cycleSelection(input: HTMLInputElement) {
+        const current = { start: input.selectionStart ?? 0, end: input.selectionEnd ?? 0 }
+        const next = nextRenameSelection(input.value, isDirectory, current)
+        input.setSelectionRange(next.start, next.end)
+    }
+
+    /**
+     * ⌥← / ⌥→ (and with ⇧) get one extra stop at the extension's dot. Answered
+     * only where the system's word move would certainly skip it; everything else,
+     * IME composition included, is left to the system (`rename-selection.ts`).
+     * True when it took the move.
+     */
+    function applyWordStop(e: KeyboardEvent, input: HTMLInputElement): boolean {
+        if (e.isComposing || !e.altKey || e.metaKey || e.ctrlKey) return false
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false
+        const stop = wordStopSelection({
+            value: input.value,
+            isDirectory,
+            selectionStart: input.selectionStart ?? 0,
+            selectionEnd: input.selectionEnd ?? 0,
+            selectionDirection: input.selectionDirection ?? 'none',
+            direction: e.key === 'ArrowLeft' ? 'left' : 'right',
+            extend: e.shiftKey,
+        })
+        if (!stop) return false
+        input.setSelectionRange(stop.start, stop.end, stop.direction)
+        return true
     }
 
     function getSeverityColor(): string {
@@ -109,6 +142,19 @@
             e.preventDefault()
             e.stopPropagation()
             onStep?.(stepDirection, openedForSession)
+            return
+        }
+        // The Rename key again (F2 / ⇧F6, or whatever it's bound to) moves the
+        // selection on instead of doing nothing.
+        if (inputElement && eventMatchesCommand(e, 'file.rename')) {
+            e.preventDefault()
+            e.stopPropagation()
+            cycleSelection(inputElement)
+            return
+        }
+        if (inputElement && applyWordStop(e, inputElement)) {
+            e.preventDefault()
+            e.stopPropagation()
             return
         }
         // Stop propagation of all keys to prevent app shortcuts

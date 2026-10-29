@@ -7,8 +7,12 @@ describe('removeExtension', () => {
     expect(removeExtension('document.pdf')).toBe('document')
   })
 
-  it('removes only the last extension for double extensions', () => {
-    expect(removeExtension('archive.tar.gz')).toBe('archive.tar')
+  it('removes a compressed tar extension whole', () => {
+    expect(removeExtension('archive.tar.gz')).toBe('archive')
+  })
+
+  it('keeps words after a dot, which are part of the name', () => {
+    expect(removeExtension('Smlouva v. 2 final')).toBe('Smlouva v. 2 final')
   })
 
   it('returns filename as-is when no extension', () => {

@@ -2,7 +2,8 @@ import { refreshListing } from '#lib/tauri-commands/index.js'
 import { moveToTrash, type RenameValidityResult } from '#lib/tauri-commands/index.js'
 import { asMutationError } from '#lib/file-operations/mutation-error.js'
 import { renderMutationError } from '#lib/file-operations/mutation-error-messages.js'
-import { validateFilename, getExtension } from '#lib/utils/filename-validation.js'
+import { validateFilename } from '#lib/utils/filename-validation.js'
+import { fileExtension, withExtension } from '#lib/utils/file-extension.js'
 import { cancelClickToRename } from '../rename/rename-activation'
 import { executeRenameSave, performRename, checkPermission, type RenameResult } from '../rename/rename-operations'
 import { getSetting } from '#lib/settings/index.js'
@@ -642,13 +643,11 @@ export function createRenameFlow(deps: RenameFlowDeps) {
     handleExtensionKeepOld() {
       extensionDialogState = null
       if (rename.target) {
-        const oldExt = getExtension(rename.target.originalName)
-        const nameWithoutExt = rename.getTrimmedName()
-        const newExt = getExtension(nameWithoutExt)
-        if (newExt) {
-          const base = nameWithoutExt.slice(0, -newExt.length)
-          rename.setCurrentName(base + oldExt)
-        }
+        // Put the old extension back, also when the edit removed it or added one
+        // where there was none, so "Keep" always means the original extension.
+        const { originalName, isDirectory } = rename.target
+        const oldExt = fileExtension(originalName, isDirectory)
+        rename.setCurrentName(withExtension(rename.getTrimmedName(), oldExt, isDirectory))
       }
       rename.requestRefocus()
     },

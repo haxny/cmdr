@@ -185,24 +185,18 @@ impl SortableEntry for FileEntry {
 
 /// Extracts file extension for sorting purposes.
 /// Returns: (is_dotfile, has_extension, extension_lowercase)
-/// Dotfiles (names starting with .) sort first, then files without extension, then by extension.
-fn extract_extension_for_sort(name: &str) -> (bool, bool, String) {
+/// Dotfiles (names starting with .) sort first, then names without extension, then by extension.
+/// What an extension IS comes from the product's one rule, `cmdr_fs::file_extension`.
+fn extract_extension_for_sort(name: &str, is_directory: bool) -> (bool, bool, String) {
     // Dotfiles (like .gitignore) sort first
     if name.starts_with('.') && !name[1..].contains('.') {
         return (true, false, String::new());
     }
 
-    // Check for extension
-    if let Some(dot_pos) = name.rfind('.')
-        && dot_pos > 0
-        && dot_pos < name.len() - 1
-    {
-        let ext = name[dot_pos + 1..].to_lowercase();
-        return (false, true, ext);
+    match cmdr_fs::file_extension::extension_of(name, is_directory) {
+        Some(ext) => (false, true, ext.to_lowercase()),
+        None => (false, false, String::new()),
     }
-
-    // No extension
-    (false, false, String::new())
 }
 
 /// A row paired with the collation key for its name, so a bulk sort collates
@@ -409,8 +403,8 @@ fn compare_by_column<E: SortableEntry + ?Sized>(
     match sort_by {
         SortColumn::Name => a.compare_name(b, collator),
         SortColumn::Extension => {
-            let (a_dotfile, a_has_ext, a_ext) = extract_extension_for_sort(a.name());
-            let (b_dotfile, b_has_ext, b_ext) = extract_extension_for_sort(b.name());
+            let (a_dotfile, a_has_ext, a_ext) = extract_extension_for_sort(a.name(), a.is_directory());
+            let (b_dotfile, b_has_ext, b_ext) = extract_extension_for_sort(b.name(), b.is_directory());
 
             // Dotfiles first, then no extension, then by extension alphabetically
             match (a_dotfile, b_dotfile) {

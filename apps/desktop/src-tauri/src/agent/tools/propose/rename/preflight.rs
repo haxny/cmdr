@@ -324,17 +324,13 @@ pub(super) fn rename_warnings(source_path: &str, destination_name: &str) -> Vec<
     }
 }
 
+/// Whether a bulk rename keeps the file's extension, under the product's one
+/// extension rule (`cmdr_fs::file_extension`). Sources are always files: the
+/// preflight blocks a folder before it gets here.
 fn extensions_match(source_name: &str, destination_name: &str) -> bool {
-    match (
-        Path::new(source_name).extension(),
-        Path::new(destination_name).extension(),
-    ) {
-        (Some(source), Some(destination)) => {
-            let (Some(source), Some(destination)) = (source.to_str(), destination.to_str()) else {
-                return source == destination;
-            };
-            source.eq_ignore_ascii_case(destination)
-        }
+    use cmdr_fs::file_extension::extension_of;
+    match (extension_of(source_name, false), extension_of(destination_name, false)) {
+        (Some(source), Some(destination)) => source.eq_ignore_ascii_case(destination),
         (None, None) => true,
         (Some(_), None) | (None, Some(_)) => false,
     }

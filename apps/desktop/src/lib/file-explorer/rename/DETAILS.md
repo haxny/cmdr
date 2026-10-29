@@ -5,10 +5,10 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
 ## Components
 
 - **InlineRenameEditor.svelte**: input field that replaces the static name cell. Green/yellow/red border by validation
-  state, 300 ms glow/zoom on activation, pre-selects the filename excluding the extension. The zoom and the invalid-name
-  shake run only under `prefers-reduced-motion: no-preference`; with Reduce motion on, the border and the live
-  validation message carry it, and `shaking` stays set until the next keystroke (no `animationend` ever fires). Its
-  `aria-label` is `fileExplorer.rename.fieldAriaLabel` ("Rename {name}").
+  state, 300 ms glow/zoom on activation, pre-selects the filename excluding the extension (§ "Selection: the F2 cycle
+  and the dot stops"). The zoom and the invalid-name shake run only under `prefers-reduced-motion: no-preference`; with
+  Reduce motion on, the border and the live validation message carry it, and `shaking` stays set until the next
+  keystroke (no `animationend` ever fires). Its `aria-label` is `fileExplorer.rename.fieldAriaLabel` ("Rename {name}").
 - **RenameOverlay.svelte**: where the editor lives. The renamed row renders an empty slot (`.rename-slot` in Brief,
   `.col-rename` in Full, the box the name cells had) and registers it with the view; the view renders the overlay as the
   `.listbox-region`'s sibling inside its scroller (`position: relative`), absolutely placed over the slot in
@@ -25,7 +25,8 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
   "Continue renaming". The two ways out sit in `ModalDialog`'s `footerLeading`, the two overwrites in its `footer` with
   the Enter one (trash, when offered) rightmost.
 - **ExtensionChangeDialog.svelte**: confirmation when the extension changed and policy is "ask". Buttons: "Keep .{old}",
-  "Use .{new}". Checkbox: "Always allow extension changes" (sets policy to "yes").
+  "Use .{new}". Checkbox: "Always allow extension changes" (sets policy to "yes"). "Keep" puts the old extension back
+  with `withExtension`, also when the edit removed it or added one where there was none.
 - **rename-state.svelte.ts**: reactive `$state` for active/target/currentName/validation/shaking/focusTrigger. Must be
   `.svelte.ts` for Svelte 5 reactivity.
 - **rename-operations.ts**: pure save-flow logic returning a `RenameResult` discriminated union instead of side effects.
@@ -33,6 +34,32 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
 - **rename-step.ts**: the two pure halves of a chained rename: which keypress chains, and which row it lands on.
 - **chain-reports.ts**: the two running toasts a chain speaks through (kept names, renames a slow volume is still
   running), each one per pane.
+
+## Selection: the F2 cycle and the dot stops (`rename-selection.ts`)
+
+What the extension is comes from the product's one rule (`crates/cmdr-fs/DETAILS.md` § "What counts as an extension"),
+read off the name AS TYPED and the target's `isDirectory` (a prop the views pass), so the pre-selection, the cycle, the
+dot stops, and the extension-change warning can't disagree. `Smlouva v. 2 final` and `release.v1.2` (a folder) open
+fully selected; `Cmdr.app` opens with `Cmdr` selected.
+
+- **Pressing `file.rename` again cycles the selection** (F2 and ⇧F6 by default, matched with `eventMatchesCommand`, so a
+  rebind follows): the name without its extension (where the editor opens), the whole name, the extension alone, and
+  back. `renameSelectionStages` drops a stage that would be empty or repeat the one before, so a name with no extension
+  has one stage and F2 just reselects it. The next stage is picked from where the selection IS, so after the user moves
+  the caret, F2 starts over at the name. Directory Opus does the same on F2.
+- **⌥← / ⌥→ (and with ⇧) stop once at the extension's dot**: the extension's start going left, the name's end going
+  right, so ⇧⌥← from the end selects exactly the extension and ⇧⌥→ from the start exactly the name. The system's word
+  boundaries treat `report.pdf` as one word, which is why the stop is needed.
+
+**Decision: answer the word move only where the system's would certainly cross the dot, and leave everything else to the
+system.** `wordStopSelection` answers when the text between the caret and the stop is one hop for the native move: going
+left, the caret is inside a plain extension (ASCII letters and digits have no word boundary inside); going right, the
+text up to the name's end is optional whitespace plus one run of letters, digits, marks, and `_`. Anywhere a native
+boundary could come first (a space or hyphen mid-way, a compound extension's inner dot), it returns `null` and the
+keydown goes through untouched. So the editor never reimplements word movement, IME composition (`isComposing`) passes
+through, and undo is unaffected (a selection change isn't an undo step). A plain ⌥ arrow with a selection is also left
+alone: collapsing it is the system's call. The trade: a few spots where a stop would be nice (`my report.pdf` from its
+very start) get only the native moves.
 
 ## Three-stage save flow (`rename-operations.ts::executeRenameSave()`)
 

@@ -30,6 +30,7 @@ pub mod deadline;
 pub mod durable;
 pub mod entry;
 pub mod error_detail;
+pub mod file_extension;
 pub mod file_provider;
 pub mod filesystem_kind;
 pub mod firmlinks;

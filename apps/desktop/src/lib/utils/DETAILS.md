@@ -43,14 +43,20 @@ interface ValidationResult {
 `validateDirectoryPath` is used by TransferDialog and composes with the individual validators in NewFolderDialog.
 
 Extension-change behavior is controlled by the `allowExtensionChanges` user setting (`yes`/`no`/`ask`). `'ask'` returns
-`ok` at validation time; the save dialog handles it separately. `extensionsDifferMeaningfully(oldName, newName)` gates
-that confirmation so users aren't pestered over case-only changes (`.JPG` → `.jpg`) or known equivalents (`.jpeg` →
-`.jpg`, `.md` → `.txt`); add an alias by extending `EQUIVALENT_EXTENSION_GROUPS` in the same file.
-`extensionChangeNeedsConfirmation(oldName, newName, isDirectory)` wraps it and backs both `validateExtensionChange` and
-the rename save flow's "ask" gate. For a folder, a dot is usually just part of the name (`release.v1.2`), so a folder
-only counts when the old or new extension is in `PACKAGE_EXTENSIONS` (`.app`, `.bundle`, `.photoslibrary`, …): those
-make macOS show the folder as one opaque item, and dropping the extension turns an app into a plain folder. The list is
-hand-kept until the backend reports packages itself (issue #385).
+`ok` at validation time; the save dialog handles it separately.
+`extensionsDifferMeaningfully(oldName, newName, isDirectory)` gates that confirmation so users aren't pestered over
+case-only changes (`.JPG` → `.jpg`) or known equivalents (`.jpeg` → `.jpg`, `.md` → `.txt`); add an alias by extending
+`EQUIVALENT_EXTENSION_GROUPS` in the same file. `extensionChangeNeedsConfirmation(oldName, newName, isDirectory)` backs
+both `validateExtensionChange` and the rename save flow's "ask" gate. Which part of a name IS the extension comes from
+`file-extension.ts`, so a plain folder (`release.v1.2`) and a file whose dot is followed by words (`Smlouva v. 2 final`)
+never ask, while a macOS package (`Cmdr.app` → `Cmdr.old`) does.
+
+## file-extension.ts
+
+The frontend mirror of the product's one extension rule: `fileExtension(name, isDirectory)` (no dot, the name's case,
+`''` for none), `nameWithoutExtension`, `withExtension` (swap, add, or drop one), and the two lists. The rule and why
+it's mirrored: `crates/cmdr-fs/DETAILS.md` § "What counts as an extension". `file-extension.test.ts` runs the backend's
+case file, so a new case goes into `crates/cmdr-fs/src/file_extension_cases.json`, never into one side's test only.
 
 ## confirm-dialog.ts
 

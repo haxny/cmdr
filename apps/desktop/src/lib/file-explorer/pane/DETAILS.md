@@ -1976,10 +1976,9 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
   every extension-less file. The `..` row has no kind, so the command no-ops there and the label falls back to its
   neutral form.
 - **The extension rule is `getDisplayExtension`** (`../views/full-list-utils.ts`), what the **Ext column the user is
-  looking at** renders and what Rust sorts by. ❌ Never `getExtension` (`#lib/utils/filename-validation`): it returns
-  the last dot segment WITH its dot and calls `file.` an extension of `"."`, where the column says "no extension". They
-  agree on everything else that matters here (`archive.tar.gz` → `gz`, `.gitignore` → none). What the command groups has
-  to be what the column shows.
+  looking at** renders and what Rust sorts by: the product's one rule (`crates/cmdr-fs/DETAILS.md` § "What counts as an
+  extension"), so `archive.tar.gz` groups as `tar.gz`, apart from `backup.gz`. What the command groups has to be what
+  the column shows.
 - **It ADDS, never replaces** (decision, matching Total Commander): the matches union into whatever is already selected.
 - **❗ `FilePane.selectSameKind` applies through `selection.applyIndices`, ❌ NOT the component's own `applyIndices`.**
   That one moves the cursor to the first newly-selected row and scrolls there on `'add'`, which is right for the Select

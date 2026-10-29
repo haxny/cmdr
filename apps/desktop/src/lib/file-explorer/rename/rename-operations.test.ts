@@ -181,7 +181,16 @@ describe('the extension question on save', () => {
 
     const result = await executeRenameSave(app, 'Cmdr.old', 'ask')
 
-    expect(result).toEqual({ type: 'extension-ask', oldExtension: 'app', newExtension: 'old' })
+    // `old` isn't a package extension, so as a folder `Cmdr.old` has none.
+    expect(result).toEqual({ type: 'extension-ask', oldExtension: 'app', newExtension: '' })
+  })
+
+  it('reads the extensions by the product rule, so a compound tar is one', async () => {
+    const tarball: RenameTarget = { ...FILE, path: '/dir/src.tar.gz', originalName: 'src.tar.gz' }
+
+    const result = await executeRenameSave(tarball, 'src.zip', 'ask')
+
+    expect(result).toEqual({ type: 'extension-ask', oldExtension: 'tar.gz', newExtension: 'zip' })
   })
 })
 

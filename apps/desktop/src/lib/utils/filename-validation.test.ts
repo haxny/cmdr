@@ -9,7 +9,6 @@ import {
   validateExtensionChange,
   validateConflict,
   validateFilename,
-  getExtension,
   extensionsDifferMeaningfully,
   extensionChangeNeedsConfirmation,
 } from './filename-validation'
@@ -194,29 +193,17 @@ describe('validateDirectoryPath', () => {
   })
 })
 
-describe('getExtension', () => {
-  it('returns extension with dot', () => {
-    expect(getExtension('file.txt')).toBe('.txt')
-  })
-
-  it('returns empty for no extension', () => {
-    expect(getExtension('Makefile')).toBe('')
-  })
-
-  it('returns empty for hidden files without ext', () => {
-    expect(getExtension('.gitignore')).toBe('')
-  })
-
-  it('returns last extension for double extensions', () => {
-    expect(getExtension('archive.tar.gz')).toBe('.gz')
-  })
-
-  it('handles hidden files with extensions', () => {
-    expect(getExtension('.config.json')).toBe('.json')
-  })
-})
-
 describe('extensionsDifferMeaningfully', () => {
+  it('reads extensions by the product rule, so words after a dot are part of the name', () => {
+    expect(extensionsDifferMeaningfully('Smlouva v. 2 final', 'Smlouva v. 3 final')).toBe(false)
+    expect(extensionsDifferMeaningfully('J. Novak - notes', 'J. Novakova - notes')).toBe(false)
+  })
+
+  it('treats a compound tar as one extension', () => {
+    expect(extensionsDifferMeaningfully('src.tar.gz', 'source.tar.gz')).toBe(false)
+    expect(extensionsDifferMeaningfully('src.tar.gz', 'src.gz')).toBe(true)
+  })
+
   it('detects a real extension change', () => {
     expect(extensionsDifferMeaningfully('file.txt', 'file.json')).toBe(true)
   })
@@ -292,7 +279,7 @@ describe('extensionsDifferMeaningfully', () => {
   })
 
   it('treats a dotfile without extension as no extension', () => {
-    // getExtension('.gitignore') === '', so renaming to .gitkeep is also no extension
+    // '.gitignore' has no extension, so renaming to .gitkeep is also no extension
     expect(extensionsDifferMeaningfully('.gitignore', '.gitkeep')).toBe(false)
   })
 
@@ -322,6 +309,14 @@ describe('validateExtensionChange', () => {
 
   it('allows case-only extension change when setting is no', () => {
     expect(validateExtensionChange('photo.JPG', 'photo.jpg', 'no').severity).toBe('ok')
+  })
+
+  it('names the old extension with its dot in the blocked message', () => {
+    expect(validateExtensionChange('file.txt', 'file.json', 'no').message).toContain('“.txt”')
+  })
+
+  it('does not block a file with no extension under the product rule', () => {
+    expect(validateExtensionChange('Smlouva v. 2 final', 'Smlouva v. 3', 'no').severity).toBe('ok')
   })
 
   it('still errors on real extension change when setting is no', () => {

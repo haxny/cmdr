@@ -9,10 +9,9 @@
  * `'add'` mode, and it's why the cursor row itself is always part of the result).
  *
  * The extension rule is `getDisplayExtension`, the same one the **Ext column the
- * user is looking at** renders and Rust sorts by — ❌ never `getExtension` from
- * `#lib/utils/filename-validation`, which returns the last dot segment WITH its
- * dot and calls a trailing-dot name (`file.`) an extension of `"."`. What the
- * command groups has to be what the column shows.
+ * user is looking at** renders and Rust sorts by (the product's one rule,
+ * `#lib/utils/file-extension`). What the command groups has to be what the
+ * column shows.
  */
 
 import type { FileEntry } from '../types'

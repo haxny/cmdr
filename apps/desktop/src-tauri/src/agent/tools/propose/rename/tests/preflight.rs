@@ -58,7 +58,8 @@ fn extension_warnings_cover_changes_additions_removals_and_filename_edges() {
         ("README", "README.md"),
         (".env", ".env.txt"),
         ("archive.tar.gz", "archive.tar.zip"),
-        ("trailing.", "trailing"),
+        // `tar.gz` is one extension (`cmdr_fs::file_extension`), so this is a format change.
+        ("archive.tar.gz", "renamed.gz"),
     ] {
         assert_eq!(
             rename_warnings(source, destination),
@@ -71,7 +72,10 @@ fn extension_warnings_cover_changes_additions_removals_and_filename_edges() {
         ("photo.png", "renamed.png"),
         ("photo.PNG", "renamed.png"),
         (".env", ".config"),
-        ("archive.tar.gz", "renamed.gz"),
+        // Neither side has an extension: a trailing dot isn't one, and a dot
+        // followed by words is part of the name.
+        ("trailing.", "trailing"),
+        ("Smlouva v. 2 final", "Smlouva v. 3 final"),
     ] {
         assert!(
             rename_warnings(source, destination).is_empty(),

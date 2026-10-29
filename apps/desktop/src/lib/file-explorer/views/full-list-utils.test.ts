@@ -76,13 +76,28 @@ describe('getDisplayExtension / getDisplayName', () => {
   })
 
   it('treats only the last segment of a multi-dot name as the extension', () => {
-    expect(getDisplayExtension('file.tar.gz', false)).toBe('gz')
-    expect(getDisplayName('file.tar.gz', false)).toBe('file.tar')
+    expect(getDisplayExtension('my.file.name.txt', false)).toBe('txt')
+    expect(getDisplayName('my.file.name.txt', false)).toBe('my.file.name')
+  })
+
+  it('shows a compressed tar as one extension', () => {
+    expect(getDisplayExtension('file.tar.gz', false)).toBe('tar.gz')
+    expect(getDisplayName('file.tar.gz', false)).toBe('file')
+  })
+
+  it('keeps words after a dot in the name', () => {
+    expect(getDisplayExtension('Smlouva v. 2 final', false)).toBe('')
+    expect(getDisplayName('Smlouva v. 2 final', false)).toBe('Smlouva v. 2 final')
   })
 
   it('returns empty ext for directories and keeps the full name', () => {
     expect(getDisplayExtension('My Folder.d', true)).toBe('')
     expect(getDisplayName('My Folder.d', true)).toBe('My Folder.d')
+  })
+
+  it('splits a macOS package folder at its extension', () => {
+    expect(getDisplayExtension('Cmdr.app', true)).toBe('app')
+    expect(getDisplayName('Cmdr.app', true)).toBe('Cmdr')
   })
 
   it('keeps trailing-dot names intact', () => {
@@ -104,7 +119,7 @@ describe('getDisplayExtension / getDisplayName', () => {
 describe('getNameColumnText', () => {
   it('strips the extension when the split mode is on (default)', () => {
     expect(getNameColumnText('launch.json', false, false)).toBe('launch')
-    expect(getNameColumnText('file.tar.gz', false, false)).toBe('file.tar')
+    expect(getNameColumnText('file.tar.gz', false, false)).toBe('file')
   })
 
   it('keeps the full filename when showExtensionInName is on', () => {

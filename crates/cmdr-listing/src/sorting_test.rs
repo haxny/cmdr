@@ -139,6 +139,48 @@ fn test_sort_by_extension() {
     );
 }
 
+/// The product's one extension rule (`cmdr_fs::file_extension`): what follows a
+/// name's last dot is only an extension when it's short and plain, a compound
+/// tar counts as one, and a folder's dot is part of its name. So the Ext column
+/// and this order never disagree.
+#[test]
+fn extension_sort_follows_the_product_extension_rule() {
+    let mut entries = vec![
+        make_entry("Smlouva v. 2 final", false, Some(100), None),
+        make_entry("photo.jpg_old", false, Some(100), None),
+        make_entry("src.tar.gz", false, Some(100), None),
+        make_entry("other.gz", false, Some(100), None),
+        make_entry("alpha.tar", false, Some(100), None),
+        make_entry("release.zz", true, None, None),
+        make_entry("Project 1.5 backup", true, None, None),
+        make_entry("Cmdr.app", true, None, None),
+        make_entry("plain", true, None, None),
+    ];
+
+    sort_entries(
+        &mut entries,
+        SortColumn::Extension,
+        SortOrder::Ascending,
+        DirectorySortMode::LikeFiles,
+    );
+
+    let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
+    assert_eq!(
+        names,
+        vec![
+            "plain",              // folder, no extension
+            "Project 1.5 backup", // folder, its dot is part of the name
+            "release.zz",         // same
+            "Cmdr.app",           // package: `app`
+            "photo.jpg_old",      // no extension: `_` isn't plain
+            "Smlouva v. 2 final", // no extension
+            "other.gz",           // gz
+            "alpha.tar",          // tar
+            "src.tar.gz",         // tar.gz
+        ]
+    );
+}
+
 #[test]
 fn test_extension_sort_same_ext_by_name() {
     let mut entries = vec![

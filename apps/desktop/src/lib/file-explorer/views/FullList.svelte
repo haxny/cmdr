@@ -1070,6 +1070,7 @@
                 <RenameOverlay anchor={renameSlot} scroller={scrollContainer}>
                     <InlineRenameEditor
                         value={renameState.currentName}
+                        isDirectory={renameState.target?.isDirectory ?? false}
                         severity={renameState.validation.severity}
                         shaking={renameState.shaking}
                         ariaLabel={tString('fileExplorer.rename.fieldAriaLabel', {
