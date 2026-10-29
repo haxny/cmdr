@@ -328,6 +328,15 @@ fn example_media(taken: Option<NaiveDateTime>) -> MediaFacts {
         track: Some(3),
         disc: Some(1),
         year: Some(2001),
+        performer: vec!["Thomas Bangalter".to_string()],
+        composer: vec!["Guy-Manuel de Homem-Christo".to_string()],
+        publisher: Some("Virgin".to_string()),
+        date: Some("2001-03-12".to_string()),
+        total_tracks: Some(14),
+        total_discs: Some(1),
+        description: Some("The second studio album".to_string()),
+        translator: vec!["Anna Novak".to_string()],
+        www: vec!["https://example.com".to_string()],
     }
 }
 

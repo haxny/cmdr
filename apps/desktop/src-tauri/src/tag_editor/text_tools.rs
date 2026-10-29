@@ -195,10 +195,13 @@ fn folder_name(folder: Option<&Path>) -> String {
         .unwrap_or_default()
 }
 
-/// What the `[=tag.*]` placeholders read from `tags`: the text fields' first value, the track and
-/// disc as integers, and the year from the first four digits of Date.
-fn media_facts_of(tags: &FileTags) -> MediaFacts {
+/// What the `[=tag.*]` placeholders read from `tags`: the text fields' first value (the
+/// multi-value fields, performer, composer, translator and web address, all of them), the track
+/// and disc and their totals as integers, the year from the first four digits of Date, and Date
+/// as stored.
+pub(super) fn media_facts_of(tags: &FileTags) -> MediaFacts {
     let first = |field: TagField| tags.fields.get(&field).and_then(|values| values.first()).cloned();
+    let all = |field: TagField| tags.fields.get(&field).cloned().unwrap_or_default();
     // `3/12` is track 3 of 12: the N, as the mask side reads it.
     let number = |field: TagField| {
         first(field).and_then(|text| text.split('/').next().and_then(|n| n.trim().parse::<i64>().ok()))
@@ -216,6 +219,15 @@ fn media_facts_of(tags: &FileTags) -> MediaFacts {
             let digits: String = date.chars().take(4).collect();
             digits.parse::<i64>().ok().filter(|_| digits.len() == 4)
         }),
+        performer: all(TagField::Performer),
+        composer: all(TagField::Composer),
+        publisher: first(TagField::Publisher),
+        date: first(TagField::Date),
+        total_tracks: number(TagField::TrackTotal),
+        total_discs: number(TagField::DiscTotal),
+        description: first(TagField::Description),
+        translator: all(TagField::Translator),
+        www: all(TagField::Www),
         ..MediaFacts::default()
     }
 }

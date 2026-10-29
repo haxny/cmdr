@@ -373,3 +373,41 @@ fn text_is_one_undo_step() {
     close(&id);
     close_rename(&id);
 }
+
+// What a mask's `[=tag.*]` placeholders read from a track's tags.
+
+#[test]
+fn media_facts_carry_the_tag_fields_masks_can_name() {
+    use cmdr_media_meta::{MediaField, MediaValue};
+    let mut tags = cmdr_tags::FileTags::default();
+    for (field, values) in [
+        (TagField::Performer, vec!["Jan Hartl", "Eva Novak"]),
+        (TagField::Composer, vec!["Dvorak"]),
+        (TagField::Publisher, vec!["CRo3"]),
+        (TagField::Date, vec!["2010-09-20"]),
+        (TagField::Track, vec!["3"]),
+        (TagField::TrackTotal, vec!["12"]),
+        (TagField::Disc, vec!["1"]),
+        (TagField::DiscTotal, vec!["2"]),
+        (TagField::Description, vec!["About it"]),
+        (TagField::Translator, vec!["Pavel Eisner"]),
+        (TagField::Www, vec!["https://a.cz", "https://b.cz"]),
+    ] {
+        tags.fields.insert(field, values.into_iter().map(String::from).collect());
+    }
+    let facts = super::text_tools::media_facts_of(&tags);
+    let text = |field| match facts.get(field) {
+        Some(MediaValue::Text(text)) => Some(text.into_owned()),
+        _ => None,
+    };
+    assert_eq!(text(MediaField::TagPerformer).as_deref(), Some("Jan Hartl, Eva Novak"));
+    assert_eq!(text(MediaField::TagComposer).as_deref(), Some("Dvorak"));
+    assert_eq!(text(MediaField::TagPublisher).as_deref(), Some("CRo3"));
+    assert_eq!(text(MediaField::TagDate).as_deref(), Some("2010-09-20"));
+    assert_eq!(text(MediaField::TagDescription).as_deref(), Some("About it"));
+    assert_eq!(text(MediaField::TagTranslator).as_deref(), Some("Pavel Eisner"));
+    assert_eq!(text(MediaField::TagWww).as_deref(), Some("https://a.cz, https://b.cz"));
+    assert_eq!(facts.get(MediaField::TagTotalTracks), Some(MediaValue::Number(12)));
+    assert_eq!(facts.get(MediaField::TagTotalDiscs), Some(MediaValue::Number(2)));
+    assert_eq!(facts.get(MediaField::TagYear), Some(MediaValue::Number(2010)));
+}

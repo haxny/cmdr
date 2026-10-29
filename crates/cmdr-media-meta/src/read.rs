@@ -10,7 +10,7 @@ use lofty::tag::{Accessor, ItemKey, Tag};
 use crate::clock::{ToLocal, system_local};
 use crate::source::{BlockReader, ByteSource};
 use crate::types::{MediaFacts, ReadError};
-use crate::{ebml, holes, isobmff, photo};
+use crate::{ebml, holes, isobmff, native, photo};
 
 /// Which reader a file's extension sends it to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,6 +114,7 @@ fn read_tags<R: Read + Seek>(reader: &mut R, file_name: &str) -> Result<MediaFac
         };
         probe = probe.set_file_type(file_type);
     }
+    let file_type = probe.file_type();
     let tagged = probe.read().map_err(|error| ReadError::from_error(&error))?;
     let mut facts = MediaFacts::default();
     let primary = tagged.primary_tag();
@@ -123,6 +124,16 @@ fn read_tags<R: Read + Seek>(reader: &mut R, file_name: &str) -> Result<MediaFac
         .filter(|tag| !primary.is_some_and(|p| std::ptr::eq(p, *tag)));
     for tag in primary.into_iter().chain(others) {
         merge_tags(&mut facts, facts_from_tag(tag));
+    }
+    if let Some(file_type) = file_type {
+        // The performer, publisher, totals and the rest sit where only the format's own tag
+        // shows them. They're a bonus on top of the generic fields: a stopped read ends it,
+        // anything else leaves them out.
+        match native::read_native(reader, file_type) {
+            Ok(native) => merge_tags(&mut facts, native),
+            Err(stopped @ (ReadError::Cancelled | ReadError::TimedOut)) => return Err(stopped),
+            Err(skipped) => log::debug!(target: "cmdr_media_meta::read", "No native tag fields: {skipped:?}"),
+        }
     }
     Ok(facts)
 }
@@ -157,6 +168,15 @@ fn merge_tags(facts: &mut MediaFacts, tags: MediaFacts) {
         track,
         disc,
         year,
+        performer,
+        composer,
+        publisher,
+        date,
+        total_tracks,
+        total_discs,
+        description,
+        translator,
+        www,
         ..
     } = tags;
     facts.title = facts.title.take().or(title);
@@ -168,4 +188,19 @@ fn merge_tags(facts: &mut MediaFacts, tags: MediaFacts) {
     facts.track = facts.track.or(track);
     facts.disc = facts.disc.or(disc);
     facts.year = facts.year.or(year);
+    facts.publisher = facts.publisher.take().or(publisher);
+    facts.date = facts.date.take().or(date);
+    facts.total_tracks = facts.total_tracks.or(total_tracks);
+    facts.total_discs = facts.total_discs.or(total_discs);
+    facts.description = facts.description.take().or(description);
+    for (have, more) in [
+        (&mut facts.performer, performer),
+        (&mut facts.composer, composer),
+        (&mut facts.translator, translator),
+        (&mut facts.www, www),
+    ] {
+        if have.is_empty() {
+            *have = more;
+        }
+    }
 }

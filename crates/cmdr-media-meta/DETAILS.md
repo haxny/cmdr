@@ -12,7 +12,12 @@ compiles and tests alone, `index-crate-isolation` keeps `tauri` out of it, and t
 
 - `exif`: `taken` (Date), `camera`, `make`, `model`, `lens` (Text), `iso`, `focal` (whole mm), `width`, `height`,
   `orientation` (Number).
-- `tag`: `title`, `artist`, `albumartist`, `album`, `genre`, `comment` (Text), `track`, `disc`, `year` (Number).
+- `tag`: `title`, `artist`, `albumartist`, `album`, `genre`, `comment`, `performer`, `composer`, `publisher`, `date`
+  (the stored string), `description`, `translator`, `www` (Text), `track`, `disc`, `year`, `totaltracks`, `totaldiscs`
+  (Number). Performer, composer, translator and www can hold several values; `get` joins them with `, `. The new fields
+  come from `native.rs`, which reads each format's own tag (`TXXX:PERFORMER`, a freeform `PERFORMER` atom, a `PERFORMER`
+  Vorbis comment) with the same maps as `cmdr-tags`' reader, so a mask and the Tags window agree on one file. An MP3's
+  `TPE3` is the conductor there, so it is no performer here either.
 - `FieldKind` decides the formats a placeholder takes: dates the mask's date grammar, numbers a digit count, text the
   range grammar.
 - `MediaField::parse` takes the exact name only (case matters, as in every placeholder).

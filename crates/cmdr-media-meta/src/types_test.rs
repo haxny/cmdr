@@ -49,7 +49,7 @@ fn all_lists_every_field_once() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), MediaField::ALL.len());
-    assert_eq!(MediaField::ALL.len(), 19);
+    assert_eq!(MediaField::ALL.len(), 28);
 }
 
 #[test]
@@ -64,6 +64,8 @@ fn each_field_has_its_kind() {
         MediaField::TagTrack,
         MediaField::TagDisc,
         MediaField::TagYear,
+        MediaField::TagTotalTracks,
+        MediaField::TagTotalDiscs,
     ] {
         assert_eq!(field.kind(), FieldKind::Number, "{field:?}");
     }
@@ -78,6 +80,13 @@ fn each_field_has_its_kind() {
         MediaField::TagAlbum,
         MediaField::TagGenre,
         MediaField::TagComment,
+        MediaField::TagPerformer,
+        MediaField::TagComposer,
+        MediaField::TagPublisher,
+        MediaField::TagDate,
+        MediaField::TagDescription,
+        MediaField::TagTranslator,
+        MediaField::TagWww,
     ] {
         assert_eq!(field.kind(), FieldKind::Text, "{field:?}");
     }
@@ -127,6 +136,15 @@ fn get_answers_each_field_with_its_kind_of_value() {
         track: Some(3),
         disc: Some(1),
         year: Some(2001),
+        performer: vec!["Thomas Bangalter".into()],
+        composer: vec!["Guy-Manuel".into()],
+        publisher: Some("Virgin".into()),
+        date: Some("2001-03-12".into()),
+        total_tracks: Some(14),
+        total_discs: Some(1),
+        description: Some("A record".into()),
+        translator: vec!["Nobody".into()],
+        www: vec!["https://daftpunk.com".into()],
     };
     assert_eq!(facts.get(MediaField::ExifTaken), Some(MediaValue::Date(taken)));
     assert_eq!(facts.get(MediaField::ExifIso), Some(MediaValue::Number(64)));
@@ -316,4 +334,62 @@ fn any_other_io_error_is_io_with_its_text() {
     );
     let error = ReadError::from_io(std::io::ErrorKind::UnexpectedEof.into());
     assert!(matches!(error, ReadError::Io(_)), "{error:?}");
+}
+
+#[test]
+fn the_new_tag_fields_have_their_names() {
+    for (field, name) in [
+        (MediaField::TagPerformer, "tag.performer"),
+        (MediaField::TagComposer, "tag.composer"),
+        (MediaField::TagPublisher, "tag.publisher"),
+        (MediaField::TagDate, "tag.date"),
+        (MediaField::TagTotalTracks, "tag.totaltracks"),
+        (MediaField::TagTotalDiscs, "tag.totaldiscs"),
+        (MediaField::TagDescription, "tag.description"),
+        (MediaField::TagTranslator, "tag.translator"),
+        (MediaField::TagWww, "tag.www"),
+    ] {
+        assert_eq!(field.name(), name);
+        assert_eq!(field.source(), MediaSource::Tag);
+    }
+}
+
+#[test]
+fn get_joins_the_multi_value_tag_fields_with_a_comma() {
+    let facts = MediaFacts {
+        performer: vec!["Jan Hartl".to_owned(), " ".to_owned(), "Eva Novak".to_owned()],
+        composer: vec!["Dvorak".to_owned()],
+        translator: vec!["A".to_owned(), "B".to_owned(), "C".to_owned()],
+        www: vec!["https://a.cz".to_owned(), "https://b.cz".to_owned()],
+        publisher: Some(" CRo3 ".to_owned()),
+        date: Some("2010-09-20".to_owned()),
+        description: Some("A long one".to_owned()),
+        total_tracks: Some(12),
+        total_discs: Some(2),
+        ..MediaFacts::default()
+    };
+    assert_eq!(
+        text(&facts, MediaField::TagPerformer).as_deref(),
+        Some("Jan Hartl, Eva Novak")
+    );
+    assert_eq!(text(&facts, MediaField::TagComposer).as_deref(), Some("Dvorak"));
+    assert_eq!(text(&facts, MediaField::TagTranslator).as_deref(), Some("A, B, C"));
+    assert_eq!(
+        text(&facts, MediaField::TagWww).as_deref(),
+        Some("https://a.cz, https://b.cz")
+    );
+    assert_eq!(text(&facts, MediaField::TagPublisher).as_deref(), Some("CRo3"));
+    assert_eq!(text(&facts, MediaField::TagDate).as_deref(), Some("2010-09-20"));
+    assert_eq!(text(&facts, MediaField::TagDescription).as_deref(), Some("A long one"));
+    assert_eq!(facts.get(MediaField::TagTotalTracks), Some(MediaValue::Number(12)));
+    assert_eq!(facts.get(MediaField::TagTotalDiscs), Some(MediaValue::Number(2)));
+}
+
+#[test]
+fn blank_multi_values_are_no_value() {
+    let facts = MediaFacts {
+        performer: vec!["  ".to_owned()],
+        ..MediaFacts::default()
+    };
+    assert_eq!(facts.get(MediaField::TagPerformer), None);
 }

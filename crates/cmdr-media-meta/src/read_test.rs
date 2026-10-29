@@ -205,3 +205,182 @@ fn a_refusal_comes_back_as_itself_from_every_reader() {
         }
     }
 }
+
+// ── The tag fields beyond the generic ones, read as cmdr-tags reads them ──────
+
+mod native_fields {
+    use std::borrow::Cow;
+    use std::io::Cursor;
+
+    use lofty::TextEncoding;
+    use lofty::config::WriteOptions;
+    use lofty::id3::v2::{ExtendedTextFrame, Frame, FrameId, Id3v2Tag, TextInformationFrame};
+    use lofty::mp4::{Atom, AtomData, AtomIdent, DataType, Ilst};
+    use lofty::ogg::tag::VorbisComments;
+    use lofty::tag::TagExt;
+
+    use super::read;
+    use crate::test_fixtures::{flac_stream, m4a_file, mp3_frames};
+
+    fn text_frame(tag: &mut Id3v2Tag, id: &'static str, value: &str) {
+        let frame = TextInformationFrame::new(FrameId::Valid(Cow::Borrowed(id)), TextEncoding::UTF8, value.to_owned());
+        tag.insert(Frame::Text(frame));
+    }
+
+    fn txxx(tag: &mut Id3v2Tag, description: &str, value: &str) {
+        tag.insert(Frame::UserText(ExtendedTextFrame::new(
+            TextEncoding::UTF8,
+            description.to_owned(),
+            value.to_owned(),
+        )));
+    }
+
+    fn mp3(tag: &Id3v2Tag, v23: bool) -> Vec<u8> {
+        let mut cursor = Cursor::new(mp3_frames());
+        tag.save_to(&mut cursor, WriteOptions::new().use_id3v23(v23)).unwrap();
+        cursor.into_inner()
+    }
+
+    fn freeform(ilst: &mut Ilst, name: &str, values: &[&str]) {
+        let ident = AtomIdent::Freeform {
+            mean: Cow::Borrowed("com.apple.iTunes"),
+            name: Cow::Owned(name.to_owned()),
+        };
+        let data = values.iter().map(|v| AtomData::UTF8((*v).to_owned())).collect();
+        ilst.insert(Atom::from_collection(ident, data).unwrap());
+    }
+
+    fn flac(comments: &VorbisComments) -> Vec<u8> {
+        let mut cursor = Cursor::new([flac_stream(), vec![0u8; 64]].concat());
+        comments.save_to(&mut cursor, WriteOptions::default()).unwrap();
+        cursor.into_inner()
+    }
+
+    #[test]
+    fn an_mp3_gives_txxx_performer_and_the_rest_the_way_cmdr_tags_does() {
+        let mut tag = Id3v2Tag::new();
+        txxx(&mut tag, "PERFORMER", "Jan Hartl");
+        text_frame(&mut tag, "TPE3", "A Conductor");
+        text_frame(&mut tag, "TCOM", "Dvorak");
+        text_frame(&mut tag, "TPUB", "CRo3");
+        text_frame(&mut tag, "TDRC", "2010-09-20");
+        text_frame(&mut tag, "TRCK", "3/12");
+        text_frame(&mut tag, "TPOS", "1/2");
+        txxx(&mut tag, "Translator", "Pavel Eisner");
+        txxx(&mut tag, "Description", "About it");
+        txxx(&mut tag, "www", "https://example.cz");
+        let facts = read(mp3(&tag, false), "a.mp3").unwrap();
+        // TPE3 is the conductor, never the performer.
+        assert_eq!(facts.performer, ["Jan Hartl"]);
+        assert_eq!(facts.composer, ["Dvorak"]);
+        assert_eq!(facts.publisher.as_deref(), Some("CRo3"));
+        assert_eq!(facts.date.as_deref(), Some("2010-09-20"));
+        assert_eq!((facts.track, facts.disc, facts.year), (Some(3), Some(1), Some(2010)));
+        assert_eq!((facts.total_tracks, facts.total_discs), (Some(12), Some(2)));
+        assert_eq!(facts.translator, ["Pavel Eisner"]);
+        assert_eq!(facts.description.as_deref(), Some("About it"));
+        assert_eq!(facts.www, ["https://example.cz"]);
+    }
+
+    #[test]
+    fn an_id3v23_year_frame_is_the_date() {
+        let mut tag = Id3v2Tag::new();
+        text_frame(&mut tag, "TYER", "1999");
+        let facts = read(mp3(&tag, true), "a.mp3").unwrap();
+        assert_eq!(facts.date.as_deref(), Some("1999"));
+    }
+
+    #[test]
+    fn a_plain_track_number_has_no_total() {
+        let mut tag = Id3v2Tag::new();
+        text_frame(&mut tag, "TRCK", "3");
+        let facts = read(mp3(&tag, false), "a.mp3").unwrap();
+        assert_eq!((facts.track, facts.total_tracks), (Some(3), None));
+    }
+
+    #[test]
+    fn null_separated_composers_are_several_values() {
+        let mut tag = Id3v2Tag::new();
+        text_frame(&mut tag, "TCOM", "A\0B");
+        let facts = read(mp3(&tag, false), "a.mp3").unwrap();
+        assert_eq!(facts.composer, ["A", "B"]);
+    }
+
+    #[test]
+    fn an_m4a_gives_its_freeform_performer_and_the_rest() {
+        let mut ilst = Ilst::new();
+        freeform(&mut ilst, "PERFORMER", &["Jan Hartl", "Eva Novak"]);
+        freeform(&mut ilst, "publisher", &["CRo3"]);
+        freeform(&mut ilst, "www", &["https://example.cz"]);
+        freeform(&mut ilst, "translator", &["Pavel Eisner"]);
+        freeform(&mut ilst, "description", &["About it"]);
+        ilst.insert(Atom::new(
+            AtomIdent::Fourcc(*b"\xA9wrt"),
+            AtomData::UTF8("Dvorak".to_owned()),
+        ));
+        ilst.insert(Atom::new(
+            AtomIdent::Fourcc(*b"\xA9day"),
+            AtomData::UTF8("2010-09-20".to_owned()),
+        ));
+        ilst.insert(Atom::new(
+            AtomIdent::Fourcc(*b"trkn"),
+            AtomData::Unknown {
+                code: DataType::Reserved,
+                data: vec![0, 0, 0, 3, 0, 12, 0, 0],
+            },
+        ));
+        ilst.insert(Atom::new(
+            AtomIdent::Fourcc(*b"disk"),
+            AtomData::Unknown {
+                code: DataType::Reserved,
+                data: vec![0, 0, 0, 1, 0, 2],
+            },
+        ));
+        let mut cursor = Cursor::new(m4a_file());
+        ilst.save_to(&mut cursor, WriteOptions::default()).unwrap();
+        let facts = read(cursor.into_inner(), "a.m4a").unwrap();
+        assert_eq!(facts.performer, ["Jan Hartl", "Eva Novak"]);
+        assert_eq!(facts.publisher.as_deref(), Some("CRo3"));
+        assert_eq!(facts.www, ["https://example.cz"]);
+        assert_eq!(facts.translator, ["Pavel Eisner"]);
+        assert_eq!(facts.description.as_deref(), Some("About it"));
+        assert_eq!(facts.composer, ["Dvorak"]);
+        assert_eq!(facts.date.as_deref(), Some("2010-09-20"));
+        assert_eq!((facts.total_tracks, facts.total_discs), (Some(12), Some(2)));
+    }
+
+    #[test]
+    fn a_flac_gives_its_vorbis_performer_and_the_rest() {
+        let mut comments = VorbisComments::new();
+        for (key, value) in [
+            ("PERFORMER", "Jan Hartl"),
+            ("PERFORMER", "Eva Novak"),
+            ("PUBLISHER", "CRo3"),
+            ("COMPOSER", "Dvorak"),
+            ("DATE", "2010-09-20"),
+            ("TRACKNUMBER", "3"),
+            ("TRACKTOTAL", "12"),
+            ("DISCNUMBER", "1/2"),
+            ("TRANSLATOR", "Pavel Eisner"),
+            ("DESCRIPTION", "About it"),
+            ("WWW", "https://example.cz"),
+        ] {
+            comments.push(key.to_owned(), value.to_owned());
+        }
+        let facts = read(flac(&comments), "a.flac").unwrap();
+        assert_eq!(facts.performer, ["Jan Hartl", "Eva Novak"]);
+        assert_eq!(facts.publisher.as_deref(), Some("CRo3"));
+        assert_eq!(facts.composer, ["Dvorak"]);
+        assert_eq!(facts.date.as_deref(), Some("2010-09-20"));
+        assert_eq!((facts.total_tracks, facts.total_discs), (Some(12), Some(2)));
+        assert_eq!(facts.translator, ["Pavel Eisner"]);
+        assert_eq!(facts.description.as_deref(), Some("About it"));
+        assert_eq!(facts.www, ["https://example.cz"]);
+    }
+
+    #[test]
+    fn a_file_without_these_tags_has_none() {
+        let facts = read(mp3_frames(), "a.mp3").unwrap();
+        assert!(facts.performer.is_empty() && facts.publisher.is_none() && facts.total_tracks.is_none());
+    }
+}

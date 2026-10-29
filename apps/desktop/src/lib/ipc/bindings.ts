@@ -12086,6 +12086,24 @@ export type MediaField =
   | 'tagGenre'
   // The comment.
   | 'tagComment'
+  // The performer; an audiobook's narrator.
+  | 'tagPerformer'
+  // The composer.
+  | 'tagComposer'
+  // The publisher.
+  | 'tagPublisher'
+  // The date as stored (`2010-09-20`, or just `2010`).
+  | 'tagDate'
+  // The number of tracks on the album.
+  | 'tagTotalTracks'
+  // The number of discs.
+  | 'tagTotalDiscs'
+  // The long description.
+  | 'tagDescription'
+  // The translator.
+  | 'tagTranslator'
+  // The web address.
+  | 'tagWww'
 
 // One field in the picker.
 export type MediaFieldOverview = {

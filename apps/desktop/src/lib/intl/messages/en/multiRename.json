@@ -541,6 +541,42 @@
   "@multiRename.mediaField.tagComment": {
     "description": "Name of a music field Multi-rename can put in a file name: the free-text comment in the file's tags."
   },
+  "multiRename.mediaField.tagPerformer": "Performer",
+  "@multiRename.mediaField.tagPerformer": {
+    "description": "Name of a music field Multi-rename can put in a file name: the performer (for an audiobook, the narrator)."
+  },
+  "multiRename.mediaField.tagComposer": "Composer",
+  "@multiRename.mediaField.tagComposer": {
+    "description": "Name of a music field Multi-rename can put in a file name: the composer."
+  },
+  "multiRename.mediaField.tagPublisher": "Publisher",
+  "@multiRename.mediaField.tagPublisher": {
+    "description": "Name of a music field Multi-rename can put in a file name: the publisher or label."
+  },
+  "multiRename.mediaField.tagDate": "Date",
+  "@multiRename.mediaField.tagDate": {
+    "description": "Name of a music field Multi-rename can put in a file name: the full release date as the file stores it, like “2010-09-20” (the year alone is “Year”)."
+  },
+  "multiRename.mediaField.tagTotalTracks": "Total tracks",
+  "@multiRename.mediaField.tagTotalTracks": {
+    "description": "Name of a music field Multi-rename can put in a file name: how many tracks the album has, the 12 in “3/12”."
+  },
+  "multiRename.mediaField.tagTotalDiscs": "Total discs",
+  "@multiRename.mediaField.tagTotalDiscs": {
+    "description": "Name of a music field Multi-rename can put in a file name: how many discs the album has, the 2 in “1/2”."
+  },
+  "multiRename.mediaField.tagDescription": "Description",
+  "@multiRename.mediaField.tagDescription": {
+    "description": "Name of a music field Multi-rename can put in a file name: the long description in the file's tags."
+  },
+  "multiRename.mediaField.tagTranslator": "Translator",
+  "@multiRename.mediaField.tagTranslator": {
+    "description": "Name of a music field Multi-rename can put in a file name: the translator, for a translated audiobook or book."
+  },
+  "multiRename.mediaField.tagWww": "Web address",
+  "@multiRename.mediaField.tagWww": {
+    "description": "Name of a music field Multi-rename can put in a file name: the web address in the file's tags."
+  },
   "multiRename.mediaPicker.title": "Insert a field",
   "@multiRename.mediaPicker.title": {
     "description": "Accessible name of the Multi-rename field picker, a small popup listing the photo, video, and music fields (date taken, camera, artist, title, …) that can go into the new name. Also the accessible name of the button that opens it."
