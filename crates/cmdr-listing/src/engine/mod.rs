@@ -35,6 +35,8 @@ mod reread;
 mod rows;
 mod settings;
 
+pub use intake::RowFacts;
+
 /// The listing engine: every open listing, and the seams it asks the host
 /// through. Cheap to clone; every clone is the same engine.
 #[derive(Clone)]

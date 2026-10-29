@@ -111,9 +111,19 @@ drag image's truncation. The past pain that justifies it: with each site taking 
 and folders alike), `Smlouva v. 2 final` pre-selected `Smlouva v` and raised the extension warning on a file that has
 none, and the column, the sort, and the warning could disagree about one name.
 
-- **A folder has none, unless it's a macOS package** (`PACKAGE_EXTENSIONS`: `Cmdr.app` has `app`). A dot in a folder
-  name is part of the name (`release.v1.2`, `Project 1.5 backup`). The list is hand-kept until the backend reports
-  packages itself (issue #385). It's wider than `icons::packages`, which is bounded by what's worth an icon fetch.
+- **The rule takes a `NameKind` (`File`, `Folder`, `Package`), ❌ never a bare `is_directory`.** A plain folder has
+  none: a dot in its name is part of the name (`release.v1.2`, `Project 1.5 backup`). A package's extension is whatever
+  follows its last dot, any length (`Cmdr.app` has `app`, `Library.photoslibrary` has `photoslibrary`). An entry says
+  which it is (`FileEntry::name_kind`, from `is_package`); `NameKind::by_name` reads the name through the list for a
+  caller with no entry.
+- **What's a package: the list first, then macOS.** `PACKAGE_EXTENSIONS` is the free, I/O-less fast path and the
+  product's ONE list: `FileEntry::new` sets `is_package` from it, `get_icon_id` gives a hit its `pkg:` key, and the
+  listing's Ext sort follows. A dotted folder the list doesn't know (`Logo.sketchbundle`, any folder with the
+  `kHasBundle` bit) is asked of macOS once its row is visible (`apps/desktop/src-tauri/src/file_system/packages.rs`,
+  `NSURLIsPackageKey`), and a yes lands through `FileEntry::set_package` (the `pkg:` icon too) as an ordinary row
+  update. Only a volume on the local filesystem asks: SMB, MTP, S3, every other backend, and Linux keep the list's
+  answer. Why visible rows only: an NSURL read per dotted folder on the bulk listing would cost a 100k-entry directory,
+  the same reason custom folder icons and Finder tags wait for visibility.
 - **A file's extension is 1–10 ASCII letters and digits after the last dot.** Anything else after it (a space, an
   underscore, a hyphen, a non-ASCII letter, 11+ characters) makes it part of the name: `J. Novak - notes`,
   `db.sqlite3-journal`, and `photo.jpg_old` have none. The cost is the odd real extension that breaks the shape, which
@@ -128,8 +138,10 @@ none, and the column, the sort, and the warning could disagree about one name.
 **Decision: a Rust rule with a TypeScript mirror, pinned by one shared case file.** The frontend asks on every keystroke
 in the rename field, about names that exist nowhere but that field, so an IPC hop per keystroke is out (the same reason
 filename validation stays frontend-pure). `apps/desktop/src/lib/utils/file-extension.ts` mirrors the rule, and both
-suites run `src/file_extension_cases.json` (cases plus both lists), so the two languages can't drift: a new case goes in
-the JSON and both sides answer it.
+suites run `src/file_extension_cases.json` (each case names its kind; plus both lists), so the two languages can't
+drift: a new case goes in the JSON and both sides answer it. The frontend reads packageness off the entry
+(`nameKindOf`), and its copy of the package list serves only names no entry describes yet: a plain folder renamed to
+`Plugins.bundle` becomes a package, which the rename warning asks about (`kindOfRenamedName`).
 
 **Out of scope on purpose: OS type lookups.** Icon UTIs (`derive_icon_id`, `fileIconId`), "Open with" defaults, the
 archive Enter policy, and the viewer's content sniffing keep `Path::extension` semantics: there, what macOS calls the

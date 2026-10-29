@@ -188,8 +188,11 @@ export const commands = {
         isArchive: boolean
         /**
          *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-         *  Finder presents as one item. A pure suffix test on the name
-         *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+         *  Finder presents as one item. The listing sets it from the name
+         *  ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+         *  the list doesn't know, the app asks macOS once the row is visible and
+         *  patches it in ([`FileEntry::set_package`]). It decides the row's extension
+         *  (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
          *  frontend names the row a "package" for screen readers from this, ❌ never
          *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
          */
@@ -356,8 +359,11 @@ export const commands = {
         isArchive: boolean
         /**
          *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-         *  Finder presents as one item. A pure suffix test on the name
-         *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+         *  Finder presents as one item. The listing sets it from the name
+         *  ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+         *  the list doesn't know, the app asks macOS once the row is visible and
+         *  patches it in ([`FileEntry::set_package`]). It decides the row's extension
+         *  (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
          *  frontend names the row a "package" for screen readers from this, ❌ never
          *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
          */
@@ -627,6 +633,17 @@ export const commands = {
    */
   enrichTags: (listingId: string, paths: string[]) =>
     __TAURI_INVOKE<TimedOut<null>>('enrich_tags', { listingId, paths }),
+  /**
+   *  Asks macOS which of the given VISIBLE paths of `listing_id` are packages the
+   *  package list doesn't know (`Logo.sketchbundle`), and patches the answers into
+   *  the cached listing, emitting a `directory-diff` only for rows that changed.
+   *  The frontend calls this after each visible-range fetch, like `enrich_tags`.
+   *  Paths the list already answers, a non-local volume, Linux, and the pending
+   *  FDA gate all make it a no-op. `timed_out` means this range keeps the list's
+   *  answer.
+   */
+  enrichPackages: (listingId: string, paths: string[]) =>
+    __TAURI_INVOKE<TimedOut<null>>('enrich_packages', { listingId, paths }),
   /**
    *  Toggles a Finder color tag (`color` 1..=7) across `paths`, then patches the
    *  resulting tags into the cached listing so the panes re-render immediately.
@@ -9229,8 +9246,11 @@ export type FileEntry = {
   isArchive: boolean
   /**
    *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-   *  Finder presents as one item. A pure suffix test on the name
-   *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+   *  Finder presents as one item. The listing sets it from the name
+   *  ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+   *  the list doesn't know, the app asks macOS once the row is visible and
+   *  patches it in ([`FileEntry::set_package`]). It decides the row's extension
+   *  (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
    *  frontend names the row a "package" for screen readers from this, ❌ never
    *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
    */

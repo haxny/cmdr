@@ -774,8 +774,10 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
                         Ok(outcome) => {
                             crate::file_system::tags::report_skips(&app, &outcome.skipped);
                             if !outcome.updates.is_empty() {
-                                crate::listing_host::listings()
-                                    .apply_tags(&cmdr_listing::ListingId::new(listing_id), outcome.updates);
+                                crate::listing_host::listings().apply_row_facts(
+                                    &cmdr_listing::ListingId::new(listing_id),
+                                    cmdr_listing::RowFacts::Tags(outcome.updates),
+                                );
                             }
                         }
                         Err(e) => log::warn!(target: "tags", "context-menu tag toggle failed (color={color}): {e}"),

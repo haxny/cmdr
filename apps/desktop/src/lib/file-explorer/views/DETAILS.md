@@ -366,7 +366,8 @@ no per-view copy of any of it.
   `..` says "Parent folder" in place of its name, then its cells like any row, its size as "(this folder) 36,860"
   (`parentRowSize`): that cell shows the CURRENT folder's total, and bare it sounded like the parent's (VoiceOver
   listening run, 2026-10-15). The kind comes from typed fields only; "package" from `FileEntry.isPackage`, set in Rust
-  from `is_package_dir`, ❌ never the `pkg:` icon-id prefix.
+  from the package list or, for a visible dotted folder, from macOS (`enrich_packages`), ❌ never the `pkg:` icon-id
+  prefix.
 - ❗ **Label in name (WCAG 2.5.3, axe `label-content-name-mismatch`)**: the row's VISIBLE words must run through the
   name unbroken and in visible order (axe compares word tokens after dropping punctuation and parentheticals). So words
   only the name says sit in parentheses (VoiceOver doesn't speak them), the size says `<dir>` while the cell shows it,

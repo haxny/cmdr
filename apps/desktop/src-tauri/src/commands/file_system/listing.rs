@@ -5,7 +5,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_listing::{
     CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult, DirectorySortMode, FuzzyJumpError,
     ListingId, ListingLookupError, ListingRequest, ListingStats, NameFilterResult, OnNoMatch, PaneMarks, ResortResult,
-    RowBeside, RowSpan, SelectionSnapshot, SortColumn, SortOrder,
+    RowBeside, RowFacts, RowSpan, SelectionSnapshot, SortColumn, SortOrder,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -64,9 +64,23 @@ pub async fn enrich_tags(listing_id: String, paths: Vec<String>) -> TimedOut<()>
                 (p, tags)
             })
             .collect();
-        listings().apply_tags(&ListingId::new(listing_id), updates);
+        listings().apply_row_facts(&ListingId::new(listing_id), RowFacts::Tags(updates));
     })
     .await
+}
+
+/// Asks macOS which of the given VISIBLE paths of `listing_id` are packages the
+/// package list doesn't know (`Logo.sketchbundle`), and patches the answers into
+/// the cached listing, emitting a `directory-diff` only for rows that changed.
+/// The frontend calls this after each visible-range fetch, like `enrich_tags`.
+/// Paths the list already answers, a non-local volume, Linux, and the pending
+/// FDA gate all make it a no-op. `timed_out` means this range keeps the list's
+/// answer.
+#[tauri::command]
+#[specta::specta]
+pub async fn enrich_packages(listing_id: String, paths: Vec<String>) -> TimedOut<()> {
+    let timed_out = crate::file_system::packages::enrich(ListingId::new(listing_id), paths).await;
+    TimedOut { data: (), timed_out }
 }
 
 /// Toggles a Finder color tag (`color` 1..=7) across `paths`, then patches the
@@ -87,7 +101,7 @@ pub async fn toggle_tags(app: tauri::AppHandle, listing_id: String, paths: Vec<S
             Ok(outcome) => {
                 crate::file_system::tags::report_skips(&app, &outcome.skipped);
                 if !outcome.updates.is_empty() {
-                    listings().apply_tags(&ListingId::new(listing_id), outcome.updates);
+                    listings().apply_row_facts(&ListingId::new(listing_id), RowFacts::Tags(outcome.updates));
                 }
             }
             // A write failure (permission, dead mount) is logged, not surfaced as a

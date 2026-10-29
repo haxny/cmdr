@@ -257,7 +257,7 @@ fn a_re_stat_rides_the_map_a_tag_sweep_built() {
     // A row the sweep's chunk DID tag, so the carry-forward has something to carry.
     let mut restat = entry(&format!("file-{:06}.bin", ENTRY_COUNT - ENTRY_COUNT / CHUNK));
 
-    let examined = examined_while(|| listing.engine().inner.carry_forward_tags(listing.id(), &mut restat));
+    let examined = examined_while(|| listing.engine().inner.carry_forward_deferred(listing.id(), &mut restat));
 
     assert_eq!(
         restat.tags.len(),
@@ -390,7 +390,7 @@ fn a_single_path_caller_builds_no_map() {
 
     let before = lookup_probe::builds();
     listing.engine().inner.has_entry(listing.id(), &deep_row());
-    listing.engine().inner.carry_forward_tags(listing.id(), &mut restat);
+    listing.engine().inner.carry_forward_deferred(listing.id(), &mut restat);
     listing.engine().inner.insert_entry_sorted(listing.id(), restat.clone());
     listing.engine().inner.update_entry_sorted(listing.id(), restat);
     listing

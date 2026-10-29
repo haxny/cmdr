@@ -776,7 +776,7 @@ fn carry_forward_restores_tags_on_empty_restat() {
     );
 
     let mut restat = make_entry("a.txt", false, Some(99)); // empty tags, like a fresh stat
-    listing.engine().inner.carry_forward_tags(listing.id(), &mut restat);
+    listing.engine().inner.carry_forward_deferred(listing.id(), &mut restat);
     assert_eq!(restat.tags, vec![tag("Green", 2)], "carry-forward restores cached tags");
 
     // And after storing the re-stat through the modify path, the tags survive.
@@ -803,7 +803,10 @@ fn carry_forward_does_not_overwrite_incoming_tags() {
 
     let mut incoming = make_entry("a.txt", false, Some(1));
     incoming.tags = vec![tag("Blue", 4)];
-    listing.engine().inner.carry_forward_tags(listing.id(), &mut incoming);
+    listing
+        .engine()
+        .inner
+        .carry_forward_deferred(listing.id(), &mut incoming);
     assert_eq!(
         incoming.tags,
         vec![tag("Blue", 4)],

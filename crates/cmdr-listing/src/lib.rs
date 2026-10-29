@@ -72,7 +72,7 @@ pub use caching::ListingSummary;
 pub use cmdr_collation::NameCollator;
 pub use compare::{CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult};
 pub use diff::{DiffChange, DiffChangeType, DirectoryDiffBatch};
-pub use engine::{Listings, ListingsBuilder};
+pub use engine::{Listings, ListingsBuilder, RowFacts};
 pub use foreign_path::{entries_as_stored, stored_spellings};
 pub use fuzzy_jump::FuzzyJumpError;
 pub use index_sizes::IndexSizes;
@@ -300,6 +300,8 @@ mod name_filter_test;
 mod operations_test;
 #[cfg(test)]
 mod overlay_read_paths_test;
+#[cfg(test)]
+mod packages_test;
 #[cfg(test)]
 mod pane_diff_test;
 #[cfg(test)]

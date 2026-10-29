@@ -367,10 +367,15 @@ var surfaceGuardedCrates = []struct {
 		// typed path (stored-spelling fallback included) for Ask Cmdr's live
 		// `list_dir`, which keeps no listing. Copying the fallback into the app
 		// would fork the one foreign-path seam.
+		//
+		// 38th root promise, 2026-10-29: `RowFacts`, what a deferred visible-row
+		// pass brings (Finder tags, packages macOS reports, #385). It folded
+		// `apply_tags` into `apply_row_facts`, so the packages pass cost a type
+		// rather than a 48th method, and the next such pass is one more variant.
 		Name:       "cmdr-listing",
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
-			RootPromises:   37,
+			RootPromises:   38,
 			HandleMethods:  47,
 			PublicModules:  1,
 			SubsystemItems: 20,

@@ -28,6 +28,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileRange: vi.fn(),
   getDirStatsBatch: vi.fn(),
   enrichTags: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
+  enrichPackages: vi.fn().mockResolvedValue({ data: null, timedOut: false }),
 }))
 vi.mock('#lib/icon-cache.js', () => ({
   prefetchIcons: vi.fn(),
@@ -45,7 +46,7 @@ vi.mock('#lib/settings/settings-store.js', () => ({
 }))
 vi.mock('../git/commit-count-fill', () => ({ requestPendingCommitCounts: vi.fn() }))
 
-import { getFileRange, getDirStatsBatch } from '#lib/tauri-commands/index.js'
+import { getFileRange, getDirStatsBatch, enrichPackages } from '#lib/tauri-commands/index.js'
 import { requestPendingCommitCounts } from '../git/commit-count-fill'
 import { prefetchIcons } from '#lib/icon-cache.js'
 
@@ -384,6 +385,40 @@ describe('fetchVisibleRange', () => {
     })
 
     expect(requestPendingCommitCounts).toHaveBeenCalledWith('listing-1', mockEntries)
+  })
+
+  it('asks the backend about the visible folders only, so macOS can name the packages', async () => {
+    const folder = { ...mockEntries[0], name: 'Logo.sketchbundle', path: '/dir/Logo.sketchbundle', isDirectory: true }
+    const link = { ...folder, name: 'Link.bundle2', path: '/dir/Link.bundle2', isSymlink: true }
+    vi.mocked(getFileRange).mockResolvedValue([...mockEntries, folder, link])
+
+    await fetchVisibleRange({
+      listingId: 'listing-1',
+      startItem: 10,
+      endItem: 20,
+      hasParent: false,
+      totalCount: 100,
+      includeHidden: false,
+      cachedRange: { start: 0, end: 5 },
+    })
+
+    expect(enrichPackages).toHaveBeenCalledWith('listing-1', ['/dir/Logo.sketchbundle'])
+  })
+
+  it('asks nothing about packages when no folder is visible', async () => {
+    vi.mocked(getFileRange).mockResolvedValue(mockEntries)
+
+    await fetchVisibleRange({
+      listingId: 'listing-1',
+      startItem: 10,
+      endItem: 20,
+      hasParent: false,
+      totalCount: 100,
+      includeHidden: false,
+      cachedRange: { start: 0, end: 5 },
+    })
+
+    expect(enrichPackages).not.toHaveBeenCalled()
   })
 })
 

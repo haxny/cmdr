@@ -23,9 +23,9 @@ exact CJK), `display-path.ts` (`displayPath`: a twin's pick and an S3 access key
   `.length` (multi-byte characters).
 - **`validateConflict` is case-insensitive (APFS)**: pass `originalName` correctly, or a case-only rename false-flags.
 - **`validateFilename` returns the FIRST error or warning**, never a list: inline rename UI has room for one message.
-- **Split a name at its extension only through `file-extension.ts`** (`fileExtension(name, isDirectory)`, no dot), the
-  mirror of the product's one rule, ❌ never a local `lastIndexOf('.')`: the column, the sort, and the rename warning
-  must agree. `crates/cmdr-fs/DETAILS.md` § "What counts as an extension".
+- **Split a name at its extension only through `file-extension.ts`** (`fileExtension(name, nameKindOf(entry))`), ❌
+  never a local `lastIndexOf('.')` or a name-based package guess (`isPackage` knows what macOS said): column, sort, and
+  warning must agree. `crates/cmdr-fs/DETAILS.md` § "What counts as an extension".
 - **An effect that must re-run on a value it never reads calls `dependOn(a, b)`** (`reactivity.ts`), ❌ never `void a`:
   the `void` form is a lint error, and its autofix leaves a bare expression that's a second lint error. A deliberately
   unused BINDING is a `^_` name instead. DETAILS § reactivity.ts.

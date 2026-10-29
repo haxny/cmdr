@@ -15,6 +15,8 @@ pub mod google_drive;
 pub(crate) mod index_provider;
 #[cfg(target_os = "macos")]
 pub mod open_with;
+/// Asking macOS which visible dotted folders are packages.
+pub(crate) mod packages;
 pub mod restic;
 #[cfg(target_os = "macos")]
 pub mod share;

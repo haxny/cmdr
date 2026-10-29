@@ -1016,8 +1016,8 @@ export type {
 // "Go to path" (⌘G): resolving typed input, and the persisted recents list
 export { resolveGoToPath, getRecentPaths, addRecentPath, removeRecentPath } from './go-to-path'
 
-// macOS Finder color tags
-export { toggleTags, enrichTags, onTagsSkipped } from './tags'
+// macOS Finder color tags, and packages macOS reports
+export { toggleTags, enrichTags, enrichPackages, onTagsSkipped } from './tags'
 
 // macOS custom updater (check / download / install)
 export {

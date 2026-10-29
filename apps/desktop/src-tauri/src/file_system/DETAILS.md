@@ -29,6 +29,9 @@ restic backup's snapshots: the overlay row, the parked hub, and the write guards
 - `open_with.rs`: the "Open with" candidate apps. `share.rs`: the `Share` submenu's services.
 - `get_info.rs`: Finder's Get Info window, through `osascript`, refusing up front when the user has turned off Cmdr's control
   of Finder (why `osascript` and not an in-process Apple Event: its module doc).
+- `packages.rs`: asks macOS (`NSURLIsPackageKey`, on its own 8 MB-stack pool) which visible dotted folders are packages
+  the list doesn't know, for `enrich_packages`; local volumes only. The rule: `crates/cmdr-fs/DETAILS.md` § "What
+  counts as an extension".
 - `tags.rs`: Finder tags. `terminal.rs`: "open terminal here". `text_editor.rs`: which app F4 opens a file in (wire
   types; the macOS half in `text_editor_macos.rs`, its tests in `text_editor_test.rs`).
 
@@ -504,7 +507,7 @@ emits `tags-skipped { count }` to the main window, which raises the `fileExplore
 applies Finder's multi-file rule (if EVERY path already carries the color, remove it from all; otherwise add the
 canonical system tag — `Red\n6`, …, `Gray\n1` — to every path that lacks it), preserves all other tags, skips rewriting
 files already in the target state, and returns the new per-path sets. The `toggle_tags(listing_id, paths, color)` IPC
-command wraps it in the 5 s write-timeout tier and feeds the result to `Listings::apply_tags` so the panes refresh
+command wraps it in the 5 s write-timeout tier and feeds the result to `Listings::apply_row_facts` (`RowFacts::Tags`) so the panes refresh
 immediately. A same-color _custom_ tag counts as "applied" (no duplicate system tag is added; removing strips every tag
 of that color).
 
@@ -520,7 +523,7 @@ what's on disk).
 ### Finder tags MCP consumer
 
 The MCP `tag` tool wraps `tags::toggle_color` / `set_tags` (and `system_color_name` for canonical names), resolving
-target paths off the pane state and refreshing via `Listings::apply_tags`. `set` and `toggle` merge, so they skip
+target paths off the pane state and refreshing via `Listings::apply_row_facts` (`RowFacts::Tags`). `set` and `toggle` merge, so they skip
 unreadable files and name them in the tool result; `clear` writes regardless (removing every tag is what was asked). `cmdr://state` file entries also surface a
 `[tags:…]` marker mirrored from `PaneFileEntry.tags`. See `mcp/DETAILS.md`.
 

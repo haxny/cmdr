@@ -424,7 +424,7 @@ re-verifying against its path before it could be trusted. Not worth it at these 
 
 **Every by-path lookup goes through the map**, in one of two forms. `CachedListing::indices_of_paths` takes a BATCH and
 makes one build decision for it: tag enrichment and the watcher's removals. `CachedListing::index_of_path`
-(`PathIndexCache::resolve_one`) takes ONE path, for `carry_forward_tags`, `has_entry`, `update_entry_sorted`, and
+(`PathIndexCache::resolve_one`) takes ONE path, for `carry_forward_deferred`, `has_entry`, `update_entry_sorted`, and
 `insert_entry_sorted`'s duplicate guard. ❗ The single-path form rides a map that already exists and **never builds
 one**: one lookup is far under `BUILD_FROM_BATCH_SIZE`, so a modify on an untouched 300,000-entry listing must not pay
 ~20 ms for a map it uses once and (mutating) drops on the way out. What it buys is the sweep's map, so while enrichment
@@ -563,7 +563,7 @@ at `i` GOES. Applying the un-inverted permutation scrambles the whole listing wi
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 36 root promises, 47 `Listings` methods, one public module (`host`), and 20
+`index-crate-isolation` holds this crate to 38 root promises, 47 `Listings` methods, one public module (`host`), and 20
 public items inside it. The numbers are exactly what the crate exposes, with no headroom, so an addition has to be
 argued for. Everything counted exists for a named caller:
 
@@ -581,8 +581,11 @@ argued for. Everything counted exists for a named caller:
   `ListingLookupError`, `FuzzyJumpError`, `CompareDirectoriesMode` / `Error` / `Result`, `StalledOn`.
 - **Change intake** (the app's composer, the watcher, git wiring, the index-size worker): `directory_changed`,
   `observe_children`, `refresh` / `begin_read` / `refresh_from_entries` with `RefreshOutcome` and `ReadTicket`,
-  `refresh_archive_listings`, `respell_on_volume`, `apply_tags`, `update_index_sizes` / `refresh_index_sizes` with
-  `IndexSizes`, and the diff vocabulary the events seam carries (`DirectoryDiffBatch`, `DiffChange`, `DiffChangeType`).
+  `refresh_archive_listings`, `respell_on_volume`, `apply_row_facts` with `RowFacts`, `update_index_sizes` /
+  `refresh_index_sizes` with `IndexSizes`, and the diff vocabulary the events seam carries (`DirectoryDiffBatch`,
+  `DiffChange`, `DiffChangeType`). `RowFacts` (the 38th root promise) folds the deferred visible-row passes into one
+  method: Finder tags and the packages macOS reports share `apply_row_facts` instead of a method each, so the next such
+  pass is a variant, not a 48th method.
 - **Lookups and the fresh-listing oracle** (write-operation walkers, MCP, multi-rename, the index-size worker, the NFS
   poller): the ten oracle methods (`authoritative_listing` through `summaries`) and `ListingSummary`.
   `open_listing_paths` is the NFS poller's: the directories one volume's panes show, a typed question rather than a read
@@ -916,19 +919,26 @@ free). So `list_directory_core` never touches tags; the frontend calls `enrich_t
 range (mirroring the custom-folder-icon prefetch), and a background sweep backfills the rest. Visible range (~100 rows)
 ≈ 1.5 ms; a full 200k sweep ≈ 3 s, off the render path.
 
-**Flow.** The app's `enrich_tags` command reads tags for the batch and calls `Listings::apply_tags` (`mutate.rs`'s
-`apply_tags_to_listing`), which mutates entries in place (tags are sort-irrelevant — no reorder), replaces
-**unconditionally** (clearing to empty so an external removal propagates), and emits one coalesced `modify` diff for the
-rows that actually changed (so re-enriching an unchanged visible range is silent). It's timeout-guarded and degrades to
-empty on non-local/hung paths. The whole batch resolves against the listing's path map in one pass, and the write it
-does leaves both maps standing: § "Entries by path".
+**Flow.** The app's `enrich_tags` command reads tags for the batch and calls `Listings::apply_row_facts` with
+`RowFacts::Tags` (`mutate.rs`'s `apply_tags_to_listing`), which mutates entries in place (tags are sort-irrelevant — no
+reorder), replaces **unconditionally** (clearing to empty so an external removal propagates), and emits one coalesced
+`modify` diff for the rows that actually changed (so re-enriching an unchanged visible range is silent). It's
+timeout-guarded and degrades to empty on non-local/hung paths. The whole batch resolves against the listing's path map
+in one pass, and the write it does leaves both maps standing: § "Entries by path".
 
-**Carry-forward.** A watcher re-stat builds entries via `get_single_entry`, which reads no xattr (empty tags). Every
-modify path (`notify_modified`, `observe_children`) calls `mutate.rs`'s `carry_forward_tags` BEFORE storing and
-emitting, copying the cached entry's tags onto the re-stat'd one — otherwise any unrelated Modify event (content edit,
-mtime touch, chmod) would blank a file's dots until the next enrich. `carry_forward_tags` only ever restores (no-op when
-the incoming entry already has tags), so it never masks a real change; clearing flows solely through the enrich path's
-unconditional replace.
+**Packages macOS reports** ride the same deferred shape: the app asks macOS about the visible dotted folders the package
+list doesn't know (`enrich_packages`) and hands the answers over as `RowFacts::Packages` (`apply_packages_to_listing`).
+Unlike tags, a package has an extension, so it can move a row under the Ext sort (`sort_key_changed` compares
+`name_kind`): each changed row goes through `update_entry_sorted`. Only rows the list can't answer are touched, so a
+failed lookup never unmarks a listed `.app`, and a `false` revokes an earlier detection.
+
+**Carry-forward.** A watcher re-stat builds entries via `get_single_entry`, which reads no xattr (empty tags) and knows
+only the package list. Every modify path (`notify_modified`, `observe_children`) calls `mutate.rs`'s
+`carry_forward_deferred` BEFORE storing and emitting, copying the cached entry's tags, and a package macOS reported,
+onto the re-stat'd one; otherwise any unrelated Modify event (content edit, mtime touch, chmod) would blank a file's
+dots, or turn a detected package back into a folder, until the next enrich. It only ever restores (no-op when the
+incoming entry already has tags; a package only onto a same-named non-symlink folder), so it never masks a real change;
+clearing flows solely through the enrich paths.
 
 **Write path, the context menu, and the toggle** (the app's `tags.rs`):
 `apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Finder tags".

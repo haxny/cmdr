@@ -82,10 +82,12 @@ would cost a syscall per entry).
 Packages and custom-icon folders, both unbounded by nature, so the expensive NSWorkspace fetch is gated to folders that
 actually deviate, detected cheaply. Two signals with deliberately different detection timing:
 
-- **Packages** (`Safari.app`, `Foo.bundle`, …): `is_package_dir` is a pure, no-I/O suffix check on the directory name
-  against a bounded extension list (`.app`, `.bundle`, `.framework`, `.plugin`, `.kext`, `.prefpane`, …). Cheap enough
-  to run for every entry, so `get_icon_id` routes packages straight to a `pkg:{path}` key during listing. `.app` icons
-  are per-app (each distinct), so the key carries the full path; they can't share a bounded `special:`-style key.
+- **Packages** (`Safari.app`, `Foo.bundle`, …): `cmdr_fs::file_extension::is_listed_package` is a pure, no-I/O suffix
+  check against the product's one package list. Cheap enough to run for every entry, so `get_icon_id` routes a listed
+  package straight to a `pkg:{path}` key during listing. A dotted folder the list doesn't know gets the same key once
+  macOS calls it a package on a visible row (`apps/desktop/src-tauri/src/file_system/packages.rs` → `FileEntry::set_package`), arriving as a row
+  update. `.app` icons are per-app (each distinct), so the key carries the full path; they can't share a bounded
+  `special:`-style key.
 - **Custom-icon folders**: the `kHasCustomIcon` flag (`0x0400`) in the folder's `com.apple.FinderInfo` xattr (one
   `getxattr`, no NSWorkspace, no TCC). `custom_folder_icon` needs syscalls, so it is NOT run during bulk listing (a
   `getxattr` per directory in a 100k-entry listing would regress the hot path). Instead the FE asks about the bounded

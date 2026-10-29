@@ -31,9 +31,11 @@ export interface FileEntry {
   isArchive?: boolean
   /**
    * True for a macOS package (`Safari.app`, `Foo.bundle`): a directory Finder presents as
-   * one item. Set backend-side from the name (`is_package_dir`); the row's accessible name
-   * says "package" from it. ❌ Never sniff the `pkg:` prefix of `iconId` instead. Optional
-   * for the same synthetic entries as `isArchive`.
+   * one item. Set backend-side from the package list, or from macOS once the row is
+   * visible (`enrichPackages`). It decides the row's extension (`nameKindOf`), and the
+   * accessible name says "package" from it. ❌ Never sniff the `pkg:` prefix of `iconId`
+   * instead. Optional for the same synthetic entries as `isArchive`, which fall back to
+   * the list.
    */
   isPackage?: boolean
   size?: number

@@ -1,5 +1,6 @@
 //! Patching one open listing in place: insert, remove, and update an entry at
-//! its sorted position, and carry Finder tags across a re-stat.
+//! its sorted position, apply what the deferred passes read (Finder tags,
+//! packages macOS reports), and carry both across a re-stat.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -228,26 +229,67 @@ impl Inner {
         Some(rows)
     }
 
-    /// Fills `entry.tags` from the cached entry of the same path when `entry` carries
-    /// none. A watcher re-stat builds entries via `get_single_entry`, which reads no
-    /// xattr and so always yields empty tags; without this, any unrelated Modify
-    /// event (a content edit, an mtime touch) would blank a file's tag dots until the
-    /// next `enrich_tags` pass. Call this on a re-stat'd entry BEFORE it's stored and
-    /// emitted, so the cache and the `directory-diff` payload stay consistent.
+    /// Restores what the deferred, visible-row passes learned about `entry`'s path
+    /// and a re-stat can't see: its Finder tags (`enrich_tags`) and a package
+    /// macOS reported (`enrich_packages`). A watcher re-stat builds entries via
+    /// `get_single_entry`, which reads no xattr and only knows the package list;
+    /// without this, any unrelated Modify event (a content edit, an mtime touch)
+    /// would blank a file's tag dots, or turn a detected package back into a
+    /// folder, until the next pass. Call this on a re-stat'd entry BEFORE it's
+    /// stored and emitted, so the cache and the `directory-diff` payload stay
+    /// consistent.
     ///
-    /// No-op when the incoming entry already has tags — the enrich path sets tags
-    /// explicitly (including clearing to empty on an external removal), so it must
-    /// never route through here.
-    pub(crate) fn carry_forward_tags(&self, listing_id: &str, entry: &mut FileEntry) {
-        if !entry.tags.is_empty() {
-            return;
-        }
+    /// Only ever restores: an entry that already has tags keeps them (the enrich
+    /// path sets tags explicitly, including clearing to empty on an external
+    /// removal, so it must never route through here), and a package is carried
+    /// only onto a non-symlink folder of the same name. Revoking a package is
+    /// `apply_packages_to_listing`'s job.
+    pub(crate) fn carry_forward_deferred(&self, listing_id: &str, entry: &mut FileEntry) {
         let cache = self.cache.read_ignore_poison();
-        if let Some(listing) = cache.get(listing_id)
-            && let Some(index) = listing.index_of_path(&entry.path)
-            && !listing.entries()[index].tags.is_empty()
-        {
-            entry.tags = listing.entries()[index].tags.clone();
+        let Some(listing) = cache.get(listing_id) else {
+            return;
+        };
+        let Some(index) = listing.index_of_path(&entry.path) else {
+            return;
+        };
+        let cached = &listing.entries()[index];
+        if entry.tags.is_empty() && !cached.tags.is_empty() {
+            entry.tags = cached.tags.clone();
+        }
+        if cached.is_package && !entry.is_package && cached.name == entry.name {
+            entry.set_package(true);
+        }
+    }
+
+    /// Writes what macOS said about which of `listing_id`'s folders are packages,
+    /// by path, and re-places each changed row (a package has an extension, so
+    /// the Ext sort can move it). Drives the deferred `enrich_packages` pass.
+    ///
+    /// Touches only rows the package list can't answer
+    /// (`file_extension::needs_package_lookup`), so a listed `.app` is never
+    /// unmarked by a lookup that failed. A `false` revokes an earlier `true`
+    /// (the folder lost its bundle bit, or was renamed while the row stayed). A
+    /// path not in the listing is skipped, and an unchanged row emits nothing, so
+    /// re-asking a visible range is silent. The rows are few (dotted folders on
+    /// screen that macOS calls packages), so each goes through
+    /// `update_entry_sorted` rather than a batch of its own.
+    pub(crate) fn apply_packages_to_listing(&self, listing_id: &str, updates: Vec<(String, bool)>) {
+        for (path, is_package) in updates {
+            let updated = {
+                let cache = self.cache.read_ignore_poison();
+                let Some(listing) = cache.get(listing_id) else {
+                    return;
+                };
+                let Some(index) = listing.index_of_path(&path) else {
+                    continue;
+                };
+                let mut entry = listing.entries()[index].clone();
+                if !cmdr_fs::file_extension::needs_package_lookup(&entry.name) || !entry.set_package(is_package) {
+                    continue;
+                }
+                entry
+            };
+            let _ = self.update_entry_sorted(listing_id, updated);
         }
     }
 
@@ -257,7 +299,7 @@ impl Inner {
     ///
     /// Replaces tags **unconditionally** (including to empty), so an external removal
     /// (a user clearing all tags in Finder) propagates and clears the dots — this is
-    /// the deliberate counterpart to `carry_forward_tags`, which only ever restores.
+    /// the deliberate counterpart to `carry_forward_deferred`, which only ever restores.
     /// Tags are sort-irrelevant, so entries are mutated in place (no reorder). Paths
     /// not present in the listing are skipped (scrolled away, or already removed).
     /// Emits a diff only for rows whose tags genuinely changed, so re-enriching an

@@ -1,5 +1,6 @@
-// macOS Finder color-tag commands: toggling a tag across paths and enriching a
-// cached listing's entries with fresh tag data.
+// The deferred, visible-row enrichment commands: macOS Finder color tags
+// (toggling a tag across paths, reading fresh tag data into a cached listing)
+// and packages macOS reports for dotted folders the package list doesn't know.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
 import { commands, events } from '#lib/ipc/bindings.js'
@@ -32,4 +33,15 @@ export function toggleTags(listingId: string, paths: string[], color: number): P
  */
 export function enrichTags(listingId: string, paths: string[]): Promise<TimedOut<null>> {
   return commands.enrichTags(listingId, paths)
+}
+
+/**
+ * Asks macOS which of the given visible paths are packages the backend's package
+ * list doesn't know (`Logo.sketchbundle`), and patches them into the cached
+ * listing (`isPackage`, a `pkg:` icon), emitting a `directory-diff` for the rows
+ * that changed. The backend filters to dotted folder names itself, and does
+ * nothing on a non-local volume or off macOS.
+ */
+export function enrichPackages(listingId: string, paths: string[]): Promise<TimedOut<null>> {
+  return commands.enrichPackages(listingId, paths)
 }

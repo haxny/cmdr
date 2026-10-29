@@ -242,8 +242,8 @@ impl Inner {
 
     /// Updates an entry in the cache and queues a modify (or, when its sort key changed, a move) change.
     fn notify_modified(&self, listing_id: &str, mut entry: FileEntry) {
-        // Preserve already-loaded Finder tags across this re-stat (see `carry_forward_tags`).
-        self.carry_forward_tags(listing_id, &mut entry);
+        // Preserve already-loaded Finder tags across this re-stat (see `carry_forward_deferred`).
+        self.carry_forward_deferred(listing_id, &mut entry);
 
         let _ = self.update_entry_sorted(listing_id, entry);
     }
