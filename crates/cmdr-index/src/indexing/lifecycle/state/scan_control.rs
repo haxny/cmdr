@@ -501,13 +501,19 @@ mod tests {
         let sources = crate::indexing::source_guard::indexing_sources();
 
         // Assembled rather than written out, so a marker can't match its own mention.
-        let takes_the_manager_out = concat!("mem::replace(&mut ", "instance.phase,");
+        // Matched against the source with all whitespace removed, so rustfmt wrapping a
+        // call over several lines (a new `ShuttingDown` field does) can't hide a site.
+        let takes_the_manager_out = concat!("mem::replace(&mut", "instance.phase,");
         let records_the_request = concat!("claim_the_", "teardown(");
-        let publishes_the_window = concat!("IndexPhase::Detached ", "{\n");
+        let publishes_the_window = concat!("IndexPhase::Detached", "{");
 
         let mut extractors: Vec<String> = Vec::new();
         for (name, path) in sources {
-            let src = std::fs::read_to_string(&path).expect("read source");
+            let src: String = std::fs::read_to_string(&path)
+                .expect("read source")
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .collect();
             if !src.contains(takes_the_manager_out) {
                 continue;
             }
@@ -524,6 +530,7 @@ mod tests {
         assert_eq!(
             extractors,
             vec![
+                "lifecycle/state/relocation.rs".to_string(),
                 "lifecycle/state/scan_control.rs".to_string(),
                 "lifecycle/state/supervisor.rs".to_string(),
                 "lifecycle/state/teardown.rs".to_string(),
