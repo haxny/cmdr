@@ -232,10 +232,17 @@ are deferred, and `list_directory_core` never reads them: `crates/cmdr-listing/D
 ## Local volume space
 
 `get_volume_space(path)` uses `NSURLVolumeTotalCapacityKey` and `NSURLVolumeAvailableCapacityForImportantUsageKey`
-(falls back to `NSURLVolumeAvailableCapacityKey`). Returns `None` for non-existent paths.
+(falls back to `NSURLVolumeAvailableCapacityKey`) on macOS, and `statvfs` on Linux. Returns `None` for non-existent
+paths.
 
 `space.rs` holds it, beside `get_space_info_for_path` (what `Volume::get_space_info` returns) and the `statvfs` reading
 Linux uses and macOS falls back to.
+
+**Decision**: on Linux, `get_volume_space` is THE `statvfs` call: the app's `volumes_linux` re-exports it for the IPC
+command, and the space poller's unregistered-path fallback calls it, so ❌ never write a second `statvfs` in the app.
+**Why**: the app once kept its own copy, which derived `used` as `total - available` (counting root-reserved blocks as
+used) while a `Volume`'s answer read `f_bfree`, so the switcher and a transfer's pre-flight could disagree on one disk
+(#465). The non-macOS, non-Linux `stubs/volumes.rs` keeps its own copy on purpose: stubs import nothing.
 
 **Decision**: a test build answers from `statvfs` (`space::get_space_info_statvfs`), and only the NSURL tests in
 `space.rs` call the real `nsurl_volume_space`. **Why**: the first NSURL call in a process runs `CFBundleGetMainBundle`,

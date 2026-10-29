@@ -24,7 +24,10 @@ mod smb;
 #[cfg(test)]
 mod test_support;
 
-pub use fs_type::{get_volume_space, supports_trash_for_mount};
+// The platform facade `commands/volumes.rs` reaches as `platform::get_volume_space`, the
+// same `cmdr-local` reading macOS's `volumes::get_volume_space` re-exports (#465).
+pub use cmdr_local::space::get_volume_space;
+pub use fs_type::supports_trash_for_mount;
 pub use mounts::get_mounted_volumes;
 pub use smb::{SmbMountInfo, enrich_from_volume_registry, get_smb_mount_info};
 

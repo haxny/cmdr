@@ -9,7 +9,7 @@ Same file names as macOS `volumes/`. `mod.rs`
 holds the model types, `DEFAULT_VOLUME_ID`, and the orchestrators (`list_locations`, `get_favorites`, `get_main_volume`,
 `resolve_path_volume_fast`), and re-exports every submodule item so `crate::volumes_linux::X` stays stable:
 `mounts.rs` (`get_mounted_volumes`, and which `/proc/mounts` rows are user-facing), `fs_type.rs` (trash support,
-`VIRTUAL_FS_TYPES`, `get_mount_point`, `get_volume_space`), `ids.rs` (`volume_id_for_mount` and its
+`VIRTUAL_FS_TYPES`, `get_mount_point`), `ids.rs` (`volume_id_for_mount` and its
 `/dev/disk/by-uuid` lookup), `cloud.rs` (cloud-sync dirs), `smb.rs` (CIFS mount-source and GVFS dirname parsing,
 `get_network_mounts`, plus `enrich_from_volume_registry`; keep it in step with the macOS twin, the frontend doesn't
 branch on platform), `watcher.rs` (mount-table and GVFS watchers; diffs known state, registers with `VolumeManager`, emits

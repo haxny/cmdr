@@ -513,7 +513,7 @@ fn fetch_space_for_path(path: &str) -> Option<SpaceInfo> {
 
     #[cfg(target_os = "linux")]
     {
-        crate::volumes_linux::get_volume_space(path)
+        cmdr_local::space::get_volume_space(path)
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "linux")))]

@@ -10,7 +10,8 @@ Decision rationale. `CLAUDE.md` holds the must-knows.
 
 ## Dependencies
 
-`linux_mounts` (`/proc/mounts` parsing + fstype lookup), `dirs`, `libc` (`statvfs`, `poll`), `notify` (inotify on the
+`linux_mounts` (`/proc/mounts` parsing + fstype lookup), `dirs`, `libc` (`poll`), `cmdr_local::space::get_volume_space` (free space, re-exported as the `platform::get_volume_space`
+facade; `crates/cmdr-local/DETAILS.md` § "Local volume space"), `notify` (inotify on the
 GVFS directory), and `crate::file_system::volume::{manager::get_volume_manager, LocalPosixVolume}`.
 
 ## One command module
