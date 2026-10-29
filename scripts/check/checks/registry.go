@@ -312,7 +312,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
 		DependsOn:   nil,
-		IsFast:      true,
 		// The root manifest's `[patch.crates-io]` and the lockfile decide the whole
 		// answer; no cargo call, no compile.
 		Inputs: inputs([]string{"Cargo.toml", "Cargo.lock"}),
@@ -452,7 +451,6 @@ var AllChecks = []CheckDefinition{
 		// catalog dirs, but what goes stale is the table the resolver compiles in.
 		Tech:      "🦀 Rust",
 		DependsOn: nil,
-		IsFast:    true,
 		Inputs: inputs([]string{
 			"apps/desktop/src/lib/intl/messages/**",
 			"apps/desktop/scripts/gen-shipped-locales*.ts",
@@ -470,7 +468,6 @@ var AllChecks = []CheckDefinition{
 		// native menu bar compiles in.
 		Tech:      "🦀 Rust",
 		DependsOn: nil,
-		IsFast:    true,
 		Inputs: inputs([]string{
 			"apps/desktop/src/lib/intl/messages/**",
 			"apps/desktop/scripts/gen-native-strings*.ts",
@@ -1013,7 +1010,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   []string{"desktop-svelte-stylelint"},
-		IsFast:      true,
 		Inputs:      inputs(svelteInputs, siblingToolInputs("check-btn-restyle")),
 		Run:         RunBtnRestyle,
 	},
@@ -1436,7 +1432,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDashboard,
 		Tech:        "🎨 Svelte",
 		DependsOn:   []string{"oxfmt"},
-		IsFast:      true,
 		Inputs:      dashboardInputs,
 		Run:         RunDashboardStylelint,
 	},
@@ -1455,7 +1450,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDashboard,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      dashboardInputs,
 		Run:         RunDashboardImportCycles,
 	},
@@ -1498,7 +1492,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppScripts,
 		Tech:        "🐹 Go",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      goSourceInputs,
 		Run:         RunGoFmt,
 	},
@@ -1884,7 +1877,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppOther,
 		Tech:        "📏 Metrics",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      workflowsInputs,
 		Run:         RunWorkflowsRustup,
 	},

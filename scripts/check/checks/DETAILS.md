@@ -1048,6 +1048,12 @@ depends on the canonical path persisting — no CI artifact upload, and threshol
 config — so isolation applies everywhere, with no CI split. Manual `pnpm test:coverage` (no env var set) still writes
 `./coverage`.
 
+**Decision**: coverage stays on in the standard lane. **Why**: it costs ~10% CPU and no measurable wall time. Measured
+2026-10-13 with six alternating `vitest run` runs with and without `--coverage` at load 20–70, 1,124 files and 15,617
+tests: CPU (user + sys) was ~1,017 s without coverage and ~1,117 s with it (~100 CPU-s per run); wall was 85–106 s
+without and 95–98 s with, inside the noise. The lane's real cost is per-file setup, so dropping coverage would buy
+little. Don't re-measure unless the suite's shape changes a lot.
+
 ## Nothing a shard owns is shared between runs
 
 **Decision**: every resource an E2E run touches is scoped to the RUN, not to the shard name. The MCP ports come from the

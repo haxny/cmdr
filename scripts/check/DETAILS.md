@@ -343,7 +343,7 @@ lock".
 check (positionally or via `--check`) implicitly includes slow checks (`includeSlow = len(checkNames) > 0`); group/app
 selectors don't.
 
-**Fast lane (`--fast`):** `IsFast: true` marks the curated pre-commit check set: 80 checks, about 6 s wall even with
+**Fast lane (`--fast`):** `IsFast: true` marks the curated pre-commit check set: 72 checks, about 6 s wall even with
 `--fresh` (verified on the M1 Max agent box, `pnpm check --fast --ci --fresh`, 2026-10-13), intended to run before every
 commit. Its budget is 5–10 s, so formatters, test suites, typecheckers, `knip`, and the i18n generator-freshness lanes
 stay in the default lane. It's an editorial pick, not a timing-derived list (see Key decisions below). Named check
@@ -1080,6 +1080,14 @@ caught nothing the next commit wouldn't. `FilterFastChecks` keeps only `IsFast` 
 check outside the run counts as satisfied, so a setup step (`api-server-worker-types`, `dashboard-svelte-kit-sync`) is
 fast exactly when one of its dependents is; both left with theirs. The scanners that catch real failures stay
 (`macos-availability`, `discarded-outcome`).
+
+**Decision**: cheap checks that never fail go to the default lane too. **Why**: a fast-lane slot is a promise of
+pre-commit signal, and these gave none: `dashboard-stylelint`, `dashboard-import-cycles`, `btn-restyle`,
+`native-strings-fresh`, `shipped-locales-fresh`, `gofmt`, `rustup-add`, and `vendor-patch-applied` never failed in the
+check log from 2026-07-19 to 2026-10-29 (#423). The pre-push hook runs `--fast`, so they no longer run before a push;
+the default lane and CI still gate them. `html-validate` and `workflows` stay: both failed after the 2026-10-13 analysis
+(eight and one times). `resident-budget` stays because it joins every scoped run, which requires `IsFast`
+(`TestScopedRunLanesAreCheapWholeRepoScanners`).
 
 **Decision**: `CIOnly` field on `CheckDefinition` (mirrors `IsSlow`). **Why**: Keeps "this check runs only in CI"
 colocated with the check definition rather than as a hardcoded list elsewhere. `FilterCIOnlyChecks` in `registry.go`
