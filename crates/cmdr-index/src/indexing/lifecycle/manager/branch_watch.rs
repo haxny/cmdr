@@ -103,7 +103,19 @@ impl BranchWatchStart {
         // whenever the app last ran. A position the journal can't serve watches from
         // now, and the epoch bump says the rows are stale rather than current; so
         // does history the loop finds purged (`history_check`).
-        let ReplayPoint { since_event_id, now } = replay_point(&self.db_path, &self.volume_root, self.sees_every_write);
+        let ReplayPoint {
+            since_event_id,
+            now,
+            new_journal_uuid,
+        } = replay_point(&self.db_path, &self.volume_root, self.sees_every_write);
+        if let Some(uuid) = new_journal_uuid {
+            // The journal the stored position will belong to from here, so the next
+            // start can tell a replaced journal apart (`journal_was_replaced`).
+            let _ = self.writer.send(WriteMessage::UpdateMeta {
+                key: JOURNAL_UUID_META.to_string(),
+                value: uuid,
+            });
+        }
         let history_check = (self.resuming && self.sees_every_write && since_event_id > 0).then_some(since_event_id);
         if since_event_id == 0 && now > 0 {
             // Watching from now, so record where now is: the next start replays from
@@ -318,7 +330,12 @@ struct ReplayPoint {
     since_event_id: u64,
     /// The journal's current event id; `0` where there's no journal to replay.
     now: u64,
+    /// The journal's identity, when it's known and differs from the stored one.
+    new_journal_uuid: Option<String>,
 }
+
+/// The meta key holding the identity of the journal `last_event_id` belongs to.
+const JOURNAL_UUID_META: &str = "journal_uuid";
 
 /// Read the stored replay point against the journal's current id.
 fn replay_point(db_path: &Path, volume_root: &Path, sees_every_write: bool) -> ReplayPoint {
@@ -326,18 +343,35 @@ fn replay_point(db_path: &Path, volume_root: &Path, sees_every_write: bool) -> R
         return ReplayPoint {
             since_event_id: 0,
             now: 0,
+            new_journal_uuid: None,
         };
     }
-    let stored = IndexStore::open_read_connection(db_path)
-        .ok()
-        .and_then(|conn| IndexStore::get_meta(&conn, "last_event_id").ok().flatten())
-        .and_then(|id| id.parse::<u64>().ok())
-        .unwrap_or(0);
+    let conn = IndexStore::open_read_connection(db_path).ok();
+    let meta = |key: &str| {
+        conn.as_ref()
+            .and_then(|conn| IndexStore::get_meta(conn, key).ok().flatten())
+    };
+    let stored = meta("last_event_id").and_then(|id| id.parse::<u64>().ok()).unwrap_or(0);
+    let stored_uuid = meta(JOURNAL_UUID_META);
     let now = watcher::current_event_id(volume_root);
-    ReplayPoint {
-        since_event_id: replay_from(stored, now, sees_every_write),
-        now,
+    let current_uuid = watcher::journal_uuid(volume_root);
+    let replaced = journal_was_replaced(stored_uuid.as_deref(), current_uuid.as_deref());
+    if replaced {
+        log::info!("Branch watch: the drive's FSEvents journal was replaced, so its stored position can't be replayed");
     }
+    ReplayPoint {
+        since_event_id: replay_from(stored, now, sees_every_write, replaced),
+        now,
+        new_journal_uuid: current_uuid.filter(|uuid| stored_uuid.as_deref() != Some(uuid.as_str())),
+    }
+}
+
+/// Whether the drive's FSEvents journal is a different one from the journal the
+/// stored position came from: fseventsd mints a new UUID when it recreates a wiped
+/// journal. Only both UUIDs known and different says so; ⚠️ an unread one (an old
+/// database, or fseventsd answering null right after a mount) proves nothing.
+fn journal_was_replaced(stored: Option<&str>, current: Option<&str>) -> bool {
+    matches!((stored, current), (Some(stored), Some(current)) if stored != current)
 }
 
 /// Where a branch watch replays from: the stored id, or `0` ("from now", which a
@@ -355,8 +389,12 @@ fn replay_point(db_path: &Path, volume_root: &Path, sees_every_write: bool) -> R
 ///   blind there could serve rows as current over a hole; the gate errs the safe
 ///   way, stale-but-trusted (Decision 5), at the price of a false "stale" after a
 ///   busy stretch elsewhere on the machine.
-fn replay_from(stored: u64, now: u64, sees_every_write: bool) -> u64 {
-    if stored == 0 || super::launch_route::journal_runs_behind(stored, now) {
+/// - A REPLACED journal (`journal_was_replaced`) can't serve an id from the old
+///   one on either kind, however close the ids sit. A stricter check on top of the
+///   others, ❌ never a reason to relax the gate: a journal that lost history
+///   without being replaced keeps its UUID (`watch/DETAILS.md`, #808).
+fn replay_from(stored: u64, now: u64, sees_every_write: bool, journal_replaced: bool) -> u64 {
+    if stored == 0 || journal_replaced || super::launch_route::journal_runs_behind(stored, now) {
         return 0;
     }
     if !sees_every_write && now > 0 && now > stored.saturating_add(JOURNAL_GAP_THRESHOLD) {
@@ -375,26 +413,63 @@ mod replay_from_tests {
 
     #[test]
     fn the_boot_disk_replays_across_a_busy_machines_id_gap() {
-        assert_eq!(replay_from(STORED, AFTER_A_BUILD, true), STORED);
+        assert_eq!(replay_from(STORED, AFTER_A_BUILD, true, false), STORED);
     }
 
     #[test]
     fn a_mount_rooted_stream_keeps_the_id_distance_gate() {
-        assert_eq!(replay_from(STORED, AFTER_A_BUILD, false), 0);
-        assert_eq!(replay_from(STORED, STORED + 5, false), STORED);
+        assert_eq!(replay_from(STORED, AFTER_A_BUILD, false, false), 0);
+        assert_eq!(replay_from(STORED, STORED + 5, false, false), STORED);
+    }
+
+    const OLD_JOURNAL: Option<&str> = Some("7cf1895daa3a44fb8638754ade1da5f7");
+    const NEW_JOURNAL: Option<&str> = Some("e391253dc52140c390f62d2435c1212b");
+
+    #[test]
+    fn a_replaced_journal_watches_from_now_even_inside_the_gap() {
+        for sees_every_write in [true, false] {
+            let replaced = journal_was_replaced(OLD_JOURNAL, NEW_JOURNAL);
+            assert_eq!(replay_from(STORED, STORED + 5, sees_every_write, replaced), 0);
+        }
+    }
+
+    #[test]
+    fn an_unread_journal_uuid_changes_nothing() {
+        for (stored, current) in [(None, NEW_JOURNAL), (OLD_JOURNAL, None), (None, None)] {
+            let replaced = journal_was_replaced(stored, current);
+            assert!(!replaced, "{stored:?} -> {current:?}");
+            assert_eq!(replay_from(STORED, STORED + 5, false, replaced), STORED);
+            assert_eq!(
+                replay_from(STORED, AFTER_A_BUILD, false, replaced),
+                0,
+                "the gap still holds"
+            );
+        }
+    }
+
+    #[test]
+    fn the_same_journal_keeps_the_stored_point() {
+        let replaced = journal_was_replaced(OLD_JOURNAL, OLD_JOURNAL);
+        assert!(!replaced);
+        assert_eq!(replay_from(STORED, STORED + 5, false, replaced), STORED);
+        assert_eq!(replay_from(STORED, AFTER_A_BUILD, true, replaced), STORED);
     }
 
     #[test]
     fn nothing_to_replay_from_watches_from_now_on_either_kind() {
         for sees_every_write in [true, false] {
-            assert_eq!(replay_from(0, AFTER_A_BUILD, sees_every_write), 0, "no stored id");
             assert_eq!(
-                replay_from(STORED, STORED - 1, sees_every_write),
+                replay_from(0, AFTER_A_BUILD, sees_every_write, false),
+                0,
+                "no stored id"
+            );
+            assert_eq!(
+                replay_from(STORED, STORED - 1, sees_every_write, false),
                 0,
                 "a journal behind the stored id"
             );
             assert_eq!(
-                replay_from(STORED, 0, sees_every_write),
+                replay_from(STORED, 0, sees_every_write, false),
                 STORED,
                 "an unread current id proves nothing"
             );

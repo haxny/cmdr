@@ -16,7 +16,8 @@ post-replay verification COST-BOUNDING (the two teeth) in `../reconcile/DETAILS.
 - **watcher.rs** — the drive-level filesystem watcher. macOS: FSEvents via `cmdr-fsevent-stream` with event IDs and
   `sinceWhen` replay. Linux: `notify` (inotify) with recursive watching and a synthetic event counter. Other platforms:
   stub. `supports_event_replay()` lets callers branch on whether journal replay is available. `start_branches` +
-  `watch_branch` are the branch-watched entry points (below).
+  `watch_branch` are the branch-watched entry points (below). `watcher/journal.rs` holds the two questions a start asks
+  the journal before it streams: `current_event_id` and `journal_uuid`.
   - **Gotcha/Why**: every stream start AND every `current_event_id` is a round trip to `fseventsd`, one daemon for the
     whole machine. With other processes' disk churn pegging it at 100% CPU, each took 0.7–3.7 s (verified on macOS 27,
     `sample` + timing logs, 2026-10-07, issue #374), which timed the phase-machine tests out at full parallelism. Treat
@@ -177,8 +178,14 @@ boot disk the stream sees every write, so it replays across any id distance and 
 it writes anything. ⚠️ A stream rooted at a mount (`LocalExternal`) is filtered to that mount's paths, so its first
 event lands however many writes the REST of the machine made later and proves nothing; it keeps the id-distance gate
 (`JOURNAL_GAP_THRESHOLD`), which errs toward a false "stale" after a busy stretch elsewhere, never toward rows served as
-current over a hole. Nothing reads a per-mount signal yet, and the obvious one is not enough on its own (#808; verified
-on macOS 27.0.1, APFS and HFS+ disk images driven by an FSEvents probe, 2026-10-29):
+current over a hole.
+
+**A replaced journal watches from now, on either kind** (`journal_was_replaced`). Each start reads the device's journal
+UUID (`watcher::journal_uuid`, off the lock beside `current_event_id`) and stores it as `meta.journal_uuid` when it
+differs. A stored and a current UUID that both read and differ mean the stored id belongs to a journal that no longer
+exists, so the start watches from now (and a resume bumps the epoch) however close the ids sit. A `None` on either side
+changes nothing. It only ever adds a "stale"; ❌ never use the UUID to relax the id-distance gate, because a journal can
+lose history and keep its UUID:
 
 - A mounted external gets its own `.fseventsd`, and a path-rooted replay from a stored id serves its history across a
   detach and any amount of boot-disk churn, ending in `HistoryDone`.
