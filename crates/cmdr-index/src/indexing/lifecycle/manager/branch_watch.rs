@@ -60,6 +60,9 @@ pub(in crate::indexing) struct BranchWatchStart {
     branches: Arc<BranchWatch>,
     paths: Vec<PathBuf>,
     resuming: bool,
+    /// The stream sees every write on the machine (the boot disk,
+    /// `has_event_journal`), so its first event can tell purged history apart.
+    sees_every_write: bool,
 }
 
 /// A watcher [`BranchWatchStart::start`] got running, waiting to be installed.
@@ -68,6 +71,8 @@ pub(in crate::indexing) struct StartedBranchWatch {
     watcher: DriveWatcher,
     event_rx: tokio::sync::mpsc::UnboundedReceiver<FsChangeEvent>,
     since_event_id: u64,
+    /// Handed to the live loop as `LiveConfig::history_check`.
+    history_check: Option<u64>,
     branches: Arc<BranchWatch>,
     paths: Vec<PathBuf>,
 }
@@ -95,10 +100,11 @@ impl BranchWatchStart {
         }
         // Replay from where this volume's stream last left off, so a branch covered
         // in an earlier session comes back current rather than as a snapshot of
-        // whenever the app last ran. A gap too wide to be worth replaying takes the
-        // same exit a cold start does: watch from now, and let the epoch bump say
-        // the rows are stale rather than current.
-        let ReplayPoint { since_event_id, now } = replay_point(&self.db_path, &self.volume_root);
+        // whenever the app last ran. A position the journal can't serve watches from
+        // now, and the epoch bump says the rows are stale rather than current; so
+        // does history the loop finds purged (`history_check`).
+        let ReplayPoint { since_event_id, now } = replay_point(&self.db_path, &self.volume_root, self.sees_every_write);
+        let history_check = (self.resuming && self.sees_every_write && since_event_id > 0).then_some(since_event_id);
         if since_event_id == 0 && now > 0 {
             // Watching from now, so record where now is: the next start replays from
             // here even if this stream never delivers an event (and so never stores
@@ -124,6 +130,7 @@ impl BranchWatchStart {
                 watcher,
                 event_rx,
                 since_event_id,
+                history_check,
                 branches: self.branches,
                 paths: self.paths,
             }),
@@ -185,6 +192,7 @@ impl IndexManager {
             paths: branches.branch_paths().into_iter().map(PathBuf::from).collect(),
             branches,
             resuming,
+            sees_every_write: self.kind.has_event_journal(),
         })
     }
 
@@ -202,6 +210,7 @@ impl IndexManager {
             watcher,
             event_rx,
             since_event_id,
+            history_check,
             branches,
             paths,
         } = started;
@@ -251,6 +260,7 @@ impl IndexManager {
                     space,
                     watcher_overflow,
                     scope,
+                    history_check,
                 },
             )
             .await;
@@ -311,15 +321,7 @@ struct ReplayPoint {
 }
 
 /// Read the stored replay point against the journal's current id.
-///
-/// ⚠️ This still gates on the raw id distance, which the cold-start replay no
-/// longer does: ids count every write on the machine, so a busy build can trip it
-/// on a nearly current index (#751). The consequence here is milder: nothing is
-/// lost that the index claimed to know, because a gap this wide leaves the
-/// covered rows stale-but-trusted (Decision 5) rather than wrong-and-confident.
-/// The live loop this feeds has no purged-history check of its own, which is
-/// why the gate stays until it gets one.
-fn replay_point(db_path: &Path, volume_root: &Path) -> ReplayPoint {
+fn replay_point(db_path: &Path, volume_root: &Path, sees_every_write: bool) -> ReplayPoint {
     if !watcher::supports_event_replay() {
         return ReplayPoint {
             since_event_id: 0,
@@ -332,10 +334,70 @@ fn replay_point(db_path: &Path, volume_root: &Path) -> ReplayPoint {
         .and_then(|id| id.parse::<u64>().ok())
         .unwrap_or(0);
     let now = watcher::current_event_id(volume_root);
-    let since_event_id = if stored == 0 || (now > 0 && now > stored + JOURNAL_GAP_THRESHOLD) {
-        0
-    } else {
-        stored
-    };
-    ReplayPoint { since_event_id, now }
+    ReplayPoint {
+        since_event_id: replay_from(stored, now, sees_every_write),
+        now,
+    }
+}
+
+/// Where a branch watch replays from: the stored id, or `0` ("from now", which a
+/// resume pairs with an epoch bump) when the journal can't be trusted to serve it.
+///
+/// - No stored id, or a journal running BEHIND it (`launch_route::journal_runs_behind`):
+///   nothing to replay from.
+/// - A stream that sees every write (the boot disk) replays whatever the id
+///   distance: its first event tells purged history apart, which the live loop
+///   checks (`LiveConfig::history_check`). The distance itself counts every write
+///   on the machine, so it measures build activity, not staleness (#751).
+/// - ⚠️ A stream rooted at a mount keeps the id-distance gate. FSEvents filters it
+///   to that mount's paths, so its first event lands however many writes the rest
+///   of the machine made later, and can't tell purged history apart. Replaying
+///   blind there could serve rows as current over a hole; the gate errs the safe
+///   way, stale-but-trusted (Decision 5), at the price of a false "stale" after a
+///   busy stretch elsewhere on the machine.
+fn replay_from(stored: u64, now: u64, sees_every_write: bool) -> u64 {
+    if stored == 0 || super::launch_route::journal_runs_behind(stored, now) {
+        return 0;
+    }
+    if !sees_every_write && now > 0 && now > stored.saturating_add(JOURNAL_GAP_THRESHOLD) {
+        return 0;
+    }
+    stored
+}
+
+#[cfg(test)]
+mod replay_from_tests {
+    use super::*;
+
+    const STORED: u64 = 4_000_000_000;
+    /// #751's measured gap: 14 M ids in 90 minutes of `cargo` builds.
+    const AFTER_A_BUILD: u64 = STORED + 14_029_000;
+
+    #[test]
+    fn the_boot_disk_replays_across_a_busy_machines_id_gap() {
+        assert_eq!(replay_from(STORED, AFTER_A_BUILD, true), STORED);
+    }
+
+    #[test]
+    fn a_mount_rooted_stream_keeps_the_id_distance_gate() {
+        assert_eq!(replay_from(STORED, AFTER_A_BUILD, false), 0);
+        assert_eq!(replay_from(STORED, STORED + 5, false), STORED);
+    }
+
+    #[test]
+    fn nothing_to_replay_from_watches_from_now_on_either_kind() {
+        for sees_every_write in [true, false] {
+            assert_eq!(replay_from(0, AFTER_A_BUILD, sees_every_write), 0, "no stored id");
+            assert_eq!(
+                replay_from(STORED, STORED - 1, sees_every_write),
+                0,
+                "a journal behind the stored id"
+            );
+            assert_eq!(
+                replay_from(STORED, 0, sees_every_write),
+                STORED,
+                "an unread current id proves nothing"
+            );
+        }
+    }
 }

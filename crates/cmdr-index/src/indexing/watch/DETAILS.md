@@ -60,8 +60,8 @@ post-replay verification COST-BOUNDING (the two teeth) in `../reconcile/DETAILS.
   `HUGE_DIR_CHILDREN`). Structural role below; the cost-bounding RATIONALE is canonical in `../reconcile/DETAILS.md` §
   Bounding verification cost.
 - **event_loop/storm.rs** — removal-storm coalescing helpers (`REMOVAL_STORM_THRESHOLD`, `STORM_GROUP_PREFIX_DEPTH`).
-- **event_loop/tests/** — `activity` / `ingestion` / `merge` / `rename` / `split_parent` clusters plus shared fixtures
-  in `mod.rs`.
+- **event_loop/tests/** — `activity` / `history` / `ingestion` / `merge` / `rename` / `split_parent` clusters plus
+  shared fixtures in `mod.rs`.
 - **churn_monitor.rs (+churn_monitor/)** — the off-by-default per-subtree churn observability spike (below).
 - **activity_monitor.rs (+activity_monitor/)** — the per-folder activity tap over the corrected stream, plus
   `BatchObservers`, the pair `process_live_batch` takes (below).
@@ -143,7 +143,7 @@ never routes a shallow `MustScanSubDirs` to the visible scanner, whose shallow a
 
 **The journal position follows the STREAM, not what was processed.** A branch-watched loop discards most events, and
 `process_live_batch` only advances `last_event_id` for what it wrote; left there, a volume with quiet branches would age
-its stored position until the next resume's id-distance gate (`JOURNAL_GAP_THRESHOLD`) refuses to replay it.
+its stored position until a mount-rooted resume's id-distance gate (`JOURNAL_GAP_THRESHOLD`) refuses to replay it.
 `safe_event_id` advances it from every event SEEN, and returns `None` while anything is buffered (advancing past a held
 event would let a restart skip it).
 
@@ -166,11 +166,19 @@ sizes nor coverage questions. ❌ There is no launch-time pass, and adding one w
 asking about. `resumed_for` restores INTO whatever the session already holds rather than replacing it.
 
 **Replay, or an honest epoch bump.** A resumed watch starts from the stored `last_event_id` so FSEvents replays what
-happened while the app was off. When it can't (no replay support, no stored id, or an id distance past
-`JOURNAL_GAP_THRESHOLD`; still the raw distance here, unlike the cold start, since the live loop this feeds has no
-purged-history check of its own) the resume bumps `current_epoch`: the rows stay covered and trusted (Decision 5) and
-the read side renders them stale rather than current. ❌ Never on the walk path — a bump right after a walk would mark
-rows stale that were written a second ago.
+happened while the app was off. When it can't (no replay support, no stored id, a journal behind the stored id, or
+history the loop finds purged) the resume bumps `current_epoch`: the rows stay covered and trusted (Decision 5) and the
+read side renders them stale rather than current. ❌ Never on the walk path — a bump right after a walk would mark rows
+stale that were written a second ago.
+
+**How a resume tells purged history apart depends on what the stream sees** (`branch_watch.rs::replay_from`). On the
+boot disk the stream sees every write, so it replays across any id distance and the loop judges the FIRST event
+(`LiveConfig::history_check` → `history_was_purged`, the same test the cold-start replay runs), bumping the epoch before
+it writes anything. ⚠️ A stream rooted at a mount (`LocalExternal`) is filtered to that mount's paths, so its first
+event lands however many writes the REST of the machine made later and proves nothing; it keeps the id-distance gate
+(`JOURNAL_GAP_THRESHOLD`), which errs toward a false "stale" after a busy stretch elsewhere, never toward rows served as
+current over a hole. A real per-mount signal would be the device's journal UUID (`FSEventsCopyUUIDForDevice`), which
+nothing reads yet.
 
 **A watch that starts from now records where now is** (`manager/branch_watch.rs`, `UpdateLastEventId` before the stream
 starts). A session whose stream never delivers an event otherwise stores no position, and the next start can't replay:
@@ -244,9 +252,9 @@ reconcile is cheaper.** The launch refuses only a journal whose current id is BE
 (`launch_route::journal_runs_behind`): ids only grow on a healthy journal, so that one was reset and a replay from a
 future id would deliver nothing and miss every change. Everything else is the replay's call:
 
-- **Purged history** (`JOURNAL_GAP_THRESHOLD`, checked on the FIRST delivered event): on an intact journal the first
-  event sits right after the stored id however busy the machine was, so a first event 10 M+ ids later means macOS
-  dropped the history in between. Falls back with `JournalGap`.
+- **Purged history** (`history_was_purged`, checked on the FIRST delivered event): on an intact journal the first event
+  sits right after the stored id however busy the machine was, so a first event 10 M+ ids later means macOS dropped the
+  history in between. Falls back with `JournalGap`.
 - **Cost** (`ReplayBudget`, `replay_cost.rs`): the paths the replay actually PROCESSES (each a stat, a path resolve, and
   an upsert), checked before each window drains, against the index's entry count (floor `REPLAY_PATH_BUDGET_FLOOR`). A
   full reconcile visits every entry once, so a replay that would process more paths than the index holds costs more than

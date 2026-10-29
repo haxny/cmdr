@@ -66,10 +66,21 @@ pub(crate) const THROTTLE_SWEEP_INTERVAL_MS: u64 = 1000;
 /// scan. On an intact journal the first event sits right after the stored id,
 /// however busy the machine was since.
 ///
-/// ❌ Not a launch gate on `current - stored`: ids count every write on the
-/// machine, so that distance measures build activity, not staleness (#751).
-/// The branch watch still uses it that way (`lifecycle/manager/branch_watch.rs`).
+/// ❌ Not a gate on `current - stored`: ids count every write on the machine, so
+/// that distance measures build activity, not staleness (#751). Ask
+/// [`history_was_purged`] instead.
 pub(crate) const JOURNAL_GAP_THRESHOLD: u64 = 10_000_000;
+
+/// Whether the first event a `sinceWhen` stream delivered shows that macOS no
+/// longer holds the history after `since_event_id`.
+///
+/// ⚠️ Only meaningful on a stream that sees EVERY write, which is one rooted at the
+/// boot volume (`IndexVolumeKind::has_event_journal`). A stream rooted at a mount
+/// is filtered to that mount's paths, so its first event legitimately lands
+/// however many writes the rest of the machine made later.
+pub(crate) fn history_was_purged(since_event_id: u64, first_event_id: u64) -> bool {
+    first_event_id > since_event_id.saturating_add(JOURNAL_GAP_THRESHOLD)
+}
 
 /// Healthy watcher→loop queue depth. The channel is UNBOUNDED (Fix 2: a slow
 /// drain must never backpressure FSEvents/inotify into dropping events, which used

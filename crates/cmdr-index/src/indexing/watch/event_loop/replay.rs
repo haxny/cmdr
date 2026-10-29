@@ -21,7 +21,8 @@ use super::replay_cost::{REPLAY_DEDUP_WINDOW_PATHS, ReplayBudget, ReplayWindow};
 use super::verification::run_background_verification;
 use super::{
     BacklogTracker, IngestionPressure, JOURNAL_GAP_THRESHOLD, LIVE_FLUSH_INTERVAL_MS, ReplayConfig,
-    THROTTLE_SWEEP_INTERVAL_MS, classify_ingestion_pressure, open_read_conn_with_retry, report_backlog,
+    THROTTLE_SWEEP_INTERVAL_MS, classify_ingestion_pressure, history_was_purged, open_read_conn_with_retry,
+    report_backlog,
 };
 use crate::ActivityPhase;
 use crate::indexing::DEBUG_STATS;
@@ -142,7 +143,7 @@ pub(in crate::indexing) async fn run_replay_event_loop(
         // Check for journal gap on the first event
         if !first_event_checked {
             first_event_checked = true;
-            if event.event_id > since_event_id + JOURNAL_GAP_THRESHOLD {
+            if history_was_purged(since_event_id, event.event_id) {
                 emit_rescan_notification(
                     events.as_ref(),
                     &volume_id,
