@@ -123,6 +123,18 @@ fn the_name_mask_takes_either_syntax() {
     assert_eq!(data["specError"]["type"], "pattern");
     assert_eq!(data["specError"]["error"]["type"], "unknownField");
     parse_request(&json!({ "maskSyntax": "winamp" })).expect_err("unknown syntax");
+    // A pattern that renders no name would hide the file as `.jpg`: an empty name, never ready.
+    let rows = preview_of(
+        json!({ "maskSyntax": "foobar", "nameMask": "[N]" }),
+        &[file("a.jpg")],
+        &["a.jpg"],
+    );
+    assert!(matches!(
+        rows[0].status,
+        RowStatus::InvalidName {
+            reason: crate::multi_rename::plan::InvalidNameReason::Empty
+        }
+    ));
 }
 
 /// Paging a proposal would silently propose a slice, so it's refused.

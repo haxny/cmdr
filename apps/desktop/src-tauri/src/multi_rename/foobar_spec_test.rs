@@ -5,10 +5,12 @@ use std::path::Path;
 
 use super::foobar::FoobarError;
 use super::mask::RowMedia;
-use super::plan::{Compiled, MaskSyntax, MediaLookup, MultiRenameSpec, NameEdits, RowStatus, SpecError, preview};
+use super::plan::{
+    Compiled, InvalidNameReason, MaskSyntax, MediaLookup, MultiRenameSpec, NameEdits, RowStatus, SpecError, preview,
+};
 use super::transform::CaseChange;
 use cmdr_fs::entry::FileEntry;
-use cmdr_media_meta::MediaFacts;
+use cmdr_media_meta::{MediaFacts, MediaField};
 
 const DIR: &str = "/Users/me/Audiobooks/Anne Frank";
 
@@ -117,8 +119,11 @@ fn the_pipeline_runs_after_a_foobar_pattern() {
     );
 }
 
+/// Still being read: the row waits. An audio file whose tags can't be read is the same
+/// `Unreadable` problem a Cmdr mask gives (never renamed with empty fields); a file that isn't
+/// media at all renders its fields empty, as foobar does.
 #[test]
-fn a_foobar_row_waits_for_its_tags_and_a_file_without_them_gets_empty_fields() {
+fn a_foobar_row_waits_for_its_tags_an_unreadable_one_is_a_problem_and_a_non_media_one_gets_empty_fields() {
     let media = MediaByName(vec![("a.mp3", RowMedia::Reading), ("b.mp3", RowMedia::Unreadable)]);
     let out = run(
         &foobar("[%artist% - ]%filename%"),
@@ -129,10 +134,60 @@ fn a_foobar_row_waits_for_its_tags_and_a_file_without_them_gets_empty_fields() {
         out,
         vec![
             ("a.mp3".to_string(), RowStatus::Reading),
-            ("b.mp3".to_string(), RowStatus::Unchanged),
+            (
+                "b.mp3".to_string(),
+                RowStatus::Unreadable {
+                    field: MediaField::TagArtist
+                }
+            ),
             ("c.txt".to_string(), RowStatus::Unchanged),
         ]
     );
+    // A pattern of the name alone doesn't need the tags: an unreadable file renames as any other.
+    let out = run(&foobar("$upper(%filename%)"), &[file("b.mp3")], &media);
+    assert_eq!(out[0], ("B.mp3".to_string(), RowStatus::Ready));
+}
+
+/// A name part that renders empty (or spaces only) would turn the file into a hidden `.mp3`:
+/// it's an empty name, in either syntax, never a ready rename.
+#[test]
+fn an_empty_name_part_is_an_invalid_name_in_either_syntax() {
+    let empty = RowStatus::InvalidName {
+        reason: InvalidNameReason::Empty,
+    };
+    let none = MediaByName(vec![]);
+    // foobar's `[N]` is a section of literal text: always dropped.
+    assert_eq!(run(&foobar("[N]"), &[file("a.mp3")], &none)[0].1, empty);
+    // A field a non-media file has no value for.
+    assert_eq!(run(&foobar("%album%"), &[file("c.pdf")], &none)[0].1, empty);
+    assert_eq!(run(&foobar("%album%  "), &[file("c.pdf")], &none)[0].1, empty);
+    // `%title%` falls back to the file name, so it's never empty.
+    assert_eq!(
+        run(&foobar("%title%"), &[file("c.pdf")], &none)[0].1,
+        RowStatus::Unchanged
+    );
+    let cmdr = |mask: &str| MultiRenameSpec {
+        mask_syntax: MaskSyntax::Cmdr,
+        ..foobar(mask)
+    };
+    assert_eq!(run(&cmdr(""), &[file("a.mp3")], &none)[0].1, empty);
+    assert_eq!(run(&cmdr("   "), &[file("a.mp3")], &none)[0].1, empty);
+    assert_eq!(run(&cmdr("[N]"), &[file("a.mp3")], &none)[0].1, RowStatus::Unchanged);
+}
+
+#[test]
+fn a_tag_value_with_a_slash_is_an_invalid_name_through_a_foobar_pattern() {
+    let facts = MediaFacts {
+        album: Some("AC/DC Live".to_string()),
+        ..MediaFacts::default()
+    };
+    let media = MediaByName(vec![("01.mp3", RowMedia::Read(&facts))]);
+    assert!(matches!(
+        run(&foobar("%album% - %tracknumber%"), &[file("01.mp3")], &media)[0].1,
+        RowStatus::InvalidName {
+            reason: InvalidNameReason::DisallowedCharacter { .. }
+        }
+    ));
 }
 
 #[test]

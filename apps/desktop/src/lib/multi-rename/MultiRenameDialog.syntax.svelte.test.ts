@@ -138,4 +138,36 @@ describe('the name mask syntax switch', () => {
     expect(root.querySelector('.error-mark')).not.toBeNull()
     expect(root.querySelector('.preview-new-name')?.textContent).not.toContain('Anne Frank')
   })
+
+  it('keeps the switch notice and its way back while the pasted pattern has an error', async () => {
+    const root = await mountSheet()
+    ipc.previewMultiRename.mockResolvedValue({
+      ok: false,
+      error: { type: 'spec', error: { type: 'pattern', error: { type: 'unknownField', name: 'nope', at: 0 } } },
+    })
+    await type(root, '%nope% - %album%')
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('%nope%')
+    const notice = root.querySelector('.results-notice')
+    expect(notice?.textContent).toContain('foobar2000 pattern')
+    expect([...(notice?.querySelectorAll('button') ?? [])].some((b) => b.textContent.includes('Use Cmdr syntax'))).toBe(
+      true,
+    )
+  })
+
+  it('drops the underline as soon as the mask changes, before the new answer comes', async () => {
+    const root = await mountSheet()
+    ipc.previewMultiRename.mockResolvedValue({
+      ok: false,
+      error: { type: 'spec', error: { type: 'pattern', error: { type: 'unknownField', name: 'nope', at: 7 } } },
+    })
+    await type(root, 'Deník %nope%')
+    expect(root.querySelector('.error-mark')).not.toBeNull()
+    ipc.previewMultiRename.mockReturnValue(new Promise(() => {}))
+    const mask = root.querySelector<HTMLInputElement>('input')
+    if (!mask) throw new Error('no name mask')
+    mask.value = 'Deník %nope% x'
+    mask.dispatchEvent(new Event('input', { bubbles: true }))
+    await settle()
+    expect(root.querySelector('.error-mark')).toBeNull()
+  })
 })

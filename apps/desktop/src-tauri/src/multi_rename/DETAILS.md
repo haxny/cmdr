@@ -97,8 +97,13 @@ error with its byte offset.
 - **Chosen per spec**: `MultiRenameSpec.mask_syntax` (`MaskSyntax::{Cmdr, Foobar}`, `#[serde(default)]` Cmdr, so old
   presets, the last spec, and MCP calls read as before). Foobar parses the NAME mask only (`plan.rs` `NameMask`); the
   extension mask stays Cmdr's. The name then takes the same pipeline (search & replace, case, Greek, diacritics, NFC)
-  and the same statuses. A pattern that doesn't parse is `SpecError::Pattern { error: FoobarError }`; a row whose
-  tags are still read is `Reading` while the pattern names a tag field (a pattern never lacks a value otherwise).
+  and the same statuses. A pattern that doesn't parse is `SpecError::Pattern { error: FoobarError }`. While the
+  pattern names a tag field (`Pattern::media_field`, the first in reading order), a row whose tags are still read is
+  `Reading` and an audio file whose tags can't be read is `Unreadable`, as with a Cmdr mask (never renamed with its
+  fields empty); a file that isn't media renders them empty, as foobar does.
+- **An empty name part is an empty name, in either syntax** (`Rendered::blank_name`): a name part that renders empty or
+  spaces only (foobar's `[N]`, a field a file lacks) would make `a.mp3` a hidden `.mp3`, which `validate_filename`
+  takes, so the row is `InvalidName { Empty }`, never ready. A name typed in Results is the user's own and exempt.
   A stored preset's legacy counter fields never fold into a foobar name mask: its `[C]` is a section, not a counter.
 
 - **Truth decides `[ ]`.** A field with a value is true, literal text false, a sequence true when any part is.

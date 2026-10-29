@@ -238,17 +238,29 @@ impl NameMask {
         }
     }
 
-    /// A foobar pattern never lacks a value (a missing one is no text), but a row whose tags are
-    /// still being read waits for them, as a Cmdr mask's does.
+    /// A foobar pattern never lacks a value (a missing one is no text, as in foobar), but while it
+    /// names a tag field, a row whose tags are still being read waits for them, and an audio file
+    /// whose tags can't be read is `Unreadable`, as with a Cmdr mask: never renamed with its fields
+    /// empty. A file that isn't media gets them empty.
     fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
-        match self {
-            Self::Cmdr(mask) => mask.render(facts),
-            Self::Foobar(pattern) if pattern.uses_media() && matches!(facts.media, RowMedia::Reading) => {
-                Err(FieldGap::Reading)
-            }
-            Self::Foobar(pattern) => Ok(pattern.render(facts)),
+        let pattern = match self {
+            Self::Cmdr(mask) => return mask.render(facts),
+            Self::Foobar(pattern) => pattern,
+        };
+        match (facts.media, pattern.media_field()) {
+            (RowMedia::Reading, Some(_)) => Err(FieldGap::Reading),
+            (RowMedia::Unreadable, Some(field)) => Err(FieldGap::Unreadable { field }),
+            _ => Ok(pattern.render(facts)),
         }
     }
+}
+
+/// A new name as the spec renders it.
+struct Rendered {
+    full: String,
+    /// The name part (before the extension) is empty or spaces only. The full name would be a
+    /// hidden `.mp3`, which `validate_filename` takes, so the preview calls it an empty name.
+    blank_name: bool,
 }
 
 /// The parsed spec, built once per preview.
@@ -302,7 +314,7 @@ impl Compiled {
         position: usize,
         media: RowMedia<'_>,
         number_width: NumberWidth,
-    ) -> Result<String, FieldGap> {
+    ) -> Result<Rendered, FieldGap> {
         // Composed, so a range never splits a letter from its accent in a name an
         // SMB share or HFS stores decomposed.
         let file_name: String = entry.name.nfc().collect();
@@ -321,18 +333,20 @@ impl Compiled {
 
     /// The new full name for a file with these facts, or the media field it has
     /// no text for. Still reading wins over any other gap, in either mask.
-    fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
+    fn render(&self, facts: &RowFacts<'_>) -> Result<Rendered, FieldGap> {
         let (name, extension) = match (self.name_mask.render(facts), self.extension_mask.render(facts)) {
             (Ok(name), Ok(extension)) => (name, extension),
             (Err(FieldGap::Reading), _) | (_, Err(FieldGap::Reading)) => return Err(FieldGap::Reading),
             (Err(gap), _) | (_, Err(gap)) => return Err(gap),
         };
         let (name, extension) = self.transform.apply(&name, &extension);
-        Ok(self.finish(if extension.is_empty() {
+        let blank_name = name.trim().is_empty();
+        let full = self.finish(if extension.is_empty() {
             name
         } else {
             format!("{name}.{extension}")
-        }))
+        });
+        Ok(Rendered { full, blank_name })
     }
 
     /// The last step every new name takes, a typed one too: composed when the spec normalizes.
@@ -431,6 +445,7 @@ pub(crate) fn render_examples(examples: &[RenameExample]) -> Vec<Option<String>>
                     number_width: NumberWidth::of([&media]),
                 })
                 .ok()
+                .map(|rendered| rendered.full)
         })
         .collect()
 }
@@ -474,14 +489,26 @@ pub(crate) fn preview(
         .map(|(position, (row, entry))| {
             let typed = edits.get(&entry.name);
             let new_name = match typed {
-                Some(typed) => Ok(compiled.finish(typed.to_string())),
+                // A typed name is the user's own, a hidden one too.
+                Some(typed) => Ok(Rendered {
+                    full: compiled.finish(typed.to_string()),
+                    blank_name: false,
+                }),
                 None => compiled.new_name(entry, dir, position, media.media(entry), number_width),
             };
             // A row a media field has no text for keeps its name until it does.
             let (new_name, status) = match new_name {
                 Err(gap) => (entry.name.clone(), gap_status(gap)),
-                Ok(new_name) => {
-                    let status = match invalid(&new_name) {
+                Ok(Rendered {
+                    full: new_name,
+                    blank_name,
+                }) => {
+                    let reason = if blank_name {
+                        Some(InvalidNameReason::Empty)
+                    } else {
+                        invalid(&new_name)
+                    };
+                    let status = match reason {
                         Some(reason) => RowStatus::InvalidName { reason },
                         None if compiled.same_name(&new_name, &entry.name) => RowStatus::Unchanged,
                         None => RowStatus::Ready,

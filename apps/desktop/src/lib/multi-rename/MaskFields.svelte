@@ -40,7 +40,8 @@
         },
     ])
     const specError = $derived(tool.error?.type === 'spec' ? tool.error.error.type : null)
-    const errorAt = $derived(patternErrorAt(tool.error, tool.spec.nameMask))
+    // Only for the mask it was found in: an edit drops it until the new preview answers.
+    const errorAt = $derived(tool.pending ? null : patternErrorAt(tool.error, tool.spec.nameMask))
 </script>
 
 <div class="masks">

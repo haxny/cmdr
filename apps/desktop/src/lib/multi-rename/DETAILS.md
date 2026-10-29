@@ -29,18 +29,20 @@ The opt-in Tags window (fork, setting `multiRename.tagEditor`) has its own docs:
   reading line is plain text, not a live region: it ticks several times a second.
 - **A broken mask shows no new names**: under a spec error the files stay listed (the last preview's rows, or, when the
   sheet opened on a broken spec, a default spec's preview fetched for them), but every row shows its OLD name as
-  unchanged (`shownRow`), dimmed with the house disabled opacity (0.5) under an `is-unavailable` class; the footer says
-  "Fix the mask to see the new names" instead of counts, and Rename and Results refuse. **Gotcha/Why:** the last good
-  preview's names under a half-typed mask read as real (the user saw `… Denik (cte Denik.mp3` while typing
-  `[=tag.performer]`). The class names it as inactive content, the WCAG 1.4.3 case the contrast checker exempts
+  unchanged (`shownRow`, over `rowUnderBrokenMask` in `multi-rename-state-api.ts`, which also holds the state's
+  interface), dimmed with the house disabled opacity (0.5) under an `is-unavailable` class; the footer says "Fix the
+  mask to see the new names" instead of counts, and Rename and Results refuse. **Gotcha/Why:** the last good preview's
+  names under a half-typed mask read as real (the user saw `… Denik (cte Denik.mp3` while typing `[=tag.performer]`).
+  The class names it as inactive content, the WCAG 1.4.3 case the contrast checker exempts
   (`scripts/check-a11y-contrast/README.md` § Opacity); it fades with `--transition-base` unless the user asked for less
   motion.
 - **Mask syntax** (`MaskFields.svelte`, `mask-syntax.ts`): a "Cmdr / foobar2000" `ToggleGroup` beside the name mask's
   label. Typing or pasting a name mask that turns into a foobar pattern (`%field%` or `$func(`, `looksLikeFoobar`) while
-  in Cmdr switches to foobar on its own, and the heading slot says so with a "Use Cmdr syntax" link; only on that turn,
-  so after switching back, typing on stays Cmdr. In foobar: no ▾ token editors, a few foobar field inserts instead of
-  the placeholder chips, ⌘⌥X opens nothing. A foobar error is worded with its character (`error-text.ts`) and that
-  character underlined (`MaskInput` `errorAt`, the engine's byte offset turned into a UTF-16 index by `utf16Offset`).
+  in Cmdr switches to foobar on its own, and the heading slot says so with a "Use Cmdr syntax" link (beside an error
+  too); only on that turn, so after switching back, typing on stays Cmdr. In foobar: no ▾ token editors, a few foobar
+  field inserts instead of the placeholder chips, ⌘⌥X opens nothing. A foobar error is worded with its character
+  (`error-text.ts`) and that character underlined until the next edit (`MaskInput` `errorAt`, the engine's byte offset
+  turned into a UTF-16 index by `utf16Offset`).
 - **Preview**: reruns `PREVIEW_DELAY_MS` (120 ms) after the last edit. The answer carries the counts (the footer and the
   Rename button) and the first page of rows. The list is the house `ColumnList` (`lib/ui/DETAILS.md` § ColumnList), the
   same look as Search's results, fed the state's windowed `source`: `count` is the rows listed, `getRow` reads the held

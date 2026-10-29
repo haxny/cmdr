@@ -20,6 +20,7 @@ mod eval;
 mod fields;
 mod parse;
 
+use cmdr_media_meta::MediaField;
 use fields::Field;
 
 use super::mask::RowFacts;
@@ -141,14 +142,20 @@ impl Pattern {
 
     /// Whether any field comes from the file's tags (so the row waits for them).
     pub fn uses_media(&self) -> bool {
-        fn any(nodes: &[Node]) -> bool {
-            nodes.iter().any(|node| match node {
-                Node::Literal(_) => false,
-                Node::Field(field) => field.uses_media(),
-                Node::Optional(inner) => any(inner),
-                Node::Call { args, .. } => args.iter().any(|arg| any(arg)),
+        self.media_field().is_some()
+    }
+
+    /// The first tag field the pattern names, in reading order: what a row whose tags can't be
+    /// read reports as unknown. `None` when every field comes from the file's name or folder.
+    pub fn media_field(&self) -> Option<MediaField> {
+        fn first(nodes: &[Node]) -> Option<MediaField> {
+            nodes.iter().find_map(|node| match node {
+                Node::Literal(_) => None,
+                Node::Field(field) => field.media_field(),
+                Node::Optional(inner) => first(inner),
+                Node::Call { args, .. } => args.iter().find_map(|arg| first(arg)),
             })
         }
-        any(&self.0)
+        first(&self.0)
     }
 }

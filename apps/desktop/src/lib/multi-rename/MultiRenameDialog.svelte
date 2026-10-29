@@ -186,8 +186,11 @@
     const shownMessage = $derived(
         shownError ? errorText(shownError, tool.spec.nameMask) : undoNotice ? tString(undoNotice) : '',
     )
-    /** The name mask switched to foobar on its own: the heading slot says so, with the way back. */
-    const showSyntaxNotice = $derived(!shownMessage && tool.syntaxSwitched)
+    /**
+     * The name mask switched to foobar on its own: the heading slot says so, with the way back, beside
+     * an error too (a pasted pattern that doesn't parse is when the way back matters most).
+     */
+    const showSyntaxNotice = $derived(tool.syntaxSwitched)
     /** Results says what it's doing in the list's heading slot, unless an error or the syntax notice has it. */
     const showResultsNotice = $derived(!shownMessage && !showSyntaxNotice && (results.open || tool.editedCount > 0))
 
@@ -444,7 +447,7 @@
             >
                 {shownMessage}
             </p>
-            <p class="results-notice" role="status">
+            <p class="results-notice" class:after-error={shownMessage !== ''} role="status">
                 {#if showSyntaxNotice}
                     <span class="results-words">{tString('multiRename.syntax.switched')}</span>
                     <LinkButton onclick={() => { tool.undoSyntaxSwitch() }}>
@@ -703,6 +706,11 @@
         color: var(--color-text-secondary);
         font-size: var(--font-size-sm);
         white-space: nowrap;
+    }
+
+    /* Beside the error: a gap between them. Alone, it starts on the field labels' edge. */
+    .results-notice.after-error:not(:empty) {
+        margin-left: var(--spacing-sm);
     }
 
     .results-words {

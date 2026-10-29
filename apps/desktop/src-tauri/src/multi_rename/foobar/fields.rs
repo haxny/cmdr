@@ -63,9 +63,30 @@ impl Field {
         })
     }
 
-    /// Whether the value comes from the file's tags rather than its name.
-    pub(super) fn uses_media(self) -> bool {
-        !matches!(self, Self::FileName | Self::DirectoryName)
+    /// The tag the value comes from (the first one, for a field with a fallback); `None` for one
+    /// read from the file's name or folder.
+    pub(super) fn media_field(self) -> Option<MediaField> {
+        Some(match self {
+            Self::Artist => MediaField::TagArtist,
+            Self::AlbumArtist => MediaField::TagAlbumArtist,
+            Self::Album => MediaField::TagAlbum,
+            Self::Title => MediaField::TagTitle,
+            Self::TrackNumber => MediaField::TagTrack,
+            Self::DiscNumber => MediaField::TagDisc,
+            Self::TotalTracks => MediaField::TagTotalTracks,
+            Self::TotalDiscs => MediaField::TagTotalDiscs,
+            Self::Date => MediaField::TagDate,
+            Self::Year => MediaField::TagYear,
+            Self::Genre => MediaField::TagGenre,
+            Self::Performer => MediaField::TagPerformer,
+            Self::Composer => MediaField::TagComposer,
+            Self::Publisher => MediaField::TagPublisher,
+            Self::Comment => MediaField::TagComment,
+            Self::Description => MediaField::TagDescription,
+            Self::Translator => MediaField::TagTranslator,
+            Self::Www => MediaField::TagWww,
+            Self::FileName | Self::DirectoryName => return None,
+        })
     }
 
     /// The field's text for `row`, or `None` when it has no value (never `Some("")`).
