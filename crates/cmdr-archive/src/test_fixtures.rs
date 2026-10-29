@@ -194,6 +194,23 @@ pub fn overstate_record_count(bytes: &mut [u8]) {
     bytes[eocd + 10..eocd + 12].copy_from_slice(&99u16.to_le_bytes());
 }
 
+/// "Zip cloaking" (GHSA-m665-v7pm-7grj): rewrites the name of the FIRST
+/// central-directory file header to `to`, leaving the entry's local file header
+/// with the name it was written under. A central-directory reader then lists
+/// `to`, while a streaming reader that trusts local headers would extract the
+/// original name. `to` must be as long as the stored name, so offsets hold.
+pub fn cloak_first_central_name(bytes: &mut [u8], to: &[u8]) {
+    let cd = find(bytes, &CD_HEADER_SIG).expect("central-directory header not found");
+    // File name length is a u16 LE at offset 28; the name starts at offset 46.
+    let name_len = usize::from(u16::from_le_bytes([bytes[cd + 28], bytes[cd + 29]]));
+    assert_eq!(
+        name_len,
+        to.len(),
+        "the cloaked name must keep the stored name's length"
+    );
+    bytes[cd + 46..cd + 46 + name_len].copy_from_slice(to);
+}
+
 fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|w| w == needle)
 }
