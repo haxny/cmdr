@@ -109,16 +109,13 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          if git merge --no-ff --no-commit "refs/tags/$TAG" > merge.log 2>&1; then
-            git merge --abort 2>/dev/null || true
-            echo "$TAG merges cleanly."
+          # Conflicts only in regenerated files (bindings, message keys) don't count: the build
+          # job takes upstream's side and regenerates them.
+          if .github/haxny/merge-upstream.sh "$TAG" "$RUNNER_TEMP/conflicts.txt" --trial; then
             exit 0
           fi
-          cat merge.log
-          git diff --name-only --diff-filter=U > conflicts.txt
-          git merge --abort || true
           echo "conflicted=true" >> "$GITHUB_OUTPUT"
-          echo "::error::Merging $TAG into $BUILD_BRANCH conflicts in $(wc -l < conflicts.txt) file(s)."
+          echo "::error::Merging $TAG into $BUILD_BRANCH conflicts in $(wc -l < "$RUNNER_TEMP/conflicts.txt") file(s)."
           exit 1
 
       - name: Open an issue listing the conflicts
@@ -137,7 +134,7 @@ jobs:
             echo
             echo "Conflicted files:"
             echo
-            sed 's/^/- `/; s/$/`/' conflicts.txt
+            sed 's/^/- `/; s/$/`/' "$RUNNER_TEMP/conflicts.txt"
             echo
             echo "Resolve locally: \`git fetch upstream tag $TAG && git switch $BUILD_BRANCH && git merge --no-ff $TAG\`, fix, push; the next run builds it."
             echo
@@ -181,7 +178,7 @@ jobs:
           if git merge-base --is-ancestor "refs/tags/$TAG" HEAD; then
             echo "Already contains $TAG (forced rebuild)."
           else
-            git merge --no-ff --no-edit -m "merge: upstream $TAG into $BUILD_BRANCH" "refs/tags/$TAG"
+            .github/haxny/merge-upstream.sh "$TAG" "$RUNNER_TEMP/conflicts.txt"
           fi
 
       - name: Install mise
@@ -324,12 +321,16 @@ jobs:
 
       - name: Push haxny-build
         env:
-          GH_TOKEN: ${{ github.token }}
+          # ❗ `GITHUB_TOKEN` can't push a commit that changes `.github/workflows/` (GitHub refuses
+          # without the `workflows` permission, which that token can't hold), and most upstream
+          # releases touch a workflow. `HAXNY_PUSH_TOKEN` is a fine-grained PAT on this repo only,
+          # with Contents and Workflows read/write; without it, only workflow-free merges push.
+          PUSH_TOKEN: ${{ secrets.HAXNY_PUSH_TOKEN || github.token }}
         run: |
           set -euo pipefail
           # Fast-forward only: if someone pushed meanwhile, this fails rather than overwrite them,
           # and the next run merges onto their work.
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BUILD_BRANCH"
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BUILD_BRANCH"
 
       - name: Publish the release
         env:
