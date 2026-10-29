@@ -192,6 +192,56 @@ jobs:
           if-no-files-found: ignore
 
   # ===========================================
+  # Pre-release gates
+  # ===========================================
+  # The checks `release.sh` runs before every tag (`IsPreRelease`: clippy with mimalloc on
+  # macOS, the desktop bundle-size gate). They also run here so a regression surfaces within
+  # six days instead of on release morning. macOS because `clippy-mimalloc` lints macOS-only
+  # code (it skips anywhere else). Lane and decision: `scripts/check/DETAILS.md` § Pre-release lane.
+  pre-release:
+    name: Pre-release gates
+    # The release builder's image; see the `runs-on` comment in `release-pipeline.yml` for why
+    # it's never `macos-latest`.
+    runs-on: macos-26
+    # A cold ~1000-crate clippy build in the lane's private target dir, on a 3-core runner.
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install mise
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+
+      - name: Install tools with mise
+        run: mise install
+
+      - name: Keep only the pinned Rust toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      # Its own per-job cache, kept warm by the six-day cron like the others here.
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Cache pnpm
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build check tool
+        run: go build -o check .
+        working-directory: ./scripts/check
+
+      - name: Run the pre-release lane
+        run: ./scripts/check/check --pre-release --ci
+
+  # ===========================================
   # Website Docker build
   # ===========================================
   # The website deploys as a Docker image built on the server; per-push CI only

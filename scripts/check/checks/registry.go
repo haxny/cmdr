@@ -46,13 +46,15 @@ var AllChecks = []CheckDefinition{
 		DisplayName: "clippy with mimalloc on macOS",
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
-		// A periodic gate: it guards a build nobody ships today, in a build
-		// directory of its own, so a plain `pnpm check` shouldn't pay for it.
-		IsSlow:    true,
-		NotInCI:   "on CI's ubuntu lanes mimalloc is the default and the plain clippy step covers it; the macOS-only mimalloc readers are a build nobody ships, so CI's macOS job doesn't pay for them",
-		DependsOn: []string{"desktop-rust-clippy"},
-		Inputs:    inputs(rustCompileInputs, []string{"clippy.toml"}),
-		Run:       RunClippyMimalloc,
+		// A pre-release gate: it guards a build nobody ships today, in a build
+		// directory of its own, and hasn't failed since 2026-07, so neither a plain
+		// `pnpm check` nor every push should pay its ~120 s. `slow-checks.yml`
+		// runs the lane on macOS every six days, since the readers it lints are
+		// macOS-only.
+		IsPreRelease: true,
+		DependsOn:    []string{"desktop-rust-clippy"},
+		Inputs:       inputs(rustCompileInputs, []string{"clippy.toml"}),
+		Run:          RunClippyMimalloc,
 	},
 	{
 		ID:          "desktop-rust-rustdoc",
@@ -1308,11 +1310,11 @@ var AllChecks = []CheckDefinition{
 		Tech:        "🎨 Svelte",
 		// Runs its own ~6s production-shaped `vite build` into a private dir rather
 		// than depending on another lane, so the number is what a release ships and
-		// not an E2E build carrying the dialog gallery.
-		IsFast:  false,
-		NotInCI: "warn-only metric; it can never fail, so a CI step would be noise",
-		Inputs:  inputs(svelteInputs, runnerDataInputs("desktop-bundle-size-baseline.json")),
-		Run:     RunDesktopBundleSize,
+		// not an E2E build carrying the dialog gallery. A pre-release gate: growth
+		// past the budget fails, so a release ships a bigger bundle on purpose.
+		IsPreRelease: true,
+		Inputs:       inputs(svelteInputs, runnerDataInputs("desktop-bundle-size-baseline.json")),
+		Run:          RunDesktopBundleSize,
 	},
 	{
 		ID:          "website-bundle-size",
@@ -2081,6 +2083,26 @@ func FilterFastChecks(defs []CheckDefinition, fast bool, namedChecks []string) [
 	var result []CheckDefinition
 	for _, def := range defs {
 		if def.IsFast || named[def.ID] {
+			result = append(result, def)
+		}
+	}
+	return result
+}
+
+// FilterPreReleaseChecks keeps only the IsPreRelease checks when preRelease is
+// set, and drops them otherwise. Named checks bypass both directions, so
+// `pnpm check clippy-mimalloc` still runs it and `--pre-release svelte-check`
+// adds svelte-check to the lane.
+func FilterPreReleaseChecks(defs []CheckDefinition, preRelease bool, namedChecks []string) []CheckDefinition {
+	named := make(map[string]bool, len(namedChecks))
+	for _, name := range namedChecks {
+		if c := GetCheckByID(name); c != nil {
+			named[c.ID] = true
+		}
+	}
+	var result []CheckDefinition
+	for _, def := range defs {
+		if def.IsPreRelease == preRelease || named[def.ID] {
 			result = append(result, def)
 		}
 	}

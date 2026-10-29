@@ -18,7 +18,9 @@ import (
 //     and the slow-checks workflow kept invoking the old name, which the
 //     check tool rejects, so the nightly job would have failed on every run.)
 //  2. Every registry check must either be invoked by some workflow or carry a
-//     `NotInCI` reason on its definition. (A dozen checks, including
+//     `NotInCI` reason on its definition. A workflow line running the
+//     check tool with `--pre-release` covers every IsPreRelease check.
+//     (A dozen checks, including
 //     bindings-fresh, which AGENTS.md explicitly described as CI-enforced,
 //     were never wired into any workflow.)
 //  3. Every path in ci.yml's dorny/paths-filter block must exist: plain
@@ -107,8 +109,32 @@ func collectWorkflowCheckReferences(wfDir string) (map[string][]string, int, err
 		for _, name := range extractWorkflowCheckNames(string(content)) {
 			referenced[name] = append(referenced[name], e.Name())
 		}
+		// A `--pre-release` step runs the whole lane without naming its checks.
+		if workflowRunsPreReleaseLane(string(content)) {
+			for _, c := range ciCoverageRegistry {
+				if c.IsPreRelease {
+					referenced[c.ID] = append(referenced[c.ID], e.Name())
+				}
+			}
+		}
 	}
 	return referenced, scanned, nil
+}
+
+// workflowRunsPreReleaseLane reports whether any line invoking the check tool
+// passes `--pre-release`. Same `scripts/check` anchor as
+// extractWorkflowCheckNames, plus a comment guard, since prose naming the flag
+// covers nothing.
+func workflowRunsPreReleaseLane(content string) bool {
+	for line := range strings.SplitSeq(content, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") || !strings.Contains(line, "scripts/check") {
+			continue
+		}
+		if strings.Contains(line, "--pre-release") {
+			return true
+		}
+	}
+	return false
 }
 
 // validateReferencedNamesResolve is rule 1: every `--check` name in a

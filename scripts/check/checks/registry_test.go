@@ -214,6 +214,44 @@ func containsID(defs []CheckDefinition, id string) bool {
 	return false
 }
 
+// The pre-release lane is its own: `--pre-release` runs exactly its checks, every other run leaves
+// them out, and naming one still runs it.
+func TestFilterPreReleaseChecks(t *testing.T) {
+	defs := []CheckDefinition{{ID: "plain"}, {ID: "gate", IsPreRelease: true}}
+	if got := FilterPreReleaseChecks(defs, false, nil); containsID(got, "gate") || !containsID(got, "plain") {
+		t.Errorf("a normal run should drop the pre-release check and keep the rest, got %v", got)
+	}
+	if got := FilterPreReleaseChecks(defs, true, nil); !containsID(got, "gate") || containsID(got, "plain") {
+		t.Errorf("--pre-release should run only the pre-release check, got %v", got)
+	}
+}
+
+func TestFilterPreReleaseChecksNamedBypass(t *testing.T) {
+	var gate string
+	for _, c := range AllChecks {
+		if c.IsPreRelease {
+			gate = c.ID
+			break
+		}
+	}
+	if gate == "" {
+		t.Fatal("no check is IsPreRelease; drop the lane or this test")
+	}
+	if got := FilterPreReleaseChecks(AllChecks, false, []string{gate}); !containsID(got, gate) {
+		t.Errorf("naming %q should still run it", gate)
+	}
+}
+
+// A pre-release check claims no other lane: IsSlow would also pull it into `--include-slow`, and
+// IsFast or CIOnly would contradict the "only before a release" promise.
+func TestPreReleaseChecksClaimNoOtherLane(t *testing.T) {
+	for _, c := range AllChecks {
+		if c.IsPreRelease && (c.IsFast || c.IsSlow || c.CIOnly || c.JoinsScopedRuns || c.NamedOnly != "" || c.Disabled != "") {
+			t.Errorf("check %q is IsPreRelease but also claims another lane; clear the other lane flags", c.ID)
+		}
+	}
+}
+
 func TestNamedOnlyChecksClaimNoLane(t *testing.T) {
 	count := 0
 	for _, c := range AllChecks {

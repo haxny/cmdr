@@ -719,12 +719,19 @@ commit.
 ## Release prep checks that abort before tagging
 
 `scripts/release.sh` runs a few hard checks locally before it commits and tags, so a release that can't ship is never
-tagged. Beyond the version/CHANGELOG checks and `oxfmt --ci`, three are worth knowing:
+tagged. Beyond the version/CHANGELOG checks and `oxfmt --ci`, four are worth knowing:
 
 - **Changelog refs must be on `main`.** After its fast-forward pull, the script runs
   `pnpm check changelog-links --fresh`, which fails the release on any ref not reachable from HEAD (a commit cited from
   a branch that was rebased or squashed while landing). Fix: re-derive those refs from `main`, then re-run. Why
   `--fresh`: `scripts/check/checks/DETAILS.md` § "CHANGELOG commit refs".
+- **The pre-release lane must be green.** Right after that, before any version bump, the script runs
+  `pnpm check --pre-release --ci`: clippy with mimalloc on macOS (`clippy-mimalloc`) and the desktop bundle-size gate
+  (`desktop-bundle-size`, which fails when the frontend grew more than 10% past its baseline). A few minutes, mostly the
+  mimalloc clippy build. Fix a bundle-size failure by shrinking the growth or, if it's intended, refreshing the baseline
+  (delete `scripts/check/checks/desktop-bundle-size-baseline.json`, run `pnpm check desktop-bundle-size`, land it; no
+  need to ask). The same lane runs every six days in `slow-checks.yml`. What's in it and why: `scripts/check/DETAILS.md`
+  § Pre-release lane.
 - **Visual baselines are auto-refreshed (Docker required).** After the CHANGELOG/roadmap/version are finalized, the
   script runs `apps/website/scripts/update-visual-baselines.sh`, which re-shoots any stale website baseline in a pinned
   Playwright container and folds the result into the release commit. Docker must be running; a stopped Docker aborts the

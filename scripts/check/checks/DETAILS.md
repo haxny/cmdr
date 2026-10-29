@@ -943,7 +943,9 @@ compares the built website's `dist/` total against `website-bundle-size-baseline
 it downward when `dist/` shrinks past the 10% band; raising it is a deliberate act but needs no approval — delete the
 baseline file and run `pnpm check bundle-size` against a fresh build. A missing baseline is created on the spot locally
 and reported as a warning in CI. The same exemption covers `desktop-bundle-size`; the reasoning is in § "Allowlist
-consent".
+consent". The desktop lane differs in one way (`failOnGrowth`): it's a pre-release gate, so growth past the band and a
+missing baseline in CI FAIL rather than warn, and a release that ships a bigger bundle has refreshed the baseline on
+purpose.
 
 ## Website CSP connect-src
 
@@ -1011,8 +1013,8 @@ Policy by staleness class:
 
 External tools enforce the same principle natively: knip (`treatConfigHintsAsErrors` in `knip.json`), stylelint
 (`reportNeedlessDisables` in `.stylelintrc.mjs`), cargo-deny (`unused-allowed-license = "deny"` in `deny.toml`), and the
-type-aware eslint lanes (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the `osv-scanner.toml`
-ignores, one beside each lockfile: a quarterly task in `docs/maintenance.md`.
+type-aware eslint lanes (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the
+`osv-scanner.toml` ignores, one beside each lockfile: a quarterly task in `docs/maintenance.md`.
 
 ## Allowlist consent
 
@@ -2037,8 +2039,8 @@ notices file.
 
 Checks by app and tech:
 
-- **Desktop / Rust**: rustfmt, clippy, clippy-mimalloc (slow, macOS only, not in CI; clippy with `cmdr/mimalloc` in a
-  private target dir, so the global-allocator path macOS doesn't ship can't rot), rustdoc
+- **Desktop / Rust**: rustfmt, clippy, clippy-mimalloc (pre-release lane, macOS only, CI every six days; clippy with
+  `cmdr/mimalloc` in a private target dir, so the global-allocator path macOS doesn't ship can't rot), rustdoc
   (`cargo doc --all-features --document-private-items` over every first-party member, with every doc lint in
   `rustdocDeniedLints` denied and any leftover warning failing the check too; the vendored fork is skipped because
   `--all-features` turns on two mutually exclusive arms there), cargo-deny, cargo-machete, cargo-udeps (CI-only), fuzz
@@ -2118,8 +2120,8 @@ doubles as production code.
   names, so the lane that does compile the test still catches a rename. Atoms are read from `filter =` declarations
   only, never from comments quoting one). The crates' code is also covered by the desktop Rust lanes above, which all
   run workspace-wide; this scope is for checks about the crate boundary itself.
-- **Desktop / Svelte**: svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint,
-  css-unused, a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a directory-level
+- **Desktop / Svelte**: svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint, css-unused,
+  a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a directory-level
   `*.a11y.test.ts` that imports it), ui-primitive-coverage (every top-level `lib/ui/*.svelte` primitive has a Debug >
   Components catalog section), dialog-gallery-coverage (every `SOFT_DIALOG_REGISTRY` id has a row in the Debug > Soft
   dialogs gallery, and every row names a registered id), btn-restyle, bare-poll, ipc-unused (every `tauri-commands`
@@ -2178,16 +2180,16 @@ doubles as production code.
   catalogs: the per-locale guides and termbase files justify a term by citing a message key as evidence, and a citation
   orphaned by a rename hands the next translator false authority, so every backticked dotted token whose first segment
   is a real catalog namespace must name part of a real English key. § "The doc-citation check" for the namespace gate,
-  the matcher, and the two allowlist sections), bundle-size (warn-only; builds a production-shaped frontend into a
-  private dir and compares its total against a committed baseline, since the app embeds this output so every byte ships
-  in each silent update and is parsed before first paint), vite-build-target (ERROR; `apps/desktop/vite.config.js` must
-  pin `build.target` to a `safari<major>`, because Vite's default is a MOVING "widely available" baseline: leave it
-  unset and a routine Vite major bump raises the browser floor above the `minimumSystemVersion` the bundle claims,
-  silently, with a green build. It parses the config structurally (comments blanked, string literals masked, then
-  brace-matched) so the comment explaining the pin can neither fake one nor hide one, and so a `target` under `server`
-  or `optimizeDeps` doesn't answer for `build`. It deliberately enforces no UPPER bound against the plist: mapping a
-  macOS version to "the WebKit we must assume" is a product call, not a fact), knip, type-drift, tests,
-  e2e-linux-typecheck, e2e-linux (slow), e2e-playwright (slow)
+  the matcher, and the two allowlist sections), bundle-size (pre-release lane, fails on growth past 10%; builds a
+  production-shaped frontend into a private dir and compares its total against a committed baseline, since the app
+  embeds this output so every byte ships in each silent update and is parsed before first paint), vite-build-target
+  (ERROR; `apps/desktop/vite.config.js` must pin `build.target` to a `safari<major>`, because Vite's default is a MOVING
+  "widely available" baseline: leave it unset and a routine Vite major bump raises the browser floor above the
+  `minimumSystemVersion` the bundle claims, silently, with a green build. It parses the config structurally (comments
+  blanked, string literals masked, then brace-matched) so the comment explaining the pin can neither fake one nor hide
+  one, and so a `target` under `server` or `optimizeDeps` doesn't answer for `build`. It deliberately enforces no UPPER
+  bound against the plist: mapping a macOS version to "the WebKit we must assume" is a product call, not a fact), knip,
+  type-drift, tests, e2e-linux-typecheck, e2e-linux (slow), e2e-playwright (slow)
 - **Desktop / Docs**: pluralize-noun, prompt-lint (every agent prompt in `apps/desktop/src-tauri/src/agent/prompts/` has
   complete frontmatter and a template that compiles, and its `render` call in `mod.rs` passes exactly the variables its
   `variables:` declares and its body uses; a call in any other shape fails closed), third-party-notices
@@ -2590,9 +2592,9 @@ with no separate no-type-info lane. **Why**: the full config is a strict superse
 (`eslint.config.js` only swaps `tseslint.configs.strict` for `strictTypeChecked`, adds the type-aware rules, and turns
 `reportUnusedDisableDirectives` back on), and the two scopes partition `eslint .`, so a plain `desktop-svelte-eslint`
 lane (23 s median, ~600 local runs a month, plus a CI step) found nothing they didn't. Its one unique job was the local
-safe `--fix`, which moved into the type-aware lanes and runs only when their verdict is red (most runs are green, so
-the green path stays one ESLint invocation). Each fix pass is scoped to its lane's files, so the two parallel lanes
-never rewrite the same file. In CI they have their own per-push job (`desktop-svelte-eslint-typecheck`) beside
+safe `--fix`, which moved into the type-aware lanes and runs only when their verdict is red (most runs are green, so the
+green path stays one ESLint invocation). Each fix pass is scoped to its lane's files, so the two parallel lanes never
+rewrite the same file. In CI they have their own per-push job (`desktop-svelte-eslint-typecheck`) beside
 `desktop-svelte`, so their 2–4 min don't lengthen it. They used to run only in the every-six-days slow workflow, where
 25 errors (one a real toast-timeout bug) sat on a green `main` (2026-10-21).
 
@@ -2605,10 +2607,11 @@ cause it, so the invariant is structural instead, planned in `eslint-passes.go` 
 `TestESLintPassesNeverFixWithTypeAwareRules`: any pass with `--fix` sets `ESLINT_NO_TYPECHECK=1` (every app's
 `eslint.config.js` then turns the type-aware rules and unused-directive reporting off) and passes
 `--fix-type problem,suggestion,layout`, so even a misconfigured rule set can't delete an `eslint-disable`. Per lane: the
-desktop's two `eslint-typecheck-*` lanes run the full config check-only first and, only on a red local run, the fix
-pass over their own file set followed by the verdict again (`typeAwareFixPasses`); the single-lane apps (`api-server`, `website`, `dashboard`) run the fix pass and then the full config check-only, the final
-pass being the verdict. The cost: type-aware findings (`no-unnecessary-type-assertion`, `no-unnecessary-condition`,
-unused directives) are reported, never fixed, so an agent fixes them by hand.
+desktop's two `eslint-typecheck-*` lanes run the full config check-only first and, only on a red local run, the fix pass
+over their own file set followed by the verdict again (`typeAwareFixPasses`); the single-lane apps (`api-server`,
+`website`, `dashboard`) run the fix pass and then the full config check-only, the final pass being the verdict. The
+cost: type-aware findings (`no-unnecessary-type-assertion`, `no-unnecessary-condition`, unused directives) are reported,
+never fixed, so an agent fixes them by hand.
 
 **Decision**: `desktop-svelte-kit-sync` runs before every check that needs the TypeScript program. **Why**:
 `apps/desktop/tsconfig.json` extends `$app/tsconfig`, the gitignored `node_modules/$app/tsconfig.json` sync generates,

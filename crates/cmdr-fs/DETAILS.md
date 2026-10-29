@@ -1084,10 +1084,11 @@ with the allocator that's installed. The one exception: only a binary that insta
 binaries install their own counting allocator over `System`, so the mimalloc readers' tests allocate through `mi_malloc`
 directly and run only in a `--features mimalloc` test build.
 
-**What keeps the unused path alive**: the `clippy-mimalloc` check lane (slow, macOS) clippies the workspace with
-`cmdr/mimalloc` in its own target dir, and `rustdoc`'s `--all-features` documents it. `THIRD-PARTY-NOTICES.md` covers
-the default macOS build, so it doesn't credit mimalloc: shipping macOS on mimalloc again means making it that build's
-default (the rule in `build.rs`), which brings the credit back with it.
+**What keeps the unused path alive**: the `clippy-mimalloc` check lane (pre-release, macOS: before every release tag and
+every six days in CI) clippies the workspace with `cmdr/mimalloc` in its own target dir, and `rustdoc`'s
+`--all-features` documents it. `THIRD-PARTY-NOTICES.md` covers the default macOS build, so it doesn't credit mimalloc:
+shipping macOS on mimalloc again means making it that build's default (the rule in `build.rs`), which brings the credit
+back with it.
 
 ### The readers
 

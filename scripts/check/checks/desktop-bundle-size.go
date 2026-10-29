@@ -8,7 +8,8 @@ import (
 	"regexp"
 )
 
-// Desktop frontend bundle-size growth warning (warn-only, never fails).
+// Desktop frontend bundle-size gate, in the pre-release lane: growth past the
+// budget fails, so a release that ships a bigger bundle does so on purpose.
 //
 // The app embeds the built SvelteKit output, so every byte here rides in the
 // `.app`, ships in every silent update, and is parsed at startup before first
@@ -20,11 +21,11 @@ import (
 
 const desktopBundleBaselineRel = "scripts/check/checks/desktop-bundle-size-baseline.json"
 
-const desktopBundleBaselineComment = "Baseline for the desktop-bundle-size check (warn-only). " +
+const desktopBundleBaselineComment = "Baseline for the desktop-bundle-size check (a pre-release gate: growth past 10% fails). " +
 	"Measures the SvelteKit output the Tauri app embeds, built fresh into a private dir so it never touches apps/desktop/build/. " +
 	"Asset names are content-hash-normalized (chunks/AbC12345.js → chunks/*.js) so rebuilds compare stably. " +
 	"A local run ratchets totalBytes down when the bundle shrinks. Raising it is FINE without asking, unlike most " +
-	"allowlists here: delete this file and run `pnpm check desktop-bundle-size` to regenerate. The warn at the moment " +
+	"allowlists here: delete this file and run `pnpm check desktop-bundle-size` to regenerate. The failure at the moment " +
 	"of growth is the signal; the number is only a record of where the bundle stands."
 
 // desktopBundleOutDir is where this check builds, deliberately NOT
@@ -88,6 +89,9 @@ func desktopBundleSpec(rootDir string) bundleSizeSpec {
 		prepare:     buildDesktopFrontend,
 		missingHint: "frontend build produced no output",
 		normalize:   normalizeDesktopAssetName,
+		// A pre-release gate: growth past the budget stops the release until
+		// someone refreshes the baseline, which is free but deliberate.
+		failOnGrowth: true,
 	}
 }
 

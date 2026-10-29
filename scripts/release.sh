@@ -138,6 +138,12 @@ prepare_release() {
   # to nothing. `--fresh`: its cache keys on CHANGELOG.md alone, and reachability is about history.
   pnpm check changelog-links -m --fresh
 
+  # The pre-release lane: gates that guard what a release ships but are too slow or too steady to
+  # earn a seat on every run (clippy with mimalloc on macOS, the bundle-size gate). `--ci` so it
+  # writes nothing into the still-clean tree; with `set -e` a failure stops the release before any
+  # version bump. `scripts/check/DETAILS.md` § Pre-release lane.
+  pnpm check --pre-release --ci
+
   echo "Releasing version $VERSION on top of $(git rev-parse --short=9 HEAD)..."
 
   # Update version in package.json
