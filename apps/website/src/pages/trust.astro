@@ -18,7 +18,13 @@ import {
     verifiedAgainst,
     vulnerabilityResponse,
 } from '../lib/trust'
-import { codeCounts, releaseCadence, updateAdoption, window as devWindow } from '../lib/trust-development'
+import {
+    codeCounts,
+    measuredOn as devMeasuredOn,
+    releaseCadence,
+    updateAdoption,
+    window as devWindow,
+} from '../lib/trust-development'
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 const euLabel = { yes: 'In the EU', no: 'Outside the EU', partly: 'Partly outside the EU' } as const
@@ -186,12 +192,14 @@ const toc = [
         }
     </ul>
     <p>
-        Cmdr follows macOS's proxy settings: an HTTP, HTTPS, or SOCKS proxy set by hand, the list of hosts that bypass
-        it, and automatic configuration with a PAC file, which macOS itself runs. If the PAC file can't be loaded, Cmdr
-        connects directly, as macOS does. The <code>HTTPS_PROXY</code>, <code>HTTP_PROXY</code>,
-        <code>ALL_PROXY</code>, and <code>NO_PROXY</code> environment variables work too and take precedence, including
-        a SOCKS address like <code>socks5h://proxy.example:1080</code>. Addresses on the Mac itself always go direct, so
-        on-device AI keeps working behind a proxy.
+        Cmdr's web connections (everything above except file servers and phones) follow macOS's proxy settings: an
+        HTTP, HTTPS, or SOCKS proxy set by hand, the list of hosts that bypass it, and automatic configuration with a
+        PAC file, which macOS itself runs. If the PAC file can't be loaded, Cmdr connects directly, as macOS does. The
+        <code>HTTPS_PROXY</code>, <code>HTTP_PROXY</code>, <code>ALL_PROXY</code>, and <code>NO_PROXY</code>
+        environment variables work too and take precedence, including a SOCKS address like
+        <code>socks5h://proxy.example:1080</code>. Addresses on the Mac itself and link-local addresses
+        (<code>169.254.x.x</code>, <code>fe80::</code>) always go direct, so on-device AI keeps working behind a proxy.
+        SMB, SFTP, and NFS servers are reached directly, never through a proxy.
     </p>
     <p>
         Through a SOCKS proxy from macOS's settings, the proxy looks up host names, as macOS itself does, so the names
@@ -199,7 +207,9 @@ const toc = [
     </p>
     <p>
         Cmdr checks server certificates with macOS's own certificate trust, so a company's TLS-inspection certificate
-        that the Mac trusts works in Cmdr too. Without that trust, Cmdr refuses the connection.
+        that the Mac trusts works in Cmdr too. Without that trust, Cmdr refuses the connection. The one exception is a
+        WebDAV server with its own certificate (common on a NAS): Cmdr shows the certificate's fingerprint, and the user
+        can choose to trust that one certificate for that one server.
     </p>
     <p>
         Tested on macOS 27 behind a TLS-inspecting proxy, with its certificate trusted and not trusted, and with a proxy
@@ -212,26 +222,27 @@ const toc = [
         <code>SOCKS</code>: macOS's own PAC reader skips <code>SOCKS5</code> and <code>SOCKS4</code>.
     </p>
     <DevTodo>
-        Release timing: PAC files, the bypass list, SOCKS proxies, and "the Mac itself always goes direct" ship in the
-        release after 0.50.0 (<code>cmdr-http</code>). Until then this section is ahead of the app: 0.50.0 follows only a proxy set by
-        hand and the environment variables, and it sends local addresses through the proxy. Automatic proxy discovery
-        (WPAD) also works through the PAC path, but wasn't tested end to end, so it isn't claimed above. Evidence:
-        <code>docs/notes/proxy-and-tls-inspection-2026-10.md</code>.
+        Automatic proxy discovery (WPAD) also works through the PAC path, but wasn't tested end to end, so it isn't
+        claimed above. Evidence: <code>docs/notes/proxy-and-tls-inspection-2026-10.md</code>.
     </DevTodo>
 
     <h3 id="website">The website</h3>
     <p>
         getcmdr.com counts visits with Umami, which runs on Cmdr's own server in Finland and uses no cookies. It also
         uses PostHog (EU cloud) for visit recordings and heatmaps, kept in memory only, so it sets no cookie either.
+        Download links go through <code>api.getcmdr.com</code>, which counts each download with its country, referring
+        site, and browser, and a daily-salted IP hash it removes after 90 days.
     </p>
 
     <h2 id="mdm">Central management (MDM)</h2>
     <p>
-        IT can turn off usage stats, reports, updates, and AI for every user with a configuration profile from any
+        IT can turn off usage stats, reports, updates, and AI, and keep the security event log on, for every user with
+        a configuration profile from any
         MDM (Jamf, Kandji, Intune, and others). Cmdr reads managed preferences from the
         <code>com.veszelovszki.cmdr</code> preference domain, the app's bundle id. A user can't change a managed
         setting: Settings shows it locked, with a note that the organization manages it, and the MCP server can't
-        change it either. Cmdr picks up a new or changed profile while it runs, before it sends anything else.
+        change it either. Cmdr picks up a new or changed profile while it runs, and reads the profile again before each
+        send (at most once a second).
     </p>
     <ul>
         <li>
@@ -253,8 +264,10 @@ const toc = [
 
     <h3 id="mdm-keys">Keys</h3>
     <p>
-        Every key only turns something off or narrows it, and no key can turn anything on. A key that's missing, or
-        set to false, leaves that part up to each user.
+        Every key only turns something off or narrows it. The one exception keeps something on:
+        <code>DisableSecurityLogOptOut</code> stops users from turning off the local security event log, which never
+        leaves the Mac. No key turns on anything that sends data. A key that's missing, or set to false, leaves that
+        part up to each user.
     </p>
     <ul>
         {
@@ -291,8 +304,9 @@ const toc = [
         </li>
         <li>
             <strong>To check a Mac</strong>, run
-            <code>defaults read "/Library/Managed Preferences/com.veszelovszki.cmdr"</code>, which shows what the
-            profile delivered.
+            <code>defaults read "/Library/Managed Preferences/com.veszelovszki.cmdr"</code>, which shows what a device
+            profile delivered. For a user profile, read
+            <code>"/Library/Managed Preferences/&lt;user name&gt;/com.veszelovszki.cmdr"</code> instead.
         </li>
     </ul>
 
@@ -321,14 +335,12 @@ const toc = [
         <li>
             <strong>Feedback and newsletter signup</strong>: only when the user sends them.
         </li>
+        <li>
+            <strong>Images in Markdown files</strong>: only after the user clicks "Load images from the web" for a
+            document.
+        </li>
         <li><strong>Remote files</strong>: servers and devices the user connects to.</li>
     </ul>
-    <DevTodo>
-        Release timing: managed preferences ship in the first release after 0.50.0. This section, the gap lines it
-        replaced, and the "IT can" sentences elsewhere on this page are only true from then, so publish them with
-        that release. Then David runs plan M9 (the sample profile on a real Mac) before the
-        <a href="https://github.com/vdavid/cmdr/issues/118">#118</a> boxes get ticked.
-    </DevTodo>
 
     <h3 id="mdm-deploy">Deploying Cmdr</h3>
     <ul>
@@ -379,6 +391,7 @@ const toc = [
     </p>
     <ul>
         <li>Downloads and updates come from GitHub (United States), which sees the IP address.</li>
+        <li>Optional model downloads come from Hugging Face (United States), which sees the IP address.</li>
         <li>
             Crash reports, error reports, and feedback become issues in a private GitHub repository (United States).
             An email address the user attached, and an error report's note, go in a comment that's deleted on a
@@ -424,7 +437,8 @@ const toc = [
     }
     <p>
         Services with no user data: healthchecks.io and UptimeRobot (uptime monitoring), and GitGuardian (scans the
-        source code for leaked secrets). Hugging Face serves optional model downloads that the user starts.
+        source code for leaked secrets). Hugging Face serves optional model downloads that the user starts, so it sees
+        the Mac's IP address.
     </p>
 
     <h2 id="storage">What is stored where, and for how long</h2>
@@ -443,7 +457,11 @@ const toc = [
             shares. It lives in <code>~/Library/Caches/com.veszelovszki.cmdr/drive-index/</code>, so Time Machine
             doesn't back it up, and Cmdr rebuilds it if it's deleted.
         </li>
-        <li>For image search: text read from images (OCR), tags, and image fingerprints.</li>
+        <li>
+            When image search is on (off by default): each image's path, text read from it (OCR), tags, and
+            fingerprints for finding similar images. It lives in <code>Application Support</code>, so Time Machine
+            backs it up.
+        </li>
         <li>
             A log of every copy, move, rename, and delete, with paths (up to 3 GB by default). Turning it off in
             Settings stops logging new operations, and they can't be undone then.
@@ -456,7 +474,14 @@ const toc = [
             trying to reach its MCP server, a network share's reply without the server's signature, or an update that
             isn't a genuine Cmdr release), it also says so on screen, whether or not the log is on.
         </li>
-        <li>Search and selection history, AI chats, and the AI assistant's notes.</li>
+        <li>
+            Search and selection history, which folders the user opens and how often, the days Cmdr was opened, AI
+            chats, and the AI assistant's notes.
+        </li>
+        <li>
+            If the user turns on AI request logging in Settings › Advanced (off by default), a copy of every AI request
+            and answer, in <code>llm-logs/</code>.
+        </li>
         <li>Server addresses and usernames for saved network connections, and settings.</li>
         <li>
             Logs with full paths, up to 200 MB by default. Paths are cleaned only when a report is sent, not in the
@@ -474,20 +499,27 @@ const toc = [
     <p id="remove">
         <strong>Removing Cmdr and all its data</strong>: in Cmdr, open Settings › Updates &amp; privacy and click
         <strong>Delete all Cmdr data</strong>. It removes every folder, file, and Keychain item listed below, then quits,
-        and leaves your own files alone. Then move the app to the Trash.
+        and leaves your own files alone. If you turned on Settings › Behavior › "Let other apps show files in Cmdr",
+        switch it off first, or macOS keeps sending "Show in Finder" to Cmdr after it's gone. Then move the app to the
+        Trash.
     </p>
     <p>
         Already deleted the app? Delete these folders and files by hand: <code>~/Library/Application Support/com.veszelovszki.cmdr/</code>,
         <code>~/Library/Caches/com.veszelovszki.cmdr/</code>, <code>~/Library/Logs/com.veszelovszki.cmdr/</code>,
         <code>~/Library/Preferences/com.veszelovszki.cmdr.plist</code>,
-        <code>~/Library/Saved Application State/com.veszelovszki.cmdr.savedState</code>, and
+        <code>~/Library/Saved Application State/com.veszelovszki.cmdr.savedState</code>,
+        <code>~/Library/HTTPStorages/com.veszelovszki.cmdr/</code>, and
         <code>~/Library/WebKit/com.veszelovszki.cmdr/</code>. With Homebrew,
         <code>brew uninstall --zap --cask vdavid/tap/cmdr</code> does all of that. Then open Keychain Access and delete
-        the items named "Cmdr", which hold the saved passwords, API keys, and the license key.
+        the items named "Cmdr", which hold the saved passwords, API keys, and the license key. If "Show in Finder"
+        stopped working in other apps, run <code>defaults delete -g NSFileViewer</code>.
     </p>
 
     <h3>On Cmdr's servers</h3>
-    <p>A daily job on the API server deletes data on this schedule:</p>
+    <p>
+        Cmdr's servers delete data on this schedule. A daily job on the API server enforces the first six; each of the
+        others says what enforces it.
+    </p>
     <ul>
         {
             serverRetention.map((entry) => (
@@ -508,7 +540,8 @@ const toc = [
     <ul>
         <li>
             <strong>Code signing</strong>: Developer ID Application: Rymdskottkarra AB, Team ID <code>83H6YAQMNP</code>,
-            bundle id <code>com.veszelovszki.cmdr</code>. It runs on macOS 10.15 and later.
+            bundle id <code>com.veszelovszki.cmdr</code>. It needs macOS 12 or later; macOS 10.15 and 11 run on a
+            best-effort basis.
         </li>
         <li>
             <strong>Notarized by Apple</strong>, with the ticket stapled to the app. <code>spctl</code> reports
@@ -529,11 +562,14 @@ const toc = [
             publishes SHA-256 checksums (<a href="#mdm-deploy">deploying Cmdr</a>).
         </li>
         <li>
-            <strong>Build provenance</strong>: every file in a release carries a signed
+            <strong>Build provenance</strong>: every download in a release (the disk images, the installer package, the
+            update archives, the SBOMs, <code>checksums.txt</code>, and <code>latest.json</code>) carries a signed
             attestation (<a href="https://slsa.dev/spec/v1.0/levels#build-l3">SLSA Build Level 3</a>) saying which
-            commit and which GitHub workflow built it. To check a download, run
+            commit and which GitHub workflow built it. The update signatures (<code>.sig</code>) are made offline (see
+            "Signing keys" below), so they carry none. To check a download, run
             <code>gh attestation verify &lt;file&gt; --repo vdavid/cmdr</code> with the
-            <a href="https://cli.github.com/">GitHub CLI</a>.
+            <a href="https://cli.github.com/">GitHub CLI</a>. The same provenance is attached to each release as a file
+            ending in <code>.intoto.jsonl</code>.
         </li>
         <li>
             <strong>SBOMs</strong>: each release also includes software bills of materials in CycloneDX format, one
@@ -542,14 +578,16 @@ const toc = [
         </li>
         <li>
             <strong>Updates</strong>: the app downloads the new version from GitHub and checks its Ed25519 (minisign)
-            signature against a public key built into the app, before writing anything to disk. It only installs a
-            version newer than the one running, so an attacker can't force a downgrade. macOS checks the Apple
-            signature again when the app starts. If the app is in an <code>/Applications</code> folder the user can't
+            signature against the two public keys built into the app (the main key and an offline backup key for
+            rotation), before writing anything to disk. Before installing, it also checks that the new app carries
+            Rymdskottkarra AB's Apple Developer ID signature, so a leaked update key alone can't ship an update. It
+            only installs a version newer than the one running, so an attacker can't force a downgrade. If the app is in an <code>/Applications</code> folder the user can't
             write to, it downloads nothing and says how to update by hand instead.
         </li>
         <li>
-            <strong>Turning updates off</strong>: per user in Settings &gt; Updates &amp; privacy. IT can turn them
-            off for everyone or hold Cmdr at a version (<a href="#mdm">central management</a>).
+            <strong>Turning updates off</strong>: each user can turn off automatic checks in Settings &gt; Updates
+            &amp; privacy. IT can turn updates off for everyone or hold Cmdr at a version
+            (<a href="#mdm">central management</a>).
         </li>
         <li>
             <strong>Signing keys</strong>: the Apple signing keys are GitHub secrets in a protected environment that
@@ -560,12 +598,11 @@ const toc = [
         </li>
     </ul>
     <DevTodo>
-        The entitlements (none) and the code requirement above were read from the 0.50.0 release with
-        <code>codesign -d --entitlements -</code> and <code>codesign -d -r-</code>; the requirement matched 0.50.0 in
-        <code>/Applications</code> again on 2026-10-07 (<code>codesign -v -R=</code>). Nobody has tested the PPPC
-        profile on a real MDM yet. Once a release ships <code>Cmdr_X.Y.Z.intoto.jsonl</code> (the release workflow
-        attaches it from the next release on), add to the "Build provenance" bullet: "The same provenance is attached
-        to each release as a file ending in <code>.intoto.jsonl</code>."
+        The entitlements (none), the code requirement, and notarization above were read from the installed 0.57.0 on
+        2026-10-29 with <code>codesign -d --entitlements -</code>, <code>codesign -d -r-</code>,
+        <code>spctl -a -vv</code>, and <code>stapler validate</code>. Both MDM profiles were applied on a Mac enrolled
+        in Fleet on 2026-10-14 (0.52.0 from the <code>.pkg</code>, macOS 27.0.1,
+        <code>managed_policy/DETAILS.md</code> § Testing).
     </DevTodo>
 
     <h2 id="permissions">Sandbox and permissions</h2>
@@ -593,8 +630,9 @@ const toc = [
     <p>Other things Cmdr does on the system that a reviewer might notice:</p>
     <ul>
         <li>
-            While an Android phone or camera is connected over USB (MTP), Cmdr pauses the macOS
-            <code>ptpcamerad</code> service, which would otherwise take the device, and starts it again afterwards.
+            While an Android phone or camera is connected over USB (MTP), Cmdr disables the macOS
+            <code>ptpcamerad</code> service for the logged-in user and stops its process, since it would otherwise take
+            the device. Cmdr turns it back on afterwards, when it quits, and at the next launch if it crashed.
         </li>
         <li>
             It can read an SMB password that another app saved in the login keychain, only when the user connects,
@@ -607,7 +645,12 @@ const toc = [
         <li>
             The optional MCP server, which lets outside AI tools control Cmdr, is off by default. When on, it listens
             on <code>127.0.0.1</code> only, and every request needs an access token. Cmdr creates a new random token
-            each time it starts and keeps it in a file only the user's account can read.
+            each time it starts (unless the user sets a fixed one in the <code>CMDR_MCP_TOKEN</code> environment
+            variable) and keeps it in a file only the user's account can read.
+        </li>
+        <li>
+            For Android phones over ADB, Cmdr can start the ADB server from the user's own Android tools, which
+            listens on <code>127.0.0.1</code> port 5037.
         </li>
         <li>
             Cmdr opens no port that other machines can connect to: everything it listens on is <code>127.0.0.1</code>.
@@ -642,19 +685,26 @@ const toc = [
     <p>With cloud AI, this is what reaches the provider:</p>
     <ul>
         <li>
-            <strong>Ask Cmdr</strong> (the assistant): file and folder names, paths, sizes, and dates. When the user's
-            question needs it, also parts of text files, text from PDF pages, archive listings, photo metadata (which
-            can include GPS location), and text read from images. The assistant can't change or delete files.
+            <strong>Ask Cmdr</strong> (the assistant, off by default): file and folder names, paths, sizes, and dates,
+            the names of drives, network shares, and favorites, and the assistant's own notes. When the user's question
+            needs it, also parts of text files, text from PDF pages, archive listings, photo metadata (which can include
+            GPS location), and text read from images. When Ask Cmdr is on, it also looks at folders that changed
+            recently on its own and suggests what to do, sending the same kinds of data; turn that off in Settings ›
+            AI. The assistant can't change or delete files by itself. It can suggest renames, moves, copies, and
+            deletes, and nothing happens until the user reviews and approves each one.
         </li>
         <li>
             <strong>Folder name suggestions, select-by-description, and natural-language search</strong>: up to a few
-            hundred file and folder names from the current folder, or the search text.
+            hundred file and folder names from the current folder, plus that folder's path, or the search text.
         </li>
     </ul>
     <p>
-        Text recognition in images, image tags, and image search always run on the Mac, using Apple's built-in
-        frameworks. IT can turn AI off, allow only on-device AI, or limit which hosts cloud AI may reach
-        (<a href="#mdm">central management</a>).
+        Image search is off by default. When it's on, text recognition and image tags use Apple's built-in Vision
+        framework, and searching images by description uses a model Cmdr downloads once and runs through Apple's Core
+        ML. All of it runs on the Mac, and no image or text from it leaves the Mac. IT can turn AI off, allow only
+        on-device AI, or limit which hosts cloud AI may reach (<a href="#mdm">central management</a>). The optional MCP
+        server, off by default, lets AI tools the user installs read what Cmdr shows them
+        (<a href="#permissions">details</a>).
     </p>
 
     <h2 id="development">How Cmdr is built</h2>
@@ -667,7 +717,7 @@ const toc = [
         <li>
             The code that touches files, the network, and the system is Rust. {codeCounts.checks} automated checks,
             including about {fmt(Math.round(codeCounts.rustTests / 100) * 100)} Rust tests with deliberately hostile
-            cases, run during development and again on GitHub after each change.
+            cases, run during development and again on GitHub before each change lands.
         </li>
         <li>
             Development is AI-assisted. One person owns every change; as a one-person company, there's no
@@ -679,7 +729,7 @@ const toc = [
             risks that remain.
         </li>
         <li>
-            {releaseCadence.releases} releases in the last {devWindow.days} days. New dependency versions wait three
+            {releaseCadence.releases} releases in the {devWindow.days} days to {devMeasuredOn}. New dependency versions wait three
             days before use, and known vulnerabilities in dependencies are scanned for automatically.
         </li>
         <li>
@@ -711,13 +761,13 @@ const toc = [
         </li>
         <li>
             <strong>Team</strong>: one person, David Veszelovszki, designs, builds, and ships Cmdr (over 98%
-            of all commits are under his name). He holds every signing key. There's no written support
-            commitment.
+            of all commits are under his name). He holds every signing key. There's no written response time for
+            support questions. Security fixes have one (<a href="#report">Report a vulnerability</a>).
         </li>
         <li>
             <strong>License</strong>: <a href="https://github.com/vdavid/cmdr/blob/main/LICENSE">Business Source
             License 1.1</a>. Free for personal use; commercial use needs a paid license. Each version converts to
-            AGPL-3.0-or-later three years after its release (the current change date is 2029-09-19).
+            AGPL-3.0-or-later three years after its release, on the Change Date in its LICENSE file.
         </li>
         <li>
             <strong>If the company stops</strong>: the full source is public today, and each version becomes open source
@@ -794,8 +844,8 @@ const toc = [
             <a href="#report">Report a vulnerability</a>.
         </li>
         <li>
-            <strong>Product</strong>: Cmdr, a two-pane file manager. It's software for macOS 10.15 and later, on Apple
-            silicon and Intel Macs. Each version has its own number, shown in Cmdr › About Cmdr. The app's bundle id is
+            <strong>Product</strong>: Cmdr, a two-pane file manager. It's software for macOS 12 and later (10.15 and 11
+            on a best-effort basis), on Apple silicon and Intel Macs. Each version has its own number, shown in Cmdr › About Cmdr. The app's bundle id is
             <code>com.veszelovszki.cmdr</code>, and its signature names Rymdskottkarra AB, Team ID
             <code>83H6YAQMNP</code> (<a href="#signing">signing</a>).
         </li>
@@ -823,6 +873,11 @@ const toc = [
                     <strong>Connecting without encryption on a network you don't trust</strong>: a WebDAV or S3
                     server over plain <code>http://</code>, or an SMB server that doesn't encrypt, lets others on the
                     network read passwords and files on the way.
+                </li>
+                <li>
+                    <strong>Trusting a server you can't verify</strong>: accepting a WebDAV server's self-signed
+                    certificate or a new SFTP host key on a network you don't trust lets someone in the middle pose as
+                    that server. Cmdr remembers the answer and warns if it changes.
                 </li>
                 <li>
                     <strong>Turning on cloud AI</strong>: file names and, when asked, parts of files go to the AI
@@ -870,8 +925,8 @@ const toc = [
                 </li>
                 <li>
                     Keep the defaults unless you need something else: automatic updates on, AI and the MCP server off,
-                    and nothing that other machines can connect to. Settings › Advanced › "Reset all to defaults"
-                    brings them back.
+                    and nothing that other machines can connect to. A setting you changed shows a reset button next to
+                    it that puts it back to its default.
                 </li>
                 <li>
                     Full Disk Access is optional. Grant it during setup to browse every folder without macOS asking
@@ -885,9 +940,10 @@ const toc = [
             </ul>
         </li>
         <li>
-            <strong>How updates install</strong>: by default, Cmdr checks for updates at launch and then every three
-            hours. It downloads a new version, checks its signature, and installs it by itself, then asks you to
-            restart. "Later" waits, and Cmdr asks again 24 hours later. Turning updates off is under
+            <strong>How updates install</strong>: by default, Cmdr checks for updates every three hours. It downloads a
+            new version, checks its signature, and installs it by itself, then asks you to restart. "Later" waits, and
+            Cmdr asks again 24 hours later, or after four hours when the update fixes a critical security issue. When an
+            update fixes a security issue, the restart prompt and What's new say so. Turning updates off is under
             <a href="#signing">signing</a>; managed Macs are under <a href="#mdm-deploy">deploying Cmdr</a>.
         </li>
         <li>

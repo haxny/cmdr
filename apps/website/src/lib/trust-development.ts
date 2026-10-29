@@ -29,12 +29,13 @@ export const releaseCadence = {
 }
 
 /**
- * Minutes from tag push to a published release: `gh run list --workflow release.yml --limit 8
- * --json displayTitle,createdAt,updatedAt,conclusion`, the four most recent successful tag runs
- * (0.44.0: 49, 0.45.0: 43, 0.45.1: 48, 0.46.1: 35). Runs with the `attest` job keep going a few
- * minutes after the release is out, so when refreshing this, take the `publish` job's `completedAt` (`gh run view <id> --json jobs`) rather than `updatedAt`.
+ * Minutes from tag push to a published release, over the five most recent releases:
+ * `gh release list --limit 5 --json tagName,createdAt,publishedAt`, `publishedAt` minus
+ * `createdAt` (the draft is created at the tag push). In `local` signing mode a release has two
+ * `release.yml` runs (the tag push and the dispatch that publishes), so run durations don't measure
+ * this. Measured 2026-10-29: 0.53.0: 63, 0.54.0: 61, 0.55.0: 63, 0.56.0: 43, 0.57.0: 46.
  */
-export const releaseBuildMinutes = { min: 35, max: 50 }
+export const releaseBuildMinutes = { min: 43, max: 63 }
 
 /**
  * How often locked dependency versions change:
@@ -146,7 +147,7 @@ export const advisoryFixes: AdvisoryFix[] = [
  * - `unsafe` blocks: `rg -c --type rust 'unsafe \{' apps crates`. The vendored copy is
  *   `crates/fsevent-stream`: the only crate with `unsafe` code that lacks `[lints] workspace = true`,
  *   so the `undocumented_unsafe_blocks` lint doesn't reach it.
- * - Checks: the count in `scripts/check/CLAUDE.md`'s first line.
+ * - Checks: the count in `scripts/check/CLAUDE.md`'s opening sentence.
  */
 export const codeCounts = {
   rustTests: 9514,

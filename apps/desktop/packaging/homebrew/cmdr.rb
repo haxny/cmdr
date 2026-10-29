@@ -51,6 +51,7 @@ cask "cmdr" do
   zap trash: [
     "~/Library/Application Support/com.veszelovszki.cmdr",
     "~/Library/Caches/com.veszelovszki.cmdr",
+    "~/Library/HTTPStorages/com.veszelovszki.cmdr",
     "~/Library/Logs/com.veszelovszki.cmdr",
     "~/Library/Preferences/com.veszelovszki.cmdr.plist",
     "~/Library/Saved Application State/com.veszelovszki.cmdr.savedState",

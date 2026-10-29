@@ -259,7 +259,7 @@ const wcagA: CriterionRow[] = [
     name: 'Language of page',
     level: 'A',
     conformance: 'supports',
-    remark: 'Every window declares the language the user chose for the app (12 languages).',
+    remark: 'Every window declares the language the user chose for the app (11 languages).',
   },
   {
     id: '3.2.1',
@@ -459,7 +459,7 @@ const wcagAA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       'Column headers, the function key bar, the new-tab button, and the tab close button are at least 24 by 24 pixels. Path segments above the file list take the full height of their bar, but a folder with a one-letter name is still a narrow target, and the divider between the panes is 8 pixels wide.',
-    issues: [441],
+    issues: [817],
   },
   {
     id: '3.1.2',
@@ -550,7 +550,7 @@ const section508Ch3: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       'Everything core works from the keyboard with remappable shortcuts, reordering and moving tabs included, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. A few click targets are still smaller than 24 pixels: a path segment with a one-letter folder name, and the divider between the panes.',
-    issues: [441],
+    issues: [817],
   },
   {
     id: '302.8',
@@ -795,7 +795,7 @@ const enClause4: CriterionRow[] = [
     name: 'Usage with limited manipulation or strength',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.7.',
-    issues: [441],
+    issues: [817],
   },
   {
     id: '4.2.8',
@@ -1103,12 +1103,7 @@ export const gapIssues: { number: number; title: string }[] = [
   },
   { number: 452, title: 'Hidden files differ from other files only by a dimmer color' },
   {
-    number: 449,
-    title: "The rename field sits inside the file's row, which hides its role from some assistive technology",
-  },
-  { number: 450, title: "Seven controls' accessible names don't contain their visible text" },
-  {
-    number: 441,
+    number: 817,
     title: 'A few click targets are still under 24 pixels: one-letter path segments and the pane divider',
   },
 ]

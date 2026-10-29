@@ -74,7 +74,7 @@ const toc = [
             <strong>There's a defined process, and it's mostly automated.</strong> {codeCounts.checks} automated checks
             (lints, custom code rules, and about {approx(codeCounts.rustTests)} Rust tests,
             {approx(codeCounts.frontendTests)} user interface tests, and {codeCounts.e2eTests}
-            end-to-end tests) run during development and again on GitHub after each change. It doesn't follow a named
+            end-to-end tests) run during development and again on GitHub before each change lands. It doesn't follow a named
             framework like Microsoft SDL, and it has no formal sign-off steps.
         </li>
         <li>
@@ -82,8 +82,8 @@ const toc = [
             second-person code review. The <a href="#review">review section</a> says what stands in for a reviewer.
         </li>
         <li>
-            <strong>Releases are frequent</strong>: {releaseCadence.releases} releases in the last {window.days} days, a
-            median of {releaseCadence.medianGapDays} days apart.
+            <strong>Releases are frequent</strong>: {releaseCadence.releases} releases in the {window.days} days to
+            {measuredOn}, a median of {releaseCadence.medianGapDays} days apart.
         </li>
         <li>
             <strong>Dependencies change every week</strong>, and a new dependency version waits three days after
@@ -92,12 +92,12 @@ const toc = [
         <li>
             <strong>Fixes reach users fast.</strong> The app checks for updates every three hours and installs them by itself.
             About {updateAdoption.firstDay.percent}% of active installs run a new release within 24 hours, and
-            {updateAdoption.thirdDay.percent}% by the third day. The two most recent dependency advisories reached a release
+            {updateAdoption.thirdDay.percent}% by the third day. The two most recent dependency advisories in the
+            {window.days} days to {measuredOn} reached a release
             {latestAdvisories.map((fix) => fix.days).sort((a, b) => a - b).join(' and ')} days after they were published.
         </li>
         <li>
-            <strong>Limits</strong>: no third-party audit, and checks on GitHub run
-            after a change lands instead of before. The full list is in
+            <strong>Limits</strong>: no third-party audit, and no second person reviews code. The full list is in
             <a href="/trust#gaps">Known limitations</a>.
         </li>
     </ul>
@@ -134,8 +134,8 @@ const toc = [
     <ul>
         <li>
             <strong>Memory-safe language for everything that touches files, the network, and the system.</strong> That
-            code is Rust. The user interface is Svelte and TypeScript, runs in a webview with a strict content security
-            policy, and can't reach the network itself.
+            code is Rust. The user interface is Svelte and TypeScript, and runs in a webview with a strict content
+            security policy: it can't load remote code, and the only host it may contact is getcmdr.com.
         </li>
         <li>
             <strong>Compiler warnings fail the build.</strong> The Rust lints run with warnings as errors. Among them:
@@ -167,12 +167,17 @@ const toc = [
         </li>
         <li>
             <strong>Secret scanning</strong>: GitHub secret scanning with push protection, and GitGuardian, check every
-            push for leaked keys. Recent commits are signed.
+            push for leaked keys. Release tags are signed, and so are most commits.
         </li>
         <li>
             <strong>OpenSSF Scorecard</strong> grades the repo's supply-chain practices on every push to
             <code>main</code>, and the
             <a href="https://scorecard.dev/viewer/?uri=github.com/vdavid/cmdr">results are public</a>.
+        </li>
+        <li>
+            <strong>Static analysis (CodeQL)</strong> scans the GitHub workflows, the TypeScript, and the Rust code:
+            the first two on every pull request, Rust on each change to it, and all three every week. A high or
+            critical finding fails the scan and holds the next release.
         </li>
     </ul>
 
@@ -184,7 +189,10 @@ const toc = [
     </p>
     <p>What stands in for a reviewer:</p>
     <ul>
-        <li>The automated checks in the <a href="#test">test section</a>, which run during development and again on GitHub.</li>
+        <li>
+            The automated checks in the <a href="#test">test section</a>. GitHub won't let a change onto the main branch
+            until they pass, and the branch's history can't be rewritten or deleted.
+        </li>
         <li>
             The project's written engineering rules, which are public:
             <a href={`${repo}/blob/main/AGENTS.md`}>AGENTS.md</a> and a short guide next to each part of the code.
@@ -201,8 +209,8 @@ const toc = [
             device unplugged during a transfer, a server that fails.
         </li>
         <li>
-            Integration tests against real SMB, SFTP, and WebDAV servers in containers, plus a real Nextcloud server,
-            and a simulated phone for USB transfers.
+            Integration tests against real SMB, SFTP, WebDAV, S3, and NFS servers in containers, plus a real Nextcloud
+            server, and a simulated phone for USB transfers.
         </li>
         <li>Property-based tests, which try many random inputs, for parts of the file index and the app.</li>
         <li>
@@ -222,9 +230,10 @@ const toc = [
             slower checks run at milestones. Nothing forces this before a commit; it's the written development process.
         </li>
         <li>
-            <strong>After every push to the main branch, on GitHub (Linux)</strong>: all lints and custom checks, all
-            unit and integration tests, and the end-to-end suite in Docker. This runs after the change lands, so a
-            failure means a fix follows; it doesn't block the change.
+            <strong>Before a change lands on the main branch, on GitHub</strong>: every change arrives as a pull
+            request, and GitHub refuses to merge it until the checks for the parts it touches pass: lints and custom
+            checks, unit and integration tests, and the end-to-end suite in Docker on Linux, plus the Rust lints and
+            tests on macOS when Rust code changed. Nobody can skip this, the maintainer included.
         </li>
         <li>
             <strong>Every day, on GitHub</strong>: the dependency vulnerability and license scans
@@ -233,9 +242,9 @@ const toc = [
         </li>
         <li>
             <strong>Every six days, on GitHub</strong>: <code>govulncheck</code> for the Go build scripts, an
-            unused-dependency scan, the slowest lints, and live tests against five AI providers' real APIs. Also
-            fuzzing: random-input testing, two minutes each, of the parsers that read data from outside (Android phones
-            over USB, WebDAV and S3 server responses, archives, PDFs, and image headers).
+            unused-dependency scan, and live tests against five AI providers' real APIs. Also fuzzing: random-input
+            testing, two minutes each, of the parsers that read data from outside (Android phones, WebDAV, S3, and NFS
+            server responses, archives, PDFs, and image headers).
         </li>
         <li>
             <strong>Every release, on GitHub (macOS)</strong>: a check that the built app uses no macOS framework or
@@ -245,21 +254,22 @@ const toc = [
     </ul>
     <p>
         A release waits for GitHub's checks: a full, green run of every check on the exact commit being released,
-        version bump included. The app builds while those checks run, but nothing ships until they're green: the
-        update isn't signed without them, and the release workflow on GitHub checks them again before it publishes
-        anything, so a tag pushed by hand can't skip them.
+        version bump included, plus a green CodeQL scan and no open high or critical CodeQL finding. The app builds
+        while those checks run, but nothing ships until they're green: the maintainer's signing step refuses without
+        them, and the release workflow checks them again before it publishes anything. The only override is a
+        repository setting that names one exact release tag, which only the maintainer can set.
     </p>
     <p>
-        Not in place: automated tests of the macOS-only code on GitHub (the per-push runs use Linux).
+        Not in place: end-to-end tests of the macOS app on GitHub. The end-to-end suite on GitHub runs on Linux; the
+        macOS one runs on the maintainer's Mac.
     </p>
     <DevTodo>
         Numbers only you see. In the {window.days} days to {measuredOn}, {ciOnMain.failed} of {ciOnMain.runs} CI runs
         on <code>main</code> failed, and {ciOnMain.releaseCommitsRed} of the last {ciOnMain.releaseCommits} release
         commits had a red job ({ciOnMain.redJobs}). <code>scripts/release-finish.sh</code> refuses to sign without a green full CI run
         on the tagged commit (<code>scripts/release-ci-gate.sh</code>), and the release workflow's <code>ci-gate</code> job
-        checks it again before publishing. Suggestion: add a macOS runner lane for clippy and the Rust tests (public repo, so macOS minutes are
-        free), since per-push CI never compiles the <code>cfg(target_os = "macos")</code> code. That moves a sentence
-        off this page.
+        checks it again before publishing. Since 2026-10-18, <code>main</code> pushes skip the lanes and inherit
+        the pull request's verdict, so the next refresh should count pull request and release runs instead.
     </DevTodo>
 
     <h2 id="dependencies">Dependencies</h2>
@@ -267,7 +277,7 @@ const toc = [
         <li>
             <strong>Vulnerability and license policy (<code>cargo-deny</code>)</strong>: any known vulnerability in a
             Rust crate that ships in the Mac app fails the check, at any depth. Licenses must be on an allowlist, and
-            crates may only come from crates.io (no Git sources, no wildcard versions). Two advisories are ignored on
+            crates may only come from crates.io or from this repository (no Git sources, no wildcard versions). Two advisories are ignored on
             purpose, each with a written reason: one is in a test-only crate, and one (a timing issue in RSA) affects
             only SFTP logins with an RSA key file.
         </li>
@@ -299,7 +309,7 @@ const toc = [
             Renovate proposes the fixed version as soon as it's three days old.
         </li>
         <li>
-            <strong>In numbers</strong>: in the last {window.days} days, locked dependency versions changed in
+            <strong>In numbers</strong>: in the {window.days} days to {measuredOn}, locked dependency versions changed in
             {lockfileChanges.commits} commits on {lockfileChanges.days} different days, and at least once in
             {lockfileChanges.weeksWithAChange === window.weeks ? 'every one' : lockfileChanges.weeksWithAChange} of the
             {window.weeks} weeks.
@@ -309,8 +319,8 @@ const toc = [
     <h2 id="release">Build and release</h2>
     <ul>
         <li>
-            <strong>Who can release</strong>: the maintainer, by pushing a version tag to GitHub. He's the only person
-            with write access to the repository.
+            <strong>Who can release</strong>: the maintainer, by pushing a signed version tag and then signing the
+            update on his Mac. He's the only person with write access to the repository.
         </li>
         <li>
             <strong>Signed tags</strong>: the maintainer signs each release tag locally with an SSH key. Before any
@@ -333,13 +343,17 @@ const toc = [
         </li>
         <li>
             <strong>Provenance and SBOMs</strong>: once a release is published, a separate step downloads every file
-            back from it and signs a build attestation for each one (SLSA Build Level 3). It also publishes CycloneDX
+            back from it and signs a build attestation for each file the release workflow built (SLSA Build Level 3;
+            the update signatures come from the maintainer's Mac). It also publishes CycloneDX
             SBOMs (software bills of materials) for the Rust and JavaScript dependencies, signed and tied to the builds
             they describe. Check any download with
             <code>gh attestation verify &lt;file&gt; --repo vdavid/cmdr</code>.
         </li>
         <li>
-            <strong>Signing keys</strong> sit in a protected GitHub environment that only signed release tags reach.
+            <strong>Signing keys</strong>: Apple's signing and notarization credentials sit in a protected GitHub
+            environment that only release tags reach, and only after the tag's signature checks out. The
+            update-signing key never reaches GitHub: the maintainer signs each update on his own Mac, and only after
+            checking the build's provenance.
             <strong>Not in place</strong>: a reproducible build.
         </li>
     </ul>
@@ -347,13 +361,13 @@ const toc = [
     <h2 id="updates">Update delivery</h2>
     <ul>
         <li>
-            <strong>How</strong>: the app checks for a new version at launch and every three hours. It downloads the update,
+            <strong>How</strong>: the app checks for a new version every three hours. It downloads the update,
             checks its signature, installs it in place, and asks the user to restart. It only ever installs a newer
             version. Users can turn this off per Mac, and IT can control it centrally
             (<a href="/trust#mdm">central management</a>).
         </li>
         <li>
-            <strong>How often</strong>: {releaseCadence.releases} releases in the last {window.days} days, from
+            <strong>How often</strong>: {releaseCadence.releases} releases in the {window.days} days to {measuredOn}, from
             {releaseCadence.first} to {releaseCadence.last}. The median gap between releases was
             {releaseCadence.medianGapDays} days, and the longest was {releaseCadence.longestGapDays} days.
         </li>
@@ -377,7 +391,10 @@ const toc = [
         <a href={`${repo}/blob/main/SECURITY.md`}>SECURITY.md</a>. Security fixes are listed under
         "Security" in the <a href="/changelog">changelog</a>. All of them so far were found internally.
     </p>
-    <p>Every RustSec advisory in a Rust dependency that Cmdr fixed in the last {window.days} days, newest first:</p>
+    <p>
+        Every RustSec advisory in a Rust dependency that Cmdr fixed in the {window.days} days to {measuredOn}, newest
+        first:
+    </p>
     <ul>
         {
             advisoryFixes.map((fix) => (
@@ -397,8 +414,9 @@ const toc = [
     <h2 id="platforms">Supported platforms</h2>
     <ul>
         <li>
-            <strong>macOS 12 Monterey and later</strong>, on Apple Silicon and Intel Macs. macOS 10.15 Catalina and 11
-            Big Sur work on a best-effort basis: the app runs, but small visual issues there get fixed last.
+            <strong>macOS 12 Monterey and later</strong>, with Safari's updates installed, on Apple Silicon and Intel
+            Macs. macOS 10.15 Catalina and 11 Big Sur work on a best-effort basis once their last Safari update is
+            installed: the app runs, but small visual issues there get fixed last.
         </li>
         <li>
             <strong>Only the latest version gets fixes.</strong> Automatic updates keep most installs on it.
@@ -406,7 +424,7 @@ const toc = [
         <li>
             <strong>No automated test runs the app on an older macOS version.</strong> A release-time check catches
             system frameworks and functions that are too new for the oldest supported version. That check exists
-            because two releases in this period (0.42.0 and 0.46.0) wouldn't start on Catalina; both were fixed in a
+            because two releases in September 2026 (0.42.0 and 0.46.0) wouldn't start on Catalina; both were fixed in a
             follow-up release.
         </li>
         <li>

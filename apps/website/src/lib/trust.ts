@@ -6,7 +6,9 @@
  *
  * ❗ Every claim here must be true of the RELEASED app on the date in `verifiedAgainst`. The audience
  * is a security reviewer who will check it against the source, so an overstatement costs more than
- * a gap. The evidence behind each line is David's fact sheet
+ * a gap. The website deploys from `main`, so a claim about unreleased code waits for the release
+ * prep, where each release reviews the changed sections and moves the stamp
+ * (`docs/guides/trust-page-review.md`; `release.sh` refuses a stale stamp). The evidence behind each line is David's fact sheet
  * (`projects/Cmdr/business/2026-09-23 Cmdr security posture fact sheet.md` in his vault) and
  * `docs/security.md`. When a gap closes, move it out of `knownLimitations` and update the section.
  *
@@ -16,7 +18,7 @@
  */
 
 /** The release and date the page's claims were checked against. */
-export const verifiedAgainst = { version: '0.51.0', date: '2026-10-08' }
+export const verifiedAgainst = { version: '0.57.0', date: '2026-10-29' }
 
 export interface NetworkConnection {
   id: string
@@ -40,7 +42,7 @@ export const networkConnections: NetworkConnection[] = [
     name: 'Update check and download',
     destination:
       '<code>api.getcmdr.com</code>, then <code>getcmdr.com/latest.json</code>. The update itself downloads from <code>github.com</code> and <code>release-assets.githubusercontent.com</code>.',
-    when: 'At most once every three hours, starting at launch. Users can set the interval from five minutes to 24 hours.',
+    when: 'In the background, at most once every three hours, counted across relaunches, and whenever the user picks "Check for updates". Users can set the interval from five minutes to 24 hours in Settings &gt; Advanced.',
     sends:
       'The app version and CPU architecture, in the URL. The server keeps a one-way hash of the IP address, the date, the version, and the architecture. It deletes each record after seven days and keeps only daily totals.',
     control:
@@ -53,9 +55,9 @@ export const networkConnections: NetworkConnection[] = [
       '<code>api.getcmdr.com/heartbeat</code>. They stay in our own database there; no third party gets them.',
     when: 'At most once every three hours while the app is open. Feature events wait on the Mac and go with the next send.',
     sends:
-      'A random install id created on the Mac (not linked to a name, email, or license), app version, macOS version, CPU architecture, the names of features used, and a fixed list of settings values (like light or dark mode). No file names, paths, file contents, search terms, or AI prompts. That list is enforced by code review, not by an automatic filter.',
+      "A random install id created on the Mac (not linked to a name, email, or license), app version, macOS version, CPU architecture, how long the app ran, the features used (with when, and coarse details like the kind of drive), every on/off and number setting plus a fixed list of choice settings (like light or dark mode), whether Full Disk Access is granted, and whether an organization manages the Mac. No file names, paths, file contents, search terms, or AI prompts. Settings are picked by type in code, so a text setting is left out unless it's on the fixed list. Feature details are kept free of names by code review, not by an automatic filter.",
     control:
-      '<strong>On by default</strong> during the open beta. The first-launch setup shows this, and the user can\'t skip that step. Turn off with Settings &gt; Updates &amp; privacy &gt; "Send usage stats". When it\'s off, nothing is sent. IT can turn it off for everyone with <code>DisableUsageStats</code>.',
+      '<strong>On by default</strong> during the open beta, from the first launch. The first-launch setup explains it, and the user can\'t skip that step. Turn off with Settings &gt; Updates &amp; privacy &gt; "Send usage stats". When it\'s off, nothing is sent. IT can turn it off for everyone with <code>DisableUsageStats</code>.',
   },
   {
     id: 'crash-reports',
@@ -63,7 +65,7 @@ export const networkConnections: NetworkConnection[] = [
     destination: '<code>api.getcmdr.com/crash-report</code>',
     when: 'On the next launch after a crash.',
     sends:
-      "App and macOS version, where in Cmdr's code the crash happened, the crash message after it's cleaned of personal data on the Mac (at most 2,000 characters), memory addresses of the crashing code, and a random report id. From macOS's own crash report, only the one-line reason and the function names of the crashing thread. An email address only if the user ticks a box.",
+      "App and macOS version, where in Cmdr's code the crash happened, the crash message after it's cleaned of personal data on the Mac (at most 2,000 characters), memory addresses of the crashing code, how long the app ran, the Mac's model, CPU, memory, language, and free disk space, four settings (indexing, AI provider, MCP server, verbose logging), a random report id, and a random diagnostics id that groups reports from the same Mac. That id never goes with usage stats. From macOS's own crash report, only the one-line reason and the function names of the crashing thread. An email address only if the user ticks a box.",
     control:
       '<strong>On by default.</strong> Turn off with Settings &gt; Updates &amp; privacy &gt; "Send crash reports". IT can turn it off for everyone with <code>DisableCrashAndErrorReports</code>.',
   },
@@ -73,11 +75,11 @@ export const networkConnections: NetworkConnection[] = [
     destination: '<code>api.getcmdr.com/error-report</code>',
     when: 'When the user picks Help &gt; Send error report, which shows a preview first. Automatic sending exists but is off by default.',
     sends:
-      "A zip with the recent part of the app's log, the app and macOS version, and the user's note. Before it leaves the Mac, Cmdr replaces file and folder names in every path with placeholders, keeping only the extension and common folder names like Documents. A name repeated on the same log line as its path is replaced too, and so are server names, share names, and user names. Each placeholder is the same throughout one report, so the logs still show which lines are about the same file, but it can't be matched across reports. Error codes (errno, SMB, and SFTP status codes) stay as they are; an error message from another system is cleaned the same way and cut at 200 characters. Cmdr's own state (open panes, running operations, connected volumes) goes as structured fields, not free text. <strong>Known gap</strong>: a name logged on its own, with no path on its line, can get through.",
+      "A zip with the recent part of the app's log, the app and macOS version, the Mac's model, CPU, memory, and free disk space, the same diagnostics id as crash reports, and the user's note. Before it leaves the Mac, Cmdr replaces file and folder names in every path with placeholders, keeping only the extension and common folder names like Documents. A name repeated on the same log line as its path is replaced too, and so are server names, share names, and user names. Each placeholder is the same throughout one report, so the logs still show which lines are about the same file, but it can't be matched across reports. Error codes (errno, SMB, and SFTP status codes) stay as they are; an error message from another system is cleaned the same way and cut at 200 characters. Cmdr's own state (open panes, running operations, connected volumes) goes as structured fields, not free text. <strong>Known gap</strong>: a file name that macOS, a server, or a third-party library writes on its own, with no path on the same line, can get through. Names in Cmdr's own log lines are always replaced.",
     control:
       'Sent by hand only, by default. Automatic sending is Settings &gt; Updates &amp; privacy &gt; "Send error reports automatically", off by default. IT can turn off both kinds for everyone with <code>DisableCrashAndErrorReports</code>.',
     devTodo:
-      'Release timing: AI search and selection words stopped reaching the log in 3bfa0e246, and the redactor started covering paths under any prefix and a name repeated next to its path on 2026-10-06. Both ship in the release after 0.50.0, so this wording is only true from then. Remaining: a name logged with no path on its line (<code>redact/DETAILS.md</code> § "Names in prose"). If it ever closes, drop the "Known gap" sentence here, the matching line in "Known limitations", and the gap sentences in the privacy policy (section 2, the paragraph after the list, and the intro).',
+      'Remaining: a name logged with no path on its line (<code>redact/DETAILS.md</code> § "Names in prose"). If it ever closes, drop the "Known gap" sentence here, the matching line in "Known limitations", and the gap sentences in the privacy policy (section 2, the paragraph after the list, and the intro).',
   },
   {
     id: 'license',
@@ -94,7 +96,8 @@ export const networkConnections: NetworkConnection[] = [
     name: 'Feedback and newsletter signup',
     destination: '<code>api.getcmdr.com/feedback</code> and <code>api.getcmdr.com/beta-signup</code>',
     when: 'Only when the user sends feedback or types an email address to stay in touch.',
-    sends: 'The message, app and macOS version, and an email address if the user adds one. No install id.',
+    sends:
+      'The message, app and macOS version, and an email address if the user adds one, with no install id. If the user ticks "Include the past five hours of logs", an error report goes with it (see above).',
     control: 'Nothing is sent unless the user sends it.',
   },
   {
@@ -120,8 +123,8 @@ export const networkConnections: NetworkConnection[] = [
     id: 'file-access',
     name: 'Remote files the user opens',
     destination:
-      'Only servers and devices the user connects to: SMB, SFTP, and WebDAV servers, S3-compatible storage, and phones over USB.',
-    when: 'When the user browses them. To find SMB servers on the local network, Cmdr uses Bonjour (mDNS). It runs only while the Servers view is open, while Cmdr looks up the server behind an SMB share it connects to, and for 10 seconds after launch.',
+      'Only servers and devices the user connects to: SMB, SFTP, NFS, and WebDAV servers, S3-compatible storage, and phones over USB.',
+    when: 'When the user browses them. To find SMB servers on the local network, Cmdr uses Bonjour (mDNS). It runs only while the Servers view is open, while Cmdr looks up the server behind an SMB share (including shares already mounted at launch), and for about 20 seconds after launch once the user has used network features. Each search stops 10 seconds after nothing needs it.',
     sends: 'What the protocol needs: credentials the user entered and the file operations the user asked for.',
     control:
       'SMB, phone (MTP), and Android (ADB) support are on by default and each can be turned off in Settings &gt; File systems. Git support is local only and never fetches or pushes.',
@@ -135,19 +138,32 @@ export const networkConnections: NetworkConnection[] = [
     control:
       'Happens only when the user works with S3. Without it, Cmdr uses the last stored table or the one built into the app. No managed preference turns it off, since it carries no user data.',
   },
+  {
+    id: 'markdown-images',
+    name: 'Images in Markdown files (optional)',
+    destination: "Whatever web addresses a Markdown document's images point to.",
+    when: 'Only when the user views a Markdown file in Cmdr\'s viewer and clicks "Load images from the web" for that document. Until then, web images stay hidden.',
+    sends: "A normal image request, so those sites see the Mac's IP address. Nothing from the document itself.",
+    control: 'Off for every document until the user loads its images. No managed preference turns it off.',
+  },
 ]
 
 /** Hosts to allow on a proxy or firewall, with whether Cmdr needs them to work. */
 export const allowlistHosts: { host: string; purpose: string }[] = [
-  { host: 'api.getcmdr.com', purpose: 'update checks, license checks, usage stats, reports, S3 prices' },
+  {
+    host: 'api.getcmdr.com',
+    purpose: 'update checks, license checks, usage stats, reports, feedback, newsletter signup, S3 prices',
+  },
   { host: 'getcmdr.com', purpose: 'the update manifest (latest.json)' },
   { host: 'github.com, release-assets.githubusercontent.com', purpose: 'update downloads' },
   { host: 'license.getcmdr.com', purpose: 'license checks from older versions only' },
   {
     host: 'huggingface.co, *.hf.co',
-    purpose: 'optional, only for local AI and image-search model downloads (hf.co serves the files)',
+    purpose:
+      'optional, only for local AI and image-search model downloads (the files come from subdomains of hf.co several levels deep, like us.aws.cdn.hf.co)',
   },
   { host: 'your AI provider', purpose: 'optional, only if a user sets up cloud AI' },
+  { host: 'your own file servers', purpose: 'SMB, SFTP, NFS, WebDAV, and S3 servers users connect to' },
 ]
 
 export interface DataLocation {
@@ -161,8 +177,8 @@ export interface DataLocation {
 /** Where data that reaches Cmdr's backend or its vendors ends up. */
 export const dataLocations: DataLocation[] = [
   {
-    name: 'Cloudflare (Workers, D1, R2, KV)',
-    what: 'The API server. Its database holds download records, update checks, usage stats, crash reports, feedback, and the list of issued licenses. Its file storage holds error-report zips.',
+    name: 'Cloudflare (Workers, D1, R2, KV, Analytics Engine)',
+    what: 'The API server. Its database holds download records, update checks, usage stats, crash reports, feedback, error-report notes and reply-to addresses, and the list of issued licenses. Its file storage holds error-report zips and a daily backup of the license list. Its key-value store holds license keys, the hashed device ids each license was checked from, and blog like counts. Analytics Engine counts devices per license.',
     where:
       "The database and file storage are placed in Eastern Europe, but not locked to the EU by contract. The API code and the KV key-value store run on Cloudflare's global network.",
     inEu: 'partly',
@@ -212,26 +228,42 @@ export interface RetentionRule {
   rule: string
 }
 
-/** Server-side retention. A daily job enforces the D1 rows; the rest say what enforces them. */
+/**
+ * Server-side retention. A daily job on the API server enforces the first six rows (the page says
+ * so); every later row names what enforces it.
+ */
 export const serverRetention: RetentionRule[] = [
   { what: 'Update checks', rule: 'Deleted after seven days. Daily totals per version are kept.' },
   { what: 'Usage stats (heartbeats and feature events)', rule: 'Deleted after two years.' },
   {
     what: 'Download records',
-    rule: 'IP hash and browser user agent removed after 90 days. Version, architecture, country, and referrer are kept.',
+    rule: 'IP hash and browser user agent removed after 90 days. Version, architecture, country, referrer, link code, and browser family (like Safari) are kept.',
   },
   {
     what: 'Crash reports',
-    rule: 'Email and report id removed after 90 days. The technical part (versions, crash location) is kept with no time limit.',
+    rule: "Email, and the id that groups one install's reports, removed after 90 days. The technical part (versions, crash location) is kept with no time limit.",
   },
   {
     what: 'Error reports',
     rule: 'Email, notes, and the issue-tracker comment removed after 90 days. The report zip itself is deleted after 90 days by a storage rule on its bucket.',
   },
   { what: 'Feedback', rule: 'Email removed after two years. The message is kept.' },
-  { what: 'Issued licenses', rule: 'Buyer email and license record kept with no time limit.' },
-  { what: 'Website visit recordings (PostHog)', rule: 'Deleted after 30 days.' },
-  { what: 'Website visits (Umami)', rule: 'Deleted after two years.' },
+  {
+    what: 'License device checks',
+    rule: "A hashed device id drops out of its license's record 90 days after it was last seen, by the license check itself.",
+  },
+  {
+    what: 'Issued licenses',
+    rule: 'Buyer email and license record kept with no time limit, and so are the daily backups of the license list.',
+  },
+  { what: 'Blog likes', rule: "A per-post pseudonym made from the visitor's hashed IP, kept with no time limit." },
+  { what: 'Website visit recordings (PostHog)', rule: 'Deleted after 30 days, by a setting in PostHog.' },
+  {
+    what: 'Website visits (Umami)',
+    rule: "Deleted after two years, by a monthly job on Cmdr's own server that removes anything older than 23 months.",
+  },
+  { what: 'Website server logs', rule: 'Deleted after 30 days. They never hold an IP address.' },
+  { what: 'Newsletter list (Listmonk)', rule: 'Kept until the person unsubscribes.' },
   { what: 'Purchase records at Paddle', rule: 'Seven years, as Swedish accounting law requires. Paddle keeps these.' },
 ]
 
@@ -242,11 +274,12 @@ export const serverRetention: RetentionRule[] = [
  */
 export const knownLimitations: string[] = [
   '<strong>No update channels or staged rollout</strong>: every install gets a release at the same time. IT can turn updates off or hold Cmdr at a version (<a href="#mdm">central management</a>), though the updater never installs an older release.',
-  '<strong>Three connections have no managed off switch</strong>: license checks, S3 prices, and the image-search model download, each for a stated reason (<a href="#mdm-not-covered">why each one stays</a>).',
+  '<strong>Four connections have no managed off switch</strong>: license checks, S3 prices, the image-search model download, and web images in a Markdown file the user chose to load, each for a stated reason (<a href="#mdm-not-covered">why each one stays</a>).',
   '<strong>Some data leaves the EU</strong> (<a href="#eu">details</a>), and Cloudflare storage isn\'t locked to the EU jurisdiction.',
-  '<strong>Error-report cleaning has one known gap</strong>: a file name logged on its own, with no path on the same line, can be included.',
+  '<strong>Error-report cleaning has one known gap</strong>: Cmdr marks every name and path it logs itself, but a file name inside a message from macOS, a server, or a library, with no path on the same line, can get through.',
+  "<strong>The local AI model download is checked by size only</strong>, not by a fixed hash, and comes from the model's main branch on Hugging Face. The image-search model has a fixed SHA-256 hash.",
   '<strong>No reproducible builds.</strong> Instead, each release publishes SHA-256 checksums, signed build provenance, and signed SBOMs, and its tag is signed.',
-  '<strong>Automated tests run on current macOS only.</strong> A release-time check catches system frameworks and functions too new for older versions.',
+  '<strong>Automated tests run on one macOS version</strong> (macOS 26). A release-time check catches system frameworks and functions too new for older versions.',
   '<strong>No third-party audit, penetration test, SOC 2, or ISO 27001.</strong> Cmdr is self-assessed instead: the CSA STAR listing and the OpenChain self-certifications above.',
   "<strong>Proxy sign-in is limited</strong> to a user name and password in the proxy's address (<code>HTTPS_PROXY</code> or <code>ALL_PROXY</code>).",
 ]
@@ -275,7 +308,7 @@ export const complianceBadges: ComplianceBadge[] = [
   },
   {
     name: 'SLSA Build Level 3',
-    qualifier: 'Signed build provenance on every release file',
+    qualifier: 'Signed build provenance on every release download',
     image: '/images/badges/slsa-build-level-3.svg',
     href: '#signing',
   },
