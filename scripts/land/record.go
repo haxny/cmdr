@@ -103,8 +103,7 @@ func ensureRecord(r runner, n int, main, prHead string) (string, error) {
 	if remote != "" && isRecordOf(r, remote, main, prHead) {
 		return remote, nil
 	}
-	msg := recordMessage(n)
-	sha, err := r.git("commit-tree", main+"^{tree}", "-p", main, "-p", prHead, "-m", msg.Subject, "-m", msg.Body)
+	sha, err := buildRecord(r, n, main, prHead)
 	if err != nil {
 		return "", err
 	}
@@ -118,6 +117,18 @@ func ensureRecord(r runner, n int, main, prHead string) (string, error) {
 		return "", fmt.Errorf("the record push didn't go through:\n%w", err)
 	}
 	return sha, nil
+}
+
+// buildRecord makes PR n's record commit on main. It signs it when `commit.gpgSign` is on, like
+// any other commit: `git commit-tree` is plumbing and ignores that setting (verified on git
+// 2.56.0, 2026-10-30), so an unsigned record would hit `main`'s required-signatures rule.
+func buildRecord(r runner, n int, main, prHead string) (string, error) {
+	msg := recordMessage(n)
+	args := []string{"commit-tree", main + "^{tree}", "-p", main, "-p", prHead, "-m", msg.Subject, "-m", msg.Body}
+	if sign, _ := r.git("config", "--type=bool", "commit.gpgSign"); sign == "true" {
+		args = append(args, "-S")
+	}
+	return r.git(args...)
 }
 
 // isRecordOf reports whether sha is exactly the record of prHead for main.

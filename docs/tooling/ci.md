@@ -376,12 +376,12 @@ and one on a PR. A landed commit already went green on its PR, and on a `push` i
 
 1. **Fast-forward** (`pnpm land` when `main` didn't move): the pushed SHA is the PR's head, so its own check runs
    (`checks: read`) carry a completed, successful `CI OK` from GitHub Actions.
-2. **GitHub rebase or squash merge** (`pnpm land` when `main` moved, or a PR merged on GitHub): the SHAs are new, so the
-   step asks `repos/{repo}/commits/{sha}/pulls` (`pull-requests: read`) for a merged PR into `main` whose
-   `merge_commit_sha` is exactly the pushed SHA, then requires that same green `CI OK` on the PR's `head.sha`. It logs
-   the PR and head it trusted. For a rebase merge, `merge_commit_sha` is the last replayed commit, which is the push's
-   `github.sha` (verified on PR #642, six commits, and #644, four commits: `merge_commit_sha` was the tip of each on
-   `main`, 2026-10-21).
+2. **GitHub merge commit** (`pnpm land` when `main` moved, `scripts/land/DETAILS.md`; also a rebase or squash merge made
+   on GitHub): the pushed SHA is new, so the step asks `repos/{repo}/commits/{sha}/pulls` (`pull-requests: read`) for a
+   merged PR into `main` whose `merge_commit_sha` is exactly the pushed SHA, then requires that same green `CI OK` on
+   the PR's `head.sha`. It logs the PR and head it trusted. A merge commit is its PR's `merge_commit_sha` and the push's
+   `github.sha` (verified on cli/cli PR #14858's merge commit 8553724d1, `gh api .../commits/{sha}/pulls`, 2026-10-30);
+   for a rebase merge it's the last replayed commit, the push's `github.sha` too (PRs #642 and #644, 2026-10-21).
 
 Either way `verified` is set, every lane output reads `false`, and `hygiene` skips too. `CI OK` then reports green on
 the push in about a minute, and `deploy-website` runs off the raw `website-changed` filter. Anything else (an admin
@@ -402,10 +402,10 @@ push, a PR whose head never went green, an earlier commit of a replayed series) 
 - **Trust**: it trusts a `CI OK` from GitHub Actions on the SHA or on the merged PR's head, which is exactly what
   ruleset B trusts when it lets the push or the merge land. Fork PRs need no special case: their head still needs our
   own green `CI OK`.
-- **The accepted gap**: a rebase merge puts the PR's patches on a `main` its run never saw, so a semantic clash between
-  two PRs that each passed alone (no textual conflict) isn't caught on `main`. The next PR's run catches it, because a
-  `pull_request` run tests `refs/pull/N/merge` (the PR merged with the current `main`), and so does the release gate's
-  full run. David chose this (2026-10-21): re-running the suite after every rebase merge cost 255 macOS minutes for six
-  lands in one night, more than all PR runs together, and the macOS runners are the bottleneck.
+- **The accepted gap**: a merge commit onto a moved `main` makes a tree the PR's run never saw, so a semantic clash
+  between two PRs that each passed alone (no textual conflict) isn't caught on `main`. The next PR's run catches it,
+  because a `pull_request` run tests `refs/pull/N/merge` (the PR merged with the current `main`), and so does the
+  release gate's full run. David chose this (2026-10-21): re-running the suite after every such land cost 255 macOS
+  minutes for six lands in one night, more than all PR runs together, and the macOS runners are the bottleneck.
 - `ci-coverage` rule 5 keeps it whole: every lane's `if:` reads `needs.changes.outputs`, and every filter-derived
   `changes` output is gated on `steps.verified` (outputs named `*-changed` are the raw filter, for deploys).

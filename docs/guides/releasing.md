@@ -510,6 +510,9 @@ Mechanics, which the release script and the `changelog-links` check depend on:
 
 - **Draft from a synced `main`** (`git pull --ff-only origin main`, step 2). Cite only landed commits: a hash on an
   unlanded branch changes if `land` rebases or squashes it, and `changelog-links` refuses any ref not on `main`.
+- **List them with `git log --no-merges vX.Y.Z..main`.** `main` has GitHub's merge commits ("Merge pull request #N from
+  …", `pnpm land` when `main` moved under a green PR); they carry no change of their own, and the commits they bring in
+  are on that range with their own messages and hashes. Cite those, never a merge.
 - **Read every commit's title AND body.** An entry may cite several commits.
 - **Add a `## [Unreleased]` heading** right after the format preamble (before the first versioned section), and put the
   entries under it. The release script replaces it with the versioned heading, so the committed changelog has no
