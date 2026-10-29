@@ -14,6 +14,8 @@ const openTagsInPlayer = vi.hoisted(() => vi.fn())
 const tagPlayerChoices = vi.hoisted(() => vi.fn())
 const chooseTagPlayer = vi.hoisted(() => vi.fn())
 const settings = vi.hoisted(() => ({ player: 'default' }))
+const readClipboardText = vi.hoisted(() => vi.fn(() => Promise.resolve('Pasted')))
+const copyToClipboard = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
 vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -35,6 +37,8 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   openTagsInPlayer,
   tagPlayerChoices,
   chooseTagPlayer,
+  readClipboardText,
+  copyToClipboard,
 }))
 
 import type { TagEditorView } from '#lib/tauri-commands/index.js'
@@ -141,7 +145,15 @@ async function mountTab(over: { view?: TagEditorView | null } = {}) {
   })
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
-  return { root: mounted.root, state, unmount: mounted.cleanup }
+  return { root: mounted.root, state, unmount: mounted.cleanup, content: mounted.instance as unknown as Content }
+}
+
+/** What the window (`TagsWindow`) calls on the content for the native menu's roads. */
+interface Content {
+  hasDialog: () => boolean
+  runCommand: (id: 'tags.replace' | 'tags.filter') => boolean
+  selectAllTracks: () => void
+  clipboard: (action: 'cut' | 'copy' | 'paste') => Promise<void>
 }
 
 /** The mock stands in for the state; only what the window reads is there. */
@@ -358,6 +370,26 @@ describe('Open in player', () => {
     expect(settings.player).toBe('org.videolan.vlc')
     expect(openTagsInPlayer).toHaveBeenCalledWith('s1', ['/b/01.mp3', '/b/02.mp3'], 'org.videolan.vlc')
     expect(openButton(root, 'Open in VLC')).toBeDefined()
+  })
+
+  it('the open app menu holds back every native-menu road, as a dialog does', async () => {
+    const { root, state, content } = await mountTab()
+    paneList(root, 'Tracks').focus()
+    await settle()
+    expect(content.hasDialog()).toBe(false)
+    root.querySelector<HTMLElement>('button[aria-label="Choose the app to open the tracks in"]')?.click()
+    await settle()
+    expect(menuRow('VLC')).toBeDefined()
+    expect(content.hasDialog()).toBe(true)
+    expect(content.runCommand('tags.replace')).toBe(false)
+    expect(content.runCommand('tags.filter')).toBe(false)
+    await content.clipboard('paste')
+    await content.clipboard('cut')
+    await content.clipboard('copy')
+    expect(readClipboardText).not.toHaveBeenCalled()
+    expect(copyToClipboard).not.toHaveBeenCalled()
+    expect(state.edit).not.toHaveBeenCalled()
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
   })
 
   it('Choose… remembers the app the picker gave', async () => {

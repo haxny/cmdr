@@ -1366,7 +1366,7 @@
       "countText": "how many files get the cover, formatted (for example 22)"
     }
   },
-  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {A cover goes to every file, also the {countText} the filter hides.} other {A cover goes to every file, also the {countText} the filter hides.}}",
+  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {A cover goes to every file, including the {countText} the filter hides.} other {A cover goes to every file, including the {countText} the filter hides.}}",
   "@multiRename.tags.cover.allFilesFiltered": {
     "description": "Hint in the cover section of the tag editor window while a filter in the tracks pane hides some tracks: picking, pasting, or dropping a cover still changes every file, not only the shown ones.",
     "placeholders": {

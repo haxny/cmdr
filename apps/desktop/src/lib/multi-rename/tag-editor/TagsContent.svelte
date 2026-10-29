@@ -354,6 +354,7 @@
         tags,
         panes,
         activeTrackField: () => tracksPane?.activeField() ?? 'title',
+        cursorShown: () => shown === null || shown.includes(panes.tracksCursor),
         selection,
         setFieldScoped,
         clearTarget,
@@ -491,12 +492,9 @@
         return true
     }
 
-    /**
-     * A tool, the Write dialog, or any popover (the Values… list) is open: it owns the keys, and Escape closes it, never
-     * the window. One check for every road (keys, menu keys, ⌘A, ⌘X/⌘C/⌘V), the one the panes use too (`dialogIsOpen`).
-     */
+    /** A tool, Write, a popover, or the "Open in" menu is open: it owns the keys (every road), and Esc closes it. */
     export function hasDialog(): boolean {
-        return dialogOpen || dialogIsOpen()
+        return dialogOpen || dialogIsOpen() || tagPlayer.menu.isOpen
     }
 
     /**

@@ -10,6 +10,14 @@ import TagsContent from './TagsContent.svelte'
 import type { TagEditorState } from './tag-editor-state.svelte'
 import { editCursorRow, paneList, press, toggleTrack, typeInto } from './tag-cell.test-helper'
 
+const readClipboardText = vi.hoisted(() => vi.fn(() => Promise.resolve('Pasted')))
+const copyToClipboard = vi.hoisted(() => vi.fn(() => Promise.resolve()))
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  readClipboardText,
+  copyToClipboard,
+}))
+
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   getRowHeight: () => 20,
@@ -20,6 +28,7 @@ let cleanup: (() => void) | undefined
 afterEach(() => {
   cleanup?.()
   cleanup = undefined
+  vi.clearAllMocks()
 })
 
 /** Ten tracks: 01–05 on disc 1, 06–10 on disc 2. */
@@ -62,6 +71,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 interface Content {
   runCommand: (id: 'tags.filter') => boolean
   selectAllTracks: () => void
+  clipboard: (action: 'cut' | 'copy' | 'paste') => Promise<void>
 }
 
 /** A state whose `setViewScope` answers as the backend does: the count of the scope, or `null` for all. */
@@ -187,6 +197,20 @@ describe('TagsContent with the Tracks filter', () => {
     expect(header()).toContain('0 of 10 tracks (filtered)')
     await renumber(root)
     expect(state.tool).not.toHaveBeenCalled()
+    expect(root.querySelector('.status')?.textContent).toContain('No track matches the filter')
+  })
+
+  it('⌘V, ⌘X and ⌘C do nothing to a track the filter hides: the cursor row isn’t shown', async () => {
+    const { root, state, content, filterBy } = await mountFiltered()
+    await filterBy('nothing like it')
+    paneList(root, 'Tracks').focus()
+    await settle()
+    await content.clipboard('paste')
+    await content.clipboard('cut')
+    await content.clipboard('copy')
+    expect(readClipboardText).not.toHaveBeenCalled()
+    expect(copyToClipboard).not.toHaveBeenCalled()
+    expect(state.edit).not.toHaveBeenCalled()
     expect(root.querySelector('.status')?.textContent).toContain('No track matches the filter')
   })
 })

@@ -4,7 +4,7 @@
  * their own. Under a dialog nothing else happens. Otherwise: Copy puts the cursor field's text on the clipboard, Cut
  * copies it and then empties the field as Delete does, Paste sets the clipboard's plain text (unless it's blank or over
  * the field's limit, `pasteRefusal`). On a Tracks row Cut and Paste, like Delete, set every selected row when the
- * cursor row is one of them (`cursorTracks`). Each edit is a pending edit, so ⌘Z takes it back. What can't be done is worded
+ * cursor row is one of them (`cursorTracks`); a Tracks row the filter hides takes none of it. Each edit is a pending edit, so ⌘Z takes it back. What can't be done is worded
  * through `say`, for the status line.
  */
 import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -41,6 +41,8 @@ export interface TagsClipboardDeps {
   panes: { readonly active: TagsPaneId | null; readonly albumCursor: number; readonly tracksCursor: number }
   /** The Tracks pane's active cell (#, Disc or Title). */
   activeTrackField: () => TrackCell
+  /** Whether the Tracks pane's cursor row is drawn: a filter that shows nothing leaves it on a hidden row. */
+  cursorShown: () => boolean
   selection: {
     readonly count: number
     has: (index: number) => boolean
@@ -82,6 +84,7 @@ export function cursorTracks(
 export function createTagsClipboard(deps: TagsClipboardDeps): (action: TagsClipboardAction) => Promise<void> {
   const { tags, panes, selection } = deps
 
+  /** The target, or `null`; a Tracks row the filter hides is none, and the status line says why. */
   function targetOf(): ClipboardTarget | null {
     const view = tags.view
     if (view === null) return null
@@ -91,6 +94,10 @@ export function createTagsClipboard(deps: TagsClipboardDeps): (action: TagsClipb
       return row === undefined ? null : { field: row.field, text: sharedCopyText(row), path: null, index }
     }
     if (panes.active !== 'tracks') return null
+    if (!deps.cursorShown()) {
+      deps.say('multiRename.tags.filter.noneShown')
+      return null
+    }
     const index = Math.max(0, Math.min(panes.tracksCursor, view.tracks.length - 1))
     const track = view.tracks.at(index)
     if (track === undefined) return null

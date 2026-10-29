@@ -65,6 +65,8 @@
     let steps = $state.raw<readonly ReplaceStep[]>([])
     let listName = $state('')
     let listProblem = $state<string | null>(null)
+    /** The saved lists came; until then (or when they don't) "No saved lists yet" isn't true. */
+    let listsLoaded = $state(false)
 
     const formStep = $derived<ReplaceStep>({
         fields: allFields ? null : fields,
@@ -81,6 +83,7 @@
         getTagReplacePresets().then(
             (loaded) => {
                 presets = loaded
+                listsLoaded = true
             },
             () => {
                 listProblem = tString('multiRename.tags.tools.replace.lists.loadFailed')
@@ -232,10 +235,12 @@
             </Button>
         </div>
         {#if listProblem !== null}
-            <p class="note">{listProblem}</p>
+            <p class="note" role="status">{listProblem}</p>
         {/if}
         {#if presets.length === 0}
-            <p class="note">{tString('multiRename.tags.tools.replace.lists.empty')}</p>
+            {#if listsLoaded}
+                <p class="note">{tString('multiRename.tags.tools.replace.lists.empty')}</p>
+            {/if}
         {:else}
             <ul class="saved">
                 {#each presets as preset (preset.id)}

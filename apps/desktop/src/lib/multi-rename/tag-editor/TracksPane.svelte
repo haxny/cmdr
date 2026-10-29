@@ -397,8 +397,8 @@
         {#if showNumber}
             <TrackSortHeader col="number" sortKey="discTrack" label={tString('multiRename.tags.col.number')} current={sort} onClick={sortBy} align="right" />
         {/if}
-        <!-- Disc sorts like # (one order: disc, then track) but only # shows it, so a screen reader hears one sorted header. -->
-        <TrackSortHeader col="disc" sortKey="discTrack" label={tString('multiRename.tags.col.disc')} current={null} onClick={sortBy} align="right" />
+        <!-- Disc sorts like # (one order: disc, then track); # shows it while it's there, so a screen reader hears one sorted header. -->
+        <TrackSortHeader col="disc" sortKey="discTrack" label={tString('multiRename.tags.col.disc')} current={showNumber ? null : sort} onClick={sortBy} align="right" />
         <TrackSortHeader col="title" sortKey="title" label={tString('multiRename.tags.col.title')} current={sort} onClick={sortBy} />
         <TrackSortHeader col="length" sortKey="length" label={tString('multiRename.tags.col.length')} current={sort} onClick={sortBy} align="right" />
         <TrackSortHeader col="file" sortKey="fileName" label={tString('multiRename.tags.col.fileName')} current={sort} onClick={sortBy} />

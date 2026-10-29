@@ -55,7 +55,7 @@ export function createTagPlayer(deps: TagPlayerDeps): TagPlayer {
       if (res.ok) apps = res.value
     } catch (e) {
       // No list is a button that says "Open in player" and a menu with only Choose…, never a broken window.
-      log.warn('Listing the player apps failed: {error}', { error: e })
+      log.warn('Listing the player apps failed: {reason}', { reason: e instanceof Error ? e.name : typeof e })
     }
   }
 
