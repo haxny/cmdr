@@ -4,8 +4,8 @@
 //! - The incremental path classifies a debounced batch against the cache and
 //!   publishes removes, then adds, then modifies; a modify keeps the Finder tags
 //!   the cache already holds.
-//! - Over 500 events, or any `Any` / `Other` kind, it gives up on classifying and
-//!   re-reads the whole directory instead.
+//! - Over 500 changes, or any `ListingChange::Rescan`, it gives up on classifying
+//!   and re-reads the whole directory instead.
 //! - `handle_directory_change` returns only once its re-read LANDED in the cache.
 //!   `flush_all_watchers` (E2E's `flush_file_watcher`) awaits it per watch and
 //!   relies on exactly that; the flush itself is `playwright-e2e`-only, so it
@@ -15,15 +15,9 @@
 //! fallback and nothing here depends on the shared volume registry.
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use notify_debouncer_full::DebouncedEvent;
-use notify_debouncer_full::notify::Event;
-use notify_debouncer_full::notify::event::{
-    CreateKind, DataChange, EventKind, MetadataKind, ModifyKind, RemoveKind, RenameMode,
-};
-
-use super::watcher::{handle_directory_change, handle_directory_change_incremental};
+use super::watcher::{ListingChange, handle_directory_change, handle_directory_change_incremental};
 use crate::test_support::{TestDir, wait_until};
 use cmdr_fs::entry::TagRef;
 use cmdr_fs::testing::unique_test_id;
@@ -32,19 +26,12 @@ use cmdr_listing::testing::{TestListing, TestListingGuard};
 use cmdr_listing::testing::{hold_diffs, pending_changes};
 use cmdr_local::reading::list_directory_core;
 
-fn event(kind: EventKind, path: &Path) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind,
-            paths: vec![path.to_path_buf()],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
+fn content_change(path: &Path) -> ListingChange {
+    ListingChange::Content(path.to_path_buf())
 }
 
-fn content_change(path: &Path) -> DebouncedEvent {
-    event(EventKind::Modify(ModifyKind::Data(DataChange::Content)), path)
+fn structural(path: &Path) -> ListingChange {
+    ListingChange::Structural(path.to_path_buf())
 }
 
 /// A pane's listing of `dir` as `std::fs` sees it now, on an unregistered volume.
@@ -152,20 +139,12 @@ fn over_500_events_fall_back_to_a_full_re_read() {
     wait_for_the_full_re_read(&listing);
 }
 
+/// A rescan anywhere in a batch wins over the batch's other, ordinary changes.
 #[test]
-fn an_any_kind_falls_back_to_a_full_re_read() {
-    let (_scratch, seen, listing) = listing_missing_a_file("watch-any-kind");
+fn a_rescan_falls_back_to_a_full_re_read() {
+    let (_scratch, seen, listing) = listing_missing_a_file("watch-rescan");
 
-    handle_directory_change_incremental(listing.id(), vec![event(EventKind::Any, &seen)]);
-
-    wait_for_the_full_re_read(&listing);
-}
-
-#[test]
-fn an_other_kind_falls_back_to_a_full_re_read() {
-    let (_scratch, seen, listing) = listing_missing_a_file("watch-other-kind");
-
-    handle_directory_change_incremental(listing.id(), vec![event(EventKind::Other, &seen)]);
+    handle_directory_change_incremental(listing.id(), vec![content_change(&seen), ListingChange::Rescan]);
 
     wait_for_the_full_re_read(&listing);
 }
@@ -183,10 +162,7 @@ fn a_child_renamed_away_leaves_the_listing() {
 
     let elsewhere = TestDir::new("watch-rename-away-dest");
     std::fs::rename(&moved, elsewhere.join("moved.txt")).expect("scratch dir is writable");
-    handle_directory_change_incremental(
-        listing.id(),
-        vec![event(EventKind::Modify(ModifyKind::Name(RenameMode::Any)), &moved)],
-    );
+    handle_directory_change_incremental(listing.id(), vec![structural(&moved)]);
 
     let queued: Vec<(DiffChangeType, String)> = pending_changes(listing.engine(), listing.id())
         .into_iter()
@@ -201,13 +177,7 @@ fn a_child_renamed_away_leaves_the_listing() {
 fn a_replaced_watch_root_falls_back_to_a_full_re_read() {
     let (scratch, _seen, listing) = listing_missing_a_file("watch-root-replaced-batch");
 
-    handle_directory_change_incremental(
-        listing.id(),
-        vec![
-            event(EventKind::Remove(RemoveKind::Folder), &scratch),
-            event(EventKind::Create(CreateKind::Folder), &scratch),
-        ],
-    );
+    handle_directory_change_incremental(listing.id(), vec![structural(&scratch), structural(&scratch)]);
 
     wait_for_the_full_re_read(&listing);
 }
@@ -226,13 +196,7 @@ fn root_metadata_and_grandchild_events_change_nothing() {
     // Behind the cache's back, so a re-read would show up as an add.
     std::fs::write(scratch.join("unseen.txt"), b"u").expect("scratch dir is writable");
 
-    handle_directory_change_incremental(
-        listing.id(),
-        vec![
-            event(EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)), &scratch),
-            event(EventKind::Create(CreateKind::File), &deep),
-        ],
-    );
+    handle_directory_change_incremental(listing.id(), vec![content_change(&scratch), structural(&deep)]);
 
     assert!(pending_changes(listing.engine(), listing.id()).is_empty());
 }

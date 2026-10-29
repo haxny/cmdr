@@ -585,7 +585,8 @@ the vendored fork are ordinary members.
 - `crates/operation-log-dump/`: developer CLI that renders `operation-log.db` through the log's own read functions.
   Depends on `cmdr-operation-log` alone
 - `crates/fsevent-stream/`: vendored fork of the FSEvents stream crate (published as `cmdr-fsevent-stream`), giving the
-  drive watcher event IDs and `sinceWhen` replay. macOS-only
+  drive watcher event IDs and `sinceWhen` replay, and the panes' per-listing watch every event (lost-history flags
+  anchored above the folder included). macOS-only
 - `fuzz/` (repo root, outside the workspace): libFuzzer targets for the parsers that read bytes someone else chose (ADB,
   WebDAV, S3, archives, PDF, image headers), reached through each crate's `fuzzing` feature. Run by `pnpm check fuzz`
   and the slow CI lane. See `fuzz/CLAUDE.md`

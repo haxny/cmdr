@@ -9,9 +9,10 @@ submodule's own `DETAILS.md` (`volume/`); the listing engine's is `crates/cmdr-l
 Three submodules carry their own docs: `volume/`, `sync_status/` (the cloud badges), and `restic/` (browsing a
 restic backup's snapshots: the overlay row, the parked hub, and the write guards). The leaves beside them:
 
-- `watcher.rs`: FSEvents-driven listing updates: the OS half (debounce, rebasing, the stat, the full-re-read decision,
-  the `std::fs` fallback on `RefreshOutcome::NoVolume`, `directory-deleted`) over the engine's `observe_children` and
-  `refresh`.
+- `watcher.rs`: OS-driven listing updates: the OS half (rebasing, the stat, the full-re-read decision, the `std::fs`
+  fallback on `RefreshOutcome::NoVolume`, `directory-deleted`) over the engine's `observe_children` and `refresh`. Its
+  per-platform streams speak one `ListingChange`: `watcher/fsevents.rs` (macOS, our `cmdr-fsevent-stream` fork, with
+  its own debounce window) and `watcher/notify_stream.rs` (elsewhere, `notify-debouncer-full` over inotify).
 - `index_provider.rs`: the app's `VolumeProvider`, so the index never has to import `VolumeManager`. Its
   `ensure_direct_smb` is `network::smb_connect_directly::connect_directly`, with every `UpgradeResult` but `Success`
   read as a refusal. Its presence answer (`mount_identity`, `is_mounted`) reads the non-blocking mount table by
@@ -540,8 +541,9 @@ module) follows the same rule for `fetch_path_icons`.
 
 ## Watcher threading
 
-The notify-rs debouncer callback runs on notify-rs's internal thread, which has no Tokio runtime, so `tokio::spawn`
-there panics with "there is no reactor running". It bit `watcher.rs`'s full-reread fallback path (`>500` events or
+The listing watch's handler runs on notify-rs's debouncer thread (Linux) or the blocking pool (macOS's FSEvents pump
+hands each window to `spawn_blocking`, since the handler stats every path), and neither has a Tokio runtime context, so
+`tokio::spawn` there panics with "there is no reactor running". It bit `watcher.rs`'s full-reread fallback path (`>500` events or
 ambiguous event kinds), then again in v0.24.0 via the git watcher's `FullRefresh` (CRASH-26SBB). The listing engine
 spawns every re-read on the runtime it was built with (`crates/cmdr-listing/CLAUDE.md`, enforced by its
 `clippy.toml`), so a `FullRefresh` from any thread is safe. App code on a watcher OS thread uses
@@ -555,8 +557,8 @@ The listing engine reaches the watcher as its first `ListingObserver` (`watcher:
 cache removal. `start_watching_detached` hands the arm to the blocking pool; the listing pipeline never waits for it. Arming is slow,
 and slow by an amount that has nothing to do with the directory being listed:
 
-- `FSEventStreamCreate` + `FSEventStreamStart` are a handshake with `fseventsd`, and `notify` blocks until the stream's
-  new CFRunLoop thread has published its `CFRunLoopRef`.
+- `FSEventStreamCreate` + `FSEventStreamStart` are a handshake with `fseventsd`, and `create_event_stream` blocks until
+  the stream's new CFRunLoop thread has published its `CFRunLoopRef`.
 - `coverage_for_watched_path` adds a `statfs`.
 - Worst of all, it queues on `WATCHER_MANAGER` behind the PREVIOUS listing's teardown, because the frontend fires
   `listDirectoryEnd(old)` immediately before loading the new directory (`listing-loader.ts`).
@@ -574,16 +576,14 @@ run-loop scheduling", not "I/O proportional to the work".
 Two supporting changes came with it:
 
 - **`stop_watching` drops the `WatchedDirectory` OUTSIDE the manager's write lock.** Dropping it tears an FSEvents run
-  loop down, and notify's teardown busy-spins on `CFRunLoopIsWaiting` before joining the stream's thread. Holding the
-  write lock across that is what made an arm queue behind the previous teardown. ❌ Don't fold the removal and the drop
-  back into one `if let Ok(mut manager) = …` block.
-- **The debouncer uses `NoCache`, not the platform-default `RecommendedCache`** (a `FileIdMap` on macOS). The map exists
-  to pair a rename's `From` with its `To` by file id, and pays for it by walking the watched directory and `stat`ing
-  every entry at arm time, then re-`stat`ing on every create, rename, and remove. Cmdr gets nothing for that:
-  `handle_directory_change_incremental` collects the unique paths out of a batch and re-stats each one, so a rename
-  classifies identically whether it arrives as one paired event carrying both paths or as a separate `From` and `To`.
-  Root-rename detection is unaffected too, since `watch_root_identity_changed` matches on `Modify(Name(_))`, which the
-  debouncer emits either way. Linux already ran this path with `NoCache`.
+  loop down, and `EventStreamHandler::abort` waits for the loop to go idle before joining the stream's thread. Holding
+  the write lock across that is what made an arm queue behind the previous teardown. ❌ Don't fold the removal and the
+  drop back into one `if let Ok(mut manager) = …` block.
+- **The Linux debouncer uses `NoCache`, not `RecommendedCache`.** The file-id map exists to pair a rename's `From` with
+  its `To`, and pays for it by walking the watched directory and `stat`ing every entry at arm time. Cmdr gets nothing
+  for that: `handle_directory_change_incremental` collects the unique paths out of a batch and re-stats each one, so a
+  rename classifies identically whether it arrives paired or as two halves, and either half on the root is a
+  `ListingChange::Structural`.
 
 **The reconcile half of a detached arm is not optional.** `list_directory_end` removes the listing from the listing cache
 and then removes a watch the arm may not have inserted yet, so an arm can land on a listing nobody will ever close
@@ -593,7 +593,7 @@ the life of the process, each one still costing `fseventsd` fan-out. Pinned by
 `watcher_test::a_detached_arm_that_lost_the_race_leaves_no_watch_behind`, which drives `arm_and_reconcile` directly so
 the losing interleaving is the only one under test.
 
-**A change that lands before the stream starts is caught by an mtime check.** notify starts the FSEvents stream
+**A change that lands before the stream starts is caught by an mtime check.** The FSEvents stream starts
 "since now", so a child created between the listing's read and the arm is never reported, and the pane missed it
 until the user navigated away and back. The arm is not short: under fseventsd load it landed 4–10 s after the open
 (verified on macOS 27, release E2E build at load 7–18, `ended while arming` lines in the debug file log, 2026-10-13;
@@ -642,8 +642,9 @@ Same split as the git portal (`crates/cmdr-git/DETAILS.md` § "The watcher split
 the downloads watcher (`apps/desktop/src-tauri/src/downloads/DETAILS.md` § "Testing").
 
 **One real cell**: `watcher_test::entries_that_went_with_a_replaced_watch_root_leave_the_listing`, since what FSEvents
-reports for a replaced root is the OS's to answer. ❌ Don't add a second for a property of our batch handling: build the
-`DebouncedEvent`s and call `handle_directory_change_incremental`, as `rewrite_a_dotfile_beside_a_visible_file` does.
+reports for a replaced root is the OS's to answer. ❌ Don't add a second for a property of our batch handling: build
+`ListingChange`s and call `handle_directory_change_incremental`, as `rewrite_a_dotfile_beside_a_visible_file` does, or
+feed synthetic FSEvents `Event`s through `classify` / `pump` (`watcher_fsevents_test.rs`).
 The E2E arm latch (`set_test_arm_hold`) runs in the app, so it always gets the real stream.
 
 ## Watcher path rebasing
@@ -708,22 +709,25 @@ survives the replacement, so this is not a dead watch: the pane keeps getting *s
 like a refresh timing issue rather than a correctness one.
 
 `watch_root_identity_changed` therefore escalates to the full re-read (`handle_directory_change`) whenever a
-`Create`, `Remove`, or `Modify(Name)` event names the watch root itself (in either path form, via
-`event_targets_watch_root`, for the same reason `rebase_event_path` needs two). The re-read diffs against disk, replaces
-the listing, and, when the directory is genuinely gone, emits `directory-deleted` and stops the watch.
+`ListingChange::Structural` (a create, remove, rename, mount, or unmount) names the watch root itself (in either path
+form, via `event_targets_watch_root`, for the same reason `rebase_event_path` needs two). The re-read diffs against
+disk, replaces the listing, and, when the directory is genuinely gone, emits `directory-deleted` and stops the watch.
+The real-stream cell `entries_that_went_with_a_replaced_watch_root_leave_the_listing` still passes on
+`cmdr-fsevent-stream` (macOS 27.0, 2026-10-29), so the FSEvents shape above holds without `notify` in between.
 
-**Gotcha**: `Modify(Metadata(_))` on the root is deliberately not a trigger. Every ordinary child create or remove bumps
-the directory's own mtime and produces one, so counting it would route every change through the full re-read and cost
-the incremental path its entire reason to exist.
+**Gotcha**: a metadata change on the root (`ListingChange::Content`) is deliberately not a trigger. Every ordinary
+child create or remove bumps the directory's own mtime and produces one, so counting it would route every change
+through the full re-read and cost the incremental path its entire reason to exist.
 
-## Known gap: a missed rename-out under load (ERR-X84HN)
+## Lost history: a missed rename-out under load (ERR-X84HN)
 
 **Symptom** (2026-10-28, 0.56.0, macOS 27.0.1): another app renamed a file out of a `~/Downloads/<dir>/<dir>` pane, the
 indexer's FSEvents stream logged it, and the pane's listing watch fired nothing for 11 minutes, until the person's
 delete of the stale row failed. Heavy indexing and SMB load were running. The delete side is handled
-(`crates/cmdr-operations/src/delete/DETAILS.md` § "An item that's already gone is done"); the watcher cause is open.
+(`crates/cmdr-operations/src/delete/DETAILS.md` § "An item that's already gone is done").
 
-**Ruled out** (code reading, notify 8.2.1 and notify-debouncer-full 0.7.0 sources, 2026-10-29):
+**Ruled out** (code reading, notify 8.2.1 and notify-debouncer-full 0.7.0 sources, 2026-10-29, when the macOS watch
+still ran on `notify`):
 
 - **Own-write suppression**: nothing in the listing watcher or `cmdr-listing` mutes events after Cmdr's own operation.
   `host().announce` feeds the downloads watcher's ignore set only, so Cmdr's move two minutes earlier can't have muted it.
@@ -741,15 +745,25 @@ delete of the stale row failed. Heavy indexing and SMB load were running. The de
 **Leading hypothesis, unverified**: dropped events. Under churn macOS drops fine-grained events and raises
 `MustScanSubDirs` (with `UserDropped` / `KernelDropped`) on ever-higher paths, up to `/` (observed by the indexer on
 David's Mac, 14 of 28 scans 2026-07-18..20, `crates/cmdr-index/src/indexing/reconcile/reconciler/rescan/route.rs`).
-notify's FSEvents callback keeps an event only when its path `starts_with` the watched directory, so a rescan anchored
-at an ANCESTOR of a listing is discarded before the debouncer sees it, and the listing never learns it lost events.
-Not confirmed: whether a single-directory stream is handed ancestor-anchored drops at all, and whether its own stream
-dropped anything that night (the watcher logs at debug, so a shipped build's bundle can't say). Reproducing it needs
-provoked kernel or user drops, which no test here can script.
+notify's FSEvents callback kept an event only when its path `starts_with` the watched directory, so a rescan anchored
+at an ANCESTOR of a listing was discarded before the debouncer saw it, and the listing never learned it lost events.
+Reproducing it needs provoked kernel or user drops, which no test here can script.
 
-**If it holds, the fix direction**: the indexer's whole-volume stream already sees every drop anchor, so a drop anchor
-could re-read each open listing at or under it (`Listings::refresh`), independent of the per-listing stream. That
-couples the listing watcher to the indexer being on, so it's a design call, not a patch.
+**What we do about it** (#813, David's pick of option (b) over re-reading open listings from the indexer's stream,
+which would tie pane freshness to indexing being on): the macOS watch runs on our `cmdr-fsevent-stream` fork, which
+hands over every event, and `watcher/fsevents.rs::classify` decides relevance itself:
+
+- A `MustScanSubDirs` / `UserDropped` / `KernelDropped` anchored at the root or any ancestor (in any path form, up to
+  `/`) is a `ListingChange::Rescan`: the listing re-reads. At a direct child, that child is re-stated; deeper, nothing
+  the listing shows can have changed.
+- The fork's own overflow flag (its channel was full, so events were lost) is a rescan too, cleared once reported.
+- Everything else is kept exactly where `notify`'s non-recursive filter kept it: the root and its direct children.
+- One `info` line per debounce window names the anchor (`Watcher: FSEvents lost history at …`), so a bug bundle can
+  finally tell "macOS lost history and we re-read" from "the watch heard nothing".
+
+Still unconfirmed: whether a single-directory stream is handed ancestor-anchored drops at all. If a stale pane recurs
+with no such line in the bundle, the next step is option (a): re-read open listings under the indexer's drop anchors.
+Pinned by `watcher_fsevents_test.rs` (synthetic events, including a drop at `/` re-reading a real listing).
 
 ## Tag analytics
 

@@ -418,6 +418,10 @@ objc2-quick-look-ui = { version = "0.3.2", default-features = false, features = 
     "std", "QLPreviewPanel", "QLPreviewItem", "objc2-app-kit",
 ] }
 block2 = "0.6"
+# A pane's per-listing FSEvents watch (`file_system/watcher/fsevents.rs`). Our vendored fork, the
+# indexer's FSEvents layer too: unlike `notify`, it hands us every event, so a dropped-events or
+# must-scan signal anchored above the pane's folder still reaches it.
+cmdr-fsevent-stream = { path = "../../../crates/fsevent-stream" }
 # Whether the user turned Cmdr's notifications off (`notifications.rs`): the notification plugin
 # posts through `NSUserNotificationCenter`, which can't say, so we ask `UNUserNotificationCenter`.
 # Already in the lockfile through the objc2 family (published 2025-10-04). UserNotifications

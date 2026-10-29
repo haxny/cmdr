@@ -3,20 +3,17 @@
 //! Watches directories for changes and hands what it hears to the listing engine,
 //! which patches the cache and publishes `directory-diff`s. Two processing paths:
 //! incremental (stat each event's path, then `Listings::observe_children`) and
-//! full re-read (`Listings::refresh`), the fallback for over 500 events, unknown
-//! event kinds, or a watch root that changed identity.
+//! full re-read (`Listings::refresh`), the fallback for over 500 changes, a
+//! `ListingChange::Rescan` (the OS lost history), or a watch root that changed identity.
+//!
+//! The OS half is per platform: `watcher/fsevents.rs` (macOS, our `cmdr-fsevent-stream`
+//! fork, which passes lost-history signals anchored above the folder through) and
+//! `watcher/notify_stream.rs` (elsewhere, `notify`'s inotify). Both speak `ListingChange`.
 
 #[cfg(test)]
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::entry::FileEntry;
-use notify_debouncer_full::{
-    DebounceEventResult, DebouncedEvent, Debouncer, NoCache, new_debouncer_opt,
-    notify::{
-        self, RecommendedWatcher, RecursiveMode,
-        event::{EventKind, ModifyKind},
-    },
-};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -32,6 +29,32 @@ use cmdr_listing::ListingId;
 use cmdr_listing::host::{ListingObserver, OpenedListing};
 use cmdr_listing::{Listings, RefreshOutcome};
 use cmdr_local::reading::{get_single_entry, list_directory_core};
+
+#[cfg(target_os = "macos")]
+mod fsevents;
+#[cfg(not(target_os = "macos"))]
+mod notify_stream;
+#[cfg(target_os = "macos")]
+pub(super) use fsevents::WatchRoot;
+#[cfg(all(test, target_os = "macos"))]
+pub(super) use fsevents::{classify, pump};
+#[cfg(all(test, not(target_os = "macos")))]
+pub(super) use notify_stream::translate;
+
+/// What one OS event means for a listing, whichever backend heard it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ListingChange {
+    /// Something was created, removed, or renamed at this path (the root or a child).
+    Structural(PathBuf),
+    /// This path's content or metadata changed.
+    Content(PathBuf),
+    /// The OS lost history the listing depends on (dropped events, a must-scan anchored
+    /// at or above the root, a channel overflow, a watcher error): re-read the listing.
+    Rescan,
+}
+
+/// Over this many changes in one batch, re-reading the folder beats classifying each.
+const FULL_REREAD_THRESHOLD: usize = 500;
 
 /// Default debounce duration in milliseconds (used if not configured)
 const DEFAULT_DEBOUNCE_MS: u64 = 200;
@@ -66,9 +89,10 @@ pub struct DirectoryDeletedEvent {
 
 /// What keeps a watch delivering: the OS stream, which disarms when dropped.
 enum WatchStream {
-    Notify(
-        #[allow(dead_code, reason = "Debouncer must be held to keep watching")] Debouncer<RecommendedWatcher, NoCache>,
-    ),
+    #[cfg(target_os = "macos")]
+    FsEvents(#[allow(dead_code, reason = "held to keep the stream alive")] fsevents::ListingStream),
+    #[cfg(not(target_os = "macos"))]
+    Notify(#[allow(dead_code, reason = "held to keep the stream alive")] notify_stream::ListingStream),
     /// A test build's watch: the bookkeeping without an OS stream, so a test that only
     /// asserts arming, disarming, or coverage never waits on `fseventsd`. Its drop is
     /// free, so `stop_watching`'s lock-free teardown holds trivially.
@@ -168,7 +192,7 @@ fn arm_stream(listing_id: &str, path: &Path) -> Result<WatchStream, String> {
             Err(format!("Failed to watch path: {} doesn't exist", path.display()))
         };
     }
-    arm_notify_stream(listing_id, path).map(WatchStream::Notify)
+    arm_os_stream(listing_id, path)
 }
 
 /// Listing ids whose watch arms a real OS stream in a test build.
@@ -197,53 +221,20 @@ pub(crate) fn has_os_stream(listing_id: &str) -> bool {
             .watches
             .get(listing_id)
             .map(|w| &w.stream),
-        Some(WatchStream::Notify(_))
+        Some(stream) if !matches!(stream, WatchStream::Scripted)
     )
 }
 
-/// A debounced `notify` stream on `path`, handing each batch to the listing.
-fn arm_notify_stream(listing_id: &str, path: &Path) -> Result<Debouncer<RecommendedWatcher, NoCache>, String> {
-    let listing_for_closure = listing_id.to_string();
-
-    // Create the debouncer with a callback that handles changes
-    let debounce_duration = Duration::from_millis(get_debounce_ms());
-    let mut debouncer = new_debouncer_opt::<_, RecommendedWatcher, NoCache>(
-        debounce_duration,
-        None, // No tick rate limit
-        move |result: DebounceEventResult| {
-            match result {
-                Ok(events) => {
-                    handle_directory_change_incremental(&listing_for_closure, events);
-                }
-                Err(_errors) => {
-                    // Watcher errors often mean the watched directory was deleted.
-                    // Try to re-read; if it fails with NotFound, we'll emit directory-deleted.
-                    let lid = listing_for_closure.clone();
-                    tauri::async_runtime::spawn(async move { handle_directory_change(&lid).await });
-                }
-            }
-        },
-        // `NoCache`, not the platform default `RecommendedCache` (a `FileIdMap` on
-        // macOS). The map exists to pair a rename's `From` with its `To` by file id, and
-        // it pays for that by walking the watched directory and `stat`ing every entry at
-        // arm time, then re-`stat`ing on every create, rename, and remove.
-        //
-        // We get nothing for it: `handle_directory_change_incremental` collects the
-        // unique paths out of a batch and re-stats each one, so a rename classifies
-        // identically whether it arrives as one paired event carrying both paths or as a
-        // separate `From` and `To`. Root-rename detection is unaffected too, since
-        // `watch_root_identity_changed` matches on `Modify(Name(_))`, which the debouncer
-        // emits either way. Linux already runs this path with `NoCache`.
-        NoCache,
-        notify::Config::default(),
-    )
-    .map_err(|e| format!("Failed to create watcher: {}", e))?;
-
-    // Start watching the path (Debouncer implements Watcher trait)
-    debouncer
-        .watch(path, RecursiveMode::NonRecursive)
-        .map_err(|e| format!("Failed to watch path: {}", e))?;
-    Ok(debouncer)
+/// The OS stream on `path`, handing each debounced batch to the listing: FSEvents on
+/// macOS (`watcher/fsevents.rs`), `notify` elsewhere (`watcher/notify_stream.rs`).
+fn arm_os_stream(listing_id: &str, path: &Path) -> Result<WatchStream, String> {
+    let listing_id = listing_id.to_string();
+    let deliver = move |changes: Vec<ListingChange>| handle_directory_change_incremental(&listing_id, changes);
+    let debounce = Duration::from_millis(get_debounce_ms());
+    #[cfg(target_os = "macos")]
+    return fsevents::arm(WatchRoot::new(path), debounce, deliver).map(WatchStream::FsEvents);
+    #[cfg(not(target_os = "macos"))]
+    return notify_stream::arm(path, debounce, deliver).map(WatchStream::Notify);
 }
 
 /// What an FSEvents watch on `path` can actually see.
@@ -428,7 +419,7 @@ impl ListingObserver for WatchedListings {
     }
 
     /// A routed volume answers `false` to `can_watch_listings` (a git
-    /// snapshot's and an archive's paths aren't on disk, so `notify` has
+    /// snapshot's and an archive's paths aren't on disk, so the OS stream has
     /// nothing to arm on), which keeps every virtual path out by type.
     fn listing_opened(&self, opened: &OpenedListing<'_>) {
         if opened.volume.can_watch_listings() {
@@ -448,7 +439,7 @@ pub fn stop_watching(listing_id: &str) {
     let removed = WATCHER_MANAGER.write_ignore_poison().watches.remove(listing_id);
 
     // Drop OUTSIDE the lock. Dropping a `WatchedDirectory` tears an FSEvents run loop
-    // down, and notify's teardown busy-spins on `CFRunLoopIsWaiting` before it joins the
+    // down, and the teardown waits for the run loop to go idle before it joins the
     // stream's thread. Holding the manager's write lock across that made every
     // navigation's arm queue behind the previous listing's teardown, since the frontend
     // fires `listDirectoryEnd(old)` immediately before loading the new directory.
@@ -504,35 +495,26 @@ pub(super) fn event_targets_watch_root(event_path: &Path, dir_path: &Path, canon
 /// Whether this batch says the watched directory itself was replaced, removed, or
 /// renamed, so the pane's entries can no longer be trusted.
 ///
-/// `Modify(Metadata(_))` on the root is deliberately NOT a trigger: every ordinary
-/// child create or remove bumps the directory's own mtime, so counting it would send
-/// every change down the full re-read path and cost the incremental path its point.
-fn watch_root_identity_changed(events: &[DebouncedEvent], dir_path: &Path, canonical_dir: &Path) -> bool {
-    events.iter().any(|event| {
-        matches!(
-            event.kind,
-            EventKind::Create(_) | EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(_))
-        ) && event
-            .paths
-            .iter()
-            .any(|path| event_targets_watch_root(path, dir_path, canonical_dir))
+/// A content change on the root is deliberately NOT a trigger: every ordinary child
+/// create or remove bumps the directory's own mtime, so counting it would send every
+/// change down the full re-read path and cost the incremental path its point.
+fn watch_root_identity_changed(changes: &[ListingChange], dir_path: &Path, canonical_dir: &Path) -> bool {
+    changes.iter().any(|change| match change {
+        ListingChange::Structural(path) => event_targets_watch_root(path, dir_path, canonical_dir),
+        ListingChange::Content(_) | ListingChange::Rescan => false,
     })
 }
 
 /// Processes individual file-system events incrementally instead of re-reading the whole directory.
 ///
-/// Falls back to `handle_directory_change` when events are too numerous or ambiguous.
-pub(super) fn handle_directory_change_incremental(listing_id: &str, events: Vec<DebouncedEvent>) {
-    // Fallback: too many events or ambiguous event kinds
-    if events.len() > 500
-        || events
-            .iter()
-            .any(|e| matches!(e.kind, EventKind::Any | EventKind::Other))
-    {
+/// Falls back to `handle_directory_change` when the batch is too big or says the OS lost
+/// history (`ListingChange::Rescan`).
+pub(super) fn handle_directory_change_incremental(listing_id: &str, changes: Vec<ListingChange>) {
+    if changes.len() > FULL_REREAD_THRESHOLD || changes.contains(&ListingChange::Rescan) {
         let lid = listing_id.to_string();
-        // `tauri::async_runtime::spawn` instead of `tokio::spawn` because this
-        // closure runs on the notify-rs debouncer thread, which has no Tokio
-        // runtime context. Tauri's async runtime works from any thread.
+        // `tauri::async_runtime::spawn` instead of `tokio::spawn`: this runs on notify's
+        // debouncer thread or the blocking pool, neither of which is in a Tokio
+        // context. Tauri's async runtime works from any thread.
         tauri::async_runtime::spawn(async move { handle_directory_change(&lid).await });
         return;
     }
@@ -557,24 +539,21 @@ pub(super) fn handle_directory_change_incremental(listing_id: &str, events: Vec<
     // on the ROOT plus one Create per NEW child, and never a remove for the old ones.
     // Re-read instead: that diffs against disk, replaces the listing, and emits
     // `directory-deleted` plus stops the watch when the directory is really gone.
-    if watch_root_identity_changed(&events, &dir_path, &canonical_dir) {
+    if watch_root_identity_changed(&changes, &dir_path, &canonical_dir) {
         let lid = listing_id.to_string();
         // `tauri::async_runtime::spawn`, not `tokio::spawn`: see the fallback above.
         tauri::async_runtime::spawn(async move { handle_directory_change(&lid).await });
         return;
     }
 
-    // Collect unique direct-child paths, skipping access events. Event paths are
-    // rebased into the listing's path space (see `rebase_event_path`).
+    // Collect unique direct-child paths, rebased into the listing's path space (see
+    // `rebase_event_path`).
     let mut unique_paths: HashSet<PathBuf> = HashSet::new();
-    for event in &events {
-        if matches!(event.kind, EventKind::Access(_)) {
-            continue;
-        }
-        for path in &event.paths {
-            if let Some(rebased) = rebase_event_path(path, &dir_path, &canonical_dir) {
-                unique_paths.insert(rebased);
-            }
+    for change in &changes {
+        if let ListingChange::Structural(path) | ListingChange::Content(path) = change
+            && let Some(rebased) = rebase_event_path(path, &dir_path, &canonical_dir)
+        {
+            unique_paths.insert(rebased);
         }
     }
 
@@ -660,7 +639,7 @@ fn directory_deleted(listing_id: &str, path: &Path) {
 
 /// Flushes pending watcher events by re-reading every active watch.
 ///
-/// `notify-debouncer-full` doesn't expose a synchronous flush, and the
+/// The debounce window has no synchronous flush, and the
 /// debouncer's window (plus FSEvents coalescing on macOS) adds 1–10 s of
 /// latency per FS mutation under E2E. This helper sidesteps the debouncer:
 /// it grabs every active listing_id, then `handle_directory_change` re-reads
