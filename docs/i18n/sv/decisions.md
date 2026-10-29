@@ -197,8 +197,8 @@ bundle), Microsoft, file managers, the catalog.
 - Tabs `Fäst flik` / `Lossa flik` (❌ Safari's `Nåla fast`). Changelog `Ändringslogg`, apart from Help's `Nyheter`.
   `Öppna i redigeraren`.
 - Tags `Lägg till ”{color}”` / `Ta bort ”{color}”` (Finder); the submenu is the noun `Markering`.
-- Dock menu `Öppna Cmdr`, ❌ `Öppna ”Cmdr”` (opens a file). `menu.network.open` = `menu.file.open`;
-  `menu.network.edit` = `commands.serversEdit.label`.
+- Dock menu `Öppna Cmdr`, ❌ `Öppna ”Cmdr”` (opens a file). `menu.network.open` = `menu.file.open`; `menu.network.edit`
+  = `commands.serversEdit.label`.
 - The `menu.select.same*` / `.allFolders` / `.noExtension` keys and their `commands.selectionSelectSameKind.*` twins
   change together; `med filtillägget *.{extension}`. Loading `Söker efter appar…`; `delningsalternativ` (from `Dela`).
 - Justified same-as-source: `menu.view.zoom`, `menu.tag.orange`, `menu.view.askCmdr`.

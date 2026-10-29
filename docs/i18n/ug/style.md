@@ -112,7 +112,7 @@ catalog (both Arabic UEY), recorded so the next translator inherits them:
 | File         | ھۆججەت       | GNOME. Confidence: high.                             |
 | Copy         | كۆچۈر        | GNOME. Confidence: high.                             |
 | Open         | ئاچ          | GNOME, imperative. Confidence: high.                 |
-| Paste        | چاپلا         | GNOME, imperative. Confidence: high.                 |
+| Paste        | چاپلا        | GNOME, imperative. Confidence: high.                 |
 | Rename       | ئات ئۆزگەرت  | GNOME, imperative. Confidence: high.                 |
 | Cancel       | ۋاز كەچ      | GNOME, imperative. Confidence: high.                 |
 | Trash        | ئەخلەتخانا   | GNOME (literally "garbage place"). Confidence: high. |

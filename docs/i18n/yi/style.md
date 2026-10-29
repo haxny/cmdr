@@ -28,8 +28,8 @@ Yiddish software convention to copy here, so this is a default to confirm, not a
   language.
 - Majors: no macOS or Microsoft Yiddish UI exists in the reference pile (no `macOS/`, no MS terminology). Hebrew (`he`)
   is the closest shipped RTL reference for layout behavior; Yiddish is rendered RTL in Unicode-correct text the same way
-  (verified: the GNOME `yi/nautilus.po` strings are Hebrew-script, e.g. `נײַע פּאַפּקע` for "New Folder", reference pile,
-  2026-06-19).
+  (verified: the GNOME `yi/nautilus.po` strings are Hebrew-script, e.g. `נײַע פּאַפּקע` for "New Folder", reference
+  pile, 2026-06-19).
 - Recommendation: render RTL. Cmdr's UI must mirror correctly (pane layout, icons, progress direction, chevrons). This
   is a real engineering dependency, not just a string swap, and Cmdr has shipped no RTL locale yet, so the RTL plumbing
   (CSS logical properties / `dir="rtl"`, bidi isolation of `{path}` and `{name}` inserts) is a prerequisite. Flag to
@@ -68,15 +68,15 @@ Yiddish software convention to copy here, so this is a default to confirm, not a
 Sparse: the only authoritative source is the GNOME catalog, and it's barely translated (61 of ~1,200 strings, reference
 pile 2026-06-19), so most terms below are tentative and need native review.
 
-| English term  | Yiddish   | Notes                                                 |
-| ------------- | --------- | ----------------------------------------------------- |
-| New           | נײַ        | from GNOME catalog (tentative)                        |
+| English term  | Yiddish       | Notes                                                    |
+| ------------- | ------------- | -------------------------------------------------------- |
+| New           | נײַ           | from GNOME catalog (tentative)                           |
 | New Folder    | נײַע פּאַפּקע | "folder" = פּאַפּקע (papke) in GNOME catalog (tentative) |
-| Name          | נאָמען     | GNOME (tentative)                                     |
-| Search / Find | געפֿין     | GNOME "Find" (tentative)                              |
-| Size          | גרײס      | GNOME (tentative)                                     |
-| Type          | טיפּ       | GNOME (tentative)                                     |
-| Unknown       | אומבאַקאַנט | GNOME (tentative)                                     |
+| Name          | נאָמען        | GNOME (tentative)                                        |
+| Search / Find | געפֿין        | GNOME "Find" (tentative)                                 |
+| Size          | גרײס          | GNOME (tentative)                                        |
+| Type          | טיפּ          | GNOME (tentative)                                        |
+| Unknown       | אומבאַקאַנט   | GNOME (tentative)                                        |
 
 ## Brand and do-not-translate
 

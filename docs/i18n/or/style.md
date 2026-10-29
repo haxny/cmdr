@@ -19,8 +19,8 @@ everyday vocabulary. That register matches Cmdr.
 - **Second person: respectful `ଆପଣ` (āpaṇa).** Odia distinguishes familiar `ତୁମେ` (tume) from respectful `ଆପଣ` (āpaṇa);
   software uses the respectful `ଆପଣ`, which reads as ordinary courtesy. Microsoft and GNOME both use respectful-level
   address. Recommendation: `ଆପଣ` throughout. Confidence: medium-high (consistent across the two sources; no Tier-1 OS).
-- **UI actions use the polite imperative**, matching GNOME Odia ("ବାତିଲ କରନ୍ତୁ" for Cancel uses the polite `-ନ୍ତୁ` command
-  form). Recommendation: polite `-ନ୍ତୁ` imperatives for buttons and menu items. Confidence: high.
+- **UI actions use the polite imperative**, matching GNOME Odia ("ବାତିଲ କରନ୍ତୁ" for Cancel uses the polite `-ନ୍ତୁ`
+  command form). Recommendation: polite `-ନ୍ତୁ` imperatives for buttons and menu items. Confidence: high.
 
 ## Decision points
 
@@ -43,9 +43,9 @@ everyday vocabulary. That register matches Cmdr.
 
 Confirmed against GNOME Nautilus Odia (Tier 3) and Microsoft terminology (Tier 2). Extend as strings come up.
 
-| English term | Odia      | Notes                                      |
-| ------------ | --------- | ------------------------------------------ |
-| folder       | ଫୋଲଡର     | GNOME; loanword                            |
+| English term | Odia          | Notes                                      |
+| ------------ | ------------- | ------------------------------------------ |
+| folder       | ଫୋଲଡର         | GNOME; loanword                            |
 | trash        | ଆବର୍ଜନା ପାତ୍ର | GNOME; the location noun ("refuse vessel") |
 | cancel       | ବାତିଲ କରନ୍ତୁ  | GNOME; polite imperative                   |
 

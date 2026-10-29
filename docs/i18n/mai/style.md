@@ -31,8 +31,8 @@ Script, Devanagari (decided):
 
 Honorific register, pick the `अहाँ` mid tier (flag for David):
 
-- Maithili verb agreement encodes honorificity: roughly non-honorific (तों/तू), mid-honorific (अहाँ), high-honorific (अपने).
-  The choice propagates into every imperative button, so consistency across all action strings matters.
+- Maithili verb agreement encodes honorificity: roughly non-honorific (तों/तू), mid-honorific (अहाँ), high-honorific
+  (अपने). The choice propagates into every imperative button, so consistency across all action strings matters.
 - Both sources agree on `अहाँ`: Microsoft mandates it (and forbids तू/तों/ओ); Nautilus independently uses the अहाँ-tier
   imperatives (खोलू, बनाबू, मेटाबू).
 - Recommendation: use the `अहाँ` mid tier consistently, respectful without being stiff, and the right fit for Cmdr's
@@ -41,9 +41,9 @@ Honorific register, pick the `अहाँ` mid tier (flag for David):
 
 Tech vocabulary, transliterated loans + Sanskritic, with English acronyms kept (medium confidence):
 
-- Nautilus uses फाइल (file, transliterated English), फ़ोल्डर (folder), रद्द/रद्दी (cancel/trash, via Hindi), and Sanskritic
-  terms (प्रबंधन, वरीयता). MS keeps well-known English acronyms in Roman (PIN, ID, Wi-Fi), glosses others on first use,
-  and translates "&" as आ/आओर.
+- Nautilus uses फाइल (file, transliterated English), फ़ोल्डर (folder), रद्द/रद्दी (cancel/trash, via Hindi), and
+  Sanskritic terms (प्रबंधन, वरीयता). MS keeps well-known English acronyms in Roman (PIN, ID, Wi-Fi), glosses others on
+  first use, and translates "&" as आ/आओर.
 - Recommendation: mirror this, established transliterated loans for core nouns, common Sanskritic terms where already
   used, keep widely-known acronyms in Roman, no nuqta, translate "&". With no macOS/TBX tiebreaker, defer fine term
   choices to a native reviewer. Confidence: medium (two sources, one of them 2008-old).

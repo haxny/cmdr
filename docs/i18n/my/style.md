@@ -19,25 +19,25 @@ file-manager-UI precedent for register and terminology.
 ## Formality
 
 Use the polite register, but lightly. Burmese marks politeness with the sentence-final particle ပါ (pa) and the polite
-verb ending တယ်/သည်; attach ပါ to imperative UI actions to make them courteous without being verbose (for example "select"
-reads as ရွေးပါ, "sign in" as ဝင်ရောက်ပါ in Microsoft's terminology). Burmese culturally prefers pronoun avoidance: don't
-reach for an explicit "you" pronoun where the sentence works without one, which is the norm for UI copy. Keep button and
-menu labels as short polite imperatives. There's a colloquial/formal split in subject and object markers (colloquial က /
-ကို vs formal သည် / အား); UI copy uses the everyday polite register, not the literary-formal one. Confidence: medium-high
-on the polite-particle approach (matches Microsoft and Nautilus), lower on per-string particle density, which a native
-reviewer should tune.
+verb ending တယ်/သည်; attach ပါ to imperative UI actions to make them courteous without being verbose (for example
+"select" reads as ရွေးပါ, "sign in" as ဝင်ရောက်ပါ in Microsoft's terminology). Burmese culturally prefers pronoun
+avoidance: don't reach for an explicit "you" pronoun where the sentence works without one, which is the norm for UI
+copy. Keep button and menu labels as short polite imperatives. There's a colloquial/formal split in subject and object
+markers (colloquial က / ကို vs formal သည် / အား); UI copy uses the everyday polite register, not the literary-formal
+one. Confidence: medium-high on the polite-particle approach (matches Microsoft and Nautilus), lower on per-string
+particle density, which a native reviewer should tune.
 
 ## Terminology and glossary
 
-| English term | This language | Notes                                                                                           |
-| ------------ | ------------- | ----------------------------------------------------------------------------------------------- |
-| file         | ဖိုင်            | Transliteration of "file"; universal in Burmese computing (Nautilus, Microsoft).                |
-| folder       | ဖိုင်တွဲ           | Literally "file-bundle"; the established Nautilus term.                                         |
-| copy         | ကူးယူ / မိတ္တူ     | Native verb ကူးယူ for the action; မိတ္တူ ("duplicate/copy") also seen. Pick one and stay consistent. |
-| open         | ဖွင့်            | Native verb.                                                                                    |
-| rename       | အမည်ပြောင်း     | Native ("change name").                                                                         |
-| trash        | အမှိုက်ပုံး         | Native ("rubbish bin").                                                                         |
-| cancel       | ပယ်ဖျက်         | Native.                                                                                         |
+| English term | This language  | Notes                                                                                                |
+| ------------ | -------------- | ---------------------------------------------------------------------------------------------------- |
+| file         | ဖိုင်          | Transliteration of "file"; universal in Burmese computing (Nautilus, Microsoft).                     |
+| folder       | ဖိုင်တွဲ       | Literally "file-bundle"; the established Nautilus term.                                              |
+| copy         | ကူးယူ / မိတ္တူ | Native verb ကူးယူ for the action; မိတ္တူ ("duplicate/copy") also seen. Pick one and stay consistent. |
+| open         | ဖွင့်          | Native verb.                                                                                         |
+| rename       | အမည်ပြောင်း    | Native ("change name").                                                                              |
+| trash        | အမှိုက်ပုံး    | Native ("rubbish bin").                                                                              |
+| cancel       | ပယ်ဖျက်        | Native.                                                                                              |
 
 Fill more as they come up. Expect heavy English borrowing for tech-specific terms (file, tab, app, email → အီးမေးလ်,
 screenshot → ဖန်သားပြင်ရိုက်ချက်); use a clear native word where one is widely understood (open, rename, trash, copy),
@@ -119,10 +119,10 @@ These are the calls that actually matter for Burmese; settle them before a trans
 
 - **Anglicism / tech-term borrowing.** Burmese borrows computing vocabulary from English heavily; Microsoft's Burmese
   terminology transliterates email, screenshot, domain, virus, and similar directly. Expect "file", "tab", "app", and
-  many tech terms to be transliterations, while a clear native word exists for common verbs (open ဖွင့်, rename အမည်ပြောင်း,
-  copy ကူးယူ, trash အမှိုက်ပုံး). Default to the established transliteration for tech-specific nouns and a native verb for
-  actions, record each call in the glossary, and have a native reviewer confirm spelling. Confidence: high that
-  borrowing is the norm, lower on individual spellings.
+  many tech terms to be transliterations, while a clear native word exists for common verbs (open ဖွင့်, rename
+  အမည်ပြောင်း, copy ကူးယူ, trash အမှိုက်ပုံး). Default to the established transliteration for tech-specific nouns and a
+  native verb for actions, record each call in the glossary, and have a native reviewer confirm spelling. Confidence:
+  high that borrowing is the norm, lower on individual spellings.
 
 - **Localization depth / availability (priority signal).** Major-vendor Burmese UI is moderate-to-thin. Apple does NOT
   ship a Burmese macOS/iOS interface (input and fonts only), so there's no Apple-platform precedent to mirror, which

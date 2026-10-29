@@ -17,11 +17,11 @@ register matches Cmdr.
 
 ## Formality
 
-- **Second person: respectful `ਤੁਸੀਂ` (tusī̃).** Punjabi distinguishes familiar `ਤੂੰ` (tū̃) from respectful `ਤੁਸੀਂ` (tusī̃);
-  software uses respectful `ਤੁਸੀਂ`, which reads as ordinary courtesy. GNOME and Microsoft both use respectful-level
-  address. Recommendation: `ਤੁਸੀਂ` throughout. Confidence: high.
-- **UI actions use the polite imperative**, matching GNOME Punjabi ("ਕਾਪੀ ਕਰੋ" copy, "ਖੋਲ੍ਹੋ" open, "ਰੱਦ ਕਰੋ" cancel all use
-  the `-ੋ` polite command form). Recommendation: polite imperatives for buttons and menu items. Confidence: high.
+- **Second person: respectful `ਤੁਸੀਂ` (tusī̃).** Punjabi distinguishes familiar `ਤੂੰ` (tū̃) from respectful `ਤੁਸੀਂ`
+  (tusī̃); software uses respectful `ਤੁਸੀਂ`, which reads as ordinary courtesy. GNOME and Microsoft both use
+  respectful-level address. Recommendation: `ਤੁਸੀਂ` throughout. Confidence: high.
+- **UI actions use the polite imperative**, matching GNOME Punjabi ("ਕਾਪੀ ਕਰੋ" copy, "ਖੋਲ੍ਹੋ" open, "ਰੱਦ ਕਰੋ" cancel all
+  use the `-ੋ` polite command form). Recommendation: polite imperatives for buttons and menu items. Confidence: high.
 
 ## Decision points
 
@@ -35,9 +35,9 @@ register matches Cmdr.
 - **Register: modern, not over-Sanskritized/Persianized.** Keep everyday Punjabi; avoid heavy Sanskrit (Gurmukhi side)
   or heavy Persian/Urdu (Shahmukhi side) officialese. Microsoft modern voice and GNOME both favor everyday words.
   Recommendation: everyday register. Confidence: high.
-- **Anglicism handling.** Computing terms are often kept as Gurmukhi-spelled loanwords ("ਫੋਲਡਰ" folder). GNOME does this.
-  Recommendation: keep entrenched loanwords; translate where a native word is common ("ਕਾਪੀ ਕਰੋ" copy, "ਰੱਦੀ" trash).
-  Confidence: high.
+- **Anglicism handling.** Computing terms are often kept as Gurmukhi-spelled loanwords ("ਫੋਲਡਰ" folder). GNOME does
+  this. Recommendation: keep entrenched loanwords; translate where a native word is common ("ਕਾਪੀ ਕਰੋ" copy, "ਰੱਦੀ"
+  trash). Confidence: high.
 - **Numerals.** Gurmukhi has its own digits (`੦੧੨੩`) but modern UI commonly uses Western digits; `Intl` formats per
   locale at runtime. Recommendation: rely on `Intl`. Confidence: medium.
 - **Inclusive/gendered language.** Punjabi verbs and adjectives carry gender agreement. UI copy via `ਤੁਸੀਂ` and polite
@@ -51,13 +51,13 @@ as strings come up.
 
 | English term | Punjabi (Gurmukhi) | Notes                    |
 | ------------ | ------------------ | ------------------------ |
-| folder       | ਫੋਲਡਰ               | GNOME; loanword          |
-| copy         | ਕਾਪੀ ਕਰੋ            | GNOME; polite imperative |
-| trash        | ਰੱਦੀ                | GNOME; the location noun |
-| rename       | ਨਾਂ ਨੂੰ ਬਦਲੋ           | GNOME                    |
-| paste        | ਚੇਪੋ                 | GNOME                    |
-| open         | ਖੋਲ੍ਹੋ                | GNOME                    |
-| cancel       | ਰੱਦ ਕਰੋ              | GNOME                    |
+| folder       | ਫੋਲਡਰ              | GNOME; loanword          |
+| copy         | ਕਾਪੀ ਕਰੋ           | GNOME; polite imperative |
+| trash        | ਰੱਦੀ               | GNOME; the location noun |
+| rename       | ਨਾਂ ਨੂੰ ਬਦਲੋ       | GNOME                    |
+| paste        | ਚੇਪੋ               | GNOME                    |
+| open         | ਖੋਲ੍ਹੋ             | GNOME                    |
+| cancel       | ਰੱਦ ਕਰੋ            | GNOME                    |
 
 ## Brand and do-not-translate
 

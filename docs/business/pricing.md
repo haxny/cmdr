@@ -12,9 +12,11 @@ Two tiers, one of them paid.
   models, and that the file manager stays free for personal use. ❌ Never write "free forever" on any surface, and never
   describe Cmdr AI as part of the free tier without the beta qualifier: the wording has to leave room for the Pro plan
   without it reading as a rug pull.
-- **Commercial**: **$59, paid once**, per person, on as many of that person's own machines as they like. Every feature,
-  Cmdr AI included. One year of updates is included; after that year, **$39/year** keeps new versions coming, and the
-  last version the buyer was entitled to stays theirs forever whether or not they renew.
+- **Commercial**:
+  **$59, paid once**, per person, on as many of that person's own machines as they like. Every feature,
+  Cmdr AI included. One year of updates is included; after that year, **$39/year**
+  keeps new versions coming, and the last version the buyer was entitled to stays theirs forever whether or not they
+  renew.
 - **Organizations**: quoted by hand. ❌ **Nothing is published**: no price, no seat threshold, no list of inclusions.
   The page carries a "Buying for an organization?" block with one line pointing at `sales@getcmdr.com`, and the FAQ says
   a handful of people should just buy Commercial licenses one by one. Every number or promise on that block is something
@@ -42,9 +44,11 @@ price rather than deleting it. A price ID that stops resolving takes every licen
 `PRICE_ID_COMMERCIAL_SUBSCRIPTION` stays set for exactly this reason.
 
 ❌ **$59 now means two different things, and this is the trap in this file.** The retired subscription was $59 per year;
-the current Commercial license is $59 paid once. A grep for `59` cannot tell them apart, and neither can a reader
+the current Commercial license is
+$59 paid once. A grep for `59` cannot tell them apart, and neither can a reader
 skimming. The distinguishing token is `/year` or `/yr` next to the number, which is why the pricing page's E2E test
-asserts on `$59/year`being absent rather than on`$59`. When writing about either, always say which.
+asserts on `$59/year`being absent rather than on`$59`.
+When writing about either, always say which.
 
 ## Every place a price or plan is hardcoded
 
@@ -71,8 +75,10 @@ asserts on `$59/year`being absent rather than on`$59`. When writing about either
   static build, so the value lives in `/opt/cmdr/apps/website/.env` on the VPS and only takes effect on the next deploy.
 - The `data-paddle-price="commercial"` attribute on the buy button is the key into `paddleConfig.priceIds`.
 - `PRICE_ID_COMMERCIAL_PERPETUAL` (api-server wrangler secret; declared in `src/types.ts`, read in
-  `src/licensing/licensing.ts`). Must point at the SAME $59 price ID as the website var. The name says "perpetual"
-  because that's the license type the webhook issues, not because a $199 tier still exists.
+  `src/licensing/licensing.ts`). Must point at the SAME
+  $59 price ID as the website var. The name says "perpetual"
+  because that's the license type the webhook issues, not because a $199
+  tier still exists.
 - `PRICE_ID_COMMERCIAL_SUBSCRIPTION` (api-server): the retired $59/year price ID. **Stays set**: licenses sold under it
   are still live, so the variable and the `commercial_subscription` license type stay in code as long as they are.
 - ❌ **An unmapped price ID falls back to `commercial_subscription`** (`getLicenseTypeFromPriceId` in `paddle-api.ts`

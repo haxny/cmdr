@@ -11,8 +11,8 @@ Current macOS builds run the system allocator, and Linux names mimalloc's mappin
 (`docs/tooling/memory-debugging.md` § "First: which allocator holds the Rust heap").
 
 `vmmap` labels VM regions by their **VM tag number**. macOS defines `VM_MEMORY_IOACCELERATOR = 100`
-(`$(xcrun --show-sdk-path)/usr/include/mach/vm_statistics.h:642`). **mimalloc tags every arena it `mmap`s with
-`os_tag` = 100 by default.** Cmdr's Rust global allocator is mimalloc (`src-tauri/src/main.rs`), so:
+(`$(xcrun --show-sdk-path)/usr/include/mach/vm_statistics.h:642`). **mimalloc tags every arena it `mmap`s with `os_tag`
+= 100 by default.** Cmdr's Rust global allocator is mimalloc (`src-tauri/src/main.rs`), so:
 
 > **In any Cmdr `vmmap` / `footprint` output, the `IOAccelerator` rows ARE the Rust heap.** Not GPU memory, not WebKit,
 > not the compositor.

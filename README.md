@@ -88,9 +88,10 @@ restrictions.
 
 ### Commercial use
 
-For work projects, you'll need a license: **$59, paid once**, per person, on as many of your own machines as you like.
-It includes one year of updates. After that year the version you have keeps working forever, and $39/year keeps new
-versions coming if you want them.
+For work projects, you'll need a license:
+**$59, paid once**, per person, on as many of your own machines as you like.
+It includes one year of updates. After that year the version you have keeps working forever, and $39/year
+keeps new versions coming if you want them.
 
 Buying for an organization? Email [sales@getcmdr.com](mailto:sales@getcmdr.com) and you'll get a quote back.
 

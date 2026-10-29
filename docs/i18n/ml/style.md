@@ -8,22 +8,24 @@ needed today (Kerala usage is the de-facto standard and what `ml` targets).
 
 Friendly, concise, calm, active. Same register Cmdr uses in English: a helpful peer, never bureaucratic or alarmist.
 Error and warning copy stays calm and actionable; never use a Malayalam equivalent of "error" or "failed" as a scare
-word. Prefer plain everyday Malayalam (the register of a well-made consumer app), not literary/Sanskritized (`ഗ്രന്ഥഭാഷ`)
-prose. Verb-final word order is natural; let the action verb close the sentence rather than forcing English order.
+word. Prefer plain everyday Malayalam (the register of a well-made consumer app), not literary/Sanskritized
+(`ഗ്രന്ഥഭാഷ`) prose. Verb-final word order is natural; let the action verb close the sentence rather than forcing
+English order.
 
 ## Formality
 
 Malayalam marks respect through the second-person PRONOUN, not the verb: `നീ` (informal), `നിങ്ങൾ` (polite/plural),
-`താങ്കൾ` (more formal). Crucially, all three take the same verb form, so the politeness choice rarely surfaces in UI copy.
+`താങ്കൾ` (more formal). Crucially, all three take the same verb form, so the politeness choice rarely surfaces in UI
+copy.
 
 - **Address the user as `നിങ്ങൾ`** when a pronoun is unavoidable (polite, neutral, the register Google and Microsoft use
   for Malayalam). Never `നീ`. Avoid `താങ്കൾ` (reads stiff/old-fashioned for an app).
 - **Prefer pronoun-free phrasing.** Most UI copy needs no "you" at all; Malayalam drops the subject readily. "Are you
   sure you want to delete?" is best rendered without a pronoun.
 - **Imperatives for actions (buttons, menu items): use the `-uക` infinitive/imperative stem** (e.g. `പകർത്തുക` copy,
-  `തുറക്കുക` open, `ഇല്ലാതാക്കുക` delete, `തിരയുക` search). This is the register-neutral command form every major Malayalam UI
-  uses for action labels; it isn't rude and matches Cmdr's direct English buttons. Don't pile on politeness particles
-  (`-ൂ`, `ദയവായി` "please") on ordinary buttons; reserve a softener only where the English is itself softened.
+  `തുറക്കുക` open, `ഇല്ലാതാക്കുക` delete, `തിരയുക` search). This is the register-neutral command form every major
+  Malayalam UI uses for action labels; it isn't rude and matches Cmdr's direct English buttons. Don't pile on politeness
+  particles (`-ൂ`, `ദയവായി` "please") on ordinary buttons; reserve a softener only where the English is itself softened.
 
 ## Decision points
 
@@ -71,8 +73,9 @@ follow this split.
   actually say: `ഫയൽ` (file), `ഫോൾഡർ` (folder), `ടാബ്` (tab). Coining an obscure native word here (e.g. `രേഖ` for file)
   reads academic and hurts comprehension. Nautilus and Microsoft both transliterate file/folder.
 - **Use the native Malayalam word** for actions and concepts that have a clear, common term: `തിരയുക` (search - both
-  Google and Microsoft), `പകർത്തുക` (copy), `ഒട്ടിക്കുക` (paste), `ഇല്ലാതാക്കുക` (delete), `പേരുമാറ്റുക` (rename), `തുറക്കുക` (open).
-  Trash/recycle is native (`ചവറ്റുകുട്ട` / Microsoft's `പുനരുപയോഗപെട്ടി`); pick one and keep it consistent.
+  Google and Microsoft), `പകർത്തുക` (copy), `ഒട്ടിക്കുക` (paste), `ഇല്ലാതാക്കുക` (delete), `പേരുമാറ്റുക` (rename),
+  `തുറക്കുക` (open). Trash/recycle is native (`ചവറ്റുകുട്ട` / Microsoft's `പുനരുപയോഗപെട്ടി`); pick one and keep it
+  consistent.
 - Litmus when unsure: would a Kerala user under 40 say the English word in a Malayalam sentence? If yes, transliterate;
   if they'd naturally use the Malayalam word, use it. Record each ruling in the glossary so it isn't relitigated.
 
@@ -112,22 +115,22 @@ plus the `{system_settings}`-style tokens. The curated list is enforced by `desk
 
 Build this up as terms come up. Starting set (encode all chillus atomically):
 
-| English term                                   | Malayalam   | Notes                                                  |
-| ---------------------------------------------- | ----------- | ------------------------------------------------------ |
-| File                                           | ഫയൽ         | Transliterated; what users say.                        |
-| Folder                                         | ഫോൾഡർ       | Transliterated.                                        |
-| Open                                           | തുറക്കുക       | Native.                                                |
-| Copy                                           | പകർത്തുക      | Native.                                                |
-| Paste                                          | ഒട്ടിക്കുക     | Native.                                                |
-| Delete                                         | ഇല്ലാതാക്കുക     | Native.                                                |
-| Rename                                         | പേരുമാറ്റുക     | Native.                                                |
+| English term                                   | Malayalam    | Notes                                                  |
+| ---------------------------------------------- | ------------ | ------------------------------------------------------ |
+| File                                           | ഫയൽ          | Transliterated; what users say.                        |
+| Folder                                         | ഫോൾഡർ        | Transliterated.                                        |
+| Open                                           | തുറക്കുക     | Native.                                                |
+| Copy                                           | പകർത്തുക     | Native.                                                |
+| Paste                                          | ഒട്ടിക്കുക   | Native.                                                |
+| Delete                                         | ഇല്ലാതാക്കുക | Native.                                                |
+| Rename                                         | പേരുമാറ്റുക  | Native.                                                |
 | Search                                         | തിരയുക       | Native; matches Google + Microsoft.                    |
 | Name                                           | പേര്         |                                                        |
 | Size                                           | വലിപ്പം      |                                                        |
-| Type                                           | തരം         |                                                        |
-| Trash                                          | ചവറ്റുകുട്ട     | Pick one trash term and stay consistent.               |
-| Tab                                            | ടാബ്          | Transliterated.                                        |
-| Pane, Volume, Drive, Viewer, Listing, Transfer | (to decide) | Flag to David: borderline transliterate-vs-coin calls. |
+| Type                                           | തരം          |                                                        |
+| Trash                                          | ചവറ്റുകുട്ട  | Pick one trash term and stay consistent.               |
+| Tab                                            | ടാബ്         | Transliterated.                                        |
+| Pane, Volume, Drive, Viewer, Listing, Transfer | (to decide)  | Flag to David: borderline transliterate-vs-coin calls. |
 
 ## Notes and decisions
 
