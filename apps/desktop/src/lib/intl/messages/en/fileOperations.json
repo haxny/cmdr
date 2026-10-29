@@ -1046,22 +1046,30 @@
 
   "fileOperations.transferProgress.titleRefusedNameTooLong": "Name too long for the destination",
   "@fileOperations.transferProgress.titleRefusedNameTooLong": {
-    "description": "Dialog title when a copy or move pauses because the destination (often a network drive) refused to store one item: its file name is longer than the destination allows. Nothing already exists there; the user can only skip the item (or every such item) or stop. Heads the same two dialogs as the 'File already exists' title."
+    "description": "Dialog title when a copy or move pauses because the destination (often a network drive) refused to store one item: its file name is longer than the destination allows. Nothing already exists there; the user can only skip the item (or every such item) or stop. Heads the same two dialogs as the 'File already exists' title.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Name not allowed at the destination",
   "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
-    "description": "Dialog title when a copy or move pauses because the destination (often a network drive) refused to store one item under its name for a reason other than length: a reserved name such as CON, or a character the destination can’t hold. The user can only skip the item (or every such item) or stop. Heads the same two dialogs as the 'File already exists' title."
+    "description": "Dialog title when a copy or move pauses because the destination (often a network drive) refused to store one item under its name for a reason other than length: a reserved name such as CON, or a character the destination can’t hold. The user can only skip the item (or every such item) or stop. Heads the same two dialogs as the 'File already exists' title.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.refusedNameTooLongBody": "The destination can’t store a name this long. Skip this item to carry on with the rest, then rename it and try it again.",
   "@fileOperations.transferProgress.refusedNameTooLongBody": {
-    "description": "Explanation under the file name in the 'Name too long for the destination' prompt of a copy or move. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder."
+    "description": "Explanation under the file name in the 'Name too long for the destination' prompt of a copy or move. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.refusedNameNotAllowedBody": "The destination can’t store this name. It may be too long, be a reserved name, or use a character the destination doesn’t allow. Skip this item to carry on with the rest, then rename it and try it again.",
   "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
-    "description": "Explanation under the file name in the 'Name not allowed at the destination' prompt of a copy or move. 'Reserved name' means names like CON or NUL that some systems keep for themselves. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder."
+    "description": "Explanation under the file name in the 'Name not allowed at the destination' prompt of a copy or move. 'Reserved name' means names like CON or NUL that some systems keep for themselves. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.conflictPolicyCaption": "If a file already exists: {policy}",
