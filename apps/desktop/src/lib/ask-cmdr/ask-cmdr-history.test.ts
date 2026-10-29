@@ -16,6 +16,7 @@ function detail(messages: MessageView[]): ConversationDetailView {
     totalMessages: messages.length,
     lastContextUsage: null,
     turnInFlightSinceSeq: null,
+    turnInFlightRun: null,
     spendPausedMicros: null,
   }
 }
@@ -150,6 +151,7 @@ describe('buildRailMessages', () => {
         view(5, 'event', [{ type: 'proposalDecisions', decisions: [decision] }], { turnId: 3 }),
       ]),
       turnInFlightSinceSeq: 2,
+      turnInFlightRun: 1,
       spendPausedMicros: null,
     })
 
@@ -175,6 +177,7 @@ describe('buildRailMessages', () => {
     const items = buildRailMessages({
       ...detail([view(1, 'user', [text('one')], { turnId: 1 }), view(2, 'assistant', [text('First.')], { turnId: 1 })]),
       turnInFlightSinceSeq: 2,
+      turnInFlightRun: 1,
       spendPausedMicros: null,
     })
     expect(assistantAt(items, 1).streaming).toBe(false)

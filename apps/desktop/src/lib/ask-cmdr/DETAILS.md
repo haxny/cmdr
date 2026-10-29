@@ -44,8 +44,8 @@ Three things follow from the subscription being conversation-keyed rather than p
   reloaded rail lands on the same thread and the rest of the turn renders. There is no second `assistantStarted` to
   hear, so `adoptLiveTurn` treats ANY live event for the thread on screen as proof a turn is running, and the reducer
   creates the streaming bubble if there isn't one (`ensureAssistant`). The load itself adopts too when the backend says
-  a turn runs there (`turnInFlightSinceSeq`, `resumeThread`), so a turn sitting in a long tool call doesn't look idle
-  until its next event.
+  a turn runs there (`turnInFlightRun`, `resumeThread`), so a turn sitting in a long tool call doesn't look idle until
+  its next event, and its Stop knows the turn's run.
 - **Only a STREAMING bubble is written into** (`streamingAssistant`). An ended turn's bubble stays closed, so a turn the
   rail never typed (a wake, or one a reload caught before its first row landed) opens its own. A reload that caught rows
   of the running turn folds that bubble still streaming, which is how the rest of the turn lands in it.
@@ -174,11 +174,12 @@ Stop reached (`CancelOutcomeView`: `tripped`, the turns it newly stopped; `live`
 - A turn thread that panics still emits a terminal (`Failed`, `unfinishedReply`) before it unregisters.
 - **A terminal ends only its own turn.** Every event carries its turn's `run` (`AskCmdrTurn.run`, the backend's cancel
   registration generation), and the send answers it too, so the rail knows the run of the turn it streams (`liveRun`:
-  from the send's answer, or a picked-up turn's first event) and each stop holds its own. A terminal settles the stop of
-  its run, else the oldest of its thread whose run is unknown. A terminal emitted just before the Stop can reach the
-  rail AFTER the `live: 0` answer: that stop's run goes to `settledRuns`, and its terminal is swallowed on arrival.
-  Regression anchor: it used to end whatever turn the user had sent since (`ask-cmdr-stop-and-reload.test.ts`, "a
-  stopped turn's late terminal"). Residual: a turn a reload adopted that said nothing before its Stop has no known run.
+  from the send's answer, a thread load's `turnInFlightRun`, or a picked-up turn's first event) and each stop holds its
+  own. A terminal settles the stop of its run, else the oldest of its thread whose run is unknown. A terminal emitted
+  just before the Stop can reach the rail AFTER the `live: 0` answer: that stop's run goes to `settledRuns`, and its
+  terminal is swallowed on arrival. Regression anchor: it used to end whatever turn the user had sent since
+  (`ask-cmdr-stop-and-reload.test.ts`, "a stopped turn's late terminal"), and, for a turn a reload adopted that went
+  quiet before its Stop, until the load named its run (#802, "Stop on a quiet turn picked up after a reload").
 
 A "load earlier" that joins a stopped bubble with its older half builds a new object, so the stop follows it
 (`followJoinedBubble`).

@@ -495,6 +495,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       conversation: conversationRow(9),
       totalMessages: 3,
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
       messages: [
         {
@@ -567,6 +568,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       conversation: conversationRow(9),
       totalMessages: 2,
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
       messages: [
         {
@@ -619,6 +621,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       totalMessages: 0,
       messages: [],
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
     })
     try {
@@ -688,6 +691,7 @@ describe('openRail bootstrap + newChat + hydrate', () => {
       totalMessages: 0,
       messages: [],
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
     })
     await switchToThread(9)
@@ -820,6 +824,7 @@ function detailPage(total: number, limit: number, offset: number) {
     totalMessages: total,
     messages,
     turnInFlightSinceSeq: null,
+    turnInFlightRun: null,
     spendPausedMicros: null,
   }
 }
@@ -898,6 +903,7 @@ describe('message paging (tail-first, load older)', () => {
         conversation: conversationRow(9),
         totalMessages: total,
         turnInFlightSinceSeq: null,
+        turnInFlightRun: null,
         spendPausedMicros: null,
         messages: rows.slice(offset, offset + limit),
       })
@@ -928,6 +934,7 @@ describe('message paging (tail-first, load older)', () => {
         conversation: conversationRow(9),
         totalMessages: total,
         turnInFlightSinceSeq: 0,
+        turnInFlightRun: 1,
         spendPausedMicros: null,
         messages: rows.slice(offset, offset + limit),
       })

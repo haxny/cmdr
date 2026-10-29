@@ -47,9 +47,19 @@ static CANCELS: LazyLock<Mutex<HashMap<i64, Registrations>>> = LazyLock::new(|| 
 /// Hands out a distinct generation per registration, so dropping one never removes another.
 static NEXT_GENERATION: AtomicI64 = AtomicI64::new(0);
 
-/// The running turn's seq high-water mark, by conversation: the thread's last `seq` when the
-/// turn took the single-flight lock. Rows after it belong to that turn.
-static IN_FLIGHT: LazyLock<Mutex<HashMap<i64, i64>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+/// The turn running in a thread right now, by conversation.
+static IN_FLIGHT: LazyLock<Mutex<HashMap<i64, InFlightTurn>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// The turn holding a thread's single-flight lock, as a reloaded rail needs it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InFlightTurn {
+    /// The thread's last `seq` when the turn took the lock: rows after it belong to that turn.
+    pub since_seq: i64,
+    /// The turn's run, which its events carry. A reloaded rail learns it here, so a Stop before
+    /// the turn's next event (a long tool call, a model thinking) still knows which terminal is its
+    /// own (#802).
+    pub run: TurnRun,
+}
 
 /// One turn's place in the registry. The token is what the turn watches; dropping the
 /// registration removes exactly this entry, so a turn that returns early or panics can't leave
@@ -205,15 +215,17 @@ impl Drop for InFlightMark {
     }
 }
 
-/// Record that a turn now runs in `conversation_id`, writing rows after `since_seq`.
-pub(crate) fn mark_in_flight(conversation_id: i64, since_seq: i64) -> InFlightMark {
-    IN_FLIGHT.lock_ignore_poison().insert(conversation_id, since_seq);
+/// Record that turn `run` now runs in `conversation_id`, writing rows after `since_seq`.
+pub(crate) fn mark_in_flight(conversation_id: i64, since_seq: i64, run: TurnRun) -> InFlightMark {
+    IN_FLIGHT
+        .lock_ignore_poison()
+        .insert(conversation_id, InFlightTurn { since_seq, run });
     InFlightMark(conversation_id)
 }
 
-/// The running turn's seq high-water mark, or `None` when no turn runs in the thread. A reload
-/// reads it to tell the running turn's result-less calls from a crashed turn's.
-pub fn turn_in_flight_since_seq(conversation_id: i64) -> Option<i64> {
+/// The turn running in the thread, or `None` when none runs. A reload reads it to tell the running
+/// turn's result-less calls from a crashed turn's, and to know the running turn's run.
+pub fn turn_in_flight(conversation_id: i64) -> Option<InFlightTurn> {
     IN_FLIGHT.lock_ignore_poison().get(&conversation_id).copied()
 }
 
@@ -342,12 +354,12 @@ mod tests {
 
     #[test]
     fn the_in_flight_mark_reads_back_until_the_turn_ends() {
-        assert_eq!(turn_in_flight_since_seq(-9_501), None);
+        assert_eq!(turn_in_flight(-9_501), None);
 
-        let mark = mark_in_flight(-9_501, 41);
-        assert_eq!(turn_in_flight_since_seq(-9_501), Some(41));
+        let mark = mark_in_flight(-9_501, 41, 7);
+        assert_eq!(turn_in_flight(-9_501), Some(InFlightTurn { since_seq: 41, run: 7 }));
 
         drop(mark);
-        assert_eq!(turn_in_flight_since_seq(-9_501), None);
+        assert_eq!(turn_in_flight(-9_501), None);
     }
 }

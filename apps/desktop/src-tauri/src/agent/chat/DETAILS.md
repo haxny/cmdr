@@ -804,9 +804,11 @@ leave a token for the next turn on the same thread to be stopped by.
 mark: the thread's last `seq` when the turn took the single-flight lock (`store::last_seq`, `-1`
 for an empty thread). `ChatRuntime::send_message` and `wake` set it right after acquiring the lock
 and drop it before releasing it, so at most one mark per thread exists and it is always the
-running turn's. `turn_in_flight_since_seq(id)` reads it: rows after the mark belong to the
-running turn, which is how a reload tells that turn's result-less calls (still running) from a
-crashed turn's (settled, no answer recorded).
+running turn's. The mark also names the turn's run. `turn_in_flight(id)` reads both: rows after
+the mark belong to the running turn, which is how a reload tells that turn's result-less calls
+(still running) from a crashed turn's (settled, no answer recorded), and the run
+(`ConversationDetailView.turn_in_flight_run`) is how a reloaded rail's Stop knows which terminal
+is its own before the turn says anything more (#802).
 
 ### Stop reaches every tool call
 
@@ -903,7 +905,7 @@ what the live one did: the same `tools::line` functions over the stored argument
   `turn_id` comes from `store::turn_opener_at`, since it is projected alone.
 - **One stats rule**: the turn's stats ride its LAST assistant view, from its `TurnFinished` row,
   else rebuilt from its rows (every result row a call, tokens summed per row, `wall_ms: None`).
-  The turn holding rows after `turn_in_flight_since_seq` gets no rebuilt stats: it is still
+  The turn holding rows after the in-flight mark gets no rebuilt stats: it is still
   running, and the live terminal event brings them. The mark is read BEFORE the rows, so a turn
   ending in between reads as running for one load, never as settled with its last results
   missing.

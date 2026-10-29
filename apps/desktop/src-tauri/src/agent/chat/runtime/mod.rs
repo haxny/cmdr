@@ -159,6 +159,8 @@ impl ChatRuntime {
         offset: FixedOffset,
         sink: ChatEventSink,
         cancel: CancellationToken,
+        // The turn's cancel registration, which the in-flight mark names for a reloaded rail.
+        run: cancel::TurnRun,
     ) -> Result<i64, AgentStoreError> {
         let conn = store::open_write_connection(&self.db_path)?;
         let now = now_secs();
@@ -169,7 +171,7 @@ impl ChatRuntime {
 
         // Single-flight: a concurrent send for this thread queues behind this guard.
         let _guard = self.locks.acquire(conversation_id, &sink).await;
-        let _in_flight = mark_in_flight(&conn, conversation_id);
+        let _in_flight = mark_in_flight(&conn, conversation_id, run);
 
         let PrefixParts { cmdr_md, memory, tools } = PrefixParts::read(app, prompt_budget);
         let dispatcher = AppHandleDispatcher::new(app.clone(), conversation_id);
@@ -208,6 +210,10 @@ impl ChatRuntime {
     ///
     /// The conversation already exists (the prepare step created it), so nothing is created
     /// here; `params.user` is the digest.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the wake surface: the turn's seams, its params, and its cancel registration's token and run"
+    )]
     pub async fn wake(
         &self,
         llm: &dyn AgentLlm,
@@ -216,10 +222,11 @@ impl ChatRuntime {
         params: &TurnParams<'_>,
         sink: &ChatEventSink,
         cancel: &CancellationToken,
+        run: cancel::TurnRun,
     ) -> Result<TurnResult, AgentStoreError> {
         let conn = store::open_write_connection(&self.db_path)?;
         let _guard = self.locks.acquire(params.conversation_id, sink).await;
-        let _in_flight = mark_in_flight(&conn, params.conversation_id);
+        let _in_flight = mark_in_flight(&conn, params.conversation_id, run);
         Ok(run_turn(llm, dispatcher, &conn, tools, params, sink, cancel).await)
     }
 
@@ -321,9 +328,13 @@ pub fn baseline_prompt_tokens<R: Runtime>(app: &AppHandle<R>, prompt_budget: usi
 /// the mark is this turn's and no other's; it drops (before the lock does) when the turn ends.
 /// A store that can't say its last row leaves the turn unmarked: a reload then reads it as
 /// settled, which only loses the running spinner.
-fn mark_in_flight(conn: &rusqlite::Connection, conversation_id: i64) -> Option<cancel::InFlightMark> {
+fn mark_in_flight(
+    conn: &rusqlite::Connection,
+    conversation_id: i64,
+    run: cancel::TurnRun,
+) -> Option<cancel::InFlightMark> {
     match store::last_seq(conn, conversation_id) {
-        Ok(since_seq) => Some(cancel::mark_in_flight(conversation_id, since_seq)),
+        Ok(since_seq) => Some(cancel::mark_in_flight(conversation_id, since_seq, run)),
         Err(e) => {
             log::warn!(target: LOG_TARGET, "couldn't mark the running turn: {e}");
             None

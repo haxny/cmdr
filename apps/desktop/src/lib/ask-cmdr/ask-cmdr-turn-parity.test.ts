@@ -88,6 +88,7 @@ function thread(messages: MessageView[]): ConversationDetailView {
     totalMessages: messages.length,
     lastContextUsage: null,
     turnInFlightSinceSeq: null,
+    turnInFlightRun: null,
     spendPausedMicros: null,
   }
 }
@@ -193,6 +194,7 @@ describe('the live reducer, round by round', () => {
       ]),
       // The turn has been running since before its opener.
       turnInFlightSinceSeq: 0,
+      turnInFlightRun: 1,
       spendPausedMicros: null,
     })
 

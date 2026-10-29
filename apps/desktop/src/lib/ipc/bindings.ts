@@ -3778,6 +3778,12 @@ export const commands = {
          */
         turnInFlightSinceSeq: number | null
         /**
+         *  The running turn's run (the `run` its events carry), set exactly when
+         *  `turn_in_flight_since_seq` is. A reloaded rail stops that turn before it says anything more,
+         *  so it needs to know which terminal is its own (#802).
+         */
+        turnInFlightRun: number | null
+        /**
          *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
          *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
          */
@@ -7622,6 +7628,12 @@ export type ConversationDetailView = {
    *  (every other result-less call is settled). `None` when nothing runs.
    */
   turnInFlightSinceSeq: number | null
+  /**
+   *  The running turn's run (the `run` its events carry), set exactly when
+   *  `turn_in_flight_since_seq` is. A reloaded rail stops that turn before it says anything more,
+   *  so it needs to know which terminal is its own (#802).
+   */
+  turnInFlightRun: number | null
   /**
    *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
    *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
