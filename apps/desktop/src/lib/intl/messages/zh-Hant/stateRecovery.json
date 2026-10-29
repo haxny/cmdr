@@ -55,6 +55,10 @@
   "@stateRecovery.selectionHistory.title": {
     "sourceHash": "a93f574"
   },
+  "stateRecovery.tagReplacePresets.title": "Cmdr couldn’t read your saved tag replace lists, so the list starts with the built-in one",
+  "@stateRecovery.tagReplacePresets.title": {
+    "sourceHash": "8079259"
+  },
   "stateRecovery.multiRenamePresets.title": "Cmdr 無法讀取你儲存的多檔重新命名預設組，所以列表現在是空的",
   "@stateRecovery.multiRenamePresets.title": {
     "sourceHash": "b6f2a3b"

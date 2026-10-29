@@ -3436,6 +3436,14 @@
   "@settings.license.getLicense.keywords": {
     "sourceHash": "5454f6d"
   },
+  "settings.multiRename.tagEditor.player.label": "Player for Open in player",
+  "@settings.multiRename.tagEditor.player.label": {
+    "sourceHash": "9b1caf9"
+  },
+  "settings.multiRename.tagEditor.player.description": "Internal: the app that opens the tracks from the Tags window.",
+  "@settings.multiRename.tagEditor.player.description": {
+    "sourceHash": "a650205"
+  },
   "settings.advanced.card.multiRename": "Multi-Rename",
   "@settings.advanced.card.multiRename": {
     "sourceHash": "566cd7f"

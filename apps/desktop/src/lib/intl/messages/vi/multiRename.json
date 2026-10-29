@@ -199,6 +199,34 @@
   "@multiRename.preset.normalizeUnicode": {
     "sourceHash": "6e1c97e"
   },
+  "multiRename.preset.foobarAuthorYearAlbumTrack": "Author - (year) Album - track",
+  "@multiRename.preset.foobarAuthorYearAlbumTrack": {
+    "sourceHash": "fe31675"
+  },
+  "multiRename.preset.foobarArtistAlbum": "Artist - Album",
+  "@multiRename.preset.foobarArtistAlbum": {
+    "sourceHash": "144aa90"
+  },
+  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Author - (year) Album - track title",
+  "@multiRename.preset.foobarAuthorYearAlbumTrackTitle": {
+    "sourceHash": "6234a2e"
+  },
+  "multiRename.preset.foobarReadByDiscTrackTitle": "… (read by) - disc track title",
+  "@multiRename.preset.foobarReadByDiscTrackTitle": {
+    "sourceHash": "82d5356"
+  },
+  "multiRename.preset.foobarReadByDiscTrack": "… (read by) - disc track",
+  "@multiRename.preset.foobarReadByDiscTrack": {
+    "sourceHash": "8678abb"
+  },
+  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (read by, publisher) - disc track",
+  "@multiRename.preset.foobarReadByPublisherDiscTrack": {
+    "sourceHash": "3fab262"
+  },
+  "multiRename.preset.foobarSftRadioShow": "SFT radio show",
+  "@multiRename.preset.foobarSftRadioShow": {
+    "sourceHash": "5015599"
+  },
   "multiRename.presetName": "Tên giá trị đặt trước",
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
@@ -254,6 +282,66 @@
   "multiRename.error.badRegex": "Biểu thức chính quy không hợp lệ",
   "@multiRename.error.badRegex": {
     "sourceHash": "176cb2f"
+  },
+  "multiRename.error.foobar.unknownField": "Cmdr doesn’t know the field %{name}% (character {position})",
+  "@multiRename.error.foobar.unknownField": {
+    "sourceHash": "52fecf4"
+  },
+  "multiRename.error.foobar.unknownFunction": "Cmdr doesn’t know the function ${name} (character {position})",
+  "@multiRename.error.foobar.unknownFunction": {
+    "sourceHash": "4228e88"
+  },
+  "multiRename.error.foobar.badArguments": "${function} got the wrong number of values (character {position})",
+  "@multiRename.error.foobar.badArguments": {
+    "sourceHash": "82bbce1"
+  },
+  "multiRename.error.foobar.unclosed": "{what, select, field {A field is missing its closing “%”} bracket {A “[” is missing its closing “]”} quote {A quote is missing its closing apostrophe} function {A function is missing its closing “)”} other {A “(” is missing its closing “)”}} (character {position})",
+  "@multiRename.error.foobar.unclosed": {
+    "sourceHash": "ab1bd9b"
+  },
+  "multiRename.error.foobar.tooDeep": "The pattern nests too many sections and functions inside each other (character {position})",
+  "@multiRename.error.foobar.tooDeep": {
+    "sourceHash": "98ae052"
+  },
+  "multiRename.syntax.label": "Name mask syntax",
+  "@multiRename.syntax.label": {
+    "sourceHash": "34e242b"
+  },
+  "multiRename.syntax.cmdr": "Cmdr",
+  "@multiRename.syntax.cmdr": {
+    "sourceHash": "40c6a1b"
+  },
+  "multiRename.syntax.foobar": "foobar2000",
+  "@multiRename.syntax.foobar": {
+    "sourceHash": "6cc8688"
+  },
+  "multiRename.syntax.cmdrTooltip": "Placeholders like [N], [C], and [=tag.title]",
+  "@multiRename.syntax.cmdrTooltip": {
+    "sourceHash": "fa7ac86"
+  },
+  "multiRename.syntax.foobarTooltip": "A foobar2000 pattern as written in foobar: %artist%, [ … ], $num(…)",
+  "@multiRename.syntax.foobarTooltip": {
+    "sourceHash": "a129ed4"
+  },
+  "multiRename.syntax.switched": "The name mask looks like a foobar2000 pattern, so Cmdr reads it as one.",
+  "@multiRename.syntax.switched": {
+    "sourceHash": "5da6429"
+  },
+  "multiRename.syntax.useCmdr": "Use Cmdr syntax",
+  "@multiRename.syntax.useCmdr": {
+    "sourceHash": "7d15664"
+  },
+  "multiRename.waitingForMask": "Fix the mask to see the new names",
+  "@multiRename.waitingForMask": {
+    "sourceHash": "d07061c"
+  },
+  "multiRename.status.waitingForMask": "Waiting for a valid mask",
+  "@multiRename.status.waitingForMask": {
+    "sourceHash": "ef7072b"
+  },
+  "multiRename.foobarFields": "Insert foobar2000 field",
+  "@multiRename.foobarFields": {
+    "sourceHash": "a105d6b"
   },
   "multiRename.error.gone": "Thư mục này không còn mở nữa. Hãy đóng “Đổi tên hàng loạt” rồi mở lại.",
   "@multiRename.error.gone": {
@@ -500,6 +588,42 @@
   "multiRename.mediaField.tagComment": "Nhận xét",
   "@multiRename.mediaField.tagComment": {
     "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaField.tagPerformer": "Performer",
+  "@multiRename.mediaField.tagPerformer": {
+    "sourceHash": "f4b163a"
+  },
+  "multiRename.mediaField.tagComposer": "Composer",
+  "@multiRename.mediaField.tagComposer": {
+    "sourceHash": "9cb2832"
+  },
+  "multiRename.mediaField.tagPublisher": "Publisher",
+  "@multiRename.mediaField.tagPublisher": {
+    "sourceHash": "2137854"
+  },
+  "multiRename.mediaField.tagDate": "Date",
+  "@multiRename.mediaField.tagDate": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaField.tagTotalTracks": "Total tracks",
+  "@multiRename.mediaField.tagTotalTracks": {
+    "sourceHash": "5677198"
+  },
+  "multiRename.mediaField.tagTotalDiscs": "Total discs",
+  "@multiRename.mediaField.tagTotalDiscs": {
+    "sourceHash": "2f1663d"
+  },
+  "multiRename.mediaField.tagDescription": "Description",
+  "@multiRename.mediaField.tagDescription": {
+    "sourceHash": "526e008"
+  },
+  "multiRename.mediaField.tagTranslator": "Translator",
+  "@multiRename.mediaField.tagTranslator": {
+    "sourceHash": "e6fe8ee"
+  },
+  "multiRename.mediaField.tagWww": "Web address",
+  "@multiRename.mediaField.tagWww": {
+    "sourceHash": "45099c5"
   },
   "multiRename.mediaPicker.title": "Chèn một trường",
   "@multiRename.mediaPicker.title": {
@@ -1049,6 +1173,46 @@
   "@multiRename.tags.album.colValue": {
     "sourceHash": "8e37953"
   },
+  "multiRename.tags.album.scopeFiltered": "{total, plural, one {{countText} of {totalText} track (filtered)} other {{countText} of {totalText} tracks (filtered)}}",
+  "@multiRename.tags.album.scopeFiltered": {
+    "sourceHash": "ca59a84"
+  },
+  "multiRename.tags.filter.label": "Filter the tracks",
+  "@multiRename.tags.filter.label": {
+    "sourceHash": "29f1004"
+  },
+  "multiRename.tags.filter.placeholder": "Filter, or title: text",
+  "@multiRename.tags.filter.placeholder": {
+    "sourceHash": "e815f87"
+  },
+  "multiRename.tags.filter.count": "{total, plural, one {{shownText} of {totalText} track} other {{shownText} of {totalText} tracks}}",
+  "@multiRename.tags.filter.count": {
+    "sourceHash": "a471e31"
+  },
+  "multiRename.tags.filter.hiddenSelected": "{count, plural, one {{countText} selected track hidden} other {{countText} selected tracks hidden}}",
+  "@multiRename.tags.filter.hiddenSelected": {
+    "sourceHash": "4cbcb7b"
+  },
+  "multiRename.tags.filter.countWithHidden": "{count}, {hidden}",
+  "@multiRename.tags.filter.countWithHidden": {
+    "sourceHash": "e638440"
+  },
+  "multiRename.tags.cover.useForAllHidden": "{count, plural, one {Use for the {countText} file, hidden one too} other {Use for all {countText} files, hidden ones too}}",
+  "@multiRename.tags.cover.useForAllHidden": {
+    "sourceHash": "7857387"
+  },
+  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {A cover goes to every file, including the {countText} the filter hides.} other {A cover goes to every file, including the {countText} the filter hides.}}",
+  "@multiRename.tags.cover.allFilesFiltered": {
+    "sourceHash": "28879e4"
+  },
+  "multiRename.tags.filter.noneShown": "No track matches the filter, so nothing was changed. Change the filter, or press Esc in it to show every track.",
+  "@multiRename.tags.filter.noneShown": {
+    "sourceHash": "ba2b0a9"
+  },
+  "multiRename.tags.clearField.shown": "{count, plural, one {Empties {field} on the track the filter shows.} other {Empties {field} on the {countText} tracks the filter shows.}}",
+  "@multiRename.tags.clearField.shown": {
+    "sourceHash": "b2c9ced"
+  },
   "multiRename.tags.album.scope": "{total, plural, one {{countText} of {totalText} track} other {{countText} of {totalText} tracks}}",
   "@multiRename.tags.album.scope": {
     "sourceHash": "1cd1edf"
@@ -1069,6 +1233,10 @@
   "@multiRename.tags.col.number": {
     "sourceHash": "334359b"
   },
+  "multiRename.tags.col.disc": "Disc",
+  "@multiRename.tags.col.disc": {
+    "sourceHash": "0c3ae2c"
+  },
   "multiRename.tags.col.title": "Title",
   "@multiRename.tags.col.title": {
     "sourceHash": "7e8cd20"
@@ -1088,6 +1256,14 @@
   "multiRename.tags.track.cellNumber": "Track number column",
   "@multiRename.tags.track.cellNumber": {
     "sourceHash": "091f2c2"
+  },
+  "multiRename.tags.track.cellDisc": "Disc column",
+  "@multiRename.tags.track.cellDisc": {
+    "sourceHash": "a8e8c8b"
+  },
+  "multiRename.tags.track.discLabel": "Disc of {fileName}",
+  "@multiRename.tags.track.discLabel": {
+    "sourceHash": "4e98c4f"
   },
   "multiRename.tags.track.cellTitle": "Title column",
   "@multiRename.tags.track.cellTitle": {
@@ -1217,6 +1393,26 @@
   "@multiRename.tags.cover.cantShow": {
     "sourceHash": "ee506dd"
   },
+  "multiRename.tags.cover.lookAlike": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}",
+  "@multiRename.tags.cover.lookAlike": {
+    "sourceHash": "1785415"
+  },
+  "multiRename.tags.cover.lookAlikeSomeNone": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}; {none, plural, one {{noneText} file has none} other {{noneText} files have none}}",
+  "@multiRename.tags.cover.lookAlikeSomeNone": {
+    "sourceHash": "8593996"
+  },
+  "multiRename.tags.cover.useLargest": "{count, plural, one {Use it for the {countText} file} other {Use it for all {countText} files}}",
+  "@multiRename.tags.cover.useLargest": {
+    "sourceHash": "41e4f40"
+  },
+  "multiRename.tags.cover.more": "{count, plural, one {{countText} more} other {{countText} more}}",
+  "@multiRename.tags.cover.more": {
+    "sourceHash": "6276706"
+  },
+  "multiRename.tags.cover.fewer": "Show fewer",
+  "@multiRename.tags.cover.fewer": {
+    "sourceHash": "255beb6"
+  },
   "multiRename.tags.cover.useForAll": "Use for all files",
   "@multiRename.tags.cover.useForAll": {
     "sourceHash": "723f22c"
@@ -1332,6 +1528,18 @@
   "multiRename.tags.tools.albumArtistFromArtist": "Album artist = Artist",
   "@multiRename.tags.tools.albumArtistFromArtist": {
     "sourceHash": "c6f45e3"
+  },
+  "multiRename.tags.tools.discFromFolder": "Disc from folder",
+  "@multiRename.tags.tools.discFromFolder": {
+    "sourceHash": "341c998"
+  },
+  "multiRename.tags.tools.discNumberOnly": "Keep only the disc number",
+  "@multiRename.tags.tools.discNumberOnly": {
+    "sourceHash": "8679776"
+  },
+  "multiRename.tags.tools.discUnchanged": "No disc changed.",
+  "@multiRename.tags.tools.discUnchanged": {
+    "sourceHash": "641443f"
   },
   "multiRename.tags.tools.narratorFromText": "Narrator from text",
   "@multiRename.tags.tools.narratorFromText": {
@@ -1629,6 +1837,82 @@
   "@multiRename.tags.tools.replace.run": {
     "sourceHash": "95e1543"
   },
+  "multiRename.tags.tools.replace.lists.heading": "Saved lists",
+  "@multiRename.tags.tools.replace.lists.heading": {
+    "sourceHash": "88b6a9e"
+  },
+  "multiRename.tags.tools.replace.lists.empty": "No saved lists yet.",
+  "@multiRename.tags.tools.replace.lists.empty": {
+    "sourceHash": "fc29749"
+  },
+  "multiRename.tags.tools.replace.lists.loadFailed": "Couldn’t load the saved lists.",
+  "@multiRename.tags.tools.replace.lists.loadFailed": {
+    "sourceHash": "bf2c5e1"
+  },
+  "multiRename.tags.tools.replace.lists.stepsLabel": "Steps in the list being built",
+  "@multiRename.tags.tools.replace.lists.stepsLabel": {
+    "sourceHash": "44debc9"
+  },
+  "multiRename.tags.tools.replace.lists.addStep": "Add as step",
+  "@multiRename.tags.tools.replace.lists.addStep": {
+    "sourceHash": "ee91785"
+  },
+  "multiRename.tags.tools.replace.lists.removeStep": "Remove step",
+  "@multiRename.tags.tools.replace.lists.removeStep": {
+    "sourceHash": "d4c76f4"
+  },
+  "multiRename.tags.tools.replace.lists.stepSummary": "{search} → {replace}",
+  "@multiRename.tags.tools.replace.lists.stepSummary": {
+    "sourceHash": "5246665"
+  },
+  "multiRename.tags.tools.replace.lists.name": "List name",
+  "@multiRename.tags.tools.replace.lists.name": {
+    "sourceHash": "6c1247b"
+  },
+  "multiRename.tags.tools.replace.lists.save": "Save list",
+  "@multiRename.tags.tools.replace.lists.save": {
+    "sourceHash": "6dfcb92"
+  },
+  "multiRename.tags.tools.replace.lists.run": "Run",
+  "@multiRename.tags.tools.replace.lists.run": {
+    "sourceHash": "00d60e3"
+  },
+  "multiRename.tags.tools.replace.lists.runNamed": "Run {name}",
+  "@multiRename.tags.tools.replace.lists.runNamed": {
+    "sourceHash": "7e8d49b"
+  },
+  "multiRename.tags.tools.replace.lists.edit": "Edit",
+  "@multiRename.tags.tools.replace.lists.edit": {
+    "sourceHash": "464c4ff"
+  },
+  "multiRename.tags.tools.replace.lists.editNamed": "Edit {name}",
+  "@multiRename.tags.tools.replace.lists.editNamed": {
+    "sourceHash": "2313fe2"
+  },
+  "multiRename.tags.tools.replace.lists.delete": "Delete",
+  "@multiRename.tags.tools.replace.lists.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "multiRename.tags.tools.replace.lists.deleteNamed": "Delete {name}",
+  "@multiRename.tags.tools.replace.lists.deleteNamed": {
+    "sourceHash": "3cf8146"
+  },
+  "multiRename.tags.tools.replace.lists.deleteFailed": "Couldn’t delete the list.",
+  "@multiRename.tags.tools.replace.lists.deleteFailed": {
+    "sourceHash": "0dda7bb"
+  },
+  "multiRename.tags.tools.replace.lists.full": "There are too many saved lists. Delete one first.",
+  "@multiRename.tags.tools.replace.lists.full": {
+    "sourceHash": "9972af1"
+  },
+  "multiRename.tags.tools.replace.lists.needsSteps": "A list needs a name and at least one step.",
+  "@multiRename.tags.tools.replace.lists.needsSteps": {
+    "sourceHash": "9437bab"
+  },
+  "multiRename.tags.tools.replace.lists.saveFailed": "Couldn’t save the list.",
+  "@multiRename.tags.tools.replace.lists.saveFailed": {
+    "sourceHash": "d7bb236"
+  },
   "multiRename.tags.tools.format.field": "Field",
   "@multiRename.tags.tools.format.field": {
     "sourceHash": "f45fc1d"
@@ -1789,6 +2073,38 @@
   "@multiRename.tags.play.openInPlayer": {
     "sourceHash": "bca23db"
   },
+  "multiRename.tags.play.openInApp": "Open in {app}",
+  "@multiRename.tags.play.openInApp": {
+    "sourceHash": "f30fd61"
+  },
+  "multiRename.tags.play.chooseApp": "Choose the app to open the tracks in",
+  "@multiRename.tags.play.chooseApp": {
+    "sourceHash": "8cf87ab"
+  },
+  "multiRename.tags.play.menu": "Open the tracks with",
+  "@multiRename.tags.play.menu": {
+    "sourceHash": "12aff2d"
+  },
+  "multiRename.tags.play.defaultApp": "{app} (default)",
+  "@multiRename.tags.play.defaultApp": {
+    "sourceHash": "32a7cca"
+  },
+  "multiRename.tags.play.defaultAppUnknown": "Each in its default app",
+  "@multiRename.tags.play.defaultAppUnknown": {
+    "sourceHash": "b564deb"
+  },
+  "multiRename.tags.play.noOtherApp": "No other app opens all these tracks",
+  "@multiRename.tags.play.noOtherApp": {
+    "sourceHash": "b31072c"
+  },
+  "multiRename.tags.play.chooseOther": "Choose…",
+  "@multiRename.tags.play.chooseOther": {
+    "sourceHash": "7ca4161"
+  },
+  "multiRename.tags.play.playerMissing": "The app you chose isn’t installed any more, so the tracks opened in the default app.",
+  "@multiRename.tags.play.playerMissing": {
+    "sourceHash": "96a9b8e"
+  },
   "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
   "@multiRename.tags.play.playerUnavailable": {
     "sourceHash": "753fba0"
@@ -1892,6 +2208,10 @@
   "multiRename.tags.keys.openInPlayer": "Open in player",
   "@multiRename.tags.keys.openInPlayer": {
     "sourceHash": "bbd20b9"
+  },
+  "multiRename.tags.keys.openInApp": "Open in {app}",
+  "@multiRename.tags.keys.openInApp": {
+    "sourceHash": "f30fd61"
   },
   "multiRename.tags.keys.case": "Case",
   "@multiRename.tags.keys.case": {

@@ -568,6 +568,10 @@
   "@commands.tagsRedo.label": {
     "sourceHash": "1b672b3"
   },
+  "commands.tagsFilter.label": "Filter the tracks",
+  "@commands.tagsFilter.label": {
+    "sourceHash": "29f1004"
+  },
   "commands.queueCursorUp.label": "Předchozí operace",
   "@commands.queueCursorUp.label": {
     "sourceHash": "122b454"

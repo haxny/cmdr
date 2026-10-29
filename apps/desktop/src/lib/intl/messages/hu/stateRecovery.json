@@ -55,6 +55,10 @@
   "@stateRecovery.selectionHistory.title": {
     "sourceHash": "a93f574"
   },
+  "stateRecovery.tagReplacePresets.title": "Cmdr couldn’t read your saved tag replace lists, so the list starts with the built-in one",
+  "@stateRecovery.tagReplacePresets.title": {
+    "sourceHash": "8079259"
+  },
   "stateRecovery.multiRenamePresets.title": "A Cmdr nem tudta beolvasni a csoportos átnevezés mentett előbeállításait, ezért a lista üresen indul",
   "@stateRecovery.multiRenamePresets.title": {
     "sourceHash": "b6f2a3b"
