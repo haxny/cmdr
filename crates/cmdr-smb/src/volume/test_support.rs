@@ -86,6 +86,7 @@ fn make_test_volume_full(volume_id: &str, host: VolumeHost, share_root: &str, mo
             scan_session_refs: AtomicUsize::new(0),
             credit_copy_capacity: AtomicUsize::new(0),
             spellings: spelling::SpellingCache::default(),
+            link_paths: dfs_links::LinkPaths::default(),
             live_connection: liveness::LiveConnection::new(None),
             transfer,
             active_mount_path: Arc::new(StdRwLock::new(mount_path)),

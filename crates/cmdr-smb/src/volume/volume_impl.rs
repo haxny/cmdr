@@ -10,6 +10,7 @@
 //! answers, whose whole content is the reasoning in their doc comments.
 
 use super::copy::ProgressOnly;
+use super::dfs_links::link_open_reader;
 use super::session::SessionLease;
 use super::state::ConnectionState;
 use super::{SmbVolume, foreground_yield};
@@ -286,7 +287,11 @@ impl Volume for SmbVolume {
         )
     }
 
-    fn listing_watch_coverage(&self, _path: &Path) -> WatchCoverage {
+    fn listing_watch_coverage(&self, path: &Path) -> WatchCoverage {
+        // Behind a DFS link no CHANGE_NOTIFY reaches us (`dfs_links.rs`).
+        if self.to_smb_path(path).is_ok_and(|p| self.inner.link_paths.covers(&p)) {
+            return WatchCoverage::None;
+        }
         // SMB watching is volume-level: the smb_watcher monitors the whole share
         // via CHANGE_NOTIFY, which the SERVER raises, so it reports every client's
         // writes and not only ours. That's what earns `EveryWriter` here while the
@@ -582,12 +587,11 @@ impl Volume for SmbVolume {
             // central-directory parse to ~1). Caching an open `FileReader` per path
             // is the future optimization; see the archive backend DETAILS.
             let SessionLease { tree, conn, generation } = self.clone_session().await?;
-            let reader = self.handle_smb_result(
-                "read_range(open)",
-                &smb_path,
-                generation,
-                tree.open_file_reader(conn, &smb_path).await,
-            )?;
+            let opened = tree.open_file_reader(conn, &smb_path).await;
+            let opened = self
+                .or_through_link(generation, &smb_path, opened, link_open_reader)
+                .await;
+            let reader = self.handle_smb_result("read_range(open)", &smb_path, generation, opened)?;
 
             let read_result = reader.read_at(offset, len as u64).await;
             // Close the handle regardless of the read outcome. Relying on `Drop`

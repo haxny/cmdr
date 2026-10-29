@@ -1,4 +1,5 @@
-//! Transfers through a DFS link inside the share (`dfs_links.rs`), against
+//! Every call family through a DFS link inside the share (`dfs_links.rs`):
+//! transfers, listings, stats, scans, and mutations, against
 //! smb2's own DFS fixtures: `smb-dfs-root` (port 10456) holds a share `dfs`
 //! whose `data` folder is an `msdfs:` link to `smb-dfs-target`'s `files` share
 //! (port 10457).
@@ -117,10 +118,10 @@ async fn smb_dfs_uploads_through_a_link_land_on_the_target_streamed_and_single_f
         return;
     }
     let vol = dfs_volume().await;
-    // Fixed names, replaced on every run: the delete that would tidy them is a
-    // main-session mutation, which doesn't follow a link yet (the cell below).
-    let big_path = "data/cmdr-transfer-session-big.bin";
-    let small_path = "data/cmdr-transfer-session-small.bin";
+    let folder = run_folder();
+    vol.create_directory(Path::new(&folder)).await.unwrap();
+    let big_path = &format!("{folder}/big.bin");
+    let small_path = &format!("{folder}/small.bin");
 
     // Bigger than a fresh connection's one-frame limit, so it streams, and
     // spans several of the link download's windows on the way back.
@@ -134,27 +135,260 @@ async fn smb_dfs_uploads_through_a_link_land_on_the_target_streamed_and_single_f
     assert!(big_back == big, "the streamed upload reads back byte for byte");
     let small_back = drain(vol.open_read_stream(Path::new(small_path)).await.unwrap()).await;
     assert_eq!(small_back, small, "the one-frame upload reads back byte for byte");
+
+    for path in [big_path, small_path, &folder] {
+        vol.delete(Path::new(path)).await.unwrap();
+    }
 }
 
-/// What doesn't follow a link yet, pinned so the gap can't be mistaken for
-/// done: the main session's listings, `stat`s, and mutations all drive the
-/// `Tree` API, so a path behind a link answers `STATUS_PATH_NOT_COVERED`. A
-/// copy INTO or OUT OF a link therefore still fails at its scan and at its
-/// landing rename, though every byte-moving call above follows the link. When
-/// those learn to follow it too, this cell flips and goes.
+/// A folder name of this run's own inside the link, so runs never collide.
+fn run_folder() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or_default();
+    format!("data/cmdr-dfs-{}-{nanos}", std::process::id())
+}
+
+fn names(entries: &[FileEntry]) -> Vec<String> {
+    let mut names: Vec<String> = entries.iter().map(|e| e.name.clone()).collect();
+    names.sort();
+    names
+}
+
 #[tokio::test]
 #[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
-async fn smb_dfs_the_main_sessions_calls_dont_follow_a_link_yet() {
+async fn smb_dfs_a_folder_behind_a_link_lists() {
     if dfs_fixture_not_requested() {
         return;
     }
     let vol = dfs_volume().await;
-    assert!(vol.list_directory(Path::new("data"), None).await.is_err(), "a listing");
-    assert!(vol.get_metadata(Path::new("data/hello.txt")).await.is_err(), "a stat");
-    assert!(vol.scan_for_copy(Path::new("data")).await.is_err(), "a copy scan");
+
+    let top = vol.list_directory(Path::new("data"), None).await.unwrap();
+    let top_names = names(&top);
     assert!(
-        vol.create_directory(Path::new("data/never")).await.is_err(),
-        "a mutation"
+        top_names.contains(&"hello.txt".to_string()) && top_names.contains(&"subdir".to_string()),
+        "the link's folder lists the target share, got {top_names:?}"
+    );
+    let hello = top.iter().find(|e| e.name == "hello.txt").unwrap();
+    assert_eq!(hello.size, Some(23));
+    assert!(
+        hello.path.ends_with("data/hello.txt"),
+        "an entry keeps the caller's path, link folder included, got {:?}",
+        hello.path
+    );
+
+    let nested = vol.list_directory(Path::new("data/subdir"), None).await.unwrap();
+    assert_eq!(
+        names(&nested),
+        vec!["nested.txt".to_string()],
+        "a folder deeper in the link"
+    );
+}
+
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_stats_behind_a_link_describe_the_target() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+
+    let file = vol.get_metadata(Path::new("data/hello.txt")).await.unwrap();
+    assert_eq!((file.is_directory, file.size), (false, Some(23)), "get_metadata");
+    assert!(
+        vol.is_directory(Path::new("data/subdir")).await.unwrap(),
+        "is_directory"
+    );
+    assert!(
+        !vol.is_directory(Path::new("data/hello.txt")).await.unwrap(),
+        "is_directory on a file"
+    );
+    assert!(vol.exists(Path::new("data/subdir/nested.txt")).await, "exists");
+    assert!(
+        !vol.exists(Path::new("data/no-such-file.txt")).await,
+        "exists on a miss"
+    );
+    assert!(matches!(
+        vol.get_metadata(Path::new("data/no-such-file.txt")).await,
+        Err(VolumeError::NotFound(_))
+    ));
+    assert_eq!(
+        vol.entry_kind(Path::new("data/subdir")).await.unwrap(),
+        cmdr_fs::volume::EntryKind::Directory,
+        "entry_kind"
+    );
+    let attributes = vol.attributes_impl(Path::new("data/hello.txt")).await.unwrap();
+    assert!(!attributes.contains(smb2::FileAttributes::DIRECTORY), "attributes");
+    assert_eq!(
+        vol.read_range(Path::new("data/hello.txt"), 6, 4).await.unwrap(),
+        b"from".to_vec(),
+        "read_range"
+    );
+    let reader = vol.open_random_reader(Path::new("data/hello.txt")).await.unwrap();
+    assert_eq!(reader.size(), 23, "open_random_reader");
+}
+
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_copy_scan_walks_behind_a_link() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+
+    let scan = vol.scan_for_copy(Path::new("data/subdir")).await.unwrap();
+    assert_eq!((scan.file_count, scan.total_bytes), (1, 12), "a folder behind the link");
+
+    let batch = vol
+        .scan_for_copy_batch(&[PathBuf::from("data/hello.txt"), PathBuf::from("data/subdir")])
+        .await
+        .unwrap();
+    assert_eq!(
+        (batch.aggregate.file_count, batch.aggregate.total_bytes),
+        (2, 35),
+        "the batch scan's pipelined top-level stats follow the link too"
+    );
+}
+
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_mutations_behind_a_link_land_on_the_target() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+    let folder = run_folder();
+    let file = format!("{folder}/note.txt");
+    let renamed = format!("{folder}/renamed.txt");
+
+    vol.create_directory(Path::new(&folder)).await.unwrap();
+    vol.create_file(Path::new(&file), b"hi").await.unwrap();
+    assert!(
+        matches!(
+            vol.create_file(Path::new(&file), b"again").await,
+            Err(VolumeError::AlreadyExists(_))
+        ),
+        "create_file still refuses to clobber through the link"
+    );
+    vol.rename(Path::new(&file), Path::new(&renamed), false).await.unwrap();
+    vol.create_file(Path::new(&file), b"second").await.unwrap();
+    vol.rename(Path::new(&file), Path::new(&renamed), true).await.unwrap();
+    assert_eq!(
+        vol.read_range(Path::new(&renamed), 0, 6).await.unwrap(),
+        b"second".to_vec(),
+        "the forced rename swapped the new file in"
+    );
+    assert_eq!(
+        names(&vol.list_directory(Path::new(&folder), None).await.unwrap()),
+        vec!["renamed.txt".to_string()]
+    );
+
+    vol.delete(Path::new(&renamed)).await.unwrap();
+    vol.delete(Path::new(&folder)).await.unwrap();
+    assert!(
+        !vol.exists(Path::new(&folder)).await,
+        "the folder is gone from the target"
+    );
+}
+
+/// smb2 follows a rename through a link only within one directory: a
+/// SET_INFO's destination is relative to the TARGET share, and smb2 can't tell
+/// where the link folder ends in a destination elsewhere. So a move between two
+/// folders behind one link is refused, pinned so the gap can't pass for done.
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_move_between_folders_behind_a_link_is_refused() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+    let folder = run_folder();
+    let inner = format!("{folder}/inner");
+    let file = format!("{folder}/moved.txt");
+    vol.create_directory(Path::new(&folder)).await.unwrap();
+    vol.create_directory(Path::new(&inner)).await.unwrap();
+    vol.create_file(Path::new(&file), b"x").await.unwrap();
+
+    let moved = vol
+        .rename(Path::new(&file), Path::new(&format!("{inner}/moved.txt")), false)
+        .await;
+    assert!(
+        moved.is_err(),
+        "smb2 can't place this rename on the target, got {moved:?}"
+    );
+
+    vol.delete(Path::new(&file)).await.unwrap();
+    vol.delete(Path::new(&inner)).await.unwrap();
+    vol.delete(Path::new(&folder)).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_foreign_spelling_behind_a_link_resolves() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+    // Exact already: nothing to correct.
+    assert_eq!(
+        vol.find_stored_spelling(Path::new("data/subdir/nested.txt"), None)
+            .await
+            .unwrap(),
+        None
+    );
+}
+
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_the_index_scan_pool_lists_behind_a_link() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+    vol.begin_scan_session().await;
+    assert!(
+        vol.inner.scan_pool.read().await.is_some(),
+        "the pool is open, so the listing rides a member"
+    );
+    let listed = vol.list_directory_for_scan(Path::new("data/subdir"), None).await;
+    let prefetched = vol
+        .open_read_stream_for_scan(Path::new("data/subdir/nested.txt"), Some(12))
+        .await;
+    vol.end_scan_session().await;
+    assert_eq!(names(&listed.unwrap()), vec!["nested.txt".to_string()]);
+    assert_eq!(
+        drain(prefetched.unwrap()).await,
+        b"Nested file\n".to_vec(),
+        "an enrichment prefetch behind the link streams through it"
+    );
+}
+
+/// The share's CHANGE_NOTIFY watch runs on the share's own server, so it never
+/// hears a change on a link's target: a listing behind a link isn't kept fresh,
+/// and the fresh-listing oracle must not stand in for a read there.
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_listing_behind_a_link_claims_no_watch() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+    assert_eq!(vol.listing_watch_coverage(Path::new("")), WatchCoverage::EveryWriter);
+    vol.list_directory(Path::new("data/subdir"), None).await.unwrap();
+    assert_eq!(
+        vol.listing_watch_coverage(Path::new("data/subdir")),
+        WatchCoverage::None
+    );
+    assert_eq!(
+        vol.listing_watch_coverage(Path::new("data/subdir/deeper")),
+        WatchCoverage::None,
+        "below a followed path too"
+    );
+    assert_eq!(
+        vol.listing_watch_coverage(Path::new("")),
+        WatchCoverage::EveryWriter,
+        "the share itself stays watched"
     );
 }
 

@@ -9,6 +9,7 @@
 //! and the unlock.
 
 use super::SmbVolume;
+use super::dfs_links::link_bare_stat;
 use super::mapping::{attributes_of, user_flags_of};
 use super::session::SessionLease;
 use cmdr_fs::log_error::LogError;
@@ -32,6 +33,7 @@ impl SmbVolume {
             generation,
         } = self.clone_session().await?;
         let r = tree.stat(&mut conn, &smb_path).await;
+        let r = self.or_through_link(generation, &smb_path, r, link_bare_stat).await;
         Ok(self
             .handle_smb_result("attributes", &smb_path, generation, r)?
             .attributes)

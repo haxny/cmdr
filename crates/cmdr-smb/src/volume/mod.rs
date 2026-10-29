@@ -324,6 +324,9 @@ struct SmbVolumeInner {
     /// bytes, keyed by directory. Per share because the names are; forgotten per
     /// directory as the watcher reports changes there. See `spelling.rs`.
     spellings: spelling::SpellingCache,
+    /// The share paths a call followed a DFS link from, so a listing behind one
+    /// claims no watch (`dfs_links.rs`).
+    link_paths: dfs_links::LinkPaths,
     /// The connection the current `client` owns, readable without the client
     /// mutex, so the transfer watchdog can ask whether the server is still talking
     /// (`Volume::connection_liveness`) and how many bytes it has sent. Swapped in
@@ -401,6 +404,7 @@ impl SmbVolume {
                 scan_session_refs: AtomicUsize::new(0),
                 credit_copy_capacity: AtomicUsize::new(0),
                 spellings: spelling::SpellingCache::default(),
+                link_paths: dfs_links::LinkPaths::default(),
                 live_connection,
                 transfer,
                 active_mount_path: Arc::new(StdRwLock::new(mount_path)),

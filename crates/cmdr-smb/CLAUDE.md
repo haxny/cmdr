@@ -29,8 +29,8 @@ keychain, mounts, and human-facing words stay in the app's `network/`.
 - **Unknown-length writes stream**, succeeding on `finish`'s count.
 - **A forced file rename is one atomic `ReplaceIfExists` swap**; ❌ never clear a destination that's the source
   re-cased.
-- **One-frame fast paths stop at smb2's quick limits**: a hinted read at `quick_read_limit()`, the write promise at
-  `quick_write_limit()`. ❌ A refused one-frame write to a non-scratch name never streams (`one_frame_write_limit`).
+- **One-frame fast paths stop at `quick_read_limit()` / `quick_write_limit()`**. ❌ A refused one-frame write to a
+  non-scratch name never streams (`one_frame_write_limit`).
 - **A streamed read ends at its last byte**: ❌ don't wait for `None` to drop `chunk_tx`.
 - **`scan_recursive` asks its `ScanBoundary` per entry, `dir()` BEFORE the listing** (`DETAILS.md` § "Scanning").
 - **Bulk work rides EXTRA sessions** (scans: `scan_pool.rs`; bytes: `transfer_session.rs`); a loss there ❌ never moves
@@ -38,6 +38,7 @@ keychain, mounts, and human-facing words stay in the app's `network/`.
 - **An error funnels with its lease's generation**, ❌ never a fresh read (DETAILS § "Which session a loss is about").
 - **A rebuilt session names only its OWN dead predecessor** (`retired_session_id`), ❌ never a live one.
 - **smb2 bounds every wait itself**: ❌ no timeout layer of ours.
+- **A path call follows a DFS link only via `or_through_link`**; ❌ a bare `Tree` call fails there.
 - **A link is `is_link()`, ❌ never the `REPARSE_POINT` bit** (dedup and cloud files carry it; DETAILS § "Junctions and
   symlinks").
 - **Path conversion matches whole COMPONENTS both ways** (`to_smb_path` / `to_display_path` join and strip
