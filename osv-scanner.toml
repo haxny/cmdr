@@ -72,6 +72,16 @@ ignoreUntil = 2026-11-07
 reason = "zip 4.6.1 (zip cloaking: `ZipStreamReader` extracts by local-header names while `ZipArchive` lists central-directory ones): same Windows-only tauri-plugin-updater path as RUSTSEC-2026-0367, and the plugin calls `ZipArchive`, never the streaming reader. Our own archive code runs the vendored zip 9.0.5, which has the fix, and lists and extracts by central-directory name only (`cloaked_*` tests in crates/cmdr-archive/src/read/archive_test.rs). The fix for this path is tauri-plugin-updater 2.14.1 (zip ^9), published 2026-10-28, so it clears the three-day release window on 2026-10-31: bump to it then (Renovate, #464), which clears this and RUSTSEC-2026-0367..0369 together."
 
 [[IgnoredVulns]]
+id = "GHSA-8hxf-qr8p-62x4"
+ignoreUntil = 2026-11-07
+reason = "zip 4.6.1 (AES entry HMAC bypass on premature EOF): same Windows-only tauri-plugin-updater path as GHSA-m665-v7pm-7grj; Cmdr ships for macOS, and the updater's own archives carry no AES entries. Our own archive code runs the vendored zip 9.0.5, past the 9.0.0 fix. Cleared by the same tauri-plugin-updater 2.14.1 bump on 2026-10-31."
+
+[[IgnoredVulns]]
+id = "GHSA-q7v9-x93c-xqv3"
+ignoreUntil = 2026-11-07
+reason = "zip 4.6.1 (unbounded symlink-target handling during extraction): same Windows-only tauri-plugin-updater path as GHSA-m665-v7pm-7grj; Cmdr ships for macOS, and the updater extracts only its own signed update archive. Our own archive code runs the vendored zip 9.0.5, past the 9.0.0 fix. Cleared by the same tauri-plugin-updater 2.14.1 bump on 2026-10-31."
+
+[[IgnoredVulns]]
 id = "RUSTSEC-2025-0052"
 reason = "async-std is discontinued: a dev-dependency of the vendored cmdr-fsevent-stream fork, used by its tests only. Same entry in deny.toml."
 
