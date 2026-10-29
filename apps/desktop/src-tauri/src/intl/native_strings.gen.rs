@@ -97,6 +97,7 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.file.deletePermanently", "Smazat trvale"),
             ("menu.file.duplicate", "Duplikovat"),
             ("menu.file.edit", "Upravit v editoru"),
+            ("menu.file.editTags", "Edit tags…"),
             ("menu.file.getInfo", "Informace"),
             ("menu.file.move", "Přesunout…"),
             ("menu.file.multiRename", "Hromadné přejmenování…"),

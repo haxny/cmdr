@@ -233,7 +233,6 @@ record the outcome in `terms.json` or `decisions.md`).
 - `askCmdr.thinking`: Přemýšlí… (3rd sg, like a messenger's píše…); check it reads naturally next to the impersonal tool
   lines
 - `askCmdr.composer.dropHint`: Pusť sem pro přiložení; check it reads naturally as a drop overlay
-- `askCmdr.tool.refused`: Tento požadavek není k dispozici; the English is vague, check the meaning comes across
 - `askCmdr.sessions.unarchive`: Obnovit z archivu has no pile source; check against Czech mail/chat apps
 - `askCmdr.tool.memoryEdit.doing`: Aktualizují se vlastní poznámky (its = vlastní); check it doesn't read as the user's
   own notes
