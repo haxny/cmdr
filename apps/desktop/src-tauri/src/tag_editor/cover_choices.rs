@@ -3,8 +3,9 @@
 //! picture, a dropped file). Nothing here writes a file: a cover edit is a change Write lists.
 //!
 //! A cover is named by its key (`Loaded::cover_key`, taken once per read or new cover, never
-//! here), so grouping hashes nothing. Unreadable files are never written, so they count in no
-//! choice.
+//! here), so grouping by bytes hashes nothing. Covers that look the same (one picture re-encoded or
+//! resized, so different bytes) are then one choice too: see [`NEAR_DUPLICATE_BITS`]. Unreadable
+//! files are never written, so they count in no choice.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -19,12 +20,20 @@ use serde::Serialize;
 use tokio::sync::Semaphore;
 
 use super::cover::{cover_from_bytes, thumbnail_url};
-use super::cover_image::thumbnail_of;
+use super::cover_image::{dhash_of, hamming, thumbnail_of};
 use super::session::{Loaded, TagEdit, TagEditorError, edit, with_loaded};
 use super::view::{TagEditorView, common_cover, cover_key, pixel_size};
 
 /// The key of the choice that stands for the files without a cover.
 pub const NO_COVER_KEY: &str = "none";
+
+/// Two covers whose 64-bit dHashes (`cover_image::dhash_of`) differ in at most this many bits look
+/// the same and are one choice. Copies of one picture land at 0 bits (JPEG quality 90 against 70,
+/// and 30 at 200 px; 600 px against 500 px; PNG against JPEG: the pictures in `cover_near_test.rs`;
+/// and the 24 distinct re-encoded copies of one real audiobook's cover, all 0 bits apart), while
+/// different pictures land at 29 or more (the same layout mirrored: 60). Five keeps a wide margin
+/// on both sides (verified with `image` 0.25.10, the generated pictures and one real MP3 book, 2026-10-29).
+pub const NEAR_DUPLICATE_BITS: u32 = 5;
 
 /// One distinct cover across the readable files, or (`key: "none"`, empty `mime`, 0 bytes) the
 /// files that have none.
@@ -38,8 +47,11 @@ pub struct CoverChoice {
     /// Pixel size, when the image header could be read.
     pub width: Option<u32>,
     pub height: Option<u32>,
-    /// How many readable files carry it.
+    /// How many readable files carry it, or one that looks the same.
     pub files: u32,
+    /// How many other distinct covers look the same as this one and are counted in it (0 when
+    /// none): this one is the largest of them in pixels.
+    pub near_duplicates: u32,
 }
 
 /// One readable file's edited cover and its key, copied out of the session (a shared buffer, no bytes copied).
@@ -66,6 +78,16 @@ struct Group<'a> {
     files: u32,
 }
 
+/// Distinct covers that look the same, while merging: the largest one's cover and key stand for
+/// them (`face`), compared by the first one's hash (`seed`, so likeness never chains on).
+struct Alike<'a> {
+    face: Group<'a>,
+    size: Option<(u32, u32)>,
+    seed: Option<u64>,
+    files: u32,
+    merged: u32,
+}
+
 /// The key a cover goes by: the cached one, else (never in practice: every read and store keys
 /// it) a hash.
 fn key_or_hash(key: Option<u64>, cover: &Cover) -> u64 {
@@ -76,9 +98,13 @@ fn key_text(key: u64) -> String {
     format!("{key:016x}")
 }
 
-/// The distinct covers of `files`, the most carried first (ties in file order), then the files
-/// without one. Same MIME, size, and key is one cover. Pure; reads no file.
-pub(super) fn choices_of(files: &[FileCover]) -> Vec<CoverChoice> {
+fn area(size: Option<(u32, u32)>) -> u64 {
+    size.map_or(0, |(width, height)| u64::from(width) * u64::from(height))
+}
+
+/// The distinct covers of `files` by bytes (same MIME, size, and key), in file order, and how many
+/// files have none.
+fn exact_groups(files: &[FileCover]) -> (Vec<Group<'_>>, u32) {
     let mut groups: Vec<Group<'_>> = Vec::new();
     let mut uncovered = 0u32;
     for file in files {
@@ -94,17 +120,62 @@ pub(super) fn choices_of(files: &[FileCover]) -> Vec<CoverChoice> {
             None => groups.push(Group { cover, key, files: 1 }),
         }
     }
+    (groups, uncovered)
+}
+
+/// `groups` with the ones that look the same as one: the largest in pixels stands (the first on a
+/// tie), the files summed. A cover that doesn't decode has no hash and stays alone.
+fn merge_alike(groups: Vec<Group<'_>>) -> Vec<Alike<'_>> {
+    let mut merged: Vec<Alike<'_>> = Vec::new();
+    for group in groups {
+        let hash = dhash_of(group.cover, &key_text(group.key));
+        let size = pixel_size(group.cover);
+        let near = hash.and_then(|hash| {
+            merged.iter_mut().find(|alike| {
+                alike
+                    .seed
+                    .is_some_and(|seed| hamming(seed, hash) <= NEAR_DUPLICATE_BITS)
+            })
+        });
+        match near {
+            Some(alike) => {
+                alike.files += group.files;
+                alike.merged += 1;
+                if area(size) > area(alike.size) {
+                    alike.face = group;
+                    alike.size = size;
+                }
+            }
+            None => merged.push(Alike {
+                files: group.files,
+                face: group,
+                size,
+                seed: hash,
+                merged: 0,
+            }),
+        }
+    }
+    merged
+}
+
+/// The distinct covers of `files`, the most carried first (ties in file order), then the files
+/// without one. Same MIME, size, and key is one cover, and so are covers that look the same.
+/// Reads no file; decodes each distinct cover once (`dhash_of` caches), so call it off any lock.
+pub(super) fn choices_of(files: &[FileCover]) -> Vec<CoverChoice> {
+    let (groups, uncovered) = exact_groups(files);
+    let mut merged = merge_alike(groups);
     // Stable: equal counts keep file order.
-    groups.sort_by_key(|group| std::cmp::Reverse(group.files));
-    let covered = groups.into_iter().map(|group| {
-        let (width, height) = pixel_size(group.cover).unzip();
+    merged.sort_by_key(|alike| std::cmp::Reverse(alike.files));
+    let covered = merged.into_iter().map(|alike| {
+        let (width, height) = alike.size.unzip();
         CoverChoice {
-            key: key_text(group.key),
-            mime: group.cover.mime.clone(),
-            bytes: u64::try_from(group.cover.data.len()).unwrap_or(u64::MAX),
+            key: key_text(alike.face.key),
+            mime: alike.face.cover.mime.clone(),
+            bytes: u64::try_from(alike.face.cover.data.len()).unwrap_or(u64::MAX),
             width,
             height,
-            files: group.files,
+            files: alike.files,
+            near_duplicates: alike.merged,
         }
     });
     let none = (uncovered > 0).then(|| CoverChoice {
@@ -114,6 +185,7 @@ pub(super) fn choices_of(files: &[FileCover]) -> Vec<CoverChoice> {
         width: None,
         height: None,
         files: uncovered,
+        near_duplicates: 0,
     });
     covered.chain(none).collect()
 }
@@ -131,7 +203,7 @@ fn find(files: &[&Loaded], key: &str) -> Option<Option<Cover>> {
 }
 
 /// The session's cover choices. Only each file's cover and key are copied out under the lock;
-/// the pixel sizes are read after it.
+/// the pixel sizes and the likeness hashes are read after it.
 pub fn list(session_id: &str) -> Result<Vec<CoverChoice>, TagEditorError> {
     let covers = with_loaded(session_id, covers_of)?;
     Ok(choices_of(&covers))

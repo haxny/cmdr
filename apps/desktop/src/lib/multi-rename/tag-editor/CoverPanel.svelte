@@ -3,7 +3,9 @@
      * The cover section, the Album pane's last group: every distinct cover the files carry as a thumbnail, with how
      * many files carry it and its size, and the files without one counted too (`list_tag_covers`, listed again on
      * every new view). A click opens a cover large (`onView`, the `CoverViewer` dialog), where "Use for all files"
-     * gives it to every file. A picture pasted (⌘V) while the section has focus, or a picture file dropped on it,
+     * gives it to every file. Covers that look the same are one tile (the backend merges them); when one tile holds every
+     * file, the section says so and offers its largest copy for all ("Use the largest one for all files", one edit, one
+     * ⌘Z). Past eight covers the rest fold under "N more". A picture pasted (⌘V) while the section has focus, or a picture file dropped on it,
      * becomes every file's cover, as does Paste picture (the mouse road, `navigator.clipboard.read()`); "From folder…" lists the pictures beside the files; "Remove" takes every cover out.
      * Each is an in-memory change Write lists; nothing touches a file before Write.
      *
@@ -17,10 +19,21 @@
     import type { CoverChoice, CoverSummary } from '#lib/ipc/bindings.js'
     import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
     import type { CoverCandidate, TagEdit } from '#lib/tauri-commands/index.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import { formatFileSizeWithFormat } from '#lib/units/byte-size.js'
     import Button from '#lib/ui/Button.svelte'
     import { dependOn } from '#lib/utils/reactivity.js'
-    import { NO_COVER_KEY, coverDetails, filesText, pasteLimit, pastedPicture, visiblePart, type CoverShown } from './cover-choices'
+    import {
+        MAX_COVER_TILES,
+        NO_COVER_KEY,
+        coverDetails,
+        filesText,
+        oneLookForAll,
+        pasteLimit,
+        pastedPicture,
+        visiblePart,
+        type CoverShown,
+    } from './cover-choices'
     import { isOver, subscribeCoverDrop, type CoverDropEvent, type CoverDropSubscriber } from './cover-drop'
 
     interface Props {
@@ -41,6 +54,8 @@
         onPaste: (data: Uint8Array) => void
         /** A dropped file's path. */
         onDrop: (path: string) => void
+        /** Gives every file the cover `key` names (`use_cover_for_all`): the largest of covers that look the same. */
+        onUseForAll: (key: string) => void
         /** The window's file drags (the webview's by default; tests give their own). */
         subscribeDrop?: CoverDropSubscriber
     }
@@ -57,6 +72,7 @@
         onEdit,
         onPaste,
         onDrop,
+        onUseForAll,
         subscribeDrop = subscribeCoverDrop,
     }: Props = $props()
 
@@ -67,6 +83,17 @@
     /** `undefined` while the first listing is out, `null` when it failed. */
     let choices = $state<CoverChoice[] | null | undefined>(undefined)
     const total = $derived((choices ?? []).reduce((sum, choice) => sum + choice.files, 0))
+    /** The one look every file's cover has, when their bytes differ but they look the same. */
+    const alike = $derived(oneLookForAll(choices ?? []))
+    /** "N more" was pressed: every cover shows. */
+    let showAll = $state(false)
+    const covered = $derived((choices ?? []).filter((choice) => choice.key !== NO_COVER_KEY))
+    const hidden = $derived(showAll ? 0 : Math.max(0, covered.length - MAX_COVER_TILES))
+    /** The tiles shown: the first eight covers (or all), then the files without one. */
+    const shownChoices = $derived([
+        ...covered.slice(0, covered.length - hidden),
+        ...(choices ?? []).filter((choice) => choice.key === NO_COVER_KEY),
+    ])
     /** Each cover's `data:` URL by key, once it came. */
     let images = $state<Record<string, string | null>>({})
     /** The keys asked for already, so a cover is fetched once however often the list comes again. */
@@ -260,8 +287,21 @@
     {#if choices === null}
         <p role="alert">{tString('multiRename.tags.cover.choicesFailed')}</p>
     {:else if choices !== undefined && choices.length > 0}
+        {#if alike !== null}
+            <div class="alike">
+                <p>
+                    {tString('multiRename.tags.cover.lookAlike', {
+                        count: alike.nearDuplicates + 1,
+                        countText: formatInteger(alike.nearDuplicates + 1),
+                    })}
+                </p>
+                <Button disabled={!editable} onclick={() => { onUseForAll(alike.key) }}>
+                    {tString('multiRename.tags.cover.useLargest')}
+                </Button>
+            </div>
+        {/if}
         <ul class="choices" aria-label={tString('multiRename.tags.cover.choicesLabel')}>
-            {#each choices as choice (choice.key)}
+            {#each shownChoices as choice (choice.key)}
                 <li>
                     {#if choice.key === NO_COVER_KEY}
                         <div class="choice">
@@ -296,6 +336,11 @@
                 </li>
             {/each}
         </ul>
+        {#if hidden > 0}
+            <Button aria-expanded={false} onclick={() => { showAll = true }}>
+                {tString('multiRename.tags.cover.more', { count: hidden, countText: formatInteger(hidden) })}
+            </Button>
+        {/if}
     {/if}
     {#if dragOver}
         <p class="hint">{tString('multiRename.tags.cover.dropHere')}</p>
@@ -367,6 +412,17 @@
         margin: 0;
         padding: 0;
         list-style: none;
+    }
+
+    .alike {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--spacing-xs) var(--spacing-sm);
+    }
+
+    .alike p {
+        margin: 0;
     }
 
     .choice {

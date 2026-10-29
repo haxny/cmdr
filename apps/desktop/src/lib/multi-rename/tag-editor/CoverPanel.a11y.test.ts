@@ -14,8 +14,16 @@ afterEach(() => {
   cleanup = undefined
 })
 
-const FRONT: CoverChoice = { key: 'k1', mime: 'image/png', bytes: 5000, width: 10, height: 10, files: 2 }
-const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 1 }
+const FRONT: CoverChoice = {
+  key: 'k1',
+  mime: 'image/png',
+  bytes: 5000,
+  width: 10,
+  height: 10,
+  files: 2,
+  nearDuplicates: 0,
+}
+const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 1, nearDuplicates: 0 }
 
 const settle = async (): Promise<void> => {
   await tick()
@@ -36,6 +44,7 @@ async function mountPanel(cover: CoverSummary, choices: CoverChoice[], editable 
     onEdit: () => {},
     onPaste: () => {},
     onDrop: () => {},
+    onUseForAll: () => {},
     subscribeDrop: () => Promise.resolve(() => {}),
   })
   cleanup = mounted.cleanup
@@ -46,6 +55,15 @@ async function mountPanel(cover: CoverSummary, choices: CoverChoice[], editable 
 describe('CoverPanel a11y', () => {
   it('covers with their counts, and the files without one, have no violations', async () => {
     await expectNoA11yViolations(await mountPanel({ kind: 'multiple' }, [FRONT, NONE]))
+  })
+
+  it('covers that look the same, with the offer to use the largest, have no violations', async () => {
+    await expectNoA11yViolations(await mountPanel({ kind: 'multiple' }, [{ ...FRONT, files: 50, nearDuplicates: 49 }]))
+  })
+
+  it('more covers than tiles, with "N more", have no violations', async () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ ...FRONT, key: `m${String(i)}` }))
+    await expectNoA11yViolations(await mountPanel({ kind: 'multiple' }, [...many, NONE]))
   })
 
   it('no cover has no violations', async () => {

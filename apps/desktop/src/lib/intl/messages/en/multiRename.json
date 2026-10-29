@@ -1451,6 +1451,26 @@
   "@multiRename.tags.cover.cantShow": {
     "description": "Shown in the dialog showing one cover large, in the tag editor window, when the picture's data can't be displayed."
   },
+  "multiRename.tags.cover.lookAlike": "{count, plural, one {These {countText} covers look almost the same} other {These {countText} covers look almost the same}}",
+  "@multiRename.tags.cover.lookAlike": {
+    "description": "In the cover section of the tag editor window, above a single cover tile: every file carries a cover, and they are the same picture saved with different bytes (re-encoded or resized), so they show as one. Always two or more.",
+    "placeholders": {
+      "count": "how many distinct covers look the same, which picks the plural form",
+      "countText": "the formatted number of covers, like 50"
+    }
+  },
+  "multiRename.tags.cover.useLargest": "Use the largest one for all files",
+  "@multiRename.tags.cover.useLargest": {
+    "description": "Button beside \"These N covers look almost the same\" in the tag editor window: gives every file the copy of that picture with the most pixels, so all files carry one identical cover. Nothing is written into the files until Write."
+  },
+  "multiRename.tags.cover.more": "{count, plural, one {{countText} more} other {{countText} more}}",
+  "@multiRename.tags.cover.more": {
+    "description": "Button under the cover tiles in the tag editor window when the files carry more than eight different covers: shows the rest.",
+    "placeholders": {
+      "count": "how many covers are not shown yet, which picks the plural form",
+      "countText": "the formatted number, like 3"
+    }
+  },
   "multiRename.tags.cover.useForAll": "Use for all files",
   "@multiRename.tags.cover.useForAll": {
     "description": "Button in the dialog showing one cover large, in the tag editor window: makes this picture the cover of every file. Nothing is written into the files until Write."

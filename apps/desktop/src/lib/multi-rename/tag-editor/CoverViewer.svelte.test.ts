@@ -19,7 +19,15 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-const FRONT: CoverChoice = { key: 'k1', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400, files: 12 }
+const FRONT: CoverChoice = {
+  key: 'k1',
+  mime: 'image/jpeg',
+  bytes: 2048,
+  width: 600,
+  height: 400,
+  files: 12,
+  nearDuplicates: 0,
+}
 const URL = 'data:image/jpeg;base64,/9j/'
 
 async function mountViewer(
@@ -71,6 +79,14 @@ describe('CoverViewer', () => {
     document.body.innerHTML = ''
     await mountViewer({ editable: false })
     expect(inDialog('Use for all files').disabled).toBe(true)
+  })
+
+  it('"Use for all files" stays on for covers that only look the same: their bytes still differ', async () => {
+    const { onUseForAll } = await mountViewer({ choice: { ...FRONT, nearDuplicates: 11 }, total: 12 })
+    const use = inDialog('Use for all files')
+    expect(use.disabled).toBe(false)
+    use.click()
+    expect(onUseForAll).toHaveBeenCalledWith('k1')
   })
 
   it('says so when the picture can’t be shown', async () => {

@@ -636,6 +636,7 @@
             onEdit={(edits: TagEdit[]) => tags.edit(edits)}
             onPaste={(data: Uint8Array) => void tags.coverFromBytes(data)}
             onDrop={(path: string) => void tags.coverFromPath(path)}
+            onUseForAll={(key: string) => void tags.useCoverForAll(key)}
         />
     {/if}
 {/snippet}

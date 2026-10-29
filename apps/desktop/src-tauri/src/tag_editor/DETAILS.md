@@ -39,7 +39,12 @@ re-reads or follows a file that something else renamed.
 - **Every cover of the book** (`cover_choices.rs`): `list_tag_covers` groups the readable files' edited covers by MIME,
   size, and the cached `Loaded::cover_key` (no hashing), most carried first (ties in file order), the files without a
   cover last as `key: "none"`. The covers are copied out under the lock (shared buffers) and their pixel sizes read
-  after it. `use_cover_for_all(key)` gives every readable file that cover (`"none"` removes them), a key no file
+  after it. Then covers that look the same are one choice: a 64-bit dHash of each distinct cover (`cover_image::dhash_of`,
+  9×8 grey box-sampled, cached by key:len, decoded off every lock) within `NEAR_DUPLICATE_BITS = 5` of a group's first
+  cover joins it; the largest in pixels stands (its key, MIME, size), the files are summed, and `nearDuplicates` counts
+  the others. Why 5 (copies measure 0 bits, different pictures 29+): the constant's doc. A cover that doesn't decode
+  never merges. "Use the largest one for all files" is `use_cover_for_all` with that key: one edit, one ⌘Z.
+  `use_cover_for_all(key)` gives every readable file that cover (`"none"` removes them), a key no file
   carries any more is `UnknownCover`. `set_cover_from_bytes` (a paste) takes at most 10 MiB sniffed by the magic bytes;
   `set_cover_from_path` (a drop) reads only a regular file at an absolute path: `symlink_metadata` refuses a folder,
   FIFO, or symlink (`CoverNotAFile`), the open is `O_NOFOLLOW | O_NONBLOCK`, and the open file is checked again, then
@@ -237,8 +242,8 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
 - `view.rs` the pure `TagEditorView`: shared rows, track rows, cover, extras, dirty, diacritics.
 - `cover.rs` reading a cover (a folder picture by plain name, a dropped file, pasted bytes: regular file, 10 MiB, type
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,
-  the in-memory "use for all", and a drop read under a deadline; `cover_image.rs` decodes (pasted TIFF → PNG/JPEG,
-  cached tile thumbnails) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
+  covers that look the same merged, the in-memory "use for all", and a drop read under a deadline; `cover_image.rs`
+  decodes (pasted TIFF → PNG/JPEG, cached tile thumbnails and likeness hashes) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
 - `apply.rs` the write (`apply`, `TagApplyReport`); `side_files.rs` Audiobookshelf's `reader.txt` / `desc.txt` beside
   the book, written and undone with the tags; `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
   folder's last write (⌘Z), kept for the app's lifetime; `at_quit.rs` what a quit would cut short, for `quit/`;

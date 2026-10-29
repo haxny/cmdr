@@ -19,9 +19,25 @@ afterEach(() => {
 })
 
 const SAME: CoverSummary = { kind: 'same', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400, key: 'k1' }
-const FRONT: CoverChoice = { key: 'k1', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400, files: 12 }
-const BACK: CoverChoice = { key: 'k2', mime: 'image/png', bytes: 4096, width: null, height: null, files: 1 }
-const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 3 }
+const FRONT: CoverChoice = {
+  key: 'k1',
+  mime: 'image/jpeg',
+  bytes: 2048,
+  width: 600,
+  height: 400,
+  files: 12,
+  nearDuplicates: 0,
+}
+const BACK: CoverChoice = {
+  key: 'k2',
+  mime: 'image/png',
+  bytes: 4096,
+  width: null,
+  height: null,
+  files: 1,
+  nearDuplicates: 0,
+}
+const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 3, nearDuplicates: 0 }
 const URLS: Record<string, string> = { k1: 'data:image/jpeg;base64,/9j/', k2: 'data:image/png;base64,iVBORw0KGgo=' }
 
 type DropHandler = (event: CoverDropEvent) => void
@@ -46,6 +62,7 @@ function props(over: Partial<ComponentProps<typeof CoverPanel>> & { choices?: Co
     onEdit: vi.fn(),
     onPaste: vi.fn(),
     onDrop: vi.fn(),
+    onUseForAll: vi.fn(),
     subscribeDrop: vi.fn(() => Promise.resolve(() => {})),
     ...rest,
   }
@@ -182,6 +199,55 @@ describe('CoverPanel', () => {
     live.revision = 2
     await settle()
     expect(root.querySelector('[role="status"]')).toBeNull()
+  })
+
+  describe('covers that look the same', () => {
+    const ALIKE: CoverChoice = { ...FRONT, files: 50, nearDuplicates: 49 }
+
+    it('when one look covers every file, says so and offers the largest for all, as one edit', async () => {
+      const { root, onUseForAll } = await mountPanel({ choices: [ALIKE] })
+      expect(tiles(root)).toHaveLength(1)
+      expect(root.textContent).toContain('These 50 covers look almost the same')
+      button(root, 'Use the largest one for all files').click()
+      expect(onUseForAll).toHaveBeenCalledTimes(1)
+      expect(onUseForAll).toHaveBeenCalledWith('k1')
+    })
+
+    it('says nothing when the files share one cover by bytes, some have none, or the covers differ', async () => {
+      for (const choices of [[FRONT], [ALIKE, NONE], [ALIKE, BACK]]) {
+        const { root } = await mountPanel({ choices })
+        expect(root.textContent).not.toContain('look almost the same')
+        cleanup?.()
+        cleanup = undefined
+      }
+    })
+
+    it('the offer is off when read-only', async () => {
+      const { root } = await mountPanel({ choices: [ALIKE], editable: false })
+      expect(button(root, 'Use the largest one for all files').disabled).toBe(true)
+    })
+  })
+
+  describe('many covers', () => {
+    const many: CoverChoice[] = Array.from({ length: 11 }, (_, i) => ({ ...BACK, key: `m${String(i)}` }))
+
+    it('shows eight tiles and "3 more", which shows the rest; the files without a cover always show', async () => {
+      const { root } = await mountPanel({ choices: [...many, NONE] })
+      expect(tiles(root)).toHaveLength(9)
+      expect(tiles(root).at(-1)?.textContent).toContain('No cover')
+      const more = button(root, '3 more')
+      expect(more.getAttribute('aria-expanded')).toBe('false')
+      more.click()
+      await settle()
+      expect(tiles(root)).toHaveLength(12)
+      expect([...root.querySelectorAll('button')].some((b) => b.textContent.trim() === '3 more')).toBe(false)
+    })
+
+    it('eight covers show without a "more"', async () => {
+      const { root } = await mountPanel({ choices: many.slice(0, 8) })
+      expect(tiles(root)).toHaveLength(8)
+      expect(root.textContent).not.toContain('more')
+    })
   })
 
   it('says so when the covers couldn’t be listed', async () => {

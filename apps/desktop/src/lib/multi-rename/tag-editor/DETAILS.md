@@ -63,7 +63,10 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   view also clears the section's notice). Tiles show `getCoverThumbnail` (asked once more when none came, then "No
   preview"; a small PNG the backend makes once per cover key); a click opens the cover large in `CoverViewer` (a
   `ModalDialog` owned by `TagsContent`, so `hasDialog()` keeps the window keys out), which fetches the full picture;
-  "Use for all files" there is `useCoverForAll`.
+  "Use for all files" there is `useCoverForAll` (on for a merged look even when it holds every file: the bytes differ).
+  Covers that look the same come merged (`nearDuplicates`); when one such tile holds every file (`oneLookForAll`), the
+  section says "These N covers look almost the same" with "Use the largest one for all files" (`useCoverForAll`, one
+  edit). Past `MAX_COVER_TILES` (8) covers the rest fold under "N more"; the "No cover" tile always shows.
 - **Paste**: ⌘V is the native Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box
   only when the page `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are
   listened to on the document and taken only while focus is in the section (which is focusable and takes focus on a

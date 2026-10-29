@@ -22,7 +22,7 @@ afterEach(() => {
 /** `image` `undefined`: the picture never comes (on its way). */
 async function check(image: string | null | undefined): Promise<void> {
   const mounted = await mountInto(CoverViewer, {
-    choice: { key: 'k1', mime: 'image/png', bytes: 5000, width: 10, height: 10, files: 2 },
+    choice: { key: 'k1', mime: 'image/png', bytes: 5000, width: 10, height: 10, files: 2, nearDuplicates: 0 },
     total: 3,
     loadImage: () => (image === undefined ? new Promise<string | null>(() => {}) : Promise.resolve(image)),
     editable: true,

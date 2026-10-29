@@ -34,6 +34,8 @@ mod big_book_test;
 #[cfg(test)]
 mod cover_choices_test;
 #[cfg(test)]
+mod cover_near_test;
+#[cfg(test)]
 mod cover_test;
 #[cfg(test)]
 mod history_test;

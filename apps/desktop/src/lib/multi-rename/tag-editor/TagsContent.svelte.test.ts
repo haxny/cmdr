@@ -243,8 +243,24 @@ describe('TagsContent', () => {
   })
 
   describe('the cover section', () => {
-    const FRONT: CoverChoice = { key: 'k1', mime: 'image/png', bytes: 40, width: null, height: null, files: 1 }
-    const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 1 }
+    const FRONT: CoverChoice = {
+      key: 'k1',
+      mime: 'image/png',
+      bytes: 40,
+      width: null,
+      height: null,
+      files: 1,
+      nearDuplicates: 0,
+    }
+    const NONE: CoverChoice = {
+      key: 'none',
+      mime: '',
+      bytes: 0,
+      width: null,
+      height: null,
+      files: 1,
+      nearDuplicates: 0,
+    }
 
     it('sits in the Album pane’s scroll, after the rows', async () => {
       const { root } = await mountTab({ choices: [FRONT, NONE] })

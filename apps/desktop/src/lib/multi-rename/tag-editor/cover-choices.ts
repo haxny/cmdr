@@ -11,6 +11,19 @@ import type { CoverChoice } from '#lib/ipc/bindings.js'
 /** The choice that stands for the files without a cover (`tag_editor::cover_choices::NO_COVER_KEY`). */
 export const NO_COVER_KEY = 'none'
 
+/** How many cover tiles show before the rest fold under "N more" (the files without a cover always show). */
+export const MAX_COVER_TILES = 8
+
+/**
+ * The one choice every file falls in when the files' covers differ by bytes but look the same (re-encoded or resized
+ * copies of one picture, merged by the backend), so offering its largest copy for every file makes sense; else `null`.
+ */
+export function oneLookForAll(choices: readonly CoverChoice[]): CoverChoice | null {
+  if (choices.length !== 1) return null
+  const [only] = choices
+  return only.key !== NO_COVER_KEY && only.nearDuplicates > 0 ? only : null
+}
+
 /** The largest picture a paste sends: the backend refuses more (`MAX_COVER_BYTES`, 10 MiB). */
 // eslint-disable-next-line cmdr/no-private-unit-format -- a fixed byte limit the backend shares, not a size shown as text
 export const MAX_COVER_BYTES = 10 * 1024 * 1024

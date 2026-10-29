@@ -138,3 +138,49 @@ thread_local! {
 pub(super) fn thumbnail_encodes() -> usize {
     ENCODES.with(std::cell::Cell::get)
 }
+
+/// How many cover hashes stay cached; past it the cache starts over. A book whose every file carries its own
+/// re-encoded copy of the cover has one per file, so this is well above a big book's file count.
+const HASH_CACHE_LIMIT: usize = 4096;
+
+/// Perceptual hashes by cover key and length, as [`THUMBNAILS`]; `None` for a cover that doesn't decode.
+static HASHES: LazyLock<Mutex<HashMap<String, Option<u64>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// `cover`'s 64-bit difference hash (dHash), cached by `key` and the byte length; `None` when it doesn't decode.
+/// Two covers whose hashes differ in few bits ([`hamming`]) look the same: the same picture re-encoded or resized.
+/// Decoding happens outside the cache's lock, and never under the session's (the caller copied the cover out).
+pub(super) fn dhash_of(cover: &Cover, key: &str) -> Option<u64> {
+    let key = format!("{key}:{}", cover.data.len());
+    if let Some(cached) = HASHES.lock_ignore_poison().get(&key) {
+        return *cached;
+    }
+    let made = dhash(cover);
+    let mut cache = HASHES.lock_ignore_poison();
+    if cache.len() >= HASH_CACHE_LIMIT {
+        cache.clear();
+    }
+    cache.insert(key, made);
+    made
+}
+
+/// The picture boxed down to 9×8 grey pixels; bit `y * 8 + x` says whether pixel `x` of row `y` is brighter than its
+/// right neighbor. Box sampling (`thumbnail_exact`) averages every source pixel, so a re-encode's noise and a resize
+/// wash out and only the picture's layout of light and dark is left.
+fn dhash(cover: &Cover) -> Option<u64> {
+    let picture = decode(&cover.data, None)?;
+    let grey = contain_panics(|| picture.thumbnail_exact(9, 8).to_luma8())?;
+    let mut hash = 0u64;
+    for y in 0..8 {
+        for x in 0..8 {
+            if grey.get_pixel(x, y)[0] > grey.get_pixel(x + 1, y)[0] {
+                hash |= 1 << (y * 8 + x);
+            }
+        }
+    }
+    Some(hash)
+}
+
+/// How many bits two hashes differ in.
+pub(super) fn hamming(a: u64, b: u64) -> u32 {
+    (a ^ b).count_ones()
+}

@@ -7749,8 +7749,13 @@ export type CoverChoice = {
   // Pixel size, when the image header could be read.
   width: number | null
   height: number | null
-  // How many readable files carry it.
+  // How many readable files carry it, or one that looks the same.
   files: number
+  /**
+   *  How many other distinct covers look the same as this one and are counted in it (0 when
+   *  none): this one is the largest of them in pixels.
+   */
+  nearDuplicates: number
 }
 
 // What to do with the front cover of every file.

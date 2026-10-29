@@ -63,7 +63,7 @@
     </div>
     {#snippet footer()}
         <Button onclick={onClose}>{tString('multiRename.tags.dialog.close')}</Button>
-        <Button variant="primary" disabled={!editable || choice.files >= total} onclick={() => { onUseForAll(choice.key) }}>
+        <Button variant="primary" disabled={!editable || (choice.files >= total && choice.nearDuplicates === 0)} onclick={() => { onUseForAll(choice.key) }}>
             {tString('multiRename.tags.cover.useForAll')}
         </Button>
     {/snippet}
