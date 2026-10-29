@@ -232,13 +232,14 @@ The full top-level inventory is here:
   batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about
   Locked items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked
   items"). `refused_name.rs` is a transfer's question about a name the destination refuses, asked through the conflict
-  slot (§ "A name the destination refuses"). Fixtures: `testing/` (an engine a test owns, and what test cells outside
-  the engine reach beyond its public list) and `test_support.rs` (the placeholder conflict, the park-window wait, and
-  the queued-operation fixture). Every backend's cells through this pipeline live app-side, in
-  `operations_host/backend_suites/`, because they need the app around the engine
-  (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the Criterion
-  bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on an engine
-  the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` § `criterion`).
+  slot (§ "A name the destination refuses"); its "Skip all" latch is `refused_names_latch.rs`, a leaf the state owns.
+  Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
+  `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every backend's
+  cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
+  engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the
+  Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on
+  an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
+  `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager"; the
 zip-edit driver in § "Archive edits"; cancellation, pause, Stop-mode conflicts, safe overwrite, scan-preview caching,
@@ -2266,9 +2267,10 @@ the batch still has a good name. So the transfer parks on the person, per item: 
 - **It IS a `write-conflict`, ❌ not a parallel prompt.** The same `ConflictSlot`, ids, `write-conflict-resolved`,
   dispatch mutex, human-wait clock, `cmdr://state` `pendingConflict`, and `resolve_conflict` answer, with
   `WriteConflictEvent::refused_name` set. Every surface that answers a clash answers this one with no new plumbing.
-- **Skip** leaves the item out, counted in `files_skipped`. **Skip with apply-to-all** latches `RefusedNames`, its OWN
-  latch (❌ never the clash one: "Skip all" here says nothing about clashes). **Any other resolution** is Stop: the
-  operation ends with the refusal as its error, as before. The dialog's Cancel / Rollback are the ordinary cancel.
+- **Skip** leaves the item out, counted in `files_skipped`. **Skip with apply-to-all** latches `RefusedNames`
+  (`refused_names_latch.rs`), its OWN latch (❌ never the clash one: "Skip all" here says nothing about clashes). **Any
+  other resolution** is Stop: the operation ends with the refusal as its error, as before. The dialog's Cancel /
+  Rollback are the ordinary cancel.
 - **Only a typed refusal asks**: `WriteOperationError::NameTooLong` or `InvalidName` (`refusal_reason`), ❌ never a
   message. A landing refused as `InvalidName` for a name longer than `MAX_SCRATCH_NAME_BYTES` reads as `NameTooLong`,
   since the temp in the same folder (at most that long) was accepted (`transfer_error.rs::from_landing`).

@@ -18,7 +18,8 @@
 //! - **Skip**: the item stays where it is, counted as skipped. A move keeps its
 //!   source: the caller records it the way it records a conflict Skip, which is
 //!   what the source sweep spares.
-//! - **Skip with apply-to-all**: also latches [`RefusedNames`], so every later
+//! - **Skip with apply-to-all**: also latches
+//!   [`RefusedNames`](super::refused_names_latch::RefusedNames), so every later
 //!   refused name in this operation skips without asking. Its own latch, ❌
 //!   never the clash one: "Skip all" here says nothing about clashes.
 //! - **Stop**: any other resolution. The operation ends with the refusal as its
@@ -32,7 +33,6 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use tokio::sync::oneshot;
 
@@ -44,24 +44,6 @@ use super::types::{
     WriteOperationError,
 };
 use cmdr_fs::log_private::LogPrivate;
-
-/// The operation's "Skip all" for refused names: once a person picks it, no
-/// later refused name in this operation asks again.
-// DEFAULT-OK: unlatched is the truth before anyone has answered anything.
-#[derive(Default)]
-pub(crate) struct RefusedNames {
-    skip_all: AtomicBool,
-}
-
-impl RefusedNames {
-    fn skips_all(&self) -> bool {
-        self.skip_all.load(Ordering::Acquire)
-    }
-
-    fn latch_skip_all(&self) {
-        self.skip_all.store(true, Ordering::Release);
-    }
-}
 
 /// Why `error` is the destination refusing a NAME, or `None` when it's any
 /// other failure. Typed on the variant, ❌ never the message.

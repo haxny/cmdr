@@ -14,7 +14,7 @@ use super::host::OperationEventSink;
 use super::human_wait::HumanWaitClock;
 use super::locked_sources_slot::LockedSourcesSlot;
 use super::outage_slot::{CleanupPolicy, OutagePolicy, OutageSlot};
-use super::refused_name::RefusedNames;
+use super::refused_names_latch::RefusedNames;
 use super::scope::OpScope;
 use super::sources_gone_slot::SourcesGoneSlot;
 use super::types::{
