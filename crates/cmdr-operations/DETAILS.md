@@ -2280,8 +2280,12 @@ the batch still has a good name. So the transfer parks on the person, per item: 
   no rollback ledger. A move keeps its source: a deep skip is `record_skip`ed (which the source sweep spares) and taken
   off the carried-source ledger; a top-level skip returns before the sweep; the local cross-FS move deletes only what
   its transaction recorded.
-- **Not covered**: a FOLDER deep in a tree whose own name is refused at its `create_directory` still ends the walk (only
-  a top-level folder's refusal asks).
+- **A refused FOLDER** (its `create_directory`, deep in a volume walk) asks from its parent level
+  (`merge.rs::skip_if_folder_refused`); a Skip leaves its whole subtree out, counts every file under it (one
+  `scan_for_copy` of the source subtree, paid only then), and records the folder as one skipped source, which the sweep
+  spares whole. It reads as `notAllowed`: a refused folder create carries no evidence its length is why, so that copy
+  names length among the reasons.
+- **Not covered**: on the LOCAL engine, a refused folder deep in a tree still ends the copy (a refused file asks).
 
 Pinned by `refused_name_tests.rs` (the question) and `transfer/volume/refused_name_tests.rs` (every volume driver,
 including the move keeping each skipped source), plus `transfer/copy/copy_tests.rs` for the local engine.

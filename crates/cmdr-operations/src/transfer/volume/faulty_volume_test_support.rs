@@ -352,8 +352,8 @@ pub struct FaultyVolume<V: Volume> {
     inner: Arc<V>,
     faults: HashMap<FaultyOp, ArmedFault>,
     calls: StdMutex<HashMap<FaultyOp, usize>>,
-    /// `Some(n)`: every `rename` onto a name longer than `n` UTF-8 bytes is
-    /// refused with `InvalidName`, the way an
+    /// `Some(n)`: every `rename` onto, and `create_directory` of, a name longer
+    /// than `n` UTF-8 bytes is refused with `InvalidName`, the way an
     /// eCryptfs-backed share answers one (cmdr-reports#83).
     name_cap: Option<usize>,
     /// How many names the cap refused.
@@ -374,7 +374,7 @@ impl<V: Volume + 'static> FaultyVolume<V> {
     }
 
     /// Refuses every name longer than `max_bytes` UTF-8 bytes at a `rename`'s
-    /// destination, with `InvalidName`: a share
+    /// destination and at a `create_directory`, with `InvalidName`: a share
     /// with a short name limit, where the staged temp (at most 143 bytes) fits
     /// and the final name doesn't.
     pub fn refusing_names_longer_than(mut self, max_bytes: usize) -> Self {
@@ -567,7 +567,10 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::CreateDirectory, path) {
+        match self
+            .fault_for(FaultyOp::CreateDirectory, path)
+            .or_else(|| self.over_name_cap(path))
+        {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.create_directory(path),
         }

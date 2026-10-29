@@ -51,6 +51,8 @@ use super::strategy::{LandingName, WriteStaging, staging_for};
 use super::stream_pipe::stream_pipe_file;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 
 /// What one leaf file's copy reports back to the walker.
@@ -415,6 +417,61 @@ async fn copy_leaf<'a>(
     created.record_file(write_dest, bytes, piped.landed);
     leaf.complete(bytes);
     Ok(LeafEnd::Landed(bytes))
+}
+
+/// A child folder of the walk, as its refused-name question names it.
+struct RefusedFolder<'p> {
+    source: &'p Path,
+    dest: &'p Path,
+    node: Option<NodeId>,
+}
+
+/// A child folder's level ended in `error`. When that is the destination
+/// refusing the FOLDER's own name (its `create_directory`, before anything
+/// under it was made), the walker asks, as for a refused file; a Skip leaves
+/// the whole subtree out and the walk carries on with its siblings.
+///
+/// The skip counts every file under it (one `scan_for_copy` of the source
+/// subtree, paid only on a skip) and records the folder as a skipped source,
+/// which a move's sweep spares whole: nothing of it was carried. Anything else,
+/// a refusal deeper down included (its own level asked about it), stands.
+async fn skip_if_folder_refused(
+    pool: &mut LeafPool<'_>,
+    merge: Option<&MergeCtx<'_>>,
+    created: &CreatedPaths,
+    progress: &Arc<SourceProgress>,
+    source_volume: &Arc<dyn Volume>,
+    folder: &RefusedFolder<'_>,
+    error: PathedVolumeError,
+) -> Result<(), PathedVolumeError> {
+    let Some(ctx) = merge else {
+        return Err(error);
+    };
+    let subject = RefusalSubject {
+        source: folder.source,
+        dest: folder.dest,
+        source_size: None,
+        source_is_directory: true,
+    };
+    if refused_here(&subject, &error).is_none() {
+        return Err(error);
+    }
+    pool.drive(skip_if_refused(ctx, &subject, error)).await?;
+    let (files, bytes) = match pool.drive(source_volume.scan_for_copy(folder.source)).await {
+        Ok(scan) => (scan.file_count, scan.total_bytes),
+        // The skip stands either way; only its count is short.
+        Err(e) => {
+            log::warn!(
+                "merge: couldn't count the skipped folder {}: {}",
+                LogPrivate::path(folder.source),
+                LogError(&e)
+            );
+            (0, 0)
+        }
+    };
+    created.record_skipped_subtree(folder.source.to_path_buf(), files, bytes);
+    progress.skip_leaves(files, bytes, folder.node);
+    Ok(())
 }
 
 /// Copies (merges) a directory tree from source to destination, streaming each
@@ -797,7 +854,7 @@ async fn merge_level<'a>(
             // entry in hand answers it, so a real folder costs no probe.
             let dir_clashes_with_leaf = dest_hit.is_some_and(|d| !merges_as_a_directory(d));
             if !dir_clashes_with_leaf {
-                let level = Box::pin(merge_level(
+                let level = match Box::pin(merge_level(
                     source_volume,
                     &child_source,
                     dest_volume,
@@ -810,7 +867,19 @@ async fn merge_level<'a>(
                     pool,
                     child_row,
                 ))
-                .await?;
+                .await
+                {
+                    Ok(level) => level,
+                    Err(e) => {
+                        let folder = RefusedFolder {
+                            source: &child_source,
+                            dest: &child_dest,
+                            node: child_row,
+                        };
+                        skip_if_folder_refused(pool, merge, created, progress, source_volume, &folder, e).await?;
+                        continue;
+                    }
+                };
                 if level == DirectoryCreation::Created {
                     pool.folders
                         .note_filled(child_dest, child_source, SourceFolderDates::of_entry(entry));
@@ -891,6 +960,8 @@ async fn merge_level<'a>(
             // Type-mismatch Overwrite/Rename that resolved to Proceed: the
             // resolver already set aside/relocated the dest leaf, so recurse
             // into `write_dest` as a fresh (or renamed) directory root.
+            // No refused-name question here: a same-named leaf already stands at
+            // this name, so the destination stores it.
             let level = Box::pin(merge_level(
                 source_volume,
                 &child_source,

@@ -354,15 +354,20 @@ impl SourceProgress {
     /// back, and an unthrottled emit apiece is a flood of IPC nobody reads. The
     /// operation's completion event carries the final tally regardless.
     pub(in crate::transfer) fn skip_leaf(&self, leaf_bytes: u64, node: Option<NodeId>) {
+        self.skip_leaves(1, leaf_bytes, node);
+    }
+
+    /// [`skip_leaf`](Self::skip_leaf) for a whole skipped subtree's `files` leaves (a refused folder name).
+    pub(in crate::transfer) fn skip_leaves(&self, files: usize, bytes: u64, node: Option<NodeId>) {
         let ledger = &self.ledger;
         ledger.tree.skip_whole(node);
         let snapshot = {
             let mut totals = ledger.totals.lock_ignore_poison();
-            totals.finished += leaf_bytes;
-            ledger.files_done.fetch_add(1, Ordering::Relaxed);
+            totals.finished += bytes;
+            ledger.files_done.fetch_add(files, Ordering::Relaxed);
             ledger.snapshot(&mut totals)
         };
-        ledger.state.note_skipped(1, leaf_bytes);
+        ledger.state.note_skipped(files, bytes);
         // The bool says whether the throttle let this tick through, and a skip
         // has nothing to do about either answer: the counters are credited
         // above, and the completion event carries the final tally whatever the

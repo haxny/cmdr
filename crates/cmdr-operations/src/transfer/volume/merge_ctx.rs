@@ -253,9 +253,16 @@ impl CreatedPaths {
     /// Tally one child a deep merge skipped (conflict resolved to Skip), and
     /// remember its SOURCE path so a move's source sweep can spare it.
     pub(super) fn record_skip(&self, source: PathBuf, size: u64) {
+        self.record_skipped_subtree(source, 1, size);
+    }
+
+    /// [`record_skip`](Self::record_skip) for a whole subtree left out at once
+    /// (a folder whose own name the destination refused): `files` leaves of
+    /// `bytes` under `source`, which a move's sweep then spares whole.
+    pub(super) fn record_skipped_subtree(&self, source: PathBuf, files: usize, bytes: u64) {
         use std::sync::atomic::Ordering;
-        self.skipped_files.fetch_add(1, Ordering::Relaxed);
-        self.skipped_bytes.fetch_add(size, Ordering::Relaxed);
+        self.skipped_files.fetch_add(files, Ordering::Relaxed);
+        self.skipped_bytes.fetch_add(bytes, Ordering::Relaxed);
         self.skipped_sources.lock_ignore_poison().push(source);
     }
 

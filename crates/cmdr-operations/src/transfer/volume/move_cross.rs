@@ -547,7 +547,9 @@ pub async fn move_volumes_with_progress(
                     // constantly), an item that appeared while the folder
                     // copied, or an original saved over after the copy read it.
                     let skipped = created.skipped_source_paths();
-                    deep_skipped_files.fetch_add(skipped.len(), Ordering::Relaxed);
+                    // The FILE count, ❌ never `skipped.len()`: one skipped
+                    // folder (a refused name) is one path but every file in it.
+                    deep_skipped_files.fetch_add(created.skipped_file_count(), Ordering::Relaxed);
                     // The copy landed, so the item is done with for now; the
                     // sweep below speaks again, and its word is the last
                     // (`../../DETAILS.md` § "Per-source outcomes"). A folder

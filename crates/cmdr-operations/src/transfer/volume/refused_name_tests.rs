@@ -41,12 +41,18 @@ enum Driver {
 struct Seeded {
     source: Arc<InMemoryVolume>,
     paths: Vec<PathBuf>,
-    /// Every source file, and whether the share can hold its name.
+    /// Every source file, and whether it lands (its name, and every folder
+    /// above it, fit the share).
     files: Vec<(PathBuf, bool)>,
+    /// How many names the share refuses, each one prompt: every long file name
+    /// outside a refused folder, plus the refused folder itself.
+    refusals: usize,
 }
 
-/// `/album/{short,long}` per source, plus, for the multi-source drivers, a
-/// top-level long FILE and a top-level short one.
+/// `/album/{short,long}` per source, plus a folder deep in it whose own name is
+/// too long (two files and a nested folder under it, all skipped with it),
+/// and, for the multi-source drivers, a top-level long FILE and a top-level
+/// short one.
 async fn seeded(driver: Driver) -> Seeded {
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     let mut paths = Vec::new();
@@ -63,6 +69,15 @@ async fn seeded(driver: Driver) -> Seeded {
         source.create_file(&path, b"the user's bytes").await.unwrap();
         files.push((path, fits));
     }
+    let refused_folder = album.join(long_name("bonus disc").trim_end_matches(".flac"));
+    source.create_directory(&refused_folder).await.unwrap();
+    source.create_directory(&refused_folder.join("live")).await.unwrap();
+    for file in ["a.flac", "b.flac", "live/c.flac"] {
+        let path = refused_folder.join(file);
+        source.create_file(&path, b"inside a refused folder").await.unwrap();
+        files.push((path, false));
+    }
+    let mut refusals = 3;
     paths.push(album);
     if driver != Driver::SerialCopy {
         for (name, fits) in [(long_name("single"), false), ("short single.flac".to_string(), true)] {
@@ -71,8 +86,14 @@ async fn seeded(driver: Driver) -> Seeded {
             files.push((path.clone(), fits));
             paths.push(path);
         }
+        refusals += 1;
     }
-    Seeded { source, paths, files }
+    Seeded {
+        source,
+        paths,
+        files,
+        refusals,
+    }
 }
 
 async fn capped_dest() -> Arc<FaultyVolume<InMemoryVolume>> {
@@ -143,15 +164,30 @@ async fn assert_skips_each_refused_name(driver: Driver) {
     let refused: Vec<_> = seeded.files.iter().filter(|(_, fits)| !fits).collect();
     assert_eq!(
         dest.names_refused(),
-        refused.len(),
+        seeded.refusals,
         "{driver:?}: the share refused each long name once"
     );
     let prompts = events.inner.conflicts.lock_ignore_poison().clone();
-    assert_eq!(prompts.len(), refused.len(), "{driver:?}: one prompt per refused name");
+    assert_eq!(
+        prompts.len(),
+        seeded.refusals,
+        "{driver:?}: one prompt per refused name"
+    );
+    assert_eq!(
+        prompts.iter().filter(|p| p.source_is_directory).count(),
+        1,
+        "{driver:?}: the refused folder is asked about once, as a folder: {prompts:?}"
+    );
+    // A file's landing proves its length is what the share refused (its temp
+    // fit); a folder's refused `create_directory` proves only that the name
+    // can't be stored.
     assert!(
-        prompts
-            .iter()
-            .all(|p| p.refused_name == Some(RefusedNameReason::TooLong)),
+        prompts.iter().all(|p| p.refused_name
+            == Some(if p.source_is_directory {
+                RefusedNameReason::NotAllowed
+            } else {
+                RefusedNameReason::TooLong
+            })),
         "{driver:?}: each prompt says the name is too long: {prompts:?}"
     );
     for (source, fits) in &seeded.files {
@@ -178,7 +214,7 @@ async fn assert_skips_each_refused_name(driver: Driver) {
     assert_eq!(
         complete[0].files_skipped,
         refused.len(),
-        "{driver:?}: every refused name counts as skipped"
+        "{driver:?}: every file left out counts as skipped, a refused folder's whole subtree included"
     );
 }
 
@@ -216,11 +252,10 @@ async fn skip_all_asks_once() {
     }
 }
 
-/// An answer that can't store the name stops the transfer with the refusal,
-/// worded as the name being too long, and a move keeps every source it didn't
-/// carry.
+/// An answer that can't store the name stops the transfer with the refusal it
+/// was asked about, and a move keeps every source it didn't carry.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn any_other_answer_stops_with_name_too_long() {
+async fn any_other_answer_stops_with_the_refusal() {
     let engine = TestOperations::new();
     let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
@@ -231,8 +266,15 @@ async fn any_other_answer_stops_with_name_too_long() {
         .await
         .expect_err("a Stop ends the transfer");
 
+    let prompts = events.inner.conflicts.lock_ignore_poison().clone();
+    assert_eq!(prompts.len(), 1, "the first answer stops it: {prompts:?}");
+    let asked_about = prompts[0].destination_path.clone();
     assert!(
-        matches!(error, WriteOperationError::NameTooLong { .. }),
+        matches!(
+            &error,
+            WriteOperationError::NameTooLong { path } | WriteOperationError::InvalidName { path, .. }
+                if *path == asked_about
+        ),
         "got {error:?}"
     );
     for (source, fits) in &seeded.files {

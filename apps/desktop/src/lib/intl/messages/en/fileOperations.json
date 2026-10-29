@@ -1059,7 +1059,7 @@
     "description": "Explanation under the file name in the 'Name too long for the destination' prompt of a copy or move. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder."
   },
 
-  "fileOperations.transferProgress.refusedNameNotAllowedBody": "The destination can’t store this name. It may be a reserved name or use a character the destination doesn’t allow. Skip this item to carry on with the rest, then rename it and try it again.",
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "The destination can’t store this name. It may be too long, be a reserved name, or use a character the destination doesn’t allow. Skip this item to carry on with the rest, then rename it and try it again.",
   "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
     "description": "Explanation under the file name in the 'Name not allowed at the destination' prompt of a copy or move. 'Reserved name' means names like CON or NUL that some systems keep for themselves. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder."
   },
