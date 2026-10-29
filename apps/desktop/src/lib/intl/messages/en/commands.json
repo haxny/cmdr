@@ -620,9 +620,9 @@
   "@commands.tagsPlay.label": {
     "description": "Row in the Keyboard shortcuts list: what F3 or Option+Space does in the tag editor window (the separate window that edits audio files’ tags). It plays the audio of the track under the cursor in the tracks pane, or stops it when it is already playing, so you can hear which track you are naming. Read-only (the key can’t be rebound)."
   },
-  "commands.tagsOpenInPlayer.label": "Open the tracks in foobar2000",
+  "commands.tagsOpenInPlayer.label": "Open the tracks in the player",
   "@commands.tagsOpenInPlayer.label": {
-    "description": "Row in the Keyboard shortcuts list: what Shift+F3 does in the tag editor window. It opens the selected tracks (every track when none is selected) in the foobar2000 music player. foobar2000 is a product name; keep it as is. Read-only (the key can’t be rebound)."
+    "description": "Row in the Keyboard shortcuts list: what Shift+F3 does in the tag editor window. It opens the selected tracks (every track when none is selected) in the music player the user picked, or in each file’s default app. Read-only (the key can’t be rebound)."
   },
   "commands.tagsReplace.label": "Find and replace in the tags",
   "@commands.tagsReplace.label": {

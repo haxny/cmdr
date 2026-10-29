@@ -15,7 +15,9 @@
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
     import {
+        chooseTagPlayer,
         openTagsInPlayer,
+        tagPlayerChoices,
         type TagApplyReport,
         type TagEdit,
         type TagsClipboardAction,
@@ -23,6 +25,8 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Menu from '#lib/ui/Menu.svelte'
     import { joinSentences } from '#lib/intl/sentence-join.js'
     import AlbumPane from './AlbumPane.svelte'
     import { followViewScope, scopedAlbumEdits } from './album-scope.svelte'
@@ -50,6 +54,7 @@
     import { createTrackSelection, type ToolScope } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
     import { SETTLE_LIMIT_MS, type TagEditorState, type TagStateError } from './tag-editor-state.svelte'
+    import { createTagPlayer } from './tag-player.svelte'
 
     interface Props {
         state: TagEditorState
@@ -143,10 +148,34 @@
         player.stop()
     })
 
-    /** Why the last Open in foobar2000 failed, when it did. */
+    /** Why the last Open in player failed (or fell back to the default app), when it did. */
     let playerError = $state<MessageKey | null>(null)
 
-    /** Opens the selected tracks (every track when none is selected) in foobar2000, else each in its default app. */
+    /** The "Open in <app>" menu: the default app, the others, Choose…; a pick is remembered and opens. */
+    const tagPlayer = createTagPlayer({
+        choices: (chosen) => tagPlayerChoices(tags.sessionId, chosen),
+        choose: () => chooseTagPlayer(),
+        getPlayer: () => getSetting('multiRename.tagEditor.player'),
+        setPlayer: (player) => { setSetting('multiRename.tagEditor.player', player) },
+        open: openInPlayer,
+    })
+    onMount(() => {
+        void tagPlayer.load()
+    })
+    onDestroy(() => {
+        tagPlayer.menu.destroy()
+    })
+    let playerMenuButton = $state<HTMLElement | undefined>()
+    const openInLabel = $derived(
+        tagPlayer.appName === null
+            ? tString('multiRename.tags.play.openInPlayer')
+            : tString('multiRename.tags.play.openInApp', { app: tagPlayer.appName }),
+    )
+
+    /**
+     * Opens the selected tracks (every track when none is selected) in the remembered player: the app the user chose,
+     * else each file in its default app. A chosen app that's gone opens the default and says so.
+     */
     async function openInPlayer(): Promise<void> {
         playerError = null
         // Unreadable tracks are not the session's tracks for the backend (it refuses the call for one), so they never go.
@@ -154,14 +183,17 @@
         const res = await runScoped(async (scope) => {
             const paths = (scope ?? allPaths).filter((path) => readable.has(path))
             if (paths.length === 0) return 'nothingReadable' as const
-            return await openTagsInPlayer(tags.sessionId, paths)
+            return await openTagsInPlayer(tags.sessionId, paths, getSetting('multiRename.tagEditor.player'))
         })
         if (res === undefined) return
         if (res === 'nothingReadable') {
             playerError = 'multiRename.tags.play.nothingReadable'
             return
         }
-        if (res.ok) return
+        if (res.ok) {
+            if (res.value.fellBack) playerError = 'multiRename.tags.play.playerMissing'
+            return
+        }
         playerError =
             res.error.kind === 'playerUnavailable' ? 'multiRename.tags.play.playerUnavailable' : 'multiRename.tags.play.openFailed'
     }
@@ -558,7 +590,7 @@
             <!-- eslint-enable @typescript-eslint/no-confusing-void-expression -->
         </div>
     {/if}
-    <TagsFunctionKeyBar enabled={enabledCommands} onCommand={(id: TagsBarCommandId) => { runCommand(id) }} />
+    <TagsFunctionKeyBar enabled={enabledCommands} playerName={tagPlayer.appName} onCommand={(id: TagsBarCommandId) => { runCommand(id) }} />
 </div>
 
 {#if tool !== null && tags.view !== null}
@@ -642,11 +674,29 @@
 {/snippet}
 
 {#snippet tracksFooter()}
-    <Button size="mini" onclick={() => void openInPlayer()}>{tString('multiRename.tags.play.openInPlayer')}</Button>
+    <span class="open-in">
+        <Button size="mini" onclick={() => void openInPlayer()}>{openInLabel}</Button>
+        <span bind:this={playerMenuButton}>
+            <Button
+                size="mini"
+                aria-label={tString('multiRename.tags.play.chooseApp')}
+                tooltipContent={tString('multiRename.tags.play.chooseApp')}
+                onclick={() => { if (playerMenuButton) void tagPlayer.openMenu(playerMenuButton) }}
+            >
+                <Icon name="chevron-down" size={12} />
+            </Button>
+        </span>
+    </span>
+    <Menu menu={tagPlayer.menu} ariaLabel={tString('multiRename.tags.play.menu')} minWidth={200} />
 {/snippet}
 
 <style>
     /* Panes, status line, function-key bar: edge to edge, as in the main window. Only the panes flex. */
+    .open-in {
+        display: inline-flex;
+        gap: 1px;
+    }
+
     .tags-content {
         display: flex;
         flex-direction: column;

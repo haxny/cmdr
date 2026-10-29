@@ -5,6 +5,7 @@ import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
   commands,
   events,
+  type AppChoice,
   type ApplyRequest,
   type ContentKind,
   type CoverCandidate,
@@ -13,6 +14,7 @@ import {
   type LastTagApply,
   type NamePattern,
   type NamePreviewRow,
+  type PlayerOpened,
   type ReplacePreset,
   type ReplacePresetRefusal,
   type ReplaceStep,
@@ -297,12 +299,26 @@ export async function releaseTagTrackAudio(url: string): Promise<void> {
 }
 
 /**
- * Opens tracks of the session in foobar2000 when it's installed, otherwise each in its default app. Resolves once
- * the launch is asked for; `unknownTrack` for a path outside the session, `playerUnavailable` when nothing could
- * start.
+ * Opens tracks of the session in the app `player` names (`'default'`: each in its default app; else a bundle id).
+ * Resolves once the launch is asked for; `fellBack` says the chosen app wasn't installed, so the default was used.
+ * `unknownTrack` for a path outside the session, `playerUnavailable` when nothing could start.
  */
-export async function openTagsInPlayer(sessionId: string, paths: string[]): Promise<TagEditorResult<null>> {
-  return result(await commands.openTagsInPlayer(sessionId, paths))
+export async function openTagsInPlayer(
+  sessionId: string,
+  paths: string[],
+  player: string,
+): Promise<TagEditorResult<PlayerOpened>> {
+  return result(await commands.openTagsInPlayer(sessionId, paths, player))
+}
+
+/** The apps that can open the session's tracks (the system default first), plus `player`'s app when it is installed. */
+export async function tagPlayerChoices(sessionId: string, player: string): Promise<TagEditorResult<AppChoice[]>> {
+  return result(await commands.tagPlayerChoices(sessionId, player))
+}
+
+/** Asks the user for a player app with the system's open panel; `null` when they cancel. */
+export async function chooseTagPlayer(): Promise<TagEditorResult<AppChoice | null>> {
+  return result(await commands.chooseTagPlayer())
 }
 
 /** A Multi-Rename answer for the Tags window's session calls. */

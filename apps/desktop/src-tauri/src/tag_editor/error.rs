@@ -54,6 +54,6 @@ pub enum TagEditorError {
     BadRegex,
     /// A Format mask that doesn't parse. Nothing was changed.
     BadMask { error: MaskError },
-    /// Neither foobar2000 nor the files' default app could be launched.
+    /// Neither the chosen player nor the files' default app could be launched.
     PlayerUnavailable,
 }

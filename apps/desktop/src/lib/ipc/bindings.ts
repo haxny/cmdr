@@ -1778,11 +1778,29 @@ export const commands = {
   // Ends a URL `tag_track_audio_url` gave. Closing the tag session ends all of them.
   releaseTagTrackAudio: (url: string) => __TAURI_INVOKE<void>('release_tag_track_audio', { url }),
   /**
-   *  Opens tracks of the session in foobar2000 when it's installed, else each in its default app.
+   *  Opens tracks of the session in the app `player` names (`"default"`: each in its default app;
+   *  else a bundle id). A chosen app that isn't installed falls back to the default and says so.
    *  Returns once the launch is asked for, not when the player is up.
    */
-  openTagsInPlayer: (sessionId: string, paths: string[]) =>
-    typedError<null, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths })),
+  openTagsInPlayer: (sessionId: string, paths: string[], player: string) =>
+    typedError<PlayerOpened, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths, player })),
+  /**
+   *  The apps that can open the session's tracks (the system default first), plus `player`'s app when
+   *  it is a bundle id that's installed.
+   */
+  tagPlayerChoices: (sessionId: string, player: string) =>
+    typedError<AppChoice[], TagEditorError>(__TAURI_INVOKE('tag_player_choices', { sessionId, player })),
+  // Asks the user for a player app with the system's open panel; `None` when they cancel.
+  chooseTagPlayer: () =>
+    typedError<
+      {
+        bundleId: string
+        name: string
+        // The system's default app for the tracks (the first candidate).
+        isDefault: boolean
+      } | null,
+      TagEditorError
+    >(__TAURI_INVOKE('choose_tag_player')),
   /**
    *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
    *  many of its files are tracks and what its folder is called. The main window calls it right
@@ -6223,6 +6241,14 @@ export type AiVerifying = null
 
 export type AmendResult = {
   id: string
+}
+
+// An app the "Open in" menu offers.
+export type AppChoice = {
+  bundleId: string
+  name: string
+  // The system's default app for the tracks (the first candidate).
+  isDefault: boolean
 }
 
 /**
@@ -14412,6 +14438,12 @@ export type PhaseRecord = {
   stats: [string, string][]
 }
 
+// What `open_tags_in_player` answers: the launch was asked for, and whether the chosen app was missing.
+export type PlayerOpened = {
+  // The chosen app isn't installed, so the default app was used.
+  fellBack: boolean
+}
+
 export type PrepareResult = {
   ready: boolean
   entryCount: number
@@ -18737,7 +18769,7 @@ export type TagEditorError =
   | { kind: 'badRegex' }
   // A Format mask that doesn't parse. Nothing was changed.
   | { kind: 'badMask'; error: MaskError }
-  // Neither foobar2000 nor the files' default app could be launched.
+  // Neither the chosen player nor the files' default app could be launched.
   | { kind: 'playerUnavailable' }
 
 // The whole tab.

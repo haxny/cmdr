@@ -24,8 +24,10 @@
         enabled: ReadonlySet<TagsBarCommandId>
         onCommand: (id: TagsBarCommandId) => void
     }
+        /** The player app's name for the ⇧F3 button ("Open in <name>"); `null` while unknown ("Open in player"). */
+        playerName?: string | null
 
-    const { enabled, onCommand }: Props = $props()
+    const { enabled, onCommand, playerName = null }: Props = $props()
 
     /** Slot 0 is F2, so an empty Shift slot `i` shows `⇧F${i + FIRST_FN_KEY}`. */
     const FIRST_FN_KEY = 2
@@ -47,6 +49,14 @@
     })
 
     const writeSlot = $derived(
+    /** The slot's label; the player slot names the app when it's known. */
+    function labelOf(slot: { id: TagsBarCommandId; label: MessageKey }): string {
+        if (slot.id === 'tags.openInPlayer' && playerName !== null) {
+            return tString('multiRename.tags.keys.openInApp', { app: playerName })
+        }
+        return tString(slot.label)
+    }
+
         toSlot(TAGS_WRITE_SLOT.id, tString(TAGS_WRITE_SLOT.label), getFirstShortcutReactive(TAGS_WRITE_SLOT.id)),
     )
     const reviewSlot = $derived(

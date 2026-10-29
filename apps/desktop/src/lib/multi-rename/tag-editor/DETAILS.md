@@ -66,9 +66,9 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   "Use for all files" there is `useCoverForAll` (on for a merged look even when it holds every file: the bytes differ).
   Covers that look the same come merged (`nearDuplicates`); when that is the only cover tile, with or without a "No
   cover" tile (`oneLookForAll`), the section says "24 covers look almost the same; 26 files have none" with "Use it for
-  all 50 files" (`useCoverForAll`, one edit; it fills the files without a cover too). Past `MAX_COVER_TILES` (8)
-  covers the rest fold under "N more", a toggle ("Show fewer", `aria-expanded`) that stays put so focus stays; the "No
-  cover" tile always shows.
+  all 50 files" (`useCoverForAll`, one edit; it fills the files without a cover too). Past `MAX_COVER_TILES` (8) covers
+  the rest fold under "N more", a toggle ("Show fewer", `aria-expanded`) that stays put so focus stays; the "No cover"
+  tile always shows.
 - **Paste**: ⌘V is the native Edit > Paste (`paste:` to the webview); WebKit enables it on a focus that isn't a text box
   only when the page `preventDefault`s `beforepaste`, and its `paste` targets the selection, not the focus, so both are
   listened to on the document and taken only while focus is in the section (which is focusable and takes focus on a
@@ -229,25 +229,29 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   again, `stop()`, `ended`, a decode error, or a URL that arrives after a stop (released unused). `TagsContent` stops it
   on destroy, which covers the window closing. A failure (`failed`) shows `multiRename.tags.play.failed`. The audio
   tokens are per tag session on the Rust side (`playback.rs`), and `closeTagEditor` drops what is left. The CSP's
-  `media-src 'self' cmdr-media:` lets `<audio>` load them. "Open in foobar2000" (⇧F3) calls `openTagsInPlayer` with the
-  selected tracks (or every track), through `runScoped`; `playerUnavailable` and other failures are worded in the status
-  line.
+  `media-src 'self' cmdr-media:` lets `<audio>` load them. "Open in <app>" (⇧F3, the footer button) calls
+  `openTagsInPlayer` with the selected tracks (or every track), through `runScoped`, and the
+  `multiRename.tagEditor.player` setting (`'default'` or a bundle id; hidden, set only by the menu). The label names the
+  app (`tag-player.svelte.ts`: the default app's name from `tagPlayerChoices`, else "Open in player"); the arrow beside
+  the button opens the menu (default app, other candidates, Choose… via the system's open panel); a pick is remembered
+  and opens at once. A chosen app that is gone opens the default and the status line says so (`fellBack`);
+  `playerUnavailable` and other failures are worded there too.
 - **Scope**: `track-selection.svelte.ts` holds the Tracks pane's selection as the file panes do (`createSelectionState`,
   indices over the view's order; `sync` carries it across a reload by path) and answers `all` (nothing selected), `some`
   (the selected paths, in session order) or `gone` (everything selected vanished in a reload: the run is refused with a
-  notice, then the next takes all). Every tool and "Open in foobar2000" take the scope from `TagsContent.runScoped`,
-  after `settled()`. The Album pane follows the selection too: `TagsContent` sends it to `setViewScope` 120 ms after it
-  last changed (one call for a run of ⇧↓; sorting doesn't change it, being keyed by path), the backend sums up only
-  those tracks in `shared` and says how many in `scopeCount` (the header's "5 of 42 tracks"; `null` for all), and every
-  Album edit road (typing, a picked value, Clear, Delete, paste, cut) goes through `editAlbum`, which turns each
-  `setAll` into a `setOne` per selected readable track. The track list, cover, dirty marks and bad dates stay over every
-  track. A scope is no edit (no undo step). The pane never shows one scope while an edit goes to another: `editAlbum`
-  reads the selection before any await (`runScopedFrom`), so a ⌘- or ⇧-click that blurs an open box (its commit) and
-  changes the selection in the same mousedown never redirects the value, then `flush`es a selection change still waiting
-  (the view shows the new scope before the edit is sent), the scope sender waits for `settled()`, and `replaceView`
-  keeps the newest view by the backend's `viewSeq` (stamped under the session lock), not by ask order, so a late answer
-  never hides a later scope or edit. A newest view whose `scopeCount` doesn't match the selection sends the scope again,
-  once. The editor's and Clear's accessible names say "for 5 of 42 tracks" while scoped (`editLabelScoped`,
+  notice, then the next takes all). Every tool and "Open in <app>" take the scope from `TagsContent.runScoped`, after
+  `settled()`. The Album pane follows the selection too: `TagsContent` sends it to `setViewScope` 120 ms after it last
+  changed (one call for a run of ⇧↓; sorting doesn't change it, being keyed by path), the backend sums up only those
+  tracks in `shared` and says how many in `scopeCount` (the header's "5 of 42 tracks"; `null` for all), and every Album
+  edit road (typing, a picked value, Clear, Delete, paste, cut) goes through `editAlbum`, which turns each `setAll` into
+  a `setOne` per selected readable track. The track list, cover, dirty marks and bad dates stay over every track. A
+  scope is no edit (no undo step). The pane never shows one scope while an edit goes to another: `editAlbum` reads the
+  selection before any await (`runScopedFrom`), so a ⌘- or ⇧-click that blurs an open box (its commit) and changes the
+  selection in the same mousedown never redirects the value, then `flush`es a selection change still waiting (the view
+  shows the new scope before the edit is sent), the scope sender waits for `settled()`, and `replaceView` keeps the
+  newest view by the backend's `viewSeq` (stamped under the session lock), not by ask order, so a late answer never
+  hides a later scope or edit. A newest view whose `scopeCount` doesn't match the selection sends the scope again, once.
+  The editor's and Clear's accessible names say "for 5 of 42 tracks" while scoped (`editLabelScoped`,
   `clearRowLabelScoped`).
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format

@@ -48,7 +48,7 @@
         sort: TrackSort | null
         /** A header was clicked: the order to put the tracks in. */
         onSort: (sort: TrackSort) => void
-        /** Under the count, at the pane's foot (Open in foobar2000). */
+        /** Under the count, at the pane's foot (Open in <app>). */
         footer?: Snippet
         /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
         isEcho?: (id: TagsCommandId) => boolean

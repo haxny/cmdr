@@ -552,9 +552,9 @@ describe('TagsContent', () => {
     await press(paneList(root, 'Album tags'), 'F2')
     await press(paneList(root, 'Tracks'), 'F2')
     expect(root.querySelector('.tag-value-editor')).toBeNull()
-    // Playing, selecting and sorting write nothing, so Play, Open in foobar2000, the select-all box and the column
+    // Playing, selecting and sorting write nothing, so Play, Open in player (and its app menu), the select-all box and the column
     // headers stay available.
-    const readers = new Set(['Open in foobar2000', 'F3Play'])
+    const readers = new Set(['Open in player', 'F3Play'])
     const writers = [...root.querySelectorAll('button')].filter(
       (b) => !readers.has(b.textContent.trim()) && !b.classList.contains('sortable-header'),
     )

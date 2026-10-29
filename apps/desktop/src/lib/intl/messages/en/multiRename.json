@@ -2211,17 +2211,51 @@
   "@multiRename.tags.play.failed": {
     "description": "Notice in the tag editor window when a track could not be played: the file is gone, unreadable, or its format can't be played here."
   },
-  "multiRename.tags.play.openInPlayer": "Open in foobar2000",
+  "multiRename.tags.play.openInPlayer": "Open in player",
   "@multiRename.tags.play.openInPlayer": {
-    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the foobar2000 music player when it is installed, otherwise in each file's default app."
+    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the music player the user picked, or in each file's default app. Shown when the default app's name isn't known; otherwise multiRename.tags.play.openInApp is shown."
+  },
+  "multiRename.tags.play.openInApp": "Open in {app}",
+  "@multiRename.tags.play.openInApp": {
+    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the named music player, which is the user's default app for them or the one they picked.",
+    "placeholders": {
+      "app": "the name of the player app, as Finder shows it (for example Music, VLC)"
+    }
+  },
+  "multiRename.tags.play.chooseApp": "Choose the app to open the tracks in",
+  "@multiRename.tags.play.chooseApp": {
+    "description": "Accessible name and tooltip of the small arrow button beside Open in <app> in the tag editor window. It opens a menu of the apps that can play the tracks."
+  },
+  "multiRename.tags.play.menu": "Open the tracks with",
+  "@multiRename.tags.play.menu": {
+    "description": "Accessible name of the menu of apps the tag editor window offers for opening the tracks in."
+  },
+  "multiRename.tags.play.defaultApp": "{app} (default)",
+  "@multiRename.tags.play.defaultApp": {
+    "description": "A row in the menu of apps the tracks can be opened in: the system's default app for them. The row's checkmark shows it's the one in use.",
+    "placeholders": {
+      "app": "the name of the player app, as Finder shows it (for example Music)"
+    }
+  },
+  "multiRename.tags.play.defaultAppUnknown": "Default app",
+  "@multiRename.tags.play.defaultAppUnknown": {
+    "description": "A row in the menu of apps the tracks can be opened in, used when the system's default app for them can't be named: opens each track in the app macOS has set for it."
+  },
+  "multiRename.tags.play.chooseOther": "Choose…",
+  "@multiRename.tags.play.chooseOther": {
+    "description": "Last row in the menu of apps the tracks can be opened in: shows a file picker to choose any app. The ellipsis says a picker follows."
+  },
+  "multiRename.tags.play.playerMissing": "The app you chose isn’t installed any more, so the tracks opened in the default app.",
+  "@multiRename.tags.play.playerMissing": {
+    "description": "Notice in the tag editor window when the music player the user had chosen can't be found (deleted or moved), so the tracks were opened in each file's default app instead."
   },
   "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
   "@multiRename.tags.play.playerUnavailable": {
-    "description": "Notice in the tag editor window when Open in foobar2000 found neither foobar2000 nor any other app that could open the tracks."
+    "description": "Notice in the tag editor window when Open in player found neither the chosen app nor any other app that could open the tracks."
   },
   "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
   "@multiRename.tags.play.nothingReadable": {
-    "description": "Notice in the tag editor window when Open in foobar2000 was pressed with only unreadable tracks checked; nothing was opened."
+    "description": "Notice in the tag editor window when Open in player was pressed with only unreadable tracks checked; nothing was opened."
   },
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
@@ -2317,7 +2351,14 @@
   },
   "multiRename.tags.keys.openInPlayer": "Open in player",
   "@multiRename.tags.keys.openInPlayer": {
-    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the foobar2000 music player."
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the music player. Shown when the default app can't be named; otherwise multiRename.tags.keys.openInApp."
+  },
+  "multiRename.tags.keys.openInApp": "Open in {app}",
+  "@multiRename.tags.keys.openInApp": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the named music player.",
+    "placeholders": {
+      "app": "the name of the player app, as Finder shows it (for example Music, VLC)"
+    }
   },
   "multiRename.tags.keys.case": "Case",
   "@multiRename.tags.keys.case": {

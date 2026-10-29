@@ -59,7 +59,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'tags.edit': 'Edit the value under the cursor',
   'tags.editNumber': 'Edit the track number under the cursor',
   'tags.play': 'Play or stop the track under the cursor',
-  'tags.openInPlayer': 'Open the tracks in foobar2000',
+  'tags.openInPlayer': 'Open the tracks in the player',
   'tags.replace': 'Find and replace in the tags',
   'tags.case': 'Change the case of a tag',
   'tags.format': 'Format a tag field',

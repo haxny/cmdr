@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 use cmdr_tags::AudioFormat;
 
-use super::playback::{audio_url, player_targets, release};
+use super::playback::{
+    AppChoice, DEFAULT_PLAYER, LaunchPlan, audio_url, choices_of, plan_launch, player_targets, release,
+};
 use super::session::{TagEditorError, close, open};
 use super::session_test::{album, path_of};
 use crate::file_viewer::content_kind::{ViewerContentKind, audio_mime};
@@ -120,4 +122,75 @@ fn player_targets_only_session_tracks() {
     );
     close(&id);
     close_rename(&id);
+}
+
+fn candidate(bundle_id: &str, name: &str) -> crate::file_system::open_with::AppCandidate {
+    crate::file_system::open_with::AppCandidate {
+        bundle_id: bundle_id.to_string(),
+        display_name: name.to_string(),
+        app_path: PathBuf::from(format!("/Applications/{name}.app")),
+        icon: None,
+    }
+}
+
+fn choice(bundle_id: &str, name: &str, is_default: bool) -> AppChoice {
+    AppChoice {
+        bundle_id: bundle_id.to_string(),
+        name: name.to_string(),
+        is_default,
+    }
+}
+
+#[test]
+fn default_player_opens_each_file_in_its_default_app_without_a_lookup() {
+    let plan = plan_launch(DEFAULT_PLAYER, |_| panic!("the default needs no app lookup"));
+    assert_eq!(plan, LaunchPlan::Default { fell_back: false });
+}
+
+#[test]
+fn chosen_player_opens_all_files_with_that_app() {
+    let plan = plan_launch("org.videolan.vlc", |id| {
+        assert_eq!(id, "org.videolan.vlc");
+        Some(PathBuf::from("/Applications/VLC.app"))
+    });
+    assert_eq!(plan, LaunchPlan::With(PathBuf::from("/Applications/VLC.app")));
+}
+
+#[test]
+fn missing_chosen_player_falls_back_to_the_default_and_says_so() {
+    let plan = plan_launch("org.videolan.vlc", |_| None);
+    assert_eq!(plan, LaunchPlan::Default { fell_back: true });
+}
+
+#[test]
+fn choices_lead_with_the_default_app() {
+    let found = [
+        candidate("com.apple.Music", "Music"),
+        candidate("org.videolan.vlc", "VLC"),
+    ];
+    assert_eq!(
+        choices_of(&found, None),
+        vec![
+            choice("com.apple.Music", "Music", true),
+            choice("org.videolan.vlc", "VLC", false)
+        ]
+    );
+}
+
+#[test]
+fn a_chosen_app_outside_the_candidates_is_listed_last_once() {
+    let found = [candidate("com.apple.Music", "Music")];
+    let extra = choice("com.foobar2000.mac", "foobar2000", false);
+    assert_eq!(
+        choices_of(&found, Some(extra.clone())),
+        vec![choice("com.apple.Music", "Music", true), extra.clone()]
+    );
+    // Already a candidate: not listed twice.
+    let known = choice("com.apple.Music", "Music", false);
+    assert_eq!(choices_of(&found, Some(known)).len(), 1);
+}
+
+#[test]
+fn no_candidates_means_no_default() {
+    assert!(choices_of(&[], None).is_empty());
 }

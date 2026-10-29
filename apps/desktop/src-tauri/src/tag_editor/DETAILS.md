@@ -107,8 +107,10 @@ re-reads or follows a file that something else renamed.
 - **Audio tokens are per tag session.** `playback::audio_url` mints a `cmdr-media://` token only for a readable track
   of the session (canonical-path match, never a path the frontend made up) and keeps it under the session id;
   `release` drops one, and `session::close` drops all that remain. The viewer's `session::close_session` is not
-  the only place a media token is freed (`file_viewer/media.rs`). `open_in_player` opens foobar2000
-  (`com.foobar2000.mac`) when installed, else each file in its default app; `UnknownTrack` for a path outside the
+  the only place a media token is freed (`file_viewer/media.rs`). `open_in_player` follows the
+  `multiRename.tagEditor.player` setting the frontend passes (`"default"`: each file in its default app; else a bundle
+  id, all files in one launch of that app on the main thread; an app that is gone falls back to the default and the
+  answer's `fellBack` says so; the E2E build looks no app up and launches nothing); `UnknownTrack` for a path outside the
   session, `PlayerUnavailable` when nothing could start.
 - **Text tools run in the app.** `text_tools.rs` builds on `multi_rename::{mask, transform}` (`Mask`, `Transform`,
   `Replace`), which `cmdr-tags` can't depend on; they validate first, change nothing on a bad pattern, never strip
@@ -265,8 +267,9 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
   `tags_native_edit` hands back for a text box or the cover section.
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the
-  viewer's choke point) and "open in foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread,
-  never awaited).
+  viewer's choke point) and "open in <app>" (`plan_launch`, `choices_of` pure; `player_choices` lists the apps that open the tracks, one
+  sample file per extension; `choose_player` shows the open panel on the main thread; launch on the main thread, never
+  awaited).
 
 ## Must-knows (full)
 

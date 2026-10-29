@@ -549,4 +549,15 @@ export const advancedSettings: SettingDefinitionSource[] = [
     default: false,
     component: 'switch',
   },
+  {
+    // Internal (FE-owned): `'default'` or the bundle id of the app picked in the Tags window's "Open in" menu.
+    id: 'multiRename.tagEditor.player',
+    section: ['Advanced'],
+    labelKey: 'settings.multiRename.tagEditor.player.label',
+    descriptionKey: 'settings.multiRename.tagEditor.player.description',
+    type: 'string',
+    default: 'default',
+    component: 'text-input',
+    hidden: true,
+  },
 ]
