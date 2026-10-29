@@ -27,6 +27,7 @@ use cmdr_fs::firmlinks;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 use crate::indexing::host;
+use crate::indexing::host::volumes::MountPoint;
 use crate::indexing::paths::path_prefix::is_at_or_under;
 
 /// How stale the cached table may get before the next ask re-reads it. A read is
@@ -58,16 +59,18 @@ impl BootTreeMounts {
     /// a mount it already keeps the boot scan out of is the boot disk's own
     /// (`/System/Volumes/Data`) or somebody else's that the prefixes handle
     /// (`/Volumes/X`), and either way it's not this set's job.
+    ///
+    /// Which of the rest it stops at is [`BOOT_TREE_CUT`]'s call: every one on
+    /// macOS, only the ones that aren't a local disk on Linux.
     pub(in crate::indexing) fn from_mount_table(
-        mount_points: impl IntoIterator<Item = String>,
+        mount_points: impl IntoIterator<Item = MountPoint>,
         already_excluded: impl Fn(&str) -> bool,
     ) -> Self {
-        if !CUTS_AT_BOOT_TREE_MOUNTS {
-            return Self::default();
-        }
         let mut mounts: Vec<BootTreeMount> = mount_points
             .into_iter()
-            .filter_map(|raw| {
+            .filter(|mount| BOOT_TREE_CUT.cuts(mount))
+            .filter_map(|mount| {
+                let raw = mount.path.to_string_lossy();
                 let trimmed = raw.trim_end_matches('/');
                 if trimmed.is_empty() {
                     return None; // `/`, the boot disk itself
@@ -100,14 +103,44 @@ impl BootTreeMounts {
     }
 }
 
-/// Whether the boot-disk index stops at filesystems mounted inside its tree on
-/// this platform.
-///
-/// macOS only, for now. On Linux the same rule would cut a separate `/home`
-/// partition (Fedora Workstation mounts `/home` as its own btrfs subvolume), and
-/// nothing else indexes it: only `/mnt` and `/media` mounts get their own indexes.
-/// Linux keeps walking into mounts inside its tree until that has an answer.
-pub(super) const CUTS_AT_BOOT_TREE_MOUNTS: bool = cfg!(target_os = "macos");
+/// Which filesystems mounted inside its tree the boot-disk index stops at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum BootTreeCut {
+    /// Every one (macOS): a mount is its own drive, with its own index.
+    Every,
+    /// Only the ones that aren't a known local disk (Linux): an NFS or CIFS share,
+    /// FUSE, sshfs. A local one stays the boot disk's, because cutting it would cut
+    /// a separate `/home` partition (Fedora Workstation mounts `/home` as its own
+    /// btrfs subvolume) that nothing else indexes: only `/mnt` and `/media` mounts
+    /// get their own indexes.
+    NotALocalDisk,
+}
+
+impl BootTreeCut {
+    /// Whether the boot scan stops at `mount`.
+    pub(super) fn cuts(self, mount: &MountPoint) -> bool {
+        match self {
+            Self::Every => true,
+            Self::NotALocalDisk => !mount.is_local_disk(),
+        }
+    }
+
+    /// The rule's name in the exclusion-policy fingerprint, so changing it rebuilds
+    /// every boot index built under the old one.
+    pub(super) fn fingerprint_tag(self) -> &'static str {
+        match self {
+            Self::Every => "cut_at_boot_tree_mounts",
+            Self::NotALocalDisk => "cut_at_non_local_boot_tree_mounts",
+        }
+    }
+}
+
+/// This platform's [`BootTreeCut`].
+pub(super) const BOOT_TREE_CUT: BootTreeCut = if cfg!(target_os = "macos") {
+    BootTreeCut::Every
+} else {
+    BootTreeCut::NotALocalDisk
+};
 
 /// What the cache holds between reads.
 struct Cached {
@@ -152,10 +185,7 @@ fn refresh(now: u64) {
     let read = host::volumes::current().mount_points();
     let mut cache = CACHE.write_ignore_poison();
     if let Some(points) = read {
-        let mounts = BootTreeMounts::from_mount_table(
-            points.into_iter().map(|p| p.to_string_lossy().into_owned()),
-            super::exclusions::excluded_by_boot_prefixes,
-        );
+        let mounts = BootTreeMounts::from_mount_table(points, super::exclusions::excluded_by_boot_prefixes);
         ANY.store(!mounts.is_empty(), Ordering::Release);
         *cache = Some(Cached {
             mounts: Arc::new(mounts),
@@ -197,26 +227,6 @@ pub(in crate::indexing) fn is_inside_a_mount(path: &str) -> bool {
         .is_some_and(|cached| cached.mounts.covering(path).is_some())
 }
 
-#[cfg(all(test, target_os = "macos"))]
+#[cfg(test)]
 #[path = "boot_tree_mounts_tests.rs"]
 mod tests;
-
-#[cfg(all(test, not(target_os = "macos")))]
-mod off_macos_tests {
-    use super::*;
-
-    /// Off macOS the boot disk still walks into what's mounted inside its tree
-    /// ([`CUTS_AT_BOOT_TREE_MOUNTS`]), so a separate `/home` stays indexed.
-    #[test]
-    fn nothing_mounted_inside_the_boot_tree_is_cut() {
-        let set = BootTreeMounts::from_mount_table(
-            [
-                "/".to_string(),
-                "/home".to_string(),
-                "/home/someone/mnt/sshfs".to_string(),
-            ],
-            super::super::exclusions::excluded_by_boot_prefixes,
-        );
-        assert!(set.is_empty());
-    }
-}

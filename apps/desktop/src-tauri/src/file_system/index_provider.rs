@@ -13,7 +13,8 @@ use cmdr_fs::log_error::LogError;
 use cmdr_fs::volume::Volume;
 
 use cmdr_index::host::volumes::{
-    EnsureDirectSmbFut, MountFacts, MountIdentity, ResolveMtpFut, ResolvedMtpObject, SmbUpgradeRefusal, VolumeProvider,
+    EnsureDirectSmbFut, MountFacts, MountIdentity, MountPoint, ResolveMtpFut, ResolvedMtpObject, SmbUpgradeRefusal,
+    VolumeProvider,
 };
 use cmdr_local::filesystem_kind::{is_network, probe_mount_for_path};
 
@@ -110,16 +111,24 @@ impl VolumeProvider for AppVolumeProvider {
         }
     }
 
-    fn mount_points(&self) -> Option<Vec<std::path::PathBuf>> {
+    fn mount_points(&self) -> Option<Vec<MountPoint>> {
         // The whole table, ❌ never `registrable_mount_roots`: the boot scan has to
         // stop at another account's mount too, which the registry leaves out.
         #[cfg(target_os = "macos")]
-        let roots = crate::volumes::mount_roots();
+        let rows = crate::volumes::mount_rows();
         #[cfg(target_os = "linux")]
-        let roots = crate::volumes_linux::mount_roots();
+        let rows = crate::volumes_linux::mount_rows();
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-        let roots: Option<Vec<String>> = Some(Vec::new());
-        roots.map(|roots| roots.into_iter().map(std::path::PathBuf::from).collect())
+        let rows: Option<Vec<(String, String, String)>> = Some(Vec::new());
+        rows.map(|rows| {
+            rows.into_iter()
+                .map(|(path, source, fs_type)| MountPoint {
+                    path: path.into(),
+                    source: Some(source),
+                    fs_type: Some(fs_type),
+                })
+                .collect()
+        })
     }
 
     fn smb_volume_id_for_path(&self, path: &str) -> Option<String> {
@@ -289,7 +298,14 @@ mod tests {
     #[test]
     fn mount_points_come_from_the_kernel_table() {
         let points = AppVolumeProvider.mount_points().expect("the mount table reads");
-        assert!(points.iter().any(|p| p == Path::new("/")), "`/` is mounted: {points:?}");
+        let root = points
+            .iter()
+            .find(|p| p.path == Path::new("/"))
+            .unwrap_or_else(|| panic!("`/` is mounted: {points:?}"));
+        assert!(
+            root.fs_type.as_deref().is_some_and(|t| !t.is_empty()),
+            "each row carries its type, which the Linux cut decides by: {root:?}"
+        );
     }
 
     /// The negative half, against a REAL filesystem: a FAT32 mount's inodes are

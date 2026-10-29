@@ -43,7 +43,7 @@ pub use fs_type::{is_network_fs_type, is_smb_fs_type, supports_trash_for_mount};
 pub(crate) use ids::{volume_id_for, volume_id_for_mount};
 pub use mounts::get_attached_volumes;
 pub(crate) use mounts::{
-    has_mount_identity, is_private_to_another_user, mount_identity_at, mount_roots, mount_type_and_source_for,
+    has_mount_identity, is_private_to_another_user, mount_identity_at, mount_rows, mount_type_and_source_for,
     network_mount_under, registrable_mount_roots, smb_mount_info_at, smb_mounts,
 };
 pub(crate) use nsurl::{

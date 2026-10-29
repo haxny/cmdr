@@ -77,7 +77,7 @@ folder (reported against 0.48.0). Nothing in discovery looked at who owned a mou
 - **The registry sweep** (`registrable_mount_roots`): not registered.
 - **The mount watcher** (`handle_volume_mounted`, asking `is_private_to_another_user`): no registration, no
   `volume-mounted`, no refresh. An unmount can't be asked about (the row is gone), and finds nothing to remove.
-- **The index** (`mount_roots`): STILL listed. The boot scan cuts at every mount inside the boot tree, and it has to
+- **The index** (`mount_rows`): STILL listed. The boot scan cuts at every mount inside the boot tree, and it has to
   stop at one it can't enter as well. ❌ Never point the index at `registrable_mount_roots`.
 - **Table facts** (`is_mount_point`, `mount_identity_at`, `has_mount_identity`, `mount_sources`, `smb_mounts`):
   unfiltered. They answer what the kernel lists, and the rule excludes disks and network mounts anyway.

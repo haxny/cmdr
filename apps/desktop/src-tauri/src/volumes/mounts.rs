@@ -109,13 +109,19 @@ pub(super) fn mount_under<'a>(mounts: &'a [MountEntry], path: &Path) -> Option<&
         .max_by_key(|m| m.mount_point.len())
 }
 
-/// Every mount point the kernel currently lists, from the same non-blocking snapshot.
+/// Every mount the kernel currently lists, as `(mount point, source, fs type)`, from
+/// the same non-blocking snapshot.
 ///
 /// What the INDEX cuts its boot-tree scan at, so it's every row, another account's
 /// mounts included: a scan has to stop at a mount it can't enter too. ❗ `None` when
 /// the table couldn't be read, ❌ never an empty list.
-pub(crate) fn mount_roots() -> Option<Vec<String>> {
-    Some(enumerate_mounts()?.into_iter().map(|mount| mount.mount_point).collect())
+pub(crate) fn mount_rows() -> Option<Vec<(String, String, String)>> {
+    Some(
+        enumerate_mounts()?
+            .into_iter()
+            .map(|mount| (mount.mount_point, mount.mount_from, mount.fs_type))
+            .collect(),
+    )
 }
 
 /// The mount points the volume REGISTRY sweeps (`file_system::volume::mount_registration`):

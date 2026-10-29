@@ -150,10 +150,14 @@ image or an NFS share mounted in the home folder, an rclone / sshfs / macFUSE mo
 `~/Library/Developer/CoreDevice/DeviceFS`. `/Volumes/` always got this by prefix; `boot_tree_mounts` extends it to every
 other mount point.
 
-- **macOS only** (`CUTS_AT_BOOT_TREE_MOUNTS`). On Linux the rule would also cut a separate `/home` partition (Fedora
-  Workstation mounts `/home` as its own btrfs subvolume), and nothing else indexes it, since only `/mnt` and `/media`
-  mounts get their own indexes. So Linux keeps walking into mounts inside its tree, and its `BootDisk` fingerprint
-  doesn't carry the rule (no rebuild there).
+- **Decision/Why: macOS cuts every mount, Linux only the ones that aren't a local disk** (`BOOT_TREE_CUT`,
+  [#731](https://github.com/vdavid/cmdr/issues/731)). On Linux, cutting every mount would also cut a separate `/home`
+  partition (Fedora Workstation mounts `/home` as its own btrfs subvolume), and nothing else indexes it, since only
+  `/mnt` and `/media` mounts get their own indexes. Cutting none crawled an NFS or CIFS share under the home folder at
+  local-walker speed: slow, chatty on the network, and its sizes went stale. So Linux asks `MountPoint::is_local_disk`
+  (the shared `mount_is_local_disk` allowlist: a `/dev/` source or a known local type), and a network share, FUSE, or
+  sshfs mount is cut. Each rule has its own `BootDisk` fingerprint tag, so a platform changing rules rebuilds its boot
+  index once.
 
 - **Where it lives: inside `should_exclude`'s `BootDisk` tier**, after the prefix checks. That's the one gate every
   boot-disk path already asks (the walker per child, the reconciler's listing and live events, the verifier, FSEvents

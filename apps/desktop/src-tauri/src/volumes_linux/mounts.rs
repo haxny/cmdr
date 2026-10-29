@@ -24,16 +24,16 @@ pub fn get_mounted_volumes(mounts: &[MountEntry]) -> Vec<LocationInfo> {
     get_mounted_volumes_with(mounts, volume_id_for_mount)
 }
 
-/// Every mount point `/proc/mounts` currently lists.
+/// Every mount `/proc/mounts` currently lists, as `(mount point, device, fs type)`.
 ///
-/// What the INDEX cuts its boot-tree scan at, so it's every row, another account's FUSE mounts
-/// included: a scan has to stop at a mount it can't enter too. ❗ `None` when the table couldn't
-/// be read, ❌ never an empty list.
-pub(crate) fn mount_roots() -> Option<Vec<String>> {
+/// What the INDEX cuts its boot-tree scan at (on Linux, the rows that aren't a local disk), so
+/// it's every row, another account's FUSE mounts included: a scan has to stop at a mount it can't
+/// enter too. ❗ `None` when the table couldn't be read, ❌ never an empty list.
+pub(crate) fn mount_rows() -> Option<Vec<(String, String, String)>> {
     Some(
         cmdr_local::linux_mounts::parse_proc_mounts()?
             .into_iter()
-            .map(|mount| mount.mountpoint)
+            .map(|mount| (mount.mountpoint, mount.device, mount.fstype))
             .collect(),
     )
 }

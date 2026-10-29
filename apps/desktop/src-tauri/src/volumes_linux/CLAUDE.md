@@ -39,7 +39,7 @@ branch on platform), `watcher.rs` (mount-table and GVFS watchers; diffs known st
 - **Hidden mounts (`/snap/`, `/boot/`, `/run/user/`) are filtered by path prefix, not fstype**, because snap loopback
   mounts are `squashfs` and EFI is `vfat`, real types you can't exclude without hiding a mounted ISO.
 - **Another account's FUSE mount (`user_id=` not ours, no `allow_other`) gets no row, registration, or watcher event**,
-  yet stays in `mount_roots` for the index's cut. DETAILS § "Another account's FUSE mounts".
+  yet stays in `mount_rows` for the index's cut. DETAILS § "Another account's FUSE mounts".
 - **GVFS network mounts: `supports_trash: false`, `is_ejectable: true`**: GVFS FUSE has no FreeDesktop trash
   (`gio trash` silently fails), and users expect to disconnect a share. DETAILS § "Decisions".
 - **Removable detection is path-based** (`/run/media/$USER/` or `/media/$USER/` → `is_ejectable`). `get_username()`
