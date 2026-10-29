@@ -317,8 +317,14 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         .collect();
     let scoped = scoped_tracks(&tracks, session.view_scope.as_ref());
     let mut view = build(layout.access, &tracks, scoped.as_deref());
-    for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
-        row.file_name = file_name_of(&layout.dir, path);
+    // The File column drops the folder every track shares; the session's own names stay relative to its folder.
+    let names: Vec<String> = tracks.iter().map(|(path, _)| file_name_of(&layout.dir, path)).collect();
+    let shared = super::cover::tracks_folder(&layout.dir, names.iter());
+    for (row, (path, _)) in view.tracks.iter_mut().zip(&tracks) {
+        row.file_name = path.strip_prefix(&shared).map_or_else(
+            |_| file_name_of(&layout.dir, path),
+            |name| name.to_string_lossy().into_owned(),
+        );
     }
     TagEditorView {
         sort: session.sort,
