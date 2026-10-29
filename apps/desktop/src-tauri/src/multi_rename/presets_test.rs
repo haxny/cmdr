@@ -660,3 +660,42 @@ fn a_new_install_takes_every_version_and_a_set_aside_file_none() {
     store.load_at(&path);
     assert!(store.seed_at(Some(&path), v2_seeds(), 20).is_empty());
 }
+
+#[test]
+fn version_two_seeds_stop_at_the_cap_and_the_version_is_still_stored() {
+    let mut list = PresetList {
+        entries: vec![preset("a", "Mine"), preset("b", "Date and time")],
+        seeded: true,
+        seed_version: 1,
+    };
+    assert!(seed_in(&mut list, v2_seeds(), 3));
+    assert_eq!(names(&list.entries), ["Mine", "Date and time", "Foobar one"]);
+    assert_eq!(list.seed_version, 2, "the rest don't come back later");
+    assert!(!seed_in(&mut list, v2_seeds(), 10));
+}
+
+#[test]
+fn a_file_from_before_seeding_with_entries_gets_every_seed_once() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("multi-rename-presets.json");
+    let entries = serde_json::to_value([preset("b", "Mine")]).expect("serializes");
+    std::fs::write(
+        &path,
+        serde_json::json!({ "_schemaVersion": 1, "entries": entries }).to_string(),
+    )
+    .expect("write");
+    let store = PresetStore::new();
+    store.load_at(&path);
+
+    let answer = store.seed_at(Some(&path), v2_seeds(), 20);
+    assert_eq!(
+        answer.len(),
+        1 + 4 + 2,
+        "its own, the first four, and the two version 2 seeds not named Mine"
+    );
+    assert_eq!(answer[0].name, "Mine");
+
+    let after_restart = PresetStore::new();
+    after_restart.load_at(&path);
+    assert_eq!(after_restart.seed_at(Some(&path), v2_seeds(), 20).len(), 7, "once only");
+}

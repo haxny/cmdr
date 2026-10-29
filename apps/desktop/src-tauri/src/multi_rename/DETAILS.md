@@ -333,7 +333,8 @@ the frontend (`spec.ts`).
   (`#[serde(default)]`, schema stays 1) is the newest version the list took; a `seeded` file without it counts as 1. A
   seed goes in when its version is above that, by the same rules (after the user's presets, name taken: skipped, cap),
   and `seedVersion` is stored after, so deleting a version-2 seed never brings it back. A set-aside file stores
-  `u32::MAX`: no seeds, ever. The seven patterns are pinned by `foobar_spec_test.rs` (rendered through the real pipeline) and `spec.test.ts`.
+  `u32::MAX`: no seeds, ever. The seven patterns live in `foobar_preset_vectors.json` (nameKey, pattern, expected name on the Anne Frank fixture): `foobar_spec_test.rs` renders them through the real pipeline and `spec.test.ts` pins `PRESET_SEEDS` to them.
+  **Known limit:** an older build rewrites the file without `seedVersion`, so after a downgrade-then-upgrade the list reads as version 1 and the seven are offered again once (a deleted one returns; a renamed one comes back beside the renamed copy).
 - **The file** keeps the `crate::recents` envelope (`_schemaVersion: 1`, `entries`) plus `seeded` and `seedVersion`, so an older build's
   file reads as stored (newest first) and an older build reads ours. A file that won't read goes through
   `state_recovery::read_state_file` (set aside, the person told once), like every state file; the lock discipline is
