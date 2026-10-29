@@ -1095,7 +1095,7 @@ fn a_start_answers_every_phase_it_can_meet() {
         .is_err();
         let recorded = matches!(
             registry.lock_ignore_poison().get("phase-table").map(|i| &i.phase),
-            Some(IndexPhase::ShuttingDown { restart: Some(_) })
+            Some(IndexPhase::ShuttingDown { restart: Some(_), .. })
         );
         // The pool went into the process-wide table under a name no other test uses.
         uninstall_read_pool("phase-table");
@@ -1137,7 +1137,10 @@ fn a_start_answers_every_phase_it_can_meet() {
     // drain carries it out. ❗ This is the whole bug: refusing here silently drops
     // what the user asked for, and the disable's veto then lands on top of it.
     assert_eq!(
-        reserve_over(IndexPhase::ShuttingDown { restart: None }),
+        reserve_over(IndexPhase::ShuttingDown {
+            restart: None,
+            then_clear: None
+        }),
         (true, true),
         "a start meeting a drain has to be recorded, never bounced",
     );

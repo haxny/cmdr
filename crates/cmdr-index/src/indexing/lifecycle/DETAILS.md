@@ -367,9 +367,9 @@ captured up front cancels correctly in that case.
 
 ## The `IndexPhase` machine (and where the pipeline-phase EVENT lives)
 
-`IndexPhase` (state.rs) is the LIFECYCLE state: `Initializing { store }` → `Running` → `ShuttingDown { restart }`
-(transient) → absent, plus the terminal `Failed { reason, db_path }` and the transient `Detached { writer, teardown }` a
-scan start publishes (§ "The detached window").
+`IndexPhase` (state.rs) is the LIFECYCLE state: `Initializing { store }` → `Running` →
+`ShuttingDown { restart, then_clear }` (transient) → absent, plus the terminal `Failed { reason, db_path }` and the
+transient `Detached { writer, teardown }` a scan start publishes (§ "The detached window").
 
 Five phases, and what each one does with a request that arrives while it holds the volume's key:
 
@@ -382,8 +382,8 @@ Five phases, and what each one does with a request that arrives while it holds t
   teardown drains it.
 - **`Detached { writer, teardown }`** — transient, § "The detached window". A teardown CLAIMS it. A start does nothing
   unless a teardown has already claimed it, in which case it rides that claim.
-- **`ShuttingDown { restart }`** — transient, § "The shutting-down window". A start is RECORDED and carried out by the
-  drain; a further teardown DROPS what was recorded.
+- **`ShuttingDown { restart, then_clear }`** — transient, § "The shutting-down window". A start is RECORDED and carried
+  out by the drain; a further teardown DROPS the recorded start, and a CLEAR is recorded too (`then_clear`).
 - **`Failed { reason, db_path }`** — the database died, § "The Failed state". A start CLEARS it and rebuilds, at the
   choke point, before it ever reserves.
 
@@ -443,7 +443,7 @@ every path, deferred ones included. Anchor:
   claim table refuses the walk one line later anyway (`claim_the_volume` takes the volume `Exclusive`ly before every
   blocking call in `start_scan`), so the phase check is belt over braces.
 
-## The shutting-down window (`IndexPhase::ShuttingDown { restart }`)
+## The shutting-down window (`IndexPhase::ShuttingDown { restart, then_clear }`)
 
 The mirror of the detached window, pointing the other way: a volume is on its way OUT, its key is still in the registry,
 and a START lands. The window is the blocking drain, up to **five seconds** wide (`mgr.shutdown()` waits on the
@@ -468,14 +468,25 @@ particular decides between indexing a drive and standing a writer up for a searc
 
 **Toggles collapse rather than queue.** Everything after the first toggle lands in the same window, so N clicks cost one
 drain and one index: each start overwrites the `Option`, each teardown clears it (`stop_the_volume` and `clear_index`
-both publish a FRESH `ShuttingDown { restart: None }`), and the far side acts on whatever is left. The `Stopped` path
-also SKIPS `record_the_disable` when a restart is pending — the enable is already on disk from the start that superseded
-it, so writing the veto after it would make "off" the last word on a drive that was just turned on.
+both publish a FRESH marker with `restart: None`), and the far side acts on whatever is left. The `Stopped` path also
+SKIPS `record_the_disable` when a restart is pending — the enable is already on disk from the start that superseded it,
+so writing the veto after it would make "off" the last word on a drive that was just turned on.
 
 **A start riding a claim.** A start meeting `Detached` with a teardown claimed on it goes into `ClaimedTeardown.restart`
 rather than a second `Option` of its own, so "restart a volume nothing is tearing down" is unrepresentable; the claim
 carries it into the `ShuttingDown` that `hand_the_manager_back` publishes, where it joins the one honoring path. A
 teardown arriving after a start drops it either way: the user's last word is off.
+
+**A clear meeting the drain is RECORDED too** (`then_clear`). It used to bail on "another teardown is already draining
+this volume", which holds only when that teardown is a clear: a STOP's drain (the user's disable, an eject, a move)
+keeps the database, so forgetting a drive while its stop drained reported success and left the index on disk. Now
+`clear_index` writes its `Removal` onto the drain (the wider of two, `Removal::wider`), and every drain's far side
+deletes before carrying out any start: `finish_stopping` and `finish_clearing` through `remove_once_let_go` (the same
+wait for the volume to be let go, the manager's share dropped first), `finish_failing` through `clear_index` over the
+`Failed` it just installed. A start recorded after the clear still runs, onto a fresh database. ⚠️ A later stop's fresh
+marker drops the recorded start but CARRIES `then_clear` over, and skips the veto (the database is going). Pinned by
+`cold_drive_tests::toggles::a_forget_during_a_stop_deletes_the_index_once_the_stop_is_done` and
+`a_stop_after_a_forget_in_one_drain_still_deletes_the_index`.
 
 **`is_active` is not the question a start asks.** A `Detached` volume with a claim on it reads active right up to the
 moment it stops, so the four "already indexing, no-op" gates (`Index::start_volume` and the three transport enables) ask

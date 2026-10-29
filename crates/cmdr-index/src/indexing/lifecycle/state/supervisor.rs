@@ -86,7 +86,13 @@ fn fail_index(events: &dyn crate::EventSink, volume_id: &str, reason: IndexFailu
             );
             return;
         }
-        match std::mem::replace(&mut instance.phase, IndexPhase::ShuttingDown { restart: None }) {
+        match std::mem::replace(
+            &mut instance.phase,
+            IndexPhase::ShuttingDown {
+                restart: None,
+                then_clear: None,
+            },
+        ) {
             IndexPhase::Running(mgr) => mgr,
             other => {
                 // Not `Running` (already stopped, cleared, or failed elsewhere):
@@ -130,13 +136,13 @@ pub(super) fn finish_failing(
     // Re-lock and install `Failed` — but only if the instance is still the
     // `ShuttingDown` marker we published (a concurrent stop/clear may have removed
     // it while we drained; respect that).
-    let restart = {
+    let (restart, then_clear) = {
         let mut reg = INDEX_REGISTRY.lock_ignore_poison();
         match reg.get_mut(volume_id) {
             Some(instance) if matches!(instance.phase, IndexPhase::ShuttingDown { .. }) => {
                 match std::mem::replace(&mut instance.phase, IndexPhase::Failed { reason, db_path }) {
-                    IndexPhase::ShuttingDown { restart } => restart,
-                    _ => None,
+                    IndexPhase::ShuttingDown { restart, then_clear } => (restart, then_clear),
+                    _ => (None, None),
                 }
             }
             _ => {
@@ -163,6 +169,16 @@ pub(super) fn finish_failing(
         reason.code,
         reason.extended_code,
     );
+
+    // A clear that met the drain completes now. `clear_index` meets the `Failed`
+    // just installed, removes it, and deletes with the usual wait for the volume to
+    // be let go, so the manager's share has to be gone first.
+    if let Some(why) = then_clear {
+        drop(mgr);
+        if let Err(e) = super::teardown::clear_index(volume_id, why) {
+            log::warn!("fail_index('{volume_id}'): the clear that landed while it failed finished with: {e}");
+        }
+    }
 
     // Somebody asked for this volume back while its database was dying. The start
     // does the documented recovery for a `Failed` index — clear the dead one out of

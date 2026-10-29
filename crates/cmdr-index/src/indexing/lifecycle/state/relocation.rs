@@ -69,6 +69,7 @@ pub(crate) fn follow_the_move(volume_id: &str, new_root: PathBuf) -> bool {
             &mut instance.phase,
             IndexPhase::ShuttingDown {
                 restart: Some(moved.clone()),
+                then_clear: None,
             },
         ) {
             IndexPhase::Running(mgr) => Next::Drain(mgr),
@@ -139,7 +140,7 @@ fn record_the_move(phase: &mut IndexPhase, moved: StartRequest) -> Next {
         None => Next::Nothing,
     };
     match phase {
-        IndexPhase::ShuttingDown { restart } => retarget(restart),
+        IndexPhase::ShuttingDown { restart, .. } => retarget(restart),
         IndexPhase::Detached {
             teardown: Some(claimed),
             ..

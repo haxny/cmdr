@@ -305,6 +305,59 @@ fn a_clear_waits_for_the_volume_to_be_let_go_before_deleting_its_database() {
     assert!(!db_path.exists(), "the dead database is gone");
 }
 
+/// Forgetting a drive while its stop is still draining deletes the index once the
+/// stop is done, and only once the volume is let go. The forget used to bail on
+/// "another teardown is already draining", which is true only when that teardown
+/// is a CLEAR: a stop keeps the database, so the forget reported success and the
+/// index stayed on disk.
+#[test]
+fn a_forget_during_a_stop_deletes_the_index_once_the_stop_is_done() {
+    let drive = an_indexed_drive("cover-toggle-forget-during-stop-test");
+    let db_path = state::resolved_index_db_path(drive.volume_id).expect("a database path");
+    let straggler = VolumeWork::for_test(drive.volume_id);
+
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let volume_id = drive.volume_id;
+    std::thread::spawn(move || {
+        state::while_stopping_for_test(volume_id, || {
+            state::clear_index(volume_id, crate::volume_files::Removal::Forgotten).expect("the forget is recorded");
+        });
+        let _ = done_tx.send(());
+    });
+
+    assert!(
+        done_rx.recv_timeout(std::time::Duration::from_millis(300)).is_err(),
+        "the forget waits while something still holds the volume"
+    );
+    assert!(db_path.exists(), "and deletes nothing under it");
+
+    drop(straggler);
+    done_rx
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .expect("the stop finishes once the volume is let go");
+    assert!(!db_path.exists(), "the forgotten drive's index is gone");
+    assert!(!state::is_active(drive.volume_id), "and the drive stays off");
+}
+
+/// A second stop landing in the same drain doesn't undo the forget before it: the
+/// stop's fresh marker drops a recorded START, never a recorded clear.
+#[test]
+fn a_stop_after_a_forget_in_one_drain_still_deletes_the_index() {
+    let drive = an_indexed_drive("cover-toggle-stop-after-forget-test");
+    let db_path = state::resolved_index_db_path(drive.volume_id).expect("a database path");
+
+    state::while_stopping_for_test(drive.volume_id, || {
+        drive
+            .index
+            .forget_volume(drive.volume_id)
+            .expect("the drive is forgotten");
+        turn_off(&drive);
+    });
+
+    assert!(!db_path.exists(), "the forget still happened");
+    assert!(!state::is_active(drive.volume_id), "and the drive stays off");
+}
+
 /// The same wait on the CLAIMED path (#620): a clear that lands while a scan start
 /// has the manager out runs at the handback, and it deleted at once, so a worker of
 /// the old generation (the phase machine of a first index still in phases) could

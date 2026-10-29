@@ -1075,7 +1075,10 @@ fn is_initializing_phase_matches_only_initializing_variant() {
     let dir = tempfile::tempdir().expect("temp dir");
     let store = IndexStore::open(&dir.path().join("classifier.db")).expect("open store");
     // ShuttingDown classified as not-initializing.
-    assert!(!is_initializing_phase(&IndexPhase::ShuttingDown { restart: None }));
+    assert!(!is_initializing_phase(&IndexPhase::ShuttingDown {
+        restart: None,
+        then_clear: None
+    }));
     // Initializing classified as initializing.
     assert!(is_initializing_phase(&IndexPhase::Initializing { store }));
 }
@@ -1129,7 +1132,10 @@ fn try_reserve_initializing_succeeds_only_from_disabled() {
         INDEX_REGISTRY.lock().unwrap().insert(
             ROOT_VOLUME_ID.to_string(),
             IndexInstance {
-                phase: IndexPhase::ShuttingDown { restart: None },
+                phase: IndexPhase::ShuttingDown {
+                    restart: None,
+                    then_clear: None,
+                },
                 started_as: StartRequest::for_test(IndexVolumeKind::Local),
                 signals: VolumeSignals::new(Arc::new(std::sync::Mutex::new(None)), NoopEventSink::shared()),
                 work: hold::VolumeWork::for_test(ROOT_VOLUME_ID),
@@ -1259,7 +1265,10 @@ fn shutdown_drain_does_not_hold_indexing_lock() {
         INDEX_REGISTRY.lock().expect("registry poisoned").insert(
             ROOT_VOLUME_ID.to_string(),
             IndexInstance {
-                phase: IndexPhase::ShuttingDown { restart: None },
+                phase: IndexPhase::ShuttingDown {
+                    restart: None,
+                    then_clear: None,
+                },
                 started_as: StartRequest::for_test(IndexVolumeKind::Local),
                 signals: VolumeSignals::new(Arc::new(std::sync::Mutex::new(None)), NoopEventSink::shared()),
                 work: hold::VolumeWork::for_test(ROOT_VOLUME_ID),
