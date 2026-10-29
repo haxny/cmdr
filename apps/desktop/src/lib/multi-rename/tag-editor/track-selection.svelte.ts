@@ -51,7 +51,7 @@ export interface TrackSelection {
   /** ⌘⇧A: none, hidden ones too. */
   deselectAll(): void
   invert(): void
-  /** The header box: every shown track (`true`) or none of them. */
+  /** The header box: adds every shown track (`true`) or removes them; hidden selected tracks stay either way. */
   setAll(on: boolean): void
   /**
    * `all` while nothing is selected, `some` with the selected paths in view order, `shown` with the filter's tracks
@@ -168,9 +168,10 @@ export function createTrackSelection(): TrackSelection {
       marks.setSelectedIndices([...hidden, ...shown.filter((index) => !marks.selectedIndices.has(index))])
     },
     setAll(on) {
-      if (on) selectAll()
-      else if (shown === null) marks.deselectAll()
-      else marks.applyIndices(shown, 'remove', false)
+      if (shown === null) {
+        if (on) marks.selectAll(false, paths.length)
+        else marks.deselectAll()
+      } else marks.applyIndices(shown, on ? 'add' : 'remove', false)
     },
     scope() {
       const chosen = selectedPaths()

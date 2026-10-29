@@ -522,3 +522,13 @@ describe('CoverPanel', () => {
     })
   })
 })
+
+describe('CoverPanel under the Tracks filter', () => {
+  it('says a cover goes to every file, also the ones the filter hides; nothing without a filter', async () => {
+    const { root } = await mountPanel({ hiddenByFilter: 4 })
+    expect(root.querySelector('.cover')?.textContent).toContain('also the 4 the filter hides')
+    cleanup?.()
+    const plain = await mountPanel()
+    expect(plain.root.querySelector('.cover')?.textContent).not.toContain('filter hides')
+  })
+})

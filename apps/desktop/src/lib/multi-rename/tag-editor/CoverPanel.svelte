@@ -57,6 +57,8 @@
         onDrop: (path: string) => void
         /** Gives every file the cover `key` names (`use_cover_for_all`): the largest of covers that look the same. */
         onUseForAll: (key: string) => void
+        /** Tracks the Tracks pane's filter hides: a cover still goes to every file, and the section says so. */
+        hiddenByFilter?: number
         /** The window's file drags (the webview's by default; tests give their own). */
         subscribeDrop?: CoverDropSubscriber
     }
@@ -74,6 +76,7 @@
         onPaste,
         onDrop,
         onUseForAll,
+        hiddenByFilter = 0,
         subscribeDrop = subscribeCoverDrop,
     }: Props = $props()
 
@@ -356,6 +359,11 @@
                     : tString('multiRename.tags.cover.more', { count: folded, countText: formatInteger(folded) })}
             </Button>
         {/if}
+    {/if}
+    {#if hiddenByFilter > 0}
+        <p class="hint">
+            {tString('multiRename.tags.cover.allFilesFiltered', { count: hiddenByFilter, countText: formatInteger(hiddenByFilter) })}
+        </p>
     {/if}
     {#if dragOver}
         <p class="hint">{tString('multiRename.tags.cover.dropHere')}</p>

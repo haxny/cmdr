@@ -22,11 +22,13 @@
         /** The full cover as a `data:` URL (`get_cover_image`); `null` when it can't be shown. */
         loadImage: () => Promise<string | null>
         editable: boolean
+        /** Tracks the Tracks pane's filter hides: the cover still goes to them, and the button says so. */
+        hidden?: number
         onUseForAll: (key: string) => void
         onClose: () => void
     }
 
-    const { choice, total, loadImage, editable, onUseForAll, onClose }: Props = $props()
+    const { choice, total, loadImage, editable, hidden = 0, onUseForAll, onClose }: Props = $props()
 
     /** `undefined` while the picture is on its way. */
     let image = $state<string | null | undefined>(undefined)
@@ -64,7 +66,9 @@
     {#snippet footer()}
         <Button onclick={onClose}>{tString('multiRename.tags.dialog.close')}</Button>
         <Button variant="primary" disabled={!editable || (choice.files >= total && choice.nearDuplicates === 0)} onclick={() => { onUseForAll(choice.key) }}>
-            {tString('multiRename.tags.cover.useForAll')}
+            {hidden > 0
+                ? tString('multiRename.tags.cover.useForAllHidden', { count: total, countText: formatInteger(total) })
+                : tString('multiRename.tags.cover.useForAll')}
         </Button>
     {/snippet}
 </ModalDialog>

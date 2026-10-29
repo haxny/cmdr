@@ -28,6 +28,7 @@
     import { formatTrackLength, parseFieldText, trackCellValue } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
     import TrackFilterBar from './TrackFilterBar.svelte'
+    import { filterCountText } from './track-filter-text'
     import TrackSortHeader from './TrackSortHeader.svelte'
     import { dialogIsOpen, isClearKey, startsComposition, typedSeed, type TrackCell } from './typed-key'
     import type { TagsCommandId } from './tags-function-keys'
@@ -123,7 +124,11 @@
     )
     /** The cursor's place among the drawn rows. */
     const atRow = $derived(Math.max(0, rows.findIndex((row) => row.index === at)))
+    /** The cursor's row is drawn (a filter showing nothing draws none). */
+    const cursorShown = $derived(rows[atRow]?.index === at)
+    /** The header box reflects the drawn rows alone: hidden selected tracks never half-check it. */
     const allSelected = $derived(rows.length > 0 && rows.every((row) => selection.has(row.index)))
+    const someSelected = $derived(rows.some((row) => selection.has(row.index)))
 
     let list = $state<HTMLElement>()
     let scroller = $state<HTMLElement>()
@@ -183,7 +188,7 @@
 
     /** F3 from the window's bar or with focus outside the pane: plays or stops the cursor row. */
     export function playAtCursor(): void {
-        play(at)
+        if (cursorShown) play(at)
     }
 
     /** A header click: the active column flips its direction, another column starts ascending. */
@@ -383,7 +388,7 @@
             <Checkbox
                 ariaLabel={tString('multiRename.tags.select.all')}
                 checked={allSelected}
-                indeterminate={selection.count > 0 && !allSelected}
+                indeterminate={someSelected && !allSelected}
                 disabled={rows.length === 0}
                 onCheckedChange={() => { selection.setAll(!allSelected) }}
             />
@@ -400,6 +405,10 @@
     </div>
     <!-- Says which cell typing, Delete and F2 act on, when ← / → move it. -->
     <span class="sr-only" role="status">{tString(CELL_NAMES[activeCell])}</span>
+    <!-- The filter's count, always in the page (empty while it's closed), so a screen reader announces its first count. -->
+    <span class="sr-only" role="status" data-filter-count
+        >{filter === null ? '' : filterCountText(rows.length, tracks.length, selection.hiddenCount)}</span
+    >
     <div class="full-list" bind:this={scroller} use:useScrollBoxSize={{ onResize: measureScroller }}>
         <div
             bind:this={list}
@@ -408,7 +417,7 @@
             tabindex="0"
             aria-multiselectable="true"
             aria-label={tString('multiRename.tags.tracks.label')}
-            aria-activedescendant={rows[atRow]?.index === at ? `tag-track-row-${String(at)}` : undefined}
+            aria-activedescendant={cursorShown ? `tag-track-row-${String(at)}` : undefined}
             {onkeydown}
         >
             {#each rows as { track, index }, row (track.path)}

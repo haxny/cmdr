@@ -31,9 +31,10 @@ const FRONT: CoverChoice = {
 const URL = 'data:image/jpeg;base64,/9j/'
 
 async function mountViewer(
-  over: { choice?: CoverChoice; total?: number; editable?: boolean; image?: string | null } = {},
+  over: { choice?: CoverChoice; total?: number; editable?: boolean; image?: string | null; hidden?: number } = {},
 ) {
   const props = {
+    hidden: over.hidden ?? 0,
     choice: over.choice ?? FRONT,
     total: over.total ?? 22,
     loadImage: vi.fn(() => (over.image === undefined ? Promise.resolve(URL) : Promise.resolve(over.image))),
@@ -114,5 +115,12 @@ describe('CoverViewer', () => {
     const { onClose } = await mountViewer()
     inDialog('Close').click()
     expect(onClose).toHaveBeenCalled()
+  })
+})
+
+describe('CoverViewer under the Tracks filter', () => {
+  it('says the cover goes to every file, the hidden ones too', async () => {
+    await mountViewer({ hidden: 5 })
+    expect(inDialog('Use for all 22 files, hidden ones too').disabled).toBe(false)
   })
 })

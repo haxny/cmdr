@@ -132,6 +132,15 @@ describe('createTrackSelection under a filter (⌘F)', () => {
     expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3'] })
   })
 
+  it('the header box under a filter adds the shown tracks and keeps the hidden selected ones', () => {
+    const selection = fresh()
+    selection.toggleAt(0)
+    selection.setShown(SHOWN)
+    selection.setAll(true)
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3', ...SHOWN] })
+    expect(selection.hiddenCount).toBe(1)
+  })
+
   it('invert flips the shown tracks and leaves the hidden ones as they are', () => {
     const selection = fresh()
     selection.toggleAt(0)

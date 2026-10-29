@@ -263,11 +263,14 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   derives `shown` (indices); the pane draws those rows with their absolute indices, so the cursor, the selection and the
   editor stay on the whole list, and a hidden cursor row moves to the next shown one. `TrackSelection.setShown` makes
   the selection filter-aware: hidden selected tracks stay selected (`hiddenCount`, said beside the field), ⌘A selects
-  exactly the shown ones, invert and the header box act on the shown ones, ⇧ fills skip hidden rows. Scope: the
-  selection if any (hidden included), else `shown` (the filter's paths, passed explicitly to every tool, the Album
-  pane's `setViewScope` and its edits, paste and Delete), else all. A filter showing nothing refuses the run
-  (`filter.noneShown`) rather than widen to all, and the Album pane shows no rows and "0 of N tracks (filtered)". Esc in
-  the field or on the list (while the filter is on) clears and closes it; ⌘⏎ still writes every changed file.
+  exactly the shown ones, invert and the header box (add / remove) act on the shown ones and keep hidden ones, ⇧ fills
+  skip hidden rows; the header box reflects the shown rows alone. Scope: the selection if any (hidden included), else
+  `shown` (the filter's paths, passed explicitly to every tool, the Album pane's `setViewScope` and its edits, paste and
+  Delete), else all. A filter showing nothing refuses the run (`filter.noneShown`) rather than widen to all, and the
+  Album pane shows no rows and "0 of N tracks (filtered)". Esc in the field or on the list (while the filter is on)
+  clears and closes it; ⌘⏎ still writes every changed file. A cover still goes to every file: the cover section and the
+  viewer's button say so while the filter hides tracks. The count's live region sits in `TracksPane` from mount (empty
+  while closed), so its first count is announced; F3 with no row shown plays nothing.
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format
   will hold (M4A integers). The one-file-BOOK rule (no track number) is decided on every audio track the session lists

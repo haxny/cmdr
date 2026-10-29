@@ -4,10 +4,11 @@
 use std::collections::BTreeMap;
 
 use cmdr_media_meta::test_fixtures::mp3_frames;
-use cmdr_tags::{FileTags, TagField};
+use cmdr_tags::tools::TagTool;
+use cmdr_tags::{FileTags, NumberOptions, TagField};
 
 use super::error::TagEditorError;
-use super::session::{Loaded, SESSIONS, close, edit, open, unchanged_on_disk};
+use super::session::{Loaded, SESSIONS, close, edit, open, tool, unchanged_on_disk};
 use super::session_test::{album, folder, path_of, set_title, tag_file};
 use super::sort::{SortItem, TrackSort, TrackSortKey, reorder_with, sort_tracks, sorted_names};
 use super::view::TagEditorView;
@@ -410,6 +411,43 @@ fn a_move_between_set_order_and_the_read_leaves_no_sort_claimed() {
     })
     .expect("the view answers");
     assert_eq!(view.sort, None);
+    close(&id);
+    close_rename(&id);
+}
+
+/// The Tracks pane's filter hands a tool the shown tracks as a path list: Renumber and the numbering
+/// wizard number them in the order the window shows (a sort), whatever order the list names them in.
+#[test]
+fn a_scoped_renumber_numbers_in_the_shown_order() {
+    let (dir, id, _listing) = session_of(
+        "tag-sort-scoped-renumber",
+        &[("a.mp3", &[]), ("b.mp3", &[]), ("c.mp3", &[]), ("d.mp3", &[])],
+    );
+    open(&id, false).expect("opens");
+    sort_tracks(&id, sort(TrackSortKey::FileName, true)).expect("sorts");
+    let scope = vec![path_of(&dir, "b.mp3"), path_of(&dir, "d.mp3")];
+    let numbered = |view: &TagEditorView| -> Vec<(String, Option<String>)> {
+        view.tracks
+            .iter()
+            .map(|row| (row.file_name.clone(), row.track.clone()))
+            .collect()
+    };
+    let expected = vec![
+        ("d.mp3".to_string(), Some("01".to_string())),
+        ("c.mp3".to_string(), None),
+        ("b.mp3".to_string(), Some("02".to_string())),
+        ("a.mp3".to_string(), None),
+    ];
+    let view = tool(&id, TagTool::Renumber { start: 1 }, Some(scope.clone())).expect("renumbers");
+    assert_eq!(numbered(&view), expected);
+    let wizard = TagTool::AutoNumber(NumberOptions {
+        track_start: 1,
+        track_total: false,
+        track_pad: true,
+        disc: None,
+    });
+    let view = tool(&id, wizard, Some(scope)).expect("numbers");
+    assert_eq!(numbered(&view), expected);
     close(&id);
     close_rename(&id);
 }

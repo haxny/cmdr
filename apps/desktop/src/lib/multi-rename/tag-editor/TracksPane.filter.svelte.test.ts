@@ -53,6 +53,7 @@ async function mountFiltered(text: string | null) {
     shown: shownTrackIndices(TRACKS, text),
     cursor: 0,
   })
+  const onPlay = vi.fn()
   const onFilterChange = vi.fn((next: string | null) => {
     props.filter = next
     props.shown = shownTrackIndices(TRACKS, next)
@@ -71,7 +72,7 @@ async function mountFiltered(text: string | null) {
     },
     selection,
     playing: null,
-    onPlay: vi.fn(),
+    onPlay,
     onEdit: vi.fn(),
     onClear: vi.fn(),
     onSwitchPane: vi.fn(),
@@ -86,9 +87,10 @@ async function mountFiltered(text: string | null) {
     onFilterChange,
   })
   cleanup = mounted.cleanup
+  const pane = mounted.instance
   const list = mounted.root.querySelector<HTMLElement>('[role="listbox"]')
   if (!list) throw new Error('no listbox')
-  return { root: mounted.root, list, selection, props, onFilterChange }
+  return { root: mounted.root, list, selection, props, onFilterChange, onPlay, pane }
 }
 
 const rowPaths = (root: HTMLElement) =>
@@ -132,7 +134,7 @@ describe('TracksPane filter', () => {
     selection.toggleAt(1)
     onFilterChange('disc: 2')
     await tick()
-    const status = root.querySelector('.filter-bar [role="status"]')
+    const status = root.querySelector('[data-filter-count]')
     expect(status?.textContent).toContain('2 of 4 tracks')
     expect(status?.textContent).toContain('1 selected track hidden')
     onFilterChange(null)
@@ -169,5 +171,36 @@ describe('TracksPane filter', () => {
     const { root } = await mountFiltered('disc: 2')
     expect(fieldOf(root)?.getAttribute('aria-label')).toBe('Filter the tracks')
     await expectNoA11yViolations(root)
+  })
+
+  it('the header box shows the shown rows: unchecked when only hidden tracks are selected, checked when every shown one is', async () => {
+    const { root, selection } = await mountFiltered('disc: 2')
+    const box = () => root.querySelector('.head-mark [data-state]')?.getAttribute('data-state')
+    selection.toggleAt(0)
+    await tick()
+    expect(box()).toBe('unchecked')
+    selection.toggleAt(1)
+    await tick()
+    expect(box()).toBe('indeterminate')
+    selection.toggleAt(3)
+    await tick()
+    expect(box()).toBe('checked')
+  })
+
+  it('F3 with no track shown plays nothing', async () => {
+    const { pane, onPlay } = await mountFiltered('nothing like it')
+    ;(pane as { playAtCursor: () => void }).playAtCursor()
+    expect(onPlay).not.toHaveBeenCalled()
+  })
+
+  it('the count’s live region is there before the filter opens, so its first count is announced', async () => {
+    const { root, onFilterChange } = await mountFiltered(null)
+    const region = root.querySelector('[data-filter-count][role="status"]')
+    expect(region).not.toBeNull()
+    expect(region?.textContent.trim()).toBe('')
+    onFilterChange('disc: 2')
+    await tick()
+    expect(root.querySelector('[data-filter-count][role="status"]')).toBe(region)
+    expect(region?.textContent).toContain('2 of 4 tracks')
   })
 })

@@ -69,24 +69,30 @@
     /** The selected tracks; the tools work on these alone. Created once per mount, synced on every view change. */
     const selection = createTrackSelection()
     const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
-    /** The Tracks pane's filter text (⌘F), or `null` while it is closed. */
+    /** The Tracks filter's text (⌘F; `null` while closed) and the rows it shows (view indices; `null`: no filter). */
     let filter = $state<string | null>(null)
-    /** The rows the filter shows (indices in the view's tracks), or `null` with no filter. */
     const shown = $derived(shownTrackIndices(tags.view?.tracks ?? [], filter))
     /** Changes with the scoped tracks and the track list: a file-name preview is only good for the tracks it listed. */
     const scopeKey = $derived(JSON.stringify([[...selection.scoped].sort(), allPaths]))
+    /** Tracks the filter hides (a cover still goes to them). */
+    const hiddenByFilter = $derived(shown === null ? 0 : allPaths.length - shown.length)
     /** No track selected and the filter on: the tools and the Album pane work on the shown tracks. */
     const filtering = $derived(shown !== null && selection.count === 0)
 
     let selectionGone = $state(false)
-
     // Converges: `sync` writes only when the list of paths changed.
     $effect(() => {
         selection.sync(allPaths)
     })
+    // The shown paths reach the selection per view, and at once on a filter change (no tick where the scope lags).
+    const shownPathsOf = (rows: number[] | null): string[] | null => (rows === null ? null : rows.map((index) => allPaths[index]))
     $effect(() => {
-        selection.setShown(shown === null ? null : shown.map((index) => allPaths[index]))
+        selection.setShown(shownPathsOf(shown))
     })
+    const changeFilter = (text: string | null): void => {
+        filter = text
+        selection.setShown(shownPathsOf(shown))
+    }
 
     // The Album pane sums up the selected tracks, else the shown ones (every track while neither narrows it).
     const viewScope = followViewScope({
@@ -579,7 +585,7 @@
                     footer={tracksFooter}
                     {filter}
                     {shown}
-                    onFilterChange={(text: string | null) => { filter = text }}
+                    onFilterChange={changeFilter}
                 />
             </div>
         </div>
@@ -640,6 +646,7 @@
         total={shown.total}
         loadImage={() => tags.coverImage(shown.choice.key)}
         editable={tags.view.editable}
+        hidden={hiddenByFilter}
         onUseForAll={(key: string) => {
             viewing = null
             void tags.useCoverForAll(key)
@@ -688,6 +695,7 @@
             listChoices={() => tags.coverChoices()}
             loadThumbnail={(key: string) => tags.coverThumbnail(key)}
             {listCandidates}
+            {hiddenByFilter}
             onView={(shown: CoverShown) => { viewing = shown }}
             onPick={(fileName: string) => void tags.coverFromFile(fileName)}
             onEdit={(edits: TagEdit[]) => tags.edit(edits)}

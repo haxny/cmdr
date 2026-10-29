@@ -1,13 +1,14 @@
 <script lang="ts">
     /**
      * The Tracks pane's filter field (⌘F, `tags.filter`), above its column header: typing narrows the list
-     * (`track-filter.ts`), and its count says how many tracks show and how many selected ones it hides, announced as
-     * a status. Esc clears and closes it; Enter or ↓ goes back to the list, the filter staying on.
+     * (`track-filter.ts`), and its count says how many tracks show and how many selected ones it hides (seen here; the
+     * pane's always-present live region announces it). Esc clears and closes it; Enter or ↓ goes back to the list, the
+     * filter staying on.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
-    import { formatInteger } from '#lib/intl/number-format.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import TextInput from '#lib/ui/TextInput.svelte'
+    import { filterCountText } from './track-filter-text'
 
     interface Props {
         text: string
@@ -27,24 +28,13 @@
 
     let input = $state<HTMLInputElement>()
 
-    /** Focuses the field with its text selected, so ⌘F again starts a new filter. */
+    /** Focuses the field with its text selected (⌘F from the list), so typing starts a new filter. */
     export function focus(): void {
         input?.focus()
         input?.select()
     }
 
-    const countText = $derived(
-        tString('multiRename.tags.filter.count', {
-            total,
-            shownText: formatInteger(shownCount),
-            totalText: formatInteger(total),
-        }),
-    )
-    const hiddenText = $derived(
-        hiddenCount === 0
-            ? null
-            : tString('multiRename.tags.filter.hiddenSelected', { count: hiddenCount, countText: formatInteger(hiddenCount) }),
-    )
+    const countText = $derived(filterCountText(shownCount, total, hiddenCount))
 
     function onkeydown(e: KeyboardEvent): void {
         if (e.isComposing || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return
@@ -73,9 +63,7 @@
         oninput={(e: Event & { currentTarget: HTMLInputElement }) => { onChange(e.currentTarget.value) }}
         {onkeydown}
     />
-    <span class="filter-count" role="status">
-        {countText}{#if hiddenText !== null}<span class="hidden-selected">, {hiddenText}</span>{/if}
-    </span>
+    <span class="filter-count" aria-hidden="true">{countText}</span>
 </div>
 
 <style>
@@ -92,9 +80,5 @@
         color: var(--color-text-secondary);
         font-size: var(--font-size-sm);
         font-variant-numeric: tabular-nums;
-    }
-
-    .hidden-selected {
-        color: var(--color-text-primary);
     }
 </style>

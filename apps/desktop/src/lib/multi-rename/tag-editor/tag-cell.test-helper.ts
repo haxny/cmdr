@@ -7,13 +7,14 @@ import type { Component } from 'svelte'
 export async function mountInto<P extends Record<string, unknown>>(
   component: Component<P>,
   props: P,
-): Promise<{ root: HTMLElement; cleanup: () => void }> {
+): Promise<{ root: HTMLElement; cleanup: () => void; instance: Record<string, unknown> }> {
   const root = document.createElement('div')
   document.body.appendChild(root)
   const instance = mount(component, { target: root, props })
   await tick()
   return {
     root,
+    instance,
     cleanup: () => {
       void unmount(instance)
       root.remove()

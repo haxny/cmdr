@@ -160,7 +160,7 @@ describe('TagsContent with the Tracks filter', () => {
     const { root, state, filterBy } = await mountFiltered()
     await toggleTrack(root, '/b/01.mp3')
     await filterBy('disc: 2')
-    expect(root.querySelector('.filter-bar [role="status"]')?.textContent).toContain('1 selected track hidden')
+    expect(root.querySelector('[data-filter-count]')?.textContent).toContain('1 selected track hidden')
     await renumber(root)
     expect(state.tool).toHaveBeenCalledWith({ kind: 'renumber', start: 1 }, ['/b/01.mp3'])
   })
